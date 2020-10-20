@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "start": "tsc && node dist",
-    "ex1": "tsc examples/basic/output.tsx --outDir dist/examples/basic --target ES2015 --module ES2015 --moduleResolution node && cp examples/basic/index.html dist/examples/basic/"
+    "ex1": "tsc --p examples.tsconfig.json && cp examples/basic/index.html dist/basic/"
+
   },
   "dependencies": {
     "typescript": "^4.0.3"

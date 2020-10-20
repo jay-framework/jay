@@ -1,35 +1,16 @@
 <html>
 <head>
     <script type="module" src="./output.js"></script>
+    <script type="module" src="../benchmark.js"></script>
     <script type="module">
-        import render from "./output.js";
-        let target = document.getElementById('target');
-        let progress = document.getElementById('progress');
-        let {dom, update} = render({text:'name'});
-        target.appendChild(dom);
+      import render from "./output.js";
+      import benchmark from '../benchmark.js';
+      let target = document.getElementById('target');
+      let progress = document.getElementById('progress');
+      let {dom, update} = render({text:'name'});
+      target.appendChild(dom);
 
-        // benchmark
-        let i = 0;
-        const cycles = 1000;
-        let start = new Date().getTime();
-
-        const animationFrame = () => {
-          update({text: 'name ' + i++});
-          if (i<cycles) {
-            requestAnimationFrame(animationFrame);
-            if (i % 50 === 0) {
-              let end = new Date().getTime();
-              progress.textContent = `frames: ${1000/((end-start)/i)} cycles: ${i}`;
-            }
-          }
-          else {
-            let end = new Date().getTime();
-            progress.textContent = `frames: ${1000/((end-start)/cycles)}`;
-          }
-        };
-
-        requestAnimationFrame(animationFrame)
-
+      benchmark(index => update({text: 'name ' + index}), status => progress.textContent = status);
     </script>
 </head>
 <body>
