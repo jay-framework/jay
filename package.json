@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "tsc && node dist",
-    "ex1": "tsc --p examples.tsconfig.json && cp examples/basic/index.html dist/basic/"
+    "ex1": "tsc --p examples.tsconfig.json && cp examples/basic/index.html dist/basic/ && cp examples/conditions/index.html dist/conditions/"
 
   },
   "dependencies": {
