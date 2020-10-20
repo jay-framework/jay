@@ -1,0 +1,15 @@
+{
+  "name": "jay",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "tsc && node dist",
+    "ex1": "tsc examples/basic/output.tsx --outDir dist/examples/basic --target ES2015 --module ES2015 --moduleResolution node && cp examples/basic/index.html dist/examples/basic/"
+  },
+  "dependencies": {
+    "typescript": "^4.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^14.11.10"
+  }
+}
