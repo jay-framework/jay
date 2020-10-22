@@ -4,13 +4,16 @@
   "private": true,
   "scripts": {
     "start": "tsc && node dist",
+    "test": "jest",
     "ex1": "tsc --p examples.tsconfig.json && cp examples/basic/index.html dist/basic/ && cp examples/conditions/index.html dist/conditions/"
-
   },
   "dependencies": {
     "typescript": "^4.0.3"
   },
   "devDependencies": {
-    "@types/node": "^14.11.10"
+    "@babel/preset-env": "^7.12.1",
+    "@babel/preset-typescript": "^7.12.1",
+    "@types/node": "^14.11.10",
+    "jest": "^26.6.0"
   }
 }
