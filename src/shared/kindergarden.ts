@@ -17,6 +17,8 @@ export class KindergartenGroup {
     }
 
     removeNode(node: HTMLElement) {
+        if (!this.children.has(node))
+            throw new Error('cannot remove a node that was not added by this group')
         this.kindergarten.parentNode.removeChild(node);
         this.children.delete(node);
     }
