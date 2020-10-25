@@ -7,12 +7,15 @@ export class KindergartenGroup {
         this.children = new Set();
     }
 
-    ensureNode(node: HTMLElement) {
+    ensureNode(node: HTMLElement, atIndex: number) {
+        atIndex = atIndex || 0;
+        atIndex = atIndex < 0? this.children.size - atIndex: atIndex;
         let offset = this.kindergarten.getOffsetFor(this);
-        if (this.kindergarten.parentNode.childNodes.length > offset)
-            this.kindergarten.parentNode.insertBefore(node, this.kindergarten.parentNode.childNodes[offset]);
-        else
+        if (this.kindergarten.parentNode.childNodes.length + this.children.size > offset)
+            this.kindergarten.parentNode.insertBefore(node, this.kindergarten.parentNode.childNodes[offset + atIndex]);
+        else {
             this.kindergarten.parentNode.appendChild(node);
+        }
         this.children.add(node);
     }
 

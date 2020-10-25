@@ -124,7 +124,7 @@ describe('Kindergarten', () => {
 
     describe('Kindergarten one collection group', () => {
 
-        test.skip('add nodes in a group', () => {
+        test('add nodes in a group', () => {
             let {document, parent} = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
@@ -132,15 +132,15 @@ describe('Kindergarten', () => {
             let node2 = makeNode(document, 'text2');
             let node3 = makeNode(document, 'text3');
             group1.ensureNode(node1);
-            group1.ensureNode(node2);
-            group1.ensureNode(node3);
+            group1.ensureNode(node2, -1);
+            group1.ensureNode(node3, -1);
 
             expect(parent.childNodes[0]).toEqual(node1);
             expect(parent.childNodes[1]).toEqual(node2);
             expect(parent.childNodes[2]).toEqual(node3);
         });
 
-        test.skip('move node - 3rd to 2nd', () => {
+        test('move node - 3rd to 2nd', () => {
             let {document, parent} = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
@@ -148,12 +148,14 @@ describe('Kindergarten', () => {
             let node2 = makeNode(document, 'text2');
             let node3 = makeNode(document, 'text3');
             group1.ensureNode(node1);
-            group1.ensureNode(node2);
-            group1.ensureNode(node3);
+            group1.ensureNode(node2, -1);
+            group1.ensureNode(node3, -1);
+
+            group1.ensureNode(node3, 1);
 
             expect(parent.childNodes[0]).toEqual(node1);
-            expect(parent.childNodes[1]).toEqual(node2);
-            expect(parent.childNodes[2]).toEqual(node3);
+            expect(parent.childNodes[1]).toEqual(node3);
+            expect(parent.childNodes[2]).toEqual(node2);
         });
     });
 });
