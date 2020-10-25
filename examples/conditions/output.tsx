@@ -1,4 +1,4 @@
-import {Kindergarten} from '../../src/shared/kindergarden'
+import {Kindergarten} from '../kindergarden.js'
 
 interface ViewState {
     text1: string,
@@ -28,15 +28,15 @@ export default function render(viewState: ViewState) {
     };
 
     const rerender = (newViewState) => {
-        if (viewState.cond) {
+        if (newViewState.cond) {
             group1.ensureNode(div1);
             group2.removeNode(div2);
-            updatediv1(viewState.text1);
+            updatediv1(newViewState.text1);
         }
         else {
             group1.removeNode(div1);
             group2.ensureNode(div2);
-            updatediv2(viewState.text2);
+            updatediv2(newViewState.text2);
         }
         lastViewState = newViewState
     };
