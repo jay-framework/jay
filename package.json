@@ -5,7 +5,7 @@
   "scripts": {
     "start": "tsc && node dist",
     "test": "jest",
-    "ex1": "tsc --p examples.tsconfig.json && cp examples/basic/index.html dist/basic/ && cp examples/conditions/index.html dist/conditions/"
+    "ex": "tsc --p examples.tsconfig.json && cp examples/basic/index.html dist/basic/ && cp examples/conditions/index.html dist/conditions/"
   },
   "dependencies": {
     "typescript": "^4.0.3"

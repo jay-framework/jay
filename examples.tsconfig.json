@@ -9,6 +9,6 @@
     "outDir": "dist"
   },
   "lib": ["es2015"],
-  "include": ["examples/**/*"],
+  "include": ["examples/**/*", "src/shared/*"],
   "exclude": ["examples/**/input.tsx", "examples/todo.tsx"]
 }

@@ -1,3 +1,5 @@
+import {Kindergarten} from '../../src/shared/kindergarden'
+
 interface ViewState {
     text1: string,
     text2: string,
@@ -7,48 +9,39 @@ interface ViewState {
 export default function render(viewState: ViewState) {
     let lastViewState = viewState;
     let root = document.createElement('div');
+    let rootKindergarten = new Kindergarten(root)
+    let group1 = rootKindergarten.newGroup();
+    let group2 = rootKindergarten.newGroup();
     let div1 = document.createElement('div');
     let div2 = document.createElement('div');
     div1.style.cssText = "color:red";
     div2.style.cssText = "color:green";
 
     const updatediv1 = (text) => {
-        div1.textContent = text;
+        if (lastViewState.text1 != text)
+            div1.textContent = text;
     };
 
     const updatediv2 = (text) => {
-        div2.textContent = text;
+        if (lastViewState.text2 != text)
+            div2.textContent = text;
     };
 
-    const updateRoot = (cond) => {
-        if (cond && root.childNodes[0] !== div1) {
-            if (root.childNodes[0])
-                root.removeChild(root.childNodes[0]);
-            root.appendChild(div1)
-        }
-        if (!cond && root.childNodes[0] !== div2) {
-            if (root.childNodes[0])
-                root.removeChild(root.childNodes[0]);
-            root.appendChild(div2)
-        }
-    }
-
     const rerender = (newViewState) => {
-        if (lastViewState.cond !== newViewState.cond)
-            updateRoot(newViewState.cond);
-        if (lastViewState.text1 !== newViewState.text1)
-            updatediv1(newViewState.text1);
-        if (lastViewState.text2 !== newViewState.text2)
-            updatediv2(newViewState.text2);
+        if (viewState.cond) {
+            group1.ensureNode(div1);
+            group2.removeNode(div2);
+            updatediv1(viewState.text1);
+        }
+        else {
+            group1.removeNode(div1);
+            group2.ensureNode(div2);
+            updatediv2(viewState.text2);
+        }
         lastViewState = newViewState
     };
 
-
-    updateRoot(viewState.cond);
-    if (viewState.cond)
-        updatediv1(viewState.text1);
-    else
-        updatediv2(viewState.text2);
+    rerender(viewState);
 
     return {
         dom: root,
