@@ -1,28 +1,49 @@
-export class KindergardenGroup {
-    private kindergarden: Kindergarden;
+export class KindergartenGroup {
+    private kindergarten: Kindergarten;
+    children: Set<HTMLElement>;
 
-    constructor(kindergarden: Kindergarden) {
-        this.kindergarden = kindergarden;
+    constructor(kindergarten: Kindergarten) {
+        this.kindergarten = kindergarten;
+        this.children = new Set();
     }
 
     ensureNode(node: HTMLElement) {
-        this.kindergarden.parentNode.appendChild(node)
+        let offset = this.kindergarten.getOffsetFor(this);
+        if (this.kindergarten.parentNode.childNodes.length > offset)
+            this.kindergarten.parentNode.insertBefore(node, this.kindergarten.parentNode.childNodes[offset]);
+        else
+            this.kindergarten.parentNode.appendChild(node);
+        this.children.add(node);
     }
 
     removeNode(node: HTMLElement) {
-        this.kindergarden.parentNode.removeChild(node)
+        this.kindergarten.parentNode.removeChild(node);
+        this.children.delete(node);
     }
 }
 
 
-export class Kindergarden {
-    protected parentNode: HTMLElement;
+export class Kindergarten {
+    parentNode: HTMLElement;
+    private groups: Array<KindergartenGroup> = [];
 
     constructor(parentNode: HTMLElement) {
         this.parentNode = parentNode;
     }
 
-    newGroup(): KindergardenGroup {
-        return new KindergardenGroup(this)
+    newGroup(): KindergartenGroup {
+        let kindergartenGroup = new KindergartenGroup(this);
+        this.groups.push(kindergartenGroup);
+        return kindergartenGroup
+    }
+
+    getOffsetFor(group: KindergartenGroup): number {
+        let index = 0;
+        let offset = 0;
+        while (index < this.groups.length && this.groups[index] !== group) {
+            offset = this.groups[index].children.size;
+            index = index + 1;
+        }
+        return offset;
     }
 }

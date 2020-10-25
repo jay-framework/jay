@@ -1,5 +1,5 @@
 import { JSDOM } from 'jsdom';
-import {Kindergarden} from '../../src/shared/kindergarden';
+import {Kindergarten} from '../../src/shared/kindergarden';
 
 function makeParent(): HTMLElement {
     const { window } = new JSDOM(`<!DOCTYPE html><html><body><div id="parent"></div></body></html>`);
@@ -13,28 +13,76 @@ function makeNode(document, text: string): HTMLElement {
     return elem;
 }
 
-describe('Kindergarden', () => {
+describe('Kindergarten', () => {
 
-    test('add a node in a group', () => {
+    describe('Kindergarten one conditional group', () => {
 
-        let {document, parent} = makeParent();
-        let kindergarden = new Kindergarden(parent);
-        let group1 = kindergarden.newGroup();
-        let node1 = makeNode(document, 'text1');
-        group1.ensureNode(node1);
+        test('add a node in a group', () => {
 
-        expect(parent.childNodes[0]).toEqual(node1);
+            let {document, parent} = makeParent();
+            let kindergarden = new Kindergarten(parent);
+            let group1 = kindergarden.newGroup();
+            let node1 = makeNode(document, 'text1');
+            group1.ensureNode(node1);
+
+            expect(parent.childNodes[0]).toEqual(node1);
+        });
+
+        test('add a node twice - the node should be once', () => {
+
+            let {document, parent} = makeParent();
+            let kindergarden = new Kindergarten(parent);
+            let group1 = kindergarden.newGroup();
+            let node1 = makeNode(document, 'text1');
+            group1.ensureNode(node1);
+            group1.ensureNode(node1);
+
+            expect(parent.childNodes[0]).toEqual(node1);
+            expect(parent.childNodes.length).toEqual(1);
+        });
+
+        test('add and remove a node in a group', () => {
+
+            let {document, parent} = makeParent();
+            let kindergarden = new Kindergarten(parent);
+            let group1 = kindergarden.newGroup();
+            let node1 = makeNode(document, 'text1');
+            group1.ensureNode(node1);
+            group1.removeNode(node1);
+
+            expect(parent.childNodes.length).toEqual(0);
+        });
     });
 
-    test('add and remove a node in a group', () => {
+    describe('Kindergarten two conditional groups', () => {
+        test('add nodes group1, group 2', () => {
 
-        let {document, parent} = makeParent();
-        let kindergarden = new Kindergarden(parent);
-        let group1 = kindergarden.newGroup();
-        let node1 = makeNode(document, 'text1');
-        group1.ensureNode(node1);
-        group1.removeNode(node1);
+            let {document, parent} = makeParent();
+            let kindergarden = new Kindergarten(parent);
+            let group1 = kindergarden.newGroup();
+            let group2 = kindergarden.newGroup();
+            let node1 = makeNode(document, 'text1');
+            let node2 = makeNode(document, 'text2');
+            group1.ensureNode(node1);
+            group2.ensureNode(node2);
 
-        expect(parent.childNodes.length).toEqual(0);
+            expect(parent.childNodes[0]).toEqual(node1);
+            expect(parent.childNodes[1]).toEqual(node2);
+        });
+        test('add nodes group2, group 1', () => {
+
+            let {document, parent} = makeParent();
+            let kindergarden = new Kindergarten(parent);
+            let group1 = kindergarden.newGroup();
+            let group2 = kindergarden.newGroup();
+            let node1 = makeNode(document, 'text1');
+            let node2 = makeNode(document, 'text2');
+            group2.ensureNode(node2);
+            group1.ensureNode(node1);
+
+            expect(parent.childNodes[0]).toEqual(node1);
+            expect(parent.childNodes[1]).toEqual(node2);
+        });
+
     });
-})
+});
