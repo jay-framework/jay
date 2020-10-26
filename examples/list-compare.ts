@@ -1,10 +1,14 @@
-interface MatchResult {}
-
 export const ITEM_ADDED = 'IA';
 export const ITEM_REMOVED = 'IR';
 export const ITEM_MOVED = 'IM';
 
-export function listCompare(oldList: Array<_>, newList: Array<_>, matchBy: string): Array<MatchResult> {
+interface MatchResult<T> {
+    action: typeof ITEM_ADDED | typeof ITEM_MOVED | typeof ITEM_REMOVED,
+    item: T,
+    pos: number
+}
+
+export function listCompare<T>(oldList: Array<T>, newList: Array<T>, matchBy: string): Array<MatchResult<T>> {
     let oldKeys = new Set(oldList.map(_ => _[matchBy]));
     let newKeys = new Set(newList.map(_ => _[matchBy]));
     let moved = new Set();
@@ -38,7 +42,6 @@ export function listCompare(oldList: Array<_>, newList: Array<_>, matchBy: strin
             }
         }
     }
-    console.log('----', oldIndex, newIndex);
     while(oldIndex < oldList.length) {
         if (!moved.has(oldList[oldIndex][matchBy])) {
             result.push({action: ITEM_REMOVED, item: oldList[oldIndex], pos: oldIndex});

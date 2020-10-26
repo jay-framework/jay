@@ -7,7 +7,7 @@ export class KindergartenGroup {
         this.children = new Set();
     }
 
-    ensureNode(node: HTMLElement, atIndex: number) {
+    ensureNode(node: HTMLElement, atIndex?: number) {
         atIndex = atIndex || 0;
         atIndex = atIndex < 0? this.children.size + 1 + atIndex: atIndex;
         let offset = this.kindergarten.getOffsetFor(this);
