@@ -9,9 +9,9 @@ export class KindergartenGroup {
 
     ensureNode(node: HTMLElement, atIndex: number) {
         atIndex = atIndex || 0;
-        atIndex = atIndex < 0? this.children.size - atIndex: atIndex;
+        atIndex = atIndex < 0? this.children.size + 1 + atIndex: atIndex;
         let offset = this.kindergarten.getOffsetFor(this);
-        if (this.kindergarten.parentNode.childNodes.length + this.children.size > offset)
+        if (this.kindergarten.parentNode.childNodes.length> offset + atIndex)
             this.kindergarten.parentNode.insertBefore(node, this.kindergarten.parentNode.childNodes[offset + atIndex]);
         else {
             this.kindergarten.parentNode.appendChild(node);
