@@ -62,7 +62,7 @@ describe('list-compare', () => {
         let matchResults = listCompare(oldList, newList, 'id');
 
         expect(matchResults.length).toBe(1);
-        expect(matchResults).toEqual([{action: ITEM_MOVED, item: itemC, pos: 1}])
+        expect(matchResults).toEqual([{action: ITEM_MOVED, item: itemC, pos: 1, fromPos: 2}])
     });
 
     it('should return instructions for reshuffle', () =>{
@@ -74,7 +74,7 @@ describe('list-compare', () => {
         expect(matchResults.length).toBe(3);
         expect(matchResults).toEqual([
             {action: ITEM_ADDED, item: itemE, pos: 0},
-            {action: ITEM_MOVED, item: itemC, pos: 1},
+            {action: ITEM_MOVED, item: itemC, pos: 1, fromPos: 2},
             {action: ITEM_ADDED, item: itemD, pos: 2}
             ])
     });

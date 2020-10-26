@@ -5,13 +5,14 @@ export const ITEM_MOVED = 'IM';
 interface MatchResult<T> {
     action: typeof ITEM_ADDED | typeof ITEM_MOVED | typeof ITEM_REMOVED,
     item: T,
-    pos: number
+    pos: number,
+    fromPos?: number
 }
 
 export function listCompare<T>(oldList: Array<T>, newList: Array<T>, matchBy: string): Array<MatchResult<T>> {
     let oldKeys = new Set(oldList.map(_ => _[matchBy]));
     let newKeys = new Set(newList.map(_ => _[matchBy]));
-    let moved = new Set();
+    let moved = {};
 
     let oldIndex = 0;
     let newIndex = 0;
@@ -26,8 +27,9 @@ export function listCompare<T>(oldList: Array<T>, newList: Array<T>, matchBy: st
             let newHasOldItem = newKeys.has(oldList[oldIndex][matchBy]);
             let oldHasNewItem = oldKeys.has(newList[newIndex][matchBy]);
             if (newHasOldItem && oldHasNewItem) {
-                result.push({action: ITEM_MOVED, item: newList[newIndex], pos: newIndex});
-                moved.add(newList[newIndex][matchBy]);
+                let movedItemInstruction = {action: ITEM_MOVED, item: newList[newIndex], pos: newIndex};
+                result.push(movedItemInstruction);
+                moved[newList[newIndex][matchBy]] = movedItemInstruction;
                 newIndex++;
             }
             else if (newHasOldItem) {
@@ -43,8 +45,11 @@ export function listCompare<T>(oldList: Array<T>, newList: Array<T>, matchBy: st
         }
     }
     while(oldIndex < oldList.length) {
-        if (!moved.has(oldList[oldIndex][matchBy])) {
+        if (!moved[oldList[oldIndex][matchBy]]) {
             result.push({action: ITEM_REMOVED, item: oldList[oldIndex], pos: oldIndex});
+        }
+        else {
+            moved[oldList[oldIndex][matchBy]].fromPos = oldIndex;
         }
         oldIndex++;
     }
