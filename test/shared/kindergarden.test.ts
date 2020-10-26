@@ -229,6 +229,68 @@ describe('Kindergarten', () => {
             expect(parent.childNodes[3]).toEqual(node21);
             expect(parent.childNodes[4]).toEqual(node22);
             expect(parent.childNodes[5]).toEqual(node23);
+        });
+
+        test('two collectino groups, in different order', () => {
+            let {document, parent} = makeParent();
+            let kindergarden = new Kindergarten(parent);
+            let group1 = kindergarden.newGroup();
+            let group2 = kindergarden.newGroup();
+            let node11 = makeNode(document, 'text11');
+            let node12 = makeNode(document, 'text12');
+            let node13 = makeNode(document, 'text13');
+            let node21 = makeNode(document, 'text21');
+            let node22 = makeNode(document, 'text22');
+            let node23 = makeNode(document, 'text23');
+            group2.ensureNode(node21);
+            group2.ensureNode(node22, -1);
+            group1.ensureNode(node11);
+            group1.ensureNode(node12, -1);
+            group2.ensureNode(node23, -1);
+            group1.ensureNode(node13, -1);
+
+            expect(parent.childNodes[0]).toEqual(node11);
+            expect(parent.childNodes[1]).toEqual(node12);
+            expect(parent.childNodes[2]).toEqual(node13);
+            expect(parent.childNodes[3]).toEqual(node21);
+            expect(parent.childNodes[4]).toEqual(node22);
+            expect(parent.childNodes[5]).toEqual(node23);
+        });
+
+        test('two collectino groups, with group mutations', () => {
+            let {document, parent} = makeParent();
+            let kindergarden = new Kindergarten(parent);
+            let group1 = kindergarden.newGroup();
+            let group2 = kindergarden.newGroup();
+            let node11 = makeNode(document, 'text11');
+            let node12 = makeNode(document, 'text12');
+            let node13 = makeNode(document, 'text13');
+            let node21 = makeNode(document, 'text21');
+            let node22 = makeNode(document, 'text22');
+            let node23 = makeNode(document, 'text23');
+            group1.ensureNode(node11);
+            group2.ensureNode(node21);
+            group1.ensureNode(node12, -1);
+            group2.ensureNode(node22, -1);
+            group1.ensureNode(node13, -1);
+            group2.ensureNode(node23, -1);
+
+            group1.removeNode(node12);
+
+            expect(parent.childNodes[0]).toEqual(node11);
+            expect(parent.childNodes[1]).toEqual(node13);
+            expect(parent.childNodes[2]).toEqual(node21);
+            expect(parent.childNodes[3]).toEqual(node22);
+            expect(parent.childNodes[4]).toEqual(node23);
+
+            group1.ensureNode(node12, 1);
+
+            expect(parent.childNodes[0]).toEqual(node11);
+            expect(parent.childNodes[1]).toEqual(node12);
+            expect(parent.childNodes[2]).toEqual(node13);
+            expect(parent.childNodes[3]).toEqual(node21);
+            expect(parent.childNodes[4]).toEqual(node22);
+            expect(parent.childNodes[5]).toEqual(node23);
         })
     })
 });
