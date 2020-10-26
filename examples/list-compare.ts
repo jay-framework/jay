@@ -1,0 +1,60 @@
+interface MatchResult {}
+
+export const ITEM_ADDED = 'IA';
+export const ITEM_REMOVED = 'IR';
+export const ITEM_MOVED = 'IM';
+
+export function listCompare(oldList: Array<_>, newList: Array<_>, matchBy: string): Array<MatchResult> {
+    let oldKeys = new Set(oldList.map(_ => _[matchBy]));
+    let newKeys = new Set(newList.map(_ => _[matchBy]));
+    let moved = new Set();
+
+    let oldIndex = 0;
+    let newIndex = 0;
+
+    let result = [];
+    while(newIndex < newList.length && oldIndex < oldList.length) {
+        if (oldList[oldIndex][matchBy] === newList[newIndex][matchBy]) {
+            console.log('match', oldIndex, newIndex);
+            newIndex++;
+            oldIndex++;
+        }
+        else {
+            let newHasOldItem = newKeys.has(oldList[oldIndex][matchBy]);
+            let oldHasNewItem = oldKeys.has(newList[newIndex][matchBy]);
+            if (newHasOldItem && oldHasNewItem) {
+                console.log('moved item', oldIndex, newIndex)
+                result.push({action: ITEM_MOVED, item: newList[newIndex], pos: newIndex});
+                moved.add(newList[newIndex][matchBy]);
+                newIndex++;
+            }
+            else if (newHasOldItem) {
+                console.log('new item', oldIndex, newIndex);
+                // new item
+                result.push({action: ITEM_ADDED, item: newList[newIndex], pos: newIndex});
+                newIndex++;
+            }
+            else {
+                console.log('removed item', oldIndex, newIndex);
+                // new removed
+                result.push({action: ITEM_REMOVED, item: oldList[oldIndex], pos: oldIndex});
+                oldIndex++;
+            }
+        }
+    }
+    console.log('----', oldIndex, newIndex);
+    while(oldIndex < oldList.length) {
+        if (!moved.has(oldList[oldIndex][matchBy])) {
+            console.log('removed item', oldIndex, newIndex, moved, oldList[oldIndex][matchBy]);
+            result.push({action: ITEM_REMOVED, item: oldList[oldIndex], pos: oldIndex});
+        }
+        oldIndex++;
+    }
+    while(newIndex < newList.length) {
+        console.log('new item', oldIndex, newIndex);
+        result.push({action: ITEM_ADDED, item: newList[newIndex], pos: newIndex});
+        newIndex++;
+    }
+
+    return result;
+}
