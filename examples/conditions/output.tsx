@@ -7,7 +7,7 @@ interface ViewState {
 }
 
 export default function render(viewState: ViewState) {
-    let lastViewState = viewState;
+    let lastViewState = {text1: '', text2: '', cond: false};
     let root = document.createElement('div');
     let rootKindergarten = new Kindergarten(root)
     let group1 = rootKindergarten.newGroup();
