@@ -13,6 +13,7 @@ export function listCompare<T>(oldList: Array<T>, newList: Array<T>, matchBy: st
     let oldKeys = new Set(oldList.map(_ => _[matchBy]));
     let newKeys = new Set(newList.map(_ => _[matchBy]));
     let moved = {};
+    let numRemoved = 0;
 
     let oldIndex = 0;
     let newIndex = 0;
@@ -20,8 +21,8 @@ export function listCompare<T>(oldList: Array<T>, newList: Array<T>, matchBy: st
     const stepOldIndex = () => {
         oldIndex++;
         while (oldIndex < oldList.length && !!moved[oldList[oldIndex][matchBy]]) {
-//            console.log('stepOldIndex', oldIndex)
-            moved[oldList[oldIndex][matchBy]].fromPos = oldIndex;
+           // console.log('stepOldIndex', oldIndex)
+            moved[oldList[oldIndex][matchBy]].fromPos = oldIndex - numRemoved;
             oldIndex++;
         }
     };
@@ -29,7 +30,7 @@ export function listCompare<T>(oldList: Array<T>, newList: Array<T>, matchBy: st
     let result = [];
     while(newIndex < newList.length && oldIndex < oldList.length) {
         if (oldList[oldIndex][matchBy] === newList[newIndex][matchBy]) {
-//            console.log('same', oldIndex, newIndex)
+           // console.log('same', oldIndex, newIndex)
             newIndex++;
             stepOldIndex();
         }
@@ -37,33 +38,35 @@ export function listCompare<T>(oldList: Array<T>, newList: Array<T>, matchBy: st
             let newHasOldItem = newKeys.has(oldList[oldIndex][matchBy]);
             let oldHasNewItem = oldKeys.has(newList[newIndex][matchBy]);
             if (newHasOldItem && oldHasNewItem) {
-//                console.log('move', oldIndex, newIndex)
+               // console.log('move', oldIndex, newIndex)
                 let movedItemInstruction = {action: ITEM_MOVED, item: newList[newIndex], pos: newIndex};
                 result.push(movedItemInstruction);
                 moved[newList[newIndex][matchBy]] = movedItemInstruction;
                 newIndex++;
             }
             else if (newHasOldItem) {
-//                console.log('new', oldIndex, newIndex)
+               // console.log('new', oldIndex, newIndex)
                 // new item
                 result.push({action: ITEM_ADDED, item: newList[newIndex], pos: newIndex});
                 newIndex++;
             }
             else {
-//                console.log('remove', oldIndex, newIndex)
+               // console.log('remove', oldIndex, newIndex)
                 // new removed
                 result.push({action: ITEM_REMOVED, item: oldList[oldIndex], pos: oldIndex});
                 stepOldIndex();
+                numRemoved++;
             }
         }
     }
-//    console.log('----', oldIndex, newIndex)
+   // console.log('----', oldIndex, newIndex)
     while(oldIndex < oldList.length) {
         if (!moved[oldList[oldIndex][matchBy]]) {
+            numRemoved++;
             result.push({action: ITEM_REMOVED, item: oldList[oldIndex], pos: oldIndex});
         }
         else {
-            moved[oldList[oldIndex][matchBy]].fromPos = oldIndex;
+            moved[oldList[oldIndex][matchBy]].fromPos = oldIndex - numRemoved;
         }
         oldIndex++;
     }
@@ -72,5 +75,6 @@ export function listCompare<T>(oldList: Array<T>, newList: Array<T>, matchBy: st
         newIndex++;
     }
 
+    console.log('listCompare', oldList, newList, result)
     return result;
 }
