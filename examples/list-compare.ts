@@ -75,6 +75,6 @@ export function listCompare<T>(oldList: Array<T>, newList: Array<T>, matchBy: st
         newIndex++;
     }
 
-    console.log('listCompare', oldList, newList, result)
+//    console.log('listCompare', oldList, newList, result)
     return result;
 }
