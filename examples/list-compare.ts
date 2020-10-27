@@ -17,33 +17,47 @@ export function listCompare<T>(oldList: Array<T>, newList: Array<T>, matchBy: st
     let oldIndex = 0;
     let newIndex = 0;
 
+    const stepOldIndex = () => {
+        oldIndex++;
+        while (oldIndex < oldList.length && !!moved[oldList[oldIndex][matchBy]]) {
+//            console.log('stepOldIndex', oldIndex)
+            moved[oldList[oldIndex][matchBy]].fromPos = oldIndex;
+            oldIndex++;
+        }
+    };
+
     let result = [];
     while(newIndex < newList.length && oldIndex < oldList.length) {
         if (oldList[oldIndex][matchBy] === newList[newIndex][matchBy]) {
+//            console.log('same', oldIndex, newIndex)
             newIndex++;
-            oldIndex++;
+            stepOldIndex();
         }
         else {
             let newHasOldItem = newKeys.has(oldList[oldIndex][matchBy]);
             let oldHasNewItem = oldKeys.has(newList[newIndex][matchBy]);
             if (newHasOldItem && oldHasNewItem) {
+//                console.log('move', oldIndex, newIndex)
                 let movedItemInstruction = {action: ITEM_MOVED, item: newList[newIndex], pos: newIndex};
                 result.push(movedItemInstruction);
                 moved[newList[newIndex][matchBy]] = movedItemInstruction;
                 newIndex++;
             }
             else if (newHasOldItem) {
+//                console.log('new', oldIndex, newIndex)
                 // new item
                 result.push({action: ITEM_ADDED, item: newList[newIndex], pos: newIndex});
                 newIndex++;
             }
             else {
+//                console.log('remove', oldIndex, newIndex)
                 // new removed
                 result.push({action: ITEM_REMOVED, item: oldList[oldIndex], pos: oldIndex});
-                oldIndex++;
+                stepOldIndex();
             }
         }
     }
+//    console.log('----', oldIndex, newIndex)
     while(oldIndex < oldList.length) {
         if (!moved[oldList[oldIndex][matchBy]]) {
             result.push({action: ITEM_REMOVED, item: oldList[oldIndex], pos: oldIndex});

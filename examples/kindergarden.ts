@@ -1,6 +1,6 @@
 export class KindergartenGroup {
     private kindergarten: Kindergarten;
-    children: Set<HTMLElement>;
+    children: Set<Node>;
 
     constructor(kindergarten: Kindergarten) {
         this.kindergarten = kindergarten;
@@ -19,7 +19,7 @@ export class KindergartenGroup {
         this.children.add(node);
     }
 
-    removeNode(node: HTMLElement) {
+    removeNode(node: Node) {
         if (this.children.has(node)) {
             this.kindergarten.parentNode.removeChild(node);
             this.children.delete(node);
