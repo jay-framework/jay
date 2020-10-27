@@ -52,10 +52,10 @@ export default function render(viewState: ViewState) {
                 group1.ensureNode(createDiv(instruction.item), instruction.pos)
             }
             else if (instruction.action === ITEM_REMOVED) {
-
+                group1.removeNodeAt(instruction.pos)
             }
             else {
-                // item moved
+                group1.moveNode(instruction.fromPos, instruction.pos)
             }
         })
     };

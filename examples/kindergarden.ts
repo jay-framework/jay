@@ -25,6 +25,15 @@ export class KindergartenGroup {
             this.children.delete(node);
         }
     }
+
+    removeNodeAt(pos: number) {
+        let offset = this.kindergarten.getOffsetFor(this);
+        this.removeNode(this.kindergarten.parentNode.childNodes[offset+pos]);
+    }
+
+    moveNode(from: number, to: number) {
+
+    }
 }
 
 
