@@ -1,4 +1,4 @@
-import {END, RandomAccessLinkedList} from '../../examples/random-access-linked-list';
+import {BoF, EoF, RandomAccessLinkedList} from '../../examples/random-access-linked-list';
 
 const item = (id, val) => {return {id, val}};
 
@@ -8,6 +8,16 @@ const itemC = item('c', 789);
 const itemD = item('d', 1234);
 const itemE = item('e', 2345);
 const itemX = item('x', 2345);
+
+const listToArray = (list) => {
+    let first = list.first();
+    let res = [];
+    while (first != EoF) {
+        res.push(first.value);
+        first = first.next;
+    }
+    return res;
+}
 
 describe('random-access-linked-list', () => {
     it('create a list from array', () => {
@@ -20,7 +30,19 @@ describe('random-access-linked-list', () => {
         expect(list.first().next.next.value).toBe(itemC);
         expect(list.first().next.next.next.value).toBe(itemD);
         expect(list.first().next.next.next.next.value).toBe(itemE);
-        expect(list.first().next.next.next.next.next).toBe(END);
+        expect(list.first().next.next.next.next.next).toBe(EoF);
+    });
+
+    it('create a 2 way list from array', () => {
+        const arr = [itemA, itemB, itemC, itemD, itemE];
+
+        const list = new RandomAccessLinkedList(arr, 'id');
+
+        expect(list.first().prev).toBe(BoF);
+        expect(list.first().next.prev.value).toBe(itemA);
+        expect(list.first().next.next.prev.value).toBe(itemB);
+        expect(list.first().next.next.next.prev.value).toBe(itemC);
+        expect(list.first().next.next.next.next.prev.value).toBe(itemD);
     });
 
     it('allows random access to middle of the list by id', () => {
@@ -31,7 +53,7 @@ describe('random-access-linked-list', () => {
         expect(list.get(itemC.id).value).toBe(itemC);
         expect(list.get(itemC.id).next.value).toBe(itemD);
         expect(list.get(itemC.id).next.next.value).toBe(itemE);
-        expect(list.get(itemC.id).next.next.next).toBe(END);
+        expect(list.get(itemC.id).next.next.next).toBe(EoF);
     });
 
     it('supports has', () => {
@@ -53,5 +75,15 @@ describe('random-access-linked-list', () => {
         expect(list.distance(list.get(itemB.id), list.get(itemE.id))).toBe(3);
         expect(list.distance(list.get(itemC.id), list.get(itemA.id))).toBe(-1);
         expect(list.distance(list.get(itemC.id), list.get(itemX.id))).toBe(-1);
+    });
+
+    it('support add', () => {
+        const arr = [itemA, itemB, itemC];
+
+        const list = new RandomAccessLinkedList(arr, 'id');
+        list.add(itemD, list.get(itemB.id));
+
+        let listAsArray = listToArray(list);
+        expect(listAsArray).toEqual([itemA, itemD, itemB, itemC]);
     });
 });
