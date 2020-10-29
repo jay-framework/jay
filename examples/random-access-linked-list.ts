@@ -30,4 +30,17 @@ export class RandomAccessLinkedList<T> {
         return this._map[id]
     }
 
+    move(itemToMove: LinkedListItem<T>, toBefore:LinkedListItem<T>) {
+
+    }
+
+    distance(from: LinkedListItem<T>, to: LinkedListItem<T>) {
+        let count = 0;
+        while (from !== to && from !== END) {
+            count++;
+            from = from.next;
+        }
+        return from !== END?count: -1;
+    }
+
 }

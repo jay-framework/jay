@@ -42,4 +42,16 @@ describe('random-access-linked-list', () => {
         expect(list.has(itemC.id)).toBe(true);
         expect(list.has(itemX.id)).toBe(false);
     });
+
+    it('supports has', () => {
+        const arr = [itemA, itemB, itemC, itemD, itemE];
+
+        const list = new RandomAccessLinkedList(arr, 'id');
+
+        expect(list.distance(list.get(itemA.id), list.get(itemC.id))).toBe(2);
+        expect(list.distance(list.get(itemC.id), list.get(itemE.id))).toBe(2);
+        expect(list.distance(list.get(itemB.id), list.get(itemE.id))).toBe(3);
+        expect(list.distance(list.get(itemC.id), list.get(itemA.id))).toBe(-1);
+        expect(list.distance(list.get(itemC.id), list.get(itemX.id))).toBe(-1);
+    });
 });
