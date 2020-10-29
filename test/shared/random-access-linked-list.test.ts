@@ -86,4 +86,14 @@ describe('random-access-linked-list', () => {
         let listAsArray = listToArray(list);
         expect(listAsArray).toEqual([itemA, itemD, itemB, itemC]);
     });
+
+    it('support add first', () => {
+        const arr = [itemA, itemB, itemC];
+
+        const list = new RandomAccessLinkedList(arr, 'id');
+        list.add(itemD, list.get(itemA.id));
+
+        let listAsArray = listToArray(list);
+        expect(listAsArray).toEqual([itemD, itemA, itemB, itemC]);
+    });
 });
