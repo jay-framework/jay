@@ -43,7 +43,7 @@ export default function render(viewState: ViewState) {
         coolRoot.appendChild(span2);
         coolRoot.appendChild(span3);
         return coolRoot;
-    }
+    };
 
     const reconsileCollection = (items) => {
         let instructions = listCompare(lastViewState.items, items, 'id');

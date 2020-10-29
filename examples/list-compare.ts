@@ -2,6 +2,9 @@ export const ITEM_ADDED = 'IA';
 export const ITEM_REMOVED = 'IR';
 export const ITEM_MOVED = 'IM';
 
+const MOVED_FORWARD_NONE = 0;
+const MOVED_FORWARD_IN_SEQUENCE = 1;
+
 interface MatchResult<T> {
     action: typeof ITEM_ADDED | typeof ITEM_MOVED | typeof ITEM_REMOVED,
     item: T,
@@ -75,6 +78,33 @@ export function listCompare<T>(oldList: Array<T>, newList: Array<T>, matchBy: st
         newIndex++;
     }
 
-//    console.log('listCompare', oldList, newList, result)
+    // {action: ITEM_MOVED, item: itemC, pos: 1, fromPos: 2},
+    // {action: ITEM_MOVED, item: itemD, pos: 2, fromPos: 3},
+    // {action: ITEM_MOVED, item: itemE, pos: 3, fromPos: 4}
+    console.log(result);
+    // optimize moves
+    let movedForwardSequenceEnd: number;
+    let movedForwardState = MOVED_FORWARD_NONE;
+    for (let i=result.length-1; i >= 0; i--) {
+        if (movedForwardState === MOVED_FORWARD_NONE && result[i].action === ITEM_MOVED && result[i].pos + 1 === result[i].fromPos) {
+            movedForwardState = MOVED_FORWARD_IN_SEQUENCE;
+            movedForwardSequenceEnd = i;
+        }
+        else if (movedForwardState === MOVED_FORWARD_IN_SEQUENCE && !(result[i].action === ITEM_MOVED && result[i].pos + 1 === result[i].fromPos)) {
+            // completed sequence
+            console.log('y', i, movedForwardSequenceEnd);
+            if ((i+1 !== movedForwardSequenceEnd)) {
+                let newMove = {action: ITEM_MOVED, item: oldList[result[i].pos], pos: result[movedForwardSequenceEnd].fromPos, fromPos: result[i].pos};
+                result.splice(i, movedForwardSequenceEnd+1, newMove)
+            }
+            movedForwardState = MOVED_FORWARD_NONE;
+        }
+    }
+    if (movedForwardState === MOVED_FORWARD_IN_SEQUENCE && (0 !== movedForwardSequenceEnd)) {
+        // completed sequence
+        console.log('x', 0, movedForwardSequenceEnd);
+        let newMove = {action: ITEM_MOVED, item: oldList[result[0].pos], pos: result[movedForwardSequenceEnd].fromPos, fromPos: result[0].pos};
+        result.splice(0, movedForwardSequenceEnd+1, newMove)
+    }
     return result;
 }

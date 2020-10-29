@@ -73,18 +73,31 @@ describe('list-compare', () => {
         expect(matchResults).toEqual([{action: ITEM_MOVED, item: itemC, pos: 1, fromPos: 2}])
     });
 
-    it.skip('should return move instruction a moved item forward', () =>{
+    it('should return move instruction a moved item forward', () =>{
         let oldList = [itemA, itemB, itemC, itemD, itemE];
         let newList = [itemA, itemC, itemD, itemE, itemB];
 
         let matchResults = listCompare(oldList, newList, 'id');
 
-        expect(matchResults.length).toBe(3);
+        expect(matchResults.length).toBe(1);
         expect(matchResults).toEqual([
-            {action: ITEM_MOVED, item: itemC, pos: 1, fromPos: 2},
-            {action: ITEM_MOVED, item: itemD, pos: 2, fromPos: 3},
-            {action: ITEM_MOVED, item: itemE, pos: 3, fromPos: 4}
+            {action: ITEM_MOVED, item: itemB, pos: 4, fromPos: 1}
             ])
+    });
+
+    it.only('should return move instruction for multiple moved items forward', () =>{
+        let oldList = [itemA, itemB, itemC, itemD, itemE];
+        let newList = [itemA, itemC, itemE, itemD, itemB];
+
+        let matchResults = listCompare(oldList, newList, 'id');
+
+        console.log(matchResults);
+        expect(matchResults.length).toBe(2);
+        expect(matchResults).toEqual([
+            {action: ITEM_MOVED, item: itemC, pos: 1, fromPos: 2},  // new index 1 -> 2    old 1
+            {action: ITEM_MOVED, item: itemE, pos: 2, fromPos: 4},  // new index 2 -> 3  old 1
+            {action: ITEM_MOVED, item: itemD, pos: 3, fromPos: 3}   //
+        ])
     });
 
     it('should return move instruction a moved item backward', () =>{
@@ -116,7 +129,7 @@ describe('list-compare', () => {
         let newList = [item18, item39, item21, item42, item3, item48];
 
         let matchResults = listCompare(oldList, newList, 'id');
-        console.log(matchResults)
+
         expect(matchResults.length).toBe(2);
         expect(matchResults).toEqual([
             {action: ITEM_MOVED, item: item39, pos: 1, fromPos: 3},
@@ -129,7 +142,7 @@ describe('list-compare', () => {
         let newList = [item18, item21, item42, item39];
 
         let matchResults = listCompare(oldList, newList, 'id');
-        console.log(matchResults)
+
         expect(matchResults.length).toBe(2);
         expect(matchResults).toEqual([
             {action: ITEM_REMOVED, item: item36, pos: 2},
