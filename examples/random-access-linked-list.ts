@@ -48,10 +48,20 @@ export class RandomAccessLinkedList<T> {
     }
 
     remove(item: LinkedListItem<T>) {
+        delete this._map[this._matchBy];
         if (item.prev === BoF) {
-            this._first = item.next;
-            if (item.next !== EoF)
+            if (item.next !== EoF) {
                 item.next.prev = BoF;
+                this._first = item.next;
+            }
+            else {
+                this._first = EoF;
+                this._last = BoF;
+            }
+        }
+        else if (item.next === EoF) {
+            this._last = item.prev;
+            item.prev.next = EoF;
         }
         else {
             item.prev.next = item.next;

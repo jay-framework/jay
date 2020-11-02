@@ -94,6 +94,7 @@ describe('random-access-linked-list', () => {
 
         let listAsArray = listToArray(list);
         expect(listAsArray).toEqual([itemA, itemD, itemB, itemC]);
+        expect(list.has(itemD.id)).toBeTruthy;
         expect(list.get(itemD.id).next.value).toBe(itemB);
         expect(list.get(itemD.id).prev.value).toBe(itemA);
         expect(list.get(itemA.id).next.value).toBe(itemD);
@@ -108,9 +109,11 @@ describe('random-access-linked-list', () => {
 
         let listAsArray = listToArray(list);
         expect(listAsArray).toEqual([itemD, itemA, itemB, itemC]);
+        expect(list.has(itemD.id)).toBeTruthy;
         expect(list.get(itemD.id).next.value).toBe(itemA);
         expect(list.get(itemD.id).prev).toBe(BoF);
         expect(list.get(itemA.id).prev.value).toBe(itemD);
+        expect(list.first().value).toBe(itemD);
     });
 
     it('support add last', () => {
@@ -121,9 +124,11 @@ describe('random-access-linked-list', () => {
 
         let listAsArray = listToArray(list);
         expect(listAsArray).toEqual([itemA, itemB, itemC, itemD]);
+        expect(list.has(itemD.id)).toBeTruthy;
         expect(list.get(itemD.id).next).toBe(EoF);
         expect(list.get(itemD.id).prev.value).toBe(itemC);
         expect(list.get(itemC.id).next.value).toBe(itemD);
+        expect(list.last().value).toBe(itemD);
     });
 
     it('support add on empty list', () => {
@@ -133,6 +138,7 @@ describe('random-access-linked-list', () => {
         list.add(itemD, EoF);
         let listAsArray = listToArray(list);
         expect(listAsArray).toEqual([itemD]);
+        expect(list.has(itemD.id)).toBeTruthy;
         expect(list.get(itemD.id).next).toBe(EoF);
         expect(list.get(itemD.id).prev).toBe(BoF);
     });
@@ -145,6 +151,35 @@ describe('random-access-linked-list', () => {
 
         let listAsArray = listToArray(list);
         expect(listAsArray).toEqual([itemA, itemC]);
+        expect(list.get(itemA.id).next.value).toBe(itemC);
+        expect(list.get(itemC.id).prev.value).toBe(itemA);
+        expect(list.has(itemB.id)).toBeFalsy;
+    });
+
+    it('support remove first', () => {
+        const arr = [itemA, itemB, itemC];
+
+        const list = new RandomAccessLinkedList(arr, 'id');
+        list.remove(list.get(itemA.id));
+
+        let listAsArray = listToArray(list);
+        expect(listAsArray).toEqual([itemB, itemC]);
+        expect(list.get(itemB.id).prev).toBe(BoF);
+        expect(list.first().value).toBe(itemB);
+        expect(list.has(itemA.id)).toBeFalsy;
+    });
+
+    it('support remove last', () => {
+        const arr = [itemA, itemB, itemC];
+
+        const list = new RandomAccessLinkedList(arr, 'id');
+        list.remove(list.get(itemC.id));
+
+        let listAsArray = listToArray(list);
+        expect(listAsArray).toEqual([itemA, itemB]);
+        expect(list.get(itemB.id).next).toBe(EoF);
+        expect(list.last().value).toBe(itemB);
+        expect(list.has(itemC.id)).toBeFalsy;
     });
 
     it('support remove all', () => {
@@ -157,5 +192,10 @@ describe('random-access-linked-list', () => {
 
         let listAsArray = listToArray(list);
         expect(listAsArray).toEqual([]);
+        expect(list.first()).toBe(EoF);
+        expect(list.last()).toBe(BoF);
+        expect(list.has(itemA.id)).toBeFalsy;
+        expect(list.has(itemB.id)).toBeFalsy;
+        expect(list.has(itemC.id)).toBeFalsy;
     });
 });
