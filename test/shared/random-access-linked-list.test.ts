@@ -45,6 +45,15 @@ describe('random-access-linked-list', () => {
         expect(list.first().next.next.next.next.prev.value).toBe(itemD);
     });
 
+    it('allows direct access to last', () => {
+        const arr = [itemA, itemB, itemC, itemD, itemE];
+
+        const list = new RandomAccessLinkedList(arr, 'id');
+
+        expect(list.last().value).toBe(itemE);
+        expect(list.last().prev.value).toBe(itemD);
+    });
+
     it('allows random access to middle of the list by id', () => {
         const arr = [itemA, itemB, itemC, itemD, itemE];
 
@@ -85,6 +94,10 @@ describe('random-access-linked-list', () => {
 
         let listAsArray = listToArray(list);
         expect(listAsArray).toEqual([itemA, itemD, itemB, itemC]);
+        expect(list.get(itemD.id).next.value).toBe(itemB);
+        expect(list.get(itemD.id).prev.value).toBe(itemA);
+        expect(list.get(itemA.id).next.value).toBe(itemD);
+        expect(list.get(itemB.id).prev.value).toBe(itemD);
     });
 
     it('support add first', () => {
@@ -95,5 +108,54 @@ describe('random-access-linked-list', () => {
 
         let listAsArray = listToArray(list);
         expect(listAsArray).toEqual([itemD, itemA, itemB, itemC]);
+        expect(list.get(itemD.id).next.value).toBe(itemA);
+        expect(list.get(itemD.id).prev).toBe(BoF);
+        expect(list.get(itemA.id).prev.value).toBe(itemD);
+    });
+
+    it('support add last', () => {
+        const arr = [itemA, itemB, itemC];
+
+        const list = new RandomAccessLinkedList(arr, 'id');
+        list.add(itemD, EoF);
+
+        let listAsArray = listToArray(list);
+        expect(listAsArray).toEqual([itemA, itemB, itemC, itemD]);
+        expect(list.get(itemD.id).next).toBe(EoF);
+        expect(list.get(itemD.id).prev.value).toBe(itemC);
+        expect(list.get(itemC.id).next.value).toBe(itemD);
+    });
+
+    it('support add on empty list', () => {
+        const arr = [];
+
+        const list = new RandomAccessLinkedList(arr, 'id');
+        list.add(itemD, EoF);
+        let listAsArray = listToArray(list);
+        expect(listAsArray).toEqual([itemD]);
+        expect(list.get(itemD.id).next).toBe(EoF);
+        expect(list.get(itemD.id).prev).toBe(BoF);
+    });
+
+    it('support remove', () => {
+        const arr = [itemA, itemB, itemC];
+
+        const list = new RandomAccessLinkedList(arr, 'id');
+        list.remove(list.get(itemB.id));
+
+        let listAsArray = listToArray(list);
+        expect(listAsArray).toEqual([itemA, itemC]);
+    });
+
+    it('support remove all', () => {
+        const arr = [itemA, itemB, itemC];
+
+        const list = new RandomAccessLinkedList(arr, 'id');
+        list.remove(list.get(itemB.id));
+        list.remove(list.get(itemA.id));
+        list.remove(list.get(itemC.id));
+
+        let listAsArray = listToArray(list);
+        expect(listAsArray).toEqual([]);
     });
 });
