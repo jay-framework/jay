@@ -198,4 +198,72 @@ describe('random-access-linked-list', () => {
         expect(list.has(itemB.id)).toBeFalsy;
         expect(list.has(itemC.id)).toBeFalsy;
     });
+
+    it('support move forward', () => {
+        const arr = [itemA, itemB, itemC, itemD, itemE];
+
+        const list = new RandomAccessLinkedList(arr, 'id');
+        list.move(list.get(itemB.id), list.get(itemE.id));
+
+        let listAsArray = listToArray(list);
+        expect(listAsArray).toEqual([itemA, itemC, itemD, itemB, itemE]);
+
+        expect(list.get(itemA.id).next.value).toBe(itemC);
+        expect(list.get(itemC.id).prev.value).toBe(itemA);
+        expect(list.get(itemD.id).next.value).toBe(itemB);
+        expect(list.get(itemB.id).next.value).toBe(itemE);
+        expect(list.get(itemB.id).prev.value).toBe(itemD);
+        expect(list.get(itemE.id).prev.value).toBe(itemB);
+    });
+
+    it('support move to last', () => {
+        const arr = [itemA, itemB, itemC, itemD, itemE];
+
+        const list = new RandomAccessLinkedList(arr, 'id');
+        list.move(list.get(itemB.id), EoF);
+
+        let listAsArray = listToArray(list);
+        expect(listAsArray).toEqual([itemA, itemC, itemD, itemE, itemB]);
+
+        expect(list.get(itemA.id).next.value).toBe(itemC);
+        expect(list.get(itemC.id).prev.value).toBe(itemA);
+        expect(list.get(itemE.id).next.value).toBe(itemB);
+        expect(list.get(itemB.id).next).toBe(EoF);
+        expect(list.get(itemB.id).prev.value).toBe(itemE);
+        expect(list.last().value).toBe(itemB);
+    });
+
+    it('support move backwards', () => {
+        const arr = [itemA, itemB, itemC, itemD, itemE];
+
+        const list = new RandomAccessLinkedList(arr, 'id');
+        list.move(list.get(itemD.id), list.get(itemB.id));
+
+        let listAsArray = listToArray(list);
+        expect(listAsArray).toEqual([itemA, itemD, itemB, itemC, itemE]);
+
+        expect(list.get(itemA.id).next.value).toBe(itemD);
+        expect(list.get(itemD.id).next.value).toBe(itemB);
+        expect(list.get(itemD.id).prev.value).toBe(itemA);
+        expect(list.get(itemB.id).prev.value).toBe(itemD);
+        expect(list.get(itemC.id).next.value).toBe(itemE);
+        expect(list.get(itemE.id).prev.value).toBe(itemC);
+    });
+
+    it('support move to first', () => {
+        const arr = [itemA, itemB, itemC, itemD, itemE];
+
+        const list = new RandomAccessLinkedList(arr, 'id');
+        list.move(list.get(itemD.id), list.get(itemA.id));
+
+        let listAsArray = listToArray(list);
+        expect(listAsArray).toEqual([itemD, itemA, itemB, itemC, itemE]);
+
+        expect(list.get(itemD.id).prev).toBe(BoF);
+        expect(list.get(itemD.id).next.value).toBe(itemA);
+        expect(list.get(itemA.id).prev.value).toBe(itemD);
+        expect(list.get(itemC.id).next.value).toBe(itemE);
+        expect(list.get(itemE.id).prev.value).toBe(itemC);
+        expect(list.first().value).toBe(itemD);
+    });
 });

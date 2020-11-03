@@ -44,7 +44,8 @@ export class RandomAccessLinkedList<T> {
     }
 
     move(itemToMove: LinkedListItem<T>, toBefore:LinkedListItem<T>) {
-
+        this.remove(itemToMove);
+        this.add(itemToMove.value, toBefore);
     }
 
     remove(item: LinkedListItem<T>) {
