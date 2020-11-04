@@ -208,88 +208,6 @@ describe('list-compare', () => {
         expect(mutatedList).toEqual(newList);
     });
 
-    it.skip('...', () => {
-        let oldList = [
-            { id: 'a1734' }, { id: 'a1776' }, { id: 'a1759' }, { id: 'a1717' },
-            { id: 'a1733' }, { id: 'a1774' }, { id: 'a1778' }, { id: 'a1725' },
-            { id: 'a1783' }, { id: 'a1654' }, { id: 'a1744' }, { id: 'a1728' },
-            { id: 'a1780' }, { id: 'a1712' }, { id: 'a1625' }, { id: 'a1662' },
-            { id: 'a1651' }, { id: 'a1557' }, { id: 'a1681' }, { id: 'a1700' },
-            { id: 'a1692' }, { id: 'a1771' }, { id: 'a1768' }, { id: 'a1772' },
-            { id: 'a1745' }, { id: 'a1754' }, { id: 'a1782' }, { id: 'a1732' },
-            { id: 'a1770' }, { id: 'a1760' }, { id: 'a1752' }, { id: 'a1699' },
-            { id: 'a1749' }, { id: 'a1716' }, { id: 'a1764' }, { id: 'a1706' },
-            { id: 'a1688' }, { id: 'a1676' }, { id: 'a1698' }, { id: 'a1687' },
-            { id: 'a1736' }, { id: 'a1668' }, { id: 'a1689' }, { id: 'a1735' },
-            { id: 'a1755' }, { id: 'a1758' }, { id: 'a1767' }, { id: 'a1773' },
-            { id: 'a1730' }, { id: 'a1746' }, { id: 'a1747' }, { id: 'a1695' },
-            { id: 'a1616' }, { id: 'a1683' }, { id: 'a1634' }, { id: 'a1705' },
-            { id: 'a1781' }, { id: 'a1443' }, { id: 'a1756' }, { id: 'a1684' },
-            { id: 'a1779' }, { id: 'a1722' }, { id: 'a1667' }, { id: 'a1631' },
-            { id: 'a1551' }, { id: 'a1761' }, { id: 'a1655' }, { id: 'a1757' },
-            { id: 'a1685' }
-        ];
-
-        // let oldList = [
-        //     { id: 'a1776' }, { id: 'a1822' }, { id: 'a1717' }, { id: 'a1770' }, // 3
-        //     { id: 'a1813' }, { id: 'a1778' }, { id: 'a1801' }, { id: 'a1810' }, // 7
-        //     { id: 'a1812' }, { id: 'a1808' }, { id: 'a1654' }, { id: 'a1728' }, // 11
-        //     { id: 'a1754' }, { id: 'a1784' }, { id: 'a1816' }, { id: 'a1712' }, // 15
-        //     { id: 'a1758' }, { id: 'a1655' }, { id: 'a1662' }, { id: 'a1814' }, // 19
-        //     { id: 'a1681' }, { id: 'a1793' }, { id: 'a1700' }, { id: 'a1787' }, // 23
-        //     { id: 'a1716' }, { id: 'a1824' }, { id: 'a1692' }, { id: 'a1818' }, // 27
-        //     { id: 'a1760' }, { id: 'a1551' }, { id: 'a1819' }, { id: 'a1772' }, // 31
-        //     { id: 'a1805' }, { id: 'a1782' }, { id: 'a1732' }, { id: 'a1752' }, // 35
-        //     { id: 'a1823' }, { id: 'a1687' }, { id: 'a1705' }, { id: 'a1756' }, // 39
-        //     { id: 'a1764' }, { id: 'a1706' }, { id: 'a1807' }, { id: 'a1788' }, // 43
-        //     { id: 'a1676' }, { id: 'a1736' }, { id: 'a1689' }, { id: 'a1735' }, // 47
-        //     { id: 'a1557' }, { id: 'a1809' }, { id: 'a1699' }, { id: 'a1767' }, // 51
-        //     { id: 'a1668' }, { id: 'a1730' }, { id: 'a1746' }, { id: 'a1794' }, // 55
-        //     { id: 'a1792' }, { id: 'a1773' }, { id: 'a1747' }, { id: 'a1695' }, // 59
-        //     { id: 'a1616' }, { id: 'a1771' }, { id: 'a1781' }, { id: 'a1779' }, // 63
-        //     { id: 'a1722' }, { id: 'a1811' }, { id: 'a1821' }, { id: 'a1817' }, // 67
-        //     { id: 'a1761' }, { id: 'a1790' }, { id: 'a1774' }, { id: 'a1815' }, // 71
-        //     { id: 'a1800' }, { id: 'a1780' }, { id: 'a1820' }, { id: 'a1803' }, // 75
-        //     { id: 'a1757' }, { id: 'a1634' }, { id: 'a1667' }, { id: 'a1685' }, /// 79
-        //     { id: 'a1798' }, { id: 'a1745' },
-        //
-        //     { id: 'a1749' }, { id: 'a1688' }, { id: 'a1698' }, // 82
-        //     { id: 'a1755' }, { id: 'a1683' },  // 84
-        //     { id: 'a1443' }, { id: 'a1684' }, // 86
-        //     { id: 'a1631' },
-        // ];
-
-        let newList = [
-            { id: 'a1776' }, { id: 'a1822' }, { id: 'a1717' }, { id: 'a1770' },
-            { id: 'a1813' }, { id: 'a1778' }, { id: 'a1801' }, { id: 'a1810' },
-            { id: 'a1812' }, { id: 'a1808' }, { id: 'a1654' }, { id: 'a1728' },
-            { id: 'a1754' }, { id: 'a1784' }, { id: 'a1816' }, { id: 'a1712' },
-            { id: 'a1758' }, { id: 'a1655' }, { id: 'a1662' }, { id: 'a1814' },
-            { id: 'a1681' }, { id: 'a1793' }, { id: 'a1700' }, { id: 'a1787' },
-            { id: 'a1716' }, { id: 'a1824' }, { id: 'a1692' }, { id: 'a1818' },
-            { id: 'a1760' }, { id: 'a1551' }, { id: 'a1819' }, { id: 'a1772' },
-            { id: 'a1805' }, { id: 'a1782' }, { id: 'a1732' }, { id: 'a1752' },
-            { id: 'a1823' }, { id: 'a1687' }, { id: 'a1705' }, { id: 'a1756' },
-            { id: 'a1764' }, { id: 'a1706' }, { id: 'a1807' }, { id: 'a1788' },
-            { id: 'a1676' }, { id: 'a1736' }, { id: 'a1689' }, { id: 'a1735' },
-            { id: 'a1557' }, { id: 'a1809' }, { id: 'a1699' }, { id: 'a1767' },
-            { id: 'a1668' }, { id: 'a1730' }, { id: 'a1746' }, { id: 'a1796' },
-            { id: 'a1792' }, { id: 'a1773' }, { id: 'a1747' }, { id: 'a1695' },
-            { id: 'a1616' }, { id: 'a1771' }, { id: 'a1781' }, { id: 'a1779' },
-            { id: 'a1722' }, { id: 'a1811' }, { id: 'a1821' }, { id: 'a1817' },
-            { id: 'a1761' }, { id: 'a1790' }, { id: 'a1774' }, { id: 'a1815' },
-            { id: 'a1800' }, { id: 'a1780' }, { id: 'a1820' }, { id: 'a1803' },
-            { id: 'a1757' }, { id: 'a1634' }, { id: 'a1667' }, { id: 'a1685' },
-            { id: 'a1798' }, { id: 'a1745' }
-        ];
-
-        let matchResults = listCompare(oldList, newList, 'id');
-        console.log(matchResults)
-        let mutatedList = applyCompare(oldList, matchResults);
-        console.log(mutatedList, newList);
-        expect(mutatedList).toEqual(newList);
-    })
-
     describe('shake the shake', () => {
 
         let length = Math.floor(Math.random()*100)+10;
@@ -310,11 +228,9 @@ describe('list-compare', () => {
                 else if (action === 1) {
                     newArr.splice(pos, 1);
                 }
-                else {
+                else if (newArr.length > 1){
                     let pos2 = Math.floor(Math.random()*(newArr.length));
                     let x = newArr.splice(pos, 1);
-                    if (x[0] === undefined)
-                        console.log('******', x, i, pos, pos2, newArr.length)
                     newArr.splice(pos2, 0, x[0]);
                 }
             }
@@ -324,7 +240,6 @@ describe('list-compare', () => {
                 let mutatedList = applyCompare(arr, matchResults);
                 expect(mutatedList).toEqual(newArr);
             });
-           console.log(i, arr, newArr)
             arr = newArr;
         }
     })
