@@ -72,7 +72,6 @@ describe('list-compare', () => {
         let newList = [itemA, itemC];
 
         let matchResults = listCompare(oldList, newList, 'id');
-        process.stdout.write(require('util').inspect(matchResults) + '\n');
 
         expect(matchResults.length).toBe(1);
         expect(matchResults).toEqual([{action: ITEM_REMOVED, item: itemB, pos: 1}])
@@ -108,7 +107,7 @@ describe('list-compare', () => {
         expect(mutatedList).toEqual(newList);
     });
 
-    it('should return move instruction a moved item', () =>{
+    it('should return move instruction for a moved item', () =>{
         let oldList = [itemA, itemB, itemC];
         let newList = [itemA, itemC, itemB];
 
@@ -120,16 +119,31 @@ describe('list-compare', () => {
         expect(mutatedList).toEqual(newList);
     });
 
-    it.skip('should optimize move instruction a moved item forward', () =>{
+    it('should optimize move instruction a moved item forward', () =>{
         let oldList = [itemA, itemB, itemC, itemD, itemE];
         let newList = [itemA, itemC, itemD, itemE, itemB];
 
         let matchResults = listCompare(oldList, newList, 'id');
 
-        // expect(matchResults.length).toBe(1);
-        // expect(matchResults).toEqual([
-        //     {action: ITEM_MOVED, item: itemB, pos: 4, fromPos: 1}
-        //     ]);
+        expect(matchResults.length).toBe(1);
+        expect(matchResults).toEqual([
+            {action: ITEM_MOVED, pos: 4, fromPos: 1}
+            ]);
+        let mutatedList = applyCompare(oldList, matchResults);
+        expect(mutatedList).toEqual(newList);
+    });
+
+    it('should optimize multiple move instruction sequences', () =>{
+        let oldList = [itemA, itemB, itemC, itemD, itemE, item3, item18, item21, item36, item39];
+        let newList = [itemA, itemC, itemD, itemE, itemB, item3, item21, item36, item39, item18];
+
+        let matchResults = listCompare(oldList, newList, 'id');
+
+        expect(matchResults.length).toBe(2);
+        expect(matchResults).toEqual([
+            {action: ITEM_MOVED, pos: 4, fromPos: 1},
+            {action: ITEM_MOVED, pos: 9, fromPos: 6}
+        ]);
         let mutatedList = applyCompare(oldList, matchResults);
         expect(mutatedList).toEqual(newList);
     });
