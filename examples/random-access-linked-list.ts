@@ -3,21 +3,24 @@ export const EoF = Symbol('EoF');
 export const BoF = Symbol('BoF');
 
 export interface LinkedListItem<T> {
-    id: String,
+    id: string,
     value: T,
-    next: linkedListItem<T> | END,
-    prev: linkedListItem<T> | START,
+    next: LinkedListItem<T> | typeof EoF,
+    prev: LinkedListItem<T> | typeof BoF,
 }
 
 export class RandomAccessLinkedList<T> {
-    constructor(arr: Array<T>, matchBy: String) {
+    private _matchBy: string;
+    private _map: any;
+    private _last: LinkedListItem<T> | typeof BoF;
+    private _first: LinkedListItem<T> | typeof EoF;
+
+    constructor(arr: Array<T>, matchBy: string) {
         this._matchBy = matchBy;
         this._map = {};
         this._last = BoF;
-        this._first = arr.reduceRight((nextItem, obj) => {
-            let item = {id: obj[matchBy], value: obj}
-            item.next = nextItem;
-            item.prev = BoF;
+        this._first = arr.reduceRight((nextItem: LinkedListItem<T> | typeof EoF, obj: T): LinkedListItem<T> | typeof EoF => {
+            let item: LinkedListItem<T> = {id: obj[matchBy], value: obj, next: nextItem, prev: BoF};
             if (nextItem !== EoF)
                 nextItem.prev = item;
             if (this._last === BoF)
@@ -27,11 +30,11 @@ export class RandomAccessLinkedList<T> {
         }, EoF)
     }
 
-    first(): LinkedListItem<T> {
+    first(): LinkedListItem<T> | typeof EoF {
         return this._first;
     }
 
-    last(): LinkedListItem<T> {
+    last(): LinkedListItem<T> | typeof BoF {
         return this._last;
     }
 
@@ -70,38 +73,34 @@ export class RandomAccessLinkedList<T> {
         }         
     }
 
-    add(obj: T, beforeItem: LinkedListItem<T> = EoF) {
-        let newItem = {id: obj[this._matchBy], value: obj};
-        this._map[newItem.id] = newItem;
+    add(obj: T, beforeItem: LinkedListItem<T> | typeof EoF = EoF) {
+        let newItem: LinkedListItem<T>;
         if (this._first === EoF && this._last === BoF) {
+            newItem = {id: obj[this._matchBy], value: obj, prev: BoF, next: EoF};
             this._first = newItem;
             this._last = newItem;
-            newItem.prev = BoF;
-            newItem.next = EoF;
         }
         else if (beforeItem === EoF) {
-            newItem.next = EoF;
-            this._last.next = newItem;
-            newItem.prev = this._last;
+            newItem = {id: obj[this._matchBy], value: obj, prev: this._last, next: EoF};
+            (this._last as LinkedListItem<T>).next = newItem;
             this._last = newItem;
 
         }
         else if (beforeItem === this._first) {
-            newItem.next = beforeItem;
+            newItem = {id: obj[this._matchBy], value: obj, prev: BoF, next: beforeItem};
             this._first = newItem;
             beforeItem.prev = newItem;
-            newItem.prev = BoF;
         }
         else {
-            let itemBefore = beforeItem.prev;
-            newItem.next = beforeItem;
-            newItem.prev = itemBefore;
+            let itemBefore = beforeItem.prev as LinkedListItem<T>;
+            newItem = {id: obj[this._matchBy], value: obj, prev: itemBefore, next: beforeItem};
             itemBefore.next = newItem;
             beforeItem.prev = newItem;
         }
+        this._map[newItem.id] = newItem;
     }
 
-    distance(from: LinkedListItem<T>, to: LinkedListItem<T>) {
+    distance(from: LinkedListItem<T> | typeof EoF, to: LinkedListItem<T>) {
         let count = 0;
         while (from !== to && from !== EoF) {
             count++;
