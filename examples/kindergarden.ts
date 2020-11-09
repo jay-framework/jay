@@ -34,7 +34,13 @@ export class KindergartenGroup {
     moveNode(from: number, to: number) {
         let offset = this.kindergarten.getOffsetFor(this);
         let nodeToMove = this.kindergarten.parentNode.childNodes[offset+from];
-        this.kindergarten.parentNode.insertBefore(nodeToMove, this.kindergarten.parentNode.childNodes[offset + to]);
+        if (to > from)
+            to += 1;
+        if (this.kindergarten.parentNode.childNodes.length> offset + to)
+            this.kindergarten.parentNode.insertBefore(nodeToMove, this.kindergarten.parentNode.childNodes[offset + to]);
+        else {
+            this.kindergarten.parentNode.appendChild(nodeToMove);
+        }
     }
 }
 

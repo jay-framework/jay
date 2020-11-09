@@ -214,6 +214,30 @@ describe('Kindergarten', () => {
             expect(parent.childNodes[2]).toEqual(node2);
         });
 
+        test('move node using move - 2rd to 4nd', () => {
+            let {document, parent} = makeParent();
+            let kindergarden = new Kindergarten(parent);
+            let group1 = kindergarden.newGroup();
+            let node1 = makeNode(document, 'text1');
+            let node2 = makeNode(document, 'text2');
+            let node3 = makeNode(document, 'text3');
+            let node4 = makeNode(document, 'text4');
+            let node5 = makeNode(document, 'text5');
+            group1.ensureNode(node1);
+            group1.ensureNode(node2, -1);
+            group1.ensureNode(node3, -1);
+            group1.ensureNode(node4, -1);
+            group1.ensureNode(node5, -1);
+
+            group1.moveNode(1, 3);
+
+            expect(parent.childNodes[0]).toEqual(node1);
+            expect(parent.childNodes[1]).toEqual(node3);
+            expect(parent.childNodes[2]).toEqual(node4);
+            expect(parent.childNodes[3]).toEqual(node2);
+            expect(parent.childNodes[4]).toEqual(node5);
+        });
+
         test('move node - remove 2nd, then re-add it as first', () => {
             let {document, parent} = makeParent();
             let kindergarden = new Kindergarten(parent);
