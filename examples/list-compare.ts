@@ -25,6 +25,7 @@ export function listCompare<T>(oldArray: Array<T>, newArray: Array<T>, matchBy: 
     let instructions = [];
     while (newListItem !== EoF) {
         if (oldListItem === EoF) {
+            // process.stdout.write(`add ${newListItem.id} ${index}\n`);
             instructions.push({action: ITEM_ADDED, item: newListItem.value, pos: index});
             newListItem = newListItem.next;
             index += 1;
@@ -32,6 +33,7 @@ export function listCompare<T>(oldArray: Array<T>, newArray: Array<T>, matchBy: 
         else if (oldListItem.id !== newListItem.id) {
             if (!newList.has(oldListItem.id)) {
                 // remove the item
+                // process.stdout.write(`remove ${oldListItem.id} ${index}\n`);
                 instructions.push({action: ITEM_REMOVED, item: oldListItem.value, pos: index});
                 oldList.remove(oldListItem);
                 oldListItem = oldListItem.next;
@@ -40,6 +42,7 @@ export function listCompare<T>(oldArray: Array<T>, newArray: Array<T>, matchBy: 
                 // move the item to this position
                 let oldListItemToMove = oldList.get(newListItem.id);
                 let distance = oldList.distance(oldListItem, oldListItemToMove);
+                // process.stdout.write(`move ${newListItem.id} from ${oldIndex+distance} to ${index}\n`);
                 instructions.push({action: ITEM_MOVED, item: oldListItemToMove.value, pos: index, fromPos: oldIndex + distance});
                 oldList.move(oldListItemToMove, oldListItem);
                 newListItem = newListItem.next;
@@ -49,6 +52,7 @@ export function listCompare<T>(oldArray: Array<T>, newArray: Array<T>, matchBy: 
             else {
                 // add
                 oldList.add(newListItem.value, oldListItem);
+                // process.stdout.write(`add2 ${newListItem.id} ${index}\n`);
                 instructions.push({action: ITEM_ADDED, item: newListItem.value, pos: index});
                 newListItem = newListItem.next;
                 index += 1;
@@ -64,6 +68,7 @@ export function listCompare<T>(oldArray: Array<T>, newArray: Array<T>, matchBy: 
 
     }
     while (oldListItem !== EoF) {
+        // process.stdout.write(`remove ${oldListItem.id} ${oldIndex}\n`);
         instructions.push({action: ITEM_REMOVED, item: oldListItem.value, pos: oldIndex});
         oldList.remove(oldListItem);
         oldListItem = oldListItem.next;
@@ -72,20 +77,23 @@ export function listCompare<T>(oldArray: Array<T>, newArray: Array<T>, matchBy: 
 }
 
 function optimize(instructions) {
+    // process.stdout.write(JSON.stringify(instructions, undefined, '  ')+`\n`);
     function optimizeSequence(sequenceStart,sequenceEnd) {
         let newMove = {action: ITEM_MOVED, pos: instructions[sequenceEnd].fromPos, fromPos: instructions[sequenceStart].pos};
-        instructions.splice(sequenceStart, sequenceEnd+1, newMove);
+        instructions.splice(sequenceStart, sequenceEnd-sequenceStart+1, newMove);
     }
 
     let movedForwardSequenceEnd: number;
     let movedForwardState = MOVED_FORWARD_NONE;
     for (let i=instructions.length-1; i >= 0; i--) {
+        // process.stdout.write(`loop ${i} state: ${movedForwardState} s-end: ${movedForwardSequenceEnd}\n`);
         let isCandidateForOptimization = (instructions[i].action === ITEM_MOVED && instructions[i].pos + 1 === instructions[i].fromPos);
 
         if (movedForwardState === MOVED_FORWARD_IN_SEQUENCE &&
             (!isCandidateForOptimization || instructions[i].pos + 1 !== instructions[i+1].pos)) {
             // completed sequence
             if ((i+1 !== movedForwardSequenceEnd)) {
+                // process.stdout.write(`completed sequence from ${i+1} to ${movedForwardSequenceEnd} \n`);
                 optimizeSequence(i+1, movedForwardSequenceEnd)
             }
             movedForwardState = MOVED_FORWARD_NONE;
@@ -97,7 +105,9 @@ function optimize(instructions) {
         }
     }
     if (movedForwardState === MOVED_FORWARD_IN_SEQUENCE  && movedForwardSequenceEnd > 1) {
+        // process.stdout.write(`completed sequence2 from ${0} to ${movedForwardSequenceEnd} \n`);
         optimizeSequence(0, movedForwardSequenceEnd)
     }
+    // process.stdout.write(JSON.stringify(instructions, undefined, '  ')+`\n`);
     return instructions;
 }

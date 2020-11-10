@@ -217,6 +217,37 @@ describe('list-compare', () => {
         expect(matchResults).toEqual([
             {action: ITEM_REMOVED, item: item36, pos: 2},
             {action: ITEM_MOVED, item: item42, pos: 2, fromPos: 3}
+        ]);
+        let mutatedList = applyCompare(oldList, matchResults);
+        expect(mutatedList).toEqual(newList);
+    });
+
+    it('optimize sequence in the middle of instructions array', () =>{
+        let oldList = [
+            {name: "item 114", completed: false, cost: 114, id: "a114"},
+            {name: "item 33", completed: true, cost: 33, id: "a33"},     // 1 removed
+            {name: "item 75", completed: true, cost: 75, id: "a75"},     // 2
+            {name: "item 201", completed: true, cost: 201, id: "a201"},  // 3 moved
+            {name: "item 153", completed: true, cost: 153, id: "a153"},  // 4
+            {name: "item 204", completed: false, cost: 204, id: "a204"}, // 5
+            {name: "item 207", completed: true, cost: 207, id: "a207"}   // 6
+        ];
+        let newList = [
+            {name: "item 114", completed: false, cost: 114, id: "a114"},
+            {name: "item 75", completed: true, cost: 75, id: "a75"},     // 1
+            {name: "item 153", completed: true, cost: 153, id: "a153"},  // 2
+            {name: "item 204", completed: false, cost: 204, id: "a204"}, // 3
+            {name: "item 207", completed: true, cost: 207, id: "a207"},  // 4
+            {name: "item 210", completed: false, cost: 210, id: "a210"}, // 5 new
+            {name: "item 201", completed: true, cost: 201, id: "a201"}   // 6 moved
+        ];
+
+        let matchResults = listCompare(oldList, newList, 'id');
+        expect(matchResults.length).toBe(3);
+        expect(matchResults).toEqual([
+            {action: "IR", item: {name: "item 33", completed: true, cost: 33, id: "a33"}, pos: 1},
+            {action: "IM", pos: 5, fromPos: 2},
+            {action: "IA", item: {name: "item 210", completed: false, cost: 210, id: "a210"}, pos: 5}
         ])
         let mutatedList = applyCompare(oldList, matchResults);
         expect(mutatedList).toEqual(newList);
