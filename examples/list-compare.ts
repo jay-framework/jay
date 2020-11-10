@@ -1,4 +1,4 @@
-import {EoF, RandomAccessLinkedList} from "./random-access-linked-list";
+import {EoF, RandomAccessLinkedList} from "./random-access-linked-list.js";
 
 export const ITEM_ADDED = 'IA';
 export const ITEM_REMOVED = 'IR';
