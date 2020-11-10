@@ -45,50 +45,20 @@ export default function render(viewState: ViewState) {
         return coolRoot;
     };
 
-    // const reverseRenderChildren = () => {
-    //     let childs = [...div1.childNodes]
-    //     return childs.map(child => {
-    //         return {name: child.childNodes[0].textContent,
-    //             completed: child.childNodes[1].textContent === 'yes',
-    //             cost: Number(child.childNodes[2].textContent)}
-    //     })
-    // };
-
     const reconsileCollection = (items) => {
-        // console.log('***** reconsileCollection', lastViewState.items, items, reverseRenderChildren())
         let instructions = listCompare(lastViewState.items, items, 'id');
 
         instructions.forEach(instruction => {
             if (instruction.action === ITEM_ADDED) {
                 group1.ensureNode(createDiv(instruction.item), instruction.pos)
-                // console.log('add', instruction.pos);
             }
             else if (instruction.action === ITEM_REMOVED) {
                 group1.removeNodeAt(instruction.pos)
-                // console.log('remove', instruction.pos);
             }
             else {
                 group1.moveNode(instruction.fromPos, instruction.pos)
-                // console.log('move', instruction.fromPos, instruction.pos);
             }
-            // console.log('in loop', reverseRenderChildren());
         });
-
-        // let reverseRender = reverseRenderChildren();
-        // let match = items.length === reverseRender.length;
-        // let i =0;
-        // while (i < items.length && i < reverseRender.length) {
-        //     match = match &&
-        //         items[i].name === reverseRender[i].name &&
-        //         items[i].completed === reverseRender[i].completed &&
-        //         items[i].cost === reverseRender[i].cost;
-        //     i = i+1;
-        // }
-        // if (!match) {
-        //     console.log(lastViewState.items, items, instructions, reverseRender)
-        //     debugger;
-        // }
-        // console.log(lastViewState.items, items, instructions, reverseRender)
     };
 
     const rerender = (newViewState) => {
