@@ -1,5 +1,6 @@
 import {Kindergarten} from '../kindergarden.js'
 import {ITEM_ADDED, ITEM_REMOVED, listCompare} from "../list-compare.js";
+import {element as e} from '../element.js';
 
 interface Item {
     name: string,
@@ -14,12 +15,12 @@ interface ViewState {
 }
 
 export default function render(viewState: ViewState) {
-    let lastViewState: ViewState = {items: [], title: ''};
-    let root = document.createElement('div');
-    let h1 = document.createElement('h1');
-    root.appendChild(h1);
-    let div1 = document.createElement('div');
-    root.appendChild(div1);
+    let lastViewState: ViewState = {items: [], title: viewState.title};
+    let h1, div1;
+    let root = e('div', {}, [
+        h1 = e('h1', {}, [viewState.title]),
+        div1 = e('div')
+    ]);
     let rootKindergarten = new Kindergarten(div1);
     let group1 = rootKindergarten.newGroup();
 
@@ -29,20 +30,11 @@ export default function render(viewState: ViewState) {
     };
 
     const createDiv = (item: Item) => {
-        let coolRoot = document.createElement('div');
-        let span1 = document.createElement('span');
-        span1.style.cssText = 'color:green';
-        span1.textContent = item.name;
-        let span2 = document.createElement('span');
-        span2.style.cssText = 'color:red';
-        span2.textContent = item.completed?'yes':'no';
-        let span3 = document.createElement('span');
-        span3.style.cssText = 'color:blue';
-        span3.textContent = item.cost.toString();
-        coolRoot.appendChild(span1);
-        coolRoot.appendChild(span2);
-        coolRoot.appendChild(span3);
-        return coolRoot;
+        return e('div', {}, [
+            e('span', {style: {cssText: 'color:green'}}, [item.name]),
+            e('span', {style: {cssText: 'color:red'}}, [item.completed ? 'yes' : 'no']),
+            e('span', {style: {cssText: 'color:blue'}}, [item.cost.toString()])
+        ]);
     };
 
     const reconsileCollection = (items) => {
