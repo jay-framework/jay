@@ -5,7 +5,8 @@
   "scripts": {
     "start": "tsc && node dist",
     "test": "jest",
-    "ex": "tsc --p examples.tsconfig.json && cp examples/basic/index.html dist/basic/ && cp examples/conditions/index.html dist/conditions/ && cp examples/collections/index.html dist/collections/"
+    "ex": "tsc --p examples.tsconfig.json && cp examples/basic/index.html dist/basic/ && cp examples/conditions/index.html dist/conditions/ && cp examples/collections/index.html dist/collections/",
+    "build": "rollup --config ./rollup.config.js"
   },
   "dependencies": {
     "typescript": "^4.0.3"
@@ -13,9 +14,12 @@
   "devDependencies": {
     "@babel/preset-env": "^7.12.1",
     "@babel/preset-typescript": "^7.12.1",
+    "@rollup/plugin-typescript": "^8.1.0",
     "@types/jsdom": "^16.2.4",
     "@types/node": "^14.11.10",
     "jest": "^26.6.0",
-    "jsdom": "^16.4.0"
+    "jsdom": "^16.4.0",
+    "rollup": "^2.35.1",
+    "tslib": "^2.0.3"
   }
 }
