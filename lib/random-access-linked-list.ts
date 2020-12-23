@@ -22,7 +22,7 @@ export class RandomAccessLinkedList<T> {
         this._first = arr.reduceRight((nextItem: LinkedListItem<T> | typeof EoF, obj: T): LinkedListItem<T> | typeof EoF => {
             let item: LinkedListItem<T> = {id: obj[matchBy], value: obj, next: nextItem, prev: BoF};
             if (nextItem !== EoF)
-                nextItem.prev = item;
+                (nextItem as LinkedListItem<T>).prev = item;
             if (this._last === BoF)
                 this._last = item;
             this._map[item.id] = item;
@@ -55,7 +55,7 @@ export class RandomAccessLinkedList<T> {
         delete this._map[this._matchBy];
         if (item.prev === BoF) {
             if (item.next !== EoF) {
-                item.next.prev = BoF;
+                (item.next as LinkedListItem<T>).prev = BoF;
                 this._first = item.next;
             }
             else {
@@ -65,11 +65,11 @@ export class RandomAccessLinkedList<T> {
         }
         else if (item.next === EoF) {
             this._last = item.prev;
-            item.prev.next = EoF;
+            (item.prev as LinkedListItem<T>).next = EoF;
         }
         else {
-            item.prev.next = item.next;
-            item.next.prev = item.prev;
+            (item.prev as LinkedListItem<T>).next = item.next;
+            (item.next as LinkedListItem<T>).prev = item.prev;
         }         
     }
 
@@ -89,13 +89,13 @@ export class RandomAccessLinkedList<T> {
         else if (beforeItem === this._first) {
             newItem = {id: obj[this._matchBy], value: obj, prev: BoF, next: beforeItem};
             this._first = newItem;
-            beforeItem.prev = newItem;
+            (beforeItem as LinkedListItem<T>).prev = newItem;
         }
         else {
-            let itemBefore = beforeItem.prev as LinkedListItem<T>;
+            let itemBefore = (beforeItem as LinkedListItem<T>).prev as LinkedListItem<T>;
             newItem = {id: obj[this._matchBy], value: obj, prev: itemBefore, next: beforeItem};
             itemBefore.next = newItem;
-            beforeItem.prev = newItem;
+            (beforeItem as LinkedListItem<T>).prev = newItem;
         }
         this._map[newItem.id] = newItem;
     }
@@ -104,7 +104,7 @@ export class RandomAccessLinkedList<T> {
         let count = 0;
         while (from !== to && from !== EoF) {
             count++;
-            from = from.next;
+            from = (from as LinkedListItem<T>).next;
         }
         return from !== EoF?count: -1;
     }
