@@ -1,17 +1,6 @@
 <html>
 <head>
-    <script type="module" src="./output.js"></script>
-    <script type="module" src="../benchmark.js"></script>
-    <script type="module">
-      import render from "./output.js";
-      import benchmark from '../benchmark.js';
-      let target = document.getElementById('target');
-      let progress = document.getElementById('progress');
-      let {dom, update} = render({text1:'name', text2: 'name2', cond: true});
-      target.appendChild(dom);
-
-      benchmark(index => update({text1:'name ' + index, text2: 'name ' + index*2, cond: index % 2 === 0}), status => progress.textContent = status);
-    </script>
+    <script src="index.js"></script>
 </head>
 <body>
 <div>

@@ -21,10 +21,10 @@ export default [
     plugins: [typescript({})]
   },
   {
-    input: './examples/conditions/output.tsx',
+    input: './examples/conditions/index.ts',
     output: {
-      file: 'dist/conditions/output.js',
-      format: 'umd',
+      file: 'dist/conditions/index.js',
+      format: 'iife',
       name: 'jay'
     },
     plugins: [typescript({})]
