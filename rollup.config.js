@@ -12,9 +12,9 @@ export default [
     plugins: [typescript({})]
   },
   {
-    input: './examples/collections/output.tsx',
+    input: './examples/collections/index.ts',
     output: {
-      file: 'dist/collections/output.js',
+      file: 'dist/collections/index.js',
       format: 'umd',
       name: 'jay'
     },
