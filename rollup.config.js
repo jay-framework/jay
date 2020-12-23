@@ -3,10 +3,10 @@ import typescript from '@rollup/plugin-typescript';
 
 export default [
   {
-    input: './examples/basic/output.tsx',
+    input: './examples/basic/index.ts',
     output: {
-      file: 'dist/basic/output.js',
-      format: 'umd',
+      file: 'dist/basic/index.js',
+      format: 'iife',
       name: 'jay'
     },
     plugins: [typescript({})]

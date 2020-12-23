@@ -6,7 +6,9 @@
     "start": "tsc && node dist",
     "test": "jest",
     "ex": "tsc --p examples.tsconfig.json && cp examples/basic/index.html dist/basic/ && cp examples/conditions/index.html dist/conditions/ && cp examples/collections/index.html dist/collections/",
-    "build": "rollup --config ./rollup.config.js"
+    "rollup": "rollup --config ./rollup.config.js",
+    "copy": "cp examples/basic/index.html dist/basic/ && cp examples/conditions/index.html dist/conditions/ && cp examples/collections/index.html dist/collections/"
+    "build": "npm run rollup && npm run copy"
   },
   "dependencies": {
     "typescript": "^4.0.3"
