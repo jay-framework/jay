@@ -1,4 +1,4 @@
-import {EoF, RandomAccessLinkedList} from "./random-access-linked-list.js";
+import {EoF, RandomAccessLinkedList} from "./random-access-linked-list";
 
 export const ITEM_ADDED = 'IA';
 export const ITEM_REMOVED = 'IR';
@@ -39,6 +39,7 @@ export function listCompare<T>(oldArray: Array<T>, newArray: Array<T>, matchBy: 
                 oldListItem = oldListItem.next;
             }
             else if (oldList.has(newListItem.id)) {
+                // console.log('compare item', oldListItem.value, newListItem.value);
                 // move the item to this position
                 let oldListItemToMove = oldList.get(newListItem.id);
                 let distance = oldList.distance(oldListItem, oldListItemToMove);
@@ -60,6 +61,7 @@ export function listCompare<T>(oldArray: Array<T>, newArray: Array<T>, matchBy: 
             }
         }
         else {
+            // console.log('compare item', oldListItem.value, newListItem.value);
             oldListItem = oldListItem.next;
             newListItem = newListItem.next;
             index += 1;

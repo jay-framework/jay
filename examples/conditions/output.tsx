@@ -1,4 +1,4 @@
-import {Kindergarten} from '../kindergarden.js'
+import {Kindergarten} from '../../lib/kindergarden.js'
 
 interface ViewState {
     text1: string,

@@ -1,5 +1,5 @@
-import render from "./output.js";
-import benchmark from '../benchmark.js';
+import render from "./output";
+import benchmark from '../benchmark';
 
 window.onload = function() {
     let target = document.getElementById('target');

@@ -1,4 +1,6 @@
-import {listCompare, ITEM_ADDED, ITEM_REMOVED, ITEM_MOVED} from '../../examples/list-compare';
+import {listCompare, ITEM_ADDED, ITEM_REMOVED, ITEM_MOVED} from '../../lib/list-compare';
+import {describe, expect, it} from '@jest/globals'
+
 
 const item = (id, val) => {return {id, val}};
 

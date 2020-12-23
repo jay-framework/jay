@@ -1,6 +1,6 @@
-import {Kindergarten} from '../kindergarden.js'
-import {ITEM_ADDED, ITEM_REMOVED, listCompare} from "../list-compare.js";
-import {element as e} from '../element.js';
+import {Kindergarten} from '../../lib/kindergarden.js'
+import {ITEM_ADDED, ITEM_REMOVED, listCompare} from "../../lib/list-compare.js";
+import {element as e} from '../../lib/element.js';
 
 interface Item {
     name: string,

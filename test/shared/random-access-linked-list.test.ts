@@ -1,4 +1,5 @@
-import {BoF, EoF, RandomAccessLinkedList} from '../../examples/random-access-linked-list';
+import {BoF, EoF, RandomAccessLinkedList} from '../../lib/random-access-linked-list';
+import {describe, expect, it} from '@jest/globals'
 
 const item = (id, val) => {return {id, val}};
 

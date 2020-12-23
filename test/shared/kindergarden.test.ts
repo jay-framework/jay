@@ -1,5 +1,6 @@
 import { JSDOM } from 'jsdom';
-import {Kindergarten} from '../../examples/kindergarden';
+import {Kindergarten} from '../../lib/kindergarden';
+import {describe, expect, test} from '@jest/globals'
 
 function makeParent(): HTMLElement {
     const { window } = new JSDOM(`<!DOCTYPE html><html><body><div id="parent"></div></body></html>`);
