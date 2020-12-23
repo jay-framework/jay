@@ -14,6 +14,20 @@ interface ViewState {
     title: string
 }
 
+function applyListChanges(group, instructions, createItemElement) {
+    instructions.forEach(instruction => {
+        if (instruction.action === ITEM_ADDED) {
+            group.ensureNode(createItemElement(instruction.item), instruction.pos)
+        }
+        else if (instruction.action === ITEM_REMOVED) {
+            group.removeNodeAt(instruction.pos)
+        }
+        else {
+            group.moveNode(instruction.fromPos, instruction.pos)
+        }
+    });
+}
+
 export default function render(viewState: ViewState) {
     let lastViewState: ViewState = {items: [], title: viewState.title};
     let h1, div1;
@@ -39,18 +53,7 @@ export default function render(viewState: ViewState) {
 
     const reconsileCollection = (items) => {
         let instructions = listCompare(lastViewState.items, items, 'id');
-
-        instructions.forEach(instruction => {
-            if (instruction.action === ITEM_ADDED) {
-                group1.ensureNode(createDiv(instruction.item), instruction.pos)
-            }
-            else if (instruction.action === ITEM_REMOVED) {
-                group1.removeNodeAt(instruction.pos)
-            }
-            else {
-                group1.moveNode(instruction.fromPos, instruction.pos)
-            }
-        });
+        applyListChanges(group1, instructions, createDiv);
     };
 
     const rerender = (newViewState) => {
