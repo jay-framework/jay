@@ -28,5 +28,15 @@ export default [
       name: 'jay'
     },
     plugins: [typescript({})]
+  },
+  {
+    input: './examples/composite/index.ts',
+    output: {
+      file: 'dist/composite/index.js',
+      format: 'iife',
+      name: 'jay'
+    },
+    plugins: [typescript({})]
   }
+
 ];
