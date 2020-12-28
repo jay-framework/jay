@@ -1,3 +1,5 @@
+import {Kindergarten, KindergartenGroup} from "./kindergarden";
+
 const STYLE = 'style';
 type updateConstructor<T, S> = (e:HTMLElement, newData:T, state: S) => S;
 type updateFunc<T> = (newData:T) => void;
@@ -21,6 +23,25 @@ function setAttributes(e: HTMLElement, attributes: any) {
     });
 }
 
+function createBaseElement(tagName: string, attributes: any = {}) {
+    let e = document.createElement(tagName);
+    setAttributes(e, attributes);
+    return e;
+}
+
+function normalizeUpdates<T>(updates: Array<updateFunc<T>>): updateFunc<T> {
+    if (updates.length === 1)
+        return updates[0];
+    else if (updates.length > 0) {
+        return (newData) => {
+            updates.forEach(__update => __update(newData))
+        };
+    }
+    else {
+        return noopUpdate
+    }
+}
+
 export function element<T, S>(
     tagName: string,
     attributes: any = {},
@@ -28,9 +49,8 @@ export function element<T, S>(
     initialData: T = undefined,
     initialState: S = undefined,
     update: updateConstructor<T, S> = noopUpdateConstructor):
-JayElement<T> {
-    let e = document.createElement(tagName);
-    setAttributes(e, attributes);
+    JayElement<T> {
+    let e = createBaseElement(tagName, attributes);
 
     let updates: updateFunc<T>[] = [];
     let state: S = initialState;
@@ -49,50 +69,58 @@ JayElement<T> {
         }
     });
 
-    let _update;
-    if (updates.length === 1)
-        _update = updates[0];
-    else if (updates.length > 0) {
-        _update = (newData) => {
-            updates.forEach(__update => __update(newData))
-        };
-    }
-    else {
-        _update = noopUpdate
-    }
     return {
         dom: e,
-        update: _update
+        update: normalizeUpdates(updates)
     };
 }
 
-// export function dynamicElement<T>(
-//     tagName: string,
-//     attributes: any = {},
-//     children: Array<string | Conditional> = [],
-//     initialData: T,
-//     update: (a:HTMLElement, b:T, c:T) => void = undefined):
-// JayElement<T> {
-//     let e = document.createElement(tagName);
-//     e.append(...children);
-//     setAttributes(e, attributes);
-//
-//     let oldData = initialData;
-//
-//     let _update = (newData) => {
-//         update(e, newData, oldData);
-//         oldData = newData;
-//     };
-//     return {
-//         dom: e,
-//         update: _update
-//     };
-// }
-//
-// export function conditional<T>(condition: (newData: T) => boolean, elem: JayElement<T>): Conditional {
-//
-// }
-//
-// export interface Conditional {
-//
-// }
+export function conditional<T>(condition: (newData: T) => boolean, elem: JayElement<T>): Conditional<T> {
+    return {condition, elem};
+}
+
+export interface Conditional<T> {
+    condition: (newData: T) => boolean,
+    elem: JayElement<T>
+}
+
+export function dynamicElement<T, S>(
+    tagName: string,
+    attributes: any = {},
+    children: Array<Conditional<T>> = [],
+    initialData: T = undefined,
+    initialState: S = undefined,
+    update: updateConstructor<T, S> = noopUpdateConstructor):
+    JayElement<T> {
+    let e = createBaseElement(tagName, attributes);
+
+    let updates: updateFunc<T>[] = [];
+
+    let state: S = initialState;
+    if (update !== noopUpdateConstructor) {
+        updates.push((newData: T) => {
+            state = update(e, newData, state);
+        })
+    }
+
+    let kindergarden = new Kindergarten(e);
+    children.forEach(child => {
+        let group = new KindergartenGroup(kindergarden);
+        let update = (newData: T) => {
+            let result = child.condition(newData);
+            if (result) {
+                group.ensureNode(child.elem.dom)
+                child.elem.update(newData)
+            }
+            else
+                group.removeNode(child.elem.dom)
+        }
+        update(initialData)
+        updates.push(update);
+    })
+
+    return {
+        dom: e,
+        update: normalizeUpdates(updates)
+    };
+}
