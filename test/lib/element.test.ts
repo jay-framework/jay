@@ -1,21 +1,33 @@
 import {element as e, JayElement, noopUpdate} from '../../lib/element2';
 import {beforeEach, describe, expect, it} from '@jest/globals'
 
+const SOME_VALUE = 'some text in the element';
+const ANOTHER_VALUE = 'another text value';
 
 describe('element', () => {
 
-    describe('single static element', () => {
+    it('should create static dom element with text', () => {
         let jayElement: JayElement<void>;
-        const SOME_VALUE = 'some text in the element';
 
-        beforeEach(() => {
-            jayElement = e('div', {}, [SOME_VALUE]);
-        });
+        jayElement = e('div', {}, [SOME_VALUE]);
 
-        it('should create dom element with text', () => {
-            expect(jayElement.dom.textContent).toBe(SOME_VALUE);
-            expect(jayElement.update).toBe(noopUpdate);
-        })
+        expect(jayElement.dom.textContent).toBe(SOME_VALUE);
+        expect(jayElement.update).toBe(noopUpdate);
+    })
+
+    it('should create static dom elements tree', () => {
+        let jayElement: JayElement<void>;
+
+        jayElement = e('div', {}, [
+            e('div', {}, [SOME_VALUE]),
+            e('div', {}, [
+                e('div', {}, [ANOTHER_VALUE])
+            ])
+        ]);
+
+        expect(jayElement.dom.childNodes[0].textContent).toBe(SOME_VALUE);
+        expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(ANOTHER_VALUE);
+        expect(jayElement.update).toBe(noopUpdate);
     })
 
     describe('single element update', () => {
@@ -24,8 +36,6 @@ describe('element', () => {
             text: string
         }
 
-        const SOME_VALUE = 'some value';
-        const ANOTHER_VALUE = 'another value';
         let jayElement: JayElement<ViewState>;
         let data: ViewState;
         let updateCount;
@@ -51,7 +61,7 @@ describe('element', () => {
         it('should update simple element with text', () => {
             expect(jayElement.dom.textContent).toBe(SOME_VALUE);
 
-            data.text = 'another value';
+            data.text = ANOTHER_VALUE;
             jayElement.update(data);
 
             expect(jayElement.dom.textContent).toBe(ANOTHER_VALUE);
