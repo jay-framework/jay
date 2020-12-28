@@ -1,7 +1,7 @@
 const STYLE = 'style';
-type updateConstructor<T, S> = (e:HTMLElement, newData:T, oldData:T, state: S) => S;
+type updateConstructor<T, S> = (e:HTMLElement, newData:T, state: S) => S;
 type updateFunc<T> = (newData:T) => void;
-const noopUpdateConstructor: updateConstructor<any, any> = (e:HTMLElement, newData:any, oldData:any, state: any): any => {};
+const noopUpdateConstructor: updateConstructor<any, any> = (e:HTMLElement, newData:any, state: any): any => {};
 export const noopUpdate: updateFunc<any> = (newData:any): void => {};
 
 export interface JayElement<T> {
@@ -34,10 +34,9 @@ JayElement<T> {
 
     let updates: updateFunc<T>[] = [];
     let state: S = initialState;
-    let oldData = initialData;
     if (update !== noopUpdateConstructor) {
         updates.push((newData: T) => {
-            state = update(e, newData, oldData, state);
+            state = update(e, newData, state);
         })
     }
     children.forEach(child => {
@@ -51,10 +50,11 @@ JayElement<T> {
     });
 
     let _update;
-    if (updates.length > 0) {
+    if (updates.length === 1)
+        _update = updates[0];
+    else if (updates.length > 0) {
         _update = (newData) => {
-            updates.forEach(update => update(newData))
-            oldData = newData;
+            updates.forEach(__update => __update(newData))
         };
     }
     else {
