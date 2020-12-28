@@ -2,7 +2,7 @@ const STYLE = 'style';
 type updateConstructor<T, S> = (e:HTMLElement, newData:T, oldData:T, state: S) => S;
 type updateFunc<T> = (newData:T) => void;
 const noopUpdateConstructor: updateConstructor<any, any> = (e:HTMLElement, newData:any, oldData:any, state: any): any => {};
-const noopUpdate: updateFunc<any> = (newData:any): void => {};
+export const noopUpdate: updateFunc<any> = (newData:any): void => {};
 
 export interface JayElement<T> {
     dom: HTMLElement,

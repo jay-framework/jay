@@ -1,13 +1,28 @@
-import {element as e, JayElement} from '../../lib/element2';
+import {element as e, JayElement, noopUpdate} from '../../lib/element2';
 import {beforeEach, describe, expect, it} from '@jest/globals'
 
-interface ViewState {
-    text: string
-}
 
 describe('element', () => {
 
-    describe('single element', () => {
+    describe('single static element', () => {
+        let jayElement: JayElement<void>;
+        const SOME_VALUE = 'some text in the element';
+
+        beforeEach(() => {
+            jayElement = e('div', {}, [SOME_VALUE]);
+        });
+
+        it('should create dom element with text', () => {
+            expect(jayElement.dom.textContent).toBe(SOME_VALUE);
+            expect(jayElement.update).toBe(noopUpdate);
+        })
+    })
+
+    describe('single element update', () => {
+
+        interface ViewState {
+            text: string
+        }
 
         const SOME_VALUE = 'some value';
         const ANOTHER_VALUE = 'another value';
