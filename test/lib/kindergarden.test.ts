@@ -2,7 +2,7 @@ import { JSDOM } from 'jsdom';
 import {Kindergarten} from '../../lib/kindergarden';
 import {describe, expect, test} from '@jest/globals'
 
-function makeParent(): HTMLElement {
+function makeParent(): {document: Document, parent: HTMLElement} {
     const { window } = new JSDOM(`<!DOCTYPE html><html><body><div id="parent"></div></body></html>`);
     const document = window.document;
     return {document, parent: document.getElementById('parent')};

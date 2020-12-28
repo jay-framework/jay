@@ -1,8 +1,8 @@
 const STYLE = 'style';
-type updateConstructor<T> = (e:HTMLElement, newData:T, oldData:T) => void;
+type updateConstructor<T, S> = (e:HTMLElement, newData:T, oldData:T, state: S) => S;
 type updateFunc<T> = (newData:T) => void;
-const noopUpdateConstructor: updateConstructor<any> = (e:HTMLElement, newData:any, oldData:any) => void {};
-const noopUpdate: updateFunc<any> = (newData:any) => void {};
+const noopUpdateConstructor: updateConstructor<any, any> = (e:HTMLElement, newData:any, oldData:any, state: any): any => {};
+const noopUpdate: updateFunc<any> = (newData:any): void => {};
 
 export interface JayElement<T> {
     dom: HTMLElement,
@@ -21,21 +21,23 @@ function setAttributes(e: HTMLElement, attributes: any) {
     });
 }
 
-export function element<T>(
+export function element<T, S>(
     tagName: string,
     attributes: any = {},
     children: Array<string | JayElement<T>> = [],
     initialData: T = undefined,
-    update: (a:HTMLElement, b:T, c:T) => void = noopUpdateConstructor):
+    initialState: S = undefined,
+    update: updateConstructor<T, S> = noopUpdateConstructor):
 JayElement<T> {
     let e = document.createElement(tagName);
     setAttributes(e, attributes);
 
     let updates: updateFunc<T>[] = [];
+    let state: S = initialState;
     let oldData = initialData;
     if (update !== noopUpdateConstructor) {
         updates.push((newData: T) => {
-            update(e, newData, oldData);
+            state = update(e, newData, oldData, state);
         })
     }
     children.forEach(child => {
