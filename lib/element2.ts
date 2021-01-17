@@ -124,3 +124,12 @@ export function dynamicElement<T, S>(
         update: normalizeUpdates(updates)
     };
 }
+
+export function updateTextContent<T>(getState: (T) => string): updateConstructor<T, string> {
+    return (elem:HTMLElement, newData:T, state: string) =>  {
+        let newContent = getState(newData);
+        if (state !== newContent)
+            elem.textContent = newContent;
+        return newContent;
+    };
+}
