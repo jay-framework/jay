@@ -7,7 +7,7 @@ export const ITEM_MOVED = 'IM';
 const MOVED_FORWARD_NONE = 0;
 const MOVED_FORWARD_IN_SEQUENCE = 1;
 
-interface MatchResult<T> {
+export interface MatchResult<T> {
     action: typeof ITEM_ADDED | typeof ITEM_MOVED | typeof ITEM_REMOVED,
     item?: T,
     pos: number,

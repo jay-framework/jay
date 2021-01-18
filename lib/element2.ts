@@ -1,4 +1,5 @@
 import {Kindergarten, KindergartenGroup} from "./kindergarden";
+import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "./list-compare";
 
 const STYLE = 'style';
 type updateConstructor<T, S> = (e:HTMLElement, newData:T, state: S) => S;
@@ -84,10 +85,39 @@ export interface Conditional<T> {
     elem: JayElement<T>
 }
 
+function isCondition<T>(c: Conditional<T> | ForEach<T, any>): c is Conditional<T> {
+    return (c as Conditional<T>).condition !== undefined;
+}
+
+export function forEach<T, Item>(getItems: (T) => Array<Item>, elemCreator: (Item) => JayElement<Item>, matchBy: string): ForEach<T, Item> {
+    return {getItems, elemCreator, matchBy};
+}
+
+export interface ForEach<T, Item> {
+    getItems: (T) => Array<Item>,
+    elemCreator: (Item) => JayElement<Item>,
+    matchBy: string
+}
+
+function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<MatchResult<Item>>, createItemElement: (Item) => JayElement<Item>) {
+    instructions.forEach(instruction => {
+        if (instruction.action === ITEM_ADDED) {
+            let newElement = createItemElement(instruction.item);
+            group.ensureNode(newElement.dom, instruction.pos)
+        }
+        else if (instruction.action === ITEM_REMOVED) {
+            group.removeNodeAt(instruction.pos)
+        }
+        else {
+            group.moveNode(instruction.fromPos, instruction.pos)
+        }
+    });
+}
+
 export function dynamicElement<T, S>(
     tagName: string,
     attributes: any = {},
-    children: Array<Conditional<T>> = [],
+    children: Array<Conditional<T> | ForEach<T, any>> = [],
     initialData: T = undefined,
     initialState: S = undefined,
     update: updateConstructor<T, S> = noopUpdateConstructor):
@@ -106,14 +136,25 @@ export function dynamicElement<T, S>(
     let kindergarden = new Kindergarten(e);
     children.forEach(child => {
         let group = new KindergartenGroup(kindergarden);
-        let update = (newData: T) => {
-            let result = child.condition(newData);
-            if (result) {
-                group.ensureNode(child.elem.dom)
-                child.elem.update(newData)
+        let update;
+        if (isCondition(child)) {
+            update = (newData: T) => {
+                let result = child.condition(newData);
+                if (result) {
+                    group.ensureNode(child.elem.dom)
+                    child.elem.update(newData)
+                } else
+                    group.removeNode(child.elem.dom)
             }
-            else
-                group.removeNode(child.elem.dom)
+        }
+        else {
+            let lastItems = [];
+            update = (newData: T) => {
+                let items = child.getItems(newData);
+                let instructions = listCompare(lastItems, items, child.matchBy);
+                lastItems = items;
+                applyListChanges(group, instructions, child.elemCreator);
+            }
         }
         update(initialData)
         updates.push(update);
