@@ -1,4 +1,4 @@
-import {element as e, updateTextContent as uTContent} from '../../lib/element2';
+import {element as e, updateTextContent as uTContent} from '../../lib/element';
 
 interface ViewState {
     text: string

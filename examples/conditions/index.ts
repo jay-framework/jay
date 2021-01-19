@@ -1,4 +1,4 @@
-import render from "./output2";
+import render from "./output";
 import benchmark from '../benchmark';
 
 window.onload = function() {

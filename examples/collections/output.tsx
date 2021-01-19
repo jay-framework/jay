@@ -4,7 +4,7 @@ import {
     forEach,
     JayElement,
     updateTextContent as uTContent
-} from '../../lib/element2.js';
+} from '../../lib/element.js';
 
 interface Item {
     name: string,

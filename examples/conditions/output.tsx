@@ -1,4 +1,4 @@
-import {conditional, element as e, dynamicElement as de, updateTextContent as uTContent} from '../../lib/element2';
+import {conditional, element as e, dynamicElement as de, updateTextContent as uTContent} from '../../lib/element';
 
 interface ViewState {
     text1: string,
