@@ -100,6 +100,7 @@ export interface ForEach<T, Item> {
 }
 
 function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<MatchResult<Item>>, createItemElement: (Item) => JayElement<Item>) {
+    // todo add update
     instructions.forEach(instruction => {
         if (instruction.action === ITEM_ADDED) {
             let newElement = createItemElement(instruction.item);

@@ -9,10 +9,10 @@ interface ViewState {
 export default function render(viewState: ViewState) {
     return de('div', {}, [
         conditional((newViewState) => newViewState.cond,
-            e('div', {style: {cssText: 'color:red'}}, [viewState.text1], viewState, uTContent(vs => vs.text1))
+            e('div', {style: {cssText: 'color:red'}}, [viewState.text1], viewState, viewState.text1, uTContent(vs => vs.text1))
         ),
         conditional((newViewState) => !newViewState.cond,
-            e('div', {style: {cssText: 'color:green'}}, [viewState.text2], viewState, uTContent(vs => vs.text2))
+            e('div', {style: {cssText: 'color:green'}}, [viewState.text2], viewState, viewState.text2, uTContent(vs => vs.text2))
         )
     ], viewState);
 }
