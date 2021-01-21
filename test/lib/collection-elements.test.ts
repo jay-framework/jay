@@ -11,6 +11,8 @@ import {describe, expect, it} from '@jest/globals'
 const item1 = {name: 'name 1', id: 'id-1'};
 const item2 = {name: 'name 2', id: 'id-2'};
 const item3 = {name: 'name 3', id: 'id-3'};
+const item4 = {name: 'name 4', id: 'id-4'};
+const item5 = {name: 'name 5', id: 'id-5'};
 
 describe('collection-element', () => {
 
@@ -45,7 +47,25 @@ describe('collection-element', () => {
         expect(jayElement.dom.querySelector('#id-1')).toHaveTextContent('name 1');
         expect(jayElement.dom.querySelector('#id-2')).toHaveTextContent('name 2');
         expect(jayElement.dom.querySelector('#id-3')).toHaveTextContent('name 3');
+        expect(jayElement.dom.children[0]).toHaveTextContent('name 1');
+        expect(jayElement.dom.children[1]).toHaveTextContent('name 2');
+        expect(jayElement.dom.children[2]).toHaveTextContent('name 3');
     })
 
+    it('should update collection of items', () => {
+        let jayElement = makeElement({items: [item1, item2, item3]});
+        jayElement.update({items: [item5, item3, item4, item2, item1]});
+        expect(jayElement.dom.querySelectorAll('.item')).toHaveLength(5);
+        expect(jayElement.dom.querySelector('#id-1')).toHaveTextContent('name 1');
+        expect(jayElement.dom.querySelector('#id-2')).toHaveTextContent('name 2');
+        expect(jayElement.dom.querySelector('#id-3')).toHaveTextContent('name 3');
+        expect(jayElement.dom.querySelector('#id-4')).toHaveTextContent('name 4');
+        expect(jayElement.dom.querySelector('#id-5')).toHaveTextContent('name 5');
+        expect(jayElement.dom.children[0]).toHaveTextContent('name 5');
+        expect(jayElement.dom.children[1]).toHaveTextContent('name 3');
+        expect(jayElement.dom.children[2]).toHaveTextContent('name 4');
+        expect(jayElement.dom.children[3]).toHaveTextContent('name 2');
+        expect(jayElement.dom.children[4]).toHaveTextContent('name 1');
+    })
 });
 
