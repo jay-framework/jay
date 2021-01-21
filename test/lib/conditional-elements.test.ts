@@ -3,7 +3,6 @@ import {
     dynamicElement as de,
     element as e,
     JayElement,
-    noopUpdate,
     updateTextContent as uTContent
 } from '../../lib/element';
 import "@testing-library/jest-dom/extend-expect";
@@ -12,9 +11,6 @@ import {describe, expect, it} from '@jest/globals'
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
 const VALUE_3 = 'value 3';
-const VALUE_4 = 'value 4';
-const VALUE_5 = 'value 5';
-const VALUE_6 = 'value 6';
 
 describe('conditional-element', () => {
 
