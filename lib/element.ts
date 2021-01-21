@@ -115,6 +115,27 @@ function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<Ma
     });
 }
 
+function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup) {
+    return (newData: T) => {
+        let result = child.condition(newData);
+        if (result) {
+            group.ensureNode(child.elem.dom)
+            child.elem.update(newData)
+        } else
+            group.removeNode(child.elem.dom)
+    };
+}
+
+function mkUpdateCollection<T>(child: ForEach<T, any>, group: KindergartenGroup) {
+    let lastItems = [];
+    return (newData: T) => {
+        let items = child.getItems(newData);
+        let instructions = listCompare(lastItems, items, child.matchBy);
+        lastItems = items;
+        applyListChanges(group, instructions, child.elemCreator);
+    }
+}
+
 export function dynamicElement<T, S>(
     tagName: string,
     attributes: any = {},
@@ -139,23 +160,10 @@ export function dynamicElement<T, S>(
         let group = new KindergartenGroup(kindergarden);
         let update;
         if (isCondition(child)) {
-            update = (newData: T) => {
-                let result = child.condition(newData);
-                if (result) {
-                    group.ensureNode(child.elem.dom)
-                    child.elem.update(newData)
-                } else
-                    group.removeNode(child.elem.dom)
-            }
+            update = mkUpdateCondition(child, group)
         }
         else {
-            let lastItems = [];
-            update = (newData: T) => {
-                let items = child.getItems(newData);
-                let instructions = listCompare(lastItems, items, child.matchBy);
-                lastItems = items;
-                applyListChanges(group, instructions, child.elemCreator);
-            }
+            update = mkUpdateCollection(child, group);
         }
         update(initialData)
         updates.push(update);
