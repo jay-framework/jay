@@ -1,11 +1,15 @@
 import render from './output';
-import benchmark from '../benchmark';
 
-window.onload = function() {
-    let target = document.getElementById('target');
-    let progress = document.getElementById('progress');
-    let {dom, update} = render({text: 'name'});
-    target.appendChild(dom);
+export default {
+    render,
+    data
+}
 
-    benchmark(index => update({text: 'name ' + index}), status => progress.textContent = status);
+function data() {
+    return function (index) {
+        if (index === 0)
+            return {text: 'name'};
+        else
+            return {text: 'name ' + index};
+    }
 }

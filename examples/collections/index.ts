@@ -1,20 +1,21 @@
-import render from "./output";
-import benchmark from '../benchmark';
+import render from './output';
 
-window.onload = function() {
-    let target = document.getElementById('target');
-    let progress = document.getElementById('progress');
+export default {
+    render,
+    data
+}
+
+function data() {
     let title = 'todo';
     let items = [
         {name: 'car', completed: false, cost: 10, id: 'a'},
         {name: 'plane', completed: true, cost: 100, id: 'b'},
         {name: 'boat', completed: false, cost: 50, id: 'c'}
     ];
-
-    let {dom, update} = render({title, items});
-    target.appendChild(dom);
-
-    benchmark(index => {
+    return function (index) {
+        if (index === 0)
+            return {title, items};
+        else {
             items = [...items];
             if (index % 3 === 0)
                 items.push({name: 'item ' + index, completed: !!(index % 2), cost: index, id: 'a' + index});
@@ -28,8 +29,7 @@ window.onload = function() {
                 let item = items.splice(rand, 1);
                 items.splice(rand2, 0, item[0]);
             }
-
-            update({title, items})
-        }, status => progress.textContent = status
-    );
+            return {title, items}
+        }
+    }
 }
