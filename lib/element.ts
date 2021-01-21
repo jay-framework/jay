@@ -52,7 +52,7 @@ export function element<T, S>(
     update: updateConstructor<T, S> = noopUpdateConstructor):
     JayElement<T> {
     let e = createBaseElement(tagName, attributes);
-
+                    6
     let updates: updateFunc<T>[] = [];
     let state: S = initialState;
     if (update !== noopUpdateConstructor) {
