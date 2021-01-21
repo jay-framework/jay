@@ -35,6 +35,7 @@ window.onload = function() {
     function runExample(example) {
         let dataFunc = example.makeData();
         let {dom, update} = example.render(dataFunc(0));
+        target.innerHTML = '';
         target.appendChild(dom);
 
         benchmark(index => update(dataFunc(index)), status => progress.textContent = status);

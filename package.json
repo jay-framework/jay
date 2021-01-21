@@ -7,7 +7,7 @@
     "test": "jest",
     "ex": "tsc --p examples.tsconfig.json && cp examples/basic/index.html dist/basic/ && cp examples/conditions/index.html dist/conditions/ && cp examples/collections/index.html dist/collections/",
     "rollup": "rollup --config ./rollup.config.js",
-    "copy": "cp examples/basic/index.html dist/basic/ && cp examples/conditions/index.html dist/conditions/ && cp examples/collections/index.html dist/collections/ && cp examples/composite/index.html dist/composite/ && cp examples/index.html dist/index.html",
+    "copy": "cp examples/basic/index.html dist/basic/ && cp examples/conditions/index.html dist/conditions/ && cp examples/collections/index.html dist/collections/ && cp examples/composite/index.html dist/composite/ && cp examples/index.html dist/index.html && cp examples/index.css dist/index.css",
     "build": "npm run rollup && npm run copy"
   },
   "dependencies": {
