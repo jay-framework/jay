@@ -1,4 +1,4 @@
-import {element as e, JayElement, noopUpdate} from '../../lib/element2';
+import {element as e, JayElement, noopUpdate} from '../../lib/element';
 import {beforeEach, describe, expect, it} from '@jest/globals'
 
 const SOME_VALUE = 'some text in the element';
