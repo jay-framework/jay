@@ -14,9 +14,9 @@ export interface MatchResult<T> {
     fromPos?: number
 }
 
-export function listCompare<T>(oldArray: Array<T>, newArray: Array<T>, matchBy: string): Array<MatchResult<T>> {
-    let oldList = new RandomAccessLinkedList(oldArray, matchBy);
-    let newList = new RandomAccessLinkedList(newArray, matchBy);
+export function listCompare<T>(oldArray: RandomAccessLinkedList<T>, newArray: RandomAccessLinkedList<T>): Array<MatchResult<T>> {
+    let oldList = oldArray
+    let newList = newArray;
 
     let oldListItem = oldList.first();
     let newListItem = newList.first();
@@ -26,6 +26,7 @@ export function listCompare<T>(oldArray: Array<T>, newArray: Array<T>, matchBy: 
     while (newListItem !== EoF) {
         if (oldListItem === EoF) {
             // process.stdout.write(`add ${newListItem.id} ${index}\n`);
+            oldList.add((newListItem as LinkedListItem<T>).value, oldListItem);
             instructions.push({action: ITEM_ADDED, item: (newListItem as LinkedListItem<T>).value, pos: index});
             newListItem = (newListItem as LinkedListItem<T>).next;
             index += 1;

@@ -109,4 +109,8 @@ export class RandomAccessLinkedList<T> {
         return from !== EoF?count: -1;
     }
 
+    get matchBy(): string {
+        return this._matchBy
+    }
+
 }

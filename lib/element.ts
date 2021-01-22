@@ -1,5 +1,6 @@
 import {Kindergarten, KindergartenGroup} from "./kindergarden";
 import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "./list-compare";
+import {RandomAccessLinkedList as List} from "./random-access-linked-list";
 
 const STYLE = 'style';
 type updateConstructor<T, S> = (e:HTMLElement, newData:T, state: S) => S;
@@ -115,6 +116,16 @@ function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<Ma
     });
 }
 
+function mkUpdateCollection<T>(child: ForEach<T, any>, group: KindergartenGroup) {
+    let lastItems = new List([], child.matchBy);
+    return (newData: T) => {
+        let items = new List(child.getItems(newData), child.matchBy);
+        let instructions = listCompare(lastItems, items);
+        lastItems = items;
+        applyListChanges(group, instructions, child.elemCreator);
+    }
+}
+
 function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup) {
     return (newData: T) => {
         let result = child.condition(newData);
@@ -124,16 +135,6 @@ function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup) {
         } else
             group.removeNode(child.elem.dom)
     };
-}
-
-function mkUpdateCollection<T>(child: ForEach<T, any>, group: KindergartenGroup) {
-    let lastItems = [];
-    return (newData: T) => {
-        let items = child.getItems(newData);
-        let instructions = listCompare(lastItems, items, child.matchBy);
-        lastItems = items;
-        applyListChanges(group, instructions, child.elemCreator);
-    }
 }
 
 export function dynamicElement<T, S>(
