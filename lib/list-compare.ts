@@ -20,52 +20,53 @@ export function listCompare<T>(oldArray: RandomAccessLinkedList<T>,
     let newList = newArray;
 
     let oldListItem = oldList.first();
-    let newListItem = newList.first();
+    let newListItem_ = newList.first();
     let oldIndex = 0;
     let index = 0;
     let instructions = [];
-    while (newListItem !== EoF) {
+    while (newListItem_ !== EoF) {
+        let newListItem = newListItem_ as LinkedListItem<T>;
         if (oldListItem === EoF) {
             // process.stdout.write(`add ${newListItem.id} ${index}\n`);
-            oldList.add((newListItem as LinkedListItem<T>).value, oldListItem);
-            instructions.push({action: ITEM_ADDED, item: (newListItem as LinkedListItem<T>).value, pos: index});
-            newListItem = (newListItem as LinkedListItem<T>).next;
+            oldList.add(newListItem.value, oldListItem);
+            instructions.push({action: ITEM_ADDED, item: newListItem.value, pos: index});
+            newListItem_ = newListItem.next;
             index += 1;
         }
-        else if ((oldListItem as LinkedListItem<T>).id !== (newListItem as LinkedListItem<T>).id) {
-            if (!newList.has((oldListItem as LinkedListItem<T>).id)) {
+        else if (oldListItem.id !== newListItem.id) {
+            if (!newList.has(oldListItem.id)) {
                 // remove the item
                 // process.stdout.write(`remove ${oldListItem.id} ${index}\n`);
                 instructions.push({action: ITEM_REMOVED, item: (oldListItem as LinkedListItem<T>).value, pos: index});
-                oldList.remove((oldListItem as LinkedListItem<T>));
-                oldListItem = (oldListItem as LinkedListItem<T>).next;
+                oldList.remove(oldListItem);
+                oldListItem = oldListItem.next;
             }
-            else if (oldList.has((newListItem as LinkedListItem<T>).id)) {
+            else if (oldList.has(newListItem.id)) {
                 // console.log('compare item', oldListItem.value, newListItem.value);
                 // move the item to this position
-                let oldListItemToMove = oldList.get((newListItem as LinkedListItem<T>).id);
+                let oldListItemToMove = oldList.get(newListItem.id);
                 let distance = oldList.distance(oldListItem, oldListItemToMove);
                 // process.stdout.write(`move ${newListItem.id} from ${oldIndex+distance} to ${index}\n`);
                 instructions.push({action: ITEM_MOVED, item: oldListItemToMove.value, pos: index, fromPos: oldIndex + distance});
-                oldList.move(oldListItemToMove, (oldListItem as LinkedListItem<T>));
-                newListItem = (newListItem as LinkedListItem<T>).next;
+                oldList.move(oldListItemToMove, oldListItem);
+                newListItem_ = newListItem.next;
                 index += 1;
                 oldIndex += 1;
             }
             else {
                 // add
-                oldList.add((newListItem as LinkedListItem<T>).value, oldListItem);
+                oldList.add(newListItem.value, oldListItem);
                 // process.stdout.write(`add2 ${newListItem.id} ${index}\n`);
-                instructions.push({action: ITEM_ADDED, item: (newListItem as LinkedListItem<T>).value, pos: index});
-                newListItem = (newListItem as LinkedListItem<T>).next;
+                instructions.push({action: ITEM_ADDED, item: newListItem.value, pos: index});
+                newListItem_ = newListItem.next;
                 index += 1;
                 oldIndex += 1;
             }
         }
         else {
             // console.log('compare item', oldListItem.value, newListItem.value);
-            oldListItem = (oldListItem as LinkedListItem<T>).next;
-            newListItem = (newListItem as LinkedListItem<T>).next;
+            oldListItem = oldListItem.next;
+            newListItem_ = newListItem.next;
             index += 1;
             oldIndex += 1;
         }
@@ -73,9 +74,9 @@ export function listCompare<T>(oldArray: RandomAccessLinkedList<T>,
     }
     while (oldListItem !== EoF) {
         // process.stdout.write(`remove ${oldListItem.id} ${oldIndex}\n`);
-        instructions.push({action: ITEM_REMOVED, item: (oldListItem as LinkedListItem<T>).value, pos: oldIndex});
-        oldList.remove((oldListItem as LinkedListItem<T>));
-        oldListItem = (oldListItem as LinkedListItem<T>).next;
+        instructions.push({action: ITEM_REMOVED, item: oldListItem.value, pos: oldIndex});
+        oldList.remove(oldListItem);
+        oldListItem = oldListItem.next;
     }
     return optimize(instructions);
 }
