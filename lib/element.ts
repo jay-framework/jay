@@ -120,7 +120,7 @@ function mkUpdateCollection<T>(child: ForEach<T, any>, group: KindergartenGroup)
     let lastItems = new List([], child.matchBy);
     return (newData: T) => {
         let items = new List(child.getItems(newData), child.matchBy);
-        let instructions = listCompare(lastItems, items);
+        let instructions = listCompare(lastItems, items, () => {});
         lastItems = items;
         applyListChanges(group, instructions, child.elemCreator);
     }

@@ -14,7 +14,9 @@ export interface MatchResult<T> {
     fromPos?: number
 }
 
-export function listCompare<T>(oldArray: RandomAccessLinkedList<T>, newArray: RandomAccessLinkedList<T>): Array<MatchResult<T>> {
+export function listCompare<T>(oldArray: RandomAccessLinkedList<T>,
+                               newArray: RandomAccessLinkedList<T>,
+                               compareItem: (newItem: T, oldItem: T) => void): Array<MatchResult<T>> {
     let oldList = oldArray
     let newList = newArray;
 
@@ -43,6 +45,7 @@ export function listCompare<T>(oldArray: RandomAccessLinkedList<T>, newArray: Ra
                 // console.log('compare item', oldListItem.value, newListItem.value);
                 // move the item to this position
                 let oldListItemToMove = oldList.get((newListItem as LinkedListItem<T>).id);
+                compareItem(newListItem.value, oldListItemToMove.value);
                 let distance = oldList.distance(oldListItem, oldListItemToMove);
                 // process.stdout.write(`move ${newListItem.id} from ${oldIndex+distance} to ${index}\n`);
                 instructions.push({action: ITEM_MOVED, item: oldListItemToMove.value, pos: index, fromPos: oldIndex + distance});
@@ -63,6 +66,7 @@ export function listCompare<T>(oldArray: RandomAccessLinkedList<T>, newArray: Ra
         }
         else {
             // console.log('compare item', oldListItem.value, newListItem.value);
+            compareItem(newListItem.value, oldListItem.value);
             oldListItem = (oldListItem as LinkedListItem<T>).next;
             newListItem = (newListItem as LinkedListItem<T>).next;
             index += 1;
