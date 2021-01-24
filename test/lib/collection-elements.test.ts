@@ -90,7 +90,7 @@ describe('collection-element', () => {
         expect(jayElement.dom.children[4]).toHaveTextContent(item4.name);
     })
 
-    it.skip('should update item content', () => {
+    it('should update item content', () => {
         let jayElement = makeElement({items: [item1, item2, item3]});
         jayElement.update({items: [item1, item2_1, item3]});
         expect(jayElement.dom.querySelectorAll('.item')).toHaveLength(3);

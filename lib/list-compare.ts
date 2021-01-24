@@ -1,4 +1,5 @@
 import {EoF, LinkedListItem, RandomAccessLinkedList} from "./random-access-linked-list";
+import {JayElement} from "./element";
 
 export const ITEM_ADDED = 'IA';
 export const ITEM_REMOVED = 'IR';
@@ -7,15 +8,17 @@ export const ITEM_MOVED = 'IM';
 const MOVED_FORWARD_NONE = 0;
 const MOVED_FORWARD_IN_SEQUENCE = 1;
 
-export interface MatchResult<T> {
+export interface MatchResult<T, S> {
     action: typeof ITEM_ADDED | typeof ITEM_MOVED | typeof ITEM_REMOVED,
     item?: T,
     pos: number,
-    fromPos?: number
+    fromPos?: number,
+    elem?: JayElement<T>
 }
 
-export function listCompare<T>(oldArray: RandomAccessLinkedList<T>,
-                               newArray: RandomAccessLinkedList<T>): Array<MatchResult<T>> {
+export function listCompare<T, S>(oldArray: RandomAccessLinkedList<T, S>,
+                               newArray: RandomAccessLinkedList<T, S>,
+                               mkElement: (T) => S): Array<MatchResult<T,S>> {
     let oldList = oldArray
     let newList = newArray;
 
@@ -25,11 +28,13 @@ export function listCompare<T>(oldArray: RandomAccessLinkedList<T>,
     let index = 0;
     let instructions = [];
     while (newListItem_ !== EoF) {
-        let newListItem = newListItem_ as LinkedListItem<T>;
+        let newListItem = newListItem_ as LinkedListItem<T, S>;
         if (oldListItem === EoF) {
             // process.stdout.write(`add ${newListItem.id} ${index}\n`);
-            oldList.add(newListItem.value, oldListItem);
-            instructions.push({action: ITEM_ADDED, item: newListItem.value, pos: index});
+            let newElement = mkElement(newListItem.value);
+            oldList.add(newListItem.value, oldListItem, newElement);
+            newListItem.attach = newElement;
+            instructions.push({action: ITEM_ADDED, item: newListItem.value, pos: index, elem: newElement});
             newListItem_ = newListItem.next;
             index += 1;
         }
@@ -45,6 +50,7 @@ export function listCompare<T>(oldArray: RandomAccessLinkedList<T>,
                 // console.log('compare item', oldListItem.value, newListItem.value);
                 // move the item to this position
                 let oldListItemToMove = oldList.get(newListItem.id);
+                newListItem.attach = oldListItemToMove.attach;
                 let distance = oldList.distance(oldListItem, oldListItemToMove);
                 // process.stdout.write(`move ${newListItem.id} from ${oldIndex+distance} to ${index}\n`);
                 instructions.push({action: ITEM_MOVED, item: oldListItemToMove.value, pos: index, fromPos: oldIndex + distance});
@@ -55,9 +61,11 @@ export function listCompare<T>(oldArray: RandomAccessLinkedList<T>,
             }
             else {
                 // add
-                oldList.add(newListItem.value, oldListItem);
+                let newElement = mkElement(newListItem.value);
+                oldList.add(newListItem.value, oldListItem, newElement);
+                newListItem.attach = newElement;
                 // process.stdout.write(`add2 ${newListItem.id} ${index}\n`);
-                instructions.push({action: ITEM_ADDED, item: newListItem.value, pos: index});
+                instructions.push({action: ITEM_ADDED, item: newListItem.value, pos: index, elem: newElement});
                 newListItem_ = newListItem.next;
                 index += 1;
                 oldIndex += 1;
@@ -65,6 +73,7 @@ export function listCompare<T>(oldArray: RandomAccessLinkedList<T>,
         }
         else {
             // console.log('compare item', oldListItem.value, newListItem.value);
+            newListItem.attach = oldListItem.attach;
             oldListItem = oldListItem.next;
             newListItem_ = newListItem.next;
             index += 1;

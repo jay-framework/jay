@@ -1,6 +1,6 @@
 import {Kindergarten, KindergartenGroup} from "./kindergarden";
 import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "./list-compare";
-import {RandomAccessLinkedList as List} from "./random-access-linked-list";
+import {EoF, RandomAccessLinkedList, RandomAccessLinkedList as List} from "./random-access-linked-list";
 
 const STYLE = 'style';
 type updateConstructor<T, S> = (e:HTMLElement, newData:T, state: S) => S;
@@ -100,12 +100,11 @@ export interface ForEach<T, Item> {
     matchBy: string
 }
 
-function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<MatchResult<Item>>, createItemElement: (Item) => JayElement<Item>) {
+function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<MatchResult<Item, JayElement<Item>>>) {
     // todo add update
     instructions.forEach(instruction => {
         if (instruction.action === ITEM_ADDED) {
-            let newElement = createItemElement(instruction.item);
-            group.ensureNode(newElement.dom, instruction.pos)
+            group.ensureNode(instruction.elem.dom, instruction.pos)
         }
         else if (instruction.action === ITEM_REMOVED) {
             group.removeNodeAt(instruction.pos)
@@ -116,13 +115,24 @@ function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<Ma
     });
 }
 
+function updateListItems<T>(itemsList: RandomAccessLinkedList<T, JayElement<T>>) {
+    let listItem = itemsList.first();
+    while (listItem !== EoF) {
+        listItem.attach.update(listItem.value);
+        listItem = listItem.next;
+    }
+
+}
+
 function mkUpdateCollection<T>(child: ForEach<T, any>, group: KindergartenGroup) {
-    let lastItems = new List([], child.matchBy);
+    let lastItems = new List<T, JayElement<T>>([], child.matchBy);
     return (newData: T) => {
-        let items = new List(child.getItems(newData), child.matchBy);
-        let instructions = listCompare(lastItems, items, () => {});
-        lastItems = items;
-        applyListChanges(group, instructions, child.elemCreator);
+        const items = child.getItems(newData);
+        let itemsList = new List<T, JayElement<T>>(items, child.matchBy);
+        let instructions = listCompare<T, JayElement<T>>(lastItems, itemsList, child.elemCreator);
+        lastItems = itemsList;
+        applyListChanges(group, instructions);
+        updateListItems(itemsList);
     }
 }
 

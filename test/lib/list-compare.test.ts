@@ -3,7 +3,11 @@ import {TestList as List} from "./test-list";
 import {describe, expect, it} from '@jest/globals'
 
 
-const item = (id, val) => {return {id, val}};
+interface Item {
+    id: string,
+    val?: number
+}
+const item = (id, val): Item => {return {id, val}};
 
 const itemA = item('a', 123);
 const itemB = item('b', 456);
@@ -11,17 +15,25 @@ const itemC = item('c', 789);
 const itemD = item('d', 1234);
 const itemE = item('e', 2345);
 
-const item18 = {name: "item 18", completed: false, cost: 18, id: "a18"};
-const item21 = {name: "item 21", completed: true, cost: 21, id: "a21"};
-const item39 = {name: "item 39", completed: true, cost: 39, id: "a39"};
-const item36 = {name: "item 36", completed: false, cost: 36, id: "a36"};
-const item42 = {name: "item 42", completed: false, cost: 42, id: "a42"};
-const item3 = {name: "item 3", completed: true, cost: 3, id: "a3"};
-const item48 = {name: "item 48", completed: false, cost: 48, id: "a48"};
+interface ExItem extends Item {
+    completed: boolean,
+    name: string
+    cost: number
+}
+
+const item18: ExItem = {name: "item 18", completed: false, cost: 18, id: "a18"};
+const item21: ExItem = {name: "item 21", completed: true, cost: 21, id: "a21"};
+const item39: ExItem = {name: "item 39", completed: true, cost: 39, id: "a39"};
+const item36: ExItem = {name: "item 36", completed: false, cost: 36, id: "a36"};
+const item42: ExItem = {name: "item 42", completed: false, cost: 42, id: "a42"};
+const item3: ExItem = {name: "item 3", completed: true, cost: 3, id: "a3"};
+const item48: ExItem = {name: "item 48", completed: false, cost: 48, id: "a48"};
 
 describe('list-compare', () => {
 
-    function applyCompare(list: List<any>, instructions) {
+    function mkElem(item: Item): void {}
+
+    function applyCompare(list: List<Item, void>, instructions) {
         let res = list.toArray();
         instructions.forEach(instruction => {
             if (instruction.action === ITEM_ADDED) {
@@ -43,15 +55,15 @@ describe('list-compare', () => {
     it('should return empty result for identical lists', () =>{
         let oldList = new List([itemA, itemB, itemC], 'id');
         let newList = new List([itemA, itemB, itemC], 'id');
-        expect(listCompare(oldList, newList).length).toBe(0);
+        expect(listCompare(oldList, newList, mkElem).length).toBe(0);
     });
 
     it('should return add instruction for a new item at the end', () =>{
-        let oldList = new List([itemA, itemB], 'id');
+        let oldList = new List<Item, void>([itemA, itemB], 'id');
         let toUpdateList = oldList.clone();
-        let newList = new List([itemA, itemB, itemC], 'id');
+        let newList = new List<Item, void>([itemA, itemB, itemC], 'id');
 
-        let instructions = listCompare(toUpdateList, newList);
+        let instructions = listCompare(toUpdateList, newList, mkElem);
         let mutatedList = applyCompare(oldList, instructions);
 
         expect(instructions.length).toBe(1);
@@ -61,11 +73,11 @@ describe('list-compare', () => {
     });
 
     it('should return add instruction for a new item at the middle', () =>{
-        let oldList = new List([itemA, itemB], 'id');
+        let oldList = new List<Item, void>([itemA, itemB], 'id');
         let toUpdateList = oldList.clone();
-        let newList = new List([itemA, itemC, itemB], 'id');
+        let newList = new List<Item, void>([itemA, itemC, itemB], 'id');
 
-        let instructions = listCompare(toUpdateList, newList);
+        let instructions = listCompare(toUpdateList, newList, mkElem);
         let mutatedList = applyCompare(oldList, instructions);
 
         expect(instructions.length).toBe(1);
@@ -75,11 +87,11 @@ describe('list-compare', () => {
     });
 
     it('should return remove instruction for a removed item', () =>{
-        let oldList = new List([itemA, itemB, itemC], 'id');
+        let oldList = new List<Item, void>([itemA, itemB, itemC], 'id');
         let toUpdateList = oldList.clone();
-        let newList = new List([itemA, itemC], 'id');
+        let newList = new List<Item, void>([itemA, itemC], 'id');
 
-        let instructions = listCompare(toUpdateList, newList);
+        let instructions = listCompare(toUpdateList, newList, mkElem);
         let mutatedList = applyCompare(oldList, instructions);
 
         expect(instructions.length).toBe(1);
@@ -89,11 +101,11 @@ describe('list-compare', () => {
     });
 
     it('should return remove instruction for a removed item at the end', () =>{
-        let oldList = new List([itemA, itemB, itemC], 'id');
+        let oldList = new List<Item, void>([itemA, itemB, itemC], 'id');
         let toUpdateList = oldList.clone();
-        let newList = new List([itemA, itemB], 'id');
+        let newList = new List<Item, void>([itemA, itemB], 'id');
 
-        let instructions = listCompare(toUpdateList, newList);
+        let instructions = listCompare(toUpdateList, newList, mkElem);
         let mutatedList = applyCompare(oldList, instructions);
 
         expect(instructions.length).toBe(1);
@@ -103,11 +115,11 @@ describe('list-compare', () => {
     });
 
     it('should return remove instruction for multiple removed item at the end', () =>{
-        let oldList = new List([itemA, itemB, itemC, itemD, itemE], 'id');
+        let oldList = new List<Item, void>([itemA, itemB, itemC, itemD, itemE], 'id');
         let toUpdateList = oldList.clone();
-        let newList = new List([itemA, itemB], 'id');
+        let newList = new List<Item, void>([itemA, itemB], 'id');
 
-        let instructions = listCompare(toUpdateList, newList);
+        let instructions = listCompare(toUpdateList, newList, mkElem);
         let mutatedList = applyCompare(oldList, instructions);
 
         expect(instructions.length).toBe(3);
@@ -121,11 +133,11 @@ describe('list-compare', () => {
     });
 
     it('should return move instruction for a moved item', () =>{
-        let oldList = new List([itemA, itemB, itemC], 'id');
+        let oldList = new List<Item, void>([itemA, itemB, itemC], 'id');
         let toUpdateList = oldList.clone();
-        let newList = new List([itemA, itemC, itemB], 'id');
+        let newList = new List<Item, void>([itemA, itemC, itemB], 'id');
 
-        let instructions = listCompare(toUpdateList, newList);
+        let instructions = listCompare(toUpdateList, newList, mkElem);
         let mutatedList = applyCompare(oldList, instructions);
 
         expect(instructions.length).toBe(1);
@@ -135,11 +147,11 @@ describe('list-compare', () => {
     });
 
     it('should optimize move instruction a moved item forward', () =>{
-        let oldList = new List([itemA, itemB, itemC, itemD, itemE], 'id');
+        let oldList = new List<Item, void>([itemA, itemB, itemC, itemD, itemE], 'id');
         let toUpdateList = oldList.clone();
-        let newList = new List([itemA, itemC, itemD, itemE, itemB], 'id');
+        let newList = new List<Item, void>([itemA, itemC, itemD, itemE, itemB], 'id');
 
-        let instructions = listCompare(toUpdateList, newList);
+        let instructions = listCompare(toUpdateList, newList, mkElem);
         let mutatedList = applyCompare(oldList, instructions);
 
         expect(instructions.length).toBe(1);
@@ -151,11 +163,11 @@ describe('list-compare', () => {
     });
 
     it('should optimize multiple move instruction sequences', () =>{
-        let oldList = new List([itemA, itemB, itemC, itemD, itemE, item3, item18, item21, item36, item39], 'id');
+        let oldList = new List<Item, void>([itemA, itemB, itemC, itemD, itemE, item3, item18, item21, item36, item39], 'id');
         let toUpdateList = oldList.clone();
-        let newList = new List([itemA, itemC, itemD, itemE, itemB, item3, item21, item36, item39, item18], 'id');
+        let newList = new List<Item, void>([itemA, itemC, itemD, itemE, itemB, item3, item21, item36, item39, item18], 'id');
 
-        let instructions = listCompare(toUpdateList, newList);
+        let instructions = listCompare(toUpdateList, newList, mkElem);
         let mutatedList = applyCompare(oldList, instructions);
 
         expect(instructions.length).toBe(2);
@@ -168,11 +180,11 @@ describe('list-compare', () => {
     });
 
     it('should return move instruction for multiple moved items forward', () =>{
-        let oldList = new List([itemA, itemB, itemC, itemD, itemE], 'id');
+        let oldList = new List<Item, void>([itemA, itemB, itemC, itemD, itemE], 'id');
         let toUpdateList = oldList.clone();
-        let newList = new List([itemA, itemC, itemE, itemD, itemB], 'id');
+        let newList = new List<Item, void>([itemA, itemC, itemE, itemD, itemB], 'id');
 
-        let instructions = listCompare(toUpdateList, newList);
+        let instructions = listCompare(toUpdateList, newList, mkElem);
         let mutatedList = applyCompare(oldList, instructions);
 
         expect(instructions.length).toBe(3);
@@ -186,11 +198,11 @@ describe('list-compare', () => {
     });
 
     it('should return move instruction a moved item backward', () =>{
-        let oldList = new List([itemA, itemB, itemC, itemD, itemE], 'id');
+        let oldList = new List<Item, void>([itemA, itemB, itemC, itemD, itemE], 'id');
         let toUpdateList = oldList.clone();
-        let newList = new List([itemA, itemE, itemB, itemC, itemD], 'id');
+        let newList = new List<Item, void>([itemA, itemE, itemB, itemC, itemD], 'id');
 
-        let instructions = listCompare(toUpdateList, newList);
+        let instructions = listCompare(toUpdateList, newList, mkElem);
         let mutatedList = applyCompare(oldList, instructions);
 
         expect(instructions.length).toBe(1);
@@ -200,11 +212,11 @@ describe('list-compare', () => {
     });
 
     it('should return instructions for reshuffle', () =>{
-        let oldList = new List([itemA, itemB, itemC], 'id');
+        let oldList = new List<Item, void>([itemA, itemB, itemC], 'id');
         let toUpdateList = oldList.clone();
-        let newList = new List([itemE, itemC, itemD, itemA, itemB], 'id');
+        let newList = new List<Item, void>([itemE, itemC, itemD, itemA, itemB], 'id');
 
-        let instructions = listCompare(toUpdateList, newList);
+        let instructions = listCompare(toUpdateList, newList, mkElem);
         let mutatedList = applyCompare(oldList, instructions);
 
         expect(instructions.length).toBe(3);
@@ -218,11 +230,11 @@ describe('list-compare', () => {
     });
 
     it('should return instructions for move then remove', () =>{
-        let oldList = new List([item18, item21, item36, item39, item42, item3, item48], 'id');
+        let oldList = new List<Item, void>([item18, item21, item36, item39, item42, item3, item48], 'id');
         let toUpdateList = oldList.clone();
-        let newList = new List([item18, item39, item21, item42, item3, item48], 'id');
+        let newList = new List<Item, void>([item18, item39, item21, item42, item3, item48], 'id');
 
-        let instructions = listCompare(toUpdateList, newList);
+        let instructions = listCompare(toUpdateList, newList, mkElem);
         let mutatedList = applyCompare(oldList, instructions);
 
         expect(instructions.length).toBe(2);
@@ -235,11 +247,11 @@ describe('list-compare', () => {
     });
 
     it('should return instructions for remove then move', () =>{
-        let oldList = new List([item18, item21, item36, item39, item42], 'id');
+        let oldList = new List<Item, void>([item18, item21, item36, item39, item42], 'id');
         let toUpdateList = oldList.clone();
-        let newList = new List([item18, item21, item42, item39], 'id');
+        let newList = new List<Item, void>([item18, item21, item42, item39], 'id');
 
-        let instructions = listCompare(toUpdateList, newList);
+        let instructions = listCompare(toUpdateList, newList, mkElem);
         let mutatedList = applyCompare(oldList, instructions);
 
         expect(instructions.length).toBe(2);
@@ -252,7 +264,7 @@ describe('list-compare', () => {
     });
 
     it('optimize sequence in the middle of instructions array', () =>{
-        let oldList = new List([
+        let oldList = new List<ExItem, void>([
             {name: "item 114", completed: false, cost: 114, id: "a114"},
             {name: "item 33", completed: true, cost: 33, id: "a33"},     // 1 removed
             {name: "item 75", completed: true, cost: 75, id: "a75"},     // 2
@@ -262,7 +274,7 @@ describe('list-compare', () => {
             {name: "item 207", completed: true, cost: 207, id: "a207"}   // 6
         ], 'id');
         let toUpdateList = oldList.clone();
-        let newList = new List([
+        let newList = new List<ExItem, void>([
             {name: "item 114", completed: false, cost: 114, id: "a114"},
             {name: "item 75", completed: true, cost: 75, id: "a75"},     // 1
             {name: "item 153", completed: true, cost: 153, id: "a153"},  // 2
@@ -272,7 +284,7 @@ describe('list-compare', () => {
             {name: "item 201", completed: true, cost: 201, id: "a201"}   // 6 moved
         ], 'id');
 
-        let instructions = listCompare(toUpdateList, newList);
+        let instructions = listCompare(toUpdateList, newList, mkElem);
         let mutatedList = applyCompare(oldList, instructions);
         expect(instructions.length).toBe(3);
         expect(instructions).toEqual([
@@ -311,7 +323,7 @@ describe('list-compare', () => {
                 }
             }
             it('should handle extreme shaking ' + i, () => {
-                let matchResults = listCompare(new List(arr, 'id'), new List(newArr, 'id'));
+                let matchResults = listCompare(new List(arr, 'id'), new List(newArr, 'id'), mkElem);
 
                 let mutatedList = applyCompare(new List(arr, 'id'), matchResults);
                 expect(mutatedList).toEqual(newArr);
