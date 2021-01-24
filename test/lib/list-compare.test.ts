@@ -54,7 +54,6 @@ describe('list-compare', () => {
         let instructions = listCompare(toUpdateList, newList);
         let mutatedList = applyCompare(oldList, instructions);
 
-        console.log(oldList.toArray(), toUpdateList.toArray(), newList.toArray());
         expect(instructions.length).toBe(1);
         expect(instructions).toEqual([{action: ITEM_ADDED, item: itemC, pos: 2}])
         expect(mutatedList).toEqual(newList.toArray());

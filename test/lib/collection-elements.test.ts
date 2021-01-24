@@ -69,6 +69,27 @@ describe('collection-element', () => {
         expect(jayElement.dom.children[4]).toHaveTextContent(item1.name);
     })
 
+    it('should support multiple updates', () => {
+        let jayElement = makeElement({items: [item1, item2, item3]});
+        jayElement.update({items: [item5, item3, item4, item2, item1]});
+        jayElement.update({items: [item3, item4, item2, item1]});
+        jayElement.update({items: [item3, item4, item2, item5, item1]});
+        jayElement.update({items: [item3, item2, item5, item4, item1]});
+        jayElement.update({items: [item3, item2, item5, item4]});
+        jayElement.update({items: [item1, item3, item2, item5, item4]});
+        expect(jayElement.dom.querySelectorAll('.item')).toHaveLength(5);
+        expect(jayElement.dom.querySelector('#'+item1.id)).toHaveTextContent(item1.name);
+        expect(jayElement.dom.querySelector('#'+item2.id)).toHaveTextContent(item2.name);
+        expect(jayElement.dom.querySelector('#'+item3.id)).toHaveTextContent(item3.name);
+        expect(jayElement.dom.querySelector('#'+item4.id)).toHaveTextContent(item4.name);
+        expect(jayElement.dom.querySelector('#'+item5.id)).toHaveTextContent(item5.name);
+        expect(jayElement.dom.children[0]).toHaveTextContent(item1.name);
+        expect(jayElement.dom.children[1]).toHaveTextContent(item3.name);
+        expect(jayElement.dom.children[2]).toHaveTextContent(item2.name);
+        expect(jayElement.dom.children[3]).toHaveTextContent(item5.name);
+        expect(jayElement.dom.children[4]).toHaveTextContent(item4.name);
+    })
+
     it.skip('should update item content', () => {
         let jayElement = makeElement({items: [item1, item2, item3]});
         jayElement.update({items: [item1, item2_1, item3]});
