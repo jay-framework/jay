@@ -37,7 +37,7 @@ export function listCompare<T>(oldArray: RandomAccessLinkedList<T>,
             if (!newList.has(oldListItem.id)) {
                 // remove the item
                 // process.stdout.write(`remove ${oldListItem.id} ${index}\n`);
-                instructions.push({action: ITEM_REMOVED, item: (oldListItem as LinkedListItem<T>).value, pos: index});
+                instructions.push({action: ITEM_REMOVED, item: oldListItem.value, pos: index});
                 oldList.remove(oldListItem);
                 oldListItem = oldListItem.next;
             }
