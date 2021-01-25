@@ -5,7 +5,6 @@ import {
     JayElement,
     updateTextContent as uTContent
 } from '../../lib/element';
-import "@testing-library/jest-dom/extend-expect";
 import {describe, expect, it} from '@jest/globals'
 
 const item1 = {name: 'name 1', id: 'id-1'};

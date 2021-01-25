@@ -1,14 +1,22 @@
-import {BoF, EoF, RandomAccessLinkedList} from '../../lib/random-access-linked-list';
+import {BoF, EoF, LinkedListItem, RandomAccessLinkedList} from '../../lib/random-access-linked-list';
 import {describe, expect, it} from '@jest/globals'
 
+interface Item {
+    id: string,
+    val: number
+}
 const item = (id, val) => {return {id, val}};
 
-const itemA = item('a', 123);
-const itemB = item('b', 456);
-const itemC = item('c', 789);
-const itemD = item('d', 1234);
-const itemE = item('e', 2345);
-const itemX = item('x', 2345);
+const itemA: Item = item('a', 123);
+const itemB: Item = item('b', 456);
+const itemC: Item = item('c', 789);
+const itemD: Item = item('d', 1234);
+const itemE: Item = item('e', 2345);
+const itemX: Item = item('x', 2345);
+
+const attach1 = 'A';
+const attach2 = 'B';
+const attach3 = 'C';
 
 const listToArray = (list) => {
     let first = list.first();
@@ -267,4 +275,29 @@ describe('random-access-linked-list', () => {
         expect(list.get(itemE.id).prev.value).toBe(itemC);
         expect(list.first().value).toBe(itemD);
     });
+
+    it('stores attachements', () => {
+        const list = new RandomAccessLinkedList([], 'id');
+        list.add(itemA, EoF, attach1);
+        list.add(itemB, EoF, attach2);
+        list.add(itemC, EoF, attach3);
+
+        expect(list.first().attach).toBe(attach1);
+        expect(list.first().next.attach).toBe(attach2);
+        expect(list.first().next.next.attach).toBe(attach3);
+    })
+    it('moves itesm with attachements', () => {
+        const list = new RandomAccessLinkedList<Item, string>([], 'id');
+        list.add(itemA, EoF, attach1);
+        list.add(itemB, EoF, attach2);
+        list.add(itemC, EoF, attach3);
+
+        list.move((list.first() as LinkedListItem<Item, string>).next as LinkedListItem<Item, string>,
+            list.first() as LinkedListItem<Item, string>);
+
+        expect(list.first().attach).toBe(attach2);
+        expect(list.first().next.attach).toBe(attach1);
+        expect(list.first().next.next.attach).toBe(attach3);
+
+    })
 });
