@@ -17,6 +17,10 @@ function data() {
             return {title, items};
         else {
             items = [...items];
+            if (index % 2 === 0) {
+                let index = Math.floor(items.length * Math.random());
+                items[index].cost += 1000;
+            }
             if (index % 3 === 0)
                 items.push({name: 'item ' + index, completed: !!(index % 2), cost: index, id: 'a' + index});
             if (index % 5 === 0) {
