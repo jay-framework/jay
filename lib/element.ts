@@ -47,7 +47,13 @@ function normalizeUpdates<T>(updates: Array<updateFunc<T>>): updateFunc<T> {
 export function textElement<T>(tagName: string,
                                   attributes: any = {}, initialData: T, textContent: (T) => string) {
     let text = textContent(initialData);
-    return element<T, string>(tagName, attributes, [text], initialData, text, updateTextContent(textContent));
+    return element<T, string>(tagName, attributes, [text], initialData, text,
+        (elem:HTMLElement, newData:T, state: string) =>  {
+            let newContent = textContent(newData);
+            if (state !== newContent)
+                elem.textContent = newContent;
+            return newContent;
+        });
 }
 
 export function element<T, S>(
@@ -192,11 +198,3 @@ export function dynamicElement<T, S>(
     };
 }
 
-function updateTextContent<T>(getState: (T) => string): updateConstructor<T, string> {
-    return (elem:HTMLElement, newData:T, state: string) =>  {
-        let newContent = getState(newData);
-        if (state !== newContent)
-            elem.textContent = newContent;
-        return newContent;
-    };
-}
