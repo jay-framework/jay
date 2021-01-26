@@ -16,7 +16,6 @@ function data() {
         if (index === 0)
             return {title, items};
         else {
-            items = [...items];
             if (index % 2 === 0) {
                 let index = Math.floor(items.length * Math.random());
                 items[index].cost += 1000;
