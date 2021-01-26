@@ -1,4 +1,4 @@
-import {element as e, updateTextContent as uTContent} from '../../lib/element';
+import {element as e, textElement as text} from '../../lib/element';
 
 interface ViewState {
     text: string
@@ -7,9 +7,9 @@ interface ViewState {
 
 export default function render(viewState: ViewState) {
     return e('div', {}, [
-        e('div', {}, [viewState.text], viewState, viewState.text, uTContent(vs => vs.text)),
+        text('div', {}, viewState, vs => vs.text),
         e('div', {}, ['static']),
-        e('div', {}, [viewState.text2], viewState, viewState.text2, uTContent(vs => vs.text2))
+        text('div', {}, viewState, vs => vs.text2)
 
     ]);
 }

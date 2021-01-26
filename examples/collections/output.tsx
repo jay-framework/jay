@@ -3,7 +3,7 @@ import {
     element as e,
     forEach,
     JayElement,
-    updateTextContent as uTContent
+    textElement as text
 } from '../../lib/element.js';
 
 interface Item {
@@ -22,25 +22,17 @@ export default function render(viewState: ViewState): JayElement<ViewState> {
 
     const createDiv = (item: Item) => {
         return e('div', {}, [
-            e('span', {style: {cssText: 'color:green; width: 100px; display: inline-block;'}},
-                [item.name], item, item.name, uTContent(vs => vs.name)),
-            e('span', {style: {cssText: 'color:red; width: 100px; display: inline-block;'}},
-                [item.completed ? 'yes' : 'no'], item, item.completed, (elem:HTMLElement, newData:Item, state: boolean) => {
-                    if (newData.completed !== state)
-                        elem.textContent = item.completed ? 'yes' : 'no';
-                    return newData.completed;
-                }),
-            e('span', {style: {cssText: 'color:blue; width: 100px; display: inline-block;'}},
-                [item.cost.toString()], item, item.cost, (elem:HTMLElement, newData:Item, state: number) => {
-                    if (newData.cost !== state)
-                        elem.textContent = item.cost.toString();
-                    return newData.cost;
-                })
+            text('span', {style: {cssText: 'color:green; width: 100px; display: inline-block;'}},
+                item, item => item.name),
+            text('span', {style: {cssText: 'color:red; width: 100px; display: inline-block;'}},
+                item, item => item.completed ? 'yes' : 'no'),
+            text('span', {style: {cssText: 'color:blue; width: 100px; display: inline-block;'}},
+                item, item => item.cost.toString())
         ]);
     };
 
     return e('div', {}, [
-        e('h1', {}, [viewState.title], viewState, viewState.title, uTContent(vs => vs.title)),
+        text('h1', {}, viewState, vs => vs.title),
         de('div', {}, [
             forEach(vs => vs.items, createDiv, 'id')
         ], viewState)

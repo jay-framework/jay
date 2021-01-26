@@ -44,6 +44,12 @@ function normalizeUpdates<T>(updates: Array<updateFunc<T>>): updateFunc<T> {
     }
 }
 
+export function textElement<T>(tagName: string,
+                                  attributes: any = {}, initialData: T, textContent: (T) => string) {
+    let text = textContent(initialData);
+    return element<T, string>(tagName, attributes, [text], initialData, text, updateTextContent(textContent));
+}
+
 export function element<T, S>(
     tagName: string,
     attributes: any = {},
