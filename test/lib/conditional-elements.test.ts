@@ -1,9 +1,8 @@
 import {
     conditional,
     dynamicElement as de,
-    element as e,
     JayElement,
-    updateTextContent as uTContent
+    textElement as text
 } from '../../lib/element';
 import "@testing-library/jest-dom/extend-expect";
 import {describe, expect, it} from '@jest/globals'
@@ -24,10 +23,10 @@ describe('conditional-element', () => {
         // noinspection DuplicatedCode
         return de('div', {}, [
             conditional((newViewState) => newViewState.condition,
-                e('div', {style: {cssText: 'color:red'}, "id":"text1"}, [data.text1], data, data.text1, uTContent(vs => vs.text1))
+                text('div', {style: {cssText: 'color:red'}, "id":"text1"}, data, data => data.text1)
             ),
             conditional((newViewState) => !newViewState.condition,
-                e('div', {style: {cssText: 'color:green'}, "id":"text2"}, [data.text2], data, data.text2, uTContent(vs => vs.text2))
+                text('div', {style: {cssText: 'color:green'}, "id":"text2"}, data, data => data.text2)
             )
         ], data)
     }

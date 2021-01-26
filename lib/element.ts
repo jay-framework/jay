@@ -192,7 +192,7 @@ export function dynamicElement<T, S>(
     };
 }
 
-export function updateTextContent<T>(getState: (T) => string): updateConstructor<T, string> {
+function updateTextContent<T>(getState: (T) => string): updateConstructor<T, string> {
     return (elem:HTMLElement, newData:T, state: string) =>  {
         let newContent = getState(newData);
         if (state !== newContent)

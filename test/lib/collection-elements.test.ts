@@ -1,9 +1,8 @@
 import {
     forEach,
     dynamicElement as de,
-    element as e,
     JayElement,
-    updateTextContent as uTContent
+    textElement as text
 } from '../../lib/element';
 import {describe, expect, it} from '@jest/globals'
 
@@ -30,7 +29,7 @@ describe('collection-element', () => {
         return de('div', {}, [
             forEach(
                 (newViewState) => newViewState.items,
-                (item: Item) => e('div', {"className":"item", id: item.id}, [item.name], item, item.name, uTContent(vs => vs.name)),
+                (item: Item) => text('div', {"className":"item", id: item.id}, item, item => item.name),
                 'id'
             )
         ], data)
