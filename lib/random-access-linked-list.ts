@@ -74,7 +74,7 @@ export class RandomAccessLinkedList<T,S> {
         }         
     }
 
-    add(obj: T, beforeItem: LinkedListItem<T,S> | typeof EoF = EoF, attach: S) {
+    add(obj: T, beforeItem: LinkedListItem<T,S> | typeof EoF = EoF, attach: S = undefined) {
         let newItem: LinkedListItem<T,S>;
         if (this._first === EoF && this._last === BoF) {
             newItem = {id: obj[this._matchBy], value: obj, prev: BoF, next: EoF, attach};
