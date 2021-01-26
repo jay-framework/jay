@@ -44,49 +44,6 @@ function normalizeUpdates<T>(updates: Array<updateFunc<T>>): updateFunc<T> {
     }
 }
 
-export function textElement<T>(tagName: string,
-                                  attributes: any = {}, initialData: T, textContent: (T) => string) {
-    let text = textContent(initialData);
-    return element<T, string>(tagName, attributes, [text], initialData, text,
-        (elem:HTMLElement, newData:T, state: string) =>  {
-            let newContent = textContent(newData);
-            if (state !== newContent)
-                elem.textContent = newContent;
-            return newContent;
-        });
-}
-
-export function element<T, S>(
-    tagName: string,
-    attributes: any = {},
-    children: Array<string | JayElement<T>> = [],
-    initialData: T = undefined,
-    initialState: S = undefined,
-    update: updateConstructor<T, S> = noopUpdateConstructor):
-    JayElement<T> {
-    let e = createBaseElement(tagName, attributes);
-                    6
-    let updates: updateFunc<T>[] = [];
-    if (update !== noopUpdateConstructor) {
-        updates.push(mkElementUpdate(e, initialState, update));
-    }
-
-    children.forEach(child => {
-        if (typeof child === 'string')
-            e.append(child);
-        else {
-            e.append(child.dom);
-            if (child.update !== noopUpdate)
-                updates.push(child.update);
-        }
-    });
-
-    return {
-        dom: e,
-        update: normalizeUpdates(updates)
-    };
-}
-
 export function conditional<T>(condition: (newData: T) => boolean, elem: JayElement<T>): Conditional<T> {
     return {condition, elem};
 }
@@ -162,6 +119,49 @@ function mkElementUpdate<T, S>(e: HTMLElement, initialState: S, update: updateCo
     return (newData: T) => {
         state = update(e, newData, state);
     }
+}
+
+export function textElement<T>(tagName: string,
+                               attributes: any = {}, initialData: T, textContent: (T) => string) {
+    let text = textContent(initialData);
+    return element<T, string>(tagName, attributes, [text], initialData, text,
+        (elem:HTMLElement, newData:T, state: string) =>  {
+            let newContent = textContent(newData);
+            if (state !== newContent)
+                elem.textContent = newContent;
+            return newContent;
+        });
+}
+
+export function element<T, S>(
+    tagName: string,
+    attributes: any = {},
+    children: Array<string | JayElement<T>> = [],
+    initialData: T = undefined,
+    initialState: S = undefined,
+    update: updateConstructor<T, S> = noopUpdateConstructor):
+    JayElement<T> {
+    let e = createBaseElement(tagName, attributes);
+    6
+    let updates: updateFunc<T>[] = [];
+    if (update !== noopUpdateConstructor) {
+        updates.push(mkElementUpdate(e, initialState, update));
+    }
+
+    children.forEach(child => {
+        if (typeof child === 'string')
+            e.append(child);
+        else {
+            e.append(child.dom);
+            if (child.update !== noopUpdate)
+                updates.push(child.update);
+        }
+    });
+
+    return {
+        dom: e,
+        update: normalizeUpdates(updates)
+    };
 }
 
 export function dynamicElement<T, S>(
