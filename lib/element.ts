@@ -114,7 +114,7 @@ function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup) {
     };
 }
 
-function mkElementUpdate<T, S>(e: HTMLElement, initialState: S, update: updateConstructor<T, S>) {
+function mkUpdateElement<T, S>(e: HTMLElement, initialState: S, update: updateConstructor<T, S>) {
     let state: S = initialState;
     return (newData: T) => {
         state = update(e, newData, state);
@@ -122,7 +122,9 @@ function mkElementUpdate<T, S>(e: HTMLElement, initialState: S, update: updateCo
 }
 
 export function textElement<T>(tagName: string,
-                               attributes: any = {}, initialData: T, textContent: (T) => string) {
+                               attributes: any = {},
+                               initialData: T,
+                               textContent: (T) => string) {
     let text = textContent(initialData);
     return element<T, string>(tagName, attributes, [text], initialData, text,
         (elem:HTMLElement, newData:T, state: string) =>  {
@@ -145,7 +147,7 @@ export function element<T, S>(
     6
     let updates: updateFunc<T>[] = [];
     if (update !== noopUpdateConstructor) {
-        updates.push(mkElementUpdate(e, initialState, update));
+        updates.push(mkUpdateElement(e, initialState, update));
     }
 
     children.forEach(child => {
@@ -176,7 +178,7 @@ export function dynamicElement<T, S>(
 
     let updates: updateFunc<T>[] = [];
     if (update !== noopUpdateConstructor) {
-        updates.push(mkElementUpdate(e, initialState, update));
+        updates.push(mkUpdateElement(e, initialState, update));
     }
 
     let kindergarden = new Kindergarten(e);
