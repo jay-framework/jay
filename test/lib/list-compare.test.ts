@@ -1,6 +1,7 @@
 import {listCompare, ITEM_ADDED, ITEM_REMOVED, ITEM_MOVED} from '../../lib/list-compare';
 import {TestList as List} from "./test-list";
 import {describe, expect, it} from '@jest/globals'
+import {EoF} from "../../lib/random-access-linked-list";
 
 
 interface Item {
@@ -14,6 +15,12 @@ const itemB = item('b', 456);
 const itemC = item('c', 789);
 const itemD = item('d', 1234);
 const itemE = item('e', 2345);
+
+const attachA = 'A';
+const attachB = 'B';
+const attachC = 'C';
+const attachD = 'D';
+const attachE = 'E';
 
 interface ExItem extends Item {
     completed: boolean,
@@ -331,6 +338,36 @@ describe('list-compare', () => {
             arr = newArr;
         }
     })
+
+    it('should copy attachments from old to new list', () =>{
+        let oldList = new List([], 'id');
+        oldList.add(itemA, EoF, attachA);
+        oldList.add(itemB, EoF, attachB);
+        oldList.add(itemC, EoF, attachC);
+
+        let newList = new List([itemA, itemB, itemC], 'id');
+        listCompare(oldList, newList, mkElem)
+        
+        expect(newList.firstAsItem().attach).toBe(attachA);
+        expect(newList.at(1).attach).toBe(attachB);
+        expect(newList.at(2).attach).toBe(attachC);
+    });
+
+    it('should create new Attachments for new items', () =>{
+        let oldList = new List([], 'id');
+        oldList.add(itemA, EoF, attachA);
+        oldList.add(itemB, EoF, attachB);
+        oldList.add(itemC, EoF, attachC);
+
+        let newList = new List([itemA, itemB, itemD, itemC, itemE], 'id');
+        listCompare(oldList, newList, (item:Item) => item.id.toUpperCase())
+
+        expect(newList.firstAsItem().attach).toBe(attachA);
+        expect(newList.at(1).attach).toBe(attachB);
+        expect(newList.at(2).attach).toBe(attachD);
+        expect(newList.at(3).attach).toBe(attachC);
+        expect(newList.at(4).attach).toBe(attachE);
+    });
 
 });
 
