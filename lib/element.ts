@@ -67,12 +67,10 @@ export function element<T, S>(
     let e = createBaseElement(tagName, attributes);
                     6
     let updates: updateFunc<T>[] = [];
-    let state: S = initialState;
     if (update !== noopUpdateConstructor) {
-        updates.push((newData: T) => {
-            state = update(e, newData, state);
-        })
+        updates.push(mkElementUpdate(e, initialState, update));
     }
+
     children.forEach(child => {
         if (typeof child === 'string')
             e.append(child);
@@ -159,6 +157,13 @@ function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup) {
     };
 }
 
+function mkElementUpdate<T, S>(e: HTMLElement, initialState: S, update: updateConstructor<T, S>) {
+    let state: S = initialState;
+    return (newData: T) => {
+        state = update(e, newData, state);
+    }
+}
+
 export function dynamicElement<T, S>(
     tagName: string,
     attributes: any = {},
@@ -170,12 +175,8 @@ export function dynamicElement<T, S>(
     let e = createBaseElement(tagName, attributes);
 
     let updates: updateFunc<T>[] = [];
-
-    let state: S = initialState;
     if (update !== noopUpdateConstructor) {
-        updates.push((newData: T) => {
-            state = update(e, newData, state);
-        })
+        updates.push(mkElementUpdate(e, initialState, update));
     }
 
     let kindergarden = new Kindergarten(e);
