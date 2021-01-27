@@ -44,17 +44,25 @@ function normalizeUpdates<T>(updates: Array<updateFunc<T>>): updateFunc<T> {
     }
 }
 
-export function conditional<T>(condition: (newData: T) => boolean, elem: JayElement<T>): Conditional<T> {
+export function conditional<T>(condition: (newData: T) => boolean, elem: JayElement<T> | string): Conditional<T> {
     return {condition, elem};
 }
 
 export interface Conditional<T> {
     condition: (newData: T) => boolean,
-    elem: JayElement<T>
+    elem: JayElement<T> | string
 }
 
-function isCondition<T>(c: Conditional<T> | ForEach<T, any>): c is Conditional<T> {
+function isCondition<T>(c: Conditional<T> | ForEach<T, any> | string | JayElement<T>): c is Conditional<T> {
     return (c as Conditional<T>).condition !== undefined;
+}
+
+function isForEach<T, S>(c: Conditional<T> | ForEach<T, S> | string | JayElement<T>): c is ForEach<T, S> {
+    return (c as ForEach<T, S>).elemCreator !== undefined;
+}
+
+function isJayElement<T, S>(c: Conditional<T> | ForEach<T, S> | string | JayElement<T>): c is JayElement<T> {
+    return (c as JayElement<T>).dom !== undefined;
 }
 
 export function forEach<T, Item>(getItems: (T) => Array<Item>, elemCreator: (Item) => JayElement<Item>, matchBy: string): ForEach<T, Item> {
@@ -104,13 +112,17 @@ function mkUpdateCollection<T>(child: ForEach<T, any>, group: KindergartenGroup)
 }
 
 function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup) {
+    let [childNode, update] = isJayElement(child.elem)?
+        [child.elem.dom, child.elem.update]:
+        [document.createTextNode(child.elem), x => x];
     return (newData: T) => {
         let result = child.condition(newData);
+
         if (result) {
-            group.ensureNode(child.elem.dom)
-            child.elem.update(newData)
+            group.ensureNode(childNode)
+            update(newData);
         } else
-            group.removeNode(child.elem.dom)
+            group.removeNode(childNode)
     };
 }
 
@@ -169,7 +181,7 @@ export function element<T, S>(
 export function dynamicElement<T, S>(
     tagName: string,
     attributes: any = {},
-    children: Array<Conditional<T> | ForEach<T, any>> = [],
+    children: Array<Conditional<T> | ForEach<T, any> | string | JayElement<T>> = [],
     initialData: T = undefined,
     initialState: S = undefined,
     update: updateConstructor<T, S> = noopUpdateConstructor):
@@ -184,15 +196,25 @@ export function dynamicElement<T, S>(
     let kindergarden = new Kindergarten(e);
     children.forEach(child => {
         let group = new KindergartenGroup(kindergarden);
-        let update;
+        let update = null;
         if (isCondition(child)) {
             update = mkUpdateCondition(child, group)
         }
-        else {
+        else if (isForEach(child)){
             update = mkUpdateCollection(child, group);
         }
-        update(initialData)
-        updates.push(update);
+        else if (isJayElement(child)) {
+            group.ensureNode(child.dom)
+            update = child.update;
+        }
+        else {
+            group.ensureNode(document.createTextNode(child))
+        }
+
+        if (update !== null) {
+            update(initialData)
+            updates.push(update);
+        }
     })
 
     return {
