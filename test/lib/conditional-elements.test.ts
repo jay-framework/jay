@@ -2,7 +2,8 @@ import {
     conditional,
     dynamicElement as de,
     JayElement,
-    textElement as text
+    element as e,
+    dynamicText as dt
 } from '../../lib/element';
 import "@testing-library/jest-dom/extend-expect";
 import {describe, expect, it} from '@jest/globals'
@@ -23,10 +24,10 @@ describe('conditional-element', () => {
         // noinspection DuplicatedCode
         return de('div', {}, [
             conditional((newViewState) => newViewState.condition,
-                text('div', {style: {cssText: 'color:red'}, "id":"text1"}, data, data => data.text1)
+                e('div', {style: {cssText: 'color:red'}, "id":"text1"}, [dt(data, data => data.text1)])
             ),
             conditional((newViewState) => !newViewState.condition,
-                text('div', {style: {cssText: 'color:green'}, "id":"text2"}, data, data => data.text2)
+                e('div', {style: {cssText: 'color:green'}, "id":"text2"}, [dt(data, data => data.text2)])
             )
         ], data)
     }

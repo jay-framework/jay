@@ -13,6 +13,11 @@ export interface JayElement<T> {
     update: updateFunc<T>
 }
 
+export interface TextElement<T> {
+    dom: Text,
+    update: updateFunc<T>
+}
+
 function setAttributes(e: HTMLElement, attributes: any) {
     Object.entries(attributes).forEach(([key, value]) => {
         if (key === STYLE) {
@@ -44,25 +49,24 @@ function normalizeUpdates<T>(updates: Array<updateFunc<T>>): updateFunc<T> {
     }
 }
 
-export function conditional<T>(condition: (newData: T) => boolean, elem: JayElement<T> | string): Conditional<T> {
-    return {condition, elem};
+export function conditional<T>(condition: (newData: T) => boolean, elem: JayElement<T> | TextElement<T> | string): Conditional<T> {
+    if (typeof elem === 'string')
+        return {condition, elem: text(elem)};
+    else
+        return {condition, elem};
 }
 
 export interface Conditional<T> {
     condition: (newData: T) => boolean,
-    elem: JayElement<T> | string
+    elem: JayElement<T> | TextElement<T>
 }
 
-function isCondition<T>(c: Conditional<T> | ForEach<T, any> | string | JayElement<T>): c is Conditional<T> {
+function isCondition<T>(c: Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T>): c is Conditional<T> {
     return (c as Conditional<T>).condition !== undefined;
 }
 
-function isForEach<T, S>(c: Conditional<T> | ForEach<T, S> | string | JayElement<T>): c is ForEach<T, S> {
+function isForEach<T, S>(c: Conditional<T> | ForEach<T, S> | TextElement<T> | JayElement<T>): c is ForEach<T, S> {
     return (c as ForEach<T, S>).elemCreator !== undefined;
-}
-
-function isJayElement<T, S>(c: Conditional<T> | ForEach<T, S> | string | JayElement<T>): c is JayElement<T> {
-    return (c as JayElement<T>).dom !== undefined;
 }
 
 export function forEach<T, Item>(getItems: (T) => Array<Item>, elemCreator: (Item) => JayElement<Item>, matchBy: string): ForEach<T, Item> {
@@ -112,17 +116,14 @@ function mkUpdateCollection<T>(child: ForEach<T, any>, group: KindergartenGroup)
 }
 
 function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup) {
-    let [childNode, update] = isJayElement(child.elem)?
-        [child.elem.dom, child.elem.update]:
-        [document.createTextNode(child.elem), x => x];
     return (newData: T) => {
         let result = child.condition(newData);
 
         if (result) {
-            group.ensureNode(childNode)
-            update(newData);
+            group.ensureNode(child.elem.dom)
+            child.elem.update(newData);
         } else
-            group.removeNode(childNode)
+            group.removeNode(child.elem.dom)
     };
 }
 
@@ -133,30 +134,38 @@ function mkUpdateElement<T, S>(e: HTMLElement, initialState: S, update: updateCo
     }
 }
 
-export function textElement<T>(tagName: string,
-                               attributes: any = {},
-                               initialData: T,
-                               textContent: (T) => string) {
-    let text = textContent(initialData);
-    return element<T, string>(tagName, attributes, [text], initialData, text,
-        (elem:HTMLElement, newData:T, state: string) =>  {
+function text<T>(content: string): TextElement<T> {
+    return {
+        dom: document.createTextNode(content),
+        update: noopUpdate
+    }
+}
+
+export function dynamicText<T>(initialData: T,
+                               textContent: (T) => string): TextElement<T> {
+    let content = textContent(initialData);
+    let n = document.createTextNode(content);
+    return {
+        dom: n,
+        update: (newData:T) => {
             let newContent = textContent(newData);
-            if (state !== newContent)
-                elem.textContent = newContent;
-            return newContent;
-        });
+            if (newContent !== content)
+                n.textContent = newContent;
+            content = newContent;
+        }
+    }
 }
 
 export function element<T, S>(
     tagName: string,
     attributes: any = {},
-    children: Array<string | JayElement<T>> = [],
+    children: Array<JayElement<T> | TextElement<T> | string> = [],
     initialData: T = undefined,
     initialState: S = undefined,
     update: updateConstructor<T, S> = noopUpdateConstructor):
     JayElement<T> {
     let e = createBaseElement(tagName, attributes);
-    6
+    
     let updates: updateFunc<T>[] = [];
     if (update !== noopUpdateConstructor) {
         updates.push(mkUpdateElement(e, initialState, update));
@@ -164,12 +173,10 @@ export function element<T, S>(
 
     children.forEach(child => {
         if (typeof child === 'string')
-            e.append(child);
-        else {
-            e.append(child.dom);
-            if (child.update !== noopUpdate)
-                updates.push(child.update);
-        }
+            child = text(child);
+        e.append(child.dom);
+        if (child.update !== noopUpdate)
+            updates.push(child.update);
     });
 
     return {
@@ -181,7 +188,7 @@ export function element<T, S>(
 export function dynamicElement<T, S>(
     tagName: string,
     attributes: any = {},
-    children: Array<Conditional<T> | ForEach<T, any> | string | JayElement<T>> = [],
+    children: Array<Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T> | string> = [],
     initialData: T = undefined,
     initialState: S = undefined,
     update: updateConstructor<T, S> = noopUpdateConstructor):
@@ -195,7 +202,9 @@ export function dynamicElement<T, S>(
 
     let kindergarden = new Kindergarten(e);
     children.forEach(child => {
-        let group = new KindergartenGroup(kindergarden);
+        if (typeof child === 'string')
+            child = text(child);
+        let group = kindergarden.newGroup();
         let update = null;
         if (isCondition(child)) {
             update = mkUpdateCondition(child, group)
@@ -203,12 +212,10 @@ export function dynamicElement<T, S>(
         else if (isForEach(child)){
             update = mkUpdateCollection(child, group);
         }
-        else if (isJayElement(child)) {
+        else  {
             group.ensureNode(child.dom)
-            update = child.update;
-        }
-        else {
-            group.ensureNode(document.createTextNode(child))
+            if (child.update !== noopUpdate)
+                update = child.update;
         }
 
         if (update !== null) {

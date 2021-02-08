@@ -1,4 +1,4 @@
-import {conditional, textElement as text, dynamicElement as de} from '../../lib/element';
+import {conditional, dynamicText as dt, dynamicElement as de, element as e} from '../../lib/element';
 
 interface ViewState {
     text1: string,
@@ -9,10 +9,10 @@ interface ViewState {
 export default function render(viewState: ViewState) {
     return de('div', {}, [
         conditional((newViewState) => newViewState.cond,
-            text('div', {style: {cssText: 'color:red'}}, viewState, vs => vs.text1)
+            e('div', {style: {cssText: 'color:red'}}, [dt(viewState, vs => vs.text1)])
         ),
         conditional((newViewState) => !newViewState.cond,
-            text('div', {style: {cssText: 'color:green'}}, viewState,vs => vs.text2)
+            e('div', {style: {cssText: 'color:green'}}, [dt(viewState,vs => vs.text2)])
         )
     ], viewState);
 }

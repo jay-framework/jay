@@ -63,7 +63,7 @@ export class Kindergarten {
         let index = 0;
         let offset = 0;
         while (index < this.groups.length && this.groups[index] !== group) {
-            offset = this.groups[index].children.size;
+            offset += this.groups[index].children.size;
             index = index + 1;
         }
         return offset;

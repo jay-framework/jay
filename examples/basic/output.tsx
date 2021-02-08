@@ -1,10 +1,10 @@
-import {textElement as text} from '../../lib/element';
+import {element as e, dynamicText as dt} from '../../lib/element';
 
 interface ViewState {
     text: string
 }
 
 export default function render(viewState: ViewState) {
-    return text('div', {}, viewState, vs => vs.text);
+    return e('div', {}, [dt(viewState, vs => vs.text)]);
 }
 

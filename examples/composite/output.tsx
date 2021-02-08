@@ -1,4 +1,4 @@
-import {element as e, textElement as text} from '../../lib/element';
+import {element as e, dynamicText as dt} from '../../lib/element';
 
 interface ViewState {
     text: string
@@ -7,9 +7,9 @@ interface ViewState {
 
 export default function render(viewState: ViewState) {
     return e('div', {}, [
-        text('div', {}, viewState, vs => vs.text),
+        e('div', {}, [dt(viewState, vs => vs.text)]),
         e('div', {}, ['static']),
-        text('div', {}, viewState, vs => vs.text2)
+        e('div', {}, [dt(viewState, vs => vs.text2)])
 
     ]);
 }

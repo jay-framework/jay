@@ -2,16 +2,11 @@ import {
     forEach,
     dynamicElement as de,
     JayElement,
-    textElement as text, textElement, conditional
+    element as e,
+    dynamicText as dt,
+    conditional
 } from '../../lib/element';
 import {describe, expect, it} from '@jest/globals'
-
-const item1 = {name: 'name 1', id: 'id-1'};
-const item2 = {name: 'name 2', id: 'id-2'};
-const item2_1 = {name: 'name 2_1', id: 'id-2'};
-const item3 = {name: 'name 3', id: 'id-3'};
-const item4 = {name: 'name 4', id: 'id-4'};
-const item5 = {name: 'name 5', id: 'id-5'};
 
 describe('dynamic-element with mixed content', () => {
 
@@ -22,6 +17,7 @@ describe('dynamic-element with mixed content', () => {
 
     interface ViewState {
         title: string,
+        separator: string,
         items: Array<Item>;
     }
 
@@ -29,38 +25,45 @@ describe('dynamic-element with mixed content', () => {
         // noinspection DuplicatedCode
         return de('div', {}, [
             'Some text',
-            textElement('h1', {}, data, data => data.title),
+            e('h1', {}, [dt(data, data => data.title)]),
             forEach(
                 (newViewState) => newViewState.items,
-                (item: Item) => text('div', {"className":"item", id: item.id}, item, item => item.name),
+                (item: Item) => e('div', {"className":"item", id: item.id}, [dt(item, item => item.name)]),
                 'id'
             ),
+            dt(data, data => data.separator),
             conditional(data => data.items.length === 0,
                 "no items found")
         ], data)
     }
 
-    const data1 = {items: [], title: 'the title'};
+    const data1 = {items: [], title: 'the title', separator: '---'};
     const data2 = {items: [
             {name: 'name 1', id: 'a'},
             {name: 'name 2', id: 'b'}
-        ], title: 'the title'};
+        ], title: 'the title', separator: '---'};
+    const data3 = {items: [
+            {name: 'name 1', id: 'a'},
+            {name: 'name 2', id: 'b'}
+        ], title: 'the title', separator: '$$$'};
     it('empty collection', () => {
         let jayElement = makeElement(data1);
-        expect(jayElement.dom.outerHTML).toEqual('<div>no items found<h1>the title</h1>Some text</div>');
+        expect(jayElement.dom.outerHTML).toEqual('<div>Some text<h1>the title</h1>---no items found</div>');
     })
 
     it('full collection', () => {
         let jayElement = makeElement(data2);
-        expect(jayElement.dom.outerHTML).toEqual('<div><div class="item" id="a">name 1</div><div class="item" id="b">name 2</div><h1>the title</h1>Some text</div>');
+        expect(jayElement.dom.outerHTML).toEqual('<div>Some text<h1>the title</h1><div class="item" id="a">name 1</div><div class="item" id="b">name 2</div>---</div>');
     })
 
     it('empty collection', () => {
         let jayElement = makeElement(data1);
         jayElement.update(data2)
-        expect(jayElement.dom.outerHTML).toEqual('<div><div class="item" id="a">name 1</div><div class="item" id="b">name 2</div><h1>the title</h1>Some text</div>');
+        expect(jayElement.dom.outerHTML).toEqual('<div>Some text<h1>the title</h1><div class="item" id="a">name 1</div><div class="item" id="b">name 2</div>---</div>');
         jayElement.update(data1)
-        expect(jayElement.dom.outerHTML).toEqual('<div>no items found<h1>the title</h1>Some text</div>');
+        expect(jayElement.dom.outerHTML).toEqual('<div>Some text<h1>the title</h1>---no items found</div>');
+        jayElement.update(data3)
+        expect(jayElement.dom.outerHTML).toEqual('<div>Some text<h1>the title</h1><div class="item" id="a">name 1</div><div class="item" id="b">name 2</div>$$$</div>');
     })
 });
 
