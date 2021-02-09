@@ -1,21 +1,24 @@
-import yourPlugin from '../lib';
-import pluginTester from "babel-plugin-tester";
+/// <reference types="node" />
+import * as core from "@babel/core";
 
-pluginTester({
-    plugin: yourPlugin,
-    pluginName: 'identifier reverse',
-    tests: {
-        // the key is the title
-        // the value is the code that is unchanged (because `snapshot: false`)
-        // test title will be: `1. does not change code with no identifiers`
-        'does not change code with no identifiers': '"hello";',
-
-        // test title will be: `2. changes this code`
-        'changes this code': {
-            // input to the plugin
-            code: 'var hello = "hi";',
-            // expected output
-            output: 'var olleh = "hi";',
-        },
-    },
+describe('babel', () => {
+    it('should', () => {
+        let x = core.transform(`interface ViewState {
+    text: string
+}
+export default function render(viewState: ViewState) {
+    return (
+        <div>{viewState.text}</div>
+    );
+}
+`, {
+            filename: 'file.tsx',
+            plugins: ["@babel/plugin-syntax-jsx"],
+            presets: [
+                ['@babel/preset-env', {targets: {node: 'current'}}],
+                '@babel/typescript',
+            ]
+        });
+        console.log(x.code);
+    })
 })
