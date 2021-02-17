@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "tsc && node dist",
+    "start": "tsc",
     "test": "jest",
     "rollup": "rollup --config ./rollup.config.js",
     "copy": "cp examples/index.html dist/index.html && cp examples/index.css dist/index.css",
