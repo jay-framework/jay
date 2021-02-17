@@ -1,11 +1,18 @@
 import {parse, NodeType, HTMLElement} from 'node-html-parser';
 import yaml from 'js-yaml';
 
-enum JayPrimitiveTypes {
+export enum JayPrimitiveTypes {
     type_string,
     type_number,
     type_boolean,
     type_date
+}
+
+const typesMap = {
+    'string': JayPrimitiveTypes.type_string,
+    'number': JayPrimitiveTypes.type_number,
+    'boolean': JayPrimitiveTypes.type_boolean,
+    'date': JayPrimitiveTypes.type_date
 }
 
 interface JayType {
@@ -30,8 +37,8 @@ interface JayFile {
 function validateType(data: any, validations: JayValidations, path: Array<string>): JayType {
     let types = {}
     for (let prop in data) {
-        if (data[prop] === 'string' || data[prop] === 'number' || data[prop] === 'boolean' || data[prop] === 'date')
-            types[prop] = data[prop];
+        if (typesMap[data[prop]] !== undefined)
+            types[prop] = typesMap[data[prop]];
         else if (Array.isArray(data[prop]))
             types[prop] = [validateType(data[prop][0], validations, [...path, prop])]
         else if (typeof data[prop] === 'object') {
