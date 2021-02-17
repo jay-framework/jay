@@ -23,8 +23,8 @@ ${jayYaml}
                     text: string
             `, '<body></body>'))
             
-            expect(jayFile.types).toEqual({text: JayPrimitiveTypes.type_string});
-            expect(jayFile.examples).toEqual([]);
+            expect(jayFile.val.types).toEqual({text: JayPrimitiveTypes.type_string});
+            expect(jayFile.val.examples).toEqual([]);
         });
 
         it('should parse simple string type with a simple example', () => {
@@ -36,8 +36,8 @@ ${jayYaml}
                     text: 'hello world'
             `, '<body></body>'))
 
-            expect(jayFile.types).toEqual({text: JayPrimitiveTypes.type_string});
-            expect(jayFile.examples).toEqual([{name: "example", data:{text: "hello world"}}]);
+            expect(jayFile.val.types).toEqual({text: JayPrimitiveTypes.type_string});
+            expect(jayFile.val.examples).toEqual([{name: "example", data:{text: "hello world"}}]);
         });
 
         it('should parse invalid type', () => {
@@ -63,7 +63,7 @@ ${jayYaml}
                         n3: number
             `, '<body></body>'))
 
-            expect(jayFile.types).toEqual({
+            expect(jayFile.val.types).toEqual({
                 s1: JayPrimitiveTypes.type_string,
                 n1: JayPrimitiveTypes.type_number,
                 b1: JayPrimitiveTypes.type_boolean,
@@ -75,8 +75,54 @@ ${jayYaml}
                     s3: JayPrimitiveTypes.type_string,
                     n3: JayPrimitiveTypes.type_number}
                 ]});
-            expect(jayFile.examples).toEqual([]);
+            expect(jayFile.val.examples).toEqual([]);
         });
+
+        it('should report on a file with two yaml-jay', () => {
+            let jayFile = parseJayFile(`
+<html>
+    <head>
+        <script type="application/yaml-jay">
+data:
+  name: string
+        </script>
+        <script type="application/yaml-jay">
+data:
+  name: string
+        </script>
+    </head>
+    <body>x</body>
+</html>`)
+            expect(jayFile.validations).toEqual(["jay file should have exactly one yaml-jay script, found 2"]);
+        })
+
+        it('should report on a file without yaml-jay', () => {
+            let jayFile = parseJayFile(`
+<html>
+    <head>
+    </head>
+    <body>x</body>
+</html>`)
+            expect(jayFile.validations).toEqual(["jay file should have exactly one yaml-jay script, found none"]);
+        })
+
+        it('should report on a non html file', () => {
+            let jayFile = parseJayFile(`rrgargaergargaerg aergaegaraer aer erager`)
+            expect(jayFile.validations).toEqual(["jay file should have exactly one yaml-jay script, found none"]);
+        })
+
+        it('should report on a file without a body', () => {
+            let jayFile = parseJayFile(`
+<html>
+    <head>
+        <script type="application/yaml-jay">
+data:
+  name: string
+        </script>
+    </head>
+</html>`)
+            expect(jayFile.validations).toEqual(["jay file must have exactly a body tag"]);
+        })
     })
 
 });

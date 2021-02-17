@@ -30,7 +30,11 @@ interface JayExample {
 interface JayFile {
     types: JayType,
     examples: Array<JayExample>,
-    body: HTMLElement,
+    body: HTMLElement
+}
+
+interface WithValidations<T> {
+    val?: T,
     validations: JayValidations
 }
 
@@ -62,17 +66,27 @@ function parseJayYaml(jayYaml, validations: JayValidations): {types: JayType, ex
     return {types, examples};
 }
 
-export function parseJayFile(html): JayFile {
+export function parseJayFile(html): WithValidations<JayFile> {
     let validations = [];
     let root = parse(html);
-    let jayYamlElement = root.querySelector('[type="application/yaml-jay"]');
-    let jayYaml = jayYamlElement.text;
+    let jayYamlElements = root.querySelectorAll('[type="application/yaml-jay"]');
+    if (jayYamlElements.length !== 1) {
+        validations.push(`jay file should have exactly one yaml-jay script, found ${jayYamlElements.length===0?'none':jayYamlElements.length}`);
+        return {validations}
+    }
+    let jayYaml = jayYamlElements[0].text;
     let {types, examples} = parseJayYaml(jayYaml, validations);
     let body = root.querySelector('body');
+    if (body === null) {
+        validations.push(`jay file must have exactly a body tag`);
+        return {validations}
+    }
     return {
-        types,
-        examples,
-        body,
+        val: {
+            types,
+            examples,
+            body
+        },
         validations
     };
 }
