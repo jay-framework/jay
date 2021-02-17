@@ -1,0 +1,28 @@
+{
+  "name": "jay-compiler",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "example": "examples",
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "jest",
+    "build": "tsc"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "js-yaml": "^4.0.0",
+    "node-html-parser": "^2.1.0",
+    "tslib": "^2.0.3"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.12.1",
+    "@babel/preset-typescript": "^7.12.1",
+    "@types/node": "^14.11.10",
+    "jest": "^26.6.0",
+    "typescript": "^4.0.3"
+  }
+}
