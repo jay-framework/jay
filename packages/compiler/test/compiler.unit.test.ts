@@ -135,7 +135,13 @@ describe('compiler', () => {
                 bool: JPT.type_boolean,
                 bdate: JPT.type_date
             });
-            expect(genInterface).toEqual(`interface`)
+            expect(genInterface).toEqual(stripMargin(
+                `interface ViewState {
+                |  name: string,
+                |  age: number,
+                |  bool: boolean,
+                |  bdate: Date,
+                |}`));
         })
     })
 });

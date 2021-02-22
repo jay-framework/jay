@@ -2,10 +2,10 @@ import {parse, NodeType, HTMLElement} from 'node-html-parser';
 import yaml from 'js-yaml';
 
 export enum JayPrimitiveTypes {
-    type_string,
-    type_number,
-    type_boolean,
-    type_date
+    type_string = 'string',
+    type_number = 'number',
+    type_boolean = 'boolean',
+    type_date = 'Date'
 }
 
 const typesMap = {
@@ -92,5 +92,9 @@ export function parseJayFile(html): WithValidations<JayFile> {
 }
 
 export function generateTypes(types: JayType): string {
-
+    let genInterface = 'interface ViewState {\n';
+    for (let prop in types)
+        genInterface += `  ${prop}: ${types[prop]},\n`
+    genInterface += '}';
+    return genInterface;
 }
