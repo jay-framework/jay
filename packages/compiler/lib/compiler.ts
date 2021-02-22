@@ -90,3 +90,7 @@ export function parseJayFile(html): WithValidations<JayFile> {
         validations
     };
 }
+
+export function generateTypes(types: JayType): string {
+
+}
