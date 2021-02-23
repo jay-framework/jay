@@ -1,4 +1,4 @@
-import {JayElement} from "../runtime/lib/element";
+import {JayElement} from "jay-runtime";
 
 interface O1 {
     s2: string,

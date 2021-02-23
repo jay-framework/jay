@@ -5,11 +5,11 @@ export default [
   {
     input: './examples/index.ts',
     output: {
-      file: 'dist/index.js',
+      file: 'build/index.js',
       format: 'iife',
       name: 'jay'
     },
-    plugins: [typescript({})]
+    plugins: [typescript({tsconfig: './tsconfig-examples.json'})]
   }
 
 ];
