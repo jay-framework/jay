@@ -1,7 +1,8 @@
 {
   "packages": [
     "packages/runtime",
-    "packages/compiler"
+    "packages/compiler",
+    "packages/project"
   ],
   "version": "1.0.0"
 }

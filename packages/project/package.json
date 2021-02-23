@@ -1,0 +1,8 @@
+{
+  "name": "jay-example-project",
+  "version": "1.0.0",
+  "description": "",
+  "dependencies": {
+    "jay-runtime": "1.0.0"
+  }
+}
