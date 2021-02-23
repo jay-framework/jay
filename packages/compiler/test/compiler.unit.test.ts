@@ -183,7 +183,7 @@ describe('compiler', () => {
 
     describe('generate the definition file', () => {
         it('should generate definition file for simple file', () => {
-            let definitionFile = generateDefinitionFile(jayFileWith(
+            const jayFile = jayFileWith(
                 ` data:
                         |   s1: string
                         |   n1: number
@@ -194,10 +194,12 @@ describe('compiler', () => {
                         |   a1: 
                         |    -  s3: string
                         |       n3: number`,
-                '<body></body>')
-            )
+                '<body></body>');
+            let definitionFile = generateDefinitionFile(jayFile);
             expect(definitionFile.val).toEqual(stripMargin(
-                `interface O1 {
+                `import {JayElement} from "jay-runtime";
+                |
+                |interface O1 {
                 |  s2: string,
                 |  n2: number
                 |}
@@ -215,7 +217,7 @@ describe('compiler', () => {
                 |  a1: Array<A1>
                 |}
                 |
-                |export declare function render(viewState: ViewState): JayElement`));
+                |export declare function render(viewState: ViewState): JayElement<ViewState>`));
         })
     })
 });

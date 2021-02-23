@@ -145,6 +145,10 @@ export function generateDefinitionFile(html): WithValidations<string> {
     let parsedFile = parseJayFile(html);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        return `${types}\n\nexport declare function render(viewState: ViewState): JayElement`;
+        return `import {JayElement} from "jay-runtime";
+
+${types}
+
+export declare function render(viewState: ViewState): JayElement<ViewState>`;
     })
 }
