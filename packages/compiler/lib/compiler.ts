@@ -1,5 +1,6 @@
 import {parse, NodeType, HTMLElement} from 'node-html-parser';
 import yaml from 'js-yaml';
+import {pascalCase} from 'change-case';
 
 export enum JayPrimitiveTypes {
     type_string = 'string',
@@ -38,6 +39,10 @@ interface WithValidations<T> {
     validations: JayValidations
 }
 
+function isObject(obj) {
+    return typeof obj === 'object'
+}
+
 function validateType(data: any, validations: JayValidations, path: Array<string>): JayType {
     let types = {}
     for (let prop in data) {
@@ -45,7 +50,7 @@ function validateType(data: any, validations: JayValidations, path: Array<string
             types[prop] = typesMap[data[prop]];
         else if (Array.isArray(data[prop]))
             types[prop] = [validateType(data[prop][0], validations, [...path, prop])]
-        else if (typeof data[prop] === 'object') {
+        else if (isObject(data[prop])) {
             types[prop] = validateType(data[prop], validations, [...path, prop])
         }
         else
@@ -91,10 +96,34 @@ export function parseJayFile(html): WithValidations<JayFile> {
     };
 }
 
+function renderInterface(types: JayType, name: String): string {
+
+    let childInterfaces = [];
+
+    let genInterface = `interface ${name} {\n`;
+    genInterface += Object
+        .keys(types)
+        .map(prop => {
+            if (isObject(types[prop])) {
+                let name = prop;
+                childInterfaces.push(renderInterface(types[prop] as JayType, pascalCase(name)));
+                return `  ${prop}: ${pascalCase(name)}`;
+            }
+            else if (Array.isArray(types[prop]) && isObject(types[prop][0])) {
+
+            }
+            else if (Array.isArray(types[prop])) {
+
+            }
+            else
+                return `  ${prop}: ${types[prop]}`;
+        })
+        .join(',\n');
+    genInterface += '\n}';
+    return [...childInterfaces, genInterface].join('\n\n');
+
+}
+
 export function generateTypes(types: JayType): string {
-    let genInterface = 'interface ViewState {\n';
-    for (let prop in types)
-        genInterface += `  ${prop}: ${types[prop]},\n`
-    genInterface += '}';
-    return genInterface;
+    return renderInterface(types, 'ViewState');
 }

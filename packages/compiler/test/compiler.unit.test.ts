@@ -140,7 +140,25 @@ describe('compiler', () => {
                 |  name: string,
                 |  age: number,
                 |  bool: boolean,
-                |  bdate: Date,
+                |  bdate: Date
+                |}`));
+        })
+
+        it('should generate interface with complex types', () => {
+            let genInterface = generateTypes({
+                name: JPT.type_string,
+                address: {
+                    street: JPT.type_string,
+                }
+            });
+            expect(genInterface).toEqual(stripMargin(
+                `interface Address {
+                |  street: string
+                |}
+                |
+                |interface ViewState {
+                |  name: string,
+                |  address: Address
                 |}`));
         })
     })
