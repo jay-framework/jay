@@ -2,7 +2,8 @@
   "packages": [
     "packages/runtime",
     "packages/compiler",
-    "packages/project"
+    "packages/project",
+    "packages/rollup-plugin"
   ],
   "version": "1.0.0"
 }

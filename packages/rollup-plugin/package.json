@@ -1,0 +1,22 @@
+{
+  "name": "rollup-plugin-jay",
+  "version": "1.0.0",
+  "main": "dist/index",
+  "scripts": {
+    "test": "jest",
+    "build": "tsc"
+  },
+  "jest": {
+    "setupFilesAfterEnv": [
+      "./jest-setup.js"
+    ]
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "typescript": "^4.0.3",
+    "@types/node": "^14.11.10",
+    "jest": "^26.6.0",
+    "rollup": "^2.35.1",
+    "tslib": "^2.0.3"
+  }
+}

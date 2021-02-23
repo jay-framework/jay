@@ -1,5 +1,6 @@
 // rollup.config.js
 import typescript from '@rollup/plugin-typescript';
+import jay from 'rollup-plugin-jay';
 
 export default [
   {
@@ -9,7 +10,7 @@ export default [
       format: 'iife',
       name: 'jay'
     },
-    plugins: [typescript()]
+    plugins: [jay(), typescript()]
   }
 
 ];

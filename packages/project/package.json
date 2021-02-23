@@ -16,6 +16,7 @@
     "@babel/preset-typescript": "^7.12.1",
     "@rollup/plugin-typescript": "^8.1.0",
     "rollup": "^2.35.1",
-    "tslib": "^2.0.3"
+    "tslib": "^2.0.3",
+    "rollup-plugin-jay": "1.0.0"
   }
 }
