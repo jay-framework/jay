@@ -2,7 +2,20 @@
   "name": "jay-example-project",
   "version": "1.0.0",
   "description": "",
+  "scripts": {
+    "rollup": "rollup --config ./rollup.config.js",
+    "copy": "cp lib/index.html dist/index.html",
+    "build": "npm run rollup && npm run copy"
+  },
   "dependencies": {
     "jay-runtime": "1.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^4.0.3",
+    "@babel/preset-env": "^7.12.1",
+    "@babel/preset-typescript": "^7.12.1",
+    "@rollup/plugin-typescript": "^8.1.0",
+    "rollup": "^2.35.1",
+    "tslib": "^2.0.3"
   }
 }
