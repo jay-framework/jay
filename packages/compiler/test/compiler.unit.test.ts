@@ -1,14 +1,12 @@
-import {generateTypes, JayPrimitiveTypes as JPT, parseJayFile} from '../lib/compiler';
+import {generateDefinitionFile, generateTypes, JayPrimitiveTypes as JPT, parseJayFile} from '../lib/compiler';
 import {describe, expect, it} from '@jest/globals'
 import stripMargin from '@caiogondim/strip-margin'
 
 describe('compiler', () => {
 
-    describe('parse jay file', () => {
-
-        function jayFileWith(jayYaml, body) {
-            return stripMargin(
-                ` <html>
+    function jayFileWith(jayYaml, body) {
+        return stripMargin(
+            ` <html>
                 |   <head>
                 |     <script type="application/yaml-jay">
                 |${stripMargin(jayYaml)}
@@ -16,8 +14,10 @@ describe('compiler', () => {
                 |   </head>
                 |   ${stripMargin(body)}
                 | </html>`)
-        }
+    }
 
+    describe('parse jay file', () => {
+        
         it('should parse simple string type with no examples', () => {
             let jayFile = parseJayFile(jayFileWith(
                 `data:
@@ -178,6 +178,44 @@ describe('compiler', () => {
                 |  name: string,
                 |  address: Array<Address>
                 |}`));
+        })
+    })
+
+    describe('generate the definition file', () => {
+        it('should generate definition file for simple file', () => {
+            let definitionFile = generateDefinitionFile(jayFileWith(
+                ` data:
+                        |   s1: string
+                        |   n1: number
+                        |   b1: boolean
+                        |   o1: 
+                        |       s2: string
+                        |       n2: number
+                        |   a1: 
+                        |    -  s3: string
+                        |       n3: number`,
+                '<body></body>')
+            )
+            expect(definitionFile.val).toEqual(stripMargin(
+                `interface O1 {
+                |  s2: string,
+                |  n2: number
+                |}
+                |
+                |interface A1 {
+                |  s3: string,
+                |  n3: number
+                |}
+                |
+                |interface ViewState {
+                |  s1: string,
+                |  n1: number,
+                |  b1: boolean,
+                |  o1: O1,
+                |  a1: Array<A1>
+                |}
+                |
+                |export declare function render(viewState: ViewState): JayElement`));
         })
     })
 });

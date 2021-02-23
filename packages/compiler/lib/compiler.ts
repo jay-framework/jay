@@ -34,9 +34,30 @@ interface JayFile {
     body: HTMLElement
 }
 
-interface WithValidations<T> {
-    val?: T,
-    validations: JayValidations
+class WithValidations<T> {
+    val?: T;
+    validations: JayValidations;
+
+    constructor(val?: T, validations: JayValidations) {
+        this.val = val;
+        this.validations = validations;
+    }
+
+    map<R>(func: (T) => R): WithValidations<R> {
+        if (this.val)
+            return new WithValidations<R>(func(this.val), this.validations)
+        else
+            return new WithValidations<R>(undefined, this.validations)
+    }
+
+    flatMap<R>(func: (T) => WithValidations<R>): WithValidations<R> {
+        if (this.val) {
+            let that = func(this.val);
+            return new WithValidations<R>(that.val, [...this.validations, ...that.validations])
+        }
+        else
+            return new WithValidations<R>(undefined, this.validations)
+    }
 }
 
 function isObject(obj) {
@@ -77,23 +98,16 @@ export function parseJayFile(html): WithValidations<JayFile> {
     let jayYamlElements = root.querySelectorAll('[type="application/yaml-jay"]');
     if (jayYamlElements.length !== 1) {
         validations.push(`jay file should have exactly one yaml-jay script, found ${jayYamlElements.length===0?'none':jayYamlElements.length}`);
-        return {validations}
+        return new WithValidations(undefined, validations)
     }
     let jayYaml = jayYamlElements[0].text;
     let {types, examples} = parseJayYaml(jayYaml, validations);
     let body = root.querySelector('body');
     if (body === null) {
         validations.push(`jay file must have exactly a body tag`);
-        return {validations}
+        return new WithValidations(undefined, validations)
     }
-    return {
-        val: {
-            types,
-            examples,
-            body
-        },
-        validations
-    };
+    return new WithValidations({types, examples, body}, validations)
 }
 
 function renderInterface(types: JayType, name: String): string {
@@ -125,4 +139,12 @@ function renderInterface(types: JayType, name: String): string {
 
 export function generateTypes(types: JayType): string {
     return renderInterface(types, 'ViewState');
+}
+
+export function generateDefinitionFile(html): WithValidations<string> {
+    let parsedFile = parseJayFile(html);
+    return parsedFile.map((jayFile: JayFile) => {
+        let types = generateTypes(jayFile.types);
+        return `${types}\n\nexport declare function render(viewState: ViewState): JayElement`;
+    })
 }
