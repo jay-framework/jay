@@ -1,20 +1,15 @@
 // rollup-plugin-my-example.js
 export default function myExample () {
     return {
-        name: 'my-example', // this name will show up in warnings and errors
-        resolveId ( source ) {
-            console.log('*** source', source)
-            if (source === 'virtual-module') {
-                return source; // this signals that rollup should not ask other plugins or check the file system to find this id
+        name: 'jay', // this name will show up in warnings and errors
+        transform(code: string, id: string) {
+            console.log('transform', id, id.indexOf('.jay.html') > -1);
+            if (id.indexOf('.jay.html') > -1) {
+                return `export default function render() {}`
             }
-            return null; // other ids should be handled as usually
-        },
-        load ( id ) {
-            console.log('*** load', id)
-            if (id === 'virtual-module') {
-                return 'export default "This is virtual!"'; // the source code for "virtual-module"
+            else {
+                return code;
             }
-            return null; // other ids should be handled as usually
         }
     };
 }

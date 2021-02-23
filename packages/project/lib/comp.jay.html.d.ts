@@ -18,4 +18,4 @@ interface ViewState {
     a1: Array<A1>
 }
 
-export declare function render(viewState: ViewState): JayElement<ViewState>;
+export default function render(viewState: ViewState): JayElement<ViewState>;

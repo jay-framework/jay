@@ -1,4 +1,4 @@
-import {render} from './comp.jay.html';
+import render from './comp.jay.html';
 
 let initialData = {
     s1: 'some string',
