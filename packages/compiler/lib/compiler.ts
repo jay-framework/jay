@@ -38,7 +38,7 @@ class WithValidations<T> {
     val?: T;
     validations: JayValidations;
 
-    constructor(val?: T, validations: JayValidations) {
+    constructor(val: T | undefined, validations: JayValidations) {
         this.val = val;
         this.validations = validations;
     }
