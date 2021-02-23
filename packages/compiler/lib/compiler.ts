@@ -17,7 +17,7 @@ const typesMap = {
 }
 
 interface JayType {
-    [key: string]: JayPrimitiveTypes | JayType
+    [key: string]: JayPrimitiveTypes | JayType | Array<JayType>
 }
 
 type JayValidations = Array<string>
@@ -40,7 +40,7 @@ interface WithValidations<T> {
 }
 
 function isObject(obj) {
-    return typeof obj === 'object'
+    return typeof obj === 'object' && !Array.isArray(obj)
 }
 
 function validateType(data: any, validations: JayValidations, path: Array<string>): JayType {
@@ -109,11 +109,10 @@ function renderInterface(types: JayType, name: String): string {
                 childInterfaces.push(renderInterface(types[prop] as JayType, pascalCase(name)));
                 return `  ${prop}: ${pascalCase(name)}`;
             }
-            else if (Array.isArray(types[prop]) && isObject(types[prop][0])) {
-
-            }
             else if (Array.isArray(types[prop])) {
-
+                let name = prop;
+                childInterfaces.push(renderInterface(types[prop][0] as JayType, pascalCase(name)));
+                return `  ${prop}: Array<${pascalCase(name)}>`;
             }
             else
                 return `  ${prop}: ${types[prop]}`;

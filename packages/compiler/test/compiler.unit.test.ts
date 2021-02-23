@@ -144,7 +144,7 @@ describe('compiler', () => {
                 |}`));
         })
 
-        it('should generate interface with complex types', () => {
+        it('should generate interface with complex object types', () => {
             let genInterface = generateTypes({
                 name: JPT.type_string,
                 address: {
@@ -159,6 +159,24 @@ describe('compiler', () => {
                 |interface ViewState {
                 |  name: string,
                 |  address: Address
+                |}`));
+        })
+
+        it('should generate interface with complex array of object types', () => {
+            let genInterface = generateTypes({
+                name: JPT.type_string,
+                address: [{
+                    street: JPT.type_string,
+                }]
+            });
+            expect(genInterface).toEqual(stripMargin(
+                `interface Address {
+                |  street: string
+                |}
+                |
+                |interface ViewState {
+                |  name: string,
+                |  address: Array<Address>
                 |}`));
         })
     })
