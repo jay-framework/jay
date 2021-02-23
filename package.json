@@ -1,0 +1,10 @@
+{
+	"scripts": {
+		"test": "lerna run test",
+		"release": "echo \"======= Lerna Releasing jay =======\" && npm run test && lerna publish"
+	},
+	"devDependencies": {
+		"lerna": "^3.22.1"
+	},
+	"name": "jay"
+}

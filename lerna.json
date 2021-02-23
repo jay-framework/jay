@@ -1,0 +1,7 @@
+{
+  "packages": [
+    "packages/runtime",
+    "packages/compiler"
+  ],
+  "version": "1.0.0"
+}
