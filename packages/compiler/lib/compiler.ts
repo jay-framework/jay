@@ -1,6 +1,7 @@
-import {parse, NodeType, HTMLElement} from 'node-html-parser';
+import {HTMLElement, parse} from 'node-html-parser';
 import yaml from 'js-yaml';
 import {pascalCase} from 'change-case';
+import {JayValidations, WithValidations} from "./with-validations";
 
 export enum JayPrimitiveTypes {
     type_string = 'string',
@@ -20,8 +21,6 @@ interface JayType {
     [key: string]: JayPrimitiveTypes | JayType | Array<JayType>
 }
 
-type JayValidations = Array<string>
-
 
 interface JayExample {
     name: string,
@@ -32,32 +31,6 @@ interface JayFile {
     types: JayType,
     examples: Array<JayExample>,
     body: HTMLElement
-}
-
-class WithValidations<T> {
-    val?: T;
-    validations: JayValidations;
-
-    constructor(val: T | undefined, validations: JayValidations) {
-        this.val = val;
-        this.validations = validations;
-    }
-
-    map<R>(func: (T) => R): WithValidations<R> {
-        if (this.val)
-            return new WithValidations<R>(func(this.val), this.validations)
-        else
-            return new WithValidations<R>(undefined, this.validations)
-    }
-
-    flatMap<R>(func: (T) => WithValidations<R>): WithValidations<R> {
-        if (this.val) {
-            let that = func(this.val);
-            return new WithValidations<R>(that.val, [...this.validations, ...that.validations])
-        }
-        else
-            return new WithValidations<R>(undefined, this.validations)
-    }
 }
 
 function isObject(obj) {
@@ -152,3 +125,7 @@ ${types}
 export declare function render(viewState: ViewState): JayElement<ViewState>`;
     })
 }
+//
+// export function generateRuntimeFile(html): WithValidations<string> {
+//
+// }
