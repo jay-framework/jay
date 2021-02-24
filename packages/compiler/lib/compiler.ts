@@ -27,25 +27,28 @@ function renderInterface(types: JayType, name: String): string {
         .join(',\n');
     genInterface += '\n}';
     return [...childInterfaces, genInterface].join('\n\n');
-
 }
 
 export function generateTypes(types: JayType): string {
     return renderInterface(types, 'ViewState');
 }
 
+function renderImports(): string {
+    return `import {JayElement} from "jay-runtime";`;
+}
+
+function renderFunctionDecleration(): string {
+    return `export declare function render(viewState: ViewState): JayElement<ViewState>`;
+}
+
 export function generateDefinitionFile(html): WithValidations<string> {
     let parsedFile = parseJayFile(html);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        return `import {JayElement} from "jay-runtime";
-
-${types}
-
-export declare function render(viewState: ViewState): JayElement<ViewState>`;
+        return [renderImports(), types, renderFunctionDecleration()].join('\n\n');
     })
 }
-//
+
 // export function generateRuntimeFile(html): WithValidations<string> {
 //
 // }
