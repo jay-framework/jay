@@ -1,6 +1,7 @@
-import {generateDefinitionFile, generateTypes, JayPrimitiveTypes as JPT, parseJayFile} from '../lib/compiler';
+import {generateDefinitionFile, generateTypes} from '../lib/compiler';
 import {describe, expect, it} from '@jest/globals'
 import stripMargin from '@caiogondim/strip-margin'
+import {JayPrimitiveTypes as JPT, parseJayFile} from "../lib/parse-jay-file";
 
 describe('compiler', () => {
 
