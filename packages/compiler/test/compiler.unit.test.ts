@@ -1,4 +1,4 @@
-import {generateDefinitionFile, generateTypes} from '../lib/compiler';
+import {generateDefinitionFile, generateRuntimeFile, generateTypes} from '../lib/compiler';
 import {describe, expect, it} from '@jest/globals'
 import stripMargin from '@caiogondim/strip-margin'
 import {JayPrimitiveTypes as JPT} from "../lib/parse-jay-file";
@@ -108,6 +108,48 @@ describe('compiler', () => {
                 |}
                 |
                 |export declare function render(viewState: ViewState): JayElement<ViewState>`));
+        })
+    })
+
+    describe('generate the runtime file', () => {
+        it('should generate runtime file for simple file with dynamic text', () => {
+            const jayFile = jayFileWith(
+                ` data:
+                        |   s1: string`,
+                `<body>
+                      |  <div>{s1}</div>
+                      |</body>`);
+            let runtimeFile = generateRuntimeFile(jayFile);
+            expect(runtimeFile.val).toEqual(stripMargin(
+                `import {element as e, dynamicText as dt} from "jay-runtime";
+                |
+                |interface ViewState {
+                |  s1: string
+                |}
+                |
+                |export function render(viewState: ViewState): JayElement<ViewState> {
+                |  return e('div', {}, [dt(viewState, vs => \`\${vs.s1}\`)])
+                |}`));
+        })
+
+        it('should generate runtime file for simple file with static text', () => {
+            const jayFile = jayFileWith(
+                ` data:
+                        |   s1: string`,
+                `<body>
+                      |   <div>static text</div>
+                      |</body>`);
+            let runtimeFile = generateRuntimeFile(jayFile);
+            expect(runtimeFile.val).toEqual(stripMargin(
+                `import {element as e} from "jay-runtime";
+                |
+                |interface ViewState {
+                |  s1: string
+                |}
+                |
+                |export function render(viewState: ViewState): JayElement<ViewState> {
+                |  return e('div', {}, ['static text'])
+                |}`));
         })
     })
 });
