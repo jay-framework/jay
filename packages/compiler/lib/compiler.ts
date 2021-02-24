@@ -33,8 +33,12 @@ interface JayFile {
     body: HTMLElement
 }
 
-function isObject(obj) {
+function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj)
+}
+
+function isArrayType(obj: any) {
+    return Array.isArray(obj);
 }
 
 function validateType(data: any, validations: JayValidations, path: Array<string>): JayType {
@@ -42,9 +46,9 @@ function validateType(data: any, validations: JayValidations, path: Array<string
     for (let prop in data) {
         if (typesMap[data[prop]] !== undefined)
             types[prop] = typesMap[data[prop]];
-        else if (Array.isArray(data[prop]))
+        else if (isArrayType(data[prop]))
             types[prop] = [validateType(data[prop][0], validations, [...path, prop])]
-        else if (isObject(data[prop])) {
+        else if (isObjectType(data[prop])) {
             types[prop] = validateType(data[prop], validations, [...path, prop])
         }
         else
@@ -91,12 +95,12 @@ function renderInterface(types: JayType, name: String): string {
     genInterface += Object
         .keys(types)
         .map(prop => {
-            if (isObject(types[prop])) {
+            if (isObjectType(types[prop])) {
                 let name = prop;
                 childInterfaces.push(renderInterface(types[prop] as JayType, pascalCase(name)));
                 return `  ${prop}: ${pascalCase(name)}`;
             }
-            else if (Array.isArray(types[prop])) {
+            else if (isArrayType(types[prop])) {
                 let name = prop;
                 childInterfaces.push(renderInterface(types[prop][0] as JayType, pascalCase(name)));
                 return `  ${prop}: Array<${pascalCase(name)}>`;
