@@ -2,6 +2,11 @@ import {generateDefinitionFile, generateRuntimeFile, generateTypes} from '../lib
 import {describe, expect, it} from '@jest/globals'
 import stripMargin from '@caiogondim/strip-margin'
 import {JayPrimitiveTypes as JPT} from "../lib/parse-jay-file";
+import {promises} from 'fs';
+const readFile = promises.readFile;
+
+const readSourceFile = async (folder) => (await readFile(`./test/fixtures/${folder}/source.jay.html`)).toString().trim()
+const readGeneratedFile = async (folder) => (await readFile(`./test/fixtures/${folder}/generated.ts`)).toString().trim()
 
 describe('compiler', () => {
 
@@ -72,42 +77,10 @@ describe('compiler', () => {
     })
 
     describe('generate the definition file', () => {
-        it('should generate definition file for simple file', () => {
-            const jayFile = jayFileWith(
-                ` data:
-                        |   s1: string
-                        |   n1: number
-                        |   b1: boolean
-                        |   o1: 
-                        |       s2: string
-                        |       n2: number
-                        |   a1: 
-                        |    -  s3: string
-                        |       n3: number`,
-                '<body></body>');
+        it('should generate definition file for simple file', async () => {
+            const jayFile = await readSourceFile('definition');
             let definitionFile = generateDefinitionFile(jayFile);
-            expect(definitionFile.val).toEqual(stripMargin(
-                `import {JayElement} from "jay-runtime";
-                |
-                |interface O1 {
-                |  s2: string,
-                |  n2: number
-                |}
-                |
-                |interface A1 {
-                |  s3: string,
-                |  n3: number
-                |}
-                |
-                |interface ViewState {
-                |  s1: string,
-                |  n1: number,
-                |  b1: boolean,
-                |  o1: O1,
-                |  a1: Array<A1>
-                |}
-                |
-                |export declare function render(viewState: ViewState): JayElement<ViewState>`));
+            expect(definitionFile.val).toEqual(await readGeneratedFile('definition'));
         })
     })
 
