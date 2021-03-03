@@ -170,7 +170,7 @@ export function generateRuntimeFile(html): WithValidations<string> {
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
         let renderedImplementation = renderFunctionImplementation(jayFile.body);
-        return [renderImports(renderedImplementation.imports.plus(Import.element)),
+        return [renderImports(renderedImplementation.imports.plus(Import.element).plus(Import.jayElement)),
             types,
             renderedImplementation.rendered
         ].join('\n\n');

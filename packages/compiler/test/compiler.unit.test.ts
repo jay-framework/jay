@@ -85,44 +85,16 @@ describe('compiler', () => {
     })
 
     describe('generate the runtime file', () => {
-        it('should generate runtime file for simple file with dynamic text', () => {
-            const jayFile = jayFileWith(
-                ` data:
-                        |   s1: string`,
-                `<body>
-                      |  <div>{s1}</div>
-                      |</body>`);
+        it('should generate runtime file for simple file with dynamic text', async () => {
+            const jayFile = await readSourceFile('simple-dynamic-text');
             let runtimeFile = generateRuntimeFile(jayFile);
-            expect(runtimeFile.val).toEqual(stripMargin(
-                `import {element as e, dynamicText as dt} from "jay-runtime";
-                |
-                |interface ViewState {
-                |  s1: string
-                |}
-                |
-                |export function render(viewState: ViewState): JayElement<ViewState> {
-                |  return e('div', {}, [dt(viewState, vs => \`\${vs.s1}\`)])
-                |}`));
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('simple-dynamic-text'));
         })
 
-        it('should generate runtime file for simple file with static text', () => {
-            const jayFile = jayFileWith(
-                ` data:
-                        |   s1: string`,
-                `<body>
-                      |   <div>static text</div>
-                      |</body>`);
+        it('should generate runtime file for simple file with static text', async () => {
+            const jayFile = await readSourceFile('simple-static-text');
             let runtimeFile = generateRuntimeFile(jayFile);
-            expect(runtimeFile.val).toEqual(stripMargin(
-                `import {element as e} from "jay-runtime";
-                |
-                |interface ViewState {
-                |  s1: string
-                |}
-                |
-                |export function render(viewState: ViewState): JayElement<ViewState> {
-                |  return e('div', {}, ['static text'])
-                |}`));
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('simple-static-text'));
         })
     })
 });
