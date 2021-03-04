@@ -96,6 +96,13 @@ describe('compiler', () => {
             let runtimeFile = generateRuntimeFile(jayFile);
             expect(runtimeFile.val).toEqual(await readGeneratedFile('simple-static-text'));
         })
+
+        it('should generate runtime file for simple file with static text', async () => {
+            const jayFile = await readSourceFile('composite');
+            let runtimeFile = generateRuntimeFile(jayFile);
+            console.log(runtimeFile.val)
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('composite'));
+        })
     })
 });
 

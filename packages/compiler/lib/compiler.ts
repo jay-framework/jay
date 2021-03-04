@@ -92,13 +92,17 @@ class RenderFragment {
         this.imports = imports;
     }
 
+    map(f:(s: string) => string): RenderFragment {
+        return new RenderFragment(f(this.rendered), this.imports);
+    }
+
     static empty(): RenderFragment {
         return new RenderFragment('', Imports.none())
     }
 
     static merge(fragment1: RenderFragment, fragment2: RenderFragment): RenderFragment {
         if (!!fragment1.rendered && !!fragment2.rendered)
-            return new RenderFragment(`${fragment1.rendered}, ${fragment2.rendered}`,
+            return new RenderFragment(`${fragment1.rendered},\n${fragment2.rendered}`,
                 Imports.merge(fragment1.imports, fragment2.imports))
         else if (!!fragment1.rendered)
             return fragment1
@@ -107,34 +111,49 @@ class RenderFragment {
     }
 }
 
-const parseText = /{(.+?)}/g
+const multiplePlaceholders = /{(.+?)}/g;
 function renderTextNode(currentDataVar: string, text: string): RenderFragment {
-    let isTemplateString = false;
-    let templateString = text.replace(parseText, (fullMatch,group1) => {
-        isTemplateString = true;
-        // todo handle different types and type formatters
-        return `\${vs.${group1}}`;
-    })
 
-    if (!isTemplateString)
-        return new RenderFragment(`'${text}'`, Imports.none())
-    else {
-        // todo add import dt
-        return new RenderFragment(`dt(${currentDataVar}, vs => \`${templateString}\`)`, Imports.for(Import.dynamicText));
+    let renderedText = text;
+    let m;
+    let hasPlaceholders = false;
+    let onlyPlaceholder = false;
+    while((m = multiplePlaceholders.exec(renderedText)) !== null) {
+        hasPlaceholders = true;
+        if (m[0].length === renderedText.length) {
+            onlyPlaceholder = true;
+            renderedText = renderedText.replace(m[0], `vs.${m[1]}`);
+        }
+        else
+            renderedText = renderedText.replace(m[0], `\${vs.${m[1]}}`);
     }
+    if (!hasPlaceholders)
+        return new RenderFragment(`'${text}'`, Imports.none())
+    else if (onlyPlaceholder)
+        return new RenderFragment(`dt(${currentDataVar}, vs => ${renderedText})`, Imports.for(Import.dynamicText));
+    else
+        return new RenderFragment(`dt(${currentDataVar}, vs => \`${renderedText}\`)`, Imports.for(Import.dynamicText));
 
 }
 
-function renderNode(currentDataVar: string, node: Node): RenderFragment {
+function renderNode(currentDataVar: string, node: Node, firstLineIdent: string, ident: string): RenderFragment {
     switch(node.nodeType) {
         case NodeType.TEXT_NODE:
             let text = node.innerText;
             return renderTextNode(currentDataVar, text);
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
-            let childRenders = node.childNodes.map(_ => renderNode(currentDataVar, _))
+            let childNodes = node.childNodes
+                .filter(_ => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '');
+
+            let childLineBreaks = childNodes.length > 1;
+
+            let childRenders = childNodes
+                .map(_ => renderNode(currentDataVar, _, childLineBreaks?ident + '  ':'', ident + '  '))
                 .reduce((prev, current) => RenderFragment.merge(prev, current), RenderFragment.empty())
-            return new RenderFragment(`e('${htmlElement.rawTagName}', {}, [${childRenders.rendered}])`,
+                .map(children => childLineBreaks?`\n${children}\n`:children);
+
+            return new RenderFragment(`${firstLineIdent}e('${htmlElement.rawTagName}', {}, [${childRenders.rendered}${childLineBreaks?ident:''}])`,
                 childRenders.imports.plus(Import.element));
         case NodeType.COMMENT_NODE:
             break
@@ -147,9 +166,9 @@ function firstElementChild(node: Node): HTMLElement {
 }
 
 function renderFunctionImplementation(rootBodyElement: HTMLElement): RenderFragment {
-    let renderedRoot = renderNode(`viewState`, firstElementChild(rootBodyElement));
+    let renderedRoot = renderNode(`viewState`, firstElementChild(rootBodyElement), '', '  ');
     let body = `export function render(viewState: ViewState): JayElement<ViewState> {
-  return ${renderedRoot.rendered}
+  return ${renderedRoot.rendered};
 }`;
     return new RenderFragment(body, renderedRoot.imports);
 }

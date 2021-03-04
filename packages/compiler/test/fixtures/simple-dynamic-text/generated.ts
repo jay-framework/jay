@@ -5,5 +5,5 @@ interface ViewState {
 }
 
 export function render(viewState: ViewState): JayElement<ViewState> {
-  return e('div', {}, [dt(viewState, vs => `${vs.s1}`)])
+  return e('div', {}, [dt(viewState, vs => vs.s1)]);
 }
