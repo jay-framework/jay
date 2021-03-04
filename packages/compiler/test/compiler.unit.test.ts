@@ -97,11 +97,16 @@ describe('compiler', () => {
             expect(runtimeFile.val).toEqual(await readGeneratedFile('simple-static-text'));
         })
 
-        it('should generate runtime file for simple file with static text', async () => {
+        it('should generate runtime file for a composition of divs', async () => {
             const jayFile = await readSourceFile('composite');
             let runtimeFile = generateRuntimeFile(jayFile);
-            console.log(runtimeFile.val)
             expect(runtimeFile.val).toEqual(await readGeneratedFile('composite'));
+        })
+
+        it('should generate runtime file for composition of divs 2', async () => {
+            const jayFile = await readSourceFile('composite 2');
+            let runtimeFile = generateRuntimeFile(jayFile);
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('composite 2'));
         })
     })
 });
