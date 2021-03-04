@@ -1,0 +1,18 @@
+<html>
+<head>
+    <script type="application/yaml-jay">
+data:
+    text1: string
+    text2: string
+    cond: boolean
+    </script>
+</head>
+<body>
+<div>
+    <div>
+        <div style="color:red" if={viewState.cond}>{viewState.text1}</div>
+        <div style="color:green" if={!viewState.cond}>{viewState.text2}</div>
+    </div>
+</div>
+</body>
+</html>

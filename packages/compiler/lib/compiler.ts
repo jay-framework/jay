@@ -136,6 +136,18 @@ function renderTextNode(currentDataVar: string, text: string): RenderFragment {
 
 }
 
+function renderAttributes(element: HTMLElement): string {
+    let attributes = element.attributes;
+    let renderedAttributes = [];
+    Object.keys(attributes).forEach(attrName => {
+        if (attrName === 'style')
+            renderedAttributes.push(`style: {cssText: '${attributes[attrName]}'}`)
+        else
+            renderedAttributes.push(`${attrName}: '${attributes[attrName]}'`)
+    })
+    return `{${renderedAttributes.join(', ')}}`;
+}
+
 function renderNode(currentDataVar: string, node: Node, firstLineIdent: string, ident: string): RenderFragment {
     switch(node.nodeType) {
         case NodeType.TEXT_NODE:
@@ -153,7 +165,9 @@ function renderNode(currentDataVar: string, node: Node, firstLineIdent: string, 
                 .reduce((prev, current) => RenderFragment.merge(prev, current), RenderFragment.empty())
                 .map(children => childLineBreaks?`\n${children}\n`:children);
 
-            return new RenderFragment(`${firstLineIdent}e('${htmlElement.rawTagName}', {}, [${childRenders.rendered}${childLineBreaks?ident:''}])`,
+            let attributes = renderAttributes(node as HTMLElement);
+
+            return new RenderFragment(`${firstLineIdent}e('${htmlElement.rawTagName}', ${attributes}, [${childRenders.rendered}${childLineBreaks?ident:''}])`,
                 childRenders.imports.plus(Import.element));
         case NodeType.COMMENT_NODE:
             break

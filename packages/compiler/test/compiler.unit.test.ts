@@ -85,28 +85,41 @@ describe('compiler', () => {
     })
 
     describe('generate the runtime file', () => {
-        it('should generate runtime file for simple file with dynamic text', async () => {
+        it('for simple file with dynamic text', async () => {
             const jayFile = await readSourceFile('simple-dynamic-text');
             let runtimeFile = generateRuntimeFile(jayFile);
             expect(runtimeFile.val).toEqual(await readGeneratedFile('simple-dynamic-text'));
         })
 
-        it('should generate runtime file for simple file with static text', async () => {
+        it('for simple file with static text', async () => {
             const jayFile = await readSourceFile('simple-static-text');
             let runtimeFile = generateRuntimeFile(jayFile);
             expect(runtimeFile.val).toEqual(await readGeneratedFile('simple-static-text'));
         })
 
-        it('should generate runtime file for a composition of divs', async () => {
+        it('for a composition of divs', async () => {
             const jayFile = await readSourceFile('composite');
             let runtimeFile = generateRuntimeFile(jayFile);
             expect(runtimeFile.val).toEqual(await readGeneratedFile('composite'));
         })
 
-        it('should generate runtime file for composition of divs 2', async () => {
+        it('for composition of divs 2', async () => {
             const jayFile = await readSourceFile('composite 2');
             let runtimeFile = generateRuntimeFile(jayFile);
             expect(runtimeFile.val).toEqual(await readGeneratedFile('composite 2'));
+        })
+
+        it.skip('for conditional', async () => {
+            const jayFile = await readSourceFile('conditions');
+            let runtimeFile = generateRuntimeFile(jayFile);
+            console.log(runtimeFile.val)
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('conditions'));
+        })
+
+        it('for styles', async () => {
+            const jayFile = await readSourceFile('styles');
+            let runtimeFile = generateRuntimeFile(jayFile);
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('styles'));
         })
     })
 });
