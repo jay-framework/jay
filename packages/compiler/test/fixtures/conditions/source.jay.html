@@ -9,10 +9,8 @@ data:
 </head>
 <body>
 <div>
-    <div>
-        <div style="color:red" if={viewState.cond}>{viewState.text1}</div>
-        <div style="color:green" if={!viewState.cond}>{viewState.text2}</div>
-    </div>
+    <div style="color:red" if={cond}>{text1}</div>
+    <div style="color:green" if={!cond}>{text2}</div>
 </div>
 </body>
 </html>

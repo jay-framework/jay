@@ -8,8 +8,8 @@
     "lib": "lib"
   },
   "scripts": {
-    "test": "jest",
-    "build": "tsc"
+    "test": "pegjs lib/parse-expressions.pegjs && jest",
+    "build": "pegjs lib/parse-expressions.pegjs && tsc"
   },
   "author": "",
   "license": "ISC",
@@ -17,6 +17,7 @@
     "change-case": "^4.1.2",
     "js-yaml": "^4.0.0",
     "node-html-parser": "^2.1.0",
+    "pegjs": "^0.10.0",
     "tslib": "^2.0.3"
   },
   "devDependencies": {

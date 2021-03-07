@@ -3,6 +3,7 @@ import {WithValidations} from "./with-validations";
 import {isArrayType, isObjectType, JayFile, JayType, parseJayFile} from "./parse-jay-file";
 import {HTMLElement, NodeType} from "node-html-parser";
 import Node from "node-html-parser/dist/nodes/node";
+import {Import, Imports, RenderFragment} from "./render-fragment";
 
 
 function renderInterface(types: JayType, name: String): string {
@@ -36,79 +37,17 @@ export function generateTypes(types: JayType): string {
 }
 
 
-enum Import {
-    jayElement,
-    element,
-    dynamicText
-}
-class Imports {
-    private readonly imports: Array<boolean>;
-    constructor(newImports: Array<boolean>) {
-        this.imports = newImports;
-    }
-
-    plus(addImport: Import) {
-        let newImports: Array<boolean> = [...this.imports];
-        newImports[addImport] = true;
-        return new Imports(newImports)
-    }
-
-    has(anImport: Import) {
-        return !!this.imports[anImport];
-    }
-    static none(): Imports {
-        return new Imports([]);
-    }
-    static for(...imports: Array<Import>): Imports {
-        let newImports = Imports.none();
-        imports.forEach(anImport => newImports = newImports.plus(anImport))
-        return newImports;
-    }
-    static merge(imports1: Imports, imports2: Imports) {
-        let merged = [];
-        for (let i =0; i < Math.max(imports1.imports.length, imports2.imports.length); i++)
-            merged[i] = imports1.imports[i] || imports2.imports[i];
-        return new Imports(merged);
-    }
-}
-
 function renderImports(imports: Imports): string {
     let renderedImports = [];
     if (imports.has(Import.jayElement)) renderedImports.push('JayElement');
     if (imports.has(Import.element)) renderedImports.push('element as e');
     if (imports.has(Import.dynamicText)) renderedImports.push('dynamicText as dt');
+    if (imports.has(Import.conditional)) renderedImports.push('conditional as c');
     return `import {${renderedImports.join(', ')}} from "jay-runtime";`;
 }
 
 function renderFunctionDecleration(): string {
     return `export declare function render(viewState: ViewState): JayElement<ViewState>`;
-}
-
-class RenderFragment {
-    rendered: string;
-    imports: Imports;
-    constructor(rendered: string, imports: Imports) {
-        this.rendered = rendered;
-        this.imports = imports;
-    }
-
-    map(f:(s: string) => string): RenderFragment {
-        return new RenderFragment(f(this.rendered), this.imports);
-    }
-
-    static empty(): RenderFragment {
-        return new RenderFragment('', Imports.none())
-    }
-
-    static merge(fragment1: RenderFragment, fragment2: RenderFragment): RenderFragment {
-        if (!!fragment1.rendered && !!fragment2.rendered)
-            return new RenderFragment(`${fragment1.rendered},\n${fragment2.rendered}`,
-                Imports.merge(fragment1.imports, fragment2.imports))
-        else if (!!fragment1.rendered)
-            return fragment1
-        else
-            return fragment2;
-    }
 }
 
 const multiplePlaceholders = /{(.+?)}/g;
@@ -140,6 +79,8 @@ function renderAttributes(element: HTMLElement): string {
     let attributes = element.attributes;
     let renderedAttributes = [];
     Object.keys(attributes).forEach(attrName => {
+        if (attrName === 'if')
+            return;
         if (attrName === 'style')
             renderedAttributes.push(`style: {cssText: '${attributes[attrName]}'}`)
         else
@@ -149,26 +90,38 @@ function renderAttributes(element: HTMLElement): string {
 }
 
 function renderNode(currentDataVar: string, node: Node, firstLineIdent: string, ident: string): RenderFragment {
+    function renderHtmlElement(htmlElement) {
+        let childNodes = node.childNodes
+            .filter(_ => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '');
+
+        let childLineBreaks = childNodes.length > 1;
+
+        let childRenders = childNodes
+            .map(_ => renderNode(currentDataVar, _, childLineBreaks ? ident + '  ' : '', ident + '  '))
+            .reduce((prev, current) => RenderFragment.merge(prev, current), RenderFragment.empty())
+            .map(children => childLineBreaks ? `\n${children}\n` : children);
+
+        let attributes = renderAttributes(htmlElement);
+
+        return new RenderFragment(`${firstLineIdent}e('${htmlElement.rawTagName}', ${attributes}, [${childRenders.rendered}${childLineBreaks ? ident : ''}])`,
+            childRenders.imports.plus(Import.element));
+    }
+
     switch(node.nodeType) {
         case NodeType.TEXT_NODE:
             let text = node.innerText;
             return renderTextNode(currentDataVar, text);
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
-            let childNodes = node.childNodes
-                .filter(_ => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '');
-
-            let childLineBreaks = childNodes.length > 1;
-
-            let childRenders = childNodes
-                .map(_ => renderNode(currentDataVar, _, childLineBreaks?ident + '  ':'', ident + '  '))
-                .reduce((prev, current) => RenderFragment.merge(prev, current), RenderFragment.empty())
-                .map(children => childLineBreaks?`\n${children}\n`:children);
-
-            let attributes = renderAttributes(node as HTMLElement);
-
-            return new RenderFragment(`${firstLineIdent}e('${htmlElement.rawTagName}', ${attributes}, [${childRenders.rendered}${childLineBreaks?ident:''}])`,
-                childRenders.imports.plus(Import.element));
+            if (htmlElement.hasAttribute('if')) {
+                let condition = htmlElement.getAttribute('if');
+                let childElement = renderHtmlElement(htmlElement);
+                return new RenderFragment(`${firstLineIdent}c((vs) => vs.${condition},\n${ident}${childElement.rendered}\n${firstLineIdent})`,
+                    childElement.imports.plus(Import.conditional));
+            }
+            else {
+                return renderHtmlElement(htmlElement);
+            }
         case NodeType.COMMENT_NODE:
             break
     }
