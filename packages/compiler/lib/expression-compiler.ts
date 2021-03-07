@@ -23,5 +23,10 @@ export function parseCondition(expression: string, vars: Variables): RenderFragm
 }
 
 export function parseTextExpression(expression: string, vars: Variables): RenderFragment {
-    return new RenderFragment(parse(expression), Imports.none());
+    try {
+        return new RenderFragment(parse(expression), Imports.none());
+    }
+    catch (e) {
+        throw new Error(`failed to parse expression [${expression}]. ${e.message}` );
+    }
 }

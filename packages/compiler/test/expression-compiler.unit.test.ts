@@ -16,6 +16,13 @@ describe('expression-compiler', () => {
             const actual = parseTextExpression('123123', defaultVars);
             expect(actual.rendered).toEqual('123123')
         })
+
+        it("fail and report broken expression", () => {
+            const actual =
+            expect(() => {
+                parseTextExpression('some broken { expression', defaultVars);
+            }).toThrow('failed to parse expression [some broken { expression]. Expected "}" or [^{}] but end of input found.')
+        })
     });
 
 });
