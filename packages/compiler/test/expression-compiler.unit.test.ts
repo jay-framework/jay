@@ -21,7 +21,7 @@ describe('expression-compiler', () => {
             const actual =
             expect(() => {
                 parseTextExpression('some broken { expression', defaultVars);
-            }).toThrow('failed to parse expression [some broken { expression]. Expected "}" or [^{}] but end of input found.')
+            }).toThrow('failed to parse expression [some broken { expression]. ')
         })
     });
 
