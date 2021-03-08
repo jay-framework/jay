@@ -10,18 +10,6 @@ const readGeneratedFile = async (folder) => (await readFile(`./test/fixtures/${f
 
 describe('compiler', () => {
 
-    function jayFileWith(jayYaml, body) {
-        return stripMargin(
-            ` <html>
-                |   <head>
-                |     <script type="application/yaml-jay">
-                |${stripMargin(jayYaml)}
-                |     </script>
-                |   </head>
-                |   ${stripMargin(body)}
-                | </html>`)
-    }
-
     describe('generate data interfaces', () => {
         it('should generate simple interface', () => {
             let genInterface = generateTypes({

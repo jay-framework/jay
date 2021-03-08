@@ -3,10 +3,13 @@ start
 
 template
   = head:string tail:("{" _ accessor _ '}' string)* {
-    return tail.reduce(function(result, element) {
-      console.log(element)
-      return result + element[2] + element[5];
-    }, head);
+    if (tail.length === 0)
+        return '\'' + head + '\'';
+    else
+        return tail.reduce(function(result, element) {
+          console.log(element)
+          return result + element[2] + element[5];
+        }, head);
   }
 
 accessor
