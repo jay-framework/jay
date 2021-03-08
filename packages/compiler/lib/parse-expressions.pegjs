@@ -9,9 +9,11 @@ template
     let dt = options.dt;
     if (tail.length === 0)
         return new RenderFragment('\'' + head + '\'', none);
+    else if (tail.length === 1 && head.length === 0 && tail[0][5].length === 0) {
+        return new RenderFragment(`dt(${vars.defaultVar}, vs => vs.${tail[0][2]})`, dt);
+    }
     else {
         return new RenderFragment(`dt(${vars.defaultVar}, vs => \`` + tail.reduce(function(result, element) {
-          console.log(element)
           return `${result}\${vs.${element[2]}}${element[5]}`;
         }, head) + '\`)', dt);
     }
@@ -19,7 +21,6 @@ template
 
 accessor
   = head:Identifier tail:(_ "." _ Identifier)* {
-    console.log('accessor', head, tail);
     return tail.reduce(function(result, element) {
       return result + '.' + element[3];
     }, head);
