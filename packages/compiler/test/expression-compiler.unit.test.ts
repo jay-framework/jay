@@ -24,7 +24,7 @@ describe('expression-compiler', () => {
 
         it("single accessor in text", () => {
             const actual = parseTextExpression('some {string1} thing', defaultVars);
-            expect(actual.rendered).toEqual('dt(viewState, vs => \`some ${vs.string1} thing\`')
+            expect(actual.rendered).toEqual('dt(viewState, vs => \`some ${vs.string1} thing\`)')
         })
 
         it("fail and report broken expression", () => {

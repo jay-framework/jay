@@ -3,17 +3,23 @@ start
 
 template
   = head:string tail:("{" _ accessor _ '}' string)* {
+    let vars = options.vars;
+    let RenderFragment = options.RenderFragment;
+    let none = options.none;
+    let dt = options.dt;
     if (tail.length === 0)
-        return '\'' + head + '\'';
-    else
-        return tail.reduce(function(result, element) {
+        return new RenderFragment('\'' + head + '\'', none);
+    else {
+        return new RenderFragment(`dt(${vars.defaultVar}, vs => \`` + tail.reduce(function(result, element) {
           console.log(element)
-          return result + element[2] + element[5];
-        }, head);
+          return `${result}\${vs.${element[2]}}${element[5]}`;
+        }, head) + '\`)', dt);
+    }
   }
 
 accessor
   = head:Identifier tail:(_ "." _ Identifier)* {
+    console.log('accessor', head, tail);
     return tail.reduce(function(result, element) {
       return result + '.' + element[3];
     }, head);
@@ -42,7 +48,7 @@ string
 
 // copied from https://github.com/pegjs/pegjs/blob/master/examples/javascript.pegjs#L123
 Identifier
-  = !ReservedWord name:IdentifierName { return name; }
+  = !ReservedWord name:IdentifierName { return text(); }
 
 IdentifierName "identifier"
   = head:IdentifierStart tail:IdentifierPart* {

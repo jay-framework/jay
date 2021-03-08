@@ -1,4 +1,4 @@
-import {Imports, RenderFragment} from './render-fragment';
+import {Import, Imports, RenderFragment} from './render-fragment';
 import {parse} from '../lib/parse-expressions'
 
 export interface ObjectOfStrings {
@@ -24,7 +24,7 @@ export function parseCondition(expression: string, vars: Variables): RenderFragm
 
 export function parseTextExpression(expression: string, vars: Variables): RenderFragment {
     try {
-        return new RenderFragment(parse(expression), Imports.none());
+        return parse(expression, {vars, RenderFragment, none: Imports.none(), dt: Imports.for(Import.dynamicText)});
     }
     catch (e) {
         throw new Error(`failed to parse expression [${expression}]. ${e.message}` );
