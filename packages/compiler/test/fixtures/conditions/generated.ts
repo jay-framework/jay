@@ -8,10 +8,10 @@ interface ViewState {
 
 export function render(viewState: ViewState): JayElement<ViewState> {
   return de('div', {}, [
-    c((vs) => vs.cond,
+    c(vs => vs.cond,
         e('div', {style: {cssText: 'color:red'}}, [dt(viewState, vs => vs.text1)])
     ),
-    c((vs) => !vs.cond,
+    c(vs => !vs.cond,
         e('div', {style: {cssText: 'color:green'}}, [dt(viewState, vs => vs.text2)])
     )
   ], viewState);

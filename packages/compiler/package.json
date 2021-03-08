@@ -8,8 +8,8 @@
     "lib": "lib"
   },
   "scripts": {
-    "test": "pegjs lib/parse-expressions.pegjs && jest",
-    "build": "pegjs lib/parse-expressions.pegjs && tsc"
+    "test": "pegjs --allowed-start-rules start,condition lib/parse-expressions.pegjs && jest",
+    "build": "pegjs --allowed-start-rules start,condition lib/parse-expressions.pegjs && tsc"
   },
   "author": "",
   "license": "ISC",

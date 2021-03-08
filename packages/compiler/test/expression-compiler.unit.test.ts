@@ -1,7 +1,21 @@
 import {describe, expect, it} from '@jest/globals'
-import {parseTextExpression, Variables} from '../lib/expression-compiler'
+import {parseCondition, parseTextExpression, Variables} from '../lib/expression-compiler'
 
 describe('expression-compiler', () => {
+
+    describe('parseCondition', () => {
+        let defaultVars = new Variables('viewState', {})
+
+        it('basic condition', () => {
+            const actual = parseCondition('member', defaultVars);
+            expect(actual).toEqual('vs => vs.member');
+        })
+
+        it('not condition', () => {
+            const actual = parseCondition('!member', defaultVars);
+            expect(actual).toEqual('vs => !vs.member');
+        })
+    })
 
     describe('parseTextExpression', () => {
 

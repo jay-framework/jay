@@ -19,6 +19,13 @@ template
     }
   }
 
+condition
+  = not:bang? head:accessor {
+    return not?
+      `vs => !vs.${head}`:
+      `vs => vs.${head}`;
+  }
+
 accessor
   = head:Identifier tail:(_ "." _ Identifier)* {
     return tail.reduce(function(result, element) {
@@ -46,6 +53,9 @@ _ "whitespace"
 
 string
   = [^{}]* { return text()}
+
+bang
+  = "!"
 
 // copied from https://github.com/pegjs/pegjs/blob/master/examples/javascript.pegjs#L123
 Identifier

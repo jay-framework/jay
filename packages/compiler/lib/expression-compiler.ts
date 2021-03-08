@@ -19,12 +19,26 @@ export function parseAccessor(expression: string, vars: Variables): RenderFragme
 }
 
 export function parseCondition(expression: string, vars: Variables): RenderFragment {
-
+    try {
+        return parse(expression, {
+            vars, RenderFragment,
+            none: Imports.none(),
+            dt: Imports.for(Import.dynamicText),
+            startRule: "condition"
+        });
+    }
+    catch (e) {
+        throw new Error(`failed to parse expression [${expression}]. ${e.message}` );
+    }
 }
 
 export function parseTextExpression(expression: string, vars: Variables): RenderFragment {
     try {
-        return parse(expression, {vars, RenderFragment, none: Imports.none(), dt: Imports.for(Import.dynamicText)});
+        return parse(expression, {
+            vars, RenderFragment,
+            none: Imports.none(),
+            dt: Imports.for(Import.dynamicText)
+        });
     }
     catch (e) {
         throw new Error(`failed to parse expression [${expression}]. ${e.message}` );
