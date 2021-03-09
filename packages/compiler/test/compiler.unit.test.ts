@@ -7,6 +7,7 @@ const readFile = promises.readFile;
 
 const readSourceFile = async (folder) => (await readFile(`./test/fixtures/${folder}/source.jay.html`)).toString().trim()
 const readGeneratedFile = async (folder) => (await readFile(`./test/fixtures/${folder}/generated.ts`)).toString().trim()
+const readDefinitionFile = async (folder) => (await readFile(`./test/fixtures/${folder}/generated.d.ts`)).toString().trim()
 
 describe('compiler', () => {
 
@@ -68,7 +69,13 @@ describe('compiler', () => {
         it('should generate definition file for simple file', async () => {
             const jayFile = await readSourceFile('definition');
             let definitionFile = generateDefinitionFile(jayFile);
-            expect(definitionFile.val).toEqual(await readGeneratedFile('definition'));
+            expect(definitionFile.val).toEqual(await readDefinitionFile('definition'));
+        })
+
+        it('should generate definition file for collection file', async () => {
+            const jayFile = await readSourceFile('collections');
+            let definitionFile = generateDefinitionFile(jayFile);
+            expect(definitionFile.val).toEqual(await readDefinitionFile('collections'));
         })
     })
 

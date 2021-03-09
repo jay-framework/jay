@@ -1,4 +1,5 @@
 import {pascalCase} from 'change-case';
+import pluralize from 'pluralize';
 import {WithValidations} from "./with-validations";
 import {isArrayType, isObjectType, JayFile, JayType, parseJayFile} from "./parse-jay-file";
 import {HTMLElement, NodeType} from "node-html-parser";
@@ -6,6 +7,9 @@ import Node from "node-html-parser/dist/nodes/node";
 import {Import, Imports, RenderFragment} from "./render-fragment";
 import {parseCondition, parseTextExpression, Variables} from './expression-compiler';
 
+function toInterfaceName(name) {
+    return pascalCase(pluralize.singular(name))
+}
 
 function renderInterface(types: JayType, name: String): string {
 
@@ -17,13 +21,13 @@ function renderInterface(types: JayType, name: String): string {
         .map(prop => {
             if (isObjectType(types[prop])) {
                 let name = prop;
-                childInterfaces.push(renderInterface(types[prop] as JayType, pascalCase(name)));
-                return `  ${prop}: ${pascalCase(name)}`;
+                childInterfaces.push(renderInterface(types[prop] as JayType, toInterfaceName(name)));
+                return `  ${prop}: ${toInterfaceName(name)}`;
             }
             else if (isArrayType(types[prop])) {
                 let name = prop;
-                childInterfaces.push(renderInterface(types[prop][0] as JayType, pascalCase(name)));
-                return `  ${prop}: Array<${pascalCase(name)}>`;
+                childInterfaces.push(renderInterface(types[prop][0] as JayType, toInterfaceName(name)));
+                return `  ${prop}: Array<${toInterfaceName(name)}>`;
             }
             else
                 return `  ${prop}: ${types[prop]}`;
