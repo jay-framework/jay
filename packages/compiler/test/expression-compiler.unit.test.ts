@@ -5,7 +5,9 @@ import {JayPrimitiveTypes} from "../lib/parse-jay-file";
 describe('expression-compiler', () => {
 
     describe('parseCondition', () => {
-        let defaultVars = new Variables('viewState', {member: JayPrimitiveTypes.type_string})
+        let defaultVars = new Variables('viewState', {
+            member: JayPrimitiveTypes.type_string
+        })
 
         it('basic condition', () => {
             const actual = parseCondition('member', defaultVars);
@@ -15,6 +17,12 @@ describe('expression-compiler', () => {
         it('not condition', () => {
             const actual = parseCondition('!member', defaultVars);
             expect(actual.rendered).toEqual('vs => !vs.member');
+        })
+
+        it('basic condition with member not in type should report a problem', () => {
+            const actual = parseCondition('notAMember', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.notAMember');
+            expect(actual.validations).toEqual(['the data field [notAMember] not found in Jay data'])
         })
     })
 
