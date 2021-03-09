@@ -8,12 +8,12 @@ describe('expression-compiler', () => {
 
         it('basic condition', () => {
             const actual = parseCondition('member', defaultVars);
-            expect(actual).toEqual('vs => vs.member');
+            expect(actual.rendered).toEqual('vs => vs.member');
         })
 
         it('not condition', () => {
             const actual = parseCondition('!member', defaultVars);
-            expect(actual).toEqual('vs => !vs.member');
+            expect(actual.rendered).toEqual('vs => !vs.member');
         })
     })
 
@@ -42,7 +42,6 @@ describe('expression-compiler', () => {
         })
 
         it("fail and report broken expression", () => {
-            const actual =
             expect(() => {
                 parseTextExpression('some broken { expression', defaultVars);
             }).toThrow('failed to parse expression [some broken { expression]. ')

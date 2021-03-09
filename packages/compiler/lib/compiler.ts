@@ -4,6 +4,7 @@ import {isArrayType, isObjectType, JayFile, JayType, parseJayFile} from "./parse
 import {HTMLElement, NodeType} from "node-html-parser";
 import Node from "node-html-parser/dist/nodes/node";
 import {Import, Imports, RenderFragment} from "./render-fragment";
+import {parseCondition, parseTextExpression, Variables} from './expression-compiler';
 
 
 function renderInterface(types: JayType, name: String): string {
@@ -50,29 +51,8 @@ function renderFunctionDecleration(): string {
     return `export declare function render(viewState: ViewState): JayElement<ViewState>`;
 }
 
-const multiplePlaceholders = /{(.+?)}/g;
 function renderTextNode(currentDataVar: string, text: string): RenderFragment {
-
-    let renderedText = text;
-    let m;
-    let hasPlaceholders = false;
-    let onlyPlaceholder = false;
-    while((m = multiplePlaceholders.exec(renderedText)) !== null) {
-        hasPlaceholders = true;
-        if (m[0].length === renderedText.length) {
-            onlyPlaceholder = true;
-            renderedText = renderedText.replace(m[0], `vs.${m[1]}`);
-        }
-        else
-            renderedText = renderedText.replace(m[0], `\${vs.${m[1]}}`);
-    }
-    if (!hasPlaceholders)
-        return new RenderFragment(`'${text}'`, Imports.none())
-    else if (onlyPlaceholder)
-        return new RenderFragment(`dt(${currentDataVar}, vs => ${renderedText})`, Imports.for(Import.dynamicText));
-    else
-        return new RenderFragment(`dt(${currentDataVar}, vs => \`${renderedText}\`)`, Imports.for(Import.dynamicText));
-
+    return parseTextExpression(text, new Variables(currentDataVar, {}));
 }
 
 function renderAttributes(element: HTMLElement): string {
@@ -116,8 +96,10 @@ function renderNode(currentDataVar: string, node: Node, firstLineIdent: string, 
             if (htmlElement.hasAttribute('if')) {
                 let condition = htmlElement.getAttribute('if');
                 let childElement = renderHtmlElement(htmlElement);
-                return new RenderFragment(`${firstLineIdent}c((vs) => vs.${condition},\n${ident}${childElement.rendered}\n${firstLineIdent})`,
-                    childElement.imports.plus(Import.conditional));
+                let renderedCondition = parseCondition(condition, new Variables(currentDataVar, {}));
+                console.log('***', renderedCondition)
+                return new RenderFragment(`${firstLineIdent}c(${renderedCondition.rendered},\n${ident}${childElement.rendered}\n${firstLineIdent})`,
+                    Imports.merge(childElement.imports, renderedCondition.imports).plus(Import.conditional));
             }
             else {
                 return renderHtmlElement(htmlElement);

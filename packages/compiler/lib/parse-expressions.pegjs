@@ -1,12 +1,16 @@
+{
+    let vars = options.vars;
+    let RenderFragment = options.RenderFragment;
+    let none = options.none;
+    let dt = options.dt;
+}
+
+
 start
   = template
 
 template
   = head:string tail:("{" _ accessor _ '}' string)* {
-    let vars = options.vars;
-    let RenderFragment = options.RenderFragment;
-    let none = options.none;
-    let dt = options.dt;
     if (tail.length === 0)
         return new RenderFragment('\'' + head + '\'', none);
     else if (tail.length === 1 && head.length === 0 && tail[0][5].length === 0) {
@@ -22,8 +26,8 @@ template
 condition
   = not:bang? head:accessor {
     return not?
-      `vs => !vs.${head}`:
-      `vs => vs.${head}`;
+      new RenderFragment(`vs => !vs.${head}`, none):
+      new RenderFragment(`vs => vs.${head}`, none);
   }
 
 accessor
