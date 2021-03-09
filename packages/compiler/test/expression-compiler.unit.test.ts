@@ -22,8 +22,8 @@ describe('expression-compiler', () => {
         let defaultVars = new Variables('viewState', {})
 
         it("constant string expression", () => {
-            const actual = parseTextExpression('some constant string', defaultVars).rendered;
-            expect(actual).toEqual('\'some constant string\'')
+            const actual = parseTextExpression('some constant string', defaultVars);
+            expect(actual.rendered).toEqual('\'some constant string\'')
         })
 
         it("constant number expression", () => {
