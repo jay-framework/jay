@@ -44,9 +44,15 @@ describe('expression-compiler', () => {
             expect(actual.rendered).toEqual('dt(viewState, vs => \`some ${vs.string1} thing\`)')
         })
 
-        it("single accessor in text not in type renders the type and reports the problem", () => {
+        it("accessor in text not in type renders the type should reports the problem", () => {
             const actual = parseTextExpression('some {string2} thing', defaultVars);
             expect(actual.rendered).toEqual('dt(viewState, vs => \`some ${vs.string2} thing\`)')
+            expect(actual.validations).toEqual(['the data field [string2] not found in Jay data'])
+        })
+
+        it("accessor in simple text not in type renders the type should reports the problem", () => {
+            const actual = parseTextExpression('{string2}', defaultVars);
+            expect(actual.rendered).toEqual('dt(viewState, vs => vs.string2)')
             expect(actual.validations).toEqual(['the data field [string2] not found in Jay data'])
         })
 
