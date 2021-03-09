@@ -7,7 +7,7 @@ Runtime
 - [ ] inputs
 - [ ] events
 - [ ] slots
-- [ ] composites
+- [ ] composites (component in component)
 - [ ] server side rendering
 - [ ] hydration
 
@@ -15,7 +15,10 @@ Compiler
 ---
 
 - [x] Typescript definition file
-- [ ] Basics - elements, strings
+- [x] Basics - elements, strings
+- [x] Conditional
+- [ ] Collections
+- [x] error reporting
 
 Testing
 ---
