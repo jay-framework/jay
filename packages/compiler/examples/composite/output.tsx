@@ -1,4 +1,4 @@
-import {element as e, dynamicText as dt} from '../../lib/element';
+import {element as e, dynamicText as dt} from 'jay-runtime';
 
 interface ViewState {
     text: string

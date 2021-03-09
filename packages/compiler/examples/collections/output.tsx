@@ -4,7 +4,7 @@ import {
     forEach,
     JayElement,
     dynamicText as dt
-} from '../../lib/element.js';
+} from 'jay-runtime';
 
 interface Item {
     name: string,
