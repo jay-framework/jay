@@ -1,4 +1,4 @@
-import {JayElement, conditional as c, dynamicText as dt, dynamicElement as de, element as e} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, conditional as c, dynamicElement as de} from "jay-runtime";
 
 interface ViewState {
   text1: string,

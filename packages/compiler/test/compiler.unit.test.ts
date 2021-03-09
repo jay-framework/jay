@@ -97,10 +97,9 @@ describe('compiler', () => {
             expect(runtimeFile.val).toEqual(await readGeneratedFile('composite 2'));
         })
 
-        it.skip('for conditional', async () => {
+        it('for conditional', async () => {
             const jayFile = await readSourceFile('conditions');
             let runtimeFile = generateRuntimeFile(jayFile);
-            console.log(runtimeFile.val)
             expect(runtimeFile.val).toEqual(await readGeneratedFile('conditions'));
         })
 

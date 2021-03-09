@@ -44,6 +44,7 @@ function renderImports(imports: Imports): string {
     if (imports.has(Import.element)) renderedImports.push('element as e');
     if (imports.has(Import.dynamicText)) renderedImports.push('dynamicText as dt');
     if (imports.has(Import.conditional)) renderedImports.push('conditional as c');
+    if (imports.has(Import.dynamicElement)) renderedImports.push('dynamicElement as de');
     return `import {${renderedImports.join(', ')}} from "jay-runtime";`;
 }
 
@@ -70,11 +71,30 @@ function renderAttributes(element: HTMLElement): string {
 }
 
 function renderNode(currentDataVar: string, node: Node, firstLineIdent: string, ident: string): RenderFragment {
+
+    function de(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean): RenderFragment {
+        return new RenderFragment(`${firstLineIdent}de('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? ident : ''}], ${currentDataVar})`,
+            children.imports.plus(Import.dynamicElement));
+    }
+
+    function e(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean): RenderFragment {
+        return new RenderFragment(`${firstLineIdent}e('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? ident : ''}])`,
+            children.imports.plus(Import.element));
+    }
+
+    function isConditional(node: Node): boolean {
+        return (node.nodeType !== NodeType.TEXT_NODE) && (node as HTMLElement).hasAttribute('if');
+    }
+
     function renderHtmlElement(htmlElement) {
         let childNodes = node.childNodes
             .filter(_ => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '');
 
         let childLineBreaks = childNodes.length > 1;
+
+        let needDynamicElement = childNodes
+            .map(_ => isConditional(_))
+            .reduce((prev, current) => prev || current, false);
 
         let childRenders = childNodes
             .map(_ => renderNode(currentDataVar, _, childLineBreaks ? ident + '  ' : '', ident + '  '))
@@ -83,8 +103,10 @@ function renderNode(currentDataVar: string, node: Node, firstLineIdent: string, 
 
         let attributes = renderAttributes(htmlElement);
 
-        return new RenderFragment(`${firstLineIdent}e('${htmlElement.rawTagName}', ${attributes}, [${childRenders.rendered}${childLineBreaks ? ident : ''}])`,
-            childRenders.imports.plus(Import.element));
+        if (needDynamicElement)
+            return de(htmlElement.rawTagName, attributes, childRenders, childLineBreaks);
+        else
+            return e(htmlElement.rawTagName, attributes, childRenders, childLineBreaks);
     }
 
     switch(node.nodeType) {
@@ -93,11 +115,10 @@ function renderNode(currentDataVar: string, node: Node, firstLineIdent: string, 
             return renderTextNode(currentDataVar, text);
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
-            if (htmlElement.hasAttribute('if')) {
+            if (isConditional(htmlElement)) {
                 let condition = htmlElement.getAttribute('if');
                 let childElement = renderHtmlElement(htmlElement);
                 let renderedCondition = parseCondition(condition, new Variables(currentDataVar, {}));
-                console.log('***', renderedCondition)
                 return new RenderFragment(`${firstLineIdent}c(${renderedCondition.rendered},\n${ident}${childElement.rendered}\n${firstLineIdent})`,
                     Imports.merge(childElement.imports, renderedCondition.imports).plus(Import.conditional));
             }

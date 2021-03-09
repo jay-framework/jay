@@ -2,7 +2,8 @@ export enum Import {
     jayElement,
     element,
     dynamicText,
-    conditional
+    conditional,
+    dynamicElement
 }
 
 export class Imports {
