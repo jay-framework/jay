@@ -1,10 +1,11 @@
 import {describe, expect, it} from '@jest/globals'
 import {parseCondition, parseTextExpression, Variables} from '../lib/expression-compiler'
+import {JayPrimitiveTypes} from "../lib/parse-jay-file";
 
 describe('expression-compiler', () => {
 
     describe('parseCondition', () => {
-        let defaultVars = new Variables('viewState', {})
+        let defaultVars = new Variables('viewState', {member: JayPrimitiveTypes.type_string})
 
         it('basic condition', () => {
             const actual = parseCondition('member', defaultVars);
@@ -19,7 +20,9 @@ describe('expression-compiler', () => {
 
     describe('parseTextExpression', () => {
 
-        let defaultVars = new Variables('viewState', {})
+        let defaultVars = new Variables('viewState', {
+            string1: JayPrimitiveTypes.type_string
+        })
 
         it("constant string expression", () => {
             const actual = parseTextExpression('some constant string', defaultVars);
@@ -39,6 +42,12 @@ describe('expression-compiler', () => {
         it("single accessor in text", () => {
             const actual = parseTextExpression('some {string1} thing', defaultVars);
             expect(actual.rendered).toEqual('dt(viewState, vs => \`some ${vs.string1} thing\`)')
+        })
+
+        it("single accessor in text not in type renders the type and reports the problem", () => {
+            const actual = parseTextExpression('some {string2} thing', defaultVars);
+            expect(actual.rendered).toEqual('dt(viewState, vs => \`some ${vs.string2} thing\`)')
+            expect(actual.validations).toEqual(['the data field [string2] not found in Jay data'])
         })
 
         it("fail and report broken expression", () => {

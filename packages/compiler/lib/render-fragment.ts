@@ -1,3 +1,5 @@
+import {JayValidations} from "./with-validations";
+
 export enum Import {
     jayElement,
     element,
@@ -13,9 +15,14 @@ export class Imports {
         this.imports = newImports;
     }
 
-    plus(addImport: Import) {
+    plus(addImport: Import | Imports) {
         let newImports: Array<boolean> = [...this.imports];
-        newImports[addImport] = true;
+        if (addImport instanceof Imports) {
+            newImports = [...addImport.imports];
+        }
+        else {
+            newImports[addImport as number] = true;
+        }
         return new Imports(newImports)
     }
 
@@ -44,24 +51,27 @@ export class Imports {
 export class RenderFragment {
     rendered: string;
     imports: Imports;
+    validations: JayValidations;
 
-    constructor(rendered: string, imports: Imports) {
+    constructor(rendered: string, imports: Imports, validations: JayValidations = []) {
         this.rendered = rendered;
         this.imports = imports;
+        this.validations = validations
     }
 
     map(f: (s: string) => string): RenderFragment {
-        return new RenderFragment(f(this.rendered), this.imports);
+        return new RenderFragment(f(this.rendered), this.imports, this.validations);
     }
 
     static empty(): RenderFragment {
         return new RenderFragment('', Imports.none())
     }
 
-    static merge(fragment1: RenderFragment, fragment2: RenderFragment): RenderFragment {
+    static merge(fragment1: RenderFragment, fragment2: RenderFragment, combinator: string =''): RenderFragment {
         if (!!fragment1.rendered && !!fragment2.rendered)
-            return new RenderFragment(`${fragment1.rendered},\n${fragment2.rendered}`,
-                Imports.merge(fragment1.imports, fragment2.imports))
+            return new RenderFragment(`${fragment1.rendered}${combinator}${fragment2.rendered}`,
+                Imports.merge(fragment1.imports, fragment2.imports),
+                [...fragment1.validations, ...fragment2.validations])
         else if (!!fragment1.rendered)
             return fragment1
         else

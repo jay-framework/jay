@@ -98,7 +98,7 @@ function renderNode(currentDataVar: string, node: Node, firstLineIdent: string, 
 
         let childRenders = childNodes
             .map(_ => renderNode(currentDataVar, _, childLineBreaks ? ident + '  ' : '', ident + '  '))
-            .reduce((prev, current) => RenderFragment.merge(prev, current), RenderFragment.empty())
+            .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
             .map(children => childLineBreaks ? `\n${children}\n` : children);
 
         let attributes = renderAttributes(htmlElement);

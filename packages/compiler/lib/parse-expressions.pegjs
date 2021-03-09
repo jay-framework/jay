@@ -14,27 +14,29 @@ template
     if (tail.length === 0)
         return new RenderFragment('\'' + head + '\'', none);
     else if (tail.length === 1 && head.length === 0 && tail[0][5].length === 0) {
-        return new RenderFragment(`dt(${vars.defaultVar}, vs => vs.${tail[0][2]})`, dt);
+        let fragment = tail[0][2];
+        return new RenderFragment(`dt(${vars.currentVar}, vs => vs.${fragment.rendered})`, fragment.imports.plus(dt), fragment.validations);
     }
     else {
-        return new RenderFragment(`dt(${vars.defaultVar}, vs => \`` + tail.reduce(function(result, element) {
-          return `${result}\${vs.${element[2]}}${element[5]}`;
-        }, head) + '\`)', dt);
+        return tail.reduce(function(result, element) {
+          let fragment = element[2];
+          return RenderFragment.merge(result, fragment.map(acc => `\${vs.${acc}}${element[5]}`));
+        }, new RenderFragment(`dt(${vars.currentVar}, vs => \`${head}`, dt)).map(exp => exp + '\`)')
     }
   }
 
 condition
   = not:bang? head:accessor {
     return not?
-      new RenderFragment(`vs => !vs.${head}`, none):
-      new RenderFragment(`vs => vs.${head}`, none);
+      head.map(rendered => `vs => !vs.${rendered}`):
+      head.map(rendered => `vs => vs.${rendered}`);
   }
 
 accessor
   = head:Identifier tail:(_ "." _ Identifier)* {
-    return tail.reduce(function(result, element) {
-      return result + '.' + element[3];
-    }, head);
+    let terms = [head, ...tail.map(_ => _[3])];
+    let validations = vars.verifyAccessor(terms)
+    return new RenderFragment(terms.join('.'), none, validations);
   }
 
 additive
