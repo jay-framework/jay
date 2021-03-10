@@ -17,4 +17,12 @@ window.onload = function() {
     let {dom, update} = render(initialData);
     target.innerHTML = '';
     target.appendChild(dom);
+
+    let count = 12;
+    let interval = setInterval(() => {
+        initialData.n1 = count++;
+        update(initialData);
+        if (count == 30)
+            clearInterval(interval)
+    }, 500)
 }

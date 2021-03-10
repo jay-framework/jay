@@ -32,12 +32,9 @@ export default function jayCompiler (options = {}) {
     return {
         name: 'jay', // this name will show up in warnings and errors
         transform(code: string, id: string) {
-            console.log('transform', id, id.indexOf('.jay.html') > -1);
             if (id.indexOf('.jay.html') > -1) {
                 let tsCode = generateRuntimeFile(code);
-                console.log(tsCode.val);
                 let jsCode = ts.transpileModule(tsCode.val, tsConfig);
-                console.log(jsCode);
                 return jsCode.outputText;
             }
             else {
