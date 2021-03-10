@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "jsx": "preserve",
-    "module": "es2015",
+    "module": "commonjs",
     "esModuleInterop": true,
     "target": "es2015",
     "moduleResolution": "node",
@@ -10,5 +10,5 @@
     "declaration": true
   },
   "lib": ["es2015"],
-  "exclude": ["examples", "test"]
+  "exclude": ["examples", "test", "dist"]
 }

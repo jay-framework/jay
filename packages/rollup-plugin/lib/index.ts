@@ -7,6 +7,7 @@ export default function myExample () {
             console.log('transform', id, id.indexOf('.jay.html') > -1);
             if (id.indexOf('.jay.html') > -1) {
                 let transformed = generateRuntimeFile(code);
+                console.log(transformed);
                 return transformed.val;
             }
             else {
