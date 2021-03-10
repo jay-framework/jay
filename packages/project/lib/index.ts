@@ -21,6 +21,7 @@ window.onload = function() {
     let count = 12;
     let interval = setInterval(() => {
         initialData.n1 = count++;
+        initialData.b1 = count % 2 === 0;
         update(initialData);
         if (count == 30)
             clearInterval(interval)
