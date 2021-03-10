@@ -11,7 +11,9 @@
       "./jest-setup.js"
     ]
   },
-  "dependencies": {},
+  "dependencies": {
+    "jay-compiler": "1.0.0"
+  },
   "devDependencies": {
     "typescript": "^4.0.3",
     "@types/node": "^14.11.10",

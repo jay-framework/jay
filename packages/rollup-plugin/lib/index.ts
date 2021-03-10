@@ -1,3 +1,4 @@
+import {generateRuntimeFile}  from 'jay-compiler';
 // rollup-plugin-my-example.js
 export default function myExample () {
     return {
@@ -5,7 +6,8 @@ export default function myExample () {
         transform(code: string, id: string) {
             console.log('transform', id, id.indexOf('.jay.html') > -1);
             if (id.indexOf('.jay.html') > -1) {
-                return `export default function render() {}`
+                let transformed = generateRuntimeFile(code);
+                return transformed.val;
             }
             else {
                 return code;
