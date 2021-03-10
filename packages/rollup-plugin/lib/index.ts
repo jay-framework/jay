@@ -1,14 +1,44 @@
 import {generateRuntimeFile}  from 'jay-compiler';
+import * as ts from "typescript";
+import path from "path";
+import * as fs from "fs";
 // rollup-plugin-my-example.js
-export default function myExample () {
+
+function readTsConfigFile(tsConfigPath) {
+    const { config, error } = ts.readConfigFile(tsConfigPath, (path) => fs.readFileSync(path, 'utf8'));
+    if (error) {
+        throw error;
+    }
+    return config || {};
+}
+
+function resolveTsConfig(options) {
+
+    const tsConfigPath = path.resolve(process.cwd(), options.relativePath || 'tsconfig.json');
+    if (!ts.sys.fileExists(tsConfigPath)) {
+        if (options.relativePath) {
+            // If an explicit path was provided but no file was found, throw
+            throw new Error(`Could not find specified tsconfig.json at ${tsConfigPath}`);
+        } else {
+            return null;
+        }
+    }
+    return tsConfigPath;
+}
+
+export default function jayCompiler (options = {}) {
+    let tsConfigPath = resolveTsConfig(options);
+    let tsConfig = tsConfigPath?readTsConfigFile(tsConfigPath):{};
     return {
         name: 'jay', // this name will show up in warnings and errors
         transform(code: string, id: string) {
             console.log('transform', id, id.indexOf('.jay.html') > -1);
             if (id.indexOf('.jay.html') > -1) {
-                let transformed = generateRuntimeFile(code);
-                console.log(transformed);
-                return transformed.val;
+                let tsCode = generateRuntimeFile(code);
+                console.log(tsCode.val);
+                let jsCode = ts.transpileModule(tsCode.val, tsConfig);
+                console.log(jsCode);
+                return jsCode.outputText;
             }
             else {
                 return code;
@@ -16,14 +46,3 @@ export default function myExample () {
         }
     };
 }
-
-// // rollup.config.js
-// import myExample from './rollup-plugin-my-example.js';
-// export default ({
-//     input: 'virtual-module', // resolved by our plugin
-//     plugins: [myExample()],
-//     output: [{
-//         file: 'bundle.js',
-//         format: 'es'
-//     }]
-// });
