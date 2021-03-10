@@ -115,6 +115,12 @@ describe('compiler', () => {
             let runtimeFile = generateRuntimeFile(jayFile);
             expect(runtimeFile.val).toEqual(await readGeneratedFile('styles'));
         })
+
+        it('for collections', async () => {
+            const jayFile = await readSourceFile('collections');
+            let runtimeFile = generateRuntimeFile(jayFile);
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('collections'));
+        })
     })
 });
 

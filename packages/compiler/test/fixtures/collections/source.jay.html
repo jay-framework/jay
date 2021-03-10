@@ -14,10 +14,10 @@ data:
 <div>
     <h1>{title}</h1>
     <div>
-        <div forEach={items} item={item} trackBy={item.id}>
-            <span style="color:green; width: 100px; display: inline-block;">{item.name}</span>
-            <span style="color:red; width: 100px; display: inline-block;">{item.completed}</span>
-            <span style="color:blue; width: 100px; display: inline-block;">{item.cost}</span>
+        <div forEach="items" item="item" trackBy="id">
+            <span style="color:green; width: 100px; display: inline-block;">{name}</span>
+            <span style="color:red; width: 100px; display: inline-block;">{completed}</span>
+            <span style="color:blue; width: 100px; display: inline-block;">{cost}</span>
         </div>
     </div>
 </div>

@@ -32,6 +32,11 @@ condition
       head.map(rendered => `vs => vs.${rendered}`);
   }
 
+accessorFunction
+  = acc:accessor {
+    return acc.map(_ => 'vs => vs.' + _);
+  }
+
 accessor
   = head:Identifier tail:(_ "." _ Identifier)* {
     let terms = [head, ...tail.map(_ => _[3])];

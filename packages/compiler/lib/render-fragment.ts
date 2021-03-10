@@ -5,7 +5,8 @@ export enum Import {
     element,
     dynamicText,
     conditional,
-    dynamicElement
+    dynamicElement,
+    forEach
 }
 
 export class Imports {

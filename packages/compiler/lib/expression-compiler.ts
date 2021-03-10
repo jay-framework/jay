@@ -25,33 +25,31 @@ export class Variables {
     }
 }
 
-export function parseAccessor(expression: string, vars: Variables): RenderFragment {
-
-}
-
-export function parseCondition(expression: string, vars: Variables): RenderFragment {
+function doParse(expression: string, vars: Variables, startRule) {
     try {
         return parse(expression, {
             vars, RenderFragment,
             none: Imports.none(),
             dt: Imports.for(Import.dynamicText),
-            startRule: "condition"
+            startRule
         });
-    }
-    catch (e) {
-        throw new Error(`failed to parse expression [${expression}]. ${e.message}` );
+    } catch (e) {
+        throw new Error(`failed to parse expression [${expression}]. ${e.message}`);
     }
 }
 
+export function parseIdentifier(expression: string, vars: Variables): RenderFragment {
+    return new RenderFragment(doParse(expression, vars, 'Identifier'), Imports.none());
+}
+
+export function parseAccessorFunc(expression: string, vars: Variables): RenderFragment {
+    return doParse(expression, vars, 'accessorFunction');
+}
+
+export function parseCondition(expression: string, vars: Variables): RenderFragment {
+    return doParse(expression, vars, 'condition');
+}
+
 export function parseTextExpression(expression: string, vars: Variables): RenderFragment {
-    try {
-        return parse(expression, {
-            vars, RenderFragment,
-            none: Imports.none(),
-            dt: Imports.for(Import.dynamicText)
-        });
-    }
-    catch (e) {
-        throw new Error(`failed to parse expression [${expression}]. ${e.message}` );
-    }
+    return doParse(expression, vars, 'start');
 }
