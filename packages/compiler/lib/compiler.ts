@@ -133,7 +133,6 @@ function renderNode(currentDataVar: string, node: Node, firstLineIdent: string, 
     }
 
     function renderForEach(renderedForEach: RenderFragment, collectionDataVar: RenderFragment, trackBy: string, childElement: RenderFragment) {
-        console.log(collectionDataVar)
         return new RenderFragment(`${firstLineIdent}forEach(${renderedForEach.rendered}, (${collectionDataVar.rendered}: Item) => {
 ${ident}return ${childElement.rendered}}, '${trackBy}')`, childElement.imports.plus(Import.forEach),
             [...renderedForEach.validations, ...collectionDataVar.validations, ...childElement.validations])
