@@ -40,8 +40,8 @@ accessorFunction
 accessor
   = head:Identifier tail:(_ "." _ Identifier)* {
     let terms = [head, ...tail.map(_ => _[3])];
-    let validations = vars.verifyAccessor(terms)
-    return new RenderFragment(terms.join('.'), none, validations);
+    let {validations, resolvedType} = vars.resolveType(terms)
+    return new RenderFragment(terms.join('.'), none, validations, resolvedType);
   }
 
 additive

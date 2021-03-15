@@ -1,27 +1,41 @@
 import {Import, Imports, RenderFragment} from './render-fragment';
 import {parse} from '../lib/parse-expressions'
 import {isArrayType, isObjectType, JayPrimitiveTypes, JayType} from "./parse-jay-file";
+import {JayValidations} from "./with-validations";
 
 export class Variables {
-    private readonly currentVar: string;
-    private readonly currentTypes: JayType;
-    constructor(currentVar: string, currentTypes: JayType) {
-        this.currentVar = currentVar;
+    readonly currentVar: string;
+    readonly currentTypes: JayPrimitiveTypes | JayType | Array<JayType>;
+    readonly parent: Variables;
+    private readonly depth;
+    constructor(currentTypes: JayPrimitiveTypes | JayType | Array<JayType>, parent: Variables = undefined, depth: number = 0) {
+        if (depth === 0)
+            this.currentVar = 'viewState';
+        else
+            this.currentVar = 'vs' + depth;
+        this.depth = depth;
+        this.parent = parent;
         this.currentTypes = currentTypes;
     }
 
-    verifyAccessor(accessor: Array<string>) {
+    resolveType(accessor: Array<string>): {validations: JayValidations, resolvedType: JayPrimitiveTypes | JayType | Array<JayType>} {
         let curr: JayPrimitiveTypes | JayType | Array<JayType> = this.currentTypes;
         let validations = [];
-        accessor.forEach((member, index) => {
+        accessor.forEach((member) => {
             if (curr[member] && isObjectType(member))
                 curr = curr[member];
             // else if (curr[member] && isArrayType(member))
             //     ;
             else if (!curr[member])
                 validations.push(`the data field [${accessor.join('.')}] not found in Jay data`);
+            else
+                curr = curr[member];
         });
-        return validations;
+        return {validations, resolvedType: curr};
+    }
+
+    childVariableFor(resolvedForEachType: JayPrimitiveTypes | JayType | Array<JayType>): Variables {
+        return new Variables(resolvedForEachType, this, this.depth + 1);
     }
 }
 

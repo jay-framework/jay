@@ -63,15 +63,15 @@ function renderFunctionDecleration(): string {
     return `export declare function render(viewState: ViewState): JayElement<ViewState>`;
 }
 
-function renderTextNode(currentDataVar: string, text: string): RenderFragment {
-    return parseTextExpression(text, new Variables(currentDataVar, {}));
+function renderTextNode(variables: Variables, text: string): RenderFragment {
+    return parseTextExpression(text, variables);
 }
 
 function renderAttributes(element: HTMLElement): string {
     let attributes = element.attributes;
     let renderedAttributes = [];
     Object.keys(attributes).forEach(attrName => {
-        if (attrName === 'if' || attrName === 'forEach' || attrName === 'item' || attrName === 'trackBy')
+        if (attrName === 'if' || attrName === 'forEach' || attrName === 'trackBy')
             return;
         if (attrName === 'style')
             renderedAttributes.push(`style: {cssText: '${attributes[attrName]}'}`)
@@ -81,10 +81,10 @@ function renderAttributes(element: HTMLElement): string {
     return `{${renderedAttributes.join(', ')}}`;
 }
 
-function renderNode(currentDataVar: string, node: Node, firstLineIdent: string, ident: string): RenderFragment {
+function renderNode(variables: Variables, node: Node, firstLineIdent: string, ident: string): RenderFragment {
 
     function de(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean): RenderFragment {
-        return new RenderFragment(`${firstLineIdent}de('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? ident : ''}], ${currentDataVar})`,
+        return new RenderFragment(`${firstLineIdent}de('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? ident : ''}], ${variables.currentVar})`,
             children.imports.plus(Import.dynamicElement),
             children.validations);
     }
@@ -103,7 +103,7 @@ function renderNode(currentDataVar: string, node: Node, firstLineIdent: string, 
         return (node.nodeType !== NodeType.TEXT_NODE) && (node as HTMLElement).hasAttribute('forEach');
     }
 
-    function renderHtmlElement(htmlElement, newDataVar: string) {
+    function renderHtmlElement(htmlElement, newVariables: Variables) {
         let childNodes = node.childNodes
             .filter(_ => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '');
 
@@ -114,7 +114,7 @@ function renderNode(currentDataVar: string, node: Node, firstLineIdent: string, 
             .reduce((prev, current) => prev || current, false);
 
         let childRenders = childNodes
-            .map(_ => renderNode(newDataVar, _, childLineBreaks ? ident + '  ' : '', ident + '  '))
+            .map(_ => renderNode(newVariables, _, childLineBreaks ? ident + '  ' : '', ident + '  '))
             .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
             .map(children => childLineBreaks ? `\n${children}\n` : children);
 
@@ -132,39 +132,40 @@ function renderNode(currentDataVar: string, node: Node, firstLineIdent: string, 
             [...renderedCondition.validations, ...childElement.validations]);
     }
 
-    function renderForEach(renderedForEach: RenderFragment, collectionDataVar: RenderFragment, trackBy: string, childElement: RenderFragment) {
-        return new RenderFragment(`${firstLineIdent}forEach(${renderedForEach.rendered}, (${collectionDataVar.rendered}: Item) => {
+    function renderForEach(renderedForEach: RenderFragment, collectionVariables: Variables, trackBy: string, childElement: RenderFragment) {
+        // todo item type
+        return new RenderFragment(`${firstLineIdent}forEach(${renderedForEach.rendered}, (${collectionVariables.currentVar}: Item) => {
 ${ident}return ${childElement.rendered}}, '${trackBy}')`, childElement.imports.plus(Import.forEach),
-            [...renderedForEach.validations, ...collectionDataVar.validations, ...childElement.validations])
+            [...renderedForEach.validations, ...childElement.validations])
     }
 
     switch(node.nodeType) {
         case NodeType.TEXT_NODE:
             let text = node.innerText;
-            return renderTextNode(currentDataVar, text);
+            return renderTextNode(variables, text);
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
             if (isConditional(htmlElement)) {
                 let condition = htmlElement.getAttribute('if');
-                let childElement = renderHtmlElement(htmlElement, currentDataVar);
-                let renderedCondition = parseCondition(condition, new Variables(currentDataVar, {}));
+                let childElement = renderHtmlElement(htmlElement, variables);
+                let renderedCondition = parseCondition(condition, variables);
                 return c(renderedCondition, childElement);
             }
             else if (isForEach(htmlElement)) {
-                let forEach = htmlElement.getAttribute('forEach');
-                let item = htmlElement.getAttribute('item');
+                let forEach = htmlElement.getAttribute('forEach'); // todo extract type
                 let trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
 
-                let renderedForEach = parseAccessorFunc(forEach, new Variables(currentDataVar, {}));
-                let collectionDataVar = parseIdentifier(item, new Variables(currentDataVar, {}));
+                let renderedForEach = parseAccessorFunc(forEach, variables);
+                let resolvedForEachType = renderedForEach.resolvedType; // todo should be array type
+                let forEachVariables = variables.childVariableFor(resolvedForEachType[0])
 
-                let childElement = renderHtmlElement(htmlElement, item);
-                return renderForEach(renderedForEach, collectionDataVar, trackBy, childElement);
+                let childElement = renderHtmlElement(htmlElement, forEachVariables);
+                return renderForEach(renderedForEach, forEachVariables, trackBy, childElement);
 
                 
             }
             else {
-                return renderHtmlElement(htmlElement, currentDataVar);
+                return renderHtmlElement(htmlElement, variables);
             }
         case NodeType.COMMENT_NODE:
             break
@@ -176,8 +177,9 @@ function firstElementChild(node: Node): HTMLElement {
     return node.childNodes.find(child => child.nodeType === NodeType.ELEMENT_NODE) as HTMLElement;
 }
 
-function renderFunctionImplementation(rootBodyElement: HTMLElement): RenderFragment {
-    let renderedRoot = renderNode(`viewState`, firstElementChild(rootBodyElement), '', '  ');
+function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement): RenderFragment {
+    let variables = new Variables(types);
+    let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), '', '  ');
     let body = `export function render(viewState: ViewState): JayElement<ViewState> {
   return ${renderedRoot.rendered};
 }`;
@@ -199,7 +201,7 @@ export function generateRuntimeFile(html): WithValidations<string> {
     let parsedFile = parseJayFile(html);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        let renderedImplementation = renderFunctionImplementation(jayFile.body);
+        let renderedImplementation = renderFunctionImplementation(jayFile.types, jayFile.body);
         return [renderImports(renderedImplementation.imports.plus(Import.element).plus(Import.jayElement)),
             types,
             renderedImplementation.rendered
