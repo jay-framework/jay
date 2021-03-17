@@ -17,7 +17,7 @@ Compiler
 - [x] Typescript definition file
 - [x] Basics - elements, strings
 - [x] Conditional
-- [ ] Collections
+- [x] Collections
 - [x] error reporting
 
 Testing
