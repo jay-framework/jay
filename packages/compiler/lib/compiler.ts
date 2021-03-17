@@ -1,7 +1,5 @@
 import {WithValidations} from "./with-validations";
 import {
-    isArrayType,
-    isObjectType,
     JayArrayType,
     JayAtomicType,
     JayFile,
@@ -15,11 +13,9 @@ import {Import, Imports, RenderFragment} from "./render-fragment";
 import {
     parseAccessor,
     parseCondition,
-    parseIdentifier,
     parseTextExpression,
     Variables
 } from './expression-compiler';
-import {JayPrimitiveTypes} from "../dist/parse-jay-file";
 
 function renderInterface(aType: JayObjectType): string {
 

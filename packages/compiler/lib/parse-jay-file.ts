@@ -4,18 +4,6 @@ import yaml from 'js-yaml';
 import {pascalCase} from 'change-case';
 import pluralize from 'pluralize';
 
-// export enum JayPrimitiveTypes {
-//     type_string = 'string',
-//     type_number = 'number',
-//     type_boolean = 'boolean',
-//     type_date = 'Date'
-// }
-//
-//
-// export interface JayType {
-//     [key: string]: JayPrimitiveTypes | JayType | Array<JayType>
-// }
-
 export interface JayType {
 }
 
