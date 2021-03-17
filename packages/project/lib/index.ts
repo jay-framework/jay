@@ -4,6 +4,9 @@ let initialData = {
     s1: 'udi',
     n1: 12,
     b1: false,
+    title: 'a title',
+    otherTitle: 'another title',
+    showTitle: false,
     o1: {
         s2: 'sss',
         n2: 23
@@ -22,6 +25,7 @@ window.onload = function() {
     let interval = setInterval(() => {
         initialData.n1 = count++;
         initialData.b1 = count % 2 === 0;
+        initialData.showTitle = count % 2 === 0;
         initialData.a1.push({s3: "id" + count, n3: count})
         update(initialData);
         if (count == 30)

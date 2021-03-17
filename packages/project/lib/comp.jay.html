@@ -5,6 +5,9 @@ data:
   s1: string
   n1: number
   b1: boolean
+  title: string
+  otherTitle: string
+  showTitle: boolean
   o1:
       s2: string
       n2: number
@@ -15,6 +18,8 @@ data:
 </head>
 <body>
 <div>
+    <div if="showTitle"><h1>{title}</h1></div>
+    <div if="!showTitle"><h1>{otherTitle}</h1></div>
     <div><span>hello udi: </span><span>{s1}</span></div>
     <div if="b1"><span>n1: </span><span>{n1}</span></div>
     <div forEach="a1" trackBy="s3">
