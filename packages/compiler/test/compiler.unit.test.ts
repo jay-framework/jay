@@ -1,7 +1,7 @@
 import {generateDefinitionFile, generateRuntimeFile, generateTypes} from '../lib/compiler';
 import {describe, expect, it} from '@jest/globals'
 import stripMargin from '@caiogondim/strip-margin'
-import {JayPrimitiveTypes as JPT} from "../lib/parse-jay-file";
+import {JayArrayType, JayBoolean, JayDate, JayNumber, JayObjectType, JayString} from "../lib/parse-jay-file";
 import {promises} from 'fs';
 const readFile = promises.readFile;
 
@@ -13,12 +13,12 @@ describe('compiler', () => {
 
     describe('generate data interfaces', () => {
         it('should generate simple interface', () => {
-            let genInterface = generateTypes({
-                name: JPT.type_string,
-                age: JPT.type_number,
-                bool: JPT.type_boolean,
-                bdate: JPT.type_date
-            });
+            let genInterface = generateTypes(new JayObjectType('ViewState', {
+                name: JayString,
+                age: JayNumber,
+                bool: JayBoolean,
+                bdate: JayDate
+            }));
             expect(genInterface).toEqual(stripMargin(
                 `interface ViewState {
                 |  name: string,
@@ -29,12 +29,12 @@ describe('compiler', () => {
         })
 
         it('should generate interface with complex object types', () => {
-            let genInterface = generateTypes({
-                name: JPT.type_string,
-                address: {
-                    street: JPT.type_string,
-                }
-            });
+            let genInterface = generateTypes(new JayObjectType('ViewState', {
+                name: JayString,
+                address: new JayObjectType('Address', {
+                    street: JayString,
+                })
+            }));
             expect(genInterface).toEqual(stripMargin(
                 `interface Address {
                 |  street: string
@@ -47,12 +47,12 @@ describe('compiler', () => {
         })
 
         it('should generate interface with complex array of object types', () => {
-            let genInterface = generateTypes({
-                name: JPT.type_string,
-                address: [{
-                    street: JPT.type_string,
-                }]
-            });
+            let genInterface = generateTypes(new JayObjectType('ViewState', {
+                name: JayString,
+                address: new JayArrayType(new JayObjectType('Address', {
+                    street: JayString,
+                }))
+            }));
             expect(genInterface).toEqual(stripMargin(
                 `interface Address {
                 |  street: string

@@ -1,5 +1,4 @@
 import {JayValidations} from "./with-validations";
-import {JayPrimitiveTypes, JayType} from "./parse-jay-file";
 
 export enum Import {
     jayElement,
@@ -54,17 +53,15 @@ export class RenderFragment {
     rendered: string;
     imports: Imports;
     validations: JayValidations;
-    resolvedType: JayPrimitiveTypes | JayType | Array<JayType>;
 
-    constructor(rendered: string, imports: Imports, validations: JayValidations = [], resolvedType: JayPrimitiveTypes | JayType | Array<JayType> = undefined) {
+    constructor(rendered: string, imports: Imports, validations: JayValidations = []) {
         this.rendered = rendered;
         this.imports = imports;
         this.validations = validations
-        this.resolvedType = resolvedType;
     }
 
     map(f: (s: string) => string): RenderFragment {
-        return new RenderFragment(f(this.rendered), this.imports, this.validations, this.resolvedType);
+        return new RenderFragment(f(this.rendered), this.imports, this.validations);
     }
 
     static empty(): RenderFragment {

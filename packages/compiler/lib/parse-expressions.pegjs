@@ -14,13 +14,13 @@ template
     if (tail.length === 0)
         return new RenderFragment('\'' + head + '\'', none);
     else if (tail.length === 1 && head.length === 0 && tail[0][5].length === 0) {
-        let fragment = tail[0][2];
-        return new RenderFragment(`dt(${vars.currentVar}, vs => vs.${fragment.rendered})`, fragment.imports.plus(dt), fragment.validations);
+        let accessor = tail[0][2];
+        return new RenderFragment(`dt(${vars.currentVar}, vs => vs.${accessor.render()})`, dt, accessor.validations);
     }
     else {
         return tail.reduce(function(result, element) {
-          let fragment = element[2];
-          return RenderFragment.merge(result, fragment.map(acc => `\${vs.${acc}}${element[5]}`));
+          let accessor = element[2];
+          return RenderFragment.merge(result, new RenderFragment(`\${vs.${accessor.render()}}${element[5]}`, none, accessor.validations));
         }, new RenderFragment(`dt(${vars.currentVar}, vs => \`${head}`, dt)).map(exp => exp + '\`)')
     }
   }
@@ -28,8 +28,8 @@ template
 condition
   = not:bang? head:accessor {
     return not?
-      head.map(rendered => `vs => !vs.${rendered}`):
-      head.map(rendered => `vs => vs.${rendered}`);
+      new RenderFragment(`vs => !vs.${head.render()}`, none, head.validations):
+      new RenderFragment(`vs => vs.${head.render()}`, none, head.validations)
   }
 
 accessorFunction
@@ -40,8 +40,8 @@ accessorFunction
 accessor
   = head:Identifier tail:(_ "." _ Identifier)* {
     let terms = [head, ...tail.map(_ => _[3])];
-    let {validations, resolvedType} = vars.resolveType(terms)
-    return new RenderFragment(terms.join('.'), none, validations, resolvedType);
+    let accessor = vars.resolveAccessor(terms)
+    return accessor;
   }
 
 additive

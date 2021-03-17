@@ -1,6 +1,6 @@
 import {describe, expect, it} from '@jest/globals'
 import stripMargin from '@caiogondim/strip-margin'
-import {JayPrimitiveTypes as JPT, parseJayFile} from "../lib/parse-jay-file";
+import {JayArrayType, JayBoolean, JayNumber, JayObjectType, JayString, parseJayFile} from "../lib/parse-jay-file";
 
 describe('compiler', () => {
 
@@ -25,7 +25,7 @@ describe('compiler', () => {
                         |`,
                 '<body></body>'))
             
-            expect(jayFile.val.types).toEqual({text: JPT.type_string});
+            expect(jayFile.val.types).toEqual(new JayObjectType('ViewState', {text: JayString}));
             expect(jayFile.val.examples).toEqual([]);
         });
 
@@ -38,7 +38,7 @@ describe('compiler', () => {
                         |   text: 'hello world'`,
                 '<body></body>'))
 
-            expect(jayFile.val.types).toEqual({text: JPT.type_string});
+            expect(jayFile.val.types).toEqual(new JayObjectType('ViewState',{text: JayString}));
             expect(jayFile.val.examples).toEqual([{name: "example", data:{text: "hello world"}}]);
         });
 
@@ -65,18 +65,18 @@ describe('compiler', () => {
                         |       n3: number`,
                 '<body></body>'))
 
-            expect(jayFile.val.types).toEqual({
-                s1: JPT.type_string,
-                n1: JPT.type_number,
-                b1: JPT.type_boolean,
-                o1: {
-                    s2: JPT.type_string,
-                    n2: JPT.type_number
-                },
-                a1: [{
-                    s3: JPT.type_string,
-                    n3: JPT.type_number}
-                ]});
+            expect(jayFile.val.types).toEqual(new JayObjectType('ViewState',{
+                s1: JayString,
+                n1: JayNumber,
+                b1: JayBoolean,
+                o1: new JayObjectType("O1", {
+                    s2: JayString,
+                    n2: JayNumber
+                }),
+                a1: new JayArrayType(new JayObjectType("A1", {
+                    s3: JayString,
+                    n3: JayNumber}
+                ))}));
             expect(jayFile.val.examples).toEqual([]);
         });
 

@@ -1,50 +1,62 @@
-import {pascalCase} from 'change-case';
-import pluralize from 'pluralize';
 import {WithValidations} from "./with-validations";
-import {isArrayType, isObjectType, JayFile, JayType, parseJayFile} from "./parse-jay-file";
+import {
+    isArrayType,
+    isObjectType,
+    JayArrayType,
+    JayAtomicType,
+    JayFile,
+    JayObjectType,
+    JayType,
+    parseJayFile
+} from "./parse-jay-file";
 import {HTMLElement, NodeType} from "node-html-parser";
 import Node from "node-html-parser/dist/nodes/node";
 import {Import, Imports, RenderFragment} from "./render-fragment";
 import {
-    parseAccessorFunc,
+    parseAccessor,
     parseCondition,
     parseIdentifier,
     parseTextExpression,
     Variables
 } from './expression-compiler';
+import {JayPrimitiveTypes} from "../dist/parse-jay-file";
 
-function toInterfaceName(name) {
-    return pascalCase(pluralize.singular(name))
-}
-
-function renderInterface(types: JayType, name: String): string {
+function renderInterface(aType: JayObjectType): string {
 
     let childInterfaces = [];
 
-    let genInterface = `interface ${name} {\n`;
+    let genInterface = `interface ${aType.name} {\n`;
     genInterface += Object
-        .keys(types)
+        .keys(aType.props)
         .map(prop => {
-            if (isObjectType(types[prop])) {
-                let name = prop;
-                childInterfaces.push(renderInterface(types[prop] as JayType, toInterfaceName(name)));
-                return `  ${prop}: ${toInterfaceName(name)}`;
+            let childType = aType.props[prop];
+            if (childType instanceof JayObjectType) {
+                childInterfaces.push(renderInterface(childType));
+                return `  ${prop}: ${childType.name}`;
             }
-            else if (isArrayType(types[prop])) {
-                let name = prop;
-                childInterfaces.push(renderInterface(types[prop][0] as JayType, toInterfaceName(name)));
-                return `  ${prop}: Array<${toInterfaceName(name)}>`;
+            else if (childType instanceof JayArrayType) {
+                let arrayItemType = childType.itemType;
+                if (arrayItemType instanceof JayObjectType) {
+                    childInterfaces.push(renderInterface(arrayItemType));
+                    return `  ${prop}: Array<${arrayItemType.name}>`;
+                }
+                else {
+                    throw new Error('not implemented yet');
+                    // todo implement array of array or array of primitive
+                }
             }
+            else if (childType instanceof JayAtomicType)
+                return `  ${prop}: ${childType.name}`;
             else
-                return `  ${prop}: ${types[prop]}`;
+                throw new Error('unknown type');
         })
         .join(',\n');
     genInterface += '\n}';
     return [...childInterfaces, genInterface].join('\n\n');
 }
 
-export function generateTypes(types: JayType): string {
-    return renderInterface(types, 'ViewState');
+export function generateTypes(types: JayObjectType): string {
+    return renderInterface(types);
 }
 
 
@@ -155,12 +167,12 @@ ${ident}return ${childElement.rendered}}, '${trackBy}')`, childElement.imports.p
                 let forEach = htmlElement.getAttribute('forEach'); // todo extract type
                 let trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
 
-                let renderedForEach = parseAccessorFunc(forEach, variables);
-                let resolvedForEachType = renderedForEach.resolvedType; // todo should be array type
-                let forEachVariables = variables.childVariableFor(resolvedForEachType[0])
+                let forEachAccessor = parseAccessor(forEach, variables);
+                let forEachFragment = new RenderFragment(`vs => vs.${forEachAccessor.render()}`, Imports.none(), forEachAccessor.validations);
+                let forEachVariables = variables.childVariableFor(forEachAccessor.resolvedType)
 
                 let childElement = renderHtmlElement(htmlElement, forEachVariables);
-                return renderForEach(renderedForEach, forEachVariables, trackBy, childElement);
+                return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
 
                 
             }

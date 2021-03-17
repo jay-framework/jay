@@ -1,40 +1,55 @@
 import {Import, Imports, RenderFragment} from './render-fragment';
 import {parse} from '../lib/parse-expressions'
-import {isArrayType, isObjectType, JayPrimitiveTypes, JayType} from "./parse-jay-file";
+import {JayObjectType, JayType, JayUnknown} from "./parse-jay-file";
 import {JayValidations} from "./with-validations";
+
+export class Accessor {
+    readonly terms: Array<string>;
+    readonly validations: JayValidations;
+    readonly resolvedType: JayType;
+
+    constructor(terms: Array<string>, validations: JayValidations, resolvedType: JayType) {
+        this.terms = terms;
+        this.validations = validations;
+        this.resolvedType = resolvedType;
+    }
+
+    render() {
+        return this.terms.join('.');
+    }
+}
 
 export class Variables {
     readonly currentVar: string;
-    readonly currentTypes: JayPrimitiveTypes | JayType | Array<JayType>;
+    readonly currentType: JayType;
     readonly parent: Variables;
     private readonly depth;
-    constructor(currentTypes: JayPrimitiveTypes | JayType | Array<JayType>, parent: Variables = undefined, depth: number = 0) {
+    constructor(currentTypes: JayType, parent: Variables = undefined, depth: number = 0) {
         if (depth === 0)
             this.currentVar = 'viewState';
         else
             this.currentVar = 'vs' + depth;
         this.depth = depth;
         this.parent = parent;
-        this.currentTypes = currentTypes;
+        this.currentType = currentTypes;
     }
 
-    resolveType(accessor: Array<string>): {validations: JayValidations, resolvedType: JayPrimitiveTypes | JayType | Array<JayType>} {
-        let curr: JayPrimitiveTypes | JayType | Array<JayType> = this.currentTypes;
+    resolveAccessor(accessor: Array<string>): Accessor {
+        let curr: JayType = this.currentType;
         let validations = [];
         accessor.forEach((member) => {
-            if (curr[member] && isObjectType(member))
-                curr = curr[member];
-            // else if (curr[member] && isArrayType(member))
-            //     ;
-            else if (!curr[member])
+            if (curr instanceof JayObjectType && curr.props[member]) {
+                curr = curr.props[member];
+            }
+            else {
                 validations.push(`the data field [${accessor.join('.')}] not found in Jay data`);
-            else
-                curr = curr[member];
+                curr = JayUnknown;
+            }
         });
-        return {validations, resolvedType: curr};
+        return new Accessor(accessor, validations, curr);
     }
 
-    childVariableFor(resolvedForEachType: JayPrimitiveTypes | JayType | Array<JayType>): Variables {
+    childVariableFor(resolvedForEachType: JayType): Variables {
         return new Variables(resolvedForEachType, this, this.depth + 1);
     }
 }
@@ -56,8 +71,8 @@ export function parseIdentifier(expression: string, vars: Variables): RenderFrag
     return new RenderFragment(doParse(expression, vars, 'Identifier'), Imports.none());
 }
 
-export function parseAccessorFunc(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, vars, 'accessorFunction');
+export function parseAccessor(expression: string, vars: Variables): Accessor {
+    return doParse(expression, vars, 'accessor');
 }
 
 export function parseCondition(expression: string, vars: Variables): RenderFragment {

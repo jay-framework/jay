@@ -1,7 +1,7 @@
 import {render} from './comp.jay.html';
 
 let initialData = {
-    s1: 'some string',
+    s1: 'udi',
     n1: 12,
     b1: false,
     o1: {
