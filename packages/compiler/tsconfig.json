@@ -1,9 +1,8 @@
 {
   "compilerOptions": {
-    "jsx": "preserve",
     "module": "commonjs",
     "esModuleInterop": true,
-    "target": "es2015",
+    "target": "ES2019",
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "dist",

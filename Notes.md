@@ -10,6 +10,7 @@ Runtime
 - [ ] composites (component in component)
 - [ ] server side rendering
 - [ ] hydration
+- [ ] canvas
 
 Compiler
 ---

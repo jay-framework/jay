@@ -3,20 +3,23 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
+    "d": "node node_modules/jay-cli/dist/index.js ./lib",
     "rollup": "rollup --config ./rollup.config.js",
-    "copy": "cp lib/index.html dist/index.html",
+    "copy": "cp lib/index.html dist/index.html && cp lib/index.css dist/index.css",
     "build": "npm run rollup && npm run copy"
   },
   "dependencies": {
     "jay-runtime": "1.0.0"
   },
   "devDependencies": {
-    "typescript": "^4.0.3",
     "@babel/preset-env": "^7.12.1",
     "@babel/preset-typescript": "^7.12.1",
+    "@rollup/plugin-node-resolve": "^11.2.0",
     "@rollup/plugin-typescript": "^8.1.0",
+    "jay-cli": "1.0.0",
     "rollup": "^2.35.1",
+    "rollup-plugin-jay": "1.0.0",
     "tslib": "^2.0.3",
-    "rollup-plugin-jay": "1.0.0"
+    "typescript": "^4.0.3"
   }
 }

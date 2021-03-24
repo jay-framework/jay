@@ -1,0 +1,19 @@
+<html>
+<head>
+    <script type="application/yaml-jay">
+data:
+   count: number
+
+events:
+   dec: (count: Number)
+   inc: (count: Number)
+    </script>
+</head>
+<body>
+    <div>
+        <button onclick="dec(count)">-</button>
+        <span>{count}</span>
+        <button onclick="inc(count)">+</button>
+    </div>
+</body>
+</html>

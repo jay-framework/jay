@@ -1,6 +1,7 @@
 // rollup.config.js
 import typescript from '@rollup/plugin-typescript';
 import jay from 'rollup-plugin-jay';
+import { nodeResolve } from '@rollup/plugin-node-resolve';
 
 export default [
   {
@@ -10,7 +11,7 @@ export default [
       format: 'iife',
       name: 'jay'
     },
-    plugins: [jay(), typescript()]
+    plugins: [jay(), typescript(), nodeResolve()]
   }
 
 ];

@@ -3,7 +3,9 @@
     "packages/runtime",
     "packages/compiler",
     "packages/project",
-    "packages/rollup-plugin"
+    "packages/rollup-plugin",
+    "packages/cli",
+    "exploration"
   ],
   "version": "1.0.0"
 }

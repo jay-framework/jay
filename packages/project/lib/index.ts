@@ -1,34 +1,49 @@
-import {render} from './comp.jay.html';
+import basic from './basic-data';
+import collections from './collections-data';
+import composite from './composite-data';
+import conditions from './conditions-data';
+import benchmark from './benchmark';
 
-let initialData = {
-    s1: 'udi',
-    n1: 12,
-    b1: false,
-    title: 'a title',
-    otherTitle: 'another title',
-    showTitle: false,
-    o1: {
-        s2: 'sss',
-        n2: 23
-    },
-    a1: [{s3: 'abc', n3: 123}, {s3: 'def', n3: 456}]
+function ex(name: string, render, makeData: () => (index: number) => any) {
+    return {name, render, makeData}
 }
+
+const examples = [
+    ex('simple', basic.render, basic.data),
+    ex('collection', collections.render, collections.data),
+    ex('composite', composite.render, composite.data),
+    ex('conditions', conditions.render, conditions.data)
+]
 
 window.onload = function() {
     let target = document.getElementById('target');
+    let progress = document.getElementById('progress');
+    let chooseExample = document.getElementById('choose-example') as HTMLSelectElement;
 
-    let {dom, update} = render(initialData);
-    target.innerHTML = '';
-    target.appendChild(dom);
+    examples.forEach((example, index) => {
+        let option = document.createElement("option");
+        option.value = ""+index;
+        option.text = example.name;
+        chooseExample.appendChild(option);
+    })
 
-    let count = 12;
-    let interval = setInterval(() => {
-        initialData.n1 = count++;
-        initialData.b1 = count % 2 === 0;
-        initialData.showTitle = count % 2 === 0;
-        initialData.a1.push({s3: "id" + count, n3: count})
-        update(initialData);
-        if (count == 30)
-            clearInterval(interval)
-    }, 500)
+    chooseExample.addEventListener('change', (event) => {
+        let index = Number(chooseExample.value);
+        runExample(examples[index]);
+    });
+
+    function runExample(example) {
+        let dataFunc = example.makeData();
+        let {dom, update} = example.render(dataFunc(0));
+        target.innerHTML = '';
+        target.appendChild(dom);
+
+        benchmark(index => update(dataFunc(index)), status => progress.textContent = status);
+    }
+
+    runExample(examples[0]);
+
 }
+
+
+

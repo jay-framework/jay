@@ -1,6 +1,5 @@
 {
   "compilerOptions": {
-    "jsx": "preserve",
     "module": "es2015",
     "esModuleInterop": true,
     "target": "es2015",
@@ -10,8 +9,10 @@
     "lib": [
       "es2016",
       "dom"
-    ]
+    ],
+    "rootDir": "lib"
   },
   "lib": ["es2015"],
-  "exclude": ["test"]
+  "include": ["lib/**/*"]
+
 }
