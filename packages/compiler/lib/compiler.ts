@@ -194,7 +194,7 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
     return new RenderFragment(body, renderedRoot.imports);
 }
 
-export function generateDefinitionFile(html): WithValidations<string> {
+export function generateDefinitionFile(html: string): WithValidations<string> {
     let parsedFile = parseJayFile(html);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
@@ -205,7 +205,7 @@ export function generateDefinitionFile(html): WithValidations<string> {
     })
 }
 
-export function generateRuntimeFile(html): WithValidations<string> {
+export function generateRuntimeFile(html: string): WithValidations<string> {
     let parsedFile = parseJayFile(html);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);

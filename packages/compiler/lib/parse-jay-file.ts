@@ -97,7 +97,7 @@ function parseJayYaml(jayYaml, validations: JayValidations): { types: JayObjectT
     return {types, examples};
 }
 
-export function parseJayFile(html): WithValidations<JayFile> {
+export function parseJayFile(html: string): WithValidations<JayFile> {
     let validations = [];
     let root = parse(html);
     let jayYamlElements = root.querySelectorAll('[type="application/yaml-jay"]');
