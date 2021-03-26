@@ -16,7 +16,7 @@ export class RandomAccessLinkedList<T,S> {
     private _last: LinkedListItem<T, S> | typeof BoF;
     private _first: LinkedListItem<T,S> | typeof EoF;
 
-    constructor(arr: Array<T>, matchBy: string) {
+    constructor(arr: Array<T>, matchBy: string) {       
         this._matchBy = matchBy;
         this._map = {};
         this._last = BoF;

@@ -79,7 +79,7 @@ export interface ForEach<T, Item> {
     matchBy: string
 }
 
-function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<MatchResult<Item, JayElement<Item>>>) {
+function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<MatchResult<Item>>) {
     // todo add update
     instructions.forEach(instruction => {
         if (instruction.action === ITEM_ADDED) {
@@ -108,7 +108,7 @@ function mkUpdateCollection<T>(child: ForEach<T, any>, group: KindergartenGroup)
     return (newData: T) => {
         const items = child.getItems(newData);
         let itemsList = new List<T, JayElement<T>>(items, child.matchBy);
-        let instructions = listCompare<T, JayElement<T>>(lastItems, itemsList, child.elemCreator);
+        let instructions = listCompare<T>(lastItems, itemsList, child.elemCreator);
         lastItems = itemsList;
         applyListChanges(group, instructions);
         updateListItems(itemsList);

@@ -14,5 +14,5 @@
     "declaration": true
   },
   "lib": ["es2015"],
-  "exclude": ["test", "examples"]
+  "exclude": ["test", "examples", "dist", "build"]
 }
