@@ -253,3 +253,138 @@ export function Counter(initial: number): JayElement<ViewState> {
     }
 }
 ```
+
+
+
+3 - By ID with proxy for events and semantic events  
+---
+
+The Jay file 
+```html
+<html>
+<head>
+    <script type="application/yaml-jay">
+data:
+   count: number
+    </script>
+</head>
+<body>
+    <div>
+        <button id="dec">-</button>
+        <span id="count">{count}</span>
+        <button id="inc">+</button>
+    </div>
+</body>
+</html>
+```
+
+The Jay Component file
+```typescript
+import {JayElement, EventEmitter} from "jay-runtime";
+import {render, ViewState} from './counter.jay';
+
+interface CounterType {
+  onInc(listener: (count) => void);
+  onDec(listener: (count) => void);
+}
+
+export function Counter(initial: number): JayElement<ViewState> & CounterType {
+    let count = initial;
+    let element = render({count});
+    let incEvent = new EventEmitter<number>(); 
+    let decEvent = new EventEmitter<number>();
+    function inc() {
+        count += 1;
+        element.update({count});
+        incEvent.emit(count);
+    }
+    function dec() {
+        count -= 1;
+        element.update({count});
+        decEvent.emit(count);
+    }
+    element.addEventListener('dec', 'click', _ => dec())
+    element.addEventListener('inc', 'click', _ => inc())
+    let update = (viewState: ViewState) => {
+        count = viewState.count;
+        element.update({count})
+    }
+    return {
+        dom: element.dom,
+        update: update,
+        onInc: incEvent,
+        onDec: decEvent
+    }
+}
+```
+
+4 - declaration based event binding with emiting events
+---
+
+We can actually define the events in the JayFile, creating semantic events,
+like the following (in this example we try to auto deduce the events from 
+the DOM part of the jay file, removing the need to have a declaration)
+
+```html
+<html>
+<head>
+    <script type="application/yaml-jay">
+data:
+   count: number
+
+    </script>
+</head>
+<body>
+    <div>
+        <button onclick="dec(count)">-</button>
+        <span>{count}</span>
+        <button onclick="inc(count)">+</button>
+    </div>
+</body>
+</html>
+```
+
+and the usage is then
+```typescript
+import {JayElement, EventEmitter} from "jay-runtime";
+import {render, ViewState} from './counter.jay';
+
+interface CounterType {
+   onInc(listener: (count) => void);
+   onDec(listener: (count) => void);
+}
+
+export function Counter(initial: number): JayElement<ViewState> & CounterType{
+    let count = initial;
+    let element = render({count});
+    let incEvent = new EventEmitter<number>();
+    let decEvent = new EventEmitter<number>();
+
+    function inc() {
+        count += 1;
+        element.update({count});
+        incEvent.emit(count);
+    }
+
+    function dec() {
+        count -= 1;
+        element.update({count});
+        decEvent.emit(count);
+    }
+
+    element.onDec(_ => dec())
+    element.onInc(_ => inc())
+
+    let update = (viewState: ViewState) => {
+        count = viewState.count;
+        element.update({count})
+    }
+
+    return {
+        dom: element.dom,
+       update: update,
+       onInc: incEvent,
+       onDec: decEvent
+    }
+}
+```
