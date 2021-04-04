@@ -1,7 +1,7 @@
 Jay Element vs Jay Component
 ===
 
-![Overview](01%205%20Jay%20Element%20vs%20Jay%20Component.png "Overview")
+![Overview](02%20-%20Jay%20Element%20vs%20Component.png "Jay Element vs Component")
                                                                          
 The Jay system consists of two main entities - the **Jay Component** and the **Jay Element**.
 
