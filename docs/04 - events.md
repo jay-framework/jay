@@ -258,6 +258,14 @@ export function Counter(initial: number): JayElement<ViewState> {
 
 3 - By ID with proxy for events and semantic events  
 ---
+                  
+given an id for elements, we know to generate `byId` function on the 
+jay element that returns a proxy for events registration. The proxy
+in this case will add an `onclick` event to the two buttons.
+
+The compiler will resolve that the element is a button and generate the 
+right signature of the byId function to have exact code completion for 
+the `id` values, and the events a button exposes. 
 
 The Jay file 
 ```html
@@ -303,8 +311,8 @@ export function Counter(initial: number): JayElement<ViewState> & CounterType {
         element.update({count});
         decEvent.emit(count);
     }
-    element.addEventListener('dec', 'click', _ => dec())
-    element.addEventListener('inc', 'click', _ => inc())
+    element.byId('dec').onClick(_ => dec())
+    element.byId('inc').onClick(_ => inc())
     let update = (viewState: ViewState) => {
         count = viewState.count;
         element.update({count})
