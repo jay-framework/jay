@@ -3,7 +3,9 @@ Runtime
 
 - [x] basics - elements, strings
 - [x] update function
-- [ ] type formatters  
+- [ ] type formatters
+- [ ] dynamic styles
+- [ ] dynamic dom attributes
 - [ ] inputs
 - [ ] events
 - [ ] slots
@@ -19,7 +21,9 @@ Compiler
 - [x] Basics - elements, strings
 - [x] Conditional
 - [x] Collections
-- [x] error reporting
+- [\ֿֿ] error reporting (partial implemented)
+- [ ] Remove Drivers for secure running
+- [ ] server side rendering
 
 Testing
 ---

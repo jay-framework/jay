@@ -23,8 +23,8 @@ export function Counter(initial: number): JayElement<ViewState> & CounterType{
         changeEvent.emit(count);
     }
 
-    element.onDec(_ => dec())
-    element.onInc(_ => inc())
+    element.byId('dec').onclick(_ => dec())
+    element.byId('inc').onclick(_ => inc())
 
     let update = (viewState: ViewState) => {
         count = viewState.count;
