@@ -84,3 +84,19 @@ export function Counter(initial: number): JayElement<ViewState>{
 }
 ```
 
+Secure running model 
+---
+
+The model is based on **Jay Elements** and **Jay Components** who are working in conjunction to create a secure solution
+
+![Security Model](./02%20-%20Jay%20Element%20vs%20Jay%20Component%20-%20secure%20model.png "Security Model")
+
+The programming model is described in [Jay Element vs Component](./02%20-%20Jay%20Element%20vs%20Component.md). 
+It can run with the same runtime model as the programming model
+all on the same main window, or it can run as in the diagram above where elements run in the main window, 
+and the components which are unsafe, run in a secure IFrame. 
+
+The bridge elements and components enable the system to work with a **single postMessage** for each update cycle 
+that can call the update method of all components in the secure context, then call update of all elements in the main window. 
+
+
