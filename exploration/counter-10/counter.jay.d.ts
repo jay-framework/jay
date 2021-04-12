@@ -9,6 +9,7 @@ interface ElementProxy {
 }
 
 interface CounterEvents {
-  byId(id: string): ElementProxy;
+  dec: ElementProxy;
+  inc: ElementProxy;
 }
 export declare function render(viewState: ViewState): JayElement<ViewState> & CounterEvents

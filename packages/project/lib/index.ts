@@ -19,6 +19,7 @@ window.onload = function() {
     let target = document.getElementById('target');
     let progress = document.getElementById('progress');
     let chooseExample = document.getElementById('choose-example') as HTMLSelectElement;
+    let chooseCycles = document.getElementById('cycles') as HTMLInputElement;
 
     examples.forEach((example, index) => {
         let option = document.createElement("option");
@@ -29,19 +30,20 @@ window.onload = function() {
 
     chooseExample.addEventListener('change', (event) => {
         let index = Number(chooseExample.value);
-        runExample(examples[index]);
+        let cycles = Number(chooseCycles.value);
+        runExample(examples[index], cycles);
     });
 
-    function runExample(example) {
+    function runExample(example, cycles) {
         let dataFunc = example.makeData();
         let {dom, update} = example.render(dataFunc(0));
         target.innerHTML = '';
         target.appendChild(dom);
 
-        benchmark(index => update(dataFunc(index)), status => progress.textContent = status);
+        benchmark(index => update(dataFunc(index)), cycles, status => progress.textContent = status);
     }
 
-    runExample(examples[0]);
+//    runExample(examples[0]);
 
 }
 

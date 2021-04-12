@@ -1,10 +1,10 @@
 // benchmark
-const cycles = 1000;
+const defaultCycles = 1000;
 
 
 
-export default function benchmark(action: (number) => void, progressCallback: (string) => void) {
-
+export default function benchmark(action: (number) => void, cycles: number, progressCallback: (string) => void) {
+    cycles = cycles || defaultCycles;
     let i = 0;
     let start = new Date().getTime();
     const animationFrame = () => {

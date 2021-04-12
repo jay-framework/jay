@@ -396,3 +396,89 @@ export function Counter(initial: number): JayElement<ViewState> & CounterType{
     }
 }
 ```
+       
+
+Choozen solution
+===
+
+we have selected the choosen solution to be simple for designers and have a good separation of UI from code, 
+those we have selected the direction of using `id` in the HTML file. 
+
+For the coding part, we have opted in to using the compiler to generate the optimal API for events, with
+
+* for HTML elements that are singular (not in `forEach`), we generate a property on the element that is direct access to the 
+  child HTML element. `element.dec: HTMLElement`
+* for HTML elements that are repeated (in `forEach`), we generate a property on the element that is a 
+  collection of child elements. `element.someId: HTMLElementCollection`.
+  
+for our example, it looks like
+
+3 - By ID with proxy for events and semantic events
+---
+
+given an id for elements, we know to generate `byId` function on the
+jay element that returns a proxy for events registration. The proxy
+in this case will add an `onclick` event to the two buttons.
+
+The compiler will resolve that the element is a button and generate the
+right signature of the byId function to have exact code completion for
+the `id` values, and the events a button exposes.
+
+The Jay file
+```html
+<html>
+<head>
+    <script type="application/yaml-jay">
+data:
+   count: number
+    </script>
+</head>
+<body>
+    <div>
+        <button id="dec">-</button>
+        <span id="count">{count}</span>
+        <button id="inc">+</button>
+    </div>
+</body>
+</html>
+```
+
+The Jay Component file
+```typescript
+import {JayElement, EventEmitter} from "jay-runtime";
+import {render, ViewState} from './counter.jay';
+
+interface CounterType {
+  onInc(listener: (count) => void);
+  onDec(listener: (count) => void);
+}
+
+export function Counter(initial: number): JayElement<ViewState> & CounterType {
+    let count = initial;
+    let element = render({count});
+    let incEvent = new EventEmitter<number>(); 
+    let decEvent = new EventEmitter<number>();
+    function inc() {
+        count += 1;
+        element.update({count});
+        incEvent.emit(count);
+    }
+    function dec() {
+        count -= 1;
+        element.update({count});
+        decEvent.emit(count);
+    }
+    element.dec.onclick(_ => dec())
+    element.inc.onclick(_ => inc())
+    let update = (viewState: ViewState) => {
+        count = viewState.count;
+        element.update({count})
+    }
+    return {
+        dom: element.dom,
+        update: update,
+        onInc: incEvent,
+        onDec: decEvent
+    }
+}
+```
