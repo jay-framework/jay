@@ -402,7 +402,8 @@ Choozen solution
 ===
 
 we have selected the choosen solution to be simple for designers and have a good separation of UI from code, 
-those we have selected the direction of using `id` in the HTML file. 
+those we have selected the direction of using `id` in the HTML file. With additional feedback from @barak007
+we rename `id` to `ref`.
 
 For the coding part, we have opted in to using the compiler to generate the optimal API for events, with
 
@@ -412,17 +413,6 @@ For the coding part, we have opted in to using the compiler to generate the opti
   collection of child elements. `element.someId: HTMLElementCollection`.
   
 for our example, it looks like
-
-3 - By ID with proxy for events and semantic events
----
-
-given an id for elements, we know to generate `byId` function on the
-jay element that returns a proxy for events registration. The proxy
-in this case will add an `onclick` event to the two buttons.
-
-The compiler will resolve that the element is a button and generate the
-right signature of the byId function to have exact code completion for
-the `id` values, and the events a button exposes.
 
 The Jay file
 ```html
@@ -435,9 +425,9 @@ data:
 </head>
 <body>
     <div>
-        <button id="dec">-</button>
-        <span id="count">{count}</span>
-        <button id="inc">+</button>
+        <button ref="dec">-</button>
+        <span ref="count">{count}</span>
+        <button ref="inc">+</button>
     </div>
 </body>
 </html>
