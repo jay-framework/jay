@@ -1,39 +1,39 @@
-import {JayElement} from "jay-runtime";
-import {render, ViewState} from './counter.jay';
-import {EventEmitter} from "./EventEmitter";
+import { JayElement } from 'jay-runtime';
+import { render, ViewState } from './counter.jay';
+import { EventEmitter } from './EventEmitter';
 
 interface CounterType {
-    onChange(listener: (count) => void);
+  onChange(listener: (count) => void);
 }
 
-export function Counter(initial: number): JayElement<ViewState> & CounterType{
-    let count = initial;
-    let element = render({count});
-    let changeEvent = new EventEmitter<number>();
+export function Counter(initial: number): JayElement<ViewState> & CounterType {
+  let count = initial;
+  let element = render({ count });
+  let changeEvent = new EventEmitter<number>();
 
-    function inc() {
-        count += 1;
-        element.update({count});
-        changeEvent.emit(count);
-    }
+  function inc() {
+    count += 1;
+    element.update({ count });
+    changeEvent.emit(count);
+  }
 
-    function dec() {
-        count -= 1;
-        element.update({count});
-        changeEvent.emit(count);
-    }
+  function dec() {
+    count -= 1;
+    element.update({ count });
+    changeEvent.emit(count);
+  }
 
-    element.dec.onclick(_ => dec())
-    element.inc.onclick(_ => inc())
+  element.dec.onclick((_) => dec());
+  element.inc.onclick((_) => inc());
 
-    let update = (viewState: ViewState) => {
-        count = viewState.count;
-        element.update({count})
-    }
+  let update = (viewState: ViewState) => {
+    count = viewState.count;
+    element.update({ count });
+  };
 
-    return {
-        dom: element.dom,
-        update: update,
-        onChange: changeEvent.on
-    }
+  return {
+    dom: element.dom,
+    update: update,
+    onChange: changeEvent.on,
+  };
 }

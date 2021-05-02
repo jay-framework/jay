@@ -7,9 +7,8 @@ export default [
     output: {
       file: 'build/index.js',
       format: 'iife',
-      name: 'jay'
+      name: 'jay',
     },
-    plugins: [typescript({tsconfig: './tsconfig-examples.json'})]
-  }
-
+    plugins: [typescript({ tsconfig: './tsconfig-examples.json' })],
+  },
 ];

@@ -1,232 +1,232 @@
-import {Kindergarten, KindergartenGroup} from "./kindergarden";
-import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "./list-compare";
-import {EoF, RandomAccessLinkedList, RandomAccessLinkedList as List} from "./random-access-linked-list";
+import { Kindergarten, KindergartenGroup } from './kindergarden';
+import { ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult } from './list-compare';
+import {
+  EoF,
+  RandomAccessLinkedList,
+  RandomAccessLinkedList as List,
+} from './random-access-linked-list';
 
 const STYLE = 'style';
-type updateConstructor<T, S> = (e:HTMLElement, newData:T, state: S) => S;
-type updateFunc<T> = (newData:T) => void;
-const noopUpdateConstructor: updateConstructor<any, any> = (e:HTMLElement, newData:any, state: any): any => {};
-export const noopUpdate: updateFunc<any> = (newData:any): void => {};
+type updateConstructor<T, S> = (e: HTMLElement, newData: T, state: S) => S;
+type updateFunc<T> = (newData: T) => void;
+const noopUpdateConstructor: updateConstructor<any, any> = (
+  e: HTMLElement,
+  newData: any,
+  state: any
+): any => {};
+export const noopUpdate: updateFunc<any> = (newData: any): void => {};
 
 export interface JayElement<T> {
-    dom: HTMLElement,
-    update: updateFunc<T>
+  dom: HTMLElement;
+  update: updateFunc<T>;
 }
 
 export interface TextElement<T> {
-    dom: Text,
-    update: updateFunc<T>
+  dom: Text;
+  update: updateFunc<T>;
 }
 
 function setAttributes(e: HTMLElement, attributes: any) {
-    Object.entries(attributes).forEach(([key, value]) => {
-        if (key === STYLE) {
-            Object.entries(value).forEach(([styleKey, styleValue]) => {
-                e.style[styleKey] = styleValue;
-            })
-        }
-        else
-            e[key] = value;
-    });
+  Object.entries(attributes).forEach(([key, value]) => {
+    if (key === STYLE) {
+      Object.entries(value).forEach(([styleKey, styleValue]) => {
+        e.style[styleKey] = styleValue;
+      });
+    } else e[key] = value;
+  });
 }
 
 function createBaseElement(tagName: string, attributes: any = {}) {
-    let e = document.createElement(tagName);
-    setAttributes(e, attributes);
-    return e;
+  let e = document.createElement(tagName);
+  setAttributes(e, attributes);
+  return e;
 }
 
 function normalizeUpdates<T>(updates: Array<updateFunc<T>>): updateFunc<T> {
-    if (updates.length === 1)
-        return updates[0];
-    else if (updates.length > 0) {
-        return (newData) => {
-            updates.forEach(__update => __update(newData))
-        };
-    }
-    else {
-        return noopUpdate
-    }
+  if (updates.length === 1) return updates[0];
+  else if (updates.length > 0) {
+    return (newData) => {
+      updates.forEach((__update) => __update(newData));
+    };
+  } else {
+    return noopUpdate;
+  }
 }
 
-export function conditional<T>(condition: (newData: T) => boolean, elem: JayElement<T> | TextElement<T> | string): Conditional<T> {
-    if (typeof elem === 'string')
-        return {condition, elem: text(elem)};
-    else
-        return {condition, elem};
+export function conditional<T>(
+  condition: (newData: T) => boolean,
+  elem: JayElement<T> | TextElement<T> | string
+): Conditional<T> {
+  if (typeof elem === 'string') return { condition, elem: text(elem) };
+  else return { condition, elem };
 }
 
 export interface Conditional<T> {
-    condition: (newData: T) => boolean,
-    elem: JayElement<T> | TextElement<T>
+  condition: (newData: T) => boolean;
+  elem: JayElement<T> | TextElement<T>;
 }
 
-function isCondition<T>(c: Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T>): c is Conditional<T> {
-    return (c as Conditional<T>).condition !== undefined;
+function isCondition<T>(
+  c: Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T>
+): c is Conditional<T> {
+  return (c as Conditional<T>).condition !== undefined;
 }
 
-function isForEach<T, S>(c: Conditional<T> | ForEach<T, S> | TextElement<T> | JayElement<T>): c is ForEach<T, S> {
-    return (c as ForEach<T, S>).elemCreator !== undefined;
+function isForEach<T, S>(
+  c: Conditional<T> | ForEach<T, S> | TextElement<T> | JayElement<T>
+): c is ForEach<T, S> {
+  return (c as ForEach<T, S>).elemCreator !== undefined;
 }
 
-export function forEach<T, Item>(getItems: (T) => Array<Item>, elemCreator: (Item) => JayElement<Item>, matchBy: string): ForEach<T, Item> {
-    return {getItems, elemCreator, matchBy};
+export function forEach<T, Item>(
+  getItems: (T) => Array<Item>,
+  elemCreator: (Item) => JayElement<Item>,
+  matchBy: string
+): ForEach<T, Item> {
+  return { getItems, elemCreator, matchBy };
 }
 
 export interface ForEach<T, Item> {
-    getItems: (T) => Array<Item>,
-    elemCreator: (Item) => JayElement<Item>,
-    matchBy: string
+  getItems: (T) => Array<Item>;
+  elemCreator: (Item) => JayElement<Item>;
+  matchBy: string;
 }
 
 function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<MatchResult<Item>>) {
-    // todo add update
-    instructions.forEach(instruction => {
-        if (instruction.action === ITEM_ADDED) {
-            group.ensureNode(instruction.elem.dom, instruction.pos)
-        }
-        else if (instruction.action === ITEM_REMOVED) {
-            group.removeNodeAt(instruction.pos)
-        }
-        else {
-            group.moveNode(instruction.fromPos, instruction.pos)
-        }
-    });
+  // todo add update
+  instructions.forEach((instruction) => {
+    if (instruction.action === ITEM_ADDED) {
+      group.ensureNode(instruction.elem.dom, instruction.pos);
+    } else if (instruction.action === ITEM_REMOVED) {
+      group.removeNodeAt(instruction.pos);
+    } else {
+      group.moveNode(instruction.fromPos, instruction.pos);
+    }
+  });
 }
 
 function updateListItems<T>(itemsList: RandomAccessLinkedList<T, JayElement<T>>) {
-    let listItem = itemsList.first();
-    while (listItem !== EoF) {
-        listItem.attach.update(listItem.value);
-        listItem = listItem.next;
-    }
-
+  let listItem = itemsList.first();
+  while (listItem !== EoF) {
+    listItem.attach.update(listItem.value);
+    listItem = listItem.next;
+  }
 }
 
 function mkUpdateCollection<T>(child: ForEach<T, any>, group: KindergartenGroup) {
-    let lastItems = new List<T, JayElement<T>>([], child.matchBy);
-    return (newData: T) => {
-        const items = child.getItems(newData);
-        let itemsList = new List<T, JayElement<T>>(items, child.matchBy);
-        let instructions = listCompare<T>(lastItems, itemsList, child.elemCreator);
-        lastItems = itemsList;
-        applyListChanges(group, instructions);
-        updateListItems(itemsList);
-    }
+  let lastItems = new List<T, JayElement<T>>([], child.matchBy);
+  return (newData: T) => {
+    const items = child.getItems(newData);
+    let itemsList = new List<T, JayElement<T>>(items, child.matchBy);
+    let instructions = listCompare<T>(lastItems, itemsList, child.elemCreator);
+    lastItems = itemsList;
+    applyListChanges(group, instructions);
+    updateListItems(itemsList);
+  };
 }
 
 function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup) {
-    return (newData: T) => {
-        let result = child.condition(newData);
+  return (newData: T) => {
+    let result = child.condition(newData);
 
-        if (result) {
-            group.ensureNode(child.elem.dom)
-            child.elem.update(newData);
-        } else
-            group.removeNode(child.elem.dom)
-    };
+    if (result) {
+      group.ensureNode(child.elem.dom);
+      child.elem.update(newData);
+    } else group.removeNode(child.elem.dom);
+  };
 }
 
 function mkUpdateElement<T, S>(e: HTMLElement, initialState: S, update: updateConstructor<T, S>) {
-    let state: S = initialState;
-    return (newData: T) => {
-        state = update(e, newData, state);
-    }
+  let state: S = initialState;
+  return (newData: T) => {
+    state = update(e, newData, state);
+  };
 }
 
 function text<T>(content: string): TextElement<T> {
-    return {
-        dom: document.createTextNode(content),
-        update: noopUpdate
-    }
+  return {
+    dom: document.createTextNode(content),
+    update: noopUpdate,
+  };
 }
 
-export function dynamicText<T>(initialData: T,
-                               textContent: (T) => string): TextElement<T> {
-    let content = textContent(initialData);
-    let n = document.createTextNode(content);
-    return {
-        dom: n,
-        update: (newData:T) => {
-            let newContent = textContent(newData);
-            if (newContent !== content)
-                n.textContent = newContent;
-            content = newContent;
-        }
-    }
+export function dynamicText<T>(initialData: T, textContent: (T) => string): TextElement<T> {
+  let content = textContent(initialData);
+  let n = document.createTextNode(content);
+  return {
+    dom: n,
+    update: (newData: T) => {
+      let newContent = textContent(newData);
+      if (newContent !== content) n.textContent = newContent;
+      content = newContent;
+    },
+  };
 }
 
 export function element<T, S>(
-    tagName: string,
-    attributes: any = {},
-    children: Array<JayElement<T> | TextElement<T> | string> = [],
-    initialData: T = undefined,
-    initialState: S = undefined,
-    update: updateConstructor<T, S> = noopUpdateConstructor):
-    JayElement<T> {
-    let e = createBaseElement(tagName, attributes);
-    
-    let updates: updateFunc<T>[] = [];
-    if (update !== noopUpdateConstructor) {
-        updates.push(mkUpdateElement(e, initialState, update));
-    }
+  tagName: string,
+  attributes: any = {},
+  children: Array<JayElement<T> | TextElement<T> | string> = [],
+  initialData: T = undefined,
+  initialState: S = undefined,
+  update: updateConstructor<T, S> = noopUpdateConstructor
+): JayElement<T> {
+  let e = createBaseElement(tagName, attributes);
 
-    children.forEach(child => {
-        if (typeof child === 'string')
-            child = text(child);
-        e.append(child.dom);
-        if (child.update !== noopUpdate)
-            updates.push(child.update);
-    });
+  let updates: updateFunc<T>[] = [];
+  if (update !== noopUpdateConstructor) {
+    updates.push(mkUpdateElement(e, initialState, update));
+  }
 
-    return {
-        dom: e,
-        update: normalizeUpdates(updates)
-    };
+  children.forEach((child) => {
+    if (typeof child === 'string') child = text(child);
+    e.append(child.dom);
+    if (child.update !== noopUpdate) updates.push(child.update);
+  });
+
+  return {
+    dom: e,
+    update: normalizeUpdates(updates),
+  };
 }
 
 export function dynamicElement<T, S>(
-    tagName: string,
-    attributes: any = {},
-    children: Array<Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T> | string> = [],
-    initialData: T = undefined,
-    initialState: S = undefined,
-    update: updateConstructor<T, S> = noopUpdateConstructor):
-    JayElement<T> {
-    let e = createBaseElement(tagName, attributes);
+  tagName: string,
+  attributes: any = {},
+  children: Array<Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T> | string> = [],
+  initialData: T = undefined,
+  initialState: S = undefined,
+  update: updateConstructor<T, S> = noopUpdateConstructor
+): JayElement<T> {
+  let e = createBaseElement(tagName, attributes);
 
-    let updates: updateFunc<T>[] = [];
-    if (update !== noopUpdateConstructor) {
-        updates.push(mkUpdateElement(e, initialState, update));
+  let updates: updateFunc<T>[] = [];
+  if (update !== noopUpdateConstructor) {
+    updates.push(mkUpdateElement(e, initialState, update));
+  }
+
+  let kindergarden = new Kindergarten(e);
+  children.forEach((child) => {
+    if (typeof child === 'string') child = text(child);
+    let group = kindergarden.newGroup();
+    let update = null;
+    if (isCondition(child)) {
+      update = mkUpdateCondition(child, group);
+    } else if (isForEach(child)) {
+      update = mkUpdateCollection(child, group);
+    } else {
+      group.ensureNode(child.dom);
+      if (child.update !== noopUpdate) update = child.update;
     }
 
-    let kindergarden = new Kindergarten(e);
-    children.forEach(child => {
-        if (typeof child === 'string')
-            child = text(child);
-        let group = kindergarden.newGroup();
-        let update = null;
-        if (isCondition(child)) {
-            update = mkUpdateCondition(child, group)
-        }
-        else if (isForEach(child)){
-            update = mkUpdateCollection(child, group);
-        }
-        else  {
-            group.ensureNode(child.dom)
-            if (child.update !== noopUpdate)
-                update = child.update;
-        }
+    if (update !== null) {
+      update(initialData);
+      updates.push(update);
+    }
+  });
 
-        if (update !== null) {
-            update(initialData)
-            updates.push(update);
-        }
-    })
-
-    return {
-        dom: e,
-        update: normalizeUpdates(updates)
-    };
+  return {
+    dom: e,
+    update: normalizeUpdates(updates),
+  };
 }
-

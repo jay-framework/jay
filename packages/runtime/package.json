@@ -10,10 +10,11 @@
     "build": "npm run rollup && npm run copy && echo 'build lib' && tsc && echo 'build examples' && tsc -p tsconfig-examples.json"
   },
   "jest": {
-    "setupFilesAfterEnv": ["./jest-setup.js"]
+    "setupFilesAfterEnv": [
+      "./jest-setup.js"
+    ]
   },
-  "dependencies": {
-  },
+  "dependencies": {},
   "devDependencies": {
     "typescript": "^4.0.3",
     "@babel/preset-env": "^7.12.1",

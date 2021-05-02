@@ -1,5 +1,4 @@
-Runtime
----
+## Runtime
 
 - [x] basics - elements, strings
 - [x] update function
@@ -14,8 +13,7 @@ Runtime
 - [ ] hydration
 - [ ] canvas
 
-Compiler
----
+## Compiler
 
 - [x] Typescript definition file
 - [x] Basics - elements, strings
@@ -25,13 +23,11 @@ Compiler
 - [ ] Remove Drivers for secure running
 - [ ] server side rendering
 
-Testing
----
+## Testing
 
 - [ ] generate component drivers
 
-Example Project
----
+## Example Project
 
 - [x] basic benchmark
 - [ ] Counter

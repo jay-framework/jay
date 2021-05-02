@@ -1,8 +1,10 @@
-import {JayElement} from "jay-runtime";
+import { JayElement } from 'jay-runtime';
 
 interface ViewState {
-  count: number,
+  count: number;
 }
 
-export declare function render(viewState: ViewState,
-                               onNewElement: (id: string, element: HTMLElement) => void): JayElement<ViewState>
+export declare function render(
+  viewState: ViewState,
+  onNewElement: (id: string, element: HTMLElement) => void
+): JayElement<ViewState>;

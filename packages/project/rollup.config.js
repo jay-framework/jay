@@ -9,9 +9,8 @@ export default [
     output: {
       file: 'dist/index.js',
       format: 'iife',
-      name: 'jay'
+      name: 'jay',
     },
-    plugins: [jay(), typescript(), nodeResolve()]
-  }
-
+    plugins: [jay(), typescript(), nodeResolve()],
+  },
 ];

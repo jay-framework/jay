@@ -1,15 +1,13 @@
-import {render} from './basic.jay.html';
+import { render } from './basic.jay.html';
 
 export default {
-    render,
-    data
-}
+  render,
+  data,
+};
 
 function data() {
-    return function (index) {
-        if (index === 0)
-            return {text: 'name'};
-        else
-            return {text: 'name ' + index};
-    }
+  return function (index) {
+    if (index === 0) return { text: 'name' };
+    else return { text: 'name ' + index };
+  };
 }

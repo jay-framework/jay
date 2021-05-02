@@ -1,9 +1,9 @@
 export class ElementEvents {
-    onclick(callback: () => void): ElementEvents {
-        return this;
-    }
+  onclick(callback: () => void): ElementEvents {
+    return this;
+  }
 }
 
 export function events(): ElementEvents {
-    return new ElementEvents();
+  return new ElementEvents();
 }

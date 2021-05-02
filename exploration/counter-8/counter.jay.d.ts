@@ -1,11 +1,11 @@
-import {JayElement} from "jay-runtime";
+import { JayElement } from 'jay-runtime';
 
 interface ViewState {
-  count: number,
+  count: number;
 }
 
 interface CounterEvents {
-  onDec(handler: (number) => void)
-  onInc(handler: (number) => void)
+  onDec(handler: (number) => void);
+  onInc(handler: (number) => void);
 }
-export declare function render(viewState: ViewState): JayElement<ViewState> & CounterEvents
+export declare function render(viewState: ViewState): JayElement<ViewState> & CounterEvents;

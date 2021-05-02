@@ -1,18 +1,17 @@
-import {JayElement} from "jay-runtime";
+import { JayElement } from 'jay-runtime';
 
 export interface WithRefs {
   refs: Refs;
 }
 
-
 interface ViewState {
-  count: number,
+  count: number;
 }
 
 interface Refs {
-  dec: HTMLElement,
-  inc: HTMLElement,
-  count: HTMLElement
+  dec: HTMLElement;
+  inc: HTMLElement;
+  count: HTMLElement;
 }
 
-export declare function render(viewState: ViewState): JayElement<ViewState> & WithRefs
+export declare function render(viewState: ViewState): JayElement<ViewState> & WithRefs;
