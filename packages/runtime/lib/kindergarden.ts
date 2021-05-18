@@ -1,10 +1,20 @@
+export interface KindergardenGroupListener {
+    addNode(node: Node);
+    removeNode(node: Node);
+}
+
 export class KindergartenGroup {
     private kindergarten: Kindergarten;
+    private groupListener: KindergardenGroupListener;
     children: Set<Node>;
 
     constructor(kindergarten: Kindergarten) {
         this.kindergarten = kindergarten;
         this.children = new Set();
+    }
+
+    addListener(groupListener: KindergardenGroupListener) {
+        this.groupListener = groupListener;
     }
 
     ensureNode(node: Node, atIndex?: number) {
@@ -17,12 +27,16 @@ export class KindergartenGroup {
             this.kindergarten.parentNode.appendChild(node);
         }
         this.children.add(node);
+        if (this.groupListener)
+            this.groupListener.addNode(node)
     }
 
     removeNode(node: Node) {
         if (this.children.has(node)) {
             this.kindergarten.parentNode.removeChild(node);
             this.children.delete(node);
+            if (this.groupListener)
+                this.groupListener.removeNode(node)
         }
     }
 
@@ -46,7 +60,7 @@ export class KindergartenGroup {
 
 
 export class Kindergarten {
-    parentNode: HTMLElement;
+    readonly parentNode: HTMLElement;
     private groups: Array<KindergartenGroup> = [];
 
     constructor(parentNode: HTMLElement) {

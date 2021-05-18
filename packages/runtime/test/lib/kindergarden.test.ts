@@ -1,18 +1,8 @@
-import { JSDOM } from 'jsdom';
-import {Kindergarten} from '../../lib/kindergarden';
+import {JSDOM} from 'jsdom';
+import {KindergardenGroupListener, Kindergarten} from '../../lib/kindergarden';
 import {describe, expect, test} from '@jest/globals'
+import {makeNode, makeParent} from "./test-utils";
 
-function makeParent(): {document: Document, parent: HTMLElement} {
-    const { window } = new JSDOM(`<!DOCTYPE html><html><body><div id="parent"></div></body></html>`);
-    const document = window.document;
-    return {document, parent: document.getElementById('parent')};
-}
-
-function makeNode(document, text: string): HTMLElement {
-    let elem = document.createElement('div');
-    elem.textContent = text;
-    return elem;
-}
 
 describe('Kindergarten', () => {
 
@@ -397,4 +387,48 @@ describe('Kindergarten', () => {
 
     })
 
+    describe('Kindergarten group listener', () => {
+
+        class TestGroupListener implements KindergardenGroupListener {
+            addedNodes = [];
+            removedNodes = [];
+            addNode(node: Node) {
+                this.addedNodes.push(node);
+            }
+
+            removeNode(node: Node) {
+                this.removedNodes.push(node)
+            }
+
+        }
+
+        test('addNode is called with added nodes', () => {
+            let {document, parent} = makeParent();
+            let listener = new TestGroupListener();
+            let kindergarten = new Kindergarten(parent);
+            let group1 = kindergarten.newGroup();
+            group1.addListener(listener)
+            let node1 = makeNode(document, 'text1');
+            let node2 = makeNode(document, 'text2');
+            group1.ensureNode(node1);
+            group1.ensureNode(node2);
+
+            expect(listener.addedNodes).toEqual([node1,node2]);
+        });
+
+        test('removeNode is called with removed nodes', () => {
+            let {document, parent} = makeParent();
+            let listener = new TestGroupListener();
+            let kindergarten = new Kindergarten(parent);
+            let group1 = kindergarten.newGroup();
+            group1.addListener(listener)
+            let node1 = makeNode(document, 'text1');
+            let node2 = makeNode(document, 'text2');
+            group1.ensureNode(node1);
+            group1.ensureNode(node2);
+            group1.removeNode(node1);
+
+            expect(listener.removedNodes).toEqual([node1]);
+        });
+    });
 });
