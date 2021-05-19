@@ -1,85 +1,82 @@
-import {KindergardenGroupListener, Kindergarten} from '../../lib/kindergarden';
 import {describe, expect, it, beforeEach} from '@jest/globals'
-import {makeNode, makeParent} from "./test-utils";
-import {KindergartenGroupReference, SingleReference} from "../../lib/node-reference";
+import {ReferencesManager, ElementReference} from "../../lib/node-reference";
+import {element as e} from "../../lib/element";
 
-describe('NodeReferences', () => {
-    describe("SingleReference", () => {
+const SOME_VALUE = 'some text in the element';
+const ANOTHER_VALUE = 'another text value';
+const id1 = 'id1';
+const id2 = 'id2';
 
-        let node1;
-        let singleReference;
-        beforeEach(() => {
-            let {document, parent} = makeParent();
-            node1 = makeNode(document, 'text1');
-            parent.appendChild(node1);
-
-            singleReference = new SingleReference(node1);
-
-        })
-
-        it("should register event handler", () => {
-            const mockCallback = jest.fn(_ => undefined);
-            singleReference.addEventListener('click', mockCallback);
-
-            node1.click();
-
-            expect(mockCallback.mock.calls.length).toBe(1);
-        })
-
-        it("should remove event handler", () => {
-            const mockCallback = jest.fn(_ => undefined);
-            singleReference.addEventListener('click', mockCallback);
-            node1.click();
-
-            singleReference.removeEventListener('click', mockCallback);
-            node1.click();
-            expect(mockCallback.mock.calls.length).toBe(1);
-        })
-
-        it("should run forEach on the node", () => {
-            singleReference.forEach(node => node.textContent = 'changed text');
-            expect(node1.textContent).toBe('changed text')
-        })
-    });
-
-    describe("KindergartenGroupReference", () => {
-        let document, parent;
-        let kindergarden, group1, groupReference;
-        let node1, node2, node3;
-        beforeEach(() => {
-            ({document, parent} = makeParent());
-            kindergarden = new Kindergarten(parent);
-            group1 = kindergarden.newGroup();
-            node1 = makeNode(document, 'text1');
-            node2 = makeNode(document, 'text2');
-            node3 = makeNode(document, 'text3');
-
-            groupReference = new KindergartenGroupReference(group1);
-        })
-
-        it("should register events on all nodes in the group", () => {
-            group1.ensureNode(node1);
-            group1.ensureNode(node2);
-            group1.ensureNode(node3);
-            const mockCallback = jest.fn(_ => undefined);
-            groupReference.addEventListener('click', mockCallback);
-
-            node1.click();
-            node2.click();
-
-            expect(mockCallback.mock.calls.length).toBe(2);
-        })
-
-        it("should register events on nodes added to the group after setting the event handler", () => {
-            group1.ensureNode(node1);
-            group1.ensureNode(node2);
-            const mockCallback = jest.fn(_ => undefined);
-            groupReference.addEventListener('click', mockCallback);
-
-            group1.ensureNode(node3);
-            node3.click();
-
-            expect(mockCallback.mock.calls.length).toBe(1);
-        })
+describe('ReferencesManager', () => {
+    let jayElement1, jayElement2, jayElement3, referenceManager, mockCallback;
+    beforeEach(() => {
+        jayElement1 = e('div', {}, [SOME_VALUE]);
+        jayElement2 = e('div', {}, [SOME_VALUE]);
+        jayElement3 = e('div', {}, [SOME_VALUE]);
+        referenceManager = new ReferencesManager();
+        mockCallback = jest.fn(_ => undefined);
     })
+
+    it("should register events on an element", () => {
+        const ref = new ElementReference(jayElement1, "");
+        referenceManager.addRef(id1, ref);
+        referenceManager.get(id1).addEventListener('click', mockCallback);
+
+        jayElement1.dom.click();
+
+        expect(mockCallback.mock.calls.length).toBe(1);
+    })
+
+    it("should remove events from an element", () => {
+        const ref = new ElementReference(jayElement1, "");
+        referenceManager.addRef(id1, ref);
+        referenceManager.get(id1).addEventListener('click', mockCallback);
+        referenceManager.get(id1).removeEventListener('click', mockCallback);
+
+        jayElement1.dom.click();
+
+        expect(mockCallback.mock.calls.length).toBe(0);
+    })
+
+    it("should register events on all elements with the same ref id", () => {
+        const ref1 = new ElementReference(jayElement1, "");
+        const ref2 = new ElementReference(jayElement2, "");
+        const ref3 = new ElementReference(jayElement3, "");
+        referenceManager.addRef(id1, ref1);
+        referenceManager.addRef(id1, ref2);
+        referenceManager.addRef(id2, ref3);
+        referenceManager.get(id1).addEventListener('click', mockCallback);
+
+        jayElement1.dom.click();
+        jayElement2.dom.click();
+        jayElement3.dom.click();
+
+        expect(mockCallback.mock.calls.length).toBe(2);
+    })
+
+    it("should enrich events with the data context", () => {
+        const ref = new ElementReference(jayElement1, SOME_VALUE);
+        referenceManager.addRef(id1, ref);
+        referenceManager.get(id1).addEventListener('click', mockCallback);
+
+        jayElement1.dom.click();
+
+        expect(mockCallback.mock.calls.length).toBe(1);
+        expect(mockCallback.mock.calls[0][0]).toBeInstanceOf(Event);
+        expect(mockCallback.mock.calls[0][1]).toBe(SOME_VALUE);
+    })
+
+    it("should enrich events with the updated data context", () => {
+        const ref = new ElementReference(jayElement1, SOME_VALUE);
+        referenceManager.addRef(id1, ref);
+        referenceManager.get(id1).addEventListener('click', mockCallback);
+        ref.update(ANOTHER_VALUE)
+
+        jayElement1.dom.click();
+
+        expect(mockCallback.mock.calls.length).toBe(1);
+        expect(mockCallback.mock.calls[0][0]).toBeInstanceOf(Event);
+        expect(mockCallback.mock.calls[0][1]).toBe(ANOTHER_VALUE);
+    })
+
 });
