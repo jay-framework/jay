@@ -8,11 +8,12 @@ const id1 = 'id1';
 const id2 = 'id2';
 
 describe('ReferencesManager', () => {
-    let jayElement1, jayElement2, jayElement3, referenceManager, mockCallback;
+    let jayElement1, jayElement2, jayElement3, jayRootElement, referenceManager, mockCallback;
     beforeEach(() => {
         jayElement1 = e('div', {}, [SOME_VALUE]);
         jayElement2 = e('div', {}, [SOME_VALUE]);
         jayElement3 = e('div', {}, [SOME_VALUE]);
+        jayRootElement = e('div', {}, [jayElement1, jayElement2, jayElement3]);
         referenceManager = new ReferencesManager();
         mockCallback = jest.fn(_ => undefined);
     })
@@ -77,6 +78,24 @@ describe('ReferencesManager', () => {
         expect(mockCallback.mock.calls.length).toBe(1);
         expect(mockCallback.mock.calls[0][0]).toBeInstanceOf(Event);
         expect(mockCallback.mock.calls[0][1]).toBe(ANOTHER_VALUE);
+    })
+
+    it("should enrich jay element with the refs", () => {
+        
+        const ref1 = new ElementReference(jayElement1, "");
+        const ref2 = new ElementReference(jayElement2, "");
+        const ref3 = new ElementReference(jayElement3, "");
+        referenceManager.addRef(id1, ref1);
+        referenceManager.addRef(id1, ref2);
+        referenceManager.addRef(id2, ref3);
+        jayRootElement = referenceManager.applyToElement(jayRootElement)
+
+        jayRootElement.id1.addEventListener('click', mockCallback);
+        jayElement1.dom.click();
+        jayElement2.dom.click();
+        jayElement3.dom.click();
+
+        expect(mockCallback.mock.calls.length).toBe(2);
     })
 
 });

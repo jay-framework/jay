@@ -4,7 +4,7 @@ export class ReferencesManager {
     private refs = {};
 
     get(id: string, autoCreate: boolean = false): Reference<any> | undefined {
-        if (!this.refs[id])
+        if (!this.refs[id] && autoCreate)
             this.refs[id] = new Reference();
         return this.refs[id];
     }
@@ -17,6 +17,9 @@ export class ReferencesManager {
         this.get(id, true).removeRef(ref);
     }
 
+    applyToElement<T>(element: JayElement<T>): JayElement<T> {
+        return {...this.refs, ...element};
+    }
 }
 
 export class Reference<T> {
