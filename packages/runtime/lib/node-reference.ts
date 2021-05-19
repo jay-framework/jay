@@ -1,21 +1,20 @@
-import {KindergardenGroupListener, KindergartenGroup} from "./kindergarden";
 import {JayElement} from "./element";
 
 export class ReferencesManager {
     private refs = {};
 
-    get(id: string) {
+    get(id: string, autoCreate: boolean = false): Reference<any> | undefined {
         if (!this.refs[id])
             this.refs[id] = new Reference();
         return this.refs[id];
     }
 
     addRef(id: string, ref: ElementReference<any>) {
-        this.get(id).addRef(ref);
+        this.get(id, true).addRef(ref);
     }
 
     removeRef(id: string, ref: ElementReference<any>) {
-        this.get(id).removeRef(ref);
+        this.get(id, true).removeRef(ref);
     }
 
 }
