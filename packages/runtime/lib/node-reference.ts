@@ -18,15 +18,42 @@ export class ReferencesManager {
     }
 
     applyToElement<T>(element: JayElement<T>): JayElement<T> {
-        return {...this.refs, ...element};
+        let enrichedRefs = Object.keys(this.refs).reduce((enriched, key) => {
+            enriched[key] = newReferenceProxy(this.refs[key])
+            return enriched;
+        }, {})
+        return {...enrichedRefs, ...element};
     }
+}
+
+type GlobalEventHandlers<T> = {
+    [Property in keyof GlobalEventHandlersEventMap as `on${Property}`]: (listener: JayEventListerer<GlobalEventHandlersEventMap[Property], T>) => void;
+}
+
+export interface ReferenceAPI<T> extends GlobalEventHandlers<T>{
+    forEach(handler: (element: JayElement<T>) => void)
+    addEventListener<E extends Event>(type: string, listener: JayEventListerer<E, T> | null, options?: boolean | AddEventListenerOptions): void
+    removeEventListener<E extends Event>(type: string, listener: JayEventListerer<E, T> | null, options?: EventListenerOptions | boolean): void
+}
+
+const proxyHandler = {
+    get: function (target, prop, receiver) {
+        if (prop.indexOf("on") === 0) {
+            let event = prop.substring(2);
+            return listener => target.addEventListener(event, listener);
+        }
+        return target[prop];
+    }
+}
+export function newReferenceProxy<T>(ref: Reference<T>): ReferenceAPI<T> {
+    return new Proxy(ref, proxyHandler) as ReferenceAPI<T>;
 }
 
 export class Reference<T> {
     private elements: Set<ElementReference<T>> = new Set();
     private listeners = [];
 
-    addEventListener(type: string, listener: JayEventListerer<T> | null, options?: boolean | AddEventListenerOptions): void {
+    addEventListener<E extends Event>(type: string, listener: JayEventListerer<E, T> | null, options?: boolean | AddEventListenerOptions): void {
         this.listeners.push({type, listener, options})
         this.elements.forEach(ref =>
             ref.addEventListener(type, listener, options))
@@ -42,7 +69,7 @@ export class Reference<T> {
         this.elements.forEach(ref => handler(ref.element));
     }
 
-    removeEventListener(type: string, listener: JayEventListerer<T> | null, options?: EventListenerOptions | boolean): void {
+    removeEventListener<E extends Event>(type: string, listener: JayEventListerer<E, T> | null, options?: EventListenerOptions | boolean): void {
         this.listeners = this.listeners.filter(item => item.type !== type || item.listener !== listener);
         this.elements.forEach(ref =>
             ref.removeEventListener(type, listener, options))
@@ -56,7 +83,7 @@ export class Reference<T> {
     
 }
 
-export type JayEventListerer<T> = (evt: Event, dataContent: T) => void;
+export type JayEventListerer<E, T> = (evt: E, dataContent: T) => void;
 
 export class ElementReference<T> {
     readonly element: JayElement<T>;
@@ -67,7 +94,7 @@ export class ElementReference<T> {
         this.dataContent = dataContext
     }
 
-    addEventListener(type: string, listener: JayEventListerer<T>, options?: boolean | AddEventListenerOptions): void {
+    addEventListener<E extends Event>(type: string, listener: JayEventListerer<E, T>, options?: boolean | AddEventListenerOptions): void {
         let wrappedHandler = (event) => {
             return listener(event, this.dataContent);
         }
@@ -75,7 +102,7 @@ export class ElementReference<T> {
         this.listeners.push({type, listener, wrappedHandler})
     }
 
-    removeEventListener(type: string, listener: JayEventListerer<T> | null, options?: EventListenerOptions | boolean): void {
+    removeEventListener<E extends Event>(type: string, listener: JayEventListerer<E, T> | null, options?: EventListenerOptions | boolean): void {
         let index = this.listeners.findIndex(item => item.type === type && item.listener === listener)
         if (index > -1) {
             let item = this.listeners[index];

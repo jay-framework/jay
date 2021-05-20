@@ -1,5 +1,5 @@
 import {describe, expect, it, beforeEach} from '@jest/globals'
-import {ReferencesManager, ElementReference} from "../../lib/node-reference";
+import {ReferencesManager, ElementReference, newReferenceProxy} from "../../lib/node-reference";
 import {element as e} from "../../lib/element";
 
 const SOME_VALUE = 'some text in the element';
@@ -98,4 +98,21 @@ describe('ReferencesManager', () => {
         expect(mockCallback.mock.calls.length).toBe(2);
     })
 
+    it("should enrich jay element with the refs implementing event registration sugar API", () => {
+
+        const ref1 = new ElementReference(jayElement1, "");
+        const ref2 = new ElementReference(jayElement2, "");
+        const ref3 = new ElementReference(jayElement3, "");
+        referenceManager.addRef(id1, ref1);
+        referenceManager.addRef(id1, ref2);
+        referenceManager.addRef(id2, ref3);
+        jayRootElement = referenceManager.applyToElement(jayRootElement)
+
+        jayRootElement.id1.onclick(mockCallback);
+        jayElement1.dom.click();
+        jayElement2.dom.click();
+        jayElement3.dom.click();
+
+        expect(mockCallback.mock.calls.length).toBe(2);
+    })
 });
