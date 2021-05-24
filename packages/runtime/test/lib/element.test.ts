@@ -77,6 +77,45 @@ describe('element', () => {
         })
     })
 
+    describe('style updates', () => {
+
+        interface ViewState {
+            text: string
+            width: string;
+            color: string;
+        }
+
+        let jayElement: JayElement<ViewState>;
+        let data: ViewState;
+        beforeEach(() => {
+            data = {text: SOME_VALUE, width: '100px', color: 'red'};
+            jayElement = e('div', {
+                textContent: da(data, vs => vs.text),
+                style: {
+                    color: da(data, vs => vs.color),
+                    width: da(data, vs => vs.width)
+                }
+            });
+        });
+
+        it('should create element with styles', () => {
+            expect(jayElement.dom.textContent).toBe(SOME_VALUE);
+            expect(jayElement.dom.style.color).toBe('red');
+            expect(jayElement.dom.style.width).toBe('100px');
+        })
+
+        it('should update element styles', () => {
+            data.text = ANOTHER_VALUE;
+            data.width = '120px';
+            data.color = 'green';
+            jayElement.update(data);
+
+            expect(jayElement.dom.textContent).toBe(ANOTHER_VALUE);
+            expect(jayElement.dom.style.color).toBe('green');
+            expect(jayElement.dom.style.width).toBe('120px');
+        })
+    })
+
     describe('element trees with updates', () => {
         it('should update multiple leafs in a tree', () => {
             interface ViewState {

@@ -5,7 +5,6 @@ import {EoF, RandomAccessLinkedList, RandomAccessLinkedList as List} from "./ran
 const STYLE = 'style';
 type updateConstructor<T, S> = (e:HTMLElement, newData:T, state: S) => S;
 type updateFunc<T> = (newData:T) => void;
-const noopUpdateConstructor: updateConstructor<any, any> = (e:HTMLElement, newData:any, state: any): any => {};
 export const noopUpdate: updateFunc<any> = (newData:any): void => {};
 
 export interface JayElement<T> {
@@ -31,10 +30,8 @@ export function dynamicAttribute<T, S>(initialData: T, attributeValue: (data: T)
     return {initialData, attributeValue}
 }
 
-export type Attribute<T> = string | DynamicAttribute<T>
-export type Attributes<T> = Record<string, Attribute<T>> & {
-    style?: Record<string, string | DynamicAttribute<T>>
-}
+export type Attribute<T> = string | DynamicAttribute<T> | Record<string, string | DynamicAttribute<T>>
+export type Attributes<T> = Record<string, Attribute<T>>
 
 function setAttribute<T>(target: HTMLElement | CSSStyleDeclaration, key: string, value: string | DynamicAttribute<T>, updates: updateFunc<T>[]) {
     if (isDynamicAttribute(value)) {
