@@ -1,4 +1,4 @@
-import {element as e, JayElement, noopUpdate} from '../../lib/element';
+import {element as e, JayElement, noopUpdate, dynamicAttribute as da} from '../../lib/element';
 import {beforeEach, describe, expect, it} from '@jest/globals'
 
 const SOME_VALUE = 'some text in the element';
@@ -46,20 +46,15 @@ describe('element', () => {
         beforeEach(() => {
             data = {text: SOME_VALUE};
             updateCount = 0;
-            jayElement = e('div', {}, [data.text], data, data.text,
-                (elem, newViewState, state) => {
-                    if (state !== newViewState.text) {
-                        elem.textContent = newViewState.text;
-                        updateCount++
-                    }
-                    return newViewState.text
-                });
-
+            jayElement = e('div', {textContent: da(data, vs => {
+                updateCount++;
+                return vs.text})
+            });
         });
 
         it('should create simple element with text', () => {
             expect(jayElement.dom.textContent).toBe(SOME_VALUE);
-            expect(updateCount).toBe(0);
+            expect(updateCount).toBe(1);
         })
 
         it('should update simple element with text', () => {
@@ -69,7 +64,7 @@ describe('element', () => {
             jayElement.update(data);
 
             expect(jayElement.dom.textContent).toBe(ANOTHER_VALUE);
-            expect(updateCount).toBe(1);
+            expect(updateCount).toBe(2);
         })
 
         it('should not update if update called with the same value', () => {
@@ -78,7 +73,7 @@ describe('element', () => {
             jayElement.update(data);
 
             expect(jayElement.dom.textContent).toBe(SOME_VALUE);
-            expect(updateCount).toBe(0);
+            expect(updateCount).toBe(2);
         })
     })
 
@@ -92,25 +87,10 @@ describe('element', () => {
 
             let data: ViewState = {text: SOME_VALUE, text2: ANOTHER_VALUE, text3: VALUE_3};
             let jayElement = e('div', {}, [
-                e('div', {}, [SOME_VALUE], data, data.text,
-                    (elem, newViewState, state) => {
-                        if (state !== newViewState.text) {
-                            elem.textContent = newViewState.text;
-                        }
-                        return newViewState.text}),
+                e('div', {textContent: da(data, vs => vs.text)}),
                 e('div', {}, [
-                    e('div', {}, [ANOTHER_VALUE], data, data.text2,
-                        (elem, newViewState, state) => {
-                            if (state !== newViewState.text2) {
-                                elem.textContent = newViewState.text2;
-                            }
-                            return newViewState.text2}),
-                    e('div', {}, [VALUE_3], data, data.text3,
-                        (elem, newViewState, state) => {
-                            if (state !== newViewState.text3) {
-                                elem.textContent = newViewState.text3;
-                            }
-                            return newViewState.text3})
+                    e('div', {textContent: da(data, vs => vs.text2)}),
+                    e('div', {textContent: da(data, vs => vs.text3)})
                 ])
             ]);
 
@@ -129,7 +109,7 @@ describe('element', () => {
             expect(jayElement.dom.childNodes[1].childNodes[1].textContent).toBe(VALUE_6);
         })
         
-        it('in the case of a signle update in a tree, should propogate the update function to the top', () => {
+        it('in the case of a single update in a tree, should propogate the update function to the top', () => {
             interface ViewState {
                 text: string,
             }
@@ -139,13 +119,10 @@ describe('element', () => {
             let jayElement = e('div', {}, [
                 e('div', {}, [VALUE_3]),
                 e('div', {}, [
-                    e('div', {}, [SOME_VALUE], data, data.text,
-                        (elem, newViewState, state) => {
-                            if (state !== newViewState.text) {
-                                elem.textContent = newViewState.text;
+                    e('div', {textContent: da(data, vs => {
                                 stack = new Error().stack;
-                            }
-                            return newViewState.text}),
+                                return vs.text;
+                            })}),
                     e('div', {}, [VALUE_4])
                 ])
             ]);

@@ -18,22 +18,54 @@ export interface TextElement<T> {
     update: updateFunc<T>
 }
 
-function setAttributes(e: HTMLElement, attributes: any) {
+export interface DynamicAttribute<T> {
+    initialData: T
+    attributeValue: (data:T) => string;
+}
+
+function isDynamicAttribute(value: any) {
+    return typeof value.attributeValue === 'function';
+}
+
+export function dynamicAttribute<T, S>(initialData: T, attributeValue: (data: T) => string): DynamicAttribute<T> {
+    return {initialData, attributeValue}
+}
+
+export type Attribute<T> = string | DynamicAttribute<T>
+export type Attributes<T> = Record<string, Attribute<T>> & {
+    style?: Record<string, string | DynamicAttribute<T>>
+}
+
+function setAttribute<T>(target: HTMLElement | CSSStyleDeclaration, key: string, value: string | DynamicAttribute<T>, updates: updateFunc<T>[]) {
+    if (isDynamicAttribute(value)) {
+        let dynamicAttribute = value as DynamicAttribute<T>
+        let attributeValue = dynamicAttribute.attributeValue(dynamicAttribute.initialData);
+        target[key] = attributeValue;
+        updates.push((newData:T) => {
+            let newAttributeValue = dynamicAttribute.attributeValue(newData);
+            if (newAttributeValue !== attributeValue)
+                target[key] = newAttributeValue;
+            attributeValue = newAttributeValue;
+        });
+    }
+    else
+        target[key] = value;
+}
+
+function createBaseElement<T>(tagName: string, attributes: Attributes<T>): {e: HTMLElement, updates: updateFunc<T>[]} {
+    let e = document.createElement(tagName);
+    let updates: updateFunc<T>[] = [];
     Object.entries(attributes).forEach(([key, value]) => {
         if (key === STYLE) {
             Object.entries(value).forEach(([styleKey, styleValue]) => {
-                e.style[styleKey] = styleValue;
+                setAttribute(e.style, styleKey, styleValue as string | DynamicAttribute<T>, updates);
             })
         }
-        else
-            e[key] = value;
+        else {
+            setAttribute(e, key, value as string | DynamicAttribute<T>, updates);
+        }
     });
-}
-
-function createBaseElement(tagName: string, attributes: any = {}) {
-    let e = document.createElement(tagName);
-    setAttributes(e, attributes);
-    return e;
+    return {e, updates};
 }
 
 function normalizeUpdates<T>(updates: Array<updateFunc<T>>): updateFunc<T> {
@@ -158,19 +190,11 @@ export function dynamicText<T>(initialData: T,
 
 export function element<T, S>(
     tagName: string,
-    attributes: any = {},
-    children: Array<JayElement<T> | TextElement<T> | string> = [],
-    initialData: T = undefined,
-    initialState: S = undefined,
-    update: updateConstructor<T, S> = noopUpdateConstructor):
+    attributes: Attributes<T>,
+    children: Array<JayElement<T> | TextElement<T> | string> = []):
     JayElement<T> {
-    let e = createBaseElement(tagName, attributes);
+    let {e, updates} = createBaseElement(tagName, attributes);
     
-    let updates: updateFunc<T>[] = [];
-    if (update !== noopUpdateConstructor) {
-        updates.push(mkUpdateElement(e, initialState, update));
-    }
-
     children.forEach(child => {
         if (typeof child === 'string')
             child = text(child);
@@ -187,18 +211,11 @@ export function element<T, S>(
 
 export function dynamicElement<T, S>(
     tagName: string,
-    attributes: any = {},
+    attributes: Attributes<T>,
     children: Array<Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T> | string> = [],
-    initialData: T = undefined,
-    initialState: S = undefined,
-    update: updateConstructor<T, S> = noopUpdateConstructor):
+    initialData: T):
     JayElement<T> {
-    let e = createBaseElement(tagName, attributes);
-
-    let updates: updateFunc<T>[] = [];
-    if (update !== noopUpdateConstructor) {
-        updates.push(mkUpdateElement(e, initialState, update));
-    }
+    let {e, updates} = createBaseElement(tagName, attributes);
 
     let kindergarden = new Kindergarten(e);
     children.forEach(child => {
