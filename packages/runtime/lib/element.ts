@@ -1,11 +1,12 @@
 import {Kindergarten, KindergartenGroup} from "./kindergarden";
 import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "./list-compare";
 import {EoF, RandomAccessLinkedList, RandomAccessLinkedList as List} from "./random-access-linked-list";
+import {ElementReference, ReferencesManager} from "./node-reference";
 
 const STYLE = 'style';
-type updateConstructor<T, S> = (e:HTMLElement, newData:T, state: S) => S;
+const REF = 'ref';
 type updateFunc<T> = (newData:T) => void;
-export const noopUpdate: updateFunc<any> = (newData:any): void => {};
+export const noopUpdate: updateFunc<any> = (_newData:any): void => {};
 
 export interface JayElement<T> {
     dom: HTMLElement,
@@ -49,8 +50,9 @@ function setAttribute<T>(target: HTMLElement | CSSStyleDeclaration, key: string,
         target[key] = value;
 }
 
-function createBaseElement<T>(tagName: string, attributes: Attributes<T>): {e: HTMLElement, updates: updateFunc<T>[]} {
+function createBaseElement<T>(tagName: string, attributes: Attributes<T>): {e: HTMLElement, updates: updateFunc<T>[], refId?: string} {
     let e = document.createElement(tagName);
+    let refId;
     let updates: updateFunc<T>[] = [];
     Object.entries(attributes).forEach(([key, value]) => {
         if (key === STYLE) {
@@ -58,11 +60,14 @@ function createBaseElement<T>(tagName: string, attributes: Attributes<T>): {e: H
                 setAttribute(e.style, styleKey, styleValue as string | DynamicAttribute<T>, updates);
             })
         }
+        else if (key === REF) {
+            refId = value;
+        }
         else {
             setAttribute(e, key, value as string | DynamicAttribute<T>, updates);
         }
     });
-    return {e, updates};
+    return {e, updates, refId};
 }
 
 function normalizeUpdates<T>(updates: Array<updateFunc<T>>): updateFunc<T> {
@@ -156,13 +161,6 @@ function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup) {
     };
 }
 
-function mkUpdateElement<T, S>(e: HTMLElement, initialState: S, update: updateConstructor<T, S>) {
-    let state: S = initialState;
-    return (newData: T) => {
-        state = update(e, newData, state);
-    }
-}
-
 function text<T>(content: string): TextElement<T> {
     return {
         dom: document.createTextNode(content),
@@ -185,12 +183,33 @@ export function dynamicText<T>(initialData: T,
     }
 }
 
+function constructJayElement<T>(refId: string, e: HTMLElement, initialData: T, updates: updateFunc<T>[], referencesManager: ReferencesManager) {
+    if (refId) {
+        let ref = new ElementReference()
+        updates.push(ref.update);
+        let jayElement = {
+            dom: e,
+            update: normalizeUpdates(updates)
+        };
+        ref.setElement(jayElement, initialData);
+        referencesManager.addRef(refId, ref)
+        return jayElement;
+    } else {
+        return {
+            dom: e,
+            update: normalizeUpdates(updates)
+        };
+    }
+}
+
 export function element<T, S>(
     tagName: string,
     attributes: Attributes<T>,
-    children: Array<JayElement<T> | TextElement<T> | string> = []):
+    children: Array<JayElement<T> | TextElement<T> | string> = [],
+    initialData?: T,
+    referencesManager?: ReferencesManager):
     JayElement<T> {
-    let {e, updates} = createBaseElement(tagName, attributes);
+    let {e, updates, refId} = createBaseElement(tagName, attributes);
     
     children.forEach(child => {
         if (typeof child === 'string')
@@ -199,26 +218,23 @@ export function element<T, S>(
         if (child.update !== noopUpdate)
             updates.push(child.update);
     });
-
-    return {
-        dom: e,
-        update: normalizeUpdates(updates)
-    };
+    return constructJayElement(refId, e, initialData, updates, referencesManager);
 }
 
 export function dynamicElement<T, S>(
     tagName: string,
     attributes: Attributes<T>,
     children: Array<Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T> | string> = [],
-    initialData: T):
+    initialData: T,
+    referencesManager?: ReferencesManager):
     JayElement<T> {
-    let {e, updates} = createBaseElement(tagName, attributes);
+    let {e, updates, refId} = createBaseElement(tagName, attributes);
 
-    let kindergarden = new Kindergarten(e);
+    let kindergarten = new Kindergarten(e);
     children.forEach(child => {
         if (typeof child === 'string')
             child = text(child);
-        let group = kindergarden.newGroup();
+        let group = kindergarten.newGroup();
         let update = null;
         if (isCondition(child)) {
             update = mkUpdateCondition(child, group)
@@ -238,9 +254,6 @@ export function dynamicElement<T, S>(
         }
     })
 
-    return {
-        dom: e,
-        update: normalizeUpdates(updates)
-    };
+    return constructJayElement(refId, e, initialData, updates, referencesManager);
 }
 

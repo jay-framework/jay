@@ -8,7 +8,8 @@ const id1 = 'id1';
 const id2 = 'id2';
 
 describe('ReferencesManager', () => {
-    let jayElement1, jayElement2, jayElement3, jayRootElement, referenceManager, mockCallback;
+    let jayElement1, jayElement2, jayElement3, jayRootElement,
+        referenceManager: ReferencesManager, mockCallback;
     beforeEach(() => {
         jayElement1 = e('div', {}, [SOME_VALUE]);
         jayElement2 = e('div', {}, [SOME_VALUE]);
@@ -19,7 +20,8 @@ describe('ReferencesManager', () => {
     })
 
     it("should register events on an element", () => {
-        const ref = new ElementReference(jayElement1, "");
+        const ref = new ElementReference();
+        ref.setElement(jayElement1, "");
         referenceManager.addRef(id1, ref);
         referenceManager.get(id1).addEventListener('click', mockCallback);
 
@@ -29,7 +31,8 @@ describe('ReferencesManager', () => {
     })
 
     it("should remove events from an element", () => {
-        const ref = new ElementReference(jayElement1, "");
+        const ref = new ElementReference();
+        ref.setElement(jayElement1, "");
         referenceManager.addRef(id1, ref);
         referenceManager.get(id1).addEventListener('click', mockCallback);
         referenceManager.get(id1).removeEventListener('click', mockCallback);
@@ -39,10 +42,40 @@ describe('ReferencesManager', () => {
         expect(mockCallback.mock.calls.length).toBe(0);
     })
 
+    it("should enrich events with the data context", () => {
+        const ref = new ElementReference();
+        ref.setElement(jayElement1, SOME_VALUE);
+        referenceManager.addRef(id1, ref);
+        referenceManager.get(id1).addEventListener('click', mockCallback);
+
+        jayElement1.dom.click();
+
+        expect(mockCallback.mock.calls.length).toBe(1);
+        expect(mockCallback.mock.calls[0][0]).toBeInstanceOf(Event);
+        expect(mockCallback.mock.calls[0][1]).toBe(SOME_VALUE);
+    })
+
+    it("should enrich events with the updated data context", () => {
+        const ref = new ElementReference();
+        ref.setElement(jayElement1, SOME_VALUE)
+        referenceManager.addRef(id1, ref);
+        referenceManager.get(id1).addEventListener('click', mockCallback);
+        ref.update(ANOTHER_VALUE)
+
+        jayElement1.dom.click();
+
+        expect(mockCallback.mock.calls.length).toBe(1);
+        expect(mockCallback.mock.calls[0][0]).toBeInstanceOf(Event);
+        expect(mockCallback.mock.calls[0][1]).toBe(ANOTHER_VALUE);
+    })
+
     it("should register events on all elements with the same ref id", () => {
-        const ref1 = new ElementReference(jayElement1, "");
-        const ref2 = new ElementReference(jayElement2, "");
-        const ref3 = new ElementReference(jayElement3, "");
+        const ref1 = new ElementReference();
+        const ref2 = new ElementReference();
+        const ref3 = new ElementReference();
+        ref1.setElement(jayElement1, "");
+        ref2.setElement(jayElement2, "");
+        ref3.setElement(jayElement3, "");
         referenceManager.addRef(id1, ref1);
         referenceManager.addRef(id1, ref2);
         referenceManager.addRef(id2, ref3);
@@ -55,36 +88,14 @@ describe('ReferencesManager', () => {
         expect(mockCallback.mock.calls.length).toBe(2);
     })
 
-    it("should enrich events with the data context", () => {
-        const ref = new ElementReference(jayElement1, SOME_VALUE);
-        referenceManager.addRef(id1, ref);
-        referenceManager.get(id1).addEventListener('click', mockCallback);
-
-        jayElement1.dom.click();
-
-        expect(mockCallback.mock.calls.length).toBe(1);
-        expect(mockCallback.mock.calls[0][0]).toBeInstanceOf(Event);
-        expect(mockCallback.mock.calls[0][1]).toBe(SOME_VALUE);
-    })
-
-    it("should enrich events with the updated data context", () => {
-        const ref = new ElementReference(jayElement1, SOME_VALUE);
-        referenceManager.addRef(id1, ref);
-        referenceManager.get(id1).addEventListener('click', mockCallback);
-        ref.update(ANOTHER_VALUE)
-
-        jayElement1.dom.click();
-
-        expect(mockCallback.mock.calls.length).toBe(1);
-        expect(mockCallback.mock.calls[0][0]).toBeInstanceOf(Event);
-        expect(mockCallback.mock.calls[0][1]).toBe(ANOTHER_VALUE);
-    })
-
     it("should enrich jay element with the refs", () => {
-        
-        const ref1 = new ElementReference(jayElement1, "");
-        const ref2 = new ElementReference(jayElement2, "");
-        const ref3 = new ElementReference(jayElement3, "");
+
+        const ref1 = new ElementReference();
+        const ref2 = new ElementReference();
+        const ref3 = new ElementReference();
+        ref1.setElement(jayElement1, "");
+        ref2.setElement(jayElement2, "");
+        ref3.setElement(jayElement3, "");
         referenceManager.addRef(id1, ref1);
         referenceManager.addRef(id1, ref2);
         referenceManager.addRef(id2, ref3);
@@ -100,9 +111,12 @@ describe('ReferencesManager', () => {
 
     it("should enrich jay element with the refs implementing event registration sugar API", () => {
 
-        const ref1 = new ElementReference(jayElement1, "");
-        const ref2 = new ElementReference(jayElement2, "");
-        const ref3 = new ElementReference(jayElement3, "");
+        const ref1 = new ElementReference();
+        const ref2 = new ElementReference();
+        const ref3 = new ElementReference();
+        ref1.setElement(jayElement1, "");
+        ref2.setElement(jayElement2, "");
+        ref3.setElement(jayElement3, "");
         referenceManager.addRef(id1, ref1);
         referenceManager.addRef(id1, ref2);
         referenceManager.addRef(id2, ref3);
