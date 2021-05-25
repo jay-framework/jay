@@ -52,7 +52,7 @@ function setAttribute<T>(target: HTMLElement | CSSStyleDeclaration, key: string,
 
 function createBaseElement<T>(tagName: string, attributes: Attributes<T>): {e: HTMLElement, updates: updateFunc<T>[], refId?: string} {
     let e = document.createElement(tagName);
-    let refId = undefined;
+    let refId;
     let updates: updateFunc<T>[] = [];
     Object.entries(attributes).forEach(([key, value]) => {
         if (key === STYLE) {
@@ -67,7 +67,7 @@ function createBaseElement<T>(tagName: string, attributes: Attributes<T>): {e: H
             setAttribute(e, key, value as string | DynamicAttribute<T>, updates);
         }
     });
-    return {e, updates, refId};
+    return {e, updates};
 }
 
 function normalizeUpdates<T>(updates: Array<updateFunc<T>>): updateFunc<T> {
