@@ -52,7 +52,7 @@ function setAttribute<T>(target: HTMLElement | CSSStyleDeclaration, key: string,
 
 function createBaseElement<T>(tagName: string, attributes: Attributes<T>): {e: HTMLElement, updates: updateFunc<T>[], refId?: string} {
     let e = document.createElement(tagName);
-    let refId;
+    let refId = undefined;
     let updates: updateFunc<T>[] = [];
     Object.entries(attributes).forEach(([key, value]) => {
         if (key === STYLE) {

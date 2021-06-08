@@ -30,15 +30,17 @@ type GlobalEventHandlers<T> = {
     [Property in keyof GlobalEventHandlersEventMap as `on${Property}`]: (listener: JayEventListener<GlobalEventHandlersEventMap[Property], T>) => void;
 }
 
-export interface ReferenceAPI<T> extends GlobalEventHandlers<T>{
+interface ReferenceOperations<T> {
     one(): JayElement<T>
     forEach(handler: (element: JayElement<T>) => void)
     addEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: boolean | AddEventListenerOptions): void
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: EventListenerOptions | boolean): void
 }
 
+export interface ReferenceAPI<T> extends GlobalEventHandlers<T>, ReferenceOperations<T>{}
+
 const proxyHandler = {
-    get: function (target, prop, receiver) {
+    get: function (target, prop /*, receiver*/) {
         if (prop.indexOf("on") === 0) {
             let event = prop.substring(2);
             return listener => target.addEventListener(event, listener);
@@ -50,7 +52,7 @@ export function newReferenceProxy<T>(ref: Reference<T>): ReferenceAPI<T> {
     return new Proxy(ref, proxyHandler) as ReferenceAPI<T>;
 }
 
-export class Reference<T> {
+export class Reference<T> implements ReferenceOperations<T> {
     private elements: Set<ElementReference<T>> = new Set();
     private listeners = [];
 

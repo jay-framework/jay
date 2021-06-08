@@ -39,12 +39,12 @@ function Counter(initialValue: number): CounterComponent {
     let jayElement = renderCounter({count: initialValue});
     let count = initialValue;
 
-    jayElement.inc.onclick((event, vs) => {
+    jayElement.inc.onclick(() => {
         count += 1;
         jayElement.update({count});
     })
 
-    jayElement.dec.onclick((event, vs) => {
+    jayElement.dec.onclick(() => {
         count -= 1;
         jayElement.update({count});
     })
