@@ -31,6 +31,7 @@ type GlobalEventHandlers<T> = {
 }
 
 export interface ReferenceAPI<T> extends GlobalEventHandlers<T>{
+    one(): JayElement<T>
     forEach(handler: (element: JayElement<T>) => void)
     addEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: boolean | AddEventListenerOptions): void
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: EventListenerOptions | boolean): void
@@ -67,6 +68,10 @@ export class Reference<T> {
 
     forEach(handler: (element: JayElement<T>) => void) {
         this.elements.forEach(ref => handler(ref.element));
+    }
+
+    one() {
+        return this.elements.values().next().value.element;
     }
 
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: EventListenerOptions | boolean): void {
@@ -114,7 +119,7 @@ export class ElementReference<T> {
         }
     }
     
-    update(newData: T) {
+    update = (newData: T) => {
         this.dataContent = newData;
     }
 }

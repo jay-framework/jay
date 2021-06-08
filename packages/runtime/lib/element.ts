@@ -67,7 +67,7 @@ function createBaseElement<T>(tagName: string, attributes: Attributes<T>): {e: H
             setAttribute(e, key, value as string | DynamicAttribute<T>, updates);
         }
     });
-    return {e, updates};
+    return {e, updates, refId};
 }
 
 function normalizeUpdates<T>(updates: Array<updateFunc<T>>): updateFunc<T> {
