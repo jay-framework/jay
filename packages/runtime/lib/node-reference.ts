@@ -31,8 +31,8 @@ type GlobalEventHandlers<T> = {
 }
 
 interface ReferenceOperations<T> {
-    one(): JayElement<T>
-    forEach(handler: (element: JayElement<T>) => void)
+    one(): HTMLElement
+    forEach(handler: (element: HTMLElement) => void)
     addEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: boolean | AddEventListenerOptions): void
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: EventListenerOptions | boolean): void
 }
@@ -41,7 +41,7 @@ export interface ReferenceAPI<T> extends GlobalEventHandlers<T>, ReferenceOperat
 
 const proxyHandler = {
     get: function (target, prop /*, receiver*/) {
-        if (prop.indexOf("on") === 0) {
+        if (prop.indexOf("on") === 0 && prop !== 'one') {
             let event = prop.substring(2);
             return listener => target.addEventListener(event, listener);
         }
@@ -68,12 +68,12 @@ export class Reference<T> implements ReferenceOperations<T> {
             ref.addEventListener(listener.type, listener.listener, listener.options))
     }
 
-    forEach(handler: (element: JayElement<T>) => void) {
-        this.elements.forEach(ref => handler(ref.element));
+    forEach(handler: (element: HTMLElement) => void) {
+        this.elements.forEach(ref => handler(ref.element.dom));
     }
 
-    one() {
-        return this.elements.values().next().value.element;
+    one(): HTMLElement {
+        return this.elements.values().next().value.element.dom;
     }
 
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: EventListenerOptions | boolean): void {

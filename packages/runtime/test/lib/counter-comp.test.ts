@@ -59,25 +59,25 @@ describe('counter component', () => {
     it("create counter with initial value 6", () => {
         let counter = Counter(6);
 
-        expect(counter.element.count.one().dom.textContent).toBe('6');
+        expect(counter.element.count.one().textContent).toBe('6');
     });
 
     it("inc the counter", () => {
         let counter = Counter(6);
 
-        counter.element.inc.one().dom.click();
-        expect(counter.element.count.one().dom.textContent).toBe('7');
+        counter.element.inc.one().click();
+        expect(counter.element.count.one().textContent).toBe('7');
 
     });
 
     it("inc and dec the counter", () => {
         let counter = Counter(6);
 
-        counter.element.inc.one().dom.click();
-        counter.element.inc.one().dom.click();
-        counter.element.inc.one().dom.click();
-        counter.element.dec.one().dom.click();
-        expect(counter.element.count.one().dom.textContent).toBe('8');
+        counter.element.inc.one().click();
+        counter.element.inc.one().click();
+        counter.element.inc.one().click();
+        counter.element.dec.one().click();
+        expect(counter.element.count.one().textContent).toBe('8');
     });
 
 });
