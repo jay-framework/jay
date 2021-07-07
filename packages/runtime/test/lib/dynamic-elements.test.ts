@@ -4,7 +4,7 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
-    conditional
+    conditional, ConstructContext
 } from '../../lib/element';
 import {describe, expect, it} from '@jest/globals'
 
@@ -22,19 +22,24 @@ describe('dynamic-element with mixed content', () => {
     }
 
     function makeElement(data: ViewState): JayElement<ViewState> {
+
+        return ConstructContext.withRootContext(data, (context: ConstructContext<[ViewState]>) =>
         // noinspection DuplicatedCode
-        return de('div', {}, [
+        de('div', {}, [
             'Some text',
-            e('h1', {}, [dt(data, data => data.title)]),
+            e('h1', {}, [dt(context, data => data.title)]),
             forEach(
                 (newViewState) => newViewState.items,
-                (item: Item) => e('div', {"className":"item", id: item.id}, [dt(item, item => item.name)]),
+                (item: Item) => {
+                    let childContext = context.child(item);
+                    return e('div', {"className":"item", id: item.id}, [dt(childContext, item => item.name)])
+                },
                 'id'
             ),
-            dt(data, data => data.separator),
+            dt(context, data => data.separator),
             conditional(data => data.items.length === 0,
                 "no items found")
-        ], data)
+        ], context))
     }
 
     const data1 = {items: [], title: 'the title', separator: '---'};

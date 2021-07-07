@@ -1,6 +1,6 @@
 import {describe, it} from "@jest/globals";
-import {dynamicText as dt, element as e, JayElement,} from "../../lib/element";
-import {ReferenceAPI, ReferencesManager} from "../../lib/node-reference";
+import {ConstructContext, dynamicText as dt, element as e, JayElement,} from "../../lib/element";
+import {ReferenceAPI} from "../../lib/node-reference";
 
 interface ViewState {
     count: number
@@ -13,14 +13,14 @@ interface CounterElement extends JayElement<ViewState> {
 }
 
 function renderCounter(viewState: ViewState): CounterElement {
-    let rm = new ReferencesManager()
-    let el = e('div', {}, [
-        e('div', {ref: 'dec'}, ['-'], viewState, rm),
-        e('div', {ref: 'count'}, [dt(viewState, vs => vs.count)], viewState, rm),
-        e('div', {ref: 'inc'}, ['+'], viewState, rm)
-    ]);
-    el = rm.applyToElement(el);
-    return el as CounterElement;
+
+    return ConstructContext.withRootContext(viewState, (context: ConstructContext<[ViewState]>) =>
+        e('div', {}, [
+            e('div', {ref: 'dec'}, ['-'], context),
+            e('div', {ref: 'count'}, [dt(context, vs => vs.count)], context),
+            e('div', {ref: 'inc'}, ['+'], context)],
+            context)
+    ) as CounterElement;
 }
 
 interface JayComponent<T, R, E extends JayElement<R>> {

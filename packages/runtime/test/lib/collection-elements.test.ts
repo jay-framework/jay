@@ -3,7 +3,7 @@ import {
     dynamicElement as de,
     JayElement,
     element as e,
-    dynamicText as dt
+    dynamicText as dt, ConstructContext
 } from '../../lib/element';
 import {describe, expect, it} from '@jest/globals'
 
@@ -26,14 +26,19 @@ describe('collection-element', () => {
     }
 
     function makeElement(data: ViewState): JayElement<ViewState> {
+        return ConstructContext.withRootContext(data, (context: ConstructContext<[ViewState]>) =>
         // noinspection DuplicatedCode
-        return de('div', {}, [
+        de('div', {}, [
             forEach(
                 (newViewState) => newViewState.items,
-                (item: Item) => e('div', {"className":"item", id: item.id}, [dt(item, item => item.name)]),
+                (item: Item) => {
+                    let childContext = context.child(item)
+                    return e('div', {"className":"item", id: item.id}, [dt(childContext, item => item.name)])
+                },
                 'id'
             )
-        ], data)
+        ], context)
+        )
     }
 
     it('should render empty collection', () => {

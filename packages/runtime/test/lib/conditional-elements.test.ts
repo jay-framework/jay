@@ -3,7 +3,7 @@ import {
     dynamicElement as de,
     JayElement,
     element as e,
-    dynamicText as dt
+    dynamicText as dt, ConstructContext
 } from '../../lib/element';
 import "@testing-library/jest-dom/extend-expect";
 import {describe, expect, it} from '@jest/globals'
@@ -21,15 +21,16 @@ describe('conditional-element', () => {
     }
 
     function makeElement(data: ViewState): JayElement<ViewState> {
+        return ConstructContext.withRootContext(data, (context: ConstructContext<[ViewState]>) =>
         // noinspection DuplicatedCode
-        return de('div', {}, [
+        de('div', {}, [
             conditional((newViewState) => newViewState.condition,
-                e('div', {style: {cssText: 'color:red'}, "id":"text1"}, [dt(data, data => data.text1)])
+                e('div', {style: {cssText: 'color:red'}, "id":"text1"}, [dt(context, data => data.text1)])
             ),
             conditional((newViewState) => !newViewState.condition,
-                e('div', {style: {cssText: 'color:green'}, "id":"text2"}, [dt(data, data => data.text2)])
+                e('div', {style: {cssText: 'color:green'}, "id":"text2"}, [dt(context, data => data.text2)])
             )
-        ], data)
+        ], context))
     }
 
     it('should render first text if condition is true', () => {

@@ -1,4 +1,4 @@
-import {conditional, dynamicText as dt, dynamicElement as de, element as e} from '../../lib/element';
+import {conditional, dynamicText as dt, dynamicElement as de, element as e, ConstructContext} from '../../lib/element';
 
 interface ViewState {
     text1: string,
@@ -7,13 +7,15 @@ interface ViewState {
 }
 
 export default function render(viewState: ViewState) {
-    return de('div', {}, [
-        conditional((newViewState) => newViewState.cond,
-            e('div', {style: {cssText: 'color:red'}}, [dt(viewState, vs => vs.text1)])
-        ),
-        conditional((newViewState) => !newViewState.cond,
-            e('div', {style: {cssText: 'color:green'}}, [dt(viewState,vs => vs.text2)])
-        )
-    ], viewState);
+    return ConstructContext.withRootContext(viewState, (context: ConstructContext<[ViewState]>) =>
+        de('div', {}, [
+            conditional((newViewState) => newViewState.cond,
+                e('div', {style: {cssText: 'color:red'}}, [dt(context, vs => vs.text1)])
+            ),
+            conditional((newViewState) => !newViewState.cond,
+                e('div', {style: {cssText: 'color:green'}}, [dt(context,vs => vs.text2)])
+            )
+        ], context)
+    )
 }
 

@@ -161,6 +161,42 @@ function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup) {
     };
 }
 
+export class ConstructContext<A extends Array<any>> {
+    refManager: ReferencesManager
+    data: A
+
+    constructor(data: A, dm?: ReferencesManager) {
+        this.data = data;
+        this.refManager = dm?dm:new ReferencesManager();
+    }
+
+    get currData() {
+        return this.data[this.data.length - 1];
+    }
+
+    static acc<A extends Array<any>, B>(a: A, b: B): [...A, B] {
+        return [...a, b]
+    }
+
+    child<T>(t: T) {
+        return new ConstructContext(ConstructContext.acc(this.data, t), this.refManager)
+    }
+
+    static from<B extends Array<any>, T>(context: ConstructContext<B>, t: T) {
+        return new ConstructContext(ConstructContext.acc(context.data, t), context.refManager)
+    }
+
+    static root<T>(t: T): ConstructContext<[T]> {
+        return new ConstructContext([t])
+    }
+
+    static withRootContext<T, A extends ConstructContext<[T]>>(t: T, elementConstructor: (A) => JayElement<T>) {
+        let context = new ConstructContext([t])
+        let element = elementConstructor(context);
+        return context.refManager.applyToElement(element);
+    }
+}
+
 function text<T>(content: string): TextElement<T> {
     return {
         dom: document.createTextNode(content),
@@ -168,9 +204,9 @@ function text<T>(content: string): TextElement<T> {
     }
 }
 
-export function dynamicText<T>(initialData: T,
+export function dynamicText<T, A extends Array<any>>(context: ConstructContext<A>,
                                textContent: (T) => string): TextElement<T> {
-    let content = textContent(initialData);
+    let content = textContent(context.currData);
     let n = document.createTextNode(content);
     return {
         dom: n,
@@ -183,31 +219,11 @@ export function dynamicText<T>(initialData: T,
     }
 }
 
-function constructJayElement<T>(refId: string, e: HTMLElement, initialData: T, updates: updateFunc<T>[], referencesManager: ReferencesManager) {
-    if (refId) {
-        let ref = new ElementReference()
-        updates.push(ref.update);
-        let jayElement = {
-            dom: e,
-            update: normalizeUpdates(updates)
-        };
-        ref.setElement(jayElement, initialData);
-        referencesManager.addRef(refId, ref)
-        return jayElement;
-    } else {
-        return {
-            dom: e,
-            update: normalizeUpdates(updates)
-        };
-    }
-}
-
-export function element<T, S>(
+export function element<T, A extends Array<any>>(
     tagName: string,
     attributes: Attributes<T>,
     children: Array<JayElement<T> | TextElement<T> | string> = [],
-    initialData?: T,
-    referencesManager?: ReferencesManager):
+    context?: ConstructContext<A>):
     JayElement<T> {
     let {e, updates, refId} = createBaseElement(tagName, attributes);
     
@@ -218,15 +234,14 @@ export function element<T, S>(
         if (child.update !== noopUpdate)
             updates.push(child.update);
     });
-    return constructJayElement(refId, e, initialData, updates, referencesManager);
+    return constructJayElement(refId, e, context?.currData, updates, context?.refManager);
 }
 
-export function dynamicElement<T, S>(
+export function dynamicElement<T, A extends Array<any>>(
     tagName: string,
     attributes: Attributes<T>,
     children: Array<Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T> | string> = [],
-    initialData: T,
-    referencesManager?: ReferencesManager):
+    context?: ConstructContext<A>):
     JayElement<T> {
     let {e, updates, refId} = createBaseElement(tagName, attributes);
 
@@ -249,11 +264,30 @@ export function dynamicElement<T, S>(
         }
 
         if (update !== null) {
-            update(initialData)
+            update(context.data[0])
             updates.push(update);
         }
     })
 
-    return constructJayElement(refId, e, initialData, updates, referencesManager);
+    return constructJayElement(refId, e, context?.currData, updates, context?.refManager);
+}
+
+function constructJayElement<T>(refId: string, e: HTMLElement, initialData: T, updates: updateFunc<T>[], referencesManager: ReferencesManager) {
+    if (refId) {
+        let ref = new ElementReference()
+        updates.push(ref.update);
+        let jayElement = {
+            dom: e,
+            update: normalizeUpdates(updates)
+        };
+        ref.setElement(jayElement, initialData);
+        referencesManager.addRef(refId, ref)
+        return jayElement;
+    } else {
+        return {
+            dom: e,
+            update: normalizeUpdates(updates)
+        };
+    }
 }
 
