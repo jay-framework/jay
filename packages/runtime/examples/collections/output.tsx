@@ -24,7 +24,7 @@ export default function render(viewState: ViewState): JayElement<ViewState> {
     return ConstructContext.withRootContext(viewState, (context: ConstructContext<[ViewState]>) => {
 
         const createDiv = (item: Item) => {
-            const itemContext = context.child(item)
+            const itemContext = context.forItem(item)
             return e('div', {}, [
                 e('span', {style: {cssText: 'color:green; width: 100px; display: inline-block;'}},
                     [dt(itemContext, item => item.name)]),

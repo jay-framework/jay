@@ -20,8 +20,7 @@ describe('ReferencesManager', () => {
     })
 
     it("should register events on an element", () => {
-        const ref = new ElementReference();
-        ref.setElement(jayElement1, "");
+        const ref = new ElementReference(jayElement1.dom, "");
         referenceManager.addRef(id1, ref);
         referenceManager.get(id1).addEventListener('click', mockCallback);
 
@@ -31,8 +30,7 @@ describe('ReferencesManager', () => {
     })
 
     it("should remove events from an element", () => {
-        const ref = new ElementReference();
-        ref.setElement(jayElement1, "");
+        const ref = new ElementReference(jayElement1.dom, "");
         referenceManager.addRef(id1, ref);
         referenceManager.get(id1).addEventListener('click', mockCallback);
         referenceManager.get(id1).removeEventListener('click', mockCallback);
@@ -43,8 +41,7 @@ describe('ReferencesManager', () => {
     })
 
     it("should enrich events with the data context", () => {
-        const ref = new ElementReference();
-        ref.setElement(jayElement1, SOME_VALUE);
+        const ref = new ElementReference(jayElement1.dom, SOME_VALUE);
         referenceManager.addRef(id1, ref);
         referenceManager.get(id1).addEventListener('click', mockCallback);
 
@@ -56,8 +53,7 @@ describe('ReferencesManager', () => {
     })
 
     it("should enrich events with the updated data context", () => {
-        const ref = new ElementReference();
-        ref.setElement(jayElement1, SOME_VALUE)
+        const ref = new ElementReference(jayElement1.dom, SOME_VALUE);
         referenceManager.addRef(id1, ref);
         referenceManager.get(id1).addEventListener('click', mockCallback);
         ref.update(ANOTHER_VALUE)
@@ -70,12 +66,9 @@ describe('ReferencesManager', () => {
     })
 
     it("should register events on all elements with the same ref id", () => {
-        const ref1 = new ElementReference();
-        const ref2 = new ElementReference();
-        const ref3 = new ElementReference();
-        ref1.setElement(jayElement1, "");
-        ref2.setElement(jayElement2, "");
-        ref3.setElement(jayElement3, "");
+        const ref1 = new ElementReference(jayElement1.dom, "");
+        const ref2 = new ElementReference(jayElement2.dom, "");
+        const ref3 = new ElementReference(jayElement3.dom, "");
         referenceManager.addRef(id1, ref1);
         referenceManager.addRef(id1, ref2);
         referenceManager.addRef(id2, ref3);
@@ -90,12 +83,9 @@ describe('ReferencesManager', () => {
 
     it("should enrich jay element with the refs", () => {
 
-        const ref1 = new ElementReference();
-        const ref2 = new ElementReference();
-        const ref3 = new ElementReference();
-        ref1.setElement(jayElement1, "");
-        ref2.setElement(jayElement2, "");
-        ref3.setElement(jayElement3, "");
+        const ref1 = new ElementReference(jayElement1.dom, "");
+        const ref2 = new ElementReference(jayElement2.dom, "");
+        const ref3 = new ElementReference(jayElement3.dom, "");
         referenceManager.addRef(id1, ref1);
         referenceManager.addRef(id1, ref2);
         referenceManager.addRef(id2, ref3);
@@ -111,12 +101,9 @@ describe('ReferencesManager', () => {
 
     it("should enrich jay element with the refs implementing event registration sugar API", () => {
 
-        const ref1 = new ElementReference();
-        const ref2 = new ElementReference();
-        const ref3 = new ElementReference();
-        ref1.setElement(jayElement1, "");
-        ref2.setElement(jayElement2, "");
-        ref3.setElement(jayElement3, "");
+        const ref1 = new ElementReference(jayElement1.dom, "");
+        const ref2 = new ElementReference(jayElement2.dom, "");
+        const ref3 = new ElementReference(jayElement3.dom, "");
         referenceManager.addRef(id1, ref1);
         referenceManager.addRef(id1, ref2);
         referenceManager.addRef(id2, ref3);

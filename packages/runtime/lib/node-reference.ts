@@ -69,11 +69,11 @@ export class Reference<T> implements ReferenceOperations<T> {
     }
 
     forEach(handler: (element: HTMLElement) => void) {
-        this.elements.forEach(ref => handler(ref.element.dom));
+        this.elements.forEach(ref => handler(ref.element));
     }
 
     one(): HTMLElement {
-        return this.elements.values().next().value.element.dom;
+        return this.elements.values().next().value.element;
     }
 
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: EventListenerOptions | boolean): void {
@@ -93,13 +93,11 @@ export class Reference<T> implements ReferenceOperations<T> {
 export type JayEventListener<E, T> = (evt: E, dataContent: T) => void;
 
 export class ElementReference<T> {
-    element: JayElement<T>;
+    element: HTMLElement;
     private dataContent: T;
     private listeners = [];
-    constructor() {
-    }
 
-    setElement(element: JayElement<T>, dataContext: T) {
+    constructor(element: HTMLElement, dataContext: T) {
         this.element = element;
         this.dataContent = dataContext
     }
@@ -108,7 +106,7 @@ export class ElementReference<T> {
         let wrappedHandler = (event) => {
             return listener(event, this.dataContent);
         }
-        this.element.dom.addEventListener(type, wrappedHandler, options)
+        this.element.addEventListener(type, wrappedHandler, options)
         this.listeners.push({type, listener, wrappedHandler})
     }
 
@@ -117,7 +115,7 @@ export class ElementReference<T> {
         if (index > -1) {
             let item = this.listeners[index];
             this.listeners.splice(index, 1)
-            this.element.dom.removeEventListener(type, item.wrappedHandler, options)
+            this.element.removeEventListener(type, item.wrappedHandler, options)
         }
     }
     

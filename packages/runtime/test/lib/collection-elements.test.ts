@@ -32,7 +32,7 @@ describe('collection-element', () => {
             forEach(
                 (newViewState) => newViewState.items,
                 (item: Item) => {
-                    let childContext = context.child(item)
+                    let childContext = context.forItem(item)
                     return e('div', {"className":"item", id: item.id}, [dt(childContext, item => item.name)])
                 },
                 'id'
