@@ -3,9 +3,9 @@ import {JayElement} from "./element";
 export class ReferencesManager {
     private refs = {};
 
-    get(id: string, autoCreate: boolean = false): Reference<any> | undefined {
+    get(id: string, autoCreate: boolean = false): DynamicReferenceInternal<any> | undefined {
         if (!this.refs[id] && autoCreate)
-            this.refs[id] = new Reference();
+            this.refs[id] = new DynamicReferenceInternal();
         return this.refs[id];
     }
 
@@ -37,7 +37,7 @@ interface ReferenceOperations<T> {
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: EventListenerOptions | boolean): void
 }
 
-export interface ReferenceAPI<T> extends GlobalEventHandlers<T>, ReferenceOperations<T>{}
+export interface DynamicReference<T> extends GlobalEventHandlers<T>, ReferenceOperations<T>{}
 
 const proxyHandler = {
     get: function (target, prop /*, receiver*/) {
@@ -48,11 +48,11 @@ const proxyHandler = {
         return target[prop];
     }
 }
-export function newReferenceProxy<T>(ref: Reference<T>): ReferenceAPI<T> {
-    return new Proxy(ref, proxyHandler) as ReferenceAPI<T>;
+export function newReferenceProxy<T>(ref: DynamicReferenceInternal<T>): DynamicReference<T> {
+    return new Proxy(ref, proxyHandler) as DynamicReference<T>;
 }
 
-export class Reference<T> implements ReferenceOperations<T> {
+export class DynamicReferenceInternal<T> implements ReferenceOperations<T> {
     private elements: Set<ElementReference<T>> = new Set();
     private listeners = [];
 

@@ -1,15 +1,15 @@
 import {describe, it} from "@jest/globals";
 import {ConstructContext, dynamicText as dt, element as e, JayElement,} from "../../lib/element";
-import {ReferenceAPI} from "../../lib/node-reference";
+import {DynamicReference} from "../../lib/node-reference";
 
 interface ViewState {
     count: number
 }
 
 interface CounterElement extends JayElement<ViewState> {
-    inc: ReferenceAPI<ViewState>,
-    dec: ReferenceAPI<ViewState>,
-    count: ReferenceAPI<ViewState>
+    inc: DynamicReference<ViewState>,
+    dec: DynamicReference<ViewState>,
+    count: DynamicReference<ViewState>
 }
 
 function renderCounter(viewState: ViewState): CounterElement {
