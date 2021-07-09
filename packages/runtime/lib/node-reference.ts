@@ -36,7 +36,7 @@ type GlobalEventHandlers<T> = {
 }
 
 interface ReferenceOperations<T> {
-    one(): HTMLElement
+    first(): HTMLElement
     forEach(handler: (element: HTMLElement) => void)
     addEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: boolean | AddEventListenerOptions): void
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: EventListenerOptions | boolean): void
@@ -46,7 +46,7 @@ export interface DynamicReference<T> extends GlobalEventHandlers<T>, ReferenceOp
 
 const proxyHandler = {
     get: function (target, prop /*, receiver*/) {
-        if (prop.indexOf("on") === 0 && prop !== 'one') {
+        if (prop.indexOf("on") === 0 && prop !== 'first') {
             let event = prop.substring(2);
             return listener => target.addEventListener(event, listener);
         }
