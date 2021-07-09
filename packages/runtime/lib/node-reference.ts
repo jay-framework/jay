@@ -1,28 +1,33 @@
 import {JayElement} from "./element";
 
 export class ReferencesManager {
-    private refs = {};
+    private dynamicRefs = {};
+    private staticRefs = {};
 
-    get(id: string, autoCreate: boolean = false): DynamicReferenceInternal<any> | undefined {
-        if (!this.refs[id] && autoCreate)
-            this.refs[id] = new DynamicReferenceInternal();
-        return this.refs[id];
+    getDynamic(id: string, autoCreate: boolean = false): DynamicReferenceInternal<any> | undefined {
+        if (!this.dynamicRefs[id] && autoCreate)
+            this.dynamicRefs[id] = new DynamicReferenceInternal();
+        return this.dynamicRefs[id];
     }
 
-    addRef(id: string, ref: ElementReference<any>) {
-        this.get(id, true).addRef(ref);
+    addDynamicRef(id: string, ref: ElementReference<any>) {
+        this.getDynamic(id, true).addRef(ref);
     }
 
-    removeRef(id: string, ref: ElementReference<any>) {
-        this.get(id, true).removeRef(ref);
+    removeDynamicRef(id: string, ref: ElementReference<any>) {
+        this.getDynamic(id, true).removeRef(ref);
+    }
+
+    addStaticRef(id: string, ref: HTMLElement) {
+        this.staticRefs[id] = ref;
     }
 
     applyToElement<T>(element: JayElement<T>): JayElement<T> {
-        let enrichedRefs = Object.keys(this.refs).reduce((enriched, key) => {
-            enriched[key] = newReferenceProxy(this.refs[key])
+        let enrichedRefs = Object.keys(this.dynamicRefs).reduce((enriched, key) => {
+            enriched[key] = newReferenceProxy(this.dynamicRefs[key])
             return enriched;
         }, {})
-        return {...enrichedRefs, ...element};
+        return {...enrichedRefs, ...this.staticRefs, ...element};
     }
 }
 

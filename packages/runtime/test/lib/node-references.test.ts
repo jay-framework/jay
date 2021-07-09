@@ -21,8 +21,8 @@ describe('ReferencesManager', () => {
 
     it("should register events on an element", () => {
         const ref = new ElementReference(jayElement1.dom, "");
-        referenceManager.addRef(id1, ref);
-        referenceManager.get(id1).addEventListener('click', mockCallback);
+        referenceManager.addDynamicRef(id1, ref);
+        referenceManager.getDynamic(id1).addEventListener('click', mockCallback);
 
         jayElement1.dom.click();
 
@@ -31,9 +31,9 @@ describe('ReferencesManager', () => {
 
     it("should remove events from an element", () => {
         const ref = new ElementReference(jayElement1.dom, "");
-        referenceManager.addRef(id1, ref);
-        referenceManager.get(id1).addEventListener('click', mockCallback);
-        referenceManager.get(id1).removeEventListener('click', mockCallback);
+        referenceManager.addDynamicRef(id1, ref);
+        referenceManager.getDynamic(id1).addEventListener('click', mockCallback);
+        referenceManager.getDynamic(id1).removeEventListener('click', mockCallback);
 
         jayElement1.dom.click();
 
@@ -42,8 +42,8 @@ describe('ReferencesManager', () => {
 
     it("should enrich events with the data context", () => {
         const ref = new ElementReference(jayElement1.dom, SOME_VALUE);
-        referenceManager.addRef(id1, ref);
-        referenceManager.get(id1).addEventListener('click', mockCallback);
+        referenceManager.addDynamicRef(id1, ref);
+        referenceManager.getDynamic(id1).addEventListener('click', mockCallback);
 
         jayElement1.dom.click();
 
@@ -54,8 +54,8 @@ describe('ReferencesManager', () => {
 
     it("should enrich events with the updated data context", () => {
         const ref = new ElementReference(jayElement1.dom, SOME_VALUE);
-        referenceManager.addRef(id1, ref);
-        referenceManager.get(id1).addEventListener('click', mockCallback);
+        referenceManager.addDynamicRef(id1, ref);
+        referenceManager.getDynamic(id1).addEventListener('click', mockCallback);
         ref.update(ANOTHER_VALUE)
 
         jayElement1.dom.click();
@@ -69,10 +69,10 @@ describe('ReferencesManager', () => {
         const ref1 = new ElementReference(jayElement1.dom, "");
         const ref2 = new ElementReference(jayElement2.dom, "");
         const ref3 = new ElementReference(jayElement3.dom, "");
-        referenceManager.addRef(id1, ref1);
-        referenceManager.addRef(id1, ref2);
-        referenceManager.addRef(id2, ref3);
-        referenceManager.get(id1).addEventListener('click', mockCallback);
+        referenceManager.addDynamicRef(id1, ref1);
+        referenceManager.addDynamicRef(id1, ref2);
+        referenceManager.addDynamicRef(id2, ref3);
+        referenceManager.getDynamic(id1).addEventListener('click', mockCallback);
 
         jayElement1.dom.click();
         jayElement2.dom.click();
@@ -86,9 +86,9 @@ describe('ReferencesManager', () => {
         const ref1 = new ElementReference(jayElement1.dom, "");
         const ref2 = new ElementReference(jayElement2.dom, "");
         const ref3 = new ElementReference(jayElement3.dom, "");
-        referenceManager.addRef(id1, ref1);
-        referenceManager.addRef(id1, ref2);
-        referenceManager.addRef(id2, ref3);
+        referenceManager.addDynamicRef(id1, ref1);
+        referenceManager.addDynamicRef(id1, ref2);
+        referenceManager.addDynamicRef(id2, ref3);
         jayRootElement = referenceManager.applyToElement(jayRootElement)
 
         jayRootElement.id1.addEventListener('click', mockCallback);
@@ -104,9 +104,9 @@ describe('ReferencesManager', () => {
         const ref1 = new ElementReference(jayElement1.dom, "");
         const ref2 = new ElementReference(jayElement2.dom, "");
         const ref3 = new ElementReference(jayElement3.dom, "");
-        referenceManager.addRef(id1, ref1);
-        referenceManager.addRef(id1, ref2);
-        referenceManager.addRef(id2, ref3);
+        referenceManager.addDynamicRef(id1, ref1);
+        referenceManager.addDynamicRef(id1, ref2);
+        referenceManager.addDynamicRef(id2, ref3);
         jayRootElement = referenceManager.applyToElement(jayRootElement)
 
         jayRootElement.id1.onclick(mockCallback);

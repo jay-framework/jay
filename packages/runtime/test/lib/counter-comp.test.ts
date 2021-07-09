@@ -1,15 +1,14 @@
 import {describe, it} from "@jest/globals";
 import {ConstructContext, dynamicText as dt, element as e, JayElement,} from "../../lib/element";
-import {DynamicReference} from "../../lib/node-reference";
 
 interface ViewState {
     count: number
 }
 
 interface CounterElement extends JayElement<ViewState> {
-    inc: DynamicReference<ViewState>,
-    dec: DynamicReference<ViewState>,
-    count: DynamicReference<ViewState>
+    inc: HTMLElement,
+    dec: HTMLElement,
+    count: HTMLElement
 }
 
 function renderCounter(viewState: ViewState): CounterElement {
@@ -39,15 +38,15 @@ function Counter(initialValue: number): CounterComponent {
     let jayElement = renderCounter({count: initialValue});
     let count = initialValue;
 
-    jayElement.inc.onclick(() => {
+    jayElement.inc.onclick = () => {
         count += 1;
         jayElement.update({count});
-    })
+    }
 
-    jayElement.dec.onclick(() => {
+    jayElement.dec.onclick = () => {
         count -= 1;
         jayElement.update({count});
-    })
+    }
 
     return {
         element: jayElement,
@@ -59,25 +58,25 @@ describe('counter component', () => {
     it("create counter with initial value 6", () => {
         let counter = Counter(6);
 
-        expect(counter.element.count.one().textContent).toBe('6');
+        expect(counter.element.count.textContent).toBe('6');
     });
 
     it("inc the counter", () => {
         let counter = Counter(6);
 
-        counter.element.inc.one().click();
-        expect(counter.element.count.one().textContent).toBe('7');
+        counter.element.inc.click();
+        expect(counter.element.count.textContent).toBe('7');
 
     });
 
     it("inc and dec the counter", () => {
         let counter = Counter(6);
 
-        counter.element.inc.one().click();
-        counter.element.inc.one().click();
-        counter.element.inc.one().click();
-        counter.element.dec.one().click();
-        expect(counter.element.count.one().textContent).toBe('8');
+        counter.element.inc.click();
+        counter.element.inc.click();
+        counter.element.inc.click();
+        counter.element.dec.click();
+        expect(counter.element.count.textContent).toBe('8');
     });
 
 });

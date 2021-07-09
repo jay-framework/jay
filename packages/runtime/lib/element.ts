@@ -281,9 +281,14 @@ export function dynamicElement<T, A extends Array<any>>(
 function constructJayElement<T, A extends Array<any>>(refId: string, e: HTMLElement, context: ConstructContext<A>, updates: updateFunc<T>[]) {
     if (refId) {
         // move ref creation to mount and unmount
-        let ref = new ElementReference(e, context.currData)
-        updates.push(ref.update);
-        context.refManager.addRef(refId, ref)
+        if (context.forStaticElements) {
+            context.refManager.addStaticRef(refId, e)
+        }
+        else {
+            let ref = new ElementReference(e, context.currData)
+            updates.push(ref.update);
+            context.refManager.addDynamicRef(refId, ref)
+        }
     }
     return {
         dom: e,
