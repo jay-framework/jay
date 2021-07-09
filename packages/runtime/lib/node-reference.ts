@@ -77,7 +77,7 @@ export class DynamicReferenceInternal<T> implements ReferenceOperations<T> {
         this.elements.forEach(ref => handler(ref.element));
     }
 
-    one(): HTMLElement {
+    first(): HTMLElement {
         return this.elements.values().next().value.element;
     }
 
