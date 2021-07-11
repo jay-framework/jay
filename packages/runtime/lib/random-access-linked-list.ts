@@ -10,7 +10,20 @@ export interface LinkedListItem<T, S> {
     prev: LinkedListItem<T, S> | typeof BoF,
 }
 
-export class RandomAccessLinkedList<T,S> {
+/**
+ * hack for writing tests without typing, to reduce the need to cast items between LinkedListItem and BoF or EoF
+ */
+export interface UntypedRandomAccessLinkedList {
+    first()
+    last()
+    get(id)
+    has(id)
+    add(obj, beforeItem, attach?)
+    remove(item)
+    move(itemToMove, toBefore)
+}
+
+export class RandomAccessLinkedList<T,S> implements UntypedRandomAccessLinkedList {
     private _matchBy: string;
     private _map: any;
     private _last: LinkedListItem<T, S> | typeof BoF;

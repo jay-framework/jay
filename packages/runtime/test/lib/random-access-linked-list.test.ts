@@ -1,4 +1,10 @@
-import {BoF, EoF, LinkedListItem, RandomAccessLinkedList} from '../../lib/random-access-linked-list';
+import {
+    BoF,
+    EoF,
+    LinkedListItem,
+    RandomAccessLinkedList,
+    UntypedRandomAccessLinkedList
+} from '../../lib/random-access-linked-list';
 import {describe, expect, it} from '@jest/globals'
 
 interface Item {
@@ -32,7 +38,7 @@ describe('random-access-linked-list', () => {
     it('create a list from array', () => {
         const arr = [itemA, itemB, itemC, itemD, itemE];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
 
         expect(list.first().value).toBe(itemA);
         expect(list.first().next.value).toBe(itemB);
@@ -45,7 +51,7 @@ describe('random-access-linked-list', () => {
     it('create a 2 way list from array', () => {
         const arr = [itemA, itemB, itemC, itemD, itemE];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
 
         expect(list.first().prev).toBe(BoF);
         expect(list.first().next.prev.value).toBe(itemA);
@@ -57,7 +63,7 @@ describe('random-access-linked-list', () => {
     it('allows direct access to last', () => {
         const arr = [itemA, itemB, itemC, itemD, itemE];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id')  as UntypedRandomAccessLinkedList;
 
         expect(list.last().value).toBe(itemE);
         expect(list.last().prev.value).toBe(itemD);
@@ -66,7 +72,7 @@ describe('random-access-linked-list', () => {
     it('allows random access to middle of the list by id', () => {
         const arr = [itemA, itemB, itemC, itemD, itemE];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id')  as UntypedRandomAccessLinkedList;
 
         expect(list.get(itemC.id).value).toBe(itemC);
         expect(list.get(itemC.id).next.value).toBe(itemD);
@@ -77,7 +83,7 @@ describe('random-access-linked-list', () => {
     it('supports has', () => {
         const arr = [itemA, itemB, itemC, itemD, itemE];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
 
         expect(list.has(itemC.id)).toBe(true);
         expect(list.has(itemX.id)).toBe(false);
@@ -98,7 +104,7 @@ describe('random-access-linked-list', () => {
     it('support add', () => {
         const arr = [itemA, itemB, itemC];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
         list.add(itemD, list.get(itemB.id));
 
         let listAsArray = listToArray(list);
@@ -113,7 +119,7 @@ describe('random-access-linked-list', () => {
     it('support add first', () => {
         const arr = [itemA, itemB, itemC];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
         list.add(itemD, list.get(itemA.id));
 
         let listAsArray = listToArray(list);
@@ -128,7 +134,7 @@ describe('random-access-linked-list', () => {
     it('support add last', () => {
         const arr = [itemA, itemB, itemC];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
         list.add(itemD, EoF);
 
         let listAsArray = listToArray(list);
@@ -143,7 +149,7 @@ describe('random-access-linked-list', () => {
     it('support add on empty list', () => {
         const arr = [];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
         list.add(itemD, EoF);
         let listAsArray = listToArray(list);
         expect(listAsArray).toEqual([itemD]);
@@ -155,7 +161,7 @@ describe('random-access-linked-list', () => {
     it('support remove', () => {
         const arr = [itemA, itemB, itemC];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
         list.remove(list.get(itemB.id));
 
         let listAsArray = listToArray(list);
@@ -168,7 +174,7 @@ describe('random-access-linked-list', () => {
     it('support remove first', () => {
         const arr = [itemA, itemB, itemC];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
         list.remove(list.get(itemA.id));
 
         let listAsArray = listToArray(list);
@@ -181,7 +187,7 @@ describe('random-access-linked-list', () => {
     it('support remove last', () => {
         const arr = [itemA, itemB, itemC];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
         list.remove(list.get(itemC.id));
 
         let listAsArray = listToArray(list);
@@ -194,7 +200,7 @@ describe('random-access-linked-list', () => {
     it('support remove all', () => {
         const arr = [itemA, itemB, itemC];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
         list.remove(list.get(itemB.id));
         list.remove(list.get(itemA.id));
         list.remove(list.get(itemC.id));
@@ -211,7 +217,7 @@ describe('random-access-linked-list', () => {
     it('support move forward', () => {
         const arr = [itemA, itemB, itemC, itemD, itemE];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
         list.move(list.get(itemB.id), list.get(itemE.id));
 
         let listAsArray = listToArray(list);
@@ -228,7 +234,7 @@ describe('random-access-linked-list', () => {
     it('support move to last', () => {
         const arr = [itemA, itemB, itemC, itemD, itemE];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
         list.move(list.get(itemB.id), EoF);
 
         let listAsArray = listToArray(list);
@@ -245,7 +251,7 @@ describe('random-access-linked-list', () => {
     it('support move backwards', () => {
         const arr = [itemA, itemB, itemC, itemD, itemE];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
         list.move(list.get(itemD.id), list.get(itemB.id));
 
         let listAsArray = listToArray(list);
@@ -262,7 +268,7 @@ describe('random-access-linked-list', () => {
     it('support move to first', () => {
         const arr = [itemA, itemB, itemC, itemD, itemE];
 
-        const list = new RandomAccessLinkedList(arr, 'id');
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
         list.move(list.get(itemD.id), list.get(itemA.id));
 
         let listAsArray = listToArray(list);
@@ -277,7 +283,7 @@ describe('random-access-linked-list', () => {
     });
 
     it('stores attachements', () => {
-        const list = new RandomAccessLinkedList([], 'id');
+        const list = new RandomAccessLinkedList([], 'id') as UntypedRandomAccessLinkedList;
         list.add(itemA, EoF, attach1);
         list.add(itemB, EoF, attach2);
         list.add(itemC, EoF, attach3);
@@ -287,7 +293,7 @@ describe('random-access-linked-list', () => {
         expect(list.first().next.next.attach).toBe(attach3);
     })
     it('moves itesm with attachements', () => {
-        const list = new RandomAccessLinkedList<Item, string>([], 'id');
+        const list = new RandomAccessLinkedList<Item, string>([], 'id') as UntypedRandomAccessLinkedList;
         list.add(itemA, EoF, attach1);
         list.add(itemB, EoF, attach2);
         list.add(itemC, EoF, attach3);
