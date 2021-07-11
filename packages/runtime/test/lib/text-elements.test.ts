@@ -3,6 +3,7 @@ import {
     dynamicText as dt, ConstructContext
 } from '../../lib/element';
 import {describe, expect, it} from '@jest/globals'
+import {expectE} from "./test-utils";
 
 describe('text-element', () => {
 
@@ -26,27 +27,27 @@ describe('text-element', () => {
     it('should render string as text', () => {
         let jayElement = e('div', {"className": 'item'}, [dt(constructContext,
                 vs => vs.firstName)]);
-        expect(jayElement.dom).toHaveTextContent(initial.firstName)
+        expectE(jayElement.dom).toHaveTextContent(initial.firstName)
     })
 
     it('should update string as text', () => {
         let jayElement = e('div', {"className": 'item'}, [dt(constructContext,
             vs => vs.firstName)]);
         jayElement.update(updatedName);
-        expect(jayElement.dom).toHaveTextContent(updatedName.firstName)
+        expectE(jayElement.dom).toHaveTextContent(updatedName.firstName)
     })
 
     it('should render complex string as text', () => {
         let jayElement = e('div', {"className": 'item'}, [dt(constructContext,
                 vs => `${vs.firstName} ${vs.lastName} - age: ${vs.age}, did ${vs.graduated?'':'not'} graduate`)]);
-        expect(jayElement.dom).toHaveTextContent('John smith - age: 28, did not graduate');
+        expectE(jayElement.dom).toHaveTextContent('John smith - age: 28, did not graduate');
     })
 
     it('should render complex string as text', () => {
         let jayElement = e('div', {"className": 'item'}, [dt(constructContext,
             vs => `${vs.firstName} ${vs.lastName} - age: ${vs.age}, did ${vs.graduated?'':'not'} graduate`)]);
         jayElement.update(updatedNameAndGraduate);
-        expect(jayElement.dom).toHaveTextContent('Terry smith - age: 28, did graduate');
+        expectE(jayElement.dom).toHaveTextContent('Terry smith - age: 28, did graduate');
     })
 });
 
