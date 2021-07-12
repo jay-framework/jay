@@ -6,11 +6,15 @@ import {ElementReference, ReferencesManager} from "./node-reference";
 const STYLE = 'style';
 const REF = 'ref';
 type updateFunc<T> = (newData:T) => void;
+type mountFunc = () => void;
 export const noopUpdate: updateFunc<any> = (_newData:any): void => {};
+const noopMount: mountFunc = (): void => {}
 
 export interface JayElement<T> {
     dom: HTMLElement,
     update: updateFunc<T>
+    mount: mountFunc,
+    unmount: mountFunc
 }
 
 export interface TextElement<T> {
@@ -50,39 +54,6 @@ function setAttribute<T>(target: HTMLElement | CSSStyleDeclaration, key: string,
         target[key] = value;
 }
 
-function createBaseElement<T>(tagName: string, attributes: Attributes<T>): {e: HTMLElement, updates: updateFunc<T>[], refId?: string} {
-    let e = document.createElement(tagName);
-    let refId = undefined;
-    let updates: updateFunc<T>[] = [];
-    Object.entries(attributes).forEach(([key, value]) => {
-        if (key === STYLE) {
-            Object.entries(value).forEach(([styleKey, styleValue]) => {
-                setAttribute(e.style, styleKey, styleValue as string | DynamicAttribute<T>, updates);
-            })
-        }
-        else if (key === REF) {
-            refId = value;
-        }
-        else {
-            setAttribute(e, key, value as string | DynamicAttribute<T>, updates);
-        }
-    });
-    return {e, updates, refId};
-}
-
-function normalizeUpdates<T>(updates: Array<updateFunc<T>>): updateFunc<T> {
-    if (updates.length === 1)
-        return updates[0];
-    else if (updates.length > 0) {
-        return (newData) => {
-            updates.forEach(__update => __update(newData))
-        };
-    }
-    else {
-        return noopUpdate
-    }
-}
-
 export function conditional<T>(condition: (newData: T) => boolean, elem: JayElement<T> | TextElement<T> | string): Conditional<T> {
     if (typeof elem === 'string')
         return {condition, elem: text(elem)};
@@ -95,6 +66,9 @@ export interface Conditional<T> {
     elem: JayElement<T> | TextElement<T>
 }
 
+function isJayElement<T>(c: Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T>): c is JayElement<T> {
+    return (c as JayElement<T>).mount !== undefined;
+}
 function isCondition<T>(c: Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T>): c is Conditional<T> {
     return (c as Conditional<T>).condition !== undefined;
 }
@@ -118,9 +92,11 @@ function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<Ma
     instructions.forEach(instruction => {
         if (instruction.action === ITEM_ADDED) {
             group.ensureNode(instruction.elem.dom, instruction.pos)
+            instruction.elem.mount()
         }
         else if (instruction.action === ITEM_REMOVED) {
             group.removeNodeAt(instruction.pos)
+            instruction.elem.unmount();
         }
         else {
             group.moveNode(instruction.fromPos, instruction.pos)
@@ -128,29 +104,29 @@ function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<Ma
     });
 }
 
-function updateListItems<T>(itemsList: RandomAccessLinkedList<T, JayElement<T>>) {
-    let listItem = itemsList.first();
-    while (listItem !== EoF) {
-        listItem.attach.update(listItem.value);
-        listItem = listItem.next;
-    }
-
-}
-
-function mkUpdateCollection<T>(child: ForEach<T, any>, group: KindergartenGroup) {
+function mkUpdateCollection<T>(child: ForEach<T, any>, group: KindergartenGroup): [updateFunc<T>, mountFunc, mountFunc] {
     let lastItems = new List<T, JayElement<T>>([], child.matchBy);
-    return (newData: T) => {
+    let mount = () => lastItems.forEach((value, attach) => attach.mount);
+    let unmount = () => lastItems.forEach((value, attach) => attach.unmount);
+    const update = (newData: T) => {
         const items = child.getItems(newData);
         let itemsList = new List<T, JayElement<T>>(items, child.matchBy);
         let instructions = listCompare<T>(lastItems, itemsList, child.elemCreator);
         lastItems = itemsList;
         applyListChanges(group, instructions);
-        updateListItems(itemsList);
-    }
+        itemsList.forEach((value, elem) => elem.update(value))
+    };
+    return [update, mount, unmount]
 }
 
-function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup) {
-    return (newData: T) => {
+function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup): [updateFunc<T>, mountFunc, mountFunc] {
+
+    let mount = noopMount, unmount = noopMount;
+    if (isJayElement(child.elem) && child.elem.mount !== noopMount) {
+        mount = () => (child.elem as JayElement<T>).mount()
+        unmount = () => (child.elem as JayElement<T>).unmount()
+    }
+    const update = (newData: T) => {
         let result = child.condition(newData);
 
         if (result) {
@@ -159,6 +135,7 @@ function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup) {
         } else
             group.removeNode(child.elem.dom)
     };
+    return [update, mount, unmount];
 }
 
 export class ConstructContext<A extends Array<any>> {
@@ -184,14 +161,6 @@ export class ConstructContext<A extends Array<any>> {
         return new ConstructContext(ConstructContext.acc(this.data, t), this.refManager, false)
     }
 
-    forCondition<T>() {
-        return new ConstructContext(this.data, this.refManager, false)
-    }
-
-    static from<B extends Array<any>, T>(context: ConstructContext<B>, t: T) {
-        return new ConstructContext(ConstructContext.acc(context.data, t), context.refManager, false)
-    }
-
     static root<T>(t: T): ConstructContext<[T]> {
         return new ConstructContext([t])
     }
@@ -199,6 +168,7 @@ export class ConstructContext<A extends Array<any>> {
     static withRootContext<T, A extends ConstructContext<[T]>>(t: T, elementConstructor: (A) => JayElement<T>) {
         let context = new ConstructContext([t])
         let element = elementConstructor(context);
+        element.mount();
         return context.refManager.applyToElement(element);
     }
 }
@@ -231,7 +201,7 @@ export function element<T, A extends Array<any>>(
     children: Array<JayElement<T> | TextElement<T> | string> = [],
     context?: ConstructContext<A>):
     JayElement<T> {
-    let {e, updates, refId} = createBaseElement(tagName, attributes);
+    let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes, context);
     
     children.forEach(child => {
         if (typeof child === 'string')
@@ -239,8 +209,17 @@ export function element<T, A extends Array<any>>(
         e.append(child.dom);
         if (child.update !== noopUpdate)
             updates.push(child.update);
+        if (isJayElement(child) && child.mount !== noopMount) {
+            mounts.push(child.mount);
+            unmounts.push(child.unmount);
+        }
     });
-    return constructJayElement(refId, e, context, updates);
+    return {
+        dom: e,
+        update: normalizeUpdates(updates),
+        mount: normalizeMount(mounts),
+        unmount: normalizeMount(unmounts)
+    };
 }
 
 export function dynamicElement<T, A extends Array<any>>(
@@ -249,50 +228,102 @@ export function dynamicElement<T, A extends Array<any>>(
     children: Array<Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T> | string> = [],
     context?: ConstructContext<A>):
     JayElement<T> {
-    let {e, updates, refId} = createBaseElement(tagName, attributes);
+    let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes, context);
 
     let kindergarten = new Kindergarten(e);
     children.forEach(child => {
         if (typeof child === 'string')
             child = text(child);
         let group = kindergarten.newGroup();
-        let update = null;
+        let update = null, mount = noopMount, unmount = noopMount;
         if (isCondition(child)) {
-            update = mkUpdateCondition(child, group)
+            [update, mount, unmount] = mkUpdateCondition(child, group)
         }
         else if (isForEach(child)){
-            update = mkUpdateCollection(child, group);
+            [update, mount, unmount] = mkUpdateCollection(child, group);
         }
         else  {
             group.ensureNode(child.dom)
             if (child.update !== noopUpdate)
                 update = child.update;
         }
+        if (isJayElement(child) && child.mount !== noopMount) {
+            mount = child.mount;
+            unmount = child.unmount;
+        }
 
         if (update !== null) {
             update(context.data[0])
             updates.push(update);
         }
+
+        if (mount !== noopMount) {
+            mounts.push(mount);
+            unmounts.push(unmount);
+        }
     })
 
-    return constructJayElement(refId, e, context, updates);
-}
-
-function constructJayElement<T, A extends Array<any>>(refId: string, e: HTMLElement, context: ConstructContext<A>, updates: updateFunc<T>[]) {
-    if (refId) {
-        // move ref creation to mount and unmount
-        if (context.forStaticElements) {
-            context.refManager.addStaticRef(refId, e)
-        }
-        else {
-            let ref = new ElementReference(e, context.currData)
-            updates.push(ref.update);
-            context.refManager.addDynamicRef(refId, ref)
-        }
-    }
     return {
         dom: e,
-        update: normalizeUpdates(updates)
+        update: normalizeUpdates(updates),
+        mount: normalizeMount(mounts),
+        unmount: normalizeMount(unmounts)
     };
 }
 
+function createBaseElement<T, A extends Array<any>>(tagName: string, attributes: Attributes<T>, context: ConstructContext<A>):
+    {e: HTMLElement, updates: updateFunc<T>[], mounts: mountFunc[], unmounts: mountFunc[]} {
+    let e = document.createElement(tagName);
+    let updates: updateFunc<T>[] = [];
+    let mounts: mountFunc[] = []
+    let unmounts: mountFunc[] = []
+    Object.entries(attributes).forEach(([key, value]) => {
+        if (key === STYLE) {
+            Object.entries(value).forEach(([styleKey, styleValue]) => {
+                setAttribute(e.style, styleKey, styleValue as string | DynamicAttribute<T>, updates);
+            })
+        }
+        else if (key === REF) {
+            if (context.forStaticElements) {
+                context.refManager.addStaticRef(value as string, e)
+            }
+            else {
+                let ref = new ElementReference(e, context.currData)
+                updates.push(ref.update);
+                let refManager = context.refManager;
+                mounts.push(() => refManager.addDynamicRef(value as string, ref))
+                unmounts.push(() => refManager.removeDynamicRef(value as string, ref))
+            }
+        }
+        else {
+            setAttribute(e, key, value as string | DynamicAttribute<T>, updates);
+        }
+    });
+    return {e, updates, mounts, unmounts};
+}
+
+function normalizeUpdates<T>(updates: Array<updateFunc<T>>): updateFunc<T> {
+    if (updates.length === 1)
+        return updates[0];
+    else if (updates.length > 0) {
+        return (newData) => {
+            updates.forEach(__update => __update(newData))
+        };
+    }
+    else {
+        return noopUpdate
+    }
+}
+
+function normalizeMount(mounts: Array<mountFunc>): mountFunc {
+    if (mounts.length === 1)
+        return mounts[0];
+    else if (mounts.length > 0) {
+        return () => {
+            mounts.forEach(__update => __update())
+        };
+    }
+    else {
+        return noopMount
+    }
+}

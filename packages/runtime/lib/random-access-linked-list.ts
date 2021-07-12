@@ -21,6 +21,7 @@ export interface UntypedRandomAccessLinkedList {
     add(obj, beforeItem, attach?)
     remove(item)
     move(itemToMove, toBefore)
+    forEach(handler: (item, attach) => void)
 }
 
 export class RandomAccessLinkedList<T,S> implements UntypedRandomAccessLinkedList {
@@ -85,6 +86,14 @@ export class RandomAccessLinkedList<T,S> implements UntypedRandomAccessLinkedLis
             (item.prev as LinkedListItem<T,S>).next = item.next;
             (item.next as LinkedListItem<T,S>).prev = item.prev;
         }         
+    }
+
+    forEach(handler: (value: T, attach: S) => void) {
+        let listItem = this.first();
+        while (listItem !== EoF) {
+            handler(listItem.value, listItem.attach);
+            listItem = listItem.next;
+        }
     }
 
     add(obj: T, beforeItem: LinkedListItem<T,S> | typeof EoF = EoF, attach: S = undefined) {

@@ -42,7 +42,7 @@ export function listCompare<T>(oldArray: RandomAccessLinkedList<T, JayElement<T>
             if (!newList.has(oldListItem.id)) {
                 // remove the item
                 // process.stdout.write(`remove ${oldListItem.id} ${index}\n`);
-                instructions.push({action: ITEM_REMOVED, item: oldListItem.value, pos: index});
+                instructions.push({action: ITEM_REMOVED, item: oldListItem.value, pos: index, elem: oldListItem.attach});
                 oldList.remove(oldListItem);
                 oldListItem = oldListItem.next;
             }
@@ -83,7 +83,7 @@ export function listCompare<T>(oldArray: RandomAccessLinkedList<T, JayElement<T>
     }
     while (oldListItem !== EoF) {
         // process.stdout.write(`remove ${oldListItem.id} ${oldIndex}\n`);
-        instructions.push({action: ITEM_REMOVED, item: oldListItem.value, pos: oldIndex});
+        instructions.push({action: ITEM_REMOVED, item: oldListItem.value, pos: oldIndex, elem: oldListItem.attach});
         oldList.remove(oldListItem);
         oldListItem = oldListItem.next;
     }
