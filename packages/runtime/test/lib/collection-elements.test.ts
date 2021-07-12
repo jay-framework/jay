@@ -141,7 +141,7 @@ describe('collection-element', () => {
             expect(count).toBe(3);
         })
 
-        it('should register event on a button', () => {
+        it('should register and invoke event on a button', () => {
             let todoListElement = makeElement({items: [item1, item2, item3]});
             let eventCount = 0;
             let savedItem = undefined;
