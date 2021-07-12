@@ -1,6 +1,6 @@
 import {Kindergarten, KindergartenGroup} from "./kindergarden";
 import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "./list-compare";
-import {EoF, RandomAccessLinkedList, RandomAccessLinkedList as List} from "./random-access-linked-list";
+import {RandomAccessLinkedList as List} from "./random-access-linked-list";
 import {ElementReference, ReferencesManager} from "./node-reference";
 
 const STYLE = 'style';
@@ -8,7 +8,7 @@ const REF = 'ref';
 type updateFunc<T> = (newData:T) => void;
 type mountFunc = () => void;
 export const noopUpdate: updateFunc<any> = (_newData:any): void => {};
-const noopMount: mountFunc = (): void => {}
+export const noopMount: mountFunc = (): void => {}
 
 export interface JayElement<T> {
     dom: HTMLElement,
@@ -19,7 +19,9 @@ export interface JayElement<T> {
 
 export interface TextElement<T> {
     dom: Text,
-    update: updateFunc<T>
+    update: updateFunc<T>,
+    mount: mountFunc,
+    unmount: mountFunc
 }
 
 export interface DynamicAttribute<T> {
@@ -176,7 +178,9 @@ export class ConstructContext<A extends Array<any>> {
 function text<T>(content: string): TextElement<T> {
     return {
         dom: document.createTextNode(content),
-        update: noopUpdate
+        update: noopUpdate,
+        mount: noopMount,
+        unmount: noopMount
     }
 }
 
@@ -191,7 +195,9 @@ export function dynamicText<T, A extends Array<any>>(context: ConstructContext<A
             if (newContent !== content)
                 n.textContent = newContent;
             content = newContent;
-        }
+        },
+        mount: noopMount,
+        unmount: noopMount
     }
 }
 
@@ -209,7 +215,7 @@ export function element<T, A extends Array<any>>(
         e.append(child.dom);
         if (child.update !== noopUpdate)
             updates.push(child.update);
-        if (isJayElement(child) && child.mount !== noopMount) {
+        if (child.mount !== noopMount) {
             mounts.push(child.mount);
             unmounts.push(child.unmount);
         }
@@ -235,7 +241,7 @@ export function dynamicElement<T, A extends Array<any>>(
         if (typeof child === 'string')
             child = text(child);
         let group = kindergarten.newGroup();
-        let update = null, mount = noopMount, unmount = noopMount;
+        let update = noopUpdate, mount = noopMount, unmount = noopMount;
         if (isCondition(child)) {
             [update, mount, unmount] = mkUpdateCondition(child, group)
         }
@@ -246,13 +252,13 @@ export function dynamicElement<T, A extends Array<any>>(
             group.ensureNode(child.dom)
             if (child.update !== noopUpdate)
                 update = child.update;
-        }
-        if (isJayElement(child) && child.mount !== noopMount) {
-            mount = child.mount;
-            unmount = child.unmount;
+            if (child.mount !== noopMount) {
+                mount = child.mount;
+                unmount = child.unmount;
+            }
         }
 
-        if (update !== null) {
+        if (update !== noopUpdate) {
             update(context.data[0])
             updates.push(update);
         }
