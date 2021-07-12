@@ -165,6 +165,13 @@ describe('collection-element', () => {
             expect(count).toBe(2);
         })
 
+        it('should add an item to the ref on update', () => {
+            let todoListElement = makeElement({items: [item1, item2, item3]});
+            todoListElement.update({items: [item1, item3, item2, item4]});
+            let count = 0;
+            todoListElement.done.forEach(el => count += 1)
+            expect(count).toBe(4);
+        })
     })
 });
 
