@@ -113,7 +113,7 @@ describe('collection-element', () => {
 
     describe('references and events', () => {
         interface TodoListElement extends JayElement<ViewState> {
-            done: DynamicReference<ViewState>
+            done: DynamicReference<Item>
         }
         function makeElement(data: ViewState): TodoListElement {
             return ConstructContext.withRootContext(data, (context: ConstructContext<[ViewState]>) =>
@@ -139,6 +139,19 @@ describe('collection-element', () => {
             let count = 0;
             todoListElement.done.forEach(el => count += 1)
             expect(count).toBe(3);
+        })
+
+        it('should register event on a button', () => {
+            let todoListElement = makeElement({items: [item1, item2, item3]});
+            let eventCount = 0;
+            let savedItem = undefined;
+            todoListElement.done.onclick = (ev, item) => {
+                eventCount += 1;
+                savedItem = item;
+            }
+            todoListElement.done.byDataContext(item => item === item2).click()
+            expect(savedItem).toBe(item2)
+            expect(eventCount).toBe(1);
         })
 
     })

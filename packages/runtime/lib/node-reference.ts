@@ -32,11 +32,11 @@ export class ReferencesManager {
 }
 
 type GlobalEventHandlers<T> = {
-    [Property in keyof GlobalEventHandlersEventMap as `on${Property}`]: (listener: JayEventListener<GlobalEventHandlersEventMap[Property], T>) => void;
+    [Property in keyof GlobalEventHandlersEventMap as `on${Property}`]: JayEventListener<GlobalEventHandlersEventMap[Property], T>;
 }
 
 interface ReferenceOperations<T> {
-    first(): HTMLElement
+    byDataContext(predicate: (t:T) => boolean): HTMLElement
     forEach(handler: (element: HTMLElement) => void)
     addEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: boolean | AddEventListenerOptions): void
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: EventListenerOptions | boolean): void
@@ -45,12 +45,14 @@ interface ReferenceOperations<T> {
 export interface DynamicReference<T> extends GlobalEventHandlers<T>, ReferenceOperations<T>{}
 
 const proxyHandler = {
-    get: function (target, prop /*, receiver*/) {
-        if (prop.indexOf("on") === 0 && prop !== 'first') {
+    set: function(target, prop, value): boolean {
+        if (prop.indexOf("on") === 0) {
             let event = prop.substring(2);
-            return listener => target.addEventListener(event, listener);
+            target.addEventListener(event, value);
+            return true;
         }
-        return target[prop];
+        else
+            target[prop] = value;
     }
 }
 export function newReferenceProxy<T>(ref: DynamicReferenceInternal<T>): DynamicReference<T> {
@@ -77,8 +79,10 @@ export class DynamicReferenceInternal<T> implements ReferenceOperations<T> {
         this.elements.forEach(ref => handler(ref.element));
     }
 
-    first(): HTMLElement {
-        return this.elements.values().next().value.element;
+    byDataContext(predicate: (t:T) => boolean): HTMLElement {
+        for (let elemRef of this.elements)
+            if (elemRef.match(predicate))
+                return elemRef.element
     }
 
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: EventListenerOptions | boolean): void {
@@ -122,6 +126,10 @@ export class ElementReference<T> {
             this.listeners.splice(index, 1)
             this.element.removeEventListener(type, item.wrappedHandler, options)
         }
+    }
+
+    match(predicate: (t:T) => boolean): boolean {
+        return predicate(this.dataContent);
     }
     
     update = (newData: T) => {
