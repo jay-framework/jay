@@ -292,7 +292,7 @@ describe('random-access-linked-list', () => {
         expect(list.first().next.attach).toBe(attach2);
         expect(list.first().next.next.attach).toBe(attach3);
     })
-    it('moves itesm with attachements', () => {
+    it('moves items with attachements', () => {
         const list = new RandomAccessLinkedList<Item, string>([], 'id') as UntypedRandomAccessLinkedList;
         list.add(itemA, EoF, attach1);
         list.add(itemB, EoF, attach2);
@@ -305,5 +305,23 @@ describe('random-access-linked-list', () => {
         expect(list.first().next.attach).toBe(attach1);
         expect(list.first().next.next.attach).toBe(attach3);
 
+    })
+
+    it('runs for each on every item of the list', () => {
+        const list = new RandomAccessLinkedList([], 'id') as UntypedRandomAccessLinkedList;
+        list.add(itemA, EoF, attach1);
+        list.add(itemB, EoF, attach2);
+        list.add(itemC, EoF, attach3);
+
+        const mockCallback = jest.fn((item, attach) => {});
+        list.forEach(mockCallback)
+
+        expect(mockCallback.mock.calls.length).toBe(3);
+        expect(mockCallback.mock.calls[0][0]).toBe(itemA);
+        expect(mockCallback.mock.calls[0][1]).toBe(attach1);
+        expect(mockCallback.mock.calls[1][0]).toBe(itemB);
+        expect(mockCallback.mock.calls[1][1]).toBe(attach2);
+        expect(mockCallback.mock.calls[2][0]).toBe(itemC);
+        expect(mockCallback.mock.calls[2][1]).toBe(attach3);
     })
 });

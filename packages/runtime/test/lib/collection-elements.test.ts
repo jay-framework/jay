@@ -154,6 +154,17 @@ describe('collection-element', () => {
             expect(eventCount).toBe(1);
         })
 
+        it('should remove a todo item on click on the done button', () => {
+            let todoListElement = makeElement({items: [item1, item2, item3]});
+            todoListElement.done.onclick = (ev, item) => {
+                todoListElement.update({items: [item1, item3]})
+            }
+            todoListElement.done.byDataContext(item => item === item2).click()
+            let count = 0;
+            todoListElement.done.forEach(el => count += 1)
+            expect(count).toBe(2);
+        })
+
     })
 });
 
