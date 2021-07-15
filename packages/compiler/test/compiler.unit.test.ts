@@ -3,6 +3,8 @@ import {describe, expect, it} from '@jest/globals'
 import stripMargin from '@caiogondim/strip-margin'
 import {JayArrayType, JayBoolean, JayDate, JayNumber, JayObjectType, JayString} from "../lib/parse-jay-file";
 import {promises} from 'fs';
+import {expectE} from './equal-with-compressed-whitespace';
+
 const readFile = promises.readFile;
 
 const readSourceFile = async (folder) => (await readFile(`./test/fixtures/${folder}/source.jay.html`)).toString().trim()
@@ -83,7 +85,7 @@ describe('compiler', () => {
         it('for simple file with dynamic text', async () => {
             const jayFile = await readSourceFile('simple-dynamic-text');
             let runtimeFile = generateRuntimeFile(jayFile);
-            expect(runtimeFile.val).toEqual(await readGeneratedFile('simple-dynamic-text'));
+            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('simple-dynamic-text'));
         })
 
         it('for simple file with static text', async () => {

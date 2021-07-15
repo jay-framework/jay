@@ -11,6 +11,11 @@
     "test": "pegjs --allowed-start-rules start,condition,accessor,Identifier lib/parse-expressions.pegjs && jest",
     "build": "pegjs --allowed-start-rules start,condition,accessor,Identifier lib/parse-expressions.pegjs && tsc"
   },
+  "jest": {
+    "setupFilesAfterEnv": [
+      "./jest-setup.js"
+    ]
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {

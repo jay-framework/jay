@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, ConstructContext} from "jay-runtime";
 
 interface ViewState {
   text: string,
@@ -6,10 +6,11 @@ interface ViewState {
 }
 
 export function render(viewState: ViewState): JayElement<ViewState> {
-  return e('div', {}, [
-    e('div', {}, [dt(viewState, vs => vs.text)]),
-    e('div', {}, ['static']),
-    e('div', {}, [dt(viewState, vs => vs.text2)])
-  ]);
+  return ConstructContext.withRootContext(viewState, (context: ConstructContext<[ViewState]>) =>
+      e('div', {}, [
+        e('div', {}, [dt(context, vs => vs.text)]),
+        e('div', {}, ['static']),
+        e('div', {}, [dt(context, vs => vs.text2)])
+      ]));
 }
 
