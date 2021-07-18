@@ -6,7 +6,7 @@
     "d": "node node_modules/jay-cli/dist/index.js ./lib",
     "rollup": "rollup --config ./rollup.config.js",
     "copy": "cp lib/index.html dist/index.html && cp lib/index.css dist/index.css",
-    "build": "npm run rollup && npm run copy"
+    "build": "npm run d && npm run rollup && npm run copy"
   },
   "dependencies": {
     "jay-runtime": "1.0.0"

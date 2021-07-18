@@ -3,6 +3,7 @@ import collections from './collections-data';
 import composite from './composite-data';
 import conditions from './conditions-data';
 import benchmark from './benchmark';
+import * as Counter from './counter.comp';
 
 function ex(name: string, render, makeData: () => (index: number) => any) {
     return {name, render, makeData}
