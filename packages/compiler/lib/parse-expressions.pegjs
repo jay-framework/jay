@@ -15,13 +15,13 @@ template
         return new RenderFragment('\'' + head + '\'', none);
     else if (tail.length === 1 && head.length === 0 && tail[0][5].length === 0) {
         let accessor = tail[0][2];
-        return new RenderFragment(`dt(${vars.currentVar}, vs => vs.${accessor.render()})`, dt, accessor.validations);
+        return new RenderFragment(`dt(${vars.currentContext}, vs => vs.${accessor.render()})`, dt, accessor.validations);
     }
     else {
         return tail.reduce(function(result, element) {
           let accessor = element[2];
           return RenderFragment.merge(result, new RenderFragment(`\${vs.${accessor.render()}}${element[5]}`, none, accessor.validations));
-        }, new RenderFragment(`dt(${vars.currentVar}, vs => \`${head}`, dt)).map(exp => exp + '\`)')
+        }, new RenderFragment(`dt(${vars.currentContext}, vs => \`${head}`, dt)).map(exp => exp + '\`)')
     }
   }
 

@@ -22,13 +22,12 @@ export class Accessor {
 export class Variables {
     readonly currentVar: string;
     readonly currentType: JayType;
+    readonly currentContext: string;
     readonly parent: Variables;
     private readonly depth;
     constructor(currentTypes: JayType, parent: Variables = undefined, depth: number = 0) {
-        if (depth === 0)
-            this.currentVar = 'viewState';
-        else
-            this.currentVar = 'vs' + depth;
+        this.currentVar = (depth === 0)?'viewState':'vs'+depth;
+        this.currentContext = (depth === 0)?'context':'cx'+depth;
         this.depth = depth;
         this.parent = parent;
         this.currentType = currentTypes;

@@ -17,11 +17,11 @@ export function render(viewState: ViewState): JayElement<ViewState> {
         e('div', {}, [
             e('h1', {}, [dt(context, vs => vs.title)]),
             de('div', {}, [forEach(vs => vs.items, (vs1: Item) => {
-                const itemContext = context.forItem(vs1)
+                const cx1 = context.forItem(vs1);
                 return e('div', {}, [
-                    e('span', {style: {cssText: 'color:green; width: 100px; display: inline-block;'}}, [dt(itemContext, vs => vs.name)]),
-                    e('span', {style: {cssText: 'color:red; width: 100px; display: inline-block;'}}, [dt(itemContext, vs => vs.completed)]),
-                    e('span', {style: {cssText: 'color:blue; width: 100px; display: inline-block;'}}, [dt(itemContext, vs => vs.cost)])
+                    e('span', {style: {cssText: 'color:green; width: 100px; display: inline-block;'}}, [dt(cx1, vs => vs.name)]),
+                    e('span', {style: {cssText: 'color:red; width: 100px; display: inline-block;'}}, [dt(cx1, vs => vs.completed)]),
+                    e('span', {style: {cssText: 'color:blue; width: 100px; display: inline-block;'}}, [dt(cx1, vs => vs.cost)])
                 ])}, 'id')], context)
         ]));
 }

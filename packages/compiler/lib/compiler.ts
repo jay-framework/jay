@@ -64,6 +64,7 @@ function renderImports(imports: Imports): string {
     if (imports.has(Import.conditional)) renderedImports.push('conditional as c');
     if (imports.has(Import.dynamicElement)) renderedImports.push('dynamicElement as de');
     if (imports.has(Import.forEach)) renderedImports.push('forEach');
+    if (imports.has(Import.ConstructContext)) renderedImports.push('ConstructContext');
     return `import {${renderedImports.join(', ')}} from "jay-runtime";`;
 }
 
@@ -92,7 +93,7 @@ function renderAttributes(element: HTMLElement): string {
 function renderNode(variables: Variables, node: Node, firstLineIdent: string, ident: string): RenderFragment {
 
     function de(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean): RenderFragment {
-        return new RenderFragment(`${firstLineIdent}de('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? ident : ''}], ${variables.currentVar})`,
+        return new RenderFragment(`${firstLineIdent}de('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? ident : ''}], ${variables.currentContext})`,
             children.imports.plus(Import.dynamicElement),
             children.validations);
     }
@@ -143,6 +144,7 @@ function renderNode(variables: Variables, node: Node, firstLineIdent: string, id
     function renderForEach(renderedForEach: RenderFragment, collectionVariables: Variables, trackBy: string, childElement: RenderFragment) {
         // todo item type
         return new RenderFragment(`${firstLineIdent}forEach(${renderedForEach.rendered}, (${collectionVariables.currentVar}: Item) => {
+${ident}const ${collectionVariables.currentContext} = ${collectionVariables.parent.currentContext}.forItem(${collectionVariables.currentVar});
 ${ident}return ${childElement.rendered}}, '${trackBy}')`, childElement.imports.plus(Import.forEach),
             [...renderedForEach.validations, ...childElement.validations])
     }
@@ -189,9 +191,10 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
     let variables = new Variables(types);
     let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), '', '  ');
     let body = `export function render(viewState: ViewState): JayElement<ViewState> {
-  return ${renderedRoot.rendered};
+  return ConstructContext.withRootContext(viewState, (${variables.currentContext}: ConstructContext<[ViewState]>) =>
+      ${renderedRoot.rendered});
 }`;
-    return new RenderFragment(body, renderedRoot.imports);
+    return new RenderFragment(body, renderedRoot.imports.plus(Import.ConstructContext));
 }
 
 export function generateDefinitionFile(html: string): WithValidations<string> {

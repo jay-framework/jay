@@ -6,7 +6,8 @@ export enum Import {
     dynamicText,
     conditional,
     dynamicElement,
-    forEach
+    forEach,
+    ConstructContext
 }
 
 export class Imports {
