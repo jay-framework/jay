@@ -5,3 +5,5 @@ build
 *.lock
 package-lock.json
 /packages/compiler/lib/parse-expressions.js
+lerna-debug.log
+packages/project/lib/*.d.ts
