@@ -71,14 +71,21 @@ describe('compiler', () => {
         it('should generate definition file for simple file', async () => {
             const jayFile = await readSourceFile('definition');
             let definitionFile = generateDefinitionFile(jayFile);
-            expect(definitionFile.val).toEqual(await readDefinitionFile('definition'));
+            expectE(definitionFile.val).toMatchStringIgnoringWhitespace(await readDefinitionFile('definition'));
         })
 
         it('should generate definition file for collection file', async () => {
             const jayFile = await readSourceFile('collections');
             let definitionFile = generateDefinitionFile(jayFile);
-            expect(definitionFile.val).toEqual(await readDefinitionFile('collections'));
+            expectE(definitionFile.val).toMatchStringIgnoringWhitespace(await readDefinitionFile('collections'));
         })
+
+        it('for simple refs', async () => {
+            const jayFile = await readSourceFile('counter');
+            let runtimeFile = generateDefinitionFile(jayFile, 'counter');
+            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readDefinitionFile('counter'));
+        })
+
     })
 
     describe('generate the runtime file', () => {
@@ -122,6 +129,12 @@ describe('compiler', () => {
             const jayFile = await readSourceFile('collections');
             let runtimeFile = generateRuntimeFile(jayFile);
             expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('collections'));
+        })
+
+        it('for simple refs', async () => {
+            const jayFile = await readSourceFile('counter');
+            let runtimeFile = generateRuntimeFile(jayFile, 'counter');
+            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('counter'));
         })
     })
 });

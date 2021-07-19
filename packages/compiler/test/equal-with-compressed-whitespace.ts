@@ -15,8 +15,8 @@ export function expectE<T>(t: T): MatchersE<T> {
 }
 
 export default function toMatchStringIgnoringWhitespace(received, expected) {
-    const receivedWithCompresssedWhitespace = received?.replace(whitespace, ' ');
-    const expectedWithCompresssedWhitespace = expected?.replace(whitespace, ' ');
+    const receivedWithCompresssedWhitespace = received?.replace(whitespace, ' ').replace(' \n', '\n');
+    const expectedWithCompresssedWhitespace = expected?.replace(whitespace, ' ').replace(' \n', '\n');
     const pass = receivedWithCompresssedWhitespace === expectedWithCompresssedWhitespace
     const message = pass
         ? () =>

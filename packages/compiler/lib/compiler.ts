@@ -16,6 +16,7 @@ import {
     parseTextExpression,
     Variables
 } from './expression-compiler';
+import { capitalCase } from "change-case";
 
 function renderInterface(aType: JayObjectType): string {
 
@@ -55,6 +56,39 @@ export function generateTypes(types: JayObjectType): string {
     return renderInterface(types);
 }
 
+function findRefs(node: Node, dynamicRef: boolean): {ref: string, dynamicRef: boolean}[] {
+    switch(node.nodeType) {
+        case NodeType.TEXT_NODE:
+            return []
+        case NodeType.ELEMENT_NODE:
+            let htmlElement = node as HTMLElement;
+            if (isForEach(htmlElement))
+                dynamicRef = true;
+            let refs = [];
+            if (htmlElement.hasAttribute('ref'))
+                refs.push({'ref': htmlElement.getAttribute('ref'), dynamicRef})
+
+            return [...refs, ...htmlElement.childNodes.flatMap(_ => findRefs(_, dynamicRef))]
+        case NodeType.COMMENT_NODE:
+            return []
+    }
+
+}
+
+export function generateElementType(rootBodyElement: HTMLElement, filename?: string): {elementName?: string, elementType?: string, hasRefs: boolean} {
+    let refs = findRefs(firstElementChild(rootBodyElement), false)
+
+    if (refs.length > 0) {
+        //todo
+        let elementName = capitalCase(filename) + 'Element';
+        return {elementName, hasRefs: true, elementType: `export interface ${elementName} extends JayElement<ViewState> {
+${refs.map(_ => `  ${_.ref}: ${_.dynamicRef?'DynamicReference<???>':'HTMLElement'}`).join(',\n')} 
+}`}
+    }
+    else
+        return {hasRefs: false};
+}
+
 
 function renderImports(imports: Imports): string {
     let renderedImports = [];
@@ -68,8 +102,8 @@ function renderImports(imports: Imports): string {
     return `import {${renderedImports.join(', ')}} from "jay-runtime";`;
 }
 
-function renderFunctionDecleration(): string {
-    return `export declare function render(viewState: ViewState): JayElement<ViewState>`;
+function renderFunctionDecleration(elementName?: string): string {
+    return `export declare function render(viewState: ViewState): ${elementName? elementName:'JayElement<ViewState>'}`;
 }
 
 function renderTextNode(variables: Variables, text: string): RenderFragment {
@@ -90,6 +124,14 @@ function renderAttributes(element: HTMLElement): string {
     return `{${renderedAttributes.join(', ')}}`;
 }
 
+function isConditional(node: Node): boolean {
+    return (node.nodeType !== NodeType.TEXT_NODE) && (node as HTMLElement).hasAttribute('if');
+}
+
+function isForEach(node: Node): boolean {
+    return (node.nodeType !== NodeType.TEXT_NODE) && (node as HTMLElement).hasAttribute('forEach');
+}
+
 function renderNode(variables: Variables, node: Node, firstLineIdent: string, ident: string): RenderFragment {
 
     function de(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean): RenderFragment {
@@ -102,14 +144,6 @@ function renderNode(variables: Variables, node: Node, firstLineIdent: string, id
         return new RenderFragment(`${firstLineIdent}e('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? ident : ''}])`,
             children.imports.plus(Import.element),
             children.validations);
-    }
-
-    function isConditional(node: Node): boolean {
-        return (node.nodeType !== NodeType.TEXT_NODE) && (node as HTMLElement).hasAttribute('if');
-    }
-
-    function isForEach(node: Node): boolean {
-        return (node.nodeType !== NodeType.TEXT_NODE) && (node as HTMLElement).hasAttribute('forEach');
     }
 
     function renderHtmlElement(htmlElement, newVariables: Variables) {
@@ -187,35 +221,41 @@ function firstElementChild(node: Node): HTMLElement {
     return node.childNodes.find(child => child.nodeType === NodeType.ELEMENT_NODE) as HTMLElement;
 }
 
-function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement): RenderFragment {
+function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, elementName?:string|null): RenderFragment {
     let variables = new Variables(types);
     let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), '', '  ');
-    let body = `export function render(viewState: ViewState): JayElement<ViewState> {
+    let body = `export function render(viewState: ViewState): ${elementName?elementName:'JayElement<ViewState>'} {
   return ConstructContext.withRootContext(viewState, (${variables.currentContext}: ConstructContext<[ViewState]>) =>
-      ${renderedRoot.rendered});
+      ${renderedRoot.rendered})${elementName?` as ${elementName}`:''};
 }`;
     return new RenderFragment(body, renderedRoot.imports.plus(Import.ConstructContext));
 }
 
-export function generateDefinitionFile(html: string): WithValidations<string> {
+export function generateDefinitionFile(html: string, filename?: string): WithValidations<string> {
     let parsedFile = parseJayFile(html);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
+        let {elementName, elementType, hasRefs} = generateElementType(jayFile.body, filename);
         return [renderImports(Imports.for(Import.jayElement)),
             types,
-            renderFunctionDecleration()
-        ].join('\n\n');
+            hasRefs? elementType : null,
+            renderFunctionDecleration(hasRefs? elementName : null)
+        ]   .filter(_ => _ !== null)
+            .join('\n\n');
     })
 }
 
-export function generateRuntimeFile(html: string): WithValidations<string> {
+export function generateRuntimeFile(html: string, filename?: string): WithValidations<string> {
     let parsedFile = parseJayFile(html);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        let renderedImplementation = renderFunctionImplementation(jayFile.types, jayFile.body);
+        let {elementName, elementType, hasRefs} = generateElementType(jayFile.body, filename);
+        let renderedImplementation = renderFunctionImplementation(jayFile.types, jayFile.body, hasRefs?elementName:null);
         return [renderImports(renderedImplementation.imports.plus(Import.element).plus(Import.jayElement)),
             types,
+            hasRefs? elementType : null,
             renderedImplementation.rendered
-        ].join('\n\n');
+        ]   .filter(_ => _ !== null)
+            .join('\n\n');
     })
 }
