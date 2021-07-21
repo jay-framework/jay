@@ -33,7 +33,8 @@ export default function jayCompiler (options = {}) {
         name: 'jay', // this name will show up in warnings and errors
         transform(code: string, id: string) {
             if (id.indexOf('.jay.html') > -1) {
-                let tsCode = generateRuntimeFile(code);
+                let filename = path.basename(id).replace('.jay.html', '');
+                let tsCode = generateRuntimeFile(code, filename);
                 let jsCode = ts.transpileModule(tsCode.val, tsConfig);
                 return jsCode.outputText;
             }

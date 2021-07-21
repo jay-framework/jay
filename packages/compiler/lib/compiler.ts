@@ -52,6 +52,7 @@ function renderInterface(aType: JayObjectType): string {
     return [...childInterfaces, genInterface].join('\n\n');
 }
 
+// exported for testing
 export function generateTypes(types: JayObjectType): string {
     return renderInterface(types);
 }
@@ -75,7 +76,7 @@ function findRefs(node: Node, dynamicRef: boolean): {ref: string, dynamicRef: bo
 
 }
 
-export function generateElementType(rootBodyElement: HTMLElement, filename?: string): {elementName?: string, elementType?: string, hasRefs: boolean} {
+function generateElementType(rootBodyElement: HTMLElement, filename?: string): {elementName?: string, elementType?: string, hasRefs: boolean} {
     let refs = findRefs(firstElementChild(rootBodyElement), false)
 
     if (refs.length > 0) {
@@ -110,18 +111,21 @@ function renderTextNode(variables: Variables, text: string): RenderFragment {
     return parseTextExpression(text, variables);
 }
 
-function renderAttributes(element: HTMLElement): string {
+function renderAttributes(element: HTMLElement): {attributes: string, hasRef: boolean} {
     let attributes = element.attributes;
+    let hasRef = false;
     let renderedAttributes = [];
     Object.keys(attributes).forEach(attrName => {
         if (attrName === 'if' || attrName === 'forEach' || attrName === 'trackBy')
             return;
+        if (attrName === 'ref')
+            hasRef = true;
         if (attrName === 'style')
             renderedAttributes.push(`style: {cssText: '${attributes[attrName]}'}`)
         else
             renderedAttributes.push(`${attrName}: '${attributes[attrName]}'`)
     })
-    return `{${renderedAttributes.join(', ')}}`;
+    return {attributes:`{${renderedAttributes.join(', ')}}`, hasRef};
 }
 
 function isConditional(node: Node): boolean {
@@ -140,8 +144,8 @@ function renderNode(variables: Variables, node: Node, firstLineIdent: string, id
             children.validations);
     }
 
-    function e(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean): RenderFragment {
-        return new RenderFragment(`${firstLineIdent}e('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? ident : ''}])`,
+    function e(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean, hasRef: boolean): RenderFragment {
+        return new RenderFragment(`${firstLineIdent}e('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? ident : ''}]${hasRef?', '+variables.currentContext:''})`,
             children.imports.plus(Import.element),
             children.validations);
     }
@@ -161,12 +165,12 @@ function renderNode(variables: Variables, node: Node, firstLineIdent: string, id
             .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
             .map(children => childLineBreaks ? `\n${children}\n` : children);
 
-        let attributes = renderAttributes(htmlElement);
+        let {attributes, hasRef} = renderAttributes(htmlElement);
 
         if (needDynamicElement)
             return de(htmlElement.rawTagName, attributes, childRenders, childLineBreaks);
         else
-            return e(htmlElement.rawTagName, attributes, childRenders, childLineBreaks);
+            return e(htmlElement.rawTagName, attributes, childRenders, childLineBreaks, hasRef);
     }
 
     function c(renderedCondition: RenderFragment, childElement: RenderFragment) {

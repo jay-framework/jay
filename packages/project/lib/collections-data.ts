@@ -1,8 +1,13 @@
-import {render} from './collections.jay.html';
+import {render, ViewState} from './collections.jay.html';
+import benchmark from "./benchmark";
 
-export default {
-    render,
-    data
+export default function run(target, cycles, progressCallback) {
+    let dataFunc = data();
+    let {dom, update} = render(dataFunc(0));
+    target.innerHTML = '';
+    target.appendChild(dom);
+
+    benchmark(index => update(dataFunc(index)), cycles, progressCallback);
 }
 
 function data() {
@@ -12,7 +17,7 @@ function data() {
         {name: 'plane', completed: true, cost: 100, id: 'b'},
         {name: 'boat', completed: false, cost: 50, id: 'c'}
     ];
-    return function (index) {
+    return function (index): ViewState {
         if (index === 0)
             return {title, items};
         else {

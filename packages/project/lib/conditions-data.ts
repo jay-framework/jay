@@ -1,8 +1,13 @@
 import {render} from './conditions.jay.html';
+import benchmark from "./benchmark";
 
-export default {
-    render,
-    data
+export default function run(target, cycles, progressCallback) {
+    let dataFunc = data();
+    let {dom, update} = render(dataFunc(0));
+    target.innerHTML = '';
+    target.appendChild(dom);
+
+    benchmark(index => update(dataFunc(index)), cycles, progressCallback);
 }
 
 function data() {

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "dist/index",
   "scripts": {
-    "test": "jest",
+    "test": "#",
     "build": "tsc"
   },
   "jest": {

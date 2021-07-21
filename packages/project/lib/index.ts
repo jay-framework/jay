@@ -2,18 +2,18 @@ import basic from './basic-data';
 import collections from './collections-data';
 import composite from './composite-data';
 import conditions from './conditions-data';
-import benchmark from './benchmark';
-import * as Counter from './counter.comp';
+import counter from './counter.comp';
 
-function ex(name: string, render, makeData: () => (index: number) => any) {
-    return {name, render, makeData}
+function ex(name: string, run: (target, cycles, progressCallback) => void) {
+    return {name, run}
 }
 
 const examples = [
-    ex('simple', basic.render, basic.data),
-    ex('collection', collections.render, collections.data),
-    ex('composite', composite.render, composite.data),
-    ex('conditions', conditions.render, conditions.data)
+    ex('simple', basic),
+    ex('collection', collections),
+    ex('composite', composite),
+    ex('conditions', conditions),
+    ex('counter', counter)
 ]
 
 window.onload = function() {
@@ -32,19 +32,8 @@ window.onload = function() {
     chooseExample.addEventListener('change', (event) => {
         let index = Number(chooseExample.value);
         let cycles = Number(chooseCycles.value);
-        runExample(examples[index], cycles);
+        examples[index].run(target, cycles, status => progress.textContent = status);
     });
-
-    function runExample(example, cycles) {
-        let dataFunc = example.makeData();
-        let {dom, update} = example.render(dataFunc(0));
-        target.innerHTML = '';
-        target.appendChild(dom);
-
-        benchmark(index => update(dataFunc(index)), cycles, status => progress.textContent = status);
-    }
-
-//    runExample(examples[0]);
 
 }
 
