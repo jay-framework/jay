@@ -167,11 +167,11 @@ function renderNode(variables: Variables, node: Node, firstLineIdent: string, id
     function c(renderedCondition: RenderFragment, childElement: RenderFragment) {
         return new RenderFragment(`${firstLineIdent}c(${renderedCondition.rendered},\n${ident}${childElement.rendered}\n${firstLineIdent})`,
             Imports.merge(childElement.imports, renderedCondition.imports).plus(Import.conditional),
-            [...renderedCondition.validations, ...childElement.validations]);
+            [...renderedCondition.validations, ...childElement.validations],
+            [...renderedCondition.refs, ...childElement.refs]);
     }
 
     function renderForEach(renderedForEach: RenderFragment, collectionVariables: Variables, trackBy: string, childElement: RenderFragment) {
-        // todo item type
         return new RenderFragment(`${firstLineIdent}forEach(${renderedForEach.rendered}, (${collectionVariables.currentVar}: Item) => {
 ${ident}const ${collectionVariables.currentContext} = ${collectionVariables.parent.currentContext}.forItem(${collectionVariables.currentVar});
 ${ident}return ${childElement.rendered}}, '${trackBy}')`, childElement.imports.plus(Import.forEach),

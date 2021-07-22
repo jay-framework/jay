@@ -86,6 +86,12 @@ describe('compiler', () => {
             expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readDefinitionFile('counter'));
         })
 
+        it('for conditional with refs', async () => {
+            const jayFile = await readSourceFile('conditions-with-refs');
+            let runtimeFile = generateDefinitionFile(jayFile, 'conditions-with-refs.jay.html');
+            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readDefinitionFile('conditions-with-refs'));
+        })
+
         it('for collection refs', async () => {
             const jayFile = await readSourceFile('collection-with-refs');
             let definitionFile = generateDefinitionFile(jayFile, 'collection-with-refs.jay.html');
@@ -140,6 +146,12 @@ describe('compiler', () => {
             const jayFile = await readSourceFile('counter');
             let runtimeFile = generateRuntimeFile(jayFile, 'counter.jay.html');
             expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('counter'));
+        })
+
+        it('for conditional with refs', async () => {
+            const jayFile = await readSourceFile('conditions-with-refs');
+            let runtimeFile = generateRuntimeFile(jayFile, 'conditions-with-refs.jay.html');
+            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('conditions-with-refs'));
         })
 
         it('for collections with refs', async () => {
