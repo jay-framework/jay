@@ -5,9 +5,9 @@ Runtime
 - [x] update function
 - [ ] type formatters
 - [ ] dynamic styles
-- [ ] dynamic dom attributes
+- [x] dynamic dom attributes
 - [ ] inputs
-- [ ] events
+- [x] events
 - [ ] slots
 - [ ] composites (component in component)
 - [ ] server side rendering
@@ -34,5 +34,5 @@ Example Project
 ---
 
 - [x] basic benchmark
-- [ ] Counter
+- [x] Counter
 - [ ] TodoMVC
