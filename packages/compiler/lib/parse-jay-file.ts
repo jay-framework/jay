@@ -5,6 +5,7 @@ import {pascalCase} from 'change-case';
 import pluralize from 'pluralize';
 
 export interface JayType {
+    name: string
 }
 
 export class JayAtomicType implements JayType {
@@ -40,6 +41,9 @@ export class JayArrayType implements JayType {
     readonly itemType: JayType;
     constructor(itemType: JayType) {
         this.itemType = itemType;
+    }
+    get name() {
+        return `Array<${this.itemType.name}>`
     }
 
 }

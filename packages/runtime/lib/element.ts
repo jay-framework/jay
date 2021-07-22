@@ -2,6 +2,7 @@ import {Kindergarten, KindergartenGroup} from "./kindergarden";
 import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "./list-compare";
 import {RandomAccessLinkedList as List} from "./random-access-linked-list";
 import {ElementReference, ReferencesManager} from "./node-reference";
+export {DynamicReference} from "./node-reference";
 
 const STYLE = 'style';
 const REF = 'ref';

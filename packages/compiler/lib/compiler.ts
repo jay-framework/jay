@@ -9,7 +9,7 @@ import {
 } from "./parse-jay-file";
 import {HTMLElement, NodeType} from "node-html-parser";
 import Node from "node-html-parser/dist/nodes/node";
-import {Import, Imports, RenderFragment} from "./render-fragment";
+import {Import, Imports, Ref, RenderFragment} from "./render-fragment";
 import {
     parseAccessor,
     parseCondition,
@@ -57,6 +57,56 @@ export function generateTypes(types: JayObjectType): string {
     return renderInterface(types);
 }
 
+enum ImportsFor {
+    definition, implementation
+}
+
+function renderImports(imports: Imports, importsFor: ImportsFor): string {
+    let renderedImports = [];
+    if (imports.has(Import.jayElement)) renderedImports.push('JayElement');
+    if (imports.has(Import.element) && importsFor === ImportsFor.implementation) renderedImports.push('element as e');
+    if (imports.has(Import.dynamicText) && importsFor === ImportsFor.implementation) renderedImports.push('dynamicText as dt');
+    if (imports.has(Import.conditional) && importsFor === ImportsFor.implementation) renderedImports.push('conditional as c');
+    if (imports.has(Import.dynamicElement) && importsFor === ImportsFor.implementation) renderedImports.push('dynamicElement as de');
+    if (imports.has(Import.forEach) && importsFor === ImportsFor.implementation) renderedImports.push('forEach');
+    if (imports.has(Import.ConstructContext) && importsFor === ImportsFor.implementation) renderedImports.push('ConstructContext');
+    if (imports.has(Import.DynamicReference)) renderedImports.push('DynamicReference');
+    return `import {${renderedImports.join(', ')}} from "jay-runtime";`;
+}
+
+function renderFunctionDecleration(elementName?: string): string {
+    return `export declare function render(viewState: ViewState): ${elementName? elementName:'JayElement<ViewState>'}`;
+}
+
+function renderTextNode(variables: Variables, text: string): RenderFragment {
+    return parseTextExpression(text, variables);
+}
+
+function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: Variables): {attributes: string, refs: Ref[]} {
+    let attributes = element.attributes;
+    let refs: Ref[] = [];
+    let renderedAttributes = [];
+    Object.keys(attributes).forEach(attrName => {
+        if (attrName === 'if' || attrName === 'forEach' || attrName === 'trackBy')
+            return;
+        if (attrName === 'ref')
+            refs = [{ref: attributes[attrName], dynamicRef, refType: variables.currentType}];
+        if (attrName === 'style')
+            renderedAttributes.push(`style: {cssText: '${attributes[attrName]}'}`)
+        else
+            renderedAttributes.push(`${attrName}: '${attributes[attrName]}'`)
+    })
+    return {attributes:`{${renderedAttributes.join(', ')}}`, refs};
+}
+
+function isConditional(node: Node): boolean {
+    return (node.nodeType !== NodeType.TEXT_NODE) && (node as HTMLElement).hasAttribute('if');
+}
+
+function isForEach(node: Node): boolean {
+    return (node.nodeType !== NodeType.TEXT_NODE) && (node as HTMLElement).hasAttribute('forEach');
+}
+
 function findRefs(node: Node, dynamicRef: boolean): {ref: string, dynamicRef: boolean}[] {
     switch(node.nodeType) {
         case NodeType.TEXT_NODE:
@@ -76,78 +126,19 @@ function findRefs(node: Node, dynamicRef: boolean): {ref: string, dynamicRef: bo
 
 }
 
-function generateElementType(rootBodyElement: HTMLElement, filename?: string): {elementName?: string, elementType?: string, hasRefs: boolean} {
-    let refs = findRefs(firstElementChild(rootBodyElement), false)
+function renderNode(variables: Variables, node: Node, firstLineIdent: string, ident: string, dynamicRef: boolean): RenderFragment {
 
-    if (refs.length > 0) {
-        //todo
-        let elementName = capitalCase(filename) + 'Element';
-        return {elementName, hasRefs: true, elementType: `export interface ${elementName} extends JayElement<ViewState> {
-${refs.map(_ => `  ${_.ref}: ${_.dynamicRef?'DynamicReference<???>':'HTMLElement'}`).join(',\n')} 
-}`}
-    }
-    else
-        return {hasRefs: false};
-}
-
-
-function renderImports(imports: Imports): string {
-    let renderedImports = [];
-    if (imports.has(Import.jayElement)) renderedImports.push('JayElement');
-    if (imports.has(Import.element)) renderedImports.push('element as e');
-    if (imports.has(Import.dynamicText)) renderedImports.push('dynamicText as dt');
-    if (imports.has(Import.conditional)) renderedImports.push('conditional as c');
-    if (imports.has(Import.dynamicElement)) renderedImports.push('dynamicElement as de');
-    if (imports.has(Import.forEach)) renderedImports.push('forEach');
-    if (imports.has(Import.ConstructContext)) renderedImports.push('ConstructContext');
-    return `import {${renderedImports.join(', ')}} from "jay-runtime";`;
-}
-
-function renderFunctionDecleration(elementName?: string): string {
-    return `export declare function render(viewState: ViewState): ${elementName? elementName:'JayElement<ViewState>'}`;
-}
-
-function renderTextNode(variables: Variables, text: string): RenderFragment {
-    return parseTextExpression(text, variables);
-}
-
-function renderAttributes(element: HTMLElement): {attributes: string, hasRef: boolean} {
-    let attributes = element.attributes;
-    let hasRef = false;
-    let renderedAttributes = [];
-    Object.keys(attributes).forEach(attrName => {
-        if (attrName === 'if' || attrName === 'forEach' || attrName === 'trackBy')
-            return;
-        if (attrName === 'ref')
-            hasRef = true;
-        if (attrName === 'style')
-            renderedAttributes.push(`style: {cssText: '${attributes[attrName]}'}`)
-        else
-            renderedAttributes.push(`${attrName}: '${attributes[attrName]}'`)
-    })
-    return {attributes:`{${renderedAttributes.join(', ')}}`, hasRef};
-}
-
-function isConditional(node: Node): boolean {
-    return (node.nodeType !== NodeType.TEXT_NODE) && (node as HTMLElement).hasAttribute('if');
-}
-
-function isForEach(node: Node): boolean {
-    return (node.nodeType !== NodeType.TEXT_NODE) && (node as HTMLElement).hasAttribute('forEach');
-}
-
-function renderNode(variables: Variables, node: Node, firstLineIdent: string, ident: string): RenderFragment {
-
-    function de(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean): RenderFragment {
+    function de(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean, refs: Ref[]): RenderFragment {
         return new RenderFragment(`${firstLineIdent}de('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? ident : ''}], ${variables.currentContext})`,
             children.imports.plus(Import.dynamicElement),
-            children.validations);
+            children.validations, [...refs, ...children.refs]);
     }
 
-    function e(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean, hasRef: boolean): RenderFragment {
-        return new RenderFragment(`${firstLineIdent}e('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? ident : ''}]${hasRef?', '+variables.currentContext:''})`,
+    function e(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean, refs: Ref[]): RenderFragment {
+        let needContext = refs.length > 0;
+        return new RenderFragment(`${firstLineIdent}e('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? ident : ''}]${needContext?', '+variables.currentContext:''})`,
             children.imports.plus(Import.element),
-            children.validations);
+            children.validations, [...refs, ...children.refs]);
     }
 
     function renderHtmlElement(htmlElement, newVariables: Variables) {
@@ -161,16 +152,16 @@ function renderNode(variables: Variables, node: Node, firstLineIdent: string, id
             .reduce((prev, current) => prev || current, false);
 
         let childRenders = childNodes
-            .map(_ => renderNode(newVariables, _, childLineBreaks ? ident + '  ' : '', ident + '  '))
+            .map(_ => renderNode(newVariables, _, childLineBreaks ? ident + '  ' : '', ident + '  ', dynamicRef))
             .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
             .map(children => childLineBreaks ? `\n${children}\n` : children);
 
-        let {attributes, hasRef} = renderAttributes(htmlElement);
+        let {attributes, refs} = renderAttributes(htmlElement, dynamicRef, newVariables);
 
         if (needDynamicElement)
-            return de(htmlElement.rawTagName, attributes, childRenders, childLineBreaks);
+            return de(htmlElement.rawTagName, attributes, childRenders, childLineBreaks, refs);
         else
-            return e(htmlElement.rawTagName, attributes, childRenders, childLineBreaks, hasRef);
+            return e(htmlElement.rawTagName, attributes, childRenders, childLineBreaks, refs);
     }
 
     function c(renderedCondition: RenderFragment, childElement: RenderFragment) {
@@ -184,7 +175,7 @@ function renderNode(variables: Variables, node: Node, firstLineIdent: string, id
         return new RenderFragment(`${firstLineIdent}forEach(${renderedForEach.rendered}, (${collectionVariables.currentVar}: Item) => {
 ${ident}const ${collectionVariables.currentContext} = ${collectionVariables.parent.currentContext}.forItem(${collectionVariables.currentVar});
 ${ident}return ${childElement.rendered}}, '${trackBy}')`, childElement.imports.plus(Import.forEach),
-            [...renderedForEach.validations, ...childElement.validations])
+            [...renderedForEach.validations, ...childElement.validations], childElement.refs)
     }
 
     switch(node.nodeType) {
@@ -193,6 +184,12 @@ ${ident}return ${childElement.rendered}}, '${trackBy}')`, childElement.imports.p
             return renderTextNode(variables, text);
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
+            if (isForEach(htmlElement))
+                dynamicRef = true;
+            let refs = [];
+            if (htmlElement.hasAttribute('ref'))
+                refs.push({'ref': htmlElement.getAttribute('ref'), dynamicRef})
+
             if (isConditional(htmlElement)) {
                 let condition = htmlElement.getAttribute('if');
                 let childElement = renderHtmlElement(htmlElement, variables);
@@ -205,12 +202,10 @@ ${ident}return ${childElement.rendered}}, '${trackBy}')`, childElement.imports.p
 
                 let forEachAccessor = parseAccessor(forEach, variables);
                 let forEachFragment = new RenderFragment(`vs => vs.${forEachAccessor.render()}`, Imports.none(), forEachAccessor.validations);
-                let forEachVariables = variables.childVariableFor(forEachAccessor.resolvedType)
-
+                let itemType = (forEachAccessor.resolvedType as JayArrayType).itemType;
+                let forEachVariables = variables.childVariableFor(itemType)
                 let childElement = renderHtmlElement(htmlElement, forEachVariables);
                 return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
-
-                
             }
             else {
                 return renderHtmlElement(htmlElement, variables);
@@ -225,39 +220,75 @@ function firstElementChild(node: Node): HTMLElement {
     return node.childNodes.find(child => child.nodeType === NodeType.ELEMENT_NODE) as HTMLElement;
 }
 
-function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, elementName?:string|null): RenderFragment {
-    let variables = new Variables(types);
-    let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), '', '  ');
-    let body = `export function render(viewState: ViewState): ${elementName?elementName:'JayElement<ViewState>'} {
-  return ConstructContext.withRootContext(viewState, (${variables.currentContext}: ConstructContext<[ViewState]>) =>
-      ${renderedRoot.rendered})${elementName?` as ${elementName}`:''};
-}`;
-    return new RenderFragment(body, renderedRoot.imports.plus(Import.ConstructContext));
+function generateElementType(rootBodyElement: HTMLElement, filename?: string): {elementName?: string, elementType?: string, hasRefs: boolean} {
+    let refs = findRefs(firstElementChild(rootBodyElement), false)
+
+    if (refs.length > 0) {
+        //todo
+        let elementName = capitalCase(filename, {delimiter:''}) + 'Element';
+        return {elementName, hasRefs: true, elementType: `export interface ${elementName} extends JayElement<ViewState> {
+${refs.map(_ => `  ${_.ref}: ${_.dynamicRef?'DynamicReference<???>':'HTMLElement'}`).join(',\n')} 
+}`}
+    }
+    else
+        return {hasRefs: false};
 }
 
-export function generateDefinitionFile(html: string, filename?: string): WithValidations<string> {
+function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, filename: string):
+    {elementName: string, elementType: string, renderedImplementation: RenderFragment} {
+    let variables = new Variables(types);
+    let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), '', '  ', false);
+    let elementName = 'JayElement<ViewState>';
+    let defaultElementName = true;
+    let elementType = null;
+    let imports = renderedRoot.imports.plus(Import.ConstructContext);
+    if (renderedRoot.refs.length > 0) {
+        elementName = capitalCase(filename, {delimiter:''}) + 'Element';
+        defaultElementName = false;
+        const renderedReferences = renderedRoot.refs.map(_ => {
+            const referenceType = _.dynamicRef?`DynamicReference<${_.refType.name}>`:'HTMLElement';
+            return `  ${_.ref}: ${referenceType}`
+        }).join(',\n');
+        elementType = `export interface ${elementName} extends JayElement<ViewState> {
+${renderedReferences} 
+}`
+        if (renderedRoot.refs.find(_ => _.dynamicRef))
+            imports = imports.plus(Import.DynamicReference)
+    }
+
+    let body = `export function render(viewState: ViewState): ${elementName?elementName:'JayElement<ViewState>'} {
+  return ConstructContext.withRootContext(viewState, (${variables.currentContext}: ConstructContext<[ViewState]>) =>
+      ${renderedRoot.rendered})${!defaultElementName?` as ${elementName}`:''};
+}`;
+    return {elementName, elementType, renderedImplementation: new RenderFragment(body, imports)};
+}
+
+function normalizeFilename(filename: string): string {
+    return filename.replace('.jay.html', '');
+}
+
+export function generateDefinitionFile(html: string, filename: string): WithValidations<string> {
     let parsedFile = parseJayFile(html);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        let {elementName, elementType, hasRefs} = generateElementType(jayFile.body, filename);
-        return [renderImports(Imports.for(Import.jayElement)),
+        let {elementName, elementType, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, normalizeFilename(filename));
+        return [renderImports(renderedImplementation.imports.plus(Import.jayElement), ImportsFor.definition),
             types,
-            hasRefs? elementType : null,
-            renderFunctionDecleration(hasRefs? elementName : null)
+            elementType,
+            renderFunctionDecleration(elementName)
         ]   .filter(_ => _ !== null)
             .join('\n\n');
     })
 }
 
-export function generateRuntimeFile(html: string, filename?: string): WithValidations<string> {
+export function generateRuntimeFile(html: string, filename: string): WithValidations<string> {
     let parsedFile = parseJayFile(html);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        let {elementName, elementType, hasRefs} = generateElementType(jayFile.body, filename);
-        let renderedImplementation = renderFunctionImplementation(jayFile.types, jayFile.body, hasRefs?elementName:null);
-        return [renderImports(renderedImplementation.imports.plus(Import.element).plus(Import.jayElement)),
+        let {elementType, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, normalizeFilename(filename));
+        return [renderImports(renderedImplementation.imports.plus(Import.element).plus(Import.jayElement), ImportsFor.implementation),
             types,
-            hasRefs? elementType : null,
+            elementType,
             renderedImplementation.rendered
         ]   .filter(_ => _ !== null)
             .join('\n\n');

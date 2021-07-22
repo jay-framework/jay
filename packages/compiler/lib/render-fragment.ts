@@ -1,4 +1,5 @@
 import {JayValidations} from "./with-validations";
+import {JayType} from "./parse-jay-file";
 
 export enum Import {
     jayElement,
@@ -7,7 +8,8 @@ export enum Import {
     conditional,
     dynamicElement,
     forEach,
-    ConstructContext
+    ConstructContext,
+    DynamicReference,
 }
 
 export class Imports {
@@ -50,19 +52,27 @@ export class Imports {
     }
 }
 
+export interface Ref {
+    ref: string,
+    dynamicRef: boolean,
+    refType: JayType
+}
+
 export class RenderFragment {
     rendered: string;
     imports: Imports;
     validations: JayValidations;
+    refs: Array<Ref>;
 
-    constructor(rendered: string, imports: Imports, validations: JayValidations = []) {
+    constructor(rendered: string, imports: Imports, validations: JayValidations = [], refs: Array<Ref> = []) {
         this.rendered = rendered;
         this.imports = imports;
         this.validations = validations
+        this.refs = refs;
     }
 
     map(f: (s: string) => string): RenderFragment {
-        return new RenderFragment(f(this.rendered), this.imports, this.validations);
+        return new RenderFragment(f(this.rendered), this.imports, this.validations, this.refs);
     }
 
     static empty(): RenderFragment {
@@ -73,7 +83,8 @@ export class RenderFragment {
         if (!!fragment1.rendered && !!fragment2.rendered)
             return new RenderFragment(`${fragment1.rendered}${combinator}${fragment2.rendered}`,
                 Imports.merge(fragment1.imports, fragment2.imports),
-                [...fragment1.validations, ...fragment2.validations])
+                [...fragment1.validations, ...fragment2.validations],
+                [...fragment1.refs, ...fragment2.refs])
         else if (!!fragment1.rendered)
             return fragment1
         else
