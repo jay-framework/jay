@@ -159,6 +159,13 @@ describe('compiler', () => {
             let runtimeFile = generateRuntimeFile(jayFile, 'collection-with-refs.jay.html');
             expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('collection-with-refs'));
         })
+
+        it('with different types of HTML element attributes', async () => {
+            const jayFile = await readSourceFile('attributes');
+            let runtimeFile = generateRuntimeFile(jayFile, 'attributes.jay.html');
+            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('attributes'));
+        })
+
     })
 });
 

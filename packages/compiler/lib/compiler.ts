@@ -82,6 +82,7 @@ function renderTextNode(variables: Variables, text: string): RenderFragment {
     return parseTextExpression(text, variables);
 }
 
+const attributesRequiresQoutes = /[- ]/;
 function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: Variables): {attributes: string, refs: Ref[]} {
     let attributes = element.attributes;
     let refs: Ref[] = [];
@@ -93,8 +94,10 @@ function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: 
             refs = [{ref: attributes[attrName], dynamicRef, refType: variables.currentType}];
         if (attrName === 'style')
             renderedAttributes.push(`style: {cssText: '${attributes[attrName]}'}`)
-        else
-            renderedAttributes.push(`${attrName}: '${attributes[attrName]}'`)
+        else {
+            let attrKey = attrName.match(attributesRequiresQoutes) ? `"${attrName}"` : attrName;
+            renderedAttributes.push(`${attrKey}: '${attributes[attrName]}'`)
+        }
     })
     return {attributes:`{${renderedAttributes.join(', ')}}`, refs};
 }
