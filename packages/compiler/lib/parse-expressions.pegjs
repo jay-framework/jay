@@ -10,18 +10,23 @@ start
   = template
 
 template
-  = head:string tail:("{" _ accessor _ '}' string)* {
+  = a:_ head:((string _)+)? tail:("{" _ accessor _ '}' _ (string _)*)* {
+    const renderText = (w, h) => {
+      return h?
+        h.reduce((acc, str) => acc + str[0] + (str[1].length?' ':''), w.length?' ':''):
+        w.length?' ':''
+    }
     if (tail.length === 0)
-        return new RenderFragment('\'' + head + '\'', none);
-    else if (tail.length === 1 && head.length === 0 && tail[0][5].length === 0) {
+        return new RenderFragment('\'' + renderText(a, head) + '\'', none);
+    else if (tail.length === 1 && !head && a.length === 0 && tail[0][5].length === 0) {
         let accessor = tail[0][2];
         return new RenderFragment(`dt(${vars.currentContext}, vs => vs.${accessor.render()})`, dt, accessor.validations);
     }
     else {
         return tail.reduce(function(result, element) {
           let accessor = element[2];
-          return RenderFragment.merge(result, new RenderFragment(`\${vs.${accessor.render()}}${element[5]}`, none, accessor.validations));
-        }, new RenderFragment(`dt(${vars.currentContext}, vs => \`${head}`, dt)).map(exp => exp + '\`)')
+          return RenderFragment.merge(result, new RenderFragment(`\${vs.${accessor.render()}}${renderText(element[5], element[6])}`, none, accessor.validations));
+        }, new RenderFragment(`dt(${vars.currentContext}, vs => \`${renderText(a, head)}`, dt)).map(exp => exp + '\`)')
     }
   }
 
@@ -63,7 +68,7 @@ _ "whitespace"
   = [ \t\n\r]*
 
 string
-  = [^{}]* { return text()}
+  = [^{} \t\n\r]+ { return text()}
 
 bang
   = "!"

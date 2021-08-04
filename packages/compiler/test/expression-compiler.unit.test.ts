@@ -49,7 +49,8 @@ describe('expression-compiler', () => {
     describe('parseTextExpression', () => {
 
         let defaultVars = new Variables(new JayObjectType('data', {
-            string1: JayString
+            string1: JayString,
+            string3: JayString
         }))
 
         it("constant string expression", () => {
@@ -72,6 +73,11 @@ describe('expression-compiler', () => {
             expect(actual.rendered).toEqual('dt(context, vs => \`some ${vs.string1} thing\`)')
         })
 
+        it("multi accessor in text", () => {
+            const actual = parseTextExpression('some {string1} and {string3} thing', defaultVars);
+            expect(actual.rendered).toEqual('dt(context, vs => \`some ${vs.string1} and ${vs.string3} thing\`)')
+        })
+
         it("accessor in text not in type renders the type should reports the problem", () => {
             const actual = parseTextExpression('some {string2} thing', defaultVars);
             expect(actual.rendered).toEqual('dt(context, vs => \`some ${vs.string2} thing\`)')
@@ -82,6 +88,58 @@ describe('expression-compiler', () => {
             const actual = parseTextExpression('{string2}', defaultVars);
             expect(actual.rendered).toEqual('dt(context, vs => vs.string2)')
             expect(actual.validations).toEqual(['the data field [string2] not found in Jay data'])
+        })
+
+        describe('trim whitespace', () => {
+            it("trim whitespace to a single space", () => {
+                const actual = parseTextExpression('  text  ', defaultVars);
+                expect(actual.rendered).toEqual('\' text \'')
+            })
+
+            it("trim left whitespace to a single space", () => {
+                const actual = parseTextExpression('  text', defaultVars);
+                expect(actual.rendered).toEqual('\' text\'')
+            })
+
+            it("right left whitespace to a single space", () => {
+                const actual = parseTextExpression('text  ', defaultVars);
+                expect(actual.rendered).toEqual('\'text \'')
+            })
+
+            it("middle whitespace to a single space", () => {
+                const actual = parseTextExpression('text     text2', defaultVars);
+                expect(actual.rendered).toEqual('\'text text2\'')
+            })
+
+            it("left whitespace to template", () => {
+                const actual = parseTextExpression('  {string1}', defaultVars);
+                expect(actual.rendered).toEqual('dt(context, vs => \` ${vs.string1}\`)')
+            })
+
+            it("right whitespace to template", () => {
+                const actual = parseTextExpression('{string1}   ', defaultVars);
+                expect(actual.rendered).toEqual('dt(context, vs => \`${vs.string1} \`)')
+            })
+
+            it("mid whitespace to template", () => {
+                const actual = parseTextExpression('{string1}   {string1}', defaultVars);
+                expect(actual.rendered).toEqual('dt(context, vs => \`${vs.string1} ${vs.string1}\`)')
+            })
+
+            it("middle multiline whitespace to a single space", () => {
+                const actual = parseTextExpression('text   \n \t text2', defaultVars);
+                expect(actual.rendered).toEqual('\'text text2\'')
+            })
+        })
+
+        it("use space instead of line break", () => {
+            const actual = parseTextExpression('abc\ndef', defaultVars);
+            expect(actual.rendered).toEqual('\'abc def\'')
+        })
+
+        it("trim all whitespace to a single space", () => {
+            const actual = parseTextExpression('  \n\t\r\n  ', defaultVars);
+            expect(actual.rendered).toEqual('\' \'')
         })
 
         it("fail and report broken expression", () => {
