@@ -1,6 +1,6 @@
 import {JayElement} from "jay-runtime";
 
-interface Item {
+interface Thing {
   name: string,
   completed: boolean,
   cost: number,
@@ -9,7 +9,7 @@ interface Item {
 
 interface ViewState {
   title: string,
-  items: Array<Item>
+  things: Array<Thing>
 }
 
 export declare function render(viewState: ViewState): JayElement<ViewState>
