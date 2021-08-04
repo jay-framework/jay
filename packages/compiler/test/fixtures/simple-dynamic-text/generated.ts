@@ -6,5 +6,5 @@ interface ViewState {
 
 export function render(viewState: ViewState): JayElement<ViewState> {
   return ConstructContext.withRootContext(viewState, (context: ConstructContext<[ViewState]>) =>
-      e('div', {}, [dt(context, vs => vs.s1)]));
+    e('div', {}, [dt(context, vs => vs.s1)]));
 }
