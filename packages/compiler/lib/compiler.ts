@@ -78,8 +78,8 @@ function renderFunctionDecleration(elementName?: string): string {
     return `export declare function render(viewState: ViewState): ${elementName? elementName:'JayElement<ViewState>'}`;
 }
 
-function renderTextNode(variables: Variables, text: string): RenderFragment {
-    return parseTextExpression(text, variables);
+function renderTextNode(variables: Variables, text: string, indent: Indent): RenderFragment {
+    return parseTextExpression(text, variables).map(_ => indent.firstLine + _);
 }
 
 const attributesRequiresQoutes = /[- ]/;
@@ -218,7 +218,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
     switch(node.nodeType) {
         case NodeType.TEXT_NODE:
             let text = node.innerText;
-            return renderTextNode(variables, text) //.map(_ => ident + _);
+            return renderTextNode(variables, text, indent) //.map(_ => ident + _);
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
             if (isForEach(htmlElement))
