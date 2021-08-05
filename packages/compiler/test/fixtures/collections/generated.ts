@@ -23,7 +23,8 @@ export function render(viewState: ViewState): JayElement<ViewState> {
             e('span', {style: {cssText: 'color:green; width: 100px; display: inline-block;'}}, [dt(cx1, vs => vs.name)]),
             e('span', {style: {cssText: 'color:red; width: 100px; display: inline-block;'}}, [dt(cx1, vs => vs.completed)]),
             e('span', {style: {cssText: 'color:blue; width: 100px; display: inline-block;'}}, [dt(cx1, vs => vs.cost)])
-          ])}, 'id')], context)
+          ])}, 'id')
+      ], context)
     ]));
 }
 

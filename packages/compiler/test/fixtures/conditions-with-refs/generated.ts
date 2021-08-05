@@ -18,7 +18,9 @@ export function render(viewState: ViewState): ConditionsWithRefsElement {
         e('div', {style: {cssText: 'color:red'}, ref: 'text1'}, [dt(context, vs => vs.text1)], context)
       ),
       c(vs => !vs.cond,
-        e('div', {style: {cssText: 'color:green'}}, [e('span', {ref: 'text2'}, [dt(context, vs => vs.text2)], context)])
+        e('div', {style: {cssText: 'color:green'}}, [
+          e('span', {ref: 'text2'}, [dt(context, vs => vs.text2)], context)
+        ])
       )
     ], context)) as ConditionsWithRefsElement;
 }

@@ -131,32 +131,46 @@ function findRefs(node: Node, dynamicRef: boolean): {ref: string, dynamicRef: bo
 
 class Indent {
     private readonly base: string
-    constructor(parent: string) {
-        this.base = parent + '  ';
+    readonly firstLineBreak: boolean
+    readonly lastLineIndent: boolean
+    constructor(parent: string, firstLineBreak = true, lastLineIndent = false) {
+        this.base = parent;
+        this.firstLineBreak = firstLineBreak;
+        this.lastLineIndent = lastLineIndent;
     }
     get firstLine(): string {
-        return this.base;
+        return this.firstLineBreak?this.base:'';
     }
     get curr(): string {
         return this.base + '  ';
     }
+    get lastLine(): string {
+        return this.lastLineIndent? this.base:'';
+    }
 
     child(): Indent {
-        return new Indent(this.base)
+        return new Indent(this.base + '  ')
+    }
+
+    noFirstLineBreak() {
+        return new Indent(this.base, false)
+    }
+    withLastLineBreak() {
+        return new Indent(this.base, false, true)
     }
 }
 
 function renderNode(variables: Variables, node: Node, indent: Indent, dynamicRef: boolean): RenderFragment {
 
-    function de(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean, refs: Ref[], currIndent: Indent = indent): RenderFragment {
-        return new RenderFragment(`${currIndent.firstLine}de('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? currIndent.firstLine : ''}], ${variables.currentContext})`,
+    function de(tagName: string, attributes: string, children: RenderFragment, refs: Ref[], currIndent: Indent = indent): RenderFragment {
+        return new RenderFragment(`${currIndent.firstLine}de('${tagName}', ${attributes}, [${children.rendered}${currIndent.lastLine}], ${variables.currentContext})`,
             children.imports.plus(Import.dynamicElement),
             children.validations, [...refs, ...children.refs]);
     }
 
-    function e(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean, refs: Ref[], currIndent: Indent = indent): RenderFragment {
+    function e(tagName: string, attributes: string, children: RenderFragment, refs: Ref[], currIndent: Indent = indent): RenderFragment {
         let needContext = refs.length > 0;
-        return new RenderFragment(`${currIndent.firstLine}e('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? currIndent.firstLine : ''}]${needContext?', '+variables.currentContext:''})`,
+        return new RenderFragment(`${currIndent.firstLine}e('${tagName}', ${attributes}, [${children.rendered}${currIndent.lastLine}]${needContext?', '+variables.currentContext:''})`,
             children.imports.plus(Import.element),
             children.validations, [...refs, ...children.refs]);
     }
@@ -166,23 +180,25 @@ function renderNode(variables: Variables, node: Node, indent: Indent, dynamicRef
             node.childNodes.filter(_ => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '') :
             node.childNodes;
 
-        let childLineBreaks = childNodes.length > 1 || (childNodes.length === 1 && childNodes[0].nodeType !== NodeType.TEXT_NODE);
+        let childIndent = currIndent.child();
+        if ((childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE))
+            childIndent = childIndent.noFirstLineBreak();
 
         let needDynamicElement = childNodes
             .map(_ => isConditional(_) || isForEach(_))
             .reduce((prev, current) => prev || current, false);
 
         let childRenders = childNodes
-            .map(_ => renderNode(newVariables, _, currIndent.child(), dynamicRef))
+            .map(_ => renderNode(newVariables, _, childIndent, dynamicRef))
             .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
-            .map(children => childLineBreaks ? `\n${children}\n` : children);
+            .map(children => childIndent.firstLineBreak ? `\n${children}\n${currIndent.firstLine}` : children);
 
         let {attributes, refs} = renderAttributes(htmlElement, dynamicRef, newVariables);
 
         if (needDynamicElement)
-            return de(htmlElement.rawTagName, attributes, childRenders, true, refs, currIndent);
+            return de(htmlElement.rawTagName, attributes, childRenders, refs, currIndent);
         else
-            return e(htmlElement.rawTagName, attributes, childRenders, childLineBreaks, refs, currIndent);
+            return e(htmlElement.rawTagName, attributes, childRenders, refs, currIndent);
     }
 
     function c(renderedCondition: RenderFragment, childElement: RenderFragment) {
@@ -225,7 +241,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
                 let forEachFragment = new RenderFragment(`vs => vs.${forEachAccessor.render()}`, Imports.none(), forEachAccessor.validations);
                 let itemType = (forEachAccessor.resolvedType as JayArrayType).itemType;
                 let forEachVariables = variables.childVariableFor(itemType)
-                let childElement = renderHtmlElement(htmlElement, forEachVariables, indent.child());
+                let childElement = renderHtmlElement(htmlElement, forEachVariables, indent.child().noFirstLineBreak().withLastLineBreak());
                 return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
             }
             else {
@@ -258,7 +274,7 @@ ${refs.map(_ => `  ${_.ref}: ${_.dynamicRef?'DynamicReference<???>':'HTMLElement
 function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, filename: string):
     {elementName: string, elementType: string, renderedImplementation: RenderFragment} {
     let variables = new Variables(types);
-    let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), new Indent('  '), false);
+    let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), new Indent('    '), false);
     let elementName = 'JayElement<ViewState>';
     let defaultElementName = true;
     let elementType = null;
