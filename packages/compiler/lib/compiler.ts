@@ -129,62 +129,80 @@ function findRefs(node: Node, dynamicRef: boolean): {ref: string, dynamicRef: bo
 
 }
 
-function renderNode(variables: Variables, node: Node, firstLineIdent: string, ident: string, dynamicRef: boolean): RenderFragment {
+class Indent {
+    private readonly base: string
+    constructor(parent: string) {
+        this.base = parent + '  ';
+    }
+    get firstLine(): string {
+        return this.base;
+    }
+    get curr(): string {
+        return this.base + '  ';
+    }
 
-    function de(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean, refs: Ref[]): RenderFragment {
-        return new RenderFragment(`${firstLineIdent}de('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? ident : ''}], ${variables.currentContext})`,
+    child(): Indent {
+        return new Indent(this.base)
+    }
+}
+
+function renderNode(variables: Variables, node: Node, indent: Indent, dynamicRef: boolean): RenderFragment {
+
+    function de(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean, refs: Ref[], currIndent: Indent = indent): RenderFragment {
+        return new RenderFragment(`${currIndent.firstLine}de('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? currIndent.firstLine : ''}], ${variables.currentContext})`,
             children.imports.plus(Import.dynamicElement),
             children.validations, [...refs, ...children.refs]);
     }
 
-    function e(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean, refs: Ref[]): RenderFragment {
+    function e(tagName: string, attributes: string, children: RenderFragment, childLineBreaks: boolean, refs: Ref[], currIndent: Indent = indent): RenderFragment {
         let needContext = refs.length > 0;
-        return new RenderFragment(`${firstLineIdent}e('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? ident : ''}]${needContext?', '+variables.currentContext:''})`,
+        return new RenderFragment(`${currIndent.firstLine}e('${tagName}', ${attributes}, [${children.rendered}${childLineBreaks ? currIndent.firstLine : ''}]${needContext?', '+variables.currentContext:''})`,
             children.imports.plus(Import.element),
             children.validations, [...refs, ...children.refs]);
     }
 
-    function renderHtmlElement(htmlElement, newVariables: Variables) {
-        let childNodes = node.childNodes
-            .filter(_ => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '');
+    function renderHtmlElement(htmlElement, newVariables: Variables, currIndent: Indent = indent) {
+        let childNodes = node.childNodes.length > 1 ?
+            node.childNodes.filter(_ => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '') :
+            node.childNodes;
 
-        let childLineBreaks = childNodes.length > 1;
+        let childLineBreaks = childNodes.length > 1 || (childNodes.length === 1 && childNodes[0].nodeType !== NodeType.TEXT_NODE);
 
         let needDynamicElement = childNodes
             .map(_ => isConditional(_) || isForEach(_))
             .reduce((prev, current) => prev || current, false);
 
         let childRenders = childNodes
-            .map(_ => renderNode(newVariables, _, childLineBreaks ? ident + '  ' : '', ident + '  ', dynamicRef))
+            .map(_ => renderNode(newVariables, _, currIndent.child(), dynamicRef))
             .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
             .map(children => childLineBreaks ? `\n${children}\n` : children);
 
         let {attributes, refs} = renderAttributes(htmlElement, dynamicRef, newVariables);
 
         if (needDynamicElement)
-            return de(htmlElement.rawTagName, attributes, childRenders, childLineBreaks, refs);
+            return de(htmlElement.rawTagName, attributes, childRenders, true, refs, currIndent);
         else
-            return e(htmlElement.rawTagName, attributes, childRenders, childLineBreaks, refs);
+            return e(htmlElement.rawTagName, attributes, childRenders, childLineBreaks, refs, currIndent);
     }
 
     function c(renderedCondition: RenderFragment, childElement: RenderFragment) {
-        return new RenderFragment(`${firstLineIdent}c(${renderedCondition.rendered},\n${ident}${childElement.rendered}\n${firstLineIdent})`,
+        return new RenderFragment(`${indent.firstLine}c(${renderedCondition.rendered},\n${childElement.rendered}\n${indent.firstLine})`,
             Imports.merge(childElement.imports, renderedCondition.imports).plus(Import.conditional),
             [...renderedCondition.validations, ...childElement.validations],
             [...renderedCondition.refs, ...childElement.refs]);
     }
 
     function renderForEach(renderedForEach: RenderFragment, collectionVariables: Variables, trackBy: string, childElement: RenderFragment) {
-        return new RenderFragment(`${firstLineIdent}forEach(${renderedForEach.rendered}, (${collectionVariables.currentVar}: Item) => {
-${ident}const ${collectionVariables.currentContext} = ${collectionVariables.parent.currentContext}.forItem(${collectionVariables.currentVar});
-${ident}return ${childElement.rendered}}, '${trackBy}')`, childElement.imports.plus(Import.forEach),
+        return new RenderFragment(`${indent.firstLine}forEach(${renderedForEach.rendered}, (${collectionVariables.currentVar}: ${collectionVariables.currentType.name}) => {
+${indent.curr}const ${collectionVariables.currentContext} = ${collectionVariables.parent.currentContext}.forItem(${collectionVariables.currentVar});
+${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imports.plus(Import.forEach),
             [...renderedForEach.validations, ...childElement.validations], childElement.refs)
     }
 
     switch(node.nodeType) {
         case NodeType.TEXT_NODE:
             let text = node.innerText;
-            return renderTextNode(variables, text);
+            return renderTextNode(variables, text) //.map(_ => ident + _);
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
             if (isForEach(htmlElement))
@@ -195,7 +213,7 @@ ${ident}return ${childElement.rendered}}, '${trackBy}')`, childElement.imports.p
 
             if (isConditional(htmlElement)) {
                 let condition = htmlElement.getAttribute('if');
-                let childElement = renderHtmlElement(htmlElement, variables);
+                let childElement = renderHtmlElement(htmlElement, variables, indent.child());
                 let renderedCondition = parseCondition(condition, variables);
                 return c(renderedCondition, childElement);
             }
@@ -207,7 +225,7 @@ ${ident}return ${childElement.rendered}}, '${trackBy}')`, childElement.imports.p
                 let forEachFragment = new RenderFragment(`vs => vs.${forEachAccessor.render()}`, Imports.none(), forEachAccessor.validations);
                 let itemType = (forEachAccessor.resolvedType as JayArrayType).itemType;
                 let forEachVariables = variables.childVariableFor(itemType)
-                let childElement = renderHtmlElement(htmlElement, forEachVariables);
+                let childElement = renderHtmlElement(htmlElement, forEachVariables, indent.child());
                 return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
             }
             else {
@@ -240,7 +258,7 @@ ${refs.map(_ => `  ${_.ref}: ${_.dynamicRef?'DynamicReference<???>':'HTMLElement
 function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, filename: string):
     {elementName: string, elementType: string, renderedImplementation: RenderFragment} {
     let variables = new Variables(types);
-    let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), '', '  ', false);
+    let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), new Indent('  '), false);
     let elementName = 'JayElement<ViewState>';
     let defaultElementName = true;
     let elementType = null;
@@ -253,7 +271,7 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
             return `  ${_.ref}: ${referenceType}`
         }).join(',\n');
         elementType = `export interface ${elementName} extends JayElement<ViewState> {
-${renderedReferences} 
+${renderedReferences}
 }`
         if (renderedRoot.refs.find(_ => _.dynamicRef))
             imports = imports.plus(Import.DynamicReference)
@@ -261,7 +279,7 @@ ${renderedReferences}
 
     let body = `export function render(viewState: ViewState): ${elementName?elementName:'JayElement<ViewState>'} {
   return ConstructContext.withRootContext(viewState, (${variables.currentContext}: ConstructContext<[ViewState]>) =>
-      ${renderedRoot.rendered})${!defaultElementName?` as ${elementName}`:''};
+${renderedRoot.rendered})${!defaultElementName?` as ${elementName}`:''};
 }`;
     return {elementName, elementType, renderedImplementation: new RenderFragment(body, imports)};
 }

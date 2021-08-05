@@ -3,7 +3,7 @@ import {describe, expect, it} from '@jest/globals'
 import stripMargin from '@caiogondim/strip-margin'
 import {JayArrayType, JayBoolean, JayDate, JayNumber, JayObjectType, JayString} from "../lib/parse-jay-file";
 import {promises} from 'fs';
-import {expectE} from './equal-with-compressed-whitespace';
+// import {expect} from './equal-with-compressed-whitespace';
 
 const readFile = promises.readFile;
 
@@ -71,31 +71,31 @@ describe('compiler', () => {
         it('should generate definition file for simple file', async () => {
             const jayFile = await readSourceFile('definition');
             let definitionFile = generateDefinitionFile(jayFile, 'definition.jay.html');
-            expectE(definitionFile.val).toMatchStringIgnoringWhitespace(await readDefinitionFile('definition'));
+            expect(definitionFile.val).toEqual(await readDefinitionFile('definition'));
         })
 
         it('should generate definition file for collection file', async () => {
             const jayFile = await readSourceFile('collections');
             let definitionFile = generateDefinitionFile(jayFile, 'collections.jay.html');
-            expectE(definitionFile.val).toMatchStringIgnoringWhitespace(await readDefinitionFile('collections'));
+            expect(definitionFile.val).toEqual(await readDefinitionFile('collections'));
         })
 
         it('for simple refs', async () => {
             const jayFile = await readSourceFile('counter');
             let runtimeFile = generateDefinitionFile(jayFile, 'counter.jay.html');
-            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readDefinitionFile('counter'));
+            expect(runtimeFile.val).toEqual(await readDefinitionFile('counter'));
         })
 
         it('for conditional with refs', async () => {
             const jayFile = await readSourceFile('conditions-with-refs');
             let runtimeFile = generateDefinitionFile(jayFile, 'conditions-with-refs.jay.html');
-            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readDefinitionFile('conditions-with-refs'));
+            expect(runtimeFile.val).toEqual(await readDefinitionFile('conditions-with-refs'));
         })
 
         it('for collection refs', async () => {
             const jayFile = await readSourceFile('collection-with-refs');
             let definitionFile = generateDefinitionFile(jayFile, 'collection-with-refs.jay.html');
-            expectE(definitionFile.val).toMatchStringIgnoringWhitespace(await readDefinitionFile('collection-with-refs'));
+            expect(definitionFile.val).toEqual(await readDefinitionFile('collection-with-refs'));
         })
     })
 
@@ -103,67 +103,79 @@ describe('compiler', () => {
         it('for simple file with dynamic text', async () => {
             const jayFile = await readSourceFile('simple-dynamic-text');
             let runtimeFile = generateRuntimeFile(jayFile, 'simple-dynamic-text.jay.html');
-            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('simple-dynamic-text'));
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('simple-dynamic-text'));
         })
 
         it('for simple file with static text', async () => {
             const jayFile = await readSourceFile('simple-static-text');
             let runtimeFile = generateRuntimeFile(jayFile, 'simple-static-text.jay.html');
-            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('simple-static-text'));
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('simple-static-text'));
         })
 
         it('for a composition of divs', async () => {
             const jayFile = await readSourceFile('composite');
             let runtimeFile = generateRuntimeFile(jayFile, 'composite.jay.html');
-            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('composite'));
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('composite'));
         })
 
         it('for composition of divs 2', async () => {
             const jayFile = await readSourceFile('composite 2');
             let runtimeFile = generateRuntimeFile(jayFile, 'composite 2.jay.html');
-            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('composite 2'));
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('composite 2'));
         })
 
         it('for conditional', async () => {
             const jayFile = await readSourceFile('conditions');
             let runtimeFile = generateRuntimeFile(jayFile, 'conditions.jay.html');
-            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('conditions'));
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('conditions'));
         })
 
         it('for styles', async () => {
             const jayFile = await readSourceFile('styles');
             let runtimeFile = generateRuntimeFile(jayFile, 'styles.jay.html');
-            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('styles'));
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('styles'));
         })
 
         it('for collections', async () => {
             const jayFile = await readSourceFile('collections');
             let runtimeFile = generateRuntimeFile(jayFile, 'collections.jay.html');
-            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('collections'));
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('collections'));
         })
 
         it('for simple refs', async () => {
             const jayFile = await readSourceFile('counter');
             let runtimeFile = generateRuntimeFile(jayFile, 'counter.jay.html');
-            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('counter'));
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('counter'));
         })
 
         it('for conditional with refs', async () => {
             const jayFile = await readSourceFile('conditions-with-refs');
             let runtimeFile = generateRuntimeFile(jayFile, 'conditions-with-refs.jay.html');
-            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('conditions-with-refs'));
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('conditions-with-refs'));
         })
 
         it('for collections with refs', async () => {
             const jayFile = await readSourceFile('collection-with-refs');
             let runtimeFile = generateRuntimeFile(jayFile, 'collection-with-refs.jay.html');
-            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('collection-with-refs'));
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('collection-with-refs'));
         })
 
         it('with different types of HTML element attributes', async () => {
             const jayFile = await readSourceFile('attributes');
             let runtimeFile = generateRuntimeFile(jayFile, 'attributes.jay.html');
-            expectE(runtimeFile.val).toMatchStringIgnoringWhitespace(await readGeneratedFile('attributes'));
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('attributes'));
+        })
+
+        it('tmp', async () => {
+            const jayFile = await readSourceFile('tmp');
+            let runtimeFile = generateRuntimeFile(jayFile, 'tmp.jay.html');
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('tmp'));
+        })
+
+        it('whitespace collapsing and handling', async () => {
+            const jayFile = await readSourceFile('whitespace-and-text');
+            let runtimeFile = generateRuntimeFile(jayFile, 'whitespace-and-text.jay.html');
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('whitespace-and-text'));
         })
 
     })
