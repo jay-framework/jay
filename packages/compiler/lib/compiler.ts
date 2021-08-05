@@ -188,10 +188,12 @@ function renderNode(variables: Variables, node: Node, indent: Indent, dynamicRef
             .map(_ => isConditional(_) || isForEach(_))
             .reduce((prev, current) => prev || current, false);
 
-        let childRenders = childNodes
-            .map(_ => renderNode(newVariables, _, childIndent, dynamicRef))
-            .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
-            .map(children => childIndent.firstLineBreak ? `\n${children}\n${currIndent.firstLine}` : children);
+        let childRenders = childNodes.length === 0 ?
+            RenderFragment.empty() :
+            childNodes
+                .map(_ => renderNode(newVariables, _, childIndent, dynamicRef))
+                .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
+                .map(children => childIndent.firstLineBreak ? `\n${children}\n${currIndent.firstLine}` : children);
 
         let {attributes, refs} = renderAttributes(htmlElement, dynamicRef, newVariables);
 

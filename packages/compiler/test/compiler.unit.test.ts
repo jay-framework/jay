@@ -112,6 +112,12 @@ describe('compiler', () => {
             expect(runtimeFile.val).toEqual(await readGeneratedFile('simple-static-text'));
         })
 
+        it('for an empty element', async () => {
+            const jayFile = await readSourceFile('empty-element');
+            let runtimeFile = generateRuntimeFile(jayFile, 'empty-element.jay.html');
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('empty-element'));
+        })
+
         it('for a composition of divs', async () => {
             const jayFile = await readSourceFile('composite');
             let runtimeFile = generateRuntimeFile(jayFile, 'composite.jay.html');
