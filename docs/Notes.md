@@ -36,3 +36,5 @@ Example Project
 - [x] basic benchmark
 - [x] Counter
 - [ ] TodoMVC
+
+worth looking at solid.js control flow and rendering APIs. those are well made
