@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<header>
+    <title>Todo element</title>
+    <link rel="stylesheet" type="text/css" href="todo.css">
+    <script type="application/yaml-jay">
+data:
+    activeTodoCount: number
+    activeTodoWord: string
+    hasItems: boolean
+    filter: ------------All | Active | Completed
+    showClearCompleted: boolean
+    newTodo: string
+    shownTodos:
+    - id: string
+      title: string
+      editing: boolean
+      editText: string
+      completed: boolean
+    </script>
+</header>
+<body>
+<div>
+<section class="todoapp">
+    <div>
+        <header className="header">
+            <h1 className="main-title">todos</h1>
+            <input className="new-todo" placeholder="What needs to be done?" value="{newTodo}" ref="newTodo" autofocus/>
+        </header>
+        <section class="main" if="hasItems">
+            <input id="toggle-all" class="toggle-all" type="checkbox" ref="toggleAll" value={activeTodoCount==0}>
+            <label for="toggle-all"></label>
+            <ul class="todo-list">
+                <li jay-class="completed: completed editing: editing" forEach="shownTodos" trackBy="id">
+                    <div class="view">
+                        <input class="toggle" type="checkbox" value="{completed}" ref="completed">
+                        <label ref="label">{title}</label>
+                        <button ref="button" class="destroy"></button>
+                    </div>
+                    <input class="edit" value={editText} ref="title">
+                </li>
+            </ul>
+        </section>
+        <footer class="footer" if="hasItems">
+            <span class="todo-count">
+                <strong>{activeTodoCount}</strong><span> </span><span>{activeTodoWord}</span><span> left</span>
+            </span>
+            <ul class="filters">
+                <li>
+                    <a href="#/" jay-class="{ selected: filter == All }">All</a>
+                </li>
+                <span> </span>
+                <li>
+                    <a href="#/active" jay-class="{ selected: filter == Active }">Active</a>
+                </li>
+                <span> </span>
+                <li>
+                    <a href="#/completed" jay-class="{ selected: filter == Completed }">Completed</a>
+                </li>
+            </ul>
+            <button class="clear-completed" if="showClearCompleted" ref="clearCompleted">
+                Clear completed
+            </button>
+
+        </footer>
+    </div>
+</section>
+<footer class="info">
+    <p>Double-click to edit a todo</p>
+    <p>Created by <a href="http://github.com/petehunt/">petehunt</a></p>
+    <p>Part of <a href="http://todomvc.com">TodoMVC</a></p>
+</footer>
+</div>
+</body>
+</html>
