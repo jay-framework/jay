@@ -172,7 +172,7 @@ describe('compiler', () => {
             expect(runtimeFile.val).toEqual(await readGeneratedFile('attributes'));
         })
 
-        it('tmp', async () => {
+        it.skip('tmp', async () => {
             const jayFile = await readSourceFile('tmp');
             let runtimeFile = generateRuntimeFile(jayFile, 'tmp.jay.html');
             expect(runtimeFile.val).toEqual(await readGeneratedFile('tmp'));
