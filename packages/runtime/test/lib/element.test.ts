@@ -117,7 +117,7 @@ describe('element', () => {
     })
 
     describe('element trees with updates', () => {
-        it('should update multiple leafs in a tree', () => {
+        it('should update multiple leaves in a tree', () => {
             interface ViewState {
                 text: string,
                 text2: string,
