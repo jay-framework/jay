@@ -77,6 +77,42 @@ describe('element', () => {
         })
     })
 
+    //add tests for dynamic class attribute
+
+    describe('class updates', () => {
+        interface ViewState {
+            isOne: boolean;
+            isTwo: boolean;
+        }
+        let jayElement: JayElement<ViewState>;
+        let data: ViewState;
+        beforeEach(() => {
+            data = {isOne: true, isTwo: false};
+            jayElement = e('div', {
+                className: da(data, vs => `${vs.isOne?'one':''} ${vs.isTwo?'two':''}`)
+            }, ['some text']);
+        });
+
+        it('should create element with class one', () => {
+            expect(jayElement.dom.className).toBe('one ');
+        })
+
+        it('should update element two class two', () => {
+            jayElement.update({isOne: false, isTwo: true})
+            expect(jayElement.dom.className).toBe(' two');
+        })
+
+        it('should update element to have both classes', () => {
+            jayElement.update({isOne: true, isTwo: true})
+            expect(jayElement.dom.className).toBe('one two');
+        })
+
+        it('should update element to have no classes', () => {
+            jayElement.update({isOne: false, isTwo: false})
+            expect(jayElement.dom.className).toBe(' ');
+        })
+    })
+
     describe('style updates', () => {
 
         interface ViewState {
