@@ -79,5 +79,5 @@ export function parseCondition(expression: string, vars: Variables): RenderFragm
 }
 
 export function parseTextExpression(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, vars, 'start');
+    return doParse(expression, vars, 'template');
 }

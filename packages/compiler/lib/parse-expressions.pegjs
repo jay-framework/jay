@@ -5,10 +5,6 @@
     let dt = options.dt;
 }
 
-
-start
-  = template
-
 template
   = a:_ head:((string _)+)? tail:("{" _ accessor _ '}' _ (string _)*)* {
     const renderText = (w, h) => {
@@ -48,18 +44,6 @@ accessor
     let accessor = vars.resolveAccessor(terms)
     return accessor;
   }
-
-additive
-  = left:multiplicative "+" right:additive { return left + right; }
-  / multiplicative
-
-multiplicative
-  = left:primary "*" right:multiplicative { return left * right; }
-  / primary
-
-primary
-  = integer
-  / "(" additive:additive ")" { return additive; }
 
 integer "integer"
   = _ [0-9]+ { return text() }
