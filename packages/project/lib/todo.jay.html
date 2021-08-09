@@ -7,30 +7,33 @@ data:
     activeTodoCount: number
     activeTodoWord: string
     hasItems: boolean
+    isFilterAll: boolean
+    isFilterActive: boolean
+    isFilterCompleted: boolean
     filter: ------------All | Active | Completed
     showClearCompleted: boolean
     newTodo: string
     shownTodos:
     - id: string
       title: string
-      editing: boolean
+      isEditing: boolean
       editText: string
-      completed: boolean
+      isCompleted: boolean
     </script>
 </header>
 <body>
 <div>
 <section class="todoapp">
     <div>
-        <header className="header">
-            <h1 className="main-title">todos</h1>
-            <input className="new-todo" placeholder="What needs to be done?" value="{newTodo}" ref="newTodo" autofocus/>
+        <header class="header">
+            <h1 class="main-title">todos</h1>
+            <input class="new-todo" placeholder="What needs to be done?" value="{newTodo}" ref="newTodo" autofocus/>
         </header>
         <section class="main" if="hasItems">
             <input id="toggle-all" class="toggle-all" type="checkbox" ref="toggleAll" value={activeTodoCount==0}>
             <label for="toggle-all"></label>
             <ul class="todo-list">
-                <li jay-class="completed: completed editing: editing" forEach="shownTodos" trackBy="id">
+                <li class="{isCompleted ? completed} {isEditing ? editing}" forEach="shownTodos" trackBy="id">
                     <div class="view">
                         <input class="toggle" type="checkbox" value="{completed}" ref="completed">
                         <label ref="label">{title}</label>
@@ -46,15 +49,15 @@ data:
             </span>
             <ul class="filters">
                 <li>
-                    <a href="#/" jay-class="{ selected: filter == All }">All</a>
+                    <a href="#/" class="{isFilterAll? selected }">All</a>
                 </li>
                 <span> </span>
                 <li>
-                    <a href="#/active" jay-class="{ selected: filter == Active }">Active</a>
+                    <a href="#/active" class="{ isFilterActive? selected}">Active</a>
                 </li>
                 <span> </span>
                 <li>
-                    <a href="#/completed" jay-class="{ selected: filter == Completed }">Completed</a>
+                    <a href="#/completed" class="{ isFilterCompleted? selected}">Completed</a>
                 </li>
             </ul>
             <button class="clear-completed" if="showClearCompleted" ref="clearCompleted">
