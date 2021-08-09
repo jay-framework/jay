@@ -95,7 +95,10 @@ function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: 
         if (attrName === 'style')
             renderedAttributes.push(`style: {cssText: '${attributes[attrName]}'}`)
         else {
-            let attrKey = attrName.match(attributesRequiresQoutes) ? `"${attrName}"` : attrName;
+            let attrCanonical = attrName.toLowerCase();
+            if (attrCanonical === 'class')
+                attrCanonical = 'className';
+            let attrKey = attrCanonical.match(attributesRequiresQoutes) ? `"${attrCanonical}"` : attrCanonical;
             renderedAttributes.push(`${attrKey}: '${attributes[attrName]}'`)
         }
     })

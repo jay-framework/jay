@@ -3,7 +3,6 @@ import {describe, expect, it} from '@jest/globals'
 import stripMargin from '@caiogondim/strip-margin'
 import {JayArrayType, JayBoolean, JayDate, JayNumber, JayObjectType, JayString} from "../lib/parse-jay-file";
 import {promises} from 'fs';
-// import {expect} from './equal-with-compressed-whitespace';
 
 const readFile = promises.readFile;
 

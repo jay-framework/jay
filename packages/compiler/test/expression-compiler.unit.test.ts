@@ -1,6 +1,13 @@
 import {describe, expect, it} from '@jest/globals'
-import {Accessor, parseAccessor, parseCondition, parseTextExpression, Variables} from '../lib/expression-compiler'
-import {JayNumber, JayObjectType, JayString, JayUnknown} from "../lib/parse-jay-file";
+import {
+    Accessor,
+    parseAccessor,
+    parseClassExpression,
+    parseCondition,
+    parseTextExpression,
+    Variables
+} from '../lib/expression-compiler'
+import {JayBoolean, JayNumber, JayObjectType, JayString, JayUnknown} from "../lib/parse-jay-file";
 
 describe('expression-compiler', () => {
 
@@ -45,6 +52,38 @@ describe('expression-compiler', () => {
             expect(actual.validations).toEqual(['the data field [notAMember] not found in Jay data'])
         })
     })
+
+    describe('parseClass', () => {
+        let defaultVars = new Variables(new JayObjectType('data', {
+            isOne: JayBoolean,
+            isTwo: JayBoolean
+        }));
+
+        it('one static class declaration', () => {
+            const actual = parseClassExpression('class1', defaultVars);
+            expect(actual.rendered).toEqual('\'class1\'');
+        })
+
+        it('static class declaration', () => {
+            const actual = parseClassExpression('class1 class2', defaultVars);
+            expect(actual.rendered).toEqual('\'class1 class2\'');
+        })
+
+        it('dynamic class declaration', () => {
+            const actual = parseClassExpression('{isOne? class1} {isTwo? classTwo} three', defaultVars);
+            expect(actual.rendered).toEqual('vs => \`${vs.isOne?\'class1\':\'\'} ${vs.isTwo?\'classTwo\':\'\'} three\`');
+        })
+
+        it('one dynamic class declaration', () => {
+            const actual = parseClassExpression('{isOne? class1}', defaultVars);
+            expect(actual.rendered).toEqual('vs => \`${vs.isOne?\'class1\':\'\'}\`');
+        })
+
+        it('dynamic class declaration with fallback', () => {
+            const actual = parseClassExpression('{isOne? class1:class2} three', defaultVars);
+            expect(actual.rendered).toEqual('vs => \`${vs.isOne?\'class1\':\'class2\'} three\`');
+        })
+    });
 
     describe('parseTextExpression', () => {
 

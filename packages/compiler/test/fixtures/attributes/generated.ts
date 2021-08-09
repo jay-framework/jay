@@ -12,6 +12,6 @@ export function render(viewState: ViewState): JayElement<ViewState> {
       e('div', {style: {cssText: 'background: red;'}}, [dt(context, vs => vs.text)]),
       e('div', {"data-attribute": 'a value'}, ['static']),
       e('div', {value: 'second value'}, [dt(context, vs => vs.text2)]),
-      e('div', {class: 'main second'}, [dt(context, vs => vs.text3)])
+      e('div', {className: 'main second'}, [dt(context, vs => vs.text3)])
     ]));
 }

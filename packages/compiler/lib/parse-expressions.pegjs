@@ -5,6 +5,36 @@
     let dt = options.dt;
 }
 
+classExpression
+  = _ head: singleClassExpression tail:(_ singleClassExpression)* _ {
+    let isDynamic = false;
+    const renderClass = cls => {
+      isDynamic = isDynamic || cls instanceof RenderFragment;
+      return cls instanceof RenderFragment?
+        cls.map(_ => '${' + _ + '}') :
+        new RenderFragment(cls, none);
+    }
+    let classString = tail.reduce((result, tuple) => {
+      const classExp = tuple[1];
+      return RenderFragment.merge(result, renderClass(classExp), ' ')
+    }, renderClass(head));
+    return isDynamic?
+      classString.map(_ => `vs => \`${_}\``):
+      classString.map(_ => `'${_}'`);
+  }
+
+singleClassExpression
+  = ternaryClassExpression
+  / cssClassName
+
+ternaryClassExpression
+  = [{] _  acc:accessor _ [?] _ classY:cssClassName classN:(_ [:] _ cssClassName)? _ [}] {
+    return new RenderFragment(`vs.${acc.render()}?'${classY}':'${classN?classN[3]:''}'`, dt, acc.validations);
+  }
+
+cssClassName
+  = [-]?[_a-zA-Z]+[_a-zA-Z0-9-]* { return text() }
+
 template
   = a:_ head:((string _)+)? tail:("{" _ accessor _ '}' _ (string _)*)* {
     const renderText = (w, h) => {
