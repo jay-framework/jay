@@ -10,6 +10,7 @@ export enum Import {
     forEach,
     ConstructContext,
     DynamicReference,
+    dynamicAttribute,
 }
 
 export class Imports {
@@ -19,15 +20,15 @@ export class Imports {
         this.imports = newImports;
     }
 
-    plus(addImport: Import | Imports) {
-        let newImports: Array<boolean> = [...this.imports];
+    plus(addImport: Import | Imports): Imports {
         if (addImport instanceof Imports) {
-            newImports = [...addImport.imports];
+            return Imports.merge(this, addImport)
         }
         else {
+            let newImports: Array<boolean> = [...this.imports];
             newImports[addImport as number] = true;
+            return new Imports(newImports)
         }
-        return new Imports(newImports)
     }
 
     has(anImport: Import) {
@@ -64,7 +65,7 @@ export class RenderFragment {
     validations: JayValidations;
     refs: Array<Ref>;
 
-    constructor(rendered: string, imports: Imports, validations: JayValidations = [], refs: Array<Ref> = []) {
+    constructor(rendered: string, imports: Imports = Imports.none(), validations: JayValidations = [], refs: Array<Ref> = []) {
         this.rendered = rendered;
         this.imports = imports;
         this.validations = validations
@@ -80,14 +81,13 @@ export class RenderFragment {
     }
 
     static merge(fragment1: RenderFragment, fragment2: RenderFragment, combinator: string =''): RenderFragment {
-        if (!!fragment1.rendered && !!fragment2.rendered)
-            return new RenderFragment(`${fragment1.rendered}${combinator}${fragment2.rendered}`,
-                Imports.merge(fragment1.imports, fragment2.imports),
-                [...fragment1.validations, ...fragment2.validations],
-                [...fragment1.refs, ...fragment2.refs])
-        else if (!!fragment1.rendered)
-            return fragment1
-        else
-            return fragment2;
+        let rendered = (!!fragment1.rendered && !!fragment2.rendered) ?
+            `${fragment1.rendered}${combinator}${fragment2.rendered}` :
+            (!!fragment1.rendered) ?
+                fragment1.rendered : fragment2.rendered;
+        return new RenderFragment(rendered,
+            Imports.merge(fragment1.imports, fragment2.imports),
+            [...fragment1.validations, ...fragment2.validations],
+            [...fragment1.refs, ...fragment2.refs])
     }
 }

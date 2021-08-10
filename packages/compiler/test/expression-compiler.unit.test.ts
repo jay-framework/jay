@@ -8,6 +8,7 @@ import {
     Variables
 } from '../lib/expression-compiler'
 import {JayBoolean, JayNumber, JayObjectType, JayString, JayUnknown} from "../lib/parse-jay-file";
+import {Import} from "../lib/render-fragment";
 
 describe('expression-compiler', () => {
 
@@ -62,26 +63,31 @@ describe('expression-compiler', () => {
         it('one static class declaration', () => {
             const actual = parseClassExpression('class1', defaultVars);
             expect(actual.rendered).toEqual('\'class1\'');
+            expect(actual.imports.has(Import.dynamicAttribute)).toBeFalsy()
         })
 
         it('static class declaration', () => {
             const actual = parseClassExpression('class1 class2', defaultVars);
             expect(actual.rendered).toEqual('\'class1 class2\'');
+            expect(actual.imports.has(Import.dynamicAttribute)).toBeFalsy()
         })
 
         it('dynamic class declaration', () => {
             const actual = parseClassExpression('{isOne? class1} {isTwo? classTwo} three', defaultVars);
-            expect(actual.rendered).toEqual('vs => \`${vs.isOne?\'class1\':\'\'} ${vs.isTwo?\'classTwo\':\'\'} three\`');
+            expect(actual.rendered).toEqual('da(context.currData, vs => \`${vs.isOne?\'class1\':\'\'} ${vs.isTwo?\'classTwo\':\'\'} three\`)');
+            expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
         })
 
         it('one dynamic class declaration', () => {
             const actual = parseClassExpression('{isOne? class1}', defaultVars);
-            expect(actual.rendered).toEqual('vs => \`${vs.isOne?\'class1\':\'\'}\`');
+            expect(actual.rendered).toEqual('da(context.currData, vs => \`${vs.isOne?\'class1\':\'\'}\`)');
+            expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
         })
 
         it('dynamic class declaration with fallback', () => {
             const actual = parseClassExpression('{isOne? class1:class2} three', defaultVars);
-            expect(actual.rendered).toEqual('vs => \`${vs.isOne?\'class1\':\'class2\'} three\`');
+            expect(actual.rendered).toEqual('da(context.currData, vs => \`${vs.isOne?\'class1\':\'class2\'} three\`)');
+            expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
         })
     });
 
@@ -95,26 +101,31 @@ describe('expression-compiler', () => {
         it("constant string expression", () => {
             const actual = parseTextExpression('some constant string', defaultVars);
             expect(actual.rendered).toEqual('\'some constant string\'')
+            expect(actual.imports.has(Import.dynamicText)).toBeFalsy()
         })
 
         it("constant number expression", () => {
             const actual = parseTextExpression('123123', defaultVars);
             expect(actual.rendered).toEqual('\'123123\'')
+            expect(actual.imports.has(Import.dynamicText)).toBeFalsy()
         })
 
         it("single accessor", () => {
             const actual = parseTextExpression('{string1}', defaultVars);
             expect(actual.rendered).toEqual('dt(context, vs => vs.string1)')
+            expect(actual.imports.has(Import.dynamicText)).toBeTruthy()
         })
 
         it("single accessor in text", () => {
             const actual = parseTextExpression('some {string1} thing', defaultVars);
             expect(actual.rendered).toEqual('dt(context, vs => \`some ${vs.string1} thing\`)')
+            expect(actual.imports.has(Import.dynamicText)).toBeTruthy()
         })
 
         it("multi accessor in text", () => {
             const actual = parseTextExpression('some {string1} and {string3} thing', defaultVars);
             expect(actual.rendered).toEqual('dt(context, vs => \`some ${vs.string1} and ${vs.string3} thing\`)')
+            expect(actual.imports.has(Import.dynamicText)).toBeTruthy()
         })
 
         it("accessor in text not in type renders the type should reports the problem", () => {

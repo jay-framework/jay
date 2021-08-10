@@ -59,6 +59,7 @@ function doParse(expression: string, vars: Variables, startRule) {
             vars, RenderFragment,
             none: Imports.none(),
             dt: Imports.for(Import.dynamicText),
+            da: Imports.for(Import.dynamicAttribute),
             startRule
         });
     } catch (e) {

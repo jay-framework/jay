@@ -3,6 +3,7 @@
     let RenderFragment = options.RenderFragment;
     let none = options.none;
     let dt = options.dt;
+    let da = options.da;
 }
 
 classExpression
@@ -19,7 +20,7 @@ classExpression
       return RenderFragment.merge(result, renderClass(classExp), ' ')
     }, renderClass(head));
     return isDynamic?
-      classString.map(_ => `vs => \`${_}\``):
+      classString.map(_ => `da(${vars.currentContext}.currData, vs => \`${_}\`)`):
       classString.map(_ => `'${_}'`);
   }
 
@@ -29,7 +30,7 @@ singleClassExpression
 
 ternaryClassExpression
   = [{] _  acc:accessor _ [?] _ classY:cssClassName classN:(_ [:] _ cssClassName)? _ [}] {
-    return new RenderFragment(`vs.${acc.render()}?'${classY}':'${classN?classN[3]:''}'`, dt, acc.validations);
+    return new RenderFragment(`vs.${acc.render()}?'${classY}':'${classN?classN[3]:''}'`, da, acc.validations);
   }
 
 cssClassName

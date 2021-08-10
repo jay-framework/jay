@@ -5,6 +5,7 @@ data:
     text: string
     text2: string
     text3: string
+    bool1: boolean
     </script>
 </head>
 <body>
@@ -13,6 +14,8 @@ data:
     <div data-attribute="a value">static</div>
     <div value="second value">{text2}</div>
     <div class="main second">{text3}</div>
+    <div class="{bool1?main}">{text3}</div>
+    <div class="{bool1?main:second}">{text3}</div>
 </div>
 </body>
 </html>

@@ -11,7 +11,7 @@ import {HTMLElement, NodeType} from "node-html-parser";
 import Node from "node-html-parser/dist/nodes/node";
 import {Import, Imports, Ref, RenderFragment} from "./render-fragment";
 import {
-    parseAccessor,
+    parseAccessor, parseClassExpression,
     parseCondition,
     parseTextExpression,
     Variables
@@ -66,6 +66,7 @@ function renderImports(imports: Imports, importsFor: ImportsFor): string {
     if (imports.has(Import.jayElement)) renderedImports.push('JayElement');
     if (imports.has(Import.element) && importsFor === ImportsFor.implementation) renderedImports.push('element as e');
     if (imports.has(Import.dynamicText) && importsFor === ImportsFor.implementation) renderedImports.push('dynamicText as dt');
+    if (imports.has(Import.dynamicAttribute) && importsFor === ImportsFor.implementation) renderedImports.push('dynamicAttribute as da');
     if (imports.has(Import.conditional) && importsFor === ImportsFor.implementation) renderedImports.push('conditional as c');
     if (imports.has(Import.dynamicElement) && importsFor === ImportsFor.implementation) renderedImports.push('dynamicElement as de');
     if (imports.has(Import.forEach) && importsFor === ImportsFor.implementation) renderedImports.push('forEach');
@@ -83,26 +84,32 @@ function renderTextNode(variables: Variables, text: string, indent: Indent): Ren
 }
 
 const attributesRequiresQoutes = /[- ]/;
-function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: Variables): {attributes: string, refs: Ref[]} {
+function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
     let attributes = element.attributes;
     let refs: Ref[] = [];
     let renderedAttributes = [];
     Object.keys(attributes).forEach(attrName => {
-        if (attrName === 'if' || attrName === 'forEach' || attrName === 'trackBy')
+        let attrCanonical = attrName.toLowerCase();
+        let attrKey = attrCanonical.match(attributesRequiresQoutes) ? `"${attrCanonical}"` : attrCanonical;
+        if (attrCanonical === 'if' || attrCanonical === 'foreach' || attrCanonical === 'trackby')
             return;
-        if (attrName === 'ref')
+        if (attrCanonical === 'ref')
             refs = [{ref: attributes[attrName], dynamicRef, refType: variables.currentType}];
-        if (attrName === 'style')
-            renderedAttributes.push(`style: {cssText: '${attributes[attrName]}'}`)
+        if (attrCanonical === 'style')
+            renderedAttributes.push(new RenderFragment(`style: {cssText: '${attributes[attrName]}'}`))
+        else if (attrCanonical === 'class') {
+            let classExpression = parseClassExpression(attributes[attrName], variables);
+            renderedAttributes.push(classExpression.map(_ => `className: ${_}`))
+        }
         else {
-            let attrCanonical = attrName.toLowerCase();
-            if (attrCanonical === 'class')
-                attrCanonical = 'className';
-            let attrKey = attrCanonical.match(attributesRequiresQoutes) ? `"${attrCanonical}"` : attrCanonical;
-            renderedAttributes.push(`${attrKey}: '${attributes[attrName]}'`)
+            renderedAttributes.push(new RenderFragment(`${attrKey}: '${attributes[attrName]}'`))
         }
     })
-    return {attributes:`{${renderedAttributes.join(', ')}}`, refs};
+
+    const refsRenderFragment = new RenderFragment('', Imports.none(), [], refs);
+    return renderedAttributes
+        .reduce((prev, current) => RenderFragment.merge(prev, current, ', '), refsRenderFragment)
+        .map(_ => `{${_}}`);
 }
 
 function isConditional(node: Node): boolean {
@@ -165,17 +172,19 @@ class Indent {
 
 function renderNode(variables: Variables, node: Node, indent: Indent, dynamicRef: boolean): RenderFragment {
 
-    function de(tagName: string, attributes: string, children: RenderFragment, refs: Ref[], currIndent: Indent = indent): RenderFragment {
-        return new RenderFragment(`${currIndent.firstLine}de('${tagName}', ${attributes}, [${children.rendered}${currIndent.lastLine}], ${variables.currentContext})`,
-            children.imports.plus(Import.dynamicElement),
-            children.validations, [...refs, ...children.refs]);
+    function de(tagName: string, attributes: RenderFragment, children: RenderFragment, currIndent: Indent = indent): RenderFragment {
+        return new RenderFragment(`${currIndent.firstLine}de('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}], ${variables.currentContext})`,
+            children.imports.plus(Import.dynamicElement).plus(attributes.imports),
+            [...attributes.validations, ...children.validations],
+            [...attributes.refs, ...children.refs]);
     }
 
-    function e(tagName: string, attributes: string, children: RenderFragment, refs: Ref[], currIndent: Indent = indent): RenderFragment {
-        let needContext = refs.length > 0;
-        return new RenderFragment(`${currIndent.firstLine}e('${tagName}', ${attributes}, [${children.rendered}${currIndent.lastLine}]${needContext?', '+variables.currentContext:''})`,
-            children.imports.plus(Import.element),
-            children.validations, [...refs, ...children.refs]);
+    function e(tagName: string, attributes: RenderFragment, children: RenderFragment, currIndent: Indent = indent): RenderFragment {
+        let needContext = attributes.refs.length > 0;
+        return new RenderFragment(`${currIndent.firstLine}e('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}]${needContext?', '+variables.currentContext:''})`,
+            children.imports.plus(Import.element).plus(attributes.imports),
+            [...attributes.validations, ...children.validations],
+            [...attributes.refs, ...children.refs]);
     }
 
     function renderHtmlElement(htmlElement, newVariables: Variables, currIndent: Indent = indent) {
@@ -198,12 +207,12 @@ function renderNode(variables: Variables, node: Node, indent: Indent, dynamicRef
                 .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
                 .map(children => childIndent.firstLineBreak ? `\n${children}\n${currIndent.firstLine}` : children);
 
-        let {attributes, refs} = renderAttributes(htmlElement, dynamicRef, newVariables);
+        let attributes = renderAttributes(htmlElement, dynamicRef, newVariables);
 
         if (needDynamicElement)
-            return de(htmlElement.rawTagName, attributes, childRenders, refs, currIndent);
+            return de(htmlElement.rawTagName, attributes, childRenders, currIndent);
         else
-            return e(htmlElement.rawTagName, attributes, childRenders, refs, currIndent);
+            return e(htmlElement.rawTagName, attributes, childRenders, currIndent);
     }
 
     function c(renderedCondition: RenderFragment, childElement: RenderFragment) {
