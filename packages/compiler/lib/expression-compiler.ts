@@ -80,7 +80,11 @@ export function parseCondition(expression: string, vars: Variables): RenderFragm
 }
 
 export function parseTextExpression(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, vars, 'template');
+    return doParse(expression, vars, 'dynamicText');
+}
+
+export function parseAttributeExpression(expression: string, vars: Variables): RenderFragment {
+    return doParse(expression, vars, 'dynamicAttribute');
 }
 
 export function parseClassExpression(expression: string, vars: Variables): RenderFragment {

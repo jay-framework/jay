@@ -36,6 +36,22 @@ ternaryClassExpression
 cssClassName
   = [-]?[_a-zA-Z]+[_a-zA-Z0-9-]* { return text() }
 
+dynamicAttribute
+  = template:template {
+  let [renderFragment, isDynamic] = template;
+  return isDynamic ?
+      renderFragment.map(_ => `da(${vars.currentContext}.currData, vs => ${_})`).plusImport(da):
+      renderFragment;
+}
+
+dynamicText
+  = template:template {
+  let [renderFragment, isDynamic] = template;
+  return isDynamic ?
+      renderFragment.map(_ => `dt(${vars.currentContext}, vs => ${_})`).plusImport(dt):
+      renderFragment;
+}
+
 template
   = a:_ head:((string _)+)? tail:("{" _ accessor _ '}' _ (string _)*)* {
     const renderText = (w, h) => {
@@ -44,16 +60,18 @@ template
         w.length?' ':''
     }
     if (tail.length === 0)
-        return new RenderFragment('\'' + renderText(a, head) + '\'', none);
+      return [new RenderFragment('\'' + renderText(a, head) + '\'', none), false];
     else if (tail.length === 1 && !head && a.length === 0 && tail[0][5].length === 0) {
         let accessor = tail[0][2];
-        return new RenderFragment(`dt(${vars.currentContext}, vs => vs.${accessor.render()})`, dt, accessor.validations);
+        return [new RenderFragment(`vs.${accessor.render()}`, none, accessor.validations), true];
     }
     else {
-        return tail.reduce(function(result, element) {
-          let accessor = element[2];
-          return RenderFragment.merge(result, new RenderFragment(`\${vs.${accessor.render()}}${renderText(element[5], element[6])}`, none, accessor.validations));
-        }, new RenderFragment(`dt(${vars.currentContext}, vs => \`${renderText(a, head)}`, dt)).map(exp => exp + '\`)')
+      let reducedFragment = tail.reduce(function(result, element) {
+        let accessor = element[2];
+        return RenderFragment.merge(result, new RenderFragment(`\${vs.${accessor.render()}}${renderText(element[5], element[6])}`, none, accessor.validations));
+      }, new RenderFragment(`\`${renderText(a, head)}`, none)).map(exp => exp + '\`')
+
+      return [reducedFragment, true]
     }
   }
 

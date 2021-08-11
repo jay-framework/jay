@@ -76,6 +76,10 @@ export class RenderFragment {
         return new RenderFragment(f(this.rendered), this.imports, this.validations, this.refs);
     }
 
+    plusImport(imp: Import): RenderFragment {
+        return new RenderFragment(this.rendered, this.imports.plus(imp), this.validations, this.refs);
+    }
+
     static empty(): RenderFragment {
         return new RenderFragment('', Imports.none())
     }

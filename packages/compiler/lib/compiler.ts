@@ -11,7 +11,7 @@ import {HTMLElement, NodeType} from "node-html-parser";
 import Node from "node-html-parser/dist/nodes/node";
 import {Import, Imports, Ref, RenderFragment} from "./render-fragment";
 import {
-    parseAccessor, parseClassExpression,
+    parseAccessor, parseAttributeExpression, parseClassExpression,
     parseCondition,
     parseTextExpression,
     Variables
@@ -102,8 +102,8 @@ function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: 
             renderedAttributes.push(classExpression.map(_ => `className: ${_}`))
         }
         else {
-            // todo support dynamic attribute
-            renderedAttributes.push(new RenderFragment(`${attrKey}: '${attributes[attrName]}'`))
+            let attributeExpression = parseAttributeExpression(attributes[attrName], variables);
+            renderedAttributes.push(attributeExpression.map(_ => `${attrKey}: ${_}`))
         }
     })
 

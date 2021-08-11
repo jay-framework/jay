@@ -1,7 +1,7 @@
 import {describe, expect, it} from '@jest/globals'
 import {
     Accessor,
-    parseAccessor,
+    parseAccessor, parseAttributeExpression,
     parseClassExpression,
     parseCondition,
     parseTextExpression,
@@ -87,6 +87,38 @@ describe('expression-compiler', () => {
         it('dynamic class declaration with fallback', () => {
             const actual = parseClassExpression('{isOne? class1:class2} three', defaultVars);
             expect(actual.rendered).toEqual('da(context.currData, vs => \`${vs.isOne?\'class1\':\'class2\'} three\`)');
+            expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
+        })
+    });
+
+    describe('parseAttributeExpression', () => {
+
+        let defaultVars = new Variables(new JayObjectType('data', {
+            string1: JayString,
+            string3: JayString
+        }))
+
+        it("constant string expression", () => {
+            const actual = parseAttributeExpression('some constant string', defaultVars);
+            expect(actual.rendered).toEqual('\'some constant string\'')
+            expect(actual.imports.has(Import.dynamicAttribute)).toBeFalsy()
+        })
+
+        it("constant number expression", () => {
+            const actual = parseAttributeExpression('123123', defaultVars);
+            expect(actual.rendered).toEqual('\'123123\'')
+            expect(actual.imports.has(Import.dynamicAttribute)).toBeFalsy()
+        })
+
+        it("single accessor", () => {
+            const actual = parseAttributeExpression('{string1}', defaultVars);
+            expect(actual.rendered).toEqual('da(context.currData, vs => vs.string1)')
+            expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
+        })
+
+        it("single accessor in text", () => {
+            const actual = parseAttributeExpression('some {string1} thing', defaultVars);
+            expect(actual.rendered).toEqual('da(context.currData, vs => \`some ${vs.string1} thing\`)')
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
         })
     });
