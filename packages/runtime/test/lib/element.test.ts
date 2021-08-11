@@ -77,9 +77,30 @@ describe('element', () => {
         })
     })
 
-    //add tests for dynamic class attribute
+    describe('dynamic attribute', () => {
+        interface ViewState {
+            title: string
+        }
+        let jayElement: JayElement<ViewState>;
+        let data: ViewState;
+        beforeEach(() => {
+            data = {title: 'initial value'};
+            jayElement = e('input', {
+                value: da(data, vs => vs.title)
+            }, ['some text']);
+        });
 
-    describe('class updates', () => {
+        it('should create element initial attribute value', () => {
+            expect((jayElement.dom as HTMLInputElement).value).toBe('initial value');
+        })
+
+        it('should update element two class two', () => {
+            jayElement.update({title: 'another value'})
+            expect((jayElement.dom as HTMLInputElement).value).toBe('another value');
+        })
+    })
+
+    describe('dynamic classes', () => {
         interface ViewState {
             isOne: boolean;
             isTwo: boolean;
@@ -113,7 +134,7 @@ describe('element', () => {
         })
     })
 
-    describe('style updates', () => {
+    describe('dynamic styles', () => {
 
         interface ViewState {
             text: string
