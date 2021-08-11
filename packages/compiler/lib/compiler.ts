@@ -102,6 +102,7 @@ function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: 
             renderedAttributes.push(classExpression.map(_ => `className: ${_}`))
         }
         else {
+            // todo support dynamic attribute
             renderedAttributes.push(new RenderFragment(`${attrKey}: '${attributes[attrName]}'`))
         }
     })

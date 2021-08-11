@@ -49,15 +49,15 @@ data:
             </span>
             <ul class="filters">
                 <li>
-                    <a href="#/" class="{isFilterAll? selected }">All</a>
+                    <a ref="filterAll" class="{isFilterAll? selected }">All</a>
                 </li>
                 <span> </span>
                 <li>
-                    <a href="#/active" class="{ isFilterActive? selected}">Active</a>
+                    <a ref="filterActive" class="{ isFilterActive? selected}">Active</a>
                 </li>
                 <span> </span>
                 <li>
-                    <a href="#/completed" class="{ isFilterCompleted? selected}">Completed</a>
+                    <a ref="filterCompleted" class="{ isFilterCompleted? selected}">Completed</a>
                 </li>
             </ul>
             <button class="clear-completed" if="showClearCompleted" ref="clearCompleted">
