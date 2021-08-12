@@ -54,9 +54,14 @@ function Todo() {
     }
 
     function computedData(): ViewState {
-        let viewData = {...data,
-            activeTodoCount: data.todos.length,
-            activeTodoWord: data.todos.length > 1 ? 'todos':'todo',
+        let activeTodoCount: number = data.todos.reduce(function (accum: number, todo: ShownTodo) {
+            return todo.isCompleted ? accum : accum + 1;
+        }, 0)
+        return {
+            ...data,
+            activeTodoCount: activeTodoCount,
+            noActiveItems: activeTodoCount === 0,
+            activeTodoWord: activeTodoCount > 1 ? 'todos' : 'todo',
             hasItems: data.todos.length > 0,
             showClearCompleted: !!data.todos.find(_ => _.isCompleted),
             shownTodos: data.todos.filter(todo => {
@@ -68,8 +73,6 @@ function Todo() {
                     return true;
             })
         };
-
-        return viewData;
     }
 
     function update() {
@@ -161,26 +164,21 @@ function Todo() {
         update();
     }
     jayElement.title.onblur = (event, todo) => {
-        console.log('before blur')
         handleSubmit(todo);
         update();
-        console.log('after blur')
     }
     jayElement.title.onchange = (event, todo) => {
         updateTitleFromEditing(todo);
         update();
     }
     jayElement.title.onkeydown = (event, todo) => {
-        console.log('before keydown')
         if (event.which === ESCAPE_KEY) {
             todo.editText = todo.title;
             todo.isEditing = false;
         } else if (event.which === ENTER_KEY) {
             handleSubmit(todo);
         }
-        console.log('keydown before render')
         update();
-        console.log('after keydown')
     }
 
     return {

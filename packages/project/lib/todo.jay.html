@@ -7,6 +7,7 @@ data:
     activeTodoCount: number
     activeTodoWord: string
     hasItems: boolean
+    noActiveItems: boolean
     isFilterAll: boolean
     isFilterActive: boolean
     isFilterCompleted: boolean
@@ -30,7 +31,7 @@ data:
             <input class="new-todo" placeholder="What needs to be done?" value="{newTodo}" ref="newTodo" autofocus/>
         </header>
         <section class="main" if="hasItems">
-            <input id="toggle-all" class="toggle-all" type="checkbox" ref="toggleAll" value={activeTodoCount}>
+            <input id="toggle-all" class="toggle-all" type="checkbox" ref="toggleAll" checked={noActiveItems}>
             <label for="toggle-all"></label>
             <ul class="todo-list">
                 <li class="{isCompleted ? completed} {isEditing ? editing}" forEach="shownTodos" trackBy="id">
