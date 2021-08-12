@@ -28,7 +28,7 @@ function Todo() {
         isFilterActive: true,
         isFilterCompleted: false,
 //        filter: ------------All | Active | Completed
-        newTodo: 'this is a new todo item',
+        newTodo: '',
         todos: [
             {
                 id: 'a1',
@@ -40,7 +40,7 @@ function Todo() {
             {
                 id: 'a2',
                 title: 'a title 2',
-                isEditing: true,
+                isEditing: false,
                 editText: 'this is the edited text',
                 isCompleted: false
             },
@@ -87,7 +87,7 @@ function Todo() {
             data.todos = data.todos.filter(_ => _ !== todo);
         }
     }
-    let destroyTodo = todo => {
+    let updateTitleFromEditing = todo => {
         todo.editText = (event.target as HTMLInputElement).value;
     }
 
@@ -119,6 +119,7 @@ function Todo() {
 
         event.preventDefault();
 
+        data.newTodo = (jayElement.newTodo as HTMLInputElement).value;
         let val = data.newTodo.trim();
 
         if (val) {
@@ -156,25 +157,30 @@ function Todo() {
         update();
     }
     jayElement.button.onclick = (event, todo) => {
-        destroyTodo(todo);
+        data.todos = data.todos.filter(_ => _ !== todo);
         update();
     }
     jayElement.title.onblur = (event, todo) => {
+        console.log('before blur')
         handleSubmit(todo);
         update();
+        console.log('after blur')
     }
     jayElement.title.onchange = (event, todo) => {
-        destroyTodo(todo);
+        updateTitleFromEditing(todo);
         update();
     }
     jayElement.title.onkeydown = (event, todo) => {
+        console.log('before keydown')
         if (event.which === ESCAPE_KEY) {
             todo.editText = todo.title;
             todo.isEditing = false;
         } else if (event.which === ENTER_KEY) {
             handleSubmit(todo);
         }
+        console.log('keydown before render')
         update();
+        console.log('after keydown')
     }
 
     return {

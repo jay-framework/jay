@@ -129,14 +129,21 @@ function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup): 
         mount = () => (child.elem as JayElement<T>).mount()
         unmount = () => (child.elem as JayElement<T>).unmount()
     }
+    let lastResult = false;
     const update = (newData: T) => {
         let result = child.condition(newData);
 
         if (result) {
-            group.ensureNode(child.elem.dom)
+            if (!lastResult) {
+                group.ensureNode(child.elem.dom)
+                child.elem.mount();
+            }
             child.elem.update(newData);
-        } else
+        } else if (lastResult) {
             group.removeNode(child.elem.dom)
+            child.elem.unmount();
+        }
+        lastResult = result;
     };
     return [update, mount, unmount];
 }

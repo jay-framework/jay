@@ -8,6 +8,7 @@ import {
 import "@testing-library/jest-dom/extend-expect";
 import {describe, expect, it} from '@jest/globals'
 import {expectE} from "./test-utils";
+import {JSDOM} from 'jsdom';
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -99,5 +100,66 @@ describe('conditional-element', () => {
         })
 
     });
+
+    // those tests do not work, yet they should check that a conditional does not update the dom when not needed
+    // when updating the dom, using the call to ensureNode, we loss focus on the input. this test is intended to validate
+    // we preserve the focus on the input
+    describe.skip('preserve input focus under conditional', () => {
+        interface ConditionalViewState {
+            condition: boolean
+        }
+        interface ConditionalElement extends JayElement<ConditionalViewState> {
+            input1: HTMLInputElement,
+        }
+
+        let blurCount = 0;
+        let focusCount = 0;
+        function makeElement(data: ConditionalViewState): ConditionalElement {
+
+            const dom = new JSDOM(`<!DOCTYPE html><body></body>`);
+            
+            blurCount = 0;
+            focusCount = 0;
+            let element = ConstructContext.withRootContext(data, (context: ConstructContext<[ConditionalViewState]>) =>
+                // noinspection DuplicatedCode
+                de('div', {}, [
+                    conditional((newViewState) => newViewState.condition,
+                        e('input', {"ref":"input1", id: "input1"}, [], context)
+                    )
+                ], context)) as ConditionalElement
+            dom.window.document.querySelector("body").appendChild(element.dom);
+            element.input1.onblur = () => {console.log('blur'); blurCount += 1};
+            element.input1.onfocus = () => {console.log('focus'); focusCount += 1};
+
+            return element;
+        }
+
+        it('should render the input', () => {
+            let jayElement = makeElement({condition: true});
+            expect(jayElement.dom.querySelector('#input1')).toBeDefined();
+        })
+
+        it('should accept focus and blur', () => {
+            let jayElement = makeElement({condition: true});
+            jayElement.input1.focus();
+            expect(focusCount).toBe(1);
+            expect(blurCount).toBe(0);
+
+            jayElement.input1.blur();
+            expect(focusCount).toBe(1);
+            expect(blurCount).toBe(1);
+        })
+
+        it('conditional update should not trigger blur', () => {
+            let jayElement = makeElement({condition: true});
+            jayElement.input1.focus();
+            expect(focusCount).toBe(1);
+            expect(blurCount).toBe(0);
+
+            jayElement.update({condition: true})
+            expect(focusCount).toBe(1);
+            expect(blurCount).toBe(1);
+        })
+    })
 });
 

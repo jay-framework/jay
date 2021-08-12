@@ -30,12 +30,12 @@ data:
             <input class="new-todo" placeholder="What needs to be done?" value="{newTodo}" ref="newTodo" autofocus/>
         </header>
         <section class="main" if="hasItems">
-            <input id="toggle-all" class="toggle-all" type="checkbox" ref="toggleAll" value={activeTodoCount==0}>
+            <input id="toggle-all" class="toggle-all" type="checkbox" ref="toggleAll" value={activeTodoCount}>
             <label for="toggle-all"></label>
             <ul class="todo-list">
                 <li class="{isCompleted ? completed} {isEditing ? editing}" forEach="shownTodos" trackBy="id">
                     <div class="view">
-                        <input class="toggle" type="checkbox" value="{completed}" ref="completed">
+                        <input class="toggle" type="checkbox" checked="{isCompleted}" ref="completed">
                         <label ref="label">{title}</label>
                         <button ref="button" class="destroy"></button>
                     </div>
