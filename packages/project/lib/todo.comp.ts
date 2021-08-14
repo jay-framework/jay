@@ -180,6 +180,11 @@ function Todo() {
         }
         update();
     }
+    jayElement.toggleAll.onchange = (event) => {
+        let completed = (jayElement.toggleAll as HTMLInputElement).checked
+        data.todos.forEach(todo => todo.isCompleted = completed)
+        update();
+    }
 
     return {
         element: jayElement,

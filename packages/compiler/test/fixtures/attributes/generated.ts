@@ -13,7 +13,8 @@ export function render(viewState: ViewState): JayElement<ViewState> {
       e('div', {style: {cssText: 'background: red;'}}, [dt(context, vs => vs.text)]),
       e('div', {"data-attribute": 'a value'}, ['static']),
       e('input', {value: 'some value'}, []),
-      e('input', {value: da(context.currData, vs => vs.text2)}, []),
+      e('input', {id: 'abc', value: da(context.currData, vs => vs.text2)}, []),
+      e('label', {htmlFor: 'abc'}, []),
       e('div', {className: 'main second'}, [dt(context, vs => vs.text3)]),
       e('div', {className: da(context.currData, vs => `${vs.bool1?'main':''}`)}, [dt(context, vs => vs.text3)]),
       e('div', {className: da(context.currData, vs => `${vs.bool1?'main':'second'}`)}, [dt(context, vs => vs.text3)])

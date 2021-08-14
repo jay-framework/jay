@@ -101,6 +101,10 @@ function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: 
             let classExpression = parseClassExpression(attributes[attrName], variables);
             renderedAttributes.push(classExpression.map(_ => `className: ${_}`))
         }
+        else if (attrCanonical === 'for') {
+            let attributeExpression = parseAttributeExpression(attributes[attrName], variables);
+            renderedAttributes.push(attributeExpression.map(_ => `htmlFor: ${_}`))
+        }
         else {
             let attributeExpression = parseAttributeExpression(attributes[attrName], variables);
             renderedAttributes.push(attributeExpression.map(_ => `${attrKey}: ${_}`))
