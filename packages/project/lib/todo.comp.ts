@@ -53,13 +53,17 @@ function Todo() {
             }]
     }
 
-    function computedData(): ViewState {
-        let activeTodoCount: number = data.todos.reduce(function (accum: number, todo: ShownTodo) {
+    function mkActiveTodoCount(): number {
+        return data.todos.reduce(function (accum: number, todo: ShownTodo) {
             return todo.isCompleted ? accum : accum + 1;
-        }, 0)
+        }, 0);
+    }
+
+    function computedData(): ViewState {
+        let activeTodoCount = mkActiveTodoCount();
         return {
             ...data,
-            activeTodoCount: activeTodoCount,
+            activeTodoCount,
             noActiveItems: activeTodoCount === 0,
             activeTodoWord: activeTodoCount > 1 ? 'todos' : 'todo',
             hasItems: data.todos.length > 0,
