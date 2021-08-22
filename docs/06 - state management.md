@@ -95,6 +95,7 @@ making the component look like
 
 ```typescript
 import {render} from './counter.jay.html';
+import {StateManager} from 'jay-state';
 
 function Counter(initialValue: number, step: number) {
     let sm = new StateManager( 
@@ -128,9 +129,10 @@ or
 
 ```typescript
 import {render} from './counter.jay.html';
+import {StateManager} from 'jay-state';
 
 function Counter(initialValue: number, step: number) {
-    let sm = new StateManager( 
+    let sm = new StateManager(render,  
         {count: initialValue},
         state => ({
             ...state,
@@ -168,20 +170,20 @@ With React Hookss, our counter component looks like
 import React, { useState, useEffect } from 'react';
 
 function Counter(initialValue: number, step: number) {
-   const [count, setCount] = useState(initialValue);
+    const [count, setCount] = useState(initialValue);
 
-   useEffect(() => {
-      setCount(initialValue);
-   }, [initialValue])
+    useEffect(() => {
+        setCount(initialValue);
+    }, [initialValue])
   
-   return (
-           <div>
-              <button onClick={() => setCount(count - step)}>-</button>
-              <span style="margin: 0 16px">{count}</span>
-              {count === 0? (<span if="{isZero}">absolute zero</span>):''}
-              <button onClick={() => setCount(count + step)}>+</button>
-           </div>
-   );
+    return (
+        <div>
+            <button onClick={() => setCount(count - step)}>-</button>
+            <span style="margin: 0 16px">{count}</span>
+            {count === 0? (<span if="{isZero}">absolute zero</span>):''}
+            <button onClick={() => setCount(count + step)}>+</button>
+        </div>
+    );
 }
 ```
            
@@ -202,23 +204,27 @@ Trying to recreate the React state management model
 
 ```typescript
 import {render} from './counter.jay.html';
-import {StateManager} from 'jay';
+import {StateManager, useEffect, useState} from 'jay-hooks';
 
 function Counter(initialValue: number, step: number) {
-    return StateManager(() => {
-       const [count, setCount] = useState(initialValue);
+    return StateManager(render, () => {
+        const [count, setCount] = useState(initialValue);
 
-       useEffect(() => {
-          setCount(initialValue);
-       }, [initialValue])
+        useEffect(() => {
+            setCount(initialValue);
+        }, [initialValue])
        
-       return {
-          count, 
-          isZero: count === 0 
-       }
+        return {
+            count, 
+            isZero: count === 0 
+        }
     }); 
 }
 ```
+
+We define `StateManager` with the type signature
+`StateManager<T, S extends JayElement<T>, R: T => S>(render: R, mkViewState: () => T)`, where `T` is 
+the view state type, `S` is the element and `R` is the render function.
 
 This pattern works for state management, but how do we add the event handlers?
 
@@ -229,51 +235,120 @@ but then we do not have a reference to the `count` variable...
 
 ```typescript
 import {render} from './counter.jay.html';
-import {StateManager} from 'jay';
+import {StateManager, useEffect, useState} from 'jay-hooks';
 
 function Counter(initialValue: number, step: number) {
-    return StateManager(() => {
-       const [count, setCount] = useState(initialValue);
+    return StateManager(render, () => {
+        const [count, setCount] = useState(initialValue);
 
-       useEffect(() => {
-          setCount(initialValue);
-       }, [initialValue])
+        useEffect(() => {
+            setCount(initialValue);
+        }, [initialValue])
 
-       return {
-          count,
-          isZero: count === 0
-       }
+        return {
+            count,
+            isZero: count === 0
+        }
     }).events(je => {
-       je.adder.onclick = () => setCount(count + step); // does not compile, count and setCount are out of scope
-       je.subtracter.onclick = () => setCount(count - step); // does not compile, count and setCount are out of scope
+        je.adder.onclick = () => setCount(count + step); // does not compile, count and setCount are out of scope
+        je.subtracter.onclick = () => setCount(count - step); // does not compile, count and setCount are out of scope
     }); 
 }
 ```
-
 
 2. We can add the event handlers inside the StateManager function, like this 
 
 ```typescript
 import {render} from './counter.jay.html';
-import {StateManager} from 'jay';
+import {StateManager, useEffect, useState} from 'jay-hooks';
 
 function Counter(initialValue: number, step: number) {
-    return StateManager(je => {
-       const [count, setCount] = useState(initialValue);
+    return StateManager(render, je => {
+        const [count, setCount] = useState(initialValue);
 
-       useEffect(() => {
-          setCount(initialValue);
-       }, [initialValue])
+        useEffect(() => {
+            setCount(initialValue);
+        }, [initialValue])
 
-       je.adder.onclick = () => setCount(count + step);
-       je.subtracter.onclick = () => setCount(count - step);
+        je.adder.onclick = () => setCount(count + step);
+        je.subtracter.onclick = () => setCount(count - step);
        
-       return {
-          count, 
-          isZero: count === 0 
-       }
+        return {
+            count, 
+            isZero: count === 0 
+        }
     }); 
 }
 ```
+
+This option still feels a bit off, and has the problem that we recreate the closures for the event handlers 
+on each render. We can do better
+
+3. register events in a hook
+
+```typescript
+import {render} from './counter.jay.html';
+import {StateManager, useEffect, useState, useEvents} from 'jay-hooks';
+
+function Counter(initialValue: number, step: number) {
+    return StateManager(render, () => {
+        const [count, setCount] = useState(initialValue);
+
+        useEffect(() => {
+            setCount(initialValue);
+        }, [initialValue])
+        
+        useEvents(je => { 
+            je.adder.onclick = () => setCount(count + step);
+            je.subtracter.onclick = () => setCount(count - step);
+        }, [count, step])
+       
+        return {
+            count, 
+            isZero: count === 0 
+        }
+    }); 
+}
+```
+
+here we defined the dependency of the event handlers on a prop and a state member using the `useEvents` hook.
+We can follow the React hooks convention that if the array is empty, we execute the events register on each render.
+                  
+4.  hiding the state manager 
+
+we can make it even more idiomatic by hiding the state manager 
+      
+```typescript
+import {ViewState} from './counter.jay.html';
+import {useEffect, useState, useEvents} from 'jay-hooks';
+
+function Counter(initialValue: number, step: number): ViewState {
+    const [count, setCount] = useState(initialValue);
+
+    useEffect(() => {
+        setCount(initialValue);
+    }, [initialValue])
+        
+    useEvents(je => { 
+        je.adder.onclick = () => setCount(count + step);
+        je.subtracter.onclick = () => setCount(count - step);
+    }, [count, step])
+       
+    return {
+        count, 
+        isZero: count === 0 
+    }
+}
+```
+
+Jay can understand this is a component because it returns the `ViewState` which is the type parameter 
+of the `JayElement` (let remind `jayElement` is defined as `JayElement<T>` which has an update func `updateFunc<T> = (newData:T) => void`).
+
+However, there are still a few issues
+* If we have two different elements that have the same `ViewState`, how do we decide which one fits this component?
+* How do we statically derive the type of `je` in `useEvents`?
+
+
+
 
 
