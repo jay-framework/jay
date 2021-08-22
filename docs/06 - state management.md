@@ -298,7 +298,7 @@ function Counter(initialValue: number, step: number) {
             setCount(initialValue);
         }, [initialValue])
         
-        useEvents(je => { 
+        useEvents((je: CounterElement) => { 
             je.adder.onclick = () => setCount(count + step);
             je.subtracter.onclick = () => setCount(count - step);
         }, [count, step])
@@ -319,7 +319,7 @@ We can follow the React hooks convention that if the array is empty, we execute 
 we can make it even more idiomatic by hiding the state manager 
       
 ```typescript
-import {ViewState} from './counter.jay.html';
+import {ViewState, CounterElement} from './counter.jay.html';
 import {useEffect, useState, useEvents} from 'jay-hooks';
 
 function Counter(initialValue: number, step: number): ViewState {
@@ -329,7 +329,7 @@ function Counter(initialValue: number, step: number): ViewState {
         setCount(initialValue);
     }, [initialValue])
         
-    useEvents(je => { 
+    useEvents((je: CounterElement) => { 
         je.adder.onclick = () => setCount(count + step);
         je.subtracter.onclick = () => setCount(count - step);
     }, [count, step])
