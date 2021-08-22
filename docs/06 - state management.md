@@ -223,14 +223,19 @@ function Counter(initialValue: number, step: number) {
 ```
 
 We define `StateManager` with the type signature
-`StateManager<T, S extends JayElement<T>, R: T => S>(render: R, mkViewState: () => T)`, where `T` is 
+```typescript
+declare function StateManager<T, S extends JayElement<T>, R extends (T) => S>(
+    render: R, 
+    mkViewState: () => T)
+``` 
+where `T` is 
 the view state type, `S` is the element and `R` is the render function.
 
 This pattern works for state management, but how do we add the event handlers?
 
 We have a number of options for adding the event handlers - 
 
-1. we can add another construction step, 
+## 1. we can add another construction step 
 but then we do not have a reference to the `count` variable...
 
 ```typescript
@@ -256,7 +261,7 @@ function Counter(initialValue: number, step: number) {
 }
 ```
 
-2. We can add the event handlers inside the StateManager function, like this 
+## 2. We can add the event handlers inside the StateManager function, like this 
 
 ```typescript
 import {render} from './counter.jay.html';
@@ -284,7 +289,7 @@ function Counter(initialValue: number, step: number) {
 This option still feels a bit off, and has the problem that we recreate the closures for the event handlers 
 on each render. We can do better
 
-3. register events in a hook
+## 3. register events in a hook
 
 ```typescript
 import {render} from './counter.jay.html';
@@ -314,7 +319,7 @@ function Counter(initialValue: number, step: number) {
 here we defined the dependency of the event handlers on a prop and a state member using the `useEvents` hook.
 We can follow the React hooks convention that if the array is empty, we execute the events register on each render.
                   
-4.  hiding the state manager 
+## 4.  hiding the state manager 
 
 we can make it even more idiomatic by hiding the state manager 
       
@@ -322,7 +327,7 @@ we can make it even more idiomatic by hiding the state manager
 import {ViewState, CounterElement} from './counter.jay.html';
 import {useEffect, useState, useEvents} from 'jay-hooks';
 
-function Counter(initialValue: number, step: number): ViewState {
+function counter(initialValue: number, step: number): ViewState {
     const [count, setCount] = useState(initialValue);
 
     useEffect(() => {
@@ -348,6 +353,115 @@ However, there are still a few issues
 * If we have two different elements that have the same `ViewState`, how do we decide which one fits this component?
 * How do we statically derive the type of `je` in `useEvents`?
 
+## 5. adding a component builder / register
+
+```typescript
+import {render, ViewState, CounterElement} from './counter.jay.html';
+import {useEffect, useState, useEvents} from 'jay-hooks';
+import {registerJayComponent} from 'jay';
+
+interface CoutnerProps {
+    initialValue: number, 
+    step: number
+}
+
+function counter({initialValue, step}: CoutnerProps): ViewState {
+    const [count, setCount] = useState(initialValue);
+
+    useEffect(() => {
+        setCount(initialValue);
+    }, [initialValue])
+        
+    useEvents((je: CounterElement) => { 
+        je.adder.onclick = () => setCount(count + step);
+        je.subtracter.onclick = () => setCount(count - step);
+    }, [count, step])
+       
+    return {
+        count, 
+        isZero: count === 0 
+    }
+}
+
+registerComponent(render, counter);
+```
+
+We assume here that `registerJayComponent` has the signature
+```typescript
+declare function registerJayComponent<T, S extends JayElement<T>, P>(
+    render: (viewState: T) => S, 
+    component: (props: P) => T): void
+```
+                     
+This pattern works, in the sense that it is declarative - we can deduce the component type
+using code static analysis. However, it binds us to a specific form of creating components, 
+and a specific form of state management. 
+
+Lets decouple the component and state management
+
+## 6. Define component and a component builder
+
+We define a JayComponent as
+```typescript
+interface JayComponent<P, T, S extends JayElement<T>> {
+    elementType: typeof S,
+    update(props: P): T,
+    mount(),
+    unmount()
+}
+```
+
+We define the hooks component builder as
+```typescript
+declare function mkJayComponent<T, S extends JayElement<T>, P>(
+    render: (viewState: T) => S,
+    component: (props: P) => T
+): (props: P) => JayComponent<P, T> 
+```
+
+and we get for the full component file 
+```typescript
+import {render, ViewState, CounterElement} from './counter.jay.html';
+import {useEffect, useState, useEvents, makeJayComponent} from 'jay-hooks';
+
+interface CoutnerProps {
+    initialValue: number, 
+    step: number
+}
+
+function counter({initialValue, step}: CoutnerProps): ViewState {
+    const [count, setCount] = useState(initialValue);
+
+    useEffect(() => {
+        setCount(initialValue);
+    }, [initialValue])
+        
+    useEvents((je: CounterElement) => { 
+        je.adder.onclick = () => setCount(count + step);
+        je.subtracter.onclick = () => setCount(count - step);
+    }, [count, step])
+       
+    return {
+        count, 
+        isZero: count === 0 
+    }
+}
+
+export default makeJayComponent(render, counter);
+```
+                            
+What have we gotten here?
+1. we export a component factory function which take props and returns a JayComponent
+```typescript
+type componentFactory<P, T, S extends JayElement<T>> = 
+    (P) => JayComponent<P, T, S> 
+```
+2. the `componentFactory` type is fully declarative and encodes, in the type system, the 
+types of the props `P`, the view state type `T` and the jayElement type `S`. 
+   
+3. The function type does not assume anything about the function implementation, 
+allowing using other ways to construct a JayComponent as long as the component
+conforms to the same interface.   
 
 
 
