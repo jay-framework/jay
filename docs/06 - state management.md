@@ -33,7 +33,7 @@ import {render} from './counter.jay.html';
 
 function Counter(initialValue: number, step: number) {
     let data = {
-        count: initialValue
+        count: initialValue,
         isZero: initialValue === 0
     };
     let jayElement = render(data);
@@ -494,12 +494,12 @@ const Counter = (props: CoutnerProps) => {
 
     return (
         <>
-            <button onClick={increment}>+</button>
+            <button onClick={() => setCount(count() + props.step)}>+</button>
             <span>{count()}</span>
             <Show when={count() === 0}>
                 <span >absolute zero</span>
             </Show>
-            <button onClick={decrement}>-</button>
+            <button onClick={() => setCount(count() - props.step)}>-</button>
         </>
     );
 };
