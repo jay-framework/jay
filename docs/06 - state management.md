@@ -158,6 +158,12 @@ function Counter(initialValue: number, step: number) {
     }
 }
 ```
+       
+Discussion
+===
+
+Before going into building a state management solution, we review two interesting approaches - 
+the [React.js](https://reactjs.org/) and [Solid.js](https://solidjs.com) state management directions, and try to adjust both to Jay. 
 
 React Recap
 ===
@@ -180,7 +186,7 @@ function Counter(initialValue: number, step: number) {
         <div>
             <button onClick={() => setCount(count - step)}>-</button>
             <span style="margin: 0 16px">{count}</span>
-            {count === 0? (<span if="{isZero}">absolute zero</span>):''}
+            {count === 0? (<span >absolute zero</span>):''}
             <button onClick={() => setCount(count + step)}>+</button>
         </div>
     );
@@ -416,7 +422,7 @@ We define the hooks component builder as
 declare function mkJayComponent<T, S extends JayElement<T>, P>(
     render: (viewState: T) => S,
     component: (props: P) => T
-): (props: P) => JayComponent<P, T> 
+): (props: P) => JayComponent<P, T, S> 
 ```
 
 and we get for the full component file 
@@ -463,6 +469,53 @@ types of the props `P`, the view state type `T` and the jayElement type `S`.
 allowing using other ways to construct a JayComponent as long as the component
 conforms to the same interface.   
 
+                   
+Solid.js Recap
+===
 
+Solid js is marketed as "A declarative, efficient and flexible JavaScript library for building user interfaces".
+It takes a different approach from React in a number of subtle way.  
 
+```typescript jsx
+import { createSignal, createEffect, Show } from "solid-js";
+import { render } from "solid-js/web";
 
+interface CoutnerProps {
+    initialValue: number,
+    step: number
+}
+
+const Counter = (props: CoutnerProps) => {
+    const [count, setCount] = createSignal(props.initialValue);
+
+    createEffect(() => {
+        setCount(props.initialValue)
+    });
+
+    return (
+        <>
+            <button onClick={increment}>+</button>
+            <span>{count()}</span>
+            <Show when={count() === 0}>
+                <span >absolute zero</span>
+            </Show>
+            <button onClick={decrement}>-</button>
+        </>
+    );
+};
+```
+
+While solidjs component looks very similar to React component, there are a few key differences worth looking into.
+* solid js component is a factory and runs only once, compared to a functional React component that runs on each render.
+
+* `createSignal` and `useState` are very similar, except that `createSignal` returns a getter fucntion while react 
+  returns a value. The fact that react re-runs the component on each render allows react to use values.
+
+* solid js derives dependencies for things automatically - like in `createEffect`, something that is enabled 
+  by the use of proxies and the fact that the component runs only once.
+  
+* because solid js runs once, we cannot do conditionals in JSX. Instead, flow control is managed using dedicated tags 
+  like `Show`, `For`, `Switch`, etc.
+
+Trying to build the Solid JS model
+===
