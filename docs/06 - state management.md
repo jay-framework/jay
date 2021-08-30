@@ -516,6 +516,249 @@ While solidjs component looks very similar to React component, there are a few k
   
 * because solid js runs once, we cannot do conditionals in JSX. Instead, flow control is managed using dedicated tags 
   like `Show`, `For`, `Switch`, etc.
+  
+
+Solid JS state management
+---
+
+Solid JS provides a number of hooks for state management, including
+
+### 1. Create Signal
+Basic reactive primitive, to handle a single value. 
+ 
+```typescript
+declare function createSignal<T>(
+        value: T,
+        options?: { name?: string; equals?: false | ((prev: T, next: T) => boolean) }
+): [get: () => T, set: (v: T) => T];
+```
+Note: Unlike react useState, it does not return the value, rather it returns a value getter
+
+### 2. Create Effect
+Creates a new computation that automatically tracks dependencies and runs after each render where a dependency has changed.
+```typescript
+declare function createEffect<T>(
+        fn: (v: T) => T,
+        value?: T,
+        options?: { name?: string }
+): void;
+```
+Note: the effect function is called with the last value returned from the previous call to createEffect. 
+The second parameter value cba ne used to initialize this previous call value.
+
+### 3. Create Store 
+```typescript
+declare function createStore<T extends StoreNode>(
+        state: T | Store<T>,
+        options?: { name?: string }
+): [get: Store<T>, set: SetStoreFunction<T>];
+```
+This creates a tree of Signals as proxy that allows individual values in nested data structures to 
+be independently tracked. The create function returns a readonly proxy object, and a setter function.
+
+Store supports nested objects, by wrapping those as proxies as well (not including build in objects like Date or HTML element)
+
+Stores can use functions for calculated values```
+```typescript
+const [state, setState] = createStore({
+  user: {
+    firstName: "John",
+    lastName: "Smith",
+    get fullName() {
+      return `${this.firstName} ${this.lastName}`;
+    },
+  },
+});
+```
+
+Changing values can be by setting a value, a function, or undefined to remove a value
+```typescript
+const [state, setState] = createStore({
+  firstName: "John",
+  lastName: "Miller",
+});
+
+setState({ firstName: "Johnny", middleName: "Lee" });
+// ({ firstName: 'Johnny', middleName: 'Lee', lastName: 'Miller' })
+
+setState((state) => ({ preferredName: state.firstName, lastName: "Milner" }));
+// ({ firstName: 'Johnny', preferredName: 'Johnny', middleName: 'Lee', lastName: 'Milner' })
+```
+
+It also has path based `setState`, with all kind of options, such as
+```typescript
+setState('counter', c => c + 1);
+setState('list', l => [...l, {id: 43, title: 'Marsupials'}]);
+setState('list', 2, 'read', true);
+setState('todos', [0, 2], 'completed', true);
+setState('todos', { from: 0, to: 1 }, 'completed', c => !c);
+setState('todos', todo => todo.completed, 'task', t => t + '!')
+setState('todos', {}, todo => ({ marked: true, completed: !todo.completed }))
+```
 
 Trying to build the Solid JS model
 ===
+               
+As moving to the solid.js model, we have a number of changes from the React model
+* The function is now only called once, used as a constructor for state management
+* we have to use the props as an object, and not decompose it - in order to enable the 
+  auto detection of dependencies
+
+## 1. with hook for view state
+
+```typescript
+import {render} from './counter.jay.html';
+import {createEffect, createState, createEvents, createViewState, makeJayComponent} from 'jay-hooks';
+
+interface CoutnerProps {
+    initialValue: number, 
+    step: number
+}
+
+function counter(props: CoutnerProps): void {
+    const [count, setCount] = createState(initialValue);
+
+    createEffect(() => {
+        setCount(props.initialValue);
+    })
+        
+    createEvents((je: CounterElement) => { 
+        je.adder.onclick = () => setCount(count() + props.step);
+        je.subtracter.onclick = () => setCount((val) => val - props.step);
+    })
+       
+    createViewState(() => ({count: count(), isZero: count() === 0}))
+}
+
+export default makeJayComponent(render, counter);
+```
+             
+Some notes: 
+* With this option, we assume (like in solid js) that the props are a proxy, and those dependencies 
+  are tracked automatically.
+  
+* The `counter` function runs only once, like Solid.js and unlike React.js. 
+                                      
+* This pattern is not strongly typed, as there is no way for `createViewState` to derive the specific 
+  component `ViewState` type.
+        
+## 2. View State derived automatically
+
+```typescript
+import {render} from './counter.jay.html';
+import {createEffect, createState, createEvents, createViewState, makeJayComponent} from 'jay-hooks';
+
+interface CoutnerProps {
+    initialValue: number, 
+    step: number
+}
+
+function counter(props: CoutnerProps): void {
+    const [count, setCount] = createState('count', initialValue);
+    const [isZero] = createComputedState('isZero', () => count() === 0)
+
+    createEffect(() => {
+        setCount(props.initialValue);
+    })
+        
+    createEvents((je: CounterElement) => { 
+        je.adder.onclick = () => setCount(count() + props.step);
+        je.subtracter.onclick = () => setCount((val) => val - props.step);
+    })
+}
+
+export default makeJayComponent(render, counter);
+```
+
+With this option we added a property name to the `createState` function and add `createComputedState` function.
+We map the state to the `ViewState` by name
+
+Notes: 
+* This option matches state to view state by name, and those is not type checked.
+
+
+## 3. with returning view state function
+
+```typescript
+import {render, ViewState} from './counter.jay.html';
+import {createEffect, createState, createEvents, makeJayComponent} from 'jay-hooks';
+
+interface CoutnerProps {
+    initialValue: number, 
+    step: number
+}
+
+function counter(props: CoutnerProps): () => ViewState {
+    const [count, setCount] = createState(initialValue);
+
+    createEffect(() => {
+        setCount(props.initialValue);
+    })
+        
+    createEvents((je: CounterElement) => { 
+        je.adder.onclick = () => setCount(count() + props.step);
+        je.subtracter.onclick = () => setCount((val) => val - props.step);
+    })
+       
+    return () => ({count: count(), isZero: count() === 0})
+}
+
+export default makeJayComponent(render, counter);
+```
+
+Some notes:
+* this pattern is strongly typed, as `makeJayComponent` requires `render` and `counter` to have matching types
+* the `() => ViewState` function dependencies are tracked automatically
+* this solution still has the problem that we need a callback for `createEvents`, and that the type 
+  of the `CounterElement` is not connected to the type of the `render` function. 
+  
+4. With passing in the element
+
+```typescript
+import {render, ViewState} from './counter.jay.html';
+import {createEffect, createState, createEvents, makeJayComponent} from 'jay-hooks';
+
+interface CoutnerProps {
+    initialValue: number, 
+    step: number
+}
+
+function counter(props: CoutnerProps, je: CounterElement): () => ViewState {
+    const [count, setCount] = createState(initialValue);
+
+    createEffect(() => {
+        setCount(props.initialValue);
+    })
+        
+    je.adder.onclick = () => setCount(count() + props.step);
+    je.subtracter.onclick = () => setCount((val) => val - props.step);
+       
+    return () => ({count: count(), isZero: count() === 0})
+}
+
+export default makeJayComponent(render, counter);
+```
+
+Here we overcome the last shortcoming of the previous option - the fact that the type of `CounterElement`
+was not directly connected to the `render` function type. Here, we can define `makeJayComponent` as
+
+```typescript
+declare function makeJayComponent<P, T, S extends JayElement<T>> (
+        render: (T) => S,
+        comp: (P, S) => () => T)
+```
+
+We can even decide to specialize the element type `S` even more removing the `JayElement` members using `omit`
+```typescript
+type ElementEvents<E> = Omit<E, "dom" | "update" | "mount" | "unmount">
+declare function makeJayComponent<P, T, S extends JayElement<T>, E extends ElementEvents<S>> (
+        render: (T) => S,
+        comp: (P, E) => () => T)
+```
+
+The trick we are doing here with the events is not possible in the React case because of the nature
+of the react function - which is called each time for each render, and will result in re-creation of event
+handlers and risk of dangling closures. 
+
+With the Solid pattern, the function is only called once, and the events will only be registered once.
+
