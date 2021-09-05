@@ -828,7 +828,7 @@ je.remove.onclick = (event, item) => {
 }
 
 je.completed.onclick = (event, item) => {
-    setState({items, update(item, {...item, isCompleted: !item.isCompleted})})
+    setState({items, update(item, {"isCompleted": !item.isCompleted})})
 }
 ```
 
