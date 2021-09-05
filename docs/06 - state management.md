@@ -616,7 +616,7 @@ interface CoutnerProps {
 }
 
 function counter(props: CoutnerProps): void {
-    const [count, setCount] = createState(initialValue);
+    const [count, setCount] = createState(props.initialValue);
 
     createEffect(() => {
         setCount(props.initialValue);
@@ -654,7 +654,7 @@ interface CoutnerProps {
 }
 
 function counter(props: CoutnerProps): void {
-    const [count, setCount] = createState('count', initialValue);
+    const [count, setCount] = createState('count', props.initialValue);
     const [isZero] = createComputedState('isZero', () => count() === 0)
 
     createEffect(() => {
@@ -689,7 +689,7 @@ interface CoutnerProps {
 }
 
 function counter(props: CoutnerProps): () => ViewState {
-    const [count, setCount] = createState(initialValue);
+    const [count, setCount] = createState(props.initialValue);
 
     createEffect(() => {
         setCount(props.initialValue);
@@ -712,7 +712,7 @@ Some notes:
 * this solution still has the problem that we need a callback for `createEvents`, and that the type 
   of the `CounterElement` is not connected to the type of the `render` function. 
   
-4. With passing in the element
+## 4. With passing in the element
 
 ```typescript
 import {render, ViewState} from './counter.jay.html';
@@ -724,7 +724,7 @@ interface CoutnerProps {
 }
 
 function counter(props: CoutnerProps, je: CounterElement): () => ViewState {
-    const [count, setCount] = createState(initialValue);
+    const [count, setCount] = createState(props.initialValue);
 
     createEffect(() => {
         setCount(props.initialValue);
@@ -762,3 +762,76 @@ handlers and risk of dangling closures.
 
 With the Solid pattern, the function is only called once, and the events will only be registered once.
 
+## 4.1. moving to `createStore`
+
+Can we also opt in to a `createStore` like pattern that we see in Solid?
+
+```typescript
+import {render, ViewState} from './counter.jay.html';
+import {createEffect, createState, createEvents, makeJayComponent} from 'jay-hooks';
+
+interface CoutnerProps {
+    initialValue: number, 
+    step: number
+}
+
+function counter(props: CoutnerProps, je: CounterElement): () => ViewState {
+    const [state, setState] = createStore({
+      count: props.initialValue,
+      get isZero() {
+          return this.count === 0
+      }
+    });
+
+    createEffect(() => {
+        setState({count: props.initialValue});
+    })
+        
+    je.adder.onclick = () => setState({count: state.count + props.step});
+    je.subtracter.onclick = () => setState(state => {count: state.count - props.step});
+       
+    return state;
+}
+
+export default makeJayComponent(render, counter);
+```
+
+in this case `state` is a proxy object who conforms to the `ViewState` type and 
+`setStaet` merges the parameter it gets with `state`.
+      
+## 4.2. extending the store to handle collections
+
+When we have a collection in a store rendered using `forEach`, the React way to update it is to do things like the below. Keep 
+in mind that in Jay, the event second element are the data context of the `forEach`.
+
+```typescript
+je.remove.onclick = (event, item) => {
+    setState(state => {items: state.filter(_ => _ !== item)});
+}
+
+je.completed.onclick = (event, item) => {
+  setState(state => {items: state.map(_ => (_ === item)?
+          {...item, isCompleted: !item.isCompleted}:
+          _
+  )});
+}
+```
+
+We notice two things - one, it is repeated and cumbersome code. Second, it is loosing the intent, 
+preventing the ability to optimize on the intent.
+
+We propose the following pattern instead
+
+```typescript
+je.remove.onclick = (event, item) => {
+    setState({items: remove(item)});
+}
+
+je.completed.onclick = (event, item) => {
+    setState({items, update(item, {...item, isCompleted: !item.isCompleted})})
+}
+```
+
+Where we add a few "collection actions" constructors - `remove`, `move`, `update` and `new` that 
+both capture the intent and reduce code size. With those "collection actions" we can also track 
+the collection changes and optimize the algorithm of collection compare
