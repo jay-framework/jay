@@ -214,7 +214,7 @@ declare function conditional<T>(
 ### <a name="ConstructionContext">ConstructionContext</a>
 
 ```typescript
-export declare class ConstructContext<A extends Array<any>> {
+declare class ConstructContext<A extends Array<any>> {
     refManager: ReferencesManager;
     data: A;
     forStaticElements: boolean;
