@@ -23,17 +23,17 @@ interface TestElement extends JayElement<ViewState> {
 
 function renderComposite(viewState: ViewState): TestElement {
 
-    return ConstructContext.withRootContext(viewState, (context: ConstructContext<[ViewState]>) =>
+    return ConstructContext.withRootContext(viewState, () =>
         e('div', {}, [
-            childComp((props: ItemData) => Item(props), vs => ({text: vs.staticItem, dataId: 'AAA'}), context) //,
+            childComp((props: ItemData) => Item(props), vs => ({text: vs.staticItem, dataId: 'AAA'})) //,
                 // conditional(vs => vs.condition, Item({text: context.currData.conditionItem}),
                 // forEach(vs => vs.items, item => Item(text: item)
-        ], context)
+        ])
     ) as TestElement;
 }
 
 describe('nested components', () => {
-    it("create counter with initial value 6", () => {
+    it("create an item nested component with hello world", () => {
         let composite = renderComposite({
             staticItem: 'hello world'
         });

@@ -12,12 +12,11 @@ interface CounterElement extends JayElement<ViewState> {
 
 function renderCounter(viewState: ViewState): CounterElement {
 
-    return ConstructContext.withRootContext(viewState, (context: ConstructContext<[ViewState]>) =>
+    return ConstructContext.withRootContext(viewState, () =>
         e('div', {}, [
-                e('div', {ref: 'dec'}, ['-'], context),
-                e('div', {ref: 'count'}, [dt(context, vs => vs.count)], context),
-                e('div', {ref: 'inc'}, ['+'], context)],
-            context)
+                e('div', {ref: 'dec'}, ['-']),
+                e('div', {ref: 'count'}, [dt(vs => vs.count)]),
+                e('div', {ref: 'inc'}, ['+'])])
     ) as CounterElement;
 }
 

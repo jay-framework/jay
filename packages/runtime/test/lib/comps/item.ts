@@ -17,12 +17,11 @@ export interface ItemElement extends JayElement<ItemVS>{
 }
 
 function renderItem(viewState: ItemVS): ItemElement {
-    return ConstructContext.withRootContext(viewState, (context: ConstructContext<[ItemVS]>) =>
+    return ConstructContext.withRootContext(viewState, () =>
         e('div', {'data-id': viewState.dataId}, [
-            dt(context, vs => `${vs.text} - ${vs.done?'done':'tbd'}`),
-            e('button', {ref: 'done'}, ['done'], context),
-            e('button', {ref: 'remove'}, ['remove'], context)],
-            context)
+            dt(vs => `${vs.text} - ${vs.done?'done':'tbd'}`),
+            e('button', {ref: 'done'}, ['done']),
+            e('button', {ref: 'remove'}, ['remove'])])
     ) as ItemElement;
 }
 

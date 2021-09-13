@@ -2,6 +2,7 @@ import {Kindergarten, KindergartenGroup} from "./kindergarden";
 import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "./list-compare";
 import {RandomAccessLinkedList as List} from "./random-access-linked-list";
 import {ElementReference, ReferencesManager} from "./node-reference";
+import {ContextStack} from "./context-stack";
 export {DynamicReference} from "./node-reference";
 
 const STYLE = 'style';
@@ -28,8 +29,8 @@ export interface JayComponent<P, T, S extends JayElement<T>>{
 export function childComp<ParentT, A extends Array<any>, Props, ChildT,
     ChildElementVS extends JayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElementVS>>(
     compCreator: (props: Props) => ChildComp,
-    getProps: (t: ParentT) => Props,
-    context: ConstructContext<A>): JayElement<ParentT> {
+    getProps: (t: ParentT) => Props): JayElement<ParentT> {
+    let context = constructionContextStack.current();
     let childComp = compCreator(getProps(context.currData))
     return {
         dom: childComp.element.dom,
@@ -144,10 +145,15 @@ function mkUpdateCollection<T>(child: ForEach<T, any>, group: KindergartenGroup)
     let lastItems = new List<T, JayElement<T>>([], child.matchBy);
     let mount = () => lastItems.forEach((value, attach) => attach.mount);
     let unmount = () => lastItems.forEach((value, attach) => attach.unmount);
+    // todo handle data updates of the parent contexts
+    let parentContext = constructionContextStack.current();
     const update = (newData: T) => {
         const items = child.getItems(newData);
         let itemsList = new List<T, JayElement<T>>(items, child.matchBy);
-        let instructions = listCompare<T>(lastItems, itemsList, child.elemCreator);
+        let instructions = listCompare<T>(lastItems, itemsList, (item) => {
+            let childContext = parentContext.forItem(item);
+            return constructionContextStack.doWithContext(childContext, () => child.elemCreator(item))
+        });
         lastItems = itemsList;
         applyListChanges(group, instructions);
         itemsList.forEach((value, elem) => elem.update(value))
@@ -181,6 +187,8 @@ function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup): 
     return [update, mount, unmount];
 }
 
+const constructionContextStack = new ContextStack<ConstructContext<Array<any>>>();
+
 export class ConstructContext<A extends Array<any>> {
     refManager: ReferencesManager
     data: A
@@ -208,9 +216,9 @@ export class ConstructContext<A extends Array<any>> {
         return new ConstructContext([t])
     }
 
-    static withRootContext<T, A extends ConstructContext<[T]>>(t: T, elementConstructor: (A) => JayElement<T>) {
+    static withRootContext<T>(t: T, elementConstructor: () => JayElement<T>) {
         let context = new ConstructContext([t])
-        let element = elementConstructor(context);
+        let element = constructionContextStack.doWithContext(context, () => elementConstructor())
         element.mount();
         return context.refManager.applyToElement(element);
     }
@@ -225,8 +233,9 @@ function text<T>(content: string): TextElement<T> {
     }
 }
 
-export function dynamicText<T, A extends Array<any>>(context: ConstructContext<A>,
+export function dynamicText<T, A extends Array<any>>(
                                textContent: (T) => string): TextElement<T> {
+    let context = constructionContextStack.current();
     let content = textContent(context.currData);
     let n = document.createTextNode(content);
     return {
@@ -245,10 +254,9 @@ export function dynamicText<T, A extends Array<any>>(context: ConstructContext<A
 export function element<T, A extends Array<any>>(
     tagName: string,
     attributes: Attributes<T>,
-    children: Array<JayElement<T> | TextElement<T> | string> = [],
-    context?: ConstructContext<A>):
+    children: Array<JayElement<T> | TextElement<T> | string> = []):
     JayElement<T> {
-    let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes, context);
+    let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes);
     
     children.forEach(child => {
         if (typeof child === 'string')
@@ -272,10 +280,9 @@ export function element<T, A extends Array<any>>(
 export function dynamicElement<T, A extends Array<any>>(
     tagName: string,
     attributes: Attributes<T>,
-    children: Array<Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T> | string> = [],
-    context?: ConstructContext<A>):
+    children: Array<Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T> | string> = []):
     JayElement<T> {
-    let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes, context);
+    let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes);
 
     let kindergarten = new Kindergarten(e);
     children.forEach(child => {
@@ -300,6 +307,7 @@ export function dynamicElement<T, A extends Array<any>>(
         }
 
         if (update !== noopUpdate) {
+            let context = constructionContextStack.current();
             update(context.data[0])
             updates.push(update);
         }
@@ -318,7 +326,7 @@ export function dynamicElement<T, A extends Array<any>>(
     };
 }
 
-function createBaseElement<T, A extends Array<any>>(tagName: string, attributes: Attributes<T>, context: ConstructContext<A>):
+function createBaseElement<T, A extends Array<any>>(tagName: string, attributes: Attributes<T>):
     {e: HTMLElement, updates: updateFunc<T>[], mounts: mountFunc[], unmounts: mountFunc[]} {
     let e = document.createElement(tagName);
     let updates: updateFunc<T>[] = [];
@@ -331,6 +339,7 @@ function createBaseElement<T, A extends Array<any>>(tagName: string, attributes:
             })
         }
         else if (key === REF) {
+            let context = constructionContextStack.current();
             if (context.forStaticElements) {
                 context.refManager.addStaticRef(value as string, e)
             }

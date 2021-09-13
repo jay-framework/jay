@@ -23,23 +23,22 @@ describe('dynamic-element with mixed content', () => {
 
     function makeElement(data: ViewState): JayElement<ViewState> {
 
-        return ConstructContext.withRootContext(data, (context: ConstructContext<[ViewState]>) =>
+        return ConstructContext.withRootContext(data, () =>
         // noinspection DuplicatedCode
         de('div', {}, [
             'Some text',
-            e('h1', {}, [dt(context, data => data.title)]),
+            e('h1', {}, [dt(data => data.title)]),
             forEach(
                 (newViewState) => newViewState.items,
                 (item: Item) => {
-                    let childContext = context.forItem(item);
-                    return e('div', {"className":"item", id: item.id}, [dt(childContext, item => item.name)])
+                    return e('div', {"className":"item", id: item.id}, [dt(item => item.name)])
                 },
                 'id'
             ),
-            dt(context, data => data.separator),
+            dt(data => data.separator),
             conditional(data => data.items.length === 0,
                 "no items found")
-        ], context))
+        ]))
     }
 
     const data1 = {items: [], title: 'the title', separator: '---'};

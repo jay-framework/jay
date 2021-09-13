@@ -6,11 +6,11 @@ interface ViewState {
 }
 
 export default function render(viewState: ViewState) {
-    return ConstructContext.withRootContext(viewState, (context: ConstructContext<[ViewState]>) =>
+    return ConstructContext.withRootContext(viewState, () =>
         e('div', {}, [
-            e('div', {}, [dt(context, vs => vs.text)]),
+            e('div', {}, [dt(vs => vs.text)]),
             e('div', {}, ['static']),
-            e('div', {}, [dt(context, vs => vs.text2)])
+            e('div', {}, [dt(vs => vs.text2)])
         ])
     )
 }

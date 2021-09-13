@@ -25,27 +25,35 @@ describe('text-element', () => {
     const updatedNameAndGraduate: ViewState = {...updatedName, graduated: true}
 
     it('should render string as text', () => {
-        let jayElement = e('div', {"className": 'item'}, [dt(constructContext,
-                vs => vs.firstName)]);
+        let jayElement = ConstructContext.withRootContext(initial, () =>
+            e('div', {"className": 'item'}, [dt(
+                vs => vs.firstName)])
+        );
         expectE(jayElement.dom).toHaveTextContent(initial.firstName)
     })
 
     it('should update string as text', () => {
-        let jayElement = e('div', {"className": 'item'}, [dt(constructContext,
-            vs => vs.firstName)]);
+        let jayElement = ConstructContext.withRootContext(initial, () =>
+        e('div', {"className": 'item'}, [dt(
+            vs => vs.firstName)])
+        );
         jayElement.update(updatedName);
         expectE(jayElement.dom).toHaveTextContent(updatedName.firstName)
     })
 
     it('should render complex string as text', () => {
-        let jayElement = e('div', {"className": 'item'}, [dt(constructContext,
-                vs => `${vs.firstName} ${vs.lastName} - age: ${vs.age}, did ${vs.graduated?'':'not'} graduate`)]);
+        let jayElement = ConstructContext.withRootContext(initial, () =>
+            e('div', {"className": 'item'}, [dt(
+                vs => `${vs.firstName} ${vs.lastName} - age: ${vs.age}, did ${vs.graduated?'':'not'} graduate`)])
+        );
         expectE(jayElement.dom).toHaveTextContent('John smith - age: 28, did not graduate');
     })
 
     it('should render complex string as text', () => {
-        let jayElement = e('div', {"className": 'item'}, [dt(constructContext,
-            vs => `${vs.firstName} ${vs.lastName} - age: ${vs.age}, did ${vs.graduated?'':'not'} graduate`)]);
+        let jayElement = ConstructContext.withRootContext(initial, () =>
+            e('div', {"className": 'item'}, [dt(
+            vs => `${vs.firstName} ${vs.lastName} - age: ${vs.age}, did ${vs.graduated?'':'not'} graduate`)])
+        );
         jayElement.update(updatedNameAndGraduate);
         expectE(jayElement.dom).toHaveTextContent('Terry smith - age: 28, did graduate');
     })

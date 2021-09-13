@@ -25,16 +25,16 @@ describe('conditional-element', () => {
     describe('rendering', () => {
 
         function makeElement(data: ViewState): JayElement<ViewState> {
-            return ConstructContext.withRootContext(data, (context: ConstructContext<[ViewState]>) =>
+            return ConstructContext.withRootContext(data, () =>
                 // noinspection DuplicatedCode
                 de('div', {}, [
                     conditional((newViewState) => newViewState.condition,
-                        e('div', {style: {cssText: 'color:red'}, "id":"text1"}, [dt(context, data => data.text1)])
+                        e('div', {style: {cssText: 'color:red'}, "id":"text1"}, [dt(data => data.text1)])
                     ),
                     conditional((newViewState) => !newViewState.condition,
-                        e('div', {style: {cssText: 'color:green'}, "id":"text2"}, [dt(context, data => data.text2)])
+                        e('div', {style: {cssText: 'color:green'}, "id":"text2"}, [dt(data => data.text2)])
                     )
-                ], context))
+                ]))
         }
 
         it('should render first text if condition is true', () => {
@@ -73,16 +73,16 @@ describe('conditional-element', () => {
 
         function makeElement(data: ViewState): ConditionalElement {
 
-            return ConstructContext.withRootContext(data, (context: ConstructContext<[ViewState]>) =>
+            return ConstructContext.withRootContext(data, () =>
                 // noinspection DuplicatedCode
                 de('div', {}, [
                     conditional((newViewState) => newViewState.condition,
-                        e('div', {style: {cssText: 'color:red'}, "ref":"text1"}, [dt(context, data => data.text1)], context)
+                        e('div', {style: {cssText: 'color:red'}, "ref":"text1"}, [dt(data => data.text1)])
                     ),
                     conditional((newViewState) => !newViewState.condition,
-                        e('div', {style: {cssText: 'color:green'}, "ref":"text2"}, [dt(context, data => data.text2)], context)
+                        e('div', {style: {cssText: 'color:green'}, "ref":"text2"}, [dt(data => data.text2)])
                     )
-                ], context)) as ConditionalElement
+                ])) as ConditionalElement
         }
 
         it('should have references to elements under conditional', () => {
@@ -120,13 +120,13 @@ describe('conditional-element', () => {
             
             blurCount = 0;
             focusCount = 0;
-            let element = ConstructContext.withRootContext(data, (context: ConstructContext<[ConditionalViewState]>) =>
+            let element = ConstructContext.withRootContext(data, () =>
                 // noinspection DuplicatedCode
                 de('div', {}, [
                     conditional((newViewState) => newViewState.condition,
-                        e('input', {"ref":"input1", id: "input1"}, [], context)
+                        e('input', {"ref":"input1", id: "input1"}, [])
                     )
-                ], context)) as ConditionalElement
+                ])) as ConditionalElement
             dom.window.document.querySelector("body").appendChild(element.dom);
             element.input1.onblur = () => {console.log('blur'); blurCount += 1};
             element.input1.onfocus = () => {console.log('focus'); focusCount += 1};

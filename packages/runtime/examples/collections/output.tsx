@@ -21,26 +21,25 @@ interface ViewState {
 export default function render(viewState: ViewState): JayElement<ViewState> {
 
 
-    return ConstructContext.withRootContext(viewState, (context: ConstructContext<[ViewState]>) => {
+    return ConstructContext.withRootContext(viewState, () => {
 
         const createDiv = (item: Item) => {
-            const itemContext = context.forItem(item)
             return e('div', {}, [
                 e('span', {style: {cssText: 'color:green; width: 100px; display: inline-block;'}},
-                    [dt(itemContext, item => item.name)]),
+                    [dt(item => item.name)]),
                 e('span', {style: {cssText: 'color:red; width: 100px; display: inline-block;'}},
-                    [dt(itemContext, item => item.completed ? 'yes' : 'no')]),
+                    [dt(item => item.completed ? 'yes' : 'no')]),
                 e('span', {style: {cssText: 'color:blue; width: 100px; display: inline-block;'}},
-                    [dt(itemContext, item => item.cost.toString())])
+                    [dt(item => item.cost.toString())])
             ]);
         };
 
         return e('div', {}, [
-            e('h1', {}, [dt(context, vs => vs.title)]),
+            e('h1', {}, [dt(vs => vs.title)]),
             de('div', {}, [
                 forEach(vs => vs.items, createDiv, 'id')
-            ], context)
-        ], context)
+            ])
+        ])
     })
 }
 

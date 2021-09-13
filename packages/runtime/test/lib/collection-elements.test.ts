@@ -30,18 +30,17 @@ describe('collection-element', () => {
     describe('rendering', () => {
 
         function makeElement(data: ViewState): JayElement<ViewState> {
-            return ConstructContext.withRootContext(data, (context: ConstructContext<[ViewState]>) =>
+            return ConstructContext.withRootContext(data, () =>
                 // noinspection DuplicatedCode
                 de('div', {}, [
                     forEach(
                         (newViewState) => newViewState.items,
                         (item: Item) => {
-                            let childContext = context.forItem(item)
-                            return e('div', {"className":"item", id: item.id}, [dt(childContext, item => item.name)])
+                            return e('div', {"className":"item", id: item.id}, [dt(item => item.name)])
                         },
                         'id'
                     )
-                ], context)
+                ])
             )
         }
 
@@ -116,21 +115,20 @@ describe('collection-element', () => {
             done: DynamicReference<Item>
         }
         function makeElement(data: ViewState): TodoListElement {
-            return ConstructContext.withRootContext(data, (context: ConstructContext<[ViewState]>) =>
+            return ConstructContext.withRootContext(data, () =>
                 // noinspection DuplicatedCode
                 de('div', {}, [
                     forEach(
                         (newViewState) => newViewState.items,
                         (item: Item) => {
-                            let childContext = context.forItem(item)
                             return e('div', {"className":"item", id: item.id}, [
-                                dt(childContext, item => item.name),
-                                e('button', {ref: 'done'}, ["done"], childContext)
+                                dt(item => item.name),
+                                e('button', {ref: 'done'}, ["done"])
                             ])
                         },
                         'id'
                     )
-                ], context)
+                ])
             ) as TodoListElement
         }
 
