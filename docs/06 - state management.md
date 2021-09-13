@@ -410,10 +410,10 @@ Lets decouple the component and state management
 We define a JayComponent as
 ```typescript
 interface JayComponent<P, T, S extends JayElement<T>> {
-    elementType: typeof S,
-    update(props: P): T,
-    mount(),
-    unmount()
+  element: S,
+  update(props: P): void,
+  mount(),
+  unmount()
 }
 ```
 

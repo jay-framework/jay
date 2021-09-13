@@ -18,6 +18,27 @@ export interface JayElement<T> {
     unmount: mountFunc
 }
 
+export interface JayComponent<P, T, S extends JayElement<T>>{
+    element: S
+    update: updateFunc<P>
+    mount: mountFunc,
+    unmount: mountFunc
+}
+
+export function childComp<ParentT, A extends Array<any>, Props, ChildT,
+    ChildElementVS extends JayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElementVS>>(
+    compCreator: (props: Props) => ChildComp,
+    getProps: (t: ParentT) => Props,
+    context: ConstructContext<A>): JayElement<ParentT> {
+    let childComp = compCreator(getProps(context.currData))
+    return {
+        dom: childComp.element.dom,
+        update: (t: ParentT) => childComp.update(getProps(t)),
+        mount: childComp.mount,
+        unmount: childComp.unmount
+    }
+}
+
 export interface TextElement<T> {
     dom: Text,
     update: updateFunc<T>,
@@ -30,7 +51,7 @@ export interface DynamicAttribute<T> {
     attributeValue: (data:T) => string;
 }
 
-function isDynamicAttribute(value: any) {
+function isDynamicAttribute<T>(value: any): value is DynamicAttribute<T> {
     return typeof value.attributeValue === 'function';
 }
 
@@ -41,20 +62,32 @@ export function dynamicAttribute<T, S>(initialData: T, attributeValue: (data: T)
 export type Attribute<T> = string | DynamicAttribute<T> | Record<string, string | DynamicAttribute<T>>
 export type Attributes<T> = Record<string, Attribute<T>>
 
+function doSetAttribute(target: HTMLElement | CSSStyleDeclaration, key: string, value: string) {
+    if (target instanceof HTMLElement) {
+        if (key === 'className')
+            target.setAttribute('class', value);
+        else if (key === 'textContent')
+            target.textContent = value;
+        else
+            target.setAttribute(key, value);
+    }
+    else
+        target[key] = value;
+}
 function setAttribute<T>(target: HTMLElement | CSSStyleDeclaration, key: string, value: string | DynamicAttribute<T>, updates: updateFunc<T>[]) {
     if (isDynamicAttribute(value)) {
         let dynamicAttribute = value as DynamicAttribute<T>
         let attributeValue = dynamicAttribute.attributeValue(dynamicAttribute.initialData);
-        target[key] = attributeValue;
+        doSetAttribute(target, key, attributeValue);
         updates.push((newData:T) => {
             let newAttributeValue = dynamicAttribute.attributeValue(newData);
             if (newAttributeValue !== attributeValue)
-                target[key] = newAttributeValue;
+                doSetAttribute(target, key, newAttributeValue);
             attributeValue = newAttributeValue;
         });
     }
     else
-        target[key] = value;
+        doSetAttribute(target, key, value);
 }
 
 export function conditional<T>(condition: (newData: T) => boolean, elem: JayElement<T> | TextElement<T> | string): Conditional<T> {
