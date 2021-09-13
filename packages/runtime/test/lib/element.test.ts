@@ -205,12 +205,12 @@ describe('element', () => {
             expect(jayElement.dom.childNodes[1].childNodes[1].textContent).toBe(VALUE_6);
         })
         
-        it('in the case of a single update in a tree, should propogate the update function to the top', () => {
+        it('in the case of a single update in a tree, should propagate the update function to the top', () => {
             interface ViewState {
                 text: string,
             }
 
-            let stack;
+            let stack = '__update';
             let data: ViewState = {text: SOME_VALUE};
             let jayElement = e('div', {}, [
                 e('div', {}, [VALUE_3]),
