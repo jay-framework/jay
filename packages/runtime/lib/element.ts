@@ -48,7 +48,6 @@ export interface TextElement<T> {
 }
 
 export interface DynamicAttribute<T> {
-    initialData: T
     attributeValue: (data:T) => string;
 }
 
@@ -56,8 +55,8 @@ function isDynamicAttribute<T>(value: any): value is DynamicAttribute<T> {
     return typeof value.attributeValue === 'function';
 }
 
-export function dynamicAttribute<T, S>(initialData: T, attributeValue: (data: T) => string): DynamicAttribute<T> {
-    return {initialData, attributeValue}
+export function dynamicAttribute<T, S>(attributeValue: (data: T) => string): DynamicAttribute<T> {
+    return {attributeValue}
 }
 
 export type Attribute<T> = string | DynamicAttribute<T> | Record<string, string | DynamicAttribute<T>>
@@ -78,7 +77,8 @@ function doSetAttribute(target: HTMLElement | CSSStyleDeclaration, key: string, 
 function setAttribute<T>(target: HTMLElement | CSSStyleDeclaration, key: string, value: string | DynamicAttribute<T>, updates: updateFunc<T>[]) {
     if (isDynamicAttribute(value)) {
         let dynamicAttribute = value as DynamicAttribute<T>
-        let attributeValue = dynamicAttribute.attributeValue(dynamicAttribute.initialData);
+        let context = constructionContextStack.current()
+        let attributeValue = dynamicAttribute.attributeValue(context.currData);
         doSetAttribute(target, key, attributeValue);
         updates.push((newData:T) => {
             let newAttributeValue = dynamicAttribute.attributeValue(newData);

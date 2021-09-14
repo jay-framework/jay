@@ -20,7 +20,6 @@ describe('text-element', () => {
         age: 28,
         graduated: false
     }
-    const constructContext = ConstructContext.root(initial);
     const updatedName: ViewState = {...initial, firstName: 'Terry'}
     const updatedNameAndGraduate: ViewState = {...updatedName, graduated: true}
 

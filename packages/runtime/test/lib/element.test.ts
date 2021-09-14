@@ -1,4 +1,4 @@
-import {element as e, JayElement, noopUpdate, dynamicAttribute as da} from '../../lib/element';
+import {element as e, JayElement, noopUpdate, dynamicAttribute as da, ConstructContext} from '../../lib/element';
 import {beforeEach, describe, expect, it} from '@jest/globals'
 
 const SOME_VALUE = 'some text in the element';
@@ -46,10 +46,11 @@ describe('element', () => {
         beforeEach(() => {
             data = {text: SOME_VALUE};
             updateCount = 0;
-            jayElement = e('div', {textContent: da(data, vs => {
-                updateCount++;
-                return vs.text})
-            });
+            jayElement = ConstructContext.withRootContext(data, () =>
+                e('div', {textContent: da(vs => {
+                        updateCount++;
+                        return vs.text})
+                }));
         });
 
         it('should create simple element with text', () => {
@@ -85,9 +86,10 @@ describe('element', () => {
         let data: ViewState;
         beforeEach(() => {
             data = {title: 'initial value'};
-            jayElement = e('input', {
-                value: da(data, vs => vs.title)
-            }, ['some text']);
+            jayElement = ConstructContext.withRootContext(data, () =>
+                e('input', {
+                    value: da(vs => vs.title)
+                }, ['some text']));
         });
 
         it('should create element initial attribute value', () => {
@@ -109,9 +111,10 @@ describe('element', () => {
         let data: ViewState;
         beforeEach(() => {
             data = {isOne: true, isTwo: false};
-            jayElement = e('div', {
-                className: da(data, vs => `${vs.isOne?'one':''} ${vs.isTwo?'two':''}`)
-            }, ['some text']);
+            jayElement = ConstructContext.withRootContext(data, () =>
+                e('div', {
+                    className: da(vs => `${vs.isOne?'one':''} ${vs.isTwo?'two':''}`)
+                }, ['some text']));
         });
 
         it('should create element with class one', () => {
@@ -146,13 +149,14 @@ describe('element', () => {
         let data: ViewState;
         beforeEach(() => {
             data = {text: SOME_VALUE, width: '100px', color: 'red'};
-            jayElement = e('div', {
-                textContent: da(data, vs => vs.text),
-                style: {
-                    color: da(data, vs => vs.color),
-                    width: da(data, vs => vs.width)
-                }
-            });
+            jayElement = ConstructContext.withRootContext(data, () =>
+                e('div', {
+                    textContent: da(vs => vs.text),
+                    style: {
+                        color: da(vs => vs.color),
+                        width: da(vs => vs.width)
+                    }
+                }));
         });
 
         it('should create element with styles', () => {
@@ -182,13 +186,14 @@ describe('element', () => {
             }
 
             let data: ViewState = {text: SOME_VALUE, text2: ANOTHER_VALUE, text3: VALUE_3};
-            let jayElement = e('div', {}, [
-                e('div', {textContent: da(data, vs => vs.text)}),
+            let jayElement = ConstructContext.withRootContext(data, () =>
                 e('div', {}, [
-                    e('div', {textContent: da(data, vs => vs.text2)}),
-                    e('div', {textContent: da(data, vs => vs.text3)})
-                ])
-            ]);
+                    e('div', {textContent: da(vs => vs.text)}),
+                    e('div', {}, [
+                        e('div', {textContent: da(vs => vs.text2)}),
+                        e('div', {textContent: da(vs => vs.text3)})
+                    ])
+                ]));
 
             expect(jayElement.dom.childNodes[0].textContent).toBe(SOME_VALUE);
             expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(ANOTHER_VALUE);
@@ -204,7 +209,7 @@ describe('element', () => {
             expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(VALUE_5);
             expect(jayElement.dom.childNodes[1].childNodes[1].textContent).toBe(VALUE_6);
         })
-        
+
         it('in the case of a single update in a tree, should propagate the update function to the top', () => {
             interface ViewState {
                 text: string,
@@ -212,16 +217,17 @@ describe('element', () => {
 
             let stack = '__update';
             let data: ViewState = {text: SOME_VALUE};
-            let jayElement = e('div', {}, [
-                e('div', {}, [VALUE_3]),
+            let jayElement = ConstructContext.withRootContext(data, () =>
                 e('div', {}, [
-                    e('div', {textContent: da(data, vs => {
+                    e('div', {}, [VALUE_3]),
+                    e('div', {}, [
+                        e('div', {textContent: da(vs => {
                                 stack = new Error().stack;
                                 return vs.text;
                             })}),
-                    e('div', {}, [VALUE_4])
-                ])
-            ]);
+                        e('div', {}, [VALUE_4])
+                    ])
+                ]));
 
 
             expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(SOME_VALUE);
