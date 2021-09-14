@@ -74,19 +74,19 @@ describe('expression-compiler', () => {
 
         it('dynamic class declaration', () => {
             const actual = parseClassExpression('{isOne? class1} {isTwo? classTwo} three', defaultVars);
-            expect(actual.rendered).toEqual('da(context.currData, vs => \`${vs.isOne?\'class1\':\'\'} ${vs.isTwo?\'classTwo\':\'\'} three\`)');
+            expect(actual.rendered).toEqual('da(vs => \`${vs.isOne?\'class1\':\'\'} ${vs.isTwo?\'classTwo\':\'\'} three\`)');
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
         })
 
         it('one dynamic class declaration', () => {
             const actual = parseClassExpression('{isOne? class1}', defaultVars);
-            expect(actual.rendered).toEqual('da(context.currData, vs => \`${vs.isOne?\'class1\':\'\'}\`)');
+            expect(actual.rendered).toEqual('da(vs => \`${vs.isOne?\'class1\':\'\'}\`)');
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
         })
 
         it('dynamic class declaration with fallback', () => {
             const actual = parseClassExpression('{isOne? class1:class2} three', defaultVars);
-            expect(actual.rendered).toEqual('da(context.currData, vs => \`${vs.isOne?\'class1\':\'class2\'} three\`)');
+            expect(actual.rendered).toEqual('da(vs => \`${vs.isOne?\'class1\':\'class2\'} three\`)');
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
         })
     });
@@ -112,13 +112,13 @@ describe('expression-compiler', () => {
 
         it("single accessor", () => {
             const actual = parseAttributeExpression('{string1}', defaultVars);
-            expect(actual.rendered).toEqual('da(context.currData, vs => vs.string1)')
+            expect(actual.rendered).toEqual('da(vs => vs.string1)')
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
         })
 
         it("single accessor in text", () => {
             const actual = parseAttributeExpression('some {string1} thing', defaultVars);
-            expect(actual.rendered).toEqual('da(context.currData, vs => \`some ${vs.string1} thing\`)')
+            expect(actual.rendered).toEqual('da(vs => \`some ${vs.string1} thing\`)')
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
         })
     });
@@ -144,31 +144,31 @@ describe('expression-compiler', () => {
 
         it("single accessor", () => {
             const actual = parseTextExpression('{string1}', defaultVars);
-            expect(actual.rendered).toEqual('dt(context, vs => vs.string1)')
+            expect(actual.rendered).toEqual('dt(vs => vs.string1)')
             expect(actual.imports.has(Import.dynamicText)).toBeTruthy()
         })
 
         it("single accessor in text", () => {
             const actual = parseTextExpression('some {string1} thing', defaultVars);
-            expect(actual.rendered).toEqual('dt(context, vs => \`some ${vs.string1} thing\`)')
+            expect(actual.rendered).toEqual('dt(vs => \`some ${vs.string1} thing\`)')
             expect(actual.imports.has(Import.dynamicText)).toBeTruthy()
         })
 
         it("multi accessor in text", () => {
             const actual = parseTextExpression('some {string1} and {string3} thing', defaultVars);
-            expect(actual.rendered).toEqual('dt(context, vs => \`some ${vs.string1} and ${vs.string3} thing\`)')
+            expect(actual.rendered).toEqual('dt(vs => \`some ${vs.string1} and ${vs.string3} thing\`)')
             expect(actual.imports.has(Import.dynamicText)).toBeTruthy()
         })
 
         it("accessor in text not in type renders the type should reports the problem", () => {
             const actual = parseTextExpression('some {string2} thing', defaultVars);
-            expect(actual.rendered).toEqual('dt(context, vs => \`some ${vs.string2} thing\`)')
+            expect(actual.rendered).toEqual('dt(vs => \`some ${vs.string2} thing\`)')
             expect(actual.validations).toEqual(['the data field [string2] not found in Jay data'])
         })
 
         it("accessor in simple text not in type renders the type should reports the problem", () => {
             const actual = parseTextExpression('{string2}', defaultVars);
-            expect(actual.rendered).toEqual('dt(context, vs => vs.string2)')
+            expect(actual.rendered).toEqual('dt(vs => vs.string2)')
             expect(actual.validations).toEqual(['the data field [string2] not found in Jay data'])
         })
 
@@ -195,17 +195,17 @@ describe('expression-compiler', () => {
 
             it("left whitespace to template", () => {
                 const actual = parseTextExpression('  {string1}', defaultVars);
-                expect(actual.rendered).toEqual('dt(context, vs => \` ${vs.string1}\`)')
+                expect(actual.rendered).toEqual('dt(vs => \` ${vs.string1}\`)')
             })
 
             it("right whitespace to template", () => {
                 const actual = parseTextExpression('{string1}   ', defaultVars);
-                expect(actual.rendered).toEqual('dt(context, vs => \`${vs.string1} \`)')
+                expect(actual.rendered).toEqual('dt(vs => \`${vs.string1} \`)')
             })
 
             it("mid whitespace to template", () => {
                 const actual = parseTextExpression('{string1}   {string1}', defaultVars);
-                expect(actual.rendered).toEqual('dt(context, vs => \`${vs.string1} ${vs.string1}\`)')
+                expect(actual.rendered).toEqual('dt(vs => \`${vs.string1} ${vs.string1}\`)')
             })
 
             it("middle multiline whitespace to a single space", () => {

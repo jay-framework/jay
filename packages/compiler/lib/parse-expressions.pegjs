@@ -20,7 +20,7 @@ classExpression
       return RenderFragment.merge(result, renderClass(classExp), ' ')
     }, renderClass(head));
     return isDynamic?
-      classString.map(_ => `da(${vars.currentContext}.currData, vs => \`${_}\`)`):
+      classString.map(_ => `da(vs => \`${_}\`)`):
       classString.map(_ => `'${_}'`);
   }
 
@@ -40,7 +40,7 @@ dynamicAttribute
   = template:template {
   let [renderFragment, isDynamic] = template;
   return isDynamic ?
-      renderFragment.map(_ => `da(${vars.currentContext}.currData, vs => ${_})`).plusImport(da):
+      renderFragment.map(_ => `da(vs => ${_})`).plusImport(da):
       renderFragment;
 }
 
@@ -48,7 +48,7 @@ dynamicText
   = template:template {
   let [renderFragment, isDynamic] = template;
   return isDynamic ?
-      renderFragment.map(_ => `dt(${vars.currentContext}, vs => ${_})`).plusImport(dt):
+      renderFragment.map(_ => `dt(vs => ${_})`).plusImport(dt):
       renderFragment;
 }
 

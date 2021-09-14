@@ -12,16 +12,16 @@ export interface ConditionsWithRefsElement extends JayElement<ViewState> {
 }
 
 export function render(viewState: ViewState): ConditionsWithRefsElement {
-  return ConstructContext.withRootContext(viewState, (context: ConstructContext<[ViewState]>) =>
+  return ConstructContext.withRootContext(viewState, () =>
     de('div', {}, [
       c(vs => vs.cond,
-        e('div', {style: {cssText: 'color:red'}, ref: 'text1'}, [dt(context, vs => vs.text1)], context)
+        e('div', {style: {cssText: 'color:red'}, ref: 'text1'}, [dt(vs => vs.text1)])
       ),
       c(vs => !vs.cond,
         e('div', {style: {cssText: 'color:green'}}, [
-          e('span', {ref: 'text2'}, [dt(context, vs => vs.text2)], context)
+          e('span', {ref: 'text2'}, [dt(vs => vs.text2)])
         ])
       )
-    ], context)) as ConditionsWithRefsElement;
+    ])) as ConditionsWithRefsElement;
 }
 

@@ -7,12 +7,12 @@ interface ViewState {
 }
 
 export function render(viewState: ViewState): JayElement<ViewState> {
-  return ConstructContext.withRootContext(viewState, (context: ConstructContext<[ViewState]>) =>
+  return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
-      e('h1', {}, [dt(context, vs => vs.title)]),
+      e('h1', {}, [dt(vs => vs.title)]),
       e('section', {}, [
-        e('div', {}, [dt(context, vs => vs.subtitle)]),
-        e('div', {}, [dt(context, vs => vs.article)])
+        e('div', {}, [dt(vs => vs.subtitle)]),
+        e('div', {}, [dt(vs => vs.article)])
       ])
     ]));
 }

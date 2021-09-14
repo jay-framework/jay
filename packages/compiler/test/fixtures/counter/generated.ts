@@ -10,10 +10,10 @@ export interface CounterElement extends JayElement<ViewState> {
 }
 
 export function render(viewState: ViewState): CounterElement {
-  return ConstructContext.withRootContext(viewState, (context: ConstructContext<[ViewState]>) =>
+  return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
-      e('button', {ref: 'subtracter'}, ['-'], context),
-      e('span', {style: {cssText: 'margin: 0 16px'}}, [dt(context, vs => vs.count)]),
-      e('button', {ref: 'adder'}, ['+'], context)
+      e('button', {ref: 'subtracter'}, ['-']),
+      e('span', {style: {cssText: 'margin: 0 16px'}}, [dt(vs => vs.count)]),
+      e('button', {ref: 'adder'}, ['+'])
     ])) as CounterElement;
 }

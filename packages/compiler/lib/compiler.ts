@@ -178,15 +178,14 @@ class Indent {
 function renderNode(variables: Variables, node: Node, indent: Indent, dynamicRef: boolean): RenderFragment {
 
     function de(tagName: string, attributes: RenderFragment, children: RenderFragment, currIndent: Indent = indent): RenderFragment {
-        return new RenderFragment(`${currIndent.firstLine}de('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}], ${variables.currentContext})`,
+        return new RenderFragment(`${currIndent.firstLine}de('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}])`,
             children.imports.plus(Import.dynamicElement).plus(attributes.imports),
             [...attributes.validations, ...children.validations],
             [...attributes.refs, ...children.refs]);
     }
 
     function e(tagName: string, attributes: RenderFragment, children: RenderFragment, currIndent: Indent = indent): RenderFragment {
-        let needContext = attributes.refs.length > 0;
-        return new RenderFragment(`${currIndent.firstLine}e('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}]${needContext?', '+variables.currentContext:''})`,
+        return new RenderFragment(`${currIndent.firstLine}e('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}])`,
             children.imports.plus(Import.element).plus(attributes.imports),
             [...attributes.validations, ...children.validations],
             [...attributes.refs, ...children.refs]);
@@ -229,7 +228,6 @@ function renderNode(variables: Variables, node: Node, indent: Indent, dynamicRef
 
     function renderForEach(renderedForEach: RenderFragment, collectionVariables: Variables, trackBy: string, childElement: RenderFragment) {
         return new RenderFragment(`${indent.firstLine}forEach(${renderedForEach.rendered}, (${collectionVariables.currentVar}: ${collectionVariables.currentType.name}) => {
-${indent.curr}const ${collectionVariables.currentContext} = ${collectionVariables.parent.currentContext}.forItem(${collectionVariables.currentVar});
 ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imports.plus(Import.forEach),
             [...renderedForEach.validations, ...childElement.validations], childElement.refs)
     }
@@ -313,7 +311,7 @@ ${renderedReferences}
     }
 
     let body = `export function render(viewState: ViewState): ${elementName?elementName:'JayElement<ViewState>'} {
-  return ConstructContext.withRootContext(viewState, (${variables.currentContext}: ConstructContext<[ViewState]>) =>
+  return ConstructContext.withRootContext(viewState, () =>
 ${renderedRoot.rendered})${!defaultElementName?` as ${elementName}`:''};
 }`;
     return {elementName, elementType, renderedImplementation: new RenderFragment(body, imports)};
