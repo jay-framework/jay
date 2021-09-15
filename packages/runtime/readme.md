@@ -35,11 +35,11 @@ interface ViewState {
 }
 
 export default function render(viewState: ViewState) {
-    return ConstructContext.withRootContext(viewState, (context: ConstructContext<[ViewState]>) =>
+    return ConstructContext.withRootContext(viewState, () =>
         e('div', {}, [
-            e('div', {}, [dt(context, vs => vs.text)]),
+            e('div', {}, [dt(vs => vs.text)]),
             e('div', {}, ['static']),
-            e('div', {}, [dt(context, vs => vs.text2)])
+            e('div', {}, [dt(vs => vs.text2)])
         ])
     )
 }
@@ -56,6 +56,7 @@ The building blocks are
 * [dynamicElement()](#dynamicElement)
 * [dynamicText()](#dynamicText)
 * [dynamicAttribute()](#dynamicAttribute)
+* [dynamicProperty()](#dynamicProperty)
 * [forEach()](#forEach)
 * [conditional()](#conditional)
 * [ConstructionContext](#ConstructionContext)
@@ -71,8 +72,7 @@ The `element` function signature is
 declare function element<T, A extends Array<any>>(
     tagName: string, 
     attributes: Attributes<T>, 
-    children?: Array<JayElement<T> | TextElement<T> | string>, 
-    context?: ConstructContext<A>
+    children?: Array<JayElement<T> | TextElement<T> | string>
 ): JayElement<T>;
 ```
 
@@ -80,10 +80,9 @@ at which
 * `T` - is the type of the current view state, used as input to the update function for this element
 * `A` - is an array type of all the view states, including the current one and all parent view states (see forEach) 
 * `tagName` - the name of the HTML tag, like `div` or `button`
-* `attributes` - an object who's keys are attribute names, and values are static attributes values (strings) or 
-  dynamic attributes `DynamicAttribute<T>`
+* `attributes` - an object who's keys are attribute names, and values are static attributes values (strings),
+  dynamic attributes `DynamicAttribute<T>` or dynamic properties `DynamicProperty<T>`
 * `children` - the children of the element - can be more elements, static text (string) or dynamic text (TextElement<T>)
-* `context` - used to construct the element, holding the current data context as well as the facilities to create events.
 
 ### <a name="text">Static Text Content</a>
 
@@ -126,8 +125,7 @@ The signature of dynamic element is
 declare function dynamicElement<T, A extends Array<any>>(
     tagName: string, 
     attributes: Attributes<T>, 
-    children?: Array<Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T> | string>, 
-    context?: ConstructContext<A>
+    children?: Array<Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T> | string>
 ): JayElement<T>;
 ```
 
@@ -135,15 +133,14 @@ at which
 * `T` - is the type of the current view state, used as input to the update function for this element
 * `A` - is an array type of all the view states, including the current one and all parent view states (see forEach)
 * `tagName` - the name of the HTML tag, like `div` or `button`
-* `attributes` - an object who's keys are attribute names, and values are static attributes values (strings) or
-  dynamic attributes `DynamicAttribute<T>`
+* `attributes` - an object who's keys are attribute names, and values are static attributes values (strings),
+  dynamic attributes `DynamicAttribute<T>` or dynamic properties `DynamicProperty<T>`
 * `children` - the children of the element - can be any of
   * `Conditional` - for supporting conditional children, using the `if` directive in the jay file
   * `ForEach` - for supporting collection children, using the `forEach` directive in the jay file  
   * `elements` - for child elements, who can be dynamic, but the element inclusion itself is static
   * static text (string)
   * dynamic text (TextElement<T>)
-* `context` - used to construct the element, holding the current data context as well as the facilities to create events.
 
 
 ### <a name="dynamicText">dynamicText</a>
@@ -153,21 +150,19 @@ Dynamic Text creates a text element that is dynamic and can be updated as data c
 Dynamic text looks like
 
 ```typescript
-dt(context, vs => vs.text)
-dt(context, vs => `${vs.firstName} ${vs.lastName}`)
+dt(vs => vs.text)
+dt(vs => `${vs.firstName} ${vs.lastName}`)
 ```
 
 The signature of dynamic text is
 
 ```typescript
 declare function dynamicText<T, A extends Array<any>>(
-    context: ConstructContext<A>, 
     textContent: (T: any) => string
 ): TextElement<T>;
 ```
 
 at which
-* `context` - used to construct the element, holding the current data context as well as the facilities to create events.
 * `textContent` - a function that renders the text from the current data item
 
 ### <a name="dynamicAttribute">dynamicAttribute</a>
@@ -177,21 +172,40 @@ Dynamic Attribute creates an attribute whos value updates as the data changes.
 Dynamic Attribute looks like
 
 ```typescript
-{className: da(context.currData, vs => `${vs.bool1?'main':'second'}`)}
+{class: da(vs => `${vs.bool1?'main':'second'}`)}
 ```
 
 The signature of dynamic attribute is
 
 ```typescript
 declare function dynamicAttribute<T, S>(
-    initialData: T, 
     attributeValue: (data: T) => string
 ): DynamicAttribute<T>;
 ```
 
 at which
-* `initialData` - used to construct the element with the current data.
-* `textContent` - a function that renders the attribute value from the current data item
+* `attributeValue` - a function that renders the attribute value from the current data item
+
+### <a name="dynamicProperty">dynamicProperty</a>
+
+Dynamic Property creates a property whos value updates as the data changes.
+
+Dynamic Property looks like
+
+```typescript
+{textContent: dp(vs => `${vs.bool1?'main':'second'}`)}
+```
+
+The signature of dynamic property is
+
+```typescript
+declare function dynamicAttribute<T, S>(
+    propertyValue: (data: T) => string
+): DynamicAttribute<T>;
+```
+
+at which
+* `propertyValue` - a function that renders the property value from the current data item
 
 ### <a name="forEach">forEach</a>
 
@@ -225,7 +239,7 @@ declare class ConstructContext<A extends Array<any>> {
     static root<T>(t: T): ConstructContext<[T]>;
     static withRootContext<T, A extends ConstructContext<[T]>>(
         t: T, 
-        elementConstructor: (A: any) => JayElement<T>
+        elementConstructor: () => JayElement<T>
     ): JayElement<T>;
 }
 ```

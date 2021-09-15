@@ -31,7 +31,7 @@ describe('dynamic-element with mixed content', () => {
             forEach(
                 (newViewState) => newViewState.items,
                 (item: Item) => {
-                    return e('div', {"className":"item", id: item.id}, [dt(item => item.name)])
+                    return e('div', {"class":"item", id: item.id}, [dt(item => item.name)])
                 },
                 'id'
             ),

@@ -1,4 +1,9 @@
-import {element as e, JayElement, noopUpdate, dynamicAttribute as da, ConstructContext} from '../../lib/element';
+import {
+    element as e,
+    JayElement,
+    noopUpdate,
+    dynamicAttribute as da,
+    dynamicProperty as dp, ConstructContext} from '../../lib/element';
 import {beforeEach, describe, expect, it} from '@jest/globals'
 
 const SOME_VALUE = 'some text in the element';
@@ -47,7 +52,7 @@ describe('element', () => {
             data = {text: SOME_VALUE};
             updateCount = 0;
             jayElement = ConstructContext.withRootContext(data, () =>
-                e('div', {textContent: da(vs => {
+                e('div', {textContent: dp(vs => {
                         updateCount++;
                         return vs.text})
                 }));
@@ -113,7 +118,7 @@ describe('element', () => {
             data = {isOne: true, isTwo: false};
             jayElement = ConstructContext.withRootContext(data, () =>
                 e('div', {
-                    className: da(vs => `${vs.isOne?'one':''} ${vs.isTwo?'two':''}`)
+                    "class": da(vs => `${vs.isOne?'one':''} ${vs.isTwo?'two':''}`)
                 }, ['some text']));
         });
 
@@ -151,10 +156,10 @@ describe('element', () => {
             data = {text: SOME_VALUE, width: '100px', color: 'red'};
             jayElement = ConstructContext.withRootContext(data, () =>
                 e('div', {
-                    textContent: da(vs => vs.text),
+                    textContent: dp(vs => vs.text),
                     style: {
-                        color: da(vs => vs.color),
-                        width: da(vs => vs.width)
+                        color: dp(vs => vs.color),
+                        width: dp(vs => vs.width)
                     }
                 }));
         });
@@ -188,10 +193,10 @@ describe('element', () => {
             let data: ViewState = {text: SOME_VALUE, text2: ANOTHER_VALUE, text3: VALUE_3};
             let jayElement = ConstructContext.withRootContext(data, () =>
                 e('div', {}, [
-                    e('div', {textContent: da(vs => vs.text)}),
+                    e('div', {textContent: dp(vs => vs.text)}),
                     e('div', {}, [
-                        e('div', {textContent: da(vs => vs.text2)}),
-                        e('div', {textContent: da(vs => vs.text3)})
+                        e('div', {textContent: dp(vs => vs.text2)}),
+                        e('div', {textContent: dp(vs => vs.text3)})
                     ])
                 ]));
 
@@ -221,7 +226,7 @@ describe('element', () => {
                 e('div', {}, [
                     e('div', {}, [VALUE_3]),
                     e('div', {}, [
-                        e('div', {textContent: da(vs => {
+                        e('div', {textContent: dp(vs => {
                                 stack = new Error().stack;
                                 return vs.text;
                             })}),

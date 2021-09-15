@@ -36,7 +36,7 @@ describe('collection-element', () => {
                     forEach(
                         (newViewState) => newViewState.items,
                         (item: Item) => {
-                            return e('div', {"className":"item", id: item.id}, [dt(item => item.name)])
+                            return e('div', {"class":"item", id: item.id}, [dt(item => item.name)])
                         },
                         'id'
                     )
@@ -121,7 +121,7 @@ describe('collection-element', () => {
                     forEach(
                         (newViewState) => newViewState.items,
                         (item: Item) => {
-                            return e('div', {"className":"item", id: item.id}, [
+                            return e('div', {"class":"item", id: item.id}, [
                                 dt(item => item.name),
                                 e('button', {ref: 'done'}, ["done"])
                             ])

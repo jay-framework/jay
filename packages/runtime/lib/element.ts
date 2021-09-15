@@ -47,48 +47,52 @@ export interface TextElement<T> {
     unmount: mountFunc
 }
 
-export interface DynamicAttribute<T> {
-    attributeValue: (data:T) => string;
+export interface DynamicAttributeOrProperty<T> {
+    valueFunc: (data:T) => string;
+    isAttribute: boolean
 }
 
-function isDynamicAttribute<T>(value: any): value is DynamicAttribute<T> {
-    return typeof value.attributeValue === 'function';
+function isDynamicAttributeOrProperty<T>(value: any): value is DynamicAttributeOrProperty<T> {
+    return typeof value.valueFunc === 'function';
 }
 
-export function dynamicAttribute<T, S>(attributeValue: (data: T) => string): DynamicAttribute<T> {
-    return {attributeValue}
+export function dynamicAttribute<T, S>(attributeValue: (data: T) => string): DynamicAttributeOrProperty<T> {
+    return {valueFunc: attributeValue, isAttribute: true}
 }
 
-export type Attribute<T> = string | DynamicAttribute<T> | Record<string, string | DynamicAttribute<T>>
+export function dynamicProperty<T, S>(propertyValue: (data: T) => string): DynamicAttributeOrProperty<T> {
+    return {valueFunc: propertyValue, isAttribute: false}
+}
+
+// export function staticProperty<T>(value: T): StaticProperty<T> {
+//     return {value}
+// }
+
+export type Attribute<T> = string | DynamicAttributeOrProperty<T> | Record<string, string | DynamicAttributeOrProperty<T>>
 export type Attributes<T> = Record<string, Attribute<T>>
 
-function doSetAttribute(target: HTMLElement | CSSStyleDeclaration, key: string, value: string) {
-    if (target instanceof HTMLElement) {
-        if (key === 'className')
-            target.setAttribute('class', value);
-        else if (key === 'textContent')
-            target.textContent = value;
-        else
-            target.setAttribute(key, value);
+function doSetAttribute(target: HTMLElement | CSSStyleDeclaration, key: string, value: string, isAttribute: boolean) {
+    if (target instanceof HTMLElement && isAttribute) {
+        target.setAttribute(key, value);
     }
     else
         target[key] = value;
 }
-function setAttribute<T>(target: HTMLElement | CSSStyleDeclaration, key: string, value: string | DynamicAttribute<T>, updates: updateFunc<T>[]) {
-    if (isDynamicAttribute(value)) {
-        let dynamicAttribute = value as DynamicAttribute<T>
+function setAttribute<T>(target: HTMLElement | CSSStyleDeclaration, key: string, value: string | DynamicAttributeOrProperty<T>, updates: updateFunc<T>[]) {
+    if (isDynamicAttributeOrProperty(value)) {
+        let dynamicAttribute = value as DynamicAttributeOrProperty<T>
         let context = constructionContextStack.current()
-        let attributeValue = dynamicAttribute.attributeValue(context.currData);
-        doSetAttribute(target, key, attributeValue);
+        let attributeValue = dynamicAttribute.valueFunc(context.currData);
+        doSetAttribute(target, key, attributeValue, dynamicAttribute.isAttribute);
         updates.push((newData:T) => {
-            let newAttributeValue = dynamicAttribute.attributeValue(newData);
+            let newAttributeValue = dynamicAttribute.valueFunc(newData);
             if (newAttributeValue !== attributeValue)
-                doSetAttribute(target, key, newAttributeValue);
+                doSetAttribute(target, key, newAttributeValue, dynamicAttribute.isAttribute);
             attributeValue = newAttributeValue;
         });
     }
     else
-        doSetAttribute(target, key, value);
+        doSetAttribute(target, key, value, true);
 }
 
 export function conditional<T>(condition: (newData: T) => boolean, elem: JayElement<T> | TextElement<T> | string): Conditional<T> {
@@ -335,7 +339,7 @@ function createBaseElement<T, A extends Array<any>>(tagName: string, attributes:
     Object.entries(attributes).forEach(([key, value]) => {
         if (key === STYLE) {
             Object.entries(value).forEach(([styleKey, styleValue]) => {
-                setAttribute(e.style, styleKey, styleValue as string | DynamicAttribute<T>, updates);
+                setAttribute(e.style, styleKey, styleValue as string | DynamicAttributeOrProperty<T>, updates);
             })
         }
         else if (key === REF) {
@@ -352,7 +356,7 @@ function createBaseElement<T, A extends Array<any>>(tagName: string, attributes:
             }
         }
         else {
-            setAttribute(e, key, value as string | DynamicAttribute<T>, updates);
+            setAttribute(e, key, value as string | DynamicAttributeOrProperty<T>, updates);
         }
     });
     return {e, updates, mounts, unmounts};
