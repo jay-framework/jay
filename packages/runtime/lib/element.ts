@@ -12,22 +12,22 @@ type mountFunc = () => void;
 export const noopUpdate: updateFunc<any> = (_newData:any): void => {};
 export const noopMount: mountFunc = (): void => {}
 
-export interface JayElement<T> {
+export interface JayElement<ViewState> {
     dom: HTMLElement,
-    update: updateFunc<T>
+    update: updateFunc<ViewState>
     mount: mountFunc,
     unmount: mountFunc
 }
 
-export interface JayComponent<P, T, S extends JayElement<T>>{
-    element: S
-    update: updateFunc<P>
+export interface JayComponent<Props, ViewState, jayElement extends JayElement<ViewState>>{
+    element: jayElement
+    update: updateFunc<Props>
     mount: mountFunc,
     unmount: mountFunc
 }
 
-export function childComp<ParentT, A extends Array<any>, Props, ChildT,
-    ChildElementVS extends JayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElementVS>>(
+export function childComp<ParentT, Props, ChildT,
+    ChildElement extends JayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
     compCreator: (props: Props) => ChildComp,
     getProps: (t: ParentT) => Props): JayElement<ParentT> {
     let context = constructionContextStack.current();
@@ -40,36 +40,32 @@ export function childComp<ParentT, A extends Array<any>, Props, ChildT,
     }
 }
 
-export interface TextElement<T> {
+export interface TextElement<ViewState> {
     dom: Text,
-    update: updateFunc<T>,
+    update: updateFunc<ViewState>,
     mount: mountFunc,
     unmount: mountFunc
 }
 
-export interface DynamicAttributeOrProperty<T, S> {
-    valueFunc: (data:T) => S;
+export interface DynamicAttributeOrProperty<ViewState, S> {
+    valueFunc: (data:ViewState) => S;
     isAttribute: boolean
 }
 
-function isDynamicAttributeOrProperty<T, S>(value: any): value is DynamicAttributeOrProperty<T, S> {
+function isDynamicAttributeOrProperty<ViewState, S>(value: any): value is DynamicAttributeOrProperty<ViewState, S> {
     return typeof value.valueFunc === 'function';
 }
 
-export function dynamicAttribute<T>(attributeValue: (data: T) => string): DynamicAttributeOrProperty<T, string> {
+export function dynamicAttribute<ViewState>(attributeValue: (data: ViewState) => string): DynamicAttributeOrProperty<ViewState, string> {
     return {valueFunc: attributeValue, isAttribute: true}
 }
 
-export function dynamicProperty<T, S>(propertyValue: (data: T) => S): DynamicAttributeOrProperty<T, S> {
+export function dynamicProperty<ViewState, S>(propertyValue: (data: ViewState) => S): DynamicAttributeOrProperty<ViewState, S> {
     return {valueFunc: propertyValue, isAttribute: false}
 }
 
-// export function staticProperty<T>(value: T): StaticProperty<T> {
-//     return {value}
-// }
-
-export type Attribute<T, S> = string | DynamicAttributeOrProperty<T, S> | Record<string, string | DynamicAttributeOrProperty<T, S>>
-export type Attributes<T> = Record<string, Attribute<T, any>>
+export type Attribute<ViewState, S> = string | DynamicAttributeOrProperty<ViewState, S> | Record<string, string | DynamicAttributeOrProperty<ViewState, S>>
+export type Attributes<ViewState> = Record<string, Attribute<ViewState, any>>
 
 function doSetAttribute<S>(target: HTMLElement | CSSStyleDeclaration, key: string, value: S, isAttribute: boolean) {
     if (target instanceof HTMLElement && isAttribute) {
@@ -78,12 +74,12 @@ function doSetAttribute<S>(target: HTMLElement | CSSStyleDeclaration, key: strin
     else
         target[key] = value;
 }
-function setAttribute<T, S>(target: HTMLElement | CSSStyleDeclaration, key: string, value: string | DynamicAttributeOrProperty<T, S>, updates: updateFunc<T>[]) {
+function setAttribute<ViewState, S>(target: HTMLElement | CSSStyleDeclaration, key: string, value: string | DynamicAttributeOrProperty<ViewState, S>, updates: updateFunc<ViewState>[]) {
     if (isDynamicAttributeOrProperty(value)) {
         let context = constructionContextStack.current()
         let attributeValue = value.valueFunc(context.currData);
         doSetAttribute(target, key, attributeValue, value.isAttribute);
-        updates.push((newData:T) => {
+        updates.push((newData:ViewState) => {
             let newAttributeValue = value.valueFunc(newData);
             if (newAttributeValue !== attributeValue)
                 doSetAttribute(target, key, newAttributeValue, value.isAttribute);
@@ -94,34 +90,34 @@ function setAttribute<T, S>(target: HTMLElement | CSSStyleDeclaration, key: stri
         doSetAttribute(target, key, value, true);
 }
 
-export function conditional<T>(condition: (newData: T) => boolean, elem: JayElement<T> | TextElement<T> | string): Conditional<T> {
+export function conditional<ViewState>(condition: (newData: ViewState) => boolean, elem: JayElement<ViewState> | TextElement<ViewState> | string): Conditional<ViewState> {
     if (typeof elem === 'string')
         return {condition, elem: text(elem)};
     else
         return {condition, elem};
 }
 
-export interface Conditional<T> {
-    condition: (newData: T) => boolean,
-    elem: JayElement<T> | TextElement<T>
+export interface Conditional<ViewState> {
+    condition: (newData: ViewState) => boolean,
+    elem: JayElement<ViewState> | TextElement<ViewState>
 }
 
-function isJayElement<T>(c: Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T>): c is JayElement<T> {
-    return (c as JayElement<T>).mount !== undefined;
+function isJayElement<ViewState>(c: Conditional<ViewState> | ForEach<ViewState, any> | TextElement<ViewState> | JayElement<ViewState>): c is JayElement<ViewState> {
+    return (c as JayElement<ViewState>).mount !== undefined;
 }
-function isCondition<T>(c: Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T>): c is Conditional<T> {
-    return (c as Conditional<T>).condition !== undefined;
+function isCondition<ViewState>(c: Conditional<ViewState> | ForEach<ViewState, any> | TextElement<ViewState> | JayElement<ViewState>): c is Conditional<ViewState> {
+    return (c as Conditional<ViewState>).condition !== undefined;
 }
 
-function isForEach<T, S>(c: Conditional<T> | ForEach<T, S> | TextElement<T> | JayElement<T>): c is ForEach<T, S> {
-    return (c as ForEach<T, S>).elemCreator !== undefined;
+function isForEach<ViewState, S>(c: Conditional<ViewState> | ForEach<ViewState, S> | TextElement<ViewState> | JayElement<ViewState>): c is ForEach<ViewState, S> {
+    return (c as ForEach<ViewState, S>).elemCreator !== undefined;
 }
 
 export function forEach<T, Item>(getItems: (T) => Array<Item>, elemCreator: (Item) => JayElement<Item>, matchBy: string): ForEach<T, Item> {
     return {getItems, elemCreator, matchBy};
 }
 
-export interface ForEach<T, Item> {
+export interface ForEach<ViewState, Item> {
     getItems: (T) => Array<Item>,
     elemCreator: (Item) => JayElement<Item>,
     matchBy: string
@@ -144,16 +140,16 @@ function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<Ma
     });
 }
 
-function mkUpdateCollection<T>(child: ForEach<T, any>, group: KindergartenGroup): [updateFunc<T>, mountFunc, mountFunc] {
-    let lastItems = new List<T, JayElement<T>>([], child.matchBy);
+function mkUpdateCollection<ViewState>(child: ForEach<ViewState, any>, group: KindergartenGroup): [updateFunc<ViewState>, mountFunc, mountFunc] {
+    let lastItems = new List<ViewState, JayElement<ViewState>>([], child.matchBy);
     let mount = () => lastItems.forEach((value, attach) => attach.mount);
     let unmount = () => lastItems.forEach((value, attach) => attach.unmount);
     // todo handle data updates of the parent contexts
     let parentContext = constructionContextStack.current();
-    const update = (newData: T) => {
+    const update = (newData: ViewState) => {
         const items = child.getItems(newData);
-        let itemsList = new List<T, JayElement<T>>(items, child.matchBy);
-        let instructions = listCompare<T>(lastItems, itemsList, (item) => {
+        let itemsList = new List<ViewState, JayElement<ViewState>>(items, child.matchBy);
+        let instructions = listCompare<ViewState>(lastItems, itemsList, (item) => {
             let childContext = parentContext.forItem(item);
             return constructionContextStack.doWithContext(childContext, () => child.elemCreator(item))
         });
@@ -164,15 +160,15 @@ function mkUpdateCollection<T>(child: ForEach<T, any>, group: KindergartenGroup)
     return [update, mount, unmount]
 }
 
-function mkUpdateCondition<T>(child: Conditional<T>, group: KindergartenGroup): [updateFunc<T>, mountFunc, mountFunc] {
+function mkUpdateCondition<ViewState>(child: Conditional<ViewState>, group: KindergartenGroup): [updateFunc<ViewState>, mountFunc, mountFunc] {
 
     let mount = noopMount, unmount = noopMount;
     if (isJayElement(child.elem) && child.elem.mount !== noopMount) {
-        mount = () => (child.elem as JayElement<T>).mount()
-        unmount = () => (child.elem as JayElement<T>).unmount()
+        mount = () => (child.elem as JayElement<ViewState>).mount()
+        unmount = () => (child.elem as JayElement<ViewState>).unmount()
     }
     let lastResult = false;
-    const update = (newData: T) => {
+    const update = (newData: ViewState) => {
         let result = child.condition(newData);
 
         if (result) {
@@ -227,7 +223,7 @@ export class ConstructContext<A extends Array<any>> {
     }
 }
 
-function text<T>(content: string): TextElement<T> {
+function text<ViewState>(content: string): TextElement<ViewState> {
     return {
         dom: document.createTextNode(content),
         update: noopUpdate,
@@ -236,14 +232,14 @@ function text<T>(content: string): TextElement<T> {
     }
 }
 
-export function dynamicText<T, A extends Array<any>>(
-                               textContent: (T) => string): TextElement<T> {
+export function dynamicText<ViewState>(
+                               textContent: (vs) => string): TextElement<ViewState> {
     let context = constructionContextStack.current();
     let content = textContent(context.currData);
     let n = document.createTextNode(content);
     return {
         dom: n,
-        update: (newData:T) => {
+        update: (newData:ViewState) => {
             let newContent = textContent(newData);
             if (newContent !== content)
                 n.textContent = newContent;
@@ -254,11 +250,11 @@ export function dynamicText<T, A extends Array<any>>(
     }
 }
 
-export function element<T, A extends Array<any>>(
+export function element<ViewState>(
     tagName: string,
-    attributes: Attributes<T>,
-    children: Array<JayElement<T> | TextElement<T> | string> = []):
-    JayElement<T> {
+    attributes: Attributes<ViewState>,
+    children: Array<JayElement<ViewState> | TextElement<ViewState> | string> = []):
+    JayElement<ViewState> {
     let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes);
     
     children.forEach(child => {
@@ -280,11 +276,11 @@ export function element<T, A extends Array<any>>(
     };
 }
 
-export function dynamicElement<T, A extends Array<any>>(
+export function dynamicElement<ViewState>(
     tagName: string,
-    attributes: Attributes<T>,
-    children: Array<Conditional<T> | ForEach<T, any> | TextElement<T> | JayElement<T> | string> = []):
-    JayElement<T> {
+    attributes: Attributes<ViewState>,
+    children: Array<Conditional<ViewState> | ForEach<ViewState, any> | TextElement<ViewState> | JayElement<ViewState> | string> = []):
+    JayElement<ViewState> {
     let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes);
 
     let kindergarten = new Kindergarten(e);
@@ -329,16 +325,16 @@ export function dynamicElement<T, A extends Array<any>>(
     };
 }
 
-function createBaseElement<T, A extends Array<any>>(tagName: string, attributes: Attributes<T>):
-    {e: HTMLElement, updates: updateFunc<T>[], mounts: mountFunc[], unmounts: mountFunc[]} {
+function createBaseElement<ViewState>(tagName: string, attributes: Attributes<ViewState>):
+    {e: HTMLElement, updates: updateFunc<ViewState>[], mounts: mountFunc[], unmounts: mountFunc[]} {
     let e = document.createElement(tagName);
-    let updates: updateFunc<T>[] = [];
+    let updates: updateFunc<ViewState>[] = [];
     let mounts: mountFunc[] = []
     let unmounts: mountFunc[] = []
     Object.entries(attributes).forEach(([key, value]) => {
         if (key === STYLE) {
             Object.entries(value).forEach(([styleKey, styleValue]) => {
-                setAttribute(e.style, styleKey, styleValue as string | DynamicAttributeOrProperty<T, any>, updates);
+                setAttribute(e.style, styleKey, styleValue as string | DynamicAttributeOrProperty<ViewState, any>, updates);
             })
         }
         else if (key === REF) {
@@ -355,13 +351,13 @@ function createBaseElement<T, A extends Array<any>>(tagName: string, attributes:
             }
         }
         else {
-            setAttribute(e, key, value as string | DynamicAttributeOrProperty<T, any>, updates);
+            setAttribute(e, key, value as string | DynamicAttributeOrProperty<ViewState, any>, updates);
         }
     });
     return {e, updates, mounts, unmounts};
 }
 
-function normalizeUpdates<T>(updates: Array<updateFunc<T>>): updateFunc<T> {
+function normalizeUpdates<ViewState>(updates: Array<updateFunc<ViewState>>): updateFunc<ViewState> {
     if (updates.length === 1)
         return updates[0];
     else if (updates.length > 0) {
