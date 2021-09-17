@@ -19,7 +19,7 @@ export interface ItemElement extends JayElement<ItemVS>{
 function renderItem(viewState: ItemVS): ItemElement {
     return ConstructContext.withRootContext(viewState, () =>
         e('div', {'data-id': viewState.dataId}, [
-            dt(vs => `${vs.text} - ${vs.done?'done':'tbd'}`),
+            e('span', {}, [dt(vs => `${vs.text} - ${vs.done?'done':'tbd'}`)]),
             e('button', {ref: 'done'}, ['done']),
             e('button', {ref: 'remove'}, ['remove'])])
     ) as ItemElement;
