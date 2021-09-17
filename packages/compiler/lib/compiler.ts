@@ -12,7 +12,7 @@ import Node from "node-html-parser/dist/nodes/node";
 import {Import, Imports, Ref, RenderFragment} from "./render-fragment";
 import {
     parseAccessor, parseAttributeExpression, parseClassExpression,
-    parseCondition,
+    parseCondition, parsePropertyExpression,
     parseTextExpression,
     Variables
 } from './expression-compiler';
@@ -67,6 +67,7 @@ function renderImports(imports: Imports, importsFor: ImportsFor): string {
     if (imports.has(Import.element) && importsFor === ImportsFor.implementation) renderedImports.push('element as e');
     if (imports.has(Import.dynamicText) && importsFor === ImportsFor.implementation) renderedImports.push('dynamicText as dt');
     if (imports.has(Import.dynamicAttribute) && importsFor === ImportsFor.implementation) renderedImports.push('dynamicAttribute as da');
+    if (imports.has(Import.dynamicProperty) && importsFor === ImportsFor.implementation) renderedImports.push('dynamicProperty as dp');
     if (imports.has(Import.conditional) && importsFor === ImportsFor.implementation) renderedImports.push('conditional as c');
     if (imports.has(Import.dynamicElement) && importsFor === ImportsFor.implementation) renderedImports.push('dynamicElement as de');
     if (imports.has(Import.forEach) && importsFor === ImportsFor.implementation) renderedImports.push('forEach');
@@ -83,6 +84,11 @@ function renderTextNode(variables: Variables, text: string, indent: Indent): Ren
     return parseTextExpression(text, variables).map(_ => indent.firstLine + _);
 }
 
+const propertyMapping = {
+    'input:value': {type: 'property'},
+    'input:checked': {type: 'property'}
+}
+
 const attributesRequiresQoutes = /[- ]/;
 function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
     let attributes = element.attributes;
@@ -90,6 +96,7 @@ function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: 
     let renderedAttributes = [];
     Object.keys(attributes).forEach(attrName => {
         let attrCanonical = attrName.toLowerCase();
+        let tagAttrCanonical = element.tagName.toLowerCase() + ':' + attrCanonical;
         let attrKey = attrCanonical.match(attributesRequiresQoutes) ? `"${attrCanonical}"` : attrCanonical;
         if (attrCanonical === 'if' || attrCanonical === 'foreach' || attrCanonical === 'trackby')
             return;
@@ -99,12 +106,16 @@ function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: 
             renderedAttributes.push(new RenderFragment(`style: {cssText: '${attributes[attrName]}'}`))
         else if (attrCanonical === 'class') {
             let classExpression = parseClassExpression(attributes[attrName], variables);
-            renderedAttributes.push(classExpression.map(_ => `className: ${_}`))
+            renderedAttributes.push(classExpression.map(_ => `class: ${_}`))
         }
-        else if (attrCanonical === 'for') {
-            let attributeExpression = parseAttributeExpression(attributes[attrName], variables);
-            renderedAttributes.push(attributeExpression.map(_ => `htmlFor: ${_}`))
+        else if (propertyMapping[tagAttrCanonical]) {
+            let attributeExpression = parsePropertyExpression(attributes[attrName], variables);
+            renderedAttributes.push(attributeExpression.map(_ => `${attrKey}: ${_}`))
         }
+        // else if (attrCanonical === 'for') {
+        //     let attributeExpression = parseAttributeExpression(attributes[attrName], variables);
+        //     renderedAttributes.push(attributeExpression.map(_ => `htmlFor: ${_}`))
+        // }
         else {
             let attributeExpression = parseAttributeExpression(attributes[attrName], variables);
             renderedAttributes.push(attributeExpression.map(_ => `${attrKey}: ${_}`))

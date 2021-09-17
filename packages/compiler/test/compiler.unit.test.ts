@@ -165,7 +165,7 @@ describe('compiler', () => {
             expect(runtimeFile.val).toEqual(await readGeneratedFile('collection-with-refs'));
         })
 
-        it('with different attributes', async () => {
+        it('with different attributes and properties', async () => {
             const jayFile = await readSourceFile('attributes');
             let runtimeFile = generateRuntimeFile(jayFile, 'attributes.jay.html');
             expect(runtimeFile.val).toEqual(await readGeneratedFile('attributes'));

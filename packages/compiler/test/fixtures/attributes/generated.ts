@@ -1,10 +1,11 @@
-import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, ConstructContext} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, dynamicProperty as dp, ConstructContext} from "jay-runtime";
 
 interface ViewState {
   text: string,
   text2: string,
   text3: string,
-  bool1: boolean
+  bool1: boolean,
+  color: string
 }
 
 export function render(viewState: ViewState): JayElement<ViewState> {
@@ -13,10 +14,11 @@ export function render(viewState: ViewState): JayElement<ViewState> {
       e('div', {style: {cssText: 'background: red;'}}, [dt(vs => vs.text)]),
       e('div', {"data-attribute": 'a value'}, ['static']),
       e('input', {value: 'some value'}, []),
-      e('input', {id: 'abc', value: da(vs => vs.text2)}, []),
-      e('label', {htmlFor: 'abc'}, []),
-      e('div', {className: 'main second'}, [dt(vs => vs.text3)]),
-      e('div', {className: da(vs => `${vs.bool1?'main':''}`)}, [dt(vs => vs.text3)]),
-      e('div', {className: da(vs => `${vs.bool1?'main':'second'}`)}, [dt(vs => vs.text3)])
+      e('input', {id: 'abc', value: dp(vs => vs.text2)}, []),
+      e('input', {type: 'checkbox', checked: dp(vs => vs.bool1), value: dp(vs => vs.text2)}, []),
+      e('label', {for: 'abc'}, []),
+      e('div', {class: 'main second'}, [dt(vs => vs.text3)]),
+      e('div', {class: da(vs => `${vs.bool1?'main':''}`)}, [dt(vs => vs.text3)]),
+      e('div', {class: da(vs => `${vs.bool1?'main':'second'}`)}, [dt(vs => vs.text3)])
     ]));
 }

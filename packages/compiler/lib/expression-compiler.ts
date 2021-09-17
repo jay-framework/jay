@@ -60,6 +60,7 @@ function doParse(expression: string, vars: Variables, startRule) {
             none: Imports.none(),
             dt: Imports.for(Import.dynamicText),
             da: Imports.for(Import.dynamicAttribute),
+            dp: Imports.for(Import.dynamicProperty),
             startRule
         });
     } catch (e) {
@@ -85,6 +86,10 @@ export function parseTextExpression(expression: string, vars: Variables): Render
 
 export function parseAttributeExpression(expression: string, vars: Variables): RenderFragment {
     return doParse(expression, vars, 'dynamicAttribute');
+}
+
+export function parsePropertyExpression(expression: string, vars: Variables): RenderFragment {
+    return doParse(expression, vars, 'dynamicProperty');
 }
 
 export function parseClassExpression(expression: string, vars: Variables): RenderFragment {

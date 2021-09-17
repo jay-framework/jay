@@ -4,6 +4,7 @@
     let none = options.none;
     let dt = options.dt;
     let da = options.da;
+    let dp = options.dp;
 }
 
 classExpression
@@ -41,6 +42,14 @@ dynamicAttribute
   let [renderFragment, isDynamic] = template;
   return isDynamic ?
       renderFragment.map(_ => `da(vs => ${_})`).plusImport(da):
+      renderFragment;
+}
+
+dynamicProperty
+  = template:template {
+  let [renderFragment, isDynamic] = template;
+  return isDynamic ?
+      renderFragment.map(_ => `dp(vs => ${_})`).plusImport(dp):
       renderFragment;
 }
 

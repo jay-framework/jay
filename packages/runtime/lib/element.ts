@@ -47,20 +47,20 @@ export interface TextElement<T> {
     unmount: mountFunc
 }
 
-export interface DynamicAttributeOrProperty<T> {
-    valueFunc: (data:T) => string;
+export interface DynamicAttributeOrProperty<T, S> {
+    valueFunc: (data:T) => S;
     isAttribute: boolean
 }
 
-function isDynamicAttributeOrProperty<T>(value: any): value is DynamicAttributeOrProperty<T> {
+function isDynamicAttributeOrProperty<T, S>(value: any): value is DynamicAttributeOrProperty<T, S> {
     return typeof value.valueFunc === 'function';
 }
 
-export function dynamicAttribute<T, S>(attributeValue: (data: T) => string): DynamicAttributeOrProperty<T> {
+export function dynamicAttribute<T>(attributeValue: (data: T) => string): DynamicAttributeOrProperty<T, string> {
     return {valueFunc: attributeValue, isAttribute: true}
 }
 
-export function dynamicProperty<T, S>(propertyValue: (data: T) => string): DynamicAttributeOrProperty<T> {
+export function dynamicProperty<T, S>(propertyValue: (data: T) => S): DynamicAttributeOrProperty<T, S> {
     return {valueFunc: propertyValue, isAttribute: false}
 }
 
@@ -68,26 +68,25 @@ export function dynamicProperty<T, S>(propertyValue: (data: T) => string): Dynam
 //     return {value}
 // }
 
-export type Attribute<T> = string | DynamicAttributeOrProperty<T> | Record<string, string | DynamicAttributeOrProperty<T>>
-export type Attributes<T> = Record<string, Attribute<T>>
+export type Attribute<T, S> = string | DynamicAttributeOrProperty<T, S> | Record<string, string | DynamicAttributeOrProperty<T, S>>
+export type Attributes<T> = Record<string, Attribute<T, any>>
 
-function doSetAttribute(target: HTMLElement | CSSStyleDeclaration, key: string, value: string, isAttribute: boolean) {
+function doSetAttribute<S>(target: HTMLElement | CSSStyleDeclaration, key: string, value: S, isAttribute: boolean) {
     if (target instanceof HTMLElement && isAttribute) {
-        target.setAttribute(key, value);
+        target.setAttribute(key, value as unknown as string);
     }
     else
         target[key] = value;
 }
-function setAttribute<T>(target: HTMLElement | CSSStyleDeclaration, key: string, value: string | DynamicAttributeOrProperty<T>, updates: updateFunc<T>[]) {
+function setAttribute<T, S>(target: HTMLElement | CSSStyleDeclaration, key: string, value: string | DynamicAttributeOrProperty<T, S>, updates: updateFunc<T>[]) {
     if (isDynamicAttributeOrProperty(value)) {
-        let dynamicAttribute = value as DynamicAttributeOrProperty<T>
         let context = constructionContextStack.current()
-        let attributeValue = dynamicAttribute.valueFunc(context.currData);
-        doSetAttribute(target, key, attributeValue, dynamicAttribute.isAttribute);
+        let attributeValue = value.valueFunc(context.currData);
+        doSetAttribute(target, key, attributeValue, value.isAttribute);
         updates.push((newData:T) => {
-            let newAttributeValue = dynamicAttribute.valueFunc(newData);
+            let newAttributeValue = value.valueFunc(newData);
             if (newAttributeValue !== attributeValue)
-                doSetAttribute(target, key, newAttributeValue, dynamicAttribute.isAttribute);
+                doSetAttribute(target, key, newAttributeValue, value.isAttribute);
             attributeValue = newAttributeValue;
         });
     }
@@ -339,7 +338,7 @@ function createBaseElement<T, A extends Array<any>>(tagName: string, attributes:
     Object.entries(attributes).forEach(([key, value]) => {
         if (key === STYLE) {
             Object.entries(value).forEach(([styleKey, styleValue]) => {
-                setAttribute(e.style, styleKey, styleValue as string | DynamicAttributeOrProperty<T>, updates);
+                setAttribute(e.style, styleKey, styleValue as string | DynamicAttributeOrProperty<T, any>, updates);
             })
         }
         else if (key === REF) {
@@ -356,7 +355,7 @@ function createBaseElement<T, A extends Array<any>>(tagName: string, attributes:
             }
         }
         else {
-            setAttribute(e, key, value as string | DynamicAttributeOrProperty<T>, updates);
+            setAttribute(e, key, value as string | DynamicAttributeOrProperty<T, any>, updates);
         }
     });
     return {e, updates, mounts, unmounts};

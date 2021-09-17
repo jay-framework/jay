@@ -11,6 +11,7 @@ export enum Import {
     ConstructContext,
     DynamicReference,
     dynamicAttribute,
+    dynamicProperty,
 }
 
 export class Imports {

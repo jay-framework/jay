@@ -3,7 +3,7 @@ import {
     Accessor,
     parseAccessor, parseAttributeExpression,
     parseClassExpression,
-    parseCondition,
+    parseCondition, parsePropertyExpression,
     parseTextExpression,
     Variables
 } from '../lib/expression-compiler'
@@ -120,6 +120,38 @@ describe('expression-compiler', () => {
             const actual = parseAttributeExpression('some {string1} thing', defaultVars);
             expect(actual.rendered).toEqual('da(vs => \`some ${vs.string1} thing\`)')
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
+        })
+    });
+
+    describe('parsePropertyExpression', () => {
+
+        let defaultVars = new Variables(new JayObjectType('data', {
+            string1: JayString,
+            string3: JayString
+        }))
+
+        it("constant string expression", () => {
+            const actual = parsePropertyExpression('some constant string', defaultVars);
+            expect(actual.rendered).toEqual('\'some constant string\'')
+            expect(actual.imports.has(Import.dynamicProperty)).toBeFalsy()
+        })
+
+        it("constant number expression", () => {
+            const actual = parsePropertyExpression('123123', defaultVars);
+            expect(actual.rendered).toEqual('\'123123\'')
+            expect(actual.imports.has(Import.dynamicProperty)).toBeFalsy()
+        })
+
+        it("single accessor", () => {
+            const actual = parsePropertyExpression('{string1}', defaultVars);
+            expect(actual.rendered).toEqual('dp(vs => vs.string1)')
+            expect(actual.imports.has(Import.dynamicProperty)).toBeTruthy()
+        })
+
+        it("single accessor in text", () => {
+            const actual = parsePropertyExpression('some {string1} thing', defaultVars);
+            expect(actual.rendered).toEqual('dp(vs => \`some ${vs.string1} thing\`)')
+            expect(actual.imports.has(Import.dynamicProperty)).toBeTruthy()
         })
     });
 
