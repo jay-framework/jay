@@ -7,7 +7,11 @@ export {DynamicReference} from "./node-reference";
 
 const STYLE = 'style';
 const REF = 'ref';
-type updateFunc<T> = (newData:T) => void;
+interface updateFunc<T> {
+    (newData:T): void
+    _origUpdates?: Array<updateFunc<T>>
+}
+//type updateFunc<T> = (newData:T) => void;
 type mountFunc = () => void;
 export const noopUpdate: updateFunc<any> = (_newData:any): void => {};
 export const noopMount: mountFunc = (): void => {}
@@ -361,9 +365,15 @@ function normalizeUpdates<ViewState>(updates: Array<updateFunc<ViewState>>): upd
     if (updates.length === 1)
         return updates[0];
     else if (updates.length > 0) {
-        return (newData) => {
+        for (let i = updates.length - 1; i >= 0; i--) {
+            if (updates[i]._origUpdates)
+                updates.splice(i, 1, ...updates[i]._origUpdates);
+        }
+        let updateFunc: updateFunc<ViewState>  = (newData) => {
             updates.forEach(__update => __update(newData))
         };
+        updateFunc._origUpdates = updates;
+        return updateFunc;
     }
     else {
         return noopUpdate

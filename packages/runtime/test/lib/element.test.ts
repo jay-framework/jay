@@ -3,6 +3,7 @@ import {
     JayElement,
     noopUpdate,
     dynamicAttribute as da,
+    dynamicText as dt,
     dynamicProperty as dp, ConstructContext} from '../../lib/element';
 import {beforeEach, describe, expect, it} from '@jest/globals'
 
@@ -242,6 +243,53 @@ describe('element', () => {
             jayElement.update(data);
             expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(VALUE_6);
             expect(stack).not.toContain('__update')
+        })
+
+        it('in the case multiple updates in a static sub-tree, should merge all static branches in one update branch', () => {
+            interface ViewState {
+                text: string,
+                text2: string
+                text3: string
+            }
+
+            let stack = '__update';
+            let data: ViewState = {text: SOME_VALUE, text2: ANOTHER_VALUE, text3: VALUE_3};
+            let jayElement = ConstructContext.withRootContext(data, () =>
+                e('div', {}, [
+                    e('div', {}, [dt(vs => vs.text2)]),
+                    e('div', {}, [
+                        e('div', {textContent: dp(vs => {
+                                stack = new Error().stack;
+                                return vs.text;
+                            })}),
+                        e('div', {}, [dt(vs => vs.text3)])
+                    ])
+                ]));
+
+
+            expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(SOME_VALUE);
+            expect(jayElement.dom.childNodes[0].textContent).toBe(ANOTHER_VALUE);
+            expect(jayElement.dom.childNodes[1].childNodes[1].textContent).toBe(VALUE_3);
+
+            data.text = VALUE_4;
+            data.text2 = VALUE_5;
+            data.text3 = VALUE_6;
+
+            jayElement.update(data);
+            expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(VALUE_4);
+            expect(jayElement.dom.childNodes[0].textContent).toBe(VALUE_5);
+            expect(jayElement.dom.childNodes[1].childNodes[1].textContent).toBe(VALUE_6);
+
+            // check that __update appears only once in the stack trace of an update function
+            const count_update_regex = /__update/gm
+            let countUpdates = 0;
+            let m;
+            do {
+                m = count_update_regex.exec(stack);
+                if (m != null)
+                    countUpdates += 1;
+            } while(m)
+            expect(countUpdates).toBe(1);
         })
     })
 });
