@@ -67,7 +67,7 @@ export interface ItemData {
     dataId: string
 }
 
-export function Item(props: ItemData, je: ItemElement): ItemComponent {
+export function Item(props: ItemData, je: ItemElement) {
     const [text, setText] = createState(props.text);
     const [done, setDone] = createState(false);
     const onremove = new EventEmitter<void>();
@@ -114,24 +114,234 @@ jayElement.item.onremove = () => {
 // call the component API
 jayElement.item.doSomething('string', new Date());
 ```
+   
+# The Jay Component API
 
+* [Component Construction function](#componentConstruction)
+* [createState](#createState)
+* [createEffect](#createEffect)
+* [createMemo](#createMemo)
+
+
+## <a name="componentConstruction">Component Construction function</a>
+
+The component construction function is a function that creates the logic of the component. 
+It is inspired by [solid.js](https://www.solidjs.com/) and unlike React, the function is called 
+only once on component construction (In React, the function is called on each render cycle).
+
+The function signature is 
+```typescript
+
+type Getter<T> = () => T
+type ValueOrGetter<VS> = {
+    [K in keyof VS]: VS[K] | Getter<VS[K]>
+}
+interface JayComponentCore<ViewState> {
+    render: () => ValueOrGetter<ViewState>
+}
+
+type Prop<PropsT> = {
+    [K in keyof PropsT]: () => PropsT[K]
+}
+
+type JayComponentConstruction<PropsT, ViewState, 
+    JayElementT extends JayElement<ViewState>,
+    CompCore extends JayComponentCore<Props, ViewState>> = 
+    (props: Props<PropsT>, element: JayElementT) => CompCore
+```
+
+The function is expected to return an object with the public API of the component and a 
+`render` function which transforms the component props and state to the element's view state.
+
+The simplest component will then take the form 
+
+```typescript
+export function Component() {
+    return {
+        render: () => {
+            text: 'hello world'
+        }
+    }
+}
+```
+
+The render function signature, given the element view state type `VS` has to conform to the following
+`() => ValueOrGetter<ViewState>`. `ValueOrGetter<VS>` transforms `VS` from an object of values to
+an object of values or getters. This enables using props, state or memo getters directly in a render function.
+
+```typescript
+export function aComponentCore(props) {
+    let [age, setAge] = createState(props.initialAge());
+    let [firstName, setFirstName] = createState('');
+    let [lastName, setLastName] = createState('');
+    
+    let fullName = createMemo(() => `${lastName()} ${firstName}`);
+    
+    return {
+        render: () => ({
+            age, // a state getter
+            fullName, // a memo getter
+            role: props.role // a props getter   
+        })
+    }
+}
+```
+
+## <a name="props">props</a>
+
+Inspired by solid.js, the properties are passed to the component as a Proxy object which track access
+to the props. On each prop change, `render`, `createMemo` and `createEffect` are running.
+
+We have two options for props now - transforming props object to a props getters object, or 
+leaving props as a props proxy. We favor the first option
+
+### 1. props as getters (preferred)                                   
+
+we define a type transformation `Props<T>` which transforms an object of values to an object of getters.
+This pattern allows decomposition of props as follows
+
+```typescript
+interface ComponentProps {
+    name: string,
+    age: number
+}
+
+export function Component({name, age}: Props<ComponentProps>) {
+    return {
+        render: () => ({
+            age, 
+            text: `Hello ${name()}`              
+        })
+    }
+}
+```
+
+### 2. props as a proxy object (like solid.js)
+               
+This option has a simpler type signature, but it does not allow for decomposition because of the direct
+use of the proxy
+
+```typescript
+interface ComponentProps {
+    name: string,
+    age: number
+}
+
+export function Component(props: ComponentProps) {
+    return {
+        render: () => ({
+            age: props.age(),
+            text: `Hello ${props.name()}`
+        })
+    }
+}
+```
+
+
+## <a name="createState">createState</a>
+
+Create state is inspired from [solid.js](https://www.solidjs.com/) and [S.js](https://github.com/adamhaile/S),
+which is similar and different from React in the sense of using a getter instead of a value.
+
+```typescript
+type Next<T> = (t: T) => T 
+type Setter<T> = (t: T | Next<T>) => T 
+type Getter<T> = () => T 
+declare function createState<T>(value: T): 
+    [get: Getter<T>, set: Setter<T>];
+```
+
+and it is used as 
+```typescript
+let initialValue = 'some initial value';
+const [getState, setState] = createState(initialValue);
+
+// read value
+getState();
+
+// set value
+let nextValue = 'some next value';
+setState(nextValue);
+
+// set value with a function setter
+let next = ' and more';
+setState((prev) => prev + next);
+```
+
+## <a name="createEffect">createEffect</a>
+
+createEffect is inspired by React [useEffect](https://reactjs.org/docs/hooks-effect.html) in the sense that it is 
+run any time any of the dependencies change and can return a cleanup function. Unlike React, the dependencies
+are tracked automatically like in Solid.js.
+
+```typescript
+
+type Clean = () => void
+declare function createEffect(effect: () => void | cleanup);
+```
+
+it can be used for computations, for instance as a timer that ticks every `props.delay()` milisecs.
+
+```typescript
+let [time, setTime] = createState(0)
+createEffect(() => {
+    let timer = setInterval(() => setTime(time => time + props.delay()), props.delay())
+    return () => {
+        clearInterval(timer);
+    }
+})
+```
+
+## <a name="createMemo">createMemo</a>
+
+computed is inspired by Solid.js [createMemo](https://www.solidjs.com/docs/latest/api#creatememo).
+It creates a computation that is cached until dependencies change and return a single getter.
+For Jay Components memos are super important as they can be used directly to construct the render function
+in a very efficient way.
+
+```typescript
+type Getter<T> = () => T
+declare function createMemo<T>(computation: (prev: T) => T, initialValue?: T);
+```
+
+```typescript
+let [time, setTime] = createState(0)
+createEffect(() => {
+    let timer = setInterval(() => setTime(time => time + props.delay()), props.delay())
+    return () => {
+        clearInterval(timer);
+    }
+})
+let currentTime = createMemo(() => `The current time is ${time()}`)
+```
+
+
+
+      
+## The component Type Mapping
 We can make this happen using mapped types using the following type transformations (which look a bit complicated) which are
 
 1. The `makeJayComponent` accepts two parameters - a `JayElement` render function and a 
-   component construction function, that given props and the element returns an object extending `JayComponentCore`
+   component construction function, that given props proxy and the element returns an object extending `JayComponentCore`
    1. The returned `JayComponentCore` is required to have a `render` function
    2. The returned `JayComponentCore` can have functions which are a public API of the component
    3. The returned `JayComponentCore` can have `EventEmitter` instances to define events
 2. The type transformation
-   1. removes the `render` function
-   2. transforms `EventEmitter<E, H>` into type `H`
-   3. adds the `JayComponent` interface to the component
+   1. transforms `Props` input into a `PropsProxy<Props>` proxy which transforms property values into getter functions
+   2. removes the `render` function
+   3. transforms `EventEmitter<E, H>` into type `H`
+   4. adds the `JayComponent` interface to the component
 3. The `makeJayComponent` needs to implement the transformed component public type over the component core type, 
    probably using a `Proxy`.
 
 ```typescript
+type Getter<T> = () => T
+type ValueOrGetter<VS> = {
+    [K in keyof VS]: VS[K] | Getter<VS[K]>
+}
+
 interface JayComponentCore<Props, ViewState> {
-    render: () => ViewState
+    render: () => ValueOrGetter<ViewState>
 }
 
 class EventEmitter<Event, Handler extends (e: Event) => void> {
@@ -146,34 +356,31 @@ class EventEmitter<Event, Handler extends (e: Event) => void> {
     }
 }
 
-type ConcreteJayComponent1<
-    Props, 
-    ViewState,
-    jayComponentConstructor extends JayComponentConstructor<Props, ViewState>,
-    jayElement extends JayElement<ViewState>> =
-    Omit<jayComponentConstructor, 'render'> & JayComponent<Props, ViewState, jayElement>
+type ConcreteJayComponent1<PropsT, ViewState,
+    CompCore extends JayComponentCore<PropsT, ViewState>,
+    JayElementT extends JayElement<ViewState>> =
+    Omit<CompCore, 'render'> & JayComponent<PropsT, ViewState, JayElementT>
 
-type ConcreteJayComponent<
-    Props, 
-    ViewState,
-    jayComponentConstructor extends JayComponentConstructor<Props, ViewState>,
-    jayElement extends JayElement<ViewState>,
-    CJC extends ConcreteJayComponent1<Props, ViewState, jayComponentConstructor, jayElement>> = {
-    [K in keyof CJC]: CJC[K] extends EventEmitter<infer E, infer H> ? H : CJC[K]
+type ConcreteJayComponent<PropsT, ViewState,
+    CompCore extends JayComponentCore<PropsT, ViewState>,
+    JayElementT extends JayElement<ViewState>,
+    CJC extends ConcreteJayComponent1<PropsT, ViewState, CompCore, JayElementT>> = {
+    [K in keyof CJC]: CJC[K] extends EventEmitter<infer T, infer F> ? F : CJC[K]
 }
 
-declare function makeJayComponent<
-    Props, 
-    ViewState, 
-    jayElement extends JayElement<ViewState>,
-    compCore extends JayComponentCore<Props, ViewState>,
-    component extends JayComponent<Props, ViewState, jayElement>>(
+type Prop<PropsT> = {
+    [K in keyof PropsT]: () => PropsT[K]
+}
+declare function makeJayComponent<PropsT, ViewState, JayElementT extends JayElement<ViewState>,
+    CompCore extends JayComponentCore<PropsT, ViewState>>(
         
-    render: (vs: ViewState) => jayElement,
-    comp: (props: Props, element: jayElement) => compCore):
+    render: (vs: ViewState) => JayElementT,
+    comp: (props: Prop<PropsT>, element: JayElementT) => CompCore): 
+      ConcreteJayComponent<PropsT, ViewState, CompCore, JayElementT, ConcreteJayComponent1<PropsT, ViewState, CompCore, JayElementT>>
 
-    ConcreteJayComponent<Props, ViewState, compCore, jayElement, ConcreteJayComponent1<Props, ViewState, compConstructor, jayElement>>
 ```
+
+
                         
 
 
@@ -194,36 +401,38 @@ export interface JayElement<ViewState> {
     unmount: mountFunc
 }
 
-export interface JayComponent<Props, ViewState, jayElement extends JayElement<ViewState>>{
-    element: jayElement
-    update: updateFunc<Props>
+export interface JayComponent<PropsT, ViewState, JayElementT extends JayElement<ViewState>>{
+    element: JayElementT
+    update: updateFunc<PropsT>
     mount: mountFunc,
     unmount: mountFunc
 }
 
-interface JayComponentConstructor<Props, ViewState> {
+interface JayComponentCore<PropsT, ViewState> {
     render: () => ViewState
 }
 
-type ConcreteJayComponent<Props, ViewState,
-    cnst extends JayComponentConstructor<Props, ViewState>,
-    jayElement extends JayElement<ViewState>> =
-    Omit<cnst, 'render'> & JayComponent<Props, ViewState, jayElement>
+type ConcreteJayComponent1<PropsT, ViewState,
+    CompCore extends JayComponentCore<PropsT, ViewState>,
+    JayElementT extends JayElement<ViewState>> =
+    Omit<CompCore, 'render'> & JayComponent<PropsT, ViewState, JayElementT>
 
-type ConcreteJayComponent2<Props, ViewState,
-    cnst extends JayComponentConstructor<Props, ViewState>,
-    jayElement extends JayElement<ViewState>,
-    CJC extends ConcreteJayComponent<Props, ViewState, cnst, jayElement>> = {
-    [Property in keyof CJC]: CJC[Property] extends EventEmitter<infer T, infer F> ? F : CJC[Property]
+type ConcreteJayComponent<PropsT, ViewState,
+    CompCore extends JayComponentCore<PropsT, ViewState>,
+    JayElementT extends JayElement<ViewState>,
+    CJC extends ConcreteJayComponent1<PropsT, ViewState, CompCore, JayElementT>> = {
+    [K in keyof CJC]: CJC[K] extends EventEmitter<infer T, infer F> ? F : CJC[K]
 }
 
+type Prop<PropsT> = {
+    [K in keyof PropsT]: () => PropsT[K]
+}
 
-declare function makeJayComponent<Props, ViewState, jayElement extends JayElement<ViewState>,
-    compConstructor extends JayComponentConstructor<Props, ViewState>,
-    component extends JayComponent<Props, ViewState, jayElement>
+declare function makeJayComponent<PropsT, ViewState, JayElementT extends JayElement<ViewState>,
+    CompCore extends JayComponentCore<PropsT, ViewState>
     >(
-    render: (vs: ViewState) => jayElement,
-    comp: (props: Props, element: jayElement) => compConstructor): ConcreteJayComponent2<Props, ViewState, compConstructor, jayElement, ConcreteJayComponent<Props, ViewState, compConstructor, jayElement>>
+    render: (vs: ViewState) => JayElementT,
+    comp: (props: Prop<PropsT>, element: JayElementT) => CompCore): ConcreteJayComponent<PropsT, ViewState, CompCore, JayElementT, ConcreteJayComponent1<PropsT, ViewState, CompCore, JayElementT>>
 
 
 
@@ -250,11 +459,11 @@ class EventEmitter<T, F extends (t: T) => void> {
     }
 }
 
-const compConstructor = (props: CompProps, element: ConcreteElement) => {
+const compConstructor = (props: Prop<CompProps>, element: ConcreteElement) => {
     const onremove = new EventEmitter<void, () => void>();
     return {
         render: (): Data => {
-            return ({one: props.one, two: 2})
+            return ({one: props.one(), two: 2})
         },
         api: () => {},
         onremove
@@ -262,5 +471,6 @@ const compConstructor = (props: CompProps, element: ConcreteElement) => {
 }
 let comp = makeJayComponent(render, compConstructor)
 
-comp.onremove
+comp.
+
 ```
