@@ -1,6 +1,19 @@
 Jay Element vs Jay Component
 ===
 
+Basic Definitions
+- 
+
+A **Jay Element** is a function of **ViewState** to a certain **DOM** setup. The Jay Element can be represented 
+as a Jay HTML file or other file formats, and it fully declarative, avoid of logic and safe.
+Jay Elements are transformed into safe JS code for a `render` function, `update`, `mount` and `unmount` functions.
+
+A **Jay Component** is a function of **Props** to a **ViewState**. A Component can handle internal state,
+react to Props change, expose an API or events. A **Jay Component** is rendered to **DOM** using a 
+**Jay Element**.
+
+a **Jay Element** can contain other **Jay Components** or event other **Jay Elements** directly. 
+
 ![Overview](02%20-%20Jay%20Element%20vs%20Component.png "Jay Element vs Component")
                                                                          
 The Jay system consists of two main entities - the **Jay Component** and the **Jay Element**.
@@ -19,37 +32,68 @@ An example Jay Element looks like (non final syntax)
 <head>
     <script type="application/yaml-jay">
 data:
-   count: number
+  count: number
     </script>
 </head>
 <body>
-    <div>
-        <button id="dec">-</button>
-        <span id="count">{count}</span>
-        <button id="inc">+</button>
-    </div>
+<div>
+    <button ref="subtracter">-</button>
+    <span style="margin: 0 16px">{count}</span>
+    <button ref="adder">+</button>
+</div>
 </body>
 </html>
 ```
 
-It is compiled into a file with the `.d.ts` of
-
+It is compiled into a declaration file (`.d.ts`) and a runtime file
+                                                                   
+The definition file:
 ```typescript
 import {JayElement} from "jay-runtime";
 
-interface ViewState {
+export interface ViewState {
   count: number,
 }
 
-export declare function render(viewState: ViewState): JayElement<ViewState>
+export interface CounterElement extends JayElement<ViewState> {
+    subtracter: HTMLElement,
+    adder: HTMLElement
+}
+
+export declare function render(viewState: ViewState): CounterElement
 ```
+          
+The runtime file:
+```typescript
+import {JayElement, element as e, dynamicText as dt, ConstructContext} from "jay-runtime";
+
+interface ViewState {
+  count: number
+}
+
+export interface CounterElement extends JayElement<ViewState> {
+  subtracter: HTMLElement,
+  adder: HTMLElement
+}
+
+export function render(viewState: ViewState): CounterElement {
+  return ConstructContext.withRootContext(viewState, () =>
+    e('div', {}, [
+      e('button', {ref: 'subtracter'}, ['-']),
+      e('span', {style: {cssText: 'margin: 0 16px'}}, [dt(vs => vs.count)]),
+      e('button', {ref: 'adder'}, ['+'])
+    ])) as CounterElement;
+}
+```
+
 
 Jay Component
 ---
 
 The **Jay Component** adds logic to the **Jay Element** by composing over it, and looks like
 (non final syntax - we are still not sure about events syntax and if it will extend `JayElement` or maybe `JayComponent`)
-
+                 
+A Jay Component without any state management
 ```typescript
 import {JayElement} from "jay-runtime";
 import {render, ViewState} from './counter.jay';
@@ -82,6 +126,32 @@ export function Counter(initial: number): JayElement<ViewState>{
         update: update
     }
 }
+```
+
+The same component with state management
+```typescript
+import {JayElement} from "jay-runtime";
+import {makeJayComponent} from "jay-component"
+import {render, ViewState} from './counter.jay';
+
+export interface CounterProps {
+    initial: number
+}
+
+export function Counter({initial}: Props<CounterProps>, element: CounterElement): JayElement<ViewState>{
+    let [count, setCount] = createState(initial());
+    
+    element.onDec(_ => setCount(count()-1))
+    element.onInc(_ => setCount(count()+1))
+
+    return {
+        render: ({
+            count
+        })
+    }
+}
+
+export default makeJayComponent(render, Counter);
 ```
 
 Secure running model 
