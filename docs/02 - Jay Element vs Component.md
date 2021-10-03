@@ -113,8 +113,8 @@ export function Counter(initial: number): JayElement<ViewState>{
     }
 
     // non final event binding syntax
-    element.onDec(_ => dec())
-    element.onInc(_ => inc())
+    element.subtracter.onclick(_ => dec())
+    element.adder.onclick(_ => inc())
 
     let update = (viewState: ViewState) => {
         count = viewState.count;
@@ -140,9 +140,9 @@ export interface CounterProps {
 
 export function Counter({initial}: Props<CounterProps>, element: CounterElement): JayElement<ViewState>{
     let [count, setCount] = createState(initial());
-    
-    element.onDec(_ => setCount(count()-1))
-    element.onInc(_ => setCount(count()+1))
+
+    element.subtracter.onclick(_ => setCount(count()-1))
+    element.adder.onclick(_ => setCount(count()+1))
 
     return {
         render: ({

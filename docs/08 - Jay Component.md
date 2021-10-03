@@ -133,11 +133,11 @@ The function signature is
 ```typescript
 
 type Getter<T> = () => T
-type ValueOrGetter<VS> = {
+type RenderResult<VS> = {
     [K in keyof VS]: VS[K] | Getter<VS[K]>
 }
 interface JayComponentCore<ViewState> {
-    render: () => ValueOrGetter<ViewState>
+    render: () => RenderResult<ViewState>
 }
 
 type Prop<PropsT> = {
@@ -166,11 +166,11 @@ export function Component() {
 ```
 
 The render function signature, given the element view state type `VS` has to conform to the following
-`() => ValueOrGetter<ViewState>`. `ValueOrGetter<VS>` transforms `VS` from an object of values to
+`() => RenderResult<ViewState>`. `RenderResult<VS>` transforms `VS` from an object of values to
 an object of values or getters. This enables using props, state or memo getters directly in a render function.
 
 ```typescript
-export function aComponentCore(props) {
+export function Component({role}: Props<ComponentProps>) {
     let [age, setAge] = createState(props.initialAge());
     let [firstName, setFirstName] = createState('');
     let [lastName, setLastName] = createState('');
@@ -181,7 +181,7 @@ export function aComponentCore(props) {
         render: () => ({
             age, // a state getter
             fullName, // a memo getter
-            role: props.role // a props getter   
+            role // a props getter   
         })
     }
 }
@@ -191,11 +191,6 @@ export function aComponentCore(props) {
 
 Inspired by solid.js, the properties are passed to the component as a Proxy object which track access
 to the props. On each prop change, `render`, `createMemo` and `createEffect` are running.
-
-We have two options for props now - transforming props object to a props getters object, or 
-leaving props as a props proxy. We favor the first option
-
-### 1. props as getters (preferred)                                   
 
 we define a type transformation `Props<T>` which transforms an object of values to an object of getters.
 This pattern allows decomposition of props as follows
@@ -215,28 +210,6 @@ export function Component({name, age}: Props<ComponentProps>) {
     }
 }
 ```
-
-### 2. props as a proxy object (like solid.js)
-               
-This option has a simpler type signature, but it does not allow for decomposition because of the direct
-use of the proxy
-
-```typescript
-interface ComponentProps {
-    name: string,
-    age: number
-}
-
-export function Component(props: ComponentProps) {
-    return {
-        render: () => ({
-            age: props.age(),
-            text: `Hello ${props.name()}`
-        })
-    }
-}
-```
-
 
 ## <a name="createState">createState</a>
 
@@ -294,7 +267,7 @@ createEffect(() => {
 
 ## <a name="createMemo">createMemo</a>
 
-computed is inspired by Solid.js [createMemo](https://www.solidjs.com/docs/latest/api#creatememo).
+createMemo is inspired by Solid.js [createMemo](https://www.solidjs.com/docs/latest/api#creatememo).
 It creates a computation that is cached until dependencies change and return a single getter.
 For Jay Components memos are super important as they can be used directly to construct the render function
 in a very efficient way.
@@ -306,12 +279,6 @@ declare function createMemo<T>(computation: (prev: T) => T, initialValue?: T);
 
 ```typescript
 let [time, setTime] = createState(0)
-createEffect(() => {
-    let timer = setInterval(() => setTime(time => time + props.delay()), props.delay())
-    return () => {
-        clearInterval(timer);
-    }
-})
 let currentTime = createMemo(() => `The current time is ${time()}`)
 ```
 
@@ -327,21 +294,24 @@ We can make this happen using mapped types using the following type transformati
    2. The returned `JayComponentCore` can have functions which are a public API of the component
    3. The returned `JayComponentCore` can have `EventEmitter` instances to define events
 2. The type transformation
-   1. transforms `Props` input into a `PropsProxy<Props>` proxy which transforms property values into getter functions
-   2. removes the `render` function
-   3. transforms `EventEmitter<E, H>` into type `H`
-   4. adds the `JayComponent` interface to the component
+   1. transforms the input `ComponentProps` into a `Props<ComponentProps>` proxy which transforms property values into getter functions
+   2. removes the `render` function on the returned object
+   3. transforms `EventEmitter<E, H>` into type `H` on the returned object
+   4. adds the `JayComponent` interface to the component 
 3. The `makeJayComponent` needs to implement the transformed component public type over the component core type, 
    probably using a `Proxy`.
 
 ```typescript
 type Getter<T> = () => T
-type ValueOrGetter<VS> = {
+type RenderResult<VS> = {
     [K in keyof VS]: VS[K] | Getter<VS[K]>
+}
+type Prop<PropsT> = {
+   [K in keyof PropsT]: Getter<PropsT[K]>
 }
 
 interface JayComponentCore<Props, ViewState> {
-    render: () => ValueOrGetter<ViewState>
+    render: () => RenderResult<ViewState>
 }
 
 class EventEmitter<Event, Handler extends (e: Event) => void> {
@@ -368,9 +338,6 @@ type ConcreteJayComponent<PropsT, ViewState,
     [K in keyof CJC]: CJC[K] extends EventEmitter<infer T, infer F> ? F : CJC[K]
 }
 
-type Prop<PropsT> = {
-    [K in keyof PropsT]: () => PropsT[K]
-}
 declare function makeJayComponent<PropsT, ViewState, JayElementT extends JayElement<ViewState>,
     CompCore extends JayComponentCore<PropsT, ViewState>>(
         
