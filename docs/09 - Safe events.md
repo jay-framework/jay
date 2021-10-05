@@ -89,7 +89,7 @@ requirements
                                                                                   
 Lets imaging a solution that meets both requirements
 
-### 1. Compile unsafe code to safe code
+### Compile unsafe code to safe code
 
 It is well known that full javascript code cannot be made secure by static code analysis - meaning, 
 using static code analysis one cannot prevent the programmer from hacking the system and doing whatever 
@@ -111,12 +111,30 @@ element.subtracter.onclick(
 
 We can define this model as such that the main thread event handler can return a value to the worker handler
 ```typescript
-declare function onclick<E extends Event, VS, T>(mainHandler: (e: E, viewState: VS) => T, workerHandler: (T) => void)
+declare function onclick<E extends Event, VS, T>(secureHandler: (e: E, viewState: VS) => T, workerHandler: (T) => void)
 ```
 
 Where
-* `mainHandler` runs on the main thread, and is limited to only access the event itself, the element viewState
-  and a subset of Javascript. This function cannot access the component state, props or any other component 
+* `secureHandler` runs on the main thread, and is limited to only access the event itself, the element viewState 
+  and referenced dom nodes, a subset of Javascript. This function cannot access the component state, props or any other component 
   element that is not present in the element view state.
 * `workerHandler` runs on the worker, is not limited in terms of javascript, can access component state, props,
   functions or any other assets in the worker.
+
+### Limitations of the secureHandler code
+
+The code of the `secureHandler` is extracted and validated by the compiler, and runs in the main thread.
+                                                                                                        
+It is restricted by
+* cannot access the component state, props or any inner variable as the code actually runs on another thread
+* cannot access the generic dom - can only access DOM elements that are referenced in the element
+* cannot create objects, define classes, new functions (`new Function(...)`) to prevent breaking the sandbox 
+* can access only a whitelist of the browser APIs (`Location` allowed, `document` not allowed)
+* cannot perform network requests
+
+It enables doing the following
+* simple logic, including `if`, `for`, `array.forEach`, etc.
+* access the view state
+* access the jay element referenced dom elements
+* access the native event
+* call allowed browser APIs
