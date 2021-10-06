@@ -128,13 +128,52 @@ The code of the `secureHandler` is extracted and validated by the compiler, and 
 It is restricted by
 * cannot access the component state, props or any inner variable as the code actually runs on another thread
 * cannot access the generic dom - can only access DOM elements that are referenced in the element
-* cannot create objects, define classes, new functions (`new Function(...)`) to prevent breaking the sandbox 
+* cannot define classes 
+* cannot use new Function constructor (`new Function(...)`) to prevent breaking the sandbox
+* cannot create regular functions, only arrow functions
 * can access only a whitelist of the browser APIs (`Location` allowed, `document` not allowed)
 * cannot perform network requests
 
+Maybe restricted
+* We are not sure about the loop keywords `for` and `while` - we have a feeling that those are not required 
+  and can be replaced with `array.forEach` and similar array operands
+* Should we allow the `new` keyword? it is not clear that we need it
+
 It enables doing the following
-* simple logic, including `if`, `for`, `array.forEach`, etc.
+* simple logic, including `if`, `array.forEach`, etc.
 * access the view state
 * access the jay element referenced dom elements
 * access the native event
 * call allowed browser APIs
+* can create arrow functions
+
+## examples
+
+### prevent event default
+
+```typescript
+element.ref.onclick(
+        (event) => event.preventDefault(), // runs on the main thread 
+        _ => setCount(count()-1))  // runs in the worker
+```
+
+### navigate with opening a new tab / window
+
+```typescript
+element.ref.onclick(
+        (event, vs) => window.open(vs.url, '_blank'), // runs on the main thread 
+        _ => {}) // runs in the worker
+          
+```
+
+### start a video
+
+```typescript
+element.vidRef.onclick(
+        (event, vs) => element.vidRef.play(), // runs on the main thread 
+        _ => {}) // runs in the worker 
+```
+
+## Prior work
+
+Project [Nerio](https://github.com/kmacrow/Nerio)
