@@ -877,3 +877,177 @@ je.completed.onclick = (event, item) => {
 Where we add a few "collection actions" constructors - `remove`, `move`, `update` and `new` that both capture the intent
 and reduce code size. With those "collection actions" we can also track the collection changes and optimize the
 algorithm of collection compare
+
+
+## 5. Summary of state management
+
+We can make a system for state management that supports both immutable and mutable state using 
+a few constructs. This section summarizes the state management APIs.
+
+* [props](#props)
+* [createState](#createState)
+* [createEffect](#createEffect)
+* [createMemo](#createMemo)
+
+## <a name="props">props</a>
+
+Inspired by solid.js, the properties are passed to the component as a Proxy object which track access
+to the props. On each prop change, `render`, `createMemo` and `createEffect` are running.
+
+we define a type transformation `Props<T>` which transforms an object of values to an object of getters.
+This pattern allows decomposition of props as follows
+
+```typescript
+interface ComponentProps {
+    name: string,
+    age: number
+}
+
+export function Component({name, age}: Props<ComponentProps>) {
+    return {
+        render: () => ({
+            age, 
+            text: `Hello ${name()}`              
+        })
+    }
+}
+```
+
+to get the value of a prop, just call the getter
+```typescript
+name()
+age()
+```
+
+
+
+## <a name="createState">createState</a>
+
+Create state is inspired from [solid.js](https://www.solidjs.com/) and [S.js](https://github.com/adamhaile/S),
+which is similar and different from React in the sense of using a getter instead of a value.
+
+```typescript
+type Next<T> = (t: T) => T 
+type Setter<T> = (t: T | Next<T>) => T 
+type Getter<T> = () => T 
+declare function createState<T>(value: T | Getter<T>): 
+    [get: Getter<T>, set: Setter<T>];
+```
+
+and it is used as
+```typescript
+let initialValue = 'some initial value';
+const [getState, setState] = createState(initialValue);
+
+// read value
+getState();
+
+// set value
+let nextValue = 'some next value';
+setState(nextValue);
+
+// set value with a function setter
+let next = ' and more';
+setState((prev) => prev + next);
+```
+                     
+We can also bind the state to a computation, such as change in prop value by using a function as the 
+`createState` parameter
+
+```typescript
+// assuming name is a prop
+const [getState, setState] = createState(() => name());
+```
+
+this method removes the need to use `createEffect` just in order to update state 
+
+## <a name="createEffect">createEffect</a>
+
+createEffect is inspired by React [useEffect](https://reactjs.org/docs/hooks-effect.html) in the sense that it is
+run any time any of the dependencies change and can return a cleanup function. Unlike React, the dependencies
+are tracked automatically like in Solid.js.
+
+```typescript
+
+type Clean = () => void
+declare function createEffect(effect: () => void | cleanup);
+```
+
+it can be used for computations, for instance as a timer that ticks every `props.delay()` milisecs.
+
+```typescript
+let [time, setTime] = createState(0)
+createEffect(() => {
+    let timer = setInterval(() => setTime(time => time + props.delay()), props.delay())
+    return () => {
+        clearInterval(timer);
+    }
+})
+```
+
+## <a name="createMemo">createMemo</a>
+
+createMemo is inspired by Solid.js [createMemo](https://www.solidjs.com/docs/latest/api#creatememo).
+It creates a computation that is cached until dependencies change and return a single getter.
+For Jay Components memos are super important as they can be used directly to construct the render function
+in a very efficient way.
+
+```typescript
+type Getter<T> = () => T
+declare function createMemo<T>(computation: (prev: T) => T, initialValue?: T);
+```
+
+```typescript
+let [time, setTime] = createState(0)
+let currentTime = createMemo(() => `The current time is ${time()}`)
+```
+
+## <a name="createMutable">createMutable</a>
+
+createMutable creates a Proxy over an object who tracks modifications to the underlying object, 
+both for optimization of rendering and for computations. The mutable proxy handles deep objects, 
+including traversal of arrays and nested objects
+
+```typescript
+declare function createMutable<T>(obj: T): T
+```
+
+It is used as
+
+```typescript
+// assume todoItems is an array of todo items
+let items = createMutable(inputItems);
+
+// will track this change
+items.push({todo: 'abc', done: false});
+
+// will track this change as well
+items[3].done = true;
+```
+                     
+createMutable is very usefull for event handlers under `forEach`  as it allows mutating the `forEach` item directly.
+
+```typescript
+// assume we have a forEach on the element for the items above. An event handler can then look like
+element.toggleDone.onclick = function(event, item) => {
+    item.done = !item.done
+}
+```
+
+createMutable tracks object immutability by marking objects who have been mutated with two revision marks
+```typescript
+const REVISION = Symbol('revision');
+const CHILDRENREVISION = Symbol('children-revision')
+```
+
+When an object is updated, it's `REVISION` is updated to a new larger value.
+When a nested object is updated, it's parents `CHILDRENREVISION` is updated to a new larger value.
+
+For instance, for an array, if the array is pushed a new item, it's `REVISION` will increase. If a nested 
+element of the array is updated, it's `REVISION` increase, while the array's `CHILDRENREVISION` increases.
+
+The markings can be accessed using the symbols
+```typescript
+items[REVISION]
+items[CHILDRENREVISION]
+```
