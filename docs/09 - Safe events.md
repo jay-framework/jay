@@ -176,4 +176,6 @@ element.vidRef.onclick(
 
 ## Prior work
 
+[ADSafe](https://www.adsafe.org/)
+
 Project [Nerio](https://github.com/kmacrow/Nerio)
