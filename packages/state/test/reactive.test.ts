@@ -13,11 +13,23 @@ describe('reactive', () => {
 
             expect(myMock.mock.calls.length).toBe(1);
         });
+    });
 
-        it('should support createState', () => {
+    describe('create state', () => {
+        it('create state with a default value', () => {
             let res;
             createReactive(() => {
                 let [state, setState] = createState(12);
+                res = state();
+            })
+
+            expect(res).toBe(12);
+        });
+
+        it('create state with a getter function', () => {
+            let res;
+            createReactive(() => {
+                let [state, setState] = createState(() => 12);
                 res = state();
             })
 
