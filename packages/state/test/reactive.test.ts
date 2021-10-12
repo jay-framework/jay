@@ -107,7 +107,7 @@ describe('reactive', () => {
             expect(myMock.mock.calls[0][0]).toBe(12);
         })
 
-        it('should batch re-calculations using the batch operation', () => {
+        it('should batch re-calculations using the batch operation (single state)', () => {
             const myMock = jest.fn();
             let state, setState
             let reactive = new Reactive((reactive) => {
@@ -127,6 +127,33 @@ describe('reactive', () => {
             expect(myMock.mock.calls.length).toBe(2);
             expect(myMock.mock.calls[0][0]).toBe(12);
             expect(myMock.mock.calls[1][0]).toBe(14);
+        })
+
+        it('should batch re-calculations using the batch operation (multiple states)', () => {
+            const myMock = jest.fn();
+            let a, b, c, setA, setB, setC
+            let reactive = new Reactive((reactive) => {
+                [a, setA] = reactive.createState(false);
+                [b, setB] = reactive.createState('abc');
+                [c, setC] = reactive.createState('def');
+                reactive.createReaction(() => {
+                    myMock(a(), b(), c())
+                })
+            })
+
+            reactive.batchReactions(() => {
+                setA(true);
+                setB('abcde');
+                setC('fghij');
+            })
+
+            expect(myMock.mock.calls.length).toBe(2);
+            expect(myMock.mock.calls[0][0]).toBe(false);
+            expect(myMock.mock.calls[0][1]).toBe('abc');
+            expect(myMock.mock.calls[0][2]).toBe('def');
+            expect(myMock.mock.calls[1][0]).toBe(true);
+            expect(myMock.mock.calls[1][1]).toBe('abcde');
+            expect(myMock.mock.calls[1][2]).toBe('fghij');
         })
 
     });
