@@ -88,5 +88,46 @@ describe('reactive', () => {
             expect(myMock.mock.calls[0][0]).toBe(12);
             expect(myMock.mock.calls[1][0]).toBe(13);
         })
+
+        it('should not rerun when state it does not depends on changes', () => {
+            const myMock = jest.fn();
+            let state, setState
+            let state2, setState2
+            new Reactive((reactive) => {
+                [state, setState] = reactive.createState(12);
+                [state2, setState2] = reactive.createState(100);
+                reactive.createReaction(() => {
+                    myMock(state())
+                })
+            })
+
+            setState2(101);
+
+            expect(myMock.mock.calls.length).toBe(1);
+            expect(myMock.mock.calls[0][0]).toBe(12);
+        })
+
+        it('should batch re-calculations using the batch operation', () => {
+            const myMock = jest.fn();
+            let state, setState
+            let reactive = new Reactive((reactive) => {
+                [state, setState] = reactive.createState(12);
+                reactive.createReaction(() => {
+                    myMock(state())
+                })
+            })
+
+            reactive.batchReactions(() => {
+
+                setState(13);
+                setState(14);
+                expect(myMock.mock.calls.length).toBe(1);
+            })
+
+            expect(myMock.mock.calls.length).toBe(2);
+            expect(myMock.mock.calls[0][0]).toBe(12);
+            expect(myMock.mock.calls[1][0]).toBe(14);
+        })
+
     });
 });

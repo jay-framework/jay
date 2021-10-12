@@ -8,6 +8,7 @@ export class Reactive {
 
     private recording = false;
     private recordingReaction = undefined;
+    private batchedReactionsToRun: Set<() => void> = undefined;
 
     constructor(func: (reactive: Reactive) => void) {
         try {
@@ -24,7 +25,12 @@ export class Reactive {
 
         let setter = (value: T | Next<T>) => {
             current = (typeof value === 'function') ? (value as Next<T>)(current) : value;
-            reactionsToRerun.forEach(reaction => reaction())
+            reactionsToRerun.forEach(reaction => {
+                if (this.batchedReactionsToRun)
+                    this.batchedReactionsToRun.add(reaction)
+                else
+                    reaction()
+            })
             return current;
         }
 
@@ -37,6 +43,17 @@ export class Reactive {
         }
 
         return [getter, setter]
+    }
+
+    batchReactions(func: () => void) {
+        this.batchedReactionsToRun = new Set();
+        try {
+            func();
+        }
+        finally {
+            this.batchedReactionsToRun.forEach(reaction => reaction())
+            this.batchedReactionsToRun = undefined;
+        }
     }
 
     createReaction(func: () => void) {
