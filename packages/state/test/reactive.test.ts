@@ -7,7 +7,7 @@ describe('reactive', () => {
         it('should call the constructor function', () => {
             const myMock = jest.fn();
 
-            new Reactive(() => {
+            new Reactive().record(() => {
                 myMock()
             })
 
@@ -18,7 +18,7 @@ describe('reactive', () => {
     describe('create state', () => {
         it('create state with a default value', () => {
             let res;
-            new Reactive((reactive) => {
+            new Reactive().record((reactive) => {
                 let [state, setState] = reactive.createState(12);
                 res = state();
             })
@@ -28,7 +28,7 @@ describe('reactive', () => {
 
         it('create state with a getter function', () => {
             let res;
-            new Reactive((reactive) => {
+            new Reactive().record((reactive) => {
                 let [state, setState] = reactive.createState(() => 12);
                 res = state();
             })
@@ -38,7 +38,7 @@ describe('reactive', () => {
 
         it('should support createState state update with a value', () => {
             let res;
-            new Reactive((reactive) => {
+            new Reactive().record((reactive) => {
                 let [state, setState] = reactive.createState(12);
                 setState(13)
                 res = state();
@@ -49,7 +49,7 @@ describe('reactive', () => {
 
         it('should support createState state update with a function', () => {
             let res;
-            new Reactive((reactive) => {
+            new Reactive().record((reactive) => {
                 let [state, setState] = reactive.createState(12);
                 setState(x => x+1)
                 res = state();
@@ -63,7 +63,7 @@ describe('reactive', () => {
         it('should run the reaction on creation', () => {
             const myMock = jest.fn();
 
-            new Reactive((reactive) => {
+            new Reactive().record((reactive) => {
                 reactive.createReaction(() => {
                     myMock()
                 })
@@ -75,7 +75,7 @@ describe('reactive', () => {
         it('should rerun when it depends on state, and state changes', () => {
             const myMock = jest.fn();
             let state, setState
-            new Reactive((reactive) => {
+            new Reactive().record((reactive) => {
                 [state, setState] = reactive.createState(12);
                 reactive.createReaction(() => {
                     myMock(state())
@@ -93,7 +93,7 @@ describe('reactive', () => {
             const myMock = jest.fn();
             let state, setState
             let state2, setState2
-            new Reactive((reactive) => {
+            new Reactive().record((reactive) => {
                 [state, setState] = reactive.createState(12);
                 [state2, setState2] = reactive.createState(100);
                 reactive.createReaction(() => {
@@ -110,7 +110,8 @@ describe('reactive', () => {
         it('should batch re-calculations using the batch operation (single state)', () => {
             const myMock = jest.fn();
             let state, setState
-            let reactive = new Reactive((reactive) => {
+            let reactive = new Reactive();
+            reactive.record((reactive) => {
                 [state, setState] = reactive.createState(12);
                 reactive.createReaction(() => {
                     myMock(state())
@@ -132,7 +133,8 @@ describe('reactive', () => {
         it('should batch re-calculations using the batch operation (multiple states)', () => {
             const myMock = jest.fn();
             let a, b, c, setA, setB, setC
-            let reactive = new Reactive((reactive) => {
+            let reactive = new Reactive();
+            reactive.record((reactive) => {
                 [a, setA] = reactive.createState(false);
                 [b, setB] = reactive.createState('abc');
                 [c, setC] = reactive.createState('def');

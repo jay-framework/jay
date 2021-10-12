@@ -5,6 +5,7 @@
     "packages/project",
     "packages/rollup-plugin",
     "packages/cli",
+    "packages/state",
     "exploration"
   ],
   "version": "1.0.0"

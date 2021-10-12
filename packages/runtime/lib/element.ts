@@ -3,6 +3,7 @@ import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "./list-compare
 import {RandomAccessLinkedList as List} from "./random-access-linked-list";
 import {ElementReference, ReferencesManager} from "./node-reference";
 import {ContextStack} from "./context-stack";
+export {ContextStack} from "./context-stack";
 export {DynamicReference} from "./node-reference";
 
 const STYLE = 'style';

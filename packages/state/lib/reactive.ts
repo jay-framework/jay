@@ -4,27 +4,22 @@ export type Next<T> = (t: T) => T
 export type Setter<T> = (t: T | Next<T>) => T
 export type Getter<T> = () => T
 
-interface ReactiveConstructs {
-    createState<T>(value: T | Getter<T>): [get: Getter<T>, set: Setter<T>]
-    createReaction(func: () => void)
-}
-
 export class Reactive {
 
     private recording = false;
     private recordingReaction = undefined;
     private batchedReactionsToRun: Set<() => void> = undefined;
 
-    constructor(func: (reactive: ReactiveConstructs) => void) {
+    record(func: (reactive: Reactive) => void) {
         try {
             this.recording = true;
-            func(this as unknown as ReactiveConstructs);
+            func(this);
         }
         finally {
             this.recording = false;
         }
     }
-    private createState<T>(value: T | Getter<T>): [get: Getter<T>, set: Setter<T>] {
+    createState<T>(value: T | Getter<T>): [get: Getter<T>, set: Setter<T>] {
         let current = (typeof value === 'function') ? (value as Getter<T>)() : value;
         let reactionsToRerun = new Set<() => void>();
 
@@ -50,7 +45,7 @@ export class Reactive {
         return [getter, setter]
     }
 
-    private createReaction(func: () => void) {
+    createReaction(func: () => void) {
         if (this.recording)
             this.recordingReaction = func;
         try {
