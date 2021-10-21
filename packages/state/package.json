@@ -1,7 +1,7 @@
 {
   "name": "jay-state",
   "version": "1.0.0",
-  "main": "dist/index.js",
+  "main": "dist/component.js",
   "scripts": {
     "start": "tsc",
     "test": "jest",
