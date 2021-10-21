@@ -29,7 +29,7 @@ describe('collection-element', () => {
 
     describe('rendering', () => {
 
-        function makeElement(data: ViewState): JayElement<ViewState> {
+        function makeElement(data: ViewState): JayElement<ViewState, any> {
             return ConstructContext.withRootContext(data, () =>
                 // noinspection DuplicatedCode
                 de('div', {}, [
@@ -111,9 +111,11 @@ describe('collection-element', () => {
     })
 
     describe('references and events', () => {
-        interface TodoListElement extends JayElement<ViewState> {
+        interface TodoListRefs {
             done: DynamicReference<Item>
         }
+        interface TodoListElement extends JayElement<ViewState, TodoListRefs> {}
+        
         function makeElement(data: ViewState): TodoListElement {
             return ConstructContext.withRootContext(data, () =>
                 // noinspection DuplicatedCode
@@ -135,7 +137,7 @@ describe('collection-element', () => {
         it('should have dynamic reference to the 3 done buttons', () => {
             let todoListElement = makeElement({items: [item1, item2, item3]});
             let count = 0;
-            todoListElement.done.forEach(el => count += 1)
+            todoListElement.refs.done.forEach(el => count += 1)
             expect(count).toBe(3);
         })
 
@@ -143,23 +145,23 @@ describe('collection-element', () => {
             let todoListElement = makeElement({items: [item1, item2, item3]});
             let eventCount = 0;
             let savedItem = undefined;
-            todoListElement.done.onclick = (ev, item) => {
+            todoListElement.refs.done.onclick = (ev, item) => {
                 eventCount += 1;
                 savedItem = item;
             }
-            todoListElement.done.byDataContext(item => item === item2).click()
+            todoListElement.refs.done.byDataContext(item => item === item2).click()
             expect(savedItem).toBe(item2)
             expect(eventCount).toBe(1);
         })
 
         it('should remove a todo item on click on the done button', () => {
             let todoListElement = makeElement({items: [item1, item2, item3]});
-            todoListElement.done.onclick = (ev, item) => {
+            todoListElement.refs.done.onclick = (ev, item) => {
                 todoListElement.update({items: [item1, item3]})
             }
-            todoListElement.done.byDataContext(item => item === item2).click()
+            todoListElement.refs.done.byDataContext(item => item === item2).click()
             let count = 0;
-            todoListElement.done.forEach(el => count += 1)
+            todoListElement.refs.done.forEach(el => count += 1)
             expect(count).toBe(2);
         })
 
@@ -167,7 +169,7 @@ describe('collection-element', () => {
             let todoListElement = makeElement({items: [item1, item2, item3]});
             todoListElement.update({items: [item1, item3, item2, item4]});
             let count = 0;
-            todoListElement.done.forEach(el => count += 1)
+            todoListElement.refs.done.forEach(el => count += 1)
             expect(count).toBe(4);
         })
     })

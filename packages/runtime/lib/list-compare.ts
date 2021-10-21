@@ -1,5 +1,4 @@
 import {EoF, LinkedListItem, RandomAccessLinkedList} from "./random-access-linked-list";
-import {JayElement} from "./element";
 
 export const ITEM_ADDED = 'IA';
 export const ITEM_REMOVED = 'IR';
@@ -8,17 +7,17 @@ export const ITEM_MOVED = 'IM';
 const MOVED_FORWARD_NONE = 0;
 const MOVED_FORWARD_IN_SEQUENCE = 1;
 
-export interface MatchResult<T> {
+export interface MatchResult<T, S> {
     action: typeof ITEM_ADDED | typeof ITEM_MOVED | typeof ITEM_REMOVED,
     item?: T,
     pos: number,
     fromPos?: number,
-    elem?: JayElement<T>
+    elem?: S
 }
 
-export function listCompare<T>(oldArray: RandomAccessLinkedList<T, JayElement<T>>,
-                               newArray: RandomAccessLinkedList<T, JayElement<T>>,
-                               mkElement: (T) => JayElement<T>): Array<MatchResult<T>> {
+export function listCompare<T, S>(oldArray: RandomAccessLinkedList<T, S>,
+                               newArray: RandomAccessLinkedList<T, S>,
+                               mkElement: (T) => S): Array<MatchResult<T, S>> {
     let oldList = oldArray
     let newList = newArray;
 
@@ -28,7 +27,7 @@ export function listCompare<T>(oldArray: RandomAccessLinkedList<T, JayElement<T>
     let index = 0;
     let instructions = [];
     while (newListItem_ !== EoF) {
-        let newListItem = newListItem_ as LinkedListItem<T, JayElement<T>>;
+        let newListItem = newListItem_ as LinkedListItem<T, S>;
         if (oldListItem === EoF) {
             // process.stdout.write(`add ${newListItem.id} ${index}\n`);
             let newElement = mkElement(newListItem.value);

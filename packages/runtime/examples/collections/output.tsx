@@ -18,7 +18,9 @@ interface ViewState {
     title: string
 }
 
-export default function render(viewState: ViewState): JayElement<ViewState> {
+interface Refs {}
+
+export default function render(viewState: ViewState): JayElement<ViewState, Refs> {
 
 
     return ConstructContext.withRootContext(viewState, () => {

@@ -4,11 +4,13 @@ interface ViewState {
     count: number
 }
 
-interface CounterElement extends JayElement<ViewState> {
+interface CounterRefs {
     inc: HTMLElement,
     dec: HTMLElement,
     count: HTMLElement
 }
+
+interface CounterElement extends JayElement<ViewState, CounterRefs> {}
 
 function renderCounter(viewState: ViewState): CounterElement {
 
@@ -32,12 +34,12 @@ export function Counter(initialValue: number): CounterComponent {
     let jayElement = renderCounter({count: initialValue});
     let count = initialValue;
 
-    jayElement.inc.onclick = () => {
+    jayElement.refs.inc.onclick = () => {
         count += 1;
         jayElement.update({count});
     }
 
-    jayElement.dec.onclick = () => {
+    jayElement.refs.dec.onclick = () => {
         count -= 1;
         jayElement.update({count});
     }

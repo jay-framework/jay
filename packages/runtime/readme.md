@@ -3,22 +3,27 @@ Jay Runtime
 
 
 The Jay Runtime library is an efficient dom manipulation library, built to be the output of code generation (compiler).
-The runtime basic building block is the `JayElement<T>` which is an instance returned from the `element` and `
+The runtime basic building block is the `JayElement<ViewState, Refs>` which is an instance returned from the `element` and `
 dynamicElement functions.
 
 ## JayElement
 
-The `JayElement<ViewState>` instance manages the dom structure, including initial dom creation, updates to the dom and
-event handling.
+The `JayElement<ViewState, Refs>` instance manages the dom structure, including initial dom creation, updates to the dom and
+event handling. `BaseJayElement<ViewState>` is the internal working data structure, while `JayElement<ViewState, Refs>`
+is the public element type.
 
-The `JayElement<ViewState>` is defined as
+The `JayElement<ViewState, refs>` is defined as
 
 ```typescript
-interface JayElement<ViewState> {
-    dom: HTMLElement,
-    update: updateFunc<ViewState>
-    mount: mountFunc;
-    unmount: mountFunc;
+interface BaseJayElement<ViewState> {
+  dom: HTMLElement,
+  update: updateFunc<ViewState>
+  mount: mountFunc;
+  unmount: mountFunc;
+}
+
+interface JayElement<ViewState, Refs> extends BaseJayElement<ViewState>{
+    refs: Refs 
 }
 ```
 
@@ -77,7 +82,7 @@ declare function element<ViewState>(
     tagName: string,
     attributes: Attributes<ViewState>,
     children?: Array<JayElement<ViewState> | TextElement<ViewState> | string>
-): JayElement<ViewState>;
+): BaseJayElement<ViewState>;
 ```
 
 at which
@@ -131,7 +136,7 @@ declare function dynamicElement<TViewState>(
     attributes: Attributes<TViewState>,
     children?: Array<Conditional<TViewState> | ForEach<TViewState, any> | TextElement<TViewState> |
         JayElement<TViewState> | string>
-): JayElement<TViewState>;
+): BaseJayElement<TViewState>;
 ```
 
 at which
@@ -227,7 +232,7 @@ Jay Components are logic wrappers over a Jay Element, and can be coded using any
 conform to the Jay Component interface below
 
 ```typescript
-interface JayComponent<Props, ViewState, jayElement extends JayElement<ViewState>> {
+interface JayComponent<Props, ViewState, jayElement extends BaseJayElement<ViewState>> {
     element: jayElement
     update: updateFunc<Props>;
     mount: mountFunc;
@@ -268,7 +273,7 @@ declare function childComp<ParentT,
     ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
     compCreator: (props: Props) => ChildComp,
     getProps: (t: ParentT) => Props
-): JayElement<ParentT>;
+): BaseJayElement<ParentT>;
 ```
 
 at which
@@ -320,7 +325,7 @@ declare class ConstructContext<A extends Array<any>> {
 
     static withRootContext<T, A extends ConstructContext<[T]>>(
         t: T,
-        elementConstructor: () => JayElement<T>
+        elementConstructor: () => BaseJayElement<T>
     ): JayElement<T>;
 }
 ```

@@ -1,4 +1,4 @@
-import {JayElement} from "./element";
+import {BaseJayElement, JayElement} from "./element";
 
 export class ReferencesManager {
     private dynamicRefs = {};
@@ -22,12 +22,13 @@ export class ReferencesManager {
         this.staticRefs[id] = ref;
     }
 
-    applyToElement<T>(element: JayElement<T>): JayElement<T> {
+    applyToElement<T, Refs>(element:BaseJayElement<T>): JayElement<T, Refs> {
         let enrichedRefs = Object.keys(this.dynamicRefs).reduce((enriched, key) => {
             enriched[key] = newReferenceProxy(this.dynamicRefs[key])
             return enriched;
         }, {})
-        return {...enrichedRefs, ...this.staticRefs, ...element};
+        let refs = {...enrichedRefs, ...this.staticRefs} as Refs 
+        return {...element, refs};
     }
 }
 

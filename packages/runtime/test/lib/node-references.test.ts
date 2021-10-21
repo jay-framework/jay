@@ -91,7 +91,7 @@ describe('ReferencesManager', () => {
         referenceManager.addDynamicRef(id2, ref3);
         jayRootElement = referenceManager.applyToElement(jayRootElement)
 
-        jayRootElement.id1.addEventListener('click', mockCallback);
+        jayRootElement.refs.id1.addEventListener('click', mockCallback);
         jayElement1.dom.click();
         jayElement2.dom.click();
         jayElement3.dom.click();
@@ -109,7 +109,7 @@ describe('ReferencesManager', () => {
         referenceManager.addDynamicRef(id2, ref3);
         jayRootElement = referenceManager.applyToElement(jayRootElement)
 
-        jayRootElement.id1.onclick = mockCallback;
+        jayRootElement.refs.id1.onclick = mockCallback;
         jayElement1.dom.click();
         jayElement2.dom.click();
         jayElement3.dom.click();

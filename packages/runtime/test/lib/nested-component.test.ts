@@ -1,9 +1,8 @@
 import {describe, it} from "@jest/globals";
 import {
-    conditional,
     ConstructContext,
     DynamicReference,
-    element as e, forEach,
+    element as e,
     JayElement, childComp
 } from "../../lib/element";
 import {Item, ItemData} from "./comps/item";
@@ -13,16 +12,15 @@ describe('nested components', () => {
 
         interface ViewState {
             staticItem: string;
-            // condition: boolean;
-            // conditionItem: string;
-            // items: Array<string>;
         }
 
-        interface TestElement extends JayElement<ViewState> {
+        interface TestRefs {
             static: HTMLElement,
             conditional: HTMLElement,
             collection: DynamicReference<number>
         }
+
+        interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
 
         function renderComposite(viewState: ViewState): TestElement {
 

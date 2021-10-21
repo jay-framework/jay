@@ -10,11 +10,11 @@ export interface ItemVS {
     done: boolean,
     dataId: string
 }
-
-export interface ItemElement extends JayElement<ItemVS>{
+export interface ItemRefs {
     done: HTMLElement,
     remove: HTMLElement
 }
+export interface ItemElement extends JayElement<ItemVS, ItemRefs> {}
 
 function renderItem(viewState: ItemVS): ItemElement {
     return ConstructContext.withRootContext(viewState, () =>
@@ -39,12 +39,12 @@ export function Item(props: ItemData): ItemComponent {
     let text = props.text;
     let jayElement = renderItem({text, done, dataId: props.dataId});
 
-    jayElement.done.onclick = () => {
+    jayElement.refs.done.onclick = () => {
         done = !done;
         jayElement.update({text, done, dataId: props.dataId});
     }
 
-    jayElement.remove.onclick = () => {
+    jayElement.refs.remove.onclick = () => {
         // call event on parent
     }
 

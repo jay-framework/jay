@@ -4,7 +4,8 @@ import {
     noopUpdate,
     dynamicAttribute as da,
     dynamicText as dt,
-    dynamicProperty as dp, ConstructContext} from '../../lib/element';
+    dynamicProperty as dp, ConstructContext, BaseJayElement
+} from '../../lib/element';
 import {beforeEach, describe, expect, it} from '@jest/globals'
 
 const SOME_VALUE = 'some text in the element';
@@ -17,7 +18,7 @@ const VALUE_6 = 'value 6';
 describe('element', () => {
 
     it('should create static dom element with text', () => {
-        let jayElement: JayElement<void>;
+        let jayElement: BaseJayElement<void>;
 
         jayElement = e('div', {}, [SOME_VALUE]);
 
@@ -26,7 +27,7 @@ describe('element', () => {
     })
 
     it('should create static dom elements tree', () => {
-        let jayElement: JayElement<void>;
+        let jayElement: BaseJayElement<void>;
 
         jayElement = e('div', {}, [
             e('div', {}, [SOME_VALUE]),
@@ -46,7 +47,7 @@ describe('element', () => {
             text: string
         }
 
-        let jayElement: JayElement<ViewState>;
+        let jayElement: JayElement<ViewState, void>;
         let data: ViewState;
         let updateCount;
         beforeEach(() => {
@@ -88,7 +89,7 @@ describe('element', () => {
         interface ViewState {
             title: string
         }
-        let jayElement: JayElement<ViewState>;
+        let jayElement: JayElement<ViewState, void>;
         let data: ViewState;
         beforeEach(() => {
             data = {title: 'initial value'};
@@ -113,7 +114,7 @@ describe('element', () => {
             isOne: boolean;
             isTwo: boolean;
         }
-        let jayElement: JayElement<ViewState>;
+        let jayElement: JayElement<ViewState, void>;
         let data: ViewState;
         beforeEach(() => {
             data = {isOne: true, isTwo: false};
@@ -151,7 +152,7 @@ describe('element', () => {
             color: string;
         }
 
-        let jayElement: JayElement<ViewState>;
+        let jayElement: JayElement<ViewState, void>;
         let data: ViewState;
         beforeEach(() => {
             data = {text: SOME_VALUE, width: '100px', color: 'red'};

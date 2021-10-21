@@ -17,14 +17,18 @@ type mountFunc = () => void;
 export const noopUpdate: updateFunc<any> = (_newData:any): void => {};
 export const noopMount: mountFunc = (): void => {}
 
-export interface JayElement<ViewState> {
+export interface BaseJayElement<ViewState> {
     dom: HTMLElement,
     update: updateFunc<ViewState>
     mount: mountFunc,
     unmount: mountFunc
 }
 
-export interface JayComponent<Props, ViewState, jayElement extends JayElement<ViewState>>{
+export interface JayElement<ViewState, Refs> extends BaseJayElement<ViewState>{
+    refs: Refs
+}
+
+export interface JayComponent<Props, ViewState, jayElement extends BaseJayElement<ViewState>>{
     element: jayElement
     update: updateFunc<Props>
     mount: mountFunc,
@@ -32,9 +36,9 @@ export interface JayComponent<Props, ViewState, jayElement extends JayElement<Vi
 }
 
 export function childComp<ParentT, Props, ChildT,
-    ChildElement extends JayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
+    ChildElement extends BaseJayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
     compCreator: (props: Props) => ChildComp,
-    getProps: (t: ParentT) => Props): JayElement<ParentT> {
+    getProps: (t: ParentT) => Props): BaseJayElement<ParentT> {
     let context = constructionContextStack.current();
     let childComp = compCreator(getProps(context.currData))
     return {
@@ -95,7 +99,7 @@ function setAttribute<ViewState, S>(target: HTMLElement | CSSStyleDeclaration, k
         doSetAttribute(target, key, value, true);
 }
 
-export function conditional<ViewState>(condition: (newData: ViewState) => boolean, elem: JayElement<ViewState> | TextElement<ViewState> | string): Conditional<ViewState> {
+export function conditional<ViewState>(condition: (newData: ViewState) => boolean, elem: BaseJayElement<ViewState> | TextElement<ViewState> | string): Conditional<ViewState> {
     if (typeof elem === 'string')
         return {condition, elem: text(elem)};
     else
@@ -104,31 +108,31 @@ export function conditional<ViewState>(condition: (newData: ViewState) => boolea
 
 export interface Conditional<ViewState> {
     condition: (newData: ViewState) => boolean,
-    elem: JayElement<ViewState> | TextElement<ViewState>
+    elem: BaseJayElement<ViewState> | TextElement<ViewState>
 }
 
-function isJayElement<ViewState>(c: Conditional<ViewState> | ForEach<ViewState, any> | TextElement<ViewState> | JayElement<ViewState>): c is JayElement<ViewState> {
-    return (c as JayElement<ViewState>).mount !== undefined;
+function isJayElement<ViewState>(c: Conditional<ViewState> | ForEach<ViewState, any> | TextElement<ViewState> | BaseJayElement<ViewState>): c is BaseJayElement<ViewState> {
+    return (c as BaseJayElement<ViewState>).mount !== undefined;
 }
-function isCondition<ViewState>(c: Conditional<ViewState> | ForEach<ViewState, any> | TextElement<ViewState> | JayElement<ViewState>): c is Conditional<ViewState> {
+function isCondition<ViewState>(c: Conditional<ViewState> | ForEach<ViewState, any> | TextElement<ViewState> | BaseJayElement<ViewState>): c is Conditional<ViewState> {
     return (c as Conditional<ViewState>).condition !== undefined;
 }
 
-function isForEach<ViewState, S>(c: Conditional<ViewState> | ForEach<ViewState, S> | TextElement<ViewState> | JayElement<ViewState>): c is ForEach<ViewState, S> {
-    return (c as ForEach<ViewState, S>).elemCreator !== undefined;
+function isForEach<ViewState, Item>(c: Conditional<ViewState> | ForEach<ViewState, Item> | TextElement<ViewState> | BaseJayElement<ViewState>): c is ForEach<ViewState, Item> {
+    return (c as ForEach<ViewState, Item>).elemCreator !== undefined;
 }
 
-export function forEach<T, Item>(getItems: (T) => Array<Item>, elemCreator: (Item) => JayElement<Item>, matchBy: string): ForEach<T, Item> {
+export function forEach<T, Item>(getItems: (T) => Array<Item>, elemCreator: (Item) => BaseJayElement<Item>, matchBy: string): ForEach<T, Item> {
     return {getItems, elemCreator, matchBy};
 }
 
 export interface ForEach<ViewState, Item> {
     getItems: (T) => Array<Item>,
-    elemCreator: (Item) => JayElement<Item>,
+    elemCreator: (Item) => BaseJayElement<Item>,
     matchBy: string
 }
 
-function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<MatchResult<Item>>) {
+function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<MatchResult<Item, BaseJayElement<Item>>>) {
     // todo add update
     instructions.forEach(instruction => {
         if (instruction.action === ITEM_ADDED) {
@@ -145,16 +149,16 @@ function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<Ma
     });
 }
 
-function mkUpdateCollection<ViewState>(child: ForEach<ViewState, any>, group: KindergartenGroup): [updateFunc<ViewState>, mountFunc, mountFunc] {
-    let lastItems = new List<ViewState, JayElement<ViewState>>([], child.matchBy);
+function mkUpdateCollection<ViewState, Item>(child: ForEach<ViewState, Item>, group: KindergartenGroup): [updateFunc<ViewState>, mountFunc, mountFunc] {
+    let lastItems = new List<Item, BaseJayElement<Item>>([], child.matchBy);
     let mount = () => lastItems.forEach((value, attach) => attach.mount);
     let unmount = () => lastItems.forEach((value, attach) => attach.unmount);
     // todo handle data updates of the parent contexts
     let parentContext = constructionContextStack.current();
     const update = (newData: ViewState) => {
         const items = child.getItems(newData);
-        let itemsList = new List<ViewState, JayElement<ViewState>>(items, child.matchBy);
-        let instructions = listCompare<ViewState>(lastItems, itemsList, (item) => {
+        let itemsList = new List<Item, BaseJayElement<Item>>(items, child.matchBy);
+        let instructions = listCompare<Item, BaseJayElement<Item>>(lastItems, itemsList, (item) => {
             let childContext = parentContext.forItem(item);
             return constructionContextStack.doWithContext(childContext, () => child.elemCreator(item))
         });
@@ -169,8 +173,8 @@ function mkUpdateCondition<ViewState>(child: Conditional<ViewState>, group: Kind
 
     let mount = noopMount, unmount = noopMount;
     if (isJayElement(child.elem) && child.elem.mount !== noopMount) {
-        mount = () => (child.elem as JayElement<ViewState>).mount()
-        unmount = () => (child.elem as JayElement<ViewState>).unmount()
+        mount = () => (child.elem as BaseJayElement<ViewState>).mount()
+        unmount = () => (child.elem as BaseJayElement<ViewState>).unmount()
     }
     let lastResult = false;
     const update = (newData: ViewState) => {
@@ -220,7 +224,7 @@ export class ConstructContext<A extends Array<any>> {
         return new ConstructContext([t])
     }
 
-    static withRootContext<T>(t: T, elementConstructor: () => JayElement<T>) {
+    static withRootContext<T, Refs>(t: T, elementConstructor: () => BaseJayElement<T>): JayElement<T, Refs> {
         let context = new ConstructContext([t])
         let element = constructionContextStack.doWithContext(context, () => elementConstructor())
         element.mount();
@@ -258,8 +262,8 @@ export function dynamicText<ViewState>(
 export function element<ViewState>(
     tagName: string,
     attributes: Attributes<ViewState>,
-    children: Array<JayElement<ViewState> | TextElement<ViewState> | string> = []):
-    JayElement<ViewState> {
+    children: Array<BaseJayElement<ViewState> | TextElement<ViewState> | string> = []):
+    BaseJayElement<ViewState> {
     let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes);
     
     children.forEach(child => {
@@ -284,8 +288,8 @@ export function element<ViewState>(
 export function dynamicElement<ViewState>(
     tagName: string,
     attributes: Attributes<ViewState>,
-    children: Array<Conditional<ViewState> | ForEach<ViewState, any> | TextElement<ViewState> | JayElement<ViewState> | string> = []):
-    JayElement<ViewState> {
+    children: Array<Conditional<ViewState> | ForEach<ViewState, any> | TextElement<ViewState> | BaseJayElement<ViewState> | string> = []):
+    BaseJayElement<ViewState> {
     let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes);
 
     let kindergarten = new Kindergarten(e);

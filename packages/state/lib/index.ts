@@ -22,26 +22,53 @@ class EventEmitter<T, F extends (t: T) => void> {
 }
 
 export interface JayComponentCore<PropsT, ViewState> {
-    render: () => ViewState
+    render: (props: Props<PropsT>) => ViewState
 }
 
-type ConcreteJayComponent1<PropsT, ViewState,
+type ConcreteJayComponent1<PropsT extends object, ViewState, Refs,
     CompCore extends JayComponentCore<PropsT, ViewState>,
-    JayElementT extends JayElement<ViewState>> =
+    JayElementT extends JayElement<ViewState, Refs>> =
     Omit<CompCore, 'render'> & JayComponent<PropsT, ViewState, JayElementT>
 
-type ConcreteJayComponent<PropsT, ViewState,
+type ConcreteJayComponent2<PropsT extends object, ViewState, Refs,
     CompCore extends JayComponentCore<PropsT, ViewState>,
-    JayElementT extends JayElement<ViewState>,
-    CJC extends ConcreteJayComponent1<PropsT, ViewState, CompCore, JayElementT>> = {
+    JayElementT extends JayElement<ViewState, Refs>,
+    CJC extends ConcreteJayComponent1<PropsT, ViewState, Refs, CompCore, JayElementT>> = {
     [K in keyof CJC]: CJC[K] extends EventEmitter<infer T, infer F> ? F : CJC[K]
 }
-export function makeJayComponent<PropsT, ViewState, JayElementT extends JayElement<ViewState>,
+
+type ConcreteJayComponent<PropsT extends object, ViewState, Refs,
+    CompCore extends JayComponentCore<PropsT, ViewState>,
+    JayElementT extends JayElement<ViewState, Refs>> =
+    ConcreteJayComponent2<PropsT, ViewState, Refs, CompCore, JayElementT, ConcreteJayComponent1<PropsT, ViewState, Refs, CompCore, JayElementT>>
+
+export function makeJayComponent<PropsT extends object, ViewState, Refs, JayElementT extends JayElement<ViewState, Refs>,
     CompCore extends JayComponentCore<PropsT, ViewState>
     >(
     render: (vs: ViewState) => JayElementT,
-    comp: (props: Props<PropsT>, element: JayElementT) => CompCore): ConcreteJayComponent<PropsT, ViewState, CompCore, JayElementT, ConcreteJayComponent1<PropsT, ViewState, CompCore, JayElementT>> {
+    comp: (props: Props<PropsT>, refs: Refs) => CompCore):
+      (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT> {
 
+    return (props) => {
+        let reactive = new Reactive();
+        let propsProxy = makePropsProxy(reactive, props);
+        let refs: Refs = {} as Refs
+
+        let coreComp = comp(propsProxy, refs);
+        let {render: renderViewState, ...api} = coreComp;
+        let viewState = renderViewState(propsProxy)
+        let element = render(viewState)
+        let update = (updateProps) => {
+            propsProxy.update(updateProps)
+        }
+        return {
+            element,
+            update,
+            mount: () => void {},
+            unmount: () => void {},
+            ...api
+        } as unknown as ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>
+    }
 }
 
 const reactiveContextStack = new ContextStack<Reactive>();

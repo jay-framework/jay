@@ -24,7 +24,7 @@ describe('conditional-element', () => {
 
     describe('rendering', () => {
 
-        function makeElement(data: ViewState): JayElement<ViewState> {
+        function makeElement(data: ViewState): JayElement<ViewState, any> {
             return ConstructContext.withRootContext(data, () =>
                 // noinspection DuplicatedCode
                 de('div', {}, [
@@ -66,10 +66,11 @@ describe('conditional-element', () => {
     })
 
     describe('references and events', () => {
-        interface ConditionalElement extends JayElement<ViewState> {
+        interface ConditionalRefs {
             text1: HTMLElement,
             text2: HTMLElement
         }
+        interface ConditionalElement extends JayElement<ViewState, ConditionalRefs> {}
 
         function makeElement(data: ViewState): ConditionalElement {
 
@@ -87,15 +88,15 @@ describe('conditional-element', () => {
 
         it('should have references to elements under conditional', () => {
             let jayElement = makeElement({text1: SOME_VALUE, condition: true, text2: ANOTHER_VALUE});
-            expect(jayElement.text1).toBeDefined()
-            expect(jayElement.text2).toBeDefined()
+            expect(jayElement.refs.text1).toBeDefined()
+            expect(jayElement.refs.text2).toBeDefined()
         })
 
         it('should register and invoke events', () => {
             let jayElement = makeElement({text1: SOME_VALUE, condition: true, text2: ANOTHER_VALUE});
             let mockCallback = jest.fn(_ => undefined);
-            jayElement.text1.onclick = mockCallback;
-            jayElement.text1.click();
+            jayElement.refs.text1.onclick = mockCallback;
+            jayElement.refs.text1.click();
             expect(mockCallback.mock.calls.length).toBe(1);
         })
 
@@ -108,9 +109,10 @@ describe('conditional-element', () => {
         interface ConditionalViewState {
             condition: boolean
         }
-        interface ConditionalElement extends JayElement<ConditionalViewState> {
-            input1: HTMLInputElement,
+        interface ConditionalRefs {
+            input1: HTMLInputElement
         }
+        interface ConditionalElement extends JayElement<ConditionalViewState, ConditionalRefs> {}
 
         let blurCount = 0;
         let focusCount = 0;
@@ -128,8 +130,8 @@ describe('conditional-element', () => {
                     )
                 ])) as ConditionalElement
             dom.window.document.querySelector("body").appendChild(element.dom);
-            element.input1.onblur = () => {console.log('blur'); blurCount += 1};
-            element.input1.onfocus = () => {console.log('focus'); focusCount += 1};
+            element.refs.input1.onblur = () => {console.log('blur'); blurCount += 1};
+            element.refs.input1.onfocus = () => {console.log('focus'); focusCount += 1};
 
             return element;
         }
@@ -141,18 +143,18 @@ describe('conditional-element', () => {
 
         it('should accept focus and blur', () => {
             let jayElement = makeElement({condition: true});
-            jayElement.input1.focus();
+            jayElement.refs.input1.focus();
             expect(focusCount).toBe(1);
             expect(blurCount).toBe(0);
 
-            jayElement.input1.blur();
+            jayElement.refs.input1.blur();
             expect(focusCount).toBe(1);
             expect(blurCount).toBe(1);
         })
 
         it('conditional update should not trigger blur', () => {
             let jayElement = makeElement({condition: true});
-            jayElement.input1.focus();
+            jayElement.refs.input1.focus();
             expect(focusCount).toBe(1);
             expect(blurCount).toBe(0);
 
