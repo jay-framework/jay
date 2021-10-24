@@ -61,105 +61,105 @@ describe('reactive', () => {
 
     describe('create reaction', () => {
         it('should run the reaction on creation', () => {
-            const myMock = jest.fn();
+            const reaction = jest.fn();
 
             new Reactive().record((reactive) => {
                 reactive.createReaction(() => {
-                    myMock()
+                    reaction()
                 })
             })
 
-            expect(myMock.mock.calls.length).toBe(1);
+            expect(reaction.mock.calls.length).toBe(1);
         })
 
         it('should rerun when it depends on state, and state changes', () => {
-            const myMock = jest.fn();
+            const reaction = jest.fn();
             let state, setState
             new Reactive().record((reactive) => {
                 [state, setState] = reactive.createState(12);
                 reactive.createReaction(() => {
-                    myMock(state())
+                    reaction(state())
                 })
             })
 
             setState(13);
 
-            expect(myMock.mock.calls.length).toBe(2);
-            expect(myMock.mock.calls[0][0]).toBe(12);
-            expect(myMock.mock.calls[1][0]).toBe(13);
+            expect(reaction.mock.calls.length).toBe(2);
+            expect(reaction.mock.calls[0][0]).toBe(12);
+            expect(reaction.mock.calls[1][0]).toBe(13);
         })
 
         it('should not rerun when state it does not depends on changes', () => {
-            const myMock = jest.fn();
+            const reaction = jest.fn();
             let state, setState
             let state2, setState2
             new Reactive().record((reactive) => {
                 [state, setState] = reactive.createState(12);
                 [state2, setState2] = reactive.createState(100);
                 reactive.createReaction(() => {
-                    myMock(state())
+                    reaction(state())
                 })
             })
 
             setState2(101);
 
-            expect(myMock.mock.calls.length).toBe(1);
-            expect(myMock.mock.calls[0][0]).toBe(12);
+            expect(reaction.mock.calls.length).toBe(1);
+            expect(reaction.mock.calls[0][0]).toBe(12);
         })
     });
 
     describe('batch reactions', () => {
         it('should batch re-calculations using the batch operation (single state)', () => {
-            const myMock = jest.fn();
+            const reaction = jest.fn();
             let state, setState
             let reactive = new Reactive();
             reactive.record((reactive) => {
                 [state, setState] = reactive.createState(12);
                 reactive.createReaction(() => {
-                    myMock(state())
+                    reaction(state())
                 })
             })
 
-            expect(myMock.mock.calls.length).toBe(1);
+            expect(reaction.mock.calls.length).toBe(1);
             reactive.batchReactions(() => {
 
                 setState(13);
                 setState(14);
-                expect(myMock.mock.calls.length).toBe(1);
+                expect(reaction.mock.calls.length).toBe(1);
             })
 
-            expect(myMock.mock.calls.length).toBe(2);
-            expect(myMock.mock.calls[0][0]).toBe(12);
-            expect(myMock.mock.calls[1][0]).toBe(14);
+            expect(reaction.mock.calls.length).toBe(2);
+            expect(reaction.mock.calls[0][0]).toBe(12);
+            expect(reaction.mock.calls[1][0]).toBe(14);
         })
 
         it('should run a reaction once even if multiple states it depends on are updated', () => {
-            const myMock = jest.fn();
+            const reaction = jest.fn();
             let state, setState, state2, setState2;
             let reactive = new Reactive();
             reactive.record((reactive) => {
                 [state, setState] = reactive.createState(12);
                 [state2, setState2] = reactive.createState(34);
                 reactive.createReaction(() => {
-                    myMock(state() + state2())
+                    reaction(state() + state2())
                 })
             })
 
-            expect(myMock.mock.calls.length).toBe(1);
+            expect(reaction.mock.calls.length).toBe(1);
             reactive.batchReactions(() => {
 
                 setState(13);
                 setState2(35);
-                expect(myMock.mock.calls.length).toBe(1);
+                expect(reaction.mock.calls.length).toBe(1);
             })
 
-            expect(myMock.mock.calls.length).toBe(2);
-            expect(myMock.mock.calls[0][0]).toBe(46);
-            expect(myMock.mock.calls[1][0]).toBe(48);
+            expect(reaction.mock.calls.length).toBe(2);
+            expect(reaction.mock.calls[0][0]).toBe(46);
+            expect(reaction.mock.calls[1][0]).toBe(48);
         })
 
         it('should batch re-calculations using the batch operation (multiple states)', () => {
-            const myMock = jest.fn();
+            const reaction = jest.fn();
             let a, b, c, setA, setB, setC
             let reactive = new Reactive();
             reactive.record((reactive) => {
@@ -167,7 +167,7 @@ describe('reactive', () => {
                 [b, setB] = reactive.createState('abc');
                 [c, setC] = reactive.createState('def');
                 reactive.createReaction(() => {
-                    myMock(a(), b(), c())
+                    reaction(a(), b(), c())
                 })
             })
 
@@ -177,17 +177,47 @@ describe('reactive', () => {
                 setC('fghij');
             })
 
-            expect(myMock.mock.calls.length).toBe(2);
-            expect(myMock.mock.calls[0][0]).toBe(false);
-            expect(myMock.mock.calls[0][1]).toBe('abc');
-            expect(myMock.mock.calls[0][2]).toBe('def');
-            expect(myMock.mock.calls[1][0]).toBe(true);
-            expect(myMock.mock.calls[1][1]).toBe('abcde');
-            expect(myMock.mock.calls[1][2]).toBe('fghij');
+            expect(reaction.mock.calls.length).toBe(2);
+            expect(reaction.mock.calls[0][0]).toBe(false);
+            expect(reaction.mock.calls[0][1]).toBe('abc');
+            expect(reaction.mock.calls[0][2]).toBe('def');
+            expect(reaction.mock.calls[1][0]).toBe(true);
+            expect(reaction.mock.calls[1][1]).toBe('abcde');
+            expect(reaction.mock.calls[1][2]).toBe('fghij');
         })
 
     });
 
     describe('reaction ordering', () => {
+        it('should run reactions in dependency order', () => {
+
+            const reaction2 = jest.fn();
+            let state, setState, state2, setState2, state3, setState3, state4, setState4;
+            let reactive = new Reactive();
+            reactive.record((reactive) => {
+                [state, setState] = reactive.createState(1);
+                [state2, setState2] = reactive.createState(2);
+                [state3, setState3] = reactive.createState(3);
+                [state4, setState4] = reactive.createState(10);
+                reactive.createReaction(() => {
+                    setState2(state() + 1);
+                })
+                reactive.createReaction(() => {
+                    setState3(state2() + 1)
+                })
+                reactive.createReaction(() => {
+                    reaction2(state3() + state4())
+                })
+            })
+
+            reactive.batchReactions(() => {
+                setState4(20);
+                setState(4);
+            })
+
+            expect(state2()).toBe(5)
+            expect(state3()).toBe(6)
+            expect(reaction2.mock.calls[1][0]).toBe(26)
+        })
     })
 });

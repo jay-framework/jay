@@ -7,8 +7,9 @@ export type Getter<T> = () => T
 export class Reactive {
 
     private recording = false;
-    private recordingReaction = undefined;
-    private batchedReactionsToRun: Set<() => void> = undefined;
+    private batchedReactionsToRun: boolean[] = undefined;
+    private reactionIndex = 0;
+    private reactions: Array<() => void> = [];
 
     record(func: (reactive: Reactive) => void) {
         try {
@@ -21,23 +22,24 @@ export class Reactive {
     }
     createState<T>(value: T | Getter<T>): [get: Getter<T>, set: Setter<T>] {
         let current = (typeof value === 'function') ? (value as Getter<T>)() : value;
-        let reactionsToRerun = new Set<() => void>();
+        let reactionsToRerun: boolean[] = [];
 
         let setter = (value: T | Next<T>) => {
             current = (typeof value === 'function') ? (value as Next<T>)(current) : value;
-            reactionsToRerun.forEach(reaction => {
-                if (this.batchedReactionsToRun)
-                    this.batchedReactionsToRun.add(reaction)
-                else
-                    reaction()
-            })
+            for (let index = 0; index < reactionsToRerun.length; index++) {
+                if (reactionsToRerun[index]) {
+                    if (this.batchedReactionsToRun)
+                        this.batchedReactionsToRun[index] = true;
+                    else
+                        this.reactions[index]();
+                }
+            }
             return current;
         }
 
         let getter = () => {
             if (this.recording) {
-                if (this.recordingReaction)
-                    reactionsToRerun.add(this.recordingReaction)
+                reactionsToRerun[this.reactionIndex] = true;
             }
             return current;
         }
@@ -46,24 +48,23 @@ export class Reactive {
     }
 
     createReaction(func: () => void) {
-        if (this.recording)
-            this.recordingReaction = func;
+        this.reactions[this.reactionIndex] = func;
         try {
             func();
         }
         finally {
-            if (this.recording)
-                this.recordingReaction = undefined;
+            this.reactionIndex += 1;
         }
     }
 
     batchReactions(func: () => void) {
-        this.batchedReactionsToRun = new Set();
+        this.batchedReactionsToRun = [];
         try {
             func();
         }
         finally {
-            this.batchedReactionsToRun.forEach(reaction => reaction())
+            for (let index = 0; index < this.batchedReactionsToRun.length; index++)
+                this.reactions[index]();
             this.batchedReactionsToRun = undefined;
         }
     }
