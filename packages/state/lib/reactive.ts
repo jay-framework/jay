@@ -11,10 +11,10 @@ export class Reactive {
     private reactionIndex = 0;
     private reactions: Array<() => void> = [];
 
-    record(func: (reactive: Reactive) => void) {
+    record<T>(func: (reactive: Reactive) => T): T {
         try {
             this.recording = true;
-            func(this);
+            return func(this);
         }
         finally {
             this.recording = false;

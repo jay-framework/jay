@@ -51,23 +51,34 @@ export function makeJayComponent<PropsT extends object, ViewState, Refs, JayElem
 
     return (props) => {
         let reactive = new Reactive();
-        let propsProxy = makePropsProxy(reactive, props);
-        let refs: Refs = {} as Refs
 
-        let coreComp = comp(propsProxy, refs);
-        let {render: renderViewState, ...api} = coreComp;
-        let viewState = renderViewState(propsProxy)
-        let element = render(viewState)
-        let update = (updateProps) => {
-            propsProxy.update(updateProps)
-        }
-        return {
-            element,
-            update,
-            mount: () => void {},
-            unmount: () => void {},
-            ...api
-        } as unknown as ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>
+        return reactive.record(() => {
+            let propsProxy = makePropsProxy(reactive, props);
+            let refs: Refs = {} as Refs
+
+            let coreComp = comp(propsProxy, refs);
+            let {render: renderViewState, ...api} = coreComp;
+
+            let element;
+            reactive.createReaction(() => {
+                let viewState = renderViewState(propsProxy)
+                if (element)
+                    element.update(viewState)
+                else
+                    element = render(viewState)
+            })
+
+            let update = (updateProps) => {
+                propsProxy.update(updateProps)
+            }
+            return {
+                element,
+                update,
+                mount: () => void {},
+                unmount: () => void {},
+                ...api
+            } as unknown as ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>
+        })
     }
 }
 

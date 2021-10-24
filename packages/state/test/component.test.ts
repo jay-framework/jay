@@ -1,6 +1,6 @@
 import {describe, expect, it, jest, beforeEach, afterEach} from '@jest/globals'
 import {ConstructContext, JayElement, dynamicText as dt, element as e, JayComponent } from 'jay-runtime';
-import {forTesting, makeJayComponent, Props} from "../lib";
+import {forTesting, makeJayComponent, Props} from "../lib/component";
 import {Reactive} from "../lib/reactive";
 const {reactiveContextStack, makePropsProxy} = forTesting
 
@@ -75,5 +75,11 @@ describe('state management', () => {
             expect(instance.element.refs.label.textContent).toBe('hello world')
         })
 
+        it('should update the component on prop chagnes', () => {
+            let label = makeJayComponent(renderLabelElement, LabelComponent)
+            let instance = label({label: 'hello world'});
+            instance.update({label: 'updated world'})
+            expect(instance.element.refs.label.textContent).toBe('updated world')
+        })
     })
 })
