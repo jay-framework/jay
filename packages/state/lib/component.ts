@@ -1,5 +1,6 @@
 import {JayElement, JayComponent, ContextStack} from 'jay-runtime'
-import {Getter, Reactive} from './reactive'
+import {Getter, Reactive, Setter} from './reactive'
+import {applyToRefs, refsRecorder} from "./refs-recorder";
 
 export type Props<PropsT> = {
     [K in keyof PropsT]: Getter<PropsT[K]>
@@ -42,7 +43,13 @@ type ConcreteJayComponent<PropsT extends object, ViewState, Refs,
     JayElementT extends JayElement<ViewState, Refs>> =
     ConcreteJayComponent2<PropsT, ViewState, Refs, CompCore, JayElementT, ConcreteJayComponent1<PropsT, ViewState, Refs, CompCore, JayElementT>>
 
-export function makeJayComponent<PropsT extends object, ViewState, Refs, JayElementT extends JayElement<ViewState, Refs>,
+const reactiveContextStack = new ContextStack<Reactive>();
+
+export function createState<T>(value: T | Getter<T>): [get: Getter<T>, set: Setter<T>] {
+    return reactiveContextStack.current().createState(value);
+}
+
+export function makeJayComponent<PropsT extends object, ViewState, Refs extends object, JayElementT extends JayElement<ViewState, Refs>,
     CompCore extends JayComponentCore<PropsT, ViewState>
     >(
     render: (vs: ViewState) => JayElementT,
@@ -52,37 +59,37 @@ export function makeJayComponent<PropsT extends object, ViewState, Refs, JayElem
     return (props) => {
         let reactive = new Reactive();
 
-        return reactive.record(() => {
-            let propsProxy = makePropsProxy(reactive, props);
-            let refs: Refs = {} as Refs
+        return reactiveContextStack.doWithContext(reactive, () => {
+            return reactive.record(() => {
+                let propsProxy = makePropsProxy(reactive, props);
+                let refs: Refs = refsRecorder()
 
-            let coreComp = comp(propsProxy, refs);
-            let {render: renderViewState, ...api} = coreComp;
+                let coreComp = comp(propsProxy, refs);
+                let {render: renderViewState, ...api} = coreComp;
 
-            let element;
-            reactive.createReaction(() => {
-                let viewState = renderViewState(propsProxy)
-                if (element)
-                    element.update(viewState)
-                else
-                    element = render(viewState)
+                let element;
+                reactive.createReaction(() => {
+                    let viewState = renderViewState(propsProxy)
+                    if (element)
+                        element.update(viewState)
+                    else
+                        element = render(viewState)
+                })
+                applyToRefs(refs, element.refs);
+                let update = (updateProps) => {
+                    propsProxy.update(updateProps)
+                }
+                return {
+                    element,
+                    update,
+                    mount: () => void {},
+                    unmount: () => void {},
+                    ...api
+                } as unknown as ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>
             })
-
-            let update = (updateProps) => {
-                propsProxy.update(updateProps)
-            }
-            return {
-                element,
-                update,
-                mount: () => void {},
-                unmount: () => void {},
-                ...api
-            } as unknown as ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>
         })
     }
 }
-
-const reactiveContextStack = new ContextStack<Reactive>();
 
 function makePropsProxy<PropsT extends object>(reactive: Reactive, props: PropsT): UpdatableProps<PropsT> {
     const stateMap = {}

@@ -1,6 +1,6 @@
 import {describe, expect, it, jest, beforeEach, afterEach} from '@jest/globals'
 import {ConstructContext, JayElement, dynamicText as dt, element as e, JayComponent } from 'jay-runtime';
-import {forTesting, makeJayComponent, Props} from "../lib/component";
+import {createState, forTesting, makeJayComponent, Props} from "../lib/component";
 import {Reactive} from "../lib/reactive";
 const {reactiveContextStack, makePropsProxy} = forTesting
 
@@ -60,26 +60,57 @@ describe('state management', () => {
             label: string
         }
 
-        function LabelComponent(props: Props<LabelProps>, refs: LabelRefs) {
+        describe('with props', () => {
 
-            return {
-                render: () => ({
-                    label: props.label()
-                })
+            function LabelComponent({label}: Props<LabelProps>, refs: LabelRefs) {
+
+                return {
+                    render: () => ({
+                        label: label()
+                    })
+                }
             }
-        }
 
-        it('should render the component', () => {
-            let label = makeJayComponent(renderLabelElement, LabelComponent)
-            let instance = label({label: 'hello world'});
-            expect(instance.element.refs.label.textContent).toBe('hello world')
+            it('should render the component', () => {
+                let label = makeJayComponent(renderLabelElement, LabelComponent)
+                let instance = label({label: 'hello world'});
+                expect(instance.element.refs.label.textContent).toBe('hello world')
+            })
+
+            it('should update the component on prop changes', () => {
+                let label = makeJayComponent(renderLabelElement, LabelComponent)
+                let instance = label({label: 'hello world'});
+                instance.update({label: 'updated world'})
+                expect(instance.element.refs.label.textContent).toBe('updated world')
+            })
         })
 
-        it('should update the component on prop chagnes', () => {
-            let label = makeJayComponent(renderLabelElement, LabelComponent)
-            let instance = label({label: 'hello world'});
-            instance.update({label: 'updated world'})
-            expect(instance.element.refs.label.textContent).toBe('updated world')
-        })
+        describe('with state', () => {
+
+            function LabelComponentWithInternalState(props: Props<LabelProps>, refs: LabelRefs) {
+
+                let [label, setLabel] = createState('Hello ' + props.label());
+
+                return {
+                    render: () => ({
+                        label: label()
+                    }),
+                    setLabel
+                }
+            }
+
+            it('should render the component using state', () => {
+                let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
+                let instance = label({label: 'world'});
+                expect(instance.element.refs.label.textContent).toBe('Hello world')
+            })
+
+            it('should update the component as state changes', () => {
+                let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
+                let instance = label({label: 'world'});
+                instance.setLabel('hello mars')
+                expect(instance.element.refs.label.textContent).toBe('hello mars')
+            })
+        });
     })
 })
