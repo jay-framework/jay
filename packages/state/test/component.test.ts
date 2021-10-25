@@ -111,6 +111,48 @@ describe('state management', () => {
                 instance.setLabel('hello mars')
                 expect(instance.element.refs.label.textContent).toBe('hello mars')
             })
+
+            it('should not update the component from prop change as the prop is not bound to state', () => {
+                let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
+                let instance = label({label: 'world'});
+                instance.update({label: 'mars'})
+                expect(instance.element.refs.label.textContent).toBe('Hello world')
+            })
         });
+
+        describe('with state bound to prop', () => {
+
+            function LabelComponentWithInternalState(props: Props<LabelProps>, refs: LabelRefs) {
+
+                let [label, setLabel] = createState(() => 'Hello ' + props.label());
+
+                return {
+                    render: () => ({
+                        label: label()
+                    }),
+                    setLabel
+                }
+            }
+
+            it('should render the component using state', () => {
+                let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
+                let instance = label({label: 'world'});
+                expect(instance.element.refs.label.textContent).toBe('Hello world')
+            })
+
+            it('should update the component as state changes', () => {
+                let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
+                let instance = label({label: 'world'});
+                instance.setLabel('hello mars')
+                expect(instance.element.refs.label.textContent).toBe('hello mars')
+            })
+
+            it('should not update the component from prop change as the prop is not bound to state', () => {
+                let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
+                let instance = label({label: 'world'});
+                instance.update({label: 'mars'})
+                expect(instance.element.refs.label.textContent).toBe('Hello mars')
+            })
+        })
     })
 })
