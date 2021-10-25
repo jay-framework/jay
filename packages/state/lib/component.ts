@@ -45,6 +45,16 @@ type ConcreteJayComponent<PropsT extends object, ViewState, Refs,
 
 const reactiveContextStack = new ContextStack<Reactive>();
 
+type EffectCleanup = () => void
+export function createEffect(effect: () => void | EffectCleanup) {
+    let cleanup = undefined;
+    reactiveContextStack.current().createReaction(() => {
+        if (cleanup !== undefined)
+            cleanup();
+        cleanup = effect();
+    })
+}
+
 export function createState<T>(value: T | Getter<T>): [get: Getter<T>, set: Setter<T>] {
     return reactiveContextStack.current().createState(value);
 }

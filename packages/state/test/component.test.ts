@@ -1,8 +1,8 @@
-import {describe, expect, it, jest, beforeEach, afterEach} from '@jest/globals'
-import {ConstructContext, JayElement, dynamicText as dt, element as e, JayComponent } from 'jay-runtime';
-import {createState, forTesting, makeJayComponent, Props} from "../lib/component";
+import {describe, expect, it} from '@jest/globals'
+import {ConstructContext, JayElement, dynamicText as dt, element as e} from 'jay-runtime';
+import {createEffect, createState, forTesting, makeJayComponent, Props} from "../lib/component";
 import {Reactive} from "../lib/reactive";
-const {reactiveContextStack, makePropsProxy} = forTesting
+const {makePropsProxy} = forTesting
 
 describe('state management', () => {
     describe('Props', () => {
@@ -153,6 +153,77 @@ describe('state management', () => {
                 instance.update({label: 'mars'})
                 expect(instance.element.refs.label.textContent).toBe('Hello mars')
             })
+        })
+
+        describe('with create effect', () => {
+
+            interface Name {
+                name: string
+            }
+
+            function LabelComponentWithCreateEffect({name}: Props<Name>, refs: LabelRefs) {
+                let [label, setLabel] = createState('');
+                let resourceAllocated = false;
+                let effectRunCount = 0;
+                let effectCleanupRunCount = 0;
+                createEffect(() => {
+                    setLabel('hello ' + name());
+                    resourceAllocated = true;
+                    effectRunCount += 1;
+                    return () => {
+                        resourceAllocated = false;
+                        effectCleanupRunCount += 1;
+                    }
+                })
+
+                const getEffectState = () => ({resourceAllocated, effectRunCount, effectCleanupRunCount})
+
+                return {
+                    render: () => ({
+                        label: label()
+                    }),
+                    getResourceState: getEffectState
+                }
+            }
+
+            it('should run create effect on initial component creation', () => {
+                let label = makeJayComponent(renderLabelElement, LabelComponentWithCreateEffect)
+                let instance = label({name: 'world'});
+                expect(instance.element.refs.label.textContent).toBe('hello world')
+                expect(instance.getResourceState().resourceAllocated).toBe(true)
+                expect(instance.getResourceState().effectRunCount).toBe(1)
+                expect(instance.getResourceState().effectCleanupRunCount).toBe(0)
+            })
+
+            it('should run the effect cleanup and rerun effect on dependencies change', () => {
+                let label = makeJayComponent(renderLabelElement, LabelComponentWithCreateEffect)
+                let instance = label({name: 'world'});
+                instance.update({name: 'mars'})
+                expect(instance.element.refs.label.textContent).toBe('hello mars')
+                expect(instance.getResourceState().resourceAllocated).toBe(true)
+                expect(instance.getResourceState().effectRunCount).toBe(2)
+                expect(instance.getResourceState().effectCleanupRunCount).toBe(1)
+            })
+
+            it('should run the effect cleanup on component unmount', () => {
+
+            })
+
+            it('should run rerun the effect on component re-mount', () => {
+
+            })
+        })
+
+        describe('with create memo', () => {
+
+        })
+
+        describe('with expose component API functions', () => {
+
+        })
+
+        describe('with expose component API events', () => {
+
         })
     })
 })
