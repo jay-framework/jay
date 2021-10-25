@@ -206,11 +206,22 @@ describe('state management', () => {
             })
 
             it('should run the effect cleanup on component unmount', () => {
-
+                let label = makeJayComponent(renderLabelElement, LabelComponentWithCreateEffect)
+                let instance = label({name: 'world'});
+                instance.unmount();
+                expect(instance.getResourceState().resourceAllocated).toBe(false)
+                expect(instance.getResourceState().effectRunCount).toBe(1)
+                expect(instance.getResourceState().effectCleanupRunCount).toBe(1)
             })
 
             it('should run rerun the effect on component re-mount', () => {
-
+                let label = makeJayComponent(renderLabelElement, LabelComponentWithCreateEffect)
+                let instance = label({name: 'world'});
+                instance.unmount();
+                instance.mount();
+                expect(instance.getResourceState().resourceAllocated).toBe(true)
+                expect(instance.getResourceState().effectRunCount).toBe(2)
+                expect(instance.getResourceState().effectCleanupRunCount).toBe(1)
             })
         })
 

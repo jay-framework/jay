@@ -13,15 +13,15 @@ interface updateFunc<T> {
     _origUpdates?: Array<updateFunc<T>>
 }
 //type updateFunc<T> = (newData:T) => void;
-type mountFunc = () => void;
+export type MountFunc = () => void;
 export const noopUpdate: updateFunc<any> = (_newData:any): void => {};
-export const noopMount: mountFunc = (): void => {}
+export const noopMount: MountFunc = (): void => {}
 
 export interface BaseJayElement<ViewState> {
     dom: HTMLElement,
     update: updateFunc<ViewState>
-    mount: mountFunc,
-    unmount: mountFunc
+    mount: MountFunc,
+    unmount: MountFunc
 }
 
 export interface JayElement<ViewState, Refs> extends BaseJayElement<ViewState>{
@@ -31,8 +31,8 @@ export interface JayElement<ViewState, Refs> extends BaseJayElement<ViewState>{
 export interface JayComponent<Props, ViewState, jayElement extends BaseJayElement<ViewState>>{
     element: jayElement
     update: updateFunc<Props>
-    mount: mountFunc,
-    unmount: mountFunc
+    mount: MountFunc,
+    unmount: MountFunc
 }
 
 export function childComp<ParentT, Props, ChildT,
@@ -52,8 +52,8 @@ export function childComp<ParentT, Props, ChildT,
 export interface TextElement<ViewState> {
     dom: Text,
     update: updateFunc<ViewState>,
-    mount: mountFunc,
-    unmount: mountFunc
+    mount: MountFunc,
+    unmount: MountFunc
 }
 
 export interface DynamicAttributeOrProperty<ViewState, S> {
@@ -149,7 +149,7 @@ function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<Ma
     });
 }
 
-function mkUpdateCollection<ViewState, Item>(child: ForEach<ViewState, Item>, group: KindergartenGroup): [updateFunc<ViewState>, mountFunc, mountFunc] {
+function mkUpdateCollection<ViewState, Item>(child: ForEach<ViewState, Item>, group: KindergartenGroup): [updateFunc<ViewState>, MountFunc, MountFunc] {
     let lastItems = new List<Item, BaseJayElement<Item>>([], child.matchBy);
     let mount = () => lastItems.forEach((value, attach) => attach.mount);
     let unmount = () => lastItems.forEach((value, attach) => attach.unmount);
@@ -169,7 +169,7 @@ function mkUpdateCollection<ViewState, Item>(child: ForEach<ViewState, Item>, gr
     return [update, mount, unmount]
 }
 
-function mkUpdateCondition<ViewState>(child: Conditional<ViewState>, group: KindergartenGroup): [updateFunc<ViewState>, mountFunc, mountFunc] {
+function mkUpdateCondition<ViewState>(child: Conditional<ViewState>, group: KindergartenGroup): [updateFunc<ViewState>, MountFunc, MountFunc] {
 
     let mount = noopMount, unmount = noopMount;
     if (isJayElement(child.elem) && child.elem.mount !== noopMount) {
@@ -335,11 +335,11 @@ export function dynamicElement<ViewState>(
 }
 
 function createBaseElement<ViewState>(tagName: string, attributes: Attributes<ViewState>):
-    {e: HTMLElement, updates: updateFunc<ViewState>[], mounts: mountFunc[], unmounts: mountFunc[]} {
+    {e: HTMLElement, updates: updateFunc<ViewState>[], mounts: MountFunc[], unmounts: MountFunc[]} {
     let e = document.createElement(tagName);
     let updates: updateFunc<ViewState>[] = [];
-    let mounts: mountFunc[] = []
-    let unmounts: mountFunc[] = []
+    let mounts: MountFunc[] = []
+    let unmounts: MountFunc[] = []
     Object.entries(attributes).forEach(([key, value]) => {
         if (key === STYLE) {
             Object.entries(value).forEach(([styleKey, styleValue]) => {
@@ -385,7 +385,7 @@ function normalizeUpdates<ViewState>(updates: Array<updateFunc<ViewState>>): upd
     }
 }
 
-function normalizeMount(mounts: Array<mountFunc>): mountFunc {
+function normalizeMount(mounts: Array<MountFunc>): MountFunc {
     if (mounts.length === 1)
         return mounts[0];
     else if (mounts.length > 0) {

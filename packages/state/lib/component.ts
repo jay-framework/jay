@@ -1,4 +1,4 @@
-import {JayElement, JayComponent, ContextStack} from 'jay-runtime'
+import {JayElement, JayComponent, ContextStack, MountFunc} from 'jay-runtime'
 import {Getter, Reactive, Setter} from './reactive'
 import {applyToRefs, refsRecorder} from "./refs-recorder";
 
@@ -43,20 +43,40 @@ type ConcreteJayComponent<PropsT extends object, ViewState, Refs,
     JayElementT extends JayElement<ViewState, Refs>> =
     ConcreteJayComponent2<PropsT, ViewState, Refs, CompCore, JayElementT, ConcreteJayComponent1<PropsT, ViewState, Refs, CompCore, JayElementT>>
 
-const reactiveContextStack = new ContextStack<Reactive>();
+interface ComponentContext {
+    reactive: Reactive,
+    mounts: MountFunc[],
+    unmounts: MountFunc[]
+}
+const componentContextStack = new ContextStack<ComponentContext>();
 
 type EffectCleanup = () => void
 export function createEffect(effect: () => void | EffectCleanup) {
     let cleanup = undefined;
-    reactiveContextStack.current().createReaction(() => {
-        if (cleanup !== undefined)
+    let mounted = true;
+
+    const clean = () => {
+        if (cleanup !== undefined) {
             cleanup();
+            cleanup = undefined;
+        }
+    }
+
+    componentContextStack.current().reactive.createReaction(() => {
+        clean();
+        cleanup = effect();
+    })
+    componentContextStack.current().unmounts.push(() => {
+        mounted = false;
+        clean();
+    })
+    componentContextStack.current().mounts.push(() => {
         cleanup = effect();
     })
 }
 
 export function createState<T>(value: T | Getter<T>): [get: Getter<T>, set: Setter<T>] {
-    return reactiveContextStack.current().createState(value);
+    return componentContextStack.current().reactive.createState(value);
 }
 
 export function makeJayComponent<PropsT extends object, ViewState, Refs extends object, JayElementT extends JayElement<ViewState, Refs>,
@@ -68,8 +88,12 @@ export function makeJayComponent<PropsT extends object, ViewState, Refs extends 
 
     return (props) => {
         let reactive = new Reactive();
-
-        return reactiveContextStack.doWithContext(reactive, () => {
+        let mounts: MountFunc[] = [];
+        let unmounts: MountFunc[] = [];
+        let componentContext = {
+            reactive, mounts, unmounts
+        }
+        return componentContextStack.doWithContext(componentContext, () => {
             return reactive.record(() => {
                 let propsProxy = makePropsProxy(reactive, props);
                 let refs: Refs = refsRecorder()
@@ -89,11 +113,13 @@ export function makeJayComponent<PropsT extends object, ViewState, Refs extends 
                 let update = (updateProps) => {
                     propsProxy.update(updateProps)
                 }
+                mounts.push(element.mount)
+                unmounts.push(element.unmount)
                 return {
                     element,
                     update,
-                    mount: () => void {},
-                    unmount: () => void {},
+                    mount: () => mounts.forEach(_ => _()),
+                    unmount: () => unmounts.forEach(_ => _()),
                     ...api
                 } as unknown as ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>
             })
@@ -128,6 +154,6 @@ function makePropsProxy<PropsT extends object>(reactive: Reactive, props: PropsT
 }
 
 export const forTesting = {
-    reactiveContextStack,
+    reactiveContextStack: componentContextStack,
     makePropsProxy
 }
