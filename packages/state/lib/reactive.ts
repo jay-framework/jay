@@ -7,6 +7,7 @@ export type Getter<T> = () => T
 export class Reactive {
 
     private recording = false;
+    private inCreateReaction = false;
     private batchedReactionsToRun: boolean[] = undefined;
     private reactionIndex = 0;
     private reactions: Array<() => void> = [];
@@ -21,7 +22,7 @@ export class Reactive {
         }
     }
     createState<T>(value: T | Getter<T>): [get: Getter<T>, set: Setter<T>] {
-        let current = (typeof value === 'function') ? (value as Getter<T>)() : value;
+        let current;
         let reactionsToRerun: boolean[] = [];
 
         let setter = (value: T | Next<T>) => {
@@ -38,22 +39,33 @@ export class Reactive {
         }
 
         let getter = () => {
-            if (this.recording) {
+            if (this.recording && this.inCreateReaction) {
                 reactionsToRerun[this.reactionIndex] = true;
             }
             return current;
         }
+
+        if (typeof value === 'function') {
+            this.createReaction(() => {
+                let newValue = (value as Getter<T>)();
+                setter(newValue);
+            })
+        }
+        else
+            current = value;
 
         return [getter, setter]
     }
 
     createReaction(func: () => void) {
         this.reactions[this.reactionIndex] = func;
+        this.inCreateReaction = true;
         try {
             func();
         }
         finally {
             this.reactionIndex += 1;
+            this.inCreateReaction = false;
         }
     }
 

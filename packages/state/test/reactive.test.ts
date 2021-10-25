@@ -16,7 +16,7 @@ describe('reactive', () => {
     });
 
     describe('create state', () => {
-        it('create state with a default value', () => {
+        it('with a default value', () => {
             let res;
             new Reactive().record((reactive) => {
                 let [state, setState] = reactive.createState(12);
@@ -26,7 +26,7 @@ describe('reactive', () => {
             expect(res).toBe(12);
         });
 
-        it('create state with a getter function', () => {
+        it('with a getter function', () => {
             let res;
             new Reactive().record((reactive) => {
                 let [state, setState] = reactive.createState(() => 12);
@@ -36,7 +36,7 @@ describe('reactive', () => {
             expect(res).toBe(12);
         });
 
-        it('should support createState state update with a value', () => {
+        it('should support state update with a value', () => {
             let res;
             new Reactive().record((reactive) => {
                 let [state, setState] = reactive.createState(12);
@@ -47,7 +47,7 @@ describe('reactive', () => {
             expect(res).toBe(13);
         });
 
-        it('should support createState state update with a function', () => {
+        it('should support state update with a function', () => {
             let res;
             new Reactive().record((reactive) => {
                 let [state, setState] = reactive.createState(12);
@@ -57,6 +57,32 @@ describe('reactive', () => {
 
             expect(res).toBe(13);
         });
+
+        it('should support state update as a reaction to another state change', () => {
+            let res;
+            let state, setState, state2, setState2
+            new Reactive().record((reactive) => {
+                [state, setState] = reactive.createState(12);
+                [state2, setState2] = reactive.createState(() => state() + 1);
+            })
+            setState(20)
+            res = state2();
+
+            expect(res).toBe(21);
+        })
+
+        it('should support set state while recording, without adding additional dependencies', () => {
+            let res;
+            let state, setState, state2, setState2
+            new Reactive().record((reactive) => {
+                [state, setState] = reactive.createState(12);
+                [state2, setState2] = reactive.createState(() => state() + 1);
+                setState(20)
+            })
+            res = state2();
+
+            expect(res).toBe(21);
+        })
     });
 
     describe('create reaction', () => {
