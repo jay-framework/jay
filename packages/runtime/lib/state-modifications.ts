@@ -16,19 +16,14 @@ export function updateNewRevision<T extends object>(value: T): T {
 
 export function checkModified<T>(value: T, oldValue?: Revisioned<T>): [Revisioned<T>, boolean] {
     let isObject = typeof value === 'object';
-    if (!isObject && value === oldValue?.value)
-        return [oldValue, false];
-
     let revision = isObject? value[REVISION] || NaN : NaN;
-
+    let newValue = {value, revision};
     if (!oldValue)
-        return [{value, revision}, true]
-    else if (isObject) {
+        return [newValue, true]
+    else {
         let modified = Number.isNaN(revision)?
             value !== oldValue.value :
             revision !== oldValue.revision
-        return [{value, revision}, modified]
+        return [newValue, modified]
     }
-    else
-        return [{value, revision}, true]
 }
