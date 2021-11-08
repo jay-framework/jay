@@ -1,7 +1,10 @@
-# Reactive
-                                     
-**This is a low level API, for internal use. State Management in Jay Public API is at the [index.js](./index.md)** module.
+# Reactive Module
 
+The Reactive module is a minimal reactive core implementation that handles storing data, 
+reacting to data change and detecting if data has actually changed.
+
+# Reactive Class        
+                                     
 The Reactive class is a simple reactive core, at which reactions are dependent on state. 
 When a state is updated, any of the dependent reactions are re-run. 
 
@@ -59,6 +62,15 @@ state() // returns 12
 setState(13);
 setState(x => x + 1);
 ```
+
+### state
+
+the first function returned by `createState` is the `state` function which returns the current value of the state.
+
+### setState
+
+The second function returned is `setState` which accepts a new value or function to update the value.
+The function will trigger reactions if the value has changed - changed is defined by `Revisioned` discussed below.
 
 ## <a name="createReaction">createReaction</a>
 ```typescript
@@ -118,4 +130,36 @@ reactive.batchReactions(() => {
     setB('abcde');
     setC('fghij');
 })
+```
+
+# Revisioned
+
+The Revisioned subsystem is a system to identify changes in values while supporting both primitives, 
+immutable objects and mutable objects.
+
+* primitives are considered changed if `a !=== b`
+* immutable objects are considered changed if `a !=== b`
+* mutable objects are considered changed if `a[REVISION] !== b[REVISION]`
+                                                     
+## touchRevision
+
+the `touchRevision` function marks an object as mutable and updates the object revision 
+
+```typescript
+declare function touchRevision<T extends object>(value: T): T
+```
+
+## checkModified
+
+The check modified function compares two values - a given new value, and an old `Revisioned` value.
+The function compares the new value with the old value using the rules above, and returns a 
+new revisioned instance and a is changed flag.
+
+```typescript
+interface Revisioned<T> {
+    value: T,
+    revision: number
+}
+
+declare function checkModified<T>(value: T, oldValue?: Revisioned<T>): [Revisioned<T>, boolean]
 ```
