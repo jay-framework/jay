@@ -3,6 +3,8 @@
 The Reactive module is a minimal reactive core implementation that handles storing data, 
 reacting to data change and detecting if data has actually changed.
 
+It is intended to be an internal core implementation for state management and not a user facing API.
+
 # Reactive Class        
                                      
 The Reactive class is a simple reactive core, at which reactions are dependent on state. 
