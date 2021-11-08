@@ -1,5 +1,5 @@
 import {JayElement, JayComponent, ContextStack, MountFunc} from 'jay-runtime'
-import {Getter, Reactive, Setter} from './reactive'
+import {Getter, Reactive, Setter} from 'jay-reactive'
 import {applyToRefs, refsRecorder} from "./refs-recorder";
 
 export type Props<PropsT> = {

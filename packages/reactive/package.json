@@ -1,16 +1,14 @@
 {
-  "name": "jay-state",
+  "name": "jay-reactive",
   "version": "1.0.0",
-  "main": "dist/component.js",
+  "main": "dist/index.js",
   "scripts": {
     "start": "tsc",
     "test": "jest",
     "build": "tsc"
   },
   "jest": {},
-  "dependencies": {
-    "jay-reactive": "1.0.0"
-  },
+  "dependencies": {},
   "devDependencies": {
     "@babel/preset-env": "^7.14.2",
     "@babel/preset-typescript": "^7.13.0",

@@ -1,7 +1,7 @@
 import {describe, expect, it} from '@jest/globals'
 import {ConstructContext, JayElement, dynamicText as dt, element as e} from 'jay-runtime';
 import {createEffect, createMemo, createState, forTesting, makeJayComponent, Props} from "../lib/component";
-import {Reactive} from "../lib/reactive";
+import {Reactive} from "jay-reactive";
 const {makePropsProxy} = forTesting
 
 describe('state management', () => {

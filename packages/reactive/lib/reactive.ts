@@ -1,4 +1,4 @@
-import { checkModified, Revisioned } from "jay-runtime";
+import { checkModified, Revisioned } from "./revisioned";
 
 
 export type Next<T> = (t: T) => T

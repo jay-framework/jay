@@ -1,6 +1,6 @@
 import {describe, expect, it, jest} from '@jest/globals'
 import {Reactive} from "../lib/reactive";
-import {touchRevision} from 'jay-runtime';
+import {touchRevision} from '../lib/revisioned';
 
 describe('reactive', () => {
 

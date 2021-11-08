@@ -14,7 +14,9 @@
       "./jest-setup.js"
     ]
   },
-  "dependencies": {},
+  "dependencies": {
+    "jay-reactive": "1.0.0"
+  },
   "devDependencies": {
     "@babel/preset-env": "^7.14.2",
     "@babel/preset-typescript": "^7.13.0",

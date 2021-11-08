@@ -6,6 +6,7 @@
     "packages/rollup-plugin",
     "packages/cli",
     "packages/state",
+    "packages/reactive",
     "exploration"
   ],
   "version": "1.0.0"
