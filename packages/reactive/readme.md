@@ -137,8 +137,8 @@ reactive.batchReactions(() => {
 The Revisioned subsystem is a system to identify changes in values while supporting both primitives, 
 immutable objects and mutable objects.
 
-* primitives are considered changed if `a !=== b`
-* immutable objects are considered changed if `a !=== b`
+* primitives are considered changed if `a !== b`
+* immutable objects are considered changed if `a !== b`
 * mutable objects are considered changed if `a[REVISION] !== b[REVISION]`
                                                      
 ## touchRevision
