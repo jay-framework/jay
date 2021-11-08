@@ -1,5 +1,5 @@
 import {describe, expect, it} from '@jest/globals'
-import {checkModified, updateNewRevision} from "../../lib/state-modifications";
+import {checkModified, touchRevision} from "../../lib/revisioned";
 
 describe('isModified', () => {
     it('should return true for first number', () => {
@@ -72,7 +72,7 @@ describe('isModified', () => {
     })
 
     describe('support for mutable objects', () => {
-        const objA = updateNewRevision({});
+        const objA = touchRevision({});
         it('should return false for objects with the same revision', () => {
             let [value, isModified] = checkModified(objA);
             [value, isModified] = checkModified(objA, value);
@@ -82,7 +82,7 @@ describe('isModified', () => {
 
         it('should return true for objects with different revision', () => {
             let [value, isModified] = checkModified(objA);
-            updateNewRevision(objA);
+            touchRevision(objA);
             [value, isModified] = checkModified(objA, value);
             expect(isModified).toBe(true)
             expect(value.value).toBe(objA)

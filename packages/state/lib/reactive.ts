@@ -1,3 +1,4 @@
+import { checkModified, Revisioned } from "jay-runtime";
 
 
 export type Next<T> = (t: T) => T
@@ -22,27 +23,29 @@ export class Reactive {
         }
     }
     createState<T>(value: T | Getter<T>): [get: Getter<T>, set: Setter<T>] {
-        let current;
+        let current: Revisioned<T>;
         let reactionsToRerun: boolean[] = [];
 
         let setter = (value: T | Next<T>) => {
-            current = (typeof value === 'function') ? (value as Next<T>)(current) : value;
-            for (let index = 0; index < reactionsToRerun.length; index++) {
-                if (reactionsToRerun[index]) {
-                    if (this.batchedReactionsToRun)
-                        this.batchedReactionsToRun[index] = true;
-                    else
-                        this.reactions[index]();
+            let isModified;
+            [current, isModified] = checkModified((typeof value === 'function') ? (value as Next<T>)(current?.value) : value, current);
+            if (isModified)
+                for (let index = 0; index < reactionsToRerun.length; index++) {
+                    if (reactionsToRerun[index]) {
+                        if (this.batchedReactionsToRun)
+                            this.batchedReactionsToRun[index] = true;
+                        else
+                            this.reactions[index]();
+                    }
                 }
-            }
-            return current;
+            return current.value;
         }
 
         let getter = () => {
             if (this.recording && this.inCreateReaction) {
                 reactionsToRerun[this.reactionIndex] = true;
             }
-            return current;
+            return current.value;
         }
 
         if (typeof value === 'function') {
@@ -52,7 +55,7 @@ export class Reactive {
             })
         }
         else
-            current = value;
+            [current] = checkModified(value);
 
         return [getter, setter]
     }

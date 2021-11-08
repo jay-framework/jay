@@ -5,6 +5,7 @@ import {ElementReference, ReferencesManager} from "./node-reference";
 import {ContextStack} from "./context-stack";
 export {ContextStack} from "./context-stack";
 export {DynamicReference} from "./node-reference";
+export {Revisioned, checkModified, touchRevision} from "./revisioned";
 
 const STYLE = 'style';
 const REF = 'ref';

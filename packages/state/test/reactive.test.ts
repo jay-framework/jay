@@ -1,5 +1,6 @@
 import {describe, expect, it, jest} from '@jest/globals'
 import {Reactive} from "../lib/reactive";
+import {touchRevision} from 'jay-runtime';
 
 describe('reactive', () => {
 
@@ -131,6 +132,57 @@ describe('reactive', () => {
 
             expect(reaction.mock.calls.length).toBe(1);
             expect(reaction.mock.calls[0][0]).toBe(12);
+        })
+
+        it('should not rerun when state it depends on is updated with the same immutable (===) value', () => {
+            const reaction = jest.fn();
+            let state, setState
+            new Reactive().record((reactive) => {
+                [state, setState] = reactive.createState(12);
+                reactive.createReaction(() => {
+                    reaction(state())
+                })
+            })
+
+            setState(12);
+
+            expect(reaction.mock.calls.length).toBe(1);
+            expect(reaction.mock.calls[0][0]).toBe(12);
+        })
+
+        it('should not rerun when state it depends on is updated with the same mutable (same revision) value', () => {
+            const reaction = jest.fn();
+            let state, setState
+            let value = touchRevision({name: 'abc'});
+            new Reactive().record((reactive) => {
+                [state, setState] = reactive.createState(value);
+                reactive.createReaction(() => {
+                    reaction(state().name)
+                })
+            })
+            value.name = 'def'
+            setState(value);
+
+            expect(reaction.mock.calls.length).toBe(1);
+            expect(reaction.mock.calls[0][0]).toBe('abc');
+        })
+
+        it('should rerun when state it depends on is updated with updated mutable (different revision) value', () => {
+            const reaction = jest.fn();
+            let state, setState
+            let value = touchRevision({name: 'abc'});
+            new Reactive().record((reactive) => {
+                [state, setState] = reactive.createState(value);
+                reactive.createReaction(() => {
+                    reaction(state().name)
+                })
+            })
+            value.name = 'def'
+            touchRevision(value);
+            setState(value);
+
+            expect(reaction.mock.calls.length).toBe(2);
+            expect(reaction.mock.calls[1][0]).toBe('def');
         })
     });
 

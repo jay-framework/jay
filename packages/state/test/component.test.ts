@@ -1,6 +1,6 @@
 import {describe, expect, it} from '@jest/globals'
 import {ConstructContext, JayElement, dynamicText as dt, element as e} from 'jay-runtime';
-import {createEffect, createState, forTesting, makeJayComponent, Props} from "../lib/component";
+import {createEffect, createMemo, createState, forTesting, makeJayComponent, Props} from "../lib/component";
 import {Reactive} from "../lib/reactive";
 const {makePropsProxy} = forTesting
 
@@ -47,7 +47,6 @@ describe('state management', () => {
         }
         interface LabelElement extends JayElement<ViewState, LabelRefs> {}
 
-
         function renderLabelElement(viewState: ViewState): LabelElement {
             return ConstructContext.withRootContext(viewState, () =>
                 e('div', {}, [
@@ -56,40 +55,64 @@ describe('state management', () => {
             ) as LabelElement;
         }
 
-        interface LabelProps {
-            label: string
+        interface TwoLabelsViewState {
+            label1: string
+            label2: string
+        }
+
+        interface TwoLabelRefs {
+            label1: HTMLElement
+            label2: HTMLElement
+        }
+        interface TwoLabelsElement extends JayElement<TwoLabelsViewState, TwoLabelRefs> {}
+
+        function renderTwoLabelElement(viewState: TwoLabelsViewState): TwoLabelsElement {
+            return ConstructContext.withRootContext(viewState, () =>
+                e('div', {}, [
+                    e('div', {ref: 'label1'}, [dt(vs => vs.label1)]),
+                    e('div', {ref: 'label2'}, [dt(vs => vs.label2)])
+                ])
+            ) as TwoLabelsElement;
         }
 
         describe('with props', () => {
 
-            function LabelComponent({label}: Props<LabelProps>, refs: LabelRefs) {
+            interface Name {
+                name: string
+            }
+
+            function LabelComponent({name}: Props<Name>, refs: LabelRefs) {
 
                 return {
                     render: () => ({
-                        label: label()
+                        label: name()
                     })
                 }
             }
 
             it('should render the component', () => {
                 let label = makeJayComponent(renderLabelElement, LabelComponent)
-                let instance = label({label: 'hello world'});
+                let instance = label({name: 'hello world'});
                 expect(instance.element.refs.label.textContent).toBe('hello world')
             })
 
             it('should update the component on prop changes', () => {
                 let label = makeJayComponent(renderLabelElement, LabelComponent)
-                let instance = label({label: 'hello world'});
-                instance.update({label: 'updated world'})
+                let instance = label({name: 'hello world'});
+                instance.update({name: 'updated world'})
                 expect(instance.element.refs.label.textContent).toBe('updated world')
             })
         })
 
         describe('with state', () => {
 
-            function LabelComponentWithInternalState(props: Props<LabelProps>, refs: LabelRefs) {
+            interface Name {
+                name: string
+            }
 
-                let [label, setLabel] = createState('Hello ' + props.label());
+            function LabelComponentWithInternalState(props: Props<Name>, refs: LabelRefs) {
+
+                let [label, setLabel] = createState('Hello ' + props.name());
 
                 return {
                     render: () => ({
@@ -101,30 +124,34 @@ describe('state management', () => {
 
             it('should render the component using state', () => {
                 let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
-                let instance = label({label: 'world'});
+                let instance = label({name: 'world'});
                 expect(instance.element.refs.label.textContent).toBe('Hello world')
             })
 
             it('should update the component as state changes', () => {
                 let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
-                let instance = label({label: 'world'});
+                let instance = label({name: 'world'});
                 instance.setLabel('hello mars')
                 expect(instance.element.refs.label.textContent).toBe('hello mars')
             })
 
             it('should not update the component from prop change as the prop is not bound to state', () => {
                 let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
-                let instance = label({label: 'world'});
-                instance.update({label: 'mars'})
+                let instance = label({name: 'world'});
+                instance.update({name: 'mars'})
                 expect(instance.element.refs.label.textContent).toBe('Hello world')
             })
         });
 
         describe('with state bound to prop', () => {
 
-            function LabelComponentWithInternalState(props: Props<LabelProps>, refs: LabelRefs) {
+            interface Name {
+                name: string
+            }
 
-                let [label, setLabel] = createState(() => 'Hello ' + props.label());
+            function LabelComponentWithInternalState(props: Props<Name>, refs: LabelRefs) {
+
+                let [label, setLabel] = createState(() => 'Hello ' + props.name());
 
                 return {
                     render: () => ({
@@ -136,21 +163,21 @@ describe('state management', () => {
 
             it('should render the component using state', () => {
                 let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
-                let instance = label({label: 'world'});
+                let instance = label({name: 'world'});
                 expect(instance.element.refs.label.textContent).toBe('Hello world')
             })
 
             it('should update the component as state changes', () => {
                 let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
-                let instance = label({label: 'world'});
+                let instance = label({name: 'world'});
                 instance.setLabel('hello mars')
                 expect(instance.element.refs.label.textContent).toBe('hello mars')
             })
 
             it('should not update the component from prop change as the prop is not bound to state', () => {
                 let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
-                let instance = label({label: 'world'});
-                instance.update({label: 'mars'})
+                let instance = label({name: 'world'});
+                instance.update({name: 'mars'})
                 expect(instance.element.refs.label.textContent).toBe('Hello mars')
             })
         })
@@ -226,7 +253,50 @@ describe('state management', () => {
         })
 
         describe('with create memo', () => {
+            interface Name {
+                name: string,
+                age: number
+            }
 
+            function LabelComponentWithCreateMemo({name, age}: Props<Name>, refs: TwoLabelRefs) {
+                let memoDependsOnName = 0, memoDependsOnAge = 0;
+                let label1 = createMemo(() => {
+                    memoDependsOnName += 1;
+                    return 'hello ' + name();
+                })
+                let label2 = createMemo(() => {
+                    memoDependsOnAge += 1;
+                    return 'age ' + age();
+                })
+                const getMemoComputeCount = () => ({memoDependsOnName, memoDependsOnAge})
+
+                return {
+                    render: () => ({
+                        label1: label1(),
+                        label2: label2()
+                    }),
+                    getMemoComputeCount
+                }
+            }
+
+            it('should run create memo on initial render', () => {
+                let label = makeJayComponent(renderTwoLabelElement, LabelComponentWithCreateMemo)
+                let instance = label({name: 'world', age: 12});
+                expect(instance.element.refs.label1.textContent).toBe('hello world')
+                expect(instance.element.refs.label2.textContent).toBe('age 12')
+                expect(instance.getMemoComputeCount().memoDependsOnName).toBe(1)
+                expect(instance.getMemoComputeCount().memoDependsOnAge).toBe(1)
+            })
+
+            it('should update only the memo dependent on name on only a name change', () => {
+                let label = makeJayComponent(renderTwoLabelElement, LabelComponentWithCreateMemo)
+                let instance = label({name: 'world', age: 12});
+                instance.update({name: 'mars', age: 12})
+                expect(instance.element.refs.label1.textContent).toBe('hello world')
+                expect(instance.element.refs.label2.textContent).toBe('age 12')
+                expect(instance.getMemoComputeCount().memoDependsOnName).toBe(2)
+                expect(instance.getMemoComputeCount().memoDependsOnAge).toBe(1)
+            })
         })
 
         describe('with expose component API functions', () => {

@@ -178,4 +178,8 @@ element.vidRef.onclick(
 
 [ADSafe](https://www.adsafe.org/)
 
+https://developer.salesforce.com/docs/atlas.en-us.lightning.meta/lightning/security_code.htm
+
+RemoveUI
+
 Project [Nerio](https://github.com/kmacrow/Nerio)

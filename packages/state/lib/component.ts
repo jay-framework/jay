@@ -79,6 +79,14 @@ export function createState<T>(value: T | Getter<T>): [get: Getter<T>, set: Sett
     return componentContextStack.current().reactive.createState(value);
 }
 
+export function createMemo<T>(computation: (prev: T) => T, initialValue?: T): Getter<T> {
+    let value = initialValue
+    componentContextStack.current().reactive.createReaction(() => {
+        value = computation(value)
+    })
+    return () => value
+}
+
 export function makeJayComponent<PropsT extends object, ViewState, Refs extends object, JayElementT extends JayElement<ViewState, Refs>,
     CompCore extends JayComponentCore<PropsT, ViewState>
     >(

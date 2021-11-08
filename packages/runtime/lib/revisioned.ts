@@ -2,14 +2,13 @@
 
 export const REVISION = Symbol('revision');
 let nextRevision = 1;
-export const CHILDRENREVISION = Symbol('children-revision')
 
-interface Revisioned<T> {
+export interface Revisioned<T> {
     value: T,
     revision: number
 }
 
-export function updateNewRevision<T extends object>(value: T): T {
+export function touchRevision<T extends object>(value: T): T {
     value[REVISION] = nextRevision++;
     return value
 }
