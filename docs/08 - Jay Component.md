@@ -58,17 +58,17 @@ We expand the `Item` component constructor to return a component API definition 
 The component now looks like
 
 ```typescript
-import {render, ItemVS, ItemElement} from './item.jay.html';
-import {createEffect, createState, createEvents, makeJayComponent} from 'jay-hooks';
+import {render, ItemVS, ItemElement, ItemRefs} from './item.jay.html';
+import {Props, createEffect, createState, createEvents, makeJayComponent} from 'jay-component';
 import {EventEmitter} from "./EventEmitter";
 
-export interface ItemData {
+export interface Item {
     text: string,
     dataId: string
 }
 
-export function Item(props: ItemData, je: ItemElement) {
-    const [text, setText] = createState(props.text);
+export function Item({text, dataId}: Props<Item>, je: ItemRefs) {
+    const [text, setText] = createState(text);
     const [done, setDone] = createState(false);
     const onremove = new EventEmitter<void>();
     const doSomething = (param1: string, param2: Date): string => {
@@ -76,17 +76,10 @@ export function Item(props: ItemData, je: ItemElement) {
     }
 
     jayElement.done.onclick = () => setDone(!done());
-    jayElement.remove.onclick = () => onremove();
-
-    const render = () => ({
-        text: text(),
-        done: done(),
-        dataId: props.dataId
-    })
-
+    jayElement.remove.onclick = () => onremove.emit();
 
     return {
-        render,
+        render: () => ({text, done, dataId}),
         onremove,
         doSomething
     }
@@ -99,7 +92,7 @@ And the derived component interface returned by `makeJayComponent(render, Item)`
 
 ```typescript
 //  effective derived interface returned from `makeJayComponent(render, Item)` 
-interface ItemComponent extends JayComponent<ItemData, ItemVS, ItemElement> {
+interface ItemComponent extends JayComponent<Item, ItemVS, ItemElement> {
     onremove: () => void,
     doSomething: (param1: string, param2: Date) => string 
 }
@@ -166,7 +159,7 @@ export function Component() {
 ```
 
 The render function signature, given the element view state type `VS` has to conform to the following
-`() => RenderResult<ViewState>`. `RenderResult<VS>` transforms `VS` from an object of values to
+`() => ViewStateGetters<ViewState>`. `ViewStateGetters<VS>` transforms `VS` from an object of values to
 an object of values or getters. This enables using props, state or memo getters directly in a render function.
 
 ```typescript
