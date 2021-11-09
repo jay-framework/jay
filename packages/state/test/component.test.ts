@@ -180,6 +180,36 @@ describe('state management', () => {
             })
         })
 
+        describe('with render view state as getters', () => {
+            interface Name {
+                firstName: string,
+                lastName: string
+            }
+
+            function LabelComponentWithInternalState({firstName, lastName}: Props<Name>, refs: LabelRefs) {
+                let [label, setLabel] = createState(() => 'Hello ' + firstName() + ' ' + lastName());
+
+                return {
+                    render: () => ({
+                        label
+                    })
+                }
+            }
+
+            let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
+
+            it('should render initial component using a getter', () => {
+                let instance = label({firstName: 'John', lastName: 'Smith'});
+                expect(instance.element.refs.label.textContent).toBe('Hello John Smith')
+            })
+
+            it('should render updated component using a getter', () => {
+                let instance = label({firstName: 'John', lastName: 'Smith'});
+                instance.update({firstName: 'John', lastName: 'Adams'});
+                expect(instance.element.refs.label.textContent).toBe('Hello John Adams')
+            })
+        })
+
         describe('with create effect', () => {
 
             interface Name {

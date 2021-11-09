@@ -1,9 +1,14 @@
 import {JayElement, JayComponent, ContextStack, MountFunc} from 'jay-runtime'
-import {Getter, Reactive, Setter} from 'jay-reactive'
+import {ValueOrGetter, Getter, Reactive, Setter} from 'jay-reactive'
 import {applyToRefs, refsRecorder} from "./refs-recorder";
+import {monitorEventLoopDelay} from "perf_hooks";
 
 export type Props<PropsT> = {
     [K in keyof PropsT]: Getter<PropsT[K]>
+}
+
+export type ViewStateGetters<ViewState> = {
+    [K in keyof ViewState]: ViewState[K] | Getter<ViewState[K]>
 }
 
 export type UpdatableProps<PropsT> = Props<PropsT> & {
@@ -23,7 +28,7 @@ class EventEmitter<T, F extends (t: T) => void> {
 }
 
 export interface JayComponentCore<PropsT, ViewState> {
-    render: (props: Props<PropsT>) => ViewState
+    render: (props: Props<PropsT>) => ViewStateGetters<ViewState>
 }
 
 type ConcreteJayComponent1<PropsT extends object, ViewState, Refs,
@@ -75,7 +80,7 @@ export function createEffect(effect: () => void | EffectCleanup) {
     })
 }
 
-export function createState<T>(value: T | Getter<T>): [get: Getter<T>, set: Setter<T>] {
+export function createState<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: Setter<T>] {
     return componentContextStack.current().reactive.createState(value);
 }
 
@@ -87,7 +92,19 @@ export function createMemo<T>(computation: (prev: T) => T, initialValue?: T): Ge
     return () => value
 }
 
-export function makeJayComponent<PropsT extends object, ViewState, Refs extends object, JayElementT extends JayElement<ViewState, Refs>,
+function materializeViewState<ViewState extends object>(vsValueOrGetter: ViewStateGetters<ViewState>): ViewState {
+    let vs = {};
+    for (let key in vsValueOrGetter) {
+        const value = vsValueOrGetter[key];
+        if (typeof value === 'function')
+            vs[key as string] = value();
+        else
+            vs[key as string] = value;
+    }
+    return vs as ViewState;
+}
+
+export function makeJayComponent<PropsT extends object, ViewState extends object, Refs extends object, JayElementT extends JayElement<ViewState, Refs>,
     CompCore extends JayComponentCore<PropsT, ViewState>
     >(
     render: (vs: ViewState) => JayElementT,
@@ -109,9 +126,10 @@ export function makeJayComponent<PropsT extends object, ViewState, Refs extends 
                 let coreComp = comp(propsProxy, refs);
                 let {render: renderViewState, ...api} = coreComp;
 
-                let element;
+                let element: JayElementT;
                 reactive.createReaction(() => {
-                    let viewState = renderViewState(propsProxy)
+                    let viewStateValueOrGetters = renderViewState(propsProxy)
+                    let viewState = materializeViewState(viewStateValueOrGetters);
                     if (element)
                         element.update(viewState)
                     else

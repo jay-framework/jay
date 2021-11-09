@@ -4,6 +4,7 @@ import { checkModified, Revisioned } from "./revisioned";
 export type Next<T> = (t: T) => T
 export type Setter<T> = (t: T | Next<T>) => T
 export type Getter<T> = () => T
+export type ValueOrGetter<T> = T | Getter<T>
 
 export class Reactive {
 
@@ -22,7 +23,7 @@ export class Reactive {
             this.recording = false;
         }
     }
-    createState<T>(value: T | Getter<T>): [get: Getter<T>, set: Setter<T>] {
+    createState<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: Setter<T>] {
         let current: Revisioned<T>;
         let reactionsToRerun: boolean[] = [];
 
