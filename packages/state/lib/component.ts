@@ -15,14 +15,14 @@ export type UpdatableProps<PropsT> = Props<PropsT> & {
     update(newProps: Partial<PropsT>)
 }
 
-class EventEmitter<T, F extends (t: T) => void> {
-    handler?: F
+export class EventEmitter<T> {
+    handler?: (t: T) => void
 
     emit(t: T): void {
         if (this.handler)
             this.handler(t);
     }
-    on(handler: F) {
+    on(handler: (t: T) => void) {
         this.handler = handler;
     }
 }
@@ -40,7 +40,7 @@ type ConcreteJayComponent2<PropsT extends object, ViewState, Refs,
     CompCore extends JayComponentCore<PropsT, ViewState>,
     JayElementT extends JayElement<ViewState, Refs>,
     CJC extends ConcreteJayComponent1<PropsT, ViewState, Refs, CompCore, JayElementT>> = {
-    [K in keyof CJC]: CJC[K] extends EventEmitter<infer T, infer F> ? F : CJC[K]
+    [K in keyof CJC]: CJC[K] extends EventEmitter<infer T> ? (t: T) => void : CJC[K]
 }
 
 type ConcreteJayComponent<PropsT extends object, ViewState, Refs,
@@ -141,13 +141,28 @@ export function makeJayComponent<PropsT extends object, ViewState extends object
                 }
                 mounts.push(element.mount)
                 unmounts.push(element.unmount)
-                return {
+
+                let component = {
                     element,
                     update,
                     mount: () => mounts.forEach(_ => _()),
                     unmount: () => unmounts.forEach(_ => _()),
-                    ...api
-                } as unknown as ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>
+                }
+
+                for (let key in api) {
+                    if (api[key] instanceof EventEmitter) {
+                        Object.defineProperty(component, key, {
+                            get() {return api[key].handler},
+                            set(handler) {api[key].on(handler)},
+                            enumerable: true
+                        })
+                    }
+                    else {
+                        component[key] = api[key];
+                    }
+                }
+
+                return component as unknown as ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>
             })
         })
     }

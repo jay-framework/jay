@@ -1,6 +1,14 @@
-import {describe, expect, it} from '@jest/globals'
+import {describe, expect, it, jest} from '@jest/globals'
 import {ConstructContext, JayElement, dynamicText as dt, element as e} from 'jay-runtime';
-import {createEffect, createMemo, createState, forTesting, makeJayComponent, Props} from "../lib/component";
+import {
+    createEffect,
+    createMemo,
+    createState,
+    EventEmitter,
+    forTesting,
+    makeJayComponent,
+    Props
+} from "../lib/component";
 import {Reactive} from "jay-reactive";
 const {makePropsProxy} = forTesting
 
@@ -367,6 +375,65 @@ describe('state management', () => {
         })
 
         describe('with expose component API events', () => {
+
+            interface CounterViewState {
+                value: number
+            }
+
+            interface CounterRefs {
+                inc: HTMLElement,
+                dec: HTMLElement,
+                value: HTMLElement
+            }
+            interface CounterElement extends JayElement<CounterViewState, CounterRefs> {}
+
+            function renderCounterElement(viewState: CounterViewState): CounterElement {
+                return ConstructContext.withRootContext(viewState, () =>
+                    e('div', {}, [
+                        e('button', {ref: 'dec'}, ['dec']),
+                        e('div', {ref: 'value'}, [dt(vs => vs.value)]),
+                        e('button', {ref: 'inc'}, ['inc'])
+                    ])
+                ) as CounterElement;
+            }
+
+            interface CounterProps {
+            }
+
+            function CounterComponent({}: Props<CounterProps>, refs: CounterRefs) {
+                let [value, setValue] = createState(0);
+                refs.inc.onclick = () => setValue(value() + 1);
+                refs.dec.onclick = () => setValue(value() - 1);
+                let onChange = new EventEmitter<number>()
+                createEffect(() => {
+                    onChange.emit(value());
+                })
+                return {
+                    render: () => ({value}),
+                    onChange
+                }
+            }
+
+            let counterComponent = makeJayComponent(renderCounterElement, CounterComponent)
+
+            it('should register events and invoke the event', () => {
+                let instance = counterComponent({});
+                const myMock = jest.fn();
+                instance.onChange = myMock;
+                instance.element.refs.inc.click();
+                expect(myMock.mock.calls.length).toBe(1);
+            })
+
+            it('should invoke event with payload', () => {
+                let instance = counterComponent({});
+                const myMock = jest.fn();
+                instance.onChange = myMock;
+                instance.element.refs.inc.click();
+                instance.element.refs.inc.click();
+                expect(myMock.mock.calls.length).toBe(2);
+                expect(myMock.mock.calls[0][0]).toBe(1);
+                expect(myMock.mock.calls[1][0]).toBe(2);
+            })
 
         })
     })
