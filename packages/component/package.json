@@ -1,5 +1,5 @@
 {
-  "name": "jay-state",
+  "name": "jay-component",
   "version": "1.0.0",
   "main": "dist/component.js",
   "scripts": {

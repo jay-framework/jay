@@ -5,7 +5,7 @@
     "packages/project",
     "packages/rollup-plugin",
     "packages/cli",
-    "packages/state",
+    "packages/component",
     "packages/reactive",
     "exploration"
   ],
