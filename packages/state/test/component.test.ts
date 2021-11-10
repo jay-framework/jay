@@ -1,7 +1,7 @@
 import {describe, expect, it, jest} from '@jest/globals'
 import {ConstructContext, JayElement, dynamicText as dt, element as e} from 'jay-runtime';
 import {
-    createEffect,
+    createEffect, createEvent,
     createMemo,
     createState,
     EventEmitter,
@@ -404,10 +404,7 @@ describe('state management', () => {
                 let [value, setValue] = createState(0);
                 refs.inc.onclick = () => setValue(value() + 1);
                 refs.dec.onclick = () => setValue(value() - 1);
-                let onChange = new EventEmitter<number>()
-                createEffect(() => {
-                    onChange.emit(value());
-                })
+                let onChange = createEvent<number>(emitter => emitter.emit(value()))
                 return {
                     render: () => ({value}),
                     onChange

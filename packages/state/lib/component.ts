@@ -92,6 +92,12 @@ export function createMemo<T>(computation: (prev: T) => T, initialValue?: T): Ge
     return () => value
 }
 
+export function createEvent<T>(eventEffect: (emitter: EventEmitter<T>) => void): EventEmitter<T> {
+    let emitter = new EventEmitter<T>()
+    createEffect(() => eventEffect(emitter));
+    return emitter;
+}
+
 function materializeViewState<ViewState extends object>(vsValueOrGetter: ViewStateGetters<ViewState>): ViewState {
     let vs = {};
     for (let key in vsValueOrGetter) {
