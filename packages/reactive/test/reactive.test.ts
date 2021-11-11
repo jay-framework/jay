@@ -200,7 +200,6 @@ describe('reactive', () => {
 
             expect(reaction.mock.calls.length).toBe(1);
             reactive.batchReactions(() => {
-
                 setState(13);
                 setState(14);
                 expect(reaction.mock.calls.length).toBe(1);
@@ -262,6 +261,89 @@ describe('reactive', () => {
             expect(reaction.mock.calls[1][0]).toBe(true);
             expect(reaction.mock.calls[1][1]).toBe('abcde');
             expect(reaction.mock.calls[1][2]).toBe('fghij');
+        })
+
+        it('should return the value of the callback', () => {
+            let state, setState
+            let reactive = new Reactive();
+            reactive.record((reactive) => {
+                [state, setState] = reactive.createState(12);
+                reactive.createReaction(() => {
+                    state()
+                })
+            })
+
+            let res = reactive.batchReactions(() => {
+                setState(13);
+                return state();
+            })
+
+            expect(res).toBe(13);
+        })
+
+        describe('should only run reactions that depend on updated states', () => {
+            function makeReactive123() {
+
+                let reactive = new Reactive();
+
+                return reactive.record((reactive) => {
+                    let reaction23 = 0, reaction13 = 0, reaction12 = 0;
+                    let [state1, setState1] = reactive.createState(12);
+                    let [state2, setState2] = reactive.createState(12);
+                    let [state3, setState3] = reactive.createState(12);
+                    reactive.createReaction(() => {
+                        state2()
+                        state3()
+                        reaction23 += 1;
+                    })
+                    reactive.createReaction(() => {
+                        state1()
+                        state3()
+                        reaction13 += 1;
+                    })
+                    reactive.createReaction(() => {
+                        state1()
+                        state2()
+                        reaction12 += 1;
+                    })
+
+                    return {
+                        update1: () => reactive.batchReactions(() => {
+                            setState1(state1() + 1);
+                        }),
+                        update12: () => reactive.batchReactions(() => {
+                            setState1(state1() + 1);
+                            setState2(state2() + 1);
+                        }),
+                        update13: () => reactive.batchReactions(() => {
+                            setState1(state1() + 1);
+                            setState3(state3() + 1);
+                        }),
+                        update23: () => reactive.batchReactions(() => {
+                            setState2(state2() + 1);
+                            setState3(state3() + 1);
+                        }),
+                        data: () => ({reaction23, reaction13, reaction12})
+                    }
+                })
+            }
+
+
+            it('only run reactions 12, 13, 23 when updating state 12', () => {
+                let api = makeReactive123();
+                api.update12()
+                expect(api.data().reaction12).toBe(2);
+                expect(api.data().reaction13).toBe(2);
+                expect(api.data().reaction23).toBe(2);
+            })
+
+            it('only run reactions 12, 13 when updating state 1', () => {
+                let api = makeReactive123();
+                api.update1()
+                expect(api.data().reaction12).toBe(2);
+                expect(api.data().reaction13).toBe(2);
+                expect(api.data().reaction23).toBe(1);
+            })
         })
 
     });

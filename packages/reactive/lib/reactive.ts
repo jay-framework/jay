@@ -73,14 +73,15 @@ export class Reactive {
         }
     }
 
-    batchReactions(func: () => void) {
+    batchReactions<T>(func: () => T) {
         this.batchedReactionsToRun = [];
         try {
-            func();
+            return func();
         }
         finally {
             for (let index = 0; index < this.batchedReactionsToRun.length; index++)
-                this.reactions[index]();
+                if (this.batchedReactionsToRun[index])
+                    this.reactions[index]();
             this.batchedReactionsToRun = undefined;
         }
     }
