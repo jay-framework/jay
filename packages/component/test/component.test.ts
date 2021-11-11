@@ -1,10 +1,9 @@
-import {describe, expect, it, jest} from '@jest/globals'
+import {describe, expect, it, jest, beforeEach} from '@jest/globals'
 import {ConstructContext, JayElement, dynamicText as dt, element as e} from 'jay-runtime';
 import {
     createEffect, createEvent,
     createMemo,
     createState,
-    EventEmitter,
     forTesting,
     makeJayComponent,
     Props
@@ -432,6 +431,73 @@ describe('state management', () => {
                 expect(myMock.mock.calls[1][0]).toBe(2);
             })
 
+        })
+
+        describe('performance', () => {
+
+            interface LabelAndButtonViewState {
+                label: string
+            }
+
+            interface LabelAndButtonRefs {
+                label: HTMLElement
+                button: HTMLElement
+            }
+            interface LabelAndButtonElement extends JayElement<LabelAndButtonViewState, LabelAndButtonRefs> {}
+
+            let renderCount = 0;
+
+            function trackingLabelGetter(vs: LabelAndButtonViewState): string {
+                renderCount += 1;
+                return vs.label;
+            }
+
+            function renderTwoLabelElement(viewState: LabelAndButtonViewState): LabelAndButtonElement {
+                return ConstructContext.withRootContext(viewState, () =>
+                    e('div', {}, [
+                        e('div', {ref: 'label'}, [dt(trackingLabelGetter)]),
+                        e('button', {ref: 'button'}, ['click'])
+                    ])
+                ) as LabelAndButtonElement;
+            }
+
+            beforeEach(() => {
+                renderCount = 0;
+            })
+
+            interface TwoProps {
+                one: string,
+                two: string
+            }
+
+            function TestComponent1({one, two}: Props<TwoProps>, refs: LabelAndButtonRefs) {
+                return {
+                    render: () => ({
+                        label: `${one()} ${two()}`
+                    })
+                }
+            }
+
+            const Test1 = makeJayComponent(renderTwoLabelElement, TestComponent1);
+
+            it('should render only once on first render', () => {
+                const instance = Test1({one: 'one', two: 'two'})
+                expect(instance.element.refs.label.textContent).toBe('one two');
+                expect(renderCount).toBe(1);
+            })
+
+            it('should render only once on multiple props update', () => {
+                const instance = Test1({one: 'one', two: 'two'})
+                instance.update({one: 'three', two: 'four'})
+                expect(instance.element.refs.label.textContent).toBe('three four');
+                expect(renderCount).toBe(2);
+            })
+
+            // first render
+            // DOM event update
+            // prop update
+            // API method update
+            // nested component event
         })
     })
 })

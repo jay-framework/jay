@@ -178,12 +178,14 @@ function makePropsProxy<PropsT extends object>(reactive: Reactive, props: PropsT
     const stateMap = {}
 
     const update = (obj: PropsT) => {
-        for (const prop in obj) {
-            if (!stateMap.hasOwnProperty(prop))
-                stateMap[prop as string] = reactive.createState(obj[prop])
-            else
-                stateMap[prop as string][1](obj[prop])
-        }
+        reactive.batchReactions(() => {
+            for (const prop in obj) {
+                if (!stateMap.hasOwnProperty(prop))
+                    stateMap[prop as string] = reactive.createState(obj[prop])
+                else
+                    stateMap[prop as string][1](obj[prop])
+            }
+        })
     }
     const getter = (obj: PropsT, prop: string | number | symbol) => {
         if (!stateMap.hasOwnProperty(prop))
