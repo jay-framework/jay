@@ -141,7 +141,9 @@ export function makeJayComponent<PropsT extends object, ViewState extends object
                     else
                         element = render(viewState)
                 })
-                applyToRefs(refs, element.refs);
+                applyToRefs(refs, element.refs, func => (...args) =>
+                    reactive.batchReactions(() => func(...args))
+                );
                 let update = (updateProps) => {
                     propsProxy.update(updateProps)
                 }
@@ -162,6 +164,9 @@ export function makeJayComponent<PropsT extends object, ViewState extends object
                             set(handler) {api[key].on(handler)},
                             enumerable: true
                         })
+                    }
+                    else if (typeof api[key] === 'function') {
+                        component[key] = (...args) => reactive.batchReactions(() => api[key](...args))
                     }
                     else {
                         component[key] = api[key];

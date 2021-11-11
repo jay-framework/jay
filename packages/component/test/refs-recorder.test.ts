@@ -26,6 +26,30 @@ describe('refs recorder', () => {
         expect(refs[PRINCIPAL].two[PRINCIPAL].onclick).toBe(clickTwo)
     })
 
+    it('should wrap onclick handlers', () => {
+        let wrapperBeforeInvocations = 0;
+        let wrapperAfterInvocations = 0;
+        let wrapper = func => (...args) => {
+            wrapperBeforeInvocations += 1;
+            func(...args);
+            wrapperAfterInvocations += 1;
+        }
+        let refs: TestRefs = refsRecorder();
+        refs.one.onclick = clickOne;
+
+        let elementRefs = {
+            one: {},
+            two: {}
+        } as TestRefs
+
+        applyToRefs(refs, elementRefs, wrapper)
+
+        elementRefs.one.onclick(null, null);
+
+        expect(wrapperBeforeInvocations).toBe(1)
+        expect(wrapperAfterInvocations).toBe(1)
+    })
+
     it('should apply the references to the element', () => {
         let refs: TestRefs = refsRecorder();
         refs.one.onclick = clickOne;

@@ -26,12 +26,13 @@ function makeRefRecorder() {
     });
 }
 
-export function applyToRefs<Refs>(proxy: Refs, refs: Refs) {
+const noopWrapper = (func: any) => func;
+export function applyToRefs<Refs>(proxy: Refs, refs: Refs, wrapper: (func: any) => void = noopWrapper) {
     let refsPrincipal = proxy[PRINCIPAL];
     for (let key in refsPrincipal) {
         let refPrincipal = refsPrincipal[key][PRINCIPAL];
         for (let event in refPrincipal) {
-            refs[key][event] = refPrincipal[event];
+            refs[key][event] = wrapper(refPrincipal[event]);
         }
     }
 }

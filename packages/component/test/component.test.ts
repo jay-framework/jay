@@ -480,6 +480,27 @@ describe('state management', () => {
 
             const Test1 = makeJayComponent(renderTwoLabelElement, TestComponent1);
 
+            function TestComponent2({}: Props<null>, refs: LabelAndButtonRefs) {
+                let [one, setOne] = createState('');
+                let [two, setTwo] = createState('');
+                const setValues = (a,b) => {
+                    setOne(a);
+                    setTwo(b);
+                }
+                refs.button.onclick = () => {
+                    setOne('one');
+                    setTwo('two');
+                }
+                return {
+                    render: () => ({
+                        label: `${one()} ${two()}`
+                    }),
+                    setValues
+                }
+            }
+
+            const Test2 = makeJayComponent(renderTwoLabelElement, TestComponent2);
+
             it('should render only once on first render', () => {
                 const instance = Test1({one: 'one', two: 'two'})
                 expect(instance.element.refs.label.textContent).toBe('one two');
@@ -493,10 +514,20 @@ describe('state management', () => {
                 expect(renderCount).toBe(2);
             })
 
-            // first render
-            // DOM event update
-            // prop update
-            // API method update
+            it('should render only once on multiple state updates from an API function', () => {
+                const instance = Test2({})
+                instance.setValues('one', 'two')
+                expect(instance.element.refs.label.textContent).toBe('one two');
+                expect(renderCount).toBe(2);
+            })
+
+            it('should render only once on multiple state updates from a DOM event', () => {
+                const instance = Test2({})
+                instance.element.refs.button.click()
+                expect(instance.element.refs.label.textContent).toBe('one two');
+                expect(renderCount).toBe(2);
+            })
+
             // nested component event
         })
     })
