@@ -521,14 +521,12 @@ describe('state management', () => {
                 expect(renderCount).toBe(2);
             })
 
-            it('should render only once on multiple state updates from a DOM event', () => {
+            it('should render only once on multiple state updates from a ref event (DOM or nested component)', () => {
                 const instance = Test2({})
                 instance.element.refs.button.click()
                 expect(instance.element.refs.label.textContent).toBe('one two');
                 expect(renderCount).toBe(2);
             })
-
-            // nested component event
         })
     })
 })
