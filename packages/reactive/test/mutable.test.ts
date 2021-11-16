@@ -1,5 +1,5 @@
 import {describe, expect, it, jest} from '@jest/globals'
-import {isMutable, mutableObject} from "../lib/mutable";
+import {addMutableListener, isMutable, mutableObject, removeMutableListener} from "../lib/mutable";
 import {checkModified, getRevision} from "../lib";
 
 describe("mutable", () => {
@@ -482,5 +482,41 @@ describe("mutable", () => {
 
             expect(isMutable(mutableArr)).toBe(false)
         })
+    })
+
+    describe("mutation listener", () => {
+        it('supports change listener in mutableObject', () => {
+            let fn = jest.fn();
+            let mutable = mutableObject({a: 1, b:2}, fn);
+
+            mutable.a = 3;
+
+            expect(fn.mock.calls.length).toBe(1);
+        })
+
+        it('supports change listener in mutableObject', () => {
+            let fn = jest.fn();
+            let mutable = mutableObject({a: 1, b:2});
+            addMutableListener(mutable, fn);
+
+            mutable.a = 3;
+
+            expect(fn.mock.calls.length).toBe(1);
+        })
+
+        it('supports removing change listener in mutableObject', () => {
+            let fn1 = jest.fn();
+            let fn2 = jest.fn();
+            let mutable = mutableObject({a: 1, b:2});
+            addMutableListener(mutable, fn1);
+            addMutableListener(mutable, fn2);
+            removeMutableListener(mutable, fn1);
+
+            mutable.a = 3;
+
+            expect(fn1.mock.calls.length).toBe(0);
+            expect(fn2.mock.calls.length).toBe(1);
+        })
+
     })
 })

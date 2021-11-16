@@ -1,8 +1,17 @@
 import {touchRevision} from "./revisioned";
 
 const isProxy = Symbol("isProxy")
-export function isMutable(obj: object): boolean {
-    return !!obj[isProxy];
+const mutationListener = Symbol("listener")
+export function isMutable(obj: any): obj is object {
+    return (typeof obj === "object") && !!obj[isProxy];
+}
+
+export function addMutableListener(obj: object, listener: () => void) {
+    obj[mutationListener](listener, true);
+}
+
+export function removeMutableListener(obj: object, listener: () => void) {
+    obj[mutationListener](listener, false)
 }
 
 export function mutableObject<T extends object>(original: T, notifyParent?: () => void): T
@@ -10,9 +19,16 @@ export function mutableObject<T>(original: Array<T>, notifyParent?: () => void):
     touchRevision(original);
     const childRefs = new WeakMap();
     const childChanged = () => changed();
+    const changeListeners: Set<() => void> = notifyParent? new Set([notifyParent]): new Set();
     const changed = () => {
         touchRevision(original)
-        notifyParent?.();                       
+        changeListeners.forEach(_ => _());
+    }
+    const addRemoveChangeListener = (listener, add: boolean) => {
+        if (add)
+            changeListeners.add(listener);
+        else
+            changeListeners.delete(listener);
     }
     return new Proxy(original, {
         deleteProperty: function(target, property) {
@@ -29,6 +45,8 @@ export function mutableObject<T>(original: Array<T>, notifyParent?: () => void):
         get: function(target, property: PropertyKey) {
             if (property === isProxy)
                 return true;
+            else if (property === mutationListener)
+                return addRemoveChangeListener;
             else if (typeof target[property] === 'object') {
                 if (!childRefs.get(target[property]))
                     childRefs.set(target[property], mutableObject(target[property], childChanged))

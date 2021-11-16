@@ -1,6 +1,7 @@
 import {describe, expect, it, jest} from '@jest/globals'
 import {Reactive} from "../lib/reactive";
 import {touchRevision} from '../lib/revisioned';
+import {mutableObject} from "../lib/mutable";
 
 describe('reactive', () => {
 
@@ -378,6 +379,68 @@ describe('reactive', () => {
             expect(state2()).toBe(5)
             expect(state3()).toBe(6)
             expect(reaction2.mock.calls[1][0]).toBe(26)
+        })
+    })
+
+    describe("reactive with mutable state", () => {
+        it("should run a reaction when mutable object state changes", () => {
+            let {reaction, setState, state} = new Reactive().record((reactive) => {
+                const reaction = jest.fn();
+                let [state, setState] = reactive.createState(mutableObject({a: 1, b: 2}));
+                reactive.createReaction(() => {
+                    reaction(state())
+                })
+                return {reaction, setState, state}
+            })
+
+            state().a = 3;
+
+            expect(reaction.mock.calls.length).toBe(2);
+            expect(reaction.mock.calls[1][0]).toEqual({a: 3, b: 2});
+            expect(reaction.mock.calls[0][0]).toBe(state());
+            expect(reaction.mock.calls[1][0]).toBe(state());
+
+        })
+
+        it("should run a reaction setting a new mutable object, and it changes", () => {
+            let originalMutable = mutableObject({a: 1, b: 2});
+            let {reaction, setState, state} = new Reactive().record((reactive) => {
+                const reaction = jest.fn();
+                let [state, setState] = reactive.createState(originalMutable);
+                reactive.createReaction(() => {
+                    reaction(state())
+                })
+                return {reaction, setState, state}
+            })
+
+            setState(mutableObject({a: 3, b: 4}))
+            state().a = 5;
+
+            expect(reaction.mock.calls.length).toBe(3);
+            expect(reaction.mock.calls[1][0]).toEqual({a: 5, b: 4});
+            expect(reaction.mock.calls[0][0]).toBe(originalMutable);
+            expect(reaction.mock.calls[1][0]).toBe(state());
+            expect(reaction.mock.calls[2][0]).toBe(state());
+        })
+
+        it("should not run a reaction when a mutable object that was replaced in state is updated", () => {
+            let originalMutable = mutableObject({a: 1, b: 2});
+            let {reaction, setState, state} = new Reactive().record((reactive) => {
+                const reaction = jest.fn();
+                let [state, setState] = reactive.createState(originalMutable);
+                reactive.createReaction(() => {
+                    reaction(state())
+                })
+                return {reaction, setState, state}
+            })
+
+            setState(mutableObject({a: 3, b: 4}))
+            originalMutable.a = 5;
+
+            expect(reaction.mock.calls.length).toBe(2);
+            expect(reaction.mock.calls[1][0]).toEqual({a: 3, b: 4});
+            expect(reaction.mock.calls[0][0]).toBe(originalMutable);
+            expect(reaction.mock.calls[1][0]).toBe(state());
         })
     })
 });

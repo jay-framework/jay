@@ -1,4 +1,5 @@
 import { checkModified, Revisioned } from "./revisioned";
+import {addMutableListener, isMutable, removeMutableListener} from "./mutable";
 
 
 export type Next<T> = (t: T) => T
@@ -23,22 +24,31 @@ export class Reactive {
             this.recording = false;
         }
     }
+
     createState<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: Setter<T>] {
         let current: Revisioned<T>;
         let reactionsToRerun: boolean[] = [];
 
+        const triggerReactions = () => {
+            for (let index = 0; index < reactionsToRerun.length; index++) {
+                if (reactionsToRerun[index]) {
+                    if (this.batchedReactionsToRun)
+                        this.batchedReactionsToRun[index] = true;
+                    else
+                        this.reactions[index]();
+                }
+            }
+        }
+
         let setter = (value: T | Next<T>) => {
             let isModified;
+            if (current && isMutable(current.value))
+                removeMutableListener(current.value, triggerReactions);
             [current, isModified] = checkModified((typeof value === 'function') ? (value as Next<T>)(current?.value) : value, current);
             if (isModified)
-                for (let index = 0; index < reactionsToRerun.length; index++) {
-                    if (reactionsToRerun[index]) {
-                        if (this.batchedReactionsToRun)
-                            this.batchedReactionsToRun[index] = true;
-                        else
-                            this.reactions[index]();
-                    }
-                }
+                triggerReactions();
+            if (isMutable(current.value))
+                addMutableListener(current.value, triggerReactions)
             return current.value;
         }
 
