@@ -8,11 +8,12 @@ export function mutableObject<T>(original: Array<T>, notifyParent?: () => void):
     const childChanged = () => changed();
     const changed = () => {
         touchRevision(original)
-        notifyParent?.();
+        notifyParent?.();                       
     }
     return new Proxy(original, {
         deleteProperty: function(target, property) {
             delete target[property];
+            childRefs.delete(target[property]);
             changed();
             return true;
         },
