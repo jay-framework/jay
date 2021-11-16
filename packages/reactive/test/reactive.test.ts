@@ -1,6 +1,6 @@
 import {describe, expect, it, jest} from '@jest/globals'
-import {Reactive} from "../lib/reactive";
-import {touchRevision} from '../lib/revisioned';
+import {Reactive} from "../lib";
+import {touchRevision} from '../lib';
 import {mutableObject} from "../lib/mutable";
 
 describe('reactive', () => {
@@ -21,7 +21,7 @@ describe('reactive', () => {
         it('with a default value', () => {
             let res;
             new Reactive().record((reactive) => {
-                let [state, setState] = reactive.createState(12);
+                let [state, ] = reactive.createState(12);
                 res = state();
             })
 
@@ -31,7 +31,7 @@ describe('reactive', () => {
         it('with a getter function', () => {
             let res;
             new Reactive().record((reactive) => {
-                let [state, setState] = reactive.createState(() => 12);
+                let [state, ] = reactive.createState(() => 12);
                 res = state();
             })
 
@@ -384,13 +384,13 @@ describe('reactive', () => {
 
     describe("reactive with mutable state", () => {
         it("should run a reaction when mutable object state changes", () => {
-            let {reaction, setState, state} = new Reactive().record((reactive) => {
+            let {reaction, state} = new Reactive().record((reactive) => {
                 const reaction = jest.fn();
-                let [state, setState] = reactive.createState(mutableObject({a: 1, b: 2}));
+                let [state, ] = reactive.createState(mutableObject({a: 1, b: 2}));
                 reactive.createReaction(() => {
                     reaction(state())
                 })
-                return {reaction, setState, state}
+                return {reaction, state}
             })
 
             state().a = 3;
@@ -403,13 +403,13 @@ describe('reactive', () => {
         })
 
         it("should run a reaction when mutable sub-object state changes", () => {
-            let {reaction, setState, state} = new Reactive().record((reactive) => {
+            let {reaction, state} = new Reactive().record((reactive) => {
                 const reaction = jest.fn();
-                let [state, setState] = reactive.createState(mutableObject({a: 1, b: 2, c: {d: 4, e: 5}}));
+                let [state, ] = reactive.createState(mutableObject({a: 1, b: 2, c: {d: 4, e: 5}}));
                 reactive.createReaction(() => {
                     reaction(state())
                 })
-                return {reaction, setState, state}
+                return {reaction, state}
             })
 
             state().c.d = 8;
