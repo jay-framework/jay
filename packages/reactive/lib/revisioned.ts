@@ -8,8 +8,19 @@ export interface Revisioned<T> {
     revision: number
 }
 
+export function getRevision<T extends object>(value: T): Revisioned<T> {
+    return {value, revision: value[REVISION] || NaN};
+}
+
 export function touchRevision<T extends object>(value: T): T {
-    value[REVISION] = nextRevision++;
+    if (!Object.getOwnPropertyDescriptor(value, REVISION))
+        Object.defineProperty(value, REVISION, {
+            value: nextRevision++,
+            enumerable: false,
+            writable: true
+        });
+    else
+        value[REVISION] = nextRevision++;
     return value
 }
 
