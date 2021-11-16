@@ -1,5 +1,5 @@
 import {describe, expect, it, jest} from '@jest/globals'
-import {mutableObject} from "../lib/mutable";
+import {isMutable, mutableObject} from "../lib/mutable";
 import {checkModified, getRevision} from "../lib";
 
 describe("mutable", () => {
@@ -458,4 +458,29 @@ describe("mutable", () => {
         })
     })
 
+    describe("isMutable", () => {
+        it('for mutable object', () => {
+            let mutable = mutableObject({a: 1, b:2});
+
+            expect(isMutable(mutable)).toBe(true)
+        })
+
+        it('for mutable array', () => {
+            let mutableArr = mutableObject([1,2,3]);
+
+            expect(isMutable(mutableArr)).toBe(true)
+        })
+
+        it('for regular object', () => {
+            let mutable = {a: 1, b:2};
+
+            expect(isMutable(mutable)).toBe(false)
+        })
+
+        it('for regular array', () => {
+            let mutableArr = [1,2,3];
+
+            expect(isMutable(mutableArr)).toBe(false)
+        })
+    })
 })

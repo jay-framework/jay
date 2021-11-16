@@ -56,7 +56,7 @@ export class Reactive {
             })
         }
         else
-            [current] = checkModified(value);
+            setter(value);
 
         return [getter, setter]
     }

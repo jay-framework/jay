@@ -1,7 +1,6 @@
 import {JayElement, JayComponent, ContextStack, MountFunc} from 'jay-runtime'
 import {ValueOrGetter, Getter, Reactive, Setter} from 'jay-reactive'
 import {applyToRefs, refsRecorder} from "./refs-recorder";
-import {monitorEventLoopDelay} from "perf_hooks";
 
 export type Props<PropsT> = {
     [K in keyof PropsT]: Getter<PropsT[K]>

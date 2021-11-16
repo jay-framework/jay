@@ -1,5 +1,9 @@
 import {touchRevision} from "./revisioned";
 
+const isProxy = Symbol("isProxy")
+export function isMutable(obj: object): boolean {
+    return !!obj[isProxy];
+}
 
 export function mutableObject<T extends object>(original: T, notifyParent?: () => void): T
 export function mutableObject<T>(original: Array<T>, notifyParent?: () => void): Array<T> {
@@ -23,7 +27,9 @@ export function mutableObject<T>(original: Array<T>, notifyParent?: () => void):
             return true;
         },
         get: function(target, property: PropertyKey) {
-            if (typeof target[property] === 'object') {
+            if (property === isProxy)
+                return true;
+            else if (typeof target[property] === 'object') {
                 if (!childRefs.get(target[property]))
                     childRefs.set(target[property], mutableObject(target[property], childChanged))
                 return childRefs.get(target[property])
