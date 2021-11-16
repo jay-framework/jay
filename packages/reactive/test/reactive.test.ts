@@ -402,6 +402,25 @@ describe('reactive', () => {
 
         })
 
+        it("should run a reaction when mutable sub-object state changes", () => {
+            let {reaction, setState, state} = new Reactive().record((reactive) => {
+                const reaction = jest.fn();
+                let [state, setState] = reactive.createState(mutableObject({a: 1, b: 2, c: {d: 4, e: 5}}));
+                reactive.createReaction(() => {
+                    reaction(state())
+                })
+                return {reaction, setState, state}
+            })
+
+            state().c.d = 8;
+
+            expect(reaction.mock.calls.length).toBe(2);
+            expect(reaction.mock.calls[1][0]).toEqual({a: 1, b: 2, c: {d: 8, e: 5}});
+            expect(reaction.mock.calls[0][0]).toBe(state());
+            expect(reaction.mock.calls[1][0]).toBe(state());
+
+        })
+
         it("should run a reaction setting a new mutable object, and it changes", () => {
             let originalMutable = mutableObject({a: 1, b: 2});
             let {reaction, setState, state} = new Reactive().record((reactive) => {
