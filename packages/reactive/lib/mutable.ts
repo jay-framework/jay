@@ -1,38 +1,34 @@
 import {touchRevision} from "./revisioned";
 
 
-export function mutableArray<T>(arr: Array<T>): Array<T> {
-    touchRevision(arr);
-    return new Proxy(arr, {
+export function mutableObject<T extends object>(original: T, notifyParent?: () => void): T
+export function mutableObject<T>(original: Array<T>, notifyParent?: () => void): Array<T> {
+    touchRevision(original);
+    const childRefs = new WeakMap();
+    const childChanged = () => changed();
+    const changed = () => {
+        touchRevision(original)
+        notifyParent?.();
+    }
+    return new Proxy(original, {
         deleteProperty: function(target, property) {
-            touchRevision(arr);
             delete target[property];
-            console.log("Deleted %s", property);
+            changed();
             return true;
         },
         set: function(target, property, value) {
             target[property] = value;
-            touchRevision(arr);
-            console.log("Set", property, "to", value);
-            return true;
-        }
-    });
-}
-
-export function mutableObject<T extends object>(obj: T): T {
-    touchRevision(obj);
-    return new Proxy(obj, {
-        deleteProperty: function(target, property) {
-            touchRevision(obj);
-            delete target[property];
-            console.log("Deleted %s", property);
+            changed();
             return true;
         },
-        set: function(target, property, value) {
-            target[property] = value;
-            touchRevision(obj);
-            console.log("Set", property, "to", value);
-            return true;
+        get: function(target, property: PropertyKey) {
+            if (typeof target[property] === 'object') {
+                if (!childRefs.get(target[property]))
+                    childRefs.set(target[property], mutableObject(target[property], childChanged))
+                return childRefs.get(target[property])
+            }
+            else
+                return target[property];
         }
     });
 }

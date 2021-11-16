@@ -1,5 +1,5 @@
 import {describe, expect, it, jest} from '@jest/globals'
-import {mutableArray, mutableObject} from "../lib/mutable";
+import {mutableObject} from "../lib/mutable";
 import {checkModified, getRevision} from "../lib";
 
 describe("mutable", () => {
@@ -42,7 +42,7 @@ describe("mutable", () => {
 
     describe("array", () => {
         it('should create mutable array', () => {
-            let mutableArr = mutableArray([1,2,3]);
+            let mutableArr = mutableObject([1,2,3]);
             let revisioned = getRevision(mutableArr);
 
             expect(Array.isArray(mutableArr)).toBe(true);
@@ -51,7 +51,7 @@ describe("mutable", () => {
         })
 
         it('should support set element', () => {
-            let mutableArr = mutableArray([1,2,3]);
+            let mutableArr = mutableObject([1,2,3]);
             let revisioned = getRevision(mutableArr);
             mutableArr[1] = 4
             let [, modified] = checkModified(mutableArr, revisioned);
@@ -61,7 +61,7 @@ describe("mutable", () => {
         })
 
         it('should support copyWithin element', () => {
-            let mutableArr = mutableArray(['a', 'b', 'c', 'd', 'e']);
+            let mutableArr = mutableObject(['a', 'b', 'c', 'd', 'e']);
             let revisioned = getRevision(mutableArr);
 
             mutableArr.copyWithin(0, 3, 4);
@@ -76,7 +76,7 @@ describe("mutable", () => {
         })
 
         it('should support array entries', () => {
-            let mutableArr = mutableArray(['a', 'b', 'c']);
+            let mutableArr = mutableObject(['a', 'b', 'c']);
             let revisioned = getRevision(mutableArr);
 
             const iterator1 = mutableArr.entries();
@@ -88,7 +88,7 @@ describe("mutable", () => {
         })
 
         it('should support every', () => {
-            let mutableArr = mutableArray([1, 30, 39, 29, 10, 13]);
+            let mutableArr = mutableObject([1, 30, 39, 29, 10, 13]);
             let revisioned = getRevision(mutableArr);
             const isBelowThreshold = (currentValue) => currentValue < 40;
 
@@ -98,7 +98,7 @@ describe("mutable", () => {
         })
 
         it('should support fill', () => {
-            let mutableArr = mutableArray([1, 2, 3, 4]);
+            let mutableArr = mutableObject([1, 2, 3, 4]);
             let revisioned = getRevision(mutableArr);
 
             expect(mutableArr.fill(0, 2, 4)).toEqual([1, 2, 0, 0]);
@@ -113,7 +113,7 @@ describe("mutable", () => {
         })
 
         it('should support filter', () => {
-            let mutableArr = mutableArray(['spray', 'limit', 'elite', 'exuberant', 'destruction', 'present']);
+            let mutableArr = mutableObject(['spray', 'limit', 'elite', 'exuberant', 'destruction', 'present']);
             let revisioned = getRevision(mutableArr);
 
             const result = mutableArr.filter(word => word.length > 6);
@@ -124,7 +124,7 @@ describe("mutable", () => {
         })
 
         it('should support find', () => {
-            let mutableArr = mutableArray([5, 12, 8, 130, 44]);
+            let mutableArr = mutableObject([5, 12, 8, 130, 44]);
             let revisioned = getRevision(mutableArr);
 
             const found = mutableArr.find(element => element > 10);
@@ -135,7 +135,7 @@ describe("mutable", () => {
         })
 
         it('should support findIndex', () => {
-            let mutableArr = mutableArray([5, 12, 8, 130, 44]);
+            let mutableArr = mutableObject([5, 12, 8, 130, 44]);
             let revisioned = getRevision(mutableArr);
             const isLargeNumber = (element) => element > 13;
 
@@ -145,8 +145,8 @@ describe("mutable", () => {
         })
 
         it('should support flat', () => {
-            let mutableArr = mutableArray([0, 1, 2, [3, 4]]);
-            let mutableArr2 = mutableArray([0, 1, 2, [[[3, 4]]]]);
+            let mutableArr = mutableObject([0, 1, 2, [3, 4]]);
+            let mutableArr2 = mutableObject([0, 1, 2, [[[3, 4]]]]);
             let revisioned = getRevision(mutableArr);
 
             // @ts-ignore
@@ -158,7 +158,7 @@ describe("mutable", () => {
         })
 
         it('should support flatMap', () => {
-            let mutableArr = mutableArray([1, 2, 3, 4]);
+            let mutableArr = mutableObject([1, 2, 3, 4]);
             let revisioned = getRevision(mutableArr);
 
             // @ts-ignore
@@ -169,7 +169,7 @@ describe("mutable", () => {
 
         it('should support forEach', () => {
             let fn = jest.fn()
-            let mutableArr = mutableArray(['a', 'b', 'c']);
+            let mutableArr = mutableObject(['a', 'b', 'c']);
             let revisioned = getRevision(mutableArr);
 
             mutableArr.forEach(_ => fn(_))
@@ -183,8 +183,8 @@ describe("mutable", () => {
         })
 
         it('should support includes', () => {
-            let mutableArr = mutableArray([1, 2, 3]);
-            let mutableArr2 = mutableArray(['cat', 'dog', 'bat']);
+            let mutableArr = mutableObject([1, 2, 3]);
+            let mutableArr2 = mutableObject(['cat', 'dog', 'bat']);
             let revisioned = getRevision(mutableArr);
 
             expect(mutableArr.includes(2)).toEqual(true);
@@ -195,7 +195,7 @@ describe("mutable", () => {
         })
 
         it('should support join', () => {
-            let mutableArr = mutableArray(['Fire', 'Air', 'Water']);
+            let mutableArr = mutableObject(['Fire', 'Air', 'Water']);
             let revisioned = getRevision(mutableArr);
 
             expect(mutableArr.join()).toEqual("Fire,Air,Water");
@@ -206,7 +206,7 @@ describe("mutable", () => {
         })
 
         it('should support keys', () => {
-            let mutableArr = mutableArray(['a', 'b', 'c']);
+            let mutableArr = mutableObject(['a', 'b', 'c']);
             let revisioned = getRevision(mutableArr);
 
             const iterator = mutableArr.keys();
@@ -218,7 +218,7 @@ describe("mutable", () => {
         })
 
         it('should support lastIndexOf', () => {
-            let mutableArr = mutableArray(['Dodo', 'Tiger', 'Penguin', 'Dodo']);
+            let mutableArr = mutableObject(['Dodo', 'Tiger', 'Penguin', 'Dodo']);
             let revisioned = getRevision(mutableArr);
 
             expect(mutableArr.lastIndexOf('Dodo')).toEqual(3);
@@ -228,7 +228,7 @@ describe("mutable", () => {
         })
 
         it('should support map', () => {
-            let mutableArr = mutableArray([1, 4, 9, 16]);
+            let mutableArr = mutableObject([1, 4, 9, 16]);
             let revisioned = getRevision(mutableArr);
 
             expect(mutableArr.map(x => x * 2)).toEqual([2, 8, 18, 32]);
@@ -237,7 +237,7 @@ describe("mutable", () => {
         })
 
         it('should support pop', () => {
-            let mutableArr = mutableArray(['broccoli', 'cauliflower', 'cabbage', 'kale', 'tomato']);
+            let mutableArr = mutableObject(['broccoli', 'cauliflower', 'cabbage', 'kale', 'tomato']);
             let revisioned = getRevision(mutableArr);
 
             expect(mutableArr.pop()).toEqual("tomato");
@@ -252,7 +252,7 @@ describe("mutable", () => {
         })
 
         it('should support push', () => {
-            let mutableArr = mutableArray([1,2,3]);
+            let mutableArr = mutableObject([1,2,3]);
             let revisioned = getRevision(mutableArr);
 
             mutableArr.push(4)
@@ -267,7 +267,7 @@ describe("mutable", () => {
         })
 
         it('should support reduce', () => {
-            let mutableArr = mutableArray([1,2,3,4]);
+            let mutableArr = mutableObject([1,2,3,4]);
             let revisioned = getRevision(mutableArr);
             const reducer = (previousValue, currentValue) => previousValue + currentValue;
 
@@ -278,7 +278,7 @@ describe("mutable", () => {
         })
 
         it('should support reduceRight', () => {
-            let mutableArr = mutableArray([[0, 1], [2, 3], [4, 5]]);
+            let mutableArr = mutableObject([[0, 1], [2, 3], [4, 5]]);
             let revisioned = getRevision(mutableArr);
             const reducer = (accumulator, currentValue) => accumulator.concat(currentValue)
 
@@ -288,7 +288,7 @@ describe("mutable", () => {
         })
 
         it('should support reverse', () => {
-            let mutableArr = mutableArray(['one', 'two', 'three']);
+            let mutableArr = mutableObject(['one', 'two', 'three']);
             let revisioned = getRevision(mutableArr);
 
             expect(mutableArr.reverse()).toEqual(["three", "two", "one"]);
@@ -297,7 +297,7 @@ describe("mutable", () => {
         })
 
         it('should support shift', () => {
-            let mutableArr = mutableArray([1, 2, 3]);
+            let mutableArr = mutableObject([1, 2, 3]);
             let revisioned = getRevision(mutableArr);
 
             const firstElement = mutableArr.shift()
@@ -309,7 +309,7 @@ describe("mutable", () => {
         })
 
         it('should support slice', () => {
-            let mutableArr = mutableArray(['ant', 'bison', 'camel', 'duck', 'elephant']);
+            let mutableArr = mutableObject(['ant', 'bison', 'camel', 'duck', 'elephant']);
             let revisioned = getRevision(mutableArr);
 
             expect(mutableArr.slice(2)).toEqual(["camel", "duck", "elephant"]);
@@ -322,7 +322,7 @@ describe("mutable", () => {
         })
 
         it('should support some', () => {
-            let mutableArr = mutableArray([1, 2, 3, 4, 5]);
+            let mutableArr = mutableObject([1, 2, 3, 4, 5]);
             let revisioned = getRevision(mutableArr);
 
             const even = (element) => element % 2 === 0;
@@ -333,9 +333,9 @@ describe("mutable", () => {
         })
 
         it('should support sort', () => {
-            let mutableArr = mutableArray(['March', 'Jan', 'Feb', 'Dec']);
+            let mutableArr = mutableObject(['March', 'Jan', 'Feb', 'Dec']);
             let revisioned = getRevision(mutableArr);
-            let mutableArr2 = mutableArray([1, 30, 4, 21, 100000]);
+            let mutableArr2 = mutableObject([1, 30, 4, 21, 100000]);
             let revisioned2 = getRevision(mutableArr2);
 
             mutableArr.sort()
@@ -350,7 +350,7 @@ describe("mutable", () => {
         })
 
         it('should support splice', () => {
-            let mutableArr = mutableArray(['Jan', 'March', 'April', 'June']);
+            let mutableArr = mutableObject(['Jan', 'March', 'April', 'June']);
             let revisioned = getRevision(mutableArr);
 
             mutableArr.splice(1, 0, 'Feb')
@@ -365,7 +365,7 @@ describe("mutable", () => {
         })
 
         it('should support toString', () => {
-            let mutableArr = mutableArray([1, 2, 'a', '1a']);
+            let mutableArr = mutableObject([1, 2, 'a', '1a']);
             let revisioned = getRevision(mutableArr);
 
             expect(mutableArr.toString()).toEqual("1,2,a,1a");
@@ -374,7 +374,7 @@ describe("mutable", () => {
         })
 
         it('should support unshift', () => {
-            let mutableArr = mutableArray([1, 2, 3]);
+            let mutableArr = mutableObject([1, 2, 3]);
             let revisioned = getRevision(mutableArr);
 
             expect(mutableArr.unshift(4, 5)).toEqual(5);
@@ -384,7 +384,7 @@ describe("mutable", () => {
         })
 
         it('should support values', () => {
-            let mutableArr = mutableArray(['a', 'b', 'c']);
+            let mutableArr = mutableObject(['a', 'b', 'c']);
             let revisioned = getRevision(mutableArr);
 
             const iterator = mutableArr.values();
@@ -393,6 +393,68 @@ describe("mutable", () => {
             expect(iterator.next().value).toEqual('c');
             let [, modified] = checkModified(mutableArr, revisioned);
             expect(modified).toBe(false);
+        })
+    })
+
+    describe('nested objects', () => {
+        it('should support object in object', () => {
+            let mutable = mutableObject({
+                a: 1,
+                b: 2,
+                c: {d: 4, e: 5}
+            });
+            let rootRevision = getRevision(mutable);
+            let childRevision = getRevision(mutable.c);
+
+            mutable.c.d = 7;
+
+            let [, rootModified] = checkModified(mutable, rootRevision);
+            let [, childModified] = checkModified(mutable.c, childRevision);
+
+            expect(rootModified).toBe(true);
+            expect(childModified).toBe(true);
+        })
+
+        it('should support object in array', () => {
+            let mutable = mutableObject([
+                {a: 1, b: 2},
+                {a: 3, b: 4},
+                {a: 5, b: 6}
+            ]);
+            let rootRevision = getRevision(mutable);
+            let child1Revision = getRevision(mutable[0]);
+            let child2Revision = getRevision(mutable[1]);
+            let child3Revision = getRevision(mutable[2]);
+
+            mutable[1].a = 7;
+
+            let [, rootModified] = checkModified(mutable, rootRevision);
+            let [, child1Modified] = checkModified(mutable[0], child1Revision);
+            let [, child2Modified] = checkModified(mutable[1], child2Revision);
+            let [, child3Modified] = checkModified(mutable[2], child3Revision);
+
+            expect(rootModified).toBe(true);
+            expect(child1Modified).toBe(false);
+            expect(child2Modified).toBe(true);
+            expect(child3Modified).toBe(false);
+        })
+
+        it('should support array in object', () => {
+            let mutable = mutableObject({
+                a: 1,
+                b: 2,
+                c: [3,4,5]
+        });
+            let rootRevision = getRevision(mutable);
+            let childRevision = getRevision(mutable.c);
+
+            mutable.c.push(4);
+
+            let [, rootModified] = checkModified(mutable, rootRevision);
+            let [, childModified] = checkModified(mutable.c, childRevision);
+
+            expect(rootModified).toBe(true);
+            expect(childModified).toBe(true);
         })
     })
 
