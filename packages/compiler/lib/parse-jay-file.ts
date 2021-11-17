@@ -83,15 +83,17 @@ function resolveType(data: any, validations: JayValidations, path: Array<string>
             types[prop] = new JayArrayType(resolveType(data[prop][0], validations, [...path, prop]));
         else if (isObjectType(data[prop])) {
             types[prop] = resolveType(data[prop], validations, [...path, prop])
-        } else
-            validations.push(`invalid type [${data[prop]}] found at [${[...path, prop].join('.')}]`)
+        } else {
+            let [head, ...pathTail] = path;
+            validations.push(`invalid type [${data[prop]}] found at [${['data', ...pathTail, prop].join('.')}]`)
+        }
     }
     return new JayObjectType(toInterfaceName(path.slice(-1)[0]), types);
 }
 
-function parseJayYaml(jayYaml, validations: JayValidations): { types: JayObjectType, examples: Array<JayExample> } {
+function parseJayYaml(jayYaml, validations: JayValidations, baseElementName: string): { types: JayObjectType, examples: Array<JayExample> } {
     let jayYamlParsed = yaml.load(jayYaml);
-    let types = resolveType(jayYamlParsed.data, validations, ['data']);
+    let types = resolveType(jayYamlParsed.data, validations, [baseElementName+'ViewState']);
     let examples = Object.keys(jayYamlParsed).filter(_ => _ !== 'data').map(exampleName => {
         return {
             name: exampleName,
@@ -101,7 +103,7 @@ function parseJayYaml(jayYaml, validations: JayValidations): { types: JayObjectT
     return {types, examples};
 }
 
-export function parseJayFile(html: string): WithValidations<JayFile> {
+export function parseJayFile(html: string, baseElementName: string): WithValidations<JayFile> {
     let validations = [];
     let root = parse(html);
     let jayYamlElements = root.querySelectorAll('[type="application/yaml-jay"]');
@@ -110,7 +112,7 @@ export function parseJayFile(html: string): WithValidations<JayFile> {
         return new WithValidations(undefined, validations)
     }
     let jayYaml = jayYamlElements[0].text;
-    let {types, examples} = parseJayYaml(jayYaml, validations);
+    let {types, examples} = parseJayYaml(jayYaml, validations, baseElementName);
     let body = root.querySelector('body');
     if (body === null) {
         validations.push(`jay file must have exactly a body tag`);

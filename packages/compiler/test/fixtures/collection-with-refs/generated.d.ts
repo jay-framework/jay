@@ -1,23 +1,25 @@
 import {JayElement, DynamicReference} from "jay-runtime";
 
-interface Item {
+export interface Item {
   name: string,
   completed: boolean,
   cost: number,
   id: string
 }
 
-interface ViewState {
+export interface CollectionWithRefsViewState {
   title: string,
   items: Array<Item>
 }
 
-export interface CollectionWithRefsElement extends JayElement<ViewState> {
+export interface CollectionWithRefsRefs {
   name: DynamicReference<Item>,
   completed: DynamicReference<Item>,
   cost: DynamicReference<Item>,
   done: DynamicReference<Item>
 }
 
-export declare function render(viewState: ViewState): CollectionWithRefsElement
+export type CollectionWithRefsElement = JayElement<CollectionWithRefsViewState, CollectionWithRefsRefs>
+
+export declare function render(viewState: CollectionWithRefsViewState): CollectionWithRefsElement
 

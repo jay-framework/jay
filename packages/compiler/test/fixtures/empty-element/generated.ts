@@ -1,10 +1,14 @@
 import {JayElement, element as e, ConstructContext} from "jay-runtime";
 
-interface ViewState {
+export interface EmptyElementViewState {
 
 }
 
-export function render(viewState: ViewState): JayElement<ViewState> {
+export interface EmptyElementRefs {}
+
+export type EmptyElementElement = JayElement<EmptyElementViewState, EmptyElementRefs>
+
+export function render(viewState: EmptyElementViewState): EmptyElementElement {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
       e('div', {attr: 'value'}, [])

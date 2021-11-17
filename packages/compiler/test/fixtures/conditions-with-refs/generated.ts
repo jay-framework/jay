@@ -1,17 +1,19 @@
 import {JayElement, element as e, dynamicText as dt, conditional as c, dynamicElement as de, ConstructContext} from "jay-runtime";
 
-interface ViewState {
+export interface ConditionsWithRefsViewState {
   text1: string,
   text2: string,
   cond: boolean
 }
 
-export interface ConditionsWithRefsElement extends JayElement<ViewState> {
+export interface ConditionsWithRefsRefs {
   text1: HTMLElement,
   text2: HTMLElement
 }
 
-export function render(viewState: ViewState): ConditionsWithRefsElement {
+export type ConditionsWithRefsElement = JayElement<ConditionsWithRefsViewState, ConditionsWithRefsRefs>
+
+export function render(viewState: ConditionsWithRefsViewState): ConditionsWithRefsElement {
   return ConstructContext.withRootContext(viewState, () =>
     de('div', {}, [
       c(vs => vs.cond,
@@ -22,6 +24,6 @@ export function render(viewState: ViewState): ConditionsWithRefsElement {
           e('span', {ref: 'text2'}, [dt(vs => vs.text2)])
         ])
       )
-    ])) as ConditionsWithRefsElement;
+    ]));
 }
 

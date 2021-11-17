@@ -1,6 +1,6 @@
 import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, dynamicProperty as dp, ConstructContext} from "jay-runtime";
 
-interface ViewState {
+export interface AttributesViewState {
   text: string,
   text2: string,
   text3: string,
@@ -8,7 +8,11 @@ interface ViewState {
   color: string
 }
 
-export function render(viewState: ViewState): JayElement<ViewState> {
+export interface AttributesRefs {}
+
+export type AttributesElement = JayElement<AttributesViewState, AttributesRefs>
+
+export function render(viewState: AttributesViewState): AttributesElement {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
       e('div', {style: {cssText: 'background: red;'}}, [dt(vs => vs.text)]),

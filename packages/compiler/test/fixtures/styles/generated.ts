@@ -1,11 +1,15 @@
 import {JayElement, element as e, dynamicText as dt, ConstructContext} from "jay-runtime";
 
-interface ViewState {
+export interface StylesViewState {
   text1: string,
   text2: string
 }
 
-export function render(viewState: ViewState): JayElement<ViewState> {
+export interface StylesRefs {}
+
+export type StylesElement = JayElement<StylesViewState, StylesRefs>
+
+export function render(viewState: StylesViewState): StylesElement {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
       e('div', {style: {cssText: 'color:red'}}, [dt(vs => vs.text1)]),

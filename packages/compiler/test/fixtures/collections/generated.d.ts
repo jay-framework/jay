@@ -1,16 +1,20 @@
 import {JayElement} from "jay-runtime";
 
-interface Thing {
+export interface Thing {
   name: string,
   completed: boolean,
   cost: number,
   id: string
 }
 
-interface ViewState {
+export interface CollectionsViewState {
   title: string,
   things: Array<Thing>
 }
 
-export declare function render(viewState: ViewState): JayElement<ViewState>
+export interface CollectionsRefs {}
+
+export type CollectionsElement = JayElement<CollectionsViewState, CollectionsRefs>
+
+export declare function render(viewState: CollectionsViewState): CollectionsElement
 

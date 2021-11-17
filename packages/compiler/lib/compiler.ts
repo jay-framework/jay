@@ -22,7 +22,7 @@ function renderInterface(aType: JayObjectType): string {
 
     let childInterfaces = [];
 
-    let genInterface = `interface ${aType.name} {\n`;
+    let genInterface = `export interface ${aType.name} {\n`;
     genInterface += Object
         .keys(aType.props)
         .map(prop => {
@@ -76,8 +76,8 @@ function renderImports(imports: Imports, importsFor: ImportsFor): string {
     return `import {${renderedImports.join(', ')}} from "jay-runtime";`;
 }
 
-function renderFunctionDecleration(elementName?: string): string {
-    return `export declare function render(viewState: ViewState): ${elementName? elementName:'JayElement<ViewState>'}`;
+function renderFunctionDecleration(typeName: string, elementName: string): string {
+    return `export declare function render(viewState: ${typeName}): ${elementName}`;
 }
 
 function renderTextNode(variables: Variables, text: string, indent: Indent): RenderFragment {
@@ -299,33 +299,35 @@ ${refs.map(_ => `  ${_.ref}: ${_.dynamicRef?'DynamicReference<???>':'HTMLElement
         return {hasRefs: false};
 }
 
-function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, filename: string):
-    {elementName: string, elementType: string, renderedImplementation: RenderFragment} {
+function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, baseElementName: string):
+    {renderedRefs: string, renderedElement: string, elementType: string, renderedImplementation: RenderFragment} {
     let variables = new Variables(types);
     let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), new Indent('    '), false);
-    let elementName = 'JayElement<ViewState>';
-    let defaultElementName = true;
-    let elementType = null;
+    let elementType = baseElementName + 'Element';
+    let refsType = baseElementName + 'Refs';
     let imports = renderedRoot.imports.plus(Import.ConstructContext);
+    let renderedRefs;
     if (renderedRoot.refs.length > 0) {
-        elementName = capitalCase(filename, {delimiter:''}) + 'Element';
-        defaultElementName = false;
         const renderedReferences = renderedRoot.refs.map(_ => {
             const referenceType = _.dynamicRef?`DynamicReference<${_.refType.name}>`:'HTMLElement';
             return `  ${_.ref}: ${referenceType}`
         }).join(',\n');
-        elementType = `export interface ${elementName} extends JayElement<ViewState> {
+        renderedRefs = `export interface ${refsType} {
 ${renderedReferences}
 }`
         if (renderedRoot.refs.find(_ => _.dynamicRef))
             imports = imports.plus(Import.DynamicReference)
     }
+    else
+        renderedRefs = `export interface ${refsType} {}`;
 
-    let body = `export function render(viewState: ViewState): ${elementName?elementName:'JayElement<ViewState>'} {
+    let renderedElement = `export type ${elementType} = JayElement<${types.name}, ${refsType}>`
+
+    let body = `export function render(viewState: ${types.name}): ${elementType} {
   return ConstructContext.withRootContext(viewState, () =>
-${renderedRoot.rendered})${!defaultElementName?` as ${elementName}`:''};
+${renderedRoot.rendered});
 }`;
-    return {elementName, elementType, renderedImplementation: new RenderFragment(body, imports)};
+    return {renderedRefs, renderedElement, elementType, renderedImplementation: new RenderFragment(body, imports)};
 }
 
 function normalizeFilename(filename: string): string {
@@ -333,27 +335,33 @@ function normalizeFilename(filename: string): string {
 }
 
 export function generateDefinitionFile(html: string, filename: string): WithValidations<string> {
-    let parsedFile = parseJayFile(html);
+    const normalizedFileName = normalizeFilename(filename);
+    const baseElementName = capitalCase(normalizedFileName, {delimiter:''})
+    let parsedFile = parseJayFile(html, baseElementName);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        let {elementName, elementType, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, normalizeFilename(filename));
+        let {renderedRefs, renderedElement, elementType, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, baseElementName);
         return [renderImports(renderedImplementation.imports.plus(Import.jayElement), ImportsFor.definition),
             types,
-            elementType,
-            renderFunctionDecleration(elementName)
+            renderedRefs,
+            renderedElement,
+            renderFunctionDecleration(jayFile.types.name, elementType)
         ]   .filter(_ => _ !== null)
             .join('\n\n');
     })
 }
 
 export function generateRuntimeFile(html: string, filename: string): WithValidations<string> {
-    let parsedFile = parseJayFile(html);
+    const normalizedFileName = normalizeFilename(filename);
+    const baseElementName = capitalCase(normalizedFileName, {delimiter:''})
+    let parsedFile = parseJayFile(html, baseElementName);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        let {elementType, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, normalizeFilename(filename));
+        let {renderedRefs, renderedElement, elementType, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, baseElementName);
         return [renderImports(renderedImplementation.imports.plus(Import.element).plus(Import.jayElement), ImportsFor.implementation),
             types,
-            elementType,
+            renderedRefs,
+            renderedElement,
             renderedImplementation.rendered
         ]   .filter(_ => _ !== null)
             .join('\n\n');

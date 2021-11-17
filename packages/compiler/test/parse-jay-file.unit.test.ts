@@ -23,9 +23,20 @@ describe('compiler', () => {
                 `data:
                         |   text: string
                         |`,
-                '<body></body>'))
+                '<body></body>'), 'Base')
             
-            expect(jayFile.val.types).toEqual(new JayObjectType('ViewState', {text: JayString}));
+            expect(jayFile.val.types).toEqual(new JayObjectType('BaseViewState', {text: JayString}));
+            expect(jayFile.val.examples).toEqual([]);
+        });
+
+        it('should append the base name to the view state type', () => {
+            let jayFile = parseJayFile(jayFileWith(
+                `data:
+                        |   text: string
+                        |`,
+                '<body></body>'), 'BaseElementName')
+
+            expect(jayFile.val.types).toEqual(new JayObjectType('BaseElementNameViewState', {text: JayString}));
             expect(jayFile.val.examples).toEqual([]);
         });
 
@@ -36,9 +47,9 @@ describe('compiler', () => {
                         |
                         | example:
                         |   text: 'hello world'`,
-                '<body></body>'))
+                '<body></body>'), 'Base')
 
-            expect(jayFile.val.types).toEqual(new JayObjectType('ViewState',{text: JayString}));
+            expect(jayFile.val.types).toEqual(new JayObjectType('BaseViewState',{text: JayString}));
             expect(jayFile.val.examples).toEqual([{name: "example", data:{text: "hello world"}}]);
         });
 
@@ -46,7 +57,7 @@ describe('compiler', () => {
             let jayFile = parseJayFile(jayFileWith(
                 ` data:
                         |   text: bla`,
-                '<body></body>'))
+                '<body></body>'), 'Base')
 
             expect(jayFile.validations).toEqual(["invalid type [bla] found at [data.text]"]);
         });
@@ -63,9 +74,9 @@ describe('compiler', () => {
                         |   a1: 
                         |    -  s3: string
                         |       n3: number`,
-                '<body></body>'))
+                '<body></body>'), 'Base')
 
-            expect(jayFile.val.types).toEqual(new JayObjectType('ViewState',{
+            expect(jayFile.val.types).toEqual(new JayObjectType('BaseViewState',{
                 s1: JayString,
                 n1: JayNumber,
                 b1: JayBoolean,
@@ -94,7 +105,7 @@ describe('compiler', () => {
                 |        </script>
                 |    </head>
                 |    <body>x</body>
-                |</html>`))
+                |</html>`), 'Base')
             expect(jayFile.validations).toEqual(["jay file should have exactly one yaml-jay script, found 2"]);
         })
 
@@ -104,12 +115,12 @@ describe('compiler', () => {
                 |    <head>
                 |    </head>
                 |    <body>x</body>
-                |</html>`))
+                |</html>`), 'Base')
             expect(jayFile.validations).toEqual(["jay file should have exactly one yaml-jay script, found none"]);
         })
 
         it('should report on a non html file', () => {
-            let jayFile = parseJayFile(`rrgargaergargaerg aergaegaraer aer erager`)
+            let jayFile = parseJayFile(`rrgargaergargaerg aergaegaraer aer erager`, 'Base')
             expect(jayFile.validations).toEqual(["jay file should have exactly one yaml-jay script, found none"]);
         })
 
@@ -122,7 +133,7 @@ describe('compiler', () => {
                 |  name: string
                 |        </script>
                 |    </head>
-                |</html>`))
+                |</html>`), 'Base')
             expect(jayFile.validations).toEqual(["jay file must have exactly a body tag"]);
         })
     })

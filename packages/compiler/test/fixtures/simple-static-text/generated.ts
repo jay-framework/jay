@@ -1,10 +1,14 @@
 import {JayElement, element as e, ConstructContext} from "jay-runtime";
 
-interface ViewState {
+export interface SimpleStaticTextViewState {
   s1: string
 }
 
-export function render(viewState: ViewState): JayElement<ViewState> {
+export interface SimpleStaticTextRefs {}
+
+export type SimpleStaticTextElement = JayElement<SimpleStaticTextViewState, SimpleStaticTextRefs>
+
+export function render(viewState: SimpleStaticTextViewState): SimpleStaticTextElement {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, ['static text']));
 }

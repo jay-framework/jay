@@ -1,25 +1,27 @@
 import {JayElement, element as e, dynamicText as dt, dynamicElement as de, forEach, ConstructContext, DynamicReference} from "jay-runtime";
 
-interface Item {
+export interface Item {
   name: string,
   completed: boolean,
   cost: number,
   id: string
 }
 
-interface ViewState {
+export interface CollectionWithRefsViewState {
   title: string,
   items: Array<Item>
 }
 
-export interface CollectionWithRefsElement extends JayElement<ViewState> {
+export interface CollectionWithRefsRefs {
   name: DynamicReference<Item>,
   completed: DynamicReference<Item>,
   cost: DynamicReference<Item>,
   done: DynamicReference<Item>
 }
 
-export function render(viewState: ViewState): CollectionWithRefsElement {
+export type CollectionWithRefsElement = JayElement<CollectionWithRefsViewState, CollectionWithRefsRefs>
+
+export function render(viewState: CollectionWithRefsViewState): CollectionWithRefsElement {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
       e('h1', {}, [dt(vs => vs.title)]),
@@ -32,6 +34,6 @@ export function render(viewState: ViewState): CollectionWithRefsElement {
             e('button', {style: {cssText: 'border:1px blue; background: darkblue; color: white; display: inline-block;'}, ref: 'done'}, ['done'])
           ])}, 'id')
       ])
-    ])) as CollectionWithRefsElement;
+    ]));
 }
 

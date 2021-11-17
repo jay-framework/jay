@@ -1,18 +1,22 @@
 import {JayElement, element as e, dynamicText as dt, dynamicElement as de, forEach, ConstructContext} from "jay-runtime";
 
-interface Thing {
+export interface Thing {
   name: string,
   completed: boolean,
   cost: number,
   id: string
 }
 
-interface ViewState {
+export interface CollectionsViewState {
   title: string,
   things: Array<Thing>
 }
 
-export function render(viewState: ViewState): JayElement<ViewState> {
+export interface CollectionsRefs {}
+
+export type CollectionsElement = JayElement<CollectionsViewState, CollectionsRefs>
+
+export function render(viewState: CollectionsViewState): CollectionsElement {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
       e('h1', {}, [dt(vs => vs.title)]),

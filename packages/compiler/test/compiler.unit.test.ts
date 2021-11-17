@@ -14,14 +14,14 @@ describe('compiler', () => {
 
     describe('generate data interfaces', () => {
         it('should generate simple interface', () => {
-            let genInterface = generateTypes(new JayObjectType('ViewState', {
+            let genInterface = generateTypes(new JayObjectType('ElementNameViewState', {
                 name: JayString,
                 age: JayNumber,
                 bool: JayBoolean,
                 bdate: JayDate
             }));
             expect(genInterface).toEqual(stripMargin(
-                `interface ViewState {
+                `export interface ElementNameViewState {
                 |  name: string,
                 |  age: number,
                 |  bool: boolean,
@@ -30,36 +30,36 @@ describe('compiler', () => {
         })
 
         it('should generate interface with complex object types', () => {
-            let genInterface = generateTypes(new JayObjectType('ViewState', {
+            let genInterface = generateTypes(new JayObjectType('ElementNameViewState', {
                 name: JayString,
                 address: new JayObjectType('Address', {
                     street: JayString,
                 })
             }));
             expect(genInterface).toEqual(stripMargin(
-                `interface Address {
+                `export interface Address {
                 |  street: string
                 |}
                 |
-                |interface ViewState {
+                |export interface ElementNameViewState {
                 |  name: string,
                 |  address: Address
                 |}`));
         })
 
         it('should generate interface with complex array of object types', () => {
-            let genInterface = generateTypes(new JayObjectType('ViewState', {
+            let genInterface = generateTypes(new JayObjectType('ElementNameViewState', {
                 name: JayString,
                 address: new JayArrayType(new JayObjectType('Address', {
                     street: JayString,
                 }))
             }));
             expect(genInterface).toEqual(stripMargin(
-                `interface Address {
+                `export interface Address {
                 |  street: string
                 |}
                 |
-                |interface ViewState {
+                |export interface ElementNameViewState {
                 |  name: string,
                 |  address: Array<Address>
                 |}`));

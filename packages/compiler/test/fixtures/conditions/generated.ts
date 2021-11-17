@@ -1,12 +1,16 @@
 import {JayElement, element as e, dynamicText as dt, conditional as c, dynamicElement as de, ConstructContext} from "jay-runtime";
 
-interface ViewState {
+export interface ConditionsViewState {
   text1: string,
   text2: string,
   cond: boolean
 }
 
-export function render(viewState: ViewState): JayElement<ViewState> {
+export interface ConditionsRefs {}
+
+export type ConditionsElement = JayElement<ConditionsViewState, ConditionsRefs>
+
+export function render(viewState: ConditionsViewState): ConditionsElement {
   return ConstructContext.withRootContext(viewState, () =>
     de('div', {}, [
       c(vs => vs.cond,

@@ -1,12 +1,16 @@
 import {JayElement, element as e, dynamicText as dt, ConstructContext} from "jay-runtime";
 
-interface ViewState {
+export interface Composite2ViewState {
   title: string,
   subtitle: string,
   article: string
 }
 
-export function render(viewState: ViewState): JayElement<ViewState> {
+export interface Composite2Refs {}
+
+export type Composite2Element = JayElement<Composite2ViewState, Composite2Refs>
+
+export function render(viewState: Composite2ViewState): Composite2Element {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
       e('h1', {}, [dt(vs => vs.title)]),

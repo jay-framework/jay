@@ -1,16 +1,16 @@
 import {JayElement} from "jay-runtime";
 
-interface O1 {
+export interface O1 {
   s2: string,
   n2: number
 }
 
-interface A1 {
+export interface A1 {
   s3: string,
   n3: number
 }
 
-interface ViewState {
+export interface DefinitionViewState {
   s1: string,
   n1: number,
   b1: boolean,
@@ -18,4 +18,8 @@ interface ViewState {
   a1: Array<A1>
 }
 
-export declare function render(viewState: ViewState): JayElement<ViewState>
+export interface DefinitionRefs {}
+
+export type DefinitionElement = JayElement<DefinitionViewState, DefinitionRefs>
+
+export declare function render(viewState: DefinitionViewState): DefinitionElement
