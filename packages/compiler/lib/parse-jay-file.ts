@@ -84,7 +84,7 @@ function resolveType(data: any, validations: JayValidations, path: Array<string>
         else if (isObjectType(data[prop])) {
             types[prop] = resolveType(data[prop], validations, [...path, prop])
         } else {
-            let [head, ...pathTail] = path;
+            let [, ...pathTail] = path;
             validations.push(`invalid type [${data[prop]}] found at [${['data', ...pathTail, prop].join('.')}]`)
         }
     }

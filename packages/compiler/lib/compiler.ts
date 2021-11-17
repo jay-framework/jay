@@ -76,7 +76,7 @@ function renderImports(imports: Imports, importsFor: ImportsFor): string {
     return `import {${renderedImports.join(', ')}} from "jay-runtime";`;
 }
 
-function renderFunctionDecleration(typeName: string, elementName: string): string {
+function renderFunctionDeclaration(typeName: string, elementName: string): string {
     return `export declare function render(viewState: ${typeName}): ${elementName}`;
 }
 
@@ -89,7 +89,7 @@ const propertyMapping = {
     'input:checked': {type: 'property'}
 }
 
-const attributesRequiresQoutes = /[- ]/;
+const attributesRequiresQuotes = /[- ]/;
 function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
     let attributes = element.attributes;
     let refs: Ref[] = [];
@@ -97,7 +97,7 @@ function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: 
     Object.keys(attributes).forEach(attrName => {
         let attrCanonical = attrName.toLowerCase();
         let tagAttrCanonical = element.tagName.toLowerCase() + ':' + attrCanonical;
-        let attrKey = attrCanonical.match(attributesRequiresQoutes) ? `"${attrCanonical}"` : attrCanonical;
+        let attrKey = attrCanonical.match(attributesRequiresQuotes) ? `"${attrCanonical}"` : attrCanonical;
         if (attrCanonical === 'if' || attrCanonical === 'foreach' || attrCanonical === 'trackby')
             return;
         if (attrCanonical === 'ref')
@@ -134,25 +134,6 @@ function isConditional(node: Node): boolean {
 
 function isForEach(node: Node): boolean {
     return (node.nodeType !== NodeType.TEXT_NODE) && (node as HTMLElement).hasAttribute('forEach');
-}
-
-function findRefs(node: Node, dynamicRef: boolean): {ref: string, dynamicRef: boolean}[] {
-    switch(node.nodeType) {
-        case NodeType.TEXT_NODE:
-            return []
-        case NodeType.ELEMENT_NODE:
-            let htmlElement = node as HTMLElement;
-            if (isForEach(htmlElement))
-                dynamicRef = true;
-            let refs = [];
-            if (htmlElement.hasAttribute('ref'))
-                refs.push({'ref': htmlElement.getAttribute('ref'), dynamicRef})
-
-            return [...refs, ...htmlElement.childNodes.flatMap(_ => findRefs(_, dynamicRef))]
-        case NodeType.COMMENT_NODE:
-            return []
-    }
-
 }
 
 class Indent {
@@ -285,20 +266,6 @@ function firstElementChild(node: Node): HTMLElement {
     return node.childNodes.find(child => child.nodeType === NodeType.ELEMENT_NODE) as HTMLElement;
 }
 
-function generateElementType(rootBodyElement: HTMLElement, filename?: string): {elementName?: string, elementType?: string, hasRefs: boolean} {
-    let refs = findRefs(firstElementChild(rootBodyElement), false)
-
-    if (refs.length > 0) {
-        //todo
-        let elementName = capitalCase(filename, {delimiter:''}) + 'Element';
-        return {elementName, hasRefs: true, elementType: `export interface ${elementName} extends JayElement<ViewState> {
-${refs.map(_ => `  ${_.ref}: ${_.dynamicRef?'DynamicReference<???>':'HTMLElement'}`).join(',\n')} 
-}`}
-    }
-    else
-        return {hasRefs: false};
-}
-
 function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, baseElementName: string):
     {renderedRefs: string, renderedElement: string, elementType: string, renderedImplementation: RenderFragment} {
     let variables = new Variables(types);
@@ -345,7 +312,7 @@ export function generateDefinitionFile(html: string, filename: string): WithVali
             types,
             renderedRefs,
             renderedElement,
-            renderFunctionDecleration(jayFile.types.name, elementType)
+            renderFunctionDeclaration(jayFile.types.name, elementType)
         ]   .filter(_ => _ !== null)
             .join('\n\n');
     })
@@ -357,7 +324,7 @@ export function generateRuntimeFile(html: string, filename: string): WithValidat
     let parsedFile = parseJayFile(html, baseElementName);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        let {renderedRefs, renderedElement, elementType, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, baseElementName);
+        let {renderedRefs, renderedElement, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, baseElementName);
         return [renderImports(renderedImplementation.imports.plus(Import.element).plus(Import.jayElement), ImportsFor.implementation),
             types,
             renderedRefs,
