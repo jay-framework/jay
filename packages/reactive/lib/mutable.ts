@@ -2,6 +2,7 @@ import {touchRevision} from "./revisioned";
 
 const isProxy = Symbol("isProxy")
 const mutationListener = Symbol("listener")
+const originalSymbol = Symbol("original")
 export function isMutable(obj: any): obj is object {
     return (typeof obj === "object") && !!obj[isProxy];
 }
@@ -38,7 +39,7 @@ export function mutableObject<T>(original: Array<T>, notifyParent?: () => void):
             return true;
         },
         set: function(target, property, value) {
-            target[property] = value;
+            target[property] = isMutable(value)?value[originalSymbol]:value;
             changed();
             return true;
         },
@@ -47,6 +48,8 @@ export function mutableObject<T>(original: Array<T>, notifyParent?: () => void):
                 return true;
             else if (property === mutationListener)
                 return addRemoveChangeListener;
+            else if (property === originalSymbol)
+                return original;
             else if (typeof target[property] === 'object') {
                 if (!childRefs.get(target[property]))
                     childRefs.set(target[property], mutableObject(target[property], childChanged))

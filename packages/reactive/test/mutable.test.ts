@@ -456,6 +456,20 @@ describe("mutable", () => {
             expect(rootModified).toBe(true);
             expect(childModified).toBe(true);
         })
+
+        it('should support re-adding a proxied child as proxy, while storing the raw object', () => {
+            let raw = {
+                a: 1,
+                b: 2,
+                c: {d: 4, e: 5},
+                d: undefined
+            };
+            let mutable = mutableObject(raw);
+
+            mutable.d = mutable.c;
+
+            expect(isMutable(raw.d)).toBe(false);
+        })
     })
 
     describe("isMutable", () => {
