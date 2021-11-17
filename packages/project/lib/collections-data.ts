@@ -1,5 +1,6 @@
-import {render, ViewState} from './collections.jay.html';
+import {render, CollectionsViewState} from './collections.jay.html';
 import benchmark from "./benchmark";
+import {mutableObject} from 'jay-reactive';
 
 export default function run(target, cycles, progressCallback) {
     let dataFunc = data();
@@ -12,12 +13,12 @@ export default function run(target, cycles, progressCallback) {
 
 function data() {
     let title = 'todo';
-    let items = [
+    let items = mutableObject([
         {name: 'car', completed: false, cost: 10, id: 'a'},
         {name: 'plane', completed: true, cost: 100, id: 'b'},
         {name: 'boat', completed: false, cost: 50, id: 'c'}
-    ];
-    return function (index): ViewState {
+    ]);
+    return function (index): CollectionsViewState {
         if (index === 0)
             return {title, items};
         else {
