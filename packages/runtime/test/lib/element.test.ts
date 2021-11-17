@@ -7,6 +7,7 @@ import {
     dynamicProperty as dp, ConstructContext, BaseJayElement
 } from '../../lib/element';
 import {beforeEach, describe, expect, it} from '@jest/globals'
+import { mutableObject } from 'jay-reactive';
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -68,7 +69,7 @@ describe('element', () => {
         it('should update simple element with text', () => {
             expect(jayElement.dom.textContent).toBe(SOME_VALUE);
 
-            data.text = ANOTHER_VALUE;
+            data = {text: ANOTHER_VALUE};
             jayElement.update(data);
 
             expect(jayElement.dom.textContent).toBe(ANOTHER_VALUE);
@@ -78,6 +79,7 @@ describe('element', () => {
         it('should not update if update called with the same value', () => {
             expect(jayElement.dom.textContent).toBe(SOME_VALUE);
 
+            data = {text: SOME_VALUE};
             jayElement.update(data);
 
             expect(jayElement.dom.textContent).toBe(SOME_VALUE);
@@ -173,9 +175,7 @@ describe('element', () => {
         })
 
         it('should update element styles', () => {
-            data.text = ANOTHER_VALUE;
-            data.width = '120px';
-            data.color = 'green';
+            data = {text: ANOTHER_VALUE, width: '120px', color: 'green'};
             jayElement.update(data);
 
             expect(jayElement.dom.textContent).toBe(ANOTHER_VALUE);
@@ -206,9 +206,7 @@ describe('element', () => {
             expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(ANOTHER_VALUE);
             expect(jayElement.dom.childNodes[1].childNodes[1].textContent).toBe(VALUE_3);
 
-            data.text = VALUE_4;
-            data.text2 = VALUE_5;
-            data.text3 = VALUE_6;
+            data = {text: VALUE_4, text2: VALUE_5, text3: VALUE_6};
 
             jayElement.update(data);
 
@@ -239,7 +237,7 @@ describe('element', () => {
 
             expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(SOME_VALUE);
 
-            data.text = VALUE_6;
+            data = {...data, text: VALUE_6};
 
             jayElement.update(data);
             expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(VALUE_6);
@@ -272,9 +270,7 @@ describe('element', () => {
             expect(jayElement.dom.childNodes[0].textContent).toBe(ANOTHER_VALUE);
             expect(jayElement.dom.childNodes[1].childNodes[1].textContent).toBe(VALUE_3);
 
-            data.text = VALUE_4;
-            data.text2 = VALUE_5;
-            data.text3 = VALUE_6;
+            data = {text: VALUE_4, text2: VALUE_5, text3: VALUE_6}
 
             jayElement.update(data);
             expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(VALUE_4);
@@ -292,6 +288,69 @@ describe('element', () => {
             } while(m)
             expect(countUpdates).toBe(1);
         })
+    })
+
+    describe('mutable and immutable ViewState', () => {
+        interface ViewState {
+            text: string,
+            text2: string,
+            text3: string
+        }
+
+        function makeElement(data: ViewState) {
+            return ConstructContext.withRootContext(data, () =>
+                e('div', {}, [
+                    e('div', {textContent: dp(vs => vs.text)}),
+                    e('div', {}, [
+                        e('div', {textContent: dp(vs => vs.text2)}),
+                        e('div', {textContent: dp(vs => vs.text3)})
+                    ])
+                ]));
+        }
+
+        it('should update in case of new object', () => {
+            let data: ViewState = {text: SOME_VALUE, text2: ANOTHER_VALUE, text3: VALUE_3};
+            let jayElement = makeElement(data);
+
+            data = {text: VALUE_4, text2: VALUE_5, text3: VALUE_6};
+
+            jayElement.update(data);
+
+            expect(jayElement.dom.childNodes[0].textContent).toBe(VALUE_4);
+            expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(VALUE_5);
+            expect(jayElement.dom.childNodes[1].childNodes[1].textContent).toBe(VALUE_6);
+        })
+
+        it('should not update in case of same object, if the object is not marked as mutable', () => {
+            let data: ViewState = {text: SOME_VALUE, text2: ANOTHER_VALUE, text3: VALUE_3};
+            let jayElement = makeElement(data);
+
+            data.text = VALUE_4;
+            data.text2 = VALUE_5;
+            data.text3 = VALUE_6;
+
+            jayElement.update(data);
+
+            expect(jayElement.dom.childNodes[0].textContent).toBe(SOME_VALUE);
+            expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(ANOTHER_VALUE);
+            expect(jayElement.dom.childNodes[1].childNodes[1].textContent).toBe(VALUE_3);
+        })
+
+        it('should update in case of same object, if the object is marked as mutable', () => {
+            let data: ViewState = mutableObject({text: SOME_VALUE, text2: ANOTHER_VALUE, text3: VALUE_3});
+            let jayElement = makeElement(data);
+
+            data.text = VALUE_4;
+            data.text2 = VALUE_5;
+            data.text3 = VALUE_6;
+
+            jayElement.update(data);
+
+            expect(jayElement.dom.childNodes[0].textContent).toBe(VALUE_4);
+            expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(VALUE_5);
+            expect(jayElement.dom.childNodes[1].childNodes[1].textContent).toBe(VALUE_6);
+        })
+
     })
 });
 

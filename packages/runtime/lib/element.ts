@@ -6,6 +6,7 @@ import {ContextStack} from "./context-stack";
 export {ContextStack} from "./context-stack";
 export {DynamicReference} from "./node-reference";
 export {Revisioned, checkModified, touchRevision} from "jay-reactive";
+import {getRevision, checkModified} from "jay-reactive";
 
 const STYLE = 'style';
 const REF = 'ref';
@@ -161,7 +162,8 @@ function mkUpdateCollection<ViewState, Item>(child: ForEach<ViewState, Item>, gr
         let itemsList = new List<Item, BaseJayElement<Item>>(items, child.matchBy);
         let instructions = listCompare<Item, BaseJayElement<Item>>(lastItems, itemsList, (item) => {
             let childContext = parentContext.forItem(item);
-            return constructionContextStack.doWithContext(childContext, () => child.elemCreator(item))
+            return constructionContextStack.doWithContext(childContext, () =>
+                wrapWithModifiedCheck(constructionContextStack.current().currData, child.elemCreator(item)))
         });
         lastItems = itemsList;
         applyListChanges(group, instructions);
@@ -198,6 +200,18 @@ function mkUpdateCondition<ViewState>(child: Conditional<ViewState>, group: Kind
 
 const constructionContextStack = new ContextStack<ConstructContext<Array<any>>>();
 
+function wrapWithModifiedCheck<T extends object>(initialData: T, baseJayElement: BaseJayElement<T>): BaseJayElement<T> {
+    let update = baseJayElement.update;
+    let current = getRevision(initialData)
+    let isModified;
+    baseJayElement.update = (newData: T) => {
+        [current, isModified] = checkModified(newData, current);
+        if (isModified)
+            update(current.value)
+    }
+    return baseJayElement;
+}
+
 export class ConstructContext<A extends Array<any>> {
     refManager: ReferencesManager
     data: A
@@ -227,7 +241,8 @@ export class ConstructContext<A extends Array<any>> {
 
     static withRootContext<T, Refs>(t: T, elementConstructor: () => BaseJayElement<T>): JayElement<T, Refs> {
         let context = new ConstructContext([t])
-        let element = constructionContextStack.doWithContext(context, () => elementConstructor())
+        let element = constructionContextStack.doWithContext(context, () =>
+            wrapWithModifiedCheck(constructionContextStack.current().currData, elementConstructor()))
         element.mount();
         return context.refManager.applyToElement(element);
     }

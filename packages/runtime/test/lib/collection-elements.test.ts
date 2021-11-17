@@ -8,6 +8,7 @@ import {
 import {describe, expect, it} from '@jest/globals'
 import {expectE} from "./test-utils";
 import {DynamicReference} from "../../lib/node-reference";
+import { mutableObject } from 'jay-reactive';
 
 const item1 = {name: 'name 1', id: 'id-1'};
 const item2 = {name: 'name 2', id: 'id-2'};
@@ -107,6 +108,47 @@ describe('collection-element', () => {
             expectE(jayElement.dom.children[0]).toHaveTextContent(item1.name);
             expectE(jayElement.dom.children[1]).toHaveTextContent(item2_1.name);
             expectE(jayElement.dom.children[2]).toHaveTextContent(item3.name);
+        })
+    })
+
+    describe('mutable and immutable collection items', () => {
+
+        function makeElement(data: ViewState): [JayElement<ViewState, any>, Set<string>] {
+            let renderedItemNames = new Set<string>();
+            let nameGetter = (item) => {
+                renderedItemNames.add(item.name);
+                return item.name;
+            }
+            return [ConstructContext.withRootContext(data, () =>
+                // noinspection DuplicatedCode
+                de('div', {}, [
+                    forEach(
+                        (newViewState) => newViewState.items,
+                        (item: Item) => {
+                            return e('div', {}, [dt(nameGetter)])
+                        },
+                        'id'
+                    )
+                ])
+            ), renderedItemNames]
+        }
+
+        it('should re-render new immutable objects in array, not rendering un-replaced objects', () => {
+            let [jayElement, renderedItemNames] = makeElement({items: [item1, item2, item3]});
+            renderedItemNames.clear();
+            jayElement.update({items: [item1, item2_1, item3]});
+
+            expect(renderedItemNames).toEqual(new Set([item2_1.name]))
+        })
+
+        it('should re-render updated mutable objects in array, not rendering unchanged mutable objects', () => {
+            let items = mutableObject([{...item1}, {...item2}, {...item3}]);
+            let [jayElement, renderedItemNames] = makeElement({items});
+            renderedItemNames.clear();
+            items[1].name = item2_1.name;
+            jayElement.update({items});
+
+            expect(renderedItemNames).toEqual(new Set([item2_1.name]))
         })
     })
 
