@@ -152,22 +152,27 @@ function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<Ma
 }
 
 function mkUpdateCollection<ViewState, Item>(child: ForEach<ViewState, Item>, group: KindergartenGroup): [updateFunc<ViewState>, MountFunc, MountFunc] {
-    let lastItems = new List<Item, BaseJayElement<Item>>([], child.matchBy);
-    let mount = () => lastItems.forEach((value, attach) => attach.mount);
-    let unmount = () => lastItems.forEach((value, attach) => attach.unmount);
+    let lastItems = getRevision([]);
+    let lastItemsList = new List<Item, BaseJayElement<Item>>([], child.matchBy);
+    let mount = () => lastItemsList.forEach((value, attach) => attach.mount);
+    let unmount = () => lastItemsList.forEach((value, attach) => attach.unmount);
     // todo handle data updates of the parent contexts
     let parentContext = constructionContextStack.current();
     const update = (newData: ViewState) => {
         const items = child.getItems(newData);
-        let itemsList = new List<Item, BaseJayElement<Item>>(items, child.matchBy);
-        let instructions = listCompare<Item, BaseJayElement<Item>>(lastItems, itemsList, (item) => {
-            let childContext = parentContext.forItem(item);
-            return constructionContextStack.doWithContext(childContext, () =>
-                wrapWithModifiedCheck(constructionContextStack.current().currData, child.elemCreator(item)))
-        });
-        lastItems = itemsList;
-        applyListChanges(group, instructions);
-        itemsList.forEach((value, elem) => elem.update(value))
+        let isModified;
+        [lastItems, isModified] = checkModified(items, lastItems);
+        if (isModified) {
+            let itemsList = new List<Item, BaseJayElement<Item>>(items, child.matchBy);
+            let instructions = listCompare<Item, BaseJayElement<Item>>(lastItemsList, itemsList, (item) => {
+                let childContext = parentContext.forItem(item);
+                return constructionContextStack.doWithContext(childContext, () =>
+                    wrapWithModifiedCheck(constructionContextStack.current().currData, child.elemCreator(item)))
+            });
+            lastItemsList = itemsList;
+            applyListChanges(group, instructions);
+            itemsList.forEach((value, elem) => elem.update(value))
+        }
     };
     return [update, mount, unmount]
 }

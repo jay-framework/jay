@@ -133,6 +133,35 @@ describe('collection-element', () => {
             ), renderedItemNames]
         }
 
+        it('should not re-render the array if it is the same array (assuming immutable array), even if the array content has changed', () => {
+            let items = [item1, item2, item3];
+            let [jayElement, renderedItemNames] = makeElement({items});
+            renderedItemNames.clear();
+            items[1] = item2_1;
+            jayElement.update({items});
+
+            expect(renderedItemNames).toEqual(new Set([]))
+        })
+
+        it('should re-render the array if it is a new array (assuming immutable array)', () => {
+            let items = [item1, item2, item3];
+            let [jayElement, renderedItemNames] = makeElement({items});
+            renderedItemNames.clear();
+            items = [item1, item2_1, item3];
+            jayElement.update({items});
+
+            expect(renderedItemNames).toEqual(new Set([item2_1.name]))
+        })
+
+        it('should re-render mutable array if the array content has changed', () => {
+            let items = mutableObject([item1, item2, item3]);
+            let [jayElement, renderedItemNames] = makeElement({items});
+            renderedItemNames.clear();
+            items[1] = item2_1;
+            jayElement.update({items});
+
+            expect(renderedItemNames).toEqual(new Set([item2_1.name]))
+        })
         it('should re-render new immutable objects in array, not rendering un-replaced objects', () => {
             let [jayElement, renderedItemNames] = makeElement({items: [item1, item2, item3]});
             renderedItemNames.clear();
