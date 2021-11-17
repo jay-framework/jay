@@ -1,4 +1,5 @@
 import render from './output';
+import {mutableObject} from 'jay-reactive';
 
 export default {
     render,
@@ -7,11 +8,11 @@ export default {
 
 function data() {
     let title = 'todo';
-    let items = [
+    let items = mutableObject([
         {name: 'car', completed: false, cost: 10, id: 'a'},
         {name: 'plane', completed: true, cost: 100, id: 'b'},
         {name: 'boat', completed: false, cost: 50, id: 'c'}
-    ];
+    ]);
     return function (index) {
         if (index === 0)
             return {title, items};
