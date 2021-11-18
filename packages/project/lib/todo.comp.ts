@@ -68,14 +68,14 @@ function Todo() {
             activeTodoWord: activeTodoCount > 1 ? 'todos' : 'todo',
             hasItems: data.todos.length > 0,
             showClearCompleted: !!data.todos.find(_ => _.isCompleted),
-            shownTodos: data.todos.filter(todo => {
+            shownTodos: [...data.todos.filter(todo => {
                 if (data.isFilterCompleted)
                     return todo.isCompleted
                 else if (data.isFilterActive)
                     return !todo.isCompleted
                 else
                     return true;
-            })
+            })]
         };
     }
 
@@ -186,7 +186,7 @@ function Todo() {
     }
     jayElement.refs.toggleAll.onchange = (event) => {
         let completed = (jayElement.refs.toggleAll as HTMLInputElement).checked
-        data.todos.forEach(todo => todo.isCompleted = completed)
+        data.todos = data.todos.map(todo => ({...todo, isCompleted: completed}))
         update();
     }
 
