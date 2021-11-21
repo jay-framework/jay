@@ -66,5 +66,21 @@ describe('refs recorder', () => {
         expect(elementRefs.two.onclick).toBe(clickTwo)
     })
 
+    it('should delegte any calls to the element post applyToRefs', () => {
+        let refs: TestRefs = refsRecorder();
+        refs.one.onclick = clickOne;
+        refs.two.onclick = clickTwo;
+        let two = refs.two;
+
+        let elementRefs = {
+            one: {},
+            two: {innerText: 'some inner text'}
+        } as TestRefs
+
+        applyToRefs(refs, elementRefs)
+
+        expect(refs.two.innerText).toBe('some inner text')
+        expect(two.innerText).toBe('some inner text')
+    })
 });
 

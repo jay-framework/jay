@@ -140,7 +140,7 @@ export function makeJayComponent<PropsT extends object, ViewState extends object
                     else
                         element = render(viewState)
                 })
-                applyToRefs(refs, element.refs, func => (...args) =>
+                applyToRefs(refs, element.refs, (func: Function) => (...args) =>
                     reactive.batchReactions(() => func(...args))
                 );
                 let update = (updateProps) => {
