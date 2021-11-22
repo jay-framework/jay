@@ -121,6 +121,7 @@ describe("mutable", () => {
             expect(result).toEqual(["exuberant", "destruction", "present"]);
             let [, modified] = checkModified(mutableArr, revisioned);
             expect(modified).toBe(false);
+            expect(isMutable(result)).toBe(true);
         })
 
         it('should support find', () => {
@@ -231,9 +232,11 @@ describe("mutable", () => {
             let mutableArr = mutableObject([1, 4, 9, 16]);
             let revisioned = getRevision(mutableArr);
 
-            expect(mutableArr.map(x => x * 2)).toEqual([2, 8, 18, 32]);
+            let result = mutableArr.map(x => x * 2);
+            expect(result).toEqual([2, 8, 18, 32]);
             let [, modified] = checkModified(mutableArr, revisioned);
             expect(modified).toBe(false);
+            expect(isMutable(result)).toBe(true);
         })
 
         it('should support pop', () => {
@@ -291,9 +294,11 @@ describe("mutable", () => {
             let mutableArr = mutableObject(['one', 'two', 'three']);
             let revisioned = getRevision(mutableArr);
 
-            expect(mutableArr.reverse()).toEqual(["three", "two", "one"]);
+            let result = mutableArr.reverse();
+            expect(result).toEqual(["three", "two", "one"]);
             let [, modified] = checkModified(mutableArr, revisioned);
             expect(modified).toBe(true);
+            expect(isMutable(result)).toBe(true);
         })
 
         it('should support shift', () => {

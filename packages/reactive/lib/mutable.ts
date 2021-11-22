@@ -15,10 +15,15 @@ export function removeMutableListener(obj: object, listener: () => void) {
     obj[mutationListener](listener, false)
 }
 
+function wrapCreateArrayFunction<T>(array: Array<T>, func: Function): Function {
+    return (...args) => mutableObject(func.apply(array, args))
+}
+
 export function mutableObject<T extends object>(original: T, notifyParent?: () => void): T
 export function mutableObject<T>(original: Array<T>, notifyParent?: () => void): Array<T> {
     touchRevision(original);
     const childRefs = new WeakMap();
+    const arrayFunctions = {};
     const childChanged = () => changed();
     const changeListeners: Set<() => void> = notifyParent? new Set([notifyParent]): new Set();
     const changed = () => {
@@ -50,6 +55,11 @@ export function mutableObject<T>(original: Array<T>, notifyParent?: () => void):
                 return addRemoveChangeListener;
             else if (property === originalSymbol)
                 return original;
+            else if (Array.isArray(target) && (property === 'map' || property === 'filter' || property === 'reverse')) {
+                if (!arrayFunctions[property])
+                    arrayFunctions[property] = wrapCreateArrayFunction(target, target[property]);
+                return arrayFunctions[property];
+            }
             else if (typeof target[property] === 'object') {
                 if (!childRefs.get(target[property]))
                     childRefs.set(target[property], mutableObject(target[property], childChanged))
