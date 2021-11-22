@@ -325,10 +325,48 @@ describe('state management', () => {
             it('should update only the memo dependent on name on only a name change', () => {
                 let instance = labelComponent({name: 'world', age: 12});
                 instance.update({name: 'mars', age: 12})
-                expect(instance.element.refs.label1.textContent).toBe('hello world')
-                expect(instance.element.refs.label2.textContent).toBe('age 12')
                 expect(instance.getMemoComputeCount().memoDependsOnName).toBe(2)
                 expect(instance.getMemoComputeCount().memoDependsOnAge).toBe(1)
+            })
+
+            it('should re-render when render depends on memo', () => {
+                let instance = labelComponent({name: 'world', age: 12});
+                instance.update({name: 'mars', age: 13})
+                expect(instance.element.refs.label1.textContent).toBe('hello mars')
+                expect(instance.element.refs.label2.textContent).toBe('age 13')
+            })
+
+            function LabelComponentWithCreateMemo2({}: Props<never>, refs: TwoLabelRefs) {
+                let [state1, setState1] = createState('one')
+                let memoDependsOnName = 0, memoDependsOnAge = 0;
+                let label1 = createMemo(() => {
+                    memoDependsOnName += 1;
+                    return 'memo1: ' + state1();
+                })
+                let label2 = createMemo(() => {
+                    memoDependsOnAge += 1;
+                    return 'memo2: ' + label1();
+                })
+                return {
+                    render: () => ({
+                        label1: label1(),
+                        label2: label2()
+                    }),
+                    setState1
+                }
+            }
+            let labelComponent2 = makeJayComponent(renderTwoLabelElement, LabelComponentWithCreateMemo2)
+
+            it('should update memo that depend on a memo', () => {
+                let instance = labelComponent2({});
+                instance.setState1('two');
+                expect(instance.element.refs.label2.textContent).toBe('memo2: memo1: two')
+            })
+
+            it('should run render that depend on a memo', () => {
+                let instance = labelComponent2({});
+                instance.setState1('two');
+                expect(instance.element.refs.label1.textContent).toBe('memo1: two')
             })
         })
 

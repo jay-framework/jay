@@ -84,11 +84,11 @@ export function createState<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: S
 }
 
 export function createMemo<T>(computation: (prev: T) => T, initialValue?: T): Getter<T> {
-    let value = initialValue
+    let [value, setValue] = componentContextStack.current().reactive.createState(initialValue);
     componentContextStack.current().reactive.createReaction(() => {
-        value = computation(value)
+        setValue(oldValue => computation(oldValue))
     })
-    return () => value
+    return value
 }
 
 export function createEvent<T>(eventEffect: (emitter: EventEmitter<T>) => void): EventEmitter<T> {
