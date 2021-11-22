@@ -9,6 +9,7 @@
     "build": "npm run d && npm run rollup && npm run copy"
   },
   "dependencies": {
+    "jay-component": "1.0.0",
     "jay-runtime": "1.0.0",
     "jay-reactive": "1.0.0"
   },

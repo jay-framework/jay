@@ -4,6 +4,7 @@ import composite from './composite-data';
 import conditions from './conditions-data';
 import counter from './counter.comp';
 import todo from './todo.comp';
+import todo2 from './todo2.comp';
 
 function ex(name: string, run: (target, cycles, progressCallback) => void) {
     return {name, run}
@@ -15,7 +16,8 @@ const examples = [
     ex('composite', composite),
     ex('conditions', conditions),
     ex('counter', counter),
-    ex('todo mvc', todo)
+    ex('todo mvc', todo),
+    ex('todo mvc with state management', todo2)
 ]
 
 window.onload = function() {
