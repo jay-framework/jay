@@ -112,16 +112,49 @@ describe("mutable", () => {
             expect(modified4).toBe(true);
         })
 
-        it('should support filter', () => {
-            let mutableArr = mutableObject(['spray', 'limit', 'elite', 'exuberant', 'destruction', 'present']);
-            let revisioned = getRevision(mutableArr);
+        describe('filter', () => {
+            it('on primitives', () => {
+                let mutableArr = mutableObject(['spray', 'limit', 'elite', 'exuberant', 'destruction', 'present']);
+                let revisioned = getRevision(mutableArr);
 
-            const result = mutableArr.filter(word => word.length > 6);
+                const result = mutableArr.filter(word => word.length > 6);
 
-            expect(result).toEqual(["exuberant", "destruction", "present"]);
-            let [, modified] = checkModified(mutableArr, revisioned);
-            expect(modified).toBe(false);
-            expect(isMutable(result)).toBe(true);
+                expect(result).toEqual(["exuberant", "destruction", "present"]);
+                let [, modified] = checkModified(mutableArr, revisioned);
+                expect(modified).toBe(false);
+                expect(isMutable(result)).toBe(true);
+            })
+
+            it('on objects', () => {
+                let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}]);
+                let revisioned = getRevision(mutableArr);
+
+                const result = mutableArr.filter(item => item.a > 2);
+
+                expect(result).toEqual([{a: 3, b: 4}, {a: 5, b: 6}]);
+                let [, modified] = checkModified(mutableArr, revisioned);
+                expect(modified).toBe(false);
+            })
+
+            it('filter on object should return mutable array', () => {
+                let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}]);
+
+                const result = mutableArr.filter(item => item.a > 2);
+
+                expect(isMutable(result)).toBe(true);
+            })
+
+            it('filter on objects should respect the same mutable listeners', () => {
+                let fn1 = jest.fn();
+                let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}]);
+                addMutableListener(mutableArr, fn1);
+
+                const result = mutableArr.filter(item => item.a > 2);
+                result[0].a = 7;
+
+                expect(fn1.mock.calls.length).toBe(1);
+            })
+
         })
 
         it('should support find', () => {
@@ -158,14 +191,48 @@ describe("mutable", () => {
             expect(modified).toBe(false);
         })
 
-        it('should support flatMap', () => {
-            let mutableArr = mutableObject([1, 2, 3, 4]);
-            let revisioned = getRevision(mutableArr);
+        describe('flatMap', () => {
+            it('on primitives', () => {
+                let mutableArr = mutableObject([1, 2, 3, 4]);
+                let revisioned = getRevision(mutableArr);
 
-            // @ts-ignore
-            expect(mutableArr.flatMap(x => [x * 2])).toEqual([2, 4, 6, 8]);
-            let [, modified] = checkModified(mutableArr, revisioned);
-            expect(modified).toBe(false);
+                // @ts-ignore
+                expect(mutableArr.flatMap(x => [x * 2])).toEqual([2, 4, 6, 8]);
+                let [, modified] = checkModified(mutableArr, revisioned);
+                expect(modified).toBe(false);
+            })
+
+            it('on objects', () => {
+                let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}]);
+                let revisioned = getRevision(mutableArr);
+
+                // @ts-ignore
+                expect(mutableArr.flatMap(x => [{a: x.a}, {b: x.b}])).toEqual([{a: 1}, {b: 2}, {a: 3}, {b: 4}, {a: 5}, {b: 6}]);
+                let [, modified] = checkModified(mutableArr, revisioned);
+                expect(modified).toBe(false);
+            })
+
+            it('flatMap on object should return mutable array', () => {
+                let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}]);
+
+                // @ts-ignore
+                const result = mutableArr.flatMap(x => [{a: x.a}, {b: x.b}]);
+
+                expect(isMutable(result)).toBe(true);
+            })
+
+            it('flatMap on objects should respect the same mutable listeners', () => {
+                let fn1 = jest.fn();
+                let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}]);
+                addMutableListener(mutableArr, fn1);
+
+                // @ts-ignore
+                const result = mutableArr.flatMap(x => [{a: x.a}, {b: x.b}]);
+                result[0].a = 7;
+
+                expect(fn1.mock.calls.length).toBe(1);
+            })
+
         })
 
         it('should support forEach', () => {
@@ -228,15 +295,47 @@ describe("mutable", () => {
             expect(modified).toBe(false);
         })
 
-        it('should support map', () => {
-            let mutableArr = mutableObject([1, 4, 9, 16]);
-            let revisioned = getRevision(mutableArr);
+        describe('map', () => {
+            it('on primitives', () => {
+                let mutableArr = mutableObject([1, 4, 9, 16]);
+                let revisioned = getRevision(mutableArr);
 
-            let result = mutableArr.map(x => x * 2);
-            expect(result).toEqual([2, 8, 18, 32]);
-            let [, modified] = checkModified(mutableArr, revisioned);
-            expect(modified).toBe(false);
-            expect(isMutable(result)).toBe(true);
+                let result = mutableArr.map(x => x * 2);
+                expect(result).toEqual([2, 8, 18, 32]);
+                let [, modified] = checkModified(mutableArr, revisioned);
+                expect(modified).toBe(false);
+                expect(isMutable(result)).toBe(true);
+            })
+
+            it('on objects', () => {
+                let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}]);
+                let revisioned = getRevision(mutableArr);
+
+                const result = mutableArr.map(item => {item.a *= 2; return item});
+
+                expect(result).toEqual([{a: 2, b: 2}, {a: 6, b: 4}, {a: 10, b: 6}]);
+                let [, modified] = checkModified(mutableArr, revisioned);
+                expect(modified).toBe(false);
+            })
+
+            it('map on object should return mutable array', () => {
+                let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}]);
+
+                const result = mutableArr.map(item => {item.a *= 2; return item});
+
+                expect(isMutable(result)).toBe(true);
+            })
+
+            it('map on objects should respect the same mutable listeners', () => {
+                let fn1 = jest.fn();
+                let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}]);
+                addMutableListener(mutableArr, fn1);
+
+                const result = mutableArr.map(item => {item.a *= 2; return item});
+                result[0].a = 7;
+
+                expect(fn1.mock.calls.length).toBe(1);
+            })
         })
 
         it('should support pop', () => {
@@ -290,15 +389,37 @@ describe("mutable", () => {
             expect(modified).toBe(false);
         })
 
-        it('should support reverse', () => {
-            let mutableArr = mutableObject(['one', 'two', 'three']);
-            let revisioned = getRevision(mutableArr);
+        describe('reverse', () => {
+            it('should support reverse', () => {
+                let mutableArr = mutableObject(['one', 'two', 'three']);
+                let revisioned = getRevision(mutableArr);
 
-            let result = mutableArr.reverse();
-            expect(result).toEqual(["three", "two", "one"]);
-            let [, modified] = checkModified(mutableArr, revisioned);
-            expect(modified).toBe(true);
-            expect(isMutable(result)).toBe(true);
+                let result = mutableArr.reverse();
+                expect(result).toEqual(["three", "two", "one"]);
+                let [, modified] = checkModified(mutableArr, revisioned);
+                expect(modified).toBe(true);
+                expect(isMutable(result)).toBe(true);
+            })
+
+            it('on objects', () => {
+                let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}]);
+                let revisioned = getRevision(mutableArr);
+
+                const result = mutableArr.reverse();
+
+                expect(result).toEqual([{a: 5, b: 6}, {a: 3, b: 4}, {a: 1, b: 2}]);
+                let [, modified] = checkModified(mutableArr, revisioned);
+                expect(modified).toBe(true);
+            })
+
+            it('reverse on object should return the same array', () => {
+                let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}]);
+
+                const result = mutableArr.reverse();
+
+                expect(result === mutableArr).toBe(true);
+            })
+
         })
 
         it('should support shift', () => {
@@ -537,5 +658,13 @@ describe("mutable", () => {
             expect(fn2.mock.calls.length).toBe(1);
         })
 
+        it('supports change listener in array of objects', () => {
+            let fn = jest.fn();
+            let mutable = mutableObject([{a: 1, b:2}, {a: 3, b:4}, {a: 5, b:6}], fn);
+
+            mutable[1].a = 3;
+
+            expect(fn.mock.calls.length).toBe(1);
+        })
     })
 })
