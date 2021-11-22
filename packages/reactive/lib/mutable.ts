@@ -49,7 +49,7 @@ export function mutableObject<T>(original: Array<T>, notifyParent?: ChangeListen
                 return changeListeners;
             else if (property === originalSymbol)
                 return original;
-            else if (Array.isArray(target) && (property === 'map' || property === 'filter' || property === 'flatMap')) {
+            else if (Array.isArray(target) && (property === 'map' || property === 'filter' || property === 'flatMap' || property === 'flat')) {
                 if (!arrayFunctions[property])
                     arrayFunctions[property] = wrapCreateArrayFunction(target, target[property], changed);
                 return arrayFunctions[property];
