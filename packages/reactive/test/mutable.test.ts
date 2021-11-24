@@ -11,8 +11,8 @@ describe("mutable", () => {
 
             expect(mutable.a).toBe(1)
             expect(mutable.b).toBe(2)
-            expect(typeof revisioned.revision).toBe('number')
-            expect(revisioned.revision).not.toBe(NaN)
+            expect(typeof revisioned.revNum).toBe('number')
+            expect(revisioned.revNum).not.toBe(NaN)
         })
 
         it('should support property updates', () => {
@@ -27,6 +27,17 @@ describe("mutable", () => {
             expect(modified).toBe(true)
         })
 
+        it('added object should become mutable', () => {
+            let mutable = mutableObject({a: {x: 1}, b:{x: 2}});
+            let revision = getRevision(mutable);
+
+            mutable.a = {x: 3};
+
+            expect(isMutable(mutable.a)).toBe(true);
+            let [, modified] = checkModified(mutable, revision);
+            expect(modified).toBe(true)
+        })
+
         it('should support property deletes', () => {
             let mutable = mutableObject({a: 1, b:2});
             let revisioned = getRevision(mutable);
@@ -38,6 +49,18 @@ describe("mutable", () => {
             let [, modified] = checkModified(mutable, revisioned);
             expect(modified).toBe(true)
         })
+
+        it('removed child mutable should stop updating parent', () => {
+            let mutable = mutableObject({a: {x: 1}, b:{x: 2}});
+            let x1 = mutable.a;
+            mutable.a = {x: 3};
+            let revision = getRevision(mutable);
+
+            x1.x = 7;
+
+            let [, modified] = checkModified(mutable, revision);
+            expect(modified).toBe(false)
+        })
     })
 
     describe("array", () => {
@@ -46,8 +69,8 @@ describe("mutable", () => {
             let revisioned = getRevision(mutableArr);
 
             expect(Array.isArray(mutableArr)).toBe(true);
-            expect(typeof revisioned.revision).toBe('number')
-            expect(revisioned.revision).not.toBe(NaN)
+            expect(typeof revisioned.revNum).toBe('number')
+            expect(revisioned.revNum).not.toBe(NaN)
         })
 
         it('should support set element', () => {
@@ -87,14 +110,26 @@ describe("mutable", () => {
             expect(modified).toBe(false)
         })
 
-        it('should support every', () => {
-            let mutableArr = mutableObject([1, 30, 39, 29, 10, 13]);
-            let revisioned = getRevision(mutableArr);
-            const isBelowThreshold = (currentValue) => currentValue < 40;
+        describe('every', () => {
+            it('should support primitives', () => {
+                let mutableArr = mutableObject([1, 30, 39, 29, 10, 13]);
+                let revisioned = getRevision(mutableArr);
+                const isBelowThreshold = (currentValue) => currentValue < 40;
 
-            expect(mutableArr.every(isBelowThreshold)).toEqual(true)
-            let [, modified] = checkModified(mutableArr, revisioned);
-            expect(modified).toBe(false)
+                expect(mutableArr.every(isBelowThreshold)).toEqual(true)
+                let [, modified] = checkModified(mutableArr, revisioned);
+                expect(modified).toBe(false)
+            });
+
+            it('should support objects', () => {
+                let mutableArr = mutableObject([{a: 1}, {a: 2}, {a: 3}]);
+                let item0 = mutableArr[0];
+                let item1 = mutableArr[1];
+                let item2 = mutableArr[2];
+                const areAllItemsPresent = (_) => _ === item0 || _ === item1 || _ === item2;
+
+                expect(mutableArr.every(areAllItemsPresent)).toEqual(true)
+            });
         })
 
         it('should support fill', () => {
@@ -155,6 +190,14 @@ describe("mutable", () => {
                 expect(fn1.mock.calls.length).toBe(1);
             })
 
+            it('find function parameter should be the same proxy as when getting using index', () => {
+                let mutableArr = mutableObject([{a: 1}, {a: 2}, {a: 3}]);
+                let item1 = mutableArr[1];
+
+                let filteredArray = mutableArr.filter(_ => _ !== item1)
+
+                expect(filteredArray.length).toBe(2);
+            })
         })
 
         describe('find', () => {
@@ -187,16 +230,34 @@ describe("mutable", () => {
 
                 expect(fn1.mock.calls.length).toBe(1);
             })
+
+            it('find function parameter should be the same proxy as when getting using index', () => {
+                let mutableArr = mutableObject([{a: 1}, {a: 2}, {a: 3}]);
+                let item1 = mutableArr[1];
+
+                let foundItem = mutableArr.find(_ => _ === item1)
+
+                expect(foundItem).toBeDefined();
+            })
         })
 
-        it('should support findIndex', () => {
-            let mutableArr = mutableObject([5, 12, 8, 130, 44]);
-            let revisioned = getRevision(mutableArr);
-            const isLargeNumber = (element) => element > 13;
+        describe('findIndex', () => {
+            it('should support primitives', () => {
+                let mutableArr = mutableObject([5, 12, 8, 130, 44]);
+                let revisioned = getRevision(mutableArr);
+                const isLargeNumber = (element) => element > 13;
 
-            expect(mutableArr.findIndex(isLargeNumber)).toEqual(3);
-            let [, modified] = checkModified(mutableArr, revisioned);
-            expect(modified).toBe(false);
+                expect(mutableArr.findIndex(isLargeNumber)).toEqual(3);
+                let [, modified] = checkModified(mutableArr, revisioned);
+                expect(modified).toBe(false);
+            })
+
+            it('should support objects', () => {
+                let mutableArr = mutableObject([{a: 1}, {a: 2}, {a: 3}]);
+                let item1 = mutableArr[1];
+
+                expect(mutableArr.findIndex(_ => _ === item1)).toEqual(1);
+            })
         })
 
         describe('flat', () => {
@@ -290,31 +351,57 @@ describe("mutable", () => {
 
         })
 
-        it('should support forEach', () => {
-            let fn = jest.fn()
-            let mutableArr = mutableObject(['a', 'b', 'c']);
-            let revisioned = getRevision(mutableArr);
+        describe('forEach', () => {
+            it('should support primitives', () => {
+                let fn = jest.fn()
+                let mutableArr = mutableObject(['a', 'b', 'c']);
+                let revisioned = getRevision(mutableArr);
 
-            mutableArr.forEach(_ => fn(_))
+                mutableArr.forEach(_ => fn(_))
 
-            expect(fn.mock.calls.length).toEqual(3);
-            expect(fn.mock.calls[0][0]).toEqual('a');
-            expect(fn.mock.calls[1][0]).toEqual('b');
-            expect(fn.mock.calls[2][0]).toEqual('c');
-            let [, modified] = checkModified(mutableArr, revisioned);
-            expect(modified).toBe(false);
+                expect(fn.mock.calls.length).toEqual(3);
+                expect(fn.mock.calls[0][0]).toEqual('a');
+                expect(fn.mock.calls[1][0]).toEqual('b');
+                expect(fn.mock.calls[2][0]).toEqual('c');
+                let [, modified] = checkModified(mutableArr, revisioned);
+                expect(modified).toBe(false);
+            });
+
+            it('should support objects', () => {
+                let mutableArr = mutableObject([{a: 1}, {a: 2}, {a: 3}]);
+                let item0 = mutableArr[0];
+                let item1 = mutableArr[1];
+                let item2 = mutableArr[2];
+                let found = 0;
+                const handleItem = (_) => {
+                    if (_ === item0 || _ === item1 || _ === item2)
+                        found += 1;
+                }
+
+                mutableArr.forEach(handleItem);
+                expect(found).toEqual(3);
+            });
         })
 
-        it('should support includes', () => {
-            let mutableArr = mutableObject([1, 2, 3]);
-            let mutableArr2 = mutableObject(['cat', 'dog', 'bat']);
-            let revisioned = getRevision(mutableArr);
+        describe('includes', () => {
+            it('should support primitives', () => {
+                let mutableArr = mutableObject([1, 2, 3]);
+                let mutableArr2 = mutableObject(['cat', 'dog', 'bat']);
+                let revisioned = getRevision(mutableArr);
 
-            expect(mutableArr.includes(2)).toEqual(true);
-            expect(mutableArr2.includes('cat')).toEqual(true);
-            expect(mutableArr2.includes('at')).toEqual(false);
-            let [, modified] = checkModified(mutableArr, revisioned);
-            expect(modified).toBe(false);
+                expect(mutableArr.includes(2)).toEqual(true);
+                expect(mutableArr2.includes('cat')).toEqual(true);
+                expect(mutableArr2.includes('at')).toEqual(false);
+                let [, modified] = checkModified(mutableArr, revisioned);
+                expect(modified).toBe(false);
+            });
+
+            it('should support objects', () => {
+                let mutableArr = mutableObject([{a: 1}, {a: 2}, {a: 3}]);
+                let item1 = mutableArr[1];
+
+                expect(mutableArr.includes(item1)).toEqual(true);
+            });
         })
 
         it('should support join', () => {
@@ -340,14 +427,23 @@ describe("mutable", () => {
             expect(modified).toBe(false);
         })
 
-        it('should support lastIndexOf', () => {
-            let mutableArr = mutableObject(['Dodo', 'Tiger', 'Penguin', 'Dodo']);
-            let revisioned = getRevision(mutableArr);
+        describe('lastIndexOf', () => {
+            it('should support primitives', () => {
+                let mutableArr = mutableObject(['Dodo', 'Tiger', 'Penguin', 'Dodo']);
+                let revisioned = getRevision(mutableArr);
 
-            expect(mutableArr.lastIndexOf('Dodo')).toEqual(3);
-            expect(mutableArr.lastIndexOf('Tiger')).toEqual(1);
-            let [, modified] = checkModified(mutableArr, revisioned);
-            expect(modified).toBe(false);
+                expect(mutableArr.lastIndexOf('Dodo')).toEqual(3);
+                expect(mutableArr.lastIndexOf('Tiger')).toEqual(1);
+                let [, modified] = checkModified(mutableArr, revisioned);
+                expect(modified).toBe(false);
+            });
+
+            it('should support objects', () => {
+                let mutableArr = mutableObject([{a: 1}, {a: 2}, {a: 3}]);
+                let item1 = mutableArr[1];
+
+                expect(mutableArr.lastIndexOf(item1)).toEqual(1);
+            })
         })
 
         describe('map', () => {
@@ -502,15 +598,26 @@ describe("mutable", () => {
             expect(modified).toBe(false);
         })
 
-        it('should support some', () => {
-            let mutableArr = mutableObject([1, 2, 3, 4, 5]);
-            let revisioned = getRevision(mutableArr);
+        describe('some', () => {
+            it('should support primitives', () => {
+                let mutableArr = mutableObject([1, 2, 3, 4, 5]);
+                let revisioned = getRevision(mutableArr);
 
-            const even = (element) => element % 2 === 0;
+                const even = (element) => element % 2 === 0;
 
-            expect(mutableArr.some(even)).toEqual(true);
-            let [, modified] = checkModified(mutableArr, revisioned);
-            expect(modified).toBe(false);
+                expect(mutableArr.some(even)).toEqual(true);
+                let [, modified] = checkModified(mutableArr, revisioned);
+                expect(modified).toBe(false);
+            })
+
+            it('should support objects', () => {
+                let mutableArr = mutableObject([{a: 1}, {a: 2}, {a: 3}]);
+                let item1 = mutableArr[1];
+                const areAllItemsPresent = (_) => _ === item1;
+
+                expect(mutableArr.some(areAllItemsPresent)).toEqual(true)
+            });
+
         })
 
         it('should support sort', () => {

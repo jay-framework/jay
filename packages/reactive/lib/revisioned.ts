@@ -5,11 +5,11 @@ let nextRevision = 1;
 
 export interface Revisioned<T> {
     value: T,
-    revision: number
+    revNum: number
 }
 
 export function getRevision<T extends object>(value: T): Revisioned<T> {
-    return {value, revision: value[REVISION] || NaN};
+    return {value, revNum: value[REVISION] || NaN};
 }
 
 export function touchRevision<T extends object>(value: T): T {
@@ -26,14 +26,14 @@ export function touchRevision<T extends object>(value: T): T {
 
 export function checkModified<T>(value: T, oldValue?: Revisioned<T>): [Revisioned<T>, boolean] {
     let isObject = typeof value === 'object';
-    let revision = isObject? value[REVISION] || NaN : NaN;
-    let newValue = {value, revision};
+    let revNum = isObject? value[REVISION] || NaN : NaN;
+    let newValue = {value, revNum};
     if (!oldValue)
         return [newValue, true]
     else {
-        let modified = Number.isNaN(revision)?
+        let modified = Number.isNaN(revNum)?
             value !== oldValue.value :
-            revision !== oldValue.revision
+            revNum !== oldValue.revNum
         return [newValue, modified]
     }
 }
