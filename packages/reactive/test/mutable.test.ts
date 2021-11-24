@@ -15,7 +15,21 @@ describe("mutable", () => {
             expect(revisioned.revNum).not.toBe(NaN)
         })
 
+        it('creates object proxy', () => {
+            let mutable = mutableObject({a: 1, b:2});
+
+            let json = JSON.stringify(mutable);
+
+            expect(json).not.toContain('isProxy')
+            expect(json).not.toContain('listener')
+            expect(json).not.toContain('original')
+            expect(json).not.toContain('proxy')
+            expect(json).not.toContain('revision')
+
+        })
+
         it('should support property updates', () => {
+
             let mutable = mutableObject({a: 1, b:2});
             let revisioned = getRevision(mutable);
 
