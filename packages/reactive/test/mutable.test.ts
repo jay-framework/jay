@@ -200,8 +200,9 @@ describe("mutable", () => {
 
                 const result = mutableArr.filter(item => item.a > 2);
                 result[0].a = 7;
-
-                expect(fn1.mock.calls.length).toBe(1);
+                mutableArr[2].a = 9;
+                
+                expect(fn1.mock.calls.length).toBe(2);
             })
 
             it('find function parameter should be the same proxy as when getting using index', () => {
@@ -211,6 +212,25 @@ describe("mutable", () => {
                 let filteredArray = mutableArr.filter(_ => _ !== item1)
 
                 expect(filteredArray.length).toBe(2);
+            })
+
+            it('remove from original and add to filtered array should respect change listener', () => {
+                let fn1 = jest.fn();
+                let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}, {a: 7, b: 8}]);
+                let item3 = mutableArr[3];
+                addMutableListener(mutableArr, fn1);
+
+                const result = mutableArr.filter(item => item.a > 2);
+                removeMutableListener(mutableArr, fn1);
+                addMutableListener(result, fn1);
+                result[0].a = 7;
+                expect(fn1.mock.calls.length).toBe(1);
+
+                mutableArr[2].a = 9;
+                expect(fn1.mock.calls.length).toBe(1);
+
+                item3.a = 10;
+                expect(fn1.mock.calls.length).toBe(2);
             })
         })
 

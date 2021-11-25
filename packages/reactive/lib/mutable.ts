@@ -72,6 +72,10 @@ export function mutableObject<T>(original: Array<T>, notifyParent?: ChangeListen
         touchRevision(original)
         changeListeners.forEach(_ => _());
     }
+    for (let prop in original)
+        if (typeof original[prop] === 'object' && getProxy(original[prop] as unknown as object))
+            getProxy(original[prop] as unknown as object)[mutationListener].add(changed);
+
     return new Proxy(original, {
         deleteProperty: function(target, property) {
             deleteProxy(target[property], changed);
