@@ -4,16 +4,28 @@ The Reactive module is a minimal reactive core implementation that handles stori
 reacting to data change and detecting if data has actually changed.
 
 It is intended to be an internal core implementation for state management and not a user facing API.
+                               
+The package has 3 modules
 
-# Reactive Class        
+* [Reactive](#reactive)
+  * [Reactive constructor](#constructor)
+  * [createState](#createState)
+  * [createReaction](#createReaction)
+  * [batchReactions](#batchReactions)
+* [Mutable](#mutable)
+  * [mutableObject](#mutableObject)
+  * [isMutable](#isMutable)
+  * [addMutableListener](#addMutableListener)
+  * [removeMutableListener](#removeMutableListener)
+* [Revisioned](#revisioned)
+  * [touchRevision](#touchRevision)
+  * [checkModified](#checkModified)
+  
+# <a name="reactive">Reactive Class</a>        
                                      
 The Reactive class is a simple reactive core, at which reactions are dependent on state. 
 When a state is updated, any of the dependent reactions are re-run. 
 
-* [Reactive constructor](#constructor)
-* [createState](#createState)
-* [createReaction](#createReaction)
-* [batchReactions](#batchReactions)
 
 ## <a name="constructor">Reactive constructor</a>
 ```typescript
@@ -134,27 +146,119 @@ reactive.batchReactions(() => {
 })
 ```
 
-# Revisioned
+# <a name="mutable">Mutable</a>
 
-The Revisioned subsystem is a system to identify changes in values while supporting both primitives, 
+The mutable module adds support for mutable objects on top of reactive state management. 
+A Mutable object manages an internal revision number (based on `Revisioned` below) that is updated any time its values, 
+direct or indirect children values change. Once the revision number is updated, the mutable also calls 
+each of its mutable listeners.
+
+The Mutable module is creating proxies for the original objects that are pass-trough, tracking the changes.
+
+Creating a mutable proxy
+```typescript
+let obj = {
+    a: 1,
+    b: {
+        c: 2, 
+        d: 3
+    }, 
+    arr: [
+        {e: 4}, 
+        {e: 5}, 
+        {e:6}
+    ]};
+let mutableObj = mutableObject(obj);
+```
+
+updates that trigger revision update
+```typescript
+// update revision of mutableObj
+mutableObj.a = 7
+
+// update revision of mutableObj and mutableObj.b
+mutableObj.b.c = 7
+
+// update revision of mutableObj and mutableObj.b
+mutableObj.b.c = 7
+
+// update revision of mutableObj,  mutableObj.arr and mutableObj.arr[1] 
+mutableObj.arr[1].e = 7
+
+// update revision of mutableObj,  mutableObj.arr
+mutableObj.arr[1].push({e: 12})
+```
+
+When using Mutable with `createState`, createState adds a change listener on the mutable object to run 
+reactions when a mutable object changes
+
+```typescript
+let [theState, setTheState] = reactive.createState(mutableObject(obj));
+
+reactive.createReaction(() => console.log(theState()));
+
+// updating the mutable object triggers change listener which triggers state change, and in turn triggers
+// the reaction to print to the console.
+obj.b.c = 7;
+
+```
+
+## <a name="mutableObject">mutableObject</a>
+                                                                                              
+Creates a mutable proxy object or a mutable proxy array over a base object. 
+The notify parent callback is called any time the mutable object changes.
+
+```typescript
+declare function mutableObject<T extends object>(original: T, notifyParent?: ChangeListener): T
+declare function mutableObject<T>(original: Array<T>, notifyParent?: ChangeListener): Array<T>
+```
+
+## <a name="isMutable">isMutable</a>
+                  
+Checks if a given object is a mutable proxy.
+
+```typescript
+declare function isMutable(obj: any): obj is object
+```
+
+## <a name="addMutableListener">addMutableListener</a>
+          
+Adds another listener to the mutable proxy
+
+```typescript
+type ChangeListener = () => void;
+declare function addMutableListener(obj: object, changeListener: ChangeListener)
+```
+
+## <a name="removeMutableListener">removeMutableListener</a>
+
+Removes a listener from the mutable proxy
+
+```typescript
+declare function removeMutableListener(obj: object, changeListener: ChangeListener)
+```
+
+# <a name="revisioned">Revisioned</a>
+
+The Revisioned subsystem is a system to identify changes in values while supporting both primitives,
 immutable objects and mutable objects.
 
 * primitives are considered changed if `a !== b`
 * immutable objects are considered changed if `a !== b`
 * mutable objects are considered changed if `a[REVISION] !== b[REVISION]`
-                                                     
-## touchRevision
 
-the `touchRevision` function marks an object as mutable and updates the object revision 
+## <a name="touchRevision">touchRevision</a>
+
+the `touchRevision` function marks an object as mutable and updates the object revision
 
 ```typescript
 declare function touchRevision<T extends object>(value: T): T
 ```
 
-## checkModified
+## <a name="checkModified">checkModified</a>
 
 The check modified function compares two values - a given new value, and an old `Revisioned` value.
-The function compares the new value with the old value using the rules above, and returns a 
+The function compares the new value with the old value using the rules above, and returns a
 new revisioned instance and a is changed flag.
 
 ```typescript
@@ -165,3 +269,4 @@ interface Revisioned<T> {
 
 declare function checkModified<T>(value: T, oldValue?: Revisioned<T>): [Revisioned<T>, boolean]
 ```
+
