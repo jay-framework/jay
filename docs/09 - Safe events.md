@@ -174,7 +174,60 @@ element.vidRef.onclick(
         _ => {}) // runs in the worker 
 ```
 
-## Prior work
+Safe Event handlers - Creating an API
+---
+
+For safe event handlers, the API for using them should enable and follow a number of guidelines - 
+
+1. it should run sync with the actual DOM event to enable privileged APIS
+2. It should be able to access the view state of the element, and perform simple conditional on them
+3. It should enable a seamless API for DOM values, like input value or checkbox checked APIs
+
+With those in mind, we suggest to consider safe events as a *macro* that appears in the developer code 
+as a higher level function, yet interpret it's argument as code to be parted as safe and run in main thread.
+
+Consider the following event handler
+
+```typescript
+refs.title.onchange = (event, todo) => {
+    todo.editText = (event.target as HTMLInputElement).value
+}
+```
+
+Introducing safe events, and allowing only main thread to access element values, we get
+                    
+### option 1
+```typescript
+refs.title.onchange = async (todo) => {
+    todo.editText = await privileged((event) => (event.target as HTMLInputElement).value)
+}
+```
+
+with this option the position of the privileged call is not important inside the event handler, it will 
+always fun first. This syntax is nice as it provides the data context as a closure variable which is shimmed 
+within main thread. 
+
+### option 2
+```typescript
+refs.title.onchange = privileged((event, todo) => (event.target as HTMLInputElement).value)
+    .then((value, todo) => todo.editText = value);
+}
+```
+
+With this option we are more explicit as to what happens at the cost of reverting to more old school promise 
+syntax.
+
+### option 3
+```typescript
+refs.title.onchange = privileged((event, todo) => (event.target as HTMLInputElement).value)
+    .andReturn((value, todo) => todo.editText = value);
+}
+```
+
+This option is more explicit to the fact we do not have a regular promise here, but a special case
+macro that translates to a promise.
+
+# Prior work
 
 [ADSafe](https://www.adsafe.org/)
 
