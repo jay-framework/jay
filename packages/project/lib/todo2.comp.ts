@@ -70,10 +70,6 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoRe
             setTodos(todos().filter(_ => _ !== todo));
         }
     }
-    let updateTitleFromEditing = todo => {
-        todo.editText = (event.target as HTMLInputElement).value;
-    }
-
 
     refs.filterActive.onclick = () => setFilter('active')
     refs.filterCompleted.onclick = () => setFilter('completed')
@@ -87,7 +83,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoRe
         event.preventDefault();
 
         let newValue = newTodo();
-        let val = newValue;
+        let val = newValue.trim();
 
         if (val) {
             todos().push({
@@ -121,7 +117,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoRe
         handleSubmit(todo);
     }
     refs.title.onchange = (event, todo) => {
-        updateTitleFromEditing(todo);
+        todo.editText = (event.target as HTMLInputElement).value;
     }
     refs.title.onkeydown = (event, todo) => {
         if (event.which === ESCAPE_KEY) {
