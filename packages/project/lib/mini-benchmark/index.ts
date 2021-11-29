@@ -2,8 +2,6 @@ import basic from './basic-data';
 import collections from './collections-data';
 import composite from './composite-data';
 import conditions from './conditions-data';
-import counter from './counter.comp';
-import todo from './todo.comp';
 
 function ex(name: string, run: (target, cycles, progressCallback) => void) {
     return {name, run}
@@ -13,9 +11,7 @@ const examples = [
     ex('simple', basic),
     ex('collection', collections),
     ex('composite', composite),
-    ex('conditions', conditions),
-    ex('counter', counter),
-    ex('todo mvc', todo)
+    ex('conditions', conditions)
 ]
 
 window.onload = function() {

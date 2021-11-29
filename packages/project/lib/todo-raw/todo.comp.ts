@@ -1,25 +1,8 @@
 import {render, ShownTodo, TodoViewState} from './todo.jay.html';
+import {uuid} from "./uuid";
 
 const ENTER_KEY = 13;
 const ESCAPE_KEY = 27;
-
-function uuid() {
-    /*jshint bitwise:false */
-    var i, random;
-    var uuid = '';
-
-    for (i = 0; i < 32; i++) {
-        random = Math.random() * 16 | 0;
-        if (i === 8 || i === 12 || i === 16 || i === 20) {
-            uuid += '-';
-        }
-        uuid += (i === 12 ? 4 : (i === 16 ? (random & 3 | 8) : random))
-            .toString(16);
-    }
-
-    return uuid;
-}
-
 
 function Todo() {
 
@@ -196,9 +179,8 @@ function Todo() {
     }
 }
 
-export default function run(target, cycles, progressCallback) {
-    let counter = Todo();
+export default function run(target) {
+    let todoInstance = Todo();
     target.innerHTML = '';
-    target.appendChild(counter.element.dom);
-
+    target.appendChild(todoInstance.element.dom);
 }

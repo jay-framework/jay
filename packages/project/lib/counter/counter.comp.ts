@@ -20,7 +20,7 @@ function Counter(initialValue: number) {
     }
 }
 
-export default function run(target, cycles, progressCallback) {
+export default function run(target) {
     let counter = Counter(12);
     target.innerHTML = '';
     target.appendChild(counter.element.dom);
