@@ -1,26 +1,10 @@
 import {render, ShownTodo, TodoRefs} from './todo.jay.html';
 import {createMemo, createState, makeJayComponent, Props} from 'jay-component';
-import { mutableObject } from 'jay-reactive';
+import {mutableObject} from 'jay-reactive';
+import {uuid} from "./uuid";
 
 const ENTER_KEY = 13;
 const ESCAPE_KEY = 27;
-
-function uuid() {
-    /*jshint bitwise:false */
-    var i, random;
-    var uuid = '';
-
-    for (i = 0; i < 32; i++) {
-        random = Math.random() * 16 | 0;
-        if (i === 8 || i === 12 || i === 16 || i === 20) {
-            uuid += '-';
-        }
-        uuid += (i === 12 ? 4 : (i === 16 ? (random & 3 | 8) : random))
-            .toString(16);
-    }
-
-    return uuid;
-}
 
 interface TodoItem {
     id: string,
@@ -140,28 +124,4 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoRe
     }
 }
 
-const TodoComponent = makeJayComponent(render, TodoComponentConstructor)
-
-const initialTodos = [
-    {
-        id: 'a1',
-        title: 'a title 1',
-        isCompleted: false
-    },
-    {
-        id: 'a2',
-        title: 'a title 2',
-        isCompleted: false
-    },
-    {
-        id: 'a3',
-        title: 'a title 3',
-        isCompleted: true
-    }];
-
-export default function run(target, cycles, progressCallback) {
-    let instance = TodoComponent({initialTodos});
-    target.innerHTML = '';
-    target.appendChild(instance.element.dom);
-
-}
+export const TodoComponent = makeJayComponent(render, TodoComponentConstructor)
