@@ -4,10 +4,11 @@ import {JayArrayType, JayBoolean, JayNumber, JayObjectType, JayString, parseJayF
 
 describe('compiler', () => {
 
-    function jayFileWith(jayYaml, body) {
+    function jayFileWith(links, jayYaml, body) {
         return stripMargin(
             ` <html>
                 |   <head>
+                |${links}     
                 |     <script type="application/yaml-jay">
                 |${stripMargin(jayYaml)}
                 |     </script>
@@ -19,7 +20,7 @@ describe('compiler', () => {
     describe('parse jay file', () => {
         
         it('should parse simple string type with no examples', () => {
-            let jayFile = parseJayFile(jayFileWith(
+            let jayFile = parseJayFile(jayFileWith('',
                 `data:
                         |   text: string
                         |`,
@@ -30,7 +31,7 @@ describe('compiler', () => {
         });
 
         it('should append the base name to the view state type', () => {
-            let jayFile = parseJayFile(jayFileWith(
+            let jayFile = parseJayFile(jayFileWith('',
                 `data:
                         |   text: string
                         |`,
@@ -41,7 +42,7 @@ describe('compiler', () => {
         });
 
         it('should parse simple string type with a simple example', () => {
-            let jayFile = parseJayFile(jayFileWith(
+            let jayFile = parseJayFile(jayFileWith('',
                 ` data:
                         |   text: string
                         |
@@ -54,7 +55,7 @@ describe('compiler', () => {
         });
 
         it('should parse invalid type', () => {
-            let jayFile = parseJayFile(jayFileWith(
+            let jayFile = parseJayFile(jayFileWith('',
                 ` data:
                         |   text: bla`,
                 '<body></body>'), 'Base')
@@ -62,8 +63,8 @@ describe('compiler', () => {
             expect(jayFile.validations).toEqual(["invalid type [bla] found at [data.text]"]);
         });
 
-        it('should parse complex', () => {
-            let jayFile = parseJayFile(jayFileWith(
+        it('should parse complex types', () => {
+            let jayFile = parseJayFile(jayFileWith('',
                 ` data:
                         |   s1: string
                         |   n1: number
@@ -89,6 +90,21 @@ describe('compiler', () => {
                     n3: JayNumber}
                 ))}));
             expect(jayFile.val.examples).toEqual([]);
+        });
+
+        it('should parse import links', () => {
+            let jayFile = parseJayFile(jayFileWith(
+                `  <link rel='import' href='./component1.ts' component='comp1'/>
+                      |  <link rel='import' href='./component2.ts' component='comp2' as="comp3"/>`,
+                ` data:
+                        |   s1: string
+                        |   n1: number`,
+                '<body></body>'), 'Base')
+
+            expect(jayFile.val.imports).toEqual([
+                {module: "./component1.ts", component: "comp1"},
+                {module: "./component2.ts", component: "comp2", as: "comp3"}
+            ]);
         });
 
         it('should report on a file with two yaml-jay', () => {
@@ -136,6 +152,28 @@ describe('compiler', () => {
                 |</html>`), 'Base')
             expect(jayFile.validations).toEqual(["jay file must have exactly a body tag"]);
         })
+
+        it('should report on missing href for import link', () => {
+            let jayFile = parseJayFile(jayFileWith(
+                `  <link rel='import' component="comp1"/>`,
+                ` data:
+                        |   s1: string
+                        |   n1: number`,
+                '<body></body>'), 'Base')
+
+            expect(jayFile.validations).toEqual(["jay file link import must have href attribute"]);
+        });
+
+        it('should report on missing component for import link', () => {
+            let jayFile = parseJayFile(jayFileWith(
+                `  <link rel='import' href='./component1.ts'/>`,
+                ` data:
+                        |   s1: string
+                        |   n1: number`,
+                '<body></body>'), 'Base')
+
+            expect(jayFile.validations).toEqual(["jay file link import must have component attribute"]);
+        });
     })
 
 });

@@ -53,9 +53,16 @@ interface JayExample {
     data: any
 }
 
+interface JayImport {
+    module: string,
+    component: string,
+    as?: string
+}
+
 export interface JayFile {
     types: JayObjectType,
     examples: Array<JayExample>,
+    imports: JayImport[],
     body: HTMLElement
 }
 
@@ -103,20 +110,53 @@ function parseJayYaml(jayYaml, validations: JayValidations, baseElementName: str
     return {types, examples};
 }
 
-export function parseJayFile(html: string, baseElementName: string): WithValidations<JayFile> {
+function parseTypesAndExamples(root: HTMLElement, baseElementName: string): WithValidations<{ types: JayObjectType, examples: Array<JayExample> }> {
     let validations = [];
-    let root = parse(html);
     let jayYamlElements = root.querySelectorAll('[type="application/yaml-jay"]');
     if (jayYamlElements.length !== 1) {
         validations.push(`jay file should have exactly one yaml-jay script, found ${jayYamlElements.length === 0 ? 'none' : jayYamlElements.length}`);
         return new WithValidations(undefined, validations)
     }
     let jayYaml = jayYamlElements[0].text;
-    let {types, examples} = parseJayYaml(jayYaml, validations, baseElementName);
+    return new WithValidations(parseJayYaml(jayYaml, validations, baseElementName), validations)
+}
+
+function parseImports(root: HTMLElement): WithValidations<JayImport[]> {
+    // todo validate the imported component and identify the member
+    let imports = root.querySelectorAll('link[rel=import]');
+
+    let parsedImports: WithValidations<JayImport[]>[] = imports.map(element => {
+        if (!element.hasAttribute('href'))
+            return new WithValidations(undefined, ['jay file link import must have href attribute']);
+        else if (!element.hasAttribute('component'))
+            return new WithValidations(undefined, ['jay file link import must have component attribute']);
+        else
+            return new WithValidations([{
+                module: element.getAttribute('href'),
+                component: element.getAttribute('component'),
+                as: element.getAttribute('as')
+            }], [])
+    });
+    return parsedImports.reduce((acc, current) => {
+        return acc.merge(current, (a, b) => b?[...a, ...b]:a);
+    }, new WithValidations<JayImport[]>([], []));
+}
+
+export function parseJayFile(html: string, baseElementName: string): WithValidations<JayFile> {
+    let root = parse(html);
+
+    let {val: typesAndExamples, validations: typeValidations} = parseTypesAndExamples(root, baseElementName);
+    let {val: imports, validations: importValidations} = parseImports(root);
+
+    let validations = [...typeValidations, ...importValidations];
+    if (validations.length > 0)
+        return new WithValidations(undefined, validations);
+
+    let {types, examples} = typesAndExamples;
     let body = root.querySelector('body');
     if (body === null) {
         validations.push(`jay file must have exactly a body tag`);
         return new WithValidations(undefined, validations)
     }
-    return new WithValidations({types, examples, body}, validations)
+    return new WithValidations({types, examples, imports, body}, validations)
 }
