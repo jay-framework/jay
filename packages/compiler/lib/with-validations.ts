@@ -23,4 +23,8 @@ export class WithValidations<T> {
         } else
             return new WithValidations<R>(undefined, this.validations)
     }
+
+    merge(other: WithValidations<T>, merge: (t1: T, t2: T) => T) {
+        return new WithValidations(merge(this.val, other.val), [...this.validations, ...other.validations]);
+    }
 }
