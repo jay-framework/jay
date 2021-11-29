@@ -3,16 +3,32 @@ import {generateDefinitionFile}  from 'jay-compiler';
 import path from "path";
 import chalk from 'chalk';
 
+async function findAllJayFiles(dir) {
+    let files = await fs.readdir(dir);
+    let jayFiles = [];
+    for (let file of files)
+        if ((await fs.stat(dir + "/" + file)).isDirectory())
+            jayFiles = [...jayFiles, ...await findAllJayFiles(dir + "/" + file)]
+        else if (file.indexOf('.jay.html') === file.length - 9 && file.indexOf('.jay.html') > 0)
+            jayFiles.push(path.join(dir, "/", file))
+    return jayFiles;
+}
+
 async function run() {
     let dir = process.argv[2];
     console.log(chalk.whiteBright('Jay generating definition files for ', dir));
-    let allFiles = await fs.readdir(dir)
-    const jayFiles = allFiles.filter(_ => _.indexOf('.jay.html') === _.length - 9 && _.indexOf('.jay.html') > 0)
+    let jayFiles = await findAllJayFiles(dir)
     for (const jayFile of jayFiles) {
-        const content = await fs.readFile(path.join(dir, jayFile), 'utf-8');
+        const content = await fs.readFile(jayFile, 'utf-8');
         const d = generateDefinitionFile(content, jayFile.replace('.jay.html', ''));
-        console.log(`${chalk.green('generated')} ${chalk.yellow(jayFile)} → ${chalk.yellow(jayFile + '.d.js')}`)
-        await fs.writeFile(path.join(dir, jayFile + '.d.ts'), d.val)
+        if (d.validations.length > 0) {
+            console.log(`${chalk.red('failed to generate')} ${chalk.yellow(jayFile)} → ${chalk.yellow(jayFile + '.d.js')}`)
+            d.validations.forEach(_ => console.log(chalk.red(_)));
+        }
+        else {
+            console.log(`${chalk.green('generated')} ${chalk.yellow(jayFile)} → ${chalk.yellow(jayFile + '.d.js')}`)
+            await fs.writeFile(jayFile + '.d.ts', d.val)
+        }
     }
 }
 
