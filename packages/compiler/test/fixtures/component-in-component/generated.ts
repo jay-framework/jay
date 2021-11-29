@@ -15,8 +15,9 @@ export function render(viewState: ComponentInComponentViewState): ComponentInCom
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
       childComp(Counter, vs => ({initialValue: vs.count1})),
-      childComp(Counter, vs => ({initialValue: vs.count2})),
-      childComp(Counter, vs => ({initialValue: vs.count3}))
+      childComp(Counter, vs => ({initialValue: `${vs.count2} + 2`})),
+      childComp(Counter, vs => ({initialValue: `${vs.count1} + ${vs.count2}`})),
+      childComp(Counter, vs => ({initialValue: '12'}))
     ]));
 }
 
