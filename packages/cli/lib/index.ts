@@ -20,7 +20,7 @@ async function run() {
     let jayFiles = await findAllJayFiles(dir)
     for (const jayFile of jayFiles) {
         const content = await fs.readFile(jayFile, 'utf-8');
-        const d = generateDefinitionFile(content, jayFile.replace('.jay.html', ''));
+        const d = generateDefinitionFile(content, path.basename(jayFile.replace('.jay.html', '')));
         if (d.validations.length > 0) {
             console.log(`${chalk.red('failed to generate')} ${chalk.yellow(jayFile)} → ${chalk.yellow(jayFile + '.d.js')}`)
             d.validations.forEach(_ => console.log(chalk.red(_)));
