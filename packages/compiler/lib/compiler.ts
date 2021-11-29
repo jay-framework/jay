@@ -2,7 +2,7 @@ import {WithValidations} from "./with-validations";
 import {
     JayArrayType,
     JayAtomicType,
-    JayFile,
+    JayFile, JayImport,
     JayObjectType,
     JayType,
     parseJayFile
@@ -11,7 +11,7 @@ import {HTMLElement, NodeType} from "node-html-parser";
 import Node from "node-html-parser/dist/nodes/node";
 import {Import, Imports, Ref, RenderFragment} from "./render-fragment";
 import {
-    parseAccessor, parseAttributeExpression, parseClassExpression,
+    parseAccessor, parseAttributeExpression, parseClassExpression, parseComponentPropExpression,
     parseCondition, parsePropertyExpression,
     parseTextExpression,
     Variables
@@ -61,19 +61,27 @@ enum ImportsFor {
     definition, implementation
 }
 
-function renderImports(imports: Imports, importsFor: ImportsFor): string {
-    let renderedImports = [];
-    if (imports.has(Import.jayElement)) renderedImports.push('JayElement');
-    if (imports.has(Import.element) && importsFor === ImportsFor.implementation) renderedImports.push('element as e');
-    if (imports.has(Import.dynamicText) && importsFor === ImportsFor.implementation) renderedImports.push('dynamicText as dt');
-    if (imports.has(Import.dynamicAttribute) && importsFor === ImportsFor.implementation) renderedImports.push('dynamicAttribute as da');
-    if (imports.has(Import.dynamicProperty) && importsFor === ImportsFor.implementation) renderedImports.push('dynamicProperty as dp');
-    if (imports.has(Import.conditional) && importsFor === ImportsFor.implementation) renderedImports.push('conditional as c');
-    if (imports.has(Import.dynamicElement) && importsFor === ImportsFor.implementation) renderedImports.push('dynamicElement as de');
-    if (imports.has(Import.forEach) && importsFor === ImportsFor.implementation) renderedImports.push('forEach');
-    if (imports.has(Import.ConstructContext) && importsFor === ImportsFor.implementation) renderedImports.push('ConstructContext');
-    if (imports.has(Import.DynamicReference)) renderedImports.push('DynamicReference');
-    return `import {${renderedImports.join(', ')}} from "jay-runtime";`;
+function renderImports(imports: Imports, importsFor: ImportsFor, componentImports: Array<JayImport>): string {
+    let toBeRenderedImports = [];
+    if (imports.has(Import.jayElement)) toBeRenderedImports.push('JayElement');
+    if (imports.has(Import.element) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('element as e');
+    if (imports.has(Import.dynamicText) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('dynamicText as dt');
+    if (imports.has(Import.dynamicAttribute) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('dynamicAttribute as da');
+    if (imports.has(Import.dynamicProperty) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('dynamicProperty as dp');
+    if (imports.has(Import.conditional) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('conditional as c');
+    if (imports.has(Import.dynamicElement) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('dynamicElement as de');
+    if (imports.has(Import.forEach) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('forEach');
+    if (imports.has(Import.ConstructContext) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('ConstructContext');
+    if (imports.has(Import.DynamicReference)) toBeRenderedImports.push('DynamicReference');
+    if (imports.has(Import.childComp) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('childComp');
+    let runtimeImport =  `import {${toBeRenderedImports.join(', ')}} from "jay-runtime";`;
+
+    // todo validate the actual imported file
+    let renderedComponentImports = componentImports.map(componentImport => componentImport.as?
+        `import {${componentImport.component} as ${componentImport.as}} from '${componentImport.module}';`:
+        `import {${componentImport.component}} from '${componentImport.module}';`)
+
+    return [runtimeImport, ...renderedComponentImports].join('\n');
 }
 
 function renderFunctionDeclaration(typeName: string, elementName: string): string {
@@ -167,7 +175,30 @@ class Indent {
     }
 }
 
-function renderNode(variables: Variables, node: Node, indent: Indent, dynamicRef: boolean): RenderFragment {
+function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
+    let attributes = element.attributes;
+    let refs: Ref[] = [];
+    let props = [];
+    Object.keys(attributes).forEach(attrName => {
+        let attrCanonical = attrName.toLowerCase();
+        let attrKey = attrName.match(attributesRequiresQuotes) ? `"${attrName}"` : attrName;
+        if (attrCanonical === 'if' || attrCanonical === 'foreach' || attrCanonical === 'trackby')
+            return;
+        if (attrCanonical === 'ref')
+            refs = [{ref: attributes[attrName], dynamicRef, refType: variables.currentType}];
+        else {
+            let prop = parseComponentPropExpression(attributes[attrName], variables);
+            props.push(prop.map(_ => `${attrKey}: ${_}`))
+        }
+    })
+
+    const refsRenderFragment = new RenderFragment('', Imports.none(), [], refs);
+    return props
+        .reduce((prev, current) => RenderFragment.merge(prev, current, ', '), refsRenderFragment)
+        .map(_ => `{${_}}`);
+}
+
+function renderNode(variables: Variables, node: Node, components: Set<string>, indent: Indent, dynamicRef: boolean): RenderFragment {
 
     function de(tagName: string, attributes: RenderFragment, children: RenderFragment, currIndent: Indent = indent): RenderFragment {
         return new RenderFragment(`${currIndent.firstLine}de('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}])`,
@@ -199,7 +230,7 @@ function renderNode(variables: Variables, node: Node, indent: Indent, dynamicRef
         let childRenders = childNodes.length === 0 ?
             RenderFragment.empty() :
             childNodes
-                .map(_ => renderNode(newVariables, _, childIndent, dynamicRef))
+                .map(_ => renderNode(newVariables, _, components, childIndent, dynamicRef))
                 .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
                 .map(children => childIndent.firstLineBreak ? `\n${children}\n${currIndent.firstLine}` : children);
 
@@ -224,12 +255,21 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
             [...renderedForEach.validations, ...childElement.validations], childElement.refs)
     }
 
+    function renderNestedComponent(htmlElement: HTMLElement): RenderFragment {
+        let propsGetter = renderChildCompProps(htmlElement, dynamicRef, variables);
+        return new RenderFragment(`${indent.firstLine}childComp(${htmlElement.rawTagName}, vs => (${propsGetter.rendered}))`,
+            Imports.for(Import.childComp).plus(propsGetter.imports),
+            propsGetter.validations, propsGetter.refs);
+    }
+
     switch(node.nodeType) {
         case NodeType.TEXT_NODE:
             let text = node.innerText;
             return renderTextNode(variables, text, indent) //.map(_ => ident + _);
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
+            if (components.has(htmlElement.rawTagName))
+                return renderNestedComponent(htmlElement);
             if (isForEach(htmlElement))
                 dynamicRef = true;
             let refs = [];
@@ -266,10 +306,11 @@ function firstElementChild(node: Node): HTMLElement {
     return node.childNodes.find(child => child.nodeType === NodeType.ELEMENT_NODE) as HTMLElement;
 }
 
-function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, baseElementName: string):
-    {renderedRefs: string, renderedElement: string, elementType: string, renderedImplementation: RenderFragment} {
+function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, componentImports: JayImport[], baseElementName: string):
+    { renderedRefs: string; renderedElement: string; elementType: string; renderedImplementation: RenderFragment } {
     let variables = new Variables(types);
-    let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), new Indent('    '), false);
+    let components = new Set(componentImports.map(_ => _.as ? _.as : _.component));
+    let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), components, new Indent('    '), false);
     let elementType = baseElementName + 'Element';
     let refsType = baseElementName + 'Refs';
     let imports = renderedRoot.imports.plus(Import.ConstructContext);
@@ -307,8 +348,8 @@ export function generateDefinitionFile(html: string, filename: string): WithVali
     let parsedFile = parseJayFile(html, baseElementName);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        let {renderedRefs, renderedElement, elementType, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, baseElementName);
-        return [renderImports(renderedImplementation.imports.plus(Import.jayElement), ImportsFor.definition),
+        let {renderedRefs, renderedElement, elementType, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, baseElementName);
+        return [renderImports(renderedImplementation.imports.plus(Import.jayElement), ImportsFor.definition, jayFile.imports),
             types,
             renderedRefs,
             renderedElement,
@@ -324,8 +365,8 @@ export function generateRuntimeFile(html: string, filename: string): WithValidat
     let parsedFile = parseJayFile(html, baseElementName);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        let {renderedRefs, renderedElement, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, baseElementName);
-        return [renderImports(renderedImplementation.imports.plus(Import.element).plus(Import.jayElement), ImportsFor.implementation),
+        let {renderedRefs, renderedElement, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, baseElementName);
+        return [renderImports(renderedImplementation.imports.plus(Import.element).plus(Import.jayElement), ImportsFor.implementation, jayFile.imports),
             types,
             renderedRefs,
             renderedElement,

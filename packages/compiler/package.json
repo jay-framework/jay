@@ -8,8 +8,8 @@
     "lib": "lib"
   },
   "scripts": {
-    "test": "pegjs --allowed-start-rules dynamicAttribute,dynamicText,dynamicProperty,condition,accessor,Identifier,classExpression lib/parse-expressions.pegjs && jest",
-    "build": "pegjs --allowed-start-rules dynamicAttribute,dynamicText,dynamicProperty,condition,accessor,Identifier,classExpression lib/parse-expressions.pegjs && tsc"
+    "test": "pegjs --allowed-start-rules dynamicAttribute,dynamicText,dynamicProperty,condition,accessor,Identifier,classExpression,dynamicComponentProp lib/parse-expressions.pegjs && jest",
+    "build": "pegjs --allowed-start-rules dynamicAttribute,dynamicText,dynamicProperty,condition,accessor,Identifier,classExpression,dynamicComponentProp lib/parse-expressions.pegjs && tsc"
   },
   "jest": {
     "setupFilesAfterEnv": [

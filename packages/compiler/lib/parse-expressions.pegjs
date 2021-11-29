@@ -45,6 +45,12 @@ dynamicAttribute
       renderFragment;
 }
 
+dynamicComponentProp
+  = template:template {
+  let [renderFragment, isDynamic] = template;
+  return renderFragment;
+}
+
 dynamicProperty
   = template:template {
   let [renderFragment, isDynamic] = template;

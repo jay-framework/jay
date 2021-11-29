@@ -92,6 +92,10 @@ export function parsePropertyExpression(expression: string, vars: Variables): Re
     return doParse(expression, vars, 'dynamicProperty');
 }
 
+export function parseComponentPropExpression(expression: string, vars: Variables): RenderFragment {
+    return doParse(expression, vars, 'dynamicComponentProp');
+}
+
 export function parseClassExpression(expression: string, vars: Variables): RenderFragment {
     return doParse(expression, vars, 'classExpression');
 }

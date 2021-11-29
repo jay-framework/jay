@@ -53,7 +53,7 @@ interface JayExample {
     data: any
 }
 
-interface JayImport {
+export interface JayImport {
     module: string,
     component: string,
     as?: string

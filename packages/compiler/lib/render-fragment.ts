@@ -12,6 +12,7 @@ export enum Import {
     DynamicReference,
     dynamicAttribute,
     dynamicProperty,
+    childComp
 }
 
 export class Imports {

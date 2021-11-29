@@ -183,6 +183,11 @@ describe('compiler', () => {
             expect(runtimeFile.val).toEqual(await readGeneratedFile('whitespace-and-text'));
         })
 
+        it('nesting components in other components', async () => {
+            const jayFile = await readSourceFile('component-in-component');
+            let runtimeFile = generateRuntimeFile(jayFile, 'component-in-component.jay.html');
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('component-in-component'));
+        })
     })
 });
 
