@@ -22,11 +22,11 @@ async function makeRollupConfig() {
   let entrypoints = await findAllEntryPoints('./lib');
   let config =  entrypoints.map(ep => {
     let srcFolder = path.dirname(ep);
-    let destFolder = srcFolder.replace('/packages/project/lib', '/packages/project/dist');
+    let destFolder = srcFolder.replace('/examples/lib', '/examples/dist');
     return {
       input: ep,
       output: {
-        file: ep.replace('/packages/project/lib/', '/packages/project/dist/').replace('.ts', '.js'),
+        file: ep.replace('/examples/lib/', '/examples/dist/').replace('.ts', '.js'),
         format: 'iife',
         name: 'jay'
       },
