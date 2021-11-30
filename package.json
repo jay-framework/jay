@@ -1,6 +1,7 @@
 {
 	"scripts": {
 		"test": "lerna run test",
+		"link": "lerna run link",
 		"release": "echo \"======= Lerna Releasing jay =======\" && npm run test && lerna publish"
 	},
 	"devDependencies": {

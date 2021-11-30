@@ -2,7 +2,7 @@
   "packages": [
     "packages/runtime",
     "packages/compiler",
-    "packages/project",
+    "examples",
     "packages/rollup-plugin",
     "packages/cli",
     "packages/component",
