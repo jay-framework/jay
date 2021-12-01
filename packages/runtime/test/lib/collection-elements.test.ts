@@ -244,5 +244,75 @@ describe('collection-element', () => {
             expect(count).toBe(4);
         })
     })
+
+    describe('collection in collection', () => {
+
+        interface CinCCell {
+            name: string,
+            id: string
+        }
+
+        interface CinCLine {
+            cells: CinCCell[]
+            id: string
+        }
+
+        interface CinCViewState {
+            lines: Array<CinCLine>;
+        }
+
+
+        function makeElement(data: CinCViewState): JayElement<CinCViewState, any> {
+            return ConstructContext.withRootContext(data, () =>
+                // noinspection DuplicatedCode
+                de('table', {}, [
+                    forEach((newViewState: CinCViewState) => newViewState.lines,
+                        (line: CinCLine) =>
+                            de('tr', {}, [
+                                forEach((item: CinCLine) => item.cells,
+                                    (child: CinCCell) => {
+                                        return e('td', {id: child.id}, [dt(child => child.name)])
+                                    },
+                                    'id'
+                                )]),
+                        'id'
+                    )
+                ])
+            )
+        }
+
+        it('should render basic table', () => {
+            let jayElement = makeElement({
+                lines: [
+                    {id: 'a', cells: [{id: 'a1', name: 'abc'}, {id: 'a2', name: 'def'}]},
+                    {id: 'b', cells: [{id: 'b1', name: 'ghi'}, {id: 'b2', name: 'jkl'}]}
+                ]});
+            let tableCells = jayElement.dom.querySelectorAll('td');
+            expect(tableCells).toHaveLength(4);
+            expectE(tableCells[0]).toHaveTextContent('abc');
+            expectE(tableCells[1]).toHaveTextContent('def');
+            expectE(tableCells[2]).toHaveTextContent('ghi');
+            expectE(tableCells[3]).toHaveTextContent('jkl');
+        })
+
+        it('should update basic table', () => {
+            let jayElement = makeElement({
+                lines: [
+                    {id: 'a', cells: [{id: 'a1', name: 'abc'}, {id: 'a2', name: 'def'}]},
+                    {id: 'b', cells: [{id: 'b1', name: 'ghi'}, {id: 'b2', name: 'jkl'}]}
+                ]});
+            jayElement.update({
+                lines: [
+                    {id: 'a', cells: [{id: 'a1', name: '123'}, {id: 'a2', name: '456'}]},
+                    {id: 'b', cells: [{id: 'b1', name: '789'}, {id: 'b2', name: '101'}]}
+                ]})
+            let tableCells = jayElement.dom.querySelectorAll('td');
+            expect(tableCells).toHaveLength(4);
+            expectE(tableCells[0]).toHaveTextContent('123');
+            expectE(tableCells[1]).toHaveTextContent('456');
+            expectE(tableCells[2]).toHaveTextContent('789');
+            expectE(tableCells[3]).toHaveTextContent('101');
+        })
+    })
 });
 

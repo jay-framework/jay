@@ -337,7 +337,7 @@ export function dynamicElement<ViewState>(
 
         if (update !== noopUpdate) {
             let context = constructionContextStack.current();
-            update(context.data[0])
+            update(context.currData)
             updates.push(update);
         }
 
