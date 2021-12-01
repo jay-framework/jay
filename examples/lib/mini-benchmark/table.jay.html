@@ -1,0 +1,21 @@
+<html>
+<head>
+    <script type="application/yaml-jay">
+data:
+  line:
+  - id: number
+    cell:
+      - id: number
+        value: number
+    </script>
+</head>
+<body>
+<div>
+    <table>
+        <tr forEach="line" trackBy="id">
+            <td forEach="cell" trackBy="id">{value}</td>
+        </tr>
+    </table>
+</div>
+</body>
+</html>
