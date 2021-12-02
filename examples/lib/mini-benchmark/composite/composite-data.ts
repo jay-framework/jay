@@ -1,5 +1,5 @@
-import {render} from './basic.jay.html';
-import benchmark from "./benchmark";
+import {render} from './composite.jay.html';
+import benchmark from "../benchmark";
 
 export default function run(target, cycles, progressCallback) {
     let dataFunc = data();
@@ -13,8 +13,9 @@ export default function run(target, cycles, progressCallback) {
 function data() {
     return function (index) {
         if (index === 0)
-            return {text: 'name'};
+            return {text: 'name', text2: 'text 2'}
         else
-            return {text: 'name ' + index};
+            return {text: 'name ' + index, text2: 'text 2 ' + index}
     }
 }
+

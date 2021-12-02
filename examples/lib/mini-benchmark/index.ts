@@ -1,8 +1,8 @@
-import basic from './basic-data';
-import collections from './collections-data';
-import composite from './composite-data';
-import conditions from './conditions-data';
-import table from './table-component';
+import basic from './basic/basic-data';
+import collections from './collections/collections-data';
+import composite from './composite/composite-data';
+import conditions from './conditions/conditions-data';
+import table from './table/table-component';
 
 function ex(name: string, run: (target, cycles, progressCallback) => void) {
     return {name, run}

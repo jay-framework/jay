@@ -1,0 +1,20 @@
+<html>
+<head>
+    <link href="./table-component" rel="import" component="Table"/>
+    <script type="application/yaml-jay">
+data:
+  cycles: number
+  size: number
+  updates: number
+    </script>
+</head>
+<body>
+<div>
+    <div><label for="cycles">Number of test cycles to run: </label><input id="cycles" ref="cycles">{cycles}</div>
+    <div><label for="size"/>Size of the table to generate: </label><input id="size" ref="size">{size}</div>
+    <div><label for="updates"/>Number of updates at each cycle: </label><input id="updates" ref="updates">{updates}</div>
+    <button ref="run">run</button>
+    <table ref="table" size="{size}"/>
+</div>
+</body>
+</html>

@@ -1,5 +1,5 @@
 import {render} from './conditions.jay.html';
-import benchmark from "./benchmark";
+import benchmark from "../benchmark";
 
 export default function run(target, cycles, progressCallback) {
     let dataFunc = data();

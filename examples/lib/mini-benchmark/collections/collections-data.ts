@@ -1,5 +1,5 @@
 import {render, CollectionsViewState} from './collections.jay.html';
-import benchmark from "./benchmark";
+import benchmark from "../benchmark";
 import {mutableObject} from 'jay-reactive';
 
 export default function run(target, cycles, progressCallback) {
