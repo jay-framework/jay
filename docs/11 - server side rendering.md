@@ -9,23 +9,34 @@
 5. Enable client only components or server only components
 6. Enable lazy loading of client code - on event or on idle
 
+## Build Components
+
+If we consider the `Jay Element` as a build time function of the structure `() => Definition<ViewState -> UI>` we can
+define build time components that are functions of `(Definition<ViewState -> UI>) => Definition<ViewState -> UI>` that
+enable to set values into UI at build time, letting server and client components to continue working from that
+point forward.
+
 ## observation
 
 In Jay, the **Element** is a function `ViewState -> UI`
-                                                  
-* On the **client** it translates to 
-`ViewState -> {dom: Element, update: (ViewState) -> void}`, the update function to enable updating the DOM.
 
-* On the **server** it should translate to 
-`ViewState -> {htmlFragment: string | stream}`.
+* **Build Element** - is the Jay file definition which is formally `() => Definition<ViewState -> UI>`.
+
+* **Client Element** - On the **client** it translates to
+  `ViewState -> {dom: Element, update: (ViewState) -> void}`, the update function to enable updating the DOM.
+
+* **Server Element** - On the **server** it should translate to
+  `ViewState -> {htmlFragment: string | stream}`.
 
 The **Component** is a function `Props -> ViewState`
 
-* On the **client** it translates to 
+* **Client Component** - On the **client** it translates to 
 `Props -> {update: () -> ViewState}`, the update function used to update the UI.
 
-* On the **server** it translates to 
+* **Server Component** - On the **server** it translates to 
 `Props -> Promise<ViewState>`
+* **Build Component** - at build time, a higher level function over the element definition
+`(Definition<ViewState -> UI>) => Definition<ViewState -> UI>`
 
 We can have **Pure Client** components at which the component renders initially (on the server or client) using 
 a null View State, then updates once the client component kicks in.
