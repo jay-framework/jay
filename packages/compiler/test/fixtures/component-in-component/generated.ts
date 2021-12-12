@@ -1,10 +1,12 @@
 import {JayElement, element as e, ConstructContext, childComp} from "jay-runtime";
 import {Counter} from '../counter/counter';
+import {CounterViewState as CounterData} from '../counter/generated';
 
 export interface ComponentInComponentViewState {
   count1: number,
   count2: number,
-  count3: number
+  count3: number,
+  count4: CounterData
 }
 
 export interface ComponentInComponentRefs {}
@@ -17,7 +19,8 @@ export function render(viewState: ComponentInComponentViewState): ComponentInCom
       childComp(Counter, vs => ({initialValue: vs.count1})),
       childComp(Counter, vs => ({initialValue: `${vs.count2} + 2`})),
       childComp(Counter, vs => ({initialValue: `${vs.count1} + ${vs.count2}`})),
-      childComp(Counter, vs => ({initialValue: '12'}))
+      childComp(Counter, vs => ({initialValue: '12'})),
+      childComp(Counter, vs => ({initialValue: vs.count4.count}))
     ]));
 }
 

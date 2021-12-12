@@ -19,6 +19,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/js-yaml": "^4.0.5",
     "change-case": "^4.1.2",
     "js-yaml": "^4.0.0",
     "node-html-parser": "^2.1.0",

@@ -2,7 +2,7 @@ import {WithValidations} from "./with-validations";
 import {
     JayArrayType,
     JayAtomicType,
-    JayFile, JayImport,
+    JayFile, JayImportedType, JayImportStatement,
     JayObjectType,
     JayType,
     parseJayFile
@@ -29,6 +29,9 @@ function renderInterface(aType: JayObjectType): string {
             let childType = aType.props[prop];
             if (childType instanceof JayObjectType) {
                 childInterfaces.push(renderInterface(childType));
+                return `  ${prop}: ${childType.name}`;
+            }
+            else if (childType instanceof JayImportedType) {
                 return `  ${prop}: ${childType.name}`;
             }
             else if (childType instanceof JayArrayType) {
@@ -61,7 +64,7 @@ enum ImportsFor {
     definition, implementation
 }
 
-function renderImports(imports: Imports, importsFor: ImportsFor, componentImports: Array<JayImport>): string {
+function renderImports(imports: Imports, importsFor: ImportsFor, componentImports: Array<JayImportStatement>): string {
     let toBeRenderedImports = [];
     if (imports.has(Import.jayElement)) toBeRenderedImports.push('JayElement');
     if (imports.has(Import.element) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('element as e');
@@ -77,9 +80,13 @@ function renderImports(imports: Imports, importsFor: ImportsFor, componentImport
     let runtimeImport =  `import {${toBeRenderedImports.join(', ')}} from "jay-runtime";`;
 
     // todo validate the actual imported file
-    let renderedComponentImports = componentImports.map(componentImport => componentImport.as?
-        `import {${componentImport.component} as ${componentImport.as}} from '${componentImport.module}';`:
-        `import {${componentImport.component}} from '${componentImport.module}';`)
+    let renderedComponentImports = componentImports.map(importStatement => {
+        let symbols = importStatement.symbols
+            .map(symbol => symbol.as?`${symbol.symbol} as ${symbol.as}`:symbol.symbol)
+            .join(', ')
+
+        return `import {${symbols}} from '${importStatement.module}';`
+    });
 
     return [runtimeImport, ...renderedComponentImports].join('\n');
 }
@@ -198,7 +205,7 @@ function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variabl
         .map(_ => `{${_}}`);
 }
 
-function renderNode(variables: Variables, node: Node, components: Set<string>, indent: Indent, dynamicRef: boolean): RenderFragment {
+function renderNode(variables: Variables, node: Node, importedSymbols: Set<string>, indent: Indent, dynamicRef: boolean): RenderFragment {
 
     function de(tagName: string, attributes: RenderFragment, children: RenderFragment, currIndent: Indent = indent): RenderFragment {
         return new RenderFragment(`${currIndent.firstLine}de('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}])`,
@@ -230,7 +237,7 @@ function renderNode(variables: Variables, node: Node, components: Set<string>, i
         let childRenders = childNodes.length === 0 ?
             RenderFragment.empty() :
             childNodes
-                .map(_ => renderNode(newVariables, _, components, childIndent, dynamicRef))
+                .map(_ => renderNode(newVariables, _, importedSymbols, childIndent, dynamicRef))
                 .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
                 .map(children => childIndent.firstLineBreak ? `\n${children}\n${currIndent.firstLine}` : children);
 
@@ -268,7 +275,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
             return renderTextNode(variables, text, indent) //.map(_ => ident + _);
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
-            if (components.has(htmlElement.rawTagName))
+            if (importedSymbols.has(htmlElement.rawTagName))
                 return renderNestedComponent(htmlElement);
             if (isForEach(htmlElement))
                 dynamicRef = true;
@@ -306,11 +313,11 @@ function firstElementChild(node: Node): HTMLElement {
     return node.childNodes.find(child => child.nodeType === NodeType.ELEMENT_NODE) as HTMLElement;
 }
 
-function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, componentImports: JayImport[], baseElementName: string):
+function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, importStatements: JayImportStatement[], baseElementName: string):
     { renderedRefs: string; renderedElement: string; elementType: string; renderedImplementation: RenderFragment } {
     let variables = new Variables(types);
-    let components = new Set(componentImports.map(_ => _.as ? _.as : _.component));
-    let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), components, new Indent('    '), false);
+    let importedSymbols = new Set(importStatements.flatMap(_ => _.symbols.map(sym => sym.as? sym.as : sym.symbol)));
+    let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), importedSymbols, new Indent('    '), false);
     let elementType = baseElementName + 'Element';
     let refsType = baseElementName + 'Refs';
     let imports = renderedRoot.imports.plus(Import.ConstructContext);
