@@ -2,7 +2,7 @@ import basic from './basic/basic-data';
 import collections from './collections/collections-data';
 import composite from './composite/composite-data';
 import conditions from './conditions/conditions-data';
-import table from './table/table-component';
+import table from './table/table-host';
 
 function ex(name: string, run: (target, cycles, progressCallback) => void) {
     return {name, run}
