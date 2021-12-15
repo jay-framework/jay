@@ -21,7 +21,7 @@ function renderItem(viewState: ItemVS): ItemElement {
         e('div', {'data-id': viewState.dataId}, [
             e('span', {}, [dt(vs => `${vs.text} - ${vs.done?'done':'tbd'}`)]),
             e('button', {ref: 'done'}, ['done']),
-            e('button', {ref: 'remove'}, ['remove'])])
+            e('button', {'data-id': 'remove', ref: 'remove'}, ['remove'])])
     ) as ItemElement;
 }
 
@@ -31,7 +31,7 @@ export interface ItemData {
 }
 
 export interface ItemComponent extends JayComponent<ItemData, ItemVS, ItemElement> {
-
+    onremove?: () => void
 }
 
 export function Item(props: ItemData): ItemComponent {
@@ -45,16 +45,20 @@ export function Item(props: ItemData): ItemComponent {
     }
 
     jayElement.refs.remove.onclick = () => {
-        // call event on parent
+        if (itemInstance.onremove)
+            itemInstance.onremove();
     }
 
-    return {
+    let itemInstance: ItemComponent = {
         element: jayElement,
         update: (props) => {
             text = props.text
             jayElement.update({text, done, dataId: props.dataId});
         },
         mount: () => jayElement.mount(),
-        unmount: () => jayElement.unmount()
-    }
+        unmount: () => jayElement.unmount(),
+        onremove: undefined
+    };
+
+    return itemInstance;
 }

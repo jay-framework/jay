@@ -1,4 +1,4 @@
-import {BaseJayElement, JayElement} from "./element";
+import {BaseJayElement, JayComponent, JayElement} from "./element";
 
 export class ReferencesManager {
     private dynamicRefs = {};
@@ -18,7 +18,7 @@ export class ReferencesManager {
         this.getDynamic(id, true).removeRef(ref);
     }
 
-    addStaticRef(id: string, ref: HTMLElement) {
+    addStaticRef(id: string, ref: HTMLElement | JayComponent<any, any, any> ) {
         this.staticRefs[id] = ref;
     }
 
@@ -43,7 +43,7 @@ interface ReferenceOperations<ViewState, Element> {
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: EventListenerOptions | boolean): void
 }
 
-export interface DynamicReference<ViewState, Element extends HTMLElement> extends GlobalEventHandlers<ViewState>, ReferenceOperations<ViewState, Element>{}
+export interface DynamicReference<ViewState, Element extends HTMLElement | JayComponent<any, any, any>> extends GlobalEventHandlers<ViewState>, ReferenceOperations<ViewState, Element>{}
 
 const proxyHandler = {
     set: function(target, prop, value): boolean {

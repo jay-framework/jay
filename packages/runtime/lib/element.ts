@@ -44,6 +44,19 @@ export function childComp<ParentT, Props, ChildT,
     ref?: string): BaseJayElement<ParentT> {
     let context = constructionContextStack.current();
     let childComp = compCreator(getProps(context.currData))
+    if (ref) {
+        let context = constructionContextStack.current();
+        if (context.forStaticElements) {
+            context.refManager.addStaticRef(ref, childComp);
+        }
+        // else {
+        //     let ref = new ElementReference(e, context.currData)
+        //     updates.push(ref.update);
+        //     let refManager = context.refManager;
+        //     mounts.push(() => refManager.addDynamicRef(value as string, ref))
+        //     unmounts.push(() => refManager.removeDynamicRef(value as string, ref))
+        // }
+    }
     return {
         dom: childComp.element.dom,
         update: (t: ParentT) => childComp.update(getProps(t)),

@@ -5,7 +5,7 @@ import {
     element as e,
     JayElement, childComp
 } from "../../lib/element";
-import {Item, ItemData} from "./comps/item";
+import {Item, ItemComponent, ItemData} from "./comps/item";
 
 describe('nested components', () => {
     describe('single nested component', () => {
@@ -52,19 +52,24 @@ describe('nested components', () => {
             expect(span.textContent).toBe('an updated text - tbd');
         });
 
-        it("handle events on nested component", () => {
+        it("have a reference to a nested component", () => {
             let composite = renderComposite({
                 staticItem: 'hello world'
             });
-            // todo get reference to the nested component
-            // let button = composite.dom.querySelector('[data-id="AAA"] span');
-            // expect(button.textContent).toBe('an updated text - tbd');
+            // validate we actually have a reference to the nested component by finding the data id on the nested component dom
+            expect(composite.refs.static.element.dom.attributes['data-id'].value).toBe('AAA');
         });
 
-        it("create a reference to a nested component", () => {
+        it("handle events on nested component", () => {
+            let handler = jest.fn();
             let composite = renderComposite({
                 staticItem: 'hello world'
             });
-        })
+            composite.refs.static.onremove = handler;
+
+            let button = composite.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
+            button.click();
+            expect(handler.mock.calls.length).toBe(1);
+        });
     })
 });
