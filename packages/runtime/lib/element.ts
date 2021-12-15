@@ -34,34 +34,39 @@ export interface JayComponent<Props, ViewState, jayElement extends BaseJayElemen
     element: jayElement
     update: updateFunc<Props>
     mount: MountFunc,
-    unmount: MountFunc
+    unmount: MountFunc,
+    addEventListener: (type: string, handler: (event: any) => void, options?: boolean | AddEventListenerOptions) => void
+    removeEventListener: (type: string, handler: (event: any) => void, options?: EventListenerOptions | boolean) => void
 }
 
 export function childComp<ParentT, Props, ChildT,
     ChildElement extends BaseJayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
     compCreator: (props: Props) => ChildComp,
     getProps: (t: ParentT) => Props,
-    ref?: string): BaseJayElement<ParentT> {
+    refName?: string): BaseJayElement<ParentT> {
     let context = constructionContextStack.current();
     let childComp = compCreator(getProps(context.currData))
-    if (ref) {
+    let updates: updateFunc<ParentT>[] = [(t: ParentT) => childComp.update(getProps(t))];
+    let mounts: MountFunc[] = [childComp.mount]
+    let unmounts: MountFunc[] = [childComp.unmount]
+    if (refName) {
         let context = constructionContextStack.current();
         if (context.forStaticElements) {
-            context.refManager.addStaticRef(ref, childComp);
+            context.refManager.addStaticRef(refName, childComp);
         }
-        // else {
-        //     let ref = new ElementReference(e, context.currData)
-        //     updates.push(ref.update);
-        //     let refManager = context.refManager;
-        //     mounts.push(() => refManager.addDynamicRef(value as string, ref))
-        //     unmounts.push(() => refManager.removeDynamicRef(value as string, ref))
-        // }
+        else {
+            let ref = new ElementReference(childComp, context.currData)
+            updates.push(ref.update);
+            let refManager = context.refManager;
+            mounts.push(() => refManager.addDynamicRef(refName, ref))
+            unmounts.push(() => refManager.removeDynamicRef(refName, ref))
+        }
     }
     return {
         dom: childComp.element.dom,
-        update: (t: ParentT) => childComp.update(getProps(t)),
-        mount: childComp.mount,
-        unmount: childComp.unmount
+        update: normalizeUpdates(updates),
+        mount: normalizeMount(mounts),
+        unmount: normalizeMount(unmounts)
     }
 }
 

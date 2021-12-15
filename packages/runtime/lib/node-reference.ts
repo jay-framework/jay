@@ -1,24 +1,26 @@
 import {BaseJayElement, JayComponent, JayElement} from "./element";
 
+type ReferencedElement = HTMLElement | JayComponent<any, any, any>;
+
 export class ReferencesManager {
     private dynamicRefs = {};
     private staticRefs = {};
 
-    getDynamic(id: string, autoCreate: boolean = false): DynamicReferenceInternal<any, HTMLElement> | undefined {
+    getDynamic(id: string, autoCreate: boolean = false): DynamicReferenceInternal<any, ReferencedElement> | undefined {
         if (!this.dynamicRefs[id] && autoCreate)
             this.dynamicRefs[id] = new DynamicReferenceInternal();
         return this.dynamicRefs[id];
     }
 
-    addDynamicRef(id: string, ref: ElementReference<any, HTMLElement>) {
+    addDynamicRef(id: string, ref: ElementReference<any, ReferencedElement>) {
         this.getDynamic(id, true).addRef(ref);
     }
 
-    removeDynamicRef(id: string, ref: ElementReference<any, HTMLElement>) {
+    removeDynamicRef(id: string, ref: ElementReference<any, ReferencedElement>) {
         this.getDynamic(id, true).removeRef(ref);
     }
 
-    addStaticRef(id: string, ref: HTMLElement | JayComponent<any, any, any> ) {
+    addStaticRef(id: string, ref: ReferencedElement ) {
         this.staticRefs[id] = ref;
     }
 
@@ -43,7 +45,7 @@ interface ReferenceOperations<ViewState, Element> {
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: EventListenerOptions | boolean): void
 }
 
-export interface DynamicReference<ViewState, Element extends HTMLElement | JayComponent<any, any, any>> extends GlobalEventHandlers<ViewState>, ReferenceOperations<ViewState, Element>{}
+export interface DynamicReference<ViewState, Element extends ReferencedElement> extends GlobalEventHandlers<ViewState>, ReferenceOperations<ViewState, Element>{}
 
 const proxyHandler = {
     set: function(target, prop, value): boolean {
@@ -60,7 +62,7 @@ export function newReferenceProxy<ViewState, Element extends HTMLElement>(ref: D
     return new Proxy(ref, proxyHandler) as DynamicReference<ViewState, Element>;
 }
 
-export class DynamicReferenceInternal<ViewState, Element extends HTMLElement> implements ReferenceOperations<ViewState, Element> {
+export class DynamicReferenceInternal<ViewState, Element extends ReferencedElement> implements ReferenceOperations<ViewState, Element> {
     private elements: Set<ElementReference<ViewState, Element>> = new Set();
     private listeners = [];
 
@@ -102,7 +104,7 @@ export class DynamicReferenceInternal<ViewState, Element extends HTMLElement> im
 
 export type JayEventListener<E, T> = (evt: E, dataContent: T) => void;
 
-export class ElementReference<ViewState, Element extends HTMLElement> {
+export class ElementReference<ViewState, Element extends ReferencedElement> {
     element: Element;
     private dataContent: ViewState;
     private listeners = [];

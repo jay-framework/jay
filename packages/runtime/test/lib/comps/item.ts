@@ -20,7 +20,7 @@ function renderItem(viewState: ItemVS): ItemElement {
     return ConstructContext.withRootContext(viewState, () =>
         e('div', {'data-id': viewState.dataId}, [
             e('span', {}, [dt(vs => `${vs.text} - ${vs.done?'done':'tbd'}`)]),
-            e('button', {ref: 'done'}, ['done']),
+            e('button', {'data-id': 'done', ref: 'done'}, ['done']),
             e('button', {'data-id': 'remove', ref: 'remove'}, ['remove'])])
     ) as ItemElement;
 }
@@ -57,7 +57,16 @@ export function Item(props: ItemData): ItemComponent {
         },
         mount: () => jayElement.mount(),
         unmount: () => jayElement.unmount(),
-        onremove: undefined
+        onremove: undefined,
+        addEventListener: (type: string, handler: (event: any) => void, options?: boolean | AddEventListenerOptions) => {
+            if (type === 'remove')
+                this.onremove = handler;
+        },
+        removeEventListener: (type: string, handler: (event: any) => void, options?: EventListenerOptions | boolean) => {
+            if (type === 'remove')
+                this.onremove = undefined;
+        }
+
     };
 
     return itemInstance;
