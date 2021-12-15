@@ -40,7 +40,8 @@ export interface JayComponent<Props, ViewState, jayElement extends BaseJayElemen
 export function childComp<ParentT, Props, ChildT,
     ChildElement extends BaseJayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
     compCreator: (props: Props) => ChildComp,
-    getProps: (t: ParentT) => Props): BaseJayElement<ParentT> {
+    getProps: (t: ParentT) => Props,
+    ref?: string): BaseJayElement<ParentT> {
     let context = constructionContextStack.current();
     let childComp = compCreator(getProps(context.currData))
     return {

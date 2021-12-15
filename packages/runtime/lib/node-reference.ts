@@ -4,17 +4,17 @@ export class ReferencesManager {
     private dynamicRefs = {};
     private staticRefs = {};
 
-    getDynamic(id: string, autoCreate: boolean = false): DynamicReferenceInternal<any> | undefined {
+    getDynamic(id: string, autoCreate: boolean = false): DynamicReferenceInternal<any, HTMLElement> | undefined {
         if (!this.dynamicRefs[id] && autoCreate)
             this.dynamicRefs[id] = new DynamicReferenceInternal();
         return this.dynamicRefs[id];
     }
 
-    addDynamicRef(id: string, ref: ElementReference<any>) {
+    addDynamicRef(id: string, ref: ElementReference<any, HTMLElement>) {
         this.getDynamic(id, true).addRef(ref);
     }
 
-    removeDynamicRef(id: string, ref: ElementReference<any>) {
+    removeDynamicRef(id: string, ref: ElementReference<any, HTMLElement>) {
         this.getDynamic(id, true).removeRef(ref);
     }
 
@@ -36,14 +36,14 @@ type GlobalEventHandlers<T> = {
     [Property in keyof GlobalEventHandlersEventMap as `on${Property}`]: JayEventListener<GlobalEventHandlersEventMap[Property], T>;
 }
 
-interface ReferenceOperations<T> {
-    byDataContext(predicate: (t:T) => boolean): HTMLElement
-    forEach(handler: (element: HTMLElement) => void)
-    addEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: boolean | AddEventListenerOptions): void
-    removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: EventListenerOptions | boolean): void
+interface ReferenceOperations<ViewState, Element> {
+    byDataContext(predicate: (t:ViewState) => boolean): Element
+    forEach(handler: (element: Element) => void)
+    addEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: boolean | AddEventListenerOptions): void
+    removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: EventListenerOptions | boolean): void
 }
 
-export interface DynamicReference<T> extends GlobalEventHandlers<T>, ReferenceOperations<T>{}
+export interface DynamicReference<ViewState, Element extends HTMLElement> extends GlobalEventHandlers<ViewState>, ReferenceOperations<ViewState, Element>{}
 
 const proxyHandler = {
     set: function(target, prop, value): boolean {
@@ -56,43 +56,43 @@ const proxyHandler = {
             target[prop] = value;
     }
 }
-export function newReferenceProxy<T>(ref: DynamicReferenceInternal<T>): DynamicReference<T> {
-    return new Proxy(ref, proxyHandler) as DynamicReference<T>;
+export function newReferenceProxy<ViewState, Element extends HTMLElement>(ref: DynamicReferenceInternal<ViewState, Element>): DynamicReference<ViewState, Element> {
+    return new Proxy(ref, proxyHandler) as DynamicReference<ViewState, Element>;
 }
 
-export class DynamicReferenceInternal<T> implements ReferenceOperations<T> {
-    private elements: Set<ElementReference<T>> = new Set();
+export class DynamicReferenceInternal<ViewState, Element extends HTMLElement> implements ReferenceOperations<ViewState, Element> {
+    private elements: Set<ElementReference<ViewState, Element>> = new Set();
     private listeners = [];
 
-    addEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: boolean | AddEventListenerOptions): void {
+    addEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: boolean | AddEventListenerOptions): void {
         this.listeners.push({type, listener, options})
         this.elements.forEach(ref =>
             ref.addEventListener(type, listener, options))
     }
 
-    addRef(ref: ElementReference<T>) {
+    addRef(ref: ElementReference<ViewState, Element>) {
         this.elements.add(ref);
         this.listeners.forEach(listener =>
             ref.addEventListener(listener.type, listener.listener, listener.options))
     }
 
-    forEach(handler: (element: HTMLElement) => void) {
+    forEach(handler: (element: Element) => void) {
         this.elements.forEach(ref => handler(ref.element));
     }
 
-    byDataContext(predicate: (t:T) => boolean): HTMLElement {
+    byDataContext(predicate: (t:ViewState) => boolean): Element {
         for (let elemRef of this.elements)
             if (elemRef.match(predicate))
                 return elemRef.element
     }
 
-    removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: EventListenerOptions | boolean): void {
+    removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: EventListenerOptions | boolean): void {
         this.listeners = this.listeners.filter(item => item.type !== type || item.listener !== listener);
         this.elements.forEach(ref =>
             ref.removeEventListener(type, listener, options))
     }
 
-    removeRef(ref: ElementReference<T>) {
+    removeRef(ref: ElementReference<ViewState, Element>) {
         this.elements.delete(ref);
         this.listeners.forEach(listener =>
             ref.removeEventListener(listener.type, listener.listener, listener.options))
@@ -102,17 +102,17 @@ export class DynamicReferenceInternal<T> implements ReferenceOperations<T> {
 
 export type JayEventListener<E, T> = (evt: E, dataContent: T) => void;
 
-export class ElementReference<T> {
-    element: HTMLElement;
-    private dataContent: T;
+export class ElementReference<ViewState, Element extends HTMLElement> {
+    element: Element;
+    private dataContent: ViewState;
     private listeners = [];
 
-    constructor(element: HTMLElement, dataContext: T) {
+    constructor(element: Element, dataContext: ViewState) {
         this.element = element;
         this.dataContent = dataContext
     }
 
-    addEventListener<E extends Event>(type: string, listener: JayEventListener<E, T>, options?: boolean | AddEventListenerOptions): void {
+    addEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState>, options?: boolean | AddEventListenerOptions): void {
         let wrappedHandler = (event) => {
             return listener(event, this.dataContent);
         }
@@ -120,7 +120,7 @@ export class ElementReference<T> {
         this.listeners.push({type, listener, wrappedHandler})
     }
 
-    removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, T> | null, options?: EventListenerOptions | boolean): void {
+    removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: EventListenerOptions | boolean): void {
         let index = this.listeners.findIndex(item => item.type === type && item.listener === listener)
         if (index > -1) {
             let item = this.listeners[index];
@@ -129,11 +129,11 @@ export class ElementReference<T> {
         }
     }
 
-    match(predicate: (t:T) => boolean): boolean {
+    match(predicate: (t:ViewState) => boolean): boolean {
         return predicate(this.dataContent);
     }
     
-    update = (newData: T) => {
+    update = (newData: ViewState) => {
         this.dataContent = newData;
     }
 }
