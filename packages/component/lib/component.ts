@@ -156,6 +156,7 @@ export function makeJayComponent<PropsT extends object, ViewState extends object
                     unmount: () => unmounts.forEach(_ => _()),
                 }
 
+                // todo validate not overriding main JayComponent APIs
                 for (let key in api) {
                     if (api[key] instanceof EventEmitter) {
                         Object.defineProperty(component, key, {
