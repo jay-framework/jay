@@ -171,5 +171,23 @@ describe('nested components', () => {
             expect(composite.refs.collection.byDataContext(item => item.id === 'A')
                 .element.dom.querySelector('[data-id="A"] span').textContent).toBe('eleven - done');
         });
+
+        it("should process nested component external events", () => {
+            let fn = jest.fn();
+            let viewState = {
+                items: [{id: 'A', value: 'eleven'}, {id: 'B', value: 'twelves'}]
+            };
+            let composite = renderComposite(viewState);
+
+            let removeButton = composite.refs.collection.byDataContext(item => item.id === 'A')
+                .element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
+
+            composite.refs.collection.onremove = fn;
+
+            removeButton.click();
+
+            expect(fn.mock.calls.length).toBe(1);
+            expect(fn.mock.calls[0][1]).toBe(viewState.items[0]);
+        });
     });
 });

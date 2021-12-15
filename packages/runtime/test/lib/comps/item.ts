@@ -31,7 +31,7 @@ export interface ItemData {
 }
 
 export interface ItemComponent extends JayComponent<ItemData, ItemVS, ItemElement> {
-    onremove?: () => void
+    onremove?: (event: any) => void
 }
 
 export function Item(props: ItemData): ItemComponent {
@@ -46,7 +46,7 @@ export function Item(props: ItemData): ItemComponent {
 
     jayElement.refs.remove.onclick = () => {
         if (itemInstance.onremove)
-            itemInstance.onremove();
+            itemInstance.onremove(null);
     }
 
     let itemInstance: ItemComponent = {
@@ -60,11 +60,11 @@ export function Item(props: ItemData): ItemComponent {
         onremove: undefined,
         addEventListener: (type: string, handler: (event: any) => void, options?: boolean | AddEventListenerOptions) => {
             if (type === 'remove')
-                this.onremove = handler;
+                itemInstance.onremove = handler;
         },
         removeEventListener: (type: string, handler: (event: any) => void, options?: EventListenerOptions | boolean) => {
             if (type === 'remove')
-                this.onremove = undefined;
+                itemInstance.onremove = undefined;
         }
 
     };
