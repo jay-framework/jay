@@ -58,7 +58,8 @@ export class Imports {
 export interface Ref {
     ref: string,
     dynamicRef: boolean,
-    refType: JayType
+    viewStateType: JayType
+    elementType: JayType
 }
 
 export class RenderFragment {

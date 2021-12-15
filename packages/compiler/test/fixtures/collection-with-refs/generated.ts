@@ -13,10 +13,10 @@ export interface CollectionWithRefsViewState {
 }
 
 export interface CollectionWithRefsRefs {
-  name: DynamicReference<Item>,
-  completed: DynamicReference<Item>,
-  cost: DynamicReference<Item>,
-  done: DynamicReference<Item>
+  name: DynamicReference<Item, HTMLSpanElement>,
+  completed: DynamicReference<Item, HTMLSpanElement>,
+  cost: DynamicReference<Item, HTMLSpanElement>,
+  done: DynamicReference<Item, HTMLButtonElement>
 }
 
 export type CollectionWithRefsElement = JayElement<CollectionWithRefsViewState, CollectionWithRefsRefs>

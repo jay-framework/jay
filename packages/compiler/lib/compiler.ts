@@ -4,7 +4,7 @@ import {
     JayAtomicType,
     JayFile, JayImportedType, JayImportStatement,
     JayObjectType,
-    JayType,
+    JayType, JayTypeAlias,
     parseJayFile
 } from "./parse-jay-file";
 import {HTMLElement, NodeType} from "node-html-parser";
@@ -17,6 +17,7 @@ import {
     Variables
 } from './expression-compiler';
 import { capitalCase } from "change-case";
+import {htmlElementTagNameMap} from "./html-element-tag-name-map";
 
 function renderInterface(aType: JayObjectType): string {
 
@@ -99,11 +100,16 @@ function renderTextNode(variables: Variables, text: string, indent: Indent): Ren
     return parseTextExpression(text, variables).map(_ => indent.firstLine + _);
 }
 
+function elementNameToJayType(element: HTMLElement): JayType {
+    return htmlElementTagNameMap[element.rawTagName]?
+        new JayImportedType(htmlElementTagNameMap[element.rawTagName]) :
+        new JayImportedType('HTMLElement')
+}
+
 const propertyMapping = {
     'input:value': {type: 'property'},
     'input:checked': {type: 'property'}
 }
-
 const attributesRequiresQuotes = /[- ]/;
 function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
     let attributes = element.attributes;
@@ -116,7 +122,12 @@ function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: 
         if (attrCanonical === 'if' || attrCanonical === 'foreach' || attrCanonical === 'trackby')
             return;
         if (attrCanonical === 'ref')
-            refs = [{ref: attributes[attrName], dynamicRef, refType: variables.currentType}];
+            refs = [{
+                ref: attributes[attrName],
+                dynamicRef,
+                elementType: elementNameToJayType(element),
+                viewStateType: variables.currentType
+            }];
         if (attrCanonical === 'style')
             renderedAttributes.push(new RenderFragment(`style: {cssText: '${attributes[attrName]}'}`))
         else if (attrCanonical === 'class') {
@@ -182,7 +193,7 @@ class Indent {
     }
 }
 
-function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
+function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variables: Variables, importedSymbols: Set<string>): RenderFragment {
     let attributes = element.attributes;
     let refs: Ref[] = [];
     let props = [];
@@ -192,7 +203,12 @@ function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variabl
         if (attrCanonical === 'if' || attrCanonical === 'foreach' || attrCanonical === 'trackby')
             return;
         if (attrCanonical === 'ref')
-            refs = [{ref: attributes[attrName], dynamicRef, refType: variables.currentType}];
+            refs = [{
+                ref: attributes[attrName],
+                dynamicRef,
+                elementType: new JayTypeAlias(`ReturnType<typeof ${element.rawTagName}>`),
+                viewStateType: variables.currentType
+            }];
         else {
             let prop = parseComponentPropExpression(attributes[attrName], variables);
             props.push(prop.map(_ => `${attrKey}: ${_}`))
@@ -262,8 +278,8 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
             [...renderedForEach.validations, ...childElement.validations], childElement.refs)
     }
 
-    function renderNestedComponent(htmlElement: HTMLElement): RenderFragment {
-        let propsGetter = renderChildCompProps(htmlElement, dynamicRef, variables);
+    function renderNestedComponent(htmlElement: HTMLElement, importedSymbols: Set<string>): RenderFragment {
+        let propsGetter = renderChildCompProps(htmlElement, dynamicRef, variables, importedSymbols);
         return new RenderFragment(`${indent.firstLine}childComp(${htmlElement.rawTagName}, vs => (${propsGetter.rendered}))`,
             Imports.for(Import.childComp).plus(propsGetter.imports),
             propsGetter.validations, propsGetter.refs);
@@ -276,12 +292,9 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
             if (importedSymbols.has(htmlElement.rawTagName))
-                return renderNestedComponent(htmlElement);
+                return renderNestedComponent(htmlElement, importedSymbols);
             if (isForEach(htmlElement))
                 dynamicRef = true;
-            let refs = [];
-            if (htmlElement.hasAttribute('ref'))
-                refs.push({'ref': htmlElement.getAttribute('ref'), dynamicRef})
 
             if (isConditional(htmlElement)) {
                 let condition = htmlElement.getAttribute('if');
@@ -324,7 +337,7 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
     let renderedRefs;
     if (renderedRoot.refs.length > 0) {
         const renderedReferences = renderedRoot.refs.map(_ => {
-            const referenceType = _.dynamicRef?`DynamicReference<${_.refType.name}>`:'HTMLElement';
+            const referenceType = _.dynamicRef?`DynamicReference<${_.viewStateType.name}, ${_.elementType.name}>`:_.elementType.name;
             return `  ${_.ref}: ${referenceType}`
         }).join(',\n');
         renderedRefs = `export interface ${refsType} {

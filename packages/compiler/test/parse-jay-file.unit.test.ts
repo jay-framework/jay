@@ -4,11 +4,10 @@ import {JayArrayType, JayBoolean, JayNumber, JayObjectType, JayString, parseJayF
 
 describe('compiler', () => {
 
-    function jayFileWith(links, jayYaml, body) {
+    function jayFileWith(jayYaml, body) {
         return stripMargin(
             ` <html>
                 |   <head>
-                |${links}     
                 |     <script type="application/yaml-jay">
                 |${stripMargin(jayYaml)}
                 |     </script>
@@ -20,7 +19,7 @@ describe('compiler', () => {
     describe('parse jay file', () => {
         
         it('should parse simple string type with no examples', () => {
-            let jayFile = parseJayFile(jayFileWith('',
+            let jayFile = parseJayFile(jayFileWith(
                 `data:
                         |   text: string
                         |`,
@@ -31,7 +30,7 @@ describe('compiler', () => {
         });
 
         it('should append the base name to the view state type', () => {
-            let jayFile = parseJayFile(jayFileWith('',
+            let jayFile = parseJayFile(jayFileWith(
                 `data:
                         |   text: string
                         |`,
@@ -42,7 +41,7 @@ describe('compiler', () => {
         });
 
         it('should parse simple string type with a simple example', () => {
-            let jayFile = parseJayFile(jayFileWith('',
+            let jayFile = parseJayFile(jayFileWith(
                 ` data:
                         |   text: string
                         |
@@ -55,7 +54,7 @@ describe('compiler', () => {
         });
 
         it('should parse invalid type', () => {
-            let jayFile = parseJayFile(jayFileWith('',
+            let jayFile = parseJayFile(jayFileWith(
                 ` data:
                         |   text: bla`,
                 '<body></body>'), 'Base')
@@ -64,7 +63,7 @@ describe('compiler', () => {
         });
 
         it('should parse complex types', () => {
-            let jayFile = parseJayFile(jayFileWith('',
+            let jayFile = parseJayFile(jayFileWith(
                 ` data:
                         |   s1: string
                         |   n1: number
@@ -94,16 +93,20 @@ describe('compiler', () => {
 
         it('should parse import links', () => {
             let jayFile = parseJayFile(jayFileWith(
-                `  <link rel='import' href='./component1.ts' component='comp1'/>
-                      |  <link rel='import' href='./component2.ts' component='comp2' as="comp3"/>`,
-                ` data:
+                ` imports:
+                        |   ./component1.ts:
+                        |   - symbol: comp1 
+                        |   ./component2.ts:
+                        |   - symbol: comp2
+                        |     as: comp3   
+                        | data:
                         |   s1: string
                         |   n1: number`,
                 '<body></body>'), 'Base')
 
             expect(jayFile.val.imports).toEqual([
-                {module: "./component1.ts", component: "comp1"},
-                {module: "./component2.ts", component: "comp2", as: "comp3"}
+                {module: "./component1.ts", symbols: [{"symbol": "comp1"}]},
+                {module: "./component2.ts", symbols: [{"symbol": "comp2", as: "comp3"}]}
             ]);
         });
 
@@ -152,27 +155,31 @@ describe('compiler', () => {
                 |</html>`), 'Base')
             expect(jayFile.validations).toEqual(["jay file must have exactly a body tag"]);
         })
-
-        it('should report on missing href for import link', () => {
+        
+        it('should report on module imports not being a list', () => {
             let jayFile = parseJayFile(jayFileWith(
-                `  <link rel='import' component="comp1"/>`,
-                ` data:
+                `imports:
+                        |  module:
+                        |    notAList: aaa
+                        |data:
                         |   s1: string
                         |   n1: number`,
                 '<body></body>'), 'Base')
 
-            expect(jayFile.validations).toEqual(["jay file link import must have href attribute"]);
+            expect(jayFile.validations).toEqual(["import for module module symbols must be a YAML list"]);
         });
 
-        it('should report on missing component for import link', () => {
+        it('should report on import missing symbol property', () => {
             let jayFile = parseJayFile(jayFileWith(
-                `  <link rel='import' href='./component1.ts'/>`,
-                ` data:
+                `imports:
+                        |  module:
+                        |  - notAList: aaa
+                        |data:
                         |   s1: string
                         |   n1: number`,
                 '<body></body>'), 'Base')
 
-            expect(jayFile.validations).toEqual(["jay file link import must have component attribute"]);
+            expect(jayFile.validations).toEqual(["import for module module, member {\"notAList\":\"aaa\"} does not define a symbol"]);
         });
     })
 

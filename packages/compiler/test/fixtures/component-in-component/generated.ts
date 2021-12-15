@@ -9,14 +9,16 @@ export interface ComponentInComponentViewState {
   count4: CounterData
 }
 
-export interface ComponentInComponentRefs {}
+export interface ComponentInComponentRefs {
+  counter1: ReturnType<typeof Counter>
+}
 
 export type ComponentInComponentElement = JayElement<ComponentInComponentViewState, ComponentInComponentRefs>
 
 export function render(viewState: ComponentInComponentViewState): ComponentInComponentElement {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
-      childComp(Counter, vs => ({initialValue: vs.count1})),
+      childComp(Counter, vs => ({initialValue: vs.count1}), 'counter1'),
       childComp(Counter, vs => ({initialValue: `${vs.count2} + 2`})),
       childComp(Counter, vs => ({initialValue: `${vs.count1} + ${vs.count2}`})),
       childComp(Counter, vs => ({initialValue: '12'})),

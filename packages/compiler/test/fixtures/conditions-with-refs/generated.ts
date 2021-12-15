@@ -7,8 +7,8 @@ export interface ConditionsWithRefsViewState {
 }
 
 export interface ConditionsWithRefsRefs {
-  text1: HTMLElement,
-  text2: HTMLElement
+  text1: HTMLDivElement,
+  text2: HTMLSpanElement
 }
 
 export type ConditionsWithRefsElement = JayElement<ConditionsWithRefsViewState, ConditionsWithRefsRefs>

@@ -28,6 +28,13 @@ const typesMap = {
     'date': JayDate
 }
 
+export class JayTypeAlias implements JayType {
+    name: string;
+    constructor(name: string) {
+        this.name = name;
+    }
+}
+
 export class JayImportedType implements JayType {
     name: string;
     constructor(name: string) {
@@ -149,7 +156,7 @@ function parseYaml(root: HTMLElement): WithValidations<JayYamlStructure> {
 }
 
 function parseImports(jayYaml: JayYamlStructure, validations: JayValidations): JayImportStatement[] {
-    let imports = jayYaml.imports;
+    let imports = jayYaml.imports || [];
     return Object.keys(imports)
         .filter(module => {
             if (imports[module].length === 0) {
@@ -179,6 +186,9 @@ export function parseJayFile(html: string, baseElementName: string): WithValidat
     let root = parse(html);
 
     let {val: jayYaml, validations} = parseYaml(root);
+    if (validations.length > 0)
+        return new WithValidations(undefined, validations);
+
     let examples = parseExamples(jayYaml, validations);
     let imports = parseImports(jayYaml, validations);
     let importedSymbols = new Set(imports.flatMap(_ => _.symbols.map(sym => sym.as? sym.as : sym.symbol)));

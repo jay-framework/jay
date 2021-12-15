@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "jsx": "preserve",
+    "module": "es2015",
+    "esModuleInterop": true,
+    "target": "es2015",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "outDir": "build",
+    "lib": [
+      "es2016",
+      "dom"
+    ]
+  },
+  "lib": ["lib.es2015.d.ts", "lib.dom.d.ts"],
+  "exclude": []
+}
