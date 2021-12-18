@@ -1,4 +1,4 @@
-import {JayElement, JayComponent, ContextStack, MountFunc} from 'jay-runtime'
+import {JayElement, JayComponent, ContextStack, MountFunc, JayCustomEvent} from 'jay-runtime'
 import {ValueOrGetter, Getter, Reactive, Setter} from 'jay-reactive'
 import {applyToRefs, refsRecorder} from "./refs-recorder";
 
@@ -14,14 +14,14 @@ export type UpdatableProps<PropsT> = Props<PropsT> & {
     update(newProps: Partial<PropsT>)
 }
 
-export class EventEmitter<T> {
-    handler?: (t: T) => void
+export class EventEmitter<E extends JayCustomEvent> {
+    handler?: (e: E) => void
 
-    emit(t: T): void {
+    emit(e: E): void {
         if (this.handler)
-            this.handler(t);
+            this.handler(e);
     }
-    on(handler: (t: T) => void) {
+    on(handler: (e: E) => void) {
         this.handler = handler;
     }
 }
@@ -91,8 +91,8 @@ export function createMemo<T>(computation: (prev: T) => T, initialValue?: T): Ge
     return value
 }
 
-export function createEvent<T>(eventEffect: (emitter: EventEmitter<T>) => void): EventEmitter<T> {
-    let emitter = new EventEmitter<T>()
+export function createEvent<e extends JayCustomEvent>(eventEffect: (emitter: EventEmitter<e>) => void): EventEmitter<e> {
+    let emitter = new EventEmitter<e>()
     createEffect(() => eventEffect(emitter));
     return emitter;
 }

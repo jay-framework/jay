@@ -4,7 +4,7 @@ import {RandomAccessLinkedList as List} from "./random-access-linked-list";
 import {ElementReference, ReferencesManager} from "./node-reference";
 import {ContextStack} from "./context-stack";
 export {ContextStack} from "./context-stack";
-export {DynamicReference} from "./node-reference";
+export {DynamicReference, JayCustomEvent} from "./node-reference";
 export {Revisioned, checkModified, touchRevision} from "jay-reactive";
 import {getRevision, checkModified} from "jay-reactive";
 

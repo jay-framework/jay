@@ -1,5 +1,5 @@
 import {describe, expect, it, jest, beforeEach} from '@jest/globals'
-import {ConstructContext, JayElement, dynamicText as dt, element as e} from 'jay-runtime';
+import {ConstructContext, JayElement, dynamicText as dt, element as e, JayCustomEvent} from 'jay-runtime';
 import {
     createEffect, createEvent,
     createMemo,
@@ -413,6 +413,9 @@ describe('state management', () => {
 
         describe('with expose component API events', () => {
 
+            interface CounterChangeEvent extends JayCustomEvent {
+                value: number;
+            }
             interface CounterViewState {
                 value: number
             }
@@ -441,7 +444,7 @@ describe('state management', () => {
                 let [value, setValue] = createState(0);
                 refs.inc.onclick = () => setValue(value() + 1);
                 refs.dec.onclick = () => setValue(value() - 1);
-                let onChange = createEvent<number>(emitter => emitter.emit(value()))
+                let onChange = createEvent<CounterChangeEvent>(emitter => emitter.emit(({value: value()})))
                 return {
                     render: () => ({value}),
                     onChange
@@ -465,8 +468,8 @@ describe('state management', () => {
                 instance.element.refs.inc.click();
                 instance.element.refs.inc.click();
                 expect(myMock.mock.calls.length).toBe(2);
-                expect(myMock.mock.calls[0][0]).toBe(1);
-                expect(myMock.mock.calls[1][0]).toBe(2);
+                expect(myMock.mock.calls[0][0]).toEqual({value: 1});
+                expect(myMock.mock.calls[1][0]).toEqual({value: 2});
             })
 
         })

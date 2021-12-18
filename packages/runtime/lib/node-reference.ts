@@ -6,8 +6,8 @@ export type JayEventListener<E, T> = (evt: E, dataContent: T) => void;
 
 type FilteredKeys<T, U> = { [P in keyof T]: P extends string ? T[P] extends U ? P : never : never}[keyof T];
 
-export interface CustomEvent {}
-type EventHandler = (e: Event | CustomEvent) => void;
+export interface JayCustomEvent {}
+type EventHandler = (e: Event | JayCustomEvent) => void;
 
 type EventHandlersOf<T> = {
     [Q in FilteredKeys<T, EventHandler>]: T[Q]
