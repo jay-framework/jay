@@ -2,6 +2,30 @@ import {BaseJayElement, JayComponent, JayElement} from "./element";
 
 type ReferencedElement = HTMLElement | JayComponent<any, any, any>;
 
+export type JayEventListener<E, T> = (evt: E, dataContent: T) => void;
+
+type FilteredKeys<T, U> = { [P in keyof T]: P extends string ? T[P] extends U ? P : never : never}[keyof T];
+
+export interface CustomEvent {}
+type EventHandler = (e: Event | CustomEvent) => void;
+
+type EventHandlersOf<T> = {
+    [Q in FilteredKeys<T, EventHandler>]: T[Q]
+};
+
+type JayEventHandlersOf<ViewState, Element> = {
+    [Property in keyof EventHandlersOf<Element>]: JayEventListener<EventHandlersOf<Element>[Property], ViewState>;
+}
+
+interface ReferenceOperations<ViewState, Element> {
+    filter(predicate: (t:ViewState) => boolean): Element
+    forEach(handler: (element: Element) => void)
+    addEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: boolean | AddEventListenerOptions): void
+    removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: EventListenerOptions | boolean): void
+}
+
+export type DynamicReference<ViewState, Element extends ReferencedElement> = JayEventHandlersOf<ViewState, Element> & ReferenceOperations<ViewState, Element>
+
 export class ReferencesManager {
     private dynamicRefs = {};
     private staticRefs = {};
@@ -33,19 +57,6 @@ export class ReferencesManager {
         return {...element, refs};
     }
 }
-
-type GlobalEventHandlers<T> = {
-    [Property in keyof GlobalEventHandlersEventMap as `on${Property}`]: JayEventListener<GlobalEventHandlersEventMap[Property], T>;
-}
-
-interface ReferenceOperations<ViewState, Element> {
-    byDataContext(predicate: (t:ViewState) => boolean): Element
-    forEach(handler: (element: Element) => void)
-    addEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: boolean | AddEventListenerOptions): void
-    removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: EventListenerOptions | boolean): void
-}
-
-export interface DynamicReference<ViewState, Element extends ReferencedElement> extends GlobalEventHandlers<ViewState>, ReferenceOperations<ViewState, Element>{}
 
 const proxyHandler = {
     set: function(target, prop, value): boolean {
@@ -82,7 +93,7 @@ export class DynamicReferenceInternal<ViewState, Element extends ReferencedEleme
         this.elements.forEach(ref => handler(ref.element));
     }
 
-    byDataContext(predicate: (t:ViewState) => boolean): Element {
+    filter(predicate: (t:ViewState) => boolean): Element {
         for (let elemRef of this.elements)
             if (elemRef.match(predicate))
                 return elemRef.element
@@ -101,8 +112,6 @@ export class DynamicReferenceInternal<ViewState, Element extends ReferencedEleme
     }
     
 }
-
-export type JayEventListener<E, T> = (evt: E, dataContent: T) => void;
 
 export class ElementReference<ViewState, Element extends ReferencedElement> {
     element: Element;

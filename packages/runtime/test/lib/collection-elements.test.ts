@@ -183,7 +183,7 @@ describe('collection-element', () => {
 
     describe('references and events', () => {
         interface TodoListRefs {
-            done: DynamicReference<Item>
+            done: DynamicReference<Item, HTMLElement>
         }
         interface TodoListElement extends JayElement<ViewState, TodoListRefs> {}
         
@@ -220,7 +220,7 @@ describe('collection-element', () => {
                 eventCount += 1;
                 savedItem = item;
             }
-            todoListElement.refs.done.byDataContext(item => item === item2).click()
+            todoListElement.refs.done.filter(item => item === item2).click()
             expect(savedItem).toBe(item2)
             expect(eventCount).toBe(1);
         })
@@ -230,7 +230,7 @@ describe('collection-element', () => {
             todoListElement.refs.done.onclick = (ev, item) => {
                 todoListElement.update({items: [item1, item3]})
             }
-            todoListElement.refs.done.byDataContext(item => item === item2).click()
+            todoListElement.refs.done.filter(item => item === item2).click()
             let count = 0;
             todoListElement.refs.done.forEach(el => count += 1)
             expect(count).toBe(2);

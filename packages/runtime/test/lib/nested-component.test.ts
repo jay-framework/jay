@@ -143,7 +143,7 @@ describe('nested components', () => {
             };
             let composite = renderComposite(viewState);
             // validate we actually have a reference to the nested component by finding the data id on the nested component dom
-            expect(composite.refs.collection.byDataContext(item => item.id === 'A')
+            expect(composite.refs.collection.filter(item => item.id === 'A')
                 .element.dom.attributes['data-id'].value).toBe('A');
         });
 
@@ -153,7 +153,7 @@ describe('nested components', () => {
             };
             let composite = renderComposite(viewState);
 
-            expect(composite.refs.collection.byDataContext(item => item.id === 'A')
+            expect(composite.refs.collection.filter(item => item.id === 'A')
                 .element.dom.querySelector('[data-id="A"] span').textContent).toBe('eleven - tbd');
         });
 
@@ -163,12 +163,12 @@ describe('nested components', () => {
             };
             let composite = renderComposite(viewState);
 
-            let doneButton = composite.refs.collection.byDataContext(item => item.id === 'A')
+            let doneButton = composite.refs.collection.filter(item => item.id === 'A')
                 .element.dom.querySelector('button[data-id="done"]') as HTMLButtonElement;
 
             doneButton.click();
 
-            expect(composite.refs.collection.byDataContext(item => item.id === 'A')
+            expect(composite.refs.collection.filter(item => item.id === 'A')
                 .element.dom.querySelector('[data-id="A"] span').textContent).toBe('eleven - done');
         });
 
@@ -179,7 +179,7 @@ describe('nested components', () => {
             };
             let composite = renderComposite(viewState);
 
-            let removeButton = composite.refs.collection.byDataContext(item => item.id === 'A')
+            let removeButton = composite.refs.collection.filter(item => item.id === 'A')
                 .element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
 
             composite.refs.collection.onremove = fn;

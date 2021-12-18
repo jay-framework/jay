@@ -21,7 +21,9 @@ describe('dynamic-element with mixed content', () => {
         items: Array<Item>;
     }
 
-    function makeElement(data: ViewState): JayElement<ViewState> {
+    interface Refs {}
+
+    function makeElement(data: ViewState): JayElement<ViewState, Refs> {
 
         return ConstructContext.withRootContext(data, () =>
         // noinspection DuplicatedCode
