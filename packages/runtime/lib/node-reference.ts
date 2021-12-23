@@ -19,7 +19,7 @@ type JayEventHandlersOf<ViewState, Element> = {
 
 interface ReferenceOperations<ViewState, Element> {
     filter(predicate: (t:ViewState) => boolean): Element
-    forEach(handler: (element: Element) => void)
+    forEach(handler: (element: Element) => void): void
     addEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: boolean | AddEventListenerOptions): void
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: EventListenerOptions | boolean): void
 }
