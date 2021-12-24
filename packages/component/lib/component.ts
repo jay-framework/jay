@@ -91,9 +91,10 @@ export function createMemo<T>(computation: (prev: T) => T, initialValue?: T): Ge
     return value
 }
 
-export function createEvent<e>(eventEffect: (emitter: EventEmitter<e>) => void): EventEmitter<e> {
+export function createEvent<e>(eventEffect?: (emitter: EventEmitter<e>) => void): EventEmitter<e> {
     let emitter = new EventEmitter<e>()
-    createEffect(() => eventEffect(emitter));
+    if (eventEffect)
+        createEffect(() => eventEffect(emitter));
     return emitter;
 }
 

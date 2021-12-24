@@ -1,5 +1,5 @@
 import {describe, expect, it, jest, beforeEach} from '@jest/globals'
-import {ConstructContext, JayElement, dynamicText as dt, element as e, JayCustomEvent} from 'jay-runtime';
+import {ConstructContext, JayElement, dynamicText as dt, element as e} from 'jay-runtime';
 import {
     createEffect, createEvent,
     createMemo,
@@ -413,7 +413,7 @@ describe('state management', () => {
 
         describe('with expose component API events', () => {
 
-            interface CounterChangeEvent extends JayCustomEvent {
+            interface CounterChangeEvent {
                 value: number;
             }
             interface CounterViewState {
