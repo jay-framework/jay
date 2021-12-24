@@ -31,7 +31,7 @@ export interface ItemData {
 }
 
 export interface ItemComponent extends JayComponent<ItemData, ItemVS, ItemElement> {
-    onremove?: (event: any) => void
+    onremove?: (event: string) => void
 }
 
 export function Item(props: ItemData): ItemComponent {

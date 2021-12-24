@@ -183,7 +183,7 @@ describe('collection-element', () => {
 
     describe('references and events', () => {
         interface TodoListRefs {
-            done: DynamicReference<Item, HTMLElement>
+            done: DynamicReference<Item, HTMLButtonElement>
         }
         interface TodoListElement extends JayElement<ViewState, TodoListRefs> {}
         

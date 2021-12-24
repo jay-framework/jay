@@ -19,7 +19,7 @@ describe('ReferencesManager', () => {
         mockCallback = jest.fn(_ => undefined);
     })
 
-    it("should register events on an element", () => {
+    it("should register events handlers on an element", () => {
         const ref = new ElementReference(jayElement1.dom, "");
         referenceManager.addDynamicRef(id1, ref);
         referenceManager.getDynamic(id1).addEventListener('click', mockCallback);
@@ -29,7 +29,7 @@ describe('ReferencesManager', () => {
         expect(mockCallback.mock.calls.length).toBe(1);
     })
 
-    it("should remove events from an element", () => {
+    it("should remove events handlers from an element", () => {
         const ref = new ElementReference(jayElement1.dom, "");
         referenceManager.addDynamicRef(id1, ref);
         referenceManager.getDynamic(id1).addEventListener('click', mockCallback);

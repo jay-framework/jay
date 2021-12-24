@@ -2,19 +2,32 @@ import {BaseJayElement, JayComponent, JayElement} from "./element";
 
 type ReferencedElement = HTMLElement | JayComponent<any, any, any>;
 
-export type JayEventListener<E, T> = (evt: E, dataContent: T) => void;
+type Func0 = () => void
+type Func1 = (x: any) => void
+type DOMeventHandler<E> = (((this: GlobalEventHandlers, ev: E) => any) | null)
 
-type FilteredKeys<T, U> = { [P in keyof T]: P extends string ? T[P] extends U ? P : never : never}[keyof T];
+type EventHandlerKeys<T> = {
+    [P in keyof T]:
+    P extends string ?
+        (T[P] extends Func1 ?
+            (T[P] extends Func0 ? never : P) :
+            T[P] extends DOMeventHandler<any> ? P : never) :
+        never
+}[keyof T];
 
-export interface JayCustomEvent {}
-type EventHandler = (e: Event | JayCustomEvent) => void;
 
 type EventHandlersOf<T> = {
-    [Q in FilteredKeys<T, EventHandler>]: T[Q]
+    [Q in EventHandlerKeys<T>]: T[Q]
 };
 
+export type JayEventListener<E, T> = (evt: E, dataContent: T) => void;
+type JayComputedEventListener<Orig extends Function, VS> =
+    Orig extends DOMeventHandler<any> ?
+        ((e: Parameters<Orig>[0], dataContent: VS) => void) :
+        ((evt: Orig, dataContent: VS) => void);
+
 type JayEventHandlersOf<ViewState, Element> = {
-    [Property in keyof EventHandlersOf<Element>]: JayEventListener<EventHandlersOf<Element>[Property], ViewState>;
+    [Property in keyof EventHandlersOf<Element>]: JayComputedEventListener<EventHandlersOf<Element>[Property], ViewState>;
 }
 
 interface ReferenceOperations<ViewState, Element> {
