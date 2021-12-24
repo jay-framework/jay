@@ -279,10 +279,11 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
     }
 
     function renderNestedComponent(htmlElement: HTMLElement, importedSymbols: Set<string>): RenderFragment {
-        let propsGetter = renderChildCompProps(htmlElement, dynamicRef, variables, importedSymbols);
-        return new RenderFragment(`${indent.firstLine}childComp(${htmlElement.rawTagName}, vs => (${propsGetter.rendered}))`,
-            Imports.for(Import.childComp).plus(propsGetter.imports),
-            propsGetter.validations, propsGetter.refs);
+        let propsGetterAndRefs = renderChildCompProps(htmlElement, dynamicRef, variables, importedSymbols);
+        let refsFragment = propsGetterAndRefs.refs.length > 0 ? `, '${propsGetterAndRefs.refs[0].ref}'`: '';
+        return new RenderFragment(`${indent.firstLine}childComp(${htmlElement.rawTagName}, vs => (${propsGetterAndRefs.rendered})${refsFragment})`,
+            Imports.for(Import.childComp).plus(propsGetterAndRefs.imports),
+            propsGetterAndRefs.validations, propsGetterAndRefs.refs);
     }
 
     switch(node.nodeType) {
