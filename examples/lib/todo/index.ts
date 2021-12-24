@@ -1,4 +1,4 @@
-import {TodoComponent} from './todo2.comp';
+import {TodoComponent} from './todo';
 
 const initialTodos = [
     {
