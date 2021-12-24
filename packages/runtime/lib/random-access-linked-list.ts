@@ -25,8 +25,8 @@ export interface UntypedRandomAccessLinkedList {
 }
 
 export class RandomAccessLinkedList<T,S> implements UntypedRandomAccessLinkedList {
-    private _matchBy: string;
-    private _map: any;
+    private readonly _matchBy: string;
+    private readonly _map: any;
     private _last: LinkedListItem<T, S> | typeof BoF;
     private _first: LinkedListItem<T,S> | typeof EoF;
 

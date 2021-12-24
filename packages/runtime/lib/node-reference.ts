@@ -2,10 +2,17 @@ import {BaseJayElement, JayComponent, JayElement} from "./element";
 
 type ReferencedElement = HTMLElement | JayComponent<any, any, any>;
 
+// type computation to extract a type that describes the key of an object
+// who's prop types are one parameter functions or a DOM event handler
 type Func0 = () => void
 type Func1 = (x: any) => void
 type DOMeventHandler<E> = (((this: GlobalEventHandlers, ev: E) => any) | null)
 
+// here the conditional type matches one parameter functions
+// (which both zero and parameter functions match as zero parameter function is a subtype of one parameter function)
+// we then match on zero param function and remove the keys using `never`.
+// we then match on other cases for a DOM event handler.
+// any other case (not a one param function or DOM event handler) are removed using `never`.
 type EventHandlerKeys<T> = {
     [P in keyof T]:
     P extends string ?
@@ -15,17 +22,24 @@ type EventHandlerKeys<T> = {
         never
 }[keyof T];
 
-
+// creates a type from an object, that only includes the event handler properties
 type EventHandlersOf<T> = {
     [Q in EventHandlerKeys<T>]: T[Q]
 };
 
 export type JayEventListener<E, T> = (evt: E, dataContent: T) => void;
+// create a function type that given a function event handler,
+// creates a new type which accepts the event object type as a first param
+// and the ViewState type as a second param
+// (e: E) => void   -->  (e: E, vs: VS) => void
+// (this: GlobalEventHandlers, e: E) => void  --> (e: E, vs: VS) => void
 type JayComputedEventListener<Orig extends Function, VS> =
     Orig extends DOMeventHandler<any> ?
         ((e: Parameters<Orig>[0], dataContent: VS) => void) :
         ((evt: Orig, dataContent: VS) => void);
 
+// creates a type that has only the event handlers or the original object,
+// adding the ViewState param to each event handler function type.
 type JayEventHandlersOf<ViewState, Element> = {
     [Property in keyof EventHandlersOf<Element>]: JayComputedEventListener<EventHandlersOf<Element>[Property], ViewState>;
 }
