@@ -30,6 +30,7 @@ async function makeRollupConfig() {
         format: 'iife',
         name: 'jay'
       },
+      context: 'window',
       plugins: [
         jay(),
         typescript(),
