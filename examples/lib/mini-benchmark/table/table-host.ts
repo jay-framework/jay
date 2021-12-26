@@ -2,12 +2,9 @@ import benchmark from "../benchmark";
 import {createEvent, createState, makeJayComponent, Props } from 'jay-component';
 import {render as TableHostRender, TableHostRefs} from "./table-host.jay.html";
 
-interface TableHostProps {
-    cycles: number,
-    progressCallback: (status: string) => void
-}
+interface TableHostProps {}
 
-function TableHostConstructor({cycles, progressCallback}: Props<TableHostProps>, refs: TableHostRefs) {
+function TableHostConstructor({}: Props<TableHostProps>, refs: TableHostRefs) {
 
     let [size, setSize] = createState(100);
     let [updates, setUpdates] = createState(100);
@@ -21,7 +18,7 @@ function TableHostConstructor({cycles, progressCallback}: Props<TableHostProps>,
     const updateData = (index) => refs.table.updateData(index);
 
     return {
-        render: () => ({cycles, size, updates}),
+        render: () => ({size, updates}),
         onRunClick,
         updateData
     }
@@ -30,7 +27,7 @@ function TableHostConstructor({cycles, progressCallback}: Props<TableHostProps>,
 export const TableHost = makeJayComponent(TableHostRender, TableHostConstructor);
 
 export default function run(target, cycles, progressCallback) {
-    let host = TableHost({cycles, progressCallback});
+    let host = TableHost({cycles});
     host.onRunClick = () => {
         benchmark(index => host.updateData(index), cycles, progressCallback);
     }
