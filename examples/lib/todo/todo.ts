@@ -1,4 +1,4 @@
-import {render, ShownTodo, TodoRefs} from './todo.jay.html';
+import {Filter, render, ShownTodo, TodoRefs} from './todo.jay.html';
 import {createMemo, createState, makeJayComponent, Props} from 'jay-component';
 import {mutableObject} from 'jay-reactive';
 import {uuid} from "./uuid";
@@ -30,16 +30,13 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoRe
     const activeTodoWord = createMemo(() => activeTodoCount() > 1 ? 'todos' : 'todo');
     const hasItems = createMemo(() => todos().length > 0);
     const showClearCompleted = createMemo(() => !!todos().find(_ => _.isCompleted));
-    const [filter, setFilter] = createState('all');
-    const isFilterAll = createMemo(() => filter() === 'all');
-    const isFilterActive = createMemo(() => filter() === 'active');
-    const isFilterCompleted = createMemo(() => filter() === 'completed');
+    const [filter, setFilter] = createState<Filter>(Filter.all);
     const [newTodo, setNewTodo] = createState('');
 
     const shownTodos = createMemo(() => [...todos().filter(todo => {
-        if (isFilterCompleted())
+        if (filter() === Filter.completed)
             return todo.isCompleted
-        else if (isFilterActive())
+        else if (filter() === Filter.active)
             return !todo.isCompleted
         else
             return true;
@@ -55,9 +52,9 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoRe
         }
     }
 
-    refs.filterActive.onclick = () => setFilter('active')
-    refs.filterCompleted.onclick = () => setFilter('completed')
-    refs.filterAll.onclick = () => setFilter('all')
+    refs.filterActive.onclick = () => setFilter(Filter.active)
+    refs.filterCompleted.onclick = () => setFilter(Filter.completed)
+    refs.filterAll.onclick = () => setFilter(Filter.all)
 
     refs.newTodo.onkeydown = (event) => {
         if (event.keyCode !== ENTER_KEY) {
@@ -119,7 +116,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoRe
     return {
         render: () => ({
             activeTodoCount, noActiveItems, activeTodoWord, hasItems, showClearCompleted, shownTodos,
-            isFilterAll, isFilterActive, isFilterCompleted, newTodo
+            filter, newTodo
         })
     }
 }

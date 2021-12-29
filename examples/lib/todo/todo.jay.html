@@ -8,9 +8,7 @@ data:
     activeTodoWord: string
     hasItems: boolean
     noActiveItems: boolean
-    isFilterAll: boolean
-    isFilterActive: boolean
-    isFilterCompleted: boolean
+    filter: enum (all | active | completed)
     showClearCompleted: boolean
     newTodo: string
     shownTodos:
@@ -49,15 +47,15 @@ data:
             </span>
             <ul class="filters">
                 <li>
-                    <a ref="filterAll" class="{isFilterAll? selected }">All</a>
+                    <a ref="filterAll" class="{filter == all? selected }">All</a>
                 </li>
                 <span> </span>
                 <li>
-                    <a ref="filterActive" class="{ isFilterActive? selected}">Active</a>
+                    <a ref="filterActive" class="{ filter == active? selected}">Active</a>
                 </li>
                 <span> </span>
                 <li>
-                    <a ref="filterCompleted" class="{ isFilterCompleted? selected}">Completed</a>
+                    <a ref="filterCompleted" class="{ filter == completed? selected}">Completed</a>
                 </li>
             </ul>
             <button class="clear-completed" if="showClearCompleted" ref="clearCompleted">
