@@ -7,7 +7,7 @@ import {
     parseTextExpression,
     Variables
 } from '../lib/expression-compiler'
-import {JayBoolean, JayNumber, JayObjectType, JayString, JayUnknown} from "../lib/parse-jay-file";
+import {JayBoolean, JayEnumType, JayNumber, JayObjectType, JayString, JayUnknown} from "../lib/parse-jay-file";
 import {Import} from "../lib/render-fragment";
 
 describe('expression-compiler', () => {
@@ -34,7 +34,8 @@ describe('expression-compiler', () => {
 
     describe('parseCondition', () => {
         let defaultVars = new Variables(new JayObjectType('data', {
-            member: JayString
+            member: JayString,
+            anEnum: new JayEnumType("AnEnum", ["one", "two", "three"])
         }));
 
         it('basic condition', () => {
@@ -45,6 +46,26 @@ describe('expression-compiler', () => {
         it('not condition', () => {
             const actual = parseCondition('!member', defaultVars);
             expect(actual.rendered).toEqual('vs => !vs.member');
+        })
+
+        it('enum condition with ==', () => {
+            const actual = parseCondition('anEnum == one', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.anEnum === AnEnum.one');
+        })
+
+        it('enum condition with ===', () => {
+            const actual = parseCondition('anEnum === one', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.anEnum === AnEnum.one');
+        })
+
+        it('enum not condition with !=', () => {
+            const actual = parseCondition('anEnum != one', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.anEnum !== AnEnum.one');
+        })
+
+        it('enum not condition with !==', () => {
+            const actual = parseCondition('anEnum !== one', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.anEnum !== AnEnum.one');
         })
 
         it('basic condition with member not in type should report a problem', () => {

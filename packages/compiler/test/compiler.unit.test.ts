@@ -159,6 +159,12 @@ describe('compiler', () => {
             expect(runtimeFile.val).toEqual(await readGeneratedFile('conditions-with-refs'));
         })
 
+        it('for enums and conditions', async () => {
+            const jayFile = await readSourceFile('conditions-with-enum');
+            let runtimeFile = generateRuntimeFile(jayFile, 'conditions-with-enum.jay.html');
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('conditions-with-enum'));
+        })
+
         it('for collections with refs', async () => {
             const jayFile = await readSourceFile('collection-with-refs');
             let runtimeFile = generateRuntimeFile(jayFile, 'collection-with-refs.jay.html');

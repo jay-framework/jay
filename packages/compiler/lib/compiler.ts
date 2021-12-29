@@ -1,7 +1,7 @@
 import {WithValidations} from "./with-validations";
 import {
     JayArrayType,
-    JayAtomicType,
+    JayAtomicType, JayEnumType,
     JayFile, JayImportedType, JayImportLink,
     JayObjectType,
     JayType, JayTypeAlias,
@@ -48,6 +48,11 @@ function renderInterface(aType: JayObjectType): string {
             }
             else if (childType instanceof JayAtomicType)
                 return `  ${prop}: ${childType.name}`;
+            else if (childType instanceof JayEnumType) {
+                let genEnum = `export enum ${childType.name} {\n${childType.values.map(_ => '  ' + _).join(',\n')}\n}`;
+                childInterfaces.push(genEnum);
+                return `  ${prop}: ${childType.name}`;
+            }
             else
                 throw new Error('unknown type');
         })

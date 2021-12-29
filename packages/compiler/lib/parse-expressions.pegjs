@@ -111,11 +111,22 @@ template
   }
 
 condition
+  = enumCondition
+  / simpleCondition
+
+simpleCondition
   = not:bang? head:accessor {
     return not?
       new RenderFragment(`vs => !vs.${head.render()}`, none, head.validations):
       new RenderFragment(`vs => vs.${head.render()}`, none, head.validations)
   }
+
+enumCondition
+  = head:accessor _ oper:EqualityOperator _ val:Identifier {
+    if (oper.length === 2)
+        oper = oper + "=";
+    return new RenderFragment(`vs => vs.${head.render()} ${oper} ${head.resolvedType.name}.${val}`, none, head.validations);
+}
 
 accessorFunction
   = acc:accessor {
@@ -140,6 +151,12 @@ string
 
 bang
   = "!"
+
+EqualityOperator
+  = "==="
+  / "!=="
+  / "=="
+  / "!="
 
 // copied from https://github.com/pegjs/pegjs/blob/master/examples/javascript.pegjs#L123
 Identifier
