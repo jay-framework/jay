@@ -193,7 +193,7 @@ class Indent {
     }
 }
 
-function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variables: Variables, importedSymbols: Set<string>): RenderFragment {
+function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
     let attributes = element.attributes;
     let refs: Ref[] = [];
     let props = [];
@@ -278,8 +278,8 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
             [...renderedForEach.validations, ...childElement.validations], childElement.refs)
     }
 
-    function renderNestedComponent(htmlElement: HTMLElement, importedSymbols: Set<string>): RenderFragment {
-        let propsGetterAndRefs = renderChildCompProps(htmlElement, dynamicRef, variables, importedSymbols);
+    function renderNestedComponent(htmlElement: HTMLElement): RenderFragment {
+        let propsGetterAndRefs = renderChildCompProps(htmlElement, dynamicRef, variables);
         let refsFragment = propsGetterAndRefs.refs.length > 0 ? `, '${propsGetterAndRefs.refs[0].ref}'`: '';
         return new RenderFragment(`${indent.firstLine}childComp(${htmlElement.rawTagName}, vs => (${propsGetterAndRefs.rendered})${refsFragment})`,
             Imports.for(Import.childComp).plus(propsGetterAndRefs.imports),
@@ -293,7 +293,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
             if (importedSymbols.has(htmlElement.rawTagName))
-                return renderNestedComponent(htmlElement, importedSymbols);
+                return renderNestedComponent(htmlElement);
             if (isForEach(htmlElement))
                 dynamicRef = true;
 
