@@ -1,12 +1,8 @@
 <html>
 <head>
+    <link rel="import" href="../counter/counter" names="Counter"/>
+    <link rel="import" href="../counter/generated" names="CounterViewState as CounterData"/>
     <script type="application/yaml-jay">
-imports:
-  ../counter/counter:
-  - symbol: Counter
-  ../counter/generated:
-  - symbol: CounterViewState
-    as: CounterData
 data:
   count1: number
   count2: number

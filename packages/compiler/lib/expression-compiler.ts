@@ -1,6 +1,6 @@
 import {Import, Imports, RenderFragment} from './render-fragment';
 import {parse} from '../lib/parse-expressions'
-import {JayObjectType, JayType, JayUnknown} from "./parse-jay-file";
+import {JayImportName, JayObjectType, JayType, JayUnknown} from "./parse-jay-file";
 import {JayValidations} from "./with-validations";
 
 export class Accessor {
@@ -53,7 +53,7 @@ export class Variables {
     }
 }
 
-function doParse(expression: string, vars: Variables, startRule) {
+function doParse(expression: string, startRule, vars?: Variables) {
     try {
         return parse(expression, {
             vars, RenderFragment,
@@ -69,33 +69,37 @@ function doParse(expression: string, vars: Variables, startRule) {
 }
 
 export function parseIdentifier(expression: string, vars: Variables): RenderFragment {
-    return new RenderFragment(doParse(expression, vars, 'Identifier'), Imports.none());
+    return new RenderFragment(doParse(expression, 'Identifier', vars), Imports.none());
 }
 
 export function parseAccessor(expression: string, vars: Variables): Accessor {
-    return doParse(expression, vars, 'accessor');
+    return doParse(expression, 'accessor', vars);
 }
 
 export function parseCondition(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, vars, 'condition');
+    return doParse(expression, 'condition', vars);
 }
 
 export function parseTextExpression(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, vars, 'dynamicText');
+    return doParse(expression, 'dynamicText', vars);
 }
 
 export function parseAttributeExpression(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, vars, 'dynamicAttribute');
+    return doParse(expression, 'dynamicAttribute', vars);
 }
 
 export function parsePropertyExpression(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, vars, 'dynamicProperty');
+    return doParse(expression, 'dynamicProperty', vars);
 }
 
 export function parseComponentPropExpression(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, vars, 'dynamicComponentProp');
+    return doParse(expression, 'dynamicComponentProp', vars);
 }
 
 export function parseClassExpression(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, vars, 'classExpression');
+    return doParse(expression, 'classExpression', vars);
+}
+
+export function parseImportNames(expression: string): JayImportName[] {
+    return doParse(expression, 'importNames');
 }

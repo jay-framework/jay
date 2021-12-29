@@ -37,6 +37,14 @@ ternaryClassExpression
 cssClassName
   = [-]?[_a-zA-Z]+[_a-zA-Z0-9-]* { return text() }
 
+importNames
+  = _ head:Identifier rename:(_ "as" _ Identifier)? tail:(_ "," _ Identifier (_ "as" _ Identifier)?)* {
+  let names = tail.reduce((acc, curr) => {
+    return [...acc, curr[4]?{name: curr[3], as: curr[4][3]}:{name: curr[3]}];
+  }, [rename?{name: head, as: rename[3]}:{name: head}]);
+  return names;
+}
+
 dynamicAttribute
   = template:template {
   let [renderFragment, isDynamic] = template;

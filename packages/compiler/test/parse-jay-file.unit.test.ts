@@ -4,10 +4,10 @@ import {JayArrayType, JayBoolean, JayNumber, JayObjectType, JayString, parseJayF
 
 describe('compiler', () => {
 
-    function jayFileWith(jayYaml, body) {
+    function jayFileWith(jayYaml, body, links?) {
         return stripMargin(
             ` <html>
-                |   <head>
+                |   <head>${links? `\n | ${stripMargin(links)}`:''}
                 |     <script type="application/yaml-jay">
                 |${stripMargin(jayYaml)}
                 |     </script>
@@ -93,20 +93,17 @@ describe('compiler', () => {
 
         it('should parse import links', () => {
             let jayFile = parseJayFile(jayFileWith(
-                ` imports:
-                        |   ./component1.ts:
-                        |   - symbol: comp1 
-                        |   ./component2.ts:
-                        |   - symbol: comp2
-                        |     as: comp3   
-                        | data:
+                ` data:
                         |   s1: string
                         |   n1: number`,
-                '<body></body>'), 'Base')
+                '<body></body>',
+                `<link rel="import" href="./component1.ts" names="comp1"/>
+                      |<link rel="import" href="./component2.ts" names="comp2 as comp3"/>`
+            ), 'Base')
 
             expect(jayFile.val.imports).toEqual([
-                {module: "./component1.ts", symbols: [{"symbol": "comp1"}]},
-                {module: "./component2.ts", symbols: [{"symbol": "comp2", as: "comp3"}]}
+                {module: "./component1.ts", names: [{"name": "comp1"}]},
+                {module: "./component2.ts", names: [{"name": "comp2", as: "comp3"}]}
             ]);
         });
 
@@ -155,21 +152,8 @@ describe('compiler', () => {
                 |</html>`), 'Base')
             expect(jayFile.validations).toEqual(["jay file must have exactly a body tag"]);
         })
-        
-        it('should report on module imports not being a list', () => {
-            let jayFile = parseJayFile(jayFileWith(
-                `imports:
-                        |  module:
-                        |    notAList: aaa
-                        |data:
-                        |   s1: string
-                        |   n1: number`,
-                '<body></body>'), 'Base')
 
-            expect(jayFile.validations).toEqual(["import for module module symbols must be a YAML list"]);
-        });
-
-        it('should report on import missing symbol property', () => {
+        it('should report on import missing names property', () => {
             let jayFile = parseJayFile(jayFileWith(
                 `imports:
                         |  module:
@@ -177,9 +161,23 @@ describe('compiler', () => {
                         |data:
                         |   s1: string
                         |   n1: number`,
-                '<body></body>'), 'Base')
+                '<body></body>',
+                '<link rel="import" href="module" />'), 'Base')
 
-            expect(jayFile.validations).toEqual(["import for module module, member {\"notAList\":\"aaa\"} does not define a symbol"]);
+            expect(jayFile.validations).toEqual(["failed to parsed import names for module module - failed to parse expression [undefined]. Cannot read property 'charAt' of undefined"]);
+        });
+        it('should report on import empty names property', () => {
+            let jayFile = parseJayFile(jayFileWith(
+                `imports:
+                        |  module:
+                        |  - notAList: aaa
+                        |data:
+                        |   s1: string
+                        |   n1: number`,
+                '<body></body>',
+                '<link rel="import" href="module" names=""/>'), 'Base')
+
+            expect(jayFile.validations).toEqual(["failed to parsed import names for module module - failed to parse expression []. Expected identifier but end of input found."]);
         });
     })
 

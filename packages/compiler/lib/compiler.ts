@@ -2,7 +2,7 @@ import {WithValidations} from "./with-validations";
 import {
     JayArrayType,
     JayAtomicType,
-    JayFile, JayImportedType, JayImportStatement,
+    JayFile, JayImportedType, JayImportLink,
     JayObjectType,
     JayType, JayTypeAlias,
     parseJayFile
@@ -65,7 +65,7 @@ enum ImportsFor {
     definition, implementation
 }
 
-function renderImports(imports: Imports, importsFor: ImportsFor, componentImports: Array<JayImportStatement>): string {
+function renderImports(imports: Imports, importsFor: ImportsFor, componentImports: Array<JayImportLink>): string {
     let toBeRenderedImports = [];
     if (imports.has(Import.jayElement)) toBeRenderedImports.push('JayElement');
     if (imports.has(Import.element) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('element as e');
@@ -82,8 +82,8 @@ function renderImports(imports: Imports, importsFor: ImportsFor, componentImport
 
     // todo validate the actual imported file
     let renderedComponentImports = componentImports.map(importStatement => {
-        let symbols = importStatement.symbols
-            .map(symbol => symbol.as?`${symbol.symbol} as ${symbol.as}`:symbol.symbol)
+        let symbols = importStatement.names
+            .map(symbol => symbol.as?`${symbol.name} as ${symbol.as}`:symbol.name)
             .join(', ')
 
         return `import {${symbols}} from '${importStatement.module}';`
@@ -327,10 +327,10 @@ function firstElementChild(node: Node): HTMLElement {
     return node.childNodes.find(child => child.nodeType === NodeType.ELEMENT_NODE) as HTMLElement;
 }
 
-function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, importStatements: JayImportStatement[], baseElementName: string):
+function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, importStatements: JayImportLink[], baseElementName: string):
     { renderedRefs: string; renderedElement: string; elementType: string; renderedImplementation: RenderFragment } {
     let variables = new Variables(types);
-    let importedSymbols = new Set(importStatements.flatMap(_ => _.symbols.map(sym => sym.as? sym.as : sym.symbol)));
+    let importedSymbols = new Set(importStatements.flatMap(_ => _.names.map(sym => sym.as? sym.as : sym.name)));
     let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), importedSymbols, new Indent('    '), false);
     let elementType = baseElementName + 'Element';
     let refsType = baseElementName + 'Refs';

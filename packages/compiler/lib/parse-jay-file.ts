@@ -3,6 +3,7 @@ import {JayValidations, WithValidations} from "./with-validations";
 import yaml from 'js-yaml';
 import {pascalCase} from 'change-case';
 import pluralize from 'pluralize';
+import {parseImportNames} from "./expression-compiler";
 
 export interface JayType {
     name: string
@@ -67,20 +68,20 @@ interface JayExample {
     data: any
 }
 
-export interface JayImportSymbol {
-    symbol: string,
+export interface JayImportName {
+    name: string,
     as?: string
 }
 
-export interface JayImportStatement {
+export interface JayImportLink {
     module: string,
-    symbols: JayImportSymbol[]
+    names: JayImportName[]
 }
 
 export interface JayFile {
     types: JayObjectType,
     examples: Array<JayExample>,
-    imports: JayImportStatement[],
+    imports: JayImportLink[],
     body: HTMLElement
 }
 
@@ -139,7 +140,7 @@ function parseExamples(jayYaml: JayYamlStructure, validations: JayValidations) {
 
 interface JayYamlStructure {
     data: any,
-    imports: Record<string, Array<JayImportSymbol>>,
+    imports: Record<string, Array<JayImportName>>,
     examples: any
 }
 
@@ -155,31 +156,22 @@ function parseYaml(root: HTMLElement): WithValidations<JayYamlStructure> {
     return new WithValidations(jayYamlParsed, validations);
 }
 
-function parseImports(jayYaml: JayYamlStructure, validations: JayValidations): JayImportStatement[] {
-    let imports = jayYaml.imports || [];
-    return Object.keys(imports)
-        .filter(module => {
-            if (imports[module].length === 0) {
+function parseImports(importLinks: HTMLElement[], validations: JayValidations): JayImportLink[] {
+    return importLinks.map(importLink => {
+        let module = importLink. getAttribute('href');
+        let rawNames = importLink.getAttribute('names');
+        try {
+            let names = parseImportNames(rawNames)
+            if (names.length === 0)
                 validations.push(`import for module ${module} does not specify what to import`);
-                return false;
-            }
-            if (!Array.isArray(imports[module])) {
-                validations.push(`import for module ${module} symbols must be a YAML list`);
-                return false;
-            }
-            return true;
-        })
-        .map(module => {
-            let elements = imports[module]
-                .filter(aSymbol => {
-                    if (!aSymbol.symbol) {
-                        validations.push(`import for module ${module}, member ${JSON.stringify(aSymbol)} does not define a symbol`);
-                        return false;
-                    }
-                    return true;
-                })
-            return {module, symbols: elements}
-    });
+            return {module, names}
+        }
+        catch (e) {
+            validations.push(`failed to parsed import names for module ${module} - ${e.message}`);
+            return {module, names:[]}
+        }
+    })
+        .filter(importLink => importLink.names.length > 0);
 }
 
 export function parseJayFile(html: string, baseElementName: string): WithValidations<JayFile> {
@@ -190,8 +182,8 @@ export function parseJayFile(html: string, baseElementName: string): WithValidat
         return new WithValidations(undefined, validations);
 
     let examples = parseExamples(jayYaml, validations);
-    let imports = parseImports(jayYaml, validations);
-    let importedSymbols = new Set(imports.flatMap(_ => _.symbols.map(sym => sym.as? sym.as : sym.symbol)));
+    let imports = parseImports(root.querySelectorAll('link[rel="import"]'), validations);
+    let importedSymbols = new Set(imports.flatMap(_ => _.names.map(sym => sym.as? sym.as : sym.name)));
     let types = parseTypes(jayYaml, validations, baseElementName, importedSymbols);
 
     // let validations = [...typeValidations, ...importValidations];

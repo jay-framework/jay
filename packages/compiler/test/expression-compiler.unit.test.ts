@@ -3,7 +3,7 @@ import {
     Accessor,
     parseAccessor, parseAttributeExpression,
     parseClassExpression,
-    parseCondition, parsePropertyExpression,
+    parseCondition, parseImportNames, parsePropertyExpression,
     parseTextExpression,
     Variables
 } from '../lib/expression-compiler'
@@ -295,4 +295,31 @@ describe('expression-compiler', () => {
         })
     })
 
+    describe('parseImportNames', () => {
+        it('parse simple importName', () => {
+            const actual = parseImportNames('aName');
+            expect(actual).toEqual([{name: 'aName'}]);
+        })
+
+        it('parse import rename', () => {
+            const actual = parseImportNames('name1 as name2');
+            expect(actual).toEqual([{name: 'name1', as: 'name2'}]);
+        })
+
+        it('parse multiple names', () => {
+            const actual = parseImportNames('name1, name2');
+            expect(actual).toEqual([{name: 'name1'}, {name: 'name2'}]);
+        })
+
+        it('parse multiple names and renames', () => {
+            const actual = parseImportNames('name1 as name11, name2 as name22, name3');
+            expect(actual).toEqual([{name: 'name1', as: 'name11'}, {name: 'name2', as: 'name22'}, {name: 'name3'}]);
+        })
+
+        it('invalid import names', () => {
+            expect(() => {
+                parseImportNames('name1 name2')
+            }).toThrow('failed to parse expression [name1 name2]. Expected "," or "as" but "n" found.')
+        })
+    })
 });
