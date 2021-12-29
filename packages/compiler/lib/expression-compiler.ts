@@ -77,7 +77,7 @@ export function parseAccessor(expression: string, vars: Variables): Accessor {
 }
 
 export function parseCondition(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, 'condition', vars);
+    return doParse(expression, 'conditionFunc', vars);
 }
 
 export function parseTextExpression(expression: string, vars: Variables): RenderFragment {

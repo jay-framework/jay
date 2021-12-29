@@ -78,7 +78,8 @@ describe('expression-compiler', () => {
     describe('parseClass', () => {
         let defaultVars = new Variables(new JayObjectType('data', {
             isOne: JayBoolean,
-            isTwo: JayBoolean
+            isTwo: JayBoolean,
+            anEnum: new JayEnumType('AnEnum', ['one', 'two', 'three'])
         }));
 
         it('one static class declaration', () => {
@@ -102,6 +103,12 @@ describe('expression-compiler', () => {
         it('one dynamic class declaration', () => {
             const actual = parseClassExpression('{isOne? class1}', defaultVars);
             expect(actual.rendered).toEqual('da(vs => \`${vs.isOne?\'class1\':\'\'}\`)');
+            expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
+        })
+
+        it('dynamic class declaration with enum', () => {
+            const actual = parseClassExpression('{anEnum == one? class1}', defaultVars);
+            expect(actual.rendered).toEqual('da(vs => \`${vs.anEnum === AnEnum.one?\'class1\':\'\'}\`)');
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
         })
 

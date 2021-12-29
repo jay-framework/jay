@@ -30,8 +30,8 @@ singleClassExpression
   / cssClassName
 
 ternaryClassExpression
-  = [{] _  acc:accessor _ [?] _ classY:cssClassName classN:(_ [:] _ cssClassName)? _ [}] {
-    return new RenderFragment(`vs.${acc.render()}?'${classY}':'${classN?classN[3]:''}'`, da, acc.validations);
+  = [{] _  acc:condition _ [?] _ classY:cssClassName classN:(_ [:] _ cssClassName)? _ [}] {
+    return new RenderFragment(`${acc.rendered}?'${classY}':'${classN?classN[3]:''}'`, da, acc.validations);
   }
 
 cssClassName
@@ -110,6 +110,11 @@ template
     }
   }
 
+conditionFunc
+  = cond:condition {
+  return cond.map(_ => `vs => ${_}`)
+}
+
 condition
   = enumCondition
   / simpleCondition
@@ -117,15 +122,15 @@ condition
 simpleCondition
   = not:bang? head:accessor {
     return not?
-      new RenderFragment(`vs => !vs.${head.render()}`, none, head.validations):
-      new RenderFragment(`vs => vs.${head.render()}`, none, head.validations)
+      new RenderFragment(`!vs.${head.render()}`, none, head.validations):
+      new RenderFragment(`vs.${head.render()}`, none, head.validations)
   }
 
 enumCondition
   = head:accessor _ oper:EqualityOperator _ val:Identifier {
     if (oper.length === 2)
         oper = oper + "=";
-    return new RenderFragment(`vs => vs.${head.render()} ${oper} ${head.resolvedType.name}.${val}`, none, head.validations);
+    return new RenderFragment(`vs.${head.render()} ${oper} ${head.resolvedType.name}.${val}`, none, head.validations);
 }
 
 accessorFunction
