@@ -8,8 +8,8 @@
     "lib": "lib"
   },
   "scripts": {
-    "test": "pegjs --allowed-start-rules dynamicAttribute,dynamicText,dynamicProperty,condition,accessor,Identifier,classExpression,dynamicComponentProp,importNames lib/parse-expressions.pegjs && jest",
-    "build": "pegjs --allowed-start-rules dynamicAttribute,dynamicText,dynamicProperty,condition,accessor,Identifier,classExpression,dynamicComponentProp,importNames lib/parse-expressions.pegjs && tsc"
+    "test": "pegjs --allowed-start-rules dynamicAttribute,dynamicText,dynamicProperty,condition,accessor,Identifier,classExpression,dynamicComponentProp,importNames,enum,is_enum lib/parse-expressions.pegjs && jest",
+    "build": "pegjs --allowed-start-rules dynamicAttribute,dynamicText,dynamicProperty,condition,accessor,Identifier,classExpression,dynamicComponentProp,importNames,enum,is_enum lib/parse-expressions.pegjs && tsc"
   },
   "jest": {
     "setupFilesAfterEnv": [
@@ -31,7 +31,6 @@
   "devDependencies": {
     "@babel/preset-env": "^7.12.1",
     "@babel/preset-typescript": "^7.12.1",
-    "@caiogondim/strip-margin": "^1.0.0",
     "@types/node": "^14.11.10",
     "jest": "^26.6.0",
     "jay-runtime": "1.0.0",

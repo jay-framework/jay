@@ -3,7 +3,7 @@ import {JayValidations, WithValidations} from "./with-validations";
 import yaml from 'js-yaml';
 import {pascalCase} from 'change-case';
 import pluralize from 'pluralize';
-import {parseImportNames} from "./expression-compiler";
+import {parseEnumValues, parseImportNames, parseIsEnum} from "./expression-compiler";
 
 export interface JayType {
     name: string
@@ -33,6 +33,15 @@ export class JayTypeAlias implements JayType {
     name: string;
     constructor(name: string) {
         this.name = name;
+    }
+}
+
+export class JayEnumType implements  JayType {
+    name: string;
+    values: Array<string>
+    constructor(name: string, values: Array<string>) {
+        this.name = name;
+        this.values = values;
     }
 }
 
@@ -116,6 +125,8 @@ function resolveType(data: any, validations: JayValidations, path: Array<string>
             types[prop] = resolveType(data[prop], validations, [...path, prop], importedSymbols)
         } else if (importedSymbols.has(data[prop])) {
             types[prop] = resolveImportedType(data[prop])
+        } else if (parseIsEnum(data[prop])) {
+            types[prop] = new JayEnumType(toInterfaceName(prop), parseEnumValues(data[prop]));
         }
         else {
             let [, ...pathTail] = path;

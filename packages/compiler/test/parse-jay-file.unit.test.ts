@@ -1,6 +1,19 @@
 import {describe, expect, it} from '@jest/globals'
-import stripMargin from '@caiogondim/strip-margin'
-import {JayArrayType, JayBoolean, JayNumber, JayObjectType, JayString, parseJayFile} from "../lib/parse-jay-file";
+
+import {
+    JayArrayType,
+    JayBoolean,
+    JayEnumType,
+    JayNumber,
+    JayObjectType,
+    JayString,
+    parseJayFile
+} from "../lib/parse-jay-file";
+
+function stripMargin(str) {
+    const regexp = new RegExp(`^[ \t]+\\|`, 'gm')
+    return str.replace(regexp, '')
+}
 
 describe('compiler', () => {
 
@@ -88,6 +101,18 @@ describe('compiler', () => {
                     s3: JayString,
                     n3: JayNumber}
                 ))}));
+            expect(jayFile.val.examples).toEqual([]);
+        });
+
+        it('should parse enum types', () => {
+            let jayFile = parseJayFile(jayFileWith(
+                ` data:
+                        |   an_enum: enum(one | two | three)`,
+                '<body></body>'), 'Base')
+
+            expect(jayFile.val.types).toEqual(new JayObjectType('BaseViewState',{
+                an_enum: new JayEnumType('AnEnum', ['one', 'two', 'three'])}
+                ));
             expect(jayFile.val.examples).toEqual([]);
         });
 

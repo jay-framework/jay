@@ -103,3 +103,15 @@ export function parseClassExpression(expression: string, vars: Variables): Rende
 export function parseImportNames(expression: string): JayImportName[] {
     return doParse(expression, 'importNames');
 }
+
+export function parseIsEnum(expression: string): boolean {
+    try {
+        return doParse(expression, 'is_enum');
+    }
+    catch (err) {
+        return false;
+    }
+}
+export function parseEnumValues(expression: string): string[] {
+    return doParse(expression, 'enum');
+}

@@ -3,7 +3,7 @@ import {
     Accessor,
     parseAccessor, parseAttributeExpression,
     parseClassExpression,
-    parseCondition, parseImportNames, parsePropertyExpression,
+    parseCondition, parseEnumValues, parseImportNames, parseIsEnum, parsePropertyExpression,
     parseTextExpression,
     Variables
 } from '../lib/expression-compiler'
@@ -320,6 +320,29 @@ describe('expression-compiler', () => {
             expect(() => {
                 parseImportNames('name1 name2')
             }).toThrow('failed to parse expression [name1 name2]. Expected "," or "as" but "n" found.')
+        })
+    })
+
+    describe('parseEnum', () => {
+        it('parses the values of an enum type', () => {
+            const actual = parseEnumValues('enum(one | two | three)');
+            expect(actual).toEqual(['one', 'two', 'three']);
+        })
+
+        it('parses is enum', () => {
+            const actual = parseIsEnum('enum(one | two | three)');
+            expect(actual).toEqual(true);
+        })
+
+        it('parses is enum for non enums', () => {
+            const actual = parseIsEnum('not an enum');
+            expect(actual).toEqual(false);
+        })
+
+        it('parses invalid enum', () => {
+            expect(() => {
+                parseEnumValues('enum(not an enum');
+            }).toThrow('failed to parse expression [enum(not an enum]. Expected \")\" or \"|\" but \"a\" found.')
         })
     })
 });

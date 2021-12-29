@@ -45,6 +45,18 @@ importNames
   return names;
 }
 
+is_enum
+  = _ "enum" _ "(" "".* {
+  return true
+}
+
+enum
+  = _ "enum" _ "(" first:Identifier next:(_ "|" _ Identifier)* _ ")" _ {
+  return next.reduce((acc, val) => {
+    return [...acc, val[3]];
+  }, [first])
+}
+
 dynamicAttribute
   = template:template {
   let [renderFragment, isDynamic] = template;
