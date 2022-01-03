@@ -233,6 +233,47 @@ macro that translates to a promise.
 
 https://developer.salesforce.com/docs/atlas.en-us.lightning.meta/lightning/security_code.htm
 
-RemoveUI
-
+## Shopify RemoteUI
+                
+## Neriol
 Project [Nerio](https://github.com/kmacrow/Nerio)
+                              
+## Realms and SAS                           
+
+Looking at figma and the work they have done using Realms, the approach looks very interesting
+
+* https://www.figma.com/blog/how-we-built-the-figma-plugin-system/
+* https://agoric.com/blog/technology/realms-shim-security-updates/
+* https://github.com/endojs/endo/tree/master/packages%2Fses
+* https://github.com/Agoric/realms-shim/blob/v1.1.0/src/evaluators.js#L60-L69
+
+The big advantage - a single JS engine, with guards to prevent 3rd party code from accessing and tempering 
+with other apps code. 
+                                                                      
+However, when digging into it, it seems that the guard surface is way too large - consider this file 
+https://github.com/endojs/endo/blob/master/packages/ses/src/commons.js - which lists all the methods of `array`, 
+`map`, `set`, etc and for each implement a guard - **an approach that is not future prof 
+(once a JS engine adds a new function that is not listed in the file)** and exposes too large options for 
+mistakes.
+
+**I do not believe this approach will converge on a solid platform - the attack surface is too large**.
+
+Still, we can add this approach (the base of which is the 8 magic lines) to our proposal above of safe events, 
+on top of the compiler that ensures we only use a safe subset of JS.
+                                                           
+Code taken from https://github.com/endojs/endo/blob/master/packages/ses/src/make-evaluate-factory.js
+```typescript
+export const FERAL_FUNCTION = Function;
+export const makeEvaluateFactory = (constants = []) => {
+    const optimizer = buildOptimizer(constants);
+    return FERAL_FUNCTION(`
+    with (this) {
+      ${optimizer}
+      return function() {
+        'use strict';
+        return eval(arguments[0]);
+      };
+    }
+  `);
+}
+```
