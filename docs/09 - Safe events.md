@@ -252,7 +252,7 @@ with other apps code.
                                                                       
 However, when digging into it, it seems that the guard surface is way too large - consider this file 
 https://github.com/endojs/endo/blob/master/packages/ses/src/commons.js - which lists all the methods of `array`, 
-`map`, `set`, etc and for each implement a guard - **an approach that is not future prof 
+`map`, `set`, etc and for each implement a guard - **an approach that is not future proof 
 (once a JS engine adds a new function that is not listed in the file)** and exposes too large options for 
 mistakes.
 
