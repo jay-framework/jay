@@ -6,7 +6,7 @@ export interface CounterViewState {
 
 export interface CounterRefs {
   subtracter: HTMLButtonElement,
-  adder: HTMLButtonElement
+  adderButton: HTMLButtonElement
 }
 
 export type CounterElement = JayElement<CounterViewState, CounterRefs>
@@ -16,6 +16,6 @@ export function render(viewState: CounterViewState): CounterElement {
     e('div', {}, [
       e('button', {ref: 'subtracter'}, ['-']),
       e('span', {style: {cssText: 'margin: 0 16px'}}, [dt(vs => vs.count)]),
-      e('button', {ref: 'adder'}, ['+'])
+      e('button', {ref: 'adderButton'}, ['+'])
     ]));
 }

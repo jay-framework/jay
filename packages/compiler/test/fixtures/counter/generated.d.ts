@@ -6,7 +6,7 @@ export interface CounterViewState {
 
 export interface CounterRefs {
   subtracter: HTMLButtonElement,
-  adder: HTMLButtonElement
+  adderButton: HTMLButtonElement
 }
 
 export type CounterElement = JayElement<CounterViewState, CounterRefs>

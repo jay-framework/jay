@@ -18,6 +18,7 @@ import {
 } from './expression-compiler';
 import { capitalCase } from "change-case";
 import {htmlElementTagNameMap} from "./html-element-tag-name-map";
+import {camelCase} from "camel-case";
 
 function renderInterface(aType: JayObjectType): string {
 
@@ -126,14 +127,16 @@ function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: 
         let attrKey = attrCanonical.match(attributesRequiresQuotes) ? `"${attrCanonical}"` : attrCanonical;
         if (attrCanonical === 'if' || attrCanonical === 'foreach' || attrCanonical === 'trackby')
             return;
-        if (attrCanonical === 'ref')
+        if (attrCanonical === 'ref') {
             refs = [{
-                ref: attributes[attrName],
+                ref: camelCase(attributes[attrName]),
                 dynamicRef,
                 elementType: elementNameToJayType(element),
                 viewStateType: variables.currentType
             }];
-        if (attrCanonical === 'style')
+            renderedAttributes.push(new RenderFragment(`${attrKey}: '${camelCase(attributes[attrName])}'`))
+        }
+        else if (attrCanonical === 'style')
             renderedAttributes.push(new RenderFragment(`style: {cssText: '${attributes[attrName]}'}`))
         else if (attrCanonical === 'class') {
             let classExpression = parseClassExpression(attributes[attrName], variables);
@@ -209,7 +212,7 @@ function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variabl
             return;
         if (attrCanonical === 'ref')
             refs = [{
-                ref: attributes[attrName],
+                ref: camelCase(attributes[attrName]),
                 dynamicRef,
                 elementType: new JayTypeAlias(`ReturnType<typeof ${element.rawTagName}>`),
                 viewStateType: variables.currentType
