@@ -194,6 +194,12 @@ describe('compiler', () => {
             let runtimeFile = generateRuntimeFile(jayFile, 'component-in-component.jay.html');
             expect(runtimeFile.val).toEqual(await readGeneratedFile('component-in-component'));
         })
+
+        it('dynamic nesting components in other components', async () => {
+            const jayFile = await readSourceFile('dynamic-component-in-component');
+            let runtimeFile = generateRuntimeFile(jayFile, 'dynamic-component-in-component.jay.html');
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('dynamic-component-in-component'));
+        })
     })
 });
 

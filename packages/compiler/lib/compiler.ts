@@ -246,6 +246,9 @@ function renderNode(variables: Variables, node: Node, importedSymbols: Set<strin
     }
 
     function renderHtmlElement(htmlElement, newVariables: Variables, currIndent: Indent = indent) {
+        if (importedSymbols.has(htmlElement.rawTagName))
+            return renderNestedComponent(htmlElement, currIndent);
+
         let childNodes = node.childNodes.length > 1 ?
             node.childNodes.filter(_ => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '') :
             node.childNodes;
@@ -286,10 +289,10 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
             [...renderedForEach.validations, ...childElement.validations], childElement.refs)
     }
 
-    function renderNestedComponent(htmlElement: HTMLElement): RenderFragment {
+    function renderNestedComponent(htmlElement: HTMLElement, currIndent: Indent = indent): RenderFragment {
         let propsGetterAndRefs = renderChildCompProps(htmlElement, dynamicRef, variables);
         let refsFragment = propsGetterAndRefs.refs.length > 0 ? `, '${propsGetterAndRefs.refs[0].ref}'`: '';
-        return new RenderFragment(`${indent.firstLine}childComp(${htmlElement.rawTagName}, vs => (${propsGetterAndRefs.rendered})${refsFragment})`,
+        return new RenderFragment(`${currIndent.firstLine}childComp(${htmlElement.rawTagName}, vs => (${propsGetterAndRefs.rendered})${refsFragment})`,
             Imports.for(Import.childComp).plus(propsGetterAndRefs.imports),
             propsGetterAndRefs.validations, propsGetterAndRefs.refs);
     }
@@ -300,8 +303,6 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
             return renderTextNode(variables, text, indent) //.map(_ => ident + _);
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
-            if (importedSymbols.has(htmlElement.rawTagName))
-                return renderNestedComponent(htmlElement);
             if (isForEach(htmlElement))
                 dynamicRef = true;
 
