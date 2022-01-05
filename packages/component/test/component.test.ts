@@ -6,7 +6,7 @@ import {
     createState,
     forTesting,
     makeJayComponent,
-    Props
+    Props, useReactive
 } from "../lib/component";
 import {Reactive} from "jay-reactive";
 const {makePropsProxy} = forTesting
@@ -542,6 +542,39 @@ describe('state management', () => {
 
             const Test2 = makeJayComponent(renderTwoLabelElement, TestComponent2);
 
+            function asyncOperation(one: number, two: number): Promise<number> {
+                return new Promise((resolve) => {
+                    setImmediate(_ => resolve(one + two));
+                })
+            }
+
+            function TestComponent3({}: Props<null>, refs: LabelAndButtonRefs) {
+                let [one, setOne] = createState(12);
+                let [two, setTwo] = createState(34);
+                let [three, setThree] = createState(0);
+                let reactive = useReactive();
+                let [isWaiting, resolve] = mkResolvablePromise();
+                refs.button.onclick = async () => {
+                    let apiResult = await asyncOperation(one(), two());
+                    setOne(0);
+                    setTwo(0);
+                    setThree(apiResult);
+                    resolve();
+                }
+                const forAPItoFinish = () => isWaiting;
+                const getReactive = () => reactive
+                return {
+                    render: () => ({
+                        label: `${one()} ${two()}`
+                    }),
+                    forAPItoFinish,
+                    getReactive,
+                    three
+                }
+            }
+
+            const Test3 = makeJayComponent(renderTwoLabelElement, TestComponent3);
+
             it('should render only once on first render', () => {
                 const instance = Test1({one: 'one', two: 'two'})
                 expect(instance.element.refs.label.textContent).toBe('one two');
@@ -568,6 +601,27 @@ describe('state management', () => {
                 expect(instance.element.refs.label.textContent).toBe('one two');
                 expect(renderCount).toBe(2);
             })
+
+            it('should render only once on async API call and multiple state updates', async () => {
+                const instance = Test3({})
+                // those two getters have to be called before the button click so that the component API call will not flush
+                // the reactions of the state management after the API call
+                const waitingForAPIToFinish = instance.forAPItoFinish()
+                const reactive = instance.getReactive()
+                //
+                instance.element.refs.button.click()
+                await waitingForAPIToFinish
+                await reactive.toBeClean()
+                expect(instance.element.refs.label.textContent).toBe('0 0');
+                expect(instance.three()).toBe(46);
+                expect(renderCount).toBe(2);
+            })
         })
     })
 })
+
+function mkResolvablePromise() {
+    let resolve;
+    let promise = new Promise((res) => resolve = res);
+    return [promise, resolve];
+}

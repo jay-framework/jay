@@ -83,6 +83,9 @@ export function createState<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: S
     return componentContextStack.current().reactive.createState(value);
 }
 
+export function useReactive(): Reactive {
+    return componentContextStack.current().reactive;
+}
 export function createMemo<T>(computation: (prev: T) => T, initialValue?: T): Getter<T> {
     let [value, setValue] = componentContextStack.current().reactive.createState(initialValue);
     componentContextStack.current().reactive.createReaction(() => {
