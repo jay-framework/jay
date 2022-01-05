@@ -11,13 +11,14 @@ export class Reactive {
 
     private recording = false;
     private inCreateReaction = false;
-    private batchedReactionsToRun: boolean[] = undefined;
-    private autoBatchReactionsToRun: boolean[] = [];
+    private batchedReactionsToRun: boolean[] = [];
     private isAutoBatchScheduled = false;
     private reactionIndex = 0;
     private reactions: Array<() => void> = [];
     private dirty: Promise<void> = Promise.resolve();
     private dirtyResolve: () => void
+    private timeout: any = undefined;
+    private inBatchReactions: boolean;
 
     record<T>(func: (reactive: Reactive) => T): T {
         try {
@@ -38,12 +39,9 @@ export class Reactive {
                 if (reactionsToRerun[index]) {
                     if (this.recording)
                         this.reactions[index]();
-                    else if (this.batchedReactionsToRun)
-                        this.batchedReactionsToRun[index] = true;
-                    else {
+                    else if (!this.inBatchReactions)
                         this.ScheduleAutoBatchRuns();
-                        this.autoBatchReactionsToRun[index] = true;
-                    }
+                    this.batchedReactionsToRun[index] = true;
                 }
             }
         }
@@ -92,33 +90,25 @@ export class Reactive {
     }
 
     batchReactions<T>(func: () => T) {
-        this.batchedReactionsToRun = [];
+        this.inBatchReactions = true;
         [this.dirty, this.dirtyResolve] = mkResolvablePromise()
         try {
             return func();
         }
         finally {
-            this.runReactions(this.batchedReactionsToRun);
-            this.batchedReactionsToRun = undefined;
+            this.flush()
+            this.inBatchReactions = false;
             this.dirtyResolve();
         }
-    }
-
-    private runReactions(whichReactions: Array<Boolean>) {
-        for (let index = 0; index < whichReactions.length; index++)
-            if (whichReactions[index])
-                this.reactions[index]();
     }
 
     private ScheduleAutoBatchRuns() {
        if (!this.isAutoBatchScheduled) {
            this.isAutoBatchScheduled = true;
            [this.dirty, this.dirtyResolve] = mkResolvablePromise()
-           setTimeout(() => {
-               this.runReactions(this.autoBatchReactionsToRun);
-               this.isAutoBatchScheduled = false;
-               this.autoBatchReactionsToRun = [];
-               this.dirtyResolve()
+           this.timeout = setTimeout(() => {
+               this.timeout = undefined;
+               this.flush();
            }, 0)
        }
     }
@@ -128,11 +118,17 @@ export class Reactive {
     }
 
     flush() {
+        for (let index = 0; index < this.batchedReactionsToRun.length; index++)
+            if (this.batchedReactionsToRun[index])
+                this.reactions[index]();
         if (this.isAutoBatchScheduled) {
-            this.runReactions(this.autoBatchReactionsToRun);
             this.isAutoBatchScheduled = false;
-            this.autoBatchReactionsToRun = [];
+            if (this.timeout)
+                clearTimeout(this.timeout);
+            this.timeout = undefined;
         }
+        this.batchedReactionsToRun = [];
+        this.dirtyResolve()
     }
 }
 

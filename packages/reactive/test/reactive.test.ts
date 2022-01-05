@@ -402,6 +402,36 @@ describe('reactive', () => {
             expect(reaction.mock.calls[0][0]).toBe(36);
             expect(reaction.mock.calls[1][0]).toBe(39);
         })
+
+        it('auto batched reactions should merge into batchReactions later call', () => {
+            const reaction1 = jest.fn();
+            const reaction2 = jest.fn();
+            let reactive = new Reactive();
+
+            let [setState, setState2] = reactive.record((reactive) => {
+                let [state, setState] = reactive.createState(12);
+                let [state2, setState2] = reactive.createState(24);
+                reactive.createReaction(() => {
+                    reaction1(state())
+                })
+                reactive.createReaction(() => {
+                    reaction2(state2())
+                })
+                return [setState, setState2];
+            })
+            setState(13);
+
+            reactive.batchReactions(() => {
+                setState2(25);
+            })
+
+            expect(reaction1.mock.calls.length).toBe(2);
+            expect(reaction1.mock.calls[0][0]).toBe(12);
+            expect(reaction1.mock.calls[1][0]).toBe(13);
+            expect(reaction2.mock.calls.length).toBe(2);
+            expect(reaction2.mock.calls[0][0]).toBe(24);
+            expect(reaction2.mock.calls[1][0]).toBe(25);
+        })
     })
 
     describe('reaction ordering', () => {
