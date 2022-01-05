@@ -3,6 +3,10 @@
 The Reactive module is a minimal reactive core implementation that handles storing data, 
 reacting to data change and detecting if data has actually changed.
 
+Reactive will strive to run reactions as a batch and will do so **sync** when using `batchReactions` or 
+**async** if `batchReactions` was not used. When there are pending reactions to be run async, `toBeClean` 
+can be used to wait for the reactions to run using `await reactive.toBeClean()`. 
+
 It is intended to be an internal core implementation for state management and not a user facing API.
                                
 The package has 3 modules
@@ -12,6 +16,8 @@ The package has 3 modules
   * [createState](#createState)
   * [createReaction](#createReaction)
   * [batchReactions](#batchReactions)
+  * [toBeClean](#toBeClean)
+  * [flush](#flush)
 * [Mutable](#mutable)
   * [mutableObject](#mutableObject)
   * [isMutable](#isMutable)
@@ -144,6 +150,38 @@ reactive.batchReactions(() => {
     setB('abcde');
     setC('fghij');
 })
+```
+
+## <a name="toBeClean">toBeClean</a>
+         
+```
+Reactive.toBeClean(): Promise<void>
+```
+
+returns a promise that is resolved when pending reactions have run. If there are no pending reactions, the promise
+will resolve immediately.
+
+```typescript
+reactive.setStateA(12)
+reactive.setStateB('Joe')
+// waits for reaction to run
+await reactive.toBeClean() 
+```
+
+## <a name="flush">flush</a>
+         
+```
+Reactive.flush(): void
+```
+
+In the case of not using batch reactions, reactive will auto batch the reactions and run them async. 
+`flush` can be used to force the reactions to run sync.
+
+```typescript
+reactive.setStateA(12)
+reactive.setStateB('Joe')
+// forces reactions to run
+reactive.flush() 
 ```
 
 # <a name="mutable">Mutable</a>
