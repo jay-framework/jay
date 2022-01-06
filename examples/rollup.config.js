@@ -20,7 +20,9 @@ async function findAllEntryPoints(dir) {
 
 async function makeRollupConfig() {
   let entrypoints = await findAllEntryPoints('./lib');
-  let config =  entrypoints.map(ep => {
+  let config =  entrypoints
+    .filter(ep => ep.indexOf('react') === -1)
+    .map(ep => {
     let srcFolder = path.dirname(ep);
     let destFolder = srcFolder.replace('/examples/lib', '/examples/dist');
     return {
