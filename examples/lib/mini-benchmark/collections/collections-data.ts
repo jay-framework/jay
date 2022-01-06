@@ -1,44 +1,50 @@
-import {render, CollectionsViewState} from './collections.jay.html';
+import {render, CollectionsRefs} from './collections.jay.html';
+import {createState, makeJayComponent, useReactive, Props, createMemo} from 'jay-component';
 import benchmark from "../benchmark";
 import {mutableObject} from 'jay-reactive';
 
-export default function run(target, cycles, progressCallback) {
-    let dataFunc = data();
-    let {dom, update} = render(dataFunc(0));
-    target.innerHTML = '';
-    target.appendChild(dom);
-
-    benchmark(index => update(dataFunc(index)), cycles, progressCallback);
+interface CollectionsProps {
+    cycles: number
 }
 
-function data() {
-    let title = 'todo';
-    let items = mutableObject([
+function CollectionsConstructor({cycles}: Props<CollectionsProps>, refs: CollectionsRefs) {
+    let [title] = createState('collection');
+    let reactive = useReactive();
+    let [items] = createState(mutableObject([
         {name: 'car', completed: false, cost: 10, id: 'a'},
         {name: 'plane', completed: true, cost: 100, id: 'b'},
         {name: 'boat', completed: false, cost: 50, id: 'c'}
-    ]);
-    return function (index): CollectionsViewState {
-        if (index === 0)
-            return {title, items};
-        else {
-            if (index % 2 === 0) {
-                let index = Math.floor(items.length * Math.random());
-                items[index].cost += 1000;
-            }
-            if (index % 3 === 0)
-                items.push({name: 'item ' + index, completed: !!(index % 2), cost: index, id: 'a' + index});
-            if (index % 5 === 0) {
-                let rand = Math.floor(Math.random() * items.length);
-                items.splice(rand, 1);
-            }
-            if (index % 7 === 0) {
-                let rand = Math.floor(Math.random() * items.length);
-                let rand2 = Math.floor(Math.random() * items.length);
-                let item = items.splice(rand, 1);
-                items.splice(rand2, 0, item[0]);
-            }
-            return {title, items}
+    ]));
+    let numberOfItems = createMemo(() => items().length)
+
+    let nextId = 0;
+    const updateCollection = (index) => {
+        if (index % 2 === 0) {
+            let index = Math.floor(items().length * Math.random());
+            items()[index].cost += 1000;
+        }
+        if (index % 3 === 0)
+            items().push({name: 'item ' + nextId++, completed: !!(index % 2), cost: index, id: 'a' + nextId++});
+        if (index % 5 === 0) {
+            let rand = Math.floor(Math.random() * items().length);
+            items().splice(rand, 1);
+        }
+        if (index % 7 === 0) {
+            let rand = Math.floor(Math.random() * items().length);
+            let rand2 = Math.floor(Math.random() * items().length);
+            let item = items().splice(rand, 1);
+            items().splice(rand2, 0, item[0]);
         }
     }
+
+
+    const run = (progressCallback: (string) => void) => {
+        benchmark(index => reactive.batchReactions(() => updateCollection(index)), cycles(), progressCallback);
+    }
+    return {
+        render: () => ({title, items, numberOfItems}),
+        run
+    }
 }
+
+export const Collections = makeJayComponent(render, CollectionsConstructor);

@@ -3,16 +3,17 @@ import {createState, makeJayComponent, Props } from 'jay-component';
 import { mutableObject } from 'jay-reactive';
 
 interface TableProps {
-    size: number
+    tableSize: number
+    numCellsToUpdate: number
 }
 
-function TableConstructor({size}: Props<TableProps>, refs: TableRefs) {
+function TableConstructor({tableSize, numCellsToUpdate}: Props<TableProps>, refs: TableRefs) {
 
     let [line, _] = createState(() => {
         let tableLines = []
-        for (let x = 0; x < size(); x++) {
+        for (let x = 0; x < tableSize(); x++) {
             tableLines[x] = {id: x, cell: []};
-            for (let y = 0; y < size(); y++) {
+            for (let y = 0; y < tableSize(); y++) {
                 tableLines[x].cell[y] = {id: y, value: Math.round(Math.random()*100)};
 
             }
@@ -21,10 +22,9 @@ function TableConstructor({size}: Props<TableProps>, refs: TableRefs) {
     });
 
     const updateData = (cycle: number) => {
-        let numCellsToUpdate = Math.round(Math.random()*100);
-        for (let i = 0; i < numCellsToUpdate; i++) {
-            let x = Math.floor(Math.random()*size());
-            let y = Math.floor(Math.random()*size());
+        for (let i = 0; i < numCellsToUpdate(); i++) {
+            let x = Math.floor(Math.random()*tableSize());
+            let y = Math.floor(Math.random()*tableSize());
             line()[x].cell[y].value = Math.round(Math.random()*100);
         }
     }

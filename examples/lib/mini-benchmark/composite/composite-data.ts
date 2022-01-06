@@ -1,21 +1,28 @@
-import {render} from './composite.jay.html';
+import {render, CompositeRefs} from './composite.jay.html';
+import {createState, makeJayComponent, useReactive, Props } from 'jay-component';
 import benchmark from "../benchmark";
 
-export default function run(target, cycles, progressCallback) {
-    let dataFunc = data();
-    let {dom, update} = render(dataFunc(0));
-    target.innerHTML = '';
-    target.appendChild(dom);
-
-    benchmark(index => update(dataFunc(index)), cycles, progressCallback);
+interface CompositeProps {
+    cycles: number
 }
 
-function data() {
-    return function (index) {
-        if (index === 0)
-            return {text: 'name', text2: 'text 2'}
-        else
-            return {text: 'name ' + index, text2: 'text 2 ' + index}
+function CompositeConstructor({cycles}: Props<CompositeProps>, refs: CompositeRefs) {
+    let [text, setText] = createState('name');
+    let [text2, setText2] = createState('text 2');
+    let reactive = useReactive();
+
+    const makeData = (index) => {
+        setText('name ' + index)
+        setText2('text 2 ' + index)
+    }
+
+    const run = (progressCallback: (string) => void) => {
+        benchmark(index => reactive.batchReactions(() => makeData(index)), cycles(), progressCallback);
+    }
+    return {
+        render: () => ({text, text2}),
+        run
     }
 }
 
+export const Composite = makeJayComponent(render, CompositeConstructor);

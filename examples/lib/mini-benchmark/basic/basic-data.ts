@@ -1,20 +1,22 @@
-import {render} from './basic.jay.html';
+import {BasicRefs, render as BasicRender} from './basic.jay.html';
+import {createState, makeJayComponent, useReactive, Props } from 'jay-component';
 import benchmark from "../benchmark";
 
-export default function run(target, cycles, progressCallback) {
-    let dataFunc = data();
-    let {dom, update} = render(dataFunc(0));
-    target.innerHTML = '';
-    target.appendChild(dom);
-
-    benchmark(index => update(dataFunc(index)), cycles, progressCallback);
+interface BasicProps {
+    cycles: number
 }
+function BasicConstructor({cycles}: Props<BasicProps>, refs: BasicRefs) {
+    let [text, setText] = createState('name');
+    let reactive = useReactive();
 
-function data() {
-    return function (index) {
-        if (index === 0)
-            return {text: 'name'};
-        else
-            return {text: 'name ' + index};
+    const run = (progressCallback: (string) => void) => {
+        benchmark(index => reactive.batchReactions(() => setText('name ' + index)), cycles(), progressCallback);
+    }
+    return {
+        render: () => ({text}),
+        run
     }
 }
+
+export const Basic = makeJayComponent(BasicRender, BasicConstructor);
+

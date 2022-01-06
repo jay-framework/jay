@@ -8,11 +8,13 @@ data:
         cost: number
         id: string
     title: string
+    numberOfItems: number
     </script>
 </head>
 <body>
 <div>
     <h1>{title}</h1>
+    <p>Number of items: {numberOfItems}</p>
     <div>
         <div forEach="items" trackBy="id">
             <span style="color:green; width: 100px; display: inline-block;">{name}</span>

@@ -1,37 +1,26 @@
 import benchmark from "../benchmark";
-import {createEvent, createState, makeJayComponent, Props } from 'jay-component';
+import {createState, makeJayComponent, Props } from 'jay-component';
 import {render as TableHostRender, TableHostRefs} from "./table-host.jay.html";
 
-interface TableHostProps {}
+interface TableHostProps {
+    cycles: number
+}
 
-function TableHostConstructor({}: Props<TableHostProps>, refs: TableHostRefs) {
+function TableHostConstructor({cycles}: Props<TableHostProps>, refs: TableHostRefs) {
 
     let [size, setSize] = createState(100);
     let [updates, setUpdates] = createState(100);
 
     refs.size.oninput = () => setSize(Number((refs.size as HTMLInputElement).value));
     refs.updates.oninput = () => setUpdates(Number((refs.updates as HTMLInputElement).value));
-    let onRunClick = createEvent<void>();
-    refs.run.onclick = () => {
-        onRunClick.emit();
-    }
-    const updateData = (index) => refs.table.updateData(index);
 
+    const run = (progressCallback: (string) => void) => {
+        benchmark(index => refs.table.updateData(index), cycles(), progressCallback);
+    }
     return {
         render: () => ({size, updates}),
-        onRunClick,
-        updateData
+        run
     }
 }
 
 export const TableHost = makeJayComponent(TableHostRender, TableHostConstructor);
-
-export default function run(target, cycles, progressCallback) {
-    let host = TableHost({cycles});
-    host.onRunClick = () => {
-        benchmark(index => host.updateData(index), cycles, progressCallback);
-    }
-    target.innerHTML = '';
-    target.appendChild(host.element.dom);
-
-}

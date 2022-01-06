@@ -1,25 +1,30 @@
-import {render} from './conditions.jay.html';
+import {render, ConditionsRefs} from './conditions.jay.html';
+import {createState, makeJayComponent, useReactive, Props } from 'jay-component';
 import benchmark from "../benchmark";
 
-export default function run(target, cycles, progressCallback) {
-    let dataFunc = data();
-    let {dom, update} = render(dataFunc(0));
-    target.innerHTML = '';
-    target.appendChild(dom);
-
-    benchmark(index => update(dataFunc(index)), cycles, progressCallback);
+interface ConditionsProps {
+    cycles: number
 }
 
-function data() {
-    return function (index) {
-        if (index === 0)
-            return {text1: 'name', text2: 'name2', cond: true}
-        else
-            return {
-                text1: 'name ' + index,
-                text2: 'name ' + index * 2,
-                cond: index % 2 === 0
-            }
+function ConditionsConstructor({cycles}: Props<ConditionsProps>, refs: ConditionsRefs) {
+    let [text1, setText1] = createState('name');
+    let [text2, setText2] = createState('text 2');
+    let [cond, setCond] = createState(true)
+    let reactive = useReactive();
+
+    const makeData = (index) => {
+        setText1('name A ' + index)
+        setText2('name B ' + index*2)
+        setCond(index % 2 === 0)
+    }
+
+    const run = (progressCallback: (string) => void) => {
+        benchmark(index => reactive.batchReactions(() => makeData(index)), cycles(), progressCallback);
+    }
+    return {
+        render: () => ({text1, text2, cond}),
+        run
     }
 }
 
+export const Conditions = makeJayComponent(render, ConditionsConstructor);
