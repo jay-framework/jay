@@ -3,6 +3,7 @@ import './App.css';
 import { Basic } from './basic';
 import {Collections} from "./collections";
 import {Composite} from "./composite";
+import {Conditions} from "./conditions";
 
 export enum SelectedExample {
     basic,
@@ -64,6 +65,9 @@ function App() {
 
                 {(selectedExample === SelectedExample.composite) &&
                 (<Composite cycles={cycles} progressCallback={progressCallback} running={running}/>)}
+
+                {(selectedExample === SelectedExample.conditions) &&
+                (<Conditions cycles={cycles} progressCallback={progressCallback} running={running}/>)}
             </div>
         </div>
     );
