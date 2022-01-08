@@ -2,6 +2,7 @@ import React, {useState} from 'react';
 import './App.css';
 import { Basic } from './basic';
 import {Collections} from "./collections";
+import {Composite} from "./composite";
 
 export enum SelectedExample {
     basic,
@@ -60,6 +61,9 @@ function App() {
 
                 {(selectedExample === SelectedExample.collections) &&
                 (<Collections cycles={cycles} progressCallback={progressCallback} running={running}/>)}
+
+                {(selectedExample === SelectedExample.composite) &&
+                (<Composite cycles={cycles} progressCallback={progressCallback} running={running}/>)}
             </div>
         </div>
     );
