@@ -4,6 +4,7 @@ import { Basic } from './basic';
 import {Collections} from "./collections";
 import {Composite} from "./composite";
 import {Conditions} from "./conditions";
+import {TableHost} from "./table-host";
 
 export enum SelectedExample {
     basic,
@@ -68,6 +69,9 @@ function App() {
 
                 {(selectedExample === SelectedExample.conditions) &&
                 (<Conditions cycles={cycles} progressCallback={progressCallback} running={running}/>)}
+
+                {(selectedExample === SelectedExample.table) &&
+                (<TableHost cycles={cycles} progressCallback={progressCallback} running={running}/>)}
             </div>
         </div>
     );
