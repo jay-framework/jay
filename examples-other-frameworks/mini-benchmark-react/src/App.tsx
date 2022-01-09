@@ -43,7 +43,7 @@ function App() {
 
     return (
         <div className="App">
-            <div className="title">Jay Examples</div>
+            <div className="title">React Benchmark examples - The Jay Project</div>
             <div className="select-example">
                 <label htmlFor="choose-example">Select example to view</label>
                 <select id="choose-example" onChange={chooseExample}>
