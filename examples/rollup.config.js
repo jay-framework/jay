@@ -1,5 +1,6 @@
 // rollup.config.js
 import typescript from '@rollup/plugin-typescript';
+import { terser } from "rollup-plugin-terser";
 import jay from 'rollup-plugin-jay';
 import copy from 'rollup-plugin-copy'
 import { nodeResolve } from '@rollup/plugin-node-resolve';
@@ -27,11 +28,18 @@ async function makeRollupConfig() {
     let destFolder = srcFolder.replace('/examples/lib', '/examples/dist');
     return {
       input: ep,
-      output: {
-        file: ep.replace('/examples/lib/', '/examples/dist/').replace('.ts', '.js'),
-        format: 'iife',
-        name: 'jay'
-      },
+      output: [
+        {
+          file: ep.replace('/examples/lib/', '/examples/dist/').replace('.ts', '.js'),
+          format: 'iife',
+          name: 'jay'
+        },
+        {
+          file: ep.replace('/examples/lib/', '/examples/dist/').replace('.ts', '.min.js'),
+          format: 'iife',
+          name: 'jay',
+          plugins: [terser()]
+        }],
       context: 'window',
       plugins: [
         jay(),
