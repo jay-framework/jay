@@ -239,12 +239,13 @@ https://developer.salesforce.com/docs/atlas.en-us.lightning.meta/lightning/secur
 Project [Nerio](https://github.com/kmacrow/Nerio)
                               
 ## Realms and SAS                           
+https://github.com/Agoric/realms-shim
+https://github.com/endojs/endo/tree/master/packages%2Fses
 
 Looking at figma and the work they have done using Realms, the approach looks very interesting
 
 * https://www.figma.com/blog/how-we-built-the-figma-plugin-system/
 * https://agoric.com/blog/technology/realms-shim-security-updates/
-* https://github.com/endojs/endo/tree/master/packages%2Fses
 * https://github.com/Agoric/realms-shim/blob/v1.1.0/src/evaluators.js#L60-L69
 
 The big advantage - a single JS engine, with guards to prevent 3rd party code from accessing and tempering 
