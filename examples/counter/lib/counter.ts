@@ -18,9 +18,3 @@ function CounterConstructor({initialValue}: Props<CounterProps>, refs: CounterRe
 }
 
 export const Counter = makeJayComponent(render, CounterConstructor);
-
-export default function run(target) {
-    let counter = Counter({initialValue: 12});
-    target.innerHTML = '';
-    target.appendChild(counter.element.dom);
-}

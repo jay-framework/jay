@@ -1,8 +1,10 @@
-import run from './counter.comp';
+import {Counter} from './counter';
 
 window.onload = function() {
     let target = document.getElementById('target');
-    run(target);
+    let counter = Counter({initialValue: 12});
+    target.innerHTML = '';
+    target.appendChild(counter.element.dom);
 }
 
 
