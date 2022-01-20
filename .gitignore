@@ -6,4 +6,4 @@ build
 package-lock.json
 /packages/compiler/lib/parse-expressions.js
 lerna-debug.log
-examples/lib/**/*.d.ts
+examples/**/*.d.ts
