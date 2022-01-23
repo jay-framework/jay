@@ -153,16 +153,23 @@ export function makeJayComponent<PropsT extends object, ViewState extends object
                 mounts.push(element.mount)
                 unmounts.push(element.unmount)
 
+                let events = {}
                 let component = {
                     element,
                     update,
                     mount: () => mounts.forEach(_ => _()),
                     unmount: () => unmounts.forEach(_ => _()),
+                    addEventListener: (eventType: string, handler: Function) => events[eventType].on(handler),
+                    removeEventListener: (eventType: string) => events[eventType].on(undefined)
                 }
 
                 // todo validate not overriding main JayComponent APIs
                 for (let key in api) {
                     if (api[key] instanceof EventEmitter) {
+                        if (key.indexOf('on') === 0) {
+                            let [,,...rest] = key;
+                            events[rest.join('')] = api[key];
+                        }
                         Object.defineProperty(component, key, {
                             get() {return api[key].handler},
                             set(handler) {api[key].on(handler)},

@@ -461,6 +461,14 @@ describe('state management', () => {
                 expect(myMock.mock.calls.length).toBe(1);
             })
 
+            it('should unregister events', () => {
+                let instance = counterComponent({});
+                const myMock = jest.fn();
+                instance.onChange = myMock;
+                instance.onChange = undefined;
+                instance.element.refs.inc.click();
+                expect(myMock.mock.calls.length).toBe(0);
+            })
             it('should invoke event with payload', () => {
                 let instance = counterComponent({});
                 const myMock = jest.fn();
@@ -470,6 +478,23 @@ describe('state management', () => {
                 expect(myMock.mock.calls.length).toBe(2);
                 expect(myMock.mock.calls[0][0]).toEqual({value: 1});
                 expect(myMock.mock.calls[1][0]).toEqual({value: 2});
+            })
+
+            it('should register events and invoke the event', () => {
+                let instance = counterComponent({});
+                const myMock = jest.fn();
+                instance.addEventListener('Change', myMock);
+                instance.element.refs.inc.click();
+                expect(myMock.mock.calls.length).toBe(1);
+            })
+
+            it('should register events and invoke the event', () => {
+                let instance = counterComponent({});
+                const myMock = jest.fn();
+                instance.addEventListener('Change', myMock);
+                instance.removeEventListener('Change', myMock);
+                instance.element.refs.inc.click();
+                expect(myMock.mock.calls.length).toBe(0);
             })
 
         })
