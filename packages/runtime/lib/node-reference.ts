@@ -54,13 +54,13 @@ interface ReferenceOperations<ViewState, Element> {
 export type DynamicReference<ViewState, Element extends ReferencedElement> = JayEventHandlersOf<ViewState, Element> & ReferenceOperations<ViewState, Element>
 
 export class ReferencesManager {
-    #dynamicRefs = {};
-    #staticRefs = {};
+    private dynamicRefs = {};
+    private staticRefs = {};
 
     getDynamic(id: string, autoCreate: boolean = false): DynamicReferenceInternal<any, ReferencedElement> | undefined {
-        if (!this.#dynamicRefs[id] && autoCreate)
-            this.#dynamicRefs[id] = new DynamicReferenceInternal();
-        return this.#dynamicRefs[id];
+        if (!this.dynamicRefs[id] && autoCreate)
+            this.dynamicRefs[id] = new DynamicReferenceInternal();
+        return this.dynamicRefs[id];
     }
 
     addDynamicRef(id: string, ref: ElementReference<any, ReferencedElement>) {
@@ -72,15 +72,15 @@ export class ReferencesManager {
     }
 
     addStaticRef(id: string, ref: ReferencedElement ) {
-        this.#staticRefs[id] = ref;
+        this.staticRefs[id] = ref;
     }
 
     applyToElement<T, Refs>(element:BaseJayElement<T>): JayElement<T, Refs> {
-        let enrichedRefs = Object.keys(this.#dynamicRefs).reduce((enriched, key) => {
-            enriched[key] = newReferenceProxy(this.#dynamicRefs[key])
+        let enrichedRefs = Object.keys(this.dynamicRefs).reduce((enriched, key) => {
+            enriched[key] = newReferenceProxy(this.dynamicRefs[key])
             return enriched;
         }, {})
-        let refs = {...enrichedRefs, ...this.#staticRefs} as Refs
+        let refs = {...enrichedRefs, ...this.staticRefs} as Refs 
         return {...element, refs};
     }
 }
@@ -94,12 +94,6 @@ const proxyHandler = {
         }
         else
             target[prop] = value;
-    },
-    get(target, propKey, receiver) {
-        const origMethod = target[propKey];
-        return function (...args) {
-            return origMethod.apply(target, args);
-        };
     }
 }
 export function newReferenceProxy<ViewState, Element extends HTMLElement>(ref: DynamicReferenceInternal<ViewState, Element>): DynamicReference<ViewState, Element> {
@@ -107,40 +101,40 @@ export function newReferenceProxy<ViewState, Element extends HTMLElement>(ref: D
 }
 
 export class DynamicReferenceInternal<ViewState, Element extends ReferencedElement> implements ReferenceOperations<ViewState, Element> {
-    #elements: Set<ElementReference<ViewState, Element>> = new Set();
-    #listeners = [];
+    private elements: Set<ElementReference<ViewState, Element>> = new Set();
+    private listeners = [];
 
     addEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: boolean | AddEventListenerOptions): void {
-        this.#listeners.push({type, listener, options})
-        this.#elements.forEach(ref =>
+        this.listeners.push({type, listener, options})
+        this.elements.forEach(ref =>
             ref.addEventListener(type, listener, options))
     }
 
     addRef(ref: ElementReference<ViewState, Element>) {
-        this.#elements.add(ref);
-        this.#listeners.forEach(listener =>
+        this.elements.add(ref);
+        this.listeners.forEach(listener =>
             ref.addEventListener(listener.type, listener.listener, listener.options))
     }
 
     forEach(handler: (element: Element) => void) {
-        this.#elements.forEach(ref => handler(ref.element));
+        this.elements.forEach(ref => handler(ref.element));
     }
 
     filter(predicate: (t:ViewState) => boolean): Element {
-        for (let elemRef of this.#elements)
+        for (let elemRef of this.elements)
             if (elemRef.match(predicate))
                 return elemRef.element
     }
 
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: EventListenerOptions | boolean): void {
-        this.#listeners = this.#listeners.filter(item => item.type !== type || item.listener !== listener);
-        this.#elements.forEach(ref =>
+        this.listeners = this.listeners.filter(item => item.type !== type || item.listener !== listener);
+        this.elements.forEach(ref =>
             ref.removeEventListener(type, listener, options))
     }
 
     removeRef(ref: ElementReference<ViewState, Element>) {
-        this.#elements.delete(ref);
-        this.#listeners.forEach(listener =>
+        this.elements.delete(ref);
+        this.listeners.forEach(listener =>
             ref.removeEventListener(listener.type, listener.listener, listener.options))
     }
     
@@ -148,36 +142,36 @@ export class DynamicReferenceInternal<ViewState, Element extends ReferencedEleme
 
 export class ElementReference<ViewState, Element extends ReferencedElement> {
     element: Element;
-    #dataContent: ViewState;
-    #listeners = [];
+    private dataContent: ViewState;
+    private listeners = [];
 
     constructor(element: Element, dataContext: ViewState) {
         this.element = element;
-        this.#dataContent = dataContext
+        this.dataContent = dataContext
     }
 
     addEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState>, options?: boolean | AddEventListenerOptions): void {
         let wrappedHandler = (event) => {
-            return listener(event, this.#dataContent);
+            return listener(event, this.dataContent);
         }
         this.element.addEventListener(type, wrappedHandler, options)
-        this.#listeners.push({type, listener, wrappedHandler})
+        this.listeners.push({type, listener, wrappedHandler})
     }
 
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: EventListenerOptions | boolean): void {
-        let index = this.#listeners.findIndex(item => item.type === type && item.listener === listener)
+        let index = this.listeners.findIndex(item => item.type === type && item.listener === listener)
         if (index > -1) {
-            let item = this.#listeners[index];
-            this.#listeners.splice(index, 1)
+            let item = this.listeners[index];
+            this.listeners.splice(index, 1)
             this.element.removeEventListener(type, item.wrappedHandler, options)
         }
     }
 
     match(predicate: (t:ViewState) => boolean): boolean {
-        return predicate(this.#dataContent);
+        return predicate(this.dataContent);
     }
     
     update = (newData: ViewState) => {
-        this.#dataContent = newData;
+        this.dataContent = newData;
     }
 }
