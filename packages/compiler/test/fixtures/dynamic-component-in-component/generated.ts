@@ -13,7 +13,7 @@ export interface DynamicComponentInComponentViewState {
 }
 
 export interface DynamicComponentInComponentRefs {
-  counter1: DynamicReference<DynamicComponentInComponentViewState, ReturnType<typeof Counter>>,
+  counter1: DynamicReference<CounterComponent, ReturnType<typeof Counter>>,
   counter2: ReturnType<typeof Counter>
 }
 
