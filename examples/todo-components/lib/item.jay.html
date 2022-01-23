@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<header>
+    <title>Todo element</title>
+    <script type="application/yaml-jay">
+data:
+  title: string
+  isEditing: boolean
+  editText: string
+  isCompleted: boolean
+    </script>
+</header>
+<body>
+<li class="{isCompleted ? completed} {isEditing ? editing}">
+    <div class="view">
+        <input class="toggle" type="checkbox" checked="{isCompleted}" ref="completed">
+        <label ref="label">{title}</label>
+        <button ref="button" class="destroy"></button>
+    </div>
+    <input class="edit" value={editText} ref="title">
+</li>
+</body>
+</html>
