@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "d": "node node_modules/jay-cli/dist/index.js ./lib",
+    "d": "node node_modules/jay-cli/dist/index.js definitions ./lib",
     "rollup": "rollup --config ./rollup.config.js",
     "build": "npm run d && npm run rollup"
   },

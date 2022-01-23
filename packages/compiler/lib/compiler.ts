@@ -1,4 +1,5 @@
 import {WithValidations} from "./with-validations";
+export {WithValidations} from "./with-validations";
 import {
     JayArrayType,
     JayAtomicType, JayEnumType,
