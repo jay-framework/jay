@@ -7,6 +7,7 @@
     "examples/counter-raw",
     "examples/mini-benchmark",
     "examples/todo",
+    "examples/todo-components",
     "examples/todo-raw",
     "packages/rollup-plugin",
     "packages/cli",
