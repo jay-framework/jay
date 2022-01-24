@@ -1,18 +1,28 @@
 import {WithValidations} from "jay-compiler";
 import chalk from "chalk";
 import {findAllJayFiles} from "./find-all-jay-files";
-import {promises as fs} from "fs";
+import {promises as fsp} from "fs";
+import fs from "fs";
 import path from "path";
+
+function checkFileExists(filepath): Promise<Boolean>{
+    return new Promise((resolve, reject) => {
+        fs.access(filepath, fs.constants.F_OK, error => {
+            resolve(!error);
+        });
+    });
+}
 
 export async function generateFiles(
     dir: string,
     codeGenerationFunction: (html: string, filename: string) => WithValidations<string>,
-    outputExtension: string) {
+    outputExtension: string,
+    destinationDir?: string) {
 
     console.log(chalk.whiteBright('Jay generating definition files for ', dir));
     let jayFiles = await findAllJayFiles(dir)
     for (const jayFile of jayFiles) {
-        const content = await fs.readFile(jayFile, 'utf-8');
+        const content = await fsp.readFile(jayFile, 'utf-8');
         const generatedFile = codeGenerationFunction(content, path.basename(jayFile.replace('.jay.html', '')));
         const generateFileName = jayFile + outputExtension;
         if (generatedFile.validations.length > 0) {
@@ -20,7 +30,21 @@ export async function generateFiles(
             generatedFile.validations.forEach(_ => console.log(chalk.red(_)));
         } else {
             console.log(`${chalk.green('generated')} ${chalk.yellow(jayFile)} → ${chalk.yellow(generateFileName)}`)
-            await fs.writeFile(generateFileName, generatedFile.val)
+            let destinationGeneratedFileName;
+            if (destinationDir) {
+                let absGeneratedFileName = path.resolve(generateFileName);
+                let absSourceDir = path.resolve(dir);
+                let absDestDir = path.resolve(destinationDir);
+                destinationGeneratedFileName = absGeneratedFileName.replace(absSourceDir, absDestDir)
+            }
+            else
+                destinationGeneratedFileName = generateFileName;
+
+            let destinationDirName = path.dirname(destinationGeneratedFileName);
+            if (!await checkFileExists(destinationDirName)) {
+                await fsp.mkdir(destinationDirName, {recursive: true})
+            }
+            await fsp.writeFile(destinationGeneratedFileName, generatedFile.val)
         }
     }
 }
