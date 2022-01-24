@@ -1,5 +1,5 @@
 import {Command} from 'commander';
-import {generateDefinitionFile} from 'jay-compiler';
+import {generateDefinitionFile, generateRuntimeFile} from 'jay-compiler';
 import {generateFiles} from "./generate-files";
 
 const program = new Command();
@@ -15,7 +15,7 @@ program.command('runtime')
     .argument('<source>', 'source folder to scan for .jay.html files')
     .description('generate code files (.ts) for jay files')
     .action((source) => {
-        generateFiles(source, generateDefinitionFile, '.ts')
+        generateFiles(source, generateRuntimeFile, '.ts')
     })
 
 program.parse(process.argv);
