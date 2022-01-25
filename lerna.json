@@ -13,6 +13,7 @@
     "packages/cli",
     "packages/component",
     "packages/reactive",
+    "packages/secure",
     "exploration"
   ],
   "version": "1.0.0"
