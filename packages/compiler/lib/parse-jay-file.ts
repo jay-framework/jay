@@ -4,16 +4,19 @@ import yaml from 'js-yaml';
 import {pascalCase} from 'change-case';
 import pluralize from 'pluralize';
 import {parseEnumValues, parseImportNames, parseIsEnum} from "./expression-compiler";
+import {extractTypesForFile} from "./extract-types-for-file";
+import path from 'path';
 
 export interface JayType {
     name: string
+    isImported: boolean
 }
 
 export class JayAtomicType implements JayType {
-    readonly name: string;
-    constructor(name: string) {
-        this.name = name;
-    }
+    constructor(
+        public readonly name: string,
+        public readonly isImported: boolean = false
+    ) {}
 }
 
 export const JayString = new JayAtomicType('string');
@@ -29,47 +32,50 @@ const typesMap = {
     'date': JayDate
 }
 
+export function resolvePrimitiveType(typeName: string): JayType {
+    return typesMap[typeName] || JayUnknown
+}
+
 export class JayTypeAlias implements JayType {
-    name: string;
-    constructor(name: string) {
-        this.name = name;
-    }
+    constructor(public readonly name: string,
+                public readonly isImported: boolean = false) {}
 }
 
 export class JayEnumType implements  JayType {
-    name: string;
-    values: Array<string>
-    constructor(name: string, values: Array<string>) {
-        this.name = name;
-        this.values = values;
+    constructor(public readonly name: string,
+                public readonly values: Array<string>,
+                public readonly isImported: boolean = false) {
     }
 }
 
 export class JayImportedType implements JayType {
-    name: string;
-    constructor(name: string) {
-        this.name = name;
-    }
+    constructor(public readonly name: string,
+                public readonly isImported: boolean = false) {}}
+
+export class JayElementType implements JayType {
+    constructor(public readonly name: string,
+                public readonly isImported: boolean = false) {}
+}
+
+export class JayComponentType implements JayType {
+    constructor(public readonly name: string,
+                public readonly isImported: boolean = false) {}
 }
 
 export class JayObjectType implements JayType {
-    readonly name: string;
-    readonly props: {[key: string]: JayType};
-    constructor(name: string, props: {[key: string]: JayType}) {
-        this.name = name;
-        this.props = props;
+    constructor(public readonly name: string,
+                public readonly props: {[key: string]: JayType},
+                public readonly isImported: boolean = false) {
     }
 }
 
 export class JayArrayType implements JayType {
-    readonly itemType: JayType;
-    constructor(itemType: JayType) {
-        this.itemType = itemType;
+    constructor(public readonly itemType: JayType,
+                public readonly isImported: boolean = false) {
     }
     get name() {
         return `Array<${this.itemType.name}>`
     }
-
 }
 
 interface JayExample {
@@ -79,7 +85,8 @@ interface JayExample {
 
 export interface JayImportName {
     name: string,
-    as?: string
+    as?: string,
+    type: JayType
 }
 
 export interface JayImportLink {
@@ -88,7 +95,7 @@ export interface JayImportLink {
 }
 
 export interface JayFile {
-    types: JayObjectType,
+    types: JayType,
     examples: Array<JayExample>,
     imports: JayImportLink[],
     body: HTMLElement
@@ -109,22 +116,26 @@ function toInterfaceName(name) {
         return pascalCase(pluralize.singular(name))
 }
 
-function resolveImportedType(type: any) {
-    // todo use typescfript compiler to get the actual nested types
-    return new JayImportedType(type);
+function resolveImportedType(imports: JayImportName[], type: string): JayType {
+    let importedSymbols = imports.find(_ => _.as? _.as === type : _.name === type)
+    if (importedSymbols) {
+        // todo use typescfript compiler to get the actual nested types
+    }
+    else
+        return JayUnknown;
 }
 
-function resolveType(data: any, validations: JayValidations, path: Array<string>, importedSymbols: Set<string>): JayObjectType {
+function resolveType(data: any, validations: JayValidations, path: Array<string>, imports: JayImportName[]): JayObjectType {
     let types = {};
     for (let prop in data) {
-        if (typesMap[data[prop]] !== undefined)
-            types[prop] = typesMap[data[prop]];
+        if (resolvePrimitiveType(data[prop]) !== JayUnknown)
+            types[prop] = resolvePrimitiveType(data[prop]);
         else if (isArrayType(data[prop]))
-            types[prop] = new JayArrayType(resolveType(data[prop][0], validations, [...path, prop], importedSymbols));
+            types[prop] = new JayArrayType(resolveType(data[prop][0], validations, [...path, prop], imports));
         else if (isObjectType(data[prop])) {
-            types[prop] = resolveType(data[prop], validations, [...path, prop], importedSymbols)
-        } else if (importedSymbols.has(data[prop])) {
-            types[prop] = resolveImportedType(data[prop])
+            types[prop] = resolveType(data[prop], validations, [...path, prop], imports)
+        } else if (resolveImportedType(imports, data[prop]) !== JayUnknown) {
+            types[prop] = resolveImportedType(imports, data[prop])
         } else if (parseIsEnum(data[prop])) {
             types[prop] = new JayEnumType(toInterfaceName(prop), parseEnumValues(data[prop]));
         }
@@ -136,8 +147,11 @@ function resolveType(data: any, validations: JayValidations, path: Array<string>
     return new JayObjectType(toInterfaceName(path.slice(-1)[0]), types);
 }
 
-function parseTypes(jayYaml: JayYamlStructure, validations: JayValidations, baseElementName: string, importedSymbols: Set<string>): JayObjectType {
-    return resolveType(jayYaml.data, validations, [baseElementName+'ViewState'], importedSymbols);
+function parseTypes(jayYaml: JayYamlStructure, validations: JayValidations, baseElementName: string, imports: JayImportName[]): JayType {
+    if (typeof jayYaml.data === 'object')
+        return resolveType(jayYaml.data, validations, [baseElementName+'ViewState'], imports);
+    else if (typeof jayYaml.data === 'string')
+        return resolveImportedType(imports, jayYaml.data)
 }
 
 function parseExamples(jayYaml: JayYamlStructure, validations: JayValidations) {
@@ -167,25 +181,40 @@ function parseYaml(root: HTMLElement): WithValidations<JayYamlStructure> {
     return new WithValidations(jayYamlParsed, validations);
 }
 
-function parseImports(importLinks: HTMLElement[], validations: JayValidations): JayImportLink[] {
-    return importLinks.map(importLink => {
+function parseImports(importLinks: HTMLElement[], validations: JayValidations, filePath: string): JayImportLink[] {
+    return importLinks.map<JayImportLink>(importLink => {
         let module = importLink. getAttribute('href');
         let rawNames = importLink.getAttribute('names');
         try {
             let names = parseImportNames(rawNames)
             if (names.length === 0)
                 validations.push(`import for module ${module} does not specify what to import`);
+
+            let importedFile = path.resolve(filePath, module);
+            let exportedTypes = extractTypesForFile(importedFile);
+
+            for (let name of names) {
+                let exportedType = exportedTypes.find(_ => _.name === name.name);
+                if (exportedType && exportedType !== JayUnknown)
+                    name.type = exportedType;
+                else if (exportedType === JayUnknown)
+                    validations.push(`imported name ${name.name} from ${module} has an unsupported type`);
+                else
+                    validations.push(`failed to find exported member ${name.name} type in module ${module}`);
+            }
+
+
             return {module, names}
         }
         catch (e) {
             validations.push(`failed to parsed import names for module ${module} - ${e.message}`);
-            return {module, names:[]}
+            return {module, names: []}
         }
     })
-        .filter(importLink => importLink.names.length > 0);
+    //new Set(imports.flatMap(_ => _.names.map(sym => sym.as? sym.as : sym.name)));
 }
 
-export function parseJayFile(html: string, baseElementName: string): WithValidations<JayFile> {
+export function parseJayFile(html: string, baseElementName: string, filePath: string): WithValidations<JayFile> {
     let root = parse(html);
 
     let {val: jayYaml, validations} = parseYaml(root);
@@ -193,9 +222,9 @@ export function parseJayFile(html: string, baseElementName: string): WithValidat
         return new WithValidations(undefined, validations);
 
     let examples = parseExamples(jayYaml, validations);
-    let imports = parseImports(root.querySelectorAll('link[rel="import"]'), validations);
-    let importedSymbols = new Set(imports.flatMap(_ => _.names.map(sym => sym.as? sym.as : sym.name)));
-    let types = parseTypes(jayYaml, validations, baseElementName, importedSymbols);
+    let imports = parseImports(root.querySelectorAll('link[rel="import"]'), validations, filePath);
+    let importNames = imports.flatMap(_ => _.names);
+    let types = parseTypes(jayYaml, validations, baseElementName, importNames);
 
     // let validations = [...typeValidations, ...importValidations];
     if (validations.length > 0)

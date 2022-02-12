@@ -2,7 +2,7 @@ import {describe, expect, it} from '@jest/globals'
 
 import {
     JayArrayType,
-    JayBoolean,
+    JayBoolean, JayComponentType,
     JayEnumType,
     JayNumber,
     JayObjectType,
@@ -36,7 +36,7 @@ describe('compiler', () => {
                 `data:
                         |   text: string
                         |`,
-                '<body></body>'), 'Base')
+                '<body></body>'), 'Base', '')
             
             expect(jayFile.val.types).toEqual(new JayObjectType('BaseViewState', {text: JayString}));
             expect(jayFile.val.examples).toEqual([]);
@@ -47,7 +47,7 @@ describe('compiler', () => {
                 `data:
                         |   text: string
                         |`,
-                '<body></body>'), 'BaseElementName')
+                '<body></body>'), 'BaseElementName', '')
 
             expect(jayFile.val.types).toEqual(new JayObjectType('BaseElementNameViewState', {text: JayString}));
             expect(jayFile.val.examples).toEqual([]);
@@ -60,7 +60,7 @@ describe('compiler', () => {
                         |
                         | example:
                         |   text: 'hello world'`,
-                '<body></body>'), 'Base')
+                '<body></body>'), 'Base', '')
 
             expect(jayFile.val.types).toEqual(new JayObjectType('BaseViewState',{text: JayString}));
             expect(jayFile.val.examples).toEqual([{name: "example", data:{text: "hello world"}}]);
@@ -70,7 +70,7 @@ describe('compiler', () => {
             let jayFile = parseJayFile(jayFileWith(
                 ` data:
                         |   text: bla`,
-                '<body></body>'), 'Base')
+                '<body></body>'), 'Base', '')
 
             expect(jayFile.validations).toEqual(["invalid type [bla] found at [data.text]"]);
         });
@@ -87,7 +87,7 @@ describe('compiler', () => {
                         |   a1: 
                         |    -  s3: string
                         |       n3: number`,
-                '<body></body>'), 'Base')
+                '<body></body>'), 'Base', '')
 
             expect(jayFile.val.types).toEqual(new JayObjectType('BaseViewState',{
                 s1: JayString,
@@ -108,7 +108,7 @@ describe('compiler', () => {
             let jayFile = parseJayFile(jayFileWith(
                 ` data:
                         |   an_enum: enum(one | two | three)`,
-                '<body></body>'), 'Base')
+                '<body></body>'), 'Base', '')
 
             expect(jayFile.val.types).toEqual(new JayObjectType('BaseViewState',{
                 an_enum: new JayEnumType('AnEnum', ['one', 'two', 'three'])}
@@ -122,14 +122,21 @@ describe('compiler', () => {
                         |   s1: string
                         |   n1: number`,
                 '<body></body>',
-                `<link rel="import" href="./component1.ts" names="comp1"/>
-                      |<link rel="import" href="./component2.ts" names="comp2 as comp3"/>`
-            ), 'Base')
+                `<link rel="import" href="./fixtures/imports/component1.ts" names="comp1"/>
+                      |<link rel="import" href="./fixtures/imports/component2.ts" names="comp2 as comp3"/>`
+            ), 'Base', './test')
 
-            expect(jayFile.val.imports).toEqual([
-                {module: "./component1.ts", names: [{"name": "comp1"}]},
-                {module: "./component2.ts", names: [{"name": "comp2", as: "comp3"}]}
-            ]);
+            expect(jayFile.val.imports).toEqual(
+                expect.arrayContaining([
+                    {
+                        module: "./fixtures/imports/component1.ts",
+                        names: [{name: "comp1", type: new JayComponentType("comp1", true)}]
+                    },
+                    {
+                        module: "./fixtures/imports/component2.ts",
+                        names: [{as: "comp3", name: "comp2", type: new JayComponentType("comp2", true)}]
+                    }
+                ]));
         });
 
         it('should report on a file with two yaml-jay', () => {
@@ -146,7 +153,7 @@ describe('compiler', () => {
                 |        </script>
                 |    </head>
                 |    <body>x</body>
-                |</html>`), 'Base')
+                |</html>`), 'Base', '')
             expect(jayFile.validations).toEqual(["jay file should have exactly one yaml-jay script, found 2"]);
         })
 
@@ -156,12 +163,12 @@ describe('compiler', () => {
                 |    <head>
                 |    </head>
                 |    <body>x</body>
-                |</html>`), 'Base')
+                |</html>`), 'Base', '')
             expect(jayFile.validations).toEqual(["jay file should have exactly one yaml-jay script, found none"]);
         })
 
         it('should report on a non html file', () => {
-            let jayFile = parseJayFile(`rrgargaergargaerg aergaegaraer aer erager`, 'Base')
+            let jayFile = parseJayFile(`rrgargaergargaerg aergaegaraer aer erager`, 'Base', '')
             expect(jayFile.validations).toEqual(["jay file should have exactly one yaml-jay script, found none"]);
         })
 
@@ -174,7 +181,7 @@ describe('compiler', () => {
                 |  name: string
                 |        </script>
                 |    </head>
-                |</html>`), 'Base')
+                |</html>`), 'Base', '')
             expect(jayFile.validations).toEqual(["jay file must have exactly a body tag"]);
         })
 
@@ -187,22 +194,31 @@ describe('compiler', () => {
                         |   s1: string
                         |   n1: number`,
                 '<body></body>',
-                '<link rel="import" href="module" />'), 'Base')
+                '<link rel="import" href="module" />'), 'Base', '')
 
             expect(jayFile.validations).toEqual(["failed to parsed import names for module module - failed to parse expression [undefined]. Cannot read property 'charAt' of undefined"]);
         });
+
         it('should report on import empty names property', () => {
             let jayFile = parseJayFile(jayFileWith(
-                `imports:
-                        |  module:
-                        |  - notAList: aaa
-                        |data:
+                `data:
                         |   s1: string
                         |   n1: number`,
                 '<body></body>',
-                '<link rel="import" href="module" names=""/>'), 'Base')
+                '<link rel="import" href="module" names=""/>'), 'Base', '')
 
             expect(jayFile.validations).toEqual(["failed to parsed import names for module module - failed to parse expression []. Expected identifier but end of input found."]);
+        });
+
+        it('should report on import file not found', () => {
+            let jayFile = parseJayFile(jayFileWith(
+                `data:
+                        |   s1: string
+                        |   n1: number`,
+                '<body></body>',
+                '<link rel="import" href="./module" names="name"/>'), 'Base', '')
+
+            expect(jayFile.validations[0]).toContain("failed to parsed import names for module ./module - File not found.");
         });
     })
 
