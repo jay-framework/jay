@@ -1,6 +1,6 @@
 import {Import, Imports, RenderFragment} from './render-fragment';
 import {parse} from '../lib/parse-expressions'
-import {JayImportName, JayObjectType, JayType, JayUnknown} from "./parse-jay-file";
+import {JayImportedType, JayImportName, JayObjectType, JayType, JayUnknown} from "./parse-jay-file";
 import {JayValidations} from "./with-validations";
 
 export class Accessor {
@@ -30,7 +30,7 @@ export class Variables {
         this.currentContext = (depth === 0)?'context':'cx'+depth;
         this.depth = depth;
         this.parent = parent;
-        this.currentType = currentTypes;
+        this.currentType = currentTypes instanceof JayImportedType ? currentTypes.type : currentTypes;
     }
 
     resolveAccessor(accessor: Array<string>): Accessor {

@@ -44,16 +44,17 @@ function getJayType(type: Type, types: JayType[]): JayType {
 }
 
 function getInterfaceJayType(name: string, interfaceDeclaration: InterfaceDeclaration, types: JayType[]): JayObjectType {
-    let props = interfaceDeclaration.getMembers()
+    let props = {};
+    const jayObjectType = new JayObjectType(name, props);
+    interfaceDeclaration.getMembers()
         .filter(member => member instanceof PropertySignature)
-        .map(member => {
+        .forEach(member => {
             let propKey = (member as PropertySignature).getName();
-            let propType = getJayType(member.getType(), types)
-            return {propKey, propType}
-        })
-        .reduce((acc, {propKey, propType}) => (acc[propKey] = propType, acc), {})
+            let propType = getJayType(member.getType(), [...types, jayObjectType])
+            props[propKey] = propType
+        });
 
-    return new JayObjectType(name, props);
+    return jayObjectType;
 }
 
 function getElementType(name: string, functionDeclaration: FunctionDeclaration): JayElementType {
@@ -80,6 +81,17 @@ function autoAddExtension(filename: string) {
         throw new Error(`File not found. Tried ${filename}, ${filename}.ts and ${filename}.d.ts`);
 }
 
+function isOrSubclassOf(type: Type, ofClass: string): boolean {
+    if (type.getSymbol().getName() === ofClass)
+        return true;
+
+    for (let baseType of type.getBaseTypes())
+        if (baseType.getSymbol().getName() === ofClass)
+            return true;
+
+    return false;
+}
+
 export function extractTypesForFile(filename: string, options = {}): JayType[] {
     let tsConfigPath = resolveTsConfig(options);
     const project = new Project({
@@ -98,10 +110,10 @@ export function extractTypesForFile(filename: string, options = {}): JayType[] {
             types.push(getInterfaceJayType(name, declarations[0], types));
         }
         else if (declarations[0] instanceof FunctionDeclaration) {
-            if (declarations[0].getReturnType().getSymbol().getName() === 'JayElement') {
+            if (isOrSubclassOf(declarations[0].getReturnType(), 'JayElement')) {
                 types.push(getElementType(name, declarations[0]));
             }
-            else if (declarations[0].getReturnType().getSymbol().getName() === 'JayComponent') {
+            else if (isOrSubclassOf(declarations[0].getReturnType(), 'JayComponent')) {
                 types.push(getComponentType(name, declarations[0]));
             }
             else

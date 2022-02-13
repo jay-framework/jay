@@ -1,6 +1,14 @@
 import {describe, expect, it} from '@jest/globals'
 import {extractTypesForFile} from "../lib/extract-types-for-file";
-import {JayArrayType, JayBoolean, JayElementType, JayNumber, JayObjectType, JayString} from "../lib/parse-jay-file";
+import {
+    JayArrayType,
+    JayBoolean,
+    JayComponentType,
+    JayElementType,
+    JayNumber,
+    JayObjectType,
+    JayString, JayUnknown
+} from "../lib/parse-jay-file";
 
 describe('typescript-compiler', () => {
 
@@ -90,6 +98,35 @@ describe('typescript-compiler', () => {
                         a1: new JayArrayType(A1)
                     }),
                 new JayElementType('DefinitionElement')
+            ]))
+    })
+
+    it('should extract types a recursive file', () => {
+        let types = extractTypesForFile('./test/fixtures/recursive-components/tree-node', {relativePath: 'tsconfig-tests.json'});
+
+        let nodeType = new JayObjectType('Node', {
+            id: JayString,
+            name: JayString,
+            firstChild: JayUnknown,
+            children: new JayArrayType(JayUnknown)
+        })
+        nodeType.props.firstChild = nodeType;
+        nodeType.props.children = new JayArrayType(nodeType)
+
+        expect(types).toEqual(
+            expect.arrayContaining([
+                new JayComponentType('treeNode')
+            ]))
+        let Node = types.find(_ => _.name === 'Node') as JayObjectType;
+        expect(Node.name).toEqual('Node');
+        expect(Node.props.id).toEqual(JayString);
+        expect(Node.props.name).toEqual(JayString);
+        expect(Node.props.firstChild).toEqual(nodeType);
+        expect(Node.props.children).toBeInstanceOf(JayArrayType)
+        expect((Node.props.children as JayArrayType).itemType).toEqual(nodeType);
+        expect(types).toEqual(
+            expect.arrayContaining([
+                new JayObjectType('TreeNode', {})
             ]))
     })
 });

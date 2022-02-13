@@ -205,7 +205,7 @@ function parseImports(importLinks: HTMLElement[], validations: JayValidations, f
             return {module, names}
         }
         catch (e) {
-            validations.push(`failed to parsed import names for module ${module} - ${e.message}`);
+            validations.push(`failed to parse import names for module ${module} - ${e.message}`);
             return {module, names: []}
         }
     })
