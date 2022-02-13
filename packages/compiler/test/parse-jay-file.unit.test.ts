@@ -130,11 +130,32 @@ describe('compiler', () => {
                 expect.arrayContaining([
                     {
                         module: "./fixtures/imports/component1.ts",
-                        names: [{name: "comp1", type: new JayComponentType("comp1", true)}]
+                        "names": [
+                            {
+                                "name": "comp1",
+                                "type": {
+                                    "name": "comp1",
+                                    "type": {
+                                        "name": "comp1"
+                                    }
+                                }
+                            }
+                        ]
                     },
                     {
                         module: "./fixtures/imports/component2.ts",
-                        names: [{as: "comp3", name: "comp2", type: new JayComponentType("comp2", true)}]
+                        "names": [
+                            {
+                                "as": "comp3",
+                                "name": "comp2",
+                                "type": {
+                                    "name": "comp3",
+                                    "type": {
+                                        "name": "comp2"
+                                    }
+                                }
+                            }
+                        ]
                     }
                 ]));
         });

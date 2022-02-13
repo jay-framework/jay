@@ -9,13 +9,11 @@ import path from 'path';
 
 export interface JayType {
     name: string
-    isImported: boolean
 }
 
 export class JayAtomicType implements JayType {
     constructor(
-        public readonly name: string,
-        public readonly isImported: boolean = false
+        public readonly name: string
     ) {}
 }
 
@@ -37,41 +35,41 @@ export function resolvePrimitiveType(typeName: string): JayType {
 }
 
 export class JayTypeAlias implements JayType {
-    constructor(public readonly name: string,
-                public readonly isImported: boolean = false) {}
+    constructor(public readonly name: string) {}
 }
 
 export class JayEnumType implements  JayType {
     constructor(public readonly name: string,
-                public readonly values: Array<string>,
-                public readonly isImported: boolean = false) {
+                public readonly values: Array<string>) {
     }
+}
+
+export class JayHTMLType implements JayType {
+    constructor(public readonly name: string) {}
 }
 
 export class JayImportedType implements JayType {
     constructor(public readonly name: string,
-                public readonly isImported: boolean = false) {}}
+                public readonly type: JayType) {
+    }
+}
 
 export class JayElementType implements JayType {
-    constructor(public readonly name: string,
-                public readonly isImported: boolean = false) {}
+    constructor(public readonly name: string) {}
 }
 
 export class JayComponentType implements JayType {
-    constructor(public readonly name: string,
-                public readonly isImported: boolean = false) {}
+    constructor(public readonly name: string) {}
 }
 
 export class JayObjectType implements JayType {
     constructor(public readonly name: string,
-                public readonly props: {[key: string]: JayType},
-                public readonly isImported: boolean = false) {
+                public readonly props: {[key: string]: JayType}) {
     }
 }
 
 export class JayArrayType implements JayType {
-    constructor(public readonly itemType: JayType,
-                public readonly isImported: boolean = false) {
+    constructor(public readonly itemType: JayType) {
     }
     get name() {
         return `Array<${this.itemType.name}>`
@@ -119,7 +117,7 @@ function toInterfaceName(name) {
 function resolveImportedType(imports: JayImportName[], type: string): JayType {
     let importedSymbols = imports.find(_ => _.as? _.as === type : _.name === type)
     if (importedSymbols) {
-        // todo use typescfript compiler to get the actual nested types
+        return importedSymbols.type
     }
     else
         return JayUnknown;
@@ -196,7 +194,7 @@ function parseImports(importLinks: HTMLElement[], validations: JayValidations, f
             for (let name of names) {
                 let exportedType = exportedTypes.find(_ => _.name === name.name);
                 if (exportedType && exportedType !== JayUnknown)
-                    name.type = exportedType;
+                    name.type = new JayImportedType(name.as? name.as:name.name, exportedType);
                 else if (exportedType === JayUnknown)
                     validations.push(`imported name ${name.name} from ${module} has an unsupported type`);
                 else

@@ -1,0 +1,21 @@
+<html>
+<head>
+    <link rel="import" href="./tree-node" names="treeNode, Node"/>
+    <script type="application/yaml-jay">
+data: Node
+    </script>
+</head>
+<body>
+<div>
+    <div>{name}</div>
+    <ul>
+        <li forEach="children" trackBy="id">
+            <treeNode name="{name}" id="{id}" children="{children}"/>
+        </li>
+        <li forEach="children" trackBy="id">
+            <treeNode props="{.}"/>
+        </li>
+    </ul>
+</div>
+</body>
+</html>

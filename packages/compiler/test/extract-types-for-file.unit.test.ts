@@ -8,20 +8,20 @@ describe('typescript-compiler', () => {
         {
             s2: JayString,
             n2: JayNumber
-        }, true)
+        })
     const A1 = new JayObjectType('A1',
         {
             s3: JayString,
             n3: JayNumber
-        }, true);
+        });
 
     it('should extract types from a file', () => {
         let types = extractTypesForFile('./test/fixtures/attributes/generated.ts', {relativePath: 'tsconfig-tests.json'});
 
         expect(types).toEqual(
             expect.arrayContaining([
-                new JayElementType('render', true),
-                new JayObjectType('AttributesRefs', {}, true),
+                new JayElementType('render'),
+                new JayObjectType('AttributesRefs', {}),
                 new JayObjectType('AttributesViewState',
                     {
                         text: JayString,
@@ -29,7 +29,7 @@ describe('typescript-compiler', () => {
                         text3: JayString,
                         bool1: JayBoolean,
                         color: JayString
-                    }, true)
+                    })
             ]))
     })
 
@@ -38,8 +38,8 @@ describe('typescript-compiler', () => {
 
         expect(types).toEqual(
             expect.arrayContaining([
-                new JayElementType('render', true),
-                new JayObjectType('AttributesRefs', {}, true),
+                new JayElementType('render'),
+                new JayObjectType('AttributesRefs', {}),
                 new JayObjectType('AttributesViewState',
                     {
                         text: JayString,
@@ -47,7 +47,7 @@ describe('typescript-compiler', () => {
                         text3: JayString,
                         bool1: JayBoolean,
                         color: JayString
-                    }, true)
+                    })
             ]))
     })
 
@@ -56,8 +56,8 @@ describe('typescript-compiler', () => {
 
         expect(types).toEqual(
             expect.arrayContaining([
-                new JayElementType('render', true),
-                new JayObjectType('DefinitionRefs', {}, true),
+                new JayElementType('render'),
+                new JayObjectType('DefinitionRefs', {}),
                 O1,
                 A1,
                 new JayObjectType('DefinitionViewState',
@@ -66,9 +66,9 @@ describe('typescript-compiler', () => {
                         n1: JayNumber,
                         b1: JayBoolean,
                         o1: O1,
-                        a1: new JayArrayType(A1, false)
-                    }, true),
-                new JayElementType('DefinitionElement', true)
+                        a1: new JayArrayType(A1)
+                    }),
+                new JayElementType('DefinitionElement')
             ]))
     })
 
@@ -77,8 +77,8 @@ describe('typescript-compiler', () => {
 
         expect(types).toEqual(
             expect.arrayContaining([
-                new JayElementType('render', true),
-                new JayObjectType('DefinitionRefs', {}, true),
+                new JayElementType('render'),
+                new JayObjectType('DefinitionRefs', {}),
                 O1,
                 A1,
                 new JayObjectType('DefinitionViewState',
@@ -87,9 +87,9 @@ describe('typescript-compiler', () => {
                         n1: JayNumber,
                         b1: JayBoolean,
                         o1: O1,
-                        a1: new JayArrayType(A1, false)
-                    }, true),
-                new JayElementType('DefinitionElement', true)
+                        a1: new JayArrayType(A1)
+                    }),
+                new JayElementType('DefinitionElement')
             ]))
     })
 });

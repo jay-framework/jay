@@ -3,7 +3,7 @@ export {WithValidations} from "./with-validations";
 import {
     JayArrayType,
     JayAtomicType, JayEnumType,
-    JayFile, JayImportedType, JayImportLink,
+    JayFile, JayHTMLType, JayImportedType, JayImportLink,
     JayObjectType,
     JayType, JayTypeAlias,
     parseJayFile
@@ -21,50 +21,48 @@ import { capitalCase } from "change-case";
 import {htmlElementTagNameMap} from "./html-element-tag-name-map";
 import {camelCase} from "camel-case";
 
-function renderInterface(aType: JayObjectType): string {
+function renderInterface(aType: JayType): string {
 
     let childInterfaces = [];
 
-    let genInterface = `export interface ${aType.name} {\n`;
-    genInterface += Object
-        .keys(aType.props)
-        .map(prop => {
-            let childType = aType.props[prop];
-            if (childType instanceof JayObjectType) {
-                childInterfaces.push(renderInterface(childType));
-                return `  ${prop}: ${childType.name}`;
-            }
-            else if (childType instanceof JayImportedType) {
-                return `  ${prop}: ${childType.name}`;
-            }
-            else if (childType instanceof JayArrayType) {
-                let arrayItemType = childType.itemType;
-                if (arrayItemType instanceof JayObjectType) {
-                    childInterfaces.push(renderInterface(arrayItemType));
-                    return `  ${prop}: Array<${arrayItemType.name}>`;
-                }
-                else {
-                    throw new Error('not implemented yet');
-                    // todo implement array of array or array of primitive
-                }
-            }
-            else if (childType instanceof JayAtomicType)
-                return `  ${prop}: ${childType.name}`;
-            else if (childType instanceof JayEnumType) {
-                let genEnum = `export enum ${childType.name} {\n${childType.values.map(_ => '  ' + _).join(',\n')}\n}`;
-                childInterfaces.push(genEnum);
-                return `  ${prop}: ${childType.name}`;
-            }
-            else
-                throw new Error('unknown type');
-        })
-        .join(',\n');
+    let genInterface = '';
+    if (aType instanceof JayObjectType) {
+        genInterface = `export interface ${aType.name} {\n`;
+        genInterface += Object
+            .keys(aType.props)
+            .map(prop => {
+                let childType = aType.props[prop];
+                if (childType instanceof JayImportedType) {
+                    return `  ${prop}: ${childType.name}`;
+                } else if (childType instanceof JayObjectType) {
+                    childInterfaces.push(renderInterface(childType));
+                    return `  ${prop}: ${childType.name}`;
+                } else if (childType instanceof JayArrayType) {
+                    let arrayItemType = childType.itemType;
+                    if (arrayItemType instanceof JayObjectType) {
+                        childInterfaces.push(renderInterface(arrayItemType));
+                        return `  ${prop}: Array<${arrayItemType.name}>`;
+                    } else {
+                        throw new Error('not implemented yet');
+                        // todo implement array of array or array of primitive
+                    }
+                } else if (childType instanceof JayAtomicType)
+                    return `  ${prop}: ${childType.name}`;
+                else if (childType instanceof JayEnumType) {
+                    let genEnum = `export enum ${childType.name} {\n${childType.values.map(_ => '  ' + _).join(',\n')}\n}`;
+                    childInterfaces.push(genEnum);
+                    return `  ${prop}: ${childType.name}`;
+                } else
+                    throw new Error('unknown type');
+            })
+            .join(',\n');
+    }
     genInterface += '\n}';
     return [...childInterfaces, genInterface].join('\n\n');
 }
 
 // exported for testing
-export function generateTypes(types: JayObjectType): string {
+export function generateTypes(types: JayType): string {
     return renderInterface(types);
 }
 
@@ -109,8 +107,8 @@ function renderTextNode(variables: Variables, text: string, indent: Indent): Ren
 
 function elementNameToJayType(element: HTMLElement): JayType {
     return htmlElementTagNameMap[element.rawTagName]?
-        new JayImportedType(htmlElementTagNameMap[element.rawTagName]) :
-        new JayImportedType('HTMLElement')
+        new JayHTMLType(htmlElementTagNameMap[element.rawTagName]) :
+        new JayHTMLType('HTMLElement')
 }
 
 const propertyMapping = {
@@ -318,6 +316,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
                 let trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
 
                 let forEachAccessor = parseAccessor(forEach, variables);
+                // Todo check if type unknown throw exception
                 let forEachFragment = new RenderFragment(`vs => vs.${forEachAccessor.render()}`, Imports.none(), forEachAccessor.validations);
                 let itemType = (forEachAccessor.resolvedType as JayArrayType).itemType;
                 let forEachVariables = variables.childVariableFor(itemType)
@@ -373,10 +372,10 @@ function normalizeFilename(filename: string): string {
     return filename.replace('.jay.html', '');
 }
 
-export function generateDefinitionFile(html: string, filename: string): WithValidations<string> {
+export function generateDefinitionFile(html: string, filename: string, filePath: string): WithValidations<string> {
     const normalizedFileName = normalizeFilename(filename);
     const baseElementName = capitalCase(normalizedFileName, {delimiter:''})
-    let parsedFile = parseJayFile(html, baseElementName);
+    let parsedFile = parseJayFile(html, baseElementName, filePath);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
         let {renderedRefs, renderedElement, elementType, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, baseElementName);
@@ -390,10 +389,10 @@ export function generateDefinitionFile(html: string, filename: string): WithVali
     })
 }
 
-export function generateRuntimeFile(html: string, filename: string): WithValidations<string> {
+export function generateRuntimeFile(html: string, filename: string, filePath: string): WithValidations<string> {
     const normalizedFileName = normalizeFilename(filename);
     const baseElementName = capitalCase(normalizedFileName, {delimiter:''})
-    let parsedFile = parseJayFile(html, baseElementName);
+    let parsedFile = parseJayFile(html, baseElementName, filePath);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
         let {renderedRefs, renderedElement, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, baseElementName);

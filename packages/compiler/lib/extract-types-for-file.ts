@@ -4,7 +4,7 @@ import {
     Project,
     PropertySignature,
     Type,
-    TypeAliasDeclaration
+    TypeAliasDeclaration, VariableDeclaration
 } from "ts-morph";
 import * as ts from "typescript";
 import fs from 'fs';
@@ -53,15 +53,15 @@ function getInterfaceJayType(name: string, interfaceDeclaration: InterfaceDeclar
         })
         .reduce((acc, {propKey, propType}) => (acc[propKey] = propType, acc), {})
 
-    return new JayObjectType(name, props, true);
+    return new JayObjectType(name, props);
 }
 
 function getElementType(name: string, functionDeclaration: FunctionDeclaration): JayElementType {
-    return new JayElementType(name, true);
+    return new JayElementType(name);
 }
 
 function getComponentType(name: string, functionDeclaration: FunctionDeclaration): JayElementType {
-    return new JayComponentType(name, true);
+    return new JayComponentType(name);
 }
 
 export interface ExportedType {
@@ -110,7 +110,11 @@ export function extractTypesForFile(filename: string, options = {}): JayType[] {
         else if (declarations[0] instanceof TypeAliasDeclaration) {
             // @ts-ignore
             if (declarations[0].compilerNode.type?.typeName?.escapedText === 'JayElement')
-                types.push(new JayElementType(name, true));
+                types.push(new JayElementType(name));
+        }
+        else if (declarations[0] instanceof VariableDeclaration) {
+            if (declarations[0].getChildren().length === 3 && declarations[0].getChildren()[2].getText().indexOf('makeJayComponent') === 0)
+                types.push(new JayComponentType(name));
         }
         else
             types.push(JayUnknown)
