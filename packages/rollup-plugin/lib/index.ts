@@ -32,15 +32,24 @@ export default function jayCompiler (options = {}) {
     return {
         name: 'jay', // this name will show up in warnings and errors
         transform(code: string, id: string) {
-            if (id.indexOf('.jay.html') > -1) {
-                let filename = path.basename(id).replace('.jay.html', '');
-                let dirName = path.dirname(id);
-                let tsCode = generateRuntimeFile(code, filename, dirName);
-                let jsCode = ts.transpileModule(tsCode.val, tsConfig);
-                return jsCode.outputText;
+            try {
+                if (id.indexOf('.jay.html') > -1) {
+                    let filename = path.basename(id).replace('.jay.html', '');
+                    let dirName = path.dirname(id);
+                    let tsCode = generateRuntimeFile(code, filename, dirName);
+                    if (tsCode.validations.length > 0) {
+                        console.error('failed to run Jay Rollup Plugin for file ' + id + '\n' + tsCode.validations.join('\n'));
+                    }
+                    let jsCode = ts.transpileModule(tsCode.val, tsConfig);
+                    return jsCode.outputText;
+                }
+                else {
+                    return code;
+                }
             }
-            else {
-                return code;
+            catch (e) {
+                console.error('failed to run Jay Rollup Plugin for file ' + id + '\n' + e.message);
+                throw e;
             }
         }
     };
