@@ -15,7 +15,7 @@ function checkFileExists(filepath): Promise<Boolean>{
 
 export async function generateFiles(
     dir: string,
-    codeGenerationFunction: (html: string, filename: string) => WithValidations<string>,
+    codeGenerationFunction: (html: string, filename: string, filePath: string) => WithValidations<string>,
     outputExtension: string,
     destinationDir?: string) {
 
@@ -23,7 +23,9 @@ export async function generateFiles(
     let jayFiles = await findAllJayFiles(dir)
     for (const jayFile of jayFiles) {
         const content = await fsp.readFile(jayFile, 'utf-8');
-        const generatedFile = codeGenerationFunction(content, path.basename(jayFile.replace('.jay.html', '')));
+        const generatedFile = codeGenerationFunction(content,
+            path.basename(jayFile.replace('.jay.html', '')),
+            path.dirname(jayFile));
         const generateFileName = jayFile + outputExtension;
         if (generatedFile.validations.length > 0) {
             console.log(`${chalk.red('failed to generate')} ${chalk.yellow(jayFile)} → ${chalk.yellow(generateFileName)}`)

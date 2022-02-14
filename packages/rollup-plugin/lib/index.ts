@@ -34,7 +34,8 @@ export default function jayCompiler (options = {}) {
         transform(code: string, id: string) {
             if (id.indexOf('.jay.html') > -1) {
                 let filename = path.basename(id).replace('.jay.html', '');
-                let tsCode = generateRuntimeFile(code, filename);
+                let dirName = path.dirname(id);
+                let tsCode = generateRuntimeFile(code, filename, dirName);
                 let jsCode = ts.transpileModule(tsCode.val, tsConfig);
                 return jsCode.outputText;
             }
