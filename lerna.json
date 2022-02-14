@@ -9,6 +9,7 @@
     "examples/todo",
     "examples/todo-components",
     "examples/todo-raw",
+    "examples/tree",
     "packages/rollup-plugin",
     "packages/cli",
     "packages/component",
