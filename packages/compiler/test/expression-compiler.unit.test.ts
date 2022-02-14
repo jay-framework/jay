@@ -181,6 +181,12 @@ describe('expression-compiler', () => {
             expect(actual.rendered).toEqual('dp(vs => \`some ${vs.string1} thing\`)')
             expect(actual.imports.has(Import.dynamicProperty)).toBeTruthy()
         })
+
+        it("parse {.} (the self accessor)", () => {
+            const actual = parsePropertyExpression('{.}', defaultVars);
+            expect(actual.rendered).toEqual('dp(vs => vs)')
+            expect(actual.imports.has(Import.dynamicProperty)).toBeTruthy()
+        })
     });
 
     describe('parseTextExpression', () => {

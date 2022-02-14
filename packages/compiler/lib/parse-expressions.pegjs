@@ -98,12 +98,12 @@ template
       return [new RenderFragment('\'' + renderText(a, head) + '\'', none), false];
     else if (tail.length === 1 && !head && a.length === 0 && tail[0][5].length === 0) {
         let accessor = tail[0][2];
-        return [new RenderFragment(`vs.${accessor.render()}`, none, accessor.validations), true];
+        return [new RenderFragment(`${accessor.render()}`, none, accessor.validations), true];
     }
     else {
       let reducedFragment = tail.reduce(function(result, element) {
         let accessor = element[2];
-        return RenderFragment.merge(result, new RenderFragment(`\${vs.${accessor.render()}}${renderText(element[5], element[6])}`, none, accessor.validations));
+        return RenderFragment.merge(result, new RenderFragment(`\${${accessor.render()}}${renderText(element[5], element[6])}`, none, accessor.validations));
       }, new RenderFragment(`\`${renderText(a, head)}`, none)).map(exp => exp + '\`')
 
       return [reducedFragment, true]
@@ -122,23 +122,32 @@ condition
 simpleCondition
   = not:bang? head:accessor {
     return not?
-      new RenderFragment(`!vs.${head.render()}`, none, head.validations):
-      new RenderFragment(`vs.${head.render()}`, none, head.validations)
+      new RenderFragment(`!${head.render()}`, none, head.validations):
+      new RenderFragment(`${head.render()}`, none, head.validations)
   }
 
 enumCondition
   = head:accessor _ oper:EqualityOperator _ val:Identifier {
     if (oper.length === 2)
         oper = oper + "=";
-    return new RenderFragment(`vs.${head.render()} ${oper} ${head.resolvedType.name}.${val}`, none, head.validations);
+    return new RenderFragment(`${head.render()} ${oper} ${head.resolvedType.name}.${val}`, none, head.validations);
 }
 
 accessorFunction
   = acc:accessor {
-    return acc.map(_ => 'vs => vs.' + _);
+    return acc.map(_ => 'vs => ' + _);
   }
 
 accessor
+  = selfAccessor
+  / propertyAccessor
+
+selfAccessor
+  = "." {
+    return vars.resolveAccessor(['.'])
+  }
+
+propertyAccessor
   = head:Identifier tail:(_ "." _ Identifier)* {
     let terms = [head, ...tail.map(_ => _[3])];
     let accessor = vars.resolveAccessor(terms)
