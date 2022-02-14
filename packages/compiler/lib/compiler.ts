@@ -317,7 +317,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
 
                 let forEachAccessor = parseAccessor(forEach, variables);
                 // Todo check if type unknown throw exception
-                let forEachFragment = new RenderFragment(`vs => vs.${forEachAccessor.render()}`, Imports.none(), forEachAccessor.validations);
+                let forEachFragment = new RenderFragment(`vs => ${forEachAccessor.render()}`, Imports.none(), forEachAccessor.validations);
                 let itemType = (forEachAccessor.resolvedType as JayArrayType).itemType;
                 let forEachVariables = variables.childVariableFor(itemType)
                 let childElement = renderHtmlElement(htmlElement, forEachVariables, indent.child().noFirstLineBreak().withLastLineBreak());
