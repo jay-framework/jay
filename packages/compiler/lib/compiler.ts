@@ -56,8 +56,8 @@ function renderInterface(aType: JayType): string {
                     throw new Error('unknown type');
             })
             .join(',\n');
+        genInterface += '\n}';
     }
-    genInterface += '\n}';
     return [...childInterfaces, genInterface].join('\n\n');
 }
 
@@ -204,11 +204,15 @@ function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variabl
     let attributes = element.attributes;
     let refs: Ref[] = [];
     let props = [];
+    let isPropsDirectAssignment: boolean = false;
     Object.keys(attributes).forEach(attrName => {
         let attrCanonical = attrName.toLowerCase();
         let attrKey = attrName.match(attributesRequiresQuotes) ? `"${attrName}"` : attrName;
         if (attrCanonical === 'if' || attrCanonical === 'foreach' || attrCanonical === 'trackby')
             return;
+        if (attrCanonical === 'props') {
+            isPropsDirectAssignment = true;
+        }
         if (attrCanonical === 'ref')
             refs = [{
                 ref: camelCase(attributes[attrName]),
@@ -222,10 +226,16 @@ function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variabl
         }
     })
 
-    const refsRenderFragment = new RenderFragment('', Imports.none(), [], refs);
-    return props
-        .reduce((prev, current) => RenderFragment.merge(prev, current, ', '), refsRenderFragment)
-        .map(_ => `{${_}}`);
+    if (isPropsDirectAssignment) {
+        let prop = parseComponentPropExpression(attributes.props, variables);
+        return RenderFragment.merge(prop, new RenderFragment('', Imports.none(), [], refs));
+    }
+    else {
+        const refsRenderFragment = new RenderFragment('', Imports.none(), [], refs);
+        return props
+            .reduce((prev, current) => RenderFragment.merge(prev, current, ', '), refsRenderFragment)
+            .map(_ => `({${_}})`);
+    }
 }
 
 function renderNode(variables: Variables, node: Node, importedSymbols: Set<string>, indent: Indent, dynamicRef: boolean): RenderFragment {
@@ -291,7 +301,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
     function renderNestedComponent(htmlElement: HTMLElement, newVariables: Variables, currIndent: Indent = indent): RenderFragment {
         let propsGetterAndRefs = renderChildCompProps(htmlElement, dynamicRef, newVariables);
         let refsFragment = propsGetterAndRefs.refs.length > 0 ? `, '${propsGetterAndRefs.refs[0].ref}'`: '';
-        return new RenderFragment(`${currIndent.firstLine}childComp(${htmlElement.rawTagName}, vs => (${propsGetterAndRefs.rendered})${refsFragment})`,
+        return new RenderFragment(`${currIndent.firstLine}childComp(${htmlElement.rawTagName}, vs => ${propsGetterAndRefs.rendered}${refsFragment})`,
             Imports.for(Import.childComp).plus(propsGetterAndRefs.imports),
             propsGetterAndRefs.validations, propsGetterAndRefs.refs);
     }
@@ -384,7 +394,7 @@ export function generateDefinitionFile(html: string, filename: string, filePath:
             renderedRefs,
             renderedElement,
             renderFunctionDeclaration(jayFile.types.name, elementType)
-        ]   .filter(_ => _ !== null)
+        ]   .filter(_ => _ !== null && _ !== '')
             .join('\n\n');
     })
 }
@@ -401,7 +411,7 @@ export function generateRuntimeFile(html: string, filename: string, filePath: st
             renderedRefs,
             renderedElement,
             renderedImplementation.rendered
-        ]   .filter(_ => _ !== null)
+        ]   .filter(_ => _ !== null && _ !== '')
             .join('\n\n');
     })
 }
