@@ -40,7 +40,9 @@ export class Variables {
         let curr: JayType = this.currentType;
         let validations = [];
         accessor.forEach((member) => {
-            if (curr instanceof JayObjectType && curr.props[member]) {
+            if (member === '.')
+                return; // do not advance curr
+            else if (curr instanceof JayObjectType && curr.props[member]) {
                 curr = curr.props[member];
             }
             else {
