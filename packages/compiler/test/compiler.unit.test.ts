@@ -229,6 +229,13 @@ describe('compiler', () => {
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(await readGeneratedFile('recursive-components'));
         })
+
+        it('recursive-components-2', async () => {
+            const jayFile = await readSourceFile('recursive-components-2');
+            let runtimeFile = generateRuntimeFile(jayFile, 'recursive-components-2.jay.html', './test/fixtures/recursive-components-2');
+            expect(runtimeFile.validations).toEqual([]);
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('recursive-components-2'));
+        })
     })
 });
 

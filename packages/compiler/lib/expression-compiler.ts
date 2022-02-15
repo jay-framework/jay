@@ -44,6 +44,8 @@ export class Variables {
                 return; // do not advance curr
             else if (curr instanceof JayObjectType && curr.props[member]) {
                 curr = curr.props[member];
+                if (curr instanceof JayImportedType)
+                    curr = curr.type;
             }
             else {
                 validations.push(`the data field [${accessor.join('.')}] not found in Jay data`);

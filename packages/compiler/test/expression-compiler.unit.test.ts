@@ -7,7 +7,15 @@ import {
     parseTextExpression,
     Variables
 } from '../lib/expression-compiler'
-import {JayBoolean, JayEnumType, JayNumber, JayObjectType, JayString, JayUnknown} from "../lib/parse-jay-file";
+import {
+    JayBoolean,
+    JayEnumType,
+    JayImportedType,
+    JayNumber,
+    JayObjectType,
+    JayString,
+    JayUnknown
+} from "../lib/parse-jay-file";
 import {Import} from "../lib/render-fragment";
 
 describe('expression-compiler', () => {
@@ -301,11 +309,12 @@ describe('expression-compiler', () => {
         const object2 = new JayObjectType('bla', {
             num2: JayNumber
         });
+        const object1 = new JayObjectType('data', {
+            string1: JayString,
+            object2: object2
+        });
         let defaultVars = new Variables(
-            new JayObjectType('data', {
-                string1: JayString,
-                object2: object2
-            }))
+            object1)
 
         it('parse simple primitive accessor', () => {
             const actual = parseAccessor('string1', defaultVars);
@@ -320,6 +329,35 @@ describe('expression-compiler', () => {
         it('parse nested primitive accessor', () => {
             const actual = parseAccessor('object2.num2', defaultVars);
             expect(actual).toEqual(new Accessor(['object2', 'num2'], [], JayNumber));
+        })
+
+        it('parse self accessor', () => {
+            const actual = parseAccessor('.', defaultVars);
+            expect(actual).toEqual(new Accessor(['.'], [], object1));
+        })
+
+        it('parse top level imported type', () => {
+            const variables = new Variables(
+                new JayImportedType('root',
+                    new JayObjectType('obj1', {
+                        bla: JayString
+                    }))
+            )
+            const actual = parseAccessor('bla', variables);
+            expect(actual).toEqual(new Accessor(['bla'], [], JayString));
+        })
+
+        it('parse nested imported type', () => {
+            const variables = new Variables(
+                new JayObjectType('root', {
+                    prop1: new JayImportedType('root',
+                        new JayObjectType('obj1', {
+                            bla: JayString
+                        }))
+                })
+            )
+            const actual = parseAccessor('prop1.bla', variables);
+            expect(actual).toEqual(new Accessor(['prop1','bla'], [], JayString));
         })
 
         it('parse wrong accessor', () => {
