@@ -1,5 +1,5 @@
 import {render, TreeNodeRefs} from './tree-node.jay.html';
-import {createState, makeJayComponent, Props} from 'jay-component';
+import {createState, createMemo, makeJayComponent, Props} from 'jay-component';
 
 export interface Node {
     id: string,
@@ -12,10 +12,16 @@ export function node(name: string, children: Node[] = []) {
     return {name, id: '' + id_counter++, children}
 }
 
-function TreeNodeConstructor(props: Props<Node>, refs: TreeNodeRefs) {
+function TreeNodeConstructor({name, id, children}: Props<Node>, refs: TreeNodeRefs) {
+
+    let [open, setOpen] = createState(true);
+    let headChar = createMemo(() => children().length > 0 ? (open()?"▼":"►"):"")
+    let node = createMemo(() => ({name: name(), id: id(), children: children()}));
+
+    refs.head.onclick = () => setOpen(!open())
 
     return {
-        render: () => (props)
+        render: () => ({headChar, node, open})
     }
 }
 

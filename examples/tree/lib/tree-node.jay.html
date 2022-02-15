@@ -2,14 +2,20 @@
 <head>
     <link rel="import" href="./tree-node" names="TreeNode, Node"/>
     <script type="application/yaml-jay">
-data: Node
+data:
+  headChar: string
+  node: Node
+  open: boolean
     </script>
 </head>
 <body>
 <div>
-    <div>{name}</div>
-    <ul>
-        <li forEach="children" trackBy="id">
+    <div ref="head">
+        <span>{headChar}</span>
+        <span>{node.name}</span>
+    </div>
+    <ul if="open">
+        <li forEach="node.children" trackBy="id">
             <TreeNode props={.}"/>
         </li>
     </ul>
