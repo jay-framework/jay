@@ -22,3 +22,17 @@
     margin-top: 20px;
     background-color: #C7EFDB;
 }
+
+li {
+    list-style: none;
+    user-select: none;
+}
+
+ul {
+    margin: 0;
+}
+
+.tree-arrow {
+    display:inline-block;
+    width: 25px;
+}
