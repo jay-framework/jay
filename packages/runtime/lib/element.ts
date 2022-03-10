@@ -1,7 +1,7 @@
 import {Kindergarten, KindergartenGroup} from "./kindergarden";
 import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "./list-compare";
 import {RandomAccessLinkedList as List} from "./random-access-linked-list";
-import {ElementReference, ReferencesManager} from "./node-reference";
+import {ElementReference, ReferencedElement, ReferencesManager} from "./node-reference";
 import {ContextStack} from "./context-stack";
 export {ContextStack} from "./context-stack";
 export {DynamicReference} from "./node-reference";
@@ -39,6 +39,20 @@ export interface JayComponent<Props, ViewState, jayElement extends BaseJayElemen
     removeEventListener: (type: string, handler: (event: any) => void, options?: EventListenerOptions | boolean) => void
 }
 
+function mkRef(refName: string, element: ReferencedElement, updates: updateFunc<any>[], mounts: MountFunc[], unmounts: MountFunc[]) {
+    let context = constructionContextStack.current();
+    if (context.forStaticElements) {
+        context.refManager.addStaticRef(refName, element);
+    }
+    else {
+        let ref = new ElementReference(element, context.currData)
+        updates.push(ref.update);
+        let refManager = context.refManager;
+        mounts.push(() => refManager.addDynamicRef(refName, ref))
+        unmounts.push(() => refManager.removeDynamicRef(refName, ref))
+    }
+}
+
 export function childComp<ParentT, Props, ChildT,
     ChildElement extends BaseJayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
     compCreator: (props: Props) => ChildComp,
@@ -50,17 +64,7 @@ export function childComp<ParentT, Props, ChildT,
     let mounts: MountFunc[] = [childComp.mount]
     let unmounts: MountFunc[] = [childComp.unmount]
     if (refName) {
-        let context = constructionContextStack.current();
-        if (context.forStaticElements) {
-            context.refManager.addStaticRef(refName, childComp);
-        }
-        else {
-            let ref = new ElementReference(childComp, context.currData)
-            updates.push(ref.update);
-            let refManager = context.refManager;
-            mounts.push(() => refManager.addDynamicRef(refName, ref))
-            unmounts.push(() => refManager.removeDynamicRef(refName, ref))
-        }
+        mkRef(refName, childComp, updates, mounts, unmounts)
     }
     return {
         dom: childComp.element.dom,
@@ -387,17 +391,7 @@ function createBaseElement<ViewState>(tagName: string, attributes: Attributes<Vi
             })
         }
         else if (key === REF) {
-            let context = constructionContextStack.current();
-            if (context.forStaticElements) {
-                context.refManager.addStaticRef(value as string, e)
-            }
-            else {
-                let ref = new ElementReference(e, context.currData)
-                updates.push(ref.update);
-                let refManager = context.refManager;
-                mounts.push(() => refManager.addDynamicRef(value as string, ref))
-                unmounts.push(() => refManager.removeDynamicRef(value as string, ref))
-            }
+            mkRef(value as string, e, updates, mounts, unmounts)
         }
         else {
             setAttribute(e, key, value as string | DynamicAttributeOrProperty<ViewState, any>, updates);

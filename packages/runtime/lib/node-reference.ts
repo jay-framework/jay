@@ -1,6 +1,6 @@
 import {BaseJayElement, JayComponent, JayElement} from "./element";
 
-type ReferencedElement = HTMLElement | JayComponent<any, any, any>;
+export type ReferencedElement = HTMLElement | JayComponent<any, any, any>;
 
 // type computation to extract a type that describes the key of an object
 // who's prop types are one parameter functions or a DOM event handler
