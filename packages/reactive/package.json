@@ -1,6 +1,6 @@
 {
   "name": "jay-reactive",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "main": "dist/index.js",
   "scripts": {
     "start": "tsc",
@@ -9,6 +9,7 @@
   },
   "jest": {},
   "dependencies": {},
+  "files": ["dist", "lib"],
   "devDependencies": {
     "@babel/preset-env": "^7.14.2",
     "@babel/preset-typescript": "^7.13.0",
