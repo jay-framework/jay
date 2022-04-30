@@ -94,6 +94,8 @@ export class Reactive {
     }
 
     batchReactions<T>(func: () => T) {
+        if (this.inBatchReactions)
+            return func();
         this.inBatchReactions = true;
         [this.dirty, this.dirtyResolve] = mkResolvablePromise()
         try {

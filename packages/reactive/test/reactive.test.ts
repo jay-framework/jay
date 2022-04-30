@@ -290,6 +290,31 @@ describe('reactive', () => {
             expect(res).toBe(13);
         })
 
+        it('should flatten out nested batchReactions', () => {
+            let state, setState
+            let reactive = new Reactive();
+            reactive.record((reactive) => {
+                [state, setState] = reactive.createState(12);
+                reactive.createReaction(() => {
+                    reactive.batchReactions(() => {
+                        setState(_ => _ + 1);
+                    })
+                    state()
+                })
+            })
+
+            let res = reactive.batchReactions(() => {
+                setState(13);
+                reactive.batchReactions(() => {
+                    setState(14);
+                })
+                setState(15)
+                return state();
+            })
+
+            expect(res).toBe(15);
+        })
+
         describe('should only run reactions that depend on updated states', () => {
             function makeReactive123() {
 
