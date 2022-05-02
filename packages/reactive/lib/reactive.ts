@@ -21,6 +21,7 @@ export class Reactive {
     private dirtyResolve: () => void
     private timeout: any = undefined;
     private inBatchReactions: boolean;
+    private inFlush: boolean;
 
     record<T>(func: (reactive: Reactive) => T): T {
         try {
@@ -94,7 +95,7 @@ export class Reactive {
     }
 
     batchReactions<T>(func: () => T) {
-        if (this.inBatchReactions)
+        if (this.inBatchReactions || this.inFlush)
             return func();
         this.inBatchReactions = true;
         [this.dirty, this.dirtyResolve] = mkResolvablePromise()
@@ -124,17 +125,25 @@ export class Reactive {
     }
 
     flush() {
-        for (let index = 0; index < this.batchedReactionsToRun.length; index++)
-            if (this.batchedReactionsToRun[index])
-                this.reactions[index]();
-        if (this.isAutoBatchScheduled) {
-            this.isAutoBatchScheduled = false;
-            if (this.timeout)
-                clearTimeout(this.timeout);
-            this.timeout = undefined;
+        if (this.inFlush)
+            return;
+        this.inFlush = true;
+        try {
+            for (let index = 0; index < this.batchedReactionsToRun.length; index++)
+                if (this.batchedReactionsToRun[index])
+                    this.reactions[index]();
+            if (this.isAutoBatchScheduled) {
+                this.isAutoBatchScheduled = false;
+                if (this.timeout)
+                    clearTimeout(this.timeout);
+                this.timeout = undefined;
+            }
+            this.batchedReactionsToRun = [];
+            this.dirtyResolve()
         }
-        this.batchedReactionsToRun = [];
-        this.dirtyResolve()
+        finally {
+            this.inFlush = false;
+        }
     }
 }
 

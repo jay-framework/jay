@@ -315,6 +315,26 @@ describe('reactive', () => {
             expect(res).toBe(15);
         })
 
+        it('should not trigger nested flash (first from timeout, second from batch reaction)', async () => {
+            let state1, setState1
+            let state2, setState2
+            let reactive = new Reactive();
+            reactive.record((reactive) => {
+                [state1, setState1] = reactive.createState(12);
+                [state2, setState2] = reactive.createState(12);
+                reactive.createReaction(() => {
+                    reactive.batchReactions(() => {
+                        setState2(state1() + 10);
+                    })
+                })
+            })
+
+            setState1(13);
+            await reactive.toBeClean()
+
+            expect(state2()).toBe(23);
+        })
+
         describe('should only run reactions that depend on updated states', () => {
             function makeReactive123() {
 
