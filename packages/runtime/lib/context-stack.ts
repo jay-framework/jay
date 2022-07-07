@@ -1,7 +1,7 @@
 export class ContextStack<ContextType> {
     private readonly contexts: Array<ContextType> = [];
 
-    doWithContext<T>(context: ContextType, fn: () => T) {
+    doWithContext<T>(context: ContextType, fn: () => T): T {
         try {
             this.contexts.push(context);
             return fn();

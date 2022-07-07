@@ -3,14 +3,11 @@ import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "./list-compare
 import {RandomAccessLinkedList as List} from "./random-access-linked-list";
 import {ElementReference, ReferencedElement, ReferencesManager} from "./node-reference";
 import {ContextStack} from "./context-stack";
-export {ContextStack} from "./context-stack";
-export {DynamicReference} from "./node-reference";
-export {Revisioned, checkModified, touchRevision} from "jay-reactive";
 import {getRevision, checkModified} from "jay-reactive";
 
 const STYLE = 'style';
 const REF = 'ref';
-interface updateFunc<T> {
+export interface updateFunc<T> {
     (newData:T): void
     _origUpdates?: Array<updateFunc<T>>
 }
@@ -40,7 +37,7 @@ export interface JayComponent<Props, ViewState, jayElement extends BaseJayElemen
 }
 
 function mkRef(refName: string, element: ReferencedElement, updates: updateFunc<any>[], mounts: MountFunc[], unmounts: MountFunc[]) {
-    let context = constructionContextStack.current();
+    let context = currentContext();
     if (context.forStaticElements) {
         context.refManager.addStaticRef(refName, element);
     }
@@ -58,7 +55,7 @@ export function childComp<ParentT, Props, ChildT,
     compCreator: (props: Props) => ChildComp,
     getProps: (t: ParentT) => Props,
     refName?: string): BaseJayElement<ParentT> {
-    let context = constructionContextStack.current();
+    let context = currentContext();
     let childComp = compCreator(getProps(context.currData))
     let updates: updateFunc<ParentT>[] = [(t: ParentT) => childComp.update(getProps(t))];
     let mounts: MountFunc[] = [childComp.mount]
@@ -110,7 +107,7 @@ function doSetAttribute<S>(target: HTMLElement | CSSStyleDeclaration, key: strin
 }
 function setAttribute<ViewState, S>(target: HTMLElement | CSSStyleDeclaration, key: string, value: string | DynamicAttributeOrProperty<ViewState, S>, updates: updateFunc<ViewState>[]) {
     if (isDynamicAttributeOrProperty(value)) {
-        let context = constructionContextStack.current()
+        let context = currentContext()
         let attributeValue = value.valueFunc(context.currData);
         doSetAttribute(target, key, attributeValue, value.isAttribute);
         updates.push((newData:ViewState) => {
@@ -139,11 +136,11 @@ export interface Conditional<ViewState> {
 function isJayElement<ViewState>(c: Conditional<ViewState> | ForEach<ViewState, any> | TextElement<ViewState> | BaseJayElement<ViewState>): c is BaseJayElement<ViewState> {
     return (c as BaseJayElement<ViewState>).mount !== undefined;
 }
-function isCondition<ViewState>(c: Conditional<ViewState> | ForEach<ViewState, any> | TextElement<ViewState> | BaseJayElement<ViewState>): c is Conditional<ViewState> {
+export function isCondition<ViewState>(c: Conditional<ViewState> | ForEach<ViewState, any> | TextElement<ViewState> | BaseJayElement<ViewState>): c is Conditional<ViewState> {
     return (c as Conditional<ViewState>).condition !== undefined;
 }
 
-function isForEach<ViewState, Item>(c: Conditional<ViewState> | ForEach<ViewState, Item> | TextElement<ViewState> | BaseJayElement<ViewState>): c is ForEach<ViewState, Item> {
+export function isForEach<ViewState, Item>(c: Conditional<ViewState> | ForEach<ViewState, Item> | TextElement<ViewState> | BaseJayElement<ViewState>): c is ForEach<ViewState, Item> {
     return (c as ForEach<ViewState, Item>).elemCreator !== undefined;
 }
 
@@ -153,7 +150,7 @@ export function forEach<T, Item>(getItems: (T) => Array<Item>, elemCreator: (Ite
 
 export interface ForEach<ViewState, Item> {
     getItems: (T) => Array<Item>,
-    elemCreator: (Item) => BaseJayElement<Item>,
+    elemCreator: (Item, String) => BaseJayElement<Item>,
     matchBy: string
 }
 
@@ -174,31 +171,36 @@ function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<Ma
     });
 }
 
-function mkUpdateCollection<ViewState, Item>(child: ForEach<ViewState, Item>, group: KindergartenGroup): [updateFunc<ViewState>, MountFunc, MountFunc] {
+export function mkUpdateCollectionInternal<ViewState, Item>(child: ForEach<ViewState, Item>, applyChanges: (instructions: Array<MatchResult<Item, BaseJayElement<Item>>>) => void): [updateFunc<ViewState>, MountFunc, MountFunc] {
     let lastItems = getRevision([]);
     let lastItemsList = new List<Item, BaseJayElement<Item>>([], child.matchBy);
     let mount = () => lastItemsList.forEach((value, attach) => attach.mount);
     let unmount = () => lastItemsList.forEach((value, attach) => attach.unmount);
     // todo handle data updates of the parent contexts
-    let parentContext = constructionContextStack.current();
+    let parentContext = currentContext();
     const update = (newData: ViewState) => {
         const items = child.getItems(newData);
         let isModified;
         [lastItems, isModified] = checkModified(items, lastItems);
         if (isModified) {
             let itemsList = new List<Item, BaseJayElement<Item>>(items, child.matchBy);
-            let instructions = listCompare<Item, BaseJayElement<Item>>(lastItemsList, itemsList, (item) => {
+            let instructions = listCompare<Item, BaseJayElement<Item>>(lastItemsList, itemsList, (item, id) => {
                 let childContext = parentContext.forItem(item);
                 return constructionContextStack.doWithContext(childContext, () =>
-                    wrapWithModifiedCheck(constructionContextStack.current().currData, child.elemCreator(item)))
+                    wrapWithModifiedCheck(currentContext().currData, child.elemCreator(item, id)))
             });
             lastItemsList = itemsList;
-            applyListChanges(group, instructions);
+            applyChanges(instructions)
             itemsList.forEach((value, elem) => elem.update(value))
         }
     };
     return [update, mount, unmount]
 }
+
+function mkUpdateCollection<ViewState, Item>(child: ForEach<ViewState, Item>, group: KindergartenGroup): [updateFunc<ViewState>, MountFunc, MountFunc] {
+    return mkUpdateCollectionInternal(child, instructions => applyListChanges(group, instructions));
+}
+
 
 function mkUpdateCondition<ViewState>(child: Conditional<ViewState>, group: KindergartenGroup): [updateFunc<ViewState>, MountFunc, MountFunc] {
 
@@ -227,6 +229,10 @@ function mkUpdateCondition<ViewState>(child: Conditional<ViewState>, group: Kind
 }
 
 const constructionContextStack = new ContextStack<ConstructContext<Array<any>>>();
+
+export function currentContext() {
+    return constructionContextStack.current();
+}
 
 function wrapWithModifiedCheck<T extends object>(initialData: T, baseJayElement: BaseJayElement<T>): BaseJayElement<T> {
     let update = baseJayElement.update;
@@ -270,7 +276,7 @@ export class ConstructContext<A extends Array<any>> {
     static withRootContext<T, Refs>(t: T, elementConstructor: () => BaseJayElement<T>): JayElement<T, Refs> {
         let context = new ConstructContext([t])
         let element = constructionContextStack.doWithContext(context, () =>
-            wrapWithModifiedCheck(constructionContextStack.current().currData, elementConstructor()))
+            wrapWithModifiedCheck(currentContext().currData, elementConstructor()))
         element.mount();
         return context.refManager.applyToElement(element);
     }
@@ -287,7 +293,7 @@ function text<ViewState>(content: string): TextElement<ViewState> {
 
 export function dynamicText<ViewState>(
                                textContent: (vs) => string): TextElement<ViewState> {
-    let context = constructionContextStack.current();
+    let context = currentContext();
     let content = textContent(context.currData);
     let n = document.createTextNode(content);
     return {
@@ -359,7 +365,7 @@ export function dynamicElement<ViewState>(
         }
 
         if (update !== noopUpdate) {
-            let context = constructionContextStack.current();
+            let context = currentContext();
             update(context.currData)
             updates.push(update);
         }
@@ -400,7 +406,7 @@ function createBaseElement<ViewState>(tagName: string, attributes: Attributes<Vi
     return {e, updates, mounts, unmounts};
 }
 
-function normalizeUpdates<ViewState>(updates: Array<updateFunc<ViewState>>): updateFunc<ViewState> {
+export function normalizeUpdates<ViewState>(updates: Array<updateFunc<ViewState>>): updateFunc<ViewState> {
     if (updates.length === 1)
         return updates[0];
     else if (updates.length > 0) {
@@ -419,7 +425,7 @@ function normalizeUpdates<ViewState>(updates: Array<updateFunc<ViewState>>): upd
     }
 }
 
-function normalizeMount(mounts: Array<MountFunc>): MountFunc {
+export function normalizeMount(mounts: Array<MountFunc>): MountFunc {
     if (mounts.length === 1)
         return mounts[0];
     else if (mounts.length > 0) {

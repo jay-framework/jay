@@ -17,7 +17,7 @@ export interface MatchResult<T, S> {
 
 export function listCompare<T, S>(oldArray: RandomAccessLinkedList<T, S>,
                                newArray: RandomAccessLinkedList<T, S>,
-                               mkElement: (T) => S): Array<MatchResult<T, S>> {
+                               mkElement: (T, id: string) => S): Array<MatchResult<T, S>> {
     let oldList = oldArray
     let newList = newArray;
 
@@ -28,7 +28,7 @@ export function listCompare<T, S>(oldArray: RandomAccessLinkedList<T, S>,
     let instructions = [];
 
     function addNewItem(newListItem: LinkedListItem<T, S>) {
-        let newElement = mkElement(newListItem.value);
+        let newElement = mkElement(newListItem.value, newListItem.id);
         oldList.add(newListItem.value, oldListItem, newElement);
         newListItem.attach = newElement;
         instructions.push({action: ITEM_ADDED, item: newListItem.value, pos: index, elem: newElement});
