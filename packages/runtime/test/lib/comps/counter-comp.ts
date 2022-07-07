@@ -51,6 +51,8 @@ export function Counter(initialValue: number): CounterComponent {
             jayElement.update({count});
         },
         mount: () => jayElement.mount(),
-        unmount: () => jayElement.unmount()
+        unmount: () => jayElement.unmount(),
+        addEventListener: (type: string, handler: (event: any) => void, options?: boolean | AddEventListenerOptions) => void {},
+        removeEventListener: (type: string, handler: (event: any) => void, options?: EventListenerOptions | boolean) => void {}
     }
 }
