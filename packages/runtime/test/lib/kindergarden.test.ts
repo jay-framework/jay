@@ -1,4 +1,3 @@
-import {JSDOM} from 'jsdom';
 import {KindergardenGroupListener, Kindergarten} from '../../lib/kindergarden';
 import {describe, expect, test} from '@jest/globals'
 import {makeNode, makeParent} from "./test-utils";

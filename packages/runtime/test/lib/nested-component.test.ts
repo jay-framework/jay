@@ -5,7 +5,7 @@ import {
     element as e,
     dynamicElement as de,
     JayElement, childComp, forEach, conditional
-} from "../../lib/element";
+} from "../../lib/index";
 import {Item, ItemData} from "./comps/item";
 
 describe('nested components', () => {

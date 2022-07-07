@@ -1,5 +1,5 @@
 import {describe, expect, it, beforeEach} from '@jest/globals'
-import {ReferencesManager, ElementReference, newReferenceProxy} from "../../lib/node-reference";
+import {ReferencesManager, ElementReference} from "../../lib/node-reference";
 import {element as e} from "../../lib/element";
 
 const SOME_VALUE = 'some text in the element';

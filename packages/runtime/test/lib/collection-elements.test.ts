@@ -7,7 +7,7 @@ import {
 } from '../../lib/element';
 import {describe, expect, it} from '@jest/globals'
 import {expectE} from "./test-utils";
-import {DynamicReference} from "../../lib/node-reference";
+import {DynamicReference} from "../../lib";
 import { mutableObject } from 'jay-reactive';
 
 const item1 = {name: 'name 1', id: 'id-1'};
