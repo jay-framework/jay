@@ -1,3 +1,4 @@
+
 Secure Architecture
 ===
 
@@ -63,7 +64,25 @@ We can denote those ids as `tree id` as those ids are mapping the relations elem
 
 The third challenge is to sync the element in the main with the element in the worker and how they correlate
 to one another. The element in main and the element bridge in the worker can be generated with unique 
-internal ids that are in sync, used to create the `tree ids` in sync.
+`coordinates` that are in sync, used to create the `tree id`s in sync.
+                                                                                                      
+The algorithm
+---
+
+We use the `ConstructionContext` (internal to runtime) as the storage for `coordinates` as the nested 
+structure of `ConstructionContext`s makes it simple to create coordinates built from the matchBy ids 
+of collection with an id on the `ChildComp` member. So for a nested component under two collections, the
+coordinate will be `[{first forEach matchBy},{second forEach matchBy},{ChildComp coordinates}]`.
+
+The `coordinates`s are then guaranteed to be unique and consistent, defined during component creation.
+Keep in mind that the `coordinates`s are only unique within the scope of a single element.
+
+We then exchange the `coordinates`s with `tree id`s (`tree id`s are globally unique). 
+During component creation in the worker, the element bridge has the `coordinates`. 
+we generate a new unique `tree id` and pass the mapping `coordinates -> tree id` to the main. 
+
+On the main, the component bridge gets the `coordinates` from the parent element, 
+and is using the `coordinates -> tree id` mapping to get its data. 
 
 
 
