@@ -13,14 +13,14 @@ development process, the work a designer does is never one off, but an iterative
 the developer builds some part of the application, then due to feedback (dev feedback, QA, product, early adopters, etc) the designer
 updates the design, then the developer re-implements the design, etc.
 
-![iterative design and feedback](docs/Into%20to%20Jay%201.png "iterative design and feedback")
+![iterative design and feedback](design-log/Into%20to%20Jay%201.png "iterative design and feedback")
 
 Because there is no good tool for design export and re-export, we find that today, the way designers and developers are working 
 is by the **designer designing and the developer *re-implementing* the design** using code tools. The designer will export design 
 assets using tools like Adobe XP or photoshop, which are CSS snippets, image snippets, SVGs, etc. The developer, using those 
 design assets, will build the UI using tools like JSX, SSAS, etc.
 
-![Comparing Jay with known workflow](docs/Into%20to%20Jay%202.png "Comparing Jay with known workflow")
+![Comparing Jay with known workflow](design-log/Into%20to%20Jay%202.png "Comparing Jay with known workflow")
 
 Jay approach is to create a **declerative format** that can be generated from design tools, and used directly by the code.
 As the designer continues to update the design, the developer code who is using the design should inherit the update automatically.
@@ -47,7 +47,7 @@ However, IFrames have a host of problems - from loading times to limited flexibi
 for things like modal dialogs. IFrames are not built for many small frames - consider a table at which each cell should be an IFrame... 
 or consider compositions of component in component...
 
-![IFrame vs Jay security model](docs/Into%20to%20Jay%203.png "IFrame vs Jay security model")
+![IFrame vs Jay security model](design-log/Into%20to%20Jay%203.png "IFrame vs Jay security model")
 
 Jay as a potential of solving this problem by introducing two new concepts - **Jay Element** and **Jay Component**. 
 **Jay Element** is what the Jay File contains, and what the developer imports. Because it is logic free, it is safe to 
