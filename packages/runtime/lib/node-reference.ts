@@ -33,7 +33,8 @@ export type JayEventListener<E, T> = (evt: E, dataContent: T) => void;
 // and the ViewState type as a second param
 // (e: E) => void   -->  (e: E, vs: VS) => void
 // (this: GlobalEventHandlers, e: E) => void  --> (e: E, vs: VS) => void
-type JayComputedEventListener<Orig extends Function, VS> =
+// org will be a function in this case - typescript finds it too hard to validate
+type JayComputedEventListener<Orig, VS> =
     Orig extends DOMeventHandler<any> ?
         ((e: Parameters<Orig>[0], dataContent: VS) => void) :
         ((evt: Orig, dataContent: VS) => void);

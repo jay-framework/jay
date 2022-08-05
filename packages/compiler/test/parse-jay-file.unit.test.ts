@@ -2,7 +2,7 @@ import {describe, expect, it} from '@jest/globals'
 
 import {
     JayArrayType,
-    JayBoolean, JayComponentType,
+    JayBoolean,
     JayEnumType,
     JayNumber,
     JayObjectType,
@@ -217,7 +217,7 @@ describe('compiler', () => {
                 '<body></body>',
                 '<link rel="import" href="module" />'), 'Base', '')
 
-            expect(jayFile.validations).toEqual(["failed to parsed import names for module module - failed to parse expression [undefined]. Cannot read property 'charAt' of undefined"]);
+            expect(jayFile.validations).toEqual(["failed to parse import names for module module - failed to parse expression [undefined]. Cannot read property 'charAt' of undefined"]);
         });
 
         it('should report on import empty names property', () => {
@@ -228,7 +228,7 @@ describe('compiler', () => {
                 '<body></body>',
                 '<link rel="import" href="module" names=""/>'), 'Base', '')
 
-            expect(jayFile.validations).toEqual(["failed to parsed import names for module module - failed to parse expression []. Expected identifier but end of input found."]);
+            expect(jayFile.validations).toEqual(["failed to parse import names for module module - failed to parse expression []. Expected identifier but end of input found."]);
         });
 
         it('should report on import file not found', () => {
@@ -239,7 +239,7 @@ describe('compiler', () => {
                 '<body></body>',
                 '<link rel="import" href="./module" names="name"/>'), 'Base', '')
 
-            expect(jayFile.validations[0]).toContain("failed to parsed import names for module ./module - File not found.");
+            expect(jayFile.validations[0]).toContain("failed to parse import names for module ./module - File not found.");
         });
     })
 

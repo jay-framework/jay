@@ -7,6 +7,7 @@ import {promises} from 'fs';
 const readFile = promises.readFile;
 
 const readSourceFile = async (folder) => (await readFile(`./test/fixtures/${folder}/source.jay.html`)).toString().trim()
+const readNamedSourceFile = async (folder, file) => (await readFile(`./test/fixtures/${folder}/${file}.jay.html`)).toString().trim()
 const readGeneratedFile = async (folder) => (await readFile(`./test/fixtures/${folder}/generated.ts`)).toString().trim()
 const readDefinitionFile = async (folder) => (await readFile(`./test/fixtures/${folder}/generated.d.ts`)).toString().trim()
 
@@ -235,6 +236,13 @@ describe('compiler', () => {
             let runtimeFile = generateRuntimeFile(jayFile, 'recursive-components-2.jay.html', './test/fixtures/recursive-components-2');
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(await readGeneratedFile('recursive-components-2'));
+        })
+
+        it('tree', async () => {
+            const jayFile = await readNamedSourceFile('tree', 'tree-node');
+            let runtimeFile = generateRuntimeFile(jayFile, 'tree-node.jay.html', './test/fixtures/tree');
+            expect(runtimeFile.validations).toEqual([]);
+            expect(runtimeFile.val).toEqual(await readGeneratedFile('tree'));
         })
     })
 });
