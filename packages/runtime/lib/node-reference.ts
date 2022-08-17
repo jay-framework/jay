@@ -27,23 +27,47 @@ type EventHandlersOf<T> = {
     [Q in EventHandlerKeys<T>]: T[Q]
 };
 
-export type JayEventListener<E, T> = (evt: E, dataContent: T) => void;
 // create a function type that given a function event handler,
-// creates a new type which accepts the event object type as a first param
-// and the ViewState type as a second param
-// (e: E) => void   -->  (e: E, vs: VS) => void
-// (this: GlobalEventHandlers, e: E) => void  --> (e: E, vs: VS) => void
-// org will be a function in this case - typescript finds it too hard to validate
-type JayComputedEventListener<Orig, VS> =
-    Orig extends DOMeventHandler<any> ?
-        ((e: Parameters<Orig>[0], dataContent: VS) => void) :
-        ((evt: Orig, dataContent: VS) => void);
+// creates a new type which
+// - if the original function is a DOM event handler, creates a function that accepts an event handler,
+//   which in turn accepts ViewState and coordinate
+// - for component functions, creates a function that accepts an event handler,
+//   which in turn accepts the component event object, ViewState and coordinate.
+type JayComputedEventListener<Orig extends Func1, VS> =
+  Orig extends DOMeventHandler<any> ?
+    (handler: (dataContent: VS, coordinate: string) => void) => void :
+    (handler: (evt: Parameters<Orig>[0], dataContent: VS, coordinate: string) => void) => void;
+
+
+interface JayNativeEventBuilder<ViewState, EventData> {
+    then(handler: (eventData: EventData, viewState: ViewState, coordinate: string) => void): void
+}
+
+// create a function type that given a function event handler,
+// creates a new type which
+// - if the original function is a DOM event handler, creates a function that accepts an event handler,
+//   which in turn the native event and ViewState, and returns a value T
+// - for component functions, we return null as native events are not supported or needed
+// - the returned function (handler registration function) returns a JayNativeEventBuilder which accepts another handler
+//   for the regular event handler
+
+type JayComputedNativeEventListener<Orig extends Func1, VS> =
+  Orig extends DOMeventHandler<any> ?
+    <T>(handler: (e: Parameters<Orig>[0], dataContent: VS) => T) => JayNativeEventBuilder<VS, T>:
+    null;
 
 // creates a type that has only the event handlers or the original object,
 // adding the ViewState param to each event handler function type.
 type JayEventHandlersOf<ViewState, Element> = {
     [Property in keyof EventHandlersOf<Element>]: JayComputedEventListener<EventHandlersOf<Element>[Property], ViewState>;
 }
+
+type JayNativeEventHandlersOf<ViewState, Element> = {
+    [Property in keyof EventHandlersOf<Element>]: JayComputedNativeEventListener<EventHandlersOf<Element>[Property], ViewState>
+}
+
+
+export type JayEventListener<E, T> = (evt: E, dataContent: T, coordinate: string) => void;
 
 interface ReferenceOperations<ViewState, Element> {
     filter(predicate: (t:ViewState) => boolean): Element
@@ -52,7 +76,13 @@ interface ReferenceOperations<ViewState, Element> {
     removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: EventListenerOptions | boolean): void
 }
 
-export type DynamicReference<ViewState, Element extends ReferencedElement> = JayEventHandlersOf<ViewState, Element> & ReferenceOperations<ViewState, Element>
+export type DynamicReference<ViewState, Element extends ReferencedElement> =
+  JayEventHandlersOf<ViewState, Element> &
+  JayNativeEventHandlersOf<ViewState, Element> &
+  ReferenceOperations<ViewState, Element>
+
+
+
 
 export class ReferencesManager {
     private dynamicRefs = {};
