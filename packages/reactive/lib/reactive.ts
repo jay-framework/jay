@@ -6,8 +6,8 @@ export type Next<T> = (t: T) => T
 export type Setter<T> = (t: T | Next<T>) => T
 export type Getter<T> = () => T
 export type ValueOrGetter<T> = T | Getter<T>
-export const GetterMark = Symbol();
-export const SetterMark = Symbol();
+export const GetterMark = Symbol.for("getterMark");
+export const SetterMark = Symbol.for("setterMark");
 
 export class Reactive {
 

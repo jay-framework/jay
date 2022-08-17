@@ -1,6 +1,6 @@
 
 
-export const REVISION = Symbol('revision');
+export const REVISION = Symbol.for('revision');
 let nextRevision = 1;
 
 export interface Revisioned<T> {

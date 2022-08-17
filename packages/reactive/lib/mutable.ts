@@ -1,9 +1,9 @@
 import {touchRevision} from "./revisioned";
 
-const isProxy = Symbol("isProxy")
-const mutationListener = Symbol("listener")
-const originalSymbol = Symbol("original")
-const proxySymbol = Symbol("proxy")
+const isProxy = Symbol.for("isProxy")
+const mutationListener = Symbol.for("listener")
+const originalSymbol = Symbol.for("original")
+const proxySymbol = Symbol.for("proxy")
 type ChangeListener = () => void;
 export function isMutable(obj: any): obj is object {
     return (typeof obj === "object") && !!obj[isProxy];
