@@ -53,7 +53,7 @@ interface JayNativeEventBuilder<ViewState, EventData> {
 
 type JayComputedNativeEventListener<Orig extends Func1, VS> =
   Orig extends DOMeventHandler<any> ?
-    <T>(handler: (e: Parameters<Orig>[0], dataContent: VS) => T) => JayNativeEventBuilder<VS, T>:
+    <T>(handler: (e: Parameters<Orig>[0], dataContent: VS, coordinate: string) => T) => JayNativeEventBuilder<VS, T>:
     null;
 
 // creates a type that has only the event handlers or the original object,
@@ -67,7 +67,7 @@ type JayNativeEventHandlersOf<ViewState, Element> = {
 }
 
 
-export type JayEventListener<E, T> = (dataContent: T, coordinate: string) => void;
+export type JayEventListener<E, T> = (event: E, dataContent: T, coordinate: string) => void;
 
 interface EventRegistrar<ViewState> {
     addEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: boolean | AddEventListenerOptions): void
@@ -134,17 +134,17 @@ const proxyHandler = {
         if (prop.indexOf("on") === 0) {
             let event = prop.substring(2);
             return (handler) => {
-                target.addEventListener(event, handler);
+                target.addEventListener(event, (ev, dataContent, coordinate) => handler(dataContent, coordinate));
             }
         }
         if (prop.indexOf("$on") === 0) {
             let event = prop.substring(3);
             return (nativeHandler) => {
                 let regularHandler;
-                const handler = () => {
-                    const eventData = nativeHandler();
+                const handler = (ev, dataContent, coordinate) => {
+                    const eventData = nativeHandler(ev, dataContent, coordinate);
                     if (regularHandler)
-                        regularHandler(eventData);
+                        regularHandler(eventData, dataContent, coordinate);
                 }
                 target.addEventListener(event, handler);
                 return {
@@ -213,7 +213,7 @@ export class ElementReference<ViewState, Element extends ReferencedElement> {
 
     addEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState>, options?: boolean | AddEventListenerOptions): void {
         let wrappedHandler = (event) => {
-            return listener(/**event**/this.dataContent, this.coordinate);
+            return listener(event, this.dataContent, this.coordinate);
         }
         this.element.addEventListener(type, wrappedHandler, options)
         this.listeners.push({type, listener, wrappedHandler})

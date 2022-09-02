@@ -87,6 +87,26 @@ describe('ReferencesManager', () => {
                 expect(mockCallback.mock.calls.length).toBe(1);
                 expect(mockCallback2.mock.calls.length).toBe(1);
             })
+
+            it('should support the native event parameters', () => {
+                const ref = new ElementReference(jayElement1.dom, DATA_CONTEXT, COORDINATE_11);
+                referenceManager.addStaticRef(id1, ref);
+
+                jayRootElement = referenceManager.applyToElement(jayRootElement)
+
+                mockCallback.mockReturnValueOnce(SOME_VALUE)
+                jayRootElement.refs.id1.$onclick(mockCallback)
+                  .then(mockCallback2);
+                jayElement1.dom.click();
+
+                expect(mockCallback.mock.calls[0][0]).toBeInstanceOf(Event);
+                expect(mockCallback.mock.calls[0][1]).toBe(DATA_CONTEXT);
+                expect(mockCallback.mock.calls[0][2]).toBe(COORDINATE_11);
+
+                expect(mockCallback2.mock.calls[0][0]).toBe(SOME_VALUE);
+                expect(mockCallback2.mock.calls[0][1]).toBe(DATA_CONTEXT);
+                expect(mockCallback2.mock.calls[0][2]).toBe(COORDINATE_11);
+            })
         })
 
     })
