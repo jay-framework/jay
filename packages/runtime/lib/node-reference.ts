@@ -67,7 +67,7 @@ type JayNativeEventHandlersOf<ViewState, Element> = {
 }
 
 
-export type JayEventListener<E, T> = (evt: E, dataContent: T, coordinate: string) => void;
+export type JayEventListener<E, T> = (dataContent: T, coordinate: string) => void;
 
 interface EventRegistrar<ViewState> {
     addEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: boolean | AddEventListenerOptions): void
@@ -203,18 +203,17 @@ class DynamicReferenceInternal<ViewState, Element extends ReferencedElement> imp
 }
 
 export class ElementReference<ViewState, Element extends ReferencedElement> {
-    element: Element;
     private dataContent: ViewState;
     private listeners = [];
 
-    constructor(element: Element, dataContext: ViewState) {
+    constructor(public element: Element, dataContext: ViewState, private coordinate: string) {
         this.element = element;
         this.dataContent = dataContext
     }
 
     addEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState>, options?: boolean | AddEventListenerOptions): void {
         let wrappedHandler = (event) => {
-            return listener(event, this.dataContent, 'TODO');
+            return listener(/**event**/this.dataContent, this.coordinate);
         }
         this.element.addEventListener(type, wrappedHandler, options)
         this.listeners.push({type, listener, wrappedHandler})
