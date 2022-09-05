@@ -38,7 +38,7 @@ export interface JayComponent<Props, ViewState, jayElement extends BaseJayElemen
 
 function mkRef(refName: string, element: ReferencedElement, updates: updateFunc<any>[], mounts: MountFunc[], unmounts: MountFunc[]) {
     let context = currentContext();
-    let ref = new ElementReference(element, context.currData, refName)
+    let ref = new ElementReference(element, context.currData, context.coordinate(refName))
     updates.push(ref.update);
     if (context.forStaticElements) {
         context.refManager.addStaticRef(refName, ref);
@@ -259,6 +259,14 @@ export class ConstructContext<A extends Array<any>> {
 
     get currData() {
         return this.data[this.data.length - 1];
+    }
+
+    coordinate(ref): string {
+        return [...this.data
+          .slice(1)
+          .map(_ => _.id)
+          .reverse(), ref]
+          .join('/');
     }
 
     static acc<A extends Array<any>, B>(a: A, b: B): [...A, B] {

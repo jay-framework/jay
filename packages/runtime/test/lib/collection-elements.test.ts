@@ -220,9 +220,22 @@ describe('collection-element', () => {
                 eventCount += 1;
                 savedItem = item;
             })
-            todoListElement.refs.done.filter(item => item === item2).click()
+            todoListElement.refs.done
+              .filter(item => item === item2)
+              .click()
             expect(savedItem).toBe(item2)
             expect(eventCount).toBe(1);
+        })
+
+        it('should have the view state and dynamic coordinate "id-2/done" as event parameters', () => {
+            let todoListElement = makeElement({items: [item1, item2, item3]});
+            let fn = jest.fn();
+            todoListElement.refs.done.onclick(fn)
+            todoListElement.refs.done
+              .filter(item => item === item2)
+              .click()
+            expect(fn.mock.calls[0][0]).toBe(item2)
+            expect(fn.mock.calls[0][1]).toBe('id-2/done');
         })
 
         it('should remove a todo item on click on the done button', () => {
