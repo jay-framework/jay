@@ -28,21 +28,38 @@ interface CounterData {
 }
 
 interface CounterComponent extends JayComponent<CounterData, ViewState, CounterElement> {
+    onChange(handler: (newCount: number) => void)
+}
 
+export class EventEmitter<E> {
+    handler?: (e: E) => void
+
+    emit(e: E): void {
+        if (this.handler)
+            this.handler(e);
+    }
+    on(handler: (e: E) => void) {
+        this.handler = handler;
+    }
 }
 
 export function Counter(initialValue: number): CounterComponent {
     let jayElement = renderCounter({count: initialValue});
     let count = initialValue;
+    let onChangeHandler: (newCount: number) => void;
 
     jayElement.refs.inc.onclick(() => {
         count += 1;
         jayElement.update({count});
+        if (onChangeHandler)
+            onChangeHandler(count)
     })
 
     jayElement.refs.dec.onclick(() => {
         count -= 1;
         jayElement.update({count});
+        if (onChangeHandler)
+            onChangeHandler(count)
     })
 
     return {
@@ -54,6 +71,7 @@ export function Counter(initialValue: number): CounterComponent {
         mount: () => jayElement.mount(),
         unmount: () => jayElement.unmount(),
         addEventListener: (type: string, handler: (event: any) => void, options?: boolean | AddEventListenerOptions) => void {},
-        removeEventListener: (type: string, handler: (event: any) => void, options?: EventListenerOptions | boolean) => void {}
+        removeEventListener: (type: string, handler: (event: any) => void, options?: EventListenerOptions | boolean) => void {},
+        onChange: (handler => onChangeHandler = handler)
     }
 }
