@@ -4,6 +4,7 @@ import {
     dynamicText as dt,
     JayElement, JayComponent
 } from "../../../lib/element";
+import {Reference} from "../../../lib/node-reference";
 
 export interface ItemVS {
     text: string,
@@ -11,8 +12,8 @@ export interface ItemVS {
     dataId: string
 }
 export interface ItemRefs {
-    done: HTMLElement,
-    remove: HTMLElement
+    done: Reference<ItemVS, HTMLElement>,
+    remove: Reference<ItemVS, HTMLElement>
 }
 export interface ItemElement extends JayElement<ItemVS, ItemRefs> {}
 
@@ -39,15 +40,15 @@ export function Item(props: ItemData): ItemComponent {
     let text = props.text;
     let jayElement = renderItem({text, done, dataId: props.dataId});
 
-    jayElement.refs.done.onclick = () => {
+    jayElement.refs.done.onclick(() => {
         done = !done;
         jayElement.update({text, done, dataId: props.dataId});
-    }
+    })
 
-    jayElement.refs.remove.onclick = () => {
+    jayElement.refs.remove.onclick(() => {
         if (itemInstance.onremove)
             itemInstance.onremove(null);
-    }
+    })
 
     let itemInstance: ItemComponent = {
         element: jayElement,

@@ -216,10 +216,10 @@ describe('collection-element', () => {
             let todoListElement = makeElement({items: [item1, item2, item3]});
             let eventCount = 0;
             let savedItem = undefined;
-            todoListElement.refs.done.onclick = (ev, item) => {
+            todoListElement.refs.done.onclick((item) => {
                 eventCount += 1;
                 savedItem = item;
-            }
+            })
             todoListElement.refs.done.filter(item => item === item2).click()
             expect(savedItem).toBe(item2)
             expect(eventCount).toBe(1);
@@ -227,9 +227,9 @@ describe('collection-element', () => {
 
         it('should remove a todo item on click on the done button', () => {
             let todoListElement = makeElement({items: [item1, item2, item3]});
-            todoListElement.refs.done.onclick = (ev, item) => {
+            todoListElement.refs.done.onclick((ev, item) => {
                 todoListElement.update({items: [item1, item3]})
-            }
+            })
             todoListElement.refs.done.filter(item => item === item2).click()
             let count = 0;
             todoListElement.refs.done.forEach(el => count += 1)

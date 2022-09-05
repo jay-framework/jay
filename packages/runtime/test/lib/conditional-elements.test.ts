@@ -9,6 +9,7 @@ import "@testing-library/jest-dom/extend-expect";
 import {describe, expect, it} from '@jest/globals'
 import {expectE} from "./test-utils";
 import {JSDOM} from 'jsdom';
+import {Reference} from "../../lib/node-reference";
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -67,8 +68,8 @@ describe('conditional-element', () => {
 
     describe('references and events', () => {
         interface ConditionalRefs {
-            text1: HTMLElement,
-            text2: HTMLElement
+            text1: Reference<ViewState, HTMLElement>,
+            text2: Reference<ViewState, HTMLElement>
         }
         interface ConditionalElement extends JayElement<ViewState, ConditionalRefs> {}
 
@@ -94,9 +95,9 @@ describe('conditional-element', () => {
 
         it('should register and invoke events', () => {
             let jayElement = makeElement({text1: SOME_VALUE, condition: true, text2: ANOTHER_VALUE});
-            let mockCallback = jest.fn(_ => undefined);
-            jayElement.refs.text1.onclick = mockCallback;
-            jayElement.refs.text1.click();
+            let mockCallback = jest.fn();
+            jayElement.refs.text1.onclick(mockCallback);
+            jayElement.refs.text1.execNative((elem) => elem.click());
             expect(mockCallback.mock.calls.length).toBe(1);
         })
 

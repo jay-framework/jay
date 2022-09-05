@@ -7,6 +7,7 @@ import {
     JayElement, childComp, forEach, conditional
 } from "../../lib/index";
 import {Item, ItemData} from "./comps/item";
+import {Reference} from "../../lib/node-reference";
 
 describe('nested components', () => {
     describe('single nested component', () => {
@@ -16,7 +17,7 @@ describe('nested components', () => {
         }
 
         interface TestRefs {
-            static: ReturnType<typeof Item>,
+            static: Reference<ViewState, ReturnType<typeof Item>>,
             // conditional: ReturnType<typeof Item>,
             // collection: DynamicReference<number, ReturnType<typeof Item>>
         }
@@ -59,7 +60,9 @@ describe('nested components', () => {
                 staticItem: 'hello world'
             });
             // validate we actually have a reference to the nested component by finding the data id on the nested component dom
-            expect(composite.refs.static.element.dom.attributes['data-id'].value).toBe('AAA');
+            composite.refs.static.execNative(elem =>
+              expect(elem.element.dom.attributes['data-id'].value).toBe('AAA'))
+
         });
 
         it("handle events on nested component", () => {
@@ -82,7 +85,7 @@ describe('nested components', () => {
         }
 
         interface TestRefs {
-            conditional: ReturnType<typeof Item>,
+            conditional: Reference<ViewState, ReturnType<typeof Item>>,
         }
 
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
@@ -104,7 +107,8 @@ describe('nested components', () => {
                 condition: true
             });
             // validate we actually have a reference to the nested component by finding the data id on the nested component dom
-            expect(composite.refs.conditional.element.dom.attributes['data-id'].value).toBe('condition');
+            composite.refs.conditional.execNative(comp =>
+                expect(comp.element.dom.attributes['data-id'].value).toBe('condition'));
         });
 
     });
@@ -182,12 +186,12 @@ describe('nested components', () => {
             let removeButton = composite.refs.collection.filter(item => item.id === 'A')
                 .element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
 
-            composite.refs.collection.onremove = fn;
+            composite.refs.collection.onremove(fn);
 
             removeButton.click();
 
             expect(fn.mock.calls.length).toBe(1);
-            expect(fn.mock.calls[0][1]).toBe(viewState.items[0]);
+            expect(fn.mock.calls[0][0]).toBe(viewState.items[0]);
         });
     });
 });

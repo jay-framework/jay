@@ -1,13 +1,14 @@
 import {ConstructContext, dynamicText as dt, element as e, JayComponent, JayElement} from "../../../lib/element";
+import {Reference} from "../../../lib/node-reference";
 
 interface ViewState {
     count: number
 }
 
 interface CounterRefs {
-    inc: HTMLElement,
-    dec: HTMLElement,
-    count: HTMLElement
+    inc: Reference<ViewState, HTMLElement>,
+    dec: Reference<ViewState, HTMLElement>,
+    count: Reference<ViewState, HTMLElement>
 }
 
 interface CounterElement extends JayElement<ViewState, CounterRefs> {}
@@ -34,15 +35,15 @@ export function Counter(initialValue: number): CounterComponent {
     let jayElement = renderCounter({count: initialValue});
     let count = initialValue;
 
-    jayElement.refs.inc.onclick = () => {
+    jayElement.refs.inc.onclick(() => {
         count += 1;
         jayElement.update({count});
-    }
+    })
 
-    jayElement.refs.dec.onclick = () => {
+    jayElement.refs.dec.onclick(() => {
         count -= 1;
         jayElement.update({count});
-    }
+    })
 
     return {
         element: jayElement,

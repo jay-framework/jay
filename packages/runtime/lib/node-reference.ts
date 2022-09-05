@@ -75,6 +75,7 @@ interface EventRegistrar<ViewState> {
 }
 
 interface ReferenceOperations<ViewState, Element> extends EventRegistrar<ViewState> {
+    execNative<T>(handler: (elem: Element) => T): T
 }
 
 interface DynamicReferenceOperations<ViewState, Element> extends EventRegistrar<ViewState> {
@@ -131,31 +132,37 @@ export class ReferencesManager {
 
 const proxyHandler = {
     get: function(target, prop, receiver) {
-        if (prop.indexOf("on") === 0) {
-            let event = prop.substring(2);
-            return (handler) => {
-                target.addEventListener(event, (ev, dataContent, coordinate) => handler(dataContent, coordinate));
-            }
-        }
-        if (prop.indexOf("$on") === 0) {
-            let event = prop.substring(3);
-            return (nativeHandler) => {
-                let regularHandler;
-                const handler = (ev, dataContent, coordinate) => {
-                    const eventData = nativeHandler(ev, dataContent, coordinate);
-                    if (regularHandler)
-                        regularHandler(eventData, dataContent, coordinate);
+        if (typeof prop === 'string') {
+            if (prop.indexOf("on") === 0) {
+                let event = prop.substring(2);
+                return (handler) => {
+                    target.addEventListener(event, (ev, dataContent, coordinate) => handler(dataContent, coordinate));
                 }
-                target.addEventListener(event, handler);
-                return {
-                    then: (handler) => {
-                        regularHandler = handler;
+            }
+            if (prop.indexOf("$on") === 0) {
+                let event = prop.substring(3);
+                return (nativeHandler) => {
+                    let regularHandler;
+                    const handler = (ev, dataContent, coordinate) => {
+                        const eventData = nativeHandler(ev, dataContent, coordinate);
+                        if (regularHandler)
+                            regularHandler(eventData, dataContent, coordinate);
+                    }
+                    target.addEventListener(event, handler);
+                    return {
+                        then: (handler) => {
+                            regularHandler = handler;
+                        }
                     }
                 }
             }
+            if (prop === 'execNative') {
+                return function(handler) {
+                    handler(target);
+                }
+            }
         }
-        else
-            return target[prop];
+        return target[prop];
     }
 }
 export function newReferenceProxy<ViewState, Element extends HTMLElement>(ref: EventRegistrar<ViewState>): DynamicReference<ViewState, Element> {
