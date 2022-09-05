@@ -70,7 +70,7 @@ describe('nested components', () => {
             let composite = renderComposite({
                 staticItem: 'hello world'
             });
-            composite.refs.static.onremove = handler;
+            composite.refs.static.onremove(handler);
 
             let button = composite.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
             button.click();

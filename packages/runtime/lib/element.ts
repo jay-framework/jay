@@ -38,12 +38,12 @@ export interface JayComponent<Props, ViewState, jayElement extends BaseJayElemen
 
 function mkRef(refName: string, element: ReferencedElement, updates: updateFunc<any>[], mounts: MountFunc[], unmounts: MountFunc[]) {
     let context = currentContext();
+    let ref = new ElementReference(element, context.currData, refName)
+    updates.push(ref.update);
     if (context.forStaticElements) {
-        context.refManager.addStaticRef(refName, element);
+        context.refManager.addStaticRef(refName, ref);
     }
     else {
-        let ref = new ElementReference(element, context.currData)
-        updates.push(ref.update);
         let refManager = context.refManager;
         mounts.push(() => refManager.addDynamicRef(refName, ref))
         unmounts.push(() => refManager.removeDynamicRef(refName, ref))

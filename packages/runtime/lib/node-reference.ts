@@ -156,11 +156,6 @@ const proxyHandler = {
                     }
                 }
             }
-            if (prop === 'execNative') {
-                return function(handler) {
-                    handler(target);
-                }
-            }
         }
         return target[prop];
     }
@@ -241,5 +236,9 @@ export class ElementReference<ViewState, Element extends ReferencedElement> {
     
     update = (newData: ViewState) => {
         this.dataContent = newData;
+    }
+
+    execNative<T>(handler: (elem: Element) => T): T {
+        return handler(this.element);
     }
 }

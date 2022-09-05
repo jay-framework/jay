@@ -41,10 +41,26 @@ describe('counter component', () => {
         counter.element.refs.dec.execNative(elem => elem.click());
 
         expect(fn.mock.calls.length).toBe(4)
-        expect(fn.mock.calls[0][0]).toBe(7)
-        expect(fn.mock.calls[1][0]).toBe(8)
-        expect(fn.mock.calls[2][0]).toBe(9)
-        expect(fn.mock.calls[3][0]).toBe(8)
+    });
+
+    it("validate events view state and coordinate via the counter component", () => {
+        let fn = jest.fn();
+        let counter = Counter(6);
+
+        counter.onChange(fn);
+
+        counter.element.refs.inc.execNative(elem => elem.click());
+        counter.element.refs.inc.execNative(elem => elem.click());
+        counter.element.refs.inc.execNative(elem => elem.click());
+        counter.element.refs.dec.execNative(elem => elem.click());
+
+        expect(fn.mock.calls.length).toBe(4)
+        expect(fn.mock.calls[0][0]).toEqual({count: 7})
+        expect(fn.mock.calls[0][1]).toBe('inc')
+        expect(fn.mock.calls[1][0]).toEqual({count: 8})
+        expect(fn.mock.calls[2][0]).toEqual({count: 9})
+        expect(fn.mock.calls[3][0]).toEqual({count: 8})
+        expect(fn.mock.calls[3][1]).toBe('dec')
     });
 
 });
