@@ -3,23 +3,24 @@ import {
     HTMLElementProxy,
     JayNativeEventHandler
 } from "./node-reference-types";
+import {JayComponent} from "../dist";
 
 
 
 export class ReferencesManager {
     private htmlElementsRefs: Record<string, HTMLElementProxyHandler<any, HTMLElement>> = {};
 
-    getElementRefs(id: string, autoCreate: boolean = false): HTMLElementProxyHandler<any, HTMLElement> | undefined {
+    getElementRefs(id: string, autoCreate: boolean = false): HTMLElementProxyHandler<any, HTMLElement | JayComponent<any, any, any>> | undefined {
         if (!this.htmlElementsRefs[id] && autoCreate)
             this.htmlElementsRefs[id] = new HTMLElementProxyHandler();
         return this.htmlElementsRefs[id];
     }
 
-    addHtmlElementRef(id: string, ref: ElementReference<any, HTMLElement>) {
+    addHtmlElementRef(id: string, ref: ElementReference<any, HTMLElement | JayComponent<any, any, any>>) {
         this.getElementRefs(id, true).addRef(ref);
     }
 
-    removeHtmlElementRef(id: string, ref: ElementReference<any, HTMLElement>) {
+    removeHtmlElementRef(id: string, ref: ElementReference<any, HTMLElement | JayComponent<any, any, any>>) {
         this.getElementRefs(id, true).removeRef(ref);
     }
 
@@ -68,7 +69,7 @@ export function newReferenceProxy<ViewState, ElementType extends HTMLElement>(re
     return new Proxy(ref, proxyHandler) as HTMLElementProxy<ViewState, ElementType>;
 }
 
-class HTMLElementProxyHandler<ViewState, Element extends HTMLElement> {
+class HTMLElementProxyHandler<ViewState, Element extends HTMLElement | JayComponent<any, any, any>> {
     private elements: Set<ElementReference<ViewState, Element>> = new Set();
     private listeners = [];
 
@@ -108,7 +109,7 @@ class HTMLElementProxyHandler<ViewState, Element extends HTMLElement> {
     
 }
 
-export class ElementReference<ViewState, Element extends HTMLElement> {
+export class ElementReference<ViewState, Element extends HTMLElement | JayComponent<any, ViewState, any>> {
     private dataContent: ViewState;
     private listeners = [];
 

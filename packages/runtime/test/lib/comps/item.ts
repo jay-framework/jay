@@ -3,8 +3,8 @@ import {
     element as e,
     dynamicText as dt
 } from "../../../lib/element";
-import {JayComponent, JayElement} from "../../../lib/element-types";
-import {ComponentEventDefinition, Reference} from "../../../lib/node-reference-types";
+import {JayComponent, JayElement} from "../../../lib";
+import {ComponentEventDefinition, HTMLElementProxy} from "../../../lib/node-reference-types";
 
 export interface ItemVS {
     text: string,
@@ -12,8 +12,8 @@ export interface ItemVS {
     dataId: string
 }
 export interface ItemRefs {
-    done: Reference<ItemVS, HTMLElement>,
-    remove: Reference<ItemVS, HTMLElement>
+    done: HTMLElementProxy<ItemVS, HTMLElement>,
+    remove: HTMLElementProxy<ItemVS, HTMLElement>
 }
 export interface ItemElement extends JayElement<ItemVS, ItemRefs> {}
 

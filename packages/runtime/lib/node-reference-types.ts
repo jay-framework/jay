@@ -89,6 +89,7 @@ import {JayComponent} from "./element-types";
 /** DOM element references **/
 export type JeyEventHandler<ViewState> = (viewState: ViewState, coordinate: string) => void
 export type JayNativeEventHandler<NativeEvent, EventData, ViewState> = (ev: NativeEvent, viewState: ViewState, coordinate: string) => EventData
+export type JayComponentEventHandler<EventData, ViewState> = (ev: EventData, viewState: ViewState, coordinate: string) => void
 type JayNativeFunction<ElementType extends HTMLElement, ViewState, Result> = (elem: ElementType, viewState: ViewState) => Result
 interface JayNativeEventBuilder<ViewState, EventData> {
   then(handler: (eventData: EventData, viewState: ViewState, coordinate: string) => void): void
@@ -96,6 +97,7 @@ interface JayNativeEventBuilder<ViewState, EventData> {
 
 export interface HTMLElementProxy<ViewState, ElementType extends HTMLElement> {
   addEventListener(type: string, handler: JeyEventHandler<ViewState>)
+  removeEventListener(type: string, handler: JeyEventHandler<ViewState>)
   onclick(handler: JeyEventHandler<ViewState>): void
   $onclick<EventData>(handler: JayNativeEventHandler<MouseEvent, ViewState, EventData>): JayNativeEventBuilder<ViewState, EventData>
 
@@ -130,6 +132,9 @@ type EventsExportedByComponent<ViewState, ComponentType extends JayComponent<any
 }
 
 export interface ComponentProxyOperations<ViewState, ComponentType extends JayComponent<any, ViewState, any>> {
+  addEventListener(type: string, handler: JayComponentEventHandler<any, ViewState>)
+  removeEventListener(type: string, handler: JayComponentEventHandler<any, ViewState>)
+
   forEach(handler: (comp: ComponentType, viewState: ViewState, coordinate: string) => void): void
   find(predicate: (t: ViewState) => boolean): ComponentType
 }

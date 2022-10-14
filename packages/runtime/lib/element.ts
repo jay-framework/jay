@@ -5,17 +5,16 @@ import {ElementReference, ReferencesManager} from "./node-reference";
 import {ContextStack} from "./context-stack";
 import {checkModified, getRevision} from "jay-reactive";
 import {BaseJayElement, JayComponent, JayElement, MountFunc, noopMount, noopUpdate, updateFunc} from "./element-types";
-import {ReferencedElement} from "./node-reference-types";
 
 const STYLE = 'style';
 const REF = 'ref';
 
-function mkRef(refName: string, element: ReferencedElement, updates: updateFunc<any>[], mounts: MountFunc[], unmounts: MountFunc[]) {
+function mkRef(refName: string, element: HTMLElement, updates: updateFunc<any>[], mounts: MountFunc[], unmounts: MountFunc[]) {
     let context = currentContext();
     let ref = new ElementReference(element, context.currData, context.coordinate(refName))
     updates.push(ref.update);
     if (context.forStaticElements) {
-        context.refManager.addStaticRef(refName, ref);
+        context.refManager.addHtmlElementRef(refName, ref);
     }
     else {
         let refManager = context.refManager;
