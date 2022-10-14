@@ -87,8 +87,8 @@ import {JayComponent} from "./element-types";
 
 /** new model **/
 /** DOM element references **/
-type JeyEventHandler<ViewState> = (viewState: ViewState, coordinate: string) => void
-type JayNativeEventHandler<NativeEvent, EventData, ViewState> = (ev: NativeEvent, viewState: ViewState, coordinate: string) => EventData
+export type JeyEventHandler<ViewState> = (viewState: ViewState, coordinate: string) => void
+export type JayNativeEventHandler<NativeEvent, EventData, ViewState> = (ev: NativeEvent, viewState: ViewState, coordinate: string) => EventData
 type JayNativeFunction<ElementType extends HTMLElement, ViewState, Result> = (elem: ElementType, viewState: ViewState) => Result
 interface JayNativeEventBuilder<ViewState, EventData> {
   then(handler: (eventData: EventData, viewState: ViewState, coordinate: string) => void): void

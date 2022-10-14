@@ -19,8 +19,8 @@ function mkRef(refName: string, element: ReferencedElement, updates: updateFunc<
     }
     else {
         let refManager = context.refManager;
-        mounts.push(() => refManager.addDynamicRef(refName, ref))
-        unmounts.push(() => refManager.removeDynamicRef(refName, ref))
+        mounts.push(() => refManager.addHtmlElementRef(refName, ref))
+        unmounts.push(() => refManager.removeHtmlElementRef(refName, ref))
     }
 }
 

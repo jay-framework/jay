@@ -1,45 +1,34 @@
 import {BaseJayElement, JayElement} from "./element-types";
 import {
-    DynamicReference,
-    DynamicReferenceOperations,
-    EventRegistrar,
-    JayEventListener,
-    ReferencedElement
+    HTMLElementProxy,
+    JayNativeEventHandler
 } from "./node-reference-types";
 
 
+
 export class ReferencesManager {
-    private dynamicRefs = {};
-    private staticRefs = {};
+    private htmlElementsRefs: Record<string, HTMLElementProxyHandler<any, HTMLElement>> = {};
 
-    getDynamic(id: string, autoCreate: boolean = false): DynamicReferenceInternal<any, ReferencedElement> | undefined {
-        if (!this.dynamicRefs[id] && autoCreate)
-            this.dynamicRefs[id] = new DynamicReferenceInternal();
-        return this.dynamicRefs[id];
+    getElementRefs(id: string, autoCreate: boolean = false): HTMLElementProxyHandler<any, HTMLElement> | undefined {
+        if (!this.htmlElementsRefs[id] && autoCreate)
+            this.htmlElementsRefs[id] = new HTMLElementProxyHandler();
+        return this.htmlElementsRefs[id];
     }
 
-    addDynamicRef(id: string, ref: ElementReference<any, ReferencedElement>) {
-        this.getDynamic(id, true).addRef(ref);
+    addHtmlElementRef(id: string, ref: ElementReference<any, HTMLElement>) {
+        this.getElementRefs(id, true).addRef(ref);
     }
 
-    removeDynamicRef(id: string, ref: ElementReference<any, ReferencedElement>) {
-        this.getDynamic(id, true).removeRef(ref);
-    }
-
-    addStaticRef(id: string, ref: ElementReference<any, ReferencedElement> ) {
-        this.staticRefs[id] = ref;
+    removeHtmlElementRef(id: string, ref: ElementReference<any, HTMLElement>) {
+        this.getElementRefs(id, true).removeRef(ref);
     }
 
     applyToElement<T, Refs>(element:BaseJayElement<T>): JayElement<T, Refs> {
-        let enrichedDynamicRefs = Object.keys(this.dynamicRefs).reduce((enriched, key) => {
-            enriched[key] = newReferenceProxy(this.dynamicRefs[key])
+        let enrichedDynamicRefs = Object.keys(this.htmlElementsRefs).reduce((enriched, key) => {
+            enriched[key] = newReferenceProxy(this.htmlElementsRefs[key])
             return enriched;
         }, {})
-        let enrichedRefs = Object.keys(this.staticRefs).reduce((enriched, key) => {
-            enriched[key] = newReferenceProxy(this.staticRefs[key])
-            return enriched;
-        }, {})
-        let refs = {...enrichedDynamicRefs, ...enrichedRefs} as Refs
+        let refs = {...enrichedDynamicRefs} as Refs
         return {...element, refs};
     }
 }
@@ -74,15 +63,16 @@ const proxyHandler = {
         return target[prop];
     }
 }
-export function newReferenceProxy<ViewState, Element extends HTMLElement>(ref: EventRegistrar<ViewState>): DynamicReference<ViewState, Element> {
-    return new Proxy(ref, proxyHandler) as DynamicReference<ViewState, Element>;
+export function newReferenceProxy<ViewState, ElementType extends HTMLElement>(ref: HTMLElementProxyHandler<ViewState, ElementType>):
+  HTMLElementProxy<ViewState, ElementType> {
+    return new Proxy(ref, proxyHandler) as HTMLElementProxy<ViewState, ElementType>;
 }
 
-class DynamicReferenceInternal<ViewState, Element extends ReferencedElement> implements DynamicReferenceOperations<ViewState, Element> {
+class HTMLElementProxyHandler<ViewState, Element extends HTMLElement> {
     private elements: Set<ElementReference<ViewState, Element>> = new Set();
     private listeners = [];
 
-    addEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: boolean | AddEventListenerOptions): void {
+    addEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void {
         this.listeners.push({type, listener, options})
         this.elements.forEach(ref =>
             ref.addEventListener(type, listener, options))
@@ -104,7 +94,7 @@ class DynamicReferenceInternal<ViewState, Element extends ReferencedElement> imp
                 return elemRef.element
     }
 
-    removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: EventListenerOptions | boolean): void {
+    removeEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void {
         this.listeners = this.listeners.filter(item => item.type !== type || item.listener !== listener);
         this.elements.forEach(ref =>
             ref.removeEventListener(type, listener, options))
@@ -118,7 +108,7 @@ class DynamicReferenceInternal<ViewState, Element extends ReferencedElement> imp
     
 }
 
-export class ElementReference<ViewState, Element extends ReferencedElement> {
+export class ElementReference<ViewState, Element extends HTMLElement> {
     private dataContent: ViewState;
     private listeners = [];
 
@@ -127,7 +117,7 @@ export class ElementReference<ViewState, Element extends ReferencedElement> {
         this.dataContent = dataContext
     }
 
-    addEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState>, options?: boolean | AddEventListenerOptions): void {
+    addEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void {
         let wrappedHandler = (event) => {
             return listener(event, this.dataContent, this.coordinate);
         }
@@ -135,7 +125,7 @@ export class ElementReference<ViewState, Element extends ReferencedElement> {
         this.listeners.push({type, listener, wrappedHandler})
     }
 
-    removeEventListener<E extends Event>(type: string, listener: JayEventListener<E, ViewState> | null, options?: EventListenerOptions | boolean): void {
+    removeEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void {
         let index = this.listeners.findIndex(item => item.type === type && item.listener === listener)
         if (index > -1) {
             let item = this.listeners[index];
