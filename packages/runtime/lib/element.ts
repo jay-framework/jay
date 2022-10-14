@@ -1,40 +1,14 @@
 import {Kindergarten, KindergartenGroup} from "./kindergarden";
 import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "./list-compare";
 import {RandomAccessLinkedList as List} from "./random-access-linked-list";
-import {ElementReference, ReferencedElement, ReferencesManager} from "./node-reference";
+import {ElementReference, ReferencesManager} from "./node-reference";
 import {ContextStack} from "./context-stack";
-import {getRevision, checkModified} from "jay-reactive";
+import {checkModified, getRevision} from "jay-reactive";
+import {BaseJayElement, JayComponent, JayElement, MountFunc, noopMount, noopUpdate, updateFunc} from "./element-types";
+import {ReferencedElement} from "./node-reference-types";
 
 const STYLE = 'style';
 const REF = 'ref';
-export interface updateFunc<T> {
-    (newData:T): void
-    _origUpdates?: Array<updateFunc<T>>
-}
-//type updateFunc<T> = (newData:T) => void;
-export type MountFunc = () => void;
-export const noopUpdate: updateFunc<any> = (_newData:any): void => {};
-export const noopMount: MountFunc = (): void => {}
-
-export interface BaseJayElement<ViewState> {
-    dom: HTMLElement,
-    update: updateFunc<ViewState>
-    mount: MountFunc,
-    unmount: MountFunc
-}
-
-export interface JayElement<ViewState, Refs> extends BaseJayElement<ViewState>{
-    refs: Refs
-}
-
-export interface JayComponent<Props, ViewState, jayElement extends BaseJayElement<ViewState>>{
-    element: jayElement
-    update: updateFunc<Props>
-    mount: MountFunc,
-    unmount: MountFunc,
-    addEventListener: (type: string, handler: (event: any) => void, options?: boolean | AddEventListenerOptions) => void
-    removeEventListener: (type: string, handler: (event: any) => void, options?: EventListenerOptions | boolean) => void
-}
 
 function mkRef(refName: string, element: ReferencedElement, updates: updateFunc<any>[], mounts: MountFunc[], unmounts: MountFunc[]) {
     let context = currentContext();

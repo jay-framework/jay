@@ -1,12 +1,12 @@
 import {
     forEach,
     dynamicElement as de,
-    JayElement,
     element as e,
     dynamicText as dt,
     conditional, ConstructContext
 } from '../../lib/element';
 import {describe, expect, it} from '@jest/globals'
+import {JayElement} from "../../lib/element-types";
 
 describe('dynamic-element with mixed content', () => {
 

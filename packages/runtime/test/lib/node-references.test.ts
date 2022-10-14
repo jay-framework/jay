@@ -1,6 +1,8 @@
 import {describe, expect, it, beforeEach} from '@jest/globals'
-import {ReferencesManager, ElementReference, DynamicReference, Reference} from "../../lib/node-reference";
-import {element as e, JayElement} from "../../lib/element";
+import {ReferencesManager, ElementReference} from "../../lib/node-reference";
+import {element as e} from "../../lib/";
+import {JayElement} from "../../lib";
+import {HTMLElementProxy} from "../../lib/node-reference-types";
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -18,8 +20,8 @@ describe('ReferencesManager', () => {
 
         interface RootElementViewState {}
         interface RootElementRefs {
-            id1: Reference<RootElementViewState, HTMLDivElement>
-            id2: Reference<RootElementViewState, HTMLDivElement>
+            id1: HTMLElementProxy<RootElementViewState, HTMLDivElement>
+            id2: HTMLElementProxy<RootElementViewState, HTMLDivElement>
         }
 
         let jayElement1, jayElement2,
@@ -119,8 +121,8 @@ describe('ReferencesManager', () => {
         interface ItemViewState {}
 
         interface RootElementRefs {
-            id1: DynamicReference<ItemViewState, HTMLDivElement>
-            id2: Reference<ItemViewState, HTMLDivElement>
+            id1: HTMLElementProxy<ItemViewState, HTMLDivElement>
+            id2: HTMLElementProxy<ItemViewState, HTMLDivElement>
         }
 
         let jayElement1, jayElement2, jayElement3,

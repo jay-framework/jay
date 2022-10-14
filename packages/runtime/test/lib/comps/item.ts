@@ -1,10 +1,10 @@
 import {
     ConstructContext,
     element as e,
-    dynamicText as dt,
-    JayElement, JayComponent
+    dynamicText as dt
 } from "../../../lib/element";
-import {Reference} from "../../../lib/node-reference";
+import {JayComponent, JayElement} from "../../../lib/element-types";
+import {ComponentEventDefinition, Reference} from "../../../lib/node-reference-types";
 
 export interface ItemVS {
     text: string,
@@ -31,14 +31,24 @@ export interface ItemData {
     dataId: string
 }
 
+
 export interface ItemComponent extends JayComponent<ItemData, ItemVS, ItemElement> {
-    onremove?: (event: string) => void
+    onremove: ComponentEventDefinition<string>
+}
+
+function mkComponentEventHandler<EventType>() {
+    let register: ComponentEventDefinition<EventType>;
+    register = function(handler: (event: EventType) => void) {
+        register.handler = handler;
+    }
+    return register;
 }
 
 export function Item(props: ItemData): ItemComponent {
     let done = false;
     let text = props.text;
     let jayElement = renderItem({text, done, dataId: props.dataId});
+    let onremove = mkComponentEventHandler<string>();
 
     jayElement.refs.done.onclick(() => {
         done = !done;
@@ -46,8 +56,8 @@ export function Item(props: ItemData): ItemComponent {
     })
 
     jayElement.refs.remove.onclick(() => {
-        if (itemInstance.onremove)
-            itemInstance.onremove(null);
+        if (onremove.handler)
+            onremove.handler(null);
     })
 
     let itemInstance: ItemComponent = {
@@ -58,14 +68,14 @@ export function Item(props: ItemData): ItemComponent {
         },
         mount: () => jayElement.mount(),
         unmount: () => jayElement.unmount(),
-        onremove: undefined,
+        onremove,
         addEventListener: (type: string, handler: (event: any) => void, options?: boolean | AddEventListenerOptions) => {
             if (type === 'remove')
-                itemInstance.onremove = handler;
+                onremove(handler);
         },
         removeEventListener: (type: string, handler: (event: any) => void, options?: EventListenerOptions | boolean) => {
             if (type === 'remove')
-                itemInstance.onremove = undefined;
+                onremove(undefined);
         }
 
     };

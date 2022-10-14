@@ -1,14 +1,14 @@
 import {
     forEach,
     dynamicElement as de,
-    JayElement,
     element as e,
     dynamicText as dt, ConstructContext
 } from '../../lib/element';
 import {describe, expect, it} from '@jest/globals'
 import {expectE} from "./test-utils";
-import {DynamicReference} from "../../lib";
 import { mutableObject } from 'jay-reactive';
+import {JayElement} from "../../lib";
+import {HTMLElementProxy} from "../../lib/node-reference-types";
 
 const item1 = {name: 'name 1', id: 'id-1'};
 const item2 = {name: 'name 2', id: 'id-2'};
@@ -183,7 +183,7 @@ describe('collection-element', () => {
 
     describe('references and events', () => {
         interface TodoListRefs {
-            done: DynamicReference<Item, HTMLButtonElement>
+            done: HTMLElementProxy<Item, HTMLButtonElement>
         }
         interface TodoListElement extends JayElement<ViewState, TodoListRefs> {}
         
@@ -221,8 +221,8 @@ describe('collection-element', () => {
                 savedItem = item;
             })
             todoListElement.refs.done
-              .filter(item => item === item2)
-              .click()
+              .find(item => item === item2)
+              .$exec(el => el.click())
             expect(savedItem).toBe(item2)
             expect(eventCount).toBe(1);
         })
@@ -232,8 +232,8 @@ describe('collection-element', () => {
             let fn = jest.fn();
             todoListElement.refs.done.onclick(fn)
             todoListElement.refs.done
-              .filter(item => item === item2)
-              .click()
+              .find(item => item === item2)
+              .$exec(el => el.click())
             expect(fn.mock.calls[0][0]).toBe(item2)
             expect(fn.mock.calls[0][1]).toBe('id-2/done');
         })
@@ -243,7 +243,9 @@ describe('collection-element', () => {
             todoListElement.refs.done.onclick((ev, item) => {
                 todoListElement.update({items: [item1, item3]})
             })
-            todoListElement.refs.done.filter(item => item === item2).click()
+            todoListElement.refs.done
+              .find(item => item === item2)
+              .$exec(el => el.click())
             let count = 0;
             todoListElement.refs.done.forEach(el => count += 1)
             expect(count).toBe(2);

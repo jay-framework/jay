@@ -2,9 +2,9 @@ import {
     dynamicElement as de,
     element as e,
     forEach,
-    JayElement,
     dynamicText as dt, ConstructContext
 } from '../../lib/element.js';
+import {JayElement} from "../../lib/element-types";
 
 interface Item {
     name: string,

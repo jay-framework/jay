@@ -1,5 +1,6 @@
 import {describe, it} from "@jest/globals";
 import {Counter} from "./comps/counter-comp";
+import '../../lib/element-test-types';
 
 describe('counter component', () => {
     it("create counter with initial value 6", () => {

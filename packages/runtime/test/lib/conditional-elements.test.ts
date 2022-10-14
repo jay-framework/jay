@@ -1,7 +1,6 @@
 import {
     conditional,
     dynamicElement as de,
-    JayElement,
     element as e,
     dynamicText as dt, ConstructContext
 } from '../../lib/element';
@@ -9,7 +8,8 @@ import "@testing-library/jest-dom/extend-expect";
 import {describe, expect, it} from '@jest/globals'
 import {expectE} from "./test-utils";
 import {JSDOM} from 'jsdom';
-import {Reference} from "../../lib/node-reference";
+import {JayElement} from "../../lib";
+import {HTMLElementProxy} from "../../lib/node-reference-types";
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -68,8 +68,8 @@ describe('conditional-element', () => {
 
     describe('references and events', () => {
         interface ConditionalRefs {
-            text1: Reference<ViewState, HTMLElement>,
-            text2: Reference<ViewState, HTMLElement>
+            text1: HTMLElementProxy<ViewState, HTMLElement>,
+            text2: HTMLElementProxy<ViewState, HTMLElement>
         }
         interface ConditionalElement extends JayElement<ViewState, ConditionalRefs> {}
 
@@ -97,7 +97,7 @@ describe('conditional-element', () => {
             let jayElement = makeElement({text1: SOME_VALUE, condition: true, text2: ANOTHER_VALUE});
             let mockCallback = jest.fn();
             jayElement.refs.text1.onclick(mockCallback);
-            jayElement.refs.text1.execNative((elem) => elem.click());
+            jayElement.refs.text1.$exec((elem) => elem.click());
             expect(mockCallback.mock.calls.length).toBe(1);
         })
 

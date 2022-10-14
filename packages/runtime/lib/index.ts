@@ -1,5 +1,12 @@
 export {ContextStack} from "./context-stack";
-export {DynamicReference} from "./node-reference";
 export {Revisioned, checkModified, touchRevision} from "jay-reactive";
 export {MatchResult} from "./list-compare";
 export * from './element';
+export {JayComponent} from "./element-types";
+export {JayElement} from "./element-types";
+export {BaseJayElement} from "./element-types";
+export {noopMount} from "./element-types";
+export {noopUpdate} from "./element-types";
+export {MountFunc} from "./element-types";
+export {updateFunc} from "./element-types";
+export {DynamicReference} from "./node-reference-types";

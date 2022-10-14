@@ -1,13 +1,12 @@
 import {
     element as e,
-    JayElement,
-    noopUpdate,
     dynamicAttribute as da,
     dynamicText as dt,
-    dynamicProperty as dp, ConstructContext, BaseJayElement
+    dynamicProperty as dp, ConstructContext
 } from '../../lib/element';
 import {beforeEach, describe, expect, it} from '@jest/globals'
 import { mutableObject } from 'jay-reactive';
+import {BaseJayElement, JayElement, noopUpdate} from "../../lib/element-types";
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';

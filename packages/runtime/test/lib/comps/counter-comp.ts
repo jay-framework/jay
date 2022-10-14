@@ -1,5 +1,6 @@
-import {ConstructContext, dynamicText as dt, element as e, JayComponent, JayElement} from "../../../lib/element";
-import {Reference} from "../../../lib/node-reference";
+import {ConstructContext, dynamicText as dt, element as e} from "../../../lib/element";
+import {JayComponent, JayElement} from "../../../lib/element-types";
+import {Reference} from "../../../lib/node-reference-types";
 
 interface ViewState {
     count: number
