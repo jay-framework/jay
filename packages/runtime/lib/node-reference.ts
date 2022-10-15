@@ -5,22 +5,22 @@ import {
 } from "./node-reference-types";
 import {JayComponent} from "../dist";
 
-
+export type ReferencedElement = HTMLElement | JayComponent<any, any, any>;
 
 export class ReferencesManager {
     private htmlElementsRefs: Record<string, HTMLElementProxyHandler<any, HTMLElement>> = {};
 
-    getElementRefs(id: string, autoCreate: boolean = false): HTMLElementProxyHandler<any, HTMLElement | JayComponent<any, any, any>> | undefined {
+    getElementRefs(id: string, autoCreate: boolean = false): HTMLElementProxyHandler<any, ReferencedElement> | undefined {
         if (!this.htmlElementsRefs[id] && autoCreate)
             this.htmlElementsRefs[id] = new HTMLElementProxyHandler();
         return this.htmlElementsRefs[id];
     }
 
-    addHtmlElementRef(id: string, ref: ElementReference<any, HTMLElement | JayComponent<any, any, any>>) {
+    addHtmlElementRef(id: string, ref: ElementReference<any, ReferencedElement>) {
         this.getElementRefs(id, true).addRef(ref);
     }
 
-    removeHtmlElementRef(id: string, ref: ElementReference<any, HTMLElement | JayComponent<any, any, any>>) {
+    removeHtmlElementRef(id: string, ref: ElementReference<any, ReferencedElement>) {
         this.getElementRefs(id, true).removeRef(ref);
     }
 
@@ -69,7 +69,7 @@ export function newReferenceProxy<ViewState, ElementType extends HTMLElement>(re
     return new Proxy(ref, proxyHandler) as HTMLElementProxy<ViewState, ElementType>;
 }
 
-class HTMLElementProxyHandler<ViewState, Element extends HTMLElement | JayComponent<any, any, any>> {
+class HTMLElementProxyHandler<ViewState, Element extends ReferencedElement> {
     private elements: Set<ElementReference<ViewState, Element>> = new Set();
     private listeners = [];
 
@@ -85,14 +85,18 @@ class HTMLElementProxyHandler<ViewState, Element extends HTMLElement | JayCompon
             ref.addEventListener(listener.type, listener.listener, listener.options))
     }
 
-    forEach(handler: (element: Element) => void) {
-        this.elements.forEach(ref => handler(ref.element));
+    forEach(handler: (element: Element, viewState: ViewState, coordinate: string) => void) {
+        this.elements.forEach(ref => ref.forEach(handler));
     }
 
-    filter(predicate: (t:ViewState) => boolean): Element {
+    $exec(handler: (element: Element, viewState: ViewState) => void) {
+        return [...this.elements].map(ref => ref.$exec(handler));
+    }
+
+    find(predicate: (viewState: ViewState) => boolean) {
         for (let elemRef of this.elements)
             if (elemRef.match(predicate))
-                return elemRef.element
+                return elemRef
     }
 
     removeEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void {
@@ -109,18 +113,17 @@ class HTMLElementProxyHandler<ViewState, Element extends HTMLElement | JayCompon
     
 }
 
-export class ElementReference<ViewState, Element extends HTMLElement | JayComponent<any, ViewState, any>> {
-    private dataContent: ViewState;
+export class ElementReference<ViewState, Element extends ReferencedElement> /** implements HTMLElementProxy<ViewState, Element> **/ {
     private listeners = [];
 
-    constructor(public element: Element, dataContext: ViewState, private coordinate: string) {
+    constructor(private readonly element: Element, private viewState: ViewState, private coordinate: string) {
         this.element = element;
-        this.dataContent = dataContext
+        this.viewState = viewState
     }
 
     addEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void {
         let wrappedHandler = (event) => {
-            return listener(event, this.dataContent, this.coordinate);
+            return listener(event, this.viewState, this.coordinate);
         }
         this.element.addEventListener(type, wrappedHandler, options)
         this.listeners.push({type, listener, wrappedHandler})
@@ -135,15 +138,19 @@ export class ElementReference<ViewState, Element extends HTMLElement | JayCompon
         }
     }
 
+    forEach(handler: (element: Element, viewState: ViewState, coordinate: string) => void) {
+        handler(this.element, this.viewState, this.coordinate)
+    }
+
     match(predicate: (t:ViewState) => boolean): boolean {
-        return predicate(this.dataContent);
+        return predicate(this.viewState);
     }
     
     update = (newData: ViewState) => {
-        this.dataContent = newData;
+        this.viewState = newData;
     }
 
-    execNative<T>(handler: (elem: Element) => T): T {
-        return handler(this.element);
+    $exec<T>(handler: (elem: Element, viewState: ViewState) => T): T {
+        return handler(this.element, this.viewState);
     }
 }

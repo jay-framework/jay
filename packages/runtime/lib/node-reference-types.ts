@@ -103,7 +103,7 @@ export interface HTMLElementProxy<ViewState, ElementType extends HTMLElement> {
 
   forEach(handler: (element: ElementType, viewState: ViewState, coordinate: string) => void): void
   find(predicate: (t: ViewState) => boolean): HTMLElementProxy<ViewState, ElementType>
-  $exec<ResultType>(handler: JayNativeFunction<ElementType, ViewState, ResultType>): ResultType
+  $exec<ResultType>(handler: JayNativeFunction<ElementType, ViewState, ResultType>): Array<ResultType>
 }
 
 /** Components references **/
