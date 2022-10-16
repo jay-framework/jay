@@ -5,28 +5,44 @@ import {
 } from "./node-reference-types";
 import {JayComponent} from "../dist";
 
-export type ReferencedElement = HTMLElement | JayComponent<any, any, any>;
+export type Referenced = HTMLElement | JayComponent<any, any, any>;
+
+interface Ref<ViewState, Element extends Referenced> {
+    addEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void
+    removeEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void
+    removeRef?(ref: ElementReference<any, Element>)
+}
+
+interface RefCollection<ViewState, Element extends Referenced> extends Ref<ViewState, Element>{
+    addRef(ref: Ref<ViewState, Element>)
+    removeRef(ref: Ref<ViewState, Element>)
+}
 
 export class ReferencesManager {
-    private htmlElementsRefs: Record<string, HTMLElementProxyHandler<any, HTMLElement>> = {};
+    private refs: Record<string, Ref<any, Referenced>> = {};
+    private refCollections: Record<string, RefCollection<any, Referenced>> = {};
 
-    getElementRefs(id: string, autoCreate: boolean = false): HTMLElementProxyHandler<any, ReferencedElement> | undefined {
-        if (!this.htmlElementsRefs[id] && autoCreate)
-            this.htmlElementsRefs[id] = new HTMLElementProxyHandler();
-        return this.htmlElementsRefs[id];
+    getRefCollection(id: string, autoCreate: boolean = false): RefCollection<any, Referenced> {
+        if (!this.refCollections[id] && autoCreate)
+            this.refCollections[id] = new HTMLElementProxyHandler();
+        return this.refCollections[id];
     }
 
-    addHtmlElementRef(id: string, ref: ElementReference<any, ReferencedElement>) {
-        this.getElementRefs(id, true).addRef(ref);
+    addRef(id: string, ref: Ref<any, Referenced>, isStatic: boolean) {
+        if (isStatic)
+            this.refs[id] = ref;
+        else
+            this.getRefCollection(id, true).addRef(ref);
     }
 
-    removeHtmlElementRef(id: string, ref: ElementReference<any, ReferencedElement>) {
-        this.getElementRefs(id, true).removeRef(ref);
+    removeRef(id: string, ref: Ref<any, Referenced>) {
+        this.getRefCollection(id, true).removeRef(ref);
     }
 
     applyToElement<T, Refs>(element:BaseJayElement<T>): JayElement<T, Refs> {
-        let enrichedDynamicRefs = Object.keys(this.htmlElementsRefs).reduce((enriched, key) => {
-            enriched[key] = newReferenceProxy(this.htmlElementsRefs[key])
+        let allRefs = {...this.refCollections, ...this.refs};
+        let enrichedDynamicRefs = Object.keys(allRefs).reduce((enriched, key) => {
+            enriched[key] = newReferenceProxy(allRefs[key])
             return enriched;
         }, {})
         let refs = {...enrichedDynamicRefs} as Refs
@@ -64,12 +80,41 @@ const proxyHandler = {
         return target[prop];
     }
 }
-export function newReferenceProxy<ViewState, ElementType extends HTMLElement>(ref: HTMLElementProxyHandler<ViewState, ElementType>):
-  HTMLElementProxy<ViewState, ElementType> {
-    return new Proxy(ref, proxyHandler) as HTMLElementProxy<ViewState, ElementType>;
+export function newReferenceProxy<ViewState, ElementType extends Referenced>(ref: Ref<ViewState, ElementType>):
+  Ref<ViewState, ElementType> {
+    return new Proxy(ref, proxyHandler) as Ref<ViewState, ElementType>;
 }
 
-class HTMLElementProxyHandler<ViewState, Element extends ReferencedElement> {
+class ReferenceCollection<ViewState, Element extends Referenced> implements RefCollection<ViewState, Element>{
+    private elements: Set<ElementReference<ViewState, Element>> = new Set();
+    private listeners = [];
+
+    addEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void {
+        this.listeners.push({type, listener, options})
+        this.elements.forEach(ref =>
+          ref.addEventListener(type, listener, options))
+    }
+
+    addRef(ref: ElementReference<ViewState, Element>) {
+        this.elements.add(ref);
+        this.listeners.forEach(listener =>
+          ref.addEventListener(listener.type, listener.listener, listener.options))
+    }
+
+    removeEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void {
+        this.listeners = this.listeners.filter(item => item.type !== type || item.listener !== listener);
+        this.elements.forEach(ref =>
+          ref.removeEventListener(type, listener, options))
+    }
+
+    removeRef(ref: ElementReference<ViewState, Element>) {
+        this.elements.delete(ref);
+        this.listeners.forEach(listener =>
+          ref.removeEventListener(listener.type, listener.listener, listener.options))
+    }
+}
+
+class HTMLElementProxyHandler<ViewState, Element extends Referenced> implements RefCollection<ViewState, Element>{
     private elements: Set<ElementReference<ViewState, Element>> = new Set();
     private listeners = [];
 
@@ -113,7 +158,7 @@ class HTMLElementProxyHandler<ViewState, Element extends ReferencedElement> {
     
 }
 
-export class ElementReference<ViewState, Element extends ReferencedElement> /** implements HTMLElementProxy<ViewState, Element> **/ {
+export class ElementReference<ViewState, Element extends Referenced> implements Ref<ViewState, Element>{
     private listeners = [];
 
     constructor(private readonly element: Element, private viewState: ViewState, private coordinate: string) {

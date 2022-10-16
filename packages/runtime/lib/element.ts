@@ -1,7 +1,7 @@
 import {Kindergarten, KindergartenGroup} from "./kindergarden";
 import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "./list-compare";
 import {RandomAccessLinkedList as List} from "./random-access-linked-list";
-import {ElementReference, ReferencedElement, ReferencesManager} from "./node-reference";
+import {ElementReference, Referenced, ReferencesManager} from "./node-reference";
 import {ContextStack} from "./context-stack";
 import {checkModified, getRevision} from "jay-reactive";
 import {BaseJayElement, JayComponent, JayElement, MountFunc, noopMount, noopUpdate, updateFunc} from "./element-types";
@@ -9,17 +9,17 @@ import {BaseJayElement, JayComponent, JayElement, MountFunc, noopMount, noopUpda
 const STYLE = 'style';
 const REF = 'ref';
 
-function mkRef(refName: string, element: ReferencedElement, updates: updateFunc<any>[], mounts: MountFunc[], unmounts: MountFunc[]) {
+function mkRef(refName: string, element: Referenced, updates: updateFunc<any>[], mounts: MountFunc[], unmounts: MountFunc[]) {
     let context = currentContext();
     let ref = new ElementReference(element, context.currData, context.coordinate(refName))
     updates.push(ref.update);
     if (context.forStaticElements) {
-        context.refManager.addHtmlElementRef(refName, ref);
+        context.refManager.addRef(refName, ref, true);
     }
     else {
         let refManager = context.refManager;
-        mounts.push(() => refManager.addHtmlElementRef(refName, ref))
-        unmounts.push(() => refManager.removeHtmlElementRef(refName, ref))
+        mounts.push(() => refManager.addRef(refName, ref, false))
+        unmounts.push(() => refManager.removeRef(refName, ref))
     }
 }
 

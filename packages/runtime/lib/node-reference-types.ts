@@ -95,15 +95,23 @@ interface JayNativeEventBuilder<ViewState, EventData> {
   then(handler: (eventData: EventData, viewState: ViewState, coordinate: string) => void): void
 }
 
+export interface HTMLElementCollectionProxy<ViewState, ElementType extends HTMLElement> {
+  addEventListener(type: string, handler: JeyEventHandler<ViewState>)
+  removeEventListener(type: string, handler: JeyEventHandler<ViewState>)
+  onclick(handler: JeyEventHandler<ViewState>): void
+  $onclick<EventData>(handler: JayNativeEventHandler<MouseEvent, ViewState, EventData>): JayNativeEventBuilder<ViewState, EventData>
+
+  find(predicate: (t: ViewState) => boolean): HTMLElementProxy<ViewState, ElementType>
+  $exec<ResultType>(handler: JayNativeFunction<ElementType, ViewState, ResultType>): Array<ResultType>
+}
+
 export interface HTMLElementProxy<ViewState, ElementType extends HTMLElement> {
   addEventListener(type: string, handler: JeyEventHandler<ViewState>)
   removeEventListener(type: string, handler: JeyEventHandler<ViewState>)
   onclick(handler: JeyEventHandler<ViewState>): void
   $onclick<EventData>(handler: JayNativeEventHandler<MouseEvent, ViewState, EventData>): JayNativeEventBuilder<ViewState, EventData>
 
-  forEach(handler: (element: ElementType, viewState: ViewState, coordinate: string) => void): void
-  find(predicate: (t: ViewState) => boolean): HTMLElementProxy<ViewState, ElementType>
-  $exec<ResultType>(handler: JayNativeFunction<ElementType, ViewState, ResultType>): Array<ResultType>
+  $exec<ResultType>(handler: JayNativeFunction<ElementType, ViewState, ResultType>): ResultType
 }
 
 /** Components references **/
@@ -131,7 +139,7 @@ type EventsExportedByComponent<ViewState, ComponentType extends JayComponent<any
   [Property in keyof EventDefinedByComponent<ComponentType>]: EventExportedByComponent<any, EventDefinedByComponent<ComponentType>[Property], ViewState>
 }
 
-export interface ComponentProxyOperations<ViewState, ComponentType extends JayComponent<any, ViewState, any>> {
+export interface ComponentCollectionProxyOperations<ViewState, ComponentType extends JayComponent<any, ViewState, any>> {
   addEventListener(type: string, handler: JayComponentEventHandler<any, ViewState>)
   removeEventListener(type: string, handler: JayComponentEventHandler<any, ViewState>)
 
@@ -139,6 +147,6 @@ export interface ComponentProxyOperations<ViewState, ComponentType extends JayCo
   find(predicate: (t: ViewState) => boolean): ComponentType
 }
 
-export type ComponentProxy<ViewState, ComponentType extends JayComponent<any, ViewState, any>> =
-  ComponentProxyOperations<ViewState, ComponentType> &
+export type ComponentCollectionProxy<ViewState, ComponentType extends JayComponent<any, ViewState, any>> =
+  ComponentCollectionProxyOperations<ViewState, ComponentType> &
   EventsExportedByComponent<ViewState, ComponentType>
