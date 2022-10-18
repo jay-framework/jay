@@ -4,7 +4,16 @@ import {RandomAccessLinkedList as List} from "./random-access-linked-list";
 import {ElementReference, Referenced, ReferencesManager, RefType} from "./node-reference";
 import {ContextStack} from "./context-stack";
 import {checkModified, getRevision} from "jay-reactive";
-import {BaseJayElement, JayComponent, JayElement, MountFunc, noopMount, noopUpdate, updateFunc} from "./element-types";
+import {
+    BaseJayElement,
+    JayComponent,
+    JayComponentConstructor,
+    JayElement,
+    MountFunc,
+    noopMount,
+    noopUpdate,
+    updateFunc
+} from "./element-types";
 
 const STYLE = 'style';
 const REF = 'ref';
@@ -28,11 +37,12 @@ function mkRef(refName: string, element: Referenced, updates: updateFunc<any>[],
 
 export function childComp<ParentT, Props, ChildT,
     ChildElement extends BaseJayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
-    compCreator: (props: Props) => ChildComp,
+    compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentT) => Props,
     refName?: string): BaseJayElement<ParentT> {
     let context = currentContext();
-    let childComp = compCreator(getProps(context.currData))
+    let coordinate = refName?context.coordinate(refName):undefined;
+    let childComp = compCreator(getProps(context.currData), {parentCoordinate: coordinate})
     let updates: updateFunc<ParentT>[] = [(t: ParentT) => childComp.update(getProps(t))];
     let mounts: MountFunc[] = [childComp.mount]
     let unmounts: MountFunc[] = [childComp.unmount]

@@ -3,7 +3,7 @@ import {ElementReference, ReferencesManager, RefType} from "../../lib/node-refer
 import {childComp, ConstructContext, element as e} from "../../lib/";
 import {JayElement} from "../../lib";
 import {HTMLElementProxy} from "../../lib/node-reference-types";
-import {Item, ItemComponent} from "./comps/item";
+import {Item, ItemComponent, ItemProps} from "./comps/item";
 import '../../lib/element-test-types';
 
 const SOME_VALUE = 'some text in the element';
@@ -321,17 +321,17 @@ describe('ReferencesManager events', () => {
         interface RootElementRefs {
             id1: ItemComponent
         }
-        const ItemViewState = {text: 'hello', dataId: 'AAA'};
 
+        const ITEM_PROPS = {text: 'hello', dataId: 'A'};
         let jayComponent: ItemComponent,
           jayRootElement: JayElement<RootElementViewState, RootElementRefs>,
           referenceManager: ReferencesManager, mockCallback;
         beforeEach(() => {
-            jayComponent = Item({text: 'hello', dataId: 'A'})
+
             jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, () =>
               e('div', {}, [
-                  childComp(Item,
-                    vs => ItemViewState, 'static')])) as JayElement<RootElementViewState, RootElementRefs>;
+                  childComp((props, options) => jayComponent = Item(props as ItemProps, options),
+                    vs => ITEM_PROPS, 'static')])) as JayElement<RootElementViewState, RootElementRefs>;
 
             referenceManager = new ReferencesManager();
             mockCallback = jest.fn(_ => undefined);
@@ -372,7 +372,7 @@ describe('ReferencesManager events', () => {
 
             expect(mockCallback.mock.calls.length).toBe(1);
             expect(mockCallback.mock.calls[0][0]).toBe('item hello - false is removed');
-            expect(mockCallback.mock.calls[0][1]).toBe(ItemViewState);
+            expect(mockCallback.mock.calls[0][1]).toEqual(ITEM_PROPS);
             expect(mockCallback.mock.calls[0][2]).toBe('static');
         })
 

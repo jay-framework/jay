@@ -5,7 +5,7 @@ import {
 } from "../../../lib/element";
 import {JayComponent, JayElement} from "../../../lib";
 import {ComponentEventDefinition, HTMLElementProxy} from "../../../lib/node-reference-types";
-import {JayComponentEventHandler} from "../../../lib/element-types";
+import {ComponentCreationOptions, JayComponentEventHandler} from "../../../lib/element-types";
 
 export interface ItemVS {
     text: string,
@@ -46,7 +46,7 @@ function mkComponentEventHandler<EventType, PropsType>() {
     return register;
 }
 
-export function Item(props: ItemProps): ItemComponent {
+export function Item(props: ItemProps, options: ComponentCreationOptions): ItemComponent {
     let done = false;
     let text = props.text;
     let jayElement = renderItem({text, done, dataId: props.dataId});
@@ -59,7 +59,7 @@ export function Item(props: ItemProps): ItemComponent {
 
     jayElement.refs.remove.onclick(() => {
         if (onremove.handler)
-            onremove.handler(`item ${text} - ${done} is removed`, {dataId: props.dataId, text: props.text}, '');
+            onremove.handler(`item ${text} - ${done} is removed`, {dataId: props.dataId, text: props.text}, options.parentCoordinate);
     })
 
     let itemInstance: ItemComponent = {

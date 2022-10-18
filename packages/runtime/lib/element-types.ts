@@ -31,4 +31,7 @@ export interface JayComponent<Props, ViewState, jayElement extends BaseJayElemen
   addEventListener: (type: string, handler: JayComponentEventHandler<any, ViewState>) => void
   removeEventListener: (type: string, handler: JayComponentEventHandler<any, ViewState>) => void
 }
-
+export interface ComponentCreationOptions {
+  parentCoordinate?: string
+}
+export type JayComponentConstructor<Props> = (props: Props, options?: ComponentCreationOptions) => JayComponent<Props, any, any>
