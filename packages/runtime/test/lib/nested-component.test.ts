@@ -6,7 +6,7 @@ import {
     JayElement, childComp, forEach, conditional
 } from "../../lib/index";
 import '../../lib/element-test-types';
-import {Item, ItemData} from "./comps/item";
+import {Item, ItemProps} from "./comps/item";
 import {ComponentProxy} from "../../lib/node-reference-types";
 
 describe('nested components', () => {
@@ -28,7 +28,7 @@ describe('nested components', () => {
 
             return ConstructContext.withRootContext(viewState, () =>
                 e('div', {}, [
-                    childComp((props: ItemData) => Item(props), vs => ({text: vs.staticItem, dataId: 'AAA'}), 'static'),
+                    childComp((props: ItemProps) => Item(props), vs => ({text: vs.staticItem, dataId: 'AAA'}), 'static'),
                     // conditional(vs => vs.condition,
                     //     childComp((props: ItemData) => Item(props), vs => ({text: vs.staticItem, dataId: 'condition'}), 'static')),
                     // forEach(vs => vs.items, item => childComp((props: ItemData) => Item(props), vs => ({text: vs.staticItem, dataId: 'condition'}), 'static')
@@ -93,7 +93,7 @@ describe('nested components', () => {
             return ConstructContext.withRootContext(viewState, () =>
                 de('div', {}, [
                     conditional(vs => vs.condition,
-                        childComp((props: ItemData) => Item(props), vs => ({text: vs.staticItem, dataId: 'condition'}), 'conditional'))
+                        childComp((props: ItemProps) => Item(props), vs => ({text: vs.staticItem, dataId: 'condition'}), 'conditional'))
                     // forEach(vs => vs.items, item => childComp((props: ItemData) => Item(props), vs => ({text: vs.staticItem, dataId: 'condition'}), 'static')
                 ])
             ) as TestElement;
@@ -132,7 +132,7 @@ describe('nested components', () => {
                 de('div', {}, [
                     forEach(vs => vs.items,
                         item => childComp(
-                            (props: ItemData) => Item(props),
+                            (props: ItemProps) => Item(props),
                             dataItem => ({text: dataItem.value, dataId: dataItem.id}), 'collection'),
                         'id')
                 ])

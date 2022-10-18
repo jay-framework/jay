@@ -1,9 +1,9 @@
-import {describe, expect, it, beforeEach} from '@jest/globals'
-import {ReferencesManager, ElementReference} from "../../lib/node-reference";
+import {beforeEach, describe, expect, it} from '@jest/globals'
+import {ElementReference, ReferencesManager, RefType} from "../../lib/node-reference";
 import {childComp, ConstructContext, element as e} from "../../lib/";
 import {JayElement} from "../../lib";
-import {ComponentProxy, HTMLElementCollectionProxy, HTMLElementProxy} from "../../lib/node-reference-types";
-import {Item, ItemComponent, ItemData} from "./comps/item";
+import {ComponentCollectionProxy, HTMLElementCollectionProxy, HTMLElementProxy} from "../../lib/node-reference-types";
+import {Item, ItemComponent, ItemProps, ItemVS} from "./comps/item";
 import '../../lib/element-test-types';
 
 const SOME_VALUE = 'some text in the element';
@@ -41,7 +41,7 @@ describe('ReferencesManager operations', () => {
             mockCallback = jest.fn(_ => undefined);
             mockCallback2 = jest.fn(_ => undefined);
             const ref = new ElementReference(jayElement1.dom, DATA_CONTEXT, COORDINATE);
-            referenceManager.addRef(id1, ref, true);
+            referenceManager.addStaticRef(id1, ref);
             jayRootElement = referenceManager.applyToElement(jayRootElement)
         })
 
@@ -84,9 +84,9 @@ describe('ReferencesManager operations', () => {
                 new ElementReference(je4.dom, DATA_CONTEXT_1, COORDINATE_22),
                 new ElementReference(je5.dom, DATA_CONTEXT_2, COORDINATE_23),
                 new ElementReference(je6.dom, DATA_CONTEXT_3, COORDINATE_24)];
-            referenceManager.addRef(id1, ref1, false);
-            referenceManager.addRef(id1, ref2, false);
-            ref_ids.forEach(_ => referenceManager.addRef(id2, _, false));
+            referenceManager.addDynamicRef(id1, ref1, RefType.HTMLElement);
+            referenceManager.addDynamicRef(id1, ref2, RefType.HTMLElement);
+            ref_ids.forEach(_ => referenceManager.addDynamicRef(id2, _, RefType.HTMLElement));
             jayRootElement = referenceManager.applyToElement(jayRootElement)
         })
 
@@ -116,7 +116,7 @@ describe('ReferencesManager operations', () => {
     describe('single referenced component', () => {
         interface RootElementViewState {}
         interface RootElementRefs {
-            id1: ComponentProxy<RootElementViewState, ItemComponent>
+            id1: ItemComponent
         }
 
         let jayComponent: ItemComponent,
@@ -126,52 +126,55 @@ describe('ReferencesManager operations', () => {
             jayComponent = Item({text: 'hello', dataId: 'A'})
             jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, () =>
               e('div', {}, [
-                  childComp((props: ItemData) => jayComponent = Item(props),
+                  childComp((props: ItemProps) => jayComponent = Item(props),
                     vs => ({text: 'hello', dataId: 'AAA'}), 'static')])) as JayElement<RootElementViewState, RootElementRefs>;
 
             referenceManager = new ReferencesManager();
             mockCallback = jest.fn(_ => undefined);
         })
 
-        it('should enrich root element with the ref and allow registering events using addEventListener', () => {
+        it('should allow using component APIs', () => {
             const ref = new ElementReference(jayComponent, DATA_CONTEXT, COORDINATE);
-            referenceManager.addRef(id1, ref);
+            referenceManager.addStaticRef(id1, ref);
 
             jayRootElement = referenceManager.applyToElement(jayRootElement)
 
-            jayRootElement.refs.id1.addEventListener('remove', mockCallback);
-            let button = jayComponent.element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
-            button.click();
-
-            expect(mockCallback.mock.calls.length).toBe(1);
-        })
-
-        it('should enrich root element with the ref and allow registering events using onremove', () => {
-            const ref = new ElementReference(jayComponent, DATA_CONTEXT, COORDINATE);
-            referenceManager.addRef(id1, ref);
-
-            jayRootElement = referenceManager.applyToElement(jayRootElement)
-
-            jayRootElement.refs.id1.onremove(mockCallback);
-            let button = jayComponent.element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
-            button.click();
-
-            expect(mockCallback.mock.calls.length).toBe(1);
-        })
-
-        it('should remove event using removeEventListener', () => {
-            const ref = new ElementReference(jayComponent, DATA_CONTEXT, COORDINATE);
-            referenceManager.addRef(id1, ref);
-
-            jayRootElement = referenceManager.applyToElement(jayRootElement)
-
-            jayRootElement.refs.id1.addEventListener('remove', mockCallback);
-            jayRootElement.refs.id1.removeEventListener('remove', mockCallback);
-            let button = jayComponent.element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
-            button.click();
-
-            expect(mockCallback.mock.calls.length).toBe(0);
+            let summary = jayRootElement.refs.id1.getItemSummary()
+            expect(summary).toBe('');
         })
 
     })
+
+    describe('dynamic list of referenced component', () => {
+        interface RootElementViewState {}
+        interface RootElementRefs {
+            id1: ComponentCollectionProxy<ItemVS, ItemComponent>
+        }
+
+        let jayComponent: ItemComponent,
+          jayRootElement: JayElement<RootElementViewState, RootElementRefs>,
+          referenceManager: ReferencesManager, mockCallback;
+        beforeEach(() => {
+            jayComponent = Item({text: 'hello', dataId: 'A'})
+            jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, () =>
+              e('div', {}, [
+                  childComp((props: ItemProps) => jayComponent = Item(props),
+                    vs => ({text: 'hello', dataId: 'AAA'}), 'static')])) as JayElement<RootElementViewState, RootElementRefs>;
+
+            referenceManager = new ReferencesManager();
+            mockCallback = jest.fn(_ => undefined);
+        })
+
+        it('should allow using component APIs', () => {
+            const ref = new ElementReference(jayComponent, DATA_CONTEXT, COORDINATE);
+            referenceManager.addStaticRef(id1, ref);
+
+            jayRootElement = referenceManager.applyToElement(jayRootElement)
+
+            let summaries = jayRootElement.refs.id1.map((comp, vs, coordinate) => comp,getItemSummary())
+            expect(summaries).toBe('');
+        })
+
+    })
+
 });

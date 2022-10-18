@@ -5,6 +5,7 @@ import {
 } from "../../../lib/element";
 import {JayComponent, JayElement} from "../../../lib";
 import {ComponentEventDefinition, HTMLElementProxy} from "../../../lib/node-reference-types";
+import {JayComponentEventHandler} from "../../../lib/element-types";
 
 export interface ItemVS {
     text: string,
@@ -26,29 +27,30 @@ function renderItem(viewState: ItemVS): ItemElement {
     ) as ItemElement;
 }
 
-export interface ItemData {
+export interface ItemProps {
     text: string,
     dataId: string
 }
 
 
-export interface ItemComponent extends JayComponent<ItemData, ItemVS, ItemElement> {
-    onremove: ComponentEventDefinition<string>
+export interface ItemComponent extends JayComponent<ItemProps, ItemVS, ItemElement> {
+    onremove: ComponentEventDefinition<string, ItemProps>
+    getItemSummary(): string
 }
 
-function mkComponentEventHandler<EventType>() {
-    let register: ComponentEventDefinition<EventType>;
-    register = function(handler: (event: EventType) => void) {
+function mkComponentEventHandler<EventType, PropsType>() {
+    let register: ComponentEventDefinition<EventType, PropsType>;
+    register = function(handler: JayComponentEventHandler<EventType, PropsType>) {
         register.handler = handler;
     }
     return register;
 }
 
-export function Item(props: ItemData): ItemComponent {
+export function Item(props: ItemProps): ItemComponent {
     let done = false;
     let text = props.text;
     let jayElement = renderItem({text, done, dataId: props.dataId});
-    let onremove = mkComponentEventHandler<string>();
+    let onremove = mkComponentEventHandler<string, ItemProps>();
 
     jayElement.refs.done.onclick(() => {
         done = !done;
@@ -57,7 +59,7 @@ export function Item(props: ItemData): ItemComponent {
 
     jayElement.refs.remove.onclick(() => {
         if (onremove.handler)
-            onremove.handler(null);
+            onremove.handler(`item ${text} - ${done} is removed`, {dataId: props.dataId, text: props.text}, '');
     })
 
     let itemInstance: ItemComponent = {
@@ -69,11 +71,12 @@ export function Item(props: ItemData): ItemComponent {
         mount: () => jayElement.mount(),
         unmount: () => jayElement.unmount(),
         onremove,
-        addEventListener: (type: string, handler: (event: any) => void, options?: boolean | AddEventListenerOptions) => {
+        getItemSummary: () => `item ${text} - ${done}`,
+        addEventListener: (type: string, handler: JayComponentEventHandler<any, any>, options?: boolean | AddEventListenerOptions) => {
             if (type === 'remove')
                 onremove(handler);
         },
-        removeEventListener: (type: string, handler: (event: any) => void, options?: EventListenerOptions | boolean) => {
+        removeEventListener: (type: string, handler: JayComponentEventHandler<any, any>, options?: EventListenerOptions | boolean) => {
             if (type === 'remove')
                 onremove(undefined);
         }
