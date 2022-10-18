@@ -127,7 +127,7 @@ describe('ReferencesManager events', () => {
             id2: HTMLElementProxy<ItemViewState, HTMLDivElement>
         }
 
-        let jayElement1, jayElement2, jayElement3,
+        let jayElement1, jayElement2, jayElement3, ref1, ref2, ref3,
           jayRootElement: JayElement<RootElementViewState, RootElementRefs>,
           referenceManager: ReferencesManager, mockCallback, mockCallback2;
 
@@ -139,12 +139,18 @@ describe('ReferencesManager events', () => {
             referenceManager = new ReferencesManager();
             mockCallback = jest.fn(_ => undefined);
             mockCallback2 = jest.fn(_ => undefined);
+
+            ref1 = new ElementReference(jayElement1.dom, DATA_CONTEXT, COORDINATE_11);
+            ref2 = new ElementReference(jayElement2.dom, DATA_CONTEXT, COORDINATE_12);
+            ref3 = new ElementReference(jayElement3.dom, DATA_CONTEXT, COORDINATE_21);
+            referenceManager.addDynamicRef(id1, ref1, RefType.HTMLElement);
+            referenceManager.addDynamicRef(id1, ref2, RefType.HTMLElement);
+            referenceManager.addDynamicRef(id2, ref3, RefType.HTMLElement);
+
         })
 
         describe('events using addEventListener', () => {
             it("should register events handlers on an element", () => {
-                const ref = new ElementReference(jayElement1.dom, DATA_CONTEXT, COORDINATE_11);
-                referenceManager.addDynamicRef(id1, ref, RefType.HTMLElement);
                 referenceManager.getRefCollection(id1).addEventListener('click', mockCallback);
 
                 jayElement1.dom.click();
@@ -153,8 +159,6 @@ describe('ReferencesManager events', () => {
             })
 
             it("should remove events handlers from an element", () => {
-                const ref = new ElementReference(jayElement1.dom, DATA_CONTEXT, COORDINATE_11);
-                referenceManager.addDynamicRef(id1, ref, RefType.HTMLElement);
                 referenceManager.getRefCollection(id1).addEventListener('click', mockCallback);
                 referenceManager.getRefCollection(id1).removeEventListener('click', mockCallback);
 
@@ -164,22 +168,18 @@ describe('ReferencesManager events', () => {
             })
 
             it("should enrich events with the data context", () => {
-                const ref = new ElementReference(jayElement1.dom, SOME_VALUE, COORDINATE_11);
-                referenceManager.addDynamicRef(id1, ref, RefType.HTMLElement);
                 referenceManager.getRefCollection(id1).addEventListener('click', mockCallback);
 
                 jayElement1.dom.click();
 
                 expect(mockCallback.mock.calls.length).toBe(1);
                 expect(mockCallback.mock.calls[0][0]).toBeInstanceOf(Event);
-                expect(mockCallback.mock.calls[0][1]).toBe(SOME_VALUE);
+                expect(mockCallback.mock.calls[0][1]).toBe(DATA_CONTEXT);
             })
 
             it("should enrich events with the updated data context", () => {
-                const ref = new ElementReference(jayElement1.dom, SOME_VALUE, COORDINATE_11);
-                referenceManager.addDynamicRef(id1, ref, RefType.HTMLElement);
                 referenceManager.getRefCollection(id1).addEventListener('click', mockCallback);
-                ref.update(ANOTHER_VALUE)
+                ref1.update(ANOTHER_VALUE)
 
                 jayElement1.dom.click();
 
@@ -189,12 +189,6 @@ describe('ReferencesManager events', () => {
             })
 
             it("should register events on all elements with the same ref id", () => {
-                const ref1 = new ElementReference(jayElement1.dom, DATA_CONTEXT, COORDINATE_11);
-                const ref2 = new ElementReference(jayElement2.dom, DATA_CONTEXT, COORDINATE_12);
-                const ref3 = new ElementReference(jayElement3.dom, DATA_CONTEXT, COORDINATE_21);
-                referenceManager.addDynamicRef(id1, ref1, RefType.HTMLElement);
-                referenceManager.addDynamicRef(id1, ref2, RefType.HTMLElement);
-                referenceManager.addDynamicRef(id2, ref3, RefType.HTMLElement);
                 referenceManager.getRefCollection(id1).addEventListener('click', mockCallback);
 
                 jayElement1.dom.click();
@@ -205,12 +199,6 @@ describe('ReferencesManager events', () => {
             })
 
             it("should enrich jay element with the refs", () => {
-                const ref1 = new ElementReference(jayElement1.dom, DATA_CONTEXT, COORDINATE_11);
-                const ref2 = new ElementReference(jayElement2.dom, DATA_CONTEXT, COORDINATE_12);
-                const ref3 = new ElementReference(jayElement3.dom, DATA_CONTEXT, COORDINATE_21);
-                referenceManager.addDynamicRef(id1, ref1, RefType.HTMLElement);
-                referenceManager.addDynamicRef(id1, ref2, RefType.HTMLElement);
-                referenceManager.addDynamicRef(id2, ref3, RefType.HTMLElement);
                 jayRootElement = referenceManager.applyToElement(jayRootElement)
 
                 jayRootElement.refs.id1.addEventListener('click', mockCallback);
@@ -224,12 +212,6 @@ describe('ReferencesManager events', () => {
 
         describe('regular events', () => {
             it("should support the regular event registration", () => {
-                const ref1 = new ElementReference(jayElement1.dom, DATA_CONTEXT, COORDINATE_11);
-                const ref2 = new ElementReference(jayElement2.dom, DATA_CONTEXT, COORDINATE_12);
-                const ref3 = new ElementReference(jayElement3.dom, DATA_CONTEXT, COORDINATE_21);
-                referenceManager.addDynamicRef(id1, ref1, RefType.HTMLElement);
-                referenceManager.addDynamicRef(id1, ref2, RefType.HTMLElement);
-                referenceManager.addDynamicRef(id2, ref3, RefType.HTMLElement);
                 jayRootElement = referenceManager.applyToElement(jayRootElement)
 
                 jayRootElement.refs.id1.onclick(mockCallback);
@@ -241,12 +223,6 @@ describe('ReferencesManager events', () => {
             })
 
             it("should support the regular event parameters", () => {
-                const ref1 = new ElementReference(jayElement1.dom, DATA_CONTEXT, COORDINATE_11);
-                const ref2 = new ElementReference(jayElement2.dom, DATA_CONTEXT, COORDINATE_12);
-                const ref3 = new ElementReference(jayElement3.dom, DATA_CONTEXT, COORDINATE_21);
-                referenceManager.addDynamicRef(id1, ref1, RefType.HTMLElement);
-                referenceManager.addDynamicRef(id1, ref2, RefType.HTMLElement);
-                referenceManager.addDynamicRef(id2, ref3, RefType.HTMLElement);
                 jayRootElement = referenceManager.applyToElement(jayRootElement)
 
                 jayRootElement.refs.id1.onclick(mockCallback);
@@ -263,12 +239,6 @@ describe('ReferencesManager events', () => {
 
         describe('native events', () => {
             it("should support the regular event registration", () => {
-                const ref1 = new ElementReference(jayElement1.dom, DATA_CONTEXT, COORDINATE_11);
-                const ref2 = new ElementReference(jayElement2.dom, DATA_CONTEXT, COORDINATE_12);
-                const ref3 = new ElementReference(jayElement3.dom, DATA_CONTEXT, COORDINATE_21);
-                referenceManager.addDynamicRef(id1, ref1, RefType.HTMLElement);
-                referenceManager.addDynamicRef(id1, ref2, RefType.HTMLElement);
-                referenceManager.addDynamicRef(id2, ref3, RefType.HTMLElement);
                 jayRootElement = referenceManager.applyToElement(jayRootElement)
 
                 jayRootElement.refs.id1.$onclick(mockCallback)
@@ -282,12 +252,6 @@ describe('ReferencesManager events', () => {
             })
 
             it("should support the regular event parameters", () => {
-                const ref1 = new ElementReference(jayElement1.dom, DATA_CONTEXT, COORDINATE_11);
-                const ref2 = new ElementReference(jayElement2.dom, DATA_CONTEXT, COORDINATE_12);
-                const ref3 = new ElementReference(jayElement3.dom, DATA_CONTEXT, COORDINATE_21);
-                referenceManager.addDynamicRef(id1, ref1, RefType.HTMLElement);
-                referenceManager.addDynamicRef(id1, ref2, RefType.HTMLElement);
-                referenceManager.addDynamicRef(id2, ref3, RefType.HTMLElement);
                 jayRootElement = referenceManager.applyToElement(jayRootElement)
 
                 mockCallback.mockReturnValueOnce(SOME_VALUE).mockReturnValueOnce(ANOTHER_VALUE)
@@ -335,13 +299,12 @@ describe('ReferencesManager events', () => {
 
             referenceManager = new ReferencesManager();
             mockCallback = jest.fn(_ => undefined);
-        })
-
-        it('should enrich root element with the ref and allow registering events using addEventListener', () => {
             referenceManager.addComponnetRef(id1, jayComponent);
 
             jayRootElement = referenceManager.applyToElement(jayRootElement)
+        })
 
+        it('should enrich root element with the ref and allow registering events using addEventListener', () => {
             jayRootElement.refs.id1.addEventListener('remove', mockCallback);
             let button = jayComponent.element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
             button.click();
@@ -350,10 +313,6 @@ describe('ReferencesManager events', () => {
         })
 
         it('should enrich root element with the ref and allow registering events using onremove', () => {
-            referenceManager.addComponnetRef(id1, jayComponent);
-
-            jayRootElement = referenceManager.applyToElement(jayRootElement)
-
             jayRootElement.refs.id1.onremove(mockCallback);
             let button = jayComponent.element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
             button.click();
@@ -362,10 +321,6 @@ describe('ReferencesManager events', () => {
         })
 
         it('event parameters', () => {
-            referenceManager.addComponnetRef(id1, jayComponent);
-
-            jayRootElement = referenceManager.applyToElement(jayRootElement)
-
             jayRootElement.refs.id1.onremove(mockCallback);
             let button = jayComponent.element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
             button.click();
@@ -377,10 +332,6 @@ describe('ReferencesManager events', () => {
         })
 
         it('should remove event using removeEventListener', () => {
-            referenceManager.addComponnetRef(id1, jayComponent);
-
-            jayRootElement = referenceManager.applyToElement(jayRootElement)
-
             jayRootElement.refs.id1.addEventListener('remove', mockCallback);
             jayRootElement.refs.id1.removeEventListener('remove', mockCallback);
             let button = jayComponent.element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
