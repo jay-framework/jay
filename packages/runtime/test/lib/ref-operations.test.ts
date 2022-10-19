@@ -38,8 +38,8 @@ describe('ReferencesManager operations', () => {
             jayElement1 = e('div', {}, [SOME_VALUE]);
             jayRootElement = e('div', {}, [jayElement1]) as JayElement<RootElementViewState, RootElementRefs>;
             referenceManager = new ReferencesManager();
-            mockCallback = jest.fn(_ => undefined);
-            mockCallback2 = jest.fn(_ => undefined);
+            mockCallback = jest.fn(() => undefined);
+            mockCallback2 = jest.fn(() => undefined);
             const ref = new ElementReference(jayElement1.dom, DATA_CONTEXT, COORDINATE);
             referenceManager.addStaticRef(id1, ref);
             jayRootElement = referenceManager.applyToElement(jayRootElement)
@@ -76,8 +76,8 @@ describe('ReferencesManager operations', () => {
             je6 = e('div', {}, [DATA_CONTEXT_3]);
             jayRootElement = e('div', {}, [je1, je2, je3]) as JayElement<RootElementViewState, RootElementRefs>;
             referenceManager = new ReferencesManager();
-            mockCallback = jest.fn(_ => undefined);
-            mockCallback2 = jest.fn(_ => undefined);
+            mockCallback = jest.fn(() => undefined);
+            mockCallback2 = jest.fn(() => undefined);
             const ref1 = new ElementReference(je1.dom, DATA_CONTEXT_1, COORDINATE_11);
             const ref2 = new ElementReference(je2.dom, DATA_CONTEXT_2, COORDINATE_12);
             const ref_ids = [new ElementReference(je3.dom, DATA_CONTEXT_3, COORDINATE_21),
@@ -123,24 +123,22 @@ describe('ReferencesManager operations', () => {
           jayRootElement: JayElement<RootElementViewState, RootElementRefs>,
           referenceManager: ReferencesManager, mockCallback;
         beforeEach(() => {
-            jayComponent = Item({text: 'hello', dataId: 'A'})
             jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, () =>
               e('div', {}, [
-                  childComp((props: ItemProps) => jayComponent = Item(props),
+                  childComp((props, options) => jayComponent = Item(props, options),
                     vs => ({text: 'hello', dataId: 'AAA'}), 'static')])) as JayElement<RootElementViewState, RootElementRefs>;
 
             referenceManager = new ReferencesManager();
-            mockCallback = jest.fn(_ => undefined);
+            mockCallback = jest.fn(() => undefined);
         })
 
         it('should allow using component APIs', () => {
-            const ref = new ElementReference(jayComponent, DATA_CONTEXT, COORDINATE);
-            referenceManager.addStaticRef(id1, ref);
+            referenceManager.addComponnetRef(id1, jayComponent);
 
             jayRootElement = referenceManager.applyToElement(jayRootElement)
 
             let summary = jayRootElement.refs.id1.getItemSummary()
-            expect(summary).toBe('');
+            expect(summary).toBe('item hello - false');
         })
 
     })
@@ -155,14 +153,13 @@ describe('ReferencesManager operations', () => {
           jayRootElement: JayElement<RootElementViewState, RootElementRefs>,
           referenceManager: ReferencesManager, mockCallback;
         beforeEach(() => {
-            jayComponent = Item({text: 'hello', dataId: 'A'})
             jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, () =>
               e('div', {}, [
-                  childComp((props: ItemProps) => jayComponent = Item(props),
+                  childComp((props, options) => jayComponent = Item(props, options),
                     vs => ({text: 'hello', dataId: 'AAA'}), 'static')])) as JayElement<RootElementViewState, RootElementRefs>;
 
             referenceManager = new ReferencesManager();
-            mockCallback = jest.fn(_ => undefined);
+            mockCallback = jest.fn(() => undefined);
         })
 
         it('should allow using component APIs', () => {

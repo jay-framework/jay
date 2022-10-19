@@ -34,8 +34,8 @@ describe('ReferencesManager events', () => {
             jayElement2 = e('div', {}, [SOME_VALUE]);
             jayRootElement = e('div', {}, [jayElement1, jayElement2]) as JayElement<RootElementViewState, RootElementRefs>;
             referenceManager = new ReferencesManager();
-            mockCallback = jest.fn(_ => undefined);
-            mockCallback2 = jest.fn(_ => undefined);
+            mockCallback = jest.fn(() => undefined);
+            mockCallback2 = jest.fn(() => undefined);
         })
 
         describe('register events using addEventListener', () => {
@@ -120,11 +120,9 @@ describe('ReferencesManager events', () => {
     describe('dynamic list of referenced elements', () => {
 
         interface RootElementViewState {}
-        interface ItemViewState {}
-
         interface RootElementRefs {
-            id1: HTMLElementProxy<ItemViewState, HTMLDivElement>
-            id2: HTMLElementProxy<ItemViewState, HTMLDivElement>
+            id1: HTMLElementProxy<RootElementViewState, HTMLDivElement>
+            id2: HTMLElementProxy<RootElementViewState, HTMLDivElement>
         }
 
         let jayElement1, jayElement2, jayElement3, ref1, ref2, ref3,
@@ -137,8 +135,8 @@ describe('ReferencesManager events', () => {
             jayElement3 = e('div', {}, [SOME_VALUE]);
             jayRootElement = e('div', {}, [jayElement1, jayElement2, jayElement3]) as JayElement<RootElementViewState, RootElementRefs>;
             referenceManager = new ReferencesManager();
-            mockCallback = jest.fn(_ => undefined);
-            mockCallback2 = jest.fn(_ => undefined);
+            mockCallback = jest.fn(() => undefined);
+            mockCallback2 = jest.fn(() => undefined);
 
             ref1 = new ElementReference(jayElement1.dom, DATA_CONTEXT, COORDINATE_11);
             ref2 = new ElementReference(jayElement2.dom, DATA_CONTEXT, COORDINATE_12);
@@ -298,7 +296,7 @@ describe('ReferencesManager events', () => {
                     vs => ITEM_PROPS, 'static')])) as JayElement<RootElementViewState, RootElementRefs>;
 
             referenceManager = new ReferencesManager();
-            mockCallback = jest.fn(_ => undefined);
+            mockCallback = jest.fn(() => undefined);
             referenceManager.addComponnetRef(id1, jayComponent);
 
             jayRootElement = referenceManager.applyToElement(jayRootElement)

@@ -21,7 +21,7 @@ interface RefCollection<ViewState, Element extends Referenced> extends Ref<ViewS
 }
 
 export class ReferencesManager {
-    private refs: Record<string, Ref<any, Referenced>> = {};
+    private refs: Record<string, Ref<any, HTMLElement>> = {};
     private compRefs: Record<string, JayComponent<any, any, any>> = {};
     private refCollections: Record<string, RefCollection<any, Referenced>> = {};
 
@@ -33,7 +33,7 @@ export class ReferencesManager {
         return this.refCollections[id];
     }
 
-    addStaticRef(id: string, ref: Ref<any, Referenced>) {
+    addStaticRef(id: string, ref: Ref<any, HTMLElement>) {
         this.refs[id] = ref;
     }
 
