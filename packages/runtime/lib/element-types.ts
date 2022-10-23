@@ -22,16 +22,18 @@ export interface JayElement<ViewState, Refs> extends BaseJayElement<ViewState> {
   refs: Refs
 }
 
-export type JayComponentEventHandler<EventType, PropsType> = (ev: EventType, props: PropsType, coordinate: string) => void
+interface JayEvent<EventType, ViewState> {
+  event: EventType,
+  viewState: ViewState,
+  coordinate: string
+}
+export type JayEventHandler<EventType, ViewState, Returns> = (event: JayEvent<EventType, ViewState>) => Returns
 export interface JayComponent<Props, ViewState, jayElement extends BaseJayElement<ViewState>> {
   // element: jayElement
   update: updateFunc<Props>
   mount: MountFunc,
   unmount: MountFunc,
-  addEventListener: (type: string, handler: JayComponentEventHandler<any, ViewState>) => void
-  removeEventListener: (type: string, handler: JayComponentEventHandler<any, ViewState>) => void
+  addEventListener: (type: string, handler: JayEventHandler<any, ViewState, void>) => void
+  removeEventListener: (type: string, handler: JayEventHandler<any, ViewState, void>) => void
 }
-export interface ComponentCreationOptions {
-  parentCoordinate?: string
-}
-export type JayComponentConstructor<Props> = (props: Props, options?: ComponentCreationOptions) => JayComponent<Props, any, any>
+export type JayComponentConstructor<Props> = (props: Props) => JayComponent<Props, any, any>

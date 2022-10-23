@@ -1,51 +1,40 @@
-import {BaseJayElement, JayElement} from "./element-types";
-import {
-    JayNativeEventHandler
-} from "./node-reference-types";
+import {BaseJayElement, JayElement, JayEventHandler, updateFunc} from "./element-types";
 import {JayComponent} from "../dist";
 
-export type Referenced = HTMLElement | JayComponent<any, any, any>;
-export enum RefType {
-    HTMLElement,
-    JayComponent
+type Ref<ViewState> = {
+    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void
+    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void
+    viewState: ViewState
+    coordinate: string
 }
 
-interface Ref<ViewState, Element extends Referenced> {
-    addEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void
-    removeEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void
-}
-
-interface RefCollection<ViewState, Element extends Referenced> extends Ref<ViewState, Element>{
-    addRef(ref: Ref<ViewState, Element>)
-    removeRef(ref: Ref<ViewState, Element>)
+interface RefCollection<ViewState>{
+    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void
+    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void
+    addRef(ref: Ref<ViewState>)
+    removeRef(ref: Ref<ViewState>)
 }
 
 export class ReferencesManager {
-    private refs: Record<string, Ref<any, HTMLElement>> = {};
+    private refs: Record<string, Ref<any>> = {};
     private compRefs: Record<string, JayComponent<any, any, any>> = {};
-    private refCollections: Record<string, RefCollection<any, Referenced>> = {};
+    private refCollections: Record<string, RefCollection<any>> = {};
 
-    getRefCollection(id: string, autoCreate: boolean = false, refType: RefType = RefType.HTMLElement): RefCollection<any, Referenced> {
+    getRefCollection(id: string, autoCreate: boolean = false): RefCollection<any> {
         if (!this.refCollections[id] && autoCreate)
-            this.refCollections[id] = (refType === RefType.HTMLElement)?
-              new HTMLElementRefCollectionOperations() :
-              new ComponentRefCollectionOperations();
+            this.refCollections[id] = new ReferenceCollection();
         return this.refCollections[id];
     }
 
-    addStaticRef(id: string, ref: Ref<any, HTMLElement>) {
+    addStaticRef(id: string, ref: Ref<any>) {
         this.refs[id] = ref;
     }
 
-    addComponnetRef(id: string, comp: JayComponent<any, any, any>) {
-        this.compRefs[id] = comp;
+    addDynamicRef(id: string, ref: Ref<any>) {
+        this.getRefCollection(id, true).addRef(ref);
     }
 
-    addDynamicRef(id: string, ref: Ref<any, Referenced>, refType: RefType) {
-        this.getRefCollection(id, true, refType).addRef(ref);
-    }
-
-    removeRef(id: string, ref: Ref<any, Referenced>) {
+    removeDynamicRef(id: string, ref: Ref<any>) {
         this.refCollections[id]?.removeRef(ref);
     }
 
@@ -64,21 +53,25 @@ const proxyHandler = {
     get: function(target, prop, receiver) {
         if (typeof prop === 'string') {
             if (prop.indexOf("on") === 0) {
-                let event = prop.substring(2);
+                let eventName = prop.substring(2);
                 return (handler) => {
-                    target.addEventListener(event, (ev, dataContent, coordinate) => handler(dataContent, coordinate));
+                    console.log('proxy addEventListener', eventName)
+                    target.addEventListener(eventName, ({event, viewState, coordinate}) => {
+                        console.log('proxy invoke event', eventName)
+                        return handler({event, viewState, coordinate})
+                    });
                 }
             }
             if (prop.indexOf("$on") === 0) {
-                let event = prop.substring(3);
+                let eventName = prop.substring(3);
                 return (nativeHandler) => {
                     let regularHandler;
-                    const handler = (ev, dataContent, coordinate) => {
-                        const eventData = nativeHandler(ev, dataContent, coordinate);
+                    const handler = ({event, viewState, coordinate}) => {
+                        const returnedEvent = nativeHandler({event, viewState, coordinate});
                         if (regularHandler)
-                            regularHandler(eventData, dataContent, coordinate);
+                            regularHandler({event: returnedEvent, viewState, coordinate});
                     }
-                    target.addEventListener(event, handler);
+                    target.addEventListener(eventName, handler);
                     return {
                         then: (handler) => {
                             regularHandler = handler;
@@ -90,84 +83,93 @@ const proxyHandler = {
         return target[prop];
     }
 }
-export function newReferenceProxy<ViewState, ElementType extends Referenced>(ref) {
-    return new Proxy(ref, proxyHandler) as Ref<ViewState, ElementType>;
+export function newReferenceProxy<ViewState>(ref) {
+    return new Proxy(ref, proxyHandler);
 }
 
-class ReferenceCollection<ViewState, Element extends Referenced> implements RefCollection<ViewState, Element>{
-    protected elements: Set<ElementReference<ViewState, Element>> = new Set();
+class ReferenceCollection<ViewState> implements RefCollection<ViewState>{
+    protected elements: Set<Ref<ViewState>> = new Set();
     private listeners = [];
 
-    addEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void {
+    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void {
         this.listeners.push({type, listener, options})
+        console.log('ReferenceCollection addEventListener', type)
         this.elements.forEach(ref =>
           ref.addEventListener(type, listener, options))
     }
 
-    addRef(ref: ElementReference<ViewState, Element>) {
+    addRef(ref: Ref<ViewState>) {
         this.elements.add(ref);
         this.listeners.forEach(listener =>
           ref.addEventListener(listener.type, listener.listener, listener.options))
     }
 
-    removeEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void {
+    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void {
         this.listeners = this.listeners.filter(item => item.type !== type || item.listener !== listener);
         this.elements.forEach(ref =>
           ref.removeEventListener(type, listener, options))
     }
 
-    removeRef(ref: ElementReference<ViewState, Element>) {
+    removeRef(ref: Ref<ViewState>) {
         this.elements.delete(ref);
         this.listeners.forEach(listener =>
           ref.removeEventListener(listener.type, listener.listener, listener.options))
     }
-}
 
-class HTMLElementRefCollectionOperations<ViewState, ElementType extends HTMLElement>
-  extends ReferenceCollection<ViewState, ElementType> {
-
-    $exec<ResultType>(handler: (element: ElementType, viewState: ViewState) => ResultType): Array<ResultType> {
-        return [...this.elements].map(ref => ref.$exec(handler));
+    map<ResultType>(handler: (referenced: Ref<ViewState>, viewState: ViewState, coordinate: string) => ResultType): Array<ResultType> {
+        return [...this.elements].map(ref => handler(ref, ref.viewState, ref.coordinate));
     }
 
     find(predicate: (viewState: ViewState) => boolean) {
-        for (let elemRef of this.elements)
-            if (elemRef.match(predicate))
-                return elemRef
+        for (let ref of this.elements)
+            if (predicate(ref.viewState))
+                return ref
     }
+
 }
 
-class ComponentRefCollectionOperations<ViewState, ElementType extends HTMLElement>
-  extends ReferenceCollection<ViewState, ElementType> {
-
-    map<ResultType>(handler: (element: Element, viewState: ViewState, coordinate: string) => ResultType): Array<ResultType> {
-        return [...this.elements].map(ref => ref.map(handler));
+export function ComponentRef<ViewState>(comp: JayComponent<any, any, any>, viewState: ViewState, coordinate: string): [Ref<ViewState>, updateFunc<ViewState>] {
+    let ref = new Proxy(comp, {
+        get: function(target, prop, receiver) {
+            if (typeof prop === 'string') {
+                if (prop === 'addEventListener') {
+                    return (eventName, handler) => {
+                        console.log('ComponentRef addEventListener', eventName)
+                        target.addEventListener(eventName, ({event}) => {
+                            console.log('ComponentRef invoke event', eventName)
+                            return handler({event, viewState, coordinate})
+                        });
+                    }
+                }
+            }
+            return target[prop];
+        }
+    }) as any as Ref<ViewState>;
+    let update = (vs: ViewState) => {
+        viewState = vs;
     }
-
-    find(predicate: (viewState: ViewState) => boolean) {
-        for (let elemRef of this.elements)
-            if (elemRef.match(predicate))
-                return elemRef
-    }
+    return [ref, update];
 }
 
-export class ElementReference<ViewState, Element extends Referenced> implements Ref<ViewState, Element>{
+export class HTMLElementRefImpl<ViewState> implements Ref<ViewState>{
     private listeners = [];
 
-    constructor(private readonly element: Element, private viewState: ViewState, private coordinate: string) {
+    constructor(private readonly element: HTMLElement, public viewState: ViewState, public coordinate: string) {
         this.element = element;
         this.viewState = viewState
     }
 
-    addEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void {
+    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void {
+        console.log('HTML Element addEventListener', type)
         let wrappedHandler = (event) => {
-            return listener(event, this.viewState, this.coordinate);
+            console.log('HTML Element invoke event', type)
+            return listener({event, viewState: this.viewState, coordinate: this.coordinate});
         }
         this.element.addEventListener(type, wrappedHandler, options)
         this.listeners.push({type, listener, wrappedHandler})
     }
 
-    removeEventListener<E extends Event>(type: string, listener: JayNativeEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void {
+    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void {
         let index = this.listeners.findIndex(item => item.type === type && item.listener === listener)
         if (index > -1) {
             let item = this.listeners[index];
@@ -176,14 +178,6 @@ export class ElementReference<ViewState, Element extends Referenced> implements 
         }
     }
 
-    map<ResultType>(handler: (element: Element, viewState: ViewState, coordinate: string) => ResultType): ResultType {
-        return handler(this.element, this.viewState, this.coordinate)
-    }
-
-    match(predicate: (t:ViewState) => boolean): boolean {
-        return predicate(this.viewState);
-    }
-    
     update = (newData: ViewState) => {
         this.viewState = newData;
     }

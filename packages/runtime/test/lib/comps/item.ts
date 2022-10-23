@@ -5,7 +5,7 @@ import {
 } from "../../../lib/element";
 import {JayComponent, JayElement} from "../../../lib";
 import {ComponentEventDefinition, HTMLElementProxy} from "../../../lib/node-reference-types";
-import {ComponentCreationOptions, JayComponentEventHandler} from "../../../lib/element-types";
+import {JayEventHandler} from "../../../lib/element-types";
 
 export interface ItemVS {
     text: string,
@@ -40,13 +40,13 @@ export interface ItemComponent extends JayComponent<ItemProps, ItemVS, ItemEleme
 
 function mkComponentEventHandler<EventType, PropsType>() {
     let register: ComponentEventDefinition<EventType, PropsType>;
-    register = function(handler: JayComponentEventHandler<EventType, PropsType>) {
+    register = function(handler: JayEventHandler<EventType, PropsType, void>) {
         register.handler = handler;
     }
     return register;
 }
 
-export function Item(props: ItemProps, options: ComponentCreationOptions): ItemComponent {
+export function Item(props: ItemProps): ItemComponent {
     let done = false;
     let text = props.text;
     let jayElement = renderItem({text, done, dataId: props.dataId});
@@ -58,8 +58,9 @@ export function Item(props: ItemProps, options: ComponentCreationOptions): ItemC
     })
 
     jayElement.refs.remove.onclick(() => {
+        console.log('item click')
         if (onremove.handler)
-            onremove.handler(`item ${text} - ${done} is removed`, {dataId: props.dataId, text: props.text}, options.parentCoordinate);
+            onremove.handler({event: `item ${text} - ${done} is removed`, viewState: undefined, coordinate: undefined});
     })
 
     let itemInstance: ItemComponent = {
@@ -72,11 +73,11 @@ export function Item(props: ItemProps, options: ComponentCreationOptions): ItemC
         unmount: () => jayElement.unmount(),
         onremove,
         getItemSummary: () => `item ${text} - ${done}`,
-        addEventListener: (type: string, handler: JayComponentEventHandler<any, any>, options?: boolean | AddEventListenerOptions) => {
+        addEventListener: (type: string, handler: JayEventHandler<any, any, any>, options?: boolean | AddEventListenerOptions) => {
             if (type === 'remove')
                 onremove(handler);
         },
-        removeEventListener: (type: string, handler: JayComponentEventHandler<any, any>, options?: EventListenerOptions | boolean) => {
+        removeEventListener: (type: string, handler: JayEventHandler<any, any, any>, options?: EventListenerOptions | boolean) => {
             if (type === 'remove')
                 onremove(undefined);
         }

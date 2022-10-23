@@ -1,9 +1,8 @@
-import {JayComponent, JayComponentEventHandler} from "./element-types";
+import {JayComponent, JayEventHandler} from "./element-types";
 
 /** new model **/
 /** DOM element references **/
 export type JeyEventHandler<ViewState> = (viewState: ViewState, coordinate: string) => void
-export type JayNativeEventHandler<NativeEvent, EventData, ViewState> = (ev: NativeEvent, viewState: ViewState, coordinate: string) => EventData
 type JayNativeFunction<ElementType extends HTMLElement, ViewState, Result> = (elem: ElementType, viewState: ViewState) => Result
 interface JayNativeEventBuilder<ViewState, EventData> {
   then(handler: (eventData: EventData, viewState: ViewState, coordinate: string) => void): void
@@ -12,27 +11,27 @@ interface JayNativeEventBuilder<ViewState, EventData> {
 export interface HTMLElementCollectionProxy<ViewState, ElementType extends HTMLElement> {
   addEventListener(type: string, handler: JeyEventHandler<ViewState>)
   removeEventListener(type: string, handler: JeyEventHandler<ViewState>)
-  onclick(handler: JeyEventHandler<ViewState>): void
-  $onclick<EventData>(handler: JayNativeEventHandler<MouseEvent, ViewState, EventData>): JayNativeEventBuilder<ViewState, EventData>
+  onclick(handler: JayEventHandler<void, ViewState, void>): void
+  $onclick<EventData>(handler: JayEventHandler<MouseEvent, ViewState, EventData>): JayNativeEventBuilder<ViewState, EventData>
 
   find(predicate: (t: ViewState) => boolean): HTMLElementProxy<ViewState, ElementType>
-  $exec<ResultType>(handler: JayNativeFunction<ElementType, ViewState, ResultType>): Array<ResultType>
+  map<ResultType>(handler: (element: HTMLElementProxy<ViewState, ElementType>, viewState: ViewState, coordinate: string) => ResultType): Array<ResultType>
 }
 
 export interface HTMLElementProxy<ViewState, ElementType extends HTMLElement> {
   addEventListener(type: string, handler: JeyEventHandler<ViewState>)
   removeEventListener(type: string, handler: JeyEventHandler<ViewState>)
-  onclick(handler: JeyEventHandler<ViewState>): void
-  $onclick<EventData>(handler: JayNativeEventHandler<MouseEvent, ViewState, EventData>): JayNativeEventBuilder<ViewState, EventData>
+  onclick(handler: JayEventHandler<void, ViewState, void>): void
+  $onclick<EventData>(handler: JayEventHandler<MouseEvent, ViewState, EventData>): JayNativeEventBuilder<ViewState, EventData>
 
   $exec<ResultType>(handler: JayNativeFunction<ElementType, ViewState, ResultType>): ResultType
 }
 
 /** Components references **/
 
-export interface ComponentEventDefinition<EventType, PropsType> {
-  (handler: JayComponentEventHandler<EventType, PropsType>)
-  handler?: JayComponentEventHandler<EventType, PropsType>
+export interface ComponentEventDefinition<EventType, ViewState> {
+  (handler: JayEventHandler<EventType, ViewState, void>)
+  handler?: JayEventHandler<EventType, ViewState, void>
 }
 
 type ComponentEventDefinitionKeys<T extends JayComponent<any, any, any>> = {
@@ -54,8 +53,8 @@ type EventsExportedByComponent<ViewState, ComponentType extends JayComponent<any
 }
 
 export interface ComponentCollectionProxyOperations<ViewState, ComponentType extends JayComponent<any, ViewState, any>> {
-  addEventListener(type: string, handler: JayComponentEventHandler<any, ViewState>)
-  removeEventListener(type: string, handler: JayComponentEventHandler<any, ViewState>)
+  addEventListener(type: string, handler: JayEventHandler<any, ViewState, void>)
+  removeEventListener(type: string, handler: JayEventHandler<any, ViewState, void>)
 
   map<ResultType>(handler: (comp: ComponentType, viewState: ViewState, coordinate: string) => ResultType): Array<ResultType>
   find(predicate: (t: ViewState) => boolean): ComponentType

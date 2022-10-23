@@ -1,5 +1,5 @@
 import {beforeEach, describe, expect, it} from '@jest/globals'
-import {ElementReference, ReferencesManager, RefType} from "../../lib/node-reference";
+import {HTMLElementRefImpl, ReferencesManager} from "../../lib/node-reference";
 import {childComp, ConstructContext, element as e} from "../../lib/";
 import {JayElement} from "../../lib";
 import {ComponentCollectionProxy, HTMLElementCollectionProxy, HTMLElementProxy} from "../../lib/node-reference-types";
@@ -40,7 +40,7 @@ describe('ReferencesManager operations', () => {
             referenceManager = new ReferencesManager();
             mockCallback = jest.fn(() => undefined);
             mockCallback2 = jest.fn(() => undefined);
-            const ref = new ElementReference(jayElement1.dom, DATA_CONTEXT, COORDINATE);
+            const ref = new HTMLElementRefImpl(jayElement1.dom, DATA_CONTEXT, COORDINATE);
             referenceManager.addStaticRef(id1, ref);
             jayRootElement = referenceManager.applyToElement(jayRootElement)
         })
@@ -78,21 +78,21 @@ describe('ReferencesManager operations', () => {
             referenceManager = new ReferencesManager();
             mockCallback = jest.fn(() => undefined);
             mockCallback2 = jest.fn(() => undefined);
-            const ref1 = new ElementReference(je1.dom, DATA_CONTEXT_1, COORDINATE_11);
-            const ref2 = new ElementReference(je2.dom, DATA_CONTEXT_2, COORDINATE_12);
-            const ref_ids = [new ElementReference(je3.dom, DATA_CONTEXT_3, COORDINATE_21),
-                new ElementReference(je4.dom, DATA_CONTEXT_1, COORDINATE_22),
-                new ElementReference(je5.dom, DATA_CONTEXT_2, COORDINATE_23),
-                new ElementReference(je6.dom, DATA_CONTEXT_3, COORDINATE_24)];
-            referenceManager.addDynamicRef(id1, ref1, RefType.HTMLElement);
-            referenceManager.addDynamicRef(id1, ref2, RefType.HTMLElement);
-            ref_ids.forEach(_ => referenceManager.addDynamicRef(id2, _, RefType.HTMLElement));
+            const ref1 = new HTMLElementRefImpl(je1.dom, DATA_CONTEXT_1, COORDINATE_11);
+            const ref2 = new HTMLElementRefImpl(je2.dom, DATA_CONTEXT_2, COORDINATE_12);
+            const ref_ids = [new HTMLElementRefImpl(je3.dom, DATA_CONTEXT_3, COORDINATE_21),
+                new HTMLElementRefImpl(je4.dom, DATA_CONTEXT_1, COORDINATE_22),
+                new HTMLElementRefImpl(je5.dom, DATA_CONTEXT_2, COORDINATE_23),
+                new HTMLElementRefImpl(je6.dom, DATA_CONTEXT_3, COORDINATE_24)];
+            referenceManager.addDynamicRef(id1, ref1);
+            referenceManager.addDynamicRef(id1, ref2);
+            ref_ids.forEach(_ => referenceManager.addDynamicRef(id2, _));
             jayRootElement = referenceManager.applyToElement(jayRootElement)
         })
 
-        it("$exec should run for each referenced element", () => {
+        it("map should run for each referenced element", () => {
             mockCallback.mockReturnValueOnce(SOME_VALUE).mockReturnValueOnce(ANOTHER_VALUE)
-            let execResult = jayRootElement.refs.id1.$exec(mockCallback)
+            let execResult = jayRootElement.refs.id1.map(mockCallback)
 
             expect(execResult.length).toBe(2);
             expect(execResult).toEqual([SOME_VALUE, ANOTHER_VALUE]);
@@ -125,7 +125,7 @@ describe('ReferencesManager operations', () => {
         beforeEach(() => {
             jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, () =>
               e('div', {}, [
-                  childComp((props, options) => jayComponent = Item(props, options),
+                  childComp((props: ItemProps, options) => jayComponent = Item(props, options),
                     vs => ({text: 'hello', dataId: 'AAA'}), 'static')])) as JayElement<RootElementViewState, RootElementRefs>;
 
             referenceManager = new ReferencesManager();
@@ -133,7 +133,7 @@ describe('ReferencesManager operations', () => {
         })
 
         it('should allow using component APIs', () => {
-            referenceManager.addComponnetRef(id1, jayComponent);
+            // referenceManager.addStaticRef(id1, jayComponent);
 
             jayRootElement = referenceManager.applyToElement(jayRootElement)
 
@@ -155,7 +155,7 @@ describe('ReferencesManager operations', () => {
         beforeEach(() => {
             jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, () =>
               e('div', {}, [
-                  childComp((props, options) => jayComponent = Item(props, options),
+                  childComp((props: ItemProps, options) => jayComponent = Item(props, options),
                     vs => ({text: 'hello', dataId: 'AAA'}), 'static')])) as JayElement<RootElementViewState, RootElementRefs>;
 
             referenceManager = new ReferencesManager();
@@ -163,12 +163,12 @@ describe('ReferencesManager operations', () => {
         })
 
         it('should allow using component APIs', () => {
-            const ref = new ElementReference(jayComponent, DATA_CONTEXT, COORDINATE);
-            referenceManager.addStaticRef(id1, ref);
+            // const ref = new HTMLElementRef(jayComponent, DATA_CONTEXT, COORDINATE);
+            // referenceManager.addStaticRef(id1, ref);
 
             jayRootElement = referenceManager.applyToElement(jayRootElement)
 
-            let summaries = jayRootElement.refs.id1.map((comp, vs, coordinate) => comp,getItemSummary())
+            let summaries = jayRootElement.refs.id1.map((comp, vs, coordinate) => comp.getItemSummary())
             expect(summaries).toBe('');
         })
 
