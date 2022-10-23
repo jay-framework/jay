@@ -55,11 +55,7 @@ const proxyHandler = {
             if (prop.indexOf("on") === 0) {
                 let eventName = prop.substring(2);
                 return (handler) => {
-                    console.log('proxy addEventListener', eventName)
-                    target.addEventListener(eventName, ({event, viewState, coordinate}) => {
-                        console.log('proxy invoke event', eventName)
-                        return handler({event, viewState, coordinate})
-                    });
+                    target.addEventListener(eventName, handler);
                 }
             }
             if (prop.indexOf("$on") === 0) {
@@ -93,7 +89,6 @@ class ReferenceCollection<ViewState> implements RefCollection<ViewState>{
 
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void {
         this.listeners.push({type, listener, options})
-        console.log('ReferenceCollection addEventListener', type)
         this.elements.forEach(ref =>
           ref.addEventListener(type, listener, options))
     }
@@ -134,9 +129,7 @@ export function ComponentRef<ViewState>(comp: JayComponent<any, any, any>, viewS
             if (typeof prop === 'string') {
                 if (prop === 'addEventListener') {
                     return (eventName, handler) => {
-                        console.log('ComponentRef addEventListener', eventName)
                         target.addEventListener(eventName, ({event}) => {
-                            console.log('ComponentRef invoke event', eventName)
                             return handler({event, viewState, coordinate})
                         });
                     }
@@ -160,9 +153,7 @@ export class HTMLElementRefImpl<ViewState> implements Ref<ViewState>{
     }
 
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void {
-        console.log('HTML Element addEventListener', type)
         let wrappedHandler = (event) => {
-            console.log('HTML Element invoke event', type)
             return listener({event, viewState: this.viewState, coordinate: this.coordinate});
         }
         this.element.addEventListener(type, wrappedHandler, options)

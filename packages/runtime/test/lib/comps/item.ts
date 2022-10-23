@@ -58,7 +58,6 @@ export function Item(props: ItemProps): ItemComponent {
     })
 
     jayElement.refs.remove.onclick(() => {
-        console.log('item click')
         if (onremove.handler)
             onremove.handler({event: `item ${text} - ${done} is removed`, viewState: undefined, coordinate: undefined});
     })
