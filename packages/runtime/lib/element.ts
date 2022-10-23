@@ -45,8 +45,7 @@ export function childComp<ParentT, Props, ChildT,
     getProps: (t: ParentT) => Props,
     refName?: string): BaseJayElement<ParentT> {
     let context = currentContext();
-    let coordinate = refName?context.coordinate(refName):undefined;
-    let childComp = compCreator(getProps(context.currData), {coordinate: coordinate})
+    let childComp = compCreator(getProps(context.currData))
     let updates: updateFunc<ParentT>[] = [(t: ParentT) => childComp.update(getProps(t))];
     let mounts: MountFunc[] = [childComp.mount]
     let unmounts: MountFunc[] = [childComp.unmount]
