@@ -12,7 +12,7 @@ export const noopMount: MountFunc = (): void => {
 }
 
 export interface BaseJayElement<ViewState> {
-  dom: HTMLElement,
+  // dom: HTMLElement,
   update: updateFunc<ViewState>
   mount: MountFunc,
   unmount: MountFunc
@@ -29,7 +29,7 @@ interface JayEvent<EventType, ViewState> {
 }
 export type JayEventHandler<EventType, ViewState, Returns> = (event: JayEvent<EventType, ViewState>) => Returns
 export interface JayComponent<Props, ViewState, jayElement extends BaseJayElement<ViewState>> {
-  // element: jayElement
+  element: jayElement
   update: updateFunc<Props>
   mount: MountFunc,
   unmount: MountFunc,

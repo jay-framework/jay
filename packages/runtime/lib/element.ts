@@ -14,6 +14,7 @@ import {
     noopUpdate,
     updateFunc
 } from "./element-types";
+import './element-test-types';
 
 const STYLE = 'style';
 const REF = 'ref';

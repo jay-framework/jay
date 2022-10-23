@@ -1,7 +1,7 @@
-import {BaseJayElement} from './element-types';
+import './element-types';
 
 declare module './element-types' {
-  export interface JayComponent<Props, ViewState, jayElement extends BaseJayElement<ViewState>> {
-    element: jayElement
+  export interface BaseJayElement<ViewState> {
+    dom: HTMLElement
   }
 }
