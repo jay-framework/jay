@@ -8,7 +8,7 @@ import {describe, expect, it} from '@jest/globals'
 import {expectE} from "./test-utils";
 import { mutableObject } from 'jay-reactive';
 import {JayElement} from "../../lib";
-import {HTMLElementProxy} from "../../lib/node-reference-types";
+import {HTMLElementCollectionProxy, HTMLElementProxy} from "../../lib/node-reference-types";
 
 const item1 = {name: 'name 1', id: 'id-1'};
 const item2 = {name: 'name 2', id: 'id-2'};
@@ -183,7 +183,7 @@ describe('collection-element', () => {
 
     describe('references and events', () => {
         interface TodoListRefs {
-            done: HTMLElementProxy<Item, HTMLButtonElement>
+            done: HTMLElementCollectionProxy<Item, HTMLButtonElement>
         }
         interface TodoListElement extends JayElement<ViewState, TodoListRefs> {}
         
@@ -208,7 +208,7 @@ describe('collection-element', () => {
         it('should have dynamic reference to the 3 done buttons', () => {
             let todoListElement = makeElement({items: [item1, item2, item3]});
             let count = 0;
-            todoListElement.refs.done.forEach(el => count += 1)
+            todoListElement.refs.done.map(el => count += 1)
             expect(count).toBe(3);
         })
 
@@ -216,9 +216,9 @@ describe('collection-element', () => {
             let todoListElement = makeElement({items: [item1, item2, item3]});
             let eventCount = 0;
             let savedItem = undefined;
-            todoListElement.refs.done.onclick((item) => {
+            todoListElement.refs.done.onclick((event) => {
                 eventCount += 1;
-                savedItem = item;
+                savedItem = event.viewState;
             })
             todoListElement.refs.done
               .find(item => item === item2)
@@ -234,20 +234,20 @@ describe('collection-element', () => {
             todoListElement.refs.done
               .find(item => item === item2)
               .$exec(el => el.click())
-            expect(fn.mock.calls[0][0]).toBe(item2)
-            expect(fn.mock.calls[0][1]).toBe('id-2/done');
+            expect(fn.mock.calls[0][0].viewState).toBe(item2)
+            expect(fn.mock.calls[0][0].coordinate).toBe('id-2/done');
         })
 
         it('should remove a todo item on click on the done button', () => {
             let todoListElement = makeElement({items: [item1, item2, item3]});
-            todoListElement.refs.done.onclick((ev, item) => {
+            todoListElement.refs.done.onclick((event) => {
                 todoListElement.update({items: [item1, item3]})
             })
             todoListElement.refs.done
               .find(item => item === item2)
               .$exec(el => el.click())
             let count = 0;
-            todoListElement.refs.done.forEach(el => count += 1)
+            todoListElement.refs.done.map(el => count += 1)
             expect(count).toBe(2);
         })
 
@@ -255,7 +255,7 @@ describe('collection-element', () => {
             let todoListElement = makeElement({items: [item1, item2, item3]});
             todoListElement.update({items: [item1, item3, item2, item4]});
             let count = 0;
-            todoListElement.refs.done.forEach(el => count += 1)
+            todoListElement.refs.done.map(el => count += 1)
             expect(count).toBe(4);
         })
     })
