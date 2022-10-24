@@ -1,15 +1,15 @@
 import {ConstructContext, dynamicText as dt, element as e} from "../../../lib/element";
-import {JayComponent, JayElement} from "../../../lib/element-types";
-import {Reference} from "../../../lib/node-reference-types";
+import {JayComponent, JayElement, JayEventHandler} from "../../../lib/element-types";
+import {HTMLElementProxy} from "../../../lib/node-reference-types";
 
 interface ViewState {
     count: number
 }
 
 interface CounterRefs {
-    inc: Reference<ViewState, HTMLElement>,
-    dec: Reference<ViewState, HTMLElement>,
-    count: Reference<ViewState, HTMLElement>
+    inc: HTMLElementProxy<ViewState, HTMLElement>,
+    dec: HTMLElementProxy<ViewState, HTMLElement>,
+    count: HTMLElementProxy<ViewState, HTMLElement>
 }
 
 interface CounterElement extends JayElement<ViewState, CounterRefs> {}
@@ -37,14 +37,14 @@ export function Counter(initialValue: number): CounterComponent {
     let count = initialValue;
     let onChangeHandler: (viewState: ViewState, coordinate: string) => void;
 
-    jayElement.refs.inc.onclick((viewState, coordinate) => {
+    jayElement.refs.inc.onclick(({viewState, coordinate}) => {
         count += 1;
         jayElement.update({count});
         if (onChangeHandler)
             onChangeHandler({count}, coordinate)
     })
 
-    jayElement.refs.dec.onclick((viewState, coordinate) => {
+    jayElement.refs.dec.onclick(({viewState, coordinate}) => {
         count -= 1;
         jayElement.update({count});
         if (onChangeHandler)
@@ -59,8 +59,8 @@ export function Counter(initialValue: number): CounterComponent {
         },
         mount: () => jayElement.mount(),
         unmount: () => jayElement.unmount(),
-        addEventListener: (type: string, handler: (event: any) => void, options?: boolean | AddEventListenerOptions) => void {},
-        removeEventListener: (type: string, handler: (event: any) => void, options?: EventListenerOptions | boolean) => void {},
+        addEventListener: (type: string, handler: JayEventHandler<any, any, any>, options?: boolean | AddEventListenerOptions) => {},
+        removeEventListener: (type: string, handler: JayEventHandler<any, any, any>, options?: EventListenerOptions | boolean) => {},
         onChange: (handler => onChangeHandler = handler)
     }
 }

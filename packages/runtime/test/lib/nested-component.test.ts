@@ -6,8 +6,8 @@ import {
     JayElement, childComp, forEach, conditional
 } from "../../lib/index";
 import '../../lib/element-test-types';
-import {Item, ItemProps} from "./comps/item";
-import {ComponentProxy} from "../../lib/node-reference-types";
+import {Item, ItemComponent, ItemProps} from "./comps/item";
+import {ComponentCollectionProxy} from "../../lib/node-reference-types";
 
 describe('nested components', () => {
     describe('single nested component', () => {
@@ -17,9 +17,7 @@ describe('nested components', () => {
         }
 
         interface TestRefs {
-            staticComponent: ReturnType<typeof Item>,
-            ifComponent: ComponentProxy<ViewState, ReturnType<typeof Item>>,
-            forEachOfComponent: ComponentProxy<ViewState, ReturnType<typeof Item>>
+            staticComponent: ItemComponent,
         }
 
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
@@ -28,10 +26,7 @@ describe('nested components', () => {
 
             return ConstructContext.withRootContext(viewState, () =>
                 e('div', {}, [
-                    childComp((props: ItemProps) => Item(props), vs => ({text: vs.staticItem, dataId: 'AAA'}), 'static'),
-                    // conditional(vs => vs.condition,
-                    //     childComp((props: ItemData) => Item(props), vs => ({text: vs.staticItem, dataId: 'condition'}), 'static')),
-                    // forEach(vs => vs.items, item => childComp((props: ItemData) => Item(props), vs => ({text: vs.staticItem, dataId: 'condition'}), 'static')
+                    childComp((props: ItemProps) => Item(props), vs => ({text: vs.staticItem, dataId: 'AAA'}), 'staticComponent')
                 ])
             ) as TestElement;
         }
@@ -83,7 +78,7 @@ describe('nested components', () => {
         }
 
         interface TestRefs {
-            conditional: ComponentProxy<ViewState, ReturnType<typeof Item>>,
+            conditional: ItemComponent,
         }
 
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
@@ -94,19 +89,17 @@ describe('nested components', () => {
                 de('div', {}, [
                     conditional(vs => vs.condition,
                         childComp((props: ItemProps) => Item(props), vs => ({text: vs.staticItem, dataId: 'condition'}), 'conditional'))
-                    // forEach(vs => vs.items, item => childComp((props: ItemData) => Item(props), vs => ({text: vs.staticItem, dataId: 'condition'}), 'static')
                 ])
             ) as TestElement;
         }
 
-        it("have a reference to a nested component", () => {
+        it("have a reference to a nested conditional component", () => {
             let composite = renderComposite({
                 staticItem: 'hello world',
                 condition: true
             });
             // validate we actually have a reference to the nested component by finding the data id on the nested component dom
-            composite.refs.conditional.forEach(comp =>
-                expect(comp.element.dom.attributes['data-id'].value).toBe('condition'));
+            expect(composite.refs.conditional.element.dom.attributes['data-id'].value).toBe('condition');
         });
 
     });
@@ -121,7 +114,7 @@ describe('nested components', () => {
         }
 
         interface TestRefs {
-            forEachOfComponents: ComponentProxy<DataItem, ReturnType<typeof Item>>
+            forEachOfComponents: ComponentCollectionProxy<DataItem, ItemComponent>
         }
 
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
@@ -133,7 +126,7 @@ describe('nested components', () => {
                     forEach(vs => vs.items,
                         item => childComp(
                             (props: ItemProps) => Item(props),
-                            dataItem => ({text: dataItem.value, dataId: dataItem.id}), 'collection'),
+                            dataItem => ({text: dataItem.value, dataId: dataItem.id}), 'forEachOfComponents'),
                         'id')
                 ])
             ) as TestElement;
@@ -189,7 +182,11 @@ describe('nested components', () => {
             removeButton.click();
 
             expect(fn.mock.calls.length).toBe(1);
-            expect(fn.mock.calls[0][0]).toBe(viewState.items[0]);
+            expect(fn.mock.calls[0][0]).toEqual({
+                event: 'item eleven - false is removed',
+                coordinate: "A/forEachOfComponents",
+                viewState: viewState.items[0]
+            });
         });
     });
 });

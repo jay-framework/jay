@@ -3,7 +3,7 @@ import {HTMLElementRefImpl, ReferencesManager} from "../../lib/node-reference";
 import {childComp, ConstructContext, dynamicElement as de, element as e, forEach} from "../../lib/";
 import {JayElement} from "../../lib";
 import {ComponentCollectionProxy, HTMLElementCollectionProxy, HTMLElementProxy} from "../../lib/node-reference-types";
-import {Item, ItemComponent, ItemProps, ItemVS} from "./comps/item";
+import {Item, ItemComponent, ItemProps} from "./comps/item";
 import '../../lib/element-test-types';
 
 const SOME_VALUE = 'some text in the element';
@@ -128,14 +128,6 @@ describe('ReferencesManager operations', () => {
     })
 
     describe('dynamic list of referenced component', () => {
-        interface RootElementViewState {}
-        interface RootElementRefs {
-            id1: ComponentCollectionProxy<ItemVS, ItemComponent>
-        }
-
-        let jayComponents: ItemComponent[],
-          jayRootElement: JayElement<RootElementViewState, RootElementRefs>,
-          mockCallback;
         const viewState = {
             items: [
                 {id: '1', props: ITEM_PROPS},
@@ -143,28 +135,46 @@ describe('ReferencesManager operations', () => {
                 {id: '3', props: ITEM_PROPS_3}
             ]
         }
+
+        interface RootElementViewState {}
+        interface RootElementRefs {
+            id1: ComponentCollectionProxy<typeof viewState.items[0], ItemComponent>
+        }
+
+        let jayRootElement: JayElement<RootElementViewState, RootElementRefs>,
+          mockCallback;
         beforeEach(() => {
-            jayComponents = [];
             jayRootElement = ConstructContext.withRootContext(viewState, () =>
               de('div', {}, [
                   forEach((vs: typeof viewState) => vs.items,
                     (item) =>
-                      childComp((props) => {
-                          let comp = Item(props as ItemProps);
-                          jayComponents.push(comp)
-                          return comp;
-                      }, vs => vs.props, id1),
+                      childComp((props) => Item(props as ItemProps), vs => vs.props, id1),
                     'id')
               ])) as JayElement<RootElementViewState, RootElementRefs>;
 
             mockCallback = jest.fn();
         })
 
-        it('should allow using component APIs', () => {
+        it('map should allow using component APIs and return array of callback return values', () => {
             let summaries = jayRootElement.refs.id1.map((comp, vs, coordinate) => comp.getItemSummary())
             expect(summaries).toEqual(["item hello - false", "item hi - false", "item hey there - false"]);
         })
 
+        it('map should provide viewState and coordinate', () => {
+            let viewStates = []
+            let coordinates = []
+            jayRootElement.refs.id1.map((comp, vs, coordinate) => {
+                viewStates.push(vs);
+                coordinates.push(coordinate)
+            })
+            expect(viewStates).toEqual(viewState.items);
+            expect(coordinates).toEqual(["1/id1", "2/id1", "3/id1"]);
+        })
+
+        it('should find elements based on viewState', () => {
+            let foundComp = jayRootElement.refs.id1.find((vs) => vs.id === viewState.items[1].id)
+            expect(foundComp.getItemSummary()).toEqual("item hi - false");
+        })
     })
 
 });

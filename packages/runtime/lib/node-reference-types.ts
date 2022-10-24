@@ -60,6 +60,6 @@ export interface ComponentCollectionProxyOperations<ViewState, ComponentType ext
   find(predicate: (t: ViewState) => boolean): ComponentType
 }
 
-export type ComponentCollectionProxy<ViewState, ComponentType extends JayComponent<any, ViewState, any>> =
+export type ComponentCollectionProxy<ViewState, ComponentType extends JayComponent<any, any, any>> =
   ComponentCollectionProxyOperations<ViewState, ComponentType> &
   EventsExportedByComponent<ViewState, ComponentType>

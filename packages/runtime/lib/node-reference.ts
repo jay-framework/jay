@@ -134,6 +134,10 @@ export function ComponentRef<ViewState>(comp: JayComponent<any, any, any>, viewS
                         });
                     }
                 }
+                if (prop === 'viewState')
+                    return viewState
+                if (prop === 'coordinate')
+                    return coordinate
             }
             return target[prop];
         }

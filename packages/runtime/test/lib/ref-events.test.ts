@@ -2,8 +2,8 @@ import {beforeEach, describe, expect, it} from '@jest/globals'
 import {HTMLElementRefImpl, ReferencesManager} from "../../lib/node-reference";
 import {childComp, ConstructContext, dynamicElement as de, element as e, forEach} from "../../lib/";
 import {JayElement} from "../../lib";
-import {HTMLElementProxy} from "../../lib/node-reference-types";
-import {Item, ItemComponent, ItemProps} from "./comps/item";
+import {ComponentCollectionProxy, HTMLElementProxy} from "../../lib/node-reference-types";
+import {Item, ItemComponent, ItemProps, ItemVS} from "./comps/item";
 import '../../lib/element-test-types';
 
 const SOME_VALUE = 'some text in the element';
@@ -337,7 +337,7 @@ describe('ReferencesManager events', () => {
     describe('dynamic list of referenced components', () => {
         interface RootElementViewState {}
         interface RootElementRefs {
-            id1: ItemComponent
+            id1: ComponentCollectionProxy<ItemVS, ItemComponent>
         }
 
         let jayComponents: ItemComponent[],
