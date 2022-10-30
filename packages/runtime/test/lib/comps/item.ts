@@ -4,7 +4,7 @@ import {
     dynamicText as dt
 } from "../../../lib/element";
 import {JayComponent, JayElement} from "../../../lib";
-import {ComponentCollectionProxy, ComponentEventDefinition, HTMLElementProxy} from "../../../lib/node-reference-types";
+import {ComponentCollectionProxy, EventEmitter, HTMLElementProxy} from "../../../lib/node-reference-types";
 import {JayEventHandler} from "../../../lib/element-types";
 
 export interface ItemVS {
@@ -34,17 +34,17 @@ export interface ItemProps {
 
 
 export interface ItemComponent extends JayComponent<ItemProps, ItemVS, ItemElement> {
-    onremove: ComponentEventDefinition<string, ItemProps>
+    onremove: EventEmitter<string, ItemProps>
     getItemSummary(): string
 }
 
-function mkComponentEventHandler<EventType, PropsType>() {
-    let eventDefinition: ComponentEventDefinition<EventType, PropsType>;
+function mkComponentEventHandler<EventType, PropsType>(): EventEmitter<EventType, PropsType> {
+    let eventDefinition: EventEmitter<EventType, PropsType>;
     let _handler: JayEventHandler<EventType, PropsType, void>;
     eventDefinition = function(handler: JayEventHandler<EventType, PropsType, void>) {
         _handler = handler
-    } as ComponentEventDefinition<EventType, PropsType>
-    eventDefinition.invoke = (event: EventType) => _handler && _handler({event, viewState: undefined, coordinate: undefined});
+    } as EventEmitter<EventType, PropsType>
+    eventDefinition.emit = (event: EventType) => _handler && _handler({event, viewState: undefined, coordinate: undefined});
     return eventDefinition;
 }
 
@@ -60,7 +60,7 @@ export function Item(props: ItemProps): ItemComponent {
     })
 
     jayElement.refs.remove.onclick(() => {
-        onremove.invoke(`item ${text} - ${done} is removed`);
+        onremove.emit(`item ${text} - ${done} is removed`);
     })
 
     let itemInstance: ItemComponent = {
@@ -88,5 +88,5 @@ export function Item(props: ItemProps): ItemComponent {
 }
 
 export interface ItemComponentCollection<ItemVS> extends ComponentCollectionProxy<ItemVS, ItemComponent> {
-    onremove: ComponentEventDefinition<string, ItemVS>
+    onremove: EventEmitter<string, ItemVS>
 }

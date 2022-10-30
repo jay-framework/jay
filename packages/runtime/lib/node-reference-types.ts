@@ -29,9 +29,9 @@ export interface HTMLElementProxy<ViewState, ElementType extends HTMLElement> {
 
 /** Components references **/
 
-export interface ComponentEventDefinition<EventType, ViewState> {
+export interface EventEmitter<EventType, ViewState> {
   (handler: JayEventHandler<EventType, ViewState, void>): void
-  invoke(event: EventType): void
+  emit(event: EventType): void
 }
 
 export interface ComponentCollectionProxyOperations<ViewState, ComponentType extends JayComponent<any, ViewState, any>> {
