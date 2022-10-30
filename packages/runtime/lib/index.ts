@@ -9,4 +9,3 @@ export {noopMount} from "./element-types";
 export {noopUpdate} from "./element-types";
 export {MountFunc} from "./element-types";
 export {updateFunc} from "./element-types";
-export {DynamicReference} from "./node-reference-types";

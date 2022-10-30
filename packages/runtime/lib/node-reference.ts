@@ -20,6 +20,10 @@ export class ReferencesManager {
     private compRefs: Record<string, JayComponent<any, any, any>> = {};
     private refCollections: Record<string, RefCollection<any>> = {};
 
+    constructor(dynamicRefs?: Array<string>) {
+        dynamicRefs?.forEach(id => this.refCollections[id] = new ReferenceCollection())
+    }
+
     getRefCollection(id: string, autoCreate: boolean = false): RefCollection<any> {
         if (!this.refCollections[id] && autoCreate)
             this.refCollections[id] = new ReferenceCollection();

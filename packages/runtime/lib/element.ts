@@ -241,9 +241,9 @@ export class ConstructContext<A extends Array<any>> {
     data: A
     forStaticElements: boolean
 
-    constructor(data: A, dm?: ReferencesManager, forStaticElements: boolean = true) {
+    constructor(data: A, dm?: ReferencesManager, forStaticElements: boolean = true, dynamicRefs: Array<string> = []) {
         this.data = data;
-        this.refManager = dm?dm:new ReferencesManager();
+        this.refManager = dm?dm:new ReferencesManager(dynamicRefs);
         this.forStaticElements = forStaticElements;
     }
 
@@ -271,8 +271,8 @@ export class ConstructContext<A extends Array<any>> {
         return new ConstructContext([t])
     }
 
-    static withRootContext<T, Refs>(t: T, elementConstructor: () => BaseJayElement<T>): JayElement<T, Refs> {
-        let context = new ConstructContext([t])
+    static withRootContext<T, Refs>(t: T, elementConstructor: () => BaseJayElement<T>, dynamicRefs?: Array<string>): JayElement<T, Refs> {
+        let context = new ConstructContext([t], undefined,true, dynamicRefs)
         let element = constructionContextStack.doWithContext(context, () =>
             wrapWithModifiedCheck(currentContext().currData, elementConstructor()))
         element.mount();

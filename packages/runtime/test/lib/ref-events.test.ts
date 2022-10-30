@@ -279,6 +279,38 @@ describe('ReferencesManager events', () => {
                 expect(mockCallback2.mock.calls[1][0].coordinate).toBe(COORDINATE_12);
             })
         })
+
+        describe('empty list of elements', () => {
+            interface ViewState {
+                items: Array<string>
+            }
+            const EMPTY_VS = {items: []}
+            const FULL_VS = {items: ["one", "two", "three"]}
+            interface RootElementRefs {
+                id1: HTMLElementProxy<RootElementViewState, HTMLDivElement>
+            }
+            function constructElement(viewState: ViewState): JayElement<ViewState, RootElementRefs> {
+                return ConstructContext.withRootContext(viewState, () =>
+                  de('div', {}, [
+                      forEach((vs: typeof viewState) => vs.items,
+                        (item) =>
+                          e('div', {ref: id1, "data-id": item}, [item]),
+                        'id')
+                  ]), [id1]);
+            }
+
+            it('should enrich root element with the ref and allow registering events on element (using onclick)', () => {
+                let jayElement = constructElement(EMPTY_VS)
+
+                jayElement.refs.id1.onclick(mockCallback);
+                jayElement.update(FULL_VS);
+
+                let button = jayElement.dom.querySelector('div[data-id="two"]') as HTMLDivElement;
+                button.click();
+
+                expect(mockCallback.mock.calls.length).toBe(1);
+            })
+        })
     })
 
     describe('single referenced component', () => {
@@ -343,64 +375,95 @@ describe('ReferencesManager events', () => {
         let jayComponents: ItemComponent[],
           jayRootElement: JayElement<RootElementViewState, RootElementRefs>,
           mockCallback;
-        const viewState = {
+        interface ViewState {
+            items: {id: string, props: ItemProps}[]
+        }
+        const viewState: ViewState = {
             items: [
                 {id: '1', props: ITEM_PROPS},
                 {id: '2', props: ITEM_PROPS_2},
                 {id: '3', props: ITEM_PROPS_3}
             ]
         }
-        beforeEach(() => {
-            jayComponents = [];
-            jayRootElement = ConstructContext.withRootContext(viewState, () =>
+        const emptyViewState: ViewState = {
+            items: []
+        }
+
+        function constructElement(viewState: ViewState) {
+            return ConstructContext.withRootContext(viewState, () =>
               de('div', {}, [
                   forEach((vs: typeof viewState) => vs.items,
                     (item) =>
                       childComp((props) => {
-                            let comp = Item(props as ItemProps);
-                            jayComponents.push(comp)
-                            return comp;
-                        }, vs => ITEM_PROPS, id1),
+                          let comp = Item(props as ItemProps);
+                          jayComponents.push(comp)
+                          return comp;
+                      }, vs => ITEM_PROPS, id1),
                     'id')
-              ])) as JayElement<RootElementViewState, RootElementRefs>;
+              ]), [id1]);
+        }
 
-            mockCallback = jest.fn();
+        describe('default tests', () => {
+            beforeEach(() => {
+                jayComponents = [];
+                jayRootElement = constructElement(viewState) as JayElement<RootElementViewState, RootElementRefs>;
+
+                mockCallback = jest.fn();
+            })
+
+            it('should enrich root element with the ref and allow registering events using addEventListener', () => {
+                jayRootElement.refs.id1.addEventListener('remove', mockCallback);
+                let button = jayComponents[1].element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
+                button.click();
+
+                expect(mockCallback.mock.calls.length).toBe(1);
+            })
+
+            it('should enrich root element with the ref and allow registering events using onremove', () => {
+                jayRootElement.refs.id1.onremove(mockCallback);
+                let button = jayComponents[1].element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
+                button.click();
+
+                expect(mockCallback.mock.calls.length).toBe(1);
+            })
+
+            it('event parameters', () => {
+                jayRootElement.refs.id1.onremove(mockCallback);
+                let button = jayComponents[1].element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
+                button.click();
+
+                expect(mockCallback.mock.calls.length).toBe(1);
+                expect(mockCallback.mock.calls[0][0].event).toBe('item hello - false is removed');
+                expect(mockCallback.mock.calls[0][0].viewState).toEqual(viewState.items[1]);
+                expect(mockCallback.mock.calls[0][0].coordinate).toBe(`${viewState.items[1].id}/${id1}`);
+            })
+
+            it('should remove event using removeEventListener', () => {
+                jayRootElement.refs.id1.addEventListener('remove', mockCallback);
+                jayRootElement.refs.id1.removeEventListener('remove', mockCallback);
+                let button = jayComponents[1].element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
+                button.click();
+
+                expect(mockCallback.mock.calls.length).toBe(0);
+            })
         })
 
-        it('should enrich root element with the ref and allow registering events using addEventListener', () => {
-            jayRootElement.refs.id1.addEventListener('remove', mockCallback);
-            let button = jayComponents[1].element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
-            button.click();
+        describe('empty list of components', () => {
+            beforeEach(() => {
+                jayComponents = [];
+                jayRootElement = constructElement(emptyViewState) as JayElement<RootElementViewState, RootElementRefs>;
 
-            expect(mockCallback.mock.calls.length).toBe(1);
-        })
+                mockCallback = jest.fn();
+            })
 
-        it('should enrich root element with the ref and allow registering events using onremove', () => {
-            jayRootElement.refs.id1.onremove(mockCallback);
-            let button = jayComponents[1].element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
-            button.click();
+            it('should enrich root element with the ref and allow registering events on components (using onremove)', () => {
+                jayRootElement.refs.id1.onremove(mockCallback);
+                jayRootElement.update(viewState);
+                let button = jayComponents[1].element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
+                button.click();
 
-            expect(mockCallback.mock.calls.length).toBe(1);
-        })
-
-        it('event parameters', () => {
-            jayRootElement.refs.id1.onremove(mockCallback);
-            let button = jayComponents[1].element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
-            button.click();
-
-            expect(mockCallback.mock.calls.length).toBe(1);
-            expect(mockCallback.mock.calls[0][0].event).toBe('item hello - false is removed');
-            expect(mockCallback.mock.calls[0][0].viewState).toEqual(viewState.items[1]);
-            expect(mockCallback.mock.calls[0][0].coordinate).toBe(`${viewState.items[1].id}/${id1}`);
-        })
-
-        it('should remove event using removeEventListener', () => {
-            jayRootElement.refs.id1.addEventListener('remove', mockCallback);
-            jayRootElement.refs.id1.removeEventListener('remove', mockCallback);
-            let button = jayComponents[1].element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
-            button.click();
-
-            expect(mockCallback.mock.calls.length).toBe(0);
+                expect(mockCallback.mock.calls.length).toBe(1);
+            })
         })
 
     })
