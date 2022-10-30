@@ -30,36 +30,17 @@ export interface HTMLElementProxy<ViewState, ElementType extends HTMLElement> {
 /** Components references **/
 
 export interface ComponentEventDefinition<EventType, ViewState> {
-  (handler: JayEventHandler<EventType, ViewState, void>)
-  handler?: JayEventHandler<EventType, ViewState, void>
-}
-
-type ComponentEventDefinitionKeys<T extends JayComponent<any, any, any>> = {
-  [P in keyof T]:
-  P extends string ?
-    (T[P] extends ComponentEventDefinition<any, any> ? P : never) :
-    never
-}[keyof T];
-
-type EventDefinedByComponent<T  extends JayComponent<any, any, any>> = {
-  [Q in ComponentEventDefinitionKeys<T>]: T[Q]
-};
-
-type EventExportedByComponent<EventType, Orig extends ComponentEventDefinition<EventType, VS>, VS> =
-    (handler: (evt: Parameters<Parameters<Orig>[0]>[0], dataContent: VS, coordinate: string) => void) => void;
-
-type EventsExportedByComponent<ViewState, ComponentType extends JayComponent<any, ViewState, any>> = {
-  [Property in keyof EventDefinedByComponent<ComponentType>]: EventExportedByComponent<any, EventDefinedByComponent<ComponentType>[Property], ViewState>
+  (handler: JayEventHandler<EventType, ViewState, void>): void
+  invoke(event: EventType): void
 }
 
 export interface ComponentCollectionProxyOperations<ViewState, ComponentType extends JayComponent<any, ViewState, any>> {
-  addEventListener(type: string, handler: JayEventHandler<any, ViewState, void>)
-  removeEventListener(type: string, handler: JayEventHandler<any, ViewState, void>)
+  addEventListener(type: string, handler: JayEventHandler<any, ViewState, void>): void
+  removeEventListener(type: string, handler: JayEventHandler<any, ViewState, void>): void
 
   map<ResultType>(handler: (comp: ComponentType, viewState: ViewState, coordinate: string) => ResultType): Array<ResultType>
   find(predicate: (t: ViewState) => boolean): ComponentType
 }
 
 export type ComponentCollectionProxy<ViewState, ComponentType extends JayComponent<any, any, any>> =
-  ComponentCollectionProxyOperations<ViewState, ComponentType> &
-  EventsExportedByComponent<ViewState, ComponentType>
+  ComponentCollectionProxyOperations<ViewState, ComponentType>

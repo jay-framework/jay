@@ -3,7 +3,7 @@ import {HTMLElementRefImpl, ReferencesManager} from "../../lib/node-reference";
 import {childComp, ConstructContext, dynamicElement as de, element as e, forEach} from "../../lib/";
 import {JayElement} from "../../lib";
 import {ComponentCollectionProxy, HTMLElementProxy} from "../../lib/node-reference-types";
-import {Item, ItemComponent, ItemProps, ItemVS} from "./comps/item";
+import {Item, ItemComponent, ItemComponentCollection, ItemProps, ItemVS} from "./comps/item";
 import '../../lib/element-test-types';
 
 const SOME_VALUE = 'some text in the element';
@@ -367,17 +367,19 @@ describe('ReferencesManager events', () => {
     })
 
     describe('dynamic list of referenced components', () => {
-        interface RootElementViewState {}
+        interface ItemViewState {
+            id: string, props: ItemProps
+        }
+        interface ViewState {
+            items: ItemViewState[]
+        }
         interface RootElementRefs {
-            id1: ComponentCollectionProxy<ItemVS, ItemComponent>
+            id1: ItemComponentCollection<ItemViewState>
         }
 
         let jayComponents: ItemComponent[],
-          jayRootElement: JayElement<RootElementViewState, RootElementRefs>,
+          jayRootElement: JayElement<ViewState, RootElementRefs>,
           mockCallback;
-        interface ViewState {
-            items: {id: string, props: ItemProps}[]
-        }
         const viewState: ViewState = {
             items: [
                 {id: '1', props: ITEM_PROPS},
@@ -406,7 +408,7 @@ describe('ReferencesManager events', () => {
         describe('default tests', () => {
             beforeEach(() => {
                 jayComponents = [];
-                jayRootElement = constructElement(viewState) as JayElement<RootElementViewState, RootElementRefs>;
+                jayRootElement = constructElement(viewState) as JayElement<ViewState, RootElementRefs>;
 
                 mockCallback = jest.fn();
             })
@@ -451,7 +453,7 @@ describe('ReferencesManager events', () => {
         describe('empty list of components', () => {
             beforeEach(() => {
                 jayComponents = [];
-                jayRootElement = constructElement(emptyViewState) as JayElement<RootElementViewState, RootElementRefs>;
+                jayRootElement = constructElement(emptyViewState) as JayElement<ViewState, RootElementRefs>;
 
                 mockCallback = jest.fn();
             })

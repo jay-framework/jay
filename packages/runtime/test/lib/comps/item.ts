@@ -4,7 +4,7 @@ import {
     dynamicText as dt
 } from "../../../lib/element";
 import {JayComponent, JayElement} from "../../../lib";
-import {ComponentEventDefinition, HTMLElementProxy} from "../../../lib/node-reference-types";
+import {ComponentCollectionProxy, ComponentEventDefinition, HTMLElementProxy} from "../../../lib/node-reference-types";
 import {JayEventHandler} from "../../../lib/element-types";
 
 export interface ItemVS {
@@ -39,11 +39,13 @@ export interface ItemComponent extends JayComponent<ItemProps, ItemVS, ItemEleme
 }
 
 function mkComponentEventHandler<EventType, PropsType>() {
-    let register: ComponentEventDefinition<EventType, PropsType>;
-    register = function(handler: JayEventHandler<EventType, PropsType, void>) {
-        register.handler = handler;
-    }
-    return register;
+    let eventDefinition: ComponentEventDefinition<EventType, PropsType>;
+    let _handler: JayEventHandler<EventType, PropsType, void>;
+    eventDefinition = function(handler: JayEventHandler<EventType, PropsType, void>) {
+        _handler = handler
+    } as ComponentEventDefinition<EventType, PropsType>
+    eventDefinition.invoke = (event: EventType) => _handler && _handler({event, viewState: undefined, coordinate: undefined});
+    return eventDefinition;
 }
 
 export function Item(props: ItemProps): ItemComponent {
@@ -58,8 +60,7 @@ export function Item(props: ItemProps): ItemComponent {
     })
 
     jayElement.refs.remove.onclick(() => {
-        if (onremove.handler)
-            onremove.handler({event: `item ${text} - ${done} is removed`, viewState: undefined, coordinate: undefined});
+        onremove.invoke(`item ${text} - ${done} is removed`);
     })
 
     let itemInstance: ItemComponent = {
@@ -84,4 +85,8 @@ export function Item(props: ItemProps): ItemComponent {
     };
 
     return itemInstance;
+}
+
+export interface ItemComponentCollection<ItemVS> extends ComponentCollectionProxy<ItemVS, ItemComponent> {
+    onremove: ComponentEventDefinition<string, ItemVS>
 }

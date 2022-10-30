@@ -1,5 +1,4 @@
-import {BaseJayElement, JayElement, JayEventHandler, updateFunc} from "./element-types";
-import {JayComponent} from "../dist";
+import {BaseJayElement, JayElement, JayEventHandler, updateFunc, JayComponent} from "./element-types";
 
 type Ref<ViewState> = {
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void
