@@ -267,14 +267,17 @@ export class ConstructContext<A extends Array<any>> {
         return new ConstructContext(ConstructContext.acc(this.data, t), [], this.refManager, false)
     }
 
-    static root<T>(t: T): ConstructContext<[T]> {
-        return new ConstructContext([t])
+    static root<ViewState>(viewState: ViewState): ConstructContext<[ViewState]> {
+        return new ConstructContext([viewState])
     }
 
-    static withRootContext<T, Refs>(t: T, elementConstructor: () => BaseJayElement<T>, dynamicRefs?: Array<string>): JayElement<T, Refs> {
-        let context = new ConstructContext([t], dynamicRefs)
+    static withRootContext<ViewState, Refs>(viewState: ViewState,
+                                            elementConstructor: () => BaseJayElement<ViewState>,
+                                            dynamicRefs?: Array<string>):
+      JayElement<ViewState, Refs> {
+        let context = new ConstructContext([viewState], dynamicRefs)
         let element = constructionContextStack.doWithContext(context, () =>
-            wrapWithModifiedCheck(currentContext().currData, elementConstructor()))
+          wrapWithModifiedCheck(currentContext().currData, elementConstructor()))
         element.mount();
         return context.refManager.applyToElement(element);
     }

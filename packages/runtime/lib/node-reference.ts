@@ -16,7 +16,6 @@ interface RefCollection<ViewState>{
 
 export class ReferencesManager {
     private refs: Record<string, Ref<any>> = {};
-    private compRefs: Record<string, JayComponent<any, any, any>> = {};
     private refCollections: Record<string, RefCollection<any>> = {};
 
     constructor(dynamicRefs?: Array<string>) {
@@ -47,7 +46,7 @@ export class ReferencesManager {
             enriched[key] = newReferenceProxy(allRefs[key])
             return enriched;
         }, {})
-        let refs = {...enrichedDynamicRefs, ...this.compRefs} as Refs
+        let refs = enrichedDynamicRefs as Refs
         return {...element, refs};
     }
 }
