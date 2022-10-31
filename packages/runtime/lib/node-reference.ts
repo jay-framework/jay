@@ -1,4 +1,5 @@
 import {BaseJayElement, JayElement, JayEventHandler, updateFunc, JayComponent} from "./element-types";
+import {ConstructContext} from "./element";
 
 type Ref<ViewState> = {
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void
@@ -20,6 +21,19 @@ export class ReferencesManager {
 
     constructor(dynamicRefs?: Array<string>) {
         dynamicRefs?.forEach(id => this.refCollections[id] = new ReferenceCollection())
+    }
+
+    mkRef<ViewState>(referenced: HTMLElement | JayComponent<any, any, any>,
+                     context: ConstructContext<any>,
+                     refName: string,
+                     isComp: boolean): [Ref<ViewState>, updateFunc<ViewState>] {
+        if (isComp) {
+            return ComponentRef(referenced as JayComponent<any, any, any>, context.currData, context.coordinate(refName))
+        }
+        else {
+            let ref = new HTMLElementRefImpl(referenced as HTMLElement, context.currData, context.coordinate(refName))
+            return [ref, ref.update]
+        }
     }
 
     getRefCollection(id: string, autoCreate: boolean = false): RefCollection<any> {

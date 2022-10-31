@@ -1,7 +1,7 @@
 import {Kindergarten, KindergartenGroup} from "./kindergarden";
 import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "./list-compare";
 import {RandomAccessLinkedList as List} from "./random-access-linked-list";
-import {ComponentRef, HTMLElementRefImpl, ReferencesManager} from "./node-reference";
+import {ReferencesManager} from "./node-reference";
 import {ContextStack} from "./context-stack";
 import {checkModified, getRevision} from "jay-reactive";
 import {
@@ -21,15 +21,8 @@ const REF = 'ref';
 
 function mkRef(refName: string, referenced: HTMLElement | JayComponent<any, any, any>, updates: updateFunc<any>[], mounts: MountFunc[], unmounts: MountFunc[], isComp: boolean) {
     let context = currentContext();
-    let ref, update;
-    if (isComp) {
-        [ref, update] = ComponentRef(referenced as JayComponent<any, any, any>, context.currData, context.coordinate(refName))
-        updates.push(update);
-    }
-    else {
-        ref = new HTMLElementRefImpl(referenced as HTMLElement, context.currData, context.coordinate(refName))
-        updates.push(ref.update);
-    }
+    let [ref, update] = context.refManager.mkRef(referenced, context, refName, isComp);
+    updates.push(update);
     if (context.forStaticElements) {
         context.refManager.addStaticRef(refName, ref);
     }
