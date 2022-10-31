@@ -15,6 +15,7 @@ import {
     updateFunc
 } from "./element-types";
 import './element-test-types';
+import {JayEventHandlerWrapper} from "./node-reference-types";
 
 const STYLE = 'style';
 const REF = 'ref';
@@ -234,9 +235,13 @@ export class ConstructContext<A extends Array<any>> {
     data: A
     forStaticElements: boolean
 
-    constructor(data: A, dynamicRefs: Array<string> = [], dm?: ReferencesManager, forStaticElements: boolean = true) {
+    constructor(data: A,
+                dynamicRefs: Array<string> = [],
+                eventWrapper?: JayEventHandlerWrapper<any, any, any>,
+                dm?: ReferencesManager,
+                forStaticElements: boolean = true) {
         this.data = data;
-        this.refManager = dm?dm:new ReferencesManager(dynamicRefs);
+        this.refManager = dm?dm:new ReferencesManager(dynamicRefs, eventWrapper);
         this.forStaticElements = forStaticElements;
     }
 
@@ -257,18 +262,15 @@ export class ConstructContext<A extends Array<any>> {
     }
 
     forItem<T>(t: T) {
-        return new ConstructContext(ConstructContext.acc(this.data, t), [], this.refManager, false)
-    }
-
-    static root<ViewState>(viewState: ViewState): ConstructContext<[ViewState]> {
-        return new ConstructContext([viewState])
+        return new ConstructContext(ConstructContext.acc(this.data, t), [], undefined, this.refManager, false)
     }
 
     static withRootContext<ViewState, Refs>(viewState: ViewState,
                                             elementConstructor: () => BaseJayElement<ViewState>,
-                                            dynamicRefs?: Array<string>):
+                                            dynamicRefs?: Array<string>,
+                                            eventWrapper?: JayEventHandlerWrapper<any, any, any>):
       JayElement<ViewState, Refs> {
-        let context = new ConstructContext([viewState], dynamicRefs)
+        let context = new ConstructContext([viewState], dynamicRefs, eventWrapper)
         let element = constructionContextStack.doWithContext(context, () =>
           wrapWithModifiedCheck(currentContext().currData, elementConstructor()))
         element.mount();

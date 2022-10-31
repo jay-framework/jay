@@ -1,5 +1,6 @@
 import {BaseJayElement, JayElement, JayEventHandler, updateFunc, JayComponent} from "./element-types";
 import {ConstructContext} from "./element";
+import {JayEventHandlerWrapper} from "./node-reference-types";
 
 type Ref<ViewState> = {
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void
@@ -19,7 +20,8 @@ export class ReferencesManager {
     private refs: Record<string, Ref<any>> = {};
     private refCollections: Record<string, RefCollection<any>> = {};
 
-    constructor(dynamicRefs?: Array<string>) {
+    constructor(dynamicRefs?: Array<string>,
+                private eventWrapper: JayEventHandlerWrapper<any, any, any> = _ => _) {
         dynamicRefs?.forEach(id => this.refCollections[id] = new ReferenceCollection())
     }
 
@@ -28,10 +30,10 @@ export class ReferencesManager {
                      refName: string,
                      isComp: boolean): [Ref<ViewState>, updateFunc<ViewState>] {
         if (isComp) {
-            return ComponentRef(referenced as JayComponent<any, any, any>, context.currData, context.coordinate(refName))
+            return ComponentRef(referenced as JayComponent<any, any, any>, context.currData, context.coordinate(refName), this.eventWrapper)
         }
         else {
-            let ref = new HTMLElementRefImpl(referenced as HTMLElement, context.currData, context.coordinate(refName))
+            let ref = new HTMLElementRefImpl(referenced as HTMLElement, context.currData, context.coordinate(refName), this.eventWrapper)
             return [ref, ref.update]
         }
     }
@@ -139,14 +141,14 @@ class ReferenceCollection<ViewState> implements RefCollection<ViewState>{
 
 }
 
-export function ComponentRef<ViewState>(comp: JayComponent<any, any, any>, viewState: ViewState, coordinate: string): [Ref<ViewState>, updateFunc<ViewState>] {
+export function ComponentRef<ViewState>(comp: JayComponent<any, any, any>, viewState: ViewState, coordinate: string, eventWrapper: JayEventHandlerWrapper<any, ViewState, any>): [Ref<ViewState>, updateFunc<ViewState>] {
     let ref = new Proxy(comp, {
         get: function(target, prop, receiver) {
             if (typeof prop === 'string') {
                 if (prop === 'addEventListener') {
                     return (eventName, handler) => {
                         target.addEventListener(eventName, ({event}) => {
-                            return handler({event, viewState, coordinate})
+                            return eventWrapper(handler)({event, viewState, coordinate})
                         });
                     }
                 }
@@ -167,14 +169,14 @@ export function ComponentRef<ViewState>(comp: JayComponent<any, any, any>, viewS
 export class HTMLElementRefImpl<ViewState> implements Ref<ViewState>{
     private listeners = [];
 
-    constructor(private readonly element: HTMLElement, public viewState: ViewState, public coordinate: string) {
+    constructor(private readonly element: HTMLElement, public viewState: ViewState, public coordinate: string, private eventWrapper: JayEventHandlerWrapper<any, ViewState, any>) {
         this.element = element;
         this.viewState = viewState
     }
 
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void {
         let wrappedHandler = (event) => {
-            return listener({event, viewState: this.viewState, coordinate: this.coordinate});
+            return this.eventWrapper(listener)({event, viewState: this.viewState, coordinate: this.coordinate});
         }
         this.element.addEventListener(type, wrappedHandler, options)
         this.listeners.push({type, listener, wrappedHandler})

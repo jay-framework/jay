@@ -1,6 +1,9 @@
 import {JayComponent, JayEventHandler} from "./element-types";
 
-/** new model **/
+/** generic **/
+export type JayEventHandlerWrapper<EventType, ViewState, Returns> =
+  (orig: JayEventHandler<EventType, ViewState, Returns>) => JayEventHandler<EventType, ViewState, Returns>
+
 /** DOM element references **/
 export type JeyEventHandler<ViewState> = (viewState: ViewState, coordinate: string) => void
 type JayNativeFunction<ElementType extends HTMLElement, ViewState, Result> = (elem: ElementType, viewState: ViewState) => Result
