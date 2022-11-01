@@ -22,7 +22,7 @@ export interface JayElement<ViewState, Refs> extends BaseJayElement<ViewState> {
   refs: Refs
 }
 
-interface JayEvent<EventType, ViewState> {
+export interface JayEvent<EventType, ViewState> {
   event: EventType,
   viewState: ViewState,
   coordinate: string

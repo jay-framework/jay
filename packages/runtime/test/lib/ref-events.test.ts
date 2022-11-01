@@ -19,7 +19,7 @@ const COORDINATE_21 = `${id2}.1`
 const ITEM_PROPS = {text: 'hello', dataId: 'A'};
 const ITEM_PROPS_2 = {text: 'hi', dataId: 'B'};
 const ITEM_PROPS_3 = {text: 'hey there', dataId: 'C'};
-const UNIT_WRAPPER = _ => _;
+const UNIT_WRAPPER = (orig, event) => orig(event);
 
 
 describe('ReferencesManager events', () => {
@@ -85,7 +85,7 @@ describe('ReferencesManager events', () => {
             })
 
             it('should support event handler wrapper', () => {
-                const eventsWrapper = jest.fn(orig => orig)
+                let eventsWrapper = jest.fn((orig, event) => orig(event));
                 const ref = new HTMLElementRefImpl(jayElement1.dom, DATA_CONTEXT, COORDINATE, eventsWrapper);
                 referenceManager.addStaticRef(id1, ref);
 
@@ -94,8 +94,8 @@ describe('ReferencesManager events', () => {
                 jayRootElement.refs.id1.onclick(mockCallback)
                 jayElement1.dom.click();
 
-                expect(eventsWrapper.mock.calls[0].length).toBe(1);
-                expect(mockCallback.mock.calls[0].length).toBe(1);
+                expect(eventsWrapper.mock.calls.length).toBe(1);
+                expect(mockCallback.mock.calls.length).toBe(1);
             })
         })
 
@@ -384,7 +384,7 @@ describe('ReferencesManager events', () => {
         })
 
         it('should support event wrapper', () => {
-            let eventsWrapper = jest.fn(_ => _);
+            let eventsWrapper = jest.fn((orig, event) => orig(event));
             jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, () =>
               e('div', {}, [
                   childComp((props) => jayComponent = Item(props as ItemProps),

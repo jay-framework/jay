@@ -9,4 +9,4 @@ export {noopMount} from "./element-types";
 export {noopUpdate} from "./element-types";
 export {MountFunc} from "./element-types";
 export {updateFunc} from "./element-types";
-export {HTMLElementCollectionProxy, HTMLElementProxy, ComponentCollectionProxy, EventEmitter} from "./node-reference-types";
+export {HTMLElementCollectionProxy, HTMLElementProxy, ComponentCollectionProxy, EventEmitter, JayEventHandlerWrapper} from "./node-reference-types";

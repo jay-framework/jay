@@ -1,4 +1,4 @@
-import {BaseJayElement, JayElement, JayEventHandler, updateFunc, JayComponent} from "./element-types";
+import {BaseJayElement, JayElement, JayEventHandler, updateFunc, JayComponent, JayEvent} from "./element-types";
 import {ConstructContext} from "./element";
 import {JayEventHandlerWrapper} from "./node-reference-types";
 
@@ -16,12 +16,17 @@ interface RefCollection<ViewState>{
     removeRef(ref: Ref<ViewState>)
 }
 
+function defaultEventWrapper<EventType, ViewState, Returns>(
+  orig: JayEventHandler<EventType, ViewState, Returns>,
+  event: JayEvent<EventType, ViewState>): Returns {
+  return orig(event)
+}
 export class ReferencesManager {
     private refs: Record<string, Ref<any>> = {};
     private refCollections: Record<string, RefCollection<any>> = {};
 
     constructor(dynamicRefs?: Array<string>,
-                private eventWrapper: JayEventHandlerWrapper<any, any, any> = _ => _) {
+                private eventWrapper: JayEventHandlerWrapper<any, any, any> = defaultEventWrapper) {
         dynamicRefs?.forEach(id => this.refCollections[id] = new ReferenceCollection())
     }
 
@@ -148,7 +153,7 @@ export function ComponentRef<ViewState>(comp: JayComponent<any, any, any>, viewS
                 if (prop === 'addEventListener') {
                     return (eventName, handler) => {
                         target.addEventListener(eventName, ({event}) => {
-                            return eventWrapper(handler)({event, viewState, coordinate})
+                            return eventWrapper(handler, {event, viewState, coordinate})
                         });
                     }
                 }
@@ -176,7 +181,7 @@ export class HTMLElementRefImpl<ViewState> implements Ref<ViewState>{
 
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void {
         let wrappedHandler = (event) => {
-            return this.eventWrapper(listener)({event, viewState: this.viewState, coordinate: this.coordinate});
+            return this.eventWrapper(listener, {event, viewState: this.viewState, coordinate: this.coordinate});
         }
         this.element.addEventListener(type, wrappedHandler, options)
         this.listeners.push({type, listener, wrappedHandler})
