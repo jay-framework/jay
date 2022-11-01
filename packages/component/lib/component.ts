@@ -1,6 +1,5 @@
-import {JayElement, JayComponent, ContextStack, MountFunc} from 'jay-runtime'
+import {JayElement, JayComponent, ContextStack, MountFunc, EventEmitter, JayEventHandlerWrapper} from 'jay-runtime'
 import {ValueOrGetter, Getter, Reactive, Setter} from 'jay-reactive'
-import {applyToRefs, refsRecorder} from "./refs-recorder";
 
 export type Props<PropsT> = {
     [K in keyof PropsT]: Getter<PropsT[K]>
@@ -14,18 +13,6 @@ export type UpdatableProps<PropsT> = Props<PropsT> & {
     update(newProps: Partial<PropsT>)
 }
 
-export class EventEmitter<E> {
-    handler?: (e: E) => void
-
-    emit(e: E): void {
-        if (this.handler)
-            this.handler(e);
-    }
-    on(handler: (e: E) => void) {
-        this.handler = handler;
-    }
-}
-
 export interface JayComponentCore<PropsT, ViewState> {
     render: (props: Props<PropsT>) => ViewStateGetters<ViewState>
 }
@@ -35,23 +22,24 @@ type ConcreteJayComponent1<PropsT extends object, ViewState, Refs,
     JayElementT extends JayElement<ViewState, Refs>> =
     Omit<CompCore, 'render'> & JayComponent<PropsT, ViewState, JayElementT>
 
-type ConcreteJayComponent2<PropsT extends object, ViewState, Refs,
-    CompCore extends JayComponentCore<PropsT, ViewState>,
-    JayElementT extends JayElement<ViewState, Refs>,
-    CJC extends ConcreteJayComponent1<PropsT, ViewState, Refs, CompCore, JayElementT>> = {
-    [K in keyof CJC]: CJC[K] extends EventEmitter<infer T> ? (t: T) => void : CJC[K]
-}
-
 type ConcreteJayComponent<PropsT extends object, ViewState, Refs,
     CompCore extends JayComponentCore<PropsT, ViewState>,
     JayElementT extends JayElement<ViewState, Refs>> =
-    ConcreteJayComponent2<PropsT, ViewState, Refs, CompCore, JayElementT, ConcreteJayComponent1<PropsT, ViewState, Refs, CompCore, JayElementT>>
+    ConcreteJayComponent1<PropsT, ViewState, Refs, CompCore, JayElementT>
 
 interface ComponentContext {
     reactive: Reactive,
     mounts: MountFunc[],
     unmounts: MountFunc[]
 }
+
+export interface RenderElementOptions {
+    eventWrapper?: JayEventHandlerWrapper<any, any, any>
+}
+export type RenderElement<ViewState extends object, Refs extends object, JayElementT extends JayElement<ViewState, Refs>> =
+  (vs: ViewState, options?: RenderElementOptions) => JayElementT
+
+
 const componentContextStack = new ContextStack<ComponentContext>();
 
 type EffectCleanup = () => void
@@ -94,8 +82,10 @@ export function createMemo<T>(computation: (prev: T) => T, initialValue?: T): Ge
     return value
 }
 
-export function createEvent<e>(eventEffect?: (emitter: EventEmitter<e>) => void): EventEmitter<e> {
-    let emitter = new EventEmitter<e>()
+export function createEvent<EventType>(eventEffect?: (emitter: EventEmitter<EventType, any>) => void): EventEmitter<EventType, any> {
+    let handler;
+    let emitter: any = (h) => handler = h;
+    emitter.emit = (event: EventType) => handler && handler({event});
     if (eventEffect)
         createEffect(() => eventEffect(emitter));
     return emitter;
@@ -116,7 +106,7 @@ function materializeViewState<ViewState extends object>(vsValueOrGetter: ViewSta
 export function makeJayComponent<PropsT extends object, ViewState extends object, Refs extends object, JayElementT extends JayElement<ViewState, Refs>,
     CompCore extends JayComponentCore<PropsT, ViewState>
     >(
-    render: (vs: ViewState) => JayElementT,
+    render: RenderElement<ViewState, Refs, JayElementT>,
     comp: (props: Props<PropsT>, refs: Refs) => CompCore):
       (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT> {
 
@@ -130,23 +120,24 @@ export function makeJayComponent<PropsT extends object, ViewState extends object
         return componentContextStack.doWithContext(componentContext, () => {
             return reactive.record(() => {
                 let propsProxy = makePropsProxy(reactive, props);
-                let refs: Refs = refsRecorder()
 
-                let coreComp = comp(propsProxy, refs);
+                // @ts-ignore
+                let eventWrapper: JayEventHandlerWrapper<any, any, any> = (orig, event) => {
+                    return reactive.batchReactions(() => orig(event))
+                }
+                let element: JayElementT = render({} as ViewState, {eventWrapper});
+
+                let coreComp = comp(propsProxy, element.refs); // wrap event listening with batch reactions
                 let {render: renderViewState, ...api} = coreComp;
 
-                let element: JayElementT;
                 reactive.createReaction(() => {
                     let viewStateValueOrGetters = renderViewState(propsProxy)
                     let viewState = materializeViewState(viewStateValueOrGetters);
-                    if (element)
-                        element.update(viewState)
-                    else
-                        element = render(viewState)
+                    element.update(viewState)
                 })
-                applyToRefs(refs, element.refs, (func: Function) => (...args) =>
-                    reactive.batchReactions(() => func(...args))
-                );
+                // applyToRefs(refs, element.refs, (func: Function) => (...args) =>
+                //     reactive.batchReactions(() => func(...args))
+                // );
                 let update = (updateProps) => {
                     propsProxy.update(updateProps)
                 }
@@ -159,25 +150,22 @@ export function makeJayComponent<PropsT extends object, ViewState extends object
                     update,
                     mount: () => mounts.forEach(_ => _()),
                     unmount: () => unmounts.forEach(_ => _()),
-                    addEventListener: (eventType: string, handler: Function) => events[eventType].on(handler),
-                    removeEventListener: (eventType: string) => events[eventType].on(undefined)
+                    addEventListener: (eventType: string, handler: Function) => events[eventType](handler),
+                    removeEventListener: (eventType: string) => events[eventType](undefined)
                 }
 
                 // todo validate not overriding main JayComponent APIs
                 for (let key in api) {
-                    if (api[key] instanceof EventEmitter) {
-                        if (key.indexOf('on') === 0) {
-                            let [,,...rest] = key;
-                            events[rest.join('')] = api[key];
+                    if (typeof api[key] === 'function') {
+                        if (api[key].emit) {
+                            component[key] = api[key];
+                            if (key.indexOf('on') === 0) {
+                                let [,,...rest] = key;
+                                events[rest.join('')] = api[key];
+                            }
                         }
-                        Object.defineProperty(component, key, {
-                            get() {return api[key].handler},
-                            set(handler) {api[key].on(handler)},
-                            enumerable: true
-                        })
-                    }
-                    else if (typeof api[key] === 'function') {
-                        component[key] = (...args) => reactive.batchReactions(() => api[key](...args))
+                        else
+                            component[key] = (...args) => reactive.batchReactions(() => api[key](...args))
                     }
                     else {
                         component[key] = api[key];

@@ -1,12 +1,12 @@
 import {describe, expect, it, jest, beforeEach} from '@jest/globals'
-import {ConstructContext, JayElement, dynamicText as dt, element as e} from 'jay-runtime';
+import {ConstructContext, JayElement, dynamicText as dt, element as e, HTMLElementProxy} from 'jay-runtime';
 import {
     createEffect, createEvent,
     createMemo,
     createState,
     forTesting,
     makeJayComponent,
-    Props, useReactive
+    Props, RenderElementOptions, useReactive
 } from "../lib/component";
 import {Reactive} from "jay-reactive";
 const {makePropsProxy} = forTesting
@@ -50,7 +50,7 @@ describe('state management', () => {
         }
 
         interface LabelRefs {
-            label: HTMLElement
+            label: HTMLElementProxy<ViewState, HTMLElement>
         }
         interface LabelElement extends JayElement<ViewState, LabelRefs> {}
 
@@ -68,8 +68,8 @@ describe('state management', () => {
         }
 
         interface TwoLabelRefs {
-            label1: HTMLElement
-            label2: HTMLElement
+            label1: HTMLElementProxy<TwoLabelsViewState, HTMLElement>
+            label2: HTMLElementProxy<TwoLabelsViewState, HTMLElement>
         }
         interface TwoLabelsElement extends JayElement<TwoLabelsViewState, TwoLabelRefs> {}
 
@@ -101,13 +101,17 @@ describe('state management', () => {
 
             it('should render the component', () => {
                 let instance = label({name: 'hello world'});
-                expect(instance.element.refs.label.textContent).toBe('hello world')
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('hello world')
+                )
             })
 
             it('should update the component on prop changes', () => {
                 let instance = label({name: 'hello world'});
                 instance.update({name: 'updated world'})
-                expect(instance.element.refs.label.textContent).toBe('updated world')
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('updated world')
+                )
             })
         })
 
@@ -133,19 +137,25 @@ describe('state management', () => {
 
             it('should render the component using state', () => {
                 let instance = label({name: 'world'});
-                expect(instance.element.refs.label.textContent).toBe('Hello world')
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('Hello world')
+                )
             })
 
             it('should update the component as state changes', () => {
                 let instance = label({name: 'world'});
                 instance.setLabel('hello mars')
-                expect(instance.element.refs.label.textContent).toBe('hello mars')
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('hello mars')
+                )
             })
 
             it('should not update the component from prop change as the prop is not bound to state', () => {
                 let instance = label({name: 'world'});
                 instance.update({name: 'mars'})
-                expect(instance.element.refs.label.textContent).toBe('Hello world')
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('Hello world')
+                )
             })
         });
 
@@ -171,19 +181,22 @@ describe('state management', () => {
 
             it('should render the component using state', () => {
                 let instance = label({name: 'world'});
-                expect(instance.element.refs.label.textContent).toBe('Hello world')
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('Hello world'))
             })
 
             it('should update the component as state changes', () => {
                 let instance = label({name: 'world'});
                 instance.setLabel('hello mars')
-                expect(instance.element.refs.label.textContent).toBe('hello mars')
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('hello mars'))
             })
 
             it('should not update the component from prop change as the prop is not bound to state', () => {
                 let instance = label({name: 'world'});
                 instance.update({name: 'mars'})
-                expect(instance.element.refs.label.textContent).toBe('Hello mars')
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('Hello mars'))
             })
         })
 
@@ -207,13 +220,15 @@ describe('state management', () => {
 
             it('should render initial component using a getter', () => {
                 let instance = label({firstName: 'John', lastName: 'Smith'});
-                expect(instance.element.refs.label.textContent).toBe('Hello John Smith')
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('Hello John Smith'))
             })
 
             it('should render updated component using a getter', () => {
                 let instance = label({firstName: 'John', lastName: 'Smith'});
                 instance.update({firstName: 'John', lastName: 'Adams'});
-                expect(instance.element.refs.label.textContent).toBe('Hello John Adams')
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('Hello John Adams'))
             })
         })
 
@@ -252,7 +267,8 @@ describe('state management', () => {
 
             it('should run create effect on initial component creation', () => {
                 let instance = label({name: 'world'});
-                expect(instance.element.refs.label.textContent).toBe('hello world')
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('hello world'))
                 expect(instance.getResourceState().resourceAllocated).toBe(true)
                 expect(instance.getResourceState().effectRunCount).toBe(1)
                 expect(instance.getResourceState().effectCleanupRunCount).toBe(0)
@@ -261,7 +277,8 @@ describe('state management', () => {
             it('should run the effect cleanup and rerun effect on dependencies change', () => {
                 let instance = label({name: 'world'});
                 instance.update({name: 'mars'})
-                expect(instance.element.refs.label.textContent).toBe('hello mars')
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('hello mars'))
                 expect(instance.getResourceState().resourceAllocated).toBe(true)
                 expect(instance.getResourceState().effectRunCount).toBe(2)
                 expect(instance.getResourceState().effectCleanupRunCount).toBe(1)
@@ -316,8 +333,10 @@ describe('state management', () => {
 
             it('should run create memo on initial render', () => {
                 let instance = labelComponent({name: 'world', age: 12});
-                expect(instance.element.refs.label1.textContent).toBe('hello world')
-                expect(instance.element.refs.label2.textContent).toBe('age 12')
+                instance.element.refs.label1.$exec(elem =>
+                  expect(elem.textContent).toBe('hello world'))
+                instance.element.refs.label2.$exec(elem =>
+                  expect(elem.textContent).toBe('age 12'))
                 expect(instance.getMemoComputeCount().memoDependsOnName).toBe(1)
                 expect(instance.getMemoComputeCount().memoDependsOnAge).toBe(1)
             })
@@ -332,8 +351,10 @@ describe('state management', () => {
             it('should re-render when render depends on memo', () => {
                 let instance = labelComponent({name: 'world', age: 12});
                 instance.update({name: 'mars', age: 13})
-                expect(instance.element.refs.label1.textContent).toBe('hello mars')
-                expect(instance.element.refs.label2.textContent).toBe('age 13')
+                instance.element.refs.label1.$exec(elem =>
+                  expect(elem.textContent).toBe('hello mars'))
+                instance.element.refs.label2.$exec(elem =>
+                  expect(elem.textContent).toBe('age 13'))
             })
 
             function LabelComponentWithCreateMemo2({}: Props<never>, refs: TwoLabelRefs) {
@@ -360,13 +381,15 @@ describe('state management', () => {
             it('should update memo that depend on a memo', () => {
                 let instance = labelComponent2({});
                 instance.setState1('two');
-                expect(instance.element.refs.label2.textContent).toBe('memo2: memo1: two')
+                instance.element.refs.label2.$exec(elem =>
+                  expect(elem.textContent).toBe('memo2: memo1: two'))
             })
 
             it('should run render that depend on a memo', () => {
                 let instance = labelComponent2({});
                 instance.setState1('two');
-                expect(instance.element.refs.label1.textContent).toBe('memo1: two')
+                instance.element.refs.label1.$exec(elem =>
+                  expect(elem.textContent).toBe('memo1: two'))
             })
         })
 
@@ -407,7 +430,8 @@ describe('state management', () => {
             it('functions that change internal state', () => {
                 let instance = labelComponent({name: 'world', age: 12});
                 instance.updateLabel1('new value')
-                expect(instance.element.refs.label1.textContent).toBe('new value');
+                instance.element.refs.label1.$exec(elem =>
+                  expect(elem.textContent).toBe('new value'));
             })
         })
 
@@ -421,19 +445,19 @@ describe('state management', () => {
             }
 
             interface CounterRefs {
-                inc: HTMLElement,
-                dec: HTMLElement,
-                value: HTMLElement
+                inc: HTMLElementProxy<CounterViewState, HTMLElement>,
+                dec: HTMLElementProxy<CounterViewState, HTMLElement>,
+                value: HTMLElementProxy<CounterViewState, HTMLElement>
             }
             interface CounterElement extends JayElement<CounterViewState, CounterRefs> {}
 
-            function renderCounterElement(viewState: CounterViewState): CounterElement {
+            function renderCounterElement(viewState: CounterViewState, options?: RenderElementOptions): CounterElement {
                 return ConstructContext.withRootContext(viewState, () =>
                     e('div', {}, [
                         e('button', {ref: 'dec'}, ['dec']),
                         e('div', {ref: 'value'}, [dt(vs => vs.value)]),
                         e('button', {ref: 'inc'}, ['inc'])
-                    ])
+                    ]), [], options?.eventWrapper
                 ) as CounterElement;
             }
 
@@ -442,9 +466,9 @@ describe('state management', () => {
 
             function CounterComponent({}: Props<CounterProps>, refs: CounterRefs) {
                 let [value, setValue] = createState(0);
-                refs.inc.onclick = () => setValue(value() + 1);
-                refs.dec.onclick = () => setValue(value() - 1);
-                let onChange = createEvent<CounterChangeEvent>(emitter => emitter.emit(({value: value()})))
+                refs.inc.onclick(() => setValue(value() + 1));
+                refs.dec.onclick(() => setValue(value() - 1));
+                let onChange = createEvent<CounterChangeEvent>(emitter => emitter.emit({value: value()}))
                 return {
                     render: () => ({value}),
                     onChange
@@ -453,47 +477,47 @@ describe('state management', () => {
 
             let counterComponent = makeJayComponent(renderCounterElement, CounterComponent)
 
-            it('should register events and invoke the event', () => {
+            it('should register events using on-event property and invoke the event', () => {
                 let instance = counterComponent({});
                 const myMock = jest.fn();
-                instance.onChange = myMock;
-                instance.element.refs.inc.click();
+                instance.onChange(myMock);
+                instance.element.refs.inc.$exec(elem => elem.click())
                 expect(myMock.mock.calls.length).toBe(1);
             })
 
             it('should unregister events', () => {
                 let instance = counterComponent({});
                 const myMock = jest.fn();
-                instance.onChange = myMock;
-                instance.onChange = undefined;
-                instance.element.refs.inc.click();
+                instance.onChange(myMock);
+                instance.onChange(undefined);
+                instance.element.refs.inc.$exec(elem => elem.click())
                 expect(myMock.mock.calls.length).toBe(0);
             })
             it('should invoke event with payload', () => {
                 let instance = counterComponent({});
                 const myMock = jest.fn();
-                instance.onChange = myMock;
-                instance.element.refs.inc.click();
-                instance.element.refs.inc.click();
+                instance.onChange(myMock);
+                instance.element.refs.inc.$exec(elem => elem.click())
+                instance.element.refs.inc.$exec(elem => elem.click())
                 expect(myMock.mock.calls.length).toBe(2);
-                expect(myMock.mock.calls[0][0]).toEqual({value: 1});
-                expect(myMock.mock.calls[1][0]).toEqual({value: 2});
+                expect(myMock.mock.calls[0][0]).toEqual({event: {value: 1}});
+                expect(myMock.mock.calls[1][0]).toEqual({event: {value: 2}});
             })
 
-            it('should register events and invoke the event', () => {
+            it('should register events using addEventListener and invoke the event', () => {
                 let instance = counterComponent({});
                 const myMock = jest.fn();
                 instance.addEventListener('Change', myMock);
-                instance.element.refs.inc.click();
+                instance.element.refs.inc.$exec(elem => elem.click())
                 expect(myMock.mock.calls.length).toBe(1);
             })
 
-            it('should register events and invoke the event', () => {
+            it('should register and remove events', () => {
                 let instance = counterComponent({});
                 const myMock = jest.fn();
                 instance.addEventListener('Change', myMock);
                 instance.removeEventListener('Change', myMock);
-                instance.element.refs.inc.click();
+                instance.element.refs.inc.$exec(elem => elem.click())
                 expect(myMock.mock.calls.length).toBe(0);
             })
 
@@ -506,8 +530,8 @@ describe('state management', () => {
             }
 
             interface LabelAndButtonRefs {
-                label: HTMLElement
-                button: HTMLElement
+                label: HTMLElementProxy<LabelAndButtonViewState, HTMLElement>
+                button: HTMLElementProxy<LabelAndButtonViewState, HTMLElement>
             }
             interface LabelAndButtonElement extends JayElement<LabelAndButtonViewState, LabelAndButtonRefs> {}
 
@@ -518,12 +542,12 @@ describe('state management', () => {
                 return vs.label;
             }
 
-            function renderTwoLabelElement(viewState: LabelAndButtonViewState): LabelAndButtonElement {
+            function renderTwoLabelElement(viewState: LabelAndButtonViewState, options?: RenderElementOptions): LabelAndButtonElement {
                 return ConstructContext.withRootContext(viewState, () =>
                     e('div', {}, [
                         e('div', {ref: 'label'}, [dt(trackingLabelGetter)]),
                         e('button', {ref: 'button'}, ['click'])
-                    ])
+                    ]), [], options.eventWrapper
                 ) as LabelAndButtonElement;
             }
 
@@ -553,10 +577,10 @@ describe('state management', () => {
                     setOne(a);
                     setTwo(b);
                 }
-                refs.button.onclick = () => {
+                refs.button.onclick(() => {
                     setOne('one');
                     setTwo('two');
-                }
+                })
                 return {
                     render: () => ({
                         label: `${one()} ${two()}`
@@ -579,13 +603,13 @@ describe('state management', () => {
                 let [three, setThree] = createState(0);
                 let reactive = useReactive();
                 let [isWaiting, resolve] = mkResolvablePromise();
-                refs.button.onclick = async () => {
+                refs.button.onclick(async () => {
                     let apiResult = await asyncOperation(one(), two());
                     setOne(0);
                     setTwo(0);
                     setThree(apiResult);
                     resolve();
-                }
+                })
                 const forAPItoFinish = () => isWaiting;
                 const getReactive = () => reactive
                 return {
@@ -599,32 +623,37 @@ describe('state management', () => {
             }
 
             const Test3 = makeJayComponent(renderTwoLabelElement, TestComponent3);
+            const initialRenderCycles = 2;
 
-            it('should render only once on first render', () => {
+            it('should render twice static elements on first render (before any update)', () => {
                 const instance = Test1({one: 'one', two: 'two'})
-                expect(instance.element.refs.label.textContent).toBe('one two');
-                expect(renderCount).toBe(1);
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('one two'))
+                expect(renderCount).toBe(initialRenderCycles);
             })
 
-            it('should render only once on multiple props update', () => {
+            it('should render only once on prop update (in addition to initial renders)', () => {
                 const instance = Test1({one: 'one', two: 'two'})
                 instance.update({one: 'three', two: 'four'})
-                expect(instance.element.refs.label.textContent).toBe('three four');
-                expect(renderCount).toBe(2);
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('three four'))
+                expect(renderCount).toBe(initialRenderCycles + 1);
             })
 
             it('should render only once on multiple state updates from an API function', () => {
                 const instance = Test2({})
                 instance.setValues('one', 'two')
-                expect(instance.element.refs.label.textContent).toBe('one two');
-                expect(renderCount).toBe(2);
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('one two'))
+                expect(renderCount).toBe(initialRenderCycles + 1);
             })
 
             it('should render only once on multiple state updates from a ref event (DOM or nested component)', () => {
                 const instance = Test2({})
-                instance.element.refs.button.click()
-                expect(instance.element.refs.label.textContent).toBe('one two');
-                expect(renderCount).toBe(2);
+                instance.element.refs.button.$exec(elem => elem.click())
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('one two'))
+                expect(renderCount).toBe(initialRenderCycles + 1);
             })
 
             it('should render only once on async API call and multiple state updates', async () => {
@@ -634,12 +663,13 @@ describe('state management', () => {
                 const waitingForAPIToFinish = instance.forAPItoFinish()
                 const reactive = instance.getReactive()
                 //
-                instance.element.refs.button.click()
+                instance.element.refs.button.$exec(elem => elem.click())
                 await waitingForAPIToFinish
                 await reactive.toBeClean()
-                expect(instance.element.refs.label.textContent).toBe('0 0');
+                instance.element.refs.label.$exec(elem =>
+                  expect(elem.textContent).toBe('0 0'))
                 expect(instance.three()).toBe(46);
-                expect(renderCount).toBe(2);
+                expect(renderCount).toBe(initialRenderCycles + 1);
             })
         })
     })
