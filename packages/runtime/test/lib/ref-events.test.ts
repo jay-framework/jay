@@ -311,7 +311,7 @@ describe('ReferencesManager events', () => {
                         (item) =>
                           e('div', {ref: id1, "data-id": item}, [item]),
                         'id')
-                  ]), [id1]);
+                  ]), undefined, [id1]);
             }
 
             it('should enrich root element with the ref and allow registering events on element (using onclick)', () => {
@@ -388,7 +388,7 @@ describe('ReferencesManager events', () => {
             jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, () =>
               e('div', {}, [
                   childComp((props) => jayComponent = Item(props as ItemProps),
-                    vs => ITEM_PROPS, id1)]), [], eventsWrapper) as JayElement<RootElementViewState, RootElementRefs>;
+                    vs => ITEM_PROPS, id1)]), eventsWrapper, []) as JayElement<RootElementViewState, RootElementRefs>;
             mockCallback = jest.fn(() => undefined);
             jayRootElement.refs.id1.onremove(mockCallback);
             let button = jayComponent.element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
@@ -436,7 +436,7 @@ describe('ReferencesManager events', () => {
                           return comp;
                       }, vs => ITEM_PROPS, id1),
                     'id')
-              ]), [id1]);
+              ]), undefined, [id1]);
         }
 
         describe('default tests', () => {

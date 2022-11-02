@@ -267,8 +267,8 @@ export class ConstructContext<A extends Array<any>> {
 
     static withRootContext<ViewState, Refs>(viewState: ViewState,
                                             elementConstructor: () => BaseJayElement<ViewState>,
-                                            dynamicRefs?: Array<string>,
-                                            eventWrapper?: JayEventHandlerWrapper<any, any, any>):
+                                            eventWrapper?: JayEventHandlerWrapper<any, any, any>,
+                                            dynamicRefs?: Array<string>):
       JayElement<ViewState, Refs> {
         let context = new ConstructContext([viewState], dynamicRefs, eventWrapper)
         let element = constructionContextStack.doWithContext(context, () =>
