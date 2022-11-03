@@ -1,4 +1,4 @@
-import {JayElement, JayComponent, ContextStack, MountFunc, EventEmitter, JayEventHandlerWrapper} from 'jay-runtime'
+import {JayElement, JayComponent, ContextStack, MountFunc, EventEmitter, JayEventHandlerWrapper, RenderElement} from 'jay-runtime'
 import {ValueOrGetter, Getter, Reactive, Setter} from 'jay-reactive'
 
 export type Props<PropsT> = {
@@ -33,11 +33,6 @@ interface ComponentContext {
     unmounts: MountFunc[]
 }
 
-export interface RenderElementOptions {
-    eventWrapper?: JayEventHandlerWrapper<any, any, any>
-}
-export type RenderElement<ViewState extends object, Refs extends object, JayElementT extends JayElement<ViewState, Refs>> =
-  (vs: ViewState, options?: RenderElementOptions) => JayElementT
 
 
 const componentContextStack = new ContextStack<ComponentContext>();

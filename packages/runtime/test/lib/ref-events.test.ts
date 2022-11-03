@@ -5,6 +5,7 @@ import {JayElement} from "../../lib";
 import {ComponentCollectionProxy, HTMLElementProxy} from "../../lib/node-reference-types";
 import {Item, ItemComponent, ItemComponentCollection, ItemProps, ItemVS} from "./comps/item";
 import '../../lib/element-test-types';
+import {JayEventHandlerWrapper, RenderElementOptions} from "../../lib/element-types";
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -384,17 +385,17 @@ describe('ReferencesManager events', () => {
         })
 
         it('should support event wrapper', () => {
-            let eventsWrapper = jest.fn((orig, event) => orig(event));
+            let eventWrapper = jest.fn((orig, event) => orig(event));
             jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, () =>
               e('div', {}, [
                   childComp((props) => jayComponent = Item(props as ItemProps),
-                    vs => ITEM_PROPS, id1)]), eventsWrapper, []) as JayElement<RootElementViewState, RootElementRefs>;
+                    vs => ITEM_PROPS, id1)]), {eventWrapper}, []) as JayElement<RootElementViewState, RootElementRefs>;
             mockCallback = jest.fn(() => undefined);
             jayRootElement.refs.id1.onremove(mockCallback);
             let button = jayComponent.element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
             button.click();
 
-            expect(eventsWrapper.mock.calls.length).toBe(1);
+            expect(eventWrapper.mock.calls.length).toBe(1);
             expect(mockCallback.mock.calls.length).toBe(1);
         })
 

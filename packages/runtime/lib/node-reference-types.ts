@@ -1,8 +1,4 @@
-import {JayComponent, JayEventHandler, JayEvent} from "./element-types";
-
-/** generic **/
-export type JayEventHandlerWrapper<EventType, ViewState, Returns> =
-  (orig: JayEventHandler<EventType, ViewState, Returns>, event: JayEvent<EventType, ViewState>) => Returns
+import {JayComponent, JayEventHandler} from "./element-types";
 
 /** DOM element references **/
 export type JeyEventHandler<ViewState> = (viewState: ViewState, coordinate: string) => void

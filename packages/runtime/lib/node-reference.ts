@@ -1,6 +1,6 @@
 import {BaseJayElement, JayElement, JayEventHandler, updateFunc, JayComponent, JayEvent} from "./element-types";
 import {ConstructContext} from "./element";
-import {JayEventHandlerWrapper} from "./node-reference-types";
+import {JayEventHandlerWrapper} from "./element-types";
 
 type Ref<ViewState> = {
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void

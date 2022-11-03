@@ -1,12 +1,12 @@
 import {describe, expect, it, jest, beforeEach} from '@jest/globals'
-import {ConstructContext, JayElement, dynamicText as dt, element as e, HTMLElementProxy} from 'jay-runtime';
+import {ConstructContext, JayElement, dynamicText as dt, element as e, HTMLElementProxy, RenderElementOptions} from 'jay-runtime';
 import {
     createEffect, createEvent,
     createMemo,
     createState,
     forTesting,
     makeJayComponent,
-    Props, RenderElementOptions, useReactive
+    Props, useReactive
 } from "../lib/component";
 import {Reactive} from "jay-reactive";
 const {makePropsProxy} = forTesting
@@ -457,7 +457,7 @@ describe('state management', () => {
                         e('button', {ref: 'dec'}, ['dec']),
                         e('div', {ref: 'value'}, [dt(vs => vs.value)]),
                         e('button', {ref: 'inc'}, ['inc'])
-                    ]), options?.eventWrapper, []
+                    ]), options, []
                 ) as CounterElement;
             }
 
@@ -547,7 +547,7 @@ describe('state management', () => {
                     e('div', {}, [
                         e('div', {ref: 'label'}, [dt(trackingLabelGetter)]),
                         e('button', {ref: 'button'}, ['click'])
-                    ]), options?.eventWrapper, []
+                    ]), options, []
                 ) as LabelAndButtonElement;
             }
 

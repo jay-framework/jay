@@ -8,14 +8,13 @@ import {
     BaseJayElement,
     JayComponent,
     JayComponentConstructor,
-    JayElement,
+    JayElement, JayEventHandlerWrapper,
     MountFunc,
     noopMount,
-    noopUpdate,
+    noopUpdate, RenderElementOptions,
     updateFunc
 } from "./element-types";
 import './element-test-types';
-import {JayEventHandlerWrapper} from "./node-reference-types";
 
 const STYLE = 'style';
 const REF = 'ref';
@@ -267,10 +266,10 @@ export class ConstructContext<A extends Array<any>> {
 
     static withRootContext<ViewState, Refs>(viewState: ViewState,
                                             elementConstructor: () => BaseJayElement<ViewState>,
-                                            eventWrapper?: JayEventHandlerWrapper<any, any, any>,
+                                            options?: RenderElementOptions,
                                             dynamicRefs?: Array<string>):
       JayElement<ViewState, Refs> {
-        let context = new ConstructContext([viewState], dynamicRefs, eventWrapper)
+        let context = new ConstructContext([viewState], dynamicRefs, options?.eventWrapper)
         let element = constructionContextStack.doWithContext(context, () =>
           wrapWithModifiedCheck(currentContext().currData, elementConstructor()))
         element.mount();
