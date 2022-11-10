@@ -1,12 +1,12 @@
-import {JayElement, RenderElementOptions} from "jay-runtime";
+import {JayElement, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
 
 export interface CounterViewState {
   count: number
 }
 
 export interface CounterRefs {
-  subtracter: HTMLButtonElement,
-  adderButton: HTMLButtonElement
+  subtracter: HTMLElementProxy<CounterViewState, HTMLButtonElement>,
+  adderButton: HTMLElementProxy<CounterViewState, HTMLButtonElement>
 }
 
 export type CounterElement = JayElement<CounterViewState, CounterRefs>

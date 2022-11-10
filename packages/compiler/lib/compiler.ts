@@ -2,7 +2,7 @@ import {WithValidations} from "./with-validations";
 export {WithValidations} from "./with-validations";
 import {
     JayArrayType,
-    JayAtomicType, JayEnumType,
+    JayAtomicType, JayComponentType, JayEnumType,
     JayFile, JayHTMLType, JayImportedType, JayImportLink,
     JayObjectType,
     JayType, JayTypeAlias,
@@ -81,7 +81,9 @@ function renderImports(imports: Imports, importsFor: ImportsFor, componentImport
     if (imports.has(Import.dynamicElement) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('dynamicElement as de');
     if (imports.has(Import.forEach) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('forEach');
     if (imports.has(Import.ConstructContext) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('ConstructContext');
-    if (imports.has(Import.DynamicReference)) toBeRenderedImports.push('DynamicReference');
+    if (imports.has(Import.ComponentCollectionProxy)) toBeRenderedImports.push('ComponentCollectionProxy');
+    if (imports.has(Import.HTMLElementCollectionProxy)) toBeRenderedImports.push('HTMLElementCollectionProxy');
+    if (imports.has(Import.HTMLElementProxy)) toBeRenderedImports.push('HTMLElementProxy');
     if (imports.has(Import.childComp) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('childComp');
     toBeRenderedImports.push('RenderElementOptions')
     let runtimeImport =  `import {${toBeRenderedImports.join(', ')}} from "jay-runtime";`;
@@ -347,6 +349,10 @@ function firstElementChild(node: Node): HTMLElement {
     return node.childNodes.find(child => child.nodeType === NodeType.ELEMENT_NODE) as HTMLElement;
 }
 
+const isComponentRef = (ref: Ref) => (ref.elementType instanceof JayComponentType)
+const isCollectionRef = (ref: Ref) => (ref.dynamicRef)
+const isComponentCollectionRef = (ref: Ref) => (isCollectionRef(ref) && isComponentRef(ref))
+
 function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, importStatements: JayImportLink[], baseElementName: string):
     { renderedRefs: string; renderedElement: string; elementType: string; renderedImplementation: RenderFragment } {
     let variables = new Variables(types);
@@ -358,14 +364,27 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
     let renderedRefs;
     if (renderedRoot.refs.length > 0) {
         const renderedReferences = renderedRoot.refs.map(_ => {
-            const referenceType = _.dynamicRef?`DynamicReference<${_.viewStateType.name}, ${_.elementType.name}>`:_.elementType.name;
+            let referenceType;
+            if (isComponentCollectionRef(_)) {
+                referenceType = `ComponentCollectionProxy<${_.viewStateType.name}, ${_.elementType.name}>`;
+                imports = imports.plus(Import.ComponentCollectionProxy)
+            }
+            else if (isCollectionRef(_)) {
+                referenceType = `HTMLElementCollectionProxy<${_.viewStateType.name}, ${_.elementType.name}>`;
+                imports = imports.plus(Import.HTMLElementCollectionProxy)
+            }
+            else if (isComponentRef(_)) {
+                referenceType = _.elementType.name;
+            }
+            else {
+                referenceType = `HTMLElementProxy<${_.viewStateType.name}, ${_.elementType.name}>`;
+                imports = imports.plus(Import.HTMLElementProxy)
+            }
             return `  ${_.ref}: ${referenceType}`
         }).join(',\n');
         renderedRefs = `export interface ${refsType} {
 ${renderedReferences}
 }`
-        if (renderedRoot.refs.find(_ => _.dynamicRef))
-            imports = imports.plus(Import.DynamicReference)
     }
     else
         renderedRefs = `export interface ${refsType} {}`;

@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, dynamicElement as de, forEach, ConstructContext, HTMLElementCollectionProxy, RenderElementOptions, } from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, dynamicElement as de, forEach, ConstructContext, HTMLElementCollectionProxy, RenderElementOptions} from "jay-runtime";
 
 export interface Item {
   name: string,
