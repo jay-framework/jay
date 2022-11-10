@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, dynamicElement as de, forEach, ConstructContext, DynamicReference} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, dynamicElement as de, forEach, ConstructContext, HTMLElementCollectionProxy, RenderElementOptions, } from "jay-runtime";
 
 export interface Item {
   name: string,
@@ -13,15 +13,15 @@ export interface CollectionWithRefsViewState {
 }
 
 export interface CollectionWithRefsRefs {
-  name: DynamicReference<Item, HTMLSpanElement>,
-  completed: DynamicReference<Item, HTMLSpanElement>,
-  cost: DynamicReference<Item, HTMLSpanElement>,
-  done: DynamicReference<Item, HTMLButtonElement>
+  name: HTMLElementCollectionProxy<Item, HTMLSpanElement>,
+  completed: HTMLElementCollectionProxy<Item, HTMLSpanElement>,
+  cost: HTMLElementCollectionProxy<Item, HTMLSpanElement>,
+  done: HTMLElementCollectionProxy<Item, HTMLButtonElement>
 }
 
 export type CollectionWithRefsElement = JayElement<CollectionWithRefsViewState, CollectionWithRefsRefs>
 
-export function render(viewState: CollectionWithRefsViewState): CollectionWithRefsElement {
+export function render(viewState: CollectionWithRefsViewState, options?: RenderElementOptions): CollectionWithRefsElement {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
       e('h1', {}, [dt(vs => vs.title)]),
@@ -34,6 +34,6 @@ export function render(viewState: CollectionWithRefsViewState): CollectionWithRe
             e('button', {style: {cssText: 'border:1px blue; background: darkblue; color: white; display: inline-block;'}, ref: 'done'}, ['done'])
           ])}, 'id')
       ])
-    ]));
+    ]), options, ['name', 'completed', 'cost', 'done']);
 }
 

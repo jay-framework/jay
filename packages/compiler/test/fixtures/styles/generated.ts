@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, ConstructContext} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, ConstructContext, RenderElementOptions} from "jay-runtime";
 
 export interface StylesViewState {
   text1: string,
@@ -9,11 +9,11 @@ export interface StylesRefs {}
 
 export type StylesElement = JayElement<StylesViewState, StylesRefs>
 
-export function render(viewState: StylesViewState): StylesElement {
+export function render(viewState: StylesViewState, options?: RenderElementOptions): StylesElement {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
       e('div', {style: {cssText: 'color:red'}}, [dt(vs => vs.text1)]),
       e('div', {style: {cssText: 'color:green'}}, [dt(vs => vs.text2)])
-    ]));
+    ]), options);
 }
 

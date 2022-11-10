@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, dynamicProperty as dp, ConstructContext} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, dynamicProperty as dp, ConstructContext, RenderElementOptions} from "jay-runtime";
 
 export interface AttributesViewState {
   text: string,
@@ -12,7 +12,7 @@ export interface AttributesRefs {}
 
 export type AttributesElement = JayElement<AttributesViewState, AttributesRefs>
 
-export function render(viewState: AttributesViewState): AttributesElement {
+export function render(viewState: AttributesViewState, options?: RenderElementOptions): AttributesElement {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
       e('div', {style: {cssText: 'background: red;'}}, [dt(vs => vs.text)]),
@@ -24,5 +24,5 @@ export function render(viewState: AttributesViewState): AttributesElement {
       e('div', {class: 'main second'}, [dt(vs => vs.text3)]),
       e('div', {class: da(vs => `${vs.bool1?'main':''}`)}, [dt(vs => vs.text3)]),
       e('div', {class: da(vs => `${vs.bool1?'main':'second'}`)}, [dt(vs => vs.text3)])
-    ]));
+    ]), options);
 }

@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, conditional as c, dynamicElement as de, forEach, ConstructContext, childComp} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, conditional as c, dynamicElement as de, forEach, ConstructContext, childComp, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
 import {TreeNode, Node} from './tree-node';
 
 export interface TreeNodeViewState {
@@ -8,12 +8,12 @@ export interface TreeNodeViewState {
 }
 
 export interface TreeNodeRefs {
-  head: HTMLDivElement
+  head: HTMLElementProxy<TreeNodeViewState, HTMLDivElement>
 }
 
 export type TreeNodeElement = JayElement<TreeNodeViewState, TreeNodeRefs>
 
-export function render(viewState: TreeNodeViewState): TreeNodeElement {
+export function render(viewState: TreeNodeViewState, options?: RenderElementOptions): TreeNodeElement {
   return ConstructContext.withRootContext(viewState, () =>
     de('div', {}, [
       e('div', {ref: 'head'}, [
@@ -28,5 +28,5 @@ export function render(viewState: TreeNodeViewState): TreeNodeElement {
             ])}, 'id')
         ])
       )
-    ]));
+    ]), options);
 }

@@ -1,4 +1,4 @@
-import {JayElement, element as e, ConstructContext} from "jay-runtime";
+import {JayElement, element as e, ConstructContext, RenderElementOptions} from "jay-runtime";
 
 export interface WhitespaceAndTextViewState {
   text: string,
@@ -10,7 +10,7 @@ export interface WhitespaceAndTextRefs {}
 
 export type WhitespaceAndTextElement = JayElement<WhitespaceAndTextViewState, WhitespaceAndTextRefs>
 
-export function render(viewState: WhitespaceAndTextViewState): WhitespaceAndTextElement {
+export function render(viewState: WhitespaceAndTextViewState, options?: RenderElementOptions): WhitespaceAndTextElement {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
       e('div', {}, [' multi-line text ']),
@@ -19,5 +19,5 @@ export function render(viewState: WhitespaceAndTextViewState): WhitespaceAndText
         e('span', {}, [' ']),
         'another text'
       ])
-    ]));
+    ]), options);
 }

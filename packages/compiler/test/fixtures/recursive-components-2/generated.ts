@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, dynamicElement as de, forEach, ConstructContext} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, dynamicElement as de, forEach, ConstructContext, RenderElementOptions} from "jay-runtime";
 import {treeNode, Node} from './tree-node';
 
 export interface RecursiveComponents2ViewState {
@@ -10,7 +10,7 @@ export interface RecursiveComponents2Refs {}
 
 export type RecursiveComponents2Element = JayElement<RecursiveComponents2ViewState, RecursiveComponents2Refs>
 
-export function render(viewState: RecursiveComponents2ViewState): RecursiveComponents2Element {
+export function render(viewState: RecursiveComponents2ViewState, options?: RenderElementOptions): RecursiveComponents2Element {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
       e('div', {}, [dt(vs => vs.headChar)]),
@@ -21,5 +21,5 @@ export function render(viewState: RecursiveComponents2ViewState): RecursiveCompo
             e('TreeNode', {props: da(vs => vs)}, [])
           ])}, 'id')
       ])
-    ]));
+    ]), options);
 }

@@ -83,6 +83,7 @@ function renderImports(imports: Imports, importsFor: ImportsFor, componentImport
     if (imports.has(Import.ConstructContext) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('ConstructContext');
     if (imports.has(Import.DynamicReference)) toBeRenderedImports.push('DynamicReference');
     if (imports.has(Import.childComp) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('childComp');
+    toBeRenderedImports.push('RenderElementOptions')
     let runtimeImport =  `import {${toBeRenderedImports.join(', ')}} from "jay-runtime";`;
 
     // todo validate the actual imported file
@@ -98,7 +99,7 @@ function renderImports(imports: Imports, importsFor: ImportsFor, componentImport
 }
 
 function renderFunctionDeclaration(typeName: string, elementName: string): string {
-    return `export declare function render(viewState: ${typeName}): ${elementName}`;
+    return `export declare function render(viewState: ${typeName}, options?: RenderElementOptions): ${elementName}`;
 }
 
 function renderTextNode(variables: Variables, text: string, indent: Indent): RenderFragment {
@@ -371,9 +372,9 @@ ${renderedReferences}
 
     let renderedElement = `export type ${elementType} = JayElement<${types.name}, ${refsType}>`
 
-    let body = `export function render(viewState: ${types.name}): ${elementType} {
+    let body = `export function render(viewState: ${types.name}, options?: RenderElementOptions): ${elementType} {
   return ConstructContext.withRootContext(viewState, () =>
-${renderedRoot.rendered});
+${renderedRoot.rendered}, options);
 }`;
     return {renderedRefs, renderedElement, elementType, renderedImplementation: new RenderFragment(body, imports)};
 }

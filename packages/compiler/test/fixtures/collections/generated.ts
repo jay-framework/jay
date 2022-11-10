@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, dynamicElement as de, forEach, ConstructContext} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, dynamicElement as de, forEach, ConstructContext, RenderElementOptions} from "jay-runtime";
 
 export interface Thing {
   name: string,
@@ -16,7 +16,7 @@ export interface CollectionsRefs {}
 
 export type CollectionsElement = JayElement<CollectionsViewState, CollectionsRefs>
 
-export function render(viewState: CollectionsViewState): CollectionsElement {
+export function render(viewState: CollectionsViewState, options?: RenderElementOptions): CollectionsElement {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
       e('h1', {}, [dt(vs => vs.title)]),
@@ -28,6 +28,6 @@ export function render(viewState: CollectionsViewState): CollectionsElement {
             e('span', {style: {cssText: 'color:blue; width: 100px; display: inline-block;'}}, [dt(vs => vs.cost)])
           ])}, 'id')
       ])
-    ]));
+    ]), options);
 }
 
