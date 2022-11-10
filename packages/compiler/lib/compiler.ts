@@ -362,16 +362,19 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
     let refsType = baseElementName + 'Refs';
     let imports = renderedRoot.imports.plus(Import.ConstructContext);
     let renderedRefs;
+    let dynamicRefs = [];
     if (renderedRoot.refs.length > 0) {
         const renderedReferences = renderedRoot.refs.map(_ => {
             let referenceType;
             if (isComponentCollectionRef(_)) {
                 referenceType = `ComponentCollectionProxy<${_.viewStateType.name}, ${_.elementType.name}>`;
                 imports = imports.plus(Import.ComponentCollectionProxy)
+                dynamicRefs.push(_.ref);
             }
             else if (isCollectionRef(_)) {
                 referenceType = `HTMLElementCollectionProxy<${_.viewStateType.name}, ${_.elementType.name}>`;
                 imports = imports.plus(Import.HTMLElementCollectionProxy)
+                dynamicRefs.push(_.ref);
             }
             else if (isComponentRef(_)) {
                 referenceType = _.elementType.name;
@@ -393,7 +396,7 @@ ${renderedReferences}
 
     let body = `export function render(viewState: ${types.name}, options?: RenderElementOptions): ${elementType} {
   return ConstructContext.withRootContext(viewState, () =>
-${renderedRoot.rendered}, options);
+${renderedRoot.rendered}, options${dynamicRefs.length > 0?`, [${dynamicRefs.map(_ => `'${_}'`).join(', ')}]`:''});
 }`;
     return {renderedRefs, renderedElement, elementType, renderedImplementation: new RenderFragment(body, imports)};
 }
