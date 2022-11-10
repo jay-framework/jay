@@ -1,4 +1,4 @@
-import {JayElement} from "jay-runtime";
+import {JayElement, RenderElementOptions} from "jay-runtime";
 
 export interface O1 {
   s2: string,
@@ -22,4 +22,4 @@ export interface DefinitionRefs {}
 
 export type DefinitionElement = JayElement<DefinitionViewState, DefinitionRefs>
 
-export declare function render(viewState: DefinitionViewState): DefinitionElement
+export declare function render(viewState: DefinitionViewState, options?: RenderElementOptions): DefinitionElement

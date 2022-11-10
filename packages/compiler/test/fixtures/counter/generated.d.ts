@@ -1,4 +1,4 @@
-import {JayElement} from "jay-runtime";
+import {JayElement, RenderElementOptions} from "jay-runtime";
 
 export interface CounterViewState {
   count: number
@@ -11,4 +11,4 @@ export interface CounterRefs {
 
 export type CounterElement = JayElement<CounterViewState, CounterRefs>
 
-export declare function render(viewState: CounterViewState): CounterElement
+export declare function render(viewState: CounterViewState, options?: RenderElementOptions): CounterElement

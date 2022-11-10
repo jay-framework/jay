@@ -1,4 +1,4 @@
-import {JayElement} from "jay-runtime";
+import {JayElement, RenderElementOptions} from "jay-runtime";
 
 export interface Thing {
   name: string,
@@ -16,5 +16,5 @@ export interface CollectionsRefs {}
 
 export type CollectionsElement = JayElement<CollectionsViewState, CollectionsRefs>
 
-export declare function render(viewState: CollectionsViewState): CollectionsElement
+export declare function render(viewState: CollectionsViewState, options?: RenderElementOptions): CollectionsElement
 

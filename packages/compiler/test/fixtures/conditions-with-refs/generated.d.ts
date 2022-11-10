@@ -1,4 +1,4 @@
-import {JayElement} from "jay-runtime";
+import {JayElement, RenderElementOptions} from "jay-runtime";
 
 export interface ConditionsWithRefsViewState {
   text1: string,
@@ -13,4 +13,4 @@ export interface ConditionsWithRefsRefs {
 
 export type ConditionsWithRefsElement = JayElement<ConditionsWithRefsViewState, ConditionsWithRefsRefs>
 
-export declare function render(viewState: ConditionsWithRefsViewState): ConditionsWithRefsElement
+export declare function render(viewState: ConditionsWithRefsViewState, options?: RenderElementOptions): ConditionsWithRefsElement

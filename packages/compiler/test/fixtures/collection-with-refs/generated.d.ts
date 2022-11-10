@@ -1,4 +1,4 @@
-import {JayElement, DynamicReference} from "jay-runtime";
+import {JayElement, HTMLElementCollectionProxy, RenderElementOptions} from "jay-runtime";
 
 export interface Item {
   name: string,
@@ -13,13 +13,13 @@ export interface CollectionWithRefsViewState {
 }
 
 export interface CollectionWithRefsRefs {
-  name: DynamicReference<Item, HTMLSpanElement>,
-  completed: DynamicReference<Item, HTMLSpanElement>,
-  cost: DynamicReference<Item, HTMLSpanElement>,
-  done: DynamicReference<Item, HTMLButtonElement>
+  name: HTMLElementCollectionProxy<Item, HTMLSpanElement>,
+  completed: HTMLElementCollectionProxy<Item, HTMLSpanElement>,
+  cost: HTMLElementCollectionProxy<Item, HTMLSpanElement>,
+  done: HTMLElementCollectionProxy<Item, HTMLButtonElement>
 }
 
 export type CollectionWithRefsElement = JayElement<CollectionWithRefsViewState, CollectionWithRefsRefs>
 
-export declare function render(viewState: CollectionWithRefsViewState): CollectionWithRefsElement
+export declare function render(viewState: CollectionWithRefsViewState, options?: RenderElementOptions): CollectionWithRefsElement
 
