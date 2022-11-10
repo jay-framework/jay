@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, conditional as c, dynamicElement as de, forEach, ConstructContext, childComp, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, conditional as c, dynamicElement as de, forEach, ConstructContext, HTMLElementProxy, childComp, RenderElementOptions} from "jay-runtime";
 import {TreeNode, Node} from './tree-node';
 
 export interface TreeNodeViewState {

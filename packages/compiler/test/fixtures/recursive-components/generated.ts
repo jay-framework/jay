@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, dynamicElement as de, forEach, ConstructContext, childComp, ComponentCollectionProxy, RenderElementOptions} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, dynamicElement as de, forEach, ConstructContext, ComponentCollectionProxy, childComp, RenderElementOptions} from "jay-runtime";
 import {treeNode, Node} from './tree-node';
 
 export interface RecursiveComponentsRefs {

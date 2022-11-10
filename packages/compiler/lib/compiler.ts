@@ -349,7 +349,7 @@ function firstElementChild(node: Node): HTMLElement {
     return node.childNodes.find(child => child.nodeType === NodeType.ELEMENT_NODE) as HTMLElement;
 }
 
-const isComponentRef = (ref: Ref) => (ref.elementType instanceof JayComponentType)
+const isComponentRef = (ref: Ref) => (ref.elementType instanceof JayComponentType || ref.elementType instanceof JayTypeAlias)
 const isCollectionRef = (ref: Ref) => (ref.dynamicRef)
 const isComponentCollectionRef = (ref: Ref) => (isCollectionRef(ref) && isComponentRef(ref))
 
