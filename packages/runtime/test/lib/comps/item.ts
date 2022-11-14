@@ -1,11 +1,8 @@
-import {
-    ConstructContext,
-    element as e,
-    dynamicText as dt
-} from "../../../lib/element";
-import {JayComponent, JayElement} from "../../../lib";
-import {ComponentCollectionProxy, EventEmitter, HTMLElementProxy} from "../../../lib/node-reference-types";
-import {JayEventHandler} from "../../../lib/element-types";
+import {ConstructContext, dynamicText as dt, element as e} from "../../../lib/element";
+import {JayElement} from "../../../lib";
+import {HTMLElementProxy} from "../../../lib";
+import {JayEventHandler} from "../../../lib";
+import {mkComponentEventHandler} from "./make-component-event-handler";
 
 export interface ItemVS {
     text: string,
@@ -33,26 +30,11 @@ export interface ItemProps {
 }
 
 
-export interface ItemComponent extends JayComponent<ItemProps, ItemVS, ItemElement> {
-    onremove: EventEmitter<string, ItemProps>
-    getItemSummary(): string
-}
-
-function mkComponentEventHandler<EventType, PropsType>(): EventEmitter<EventType, PropsType> {
-    let eventDefinition: EventEmitter<EventType, PropsType>;
-    let _handler: JayEventHandler<EventType, PropsType, void>;
-    eventDefinition = function(handler: JayEventHandler<EventType, PropsType, void>) {
-        _handler = handler
-    } as EventEmitter<EventType, PropsType>
-    eventDefinition.emit = (event: EventType) => _handler && _handler({event, viewState: undefined, coordinate: undefined});
-    return eventDefinition;
-}
-
-export function Item(props: ItemProps): ItemComponent {
+export function Item<ParentVS>(props: ItemProps) {
     let done = false;
     let text = props.text;
     let jayElement = renderItem({text, done, dataId: props.dataId});
-    let onremove = mkComponentEventHandler<string, ItemProps>();
+    let onremove = mkComponentEventHandler<string, ParentVS>();
 
     jayElement.refs.done.onclick(() => {
         done = !done;
@@ -63,7 +45,7 @@ export function Item(props: ItemProps): ItemComponent {
         onremove.emit(`item ${text} - ${done} is removed`);
     })
 
-    let itemInstance: ItemComponent = {
+    let itemInstance = {
         element: jayElement,
         update: (props) => {
             text = props.text
@@ -87,6 +69,3 @@ export function Item(props: ItemProps): ItemComponent {
     return itemInstance;
 }
 
-export interface ItemComponentCollection<ItemVS> extends ComponentCollectionProxy<ItemVS, ItemComponent> {
-    onremove: EventEmitter<string, ItemVS>
-}

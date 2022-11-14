@@ -1,11 +1,10 @@
 import {beforeEach, describe, expect, it} from '@jest/globals'
 import {HTMLElementRefImpl, ReferencesManager} from "../../lib/node-reference";
 import {childComp, ConstructContext, dynamicElement as de, element as e, forEach} from "../../lib/";
-import {JayElement} from "../../lib";
-import {ComponentCollectionProxy, HTMLElementProxy} from "../../lib/node-reference-types";
-import {Item, ItemComponent, ItemComponentCollection, ItemProps, ItemVS} from "./comps/item";
+import {JayElement, HTMLElementProxy} from "../../lib";
+import {Item, ItemProps} from "./comps/item";
 import '../../lib/element-test-types';
-import {JayEventHandlerWrapper, RenderElementOptions} from "../../lib/element-types";
+import {ItemComponent, ItemComponentCollection} from "./comps/item-types";
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -332,10 +331,10 @@ describe('ReferencesManager events', () => {
     describe('single referenced component', () => {
         interface RootElementViewState {}
         interface RootElementRefs {
-            id1: ItemComponent
+            id1: ItemComponent<RootElementViewState>
         }
 
-        let jayComponent: ItemComponent,
+        let jayComponent: ItemComponent<RootElementViewState>,
           jayRootElement: JayElement<RootElementViewState, RootElementRefs>,
           mockCallback;
 
@@ -412,7 +411,7 @@ describe('ReferencesManager events', () => {
             id1: ItemComponentCollection<ItemViewState>
         }
 
-        let jayComponents: ItemComponent[],
+        let jayComponents: ItemComponent<ViewState>[],
           jayRootElement: JayElement<ViewState, RootElementRefs>,
           mockCallback;
         const viewState: ViewState = {
@@ -432,7 +431,7 @@ describe('ReferencesManager events', () => {
                   forEach((vs: typeof viewState) => vs.items,
                     (item) =>
                       childComp((props) => {
-                          let comp = Item(props as ItemProps);
+                          let comp = Item<ViewState>(props as ItemProps);
                           jayComponents.push(comp)
                           return comp;
                       }, vs => ITEM_PROPS, id1),

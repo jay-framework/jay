@@ -6,7 +6,7 @@ import {
     conditional, ConstructContext
 } from '../../lib/element';
 import {describe, expect, it} from '@jest/globals'
-import {JayElement} from "../../lib/element-types";
+import {JayElement} from "../../lib";
 
 describe('dynamic-element with mixed content', () => {
 

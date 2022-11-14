@@ -7,8 +7,7 @@ import {
 import {describe, expect, it} from '@jest/globals'
 import {expectE} from "./test-utils";
 import { mutableObject } from 'jay-reactive';
-import {JayElement} from "../../lib";
-import {HTMLElementCollectionProxy, HTMLElementProxy} from "../../lib/node-reference-types";
+import {JayElement, HTMLElementCollectionProxy} from "../../lib";
 
 const item1 = {name: 'name 1', id: 'id-1'};
 const item2 = {name: 'name 2', id: 'id-2'};

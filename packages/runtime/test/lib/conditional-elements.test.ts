@@ -8,8 +8,7 @@ import "@testing-library/jest-dom/extend-expect";
 import {describe, expect, it} from '@jest/globals'
 import {expectE} from "./test-utils";
 import {JSDOM} from 'jsdom';
-import {JayElement} from "../../lib";
-import {HTMLElementProxy} from "../../lib/node-reference-types";
+import {JayElement, HTMLElementProxy} from "../../lib";
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';

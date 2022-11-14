@@ -2,9 +2,10 @@ import {beforeEach, describe, expect, it} from '@jest/globals'
 import {HTMLElementRefImpl, ReferencesManager} from "../../lib/node-reference";
 import {childComp, ConstructContext, dynamicElement as de, element as e, forEach} from "../../lib/";
 import {JayElement} from "../../lib";
-import {ComponentCollectionProxy, HTMLElementCollectionProxy, HTMLElementProxy} from "../../lib/node-reference-types";
-import {Item, ItemComponent, ItemProps} from "./comps/item";
+import {ComponentCollectionProxy, HTMLElementCollectionProxy, HTMLElementProxy} from "../../lib";
+import {Item, ItemProps} from "./comps/item";
 import '../../lib/element-test-types';
+import {ItemComponent} from "./comps/item-types";
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -18,6 +19,7 @@ const COORDINATE_12 = `${id1}.2`
 const ITEM_PROPS = {text: 'hello', dataId: 'A'};
 const ITEM_PROPS_2 = {text: 'hi', dataId: 'B'};
 const ITEM_PROPS_3 = {text: 'hey there', dataId: 'C'};
+const UNIT_WRAPPER = (orig, event) => orig(event);
 
 describe('ReferencesManager operations', () => {
 
@@ -37,7 +39,7 @@ describe('ReferencesManager operations', () => {
             referenceManager = new ReferencesManager();
             mockCallback = jest.fn(() => undefined);
             mockCallback2 = jest.fn(() => undefined);
-            const ref = new HTMLElementRefImpl(jayElement1.dom, DATA_CONTEXT, COORDINATE);
+            const ref = new HTMLElementRefImpl(jayElement1.dom, DATA_CONTEXT, COORDINATE, UNIT_WRAPPER);
             referenceManager.addStaticRef(id1, ref);
             jayRootElement = referenceManager.applyToElement(jayRootElement)
         })
@@ -72,8 +74,8 @@ describe('ReferencesManager operations', () => {
             mockCallback = jest.fn(() => undefined);
             mockCallback2 = jest.fn(() => undefined);
             refs_id1 = [
-                new HTMLElementRefImpl(je1.dom, DATA_CONTEXT_1, COORDINATE_11),
-                new HTMLElementRefImpl(je2.dom, DATA_CONTEXT_2, COORDINATE_12)
+                new HTMLElementRefImpl(je1.dom, DATA_CONTEXT_1, COORDINATE_11, UNIT_WRAPPER),
+                new HTMLElementRefImpl(je2.dom, DATA_CONTEXT_2, COORDINATE_12, UNIT_WRAPPER)
             ]
             refs_id1.forEach(_ => referenceManager.addDynamicRef(id1, _));
             jayRootElement = referenceManager.applyToElement(jayRootElement)
@@ -106,10 +108,10 @@ describe('ReferencesManager operations', () => {
     describe('single referenced component', () => {
         interface RootElementViewState {}
         interface RootElementRefs {
-            id1: ItemComponent
+            id1: ItemComponent<RootElementViewState>
         }
 
-        let jayComponent: ItemComponent,
+        let jayComponent: ItemComponent<RootElementViewState>,
           jayRootElement: JayElement<RootElementViewState, RootElementRefs>, mockCallback;
         beforeEach(() => {
             jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, () =>
@@ -138,7 +140,7 @@ describe('ReferencesManager operations', () => {
 
         interface RootElementViewState {}
         interface RootElementRefs {
-            id1: ComponentCollectionProxy<typeof viewState.items[0], ItemComponent>
+            id1: ComponentCollectionProxy<typeof viewState.items[0], ItemComponent<RootElementViewState>>
         }
 
         let jayRootElement: JayElement<RootElementViewState, RootElementRefs>,

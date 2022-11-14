@@ -1,8 +1,9 @@
 import {ConstructContext, dynamicText as dt, element as e} from "../../../lib/element";
-import {JayComponent, JayElement, JayEventHandler} from "../../../lib/element-types";
-import {HTMLElementProxy} from "../../../lib/node-reference-types";
+import {JayElement, JayEventHandler} from "../../../lib";
+import {HTMLElementProxy} from "../../../lib";
+import {mkComponentEventHandler} from "./make-component-event-handler";
 
-interface ViewState {
+export interface ViewState {
     count: number
 }
 
@@ -12,7 +13,7 @@ interface CounterRefs {
     count: HTMLElementProxy<ViewState, HTMLElement>
 }
 
-interface CounterElement extends JayElement<ViewState, CounterRefs> {}
+export interface CounterElement extends JayElement<ViewState, CounterRefs> {}
 
 function renderCounter(viewState: ViewState): CounterElement {
 
@@ -24,31 +25,34 @@ function renderCounter(viewState: ViewState): CounterElement {
     ) as CounterElement;
 }
 
-interface CounterData {
+export interface CounterData {
     count: number
 }
 
-interface CounterComponent extends JayComponent<CounterData, ViewState, CounterElement> {
-    onChange(handler: (viewState: ViewState, coordinate: string) => void)
+export interface CounterEvent {
+    count: number,
+    innerCoordinate: string
 }
 
-export function Counter(initialValue: number): CounterComponent {
+export function Counter<ParentVS>(initialValue: number) {
     let jayElement = renderCounter({count: initialValue});
     let count = initialValue;
-    let onChangeHandler: (viewState: ViewState, coordinate: string) => void;
+    let onChange = mkComponentEventHandler<CounterEvent, ParentVS>()
 
-    jayElement.refs.inc.onclick(({viewState, coordinate}) => {
+    jayElement.refs.inc.onclick(({coordinate}) => {
         count += 1;
         jayElement.update({count});
-        if (onChangeHandler)
-            onChangeHandler({count}, coordinate)
+        onChange.emit({count, innerCoordinate: coordinate});
+        // if (onChange)
+        //     onChange({count}, coordinate)
     })
 
-    jayElement.refs.dec.onclick(({viewState, coordinate}) => {
+    jayElement.refs.dec.onclick(({coordinate}) => {
         count -= 1;
         jayElement.update({count});
-        if (onChangeHandler)
-            onChangeHandler({count}, coordinate)
+        onChange.emit({count, innerCoordinate: coordinate});
+        // if (onChange)
+        //     onChange({count}, coordinate)
     })
 
     return {
@@ -61,6 +65,6 @@ export function Counter(initialValue: number): CounterComponent {
         unmount: () => jayElement.unmount(),
         addEventListener: (type: string, handler: JayEventHandler<any, any, any>, options?: boolean | AddEventListenerOptions) => {},
         removeEventListener: (type: string, handler: JayEventHandler<any, any, any>, options?: EventListenerOptions | boolean) => {},
-        onChange: (handler => onChangeHandler = handler)
+        onChange
     }
 }
