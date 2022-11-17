@@ -5,7 +5,7 @@ import {JayElement} from "../../lib";
 import {ComponentCollectionProxy, HTMLElementCollectionProxy, HTMLElementProxy} from "../../lib";
 import {Item, ItemProps} from "./comps/item";
 import '../../lib/element-test-types';
-import {ItemComponent} from "./comps/item-types";
+import {ItemRef} from "./comps/item-refs";
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -108,10 +108,10 @@ describe('ReferencesManager operations', () => {
     describe('single referenced component', () => {
         interface RootElementViewState {}
         interface RootElementRefs {
-            id1: ItemComponent<RootElementViewState>
+            id1: ItemRef<RootElementViewState>
         }
 
-        let jayComponent: ItemComponent<RootElementViewState>,
+        let jayComponent: ItemRef<RootElementViewState>,
           jayRootElement: JayElement<RootElementViewState, RootElementRefs>, mockCallback;
         beforeEach(() => {
             jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, () =>
@@ -140,7 +140,7 @@ describe('ReferencesManager operations', () => {
 
         interface RootElementViewState {}
         interface RootElementRefs {
-            id1: ComponentCollectionProxy<typeof viewState.items[0], ItemComponent<RootElementViewState>>
+            id1: ComponentCollectionProxy<typeof viewState.items[0], ItemRef<RootElementViewState>>
         }
 
         let jayRootElement: JayElement<RootElementViewState, RootElementRefs>,

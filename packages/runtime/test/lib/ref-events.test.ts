@@ -4,7 +4,7 @@ import {childComp, ConstructContext, dynamicElement as de, element as e, forEach
 import {JayElement, HTMLElementProxy} from "../../lib";
 import {Item, ItemProps} from "./comps/item";
 import '../../lib/element-test-types';
-import {ItemComponent, ItemComponentCollection} from "./comps/item-types";
+import {ItemRef, ItemRefs} from "./comps/item-refs";
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -331,10 +331,10 @@ describe('ReferencesManager events', () => {
     describe('single referenced component', () => {
         interface RootElementViewState {}
         interface RootElementRefs {
-            id1: ItemComponent<RootElementViewState>
+            id1: ItemRef<RootElementViewState>
         }
 
-        let jayComponent: ItemComponent<RootElementViewState>,
+        let jayComponent: ItemRef<RootElementViewState>,
           jayRootElement: JayElement<RootElementViewState, RootElementRefs>,
           mockCallback;
 
@@ -408,10 +408,10 @@ describe('ReferencesManager events', () => {
             items: ItemViewState[]
         }
         interface RootElementRefs {
-            id1: ItemComponentCollection<ItemViewState>
+            id1: ItemRefs<ItemViewState>
         }
 
-        let jayComponents: ItemComponent<ViewState>[],
+        let jayComponents: ItemRef<ViewState>[],
           jayRootElement: JayElement<ViewState, RootElementRefs>,
           mockCallback;
         const viewState: ViewState = {

@@ -7,7 +7,7 @@ import {
 } from "../../lib/index";
 import '../../lib/element-test-types';
 import {Item, ItemProps} from "./comps/item";
-import {ItemComponent, ItemComponentCollection} from "./comps/item-types";
+import {ItemRef, ItemRefs} from "./comps/item-refs";
 
 describe('nested components', () => {
     describe('single nested component', () => {
@@ -17,7 +17,7 @@ describe('nested components', () => {
         }
 
         interface TestRefs {
-            staticComponent: ItemComponent<ViewState>,
+            staticComponent: ItemRef<ViewState>,
         }
 
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
@@ -78,7 +78,7 @@ describe('nested components', () => {
         }
 
         interface TestRefs {
-            conditional: ItemComponent<ViewState>,
+            conditional: ItemRef<ViewState>,
         }
 
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
@@ -114,7 +114,7 @@ describe('nested components', () => {
         }
 
         interface TestRefs {
-            forEachOfComponents: ItemComponentCollection<DataItem>
+            forEachOfComponents: ItemRefs<DataItem>
         }
 
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
