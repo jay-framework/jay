@@ -20,7 +20,6 @@ import {
 import { capitalCase } from "change-case";
 import {htmlElementTagNameMap} from "./html-element-tag-name-map";
 import {camelCase} from "camel-case";
-import {CounterComponent} from "../test/fixtures/components/counter/counter-types";
 
 function renderInterface(aType: JayType): string {
 
@@ -100,7 +99,7 @@ function renderImports(imports: Imports, importsFor: ImportsFor, componentImport
           .filter(symbol => symbol.type instanceof JayImportedType && symbol.type.type instanceof JayComponentType)
           .map(symbol => {
               let compType = (symbol.type as JayImportedType).type as JayComponentType;
-              imports.push(`import {${compType.name}Component} from '${importStatement.module}-types';`)
+              imports.push(`import {${compType.name}Ref} from '${importStatement.module}-refs';`)
           })
         imports.push(`import {${symbols}} from '${importStatement.module}';`);
         return imports.join('\n');
@@ -229,7 +228,7 @@ function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variabl
             refs = [{
                 ref: camelCase(attributes[attrName]),
                 dynamicRef,
-                elementType: new JayTypeAlias(`${element.rawTagName}Component<${variables.currentType.name}>`),
+                elementType: new JayTypeAlias(`${element.rawTagName}Ref<${variables.currentType.name}>`),
                 viewStateType: variables.currentType
             }];
         }

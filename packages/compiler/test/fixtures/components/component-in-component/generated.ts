@@ -1,5 +1,5 @@
 import {JayElement, element as e, ConstructContext, childComp, RenderElementOptions} from "jay-runtime";
-import {CounterComponent} from '../counter/counter-types';
+import {CounterRef} from '../counter/counter-refs';
 import {Counter} from '../counter/counter';
 import {CounterViewState as CounterData} from '../counter/generated';
 
@@ -11,8 +11,8 @@ export interface ComponentInComponentViewState {
 }
 
 export interface ComponentInComponentRefs {
-  counter1: CounterComponent<ComponentInComponentViewState>,
-  counterTwo: CounterComponent<ComponentInComponentViewState>
+  counter1: CounterRef<ComponentInComponentViewState>,
+  counterTwo: CounterRef<ComponentInComponentViewState>
 }
 
 export type ComponentInComponentElement = JayElement<ComponentInComponentViewState, ComponentInComponentRefs>
