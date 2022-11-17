@@ -20,6 +20,7 @@ import {
 import { capitalCase } from "change-case";
 import {htmlElementTagNameMap} from "./html-element-tag-name-map";
 import {camelCase} from "camel-case";
+import {CounterComponent} from "../test/fixtures/components/counter/counter-types";
 
 function renderInterface(aType: JayType): string {
 
@@ -94,7 +95,15 @@ function renderImports(imports: Imports, importsFor: ImportsFor, componentImport
             .map(symbol => symbol.as?`${symbol.name} as ${symbol.as}`:symbol.name)
             .join(', ')
 
-        return `import {${symbols}} from '${importStatement.module}';`
+        let imports = [];
+        importStatement.names
+          .filter(symbol => symbol.type instanceof JayImportedType && symbol.type.type instanceof JayComponentType)
+          .map(symbol => {
+              let compType = (symbol.type as JayImportedType).type as JayComponentType;
+              imports.push(`import {${compType.name}Component} from '${importStatement.module}-types';`)
+          })
+        imports.push(`import {${symbols}} from '${importStatement.module}';`);
+        return imports.join('\n');
     });
 
     return [runtimeImport, ...renderedComponentImports].join('\n');
@@ -216,13 +225,14 @@ function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variabl
         if (attrCanonical === 'props') {
             isPropsDirectAssignment = true;
         }
-        if (attrCanonical === 'ref')
+        if (attrCanonical === 'ref') {
             refs = [{
                 ref: camelCase(attributes[attrName]),
                 dynamicRef,
-                elementType: new JayTypeAlias(`ReturnType<typeof ${element.rawTagName}>`),
+                elementType: new JayTypeAlias(`${element.rawTagName}Component<${variables.currentType.name}>`),
                 viewStateType: variables.currentType
             }];
+        }
         else {
             let prop = parseComponentPropExpression(attributes[attrName], variables);
             props.push(prop.map(_ => `${attrKey}: ${_}`))
@@ -354,7 +364,7 @@ const isCollectionRef = (ref: Ref) => (ref.dynamicRef)
 const isComponentCollectionRef = (ref: Ref) => (isCollectionRef(ref) && isComponentRef(ref))
 
 function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, importStatements: JayImportLink[], baseElementName: string):
-    { renderedRefs: string; renderedElement: string; elementType: string; renderedImplementation: RenderFragment } {
+    { renderedRefs: string; renderedElement: string; elementType: string; renderedImplementation: RenderFragment; additionalImports: JayImportLink[] } {
     let variables = new Variables(types);
     let importedSymbols = new Set(importStatements.flatMap(_ => _.names.map(sym => sym.as? sym.as : sym.name)));
     let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), importedSymbols, new Indent('    '), false);
@@ -363,6 +373,7 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
     let imports = renderedRoot.imports.plus(Import.ConstructContext);
     let renderedRefs;
     let dynamicRefs = [];
+    let additionalImports = [];
     if (renderedRoot.refs.length > 0) {
         const renderedReferences = renderedRoot.refs.map(_ => {
             let referenceType;
@@ -378,6 +389,7 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
             }
             else if (isComponentRef(_)) {
                 referenceType = _.elementType.name;
+                additionalImports.push()
             }
             else {
                 referenceType = `HTMLElementProxy<${_.viewStateType.name}, ${_.elementType.name}>`;
@@ -398,7 +410,7 @@ ${renderedReferences}
   return ConstructContext.withRootContext(viewState, () =>
 ${renderedRoot.rendered}, options${dynamicRefs.length > 0?`, [${dynamicRefs.map(_ => `'${_}'`).join(', ')}]`:''});
 }`;
-    return {renderedRefs, renderedElement, elementType, renderedImplementation: new RenderFragment(body, imports)};
+    return {renderedRefs, renderedElement, elementType, additionalImports, renderedImplementation: new RenderFragment(body, imports)};
 }
 
 function normalizeFilename(filename: string): string {

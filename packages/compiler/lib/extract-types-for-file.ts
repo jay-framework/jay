@@ -103,13 +103,16 @@ export function extractTypesForFile(filename: string, options = {}): JayType[] {
     project.addSourceFileAtPath(filename);
 
     const mainFile = project.getSourceFileOrThrow(filename);
+    //
     const types = [];
 
     for (const [name, declarations] of mainFile.getExportedDeclarations()) {
+        // console.log(project.getTypeChecker().getPropertiesOfType(declarations[0].getType()))
         if (declarations[0] instanceof InterfaceDeclaration) {
             types.push(getInterfaceJayType(name, declarations[0], types));
         }
         else if (declarations[0] instanceof FunctionDeclaration) {
+            // console.log(declarations[0].getName(), ' ==> ', project.getTypeChecker().getPropertiesOfType(declarations[0].getReturnType()).map(_ => _.getName()))
             if (isOrSubclassOf(declarations[0].getReturnType(), 'JayElement')) {
                 types.push(getElementType(name, declarations[0]));
             }

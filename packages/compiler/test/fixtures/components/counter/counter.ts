@@ -2,8 +2,8 @@ import {CounterRefs, render} from './generated';
 // @ts-ignore
 import {createEvent, createState, makeJayComponent, Props} from 'jay-component';
 
-interface CounterProps {
-  initialValue
+export interface CounterProps {
+  initialValue: number
 }
 
 function CounterComponent({initialValue}: Props<CounterProps>, refs: CounterRefs) {

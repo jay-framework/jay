@@ -156,6 +156,13 @@ describe('compiler', () => {
                 expect(runtimeFile.val).toEqual(await readGeneratedFile('basics/attributes'));
             })
 
+            it('with different view state input types', async () => {
+                const jayFile = await readSourceFile('basics/dynamic-text-input-types');
+                let runtimeFile = generateRuntimeFile(jayFile, 'dynamic-text-input-types.jay.html', './test/');
+                expect(runtimeFile.validations).toEqual([]);
+                expect(runtimeFile.val).toEqual(await readGeneratedFile('basics/dynamic-text-input-types'));
+            })
+
             it('whitespace collapsing and handling', async () => {
                 const jayFile = await readSourceFile('basics/whitespace-and-text');
                 let runtimeFile = generateRuntimeFile(jayFile, 'whitespace-and-text.jay.html', './test/');
@@ -220,7 +227,7 @@ describe('compiler', () => {
                 let runtimeFile = generateRuntimeFile(jayFile, 'component-in-component.jay.html', './test/fixtures/components/component-in-component');
                 expect(runtimeFile.validations).toEqual([]);
                 expect(runtimeFile.val).toEqual(await readGeneratedFile('components/component-in-component'));
-            })
+            }, 10000)
 
             it('dynamic nesting components in other components', async () => {
                 const jayFile = await readSourceFile('components/dynamic-component-in-component');
