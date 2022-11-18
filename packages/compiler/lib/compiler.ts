@@ -70,7 +70,7 @@ enum ImportsFor {
     definition, implementation
 }
 
-function renderImports(imports: Imports, importsFor: ImportsFor, componentImports: Array<JayImportLink>, refImportsInUse: string[]): string {
+function renderImports(imports: Imports, importsFor: ImportsFor, componentImports: Array<JayImportLink>, refImportsInUse: Set<string>): string {
     let toBeRenderedImports = [];
     if (imports.has(Import.jayElement)) toBeRenderedImports.push('JayElement');
     if (imports.has(Import.element) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('element as e');
@@ -97,15 +97,15 @@ function renderImports(imports: Imports, importsFor: ImportsFor, componentImport
         let imports = [];
         importStatement.names
           .filter(symbol => symbol.type instanceof JayImportedType && symbol.type.type instanceof JayComponentType)
-          .map(symbol => (symbol.type as JayImportedType).type as JayComponentType)
-          .filter(compType => refImportsInUse.indexOf(compType+'ref') + refImportsInUse.indexOf(compType+'refs') > 0)
+          .map(symbol => ((symbol.type as JayImportedType).type as JayComponentType).name)
+          .filter(compType => refImportsInUse.has(compType+'Ref') || refImportsInUse.has(compType+'Refs'))
           .map(compType => {
               let importSymbols = []
-              if (refImportsInUse.indexOf(compType+'ref') > 0)
-                  importSymbols.push(compType+'ref')
-              if (refImportsInUse.indexOf(compType+'refs') > 0)
-                  importSymbols.push(compType+'refs')
-              imports.push(`import {${refImportsInUse.join(', ')}} from '${importStatement.module}-refs';`)
+              if (refImportsInUse.has(compType+'Ref'))
+                  importSymbols.push(compType+'Ref')
+              if (refImportsInUse.has(compType+'Refs'))
+                  importSymbols.push(compType+'Refs')
+              imports.push(`import {${importSymbols.join(', ')}} from '${importStatement.module}-refs';`)
           })
         imports.push(`import {${symbols}} from '${importStatement.module}';`);
         return imports.join('\n');
@@ -371,7 +371,7 @@ const isCollectionRef = (ref: Ref) => (ref.dynamicRef)
 const isComponentCollectionRef = (ref: Ref) => (isCollectionRef(ref) && isComponentRef(ref))
 
 function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, importStatements: JayImportLink[], baseElementName: string):
-    { renderedRefs: string; renderedElement: string; elementType: string; renderedImplementation: RenderFragment; refImportsInUse: string[] } {
+    { renderedRefs: string; renderedElement: string; elementType: string; renderedImplementation: RenderFragment; refImportsInUse: Set<string> } {
     let variables = new Variables(types);
     let importedSymbols = new Set(importStatements.flatMap(_ => _.names.map(sym => sym.as? sym.as : sym.name)));
     let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), importedSymbols, new Indent('    '), false);
@@ -380,7 +380,7 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
     let imports = renderedRoot.imports.plus(Import.ConstructContext);
     let renderedRefs;
     let dynamicRefs = [];
-    let refImportsInUse = [];
+    let refImportsInUse = new Set<string>();
     if (renderedRoot.refs.length > 0) {
         const renderedReferences = renderedRoot.refs.map(_ => {
             let referenceType;
@@ -388,7 +388,7 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
                 referenceType = `${_.elementType.name}Refs<${_.viewStateType.name}>`
                 imports = imports.plus(Import.ComponentCollectionProxy)
                 dynamicRefs.push(_.ref);
-                refImportsInUse.push(`${_.elementType.name}Refs`)
+                refImportsInUse.add(`${_.elementType.name}Refs`)
             }
             else if (isCollectionRef(_)) {
                 referenceType = `HTMLElementCollectionProxy<${_.viewStateType.name}, ${_.elementType.name}>`;
@@ -397,7 +397,7 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
             }
             else if (isComponentRef(_)) {
                 referenceType = `${_.elementType.name}Ref<${_.viewStateType.name}>`;
-                refImportsInUse.push(`${_.elementType.name}Ref`)
+                refImportsInUse.add(`${_.elementType.name}Ref`)
             }
             else {
                 referenceType = `HTMLElementProxy<${_.viewStateType.name}, ${_.elementType.name}>`;
