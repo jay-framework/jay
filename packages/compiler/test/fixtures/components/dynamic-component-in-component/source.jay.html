@@ -3,7 +3,7 @@
     <link rel="import" href="../counter/counter" names="Counter"/>
     <script type="application/yaml-jay">
 data:
-  counterComponents:
+  nestedCounters:
     - counter: number
       id: string
   condition: boolean
@@ -12,7 +12,7 @@ data:
 </head>
 <body>
 <div>
-    <Counter forEach="counterComponents" trackBy="id" ref="counter1" initialValue={counter} />
+    <Counter forEach="nestedCounters" trackBy="id" ref="counter1" initialValue={counter} />
     <Counter if="condition" ref="counter2" initialValue="{count1}" />
 </div>
 </body>

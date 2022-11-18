@@ -5,7 +5,7 @@ import {
     JayAtomicType, JayComponentType, JayEnumType,
     JayFile, JayHTMLType, JayImportedType, JayImportLink,
     JayObjectType,
-    JayType, JayTypeAlias,
+    JayType, JayTypeAlias, JayUnknown,
     parseJayFile
 } from "./parse-jay-file";
 import {HTMLElement, NodeType} from "node-html-parser";
@@ -70,7 +70,7 @@ enum ImportsFor {
     definition, implementation
 }
 
-function renderImports(imports: Imports, importsFor: ImportsFor, componentImports: Array<JayImportLink>): string {
+function renderImports(imports: Imports, importsFor: ImportsFor, componentImports: Array<JayImportLink>, refImportsInUse: string[]): string {
     let toBeRenderedImports = [];
     if (imports.has(Import.jayElement)) toBeRenderedImports.push('JayElement');
     if (imports.has(Import.element) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('element as e');
@@ -97,9 +97,15 @@ function renderImports(imports: Imports, importsFor: ImportsFor, componentImport
         let imports = [];
         importStatement.names
           .filter(symbol => symbol.type instanceof JayImportedType && symbol.type.type instanceof JayComponentType)
-          .map(symbol => {
-              let compType = (symbol.type as JayImportedType).type as JayComponentType;
-              imports.push(`import {${compType.name}Ref} from '${importStatement.module}-refs';`)
+          .map(symbol => (symbol.type as JayImportedType).type as JayComponentType)
+          .filter(compType => refImportsInUse.indexOf(compType+'ref') + refImportsInUse.indexOf(compType+'refs') > 0)
+          .map(compType => {
+              let importSymbols = []
+              if (refImportsInUse.indexOf(compType+'ref') > 0)
+                  importSymbols.push(compType+'ref')
+              if (refImportsInUse.indexOf(compType+'refs') > 0)
+                  importSymbols.push(compType+'refs')
+              imports.push(`import {${refImportsInUse.join(', ')}} from '${importStatement.module}-refs';`)
           })
         imports.push(`import {${symbols}} from '${importStatement.module}';`);
         return imports.join('\n');
@@ -228,7 +234,7 @@ function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variabl
             refs = [{
                 ref: camelCase(attributes[attrName]),
                 dynamicRef,
-                elementType: new JayTypeAlias(`${element.rawTagName}Ref<${variables.currentType.name}>`),
+                elementType: new JayComponentType(element.rawTagName),
                 viewStateType: variables.currentType
             }];
         }
@@ -340,6 +346,8 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
                 let forEachAccessor = parseAccessor(forEach, variables);
                 // Todo check if type unknown throw exception
                 let forEachFragment = new RenderFragment(`vs => ${forEachAccessor.render()}`, Imports.none(), forEachAccessor.validations);
+                if (forEachAccessor.resolvedType === JayUnknown)
+                    return new RenderFragment('', Imports.none(), [`forEach directive - failed to resolve type for forEach=${forEach}`]);
                 let itemType = (forEachAccessor.resolvedType as JayArrayType).itemType;
                 let forEachVariables = variables.childVariableFor(itemType)
                 let childElement = renderHtmlElement(htmlElement, forEachVariables, indent.child().noFirstLineBreak().withLastLineBreak());
@@ -363,7 +371,7 @@ const isCollectionRef = (ref: Ref) => (ref.dynamicRef)
 const isComponentCollectionRef = (ref: Ref) => (isCollectionRef(ref) && isComponentRef(ref))
 
 function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, importStatements: JayImportLink[], baseElementName: string):
-    { renderedRefs: string; renderedElement: string; elementType: string; renderedImplementation: RenderFragment; additionalImports: JayImportLink[] } {
+    { renderedRefs: string; renderedElement: string; elementType: string; renderedImplementation: RenderFragment; refImportsInUse: string[] } {
     let variables = new Variables(types);
     let importedSymbols = new Set(importStatements.flatMap(_ => _.names.map(sym => sym.as? sym.as : sym.name)));
     let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), importedSymbols, new Indent('    '), false);
@@ -372,14 +380,15 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
     let imports = renderedRoot.imports.plus(Import.ConstructContext);
     let renderedRefs;
     let dynamicRefs = [];
-    let additionalImports = [];
+    let refImportsInUse = [];
     if (renderedRoot.refs.length > 0) {
         const renderedReferences = renderedRoot.refs.map(_ => {
             let referenceType;
             if (isComponentCollectionRef(_)) {
-                referenceType = `ComponentCollectionProxy<${_.viewStateType.name}, ${_.elementType.name}>`;
+                referenceType = `${_.elementType.name}Refs<${_.viewStateType.name}>`
                 imports = imports.plus(Import.ComponentCollectionProxy)
                 dynamicRefs.push(_.ref);
+                refImportsInUse.push(`${_.elementType.name}Refs`)
             }
             else if (isCollectionRef(_)) {
                 referenceType = `HTMLElementCollectionProxy<${_.viewStateType.name}, ${_.elementType.name}>`;
@@ -387,8 +396,8 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
                 dynamicRefs.push(_.ref);
             }
             else if (isComponentRef(_)) {
-                referenceType = _.elementType.name;
-                additionalImports.push()
+                referenceType = `${_.elementType.name}Ref<${_.viewStateType.name}>`;
+                refImportsInUse.push(`${_.elementType.name}Ref`)
             }
             else {
                 referenceType = `HTMLElementProxy<${_.viewStateType.name}, ${_.elementType.name}>`;
@@ -409,7 +418,13 @@ ${renderedReferences}
   return ConstructContext.withRootContext(viewState, () =>
 ${renderedRoot.rendered}, options${dynamicRefs.length > 0?`, [${dynamicRefs.map(_ => `'${_}'`).join(', ')}]`:''});
 }`;
-    return {renderedRefs, renderedElement, elementType, additionalImports, renderedImplementation: new RenderFragment(body, imports)};
+    return {
+        renderedRefs,
+        renderedElement,
+        elementType,
+        refImportsInUse,
+        renderedImplementation: new RenderFragment(body, imports, renderedRoot.validations)
+    };
 }
 
 function normalizeFilename(filename: string): string {
@@ -422,8 +437,9 @@ export function generateDefinitionFile(html: string, filename: string, filePath:
     let parsedFile = parseJayFile(html, baseElementName, filePath);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        let {renderedRefs, renderedElement, elementType, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, baseElementName);
-        return [renderImports(renderedImplementation.imports.plus(Import.jayElement), ImportsFor.definition, jayFile.imports),
+        let {renderedRefs, renderedElement, elementType, renderedImplementation, refImportsInUse} = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, baseElementName);
+        return [
+            renderImports(renderedImplementation.imports.plus(Import.jayElement), ImportsFor.definition, jayFile.imports, refImportsInUse),
             types,
             renderedRefs,
             renderedElement,
@@ -437,15 +453,17 @@ export function generateRuntimeFile(html: string, filename: string, filePath: st
     const normalizedFileName = normalizeFilename(filename);
     const baseElementName = capitalCase(normalizedFileName, {delimiter:''})
     let parsedFile = parseJayFile(html, baseElementName, filePath);
-    return parsedFile.map((jayFile: JayFile) => {
+    return parsedFile.flatMap((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        let {renderedRefs, renderedElement, renderedImplementation} = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, baseElementName);
-        return [renderImports(renderedImplementation.imports.plus(Import.element).plus(Import.jayElement), ImportsFor.implementation, jayFile.imports),
+        let {renderedRefs, renderedElement, renderedImplementation, refImportsInUse} = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, baseElementName);
+        let renderedFile = [
+            renderImports(renderedImplementation.imports.plus(Import.element).plus(Import.jayElement), ImportsFor.implementation, jayFile.imports, refImportsInUse),
             types,
             renderedRefs,
             renderedElement,
             renderedImplementation.rendered
         ]   .filter(_ => _ !== null && _ !== '')
             .join('\n\n');
+        return new WithValidations(renderedFile, renderedImplementation.validations);
     })
 }
