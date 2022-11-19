@@ -24,7 +24,7 @@ describe('typescript-compiler', () => {
         });
 
     it('should extract types from a file', () => {
-        let types = extractTypesForFile('./test/fixtures/attributes/generated.ts', {relativePath: 'tsconfig-tests.json'});
+        let types = extractTypesForFile('./test/fixtures/basics/attributes/generated.ts', {relativePath: 'tsconfig-tests.json'});
 
         expect(types).toEqual(
             expect.arrayContaining([
@@ -42,7 +42,7 @@ describe('typescript-compiler', () => {
     })
 
     it('should extract types from a file, adding .ts extension automatically', () => {
-        let types = extractTypesForFile('./test/fixtures/attributes/generated', {relativePath: 'tsconfig-tests.json'});
+        let types = extractTypesForFile('./test/fixtures/basics/attributes/generated', {relativePath: 'tsconfig-tests.json'});
 
         expect(types).toEqual(
             expect.arrayContaining([
@@ -60,7 +60,7 @@ describe('typescript-compiler', () => {
     })
 
     it('should extract types from a definition file', () => {
-        let types = extractTypesForFile('./test/fixtures/definition/generated', {relativePath: 'tsconfig-tests.json'});
+        let types = extractTypesForFile('./test/fixtures/basics/definition/generated', {relativePath: 'tsconfig-tests.json'});
 
         expect(types).toEqual(
             expect.arrayContaining([
@@ -81,7 +81,7 @@ describe('typescript-compiler', () => {
     })
 
     it('should extract types from a definition file, auto adding .d.ts', () => {
-        let types = extractTypesForFile('./test/fixtures/definition/generated', {relativePath: 'tsconfig-tests.json'});
+        let types = extractTypesForFile('./test/fixtures/basics/definition/generated', {relativePath: 'tsconfig-tests.json'});
 
         expect(types).toEqual(
             expect.arrayContaining([
@@ -101,8 +101,8 @@ describe('typescript-compiler', () => {
             ]))
     })
 
-    it('should extract types a recursive file', () => {
-        let types = extractTypesForFile('./test/fixtures/recursive-components/tree-node', {relativePath: 'tsconfig-tests.json'});
+    it('should extract types from a recursive file', () => {
+        let types = extractTypesForFile('./test/fixtures/components/recursive-components/tree-node', {relativePath: 'tsconfig-tests.json'});
 
         let nodeType = new JayObjectType('Node', {
             id: JayString,
@@ -115,7 +115,7 @@ describe('typescript-compiler', () => {
 
         expect(types).toEqual(
             expect.arrayContaining([
-                new JayComponentType('treeNode')
+                new JayComponentType('TreeNode')
             ]))
         let Node = types.find(_ => _.name === 'Node') as JayObjectType;
         expect(Node.name).toEqual('Node');
@@ -126,7 +126,7 @@ describe('typescript-compiler', () => {
         expect((Node.props.children as JayArrayType).itemType).toEqual(nodeType);
         expect(types).toEqual(
             expect.arrayContaining([
-                new JayObjectType('TreeNode', {})
+                new JayComponentType('TreeNode')
             ]))
     })
 });

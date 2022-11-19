@@ -122,14 +122,14 @@ describe('compiler', () => {
                         |   s1: string
                         |   n1: number`,
                 '<body></body>',
-                `<link rel="import" href="./fixtures/imports/component1.ts" names="comp1"/>
-                      |<link rel="import" href="./fixtures/imports/component2.ts" names="comp2 as comp3"/>`
+                `<link rel="import" href="./fixtures/components/imports/component1.ts" names="comp1"/>
+                      |<link rel="import" href="./fixtures/components/imports/component2.ts" names="comp2 as comp3"/>`
             ), 'Base', './test')
 
             expect(jayFile.val.imports).toEqual(
                 expect.arrayContaining([
                     {
-                        module: "./fixtures/imports/component1.ts",
+                        module: "./fixtures/components/imports/component1.ts",
                         "names": [
                             {
                                 "name": "comp1",
@@ -143,7 +143,7 @@ describe('compiler', () => {
                         ]
                     },
                     {
-                        module: "./fixtures/imports/component2.ts",
+                        module: "./fixtures/components/imports/component2.ts",
                         "names": [
                             {
                                 "as": "comp3",
