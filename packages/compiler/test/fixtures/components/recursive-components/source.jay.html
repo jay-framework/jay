@@ -1,6 +1,6 @@
 <html>
 <head>
-    <link rel="import" href="./tree-node" names="treeNode, Node"/>
+    <link rel="import" href="./tree-node" names="TreeNode, Node"/>
     <script type="application/yaml-jay">
 data: Node
     </script>
@@ -8,13 +8,13 @@ data: Node
 <body>
 <div>
     <div>{name}</div>
-    <treeNode props="{firstChild}"/>
+    <TreeNode props="{firstChild}"/>
     <ul>
         <li forEach="children" trackBy="id">
-            <treeNode name="{name}" id="{id}" children="{children}" ref="counter1"/>
+            <TreeNode name="{name}" id="{id}" children="{children}" ref="counter1"/>
         </li>
         <li forEach="children" trackBy="id">
-            <treeNode props="{.}" ref="counterTwo"/>
+            <TreeNode props="{.}" ref="counterTwo"/>
         </li>
     </ul>
 </div>

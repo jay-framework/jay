@@ -9,7 +9,6 @@ export enum Import {
     dynamicElement,
     forEach,
     ConstructContext,
-    ComponentCollectionProxy,
     HTMLElementCollectionProxy,
     HTMLElementProxy,
     dynamicAttribute,

@@ -81,7 +81,6 @@ function renderImports(imports: Imports, importsFor: ImportsFor, componentImport
     if (imports.has(Import.dynamicElement) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('dynamicElement as de');
     if (imports.has(Import.forEach) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('forEach');
     if (imports.has(Import.ConstructContext) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('ConstructContext');
-    if (imports.has(Import.ComponentCollectionProxy)) toBeRenderedImports.push('ComponentCollectionProxy');
     if (imports.has(Import.HTMLElementCollectionProxy)) toBeRenderedImports.push('HTMLElementCollectionProxy');
     if (imports.has(Import.HTMLElementProxy)) toBeRenderedImports.push('HTMLElementProxy');
     if (imports.has(Import.childComp) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('childComp');
@@ -386,7 +385,6 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
             let referenceType;
             if (isComponentCollectionRef(_)) {
                 referenceType = `${_.elementType.name}Refs<${_.viewStateType.name}>`
-                imports = imports.plus(Import.ComponentCollectionProxy)
                 dynamicRefs.push(_.ref);
                 refImportsInUse.add(`${_.elementType.name}Refs`)
             }

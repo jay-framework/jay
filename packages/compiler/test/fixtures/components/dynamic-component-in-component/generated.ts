@@ -1,4 +1,4 @@
-import {JayElement, element as e, conditional as c, dynamicElement as de, forEach, ConstructContext, ComponentCollectionProxy, childComp, RenderElementOptions} from "jay-runtime";
+import {JayElement, element as e, conditional as c, dynamicElement as de, forEach, ConstructContext, childComp, RenderElementOptions} from "jay-runtime";
 import {CounterRef, CounterRefs} from '../counter/counter-refs';
 import {Counter} from '../counter/counter';
 
