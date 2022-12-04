@@ -2,7 +2,7 @@
   "name": "jay-compiler",
   "version": "1.0.0",
   "description": "",
-  "main": "dist/compiler.js",
+  "main": "dist/index.js",
   "directories": {
     "example": "examples",
     "lib": "lib"
