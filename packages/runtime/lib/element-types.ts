@@ -36,6 +36,11 @@ export interface JayComponent<Props, ViewState, jayElement extends BaseJayElemen
   addEventListener: (type: string, handler: JayEventHandler<any, ViewState, void>) => void
   removeEventListener: (type: string, handler: JayEventHandler<any, ViewState, void>) => void
 }
+
+export type PropsFrom<Type> = Type extends JayComponent<infer Props, any, any>? Props : null
+export type ViewStateFrom<Type> = Type extends JayComponent<any, infer ViewState, any>? ViewState : null
+export type ElementFrom<Type> = Type extends JayComponent<any, any, infer Element>? Element : null
+
 export type JayComponentConstructor<Props> = (props: Props) => JayComponent<Props, any, any>
 
 export type RenderElement<ViewState extends object, Refs extends object, JayElementT extends JayElement<ViewState, Refs>> =

@@ -11,9 +11,13 @@ function CounterComponent({initialValue}: Props<CounterProps>, refs: CounterRefs
   refs.adderButton.onclick = () => setCount(count() + 1);
   refs.subtracter.onclick = () => setCount(count() - 1);
   let onChange = createEvent<number>(emitter => emitter.emit(count()))
+  let reset = () => {
+    setCount(0);
+  }
   return {
     render: () => ({count}),
-    onChange
+    onChange,
+    reset
   }
 }
 

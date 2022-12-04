@@ -58,8 +58,14 @@ export class JayElementType implements JayType {
     constructor(public readonly name: string) {}
 }
 
+export class JayComponentApiMember {
+    constructor(
+        public readonly property: string,
+        public readonly isEvent: boolean) {
+    }
+}
 export class JayComponentType implements JayType {
-    constructor(public readonly name: string) {}
+    constructor(public readonly name: string, public readonly api: Array<JayComponentApiMember>) {}
 }
 
 export class JayObjectType implements JayType {

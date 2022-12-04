@@ -113,10 +113,6 @@ describe('typescript-compiler', () => {
         nodeType.props.firstChild = nodeType;
         nodeType.props.children = new JayArrayType(nodeType)
 
-        expect(types).toEqual(
-            expect.arrayContaining([
-                new JayComponentType('TreeNode')
-            ]))
         let Node = types.find(_ => _.name === 'Node') as JayObjectType;
         expect(Node.name).toEqual('Node');
         expect(Node.props.id).toEqual(JayString);
@@ -126,7 +122,7 @@ describe('typescript-compiler', () => {
         expect((Node.props.children as JayArrayType).itemType).toEqual(nodeType);
         expect(types).toEqual(
             expect.arrayContaining([
-                new JayComponentType('TreeNode')
+                new JayComponentType('TreeNode', [])
             ]))
     })
 });

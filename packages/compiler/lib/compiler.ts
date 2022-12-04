@@ -1,5 +1,6 @@
 import {WithValidations} from "./with-validations";
 export {WithValidations} from "./with-validations";
+export {generateRefsFile} from './refs-file-generator'
 import {
     JayArrayType,
     JayAtomicType, JayComponentType, JayEnumType,
@@ -233,7 +234,7 @@ function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variabl
             refs = [{
                 ref: camelCase(attributes[attrName]),
                 dynamicRef,
-                elementType: new JayComponentType(element.rawTagName),
+                elementType: new JayComponentType(element.rawTagName, []),
                 viewStateType: variables.currentType
             }];
         }

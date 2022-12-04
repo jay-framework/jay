@@ -1,0 +1,45 @@
+import {WithValidations} from "./with-validations";
+import {extractTypesForFile} from "./extract-types-for-file";
+import {JayComponentType} from "./parse-jay-file";
+
+
+export function generateRefsFile(filepath: string): WithValidations<string> {
+  let types = extractTypesForFile(filepath)
+
+  let componentTypes: Array<JayComponentType> = types.filter(_ => _ instanceof JayComponentType) as Array<JayComponentType>;
+
+  let relativeFilename = filepath.substring(filepath.lastIndexOf('/')+1)
+  let compImports = componentTypes.map(comp => comp.name).join(', ');
+
+  let compDeclarations = componentTypes.map(comp => {
+    let refMembers = comp.api.map(api => {
+      if (api.isEvent)
+        return `${api.property}: EventEmitter<EventTypeFrom<CounterComponentType['${api.property}']>, ParentVS>`
+      else
+        return `${api.property}: CounterComponentType['${api.property}']`
+    })
+    let refsMembers = comp.api
+        .filter(api => api.isEvent)
+        .map(api => {
+          return `${api.property}: EventEmitter<EventTypeFrom<CounterComponentType['${api.property}']>, ParentVS>`
+        })
+    return `export type ${comp.name}ComponentType = ReturnType<typeof ${comp.name}>;
+
+export interface ${comp.name}Ref<ParentVS> extends JayComponent<
+  PropsFrom<${comp.name}ComponentType>,
+  ViewStateFrom<${comp.name}ComponentType>,
+  ElementFrom<${comp.name}ComponentType>>{
+  ${refMembers.join('\n  ')}
+}
+
+export interface ${comp.name}Refs<ParentVS> extends ComponentCollectionProxy<ParentVS, ${comp.name}Ref<ParentVS>> {
+  ${refsMembers.join('\n  ')}
+}`
+  })
+
+  let code = `import {JayComponent, EventEmitter, ComponentCollectionProxy, EventTypeFrom, PropsFrom, ViewStateFrom, ElementFrom} from 'jay-runtime';
+import {${compImports}} from "./${relativeFilename}";
+
+${compDeclarations.join('\n\n')}`
+  return new WithValidations<string>(code, []);
+}

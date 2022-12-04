@@ -33,6 +33,8 @@ export interface EventEmitter<EventType, ViewState> {
   emit(event: EventType): void
 }
 
+export type EventTypeFrom<Type> = Type extends EventEmitter<infer X, any> ? X : null
+
 export interface ComponentCollectionProxyOperations<ViewState, ComponentType extends JayComponent<any, any, any>> {
   addEventListener(type: string, handler: JayEventHandler<any, ViewState, void>): void
   removeEventListener(type: string, handler: JayEventHandler<any, ViewState, void>): void

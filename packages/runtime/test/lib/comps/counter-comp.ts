@@ -55,6 +55,12 @@ export function Counter<ParentVS>(initialValue: number) {
         //     onChange({count}, coordinate)
     })
 
+    let reset = () => {
+        count = 0;
+        jayElement.update({count});
+        onChange.emit({count, innerCoordinate: ''});
+    }
+
     return {
         element: jayElement,
         update: (value) => {
@@ -65,6 +71,7 @@ export function Counter<ParentVS>(initialValue: number) {
         unmount: () => jayElement.unmount(),
         addEventListener: (type: string, handler: JayEventHandler<any, any, any>, options?: boolean | AddEventListenerOptions) => {},
         removeEventListener: (type: string, handler: JayEventHandler<any, any, any>, options?: EventListenerOptions | boolean) => {},
-        onChange
+        onChange,
+        reset
     }
 }

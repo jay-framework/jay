@@ -136,6 +136,7 @@ describe('compiler', () => {
                                 "type": {
                                     "name": "comp1",
                                     "type": {
+                                        "api": [],
                                         "name": "comp1"
                                     }
                                 }
@@ -151,6 +152,7 @@ describe('compiler', () => {
                                 "type": {
                                     "name": "comp3",
                                     "type": {
+                                        "api": [],
                                         "name": "comp2"
                                     }
                                 }
@@ -208,16 +210,13 @@ describe('compiler', () => {
 
         it('should report on import missing names property', () => {
             let jayFile = parseJayFile(jayFileWith(
-                `imports:
-                        |  module:
-                        |  - notAList: aaa
-                        |data:
+                `data:
                         |   s1: string
                         |   n1: number`,
                 '<body></body>',
                 '<link rel="import" href="module" />'), 'Base', '')
 
-            expect(jayFile.validations).toEqual(["failed to parse import names for module module - failed to parse expression [undefined]. Cannot read property 'charAt' of undefined"]);
+            expect(jayFile.validations).toEqual(["failed to parse import names for module module - failed to parse expression [undefined]. Cannot read properties of undefined (reading 'charAt')"]);
         });
 
         it('should report on import empty names property', () => {
