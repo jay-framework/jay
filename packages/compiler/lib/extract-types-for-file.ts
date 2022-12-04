@@ -62,8 +62,24 @@ function getElementType(name: string, functionDeclaration: FunctionDeclaration):
     return new JayElementType(name);
 }
 
-function getComponentType(name: string, functionDeclaration: FunctionDeclaration): JayElementType {
-    return new JayComponentType(name, []);
+function getComponentType(tsTypeChecker, name: string, componentType: Type): JayElementType {
+    let properties = componentType.getProperties()
+    let componentAPIs: Array<JayComponentApiMember> = []
+    for (let property of properties) {
+        let type = tsTypeChecker.getTypeAtLocation(property.compilerSymbol.getDeclarations()[0])
+        if (JayComponentProperties[property.getName()]) {
+            // JayComponent property, ignore it
+        }
+        else {
+            if (type.getSymbol().getName() === 'EventEmitter')
+                componentAPIs.push(new JayComponentApiMember(property.getName(), true))
+            else
+                componentAPIs.push(new JayComponentApiMember(property.getName(), false))
+        }
+    }
+
+
+    return new JayComponentType(name, componentAPIs);
 }
 
 export interface ExportedType {
@@ -127,7 +143,7 @@ export function extractTypesForFile(filename: string, options = {}): JayType[] {
                 types.push(getElementType(name, declarations[0]));
             }
             else if (isOrSubclassOf(declarations[0].getReturnType(), 'JayComponent')) {
-                types.push(getComponentType(name, declarations[0]));
+                types.push(getComponentType(tsTypeChecker, name, declarations[0].getReturnType()));
             }
             else
                 types.push(JayUnknown)
@@ -139,24 +155,8 @@ export function extractTypesForFile(filename: string, options = {}): JayType[] {
         }
         else if (Node.isVariableDeclaration(declarations[0])) {
             if (declarations[0].getChildren().length === 3 && declarations[0].getChildren()[2].getText().indexOf('makeJayComponent') === 0) {
-
-                let properties = (declarations[0].getChildren()[2] as CallExpression).getReturnType().getCallSignatures()[0].getReturnType().getProperties()
-                let componentAPIs: Array<JayComponentApiMember> = []
-                for (let property of properties) {
-                    let type = tsTypeChecker.getTypeAtLocation(property.compilerSymbol.getDeclarations()[0])
-                    if (JayComponentProperties[property.getName()]) {
-                        // JayComponent property, ignore it
-                    }
-                    else {
-                        if (type.getSymbol().getName() === 'EventEmitter')
-                            componentAPIs.push(new JayComponentApiMember(property.getName(), true))
-                        else
-                            componentAPIs.push(new JayComponentApiMember(property.getName(), false))
-//                        console.log(property.getName(), type.getSymbol().getName(), property.compilerSymbol.getDeclarations()[0].getText());
-                    }
-                }
-
-                types.push(new JayComponentType(name, componentAPIs));
+                types.push(getComponentType(tsTypeChecker, name, (declarations[0].getChildren()[2] as CallExpression).getReturnType().getCallSignatures()[0].getReturnType()))
+                // types.push(new JayComponentType(name, componentAPIs));
             }
         }
         else

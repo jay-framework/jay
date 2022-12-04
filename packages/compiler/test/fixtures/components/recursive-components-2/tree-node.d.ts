@@ -1,5 +1,5 @@
 import {JayComponent} from 'jay-runtime'
-import {RecursiveComponentsElement} from "./generated";
+import {RecursiveComponents2Element, RecursiveComponents2ViewState} from "./generated";
 
 export interface Node {
   id: string,
@@ -7,7 +7,7 @@ export interface Node {
   firstChild: Node,
   children: Array<Node>
 }
-export interface TreeNode extends JayComponent<Node, Node, RecursiveComponentsElement> {
+export interface TreeNode extends JayComponent<Node, RecursiveComponents2ViewState, RecursiveComponents2Element> {
   update(props: Node)
 }
 
