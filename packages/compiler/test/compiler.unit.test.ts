@@ -103,6 +103,14 @@ describe('compiler', () => {
             expect(definitionFile.validations).toEqual([]);
             expect(definitionFile.val).toEqual(await readDefinitionFile('collections/collection-with-refs'));
         })
+
+        it('for nesting components in other components', async () => {
+            const jayFile = await readSourceJayFile('components/component-in-component');
+            let runtimeFile = generateDefinitionFile(jayFile, 'component-in-component.jay.html', './test/fixtures/components/component-in-component');
+            expect(runtimeFile.validations).toEqual([]);
+            expect(runtimeFile.val).toEqual(await readDefinitionFile('components/component-in-component'));
+        }, 10000)
+
     })
 
     describe('generate the runtime file', () => {
