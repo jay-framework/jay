@@ -52,66 +52,77 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoRe
         }
     }
 
-    refs.filterActive.onclick = () => setFilter(Filter.active)
-    refs.filterCompleted.onclick = () => setFilter(Filter.completed)
-    refs.filterAll.onclick = () => setFilter(Filter.all)
+    refs.filterActive.onclick(() => setFilter(Filter.active))
+    refs.filterCompleted.onclick(() => setFilter(Filter.completed))
+    refs.filterAll.onclick(() => setFilter(Filter.all))
 
-    refs.newTodo.onkeydown = (event) => {
-        if (event.keyCode !== ENTER_KEY) {
-            return;
-        }
+    refs.newTodo
+        .$onkeydown(({event}) => {
+            (event.keyCode === ENTER_KEY)?event.preventDefault():''
+            return event.keyCode;
+        })
+        .then(({event: keyCode}) => {
+            if (keyCode !== ENTER_KEY)
+                return;
 
-        event.preventDefault();
+            let newValue = newTodo();
+            let val = newValue.trim();
 
-        let newValue = newTodo();
-        let val = newValue.trim();
+            if (val) {
+                todos().push({
+                    id: uuid(),
+                    title: val,
+                    isEditing: false,
+                    editText: '',
+                    isCompleted: false
+                })
+            }
+            setNewTodo('');
+        })
 
-        if (val) {
-            todos().push({
-                id: uuid(),
-                title: val,
-                isEditing: false,
-                editText: '',
-                isCompleted: false
-            })
-        }
-        setNewTodo('');
-    }
+    refs.newTodo
+        .$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .then(({event: value}) => {
+            setNewTodo(value)
+        })
 
-    refs.newTodo.oninput = (event) => setNewTodo((refs.newTodo as HTMLInputElement).value)
-
-    refs.clearCompleted.onclick = (event) => {
+    refs.clearCompleted.onclick((event) => {
         setTodos(todos().filter(function (todo) {
             return !todo.isCompleted;
         }));
-    }
+    })
 
-    refs.completed.onchange = (event, todo) => todo.isCompleted = !todo.isCompleted;
-    refs.label.ondblclick = (event, todo) => {
+    refs.completed.onchange(({viewState: todo}) => todo.isCompleted = !todo.isCompleted)
+    refs.label.ondblclick(({viewState: todo}) => {
         todo.isEditing = true;
         todo.editText = todo.title;
-    }
-    refs.button.onclick = (event, todo) => {
+    })
+    refs.button.onclick(({viewState: todo}) => {
         setTodos(todos().filter(_ => _ !== todo));
-    }
-    refs.title.onblur = (event, todo) => {
+    })
+    refs.title.onblur(({viewState: todo}) => {
         handleSubmit(todo);
-    }
-    refs.title.onchange = (event, todo) => {
-        todo.editText = (event.target as HTMLInputElement).value;
-    }
-    refs.title.onkeydown = (event, todo) => {
-        if (event.which === ESCAPE_KEY) {
-            todo.editText = todo.title;
-            todo.isEditing = false;
-        } else if (event.which === ENTER_KEY) {
-            handleSubmit(todo);
-        }
-    }
-    refs.toggleAll.onchange = (event) => {
-        let completed = (refs.toggleAll as HTMLInputElement).checked
+    })
+    refs.title
+        .$onchange(({event}) => (event.target as HTMLInputElement).value)
+        .then(({event: value, viewState: todo}) => {
+            todo.editText = value;
+        })
+    refs.title
+        .$onkeydown(({event}) => (event.which))
+        .then(({event:which, viewState: todo})=> {
+            if (which === ESCAPE_KEY) {
+                todo.editText = todo.title;
+                todo.isEditing = false;
+            } else if (which === ENTER_KEY) {
+                handleSubmit(todo);
+            }
+        })
+    refs.toggleAll
+        .$onchange(({event}) => (event.target as HTMLInputElement).checked)
+        .then(({event: completed}) => {
         setTodos(todos().map(todo => ({...todo, isCompleted: completed})))
-    }
+    })
 
     return {
         render: () => ({

@@ -162,7 +162,7 @@ export function mkUpdateCollectionInternal<ViewState, Item>(child: ForEach<ViewS
     // todo handle data updates of the parent contexts
     let parentContext = currentContext();
     const update = (newData: ViewState) => {
-        const items = child.getItems(newData);
+        const items = child.getItems(newData) || [];
         let isModified;
         [lastItems, isModified] = checkModified(items, lastItems);
         if (isModified) {

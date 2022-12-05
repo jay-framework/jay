@@ -81,35 +81,35 @@ function Todo() {
         todo.editText = (event.target as HTMLInputElement).value;
     }
 
-    jayElement.refs.filterActive.onclick = (event) => {
+    jayElement.refs.filterActive.onclick(() => {
         data.isFilterActive = true;
         data.isFilterAll = false;
         data.isFilterCompleted = false;
         update();
-    }
+    })
 
-    jayElement.refs.filterAll.onclick = (event) => {
+    jayElement.refs.filterAll.onclick(() => {
         data.isFilterActive = false;
         data.isFilterAll = true;
         data.isFilterCompleted = false;
         update();
-    }
+    })
 
-    jayElement.refs.filterCompleted.onclick = (event) => {
+    jayElement.refs.filterCompleted.onclick(() => {
         data.isFilterActive = false;
         data.isFilterAll = false;
         data.isFilterCompleted = true;
         update();
-    }
+    })
 
-    jayElement.refs.newTodo.onkeydown = (event) => {
-        if (event.keyCode !== ENTER_KEY) {
+    jayElement.refs.newTodo
+        .$onkeydown(({event}) => {
+            (event.keyCode === ENTER_KEY)?event.preventDefault():'';
+            return event.keyCode;
+        }).then(({event: keyCode}) => {
+        if (keyCode !== ENTER_KEY) {
             return;
         }
-
-        event.preventDefault();
-
-        data.newTodo = (jayElement.refs.newTodo as HTMLInputElement).value;
         let val = data.newTodo.trim();
 
         if (val) {
@@ -120,58 +120,63 @@ function Todo() {
                 editText: '',
                 isCompleted: false
             })
-            update();
         }
-        (jayElement.refs.newTodo as HTMLInputElement).value = '';
-    }
-
-    jayElement.refs.newTodo.onchange = (event) => {
-        data.newTodo = (jayElement.refs.newTodo as HTMLInputElement).value;
+        data.newTodo = '';
         update();
-    }
+    });
 
-    jayElement.refs.clearCompleted.onclick = (event) => {
+    jayElement.refs.newTodo
+        .$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .then(({event: value}) => {
+            data.newTodo = value
+            update();
+        })
+
+    jayElement.refs.clearCompleted.onclick(() => {
         data.todos = data.todos.filter(function (todo) {
             return !todo.isCompleted;
         });
         update();
-    }
+    })
     
-    jayElement.refs.completed.onchange = (event, todo) => {
+    jayElement.refs.completed.onchange(({viewState: todo}) => {
         todo.isCompleted = !todo.isCompleted;
         update();
-    }
-    jayElement.refs.label.ondblclick = (event, todo) => {
+    })
+    jayElement.refs.label.ondblclick(({viewState: todo}) => {
         todo.isEditing = true;
         todo.editText = todo.title;
         update();
-    }
-    jayElement.refs.button.onclick = (event, todo) => {
+    })
+    jayElement.refs.button.onclick(({viewState: todo}) => {
         data.todos = data.todos.filter(_ => _ !== todo);
         update();
-    }
-    jayElement.refs.title.onblur = (event, todo) => {
+    })
+    jayElement.refs.title.onblur(({viewState: todo}) => {
         handleSubmit(todo);
         update();
-    }
-    jayElement.refs.title.onchange = (event, todo) => {
+    })
+    jayElement.refs.title.onchange(({viewState: todo}) => {
         updateTitleFromEditing(todo);
         update();
-    }
-    jayElement.refs.title.onkeydown = (event, todo) => {
-        if (event.which === ESCAPE_KEY) {
+    })
+    jayElement.refs.title
+        .$onkeydown(({event}) => (event.which))
+        .then(({event: which, viewState: todo}) => {
+        if (which === ESCAPE_KEY) {
             todo.editText = todo.title;
             todo.isEditing = false;
-        } else if (event.which === ENTER_KEY) {
+        } else if (which === ENTER_KEY) {
             handleSubmit(todo);
         }
         update();
-    }
-    jayElement.refs.toggleAll.onchange = (event) => {
-        let completed = (jayElement.refs.toggleAll as HTMLInputElement).checked
+    })
+    jayElement.refs.toggleAll
+        .$onchange(({event}) => (event.target as HTMLInputElement).checked)
+        .then(({event: completed}) => {
         data.todos = data.todos.map(todo => ({...todo, isCompleted: completed}))
         update();
-    }
+    })
 
     return {
         element: jayElement,

@@ -49,6 +49,12 @@ describe('collection-element', () => {
             expect(jayElement.dom.querySelector('.item')).toBeNull()
         })
 
+        it('should render empty data', () => {
+            // @ts-ignore
+            let jayElement = makeElement({});
+            expect(jayElement.dom.querySelector('.item')).toBeNull()
+        })
+
         it('should render collection of items', () => {
             let jayElement = makeElement({items: [item1, item2, item3]});
             expect(jayElement.dom.querySelectorAll('.item')).toHaveLength(3);
