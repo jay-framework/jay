@@ -13,14 +13,15 @@ function MainConstructor({}: Props<MainProps>, refs: MainRefs) {
     let [cycles, setCycles] = createState(1000);
     let [progress, setProgress] = createState('');
 
-    refs.chooseExample.onchange = () => {
-        let index = refs.chooseExample.selectedIndex;
-        setSelectedExample(Number(examples[index].value));
-    }
+    refs.chooseExample
+        .$onchange(({event}) => (event.target as HTMLSelectElement).selectedIndex)
+        .then(({event:index}) => setSelectedExample(Number(examples[index].value)))
 
-    refs.cycles.oninput = () => setCycles(Number(refs.cycles.value))
+    refs.cycles
+        .$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .then(({event: cycles}) => setCycles(Number(cycles)))
 
-    refs.run.onclick = () => {
+    refs.run.onclick(() => {
         if (selectedExample() === SelectedExample.basic)
             refs.basic.run(setProgress)
         else if (selectedExample() === SelectedExample.collections)
@@ -31,7 +32,7 @@ function MainConstructor({}: Props<MainProps>, refs: MainRefs) {
             refs.composite.run(setProgress)
         else if (selectedExample() === SelectedExample.table)
             refs.table.run(setProgress)
-    }
+    })
 
     return {
         render: () => ({examples, selectedExample, cycles, progress})

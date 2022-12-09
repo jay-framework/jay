@@ -11,8 +11,13 @@ function TableHostConstructor({cycles}: Props<TableHostProps>, refs: TableHostRe
     let [size, setSize] = createState(100);
     let [updates, setUpdates] = createState(100);
 
-    refs.size.oninput = () => setSize(Number((refs.size as HTMLInputElement).value));
-    refs.updates.oninput = () => setUpdates(Number((refs.updates as HTMLInputElement).value));
+    refs.size
+        .$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .then(({event: size}) => setSize(Number(size)));
+
+    refs.updates
+        .$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .then(({event: updates}) => setUpdates(Number(updates)));
 
     const run = (progressCallback: (string) => void) => {
         benchmark(index => refs.table.updateData(index), cycles(), progressCallback);
