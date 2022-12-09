@@ -1,10 +1,10 @@
 export type JayValidations = Array<string>
 
-export class WithValidations<T> {
-    val?: T;
+export class WithValidations<Value> {
+    val?: Value;
     validations: JayValidations;
 
-    constructor(val: T | undefined, validations: JayValidations) {
+    constructor(val: Value | undefined, validations: JayValidations) {
         this.val = val;
         this.validations = validations;
     }
@@ -24,7 +24,7 @@ export class WithValidations<T> {
             return new WithValidations<R>(undefined, this.validations)
     }
 
-    merge(other: WithValidations<T>, merge: (t1: T, t2: T) => T) {
+    merge(other: WithValidations<Value>, merge: (t1: Value, t2: Value) => Value) {
         return new WithValidations(merge(this.val, other.val), [...this.validations, ...other.validations]);
     }
 }
