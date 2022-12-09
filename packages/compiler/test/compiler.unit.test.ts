@@ -70,10 +70,10 @@ describe('compiler', () => {
 
     describe('generate the definition file', () => {
         it('should generate definition file for simple file', async () => {
-            const jayFile = await readSourceJayFile('basics/definition');
-            let definitionFile = generateDefinitionFile(jayFile, 'definition.jay.html', './test/');
+            const jayFile = await readSourceJayFile('basics/data-types');
+            let definitionFile = generateDefinitionFile(jayFile, 'data-types.jay.html', './test/');
             expect(definitionFile.validations).toEqual([]);
-            expect(definitionFile.val).toEqual(await readDefinitionFile('basics/definition'));
+            expect(definitionFile.val).toEqual(await readDefinitionFile('basics/data-types'));
         })
 
         it('should generate definition file for collection file', async () => {
@@ -135,6 +135,13 @@ describe('compiler', () => {
                 let runtimeFile = generateRuntimeFile(jayFile, 'empty-element.jay.html', './test/');
                 expect(runtimeFile.validations).toEqual([]);
                 expect(runtimeFile.val).toEqual(await readGeneratedFile('basics/empty-element'));
+            })
+
+            it('for different data types', async () => {
+                const jayFile = await readSourceJayFile('basics/data-types');
+                let runtimeFile = generateRuntimeFile(jayFile, 'data-types.jay.html', './test/');
+                expect(runtimeFile.validations).toEqual([]);
+                expect(runtimeFile.val).toEqual(await readGeneratedFile('basics/data-types'));
             })
 
             it('for a composition of divs', async () => {

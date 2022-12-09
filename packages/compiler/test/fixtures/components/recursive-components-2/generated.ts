@@ -14,9 +14,9 @@ export function render(viewState: RecursiveComponents2ViewState, options?: Rende
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
       e('div', {}, [dt(vs => vs.headChar)]),
-      e('div', {}, [dt(vs => vs.node.name)]),
+      e('div', {}, [dt(vs => vs.node?.name)]),
       de('ul', {}, [
-        forEach(vs => vs.node.children, (vs1: Node) => {
+        forEach(vs => vs.node?.children, (vs1: Node) => {
           return e('li', {}, [
             e('TreeNode', {props: da(vs => vs)}, [])
           ])}, 'id')

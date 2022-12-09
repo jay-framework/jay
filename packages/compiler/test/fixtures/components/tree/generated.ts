@@ -18,11 +18,11 @@ export function render(viewState: TreeNodeViewState, options?: RenderElementOpti
     de('div', {}, [
       e('div', {ref: 'head'}, [
         e('span', {class: 'tree-arrow'}, [dt(vs => vs.headChar)]),
-        e('span', {}, [dt(vs => vs.node.name)])
+        e('span', {}, [dt(vs => vs.node?.name)])
       ]),
       c(vs => vs.open,
         de('ul', {}, [
-          forEach(vs => vs.node.children, (vs1: Node) => {
+          forEach(vs => vs.node?.children, (vs1: Node) => {
             return e('li', {}, [
               childComp(TreeNode, vs => vs)
             ])}, 'id')

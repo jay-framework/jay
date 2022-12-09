@@ -60,15 +60,15 @@ describe('typescript-compiler', () => {
     })
 
     it('should extract types from a definition file', () => {
-        let types = extractTypesForFile('./test/fixtures/basics/definition/generated', {relativePath: 'tsconfig-tests.json'});
+        let types = extractTypesForFile('./test/fixtures/basics/data-types/generated', {relativePath: 'tsconfig-tests.json'});
 
         expect(types).toEqual(
             expect.arrayContaining([
                 new JayElementType('render'),
-                new JayObjectType('DefinitionRefs', {}),
+                new JayObjectType('DataTypesRefs', {}),
                 O1,
                 A1,
-                new JayObjectType('DefinitionViewState',
+                new JayObjectType('DataTypesViewState',
                     {
                         s1: JayString,
                         n1: JayNumber,
@@ -76,20 +76,20 @@ describe('typescript-compiler', () => {
                         o1: O1,
                         a1: new JayArrayType(A1)
                     }),
-                new JayElementType('DefinitionElement')
+                new JayElementType('DataTypesElement')
             ]))
     })
 
     it('should extract types from a definition file, auto adding .d.ts', () => {
-        let types = extractTypesForFile('./test/fixtures/basics/definition/generated', {relativePath: 'tsconfig-tests.json'});
+        let types = extractTypesForFile('./test/fixtures/basics/data-types/generated', {relativePath: 'tsconfig-tests.json'});
 
         expect(types).toEqual(
             expect.arrayContaining([
                 new JayElementType('render'),
-                new JayObjectType('DefinitionRefs', {}),
+                new JayObjectType('DataTypesRefs', {}),
                 O1,
                 A1,
-                new JayObjectType('DefinitionViewState',
+                new JayObjectType('DataTypesViewState',
                     {
                         s1: JayString,
                         n1: JayNumber,
@@ -97,7 +97,7 @@ describe('typescript-compiler', () => {
                         o1: O1,
                         a1: new JayArrayType(A1)
                     }),
-                new JayElementType('DefinitionElement')
+                new JayElementType('DataTypesElement')
             ]))
     })
 

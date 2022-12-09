@@ -18,7 +18,7 @@ export class Accessor {
         if (this.terms.length === 1 && this.terms[0] === ".")
             return 'vs'
         else
-            return 'vs.' + this.terms.join('.');
+            return 'vs.' + this.terms.join('?.');
     }
 }
 

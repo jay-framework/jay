@@ -23,7 +23,7 @@ export function render(viewState: ComponentInComponentViewState, options?: Rende
       childComp(Counter, vs => ({initialValue: vs.count1}), 'counter1'),
       childComp(Counter, vs => ({initialValue: vs.count2}), 'counterTwo'),
       childComp(Counter, vs => ({initialValue: vs.count3})),
-      childComp(Counter, vs => ({initialValue: vs.count4.count}))
+      childComp(Counter, vs => ({initialValue: vs.count4?.count}))
     ]), options);
 }
 
