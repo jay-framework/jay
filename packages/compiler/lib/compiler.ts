@@ -1,6 +1,4 @@
 import {WithValidations} from "./with-validations";
-export {WithValidations} from "./with-validations";
-export {generateRefsFile} from './refs-file-generator'
 import {
     JayArrayType,
     JayAtomicType, JayComponentType, JayEnumType,
@@ -426,17 +424,11 @@ ${renderedRoot.rendered}, options${dynamicRefs.length > 0?`, [${dynamicRefs.map(
     };
 }
 
-function normalizeFilename(filename: string): string {
-    return filename.replace('.jay.html', '');
-}
-
 export function generateDefinitionFile(html: string, filename: string, filePath: string): WithValidations<string> {
-    const normalizedFileName = normalizeFilename(filename);
-    const baseElementName = capitalCase(normalizedFileName, {delimiter:''})
-    let parsedFile = parseJayFile(html, baseElementName, filePath);
+    let parsedFile = parseJayFile(html, filename, filePath);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        let {renderedRefs, renderedElement, elementType, renderedImplementation, refImportsInUse} = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, baseElementName);
+        let {renderedRefs, renderedElement, elementType, renderedImplementation, refImportsInUse} = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, jayFile.baseElementName);
         return [
             renderImports(renderedImplementation.imports.plus(Import.jayElement), ImportsFor.definition, jayFile.imports, refImportsInUse),
             types,
@@ -449,12 +441,10 @@ export function generateDefinitionFile(html: string, filename: string, filePath:
 }
 
 export function generateRuntimeFile(html: string, filename: string, filePath: string): WithValidations<string> {
-    const normalizedFileName = normalizeFilename(filename);
-    const baseElementName = capitalCase(normalizedFileName, {delimiter:''})
-    let parsedFile = parseJayFile(html, baseElementName, filePath);
+    let parsedFile = parseJayFile(html, filename, filePath);
     return parsedFile.flatMap((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        let {renderedRefs, renderedElement, renderedImplementation, refImportsInUse} = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, baseElementName);
+        let {renderedRefs, renderedElement, renderedImplementation, refImportsInUse} = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, jayFile.baseElementName);
         let renderedFile = [
             renderImports(renderedImplementation.imports.plus(Import.element).plus(Import.jayElement), ImportsFor.implementation, jayFile.imports, refImportsInUse),
             types,

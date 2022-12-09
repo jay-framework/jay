@@ -1,7 +1,7 @@
 import {HTMLElement, parse} from "node-html-parser";
 import {JayValidations, WithValidations} from "./with-validations";
 import yaml from 'js-yaml';
-import {pascalCase} from 'change-case';
+import {capitalCase, pascalCase} from 'change-case';
 import pluralize from 'pluralize';
 import {parseEnumValues, parseImportNames, parseIsEnum} from "./expression-compiler";
 import {extractTypesForFile} from "./extract-types-for-file";
@@ -103,6 +103,7 @@ export interface JayFile {
     examples: Array<JayExample>,
     imports: JayImportLink[],
     body: HTMLElement
+    baseElementName: string
 }
 
 export function isObjectType(obj) {
@@ -218,7 +219,13 @@ function parseImports(importLinks: HTMLElement[], validations: JayValidations, f
     //new Set(imports.flatMap(_ => _.names.map(sym => sym.as? sym.as : sym.name)));
 }
 
-export function parseJayFile(html: string, baseElementName: string, filePath: string): WithValidations<JayFile> {
+function normalizeFilename(filename: string): string {
+    return filename.replace('.jay.html', '');
+}
+
+export function parseJayFile(html: string, filename: string, filePath: string): WithValidations<JayFile> {
+    const normalizedFileName = normalizeFilename(filename);
+    const baseElementName = capitalCase(normalizedFileName, {delimiter:''})
     let root = parse(html);
 
     let {val: jayYaml, validations} = parseYaml(root);
@@ -240,5 +247,5 @@ export function parseJayFile(html: string, baseElementName: string, filePath: st
         validations.push(`jay file must have exactly a body tag`);
         return new WithValidations(undefined, validations)
     }
-    return new WithValidations({types, examples, imports, body}, validations)
+    return new WithValidations({types, examples, imports, body, baseElementName}, validations)
 }

@@ -1,4 +1,4 @@
-import {generateDefinitionFile, generateRefsFile, generateRuntimeFile, generateTypes} from '../lib/compiler';
+import {generateDefinitionFile, generateRefsFile, generateRuntimeFile, generateTypes} from '../lib';
 import {describe, expect, it} from '@jest/globals'
 import stripMargin from '@caiogondim/strip-margin'
 import {JayArrayType, JayBoolean, JayDate, JayNumber, JayObjectType, JayString} from "../lib/parse-jay-file";
