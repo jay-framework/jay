@@ -1,15 +1,17 @@
 import {Command} from 'commander';
-import {generateDefinitionFile, generateRuntimeFile} from 'jay-compiler';
+import {generateRuntimeFile} from 'jay-compiler';
 import {generateFiles} from "./generate-files";
+import {generateDefinitionFiles} from "./generate-definition-files";
 
 const program = new Command();
+const noop = () => undefined;
 
 program.command('definitions')
     .argument('<source>', 'source folder to scan for .jay.html files')
     .argument('[destination]', 'destination folder for generated files')
     .description('generate definition files (.d.ts) for jay files')
-    .action((source, dest) => {
-        generateFiles(source, generateDefinitionFile, '.d.ts', dest)
+    .action(async (source, dest) => {
+        await generateDefinitionFiles(source, dest);
     })
 
 program.command('runtime')
@@ -17,7 +19,7 @@ program.command('runtime')
     .argument('[destination]', 'destination folder for generated files')
     .description('generate code files (.ts) for jay files')
     .action((source, dest) => {
-        generateFiles(source, generateRuntimeFile, '.ts', dest)
+        generateFiles(source, generateRuntimeFile, noop,'.ts', dest)
     })
 
 program.parse(process.argv);

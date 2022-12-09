@@ -16,6 +16,7 @@ function checkFileExists(filepath): Promise<Boolean>{
 export async function generateFiles(
     dir: string,
     codeGenerationFunction: (html: string, filename: string, filePath: string) => WithValidations<string>,
+    afterGenerationFunction: (html: string, filename: string, filePath: string) => void,
     outputExtension: string,
     destinationDir?: string) {
 
@@ -48,5 +49,8 @@ export async function generateFiles(
             }
             await fsp.writeFile(destinationGeneratedFileName, generatedFile.val)
         }
+        afterGenerationFunction(content,
+            path.basename(jayFile.replace('.jay.html', '')),
+            path.dirname(jayFile))
     }
 }

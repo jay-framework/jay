@@ -16,7 +16,6 @@ import {
     parseTextExpression,
     Variables
 } from './expression-compiler';
-import { capitalCase } from "change-case";
 import {htmlElementTagNameMap} from "./html-element-tag-name-map";
 import {camelCase} from "camel-case";
 
