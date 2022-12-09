@@ -18,7 +18,7 @@ function TreeNodeConstructor({name, id, children}: Props<Node>, refs: TreeNodeRe
     let headChar = createMemo(() => children().length > 0 ? (open()?"▼":"►"):"")
     let node = createMemo(() => ({name: name(), id: id(), children: children()}));
 
-    refs.head.onclick = () => setOpen(!open())
+    refs.head.onclick(() => setOpen(!open()))
 
     return {
         render: () => ({headChar, node, open})

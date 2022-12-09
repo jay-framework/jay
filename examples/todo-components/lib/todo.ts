@@ -41,56 +41,64 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoRe
             return true;
     })]);
 
-    refs.filterActive.onclick = () => setFilter(Filter.active)
-    refs.filterCompleted.onclick = () => setFilter(Filter.completed)
+    refs.filterActive.onclick(() => setFilter(Filter.active))
+    refs.filterCompleted.onclick(() => setFilter(Filter.completed))
     refs.filterAll.onclick = () => setFilter(Filter.all)
 
-    refs.newTodo.onkeydown = (event) => {
-        if (event.keyCode !== ENTER_KEY) {
-            return;
-        }
+    refs.newTodo
+        .$onkeydown(({event}) => {
+            (event.keyCode === ENTER_KEY)?event.preventDefault():''
+            return event.keyCode;
+        })
+        .then(({event: keyCode}) => {
+            if (keyCode !== ENTER_KEY)
+                return;
 
-        event.preventDefault();
+            let newValue = newTodo();
+            let val = newValue.trim();
 
-        let newValue = newTodo();
-        let val = newValue.trim();
+            if (val) {
+                todos().push({
+                    id: uuid(),
+                    title: val,
+                    isEditing: false,
+                    editText: '',
+                    isCompleted: false
+                })
+            }
+            setNewTodo('');
+        })
 
-        if (val) {
-            todos().push({
-                id: uuid(),
-                title: val,
-                isEditing: false,
-                editText: '',
-                isCompleted: false
-            })
-        }
-        setNewTodo('');
-    }
+    refs.newTodo
+        .$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .then(({event: value}) => {
+            setNewTodo(value)
+        })
 
-    refs.newTodo.oninput = (event) => setNewTodo((refs.newTodo as HTMLInputElement).value)
 
-    refs.clearCompleted.onclick = (event) => {
+    refs.clearCompleted.onclick((event) => {
         setTodos(todos().filter(function (todo) {
             return !todo.isCompleted;
         }));
-    }
+    })
 
-    refs.items.onCompletedToggle = (newCompleted: boolean, item: ShownTodo) => {
+    refs.items.onCompletedToggle((newCompleted: boolean, item: ShownTodo) => {
         item.isCompleted = newCompleted
-    }
+    })
 
-    refs.items.onTitleChanged = (newTitle: string, item: ShownTodo) => {
+    refs.items.onTitleChanged((newTitle: string, item: ShownTodo) => {
         item.title = newTitle
-    }
+    })
 
-    refs.items.onRemove = (_, item: ShownTodo) => {
+    refs.items.onRemove((_, item: ShownTodo) => {
         setTodos(todos().filter(_ => _ !== item));
-    }
+    })
 
-    refs.toggleAll.onchange = (event) => {
-        let completed = (refs.toggleAll as HTMLInputElement).checked
-        setTodos(todos().map(todo => ({...todo, isCompleted: completed})))
-    }
+    refs.toggleAll
+        .$onchange(({event}) => (event.target as HTMLInputElement).checked)
+        .then(({event: completed}) => {
+            setTodos(todos().map(todo => ({...todo, isCompleted: completed})))
+        })
 
     return {
         render: () => ({

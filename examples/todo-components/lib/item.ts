@@ -28,22 +28,26 @@ function ItemConstructor({title, isCompleted}: Props<ItemProps>, refs: ItemRefs)
         }
     }
 
-    refs.completed.onchange = () => onCompletedToggle.emit(!isCompleted());
-    refs.label.ondblclick = () => {
+    refs.completed.onchange(() => onCompletedToggle.emit(!isCompleted()));
+    refs.label.ondblclick(() => {
         setIsEditing(true);
         setEditText(title());
-    }
-    refs.button.onclick = () => onRemove.emit(null)
-    refs.title.onblur = () => handleSubmit()
-    refs.title.onchange = (event) => setEditText((event.target as HTMLInputElement).value)
-    refs.title.onkeydown = (event) => {
-        if (event.which === ESCAPE_KEY) {
-            setEditText(title());
-            setIsEditing(false);
-        } else if (event.which === ENTER_KEY) {
-            handleSubmit();
-        }
-    }
+    })
+    refs.button.onclick(() => onRemove.emit(null))
+    refs.title.onblur(() => handleSubmit())
+    refs.title
+        .$onchange(({event}) => (event.target as HTMLInputElement).value)
+        .then(({event: value}) => setEditText(value))
+    refs.title
+        .$onkeydown(({event}) => (event.which))
+        .then(({event:which, viewState: todo})=> {
+            if (which === ESCAPE_KEY) {
+                todo.editText = todo.title;
+                todo.isEditing = false;
+            } else if (which === ENTER_KEY) {
+                handleSubmit();
+            }
+        })
 
     return {
         render: () => ({title, isCompleted, isEditing, editText}),
