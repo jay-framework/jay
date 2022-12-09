@@ -15,12 +15,14 @@ export async function generateDefinitionFiles(source, dest) {
 
         let refsFileContent = generateRefsFile(componentFilePath);
         let refsFileName = componentFilePath + '-refs.d.ts';
+        let relativeComponentFilePath = path.relative(process.cwd(), componentFilePath)
+        let relativeRefsFileName = path.relative(process.cwd(), refsFileName)
         if (refsFileContent.validations.length > 0) {
-            console.log(`${chalk.red('failed to generate')} ${chalk.yellow(componentFilePath)}.ts → ${chalk.yellow(refsFileName)}`)
+            console.log(`${chalk.red('failed to generate')} ${chalk.yellow(relativeComponentFilePath)}.ts → ${chalk.yellow(relativeRefsFileName)}`)
             refsFileContent.validations.forEach(_ => console.log(chalk.red(_)));
         }
         else {
-            console.log(`${chalk.green('generated')} ${chalk.yellow(componentFilePath)}.ts → ${chalk.yellow(refsFileName)}`)
+            console.log(`${chalk.green('generated')} ${chalk.yellow(relativeComponentFilePath)}.ts → ${chalk.yellow(relativeRefsFileName)}`)
             await fsp.writeFile(refsFileName, refsFileContent.val);
         }
     }

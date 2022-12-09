@@ -43,7 +43,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoRe
 
     refs.filterActive.onclick(() => setFilter(Filter.active))
     refs.filterCompleted.onclick(() => setFilter(Filter.completed))
-    refs.filterAll.onclick = () => setFilter(Filter.all)
+    refs.filterAll.onclick(() => setFilter(Filter.all))
 
     refs.newTodo
         .$onkeydown(({event}) => {
@@ -82,15 +82,15 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoRe
         }));
     })
 
-    refs.items.onCompletedToggle((newCompleted: boolean, item: ShownTodo) => {
+    refs.items.onCompletedToggle(({event: newCompleted, viewState: item}) => {
         item.isCompleted = newCompleted
     })
 
-    refs.items.onTitleChanged((newTitle: string, item: ShownTodo) => {
+    refs.items.onTitleChanged(({event: newTitle, viewState: item}) => {
         item.title = newTitle
     })
 
-    refs.items.onRemove((_, item: ShownTodo) => {
+    refs.items.onRemove(({viewState: item}) => {
         setTodos(todos().filter(_ => _ !== item));
     })
 
