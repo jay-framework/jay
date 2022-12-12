@@ -1,6 +1,6 @@
 import {Basic, BasicProps} from "./basic";
-import {getViewState} from "../../../lib/view-state-model";
-import {WorkerPort} from "../../../lib/comm-channel";
+import {getViewState} from "../../../../lib/view-state-model";
+import {WorkerPort} from "../../../../lib/comm-channel";
 
 class WorkerRoot<AppProps> {
     port: WorkerPort<AppProps>

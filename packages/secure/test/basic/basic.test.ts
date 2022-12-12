@@ -1,7 +1,7 @@
 import {describe, expect, it} from '@jest/globals'
 import {useMochCommunicationChannel} from "../comm-channel/mock-channel";
-import {initializeWorker} from "./worker/worker-root";
-import {BasicProps, initializeMain} from "./main/main-root";
+import {initializeWorker} from "./secure/worker/worker-root";
+import {BasicProps, initializeMain} from "./secure/main/main-root";
 
 describe('basic secure rendering', () => {
     it('should render simple component, secure', () => {

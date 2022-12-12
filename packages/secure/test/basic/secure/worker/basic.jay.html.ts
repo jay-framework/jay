@@ -1,5 +1,5 @@
 import {JayElement, element as e, dynamicText as dt, ConstructContext} from "jay-runtime";
-import {setViewState} from "./view-state-model";
+import {setViewState} from "../../../../lib/view-state-model";
 
 export interface BasicViewState {
     text: string

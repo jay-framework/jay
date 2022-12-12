@@ -1,4 +1,4 @@
-import {MainPort} from "../../../lib/comm-channel";
+import {MainPort} from "../../../../lib/comm-channel";
 import {render, BasicElement, BasicViewState} from "./basic.jay.html";
 
 export interface BasicProps {
