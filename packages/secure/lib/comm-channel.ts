@@ -1,17 +1,15 @@
 import { BaseJayElement, MatchResult } from "jay-runtime"
 
 
-
-export interface MainPort<RootComponentProps> {
-    init(initData: RootComponentProps): object
-    update(data: RootComponentProps): object
+export type JayPortInMessageHandler = (inMessage: any) => void;
+export interface JayPort {
+    post(compId: string, outMessage: any);
+    onUpdate(handler: JayPortInMessageHandler)
+    batch(handler: () => void)
+    flush()
 }
 
-export interface WorkerPort<RootComponentProps> {
-    onInit: (initData: RootComponentProps) => object
-    onUpdate: (data: RootComponentProps) => object
-}
-
+export const ROOT_MESSAGE = '.';
 export type TID = number
 export type IIDPath = string
 export enum RenderingElements {
@@ -30,4 +28,12 @@ export interface SubCompRendering {
 }
 export interface RenderMessage {
     components: Map<TID, CollectionRendering<any> | SubCompRendering>
+}
+
+let _port
+export function setPort(port: JayPort) {
+    _port = port;
+}
+export function usePort(): JayPort {
+    return _port
 }

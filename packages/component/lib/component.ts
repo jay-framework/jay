@@ -1,7 +1,8 @@
 import {JayElement, JayComponent, ContextStack, MountFunc, EventEmitter, JayEventHandlerWrapper, RenderElement} from 'jay-runtime'
 import {ValueOrGetter, Getter, Reactive, Setter} from 'jay-reactive'
 
-export type Props<PropsT> = {
+export type hasProps<PropsT> = {props: Getter<PropsT>}
+export type Props<PropsT> = hasProps<PropsT> & {
     [K in keyof PropsT]: Getter<PropsT[K]>
 }
 
@@ -176,13 +177,17 @@ export function makeJayComponent<PropsT extends object, ViewState extends object
 function makePropsProxy<PropsT extends object>(reactive: Reactive, props: PropsT): UpdatableProps<PropsT> {
     const stateMap = {}
 
-    const update = (obj: PropsT) => {
+    const [_props, _setProps] = createState(props)
+
+    const update = (newProps: PropsT) => {
         reactive.batchReactions(() => {
-            for (const prop in obj) {
+            let props = _props();
+            for (const prop in newProps) {
+                props[prop] = newProps[prop]
                 if (!stateMap.hasOwnProperty(prop))
-                    stateMap[prop as string] = reactive.createState(obj[prop])
+                    stateMap[prop as string] = reactive.createState(newProps[prop])
                 else
-                    stateMap[prop as string][1](obj[prop])
+                    stateMap[prop as string][1](newProps[prop])
             }
         })
     }
@@ -195,6 +200,8 @@ function makePropsProxy<PropsT extends object>(reactive: Reactive, props: PropsT
         get: function(obj, prop) {
             if (prop === 'update')
                 return update
+            else if (prop === 'props')
+                return _props
             else
                 return getter(obj, prop);
         }
@@ -202,6 +209,6 @@ function makePropsProxy<PropsT extends object>(reactive: Reactive, props: PropsT
 }
 
 export const forTesting = {
-    reactiveContextStack: componentContextStack,
+    componentContextStack,
     makePropsProxy
 }

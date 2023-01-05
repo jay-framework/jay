@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "dist/element",
   "scripts": {
-    "d": "node node_modules/jay-cli/dist/index.js definitions ./test/basic/regular",
+    "d": "node node_modules/jay-cli/dist/index.js definitions ./test/regular/source",
+    "jay": "node node_modules/jay-cli/dist/index.js runtime ./test/regular/source",
     "start": "tsc",
     "test": "jest",
     "build": "tsc"

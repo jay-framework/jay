@@ -1,25 +1,66 @@
-import {MainPort, WorkerPort} from '../../lib/comm-channel'
+import {JayPort, JayPortInMessageHandler, setPort} from '../../lib/comm-channel'
 
-export function useMochCommunicationChannel<RootComponentProps>(): [MainPort<RootComponentProps>, WorkerPort<RootComponentProps>] {
-    let workerPort = new MockWorkerPort();
-    let mainPort = new MockMainPort();
-    mainPort.workerPort = workerPort;
-    return [mainPort, workerPort]
+export function useMochCommunicationChannel<PropsT, ViewState>(): [JayPort, JayPort] {
+    let channel = new Channel<PropsT, ViewState>();
+    return [channel.mainPort, channel.workerPort]
 }
 
-class MockMainPort<T> implements MainPort<T> {
-    workerPort: WorkerPort<T>
-    init(initData: T): object {
-        return this.workerPort.onInit(initData);
+class Channel<PropsT, ViewState> {
+
+    private readonly main: MockJayPort
+    private readonly worker: MockJayPort
+
+    constructor() {
+        this.main = new MockJayPort('main');
+        this.worker = new MockJayPort('worker');
+        this.main.setTarget(this.worker);
+        this.worker.setTarget(this.main)
     }
 
-    update(data: T): object {
-        return this.workerPort.onUpdate(data);
+    get mainPort(): JayPort {return this.main}
+    get workerPort(): JayPort {return this.worker}
+}
+
+class MockJayPort implements JayPort {
+
+    private handler: JayPortInMessageHandler
+    private target: MockJayPort
+    private message: Record<string, any> = {}
+
+    constructor(public readonly name: string) {
+    }
+
+    post(compId: string, outMessage: any) {
+        this.message[compId] = outMessage
+    }
+
+    onUpdate(handler: JayPortInMessageHandler) {
+        this.handler = handler
+    }
+
+    setTarget(target: MockJayPort) {
+        this.target = target;
+    }
+
+    invoke(inMessage: any) {
+        this?.handler(inMessage);
+    }
+
+    batch(handler: () => void) {
+        this.message = {};
+        try {
+            setPort(this);
+            handler()
+        }
+        finally {
+            this.flush();
+        }
+    }
+
+    flush() {
+        process.nextTick(() => {
+            this.target.invoke(this.message)
+        })
     }
 }
 
-class MockWorkerPort<T> implements WorkerPort<T> {
-    onInit: (initData: T) => object;
-    onUpdate: (data: T) => object;
-
-}

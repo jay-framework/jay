@@ -1,4 +1,4 @@
-import {MainPort} from "../../../lib/comm-channel";
+import {JayPort} from "../../../lib/comm-channel";
 import {render, TreeNodeViewState, TreeNodeElement} from "./tree-node.jay.html";
 
 export interface BasicProps {
@@ -7,14 +7,14 @@ export interface BasicProps {
 }
 
 class MainRoot<AppProps> {
-    private mainPort: MainPort<AppProps>
+    private mainPort: JayPort<AppProps>
     element: TreeNodeElement;
-    constructor(mainPort: MainPort<AppProps>) {
+    constructor(mainPort: JayPort<AppProps>) {
         this.mainPort = mainPort;
     }
 
     start(props: AppProps) {
-        let viewState = this.mainPort.init(props);
+        let viewState = this.mainPort.post(props);
         this.element = render(viewState as TreeNodeViewState)
     }
 
@@ -24,7 +24,7 @@ class MainRoot<AppProps> {
     }
 }
 
-export function initializeMain<BasicProps>(mainPort: MainPort<BasicProps>): MainRoot<BasicProps> {
+export function initializeMain<BasicProps>(mainPort: JayPort<BasicProps>): MainRoot<BasicProps> {
     return new MainRoot(mainPort)
 
 }

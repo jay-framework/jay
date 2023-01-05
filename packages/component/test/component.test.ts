@@ -9,7 +9,7 @@ import {
     Props, useReactive
 } from "../lib/component";
 import {Reactive} from "jay-reactive";
-const {makePropsProxy} = forTesting
+const {makePropsProxy, componentContextStack} = forTesting
 
 describe('state management', () => {
     describe('Props', () => {
@@ -20,7 +20,8 @@ describe('state management', () => {
                 name: 'abc',
                 age: 12
             }
-            let propsGetters: Props<typeof props> = makePropsProxy(reactive, props);
+            let propsGetters =
+                componentContextStack.doWithContext({reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
 
             expect(propsGetters.name()).toBe('abc')
             expect(propsGetters.age()).toBe(12)
@@ -32,7 +33,8 @@ describe('state management', () => {
                 name: 'abc',
                 age: 12
             }
-            let propsGetters = makePropsProxy(reactive, props);
+            let propsGetters =
+                componentContextStack.doWithContext({reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
 
             propsGetters.name()
             propsGetters.age()
@@ -41,6 +43,39 @@ describe('state management', () => {
 
             expect(propsGetters.name()).toBe('def')
             expect(propsGetters.age()).toBe(12)
+        })
+
+        it('should give back the props using the .props property', () => {
+            let reactive = new Reactive();
+            const props = {
+                name: 'abc',
+                age: 12
+            }
+            let propsGetters =
+                componentContextStack.doWithContext({reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
+
+            expect(propsGetters.props()).toEqual(props)
+        })
+
+        it('should give back the updated props using the .props property', () => {
+            let reactive = new Reactive();
+            const props = {
+                name: 'abc',
+                age: 12
+            }
+            let propsGetters =
+                componentContextStack.doWithContext({reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
+
+            propsGetters.name()
+            propsGetters.age()
+
+            propsGetters.update({name: 'def'})
+
+            expect(propsGetters.props()).toEqual({
+                    name: 'def',
+                    age: 12
+                }
+            )
         })
     })
 
