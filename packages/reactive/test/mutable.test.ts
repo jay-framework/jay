@@ -760,6 +760,43 @@ describe("mutable", () => {
             expect(childModified).toBe(true);
         })
 
+        it('should support date in object for detecting changes', () => {
+            let mutable = mutableObject({
+                a: new Date()
+            });
+            let rootRevision = getRevision(mutable);
+
+            mutable.a = new Date();
+
+            let [, rootModified] = checkModified(mutable, rootRevision);
+
+            expect(rootModified).toBe(true);
+        })
+
+        it('should support date in object - date functions', () => {
+            let mutable = mutableObject({
+                a: new Date()
+            });
+
+            let time = mutable.a.getTime()
+
+            expect(time).toBeLessThanOrEqual(new Date().getTime());
+        })
+
+        it('should support class instance in object - functions', () => {
+            class Test {
+                constructor(public a: number) {}
+                plusOne() {return this.a+1}
+            }
+            let mutable = mutableObject({
+                a: new Test(12)
+            });
+
+            let value = mutable.a.plusOne()
+
+            expect(value).toBe(13);
+        })
+
         it('should support object in array', () => {
             let mutable = mutableObject([
                 {a: 1, b: 2},

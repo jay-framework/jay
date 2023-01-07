@@ -107,6 +107,8 @@ export function mutableObject<T>(original: Array<T>, notifyParent?: ChangeListen
                     setProxy(target[property], mutableObject(target[property], changed))
                 return getProxy(target[property])
             }
+            else if (typeof target[property] === 'function')
+                return target[property].bind(target);
             else
                 return target[property];
         }
