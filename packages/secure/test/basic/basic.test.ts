@@ -6,7 +6,7 @@ import {BasicViewState} from "./secure/main/basic.jay.html";
 import {render} from "./secure/main/app.jay.html";
 import {setPort} from "../../lib/comm-channel";
 
-function eventually(assertion: () => void, attemptsLimit: number, timeout: number) {
+function eventually(assertion: () => void, attemptsLimit: number, timeout: number): Promise<void> {
     let lastError;
     const tryAssertion = () => {
         try {
@@ -19,39 +19,45 @@ function eventually(assertion: () => void, attemptsLimit: number, timeout: numbe
         }
     }
 
-    if (tryAssertion())
-        return;
+    if (tryAssertion()) {
+        console.log('assert true')
+        return Promise.resolve();
+    }
 
-    let failures = 1;
-    let interval = setInterval(() => {
-        if (tryAssertion()) {
-            clearInterval(interval)
-            return;
-        }
-        failures += 1
-        if (failures > attemptsLimit) {
-            clearInterval(interval)
-            throw lastError;
-        }
-    }, timeout)
+    return new Promise((resolve, reject) => {
+        let failures = 1;
+        let interval = setInterval(() => {
+            if (tryAssertion()) {
+                clearInterval(interval)
+                resolve();
+            }
+            else {
+                failures += 1
+                if (failures > attemptsLimit) {
+                    clearInterval(interval)
+                    reject(lastError);
+                }
+            }
+        }, timeout)
+    })
 }
 
-const eventually10ms = (assertion: () => void) => eventually(assertion, 5, 2)
+const eventually10ms = (assertion: () => void): Promise<void> => eventually(assertion, 5, 2)
 
 describe('basic secure rendering', () => {
-    it('should render simple component, secure', () => {
+    it('should render simple component, secure', async () => {
         let [mainPort, workerPort] = useMochCommunicationChannel<BasicProps, BasicViewState>();
         setPort(workerPort);
         initializeWorker();
         setPort(mainPort);
         let appElement = render({firstName: 'Joe', lastName: 'Smith'});
         // wait till render
-        eventually10ms(() =>
-            expect(appElement.dom.childNodes[0].textContent).toBe('hello Joe smith')
-        )
+        await eventually10ms(() => {
+            expect(appElement.dom.childNodes[0].textContent).toBe('hello Joe Smith')
+        })
     })
 
-    it('should render and update simple component, secure', () => {
+    it('should render and update simple component, secure', async () => {
         let [mainPort, workerPort] = useMochCommunicationChannel<BasicProps, BasicViewState>();
         setPort(workerPort);
         initializeWorker();
@@ -59,7 +65,7 @@ describe('basic secure rendering', () => {
         let appElement = render({firstName: 'Joe', lastName: 'Smith'});
         appElement.update({firstName: 'John', lastName: 'Green'})
 
-        eventually10ms(() =>
+        await eventually10ms(() =>
             expect(appElement.dom.childNodes[0].textContent).toBe('hello John Green')
         )
     })

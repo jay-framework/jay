@@ -10,11 +10,12 @@ function makeComponentBridgeConstructor<
 
     let [viewState, setViewState] = createState<ViewState>({} as ViewState);
     let port = usePort();
+    let reactive = useReactive();
 
     port.post(ROOT_MESSAGE, props.props())
     port.flush()
     port.onUpdate(message => {
-        useReactive().batchReactions(() => setViewState(message['a']))
+        reactive.batchReactions(() => setViewState(message['a']))
     })
     return {
         render: viewState
