@@ -200,7 +200,14 @@ export class HTMLElementRefImpl<ViewState> implements Ref<ViewState>{
         this.viewState = newData;
     }
 
-    $exec<T>(handler: (elem: Element, viewState: ViewState) => T): T {
-        return handler(this.element, this.viewState);
+    $exec<T>(handler: (elem: Element, viewState: ViewState) => T): Promise<T> {
+        return new Promise((resolve, reject) => {
+            try {
+                resolve(handler(this.element, this.viewState));
+            }
+            catch (e) {
+                reject(e);
+            }
+        })
     }
 }
