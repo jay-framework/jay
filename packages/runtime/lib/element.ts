@@ -287,16 +287,17 @@ function text<ViewState>(content: string): TextElement<ViewState> {
 }
 
 export function dynamicText<ViewState>(
-                               textContent: (vs) => string): TextElement<ViewState> {
+                               textContent: (vs: ViewState) => string | number | boolean): TextElement<ViewState> {
     let context = currentContext();
     let content = textContent(context.currData);
-    let n = document.createTextNode(content);
+    // we rely here on the default JS conversion from number abd boolean to string
+    let n = document.createTextNode(content as string);
     return {
         dom: n,
         update: (newData:ViewState) => {
             let newContent = textContent(newData);
             if (newContent !== content)
-                n.textContent = newContent;
+                n.textContent = newContent as string;
             content = newContent;
         },
         mount: noopMount,
