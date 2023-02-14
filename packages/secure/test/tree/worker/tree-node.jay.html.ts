@@ -1,6 +1,6 @@
 import {ConstructContext, JayElement } from "jay-runtime";
 import {Node, TreeNode} from "./tree-node";
-import {bridge, childCompWorker, forEachWorker, withWorkerRootContext} from "../../../lib/element";
+import {bridge, childCompWorker, forEachWorker, withWorkerRootContext} from "../../../lib/element.old";
 
 export interface TreeNodeViewState {
     headChar: string,

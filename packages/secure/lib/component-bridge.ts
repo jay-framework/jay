@@ -1,6 +1,14 @@
-import {JayElement, RenderElement} from "jay-runtime";
+import {JayElement, JayEvent, RenderElement} from "jay-runtime";
 import {createState, JayComponentCore, makeJayComponent, Props, useReactive} from "jay-component";
-import {ROOT_MESSAGE, usePort} from "./comm-channel";
+import {
+    domEventMessage,
+    JayPortMessage,
+    JayPortMessageType,
+    JPMMessage,
+    ROOT_MESSAGE,
+    rootMessage,
+    usePort
+} from "./comm-channel";
 
 function makeComponentBridgeConstructor<
     PropsT extends object,
@@ -12,10 +20,22 @@ function makeComponentBridgeConstructor<
     let port = usePort();
     let reactive = useReactive();
 
-    port.post(ROOT_MESSAGE, props.props())
-    port.flush()
-    port.onUpdate(message => {
-        reactive.batchReactions(() => setViewState(message['a']))
+    port.batch(() => {
+        port.post(ROOT_MESSAGE, rootMessage(props.props()))
+    })
+    port.onUpdate((message: JPMMessage) => {
+        switch (message.type) {
+            case JayPortMessageType.render:
+                reactive.batchReactions(() => setViewState(message.viewState));
+                break;
+            case JayPortMessageType.addEventListener:
+                refs[message.ref].addEventListener(message.eventType, (event: JayEvent<any, any>) => {
+                    port.batch(() => {
+                        port.post(ROOT_MESSAGE, domEventMessage(message.eventType, event.coordinate))
+                    })
+                })
+                break;
+        }
     })
     return {
         render: viewState

@@ -1,5 +1,5 @@
 import {describe, expect, it} from '@jest/globals'
-import {useMochCommunicationChannel} from "../comm-channel/mock-channel";
+import {useMockCommunicationChannel} from "../comm-channel/mock-channel";
 import {initializeWorker} from "./secure/worker/worker-root";
 import {BasicProps} from "./secure/main/basic";
 import {BasicViewState} from "./secure/main/basic.jay.html";
@@ -9,7 +9,7 @@ import {eventually10ms} from "../util/eventually";
 
 describe('basic secure rendering', () => {
     it('should render simple component, secure', async () => {
-        let [mainPort, workerPort] = useMochCommunicationChannel<BasicProps, BasicViewState>();
+        let [mainPort, workerPort] = useMockCommunicationChannel<BasicProps, BasicViewState>();
         setPort(workerPort);
         initializeWorker();
         setPort(mainPort);
@@ -21,7 +21,7 @@ describe('basic secure rendering', () => {
     })
 
     it('should render and update simple component, secure', async () => {
-        let [mainPort, workerPort] = useMochCommunicationChannel<BasicProps, BasicViewState>();
+        let [mainPort, workerPort] = useMockCommunicationChannel<BasicProps, BasicViewState>();
         setPort(workerPort);
         initializeWorker();
         setPort(mainPort);

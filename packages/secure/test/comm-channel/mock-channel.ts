@@ -1,20 +1,36 @@
-import {JayPort, JayPortInMessageHandler, setPort} from '../../lib/comm-channel'
+import {JayPort, JayPortInMessageHandler, JayPortMessage, setPort} from '../../lib/comm-channel'
 
-export function useMochCommunicationChannel<PropsT, ViewState>(): [JayPort, JayPort] {
-    let channel = new Channel<PropsT, ViewState>();
-    return [channel.mainPort, channel.workerPort]
+export function useMockCommunicationChannel<PropsT, ViewState>(): [JayMockChannel<PropsT, ViewState>, JayPort, JayPort] {
+    let channel = new JayMockChannel<PropsT, ViewState>();
+    return [channel, channel.mainPort, channel.workerPort]
 }
 
-class Channel<PropsT, ViewState> {
+class JayMockChannel<PropsT, ViewState> {
 
     private readonly main: MockJayPort
     private readonly worker: MockJayPort
+    private pendingMessages: number = 0;
+    private dirty = Promise.resolve();
+    private dirtyResolve: () => void
 
     constructor() {
-        this.main = new MockJayPort('main');
-        this.worker = new MockJayPort('worker');
+        this.pendingMessages = 0;
+        this.main = new MockJayPort('main', this.messageCountCallback);
+        this.worker = new MockJayPort('worker', this.messageCountCallback);
         this.main.setTarget(this.worker);
         this.worker.setTarget(this.main)
+    }
+
+    messageCountCallback = (diff) => {
+        if (this.pendingMessages === 0)
+            [this.dirty, this.dirtyResolve] = mkResolvablePromise();
+        this.pendingMessages += diff
+        if (this.pendingMessages === 0)
+            this.dirtyResolve();
+    }
+
+    toBeClean() {
+        return this.dirty;
     }
 
     get mainPort(): JayPort {return this.main}
@@ -25,13 +41,14 @@ class MockJayPort implements JayPort {
 
     private handler: JayPortInMessageHandler
     private target: MockJayPort
-    private message: Record<string, any> = {}
+    private messages: Array<[string, JayPortMessage]> = []
 
-    constructor(public readonly name: string) {
+    constructor(public readonly name: string, private messageCountCallback: (diff: number) => void) {
     }
 
-    post(compId: string, outMessage: any) {
-        this.message[compId] = outMessage
+    post(compId: string, outMessage: JayPortMessage) {
+        this.messages.push([compId, outMessage]);
+        this.messageCountCallback(1)
     }
 
     onUpdate(handler: JayPortInMessageHandler) {
@@ -42,12 +59,12 @@ class MockJayPort implements JayPort {
         this.target = target;
     }
 
-    invoke(inMessage: any) {
+    invoke(inMessage: JayPortMessage) {
         this?.handler(inMessage);
     }
 
     batch(handler: () => void) {
-        this.message = {};
+        this.messages = [];
         try {
             setPort(this);
             handler()
@@ -59,8 +76,14 @@ class MockJayPort implements JayPort {
 
     flush() {
         process.nextTick(() => {
-            this.target.invoke(this.message)
+            this.messages.forEach(([compId, message]) => this.target.invoke(message))
+            this.messageCountCallback(-this.messages.length)
         })
     }
 }
 
+function mkResolvablePromise() {
+    let resolve;
+    let promise = new Promise((res) => resolve = res);
+    return [promise, resolve];
+}
