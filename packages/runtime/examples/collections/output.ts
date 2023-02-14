@@ -28,11 +28,11 @@ export default function render(viewState: ViewState): JayElement<ViewState, Refs
         const createDiv = (item: Item) => {
             return e('div', {}, [
                 e('span', {style: {cssText: 'color:green; width: 100px; display: inline-block;'}},
-                    [dt(item => item.name)]),
+                    [dt<Item>(item => item.name)]),
                 e('span', {style: {cssText: 'color:red; width: 100px; display: inline-block;'}},
-                    [dt(item => item.completed ? 'yes' : 'no')]),
+                    [dt<Item>(item => item.completed ? 'yes' : 'no')]),
                 e('span', {style: {cssText: 'color:blue; width: 100px; display: inline-block;'}},
-                    [dt(item => item.cost.toString())])
+                    [dt<Item>(item => item.cost.toString())])
             ]);
         };
 
