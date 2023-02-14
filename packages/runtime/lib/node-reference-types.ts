@@ -2,8 +2,8 @@ import {JayComponent, JayEvent, JayEventHandler} from "./element-types";
 
 /** DOM element references **/
 export type JeyEventHandler<ViewState> = (viewState: ViewState, coordinate: string) => void
-type JayNativeFunction<ElementType extends HTMLElement, ViewState, Result> = (elem: ElementType, viewState: ViewState) => Result
-interface JayNativeEventBuilder<ViewState, EventData> {
+export type JayNativeFunction<ElementType extends HTMLElement, ViewState, Result> = (elem: ElementType, viewState: ViewState) => Result
+export interface JayNativeEventBuilder<ViewState, EventData> {
   then(handler: (event: JayEvent<EventData, ViewState>) => void): void
 }
 
@@ -62,7 +62,8 @@ interface GlobalJayEvents<ViewState> {
   onfocus(handler: JayEventHandler<void, ViewState, void>): void
   $onfocus<EventData>(handler: JayEventHandler<FocusEvent, ViewState, EventData>): JayNativeEventBuilder<ViewState, EventData>
   onformdata(handler: JayEventHandler<void, ViewState, void>): void
-  $onformdata<EventData>(handler: JayEventHandler<FormDataEvent, ViewState, EventData>): JayNativeEventBuilder<ViewState, EventData>
+
+  $onformdata<EventData>(handler: JayEventHandler<any, ViewState, EventData>): JayNativeEventBuilder<ViewState, EventData>
   ongotpointercapture(handler: JayEventHandler<void, ViewState, void>): void
   $ongotpointercapture<EventData>(handler: JayEventHandler<PointerEvent, ViewState, EventData>): JayNativeEventBuilder<ViewState, EventData>
   oninput(handler: JayEventHandler<void, ViewState, void>): void
