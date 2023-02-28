@@ -33,14 +33,14 @@ function mkRef(refName: string, referenced: HTMLElement | JayComponent<any, any,
     }
 }
 
-export function childComp<ParentT, Props, ChildT,
+export function childComp<ParentVS, Props, ChildT,
     ChildElement extends BaseJayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
     compCreator: JayComponentConstructor<Props>,
-    getProps: (t: ParentT) => Props,
-    refName?: string): BaseJayElement<ParentT> {
+    getProps: (t: ParentVS) => Props,
+    refName?: string): BaseJayElement<ParentVS> {
     let context = currentContext();
     let childComp = compCreator(getProps(context.currData))
-    let updates: updateFunc<ParentT>[] = [(t: ParentT) => childComp.update(getProps(t))];
+    let updates: updateFunc<ParentVS>[] = [(t: ParentVS) => childComp.update(getProps(t))];
     let mounts: MountFunc[] = [childComp.mount]
     let unmounts: MountFunc[] = [childComp.unmount]
     if (refName) {
