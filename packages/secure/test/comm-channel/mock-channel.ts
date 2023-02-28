@@ -1,24 +1,40 @@
-import {JayPort, JayPortInMessageHandler, JayPortMessage, setPort} from '../../lib/comm-channel'
+import {
+    JayChannel,
+    JayEndpoint,
+    JayPort,
+    JayPortInMessageHandler,
+    JayPortMessage,
+    setChannel
+} from '../../lib/comm-channel'
 
-export function useMockCommunicationChannel<PropsT, ViewState>(): [JayMockChannel<PropsT, ViewState>, JayPort, JayPort] {
+export function useMockCommunicationChannel<PropsT, ViewState>(): JayMockChannel<PropsT, ViewState> {
     let channel = new JayMockChannel<PropsT, ViewState>();
-    return [channel, channel.mainPort, channel.workerPort]
+    return channel
 }
 
-class JayMockChannel<PropsT, ViewState> {
+class JayMockChannel<PropsT, ViewState> implements JayChannel {
 
     private readonly main: MockJayPort
     private readonly worker: MockJayPort
     private pendingMessages: number = 0;
     private dirty = Promise.resolve();
     private dirtyResolve: () => void
+    private comps: Map<string, number> = new Map();
+    private nextCompId: number = 1;
 
     constructor() {
         this.pendingMessages = 0;
-        this.main = new MockJayPort('main', this.messageCountCallback);
-        this.worker = new MockJayPort('worker', this.messageCountCallback);
+        this.main = new MockJayPort(this.messageCountCallback, this.getCompId);
+        this.worker = new MockJayPort(this.messageCountCallback, this.getCompId);
         this.main.setTarget(this.worker);
         this.worker.setTarget(this.main)
+    }
+
+    getCompId = (parentCompId: number, coordinate: string): number => {
+        let fullId = `${parentCompId}-${coordinate}`;
+        if (!this.comps.has(fullId))
+            this.comps.set(fullId, this.nextCompId++);
+        return this.comps.get(fullId) as number;
     }
 
     messageCountCallback = (diff) => {
@@ -38,35 +54,36 @@ class JayMockChannel<PropsT, ViewState> {
 }
 
 class MockJayPort implements JayPort {
-
-    private handler: JayPortInMessageHandler
+    private messages: Array<[number, JayPortMessage]> = []
     private target: MockJayPort
-    private messages: Array<[string, JayPortMessage]> = []
+    private endpoints: Map<number, MockEndpointPort> = new Map();
 
-    constructor(public readonly name: string, private messageCountCallback: (diff: number) => void) {
+    constructor(private messageCountCallback: (diff: number) => void, 
+                private getCompId:(parentCompId: number, coordinate: string) => number) {}
+                
+    getEndpoint(parentCompId: number, coordinate: string): JayEndpoint {
+        let compId = this.getCompId(parentCompId, coordinate);
+        let ep = new MockEndpointPort(compId, this);
+        this.endpoints.set(compId, ep)
+        return ep;
     }
 
-    post(compId: string, outMessage: JayPortMessage) {
+    getRootEndpoint(): JayEndpoint {
+        return this.getEndpoint(-1, '')
+    }
+
+    post(compId: number, outMessage: JayPortMessage) {
         this.messages.push([compId, outMessage]);
         this.messageCountCallback(1)
-    }
-
-    onUpdate(handler: JayPortInMessageHandler) {
-        this.handler = handler
     }
 
     setTarget(target: MockJayPort) {
         this.target = target;
     }
 
-    invoke(inMessage: JayPortMessage) {
-        this?.handler(inMessage);
-    }
-
     batch(handler: () => void) {
         this.messages = [];
         try {
-            setPort(this);
             handler()
         }
         finally {
@@ -74,11 +91,37 @@ class MockJayPort implements JayPort {
         }
     }
 
+    invoke(messages: Array<[number, JayPortMessage]>) {
+        this.batch(() => {
+            messages.forEach(([compId, message]) => this.endpoints.get(compId)?.invoke(message))
+        })
+    }
+
     flush() {
         process.nextTick(() => {
-            this.messages.forEach(([compId, message]) => this.target.invoke(message))
+            this.target.invoke(this.messages);
             this.messageCountCallback(-this.messages.length)
         })
+    }
+}
+
+class MockEndpointPort implements JayEndpoint {
+
+    private handler: JayPortInMessageHandler
+    constructor(
+        readonly compId: number,
+        private readonly port: MockJayPort) {}
+
+    post(outMessage: JayPortMessage) {
+        this.port.post(this.compId, outMessage)
+    }
+
+    onUpdate(handler: JayPortInMessageHandler) {
+        this.handler = handler
+    }
+
+    invoke(inMessage: JayPortMessage) {
+        this?.handler(inMessage);
     }
 }
 

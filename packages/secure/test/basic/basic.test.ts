@@ -4,15 +4,14 @@ import {initializeWorker} from "./secure/worker/worker-root";
 import {BasicProps} from "./secure/main/basic";
 import {BasicViewState} from "./secure/main/basic.jay.html";
 import {render} from "./secure/main/app.jay.html";
-import {setPort} from "../../lib/comm-channel";
+import {setChannel} from "../../lib/comm-channel";
 import {eventually10ms} from "../util/eventually";
 
 describe('basic secure rendering', () => {
     it('should render simple component, secure', async () => {
-        let [mainPort, workerPort] = useMockCommunicationChannel<BasicProps, BasicViewState>();
-        setPort(workerPort);
+        let channel = useMockCommunicationChannel<BasicProps, BasicViewState>();
+        setChannel(channel);
         initializeWorker();
-        setPort(mainPort);
         let appElement = render({firstName: 'Joe', lastName: 'Smith'});
         // wait till render
         await eventually10ms(() => {
@@ -21,10 +20,9 @@ describe('basic secure rendering', () => {
     })
 
     it('should render and update simple component, secure', async () => {
-        let [mainPort, workerPort] = useMockCommunicationChannel<BasicProps, BasicViewState>();
-        setPort(workerPort);
+        let channel = useMockCommunicationChannel<BasicProps, BasicViewState>();
+        setChannel(channel);
         initializeWorker();
-        setPort(mainPort);
         let appElement = render({firstName: 'Joe', lastName: 'Smith'});
         appElement.update({firstName: 'John', lastName: 'Green'})
 

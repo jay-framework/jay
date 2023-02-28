@@ -1,5 +1,5 @@
 import {HTMLElementProxy, JayElement} from "jay-runtime";
-import {proxyRef, workerStub} from "../../../../lib/worker-stub";
+import {proxyRef, elementBridge} from "../../../../lib/worker-stub";
 
 export interface CounterViewState {
     title: string,
@@ -14,7 +14,7 @@ export interface CounterRefs {
 export type CounterElement = JayElement<CounterViewState, CounterRefs>
 
 export function render(viewState: CounterViewState): CounterElement {
-    return workerStub('a', viewState, [
+    return elementBridge('a', viewState, [
         proxyRef('subtracter', 'a'),
         proxyRef('adder', 'a')
     ]) as unknown as CounterElement;

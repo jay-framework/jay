@@ -4,16 +4,16 @@ import {initializeWorker} from "./secure/worker/worker-root";
 import {CounterProps} from "./secure/main/counter";
 import {CounterViewState} from "./secure/main/counter.jay.html";
 import {render} from "./secure/main/app.jay.html";
-import {setPort} from "../../lib/comm-channel";
+import {setChannel} from "../../lib/comm-channel";
 import {eventually10ms} from "../util/eventually";
 
 describe('counter secure rendering - checking events', () => {
 
     async function mkElement() {
         let [channel, mainPort, workerPort] = useMockCommunicationChannel<CounterProps, CounterViewState>();
-        setPort(workerPort);
+        setChannel(workerPort);
         initializeWorker();
-        setPort(mainPort);
+        setChannel(mainPort);
         let appElement = render({});
         let title = appElement.dom.querySelector('[data-id="title"]') as HTMLDivElement;
         let add = appElement.dom.querySelector('[data-id="add"]') as HTMLButtonElement;

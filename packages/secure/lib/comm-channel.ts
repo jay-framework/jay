@@ -21,21 +21,34 @@ export interface JPMDomEvent extends JayPortMessage {
     eventType: string
     coordinate: string
 }
-export interface JPMRoot extends JayPortMessage {
+export interface JPMRootComponentProps extends JayPortMessage {
     readonly type: JayPortMessageType.root
-    props: any
+    props: object
 }
 
-export type JPMMessage = JPMRoot | JPMRender | JPMAddEventListener | JPMDomEvent
+export type JPMMessage = JPMRootComponentProps | JPMRender | JPMAddEventListener | JPMDomEvent
 
-export const ROOT_MESSAGE = '.';
+export const ROOT_MESSAGE = 0;
 
 export type JayPortInMessageHandler = (inMessage: JayPortMessage) => void;
+
+export interface JayChannel {
+    mainPort: JayPort,
+    workerPort: JayPort
+}
+
 export interface JayPort {
-    post(compId: string, outMessage: JayPortMessage);
-    onUpdate(handler: JayPortInMessageHandler)
+    getEndpoint(parentCompId: number, coordinate: string): JayEndpoint;
     batch(handler: () => void)
     flush()
+
+    getRootEndpoint(): JayEndpoint;
+}
+
+export interface JayEndpoint {
+    post(outMessage: JayPortMessage);
+    onUpdate(handler: JayPortInMessageHandler)
+    get compId(): number;
 }
 
 export function renderMessage(viewState): JPMRender {
@@ -47,14 +60,17 @@ export function addEventListenerMessage(ref: string, eventType: string): JPMAddE
 export function domEventMessage(eventType: string, coordinate: string): JPMDomEvent {
     return ({coordinate, eventType, type: JayPortMessageType.DOMEvent});
 }
-export function rootMessage(props: any): JPMRoot {
+export function rootComponentProps(props: any): JPMRootComponentProps {
     return ({props, type: JayPortMessageType.root});
 }
 
-let _port
-export function setPort(port: JayPort) {
-    _port = port;
+let _channel: JayChannel
+export function setChannel(channel: JayChannel) {
+    _channel = channel;
 }
-export function usePort(): JayPort {
-    return _port
+export function useMainPort(): JayPort {
+    return _channel.mainPort
+}
+export function useWorkerPort(): JayPort {
+    return _channel.workerPort
 }

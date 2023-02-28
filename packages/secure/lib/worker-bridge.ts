@@ -1,15 +1,15 @@
-import {addEventListenerMessage, JayPort, renderMessage, usePort} from "./comm-channel";
+import {addEventListenerMessage, JayEndpoint, JayPort, renderMessage, useWorkerPort} from "./comm-channel";
 import {BasicViewState} from "../test/basic/secure/worker/basic.jay.html";
 import {HTMLElementCollectionProxy, HTMLElementProxy, JayEventHandler, JayNativeFunction} from "jay-runtime";
 
 class Ref {
-    public port: JayPort;
-    constructor(public ref: string, public compId: string) {
+    public ep: JayEndpoint;
+    constructor(public ref: string) {
 
     }
 
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: boolean | AddEventListenerOptions): void {
-        this.port.post(this.compId, addEventListenerMessage(this.ref, type));
+        this.ep.post(addEventListenerMessage(this.ref, type));
     }
     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: EventListenerOptions | boolean): void {
 
@@ -24,8 +24,8 @@ class Ref {
 //     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: EventListenerOptions | boolean): void
 // }
 //
-export function proxyRef(ref: string, compId: string): Ref {
-    return new Ref(ref, compId);
+export function proxyRef(ref: string): Ref {
+    return new Ref(ref);
 }
 
 // export function proxyRefs(ref: string): ProxyRefDefinition {
@@ -68,18 +68,19 @@ function mkRef(refDef: Ref): HTMLElementCollectionProxy<any, any> | HTMLElementP
     return new Proxy(refDef, proxyHandler);
 }
 
-export function workerStub(compId: string, viewState: any, refDefinitions: Ref[] = []) {
-    let port: JayPort = usePort();
-    port.post(compId, viewState);
+export function elementBridge(compId: number, viewState: any, refDefinitions: Ref[] = []) {
+    let port: JayPort = useWorkerPort();
+    let ep = port.getEndpoint(compId)
+    ep.post(viewState);
     let refs = {};
     refDefinitions.forEach(refDef => {
-        refDef.port = port;
+        refDef.ep = ep;
         refs[refDef.ref] = mkRef(refDef);
     })
     return {
         dom: null,
         update: (newData: BasicViewState) => {
-            port.post(compId, renderMessage(newData));
+            ep.post(renderMessage(newData));
         },
         mount: () => {},
         unmount: () => {},
