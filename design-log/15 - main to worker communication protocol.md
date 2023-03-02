@@ -44,7 +44,7 @@ As we can see above, one of the challenges is directing messages between the pai
 element bridges at the same place in the tree. Because the tree structure, `forEach` and `if` 
 statements, the tree structure cannot be statically determined.
 
-We denote `CompId` as a value that facilitates the communication between the bridges - that is,
+We denote `CompId` as a `number` value that facilitates the communication between the bridges - that is,
 component bridge `CompId: 2` communicates with element bridge `CompId: 2`.
 
 ![Jay Communication Protocol 3](15%20-%20main%20to%20worker%20communication%20protocol%20-%203.md.png)
@@ -54,3 +54,50 @@ at the parent component and the coordinate within the parent component's element
 That is, we compute `CompId` based on `(parent CompId, coordinate in parent)`.
 
 `CompId:2` ~~ `CompId:1` + `Coordinate: a` 
+
+We also need to think of the order of components and elements creation - the main point of
+which is that a child is always created after the parent, and has the creation context 
+internally in the runtime package. It terms of `CompId` allocation - who allocates between the
+main and sandbox, there is no one clear answer - for static elements and components, the 
+main window will be first. For dynamic elements and components, the sandbox will be first.
+
+For the element bridge `CompId: 2` to generate the `CompId`, it needs to look up the stack
+for the element bridge `CompId: 1` and to the `coordinate: a` of a sub-element of `CompId: 1`.
+
+For the component bridge `CompId: 2` to generate the `CompId`, it needs to look up the stack
+for the component bridge `CompId: 1` and to the `coordinate: a` of a sub-element of `CompId: 1`.
+
+Both imply a context API for Jay that can be used by the secure package to access the parent 
+`CompId` and `coordinate`.
+
+The formal communication protocol
+-----
+
+```typescript
+export interface JayPort {
+    getRootEndpoint(): JayEndpoint;
+    getEndpoint(parentCompId: number, parentCoordinate: string): JayEndpoint;
+    batch(handler: () => void)
+    flush()
+}
+
+export interface JayEndpoint {
+    post(outMessage: JayPortMessage);
+    onUpdate(handler: JayPortInMessageHandler)
+    get compId(): number;
+}
+```
+
+* `JayPort` - the connection to the protocol. Each side, the main and the sandbox, have
+  one port to facilitate the communication
+  * `getRootEndpoint` - gets an endpoint that represents the tree root, that is, does not 
+    have a parent component
+  * `getEndpoint` - gets an endpoint that represents a specific bridge communication with it's partner bridge.
+    the call to `getEndpoint` also triggers the generation of the `CompId` based of the provided parameters
+  * `batch` - record all messages send via the endpoints during the handler run, 
+     and flush all messages as one batch when the handler completes
+  * `flush` - flushes all messages, if messages are added without `batch`
+* `JayEndpoint` - the actual interface bridges are using
+  * `post` - send a message to the partner bridge
+  * `onUpdate` - listen to messages from the partner bridge
+  * `compId` - get the compId.
