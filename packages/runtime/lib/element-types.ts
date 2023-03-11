@@ -51,3 +51,5 @@ export interface RenderElementOptions {
 }
 export type JayEventHandlerWrapper<EventType, ViewState, Returns> =
   (orig: JayEventHandler<EventType, ViewState, Returns>, event: JayEvent<EventType, ViewState>) => Returns
+
+export interface ContextMarker<ContextType> {}

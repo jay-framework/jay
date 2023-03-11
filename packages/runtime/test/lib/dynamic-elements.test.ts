@@ -3,10 +3,11 @@ import {
     dynamicElement as de,
     element as e,
     dynamicText as dt,
-    conditional, ConstructContext
+    conditional
 } from '../../lib/element';
 import {describe, expect, it} from '@jest/globals'
 import {JayElement} from "../../lib";
+import {ConstructContext} from "../../lib/context";
 
 describe('dynamic-element with mixed content', () => {
 

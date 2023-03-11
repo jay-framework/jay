@@ -1,9 +1,10 @@
 import {
     element as e,
-    dynamicText as dt, ConstructContext
+    dynamicText as dt
 } from '../../lib/element';
 import {describe, it} from '@jest/globals'
 import {expectE} from "./test-utils";
+import {ConstructContext} from "../../lib/context";
 
 describe('text-element', () => {
 

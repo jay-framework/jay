@@ -1,7 +1,8 @@
-import {ConstructContext, dynamicText as dt, element as e} from "../../../lib/element";
+import {dynamicText as dt, element as e} from "../../../lib/element";
 import {JayElement, JayEventHandler} from "../../../lib";
 import {HTMLElementProxy} from "../../../lib";
 import {mkComponentEventHandler} from "./make-component-event-handler";
+import {ConstructContext} from "../../../lib/context";
 
 export interface ViewState {
     count: number

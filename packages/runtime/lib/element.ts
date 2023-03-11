@@ -1,26 +1,29 @@
 import {Kindergarten, KindergartenGroup} from "./kindergarden";
 import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "./list-compare";
 import {RandomAccessLinkedList as List} from "./random-access-linked-list";
-import {ReferencesManager} from "./node-reference";
-import {ContextStack} from "./context-stack";
 import {checkModified, getRevision} from "jay-reactive";
 import {
     BaseJayElement,
     JayComponent,
     JayComponentConstructor,
-    JayElement, JayEventHandlerWrapper,
     MountFunc,
     noopMount,
-    noopUpdate, RenderElementOptions,
+    noopUpdate,
     updateFunc
 } from "./element-types";
 import './element-test-types';
+import {
+    CONSTRUCTION_CONTEXT_MARKER,
+    currentConstructionContext,
+    provideContext,
+    wrapWithModifiedCheck
+} from "./context";
 
 const STYLE = 'style';
 const REF = 'ref';
 
 function mkRef(refName: string, referenced: HTMLElement | JayComponent<any, any, any>, updates: updateFunc<any>[], mounts: MountFunc[], unmounts: MountFunc[], isComp: boolean) {
-    let context = currentContext();
+    let context = currentConstructionContext();
     let [ref, update] = context.refManager.mkRef(referenced, context, refName, isComp);
     updates.push(update);
     if (context.forStaticElements) {
@@ -38,7 +41,7 @@ export function childComp<ParentVS, Props, ChildT,
     compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentVS) => Props,
     refName?: string): BaseJayElement<ParentVS> {
-    let context = currentContext();
+    let context = currentConstructionContext();
     let childComp = compCreator(getProps(context.currData))
     let updates: updateFunc<ParentVS>[] = [(t: ParentVS) => childComp.update(getProps(t))];
     let mounts: MountFunc[] = [childComp.mount]
@@ -90,7 +93,7 @@ function doSetAttribute<S>(target: HTMLElement | CSSStyleDeclaration, key: strin
 }
 function setAttribute<ViewState, S>(target: HTMLElement | CSSStyleDeclaration, key: string, value: string | DynamicAttributeOrProperty<ViewState, S>, updates: updateFunc<ViewState>[]) {
     if (isDynamicAttributeOrProperty(value)) {
-        let context = currentContext()
+        let context = currentConstructionContext()
         let attributeValue = value.valueFunc(context.currData);
         doSetAttribute(target, key, attributeValue, value.isAttribute);
         updates.push((newData:ViewState) => {
@@ -160,7 +163,7 @@ export function mkUpdateCollectionInternal<ViewState, Item>(child: ForEach<ViewS
     let mount = () => lastItemsList.forEach((value, attach) => attach.mount);
     let unmount = () => lastItemsList.forEach((value, attach) => attach.unmount);
     // todo handle data updates of the parent contexts
-    let parentContext = currentContext();
+    let parentContext = currentConstructionContext();
     const update = (newData: ViewState) => {
         const items = child.getItems(newData) || [];
         let isModified;
@@ -169,8 +172,8 @@ export function mkUpdateCollectionInternal<ViewState, Item>(child: ForEach<ViewS
             let itemsList = new List<Item, BaseJayElement<Item>>(items, child.matchBy);
             let instructions = listCompare<Item, BaseJayElement<Item>>(lastItemsList, itemsList, (item, id) => {
                 let childContext = parentContext.forItem(item);
-                return constructionContextStack.doWithContext(childContext, () =>
-                    wrapWithModifiedCheck(currentContext().currData, child.elemCreator(item, id)))
+                return provideContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () =>
+                    wrapWithModifiedCheck(currentConstructionContext().currData, child.elemCreator(item, id)))
             });
             lastItemsList = itemsList;
             applyChanges(instructions)
@@ -211,72 +214,6 @@ function mkUpdateCondition<ViewState>(child: Conditional<ViewState>, group: Kind
     return [update, mount, unmount];
 }
 
-const constructionContextStack = new ContextStack<ConstructContext<Array<any>>>();
-
-export function currentContext() {
-    return constructionContextStack.current();
-}
-
-function wrapWithModifiedCheck<T extends object>(initialData: T, baseJayElement: BaseJayElement<T>): BaseJayElement<T> {
-    let update = baseJayElement.update;
-    let current = getRevision(initialData)
-    let isModified;
-    baseJayElement.update = (newData: T) => {
-        [current, isModified] = checkModified(newData, current);
-        if (isModified)
-            update(current.value)
-    }
-    return baseJayElement;
-}
-
-export class ConstructContext<A extends Array<any>> {
-    refManager: ReferencesManager
-    data: A
-    forStaticElements: boolean
-
-    constructor(data: A,
-                dynamicRefs: Array<string> = [],
-                eventWrapper?: JayEventHandlerWrapper<any, any, any>,
-                dm?: ReferencesManager,
-                forStaticElements: boolean = true) {
-        this.data = data;
-        this.refManager = dm?dm:new ReferencesManager(dynamicRefs, eventWrapper);
-        this.forStaticElements = forStaticElements;
-    }
-
-    get currData() {
-        return this.data[this.data.length - 1];
-    }
-
-    coordinate(ref): string {
-        return [...this.data
-          .slice(1)
-          .map(_ => _.id)
-          .reverse(), ref]
-          .join('/');
-    }
-
-    static acc<A extends Array<any>, B>(a: A, b: B): [...A, B] {
-        return [...a, b]
-    }
-
-    forItem<T>(t: T) {
-        return new ConstructContext(ConstructContext.acc(this.data, t), [], undefined, this.refManager, false)
-    }
-
-    static withRootContext<ViewState, Refs>(viewState: ViewState,
-                                            elementConstructor: () => BaseJayElement<ViewState>,
-                                            options?: RenderElementOptions,
-                                            dynamicRefs?: Array<string>):
-      JayElement<ViewState, Refs> {
-        let context = new ConstructContext([viewState], dynamicRefs, options?.eventWrapper)
-        let element = constructionContextStack.doWithContext(context, () =>
-          wrapWithModifiedCheck(currentContext().currData, elementConstructor()))
-        element.mount();
-        return context.refManager.applyToElement(element);
-    }
-}
-
 function text<ViewState>(content: string): TextElement<ViewState> {
     return {
         dom: document.createTextNode(content),
@@ -288,7 +225,7 @@ function text<ViewState>(content: string): TextElement<ViewState> {
 
 export function dynamicText<ViewState>(
                                textContent: (vs: ViewState) => string | number | boolean): TextElement<ViewState> {
-    let context = currentContext();
+    let context = currentConstructionContext();
     let content = textContent(context.currData);
     // we rely here on the default JS conversion from number abd boolean to string
     let n = document.createTextNode(content as string);
@@ -361,7 +298,7 @@ export function dynamicElement<ViewState>(
         }
 
         if (update !== noopUpdate) {
-            let context = currentContext();
+            let context = currentConstructionContext();
             update(context.currData)
             updates.push(update);
         }

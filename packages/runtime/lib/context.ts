@@ -1,0 +1,119 @@
+import {BaseJayElement, ContextMarker, JayElement, JayEventHandlerWrapper, RenderElementOptions} from "./element-types";
+import {checkModified, getRevision} from "jay-reactive";
+import {ContextStack} from "./context-stack";
+import {ReferencesManager} from "./node-reference";
+
+let newCurrentContext: NewContextStack<any> = undefined;
+interface NewContextStack<ContextType> {
+    context: ContextType,
+    marker: ContextMarker<ContextType>,
+    parent?: NewContextStack<any>
+}
+function NewContextStack<ContextType> (context: ContextType, marker: ContextMarker<ContextType>, parent?: NewContextStack<ContextType>) {
+    return {context, marker, parent}
+}
+
+export function createJayContext<ContextType=unknown>(): ContextMarker<ContextType> {
+    return Symbol();
+}
+
+export function provideContext<ContextType, Returns>(marker: ContextMarker<ContextType>, context: ContextType, callback: () => Returns): Returns {
+    let aContext = NewContextStack(context, marker, newCurrentContext)
+    try {
+        newCurrentContext = aContext;
+        return callback();
+    }
+    finally {
+        newCurrentContext = aContext.parent;
+    }
+}
+
+export function useContext<ContextType>(marker: ContextMarker<ContextType>): ContextType {
+    let context = useOptionalContext(marker);
+    if (!context)
+        throw new Error();
+    return context as ContextType
+}
+
+export function useOptionalContext<ContextType>(marker: ContextMarker<ContextType>): ContextType | undefined {
+    let aContext = newCurrentContext
+    while (aContext) {
+        if (marker === aContext.marker)
+            return aContext.context;
+        aContext = aContext.parent;
+    }
+    return undefined;
+}
+
+
+
+export const CONSTRUCTION_CONTEXT_MARKER = createJayContext<ConstructContext<any>>();
+
+export function currentConstructionContext() {
+    return useContext(CONSTRUCTION_CONTEXT_MARKER);
+}
+
+export function wrapWithModifiedCheck<T extends object>(initialData: T, baseJayElement: BaseJayElement<T>): BaseJayElement<T> {
+    let update = baseJayElement.update;
+    let current = getRevision(initialData)
+    let isModified;
+    baseJayElement.update = (newData: T) => {
+        [current, isModified] = checkModified(newData, current);
+        if (isModified)
+            update(current.value)
+    }
+    return baseJayElement;
+}
+
+export class ConstructContext<A extends Array<any>> {
+    refManager: ReferencesManager
+    data: A
+    forStaticElements: boolean
+
+    constructor(data: A,
+                dynamicRefs: Array<string> = [],
+                eventWrapper?: JayEventHandlerWrapper<any, any, any>,
+                dm?: ReferencesManager,
+                forStaticElements: boolean = true) {
+        this.data = data;
+        this.refManager = dm ? dm : new ReferencesManager(dynamicRefs, eventWrapper);
+        this.forStaticElements = forStaticElements;
+    }
+
+    get currData() {
+        return this.data[this.data.length - 1];
+    }
+
+    coordinate(ref): string {
+        return [...this.data
+            .slice(1)
+            .map(_ => _.id)
+            .reverse(), ref]
+            .join('/');
+    }
+
+    static acc<A extends Array<any>, B>(a: A, b: B): [...A, B] {
+        return [...a, b]
+    }
+
+    forItem<T>(t: T) {
+        return new ConstructContext(ConstructContext.acc(this.data, t), [], undefined, this.refManager, false)
+    }
+
+    static withRootContext<ViewState, Refs>(viewState: ViewState,
+                                            elementConstructor: () => BaseJayElement<ViewState>,
+                                            options?: RenderElementOptions,
+                                            dynamicRefs?: Array<string>):
+        JayElement<ViewState, Refs> {
+        let context = new ConstructContext([viewState], dynamicRefs, options?.eventWrapper)
+        let element = provideContext(CONSTRUCTION_CONTEXT_MARKER, context, () =>
+            wrapWithModifiedCheck(currentConstructionContext().currData, elementConstructor()))
+        element.mount();
+        return context.refManager.applyToElement(element);
+    }
+}
+
+
+// export function useParentContext<ContextType>(marker: ContextMarker<ContextType>): ContextType {
+//
+// }

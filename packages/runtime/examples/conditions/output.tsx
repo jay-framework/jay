@@ -1,4 +1,5 @@
-import {conditional, dynamicText as dt, dynamicElement as de, element as e, ConstructContext} from '../../lib/element';
+import {conditional, dynamicText as dt, dynamicElement as de, element as e} from '../../lib/element';
+import {ConstructContext} from "../../lib/context";
 
 interface ViewState {
     text1: string,

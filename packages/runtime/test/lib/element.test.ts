@@ -2,11 +2,12 @@ import {
     element as e,
     dynamicAttribute as da,
     dynamicText as dt,
-    dynamicProperty as dp, ConstructContext
+    dynamicProperty as dp
 } from '../../lib/element';
 import {beforeEach, describe, expect, it} from '@jest/globals'
 import { mutableObject } from 'jay-reactive';
 import {BaseJayElement, JayElement, noopUpdate} from "../../lib";
+import {ConstructContext} from "../../lib/context";
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';

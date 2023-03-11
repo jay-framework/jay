@@ -1,8 +1,9 @@
-import {ConstructContext, dynamicText as dt, element as e} from "../../../lib/element";
+import {dynamicText as dt, element as e} from "../../../lib/element";
 import {JayElement} from "../../../lib";
 import {HTMLElementProxy} from "../../../lib";
 import {JayEventHandler} from "../../../lib";
 import {mkComponentEventHandler} from "./make-component-event-handler";
+import {ConstructContext} from "../../../lib/context";
 
 export interface ItemVS {
     text: string,

@@ -14,4 +14,8 @@ export class ContextStack<ContextType> {
     current(): ContextType {
         return this.contexts[this.contexts.length-1];
     }
+
+    parent(): ContextType {
+        return (this.contexts.length > 1)?this.contexts[this.contexts.length-2]:undefined;
+    }
 }

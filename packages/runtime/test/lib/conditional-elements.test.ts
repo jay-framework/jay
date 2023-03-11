@@ -2,13 +2,14 @@ import {
     conditional,
     dynamicElement as de,
     element as e,
-    dynamicText as dt, ConstructContext
+    dynamicText as dt
 } from '../../lib/element';
 import "@testing-library/jest-dom/extend-expect";
 import {describe, expect, it} from '@jest/globals'
 import {expectE} from "./test-utils";
 import {JSDOM} from 'jsdom';
 import {JayElement, HTMLElementProxy} from "../../lib";
+import {ConstructContext} from "../../lib/context";
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
