@@ -68,7 +68,7 @@ For the component bridge `CompId: 2` to generate the `CompId`, it needs to look 
 for the component bridge `CompId: 1` and to the `coordinate: a` of a sub-element of `CompId: 1`.
 
 Both imply a context API for Jay that can be used by the secure package to access the parent 
-`CompId` and `coordinate`.
+`CompId` and `coordinate`. See [16 - Context API](./16%20-%20context%20api.md)
 
 The formal communication protocol
 -----
