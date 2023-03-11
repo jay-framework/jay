@@ -1,6 +1,5 @@
 import {BaseJayElement, ContextMarker, JayElement, JayEventHandlerWrapper, RenderElementOptions} from "./element-types";
 import {checkModified, getRevision} from "jay-reactive";
-import {ContextStack} from "./context-stack";
 import {ReferencesManager} from "./node-reference";
 
 let newCurrentContext: NewContextStack<any> = undefined;
