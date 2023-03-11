@@ -1,6 +1,15 @@
 import {describe, expect, it, jest, beforeEach} from '@jest/globals'
-import {ConstructContext, JayElement, dynamicText as dt, element as e, HTMLElementProxy, RenderElementOptions} from 'jay-runtime';
 import {
+    ConstructContext,
+    JayElement,
+    dynamicText as dt,
+    element as e,
+    HTMLElementProxy,
+    RenderElementOptions,
+    provideContext
+} from 'jay-runtime';
+import {
+    COMPONENT_CONTEXT,
     createEffect, createEvent,
     createMemo,
     createState,
@@ -9,7 +18,7 @@ import {
     Props, useReactive
 } from "../lib/component";
 import {Reactive} from "jay-reactive";
-const {makePropsProxy, componentContextStack} = forTesting
+const {makePropsProxy} = forTesting
 
 describe('state management', () => {
     describe('Props', () => {
@@ -20,8 +29,8 @@ describe('state management', () => {
                 name: 'abc',
                 age: 12
             }
-            let propsGetters =
-                componentContextStack.doWithContext({reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
+            let propsGetters = provideContext(COMPONENT_CONTEXT,
+                {reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
 
             expect(propsGetters.name()).toBe('abc')
             expect(propsGetters.age()).toBe(12)
@@ -33,8 +42,8 @@ describe('state management', () => {
                 name: 'abc',
                 age: 12
             }
-            let propsGetters =
-                componentContextStack.doWithContext({reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
+            let propsGetters = provideContext(COMPONENT_CONTEXT,
+                {reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
 
             propsGetters.name()
             propsGetters.age()
@@ -51,8 +60,8 @@ describe('state management', () => {
                 name: 'abc',
                 age: 12
             }
-            let propsGetters =
-                componentContextStack.doWithContext({reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
+            let propsGetters = provideContext(COMPONENT_CONTEXT,
+                {reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
 
             expect(propsGetters.props()).toEqual(props)
         })
@@ -63,8 +72,8 @@ describe('state management', () => {
                 name: 'abc',
                 age: 12
             }
-            let propsGetters =
-                componentContextStack.doWithContext({reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
+            let propsGetters = provideContext(COMPONENT_CONTEXT,
+                {reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
 
             propsGetters.name()
             propsGetters.age()

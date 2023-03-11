@@ -1,4 +1,12 @@
-import {JayElement, JayComponent, ContextStack, MountFunc, EventEmitter, JayEventHandlerWrapper, RenderElement} from 'jay-runtime'
+import {
+    JayElement,
+    JayComponent,
+    MountFunc,
+    EventEmitter,
+    JayEventHandlerWrapper,
+    RenderElement,
+    createJayContext, useContext, provideContext
+} from 'jay-runtime'
 import {ValueOrGetter, Getter, Reactive, Setter} from 'jay-reactive'
 
 export type hasProps<PropsT> = {props: Getter<PropsT>}
@@ -35,8 +43,11 @@ interface ComponentContext {
 }
 
 
+export const COMPONENT_CONTEXT = createJayContext<ComponentContext>()
 
-const componentContextStack = new ContextStack<ComponentContext>();
+function currentComponentContext() {
+    return useContext(COMPONENT_CONTEXT);
+}
 
 type EffectCleanup = () => void
 export function createEffect(effect: () => void | EffectCleanup) {
@@ -50,29 +61,29 @@ export function createEffect(effect: () => void | EffectCleanup) {
         }
     }
 
-    componentContextStack.current().reactive.createReaction(() => {
+    currentComponentContext().reactive.createReaction(() => {
         clean();
         cleanup = effect();
     })
-    componentContextStack.current().unmounts.push(() => {
+    currentComponentContext().unmounts.push(() => {
         mounted = false;
         clean();
     })
-    componentContextStack.current().mounts.push(() => {
+    currentComponentContext().mounts.push(() => {
         cleanup = effect();
     })
 }
 
 export function createState<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: Setter<T>] {
-    return componentContextStack.current().reactive.createState(value);
+    return currentComponentContext().reactive.createState(value);
 }
 
 export function useReactive(): Reactive {
-    return componentContextStack.current().reactive;
+    return currentComponentContext().reactive;
 }
 export function createMemo<T>(computation: (prev: T) => T, initialValue?: T): Getter<T> {
-    let [value, setValue] = componentContextStack.current().reactive.createState(initialValue);
-    componentContextStack.current().reactive.createReaction(() => {
+    let [value, setValue] = currentComponentContext().reactive.createState(initialValue);
+    currentComponentContext().reactive.createReaction(() => {
         setValue(oldValue => computation(oldValue))
     })
     return value
@@ -113,7 +124,7 @@ export function makeJayComponent<PropsT extends object, ViewState extends object
         let componentContext = {
             reactive, mounts, unmounts
         }
-        return componentContextStack.doWithContext(componentContext, () => {
+        return provideContext(COMPONENT_CONTEXT, componentContext, () => {
             return reactive.record(() => {
                 let propsProxy = makePropsProxy(reactive, props);
 
@@ -209,6 +220,5 @@ function makePropsProxy<PropsT extends object>(reactive: Reactive, props: PropsT
 }
 
 export const forTesting = {
-    componentContextStack,
     makePropsProxy
 }
