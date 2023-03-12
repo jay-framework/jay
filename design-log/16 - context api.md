@@ -70,4 +70,14 @@ provideContext(COMPONENT_CONTEXT, {}, () => {
 })
 ```
 
+Final API
+----
+
+```typescript
+export interface ContextMarker<ContextType> {}
+export declare function createJayContext<ContextType=unknown>(): ContextMarker<ContextType>
+export declare function provideContext<ContextType, Returns>(marker: ContextMarker<ContextType>, context: ContextType, callback: () => Returns): Returns
+export declare function useContext<ContextType>(marker: ContextMarker<ContextType>): ContextType
+export declare function useOptionalContext<ContextType>(marker: ContextMarker<ContextType>): ContextType | undefined
+```
 
