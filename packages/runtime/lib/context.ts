@@ -2,13 +2,13 @@ import {BaseJayElement, ContextMarker, JayElement, JayEventHandlerWrapper, Rende
 import {checkModified, getRevision} from "jay-reactive";
 import {ReferencesManager} from "./node-reference";
 
-let newCurrentContext: NewContextStack<any> = undefined;
-interface NewContextStack<ContextType> {
+let currentContext: ContextStack<any> = undefined;
+interface ContextStack<ContextType> {
     context: ContextType,
     marker: ContextMarker<ContextType>,
-    parent?: NewContextStack<any>
+    parent?: ContextStack<any>
 }
-function NewContextStack<ContextType> (context: ContextType, marker: ContextMarker<ContextType>, parent?: NewContextStack<ContextType>) {
+function NewContextStack<ContextType> (context: ContextType, marker: ContextMarker<ContextType>, parent?: ContextStack<ContextType>) {
     return {context, marker, parent}
 }
 
@@ -17,13 +17,13 @@ export function createJayContext<ContextType=unknown>(): ContextMarker<ContextTy
 }
 
 export function provideContext<ContextType, Returns>(marker: ContextMarker<ContextType>, context: ContextType, callback: () => Returns): Returns {
-    let aContext = NewContextStack(context, marker, newCurrentContext)
+    let aContext = NewContextStack(context, marker, currentContext)
     try {
-        newCurrentContext = aContext;
+        currentContext = aContext;
         return callback();
     }
     finally {
-        newCurrentContext = aContext.parent;
+        currentContext = aContext.parent;
     }
 }
 
@@ -35,7 +35,7 @@ export function useContext<ContextType>(marker: ContextMarker<ContextType>): Con
 }
 
 export function useOptionalContext<ContextType>(marker: ContextMarker<ContextType>): ContextType | undefined {
-    let aContext = newCurrentContext
+    let aContext = currentContext
     while (aContext) {
         if (marker === aContext.marker)
             return aContext.context;
