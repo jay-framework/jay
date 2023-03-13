@@ -1,12 +1,12 @@
-import {JayElement, JayEvent, RenderElement} from "jay-runtime";
+import {JayElement, JayEvent, provideContext, RenderElement, useContext} from "jay-runtime";
 import {createState, JayComponentCore, makeJayComponent, Props, useReactive} from "jay-component";
 import {
     domEventMessage,
     JayPortMessageType,
-    JPMMessage,
-    ROOT_MESSAGE,
-    useMainPort
+    JPMMessage
 } from "./comm-channel";
+import {SECURE_COMPONENT_MARKER} from "./component-contexts";
+import {SECURE_COORDINATE_MARKER} from "./secure-child-comp";
 
 function makeComponentBridgeConstructor<
     PropsT extends object,
@@ -15,19 +15,18 @@ function makeComponentBridgeConstructor<
 (props: Props<PropsT>, refs: Refs): JayComponentCore<PropsT, ViewState> {
 
     let [viewState, setViewState] = createState<ViewState>({} as ViewState);
-    let port = useMainPort();
-    let ep = port.getEndpoint();
     let reactive = useReactive();
+    let {endpoint, port} = useContext(SECURE_COMPONENT_MARKER);
 
-    ep.onUpdate((message: JPMMessage) => {
+    endpoint.onUpdate((message: JPMMessage) => {
         switch (message.type) {
             case JayPortMessageType.render:
                 reactive.batchReactions(() => setViewState(message.viewState));
                 break;
             case JayPortMessageType.addEventListener:
-                refs[message.ref].addEventListener(message.eventType, (event: JayEvent<any, any>) => {
+                refs[message.refName].addEventListener(message.eventType, (event: JayEvent<any, any>) => {
                     port.batch(() => {
-                        ep.post(domEventMessage(message.eventType, event.coordinate))
+                        endpoint.post(domEventMessage(message.eventType, event.coordinate))
                     })
                 })
                 break;
@@ -44,5 +43,11 @@ export function makeJayComponentBridge<
     Refs extends object,
     JayElementT extends JayElement<ViewState, Refs>>
 (render: RenderElement<ViewState, Refs, JayElementT>) {
-    return makeJayComponent(render, makeComponentBridgeConstructor)
+    let {compId, port} = useContext(SECURE_COMPONENT_MARKER);
+    let {coordinate} = useContext(SECURE_COORDINATE_MARKER);
+    let endpoint = port.getEndpoint(compId, coordinate);
+    let newSecureComponentContext = {endpoint, compId: endpoint.compId, port}
+    return provideContext(SECURE_COMPONENT_MARKER, newSecureComponentContext, () => {
+        return makeJayComponent(render, makeComponentBridgeConstructor)
+    })
 }

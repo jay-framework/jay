@@ -61,8 +61,8 @@ class MockJayPort implements JayPort {
     constructor(private messageCountCallback: (diff: number) => void, 
                 private getCompId:(parentCompId: number, coordinate: string) => number) {}
                 
-    getEndpoint(parentCompId: number, coordinate: string): JayEndpoint {
-        let compId = this.getCompId(parentCompId, coordinate);
+    getEndpoint(parentCompId: number, parentCoordinate: string): JayEndpoint {
+        let compId = this.getCompId(parentCompId, parentCoordinate);
         let ep = new MockEndpointPort(compId, this);
         this.endpoints.set(compId, ep)
         return ep;

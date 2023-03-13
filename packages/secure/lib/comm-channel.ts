@@ -14,16 +14,17 @@ export interface JPMRender extends JayPortMessage {
 export interface JPMAddEventListener extends JayPortMessage {
     readonly type: JayPortMessageType.addEventListener
     eventType: string
-    ref: string
+    refName: string
 }
 export interface JPMDomEvent extends JayPortMessage {
     readonly type: JayPortMessageType.DOMEvent
     eventType: string
     coordinate: string
+    eventData: any
 }
 export interface JPMRootComponentProps extends JayPortMessage {
     readonly type: JayPortMessageType.root
-    props: object
+    viewState: object
 }
 
 export type JPMMessage = JPMRootComponentProps | JPMRender | JPMAddEventListener | JPMDomEvent
@@ -38,30 +39,29 @@ export interface JayChannel {
 }
 
 export interface JayPort {
-    getEndpoint(parentCompId: number, coordinate: string): JayEndpoint;
+    getRootEndpoint(): JayEndpoint;
+    getEndpoint(parentCompId: number, parentCoordinate: string): JayEndpoint;
     batch(handler: () => void)
     flush()
-
-    getRootEndpoint(): JayEndpoint;
 }
 
 export interface JayEndpoint {
     post(outMessage: JayPortMessage);
-    onUpdate(handler: JayPortInMessageHandler)
-    get compId(): number;
+    onUpdate(handler: JayPortInMessageHandler);
+    readonly compId: number;
 }
 
 export function renderMessage(viewState): JPMRender {
     return ({viewState, type: JayPortMessageType.render});
 }
-export function addEventListenerMessage(ref: string, eventType: string): JPMAddEventListener {
-    return ({ref, eventType, type: JayPortMessageType.addEventListener});
+export function addEventListenerMessage(refName: string, eventType: string): JPMAddEventListener {
+    return ({refName, eventType, type: JayPortMessageType.addEventListener});
 }
-export function domEventMessage(eventType: string, coordinate: string): JPMDomEvent {
-    return ({coordinate, eventType, type: JayPortMessageType.DOMEvent});
+export function domEventMessage(eventType: string, coordinate: string, eventData?: any): JPMDomEvent {
+    return ({coordinate, eventType, eventData, type: JayPortMessageType.DOMEvent});
 }
-export function rootComponentProps(props: any): JPMRootComponentProps {
-    return ({props, type: JayPortMessageType.root});
+export function rootComponentProps(viewState: any): JPMRootComponentProps {
+    return ({viewState, type: JayPortMessageType.root});
 }
 
 let _channel: JayChannel

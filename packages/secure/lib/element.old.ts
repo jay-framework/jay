@@ -1,5 +1,5 @@
 import {BaseJayElement, ForEach, Conditional, forEach, JayComponent, childComp, isCondition, isForEach,
-    noopUpdate, noopMount, normalizeUpdates, normalizeMount, MountFunc, updateFunc, currentContext,
+    noopUpdate, noopMount, normalizeUpdates, normalizeMount, MountFunc, updateFunc, currentConstructionContext,
     mkUpdateCollectionInternal,
     ContextStack} from 'jay-runtime'
 
@@ -64,7 +64,7 @@ export function bridge<ViewState>(children: Array</*ConditionalWorker<ViewState>
         }
 
         if (update !== noopUpdate) {
-            let context = currentContext();
+            let context = currentConstructionContext();
             update(context.currData)
             updates.push(update);
         }

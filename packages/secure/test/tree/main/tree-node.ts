@@ -1,4 +1,4 @@
-import { JayComponent, currentContext } from "jay-runtime";
+import { JayComponent, currentConstructionContext } from "jay-runtime";
 import {render, TreeNodeElement, TreeNodeViewState} from "./tree-node.jay.html";
 import {getViewState} from "../../../lib/view-state-model";
 import { Props } from "jay-component";
@@ -10,7 +10,7 @@ export interface Node {
 }
 
 function makeComponentBridge(compRender: () => TreeNodeViewState): JayComponent<Node, TreeNodeViewState, TreeNodeElement> {
-    let context = currentContext();
+    let context = currentConstructionContext();
 
     let element: TreeNodeElement = render(compRender());
     return {

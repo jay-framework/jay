@@ -22,12 +22,12 @@ export function workerRoot(comps: Array<WorkerChildComp<any, any>>) {
     let port: JayPort = useWorkerPort();
     let ep = port.getRootEndpoint();
     ep.onUpdate((inMessage: JPMRootComponentProps)  => {
-        let newProps = inMessage.props;
+        let viewState = inMessage.viewState;
         comps.forEach(workerChildComp => {
             if (!workerChildComp.comp)
-                workerChildComp.comp = workerChildComp.compCreator(workerChildComp.getProps(newProps))
+                workerChildComp.comp = workerChildComp.compCreator(workerChildComp.getProps(viewState))
             else
-                workerChildComp.comp.update(newProps);
+                workerChildComp.comp.update(workerChildComp.getProps(viewState));
         })
     })
 }
