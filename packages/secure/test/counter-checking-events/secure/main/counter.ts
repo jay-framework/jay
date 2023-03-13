@@ -1,5 +1,5 @@
 import {render} from "./counter.jay.html";
-import {makeJayComponentBridge} from "../../../../lib/component-bridge";
+import {makeJayComponentBridge} from "../../../../lib/main/main-bridge";
 
 export interface CounterProps {
     title: string

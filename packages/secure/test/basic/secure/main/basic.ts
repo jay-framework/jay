@@ -1,5 +1,5 @@
 import {render} from "./basic.jay.html";
-import {makeJayComponentBridge} from "../../../../lib/component-bridge";
+import {makeJayComponentBridge} from "../../../../lib/main/main-bridge";
 
 export interface BasicProps {
     firstName: string,

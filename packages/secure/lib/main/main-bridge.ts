@@ -4,9 +4,9 @@ import {
     domEventMessage,
     JayPortMessageType,
     JPMMessage
-} from "./comm-channel";
-import {SECURE_COMPONENT_MARKER} from "./component-contexts";
-import {SECURE_COORDINATE_MARKER} from "./secure-child-comp";
+} from "../comm-channel";
+import {SECURE_COMPONENT_MARKER} from "./main-contexts";
+import {SECURE_COORDINATE_MARKER} from "./main-child-comp";
 
 function makeComponentBridgeConstructor<
     PropsT extends object,
