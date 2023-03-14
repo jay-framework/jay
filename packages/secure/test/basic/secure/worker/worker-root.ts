@@ -1,5 +1,5 @@
 import {Basic} from "./basic";
-import {workerRoot} from "../../../../lib/worker-root";
+import {workerRoot} from "../../../../lib/sandbox/worker-root";
 
 export function initializeWorker() {
     workerRoot([{

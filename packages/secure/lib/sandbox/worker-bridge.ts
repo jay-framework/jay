@@ -1,6 +1,13 @@
-import {addEventListenerMessage, JayEndpoint, JayPort, renderMessage, useWorkerPort} from "./comm-channel";
-import {BasicViewState} from "../test/basic/secure/worker/basic.jay.html";
-import {HTMLElementCollectionProxy, HTMLElementProxy, JayEventHandler, JayNativeFunction} from "jay-runtime";
+import {addEventListenerMessage, JayEndpoint, renderMessage} from "../comm-channel";
+import {BasicViewState} from "../../test/basic/secure/worker/basic.jay.html";
+import {
+    HTMLElementCollectionProxy,
+    HTMLElementProxy,
+    JayEventHandler,
+    JayNativeFunction,
+    useContext
+} from "jay-runtime";
+import {SANDBOX_MARKER} from "./sandbox-context";
 
 class Ref {
     public ep: JayEndpoint;
@@ -68,9 +75,9 @@ function mkRef(refDef: Ref): HTMLElementCollectionProxy<any, any> | HTMLElementP
     return new Proxy(refDef, proxyHandler);
 }
 
-export function elementBridge(compId: number, viewState: any, refDefinitions: Ref[] = []) {
-    let port: JayPort = useWorkerPort();
-    let ep = port.getEndpoint(compId)
+export function elementBridge(viewState: any, refDefinitions: Ref[] = []) {
+    let parentContext = useContext(SANDBOX_MARKER);
+    let ep = parentContext.port.getEndpoint(parentContext.compId, parentContext.coordinate)
     ep.post(viewState);
     let refs = {};
     refDefinitions.forEach(refDef => {

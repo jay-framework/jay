@@ -78,3 +78,16 @@ and for a child component of another component in a secure environment
                   |-- makeComponentBridgeConstructor    
                                                        
 ```
+
+Creating the mapping [2] in sandbox environment
+-----
+
+
+```
+  workerRoot                                        -- provides SandboxComponentContext
+  | -- workerChildComp                              -- provides SandboxCoordinateContext
+       | -- makeJayComponent
+            | -- elementBridge                      -- Consumes SecureComponentContext, SecureCoordinateContext
+                                                    -- provides new SecureComponentContext (compId, endpoint)
+```
+
