@@ -19,7 +19,7 @@ export function childComp<
     return {refName, compCreator, getProps}
 }
 
-export function workerRoot(comps: Array<WorkerChildComp<any, any>>) {
+export function sandboxRoot(comps: Array<WorkerChildComp<any, any>>) {
     let port: JayPort = useWorkerPort();
     let endpoint = port.getRootEndpoint();
     endpoint.onUpdate((inMessage: JPMRootComponentProps)  => {

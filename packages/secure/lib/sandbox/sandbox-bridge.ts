@@ -1,5 +1,4 @@
 import {addEventListenerMessage, JayEndpoint, renderMessage} from "../comm-channel";
-import {BasicViewState} from "../../test/basic/secure/worker/basic.jay.html";
 import {
     HTMLElementCollectionProxy,
     HTMLElementProxy,
@@ -86,7 +85,7 @@ export function elementBridge(viewState: any, refDefinitions: Ref[] = []) {
     })
     return {
         dom: null,
-        update: (newData: BasicViewState) => {
+        update: (newData: any) => {
             ep.post(renderMessage(newData));
         },
         mount: () => {},

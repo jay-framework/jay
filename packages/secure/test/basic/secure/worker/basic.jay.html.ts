@@ -1,5 +1,5 @@
 import {JayElement} from "jay-runtime";
-import {elementBridge} from "../../../../lib/sandbox/worker-bridge";
+import {elementBridge} from "../../../../lib/sandbox/sandbox-bridge";
 
 export interface BasicViewState {
     text: string

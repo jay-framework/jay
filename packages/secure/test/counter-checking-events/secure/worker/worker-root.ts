@@ -1,6 +1,6 @@
 import {Counter} from "./counter";
-import {workerRoot} from "../../../../lib/sandbox/worker-root";
+import {sandboxRoot} from "../../../../lib/sandbox/sandbox-root";
 
 export function initializeWorker() {
-    workerRoot(Counter)
+    sandboxRoot(Counter)
 }
