@@ -1,5 +1,5 @@
 import {JayComponent, JayComponentConstructor, provideContext} from "jay-runtime";
-import {JayPort, JPMRootComponentProps, useWorkerPort} from "../comm-channel";
+import {JayPort, JPMRootComponentViewState, useWorkerPort} from "../comm-channel";
 import {SANDBOX_MARKER} from "./sandbox-context";
 
 interface WorkerChildComp<ParentVS extends object, PropsT extends object> {
@@ -22,7 +22,7 @@ export function childComp<
 export function sandboxRoot(comps: Array<WorkerChildComp<any, any>>) {
     let port: JayPort = useWorkerPort();
     let endpoint = port.getRootEndpoint();
-    endpoint.onUpdate((inMessage: JPMRootComponentProps)  => {
+    endpoint.onUpdate((inMessage: JPMRootComponentViewState)  => {
         let viewState = inMessage.viewState;
         comps.forEach(workerChildComp => {
             if (!workerChildComp.comp) {

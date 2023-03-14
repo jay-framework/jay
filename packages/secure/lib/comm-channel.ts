@@ -22,12 +22,12 @@ export interface JPMDomEvent extends JayPortMessage {
     coordinate: string
     eventData: any
 }
-export interface JPMRootComponentProps extends JayPortMessage {
+export interface JPMRootComponentViewState extends JayPortMessage {
     readonly type: JayPortMessageType.root
     viewState: object
 }
 
-export type JPMMessage = JPMRootComponentProps | JPMRender | JPMAddEventListener | JPMDomEvent
+export type JPMMessage = JPMRootComponentViewState | JPMRender | JPMAddEventListener | JPMDomEvent
 
 export const ROOT_MESSAGE = 0;
 
@@ -41,7 +41,7 @@ export interface JayChannel {
 export interface JayPort {
     getRootEndpoint(): JayEndpoint;
     getEndpoint(parentCompId: number, parentCoordinate: string): JayEndpoint;
-    batch(handler: () => void)
+    batch<T>(handler: () => T): T
     flush()
 }
 
@@ -60,7 +60,7 @@ export function addEventListenerMessage(refName: string, eventType: string): JPM
 export function domEventMessage(eventType: string, coordinate: string, eventData?: any): JPMDomEvent {
     return ({coordinate, eventType, eventData, type: JayPortMessageType.DOMEvent});
 }
-export function rootComponentProps(viewState: any): JPMRootComponentProps {
+export function rootComponentViewState(viewState: any): JPMRootComponentViewState {
     return ({viewState, type: JayPortMessageType.root});
 }
 

@@ -81,13 +81,14 @@ class MockJayPort implements JayPort {
         this.target = target;
     }
 
-    batch(handler: () => void) {
+    batch<T>(handler: () => T): T {
         this.messages = [];
         try {
-            handler()
+            return handler()
         }
         finally {
-            this.flush();
+            if (this.messages.length > 0)
+                this.flush();
         }
     }
 
