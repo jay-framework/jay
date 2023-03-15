@@ -5,9 +5,8 @@ import {CounterProps} from "./secure/main/counter";
 import {CounterViewState} from "./secure/main/counter.jay.html";
 import {render} from "./secure/main/app.jay.html";
 import {setChannel} from "../../lib/comm-channel";
-import {eventually10ms} from "../util/eventually";
 
-describe('counter secure rendering - checking events', () => {
+describe('basic events - using counter component', () => {
 
     async function mkElement() {
         let channel = useMockCommunicationChannel<CounterProps, CounterViewState>();
@@ -36,6 +35,22 @@ describe('counter secure rendering - checking events', () => {
 
         expect(title.textContent).toBe('first counter')
         expect(count.textContent).toBe('13')
+    })
+
+    it('should handle multiple click events', async () => {
+        let {channel, title, add, sub, count} = await mkElement()
+
+        add.click()
+        await channel.toBeClean()
+        add.click()
+        await channel.toBeClean()
+        add.click()
+        await channel.toBeClean()
+        sub.click()
+        await channel.toBeClean()
+
+        expect(title.textContent).toBe('first counter')
+        expect(count.textContent).toBe('14')
     })
 
 })

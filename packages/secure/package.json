@@ -5,8 +5,8 @@
   "scripts": {
     "d-basic": "node node_modules/jay-cli/dist/index.js definitions ./test/basic/regular",
     "jay-basic": "node node_modules/jay-cli/dist/index.js runtime ./test/basic/regular",
-    "d-counter": "node node_modules/jay-cli/dist/index.js definitions ./test/counter-checking-events/regular",
-    "jay-counter": "node node_modules/jay-cli/dist/index.js runtime ./test/counter-checking-events/regular",
+    "d-counter": "node node_modules/jay-cli/dist/index.js definitions test/events-basic/regular",
+    "jay-counter": "node node_modules/jay-cli/dist/index.js runtime test/events-basic/regular",
     "d": "npm run d-basic & num run d-counter",
     "jay": "npm run jay-basic & num run jay-counter",
     "start": "tsc",
