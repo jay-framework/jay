@@ -1,4 +1,10 @@
-import {addEventListenerMessage, JayEndpoint, renderMessage} from "../comm-channel";
+import {
+    addEventListenerMessage,
+    JayEndpoint,
+    JayPortMessageType,
+    JPMMessage,
+    renderMessage
+} from "../comm-channel";
 import {
     HTMLElementCollectionProxy,
     HTMLElementProxy,
@@ -7,18 +13,34 @@ import {
     useContext
 } from "jay-runtime";
 import {SANDBOX_MARKER} from "./sandbox-context";
+import {CONSTRUCTION_CONTEXT_MARKER} from "jay-runtime/dist/context";
+import {COMPONENT_CONTEXT} from "jay-component";
 
 class Ref {
     public ep: JayEndpoint;
+    private listeners = new Map<string, JayEventHandler<any, any, any>>()
     constructor(public ref: string) {
 
     }
 
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: boolean | AddEventListenerOptions): void {
-        this.ep.post(addEventListenerMessage(this.ref, type));
+        if (listener) {
+            this.ep.post(addEventListenerMessage(this.ref, type));
+            this.listeners.set(type, listener)
+        }
+        // todo add remove
     }
     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: EventListenerOptions | boolean): void {
-
+        // todo add remove
+    }
+    invoke(type: string, eventData: any) {
+        let listener = this.listeners.get(type)
+        if (listener)
+            listener({
+                event: type,
+                viewState: undefined,
+                coordinate: this.ref
+            })
     }
     $exec<ResultType>(handler: JayNativeFunction<any, any, ResultType>): Promise<ResultType> {
         return null;
@@ -76,9 +98,21 @@ function mkRef(refDef: Ref): HTMLElementCollectionProxy<any, any> | HTMLElementP
 
 export function elementBridge(viewState: any, refDefinitions: Ref[] = []) {
     let parentContext = useContext(SANDBOX_MARKER);
+    let {reactive} = useContext(COMPONENT_CONTEXT);
     let ep = parentContext.port.getEndpoint(parentContext.compId, parentContext.coordinate)
-    ep.post(viewState);
     let refs = {};
+    ep.post(viewState);
+    ep.onUpdate((inMessage: JPMMessage) => {
+        switch (inMessage.type) {
+            case JayPortMessageType.DOMEvent: {
+                reactive.batchReactions(() => {
+                    refs[inMessage.coordinate].invoke(inMessage.eventType, inMessage.eventData)
+                })
+                break;
+            }
+        }
+        console.log(inMessage)
+    })
     refDefinitions.forEach(refDef => {
         refDef.ep = ep;
         refs[refDef.ref] = mkRef(refDef);

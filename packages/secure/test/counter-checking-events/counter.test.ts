@@ -10,10 +10,9 @@ import {eventually10ms} from "../util/eventually";
 describe('counter secure rendering - checking events', () => {
 
     async function mkElement() {
-        let [channel, mainPort, workerPort] = useMockCommunicationChannel<CounterProps, CounterViewState>();
-        setChannel(workerPort);
+        let channel = useMockCommunicationChannel<CounterProps, CounterViewState>();
+        setChannel(channel);
         initializeWorker();
-        setChannel(mainPort);
         let appElement = render({});
         let title = appElement.dom.querySelector('[data-id="title"]') as HTMLDivElement;
         let add = appElement.dom.querySelector('[data-id="add"]') as HTMLButtonElement;
