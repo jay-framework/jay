@@ -11,7 +11,7 @@ import {
 import {
     COMPONENT_CONTEXT,
     createEffect, createEvent,
-    createMemo,
+    createMemo, createMutableState,
     createState,
     forTesting,
     makeJayComponent,
@@ -143,17 +143,17 @@ describe('state management', () => {
 
             let label = makeJayComponent(renderLabelElement, LabelComponent)
 
-            it('should render the component', () => {
+            it('should render the component', async() => {
                 let instance = label({name: 'hello world'});
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('hello world')
                 )
             })
 
-            it('should update the component on prop changes', () => {
+            it('should update the component on prop changes', async() => {
                 let instance = label({name: 'hello world'});
                 instance.update({name: 'updated world'})
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('updated world')
                 )
             })
@@ -179,26 +179,65 @@ describe('state management', () => {
 
             let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
 
-            it('should render the component using state', () => {
+            it('should render the component using state', async() => {
                 let instance = label({name: 'world'});
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('Hello world')
                 )
             })
 
-            it('should update the component as state changes', () => {
+            it('should update the component as state changes', async() => {
                 let instance = label({name: 'world'});
                 instance.setLabel('hello mars')
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('hello mars')
                 )
             })
 
-            it('should not update the component from prop change as the prop is not bound to state', () => {
+            it('should not update the component from prop change as the prop is not bound to state', async() => {
                 let instance = label({name: 'world'});
                 instance.update({name: 'mars'})
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('Hello world')
+                )
+            })
+        });
+
+        describe('with mutable state', () => {
+
+            interface Name {
+                name: string
+            }
+
+            function LabelComponentWithInternalState(props: Props<Name>, refs: LabelRefs) {
+
+                let label = createMutableState({greeting: 'Hello ' + props.name()});
+                let reactive = useReactive();
+
+                return {
+                    render: () => ({
+                        label: () => label().greeting
+                    }),
+                    label,
+                    reactive
+                }
+            }
+
+            let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
+
+            it('should render the component using state', async () => {
+                let instance = label({name: 'world'});
+                await instance.element.refs.label.$exec(elem =>
+                    expect(elem.textContent).toBe('Hello world')
+                )
+            })
+
+            it('should update the component as state changes', async() => {
+                let instance = label({name: 'world'});
+                instance.label().greeting = 'hello mars';
+                instance.reactive.flush()
+                await instance.element.refs.label.$exec(elem =>
+                    expect(elem.textContent).toBe('hello mars')
                 )
             })
         });
@@ -223,23 +262,23 @@ describe('state management', () => {
 
             let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
 
-            it('should render the component using state', () => {
+            it('should render the component using state', async() => {
                 let instance = label({name: 'world'});
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('Hello world'))
             })
 
-            it('should update the component as state changes', () => {
+            it('should update the component as state changes', async() => {
                 let instance = label({name: 'world'});
                 instance.setLabel('hello mars')
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('hello mars'))
             })
 
-            it('should not update the component from prop change as the prop is not bound to state', () => {
+            it('should not update the component from prop change as the prop is not bound to state', async() => {
                 let instance = label({name: 'world'});
                 instance.update({name: 'mars'})
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('Hello mars'))
             })
         })
@@ -262,16 +301,16 @@ describe('state management', () => {
 
             let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
 
-            it('should render initial component using a getter', () => {
+            it('should render initial component using a getter', async() => {
                 let instance = label({firstName: 'John', lastName: 'Smith'});
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('Hello John Smith'))
             })
 
-            it('should render updated component using a getter', () => {
+            it('should render updated component using a getter', async() => {
                 let instance = label({firstName: 'John', lastName: 'Smith'});
                 instance.update({firstName: 'John', lastName: 'Adams'});
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('Hello John Adams'))
             })
         })
@@ -309,19 +348,19 @@ describe('state management', () => {
 
             let label = makeJayComponent(renderLabelElement, LabelComponentWithCreateEffect)
 
-            it('should run create effect on initial component creation', () => {
+            it('should run create effect on initial component creation',async () => {
                 let instance = label({name: 'world'});
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('hello world'))
                 expect(instance.getResourceState().resourceAllocated).toBe(true)
                 expect(instance.getResourceState().effectRunCount).toBe(1)
                 expect(instance.getResourceState().effectCleanupRunCount).toBe(0)
             })
 
-            it('should run the effect cleanup and rerun effect on dependencies change', () => {
+            it('should run the effect cleanup and rerun effect on dependencies change', async () => {
                 let instance = label({name: 'world'});
                 instance.update({name: 'mars'})
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('hello mars'))
                 expect(instance.getResourceState().resourceAllocated).toBe(true)
                 expect(instance.getResourceState().effectRunCount).toBe(2)
@@ -375,11 +414,11 @@ describe('state management', () => {
 
             let labelComponent = makeJayComponent(renderTwoLabelElement, LabelComponentWithCreateMemo)
 
-            it('should run create memo on initial render', () => {
+            it('should run create memo on initial render', async () => {
                 let instance = labelComponent({name: 'world', age: 12});
-                instance.element.refs.label1.$exec(elem =>
+                await instance.element.refs.label1.$exec(elem =>
                   expect(elem.textContent).toBe('hello world'))
-                instance.element.refs.label2.$exec(elem =>
+                await instance.element.refs.label2.$exec(elem =>
                   expect(elem.textContent).toBe('age 12'))
                 expect(instance.getMemoComputeCount().memoDependsOnName).toBe(1)
                 expect(instance.getMemoComputeCount().memoDependsOnAge).toBe(1)
@@ -392,12 +431,12 @@ describe('state management', () => {
                 expect(instance.getMemoComputeCount().memoDependsOnAge).toBe(1)
             })
 
-            it('should re-render when render depends on memo', () => {
+            it('should re-render when render depends on memo', async() => {
                 let instance = labelComponent({name: 'world', age: 12});
                 instance.update({name: 'mars', age: 13})
-                instance.element.refs.label1.$exec(elem =>
+                await instance.element.refs.label1.$exec(elem =>
                   expect(elem.textContent).toBe('hello mars'))
-                instance.element.refs.label2.$exec(elem =>
+                await instance.element.refs.label2.$exec(elem =>
                   expect(elem.textContent).toBe('age 13'))
             })
 
@@ -422,17 +461,17 @@ describe('state management', () => {
             }
             let labelComponent2 = makeJayComponent(renderTwoLabelElement, LabelComponentWithCreateMemo2)
 
-            it('should update memo that depend on a memo', () => {
+            it('should update memo that depend on a memo', async () => {
                 let instance = labelComponent2({});
                 instance.setState1('two');
-                instance.element.refs.label2.$exec(elem =>
+                await instance.element.refs.label2.$exec(elem =>
                   expect(elem.textContent).toBe('memo2: memo1: two'))
             })
 
-            it('should run render that depend on a memo', () => {
+            it('should run render that depend on a memo', async () => {
                 let instance = labelComponent2({});
                 instance.setState1('two');
-                instance.element.refs.label1.$exec(elem =>
+                await instance.element.refs.label1.$exec(elem =>
                   expect(elem.textContent).toBe('memo1: two'))
             })
         })
@@ -471,10 +510,10 @@ describe('state management', () => {
                 expect(labels.label2).toBe('age 12')
             })
 
-            it('functions that change internal state', () => {
+            it('functions that change internal state', async () => {
                 let instance = labelComponent({name: 'world', age: 12});
                 instance.updateLabel1('new value')
-                instance.element.refs.label1.$exec(elem =>
+                await instance.element.refs.label1.$exec(elem =>
                   expect(elem.textContent).toBe('new value'));
             })
         })
@@ -521,47 +560,47 @@ describe('state management', () => {
 
             let counterComponent = makeJayComponent(renderCounterElement, CounterComponent)
 
-            it('should register events using on-event property and invoke the event', () => {
+            it('should register events using on-event property and invoke the event', async () => {
                 let instance = counterComponent({});
                 const myMock = jest.fn();
                 instance.onChange(myMock);
-                instance.element.refs.inc.$exec(elem => elem.click())
+                await instance.element.refs.inc.$exec(elem => elem.click())
                 expect(myMock.mock.calls.length).toBe(1);
             })
 
-            it('should unregister events', () => {
+            it('should unregister events', async () => {
                 let instance = counterComponent({});
                 const myMock = jest.fn();
                 instance.onChange(myMock);
                 instance.onChange(undefined);
-                instance.element.refs.inc.$exec(elem => elem.click())
+                await instance.element.refs.inc.$exec(elem => elem.click())
                 expect(myMock.mock.calls.length).toBe(0);
             })
-            it('should invoke event with payload', () => {
+            it('should invoke event with payload', async () => {
                 let instance = counterComponent({});
                 const myMock = jest.fn();
                 instance.onChange(myMock);
-                instance.element.refs.inc.$exec(elem => elem.click())
-                instance.element.refs.inc.$exec(elem => elem.click())
+                await instance.element.refs.inc.$exec(elem => elem.click())
+                await instance.element.refs.inc.$exec(elem => elem.click())
                 expect(myMock.mock.calls.length).toBe(2);
                 expect(myMock.mock.calls[0][0]).toEqual({event: {value: 1}});
                 expect(myMock.mock.calls[1][0]).toEqual({event: {value: 2}});
             })
 
-            it('should register events using addEventListener and invoke the event', () => {
+            it('should register events using addEventListener and invoke the event', async () => {
                 let instance = counterComponent({});
                 const myMock = jest.fn();
                 instance.addEventListener('Change', myMock);
-                instance.element.refs.inc.$exec(elem => elem.click())
+                await instance.element.refs.inc.$exec(elem => elem.click())
                 expect(myMock.mock.calls.length).toBe(1);
             })
 
-            it('should register and remove events', () => {
+            it('should register and remove events', async () => {
                 let instance = counterComponent({});
                 const myMock = jest.fn();
                 instance.addEventListener('Change', myMock);
                 instance.removeEventListener('Change', myMock);
-                instance.element.refs.inc.$exec(elem => elem.click())
+                await instance.element.refs.inc.$exec(elem => elem.click())
                 expect(myMock.mock.calls.length).toBe(0);
             })
 
@@ -669,33 +708,33 @@ describe('state management', () => {
             const Test3 = makeJayComponent(renderTwoLabelElement, TestComponent3);
             const initialRenderCycles = 2;
 
-            it('should render twice static elements on first render (before any update)', () => {
+            it('should render twice static elements on first render (before any update)', async () => {
                 const instance = Test1({one: 'one', two: 'two'})
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('one two'))
                 expect(renderCount).toBe(initialRenderCycles);
             })
 
-            it('should render only once on prop update (in addition to initial renders)', () => {
+            it('should render only once on prop update (in addition to initial renders)', async () => {
                 const instance = Test1({one: 'one', two: 'two'})
                 instance.update({one: 'three', two: 'four'})
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('three four'))
                 expect(renderCount).toBe(initialRenderCycles + 1);
             })
 
-            it('should render only once on multiple state updates from an API function', () => {
+            it('should render only once on multiple state updates from an API function', async () => {
                 const instance = Test2({})
                 instance.setValues('one', 'two')
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('one two'))
                 expect(renderCount).toBe(initialRenderCycles + 1);
             })
 
-            it('should render only once on multiple state updates from a ref event (DOM or nested component)', () => {
+            it('should render only once on multiple state updates from a ref event (DOM or nested component)', async () => {
                 const instance = Test2({})
-                instance.element.refs.button.$exec(elem => elem.click())
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.button.$exec(elem => elem.click())
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('one two'))
                 expect(renderCount).toBe(initialRenderCycles + 1);
             })
@@ -707,10 +746,10 @@ describe('state management', () => {
                 const waitingForAPIToFinish = instance.forAPItoFinish()
                 const reactive = instance.getReactive()
                 //
-                instance.element.refs.button.$exec(elem => elem.click())
+                await instance.element.refs.button.$exec(elem => elem.click())
                 await waitingForAPIToFinish
                 await reactive.toBeClean()
-                instance.element.refs.label.$exec(elem =>
+                await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('0 0'))
                 expect(instance.three()).toBe(46);
                 expect(renderCount).toBe(initialRenderCycles + 1);

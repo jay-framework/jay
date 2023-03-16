@@ -7,7 +7,7 @@ import {
     RenderElement,
     createJayContext, useContext, provideContext
 } from 'jay-runtime'
-import {ValueOrGetter, Getter, Reactive, Setter} from 'jay-reactive'
+import {ValueOrGetter, Getter, Reactive, Setter, mutableObject} from 'jay-reactive'
 
 export type hasProps<PropsT> = {props: Getter<PropsT>}
 export type Props<PropsT> = hasProps<PropsT> & {
@@ -76,6 +76,11 @@ export function createEffect(effect: () => void | EffectCleanup) {
 
 export function createState<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: Setter<T>] {
     return currentComponentContext().reactive.createState(value);
+}
+
+export function createMutableState<T extends object>(value: T): Getter<T> {
+    let [get, set] = createState(mutableObject(value))
+    return get
 }
 
 export function useReactive(): Reactive {
