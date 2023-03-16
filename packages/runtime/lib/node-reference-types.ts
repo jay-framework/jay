@@ -210,7 +210,7 @@ export interface HTMLElementProxy<ViewState, ElementType extends HTMLElement> ex
   addEventListener(type: string, handler: JeyEventHandler<ViewState>)
   removeEventListener(type: string, handler: JeyEventHandler<ViewState>)
 
-  $exec<ResultType>(handler: JayNativeFunction<ElementType, ViewState, ResultType>): ResultType
+  $exec<ResultType>(handler: JayNativeFunction<ElementType, ViewState, ResultType>): Promise<ResultType>
 }
 
 /** Components references **/
