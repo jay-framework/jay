@@ -1,0 +1,30 @@
+import {CompRefs, render as CompRender} from './comp.jay.html';
+import {makeJayComponent, Props, createMemo, createState, createMutableState} from 'jay-component';
+
+export interface CompProps {
+}
+function CompConstructor({}: Props<CompProps>, refs: CompRefs) {
+
+    let [text, setText] = createState('default result')
+    let items = createMutableState([
+        {id: 'a', text: "alpha"},
+        {id: 'b', text: "beta"},
+        {id: 'c', text: "gamma"}
+    ])
+
+    refs.button.onclick(() => setText('two'))
+    refs.input.$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .then(({event}) => setText(event))
+
+    refs.itemButton.onclick(({viewState: item}) => items[item.id].value = "clicked")
+    refs.itemInput.$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .then(({viewState: item, event}) => items[item.id].value = event)
+
+    return {
+        render: () => ({text, items}),
+
+    }
+}
+
+export const Comp = makeJayComponent(CompRender, CompConstructor);
+

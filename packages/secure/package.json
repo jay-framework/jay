@@ -5,10 +5,12 @@
   "scripts": {
     "d-basic": "node node_modules/jay-cli/dist/index.js definitions ./test/basic/regular",
     "jay-basic": "node node_modules/jay-cli/dist/index.js runtime ./test/basic/regular",
-    "d-counter": "node node_modules/jay-cli/dist/index.js definitions test/events-basic/regular",
-    "jay-counter": "node node_modules/jay-cli/dist/index.js runtime test/events-basic/regular",
-    "d": "npm run d-basic & num run d-counter",
-    "jay": "npm run jay-basic & num run jay-counter",
+    "d-events-basic": "node node_modules/jay-cli/dist/index.js definitions test/events-basic/regular",
+    "jay-events-basic": "node node_modules/jay-cli/dist/index.js runtime test/events-basic/regular",
+    "d-events-synthetic": "node node_modules/jay-cli/dist/index.js definitions test/events-synthetic/regular",
+    "jay-events-synthetic": "node node_modules/jay-cli/dist/index.js runtime test/events-synthetic/regular",
+    "d": "npm run d-basic & num run d-events-basic & npm run d-events-synthetic",
+    "jay": "npm run jay-basic & num run jay-events-basic & npm run jay-events-synthetic",
     "start": "tsc",
     "test": "jest",
     "build": "tsc"

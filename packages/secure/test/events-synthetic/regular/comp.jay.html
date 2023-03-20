@@ -1,0 +1,23 @@
+<html>
+<head>
+    <script type="application/yaml-jay">
+data:
+  text: string
+  items:
+    - id: string
+      text: string
+    </script>
+</head>
+<body>
+<div>
+    <div ref="result" data-id="result">{text}</div>
+    <button ref="button" data-id="button">button</button>
+    <input ref="input" data-id="input"/>
+
+    <div forEach="items">
+        <button ref="itemButton" data-id="{id}-itemButton">{text}</button>
+        <input ref="itemInput" data-id="{id}-itemInput"/>
+    </div>
+</div>
+</body>
+</html>

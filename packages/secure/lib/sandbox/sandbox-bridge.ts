@@ -111,7 +111,6 @@ export function elementBridge(viewState: any, refDefinitions: Ref[] = []) {
                 break;
             }
         }
-        console.log(inMessage)
     })
     refDefinitions.forEach(refDef => {
         refDef.ep = ep;

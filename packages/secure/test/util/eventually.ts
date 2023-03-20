@@ -11,7 +11,6 @@ function eventually(assertion: () => void, attemptsLimit: number, timeout: numbe
     }
 
     if (tryAssertion()) {
-        console.log('assert true')
         return Promise.resolve();
     }
 
