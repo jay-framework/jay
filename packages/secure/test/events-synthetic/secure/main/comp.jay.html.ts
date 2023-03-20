@@ -11,6 +11,7 @@ export interface CompViewState {
 }
 
 export interface CompRefs {
+    result: HTMLElementProxy<CompViewState, HTMLDivElement>,
     button: HTMLElementProxy<CompViewState, HTMLButtonElement>,
     input: HTMLElementProxy<CompViewState, HTMLInputElement>,
     itemButton: HTMLElementCollectionProxy<Item, HTMLButtonElement>,
@@ -27,8 +28,8 @@ export function render(viewState: CompViewState, options?: RenderElementOptions)
             e('input', {ref: 'input', "data-id": 'input'}, []),
             forEach(vs => vs.items, (vs1: Item) => {
                 return e('div', {}, [
-                    e('button', {ref: 'itemButton', "data-id": da(vs => vs.id)}, [dt(vs => vs.text)]),
-                    e('input', {ref: 'itemInput', "data-id": da(vs => vs.id)}, [])
+                    e('button', {ref: 'itemButton', "data-id": da(vs => `${vs.id}-itemButton`)}, [dt(vs => vs.text)]),
+                    e('input', {ref: 'itemInput', "data-id": da(vs => `${vs.id}-itemInput`)}, [])
                 ])}, 'undefined')
         ]), options, ['itemButton', 'itemInput']);
 }

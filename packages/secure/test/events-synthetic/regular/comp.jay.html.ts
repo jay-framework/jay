@@ -11,6 +11,7 @@ export interface CompViewState {
 }
 
 export interface CompRefs {
+  result: HTMLElementProxy<CompViewState, HTMLDivElement>,
   button: HTMLElementProxy<CompViewState, HTMLButtonElement>,
   input: HTMLElementProxy<CompViewState, HTMLInputElement>,
   itemButton: HTMLElementCollectionProxy<Item, HTMLButtonElement>,
@@ -22,13 +23,13 @@ export type CompElement = JayElement<CompViewState, CompRefs>
 export function render(viewState: CompViewState, options?: RenderElementOptions): CompElement {
   return ConstructContext.withRootContext(viewState, () =>
     de('div', {}, [
-      e('div', {"data-id": 'result'}, [dt(vs => vs.text)]),
+      e('div', {ref: 'result', "data-id": 'result'}, [dt(vs => vs.text)]),
       e('button', {ref: 'button', "data-id": 'button'}, ['button']),
       e('input', {ref: 'input', "data-id": 'input'}, []),
       forEach(vs => vs.items, (vs1: Item) => {
         return e('div', {}, [
-          e('button', {ref: 'itemButton', "data-id": da(vs => `button-${vs.id}`)}, [dt(vs => vs.text)]),
-          e('input', {ref: 'itemInput', "data-id": da(vs => `input-${vs.id}`)}, [])
+          e('button', {ref: 'itemButton', "data-id": da(vs => `${vs.id}-itemButton`)}, [dt(vs => vs.text)]),
+          e('input', {ref: 'itemInput', "data-id": da(vs => `${vs.id}-itemInput`)}, [])
         ])}, 'undefined')
     ]), options, ['itemButton', 'itemInput']);
 }

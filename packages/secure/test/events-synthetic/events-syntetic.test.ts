@@ -18,15 +18,38 @@ describe('events synthetic tests', () => {
         let button = appElement.dom.querySelector('[data-id="button"]') as HTMLButtonElement;
         let input = appElement.dom.querySelector('[data-id="input"]') as HTMLInputElement;
 
+        let getDynamicButtonById = (id) => appElement.dom.querySelector(`[data-id="${id}-itemButton"]`) as HTMLButtonElement;
+
         await channel.toBeClean();
-        return {appElement, result, button, input}
+        return {channel, appElement, result, button, input, getDynamicButtonById}
     }
 
     it('should render the component with default result', async () => {
-        // wait till render
         let {result} = await mkElement();
         await eventually10ms(async () => {
             expect(result.textContent).toBe('default result')
+        })
+    })
+
+    it('should react to button click', async () => {
+        let {channel, result, button} = await mkElement();
+
+        button.click()
+        await channel.toBeClean()
+
+        await eventually10ms(async () => {
+            expect(result.textContent).toBe('static button was clicked')
+        })
+    })
+
+    it('should react to dynamic buttons (under forEach) click', async () => {
+        let {channel, result, button, getDynamicButtonById} = await mkElement();
+
+        getDynamicButtonById('a').click()
+        await channel.toBeClean()
+
+        await eventually10ms(async () => {
+            expect(result.textContent).toBe('static button was clicked')
         })
     })
 })
