@@ -96,7 +96,7 @@ template
     }
     if (tail.length === 0)
       return [new RenderFragment('\'' + renderText(a, head) + '\'', none), false];
-    else if (tail.length === 1 && !head && a.length === 0 && tail[0][5].length === 0) {
+    else if (tail.length === 1 && !head && a.length === 0 && tail[0][5].length === 0 && tail[0][6].length === 0) {
         let accessor = tail[0][2];
         return [new RenderFragment(`${accessor.render()}`, none, accessor.validations), true];
     }

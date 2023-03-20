@@ -228,8 +228,6 @@ describe('compiler', () => {
             })
         });
 
-
-
         describe('components', () => {
             it('for simple refs', async () => {
                 const jayFile = await readSourceJayFile('components/counter');
@@ -273,10 +271,6 @@ describe('compiler', () => {
                 expect(runtimeFile.val).toEqual(await readGeneratedFile('components/tree'));
             })
         });
-
-
-
-
 
         it.skip('tmp', async () => {
             const jayFile = await readSourceJayFile('tmp');

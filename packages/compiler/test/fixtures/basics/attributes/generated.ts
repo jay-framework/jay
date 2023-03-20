@@ -23,6 +23,10 @@ export function render(viewState: AttributesViewState, options?: RenderElementOp
       e('label', {for: 'abc'}, []),
       e('div', {class: 'main second'}, [dt(vs => vs.text3)]),
       e('div', {class: da(vs => `${vs.bool1?'main':''}`)}, [dt(vs => vs.text3)]),
-      e('div', {class: da(vs => `${vs.bool1?'main':'second'}`)}, [dt(vs => vs.text3)])
+      e('div', {class: da(vs => `${vs.bool1?'main':'second'}`)}, [dt(vs => vs.text3)]),
+      e('div', {"data-attribute": da(vs => vs.text)}, []),
+      e('div', {"data-attribute": da(vs => `${vs.text}-abcd`)}, []),
+      e('div', {"data-attribute": da(vs => `abcd-${vs.text}`)}, []),
+      e('div', {"data-attribute": da(vs => `abcd-${vs.text}-abcd`)}, [])
     ]), options);
 }

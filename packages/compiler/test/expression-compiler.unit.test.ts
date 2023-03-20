@@ -157,6 +157,18 @@ describe('expression-compiler', () => {
             expect(actual.rendered).toEqual('da(vs => \`some ${vs.string1} thing\`)')
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
         })
+
+        it("single accessor with text before", () => {
+            const actual = parseAttributeExpression('some {string1}', defaultVars);
+            expect(actual.rendered).toEqual('da(vs => \`some ${vs.string1}\`)')
+            expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
+        })
+
+        it("single accessor with text after", () => {
+            const actual = parseAttributeExpression('{string1} thing', defaultVars);
+            expect(actual.rendered).toEqual('da(vs => \`${vs.string1} thing\`)')
+            expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy()
+        })
     });
 
     describe('parsePropertyExpression', () => {
