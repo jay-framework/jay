@@ -1,5 +1,5 @@
 import {HTMLElementProxy, JayElement} from "jay-runtime";
-import {proxyRef, elementBridge} from "../../../../lib/sandbox/sandbox-bridge";
+import {mkRef, elementBridge} from "../../../../lib/sandbox/sandbox-bridge";
 
 export interface CounterViewState {
     title: string,
@@ -15,7 +15,7 @@ export type CounterElement = JayElement<CounterViewState, CounterRefs>
 
 export function render(viewState: CounterViewState): CounterElement {
     return elementBridge(viewState, [
-        proxyRef('subtracter'),
-        proxyRef('adder')
+        mkRef('subtracter'),
+        mkRef('adder')
     ]) as unknown as CounterElement;
 }

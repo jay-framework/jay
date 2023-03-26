@@ -16,11 +16,24 @@ import {SANDBOX_MARKER} from "./sandbox-context";
 import {CONSTRUCTION_CONTEXT_MARKER} from "jay-runtime/dist/context";
 import {COMPONENT_CONTEXT} from "jay-component";
 
-class Ref {
-    public ep: JayEndpoint;
-    private listeners = new Map<string, JayEventHandler<any, any, any>>()
-    constructor(public ref: string) {
+abstract class Ref {
 
+    abstract getRefs(): StaticRef<any>[]
+    abstract update(newViewState: any);
+}
+
+export class StaticRef<ViewState> extends Ref {
+    viewState: ViewState;
+    ep: JayEndpoint;
+    listeners = new Map<string, JayEventHandler<any, any, any>>()
+
+    constructor(
+        public ref: string) {
+        super();
+    }
+
+    getRefs(): StaticRef<any>[] {
+        return [this]
     }
 
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: boolean | AddEventListenerOptions): void {
@@ -28,38 +41,60 @@ class Ref {
             this.ep.post(addEventListenerMessage(this.ref, type));
             this.listeners.set(type, listener)
         }
-        // todo add remove
     }
     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: EventListenerOptions | boolean): void {
         // todo add remove
     }
-    invoke(type: string, eventData: any) {
+
+    invoke(type: string, eventData: any, coordinate: string[]) {
         let listener = this.listeners.get(type)
+        // let eventViewState = this.getVS(compViewState, coordinate)
         if (listener)
             listener({
                 event: type,
-                viewState: undefined,
+                viewState: this.viewState,
                 coordinate: this.ref
             })
     }
     $exec<ResultType>(handler: JayNativeFunction<any, any, ResultType>): Promise<ResultType> {
         return null;
     }
+    update(newViewState: ViewState) {
+        this.viewState = newViewState
+    }
 }
 
-// interface RefCollection {
-//     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: boolean | AddEventListenerOptions): void
-//     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: EventListenerOptions | boolean): void
-// }
-//
-export function proxyRef(ref: string): Ref {
-    return new Ref(ref);
+export class DynamicRef<ParentViewState, ItemViewState> extends Ref {
+    private itemsMap: Record<string, ItemViewState> = {};
+    constructor(
+        private getItems: (pvs: ParentViewState) => ItemViewState[],
+        private matchBy: string,
+        private refDefinitions: Ref[]) {
+        super();
+    }
+
+    getRefs(): StaticRef<any>[] {
+        return this.refDefinitions.flatMap(_ => _.getRefs())
+    }
+
+    update(newViewState: ParentViewState) {
+        this.refDefinitions.forEach(_ => _.update(newViewState))
+        let items = this.getItems(newViewState);
+        this.itemsMap = items.reduce((obj, item) => {
+            return {
+                ...obj,
+                [item[this.matchBy]]: item
+            }
+        }, {})
+
+    }
+
 }
 
-// export function proxyRefs(ref: string): ProxyRefDefinition {
-//     return [ref, true]
-// }
-//
+export function mkRef<ViewState>(ref: string, getVS: (viewState: ViewState, coordinate: string[]) => any = (U: ViewState, C) => U): StaticRef<ViewState> {
+    return new StaticRef(ref);
+}
+
 const proxyHandler = {
     get: function(target, prop, receiver) {
         if (typeof prop === 'string') {
@@ -92,33 +127,38 @@ const proxyHandler = {
 }
 
 
-function mkRef(refDef: Ref): HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> {
+function proxyRef<ViewState>(refDef: StaticRef<ViewState>): HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> {
     return new Proxy(refDef, proxyHandler);
 }
 
-export function elementBridge(viewState: any, refDefinitions: Ref[] = []) {
+export function elementBridge<ElementViewState>(viewState: ElementViewState, refDefinitions: Ref[] = []) {
     let parentContext = useContext(SANDBOX_MARKER);
     let {reactive} = useContext(COMPONENT_CONTEXT);
     let ep = parentContext.port.getEndpoint(parentContext.compId, parentContext.coordinate)
     let refs = {};
-    ep.post(viewState);
+    let elementViewState = viewState;
+    ep.post(renderMessage(viewState));
     ep.onUpdate((inMessage: JPMMessage) => {
         switch (inMessage.type) {
             case JayPortMessageType.DOMEvent: {
                 reactive.batchReactions(() => {
-                    refs[inMessage.coordinate].invoke(inMessage.eventType, inMessage.eventData)
+                    let coordinate = inMessage.coordinate.split('/');
+                    refs[coordinate.slice(-1)[0]].invoke(inMessage.eventType, inMessage.eventData, elementViewState, coordinate)
                 })
                 break;
             }
         }
     })
-    refDefinitions.forEach(refDef => {
-        refDef.ep = ep;
-        refs[refDef.ref] = mkRef(refDef);
+    refDefinitions
+        .flatMap(_ => _.getRefs())
+        .forEach(refDef => {
+            refDef.ep = ep;
+            refs[refDef.ref] = proxyRef(refDef);
     })
     return {
         dom: null,
         update: (newData: any) => {
+            elementViewState = newData;
             ep.post(renderMessage(newData));
         },
         mount: () => {},

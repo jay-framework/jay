@@ -31,7 +31,7 @@ export type JPMMessage = JPMRootComponentViewState | JPMRender | JPMAddEventList
 
 export const ROOT_MESSAGE = 0;
 
-export type JayPortInMessageHandler = (inMessage: JayPortMessage) => void;
+export type JayPortInMessageHandler = (inMessage: JPMMessage) => void;
 
 export interface JayChannel {
     mainPort: JayPort,

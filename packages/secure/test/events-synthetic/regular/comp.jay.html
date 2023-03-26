@@ -14,7 +14,7 @@ data:
     <button ref="button" data-id="button">button</button>
     <input ref="input" data-id="input"/>
 
-    <div forEach="items">
+    <div forEach="items" matchBy="id">
         <button ref="itemButton" data-id="{id}-itemButton">{text}</button>
         <input ref="itemInput" data-id="{id}-itemInput"/>
     </div>

@@ -1,6 +1,5 @@
-import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, dynamicElement as de, forEach, ConstructContext, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
-import {elementBridge, proxyRef} from "../../../../lib/sandbox/sandbox-bridge";
-import {CounterElement} from "../../../events-basic/secure/worker/counter.jay.html";
+import {JayElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
+import {DynamicRef, elementBridge, mkRef, StaticRef} from "../../../../lib/sandbox/sandbox-bridge";
 
 export interface Item {
     id: string,
@@ -23,9 +22,12 @@ export type CompElement = JayElement<CompViewState, CompRefs>
 
 export function render(viewState: CompViewState, options?: RenderElementOptions): CompElement {
     return elementBridge(viewState, [
-        proxyRef('button'),
-        proxyRef('input'),
-        proxyRef('itemButton'),
-        proxyRef('itemInput'),
+        new StaticRef('button'),
+        new StaticRef('input'),
+        new DynamicRef((viewState: CompViewState) => viewState.items, 'id', [
+            new StaticRef('itemButton'),
+            new StaticRef('itemInput')
+            ]
+        )
     ]) as unknown as CompElement;
 }
