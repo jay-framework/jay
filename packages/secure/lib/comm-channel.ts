@@ -2,7 +2,8 @@ export enum JayPortMessageType {
     render = 0,
     addEventListener = 1,
     root = 2,
-    DOMEvent = 3
+    DOMEvent = 3,
+    removeEventListener,
 }
 export interface JayPortMessage {
     readonly type: JayPortMessageType;
@@ -13,6 +14,11 @@ export interface JPMRender extends JayPortMessage {
 }
 export interface JPMAddEventListener extends JayPortMessage {
     readonly type: JayPortMessageType.addEventListener
+    eventType: string
+    refName: string
+}
+export interface JPMRemoveEventListener extends JayPortMessage {
+    readonly type: JayPortMessageType.removeEventListener
     eventType: string
     refName: string
 }
@@ -56,6 +62,9 @@ export function renderMessage(viewState): JPMRender {
 }
 export function addEventListenerMessage(refName: string, eventType: string): JPMAddEventListener {
     return ({refName, eventType, type: JayPortMessageType.addEventListener});
+}
+export function removeEventListenerMessage(refName: string, eventType: string): JPMRemoveEventListener {
+    return ({refName, eventType, type: JayPortMessageType.removeEventListener});
 }
 export function domEventMessage(eventType: string, coordinate: string, eventData?: any): JPMDomEvent {
     return ({coordinate, eventType, eventData, type: JayPortMessageType.DOMEvent});

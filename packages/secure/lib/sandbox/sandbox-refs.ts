@@ -6,7 +6,14 @@ import {
     JayEventHandler,
     JayNativeFunction, MountFunc, updateFunc
 } from "jay-runtime";
-import {addEventListenerMessage, JayEndpoint, JayPortMessage, JayPortMessageType, JPMMessage} from "../comm-channel";
+import {
+    addEventListenerMessage,
+    JayEndpoint,
+    JayPortMessage,
+    JayPortMessageType,
+    JPMMessage,
+    removeEventListenerMessage
+} from "../comm-channel";
 
 export interface SandboxCondition<ViewState> {
     condition: (viewState: ViewState) => boolean
@@ -92,7 +99,8 @@ export class StaticRefImplementation<ViewState> {
         }
     }
     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: EventListenerOptions | boolean): void {
-        // todo add remove
+        this.ep.post(removeEventListenerMessage(this.ref, type));
+        this.listeners.delete(type)
     }
 
     invoke = (type: string) => {

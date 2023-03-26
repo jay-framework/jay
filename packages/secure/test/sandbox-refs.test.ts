@@ -3,7 +3,7 @@ import {mkBridgeElement} from "../lib/sandbox/sandbox-refs";
 import {
     domEventMessage,
     JayEndpoint,
-    JayPortInMessageHandler,
+    JayPortInMessageHandler, JayPortMessageType,
     JPMAddEventListener,
     JPMDomEvent
 } from "../lib/comm-channel";
@@ -19,6 +19,7 @@ describe('sandbox-refs', () => {
             bridgeElement.refs.one.onclick(() => {});
 
             expect(endpoint.outMessages).toHaveLength(1)
+            expect(endpoint.outMessages[0].type).toBe(JayPortMessageType.addEventListener)
             expect(endpoint.outMessages[0].eventType).toBe('click')
             expect(endpoint.outMessages[0].refName).toBe('one')
         })
@@ -46,6 +47,48 @@ describe('sandbox-refs', () => {
 
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": "one", "event": "click", "viewState": vs2})
+        })
+
+        it('should add event listener using addEventListener', () => {
+            let endpoint = mkEndpoint();
+            let bridgeElement = mkBridgeElement(['one', 'two'], endpoint, vs)
+            let callback = jest.fn();
+
+            bridgeElement.refs.one.addEventListener('click', callback);
+
+            expect(endpoint.outMessages).toHaveLength(1)
+            expect(endpoint.outMessages[0].type).toBe(JayPortMessageType.addEventListener)
+            expect(endpoint.outMessages[0].eventType).toBe('click')
+            expect(endpoint.outMessages[0].refName).toBe('one')
+        })
+
+        it('should remove event listener using removeEventListener', () => {
+            let endpoint = mkEndpoint();
+            let bridgeElement = mkBridgeElement(['one', 'two'], endpoint, vs)
+            let callback = jest.fn();
+
+            bridgeElement.refs.one.addEventListener('click', callback);
+            bridgeElement.refs.one.removeEventListener('click', callback);
+
+            expect(endpoint.outMessages).toHaveLength(2)
+            expect(endpoint.outMessages[0].type).toBe(JayPortMessageType.addEventListener)
+            expect(endpoint.outMessages[0].eventType).toBe('click')
+            expect(endpoint.outMessages[0].refName).toBe('one')
+            expect(endpoint.outMessages[1].type).toBe(JayPortMessageType.removeEventListener)
+            expect(endpoint.outMessages[1].eventType).toBe('click')
+            expect(endpoint.outMessages[1].refName).toBe('one')
+        })
+
+        it('after removing, event handler should not be invoked', () => {
+            let endpoint = mkEndpoint();
+            let bridgeElement = mkBridgeElement(['one', 'two'], endpoint, vs)
+            let callback = jest.fn();
+
+            bridgeElement.refs.one.addEventListener('click', callback);
+            bridgeElement.refs.one.removeEventListener('click', callback);
+            endpoint.invoke(domEventMessage('click', 'one'))
+
+            expect(callback.mock.calls).toHaveLength(0)
         })
     });
 
