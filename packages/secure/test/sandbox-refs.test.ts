@@ -1,5 +1,5 @@
 import {describe, expect, it} from '@jest/globals'
-import {mkRefs} from "../lib/sandbox/sandbox-refs";
+import {mkBridgeElement} from "../lib/sandbox/sandbox-refs";
 import {
     domEventMessage,
     JayEndpoint,
@@ -11,11 +11,12 @@ import {
 describe('sandbox-refs', () => {
     describe('static refs', () => {
         const vs = {data: 'some data'}
+        const vs2 = {data: 'some new data'}
         it('should register events --> JPMAddEventListener', () => {
             let endpoint = mkEndpoint();
-            let refs = mkRefs(['one', 'two'], endpoint, vs)
+            let bridgeElement = mkBridgeElement(['one', 'two'], endpoint, vs)
 
-            refs.one.onclick(() => {});
+            bridgeElement.refs.one.onclick(() => {});
 
             expect(endpoint.outMessages).toHaveLength(1)
             expect(endpoint.outMessages[0].eventType).toBe('click')
@@ -24,14 +25,27 @@ describe('sandbox-refs', () => {
 
         it('should trigger events on JPMDomEvent --> callback', () => {
             let endpoint = mkEndpoint();
-            let refs = mkRefs(['one', 'two'], endpoint, vs)
+            let bridgeElement = mkBridgeElement(['one', 'two'], endpoint, vs)
             let callback = jest.fn();
 
-            refs.one.onclick(callback);
+            bridgeElement.refs.one.onclick(callback);
             endpoint.invoke(domEventMessage('click', 'one'))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": "one", "event": "click", "viewState": {"data": "some data"}})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": "one", "event": "click", "viewState": vs})
+        })
+
+        it('should pass the new viewState on viewState update', () => {
+            let endpoint = mkEndpoint();
+            let bridgeElement = mkBridgeElement(['one', 'two'], endpoint, vs)
+            let callback = jest.fn();
+
+            bridgeElement.update(vs2)
+            bridgeElement.refs.one.onclick(callback);
+            endpoint.invoke(domEventMessage('click', 'one'))
+
+            expect(callback.mock.calls).toHaveLength(1)
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": "one", "event": "click", "viewState": vs2})
         })
     });
 
