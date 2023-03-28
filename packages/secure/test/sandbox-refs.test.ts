@@ -1,5 +1,5 @@
 import {describe, expect, it} from '@jest/globals'
-import {mkBridgeElement, sandboxForEach} from "../lib/sandbox/sandbox-refs";
+import {mkBridgeElement, sandboxElement as e} from "../lib/sandbox/sandbox-refs";
 import {
     domEventMessage,
     JayEndpoint,
@@ -15,7 +15,7 @@ describe('sandbox-refs', () => {
 
         it('should register events --> JPMAddEventListener', () => {
             let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,['one', 'two'])
+            let bridgeElement = mkBridgeElement(vs, endpoint,() => [e('one'), e('two')])
 
             bridgeElement.refs.one.onclick(() => {});
 
@@ -27,7 +27,7 @@ describe('sandbox-refs', () => {
 
         it('should trigger events on JPMDomEvent --> callback', () => {
             let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,['one', 'two'])
+            let bridgeElement = mkBridgeElement(vs, endpoint,() => [e('one'), e('two')])
             let callback = jest.fn();
 
             bridgeElement.refs.one.onclick(callback);
@@ -39,7 +39,7 @@ describe('sandbox-refs', () => {
 
         it('should pass the new viewState on viewState update', () => {
             let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,['one', 'two'])
+            let bridgeElement = mkBridgeElement(vs, endpoint,() => [e('one'), e('two')])
             let callback = jest.fn();
 
             bridgeElement.update(vs2)
@@ -52,7 +52,7 @@ describe('sandbox-refs', () => {
 
         it('should add event listener using addEventListener', () => {
             let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,['one', 'two'])
+            let bridgeElement = mkBridgeElement(vs, endpoint,() => [e('one'), e('two')])
             let callback = jest.fn();
 
             bridgeElement.refs.one.addEventListener('click', callback);
@@ -65,7 +65,7 @@ describe('sandbox-refs', () => {
 
         it('should remove event listener using removeEventListener', () => {
             let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,['one', 'two'])
+            let bridgeElement = mkBridgeElement(vs, endpoint,() => [e('one'), e('two')])
             let callback = jest.fn();
 
             bridgeElement.refs.one.addEventListener('click', callback);
@@ -82,7 +82,7 @@ describe('sandbox-refs', () => {
 
         it('after removing, event handler should not be invoked', () => {
             let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,['one', 'two'])
+            let bridgeElement = mkBridgeElement(vs, endpoint,() => [e('one'), e('two')])
             let callback = jest.fn();
 
             bridgeElement.refs.one.addEventListener('click', callback);
@@ -94,7 +94,7 @@ describe('sandbox-refs', () => {
 
         it.skip('should register $events --> JPMAddEventListener', () => {
             let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,['one', 'two'])
+            let bridgeElement = mkBridgeElement(vs, endpoint,() => [e('one'), e('two')])
 
             bridgeElement.refs.one.$onclick(() => {});
 

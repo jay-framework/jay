@@ -1,9 +1,9 @@
 import {
+    createJayContext,
     HTMLElementCollectionProxy,
     HTMLElementProxy, HTMLNativeExec,
-    JayComponentConstructor,
     JayEventHandler,
-    JayNativeFunction, MountFunc, updateFunc
+    JayNativeFunction, MountFunc, noopMount, normalizeUpdates, provideContext, updateFunc, useContext
 } from "jay-runtime";
 import {
     addEventListenerMessage,
@@ -13,42 +13,68 @@ import {
     removeEventListenerMessage
 } from "../comm-channel";
 
-export enum SandboxRefType {
-    condition = 0,
-    forEach = 1,
-    comp = 2
+interface SandboxCreationContext<ViewState> {
+    viewState: ViewState,
+    endpoint: JayEndpoint
 }
 
-export interface SandboxCondition<ViewState> {
-    readonly type: SandboxRefType.condition
-    condition: (viewState: ViewState) => boolean
-    children: SandboxRefs<ViewState>
+const SANDBOX_CREATION_CONTEXT = createJayContext<SandboxCreationContext<any>>()
+
+interface SandboxElement<ViewState> {
+    update: updateFunc<ViewState>
+    mount: MountFunc,
+    unmount: MountFunc
+    refs: Refs
 }
 
-export interface SandboxComp<ViewState, Props> {
-    readonly type: SandboxRefType.comp
-    compCreator: JayComponentConstructor<Props>,
-    getProps: (viewState: ViewState) => Props,
-    refName: string
+export function sandboxElement<ViewState>(refName: string): SandboxElement<ViewState> {
+    const {viewState, endpoint} = useContext(SANDBOX_CREATION_CONTEXT)
+    let refImpl = new StaticRefImplementation(refName, endpoint, viewState);
+    let ref = proxyRef(refImpl)
+    return {
+        update: refImpl.update,
+        mount: noopMount,
+        unmount: noopMount,
+        refs: {[refName]: ref}
+    }
 }
 
-export interface SandboxForEach<ParentViewState, ItemViewState> {
-    readonly type: SandboxRefType.forEach
-    getItems: (viewState: ParentViewState) => ItemViewState[]
-    matchBy: string
-    children: SandboxRefs<ItemViewState>
-}
-export function sandboxForEach<ParentViewState, ItemViewState>(getItems: (viewState: ParentViewState) => ItemViewState[],
-                                                               matchBy: string,
-                                                               children: SandboxRefs<ItemViewState>): SandboxForEach<ParentViewState, ItemViewState> {
-    return {getItems, matchBy, children, type: SandboxRefType.forEach}
-}
+// export enum SandboxRefType {
+//     condition = 0,
+//     forEach = 1,
+//     comp = 2
+// }
+//
+// export interface SandboxCondition<ViewState> {
+//     readonly type: SandboxRefType.condition
+//     condition: (viewState: ViewState) => boolean
+//     children: SandboxRefs<ViewState>
+// }
+//
+// export interface SandboxComp<ViewState, Props> {
+//     readonly type: SandboxRefType.comp
+//     compCreator: JayComponentConstructor<Props>,
+//     getProps: (viewState: ViewState) => Props,
+//     refName: string
+// }
+//
+// export interface SandboxForEach<ParentViewState, ItemViewState> {
+//     readonly type: SandboxRefType.forEach
+//     getItems: (viewState: ParentViewState) => ItemViewState[]
+//     matchBy: string
+//     children: SandboxRefs<ItemViewState>
+// }
+// export function sandboxForEach<ParentViewState, ItemViewState>(getItems: (viewState: ParentViewState) => ItemViewState[],
+//                                                                matchBy: string,
+//                                                                children: SandboxRefs<ItemViewState>): SandboxForEach<ParentViewState, ItemViewState> {
+//     return {getItems, matchBy, children, type: SandboxRefType.forEach}
+// }
 
-export type SandboxRef<ViewState> = string |
-    SandboxForEach<ViewState, any> |
-    SandboxCondition<ViewState> |
-    SandboxComp<ViewState, any>
-export type SandboxRefs<ViewState> = SandboxRef<ViewState>[];
+// export type SandboxRef<ViewState> = string |
+//     SandboxForEach<ViewState, any> |
+//     SandboxCondition<ViewState> |
+//     SandboxComp<ViewState, any>
+// export type SandboxRefs<ViewState> = SandboxRef<ViewState>[];
 
 type Refs = Record<string, HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any>>
 
@@ -90,6 +116,10 @@ const proxyHandler = {
     }
 }
 
+function proxyRef<ViewState>(refDef: StaticRefImplementation<ViewState> | DynamicRefImplementation<ViewState>): HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> {
+    return new Proxy(refDef, proxyHandler) as any as HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any>;
+}
+
 interface RefImplementation<ViewState> {
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: boolean | AddEventListenerOptions): void
     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: EventListenerOptions | boolean): void
@@ -125,7 +155,7 @@ export class StaticRefImplementation<ViewState> {
     $exec<ResultType>(handler: JayNativeFunction<any, any, ResultType>): Promise<ResultType> {
         return null;
     }
-    update(newViewState: ViewState) {
+    update = (newViewState: ViewState) => {
         this.viewState = newViewState
     }
 }
@@ -180,35 +210,28 @@ class DataCollectionRef<ParentViewState, ItemViewState> {
     }
 }
 
-export function mkBridgeElement<ViewState>(viewState: ViewState, endpoint: JayEndpoint, refDefinitions: SandboxRefs<ViewState>): SandboxBridgeElement<ViewState> {
-    let refs: Record<string, RefImplementation<ViewState>> = {};
-    refDefinitions.forEach(refDefinition => {
-        if (typeof refDefinition === 'string') {
-            refs[refDefinition] = new Proxy(new StaticRefImplementation(refDefinition, endpoint, viewState), proxyHandler)
-        }
-        else if (refDefinition.type === SandboxRefType.forEach) {
-            refDefinition.children.forEach(child => {
-                if (typeof child === 'string') {
-                    refs[child] = new Proxy(new DynamicRefImplementation(child, endpoint, viewState), proxyHandler)
+export function mkBridgeElement<ViewState>(viewState: ViewState, endpoint: JayEndpoint, sandboxElements: () => SandboxElement<ViewState>[]): SandboxBridgeElement<ViewState> {
+    return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState}, () => {
+        let elements = sandboxElements();
+        let update = normalizeUpdates(elements.map(el => el.update));
+        let refs = elements.reduce((acc, obj) => {
+            return {...acc, ...obj.refs}
+        }, {}) as Refs;
+
+        endpoint.onUpdate((inMessage: JPMMessage) => {
+            switch (inMessage.type) {
+                case JayPortMessageType.DOMEvent: {
+                    refs[inMessage.coordinate.split('/').slice(-1)[0]].invoke(inMessage.eventType)
+                    break;
                 }
-            })
-        }
-    })
-    endpoint.onUpdate((inMessage: JPMMessage) => {
-        switch (inMessage.type) {
-            case JayPortMessageType.DOMEvent: {
-                refs[inMessage.coordinate.split('/').slice(-1)[0]].invoke(inMessage.eventType)
-                break;
             }
+        })
+
+        return {
+            refs,
+            update,
+            mount: () => {},
+            unmount: () => {}
         }
     })
-    const update = (newViewState: ViewState) => {
-        Object.entries(refs).forEach(([key, ref]) => ref.update(newViewState))
-    }
-    return {
-        refs: refs as any as Refs,
-        update,
-        mount: () => {},
-        unmount: () => {}
-    };
 }
