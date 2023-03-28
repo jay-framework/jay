@@ -202,15 +202,17 @@ export interface HTMLElementCollectionProxy<ViewState, ElementType extends HTMLE
   addEventListener(type: string, handler: JeyEventHandler<ViewState>)
   removeEventListener(type: string, handler: JeyEventHandler<ViewState>)
 
-  find(predicate: (t: ViewState) => boolean): HTMLElementProxy<ViewState, ElementType>
-  map<ResultType>(handler: (element: HTMLElementProxy<ViewState, ElementType>, viewState: ViewState, coordinate: string) => ResultType): Array<ResultType>
+  find(predicate: (t: ViewState) => boolean): HTMLNativeExec<ViewState, ElementType>
+  map<ResultType>(handler: (element: HTMLNativeExec<ViewState, ElementType>, viewState: ViewState, coordinate: string) => ResultType): Array<ResultType>
 }
 
-export interface HTMLElementProxy<ViewState, ElementType extends HTMLElement> extends GlobalJayEvents<ViewState>{
+export interface HTMLNativeExec<ViewState, ElementType extends HTMLElement> {
+  $exec<ResultType>(handler: JayNativeFunction<ElementType, ViewState, ResultType>): Promise<ResultType>
+}
+
+export interface HTMLElementProxy<ViewState, ElementType extends HTMLElement> extends GlobalJayEvents<ViewState>, HTMLNativeExec<ViewState, ElementType>{
   addEventListener(type: string, handler: JeyEventHandler<ViewState>)
   removeEventListener(type: string, handler: JeyEventHandler<ViewState>)
-
-  $exec<ResultType>(handler: JayNativeFunction<ElementType, ViewState, ResultType>): Promise<ResultType>
 }
 
 /** Components references **/
