@@ -3,7 +3,7 @@
     "jsx": "preserve",
     "module": "es2015",
     "esModuleInterop": true,
-    "target": "es2015",
+    "target": "es2019",
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "dist",
@@ -13,6 +13,6 @@
     ],
     "declaration": true
   },
-  "lib": ["es2015"],
+  "lib": ["es2019"],
   "exclude": ["test", "examples", "dist", "build"]
 }

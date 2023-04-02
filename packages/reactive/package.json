@@ -8,7 +8,6 @@
     "build": "tsc"
   },
   "jest": {},
-  "dependencies": {},
   "files": [
     "dist",
     "lib"
