@@ -5,6 +5,7 @@ import {
     JayEventHandler,
     JayNativeFunction, MountFunc, noopMount, normalizeUpdates, provideContext, updateFunc, useContext
 } from "jay-runtime";
+import {checkModified, getRevision} from "jay-reactive";
 import {
     addEventListenerMessage,
     JayEndpoint,
@@ -36,6 +37,77 @@ export function sandboxElement<ViewState>(refName: string): SandboxElement<ViewS
         mount: noopMount,
         unmount: noopMount,
         refs: {[refName]: ref}
+    }
+}
+
+function itemsToItemsMap<ParentViewState, ItemViewState>(
+    viewState: ParentViewState,
+    getItems: (viewState: ParentViewState) => ItemViewState[],
+    matchBy: string,
+): Map<string, ItemViewState> {
+    return new Map(this.getItems(viewState)
+        .map(item => [item[this.matchBy], item]));
+}
+
+function compareLists<ItemViewState extends object>(oldList: ItemViewState[], newList: ItemViewState[], matchBy: string):
+    {removedItems: ItemViewState[], addedItems: ItemViewState[]} {
+    let removedItems = [];
+    let addedItems = [];
+    let newListIds = new Set(newList.map(item => item[matchBy]));
+    let oldListIds = new Set(oldList.map(item => item[matchBy]));
+    oldList.forEach(oldItem => {
+        if (!newListIds.has(oldItem[matchBy]))
+            removedItems.push(oldItem)
+    })
+    newList.forEach(newItem => {
+        if (!oldListIds.has(newItem[matchBy]))
+            addedItems.push(newItem)
+    })
+    return {removedItems, addedItems}
+}
+
+export function sandboxForEach<ParentViewState, ItemViewState extends object>(
+    getItems: (viewState: ParentViewState) => ItemViewState[],
+    matchBy: string,
+    children: () => SandboxElement<ItemViewState>[]
+): SandboxElement<ParentViewState> {
+    const {viewState, endpoint} = useContext(SANDBOX_CREATION_CONTEXT)
+    let lastItems = getRevision<ItemViewState[]>([]);
+    let childElementsMap: Map<string, SandboxElement<ItemViewState>[]> = new Map();
+
+    let update = (viewState: ParentViewState) => {
+        let newItems = getItems(viewState);
+        let isModified;
+        [lastItems, isModified] = checkModified(newItems, lastItems);
+        if (isModified) {
+            let {removedItems, addedItems} = compareLists(lastItems.value, newItems, matchBy)
+            addedItems.forEach(item => {
+                let childElements = provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState: item}, children)
+                childElementsMap.set(item[matchBy], childElements);
+            })
+            removedItems.forEach(item => {
+                let childElements = childElementsMap.get(item[matchBy])
+                childElements.forEach(childElement => childElement.unmount)
+                childElementsMap.delete(item[matchBy])
+            })
+        }
+    }
+
+    let mountUnmount = (op) => () => {
+        childElementsMap.forEach((childElements) =>
+            childElements.forEach(childElement => childElement[op]())
+        )
+    }
+    let mount = mountUnmount('mount')
+    let unmount = mountUnmount('unmount')
+
+    update(viewState)
+
+    return {
+        update,
+        mount: mount,
+        unmount: unmount,
+        refs: {}
     }
 }
 
