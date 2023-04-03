@@ -1,8 +1,9 @@
 import {BaseJayElement, JayElement, JayEventHandler, updateFunc, JayComponent, JayEvent} from "./element-types";
 import {JayEventHandlerWrapper} from "./element-types";
 import {ConstructContext} from "./context";
+import {HTMLElementCollectionProxyTarget, HTMLElementProxyTarget, HTMLNativeExec} from "./node-reference-types";
 
-type Ref<ViewState> = {
+interface Ref<ViewState> extends HTMLNativeExec<ViewState, any> {
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void
     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void
     viewState: ViewState
@@ -106,7 +107,7 @@ export function newReferenceProxy<ViewState>(ref) {
     return new Proxy(ref, proxyHandler);
 }
 
-class ReferenceCollection<ViewState> implements RefCollection<ViewState>{
+class ReferenceCollection<ViewState> implements RefCollection<ViewState>, HTMLElementCollectionProxyTarget<ViewState, any>{
     protected elements: Set<Ref<ViewState>> = new Set();
     private listeners = [];
 
@@ -134,7 +135,7 @@ class ReferenceCollection<ViewState> implements RefCollection<ViewState>{
           ref.removeEventListener(listener.type, listener.listener, listener.options))
     }
 
-    map<ResultType>(handler: (referenced: Ref<ViewState>, viewState: ViewState, coordinate: string) => ResultType): Array<ResultType> {
+    map<ResultType>(handler: (referenced: HTMLNativeExec<ViewState, any>, viewState: ViewState, coordinate: string) => ResultType): Array<ResultType> {
         return [...this.elements].map(ref => handler(ref, ref.viewState, ref.coordinate));
     }
 
@@ -171,7 +172,7 @@ export function ComponentRef<ViewState>(comp: JayComponent<any, any, any>, viewS
     return [ref, update];
 }
 
-export class HTMLElementRefImpl<ViewState> implements Ref<ViewState>{
+export class HTMLElementRefImpl<ViewState> implements Ref<ViewState>, HTMLElementProxyTarget<ViewState, any>{
     private listeners = [];
 
     constructor(private readonly element: HTMLElement, public viewState: ViewState, public coordinate: string, private eventWrapper: JayEventHandlerWrapper<any, ViewState, any>) {

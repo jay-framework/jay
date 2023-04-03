@@ -1,7 +1,6 @@
 import {JayComponent, JayEvent, JayEventHandler} from "./element-types";
 
 /** DOM element references **/
-export type JeyEventHandler<ViewState> = (viewState: ViewState, coordinate: string) => void
 export type JayNativeFunction<ElementType extends HTMLElement, ViewState, Result> = (elem: ElementType, viewState: ViewState) => Result
 export interface JayNativeEventBuilder<ViewState, EventData> {
   then(handler: (event: JayEvent<EventData, ViewState>) => void): void
@@ -198,22 +197,26 @@ interface GlobalJayEvents<ViewState> {
   $onwheel<EventData>(handler: JayEventHandler<WheelEvent, ViewState, EventData>): JayNativeEventBuilder<ViewState, EventData>
 }
 
-export interface HTMLElementCollectionProxy<ViewState, ElementType extends HTMLElement> extends GlobalJayEvents<ViewState> {
-  addEventListener(type: string, handler: JeyEventHandler<ViewState>)
-  removeEventListener(type: string, handler: JeyEventHandler<ViewState>)
+export interface HTMLElementCollectionProxyTarget<ViewState, ElementType extends HTMLElement> {
+  addEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>)
+  removeEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>)
 
   find(predicate: (t: ViewState) => boolean): HTMLNativeExec<ViewState, ElementType>
   map<ResultType>(handler: (element: HTMLNativeExec<ViewState, ElementType>, viewState: ViewState, coordinate: string) => ResultType): Array<ResultType>
 }
 
+export interface HTMLElementCollectionProxy<ViewState, ElementType extends HTMLElement> extends GlobalJayEvents<ViewState>, HTMLElementCollectionProxyTarget<ViewState, ElementType> {}
+
 export interface HTMLNativeExec<ViewState, ElementType extends HTMLElement> {
   $exec<ResultType>(handler: JayNativeFunction<ElementType, ViewState, ResultType>): Promise<ResultType>
 }
 
-export interface HTMLElementProxy<ViewState, ElementType extends HTMLElement> extends GlobalJayEvents<ViewState>, HTMLNativeExec<ViewState, ElementType>{
-  addEventListener(type: string, handler: JeyEventHandler<ViewState>)
-  removeEventListener(type: string, handler: JeyEventHandler<ViewState>)
+export interface HTMLElementProxyTarget<ViewState, ElementType extends HTMLElement> extends HTMLNativeExec<ViewState, ElementType>{
+  addEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>)
+  removeEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>)
 }
+
+export interface HTMLElementProxy<ViewState, ElementType extends HTMLElement> extends GlobalJayEvents<ViewState>, HTMLElementProxyTarget<ViewState, ElementType>{}
 
 /** Components references **/
 
