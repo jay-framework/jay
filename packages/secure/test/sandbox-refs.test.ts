@@ -1,5 +1,10 @@
 import {describe, expect, it} from '@jest/globals'
-import {mkBridgeElement, sandboxElement as e, sandboxForEach as forEach} from "../lib/sandbox/sandbox-refs";
+import {
+    mkBridgeElement,
+    sandboxElement as e,
+    sandboxDynamicElement as de,
+    sandboxForEach as forEach
+} from "../lib/sandbox/sandbox-refs";
 import {
     domEventMessage,
     JayEndpoint,
@@ -131,8 +136,8 @@ describe('sandbox-refs', () => {
         it('should register events --> JPMAddEventListener', () => {
             let endpoint = mkEndpoint();
             let bridgeElement = mkBridgeElement(vs, endpoint,() => [
-                forEach(vs => vs.items, 'name', () => [e('one')])
-            ])
+                forEach(vs => vs.items, 'name', () => [de('one')])
+            ], ['one'])
 
             bridgeElement.refs.one.onclick(() => {});
 
@@ -145,8 +150,8 @@ describe('sandbox-refs', () => {
         it('should trigger events on JPMDomEvent --> callback', () => {
             let endpoint = mkEndpoint();
             let bridgeElement = mkBridgeElement(vs, endpoint,() => [
-                forEach(vs => vs.items, 'name', () => [e('one')])
-            ])
+                forEach(vs => vs.items, 'name', () => [de('one')])
+            ], ['one'])
             let callback = jest.fn();
 
             bridgeElement.refs.one.onclick(callback);
