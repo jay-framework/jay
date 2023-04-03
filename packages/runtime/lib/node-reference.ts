@@ -1,7 +1,12 @@
 import {BaseJayElement, JayElement, JayEventHandler, updateFunc, JayComponent, JayEvent} from "./element-types";
 import {JayEventHandlerWrapper} from "./element-types";
 import {ConstructContext} from "./context";
-import {HTMLElementCollectionProxyTarget, HTMLElementProxyTarget, HTMLNativeExec} from "./node-reference-types";
+import {
+    GlobalJayEvents,
+    HTMLElementCollectionProxyTarget,
+    HTMLElementProxyTarget,
+    HTMLNativeExec
+} from "./node-reference-types";
 
 interface Ref<ViewState> extends HTMLNativeExec<ViewState, any> {
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void
@@ -103,7 +108,7 @@ const proxyHandler = {
         return target[prop];
     }
 }
-export function newReferenceProxy<ViewState>(ref) {
+export function newReferenceProxy<ViewState, T>(ref: T): T & GlobalJayEvents<ViewState> {
     return new Proxy(ref, proxyHandler);
 }
 

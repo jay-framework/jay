@@ -6,7 +6,7 @@ export interface JayNativeEventBuilder<ViewState, EventData> {
   then(handler: (event: JayEvent<EventData, ViewState>) => void): void
 }
 
-interface GlobalJayEvents<ViewState> {
+export interface GlobalJayEvents<ViewState> {
   onabort(handler: JayEventHandler<void, ViewState, void>): void
   $onabort<EventData>(handler: JayEventHandler<UIEvent, ViewState, EventData>): JayNativeEventBuilder<ViewState, EventData>
   onanimationcancel(handler: JayEventHandler<void, ViewState, void>): void
