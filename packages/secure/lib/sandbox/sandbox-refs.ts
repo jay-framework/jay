@@ -186,13 +186,13 @@ export class StaticRefImplementation<ViewState> implements HTMLElementProxyTarge
         this.listeners.delete(type)
     }
 
-    invoke = (type: string) => {
+    invoke = (type: string, coordinate: string) => {
         let listener = this.listeners.get(type)
         if (listener)
             listener({
                 event: type,
                 viewState: this.viewState,
-                coordinate: this.ref
+                coordinate: coordinate
             })
     }
     $exec<ResultType>(handler: JayNativeFunction<any, any, ResultType>): Promise<ResultType> {
@@ -219,13 +219,13 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
         this.listeners.delete(type)
     }
 
-    invoke = (type: string) => {
+    invoke = (type: string, coordinate: string) => {
         let listener = this.listeners.get(type)
         if (listener)
             listener({
                 event: type,
                 viewState: undefined,
-                coordinate: this.ref
+                coordinate: coordinate
             })
     }
     find(predicate: (t: ViewState) => boolean): HTMLNativeExec<ViewState, any> {
@@ -254,7 +254,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
         endpoint.onUpdate((inMessage: JPMMessage) => {
             switch (inMessage.type) {
                 case JayPortMessageType.DOMEvent: {
-                    refs[inMessage.coordinate.split('/').slice(-1)[0]].invoke(inMessage.eventType)
+                    refs[inMessage.coordinate.split('/').slice(-1)[0]].invoke(inMessage.eventType, inMessage.coordinate)
                     break;
                 }
             }
