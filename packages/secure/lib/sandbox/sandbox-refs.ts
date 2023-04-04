@@ -80,16 +80,20 @@ function compareLists<ItemViewState extends object>(oldList: ItemViewState[], ne
     let addedItems = [];
     let itemsToUpdate = [];
     let newListIds = new Set(newList.map(item => item[matchBy]));
-    let oldListIds = new Set(oldList.map(item => item[matchBy]));
+    let oldListIdsMap = new Map(oldList.map(item => [item[matchBy], item]));
     oldList.forEach(oldItem => {
         if (!newListIds.has(oldItem[matchBy]))
             removedItems.push(oldItem)
     })
     newList.forEach(newItem => {
-        if (!oldListIds.has(newItem[matchBy]))
+        if (!oldListIdsMap.has(newItem[matchBy]))
             addedItems.push(newItem)
         else {
-            itemsToUpdate.push(newItem);
+            let oldItem = oldListIdsMap.get(newItem[matchBy]);
+            let oldItemRevisioned = getRevision(oldItem);
+            let [, isModified] = checkModified(newItem, oldItemRevisioned)
+            if (isModified)
+                itemsToUpdate.push(newItem);
         }
 
     })
