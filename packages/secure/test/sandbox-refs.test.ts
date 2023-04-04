@@ -160,6 +160,20 @@ describe('sandbox-refs', () => {
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": "click", "viewState": vs.items[1]})
         })
+
+        it('in case of event with coordinate of non existing element, should not throw error, but instead return undefined viewState', () => {
+            let endpoint = mkEndpoint();
+            let bridgeElement = mkBridgeElement(vs, endpoint,() => [
+                forEach(vs => vs.items, 'name', () => [de('one')])
+            ], ['one'])
+            let callback = jest.fn();
+
+            bridgeElement.refs.one.onclick(callback);
+            endpoint.invoke(domEventMessage('click', ['D', 'one']))
+
+            expect(callback.mock.calls).toHaveLength(1)
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["D","one"], "event": "click", "viewState": undefined})
+        })
     });
 })
 
