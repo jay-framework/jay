@@ -372,6 +372,72 @@ describe('sandbox-refs', () => {
             expect(callback.mock.calls[3][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": vs4})
         })
     })
+
+    describe('dynamic foreach + condition', () => {
+        const vs = {items: [
+                {name: 'A', title: 'Alpha', test: true},
+                {name: 'B', title: 'Beta', test: true},
+                {name: 'C', title: 'Gamma', test: false},
+                {name: 'D', title: 'Delta', test: false},
+            ]}
+        const vs2 = {items: [
+                {name: 'A', title: 'Alpha', test: true},
+                {name: 'B', title: 'Beta', test: false},
+                {name: 'C', title: 'Gamma', test: false},
+                {name: 'E', title: 'epsilon', test: true},
+            ]}
+
+        type VS = typeof vs;
+        type VSItem = typeof vs.items[number]
+
+        function setup() {
+            let endpoint = mkEndpoint();
+            let bridgeElement = mkBridgeElement(vs, endpoint,() => [
+                forEach<VS, VSItem>(vs => vs.items, 'name', () => [
+                    de('one'),
+                    c(vs => vs.test, [
+                        de('two')
+                    ])
+                ])
+            ], ['one', 'two'])
+            return {endpoint, bridgeElement}
+        }
+
+        it('should trigger events with view state for mounted elements, and with undefined for unmounted elements (parent condition === false)', () => {
+            let {endpoint, bridgeElement} = setup();
+            let callback = jest.fn();
+
+            bridgeElement.refs.two.onclick(callback);
+            endpoint.invoke(domEventMessage('click', ['A', 'two']))
+            endpoint.invoke(domEventMessage('click', ['B', 'two']))
+            endpoint.invoke(domEventMessage('click', ['C', 'two']))
+            endpoint.invoke(domEventMessage('click', ['D', 'two']))
+
+            expect(callback.mock.calls).toHaveLength(4)
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["A", "two"], "event": "click", "viewState": vs.items[0]})
+            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ["B", "two"], "event": "click", "viewState": vs.items[1]})
+            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ["C", "two"], "event": "click", "viewState": undefined})
+            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ["D", "two"], "event": "click", "viewState": undefined})
+        })
+
+        it('after update, should trigger events with view state for mounted elements, and with undefined for unmounted elements (parent condition === false)', () => {
+            let {endpoint, bridgeElement} = setup();
+            let callback = jest.fn();
+
+            bridgeElement.update(vs2)
+            bridgeElement.refs.two.onclick(callback);
+            endpoint.invoke(domEventMessage('click', ['A', 'two']))
+            endpoint.invoke(domEventMessage('click', ['B', 'two']))
+            endpoint.invoke(domEventMessage('click', ['C', 'two']))
+            endpoint.invoke(domEventMessage('click', ['E', 'two']))
+
+            expect(callback.mock.calls).toHaveLength(4)
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["A", "two"], "event": "click", "viewState": vs2.items[0]})
+            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ["B", "two"], "event": "click", "viewState": undefined})
+            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ["C", "two"], "event": "click", "viewState": undefined})
+            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ["E", "two"], "event": "click", "viewState": vs2.items[3]})
+        })
+    })
 })
 
 interface TestJayEndpoint extends JayEndpoint {

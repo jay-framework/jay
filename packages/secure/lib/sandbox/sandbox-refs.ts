@@ -53,13 +53,24 @@ export function sandboxElement<ViewState>(refName: string): SandboxElement<ViewS
 }
 
 export function sandboxDynamicElement<ViewState>(refName: string): SandboxElement<ViewState> {
-    const {viewState, refs, dataIds} = useContext(SANDBOX_CREATION_CONTEXT);
+    let {viewState, refs, dataIds} = useContext(SANDBOX_CREATION_CONTEXT);
     let ref = (refs[refName] as any as DynamicRefImplementation<ViewState>);
     ref.setItem(dataIds, viewState)
+    let mounted = true;
     return {
-        update: (viewState) => ref.setItem(dataIds, viewState),
-        mount: () => ref.setItem(dataIds, viewState),
-        unmount: () => ref.removeItem(dataIds)
+        update: (newViewState) => {
+            viewState = newViewState;
+            if (mounted)
+                ref.setItem(dataIds, newViewState)
+        },
+        mount: () => {
+            mounted = true;
+            ref.setItem(dataIds, viewState)
+        },
+        unmount: () => {
+            mounted = false;
+            ref.removeItem(dataIds)
+        }
     }
 }
 
@@ -77,8 +88,10 @@ function compareLists<ItemViewState extends object>(oldList: ItemViewState[], ne
     newList.forEach(newItem => {
         if (!oldListIds.has(newItem[matchBy]))
             addedItems.push(newItem)
-        else
+        else {
             itemsToUpdate.push(newItem);
+        }
+
     })
     return {removedItems, addedItems, itemsToUpdate}
 }
