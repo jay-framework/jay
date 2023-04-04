@@ -112,27 +112,16 @@ describe('sandbox-refs', () => {
     });
 
     describe('dynamic forEach refs - one level', () => {
-        const baseViewState = {items: [
-                {name: 'A', title: 'Alpha'},
-                {name: 'B', title: 'Beta'},
-                {name: 'C', title: 'Gamma'}
-            ]}
-        const addItemViewState = {items: [
-                {name: 'A', title: 'Alpha'},
-                {name: 'B', title: 'Beta'},
-                {name: 'C', title: 'Gamma'},
-                {name: 'D', title: 'Delta'}
-            ]}
-        const addAndRemoveItemViewState = {items: [
-                {name: 'A', title: 'Alpha'},
-                {name: 'C', title: 'Gamma'},
-                {name: 'D', title: 'Delta'}
-            ]}
-        const updateItemViewState = {items: [
-                {name: 'A', title: 'Alpha'},
-                {name: 'B', title: 'Beta Beta'},
-                {name: 'C', title: 'Gamma'}
-            ]}
+        const A = {name: 'A', title: 'Alpha'}
+        const B = {name: 'B', title: 'Beta'}
+        const B2 = {name: 'B', title: 'Beta Beta'}
+        const C = {name: 'C', title: 'Gamma'}
+        const D = {name: 'D', title: 'Delta'}
+
+        const baseViewState =             {items: [A, B,  C]}
+        const addItemViewState =          {items: [A, B,  C, D]}
+        const addAndRemoveItemViewState = {items: [A,     C, D]}
+        const updateItemViewState =       {items: [A, B2, C]}
 
         function setup() {
             let endpoint = mkEndpoint();
@@ -374,18 +363,14 @@ describe('sandbox-refs', () => {
     })
 
     describe('dynamic foreach + condition', () => {
-        const vs = {items: [
-                {name: 'A', title: 'Alpha', test: true},
-                {name: 'B', title: 'Beta', test: true},
-                {name: 'C', title: 'Gamma', test: false},
-                {name: 'D', title: 'Delta', test: false},
-            ]}
-        const vs2 = {items: [
-                {name: 'A', title: 'Alpha', test: true},
-                {name: 'B', title: 'Beta', test: false},
-                {name: 'C', title: 'Gamma', test: false},
-                {name: 'E', title: 'epsilon', test: true},
-            ]}
+        const A = {name: 'A', title: 'Alpha', test: true}
+        const B1 = {name: 'B', title: 'Beta', test: true}
+        const B2 = {name: 'B', title: 'Beta', test: false}
+        const C = {name: 'C', title: 'Gamma', test: false}
+        const D = {name: 'D', title: 'Delta', test: false}
+        const E = {name: 'E', title: 'epsilon', test: true}
+        const vs = {items: [A, B1, C, D]}
+        const vs2 = {items: [A, B2, C, E]}
 
         type VS = typeof vs;
         type VSItem = typeof vs.items[number]
