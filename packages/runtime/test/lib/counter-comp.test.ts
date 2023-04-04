@@ -56,10 +56,10 @@ describe('counter component', () => {
         counter.element.refs.dec.$exec(elem => elem.click());
 
         expect(fn.mock.calls.length).toBe(4)
-        expect(fn.mock.calls[0][0]).toEqual({event: {count: 7, innerCoordinate: 'inc'}})
-        expect(fn.mock.calls[1][0]).toEqual({event: {count: 8, innerCoordinate: 'inc'}})
-        expect(fn.mock.calls[2][0]).toEqual({event: {count: 9, innerCoordinate: 'inc'}})
-        expect(fn.mock.calls[3][0]).toEqual({event: {count: 8, innerCoordinate: 'dec'}})
+        expect(fn.mock.calls[0][0]).toEqual({event: {count: 7, innerCoordinate: ['inc']}})
+        expect(fn.mock.calls[1][0]).toEqual({event: {count: 8, innerCoordinate: ['inc']}})
+        expect(fn.mock.calls[2][0]).toEqual({event: {count: 9, innerCoordinate: ['inc']}})
+        expect(fn.mock.calls[3][0]).toEqual({event: {count: 8, innerCoordinate: ['dec']}})
     });
 
 });

@@ -13,9 +13,9 @@ const id1 = 'id1';
 const DATA_CONTEXT = 'DataContext'
 const DATA_CONTEXT_1 = 'DataContext 1'
 const DATA_CONTEXT_2 = 'DataContext 2'
-const COORDINATE = id1
-const COORDINATE_11 = `${id1}.1`
-const COORDINATE_12 = `${id1}.2`
+const COORDINATE = [id1]
+const COORDINATE_11 = [id1, '1']
+const COORDINATE_12 = [id1, '2']
 const ITEM_PROPS = {text: 'hello', dataId: 'A'};
 const ITEM_PROPS_2 = {text: 'hi', dataId: 'B'};
 const ITEM_PROPS_3 = {text: 'hey there', dataId: 'C'};
@@ -170,7 +170,7 @@ describe('ReferencesManager operations', () => {
                 coordinates.push(coordinate)
             })
             expect(viewStates).toEqual(viewState.items);
-            expect(coordinates).toEqual(["1/id1", "2/id1", "3/id1"]);
+            expect(coordinates).toEqual([["1","id1"], ["2","id1"], ["3","id1"]]);
         })
 
         it('should find elements based on viewState', () => {

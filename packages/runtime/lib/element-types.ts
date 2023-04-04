@@ -22,10 +22,11 @@ export interface JayElement<ViewState, Refs> extends BaseJayElement<ViewState> {
   refs: Refs
 }
 
+export type Coordinate = string[];
 export interface JayEvent<EventType, ViewState> {
   event: EventType,
   viewState: ViewState,
-  coordinate: string
+  coordinate: Coordinate
 }
 export type JayEventHandler<EventType, ViewState, Returns> = (event: JayEvent<EventType, ViewState>) => Returns
 export interface JayComponent<Props, ViewState, jayElement extends BaseJayElement<ViewState>> {

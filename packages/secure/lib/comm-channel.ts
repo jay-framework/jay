@@ -1,3 +1,5 @@
+import {Coordinate} from "jay-runtime";
+
 export enum JayPortMessageType {
     render = 0,
     addEventListener = 1,
@@ -25,7 +27,7 @@ export interface JPMRemoveEventListener extends JayPortMessage {
 export interface JPMDomEvent extends JayPortMessage {
     readonly type: JayPortMessageType.DOMEvent
     eventType: string
-    coordinate: string
+    coordinate: Coordinate
     eventData: any
 }
 export interface JPMRootComponentViewState extends JayPortMessage {
@@ -46,7 +48,7 @@ export interface JayChannel {
 
 export interface JayPort {
     getRootEndpoint(): JayEndpoint;
-    getEndpoint(parentCompId: number, parentCoordinate: string): JayEndpoint;
+    getEndpoint(parentCompId: number, parentCoordinate: Coordinate): JayEndpoint;
     batch<T>(handler: () => T): T
     flush()
 }
@@ -66,7 +68,7 @@ export function addEventListenerMessage(refName: string, eventType: string): JPM
 export function removeEventListenerMessage(refName: string, eventType: string): JPMRemoveEventListener {
     return ({refName, eventType, type: JayPortMessageType.removeEventListener});
 }
-export function domEventMessage(eventType: string, coordinate: string, eventData?: any): JPMDomEvent {
+export function domEventMessage(eventType: string, coordinate: Coordinate, eventData?: any): JPMDomEvent {
     return ({coordinate, eventType, eventData, type: JayPortMessageType.DOMEvent});
 }
 export function rootComponentViewState(viewState: any): JPMRootComponentViewState {

@@ -1,4 +1,11 @@
-import {BaseJayElement, ContextMarker, JayElement, JayEventHandlerWrapper, RenderElementOptions} from "./element-types";
+import {
+    BaseJayElement,
+    ContextMarker,
+    Coordinate,
+    JayElement,
+    JayEventHandlerWrapper,
+    RenderElementOptions
+} from "./element-types";
 import {checkModified, getRevision} from "jay-reactive";
 import {ReferencesManager} from "./node-reference";
 
@@ -83,12 +90,11 @@ export class ConstructContext<A extends Array<any>> {
         return this.data[this.data.length - 1];
     }
 
-    coordinate(ref): string {
+    coordinate(ref): Coordinate {
         return [...this.data
             .slice(1)
             .map(_ => _.id)
-            .reverse(), ref]
-            .join('/');
+            .reverse(), ref];
     }
 
     static acc<A extends Array<any>, B>(a: A, b: B): [...A, B] {

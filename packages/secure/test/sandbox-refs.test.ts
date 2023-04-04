@@ -36,10 +36,10 @@ describe('sandbox-refs', () => {
             let callback = jest.fn();
 
             bridgeElement.refs.one.onclick(callback);
-            endpoint.invoke(domEventMessage('click', 'one'))
+            endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": "one", "event": "click", "viewState": vs})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["one"], "event": "click", "viewState": vs})
         })
 
         it('should pass the new viewState on viewState update', () => {
@@ -49,10 +49,10 @@ describe('sandbox-refs', () => {
 
             bridgeElement.update(vs2)
             bridgeElement.refs.one.onclick(callback);
-            endpoint.invoke(domEventMessage('click', 'one'))
+            endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": "one", "event": "click", "viewState": vs2})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["one"], "event": "click", "viewState": vs2})
         })
 
         it('should add event listener using addEventListener', () => {
@@ -92,7 +92,7 @@ describe('sandbox-refs', () => {
 
             bridgeElement.refs.one.addEventListener('click', callback);
             bridgeElement.refs.one.removeEventListener('click', callback);
-            endpoint.invoke(domEventMessage('click', 'one'))
+            endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(0)
         })
@@ -155,10 +155,10 @@ describe('sandbox-refs', () => {
             let callback = jest.fn();
 
             bridgeElement.refs.one.onclick(callback);
-            endpoint.invoke(domEventMessage('click', 'B/one'))
+            endpoint.invoke(domEventMessage('click', ['B', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": "B/one", "event": "click", "viewState": vs.items[1]})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": "click", "viewState": vs.items[1]})
         })
 
     });

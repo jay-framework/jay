@@ -1,4 +1,12 @@
-import {BaseJayElement, JayElement, JayEventHandler, updateFunc, JayComponent, JayEvent} from "./element-types";
+import {
+    BaseJayElement,
+    JayElement,
+    JayEventHandler,
+    updateFunc,
+    JayComponent,
+    JayEvent,
+    Coordinate
+} from "./element-types";
 import {JayEventHandlerWrapper} from "./element-types";
 import {ConstructContext} from "./context";
 import {
@@ -12,7 +20,7 @@ interface Ref<ViewState> extends HTMLNativeExec<ViewState, any> {
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void
     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void
     viewState: ViewState
-    coordinate: string
+    coordinate: Coordinate
 }
 
 interface RefCollection<ViewState>{
@@ -140,7 +148,7 @@ class ReferenceCollection<ViewState> implements RefCollection<ViewState>, HTMLEl
           ref.removeEventListener(listener.type, listener.listener, listener.options))
     }
 
-    map<ResultType>(handler: (referenced: HTMLNativeExec<ViewState, any>, viewState: ViewState, coordinate: string) => ResultType): Array<ResultType> {
+    map<ResultType>(handler: (referenced: HTMLNativeExec<ViewState, any>, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType> {
         return [...this.elements].map(ref => handler(ref, ref.viewState, ref.coordinate));
     }
 
@@ -152,7 +160,7 @@ class ReferenceCollection<ViewState> implements RefCollection<ViewState>, HTMLEl
 
 }
 
-export function ComponentRef<ViewState>(comp: JayComponent<any, any, any>, viewState: ViewState, coordinate: string, eventWrapper: JayEventHandlerWrapper<any, ViewState, any>): [Ref<ViewState>, updateFunc<ViewState>] {
+export function ComponentRef<ViewState>(comp: JayComponent<any, any, any>, viewState: ViewState, coordinate: Coordinate, eventWrapper: JayEventHandlerWrapper<any, ViewState, any>): [Ref<ViewState>, updateFunc<ViewState>] {
     let ref = new Proxy(comp, {
         get: function(target, prop, receiver) {
             if (typeof prop === 'string') {
@@ -180,7 +188,7 @@ export function ComponentRef<ViewState>(comp: JayComponent<any, any, any>, viewS
 export class HTMLElementRefImpl<ViewState> implements Ref<ViewState>, HTMLElementProxyTarget<ViewState, any>{
     private listeners = [];
 
-    constructor(private readonly element: HTMLElement, public viewState: ViewState, public coordinate: string, private eventWrapper: JayEventHandlerWrapper<any, ViewState, any>) {
+    constructor(private readonly element: HTMLElement, public viewState: ViewState, public coordinate: Coordinate, private eventWrapper: JayEventHandlerWrapper<any, ViewState, any>) {
         this.element = element;
         this.viewState = viewState
     }

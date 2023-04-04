@@ -1,4 +1,5 @@
 import {
+    Coordinate,
     createJayContext,
     HTMLElementCollectionProxy,
     HTMLElementCollectionProxyTarget,
@@ -166,7 +167,7 @@ function proxyRef<ViewState>(refDef: StaticRefImplementation<ViewState> | Dynami
 interface RefImplementation<ViewState> {
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: boolean | AddEventListenerOptions): void
     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: EventListenerOptions | boolean): void
-    invoke: (type: string) => void
+    invoke: (type: string, coordinate: Coordinate) => void
     update(newViewState: ViewState)
 }
 
@@ -186,7 +187,7 @@ export class StaticRefImplementation<ViewState> implements HTMLElementProxyTarge
         this.listeners.delete(type)
     }
 
-    invoke = (type: string, coordinate: string) => {
+    invoke = (type: string, coordinate: Coordinate) => {
         let listener = this.listeners.get(type)
         if (listener)
             listener({
@@ -219,7 +220,7 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
         this.listeners.delete(type)
     }
 
-    invoke = (type: string, coordinate: string) => {
+    invoke = (type: string, coordinate: Coordinate) => {
         let listener = this.listeners.get(type)
         if (listener)
             listener({
@@ -231,7 +232,7 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
     find(predicate: (t: ViewState) => boolean): HTMLNativeExec<ViewState, any> {
 
     }
-    map<ResultType>(handler: (element: HTMLNativeExec<ViewState, any>, viewState: ViewState, coordinate: string) => ResultType): Array<ResultType> {
+    map<ResultType>(handler: (element: HTMLNativeExec<ViewState, any>, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType> {
 
     }
     update(newViewState: ViewState) {
@@ -254,7 +255,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
         endpoint.onUpdate((inMessage: JPMMessage) => {
             switch (inMessage.type) {
                 case JayPortMessageType.DOMEvent: {
-                    refs[inMessage.coordinate.split('/').slice(-1)[0]].invoke(inMessage.eventType, inMessage.coordinate)
+                    refs[inMessage.coordinate.slice(-1)[0]].invoke(inMessage.eventType, inMessage.coordinate)
                     break;
                 }
             }

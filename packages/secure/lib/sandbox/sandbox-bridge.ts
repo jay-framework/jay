@@ -6,6 +6,7 @@ import {
     renderMessage
 } from "../comm-channel";
 import {
+    Coordinate,
     HTMLElementCollectionProxy,
     HTMLElementProxy,
     JayEventHandler,
@@ -46,14 +47,14 @@ export class StaticRef<ViewState> extends Ref {
         // todo add remove
     }
 
-    invoke(type: string, eventData: any, coordinate: string[]) {
+    invoke(type: string, eventData: any, coordinate: Coordinate) {
         let listener = this.listeners.get(type)
         // let eventViewState = this.getVS(compViewState, coordinate)
         if (listener)
             listener({
                 event: type,
                 viewState: this.viewState,
-                coordinate: this.ref
+                coordinate: [this.ref]
             })
     }
     $exec<ResultType>(handler: JayNativeFunction<any, any, ResultType>): Promise<ResultType> {
@@ -142,7 +143,7 @@ export function elementBridge<ElementViewState>(viewState: ElementViewState, ref
         switch (inMessage.type) {
             case JayPortMessageType.DOMEvent: {
                 reactive.batchReactions(() => {
-                    let coordinate = inMessage.coordinate.split('/');
+                    let coordinate = inMessage.coordinate;
                     refs[coordinate.slice(-1)[0]].invoke(inMessage.eventType, inMessage.eventData, elementViewState, coordinate)
                 })
                 break;

@@ -1,6 +1,6 @@
 import {
     BaseJayElement,
-    childComp,
+    childComp, Coordinate,
     createJayContext,
     JayComponent,
     JayComponentConstructor,
@@ -9,7 +9,7 @@ import {
 import {currentConstructionContext} from "jay-runtime/dist/context";
 
 export interface SecureCoordinateContext {
-    coordinate: string
+    coordinate: Coordinate
 }
 export const SECURE_COORDINATE_MARKER = createJayContext<SecureCoordinateContext>()
 

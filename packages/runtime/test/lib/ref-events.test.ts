@@ -11,10 +11,10 @@ const ANOTHER_VALUE = 'another text value';
 const id1 = 'id1';
 const id2 = 'id2';
 const DATA_CONTEXT = 'DataContext'
-const COORDINATE = id1
-const COORDINATE_11 = `${id1}.1`
-const COORDINATE_12 = `${id1}.2`
-const COORDINATE_21 = `${id2}.1`
+const COORDINATE = [id1]
+const COORDINATE_11 = [id1, '1']
+const COORDINATE_12 = [id1, '2']
+const COORDINATE_21 = [id2, '1']
 
 const ITEM_PROPS = {text: 'hello', dataId: 'A'};
 const ITEM_PROPS_2 = {text: 'hi', dataId: 'B'};
@@ -369,7 +369,7 @@ describe('ReferencesManager events', () => {
                 button.click();
 
                 expect(mockCallback.mock.calls.length).toBe(1);
-                expect(mockCallback.mock.calls[0][0]).toEqual({event: 'item hello - false is removed', viewState: DATA_CONTEXT, coordinate: id1});
+                expect(mockCallback.mock.calls[0][0]).toEqual({event: 'item hello - false is removed', viewState: DATA_CONTEXT, coordinate: [id1]});
             })
 
             it('should remove event using removeEventListener', () => {
@@ -471,7 +471,7 @@ describe('ReferencesManager events', () => {
                 expect(mockCallback.mock.calls.length).toBe(1);
                 expect(mockCallback.mock.calls[0][0].event).toBe('item hello - false is removed');
                 expect(mockCallback.mock.calls[0][0].viewState).toEqual(viewState.items[1]);
-                expect(mockCallback.mock.calls[0][0].coordinate).toBe(`${viewState.items[1].id}/${id1}`);
+                expect(mockCallback.mock.calls[0][0].coordinate).toEqual([viewState.items[1].id, id1]);
             })
 
             it('should remove event using removeEventListener', () => {

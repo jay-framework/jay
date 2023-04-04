@@ -184,7 +184,7 @@ describe('nested components', () => {
             expect(fn.mock.calls.length).toBe(1);
             expect(fn.mock.calls[0][0]).toEqual({
                 event: 'item eleven - false is removed',
-                coordinate: "A/forEachOfComponents",
+                coordinate: ['A', 'forEachOfComponents'],
                 viewState: viewState.items[0]
             });
         });

@@ -1,4 +1,4 @@
-import {JayComponent, JayEvent, JayEventHandler} from "./element-types";
+import {Coordinate, JayComponent, JayEvent, JayEventHandler} from "./element-types";
 
 /** DOM element references **/
 export type JayNativeFunction<ElementType extends HTMLElement, ViewState, Result> = (elem: ElementType, viewState: ViewState) => Result
@@ -202,7 +202,7 @@ export interface HTMLElementCollectionProxyTarget<ViewState, ElementType extends
   removeEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>)
 
   find(predicate: (t: ViewState) => boolean): HTMLNativeExec<ViewState, ElementType>
-  map<ResultType>(handler: (element: HTMLNativeExec<ViewState, ElementType>, viewState: ViewState, coordinate: string) => ResultType): Array<ResultType>
+  map<ResultType>(handler: (element: HTMLNativeExec<ViewState, ElementType>, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType>
 }
 
 export interface HTMLElementCollectionProxy<ViewState, ElementType extends HTMLElement> extends GlobalJayEvents<ViewState>, HTMLElementCollectionProxyTarget<ViewState, ElementType> {}
@@ -231,7 +231,7 @@ export interface ComponentCollectionProxyOperations<ViewState, ComponentType ext
   addEventListener(type: string, handler: JayEventHandler<any, ViewState, void>): void
   removeEventListener(type: string, handler: JayEventHandler<any, ViewState, void>): void
 
-  map<ResultType>(handler: (comp: ComponentType, viewState: ViewState, coordinate: string) => ResultType): Array<ResultType>
+  map<ResultType>(handler: (comp: ComponentType, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType>
   find(predicate: (t: ViewState) => boolean): ComponentType
 }
 

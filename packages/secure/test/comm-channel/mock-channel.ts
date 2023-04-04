@@ -1,15 +1,8 @@
-import {
-    JayChannel,
-    JayEndpoint,
-    JayPort,
-    JayPortInMessageHandler,
-    JayPortMessage,
-    setChannel
-} from '../../lib/comm-channel'
+import {JayChannel, JayEndpoint, JayPort, JayPortInMessageHandler, JPMMessage} from '../../lib/comm-channel'
+import {Coordinate} from "jay-runtime";
 
 export function useMockCommunicationChannel<PropsT, ViewState>(): JayMockChannel<PropsT, ViewState> {
-    let channel = new JayMockChannel<PropsT, ViewState>();
-    return channel
+    return new JayMockChannel<PropsT, ViewState>()
 }
 
 class JayMockChannel<PropsT, ViewState> implements JayChannel {
@@ -30,7 +23,7 @@ class JayMockChannel<PropsT, ViewState> implements JayChannel {
         this.worker.setTarget(this.main)
     }
 
-    getCompId = (parentCompId: number, coordinate: string): number => {
+    getCompId = (parentCompId: number, coordinate: Coordinate): number => {
         let fullId = `${parentCompId}-${coordinate}`;
         if (!this.comps.has(fullId))
             this.comps.set(fullId, this.nextCompId++);
@@ -54,14 +47,14 @@ class JayMockChannel<PropsT, ViewState> implements JayChannel {
 }
 
 class MockJayPort implements JayPort {
-    private messages: Array<[number, JayPortMessage]> = []
+    private messages: Array<[number, JPMMessage]> = []
     private target: MockJayPort
     private endpoints: Map<number, MockEndpointPort> = new Map();
 
     constructor(private messageCountCallback: (diff: number) => void, 
-                private getCompId:(parentCompId: number, coordinate: string) => number) {}
+                private getCompId:(parentCompId: number, coordinate: Coordinate) => number) {}
                 
-    getEndpoint(parentCompId: number, parentCoordinate: string): JayEndpoint {
+    getEndpoint(parentCompId: number, parentCoordinate: Coordinate): JayEndpoint {
         let compId = this.getCompId(parentCompId, parentCoordinate);
         let ep = new MockEndpointPort(compId, this);
         this.endpoints.set(compId, ep)
@@ -69,10 +62,10 @@ class MockJayPort implements JayPort {
     }
 
     getRootEndpoint(): JayEndpoint {
-        return this.getEndpoint(-1, '')
+        return this.getEndpoint(-1, [''])
     }
 
-    post(compId: number, outMessage: JayPortMessage) {
+    post(compId: number, outMessage: JPMMessage) {
         this.messages.push([compId, outMessage]);
         this.messageCountCallback(1)
     }
@@ -92,7 +85,7 @@ class MockJayPort implements JayPort {
         }
     }
 
-    invoke(messages: Array<[number, JayPortMessage]>) {
+    invoke(messages: Array<[number, JPMMessage]>) {
         this.batch(() => {
             messages.forEach(([compId, message]) => this.endpoints.get(compId)?.invoke(message))
         })
@@ -113,7 +106,7 @@ class MockEndpointPort implements JayEndpoint {
         readonly compId: number,
         private readonly port: MockJayPort) {}
 
-    post(outMessage: JayPortMessage) {
+    post(outMessage: JPMMessage) {
         this.port.post(this.compId, outMessage)
     }
 
@@ -121,7 +114,7 @@ class MockEndpointPort implements JayEndpoint {
         this.handler = handler
     }
 
-    invoke(inMessage: JayPortMessage) {
+    invoke(inMessage: JPMMessage) {
         this?.handler(inMessage);
     }
 }

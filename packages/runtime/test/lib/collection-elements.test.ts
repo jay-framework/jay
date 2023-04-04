@@ -241,7 +241,7 @@ describe('collection-element', () => {
               .find(item => item === item2)
               .$exec(el => el.click())
             expect(fn.mock.calls[0][0].viewState).toBe(item2)
-            expect(fn.mock.calls[0][0].coordinate).toBe('id-2/done');
+            expect(fn.mock.calls[0][0].coordinate).toEqual(['id-2', 'done']);
         })
 
         it('should remove a todo item on click on the done button', () => {
