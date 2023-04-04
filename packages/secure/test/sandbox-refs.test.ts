@@ -160,7 +160,6 @@ describe('sandbox-refs', () => {
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": "click", "viewState": vs.items[1]})
         })
-
     });
 })
 
