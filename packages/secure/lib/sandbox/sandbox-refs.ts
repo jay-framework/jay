@@ -54,18 +54,20 @@ export function sandboxElement<ViewState>(refName: string): SandboxElement<ViewS
 
 export function sandboxDynamicElement<ViewState>(refName: string): SandboxElement<ViewState> {
     const {viewState, refs, dataIds} = useContext(SANDBOX_CREATION_CONTEXT);
-    (refs[refName] as any as DynamicRefImplementation<ViewState>).addItem(dataIds, viewState)
+    let ref = (refs[refName] as any as DynamicRefImplementation<ViewState>);
+    ref.setItem(dataIds, viewState)
     return {
-        update: () => {},
-        mount: noopMount,
-        unmount: noopMount
+        update: (viewState) => ref.setItem(dataIds, viewState),
+        mount: () => ref.setItem(dataIds, viewState),
+        unmount: () => ref.removeItem(dataIds)
     }
 }
 
 function compareLists<ItemViewState extends object>(oldList: ItemViewState[], newList: ItemViewState[], matchBy: string):
-    {removedItems: ItemViewState[], addedItems: ItemViewState[]} {
+    {removedItems: ItemViewState[], addedItems: ItemViewState[], itemsToUpdate: ItemViewState[]} {
     let removedItems = [];
     let addedItems = [];
+    let itemsToUpdate = [];
     let newListIds = new Set(newList.map(item => item[matchBy]));
     let oldListIds = new Set(oldList.map(item => item[matchBy]));
     oldList.forEach(oldItem => {
@@ -75,8 +77,10 @@ function compareLists<ItemViewState extends object>(oldList: ItemViewState[], ne
     newList.forEach(newItem => {
         if (!oldListIds.has(newItem[matchBy]))
             addedItems.push(newItem)
+        else
+            itemsToUpdate.push(newItem);
     })
-    return {removedItems, addedItems}
+    return {removedItems, addedItems, itemsToUpdate}
 }
 
 export function sandboxForEach<ParentViewState, ItemViewState extends object>(
@@ -93,7 +97,7 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
         let isModified, newItemsRevisioned;
         [newItemsRevisioned, isModified] = checkModified(newItems, lastItems);
         if (isModified) {
-            let {removedItems, addedItems} = compareLists(lastItems.value, newItems, matchBy)
+            let {removedItems, addedItems, itemsToUpdate} = compareLists(lastItems.value, newItems, matchBy)
             addedItems.forEach(item => {
                 let childElements = provideContext(SANDBOX_CREATION_CONTEXT,
                     {endpoint, viewState: item, refs, dataIds: [...dataIds, item[matchBy]]}, children)
@@ -101,8 +105,13 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
             })
             removedItems.forEach(item => {
                 let childElements = childElementsMap.get(item[matchBy])
-                childElements.forEach(childElement => childElement.unmount)
+                childElements.forEach(childElement => childElement.unmount())
                 childElementsMap.delete(item[matchBy])
+            })
+            itemsToUpdate.forEach(item => {
+                childElementsMap.get(item[matchBy]).forEach(childElement => {
+                    childElement.update(item);
+                })
             })
         }
         lastItems = newItemsRevisioned;
@@ -243,7 +252,7 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
         console.log(newViewState);
     }
 
-    addItem(dataIds: string[], viewState: ViewState) {
+    setItem(dataIds: string[], viewState: ViewState) {
         this.items.set(dataIds.toString(), viewState)
     }
 

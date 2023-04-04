@@ -174,6 +174,51 @@ describe('sandbox-refs', () => {
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["D","one"], "event": "click", "viewState": undefined})
         })
+
+        it('in case of event with coordinate of a removed element, should not throw error, but instead return undefined viewState', () => {
+            let endpoint = mkEndpoint();
+            let bridgeElement = mkBridgeElement(vs, endpoint,() => [
+                forEach(vs => vs.items, 'name', () => [de('one')])
+            ], ['one'])
+            let callback = jest.fn();
+
+            bridgeElement.update(vs3);
+            bridgeElement.refs.one.onclick(callback);
+            endpoint.invoke(domEventMessage('click', ['B', 'one']))
+
+            expect(callback.mock.calls).toHaveLength(1)
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": "click", "viewState": undefined})
+        })
+
+        it('should support viewState updates - additional item', () => {
+            let endpoint = mkEndpoint();
+            let bridgeElement = mkBridgeElement(vs, endpoint,() => [
+                forEach(vs => vs.items, 'name', () => [de('one')])
+            ], ['one'])
+            let callback = jest.fn();
+
+            bridgeElement.update(vs2)
+            bridgeElement.refs.one.onclick(callback);
+            endpoint.invoke(domEventMessage('click', ['D', 'one']))
+
+            expect(callback.mock.calls).toHaveLength(1)
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["D","one"], "event": "click", "viewState": vs2.items[3]})
+        })
+
+        it('should support viewState updates - updated item', () => {
+            let endpoint = mkEndpoint();
+            let bridgeElement = mkBridgeElement(vs, endpoint,() => [
+                forEach(vs => vs.items, 'name', () => [de('one')])
+            ], ['one'])
+            let callback = jest.fn();
+
+            bridgeElement.update(vs4)
+            bridgeElement.refs.one.onclick(callback);
+            endpoint.invoke(domEventMessage('click', ['B', 'one']))
+
+            expect(callback.mock.calls).toHaveLength(1)
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": "click", "viewState": vs4.items[1]})
+        })
     });
 })
 
