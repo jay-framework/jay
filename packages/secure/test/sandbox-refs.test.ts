@@ -3,7 +3,8 @@ import {
     mkBridgeElement,
     sandboxElement as e,
     sandboxDynamicElement as de,
-    sandboxForEach as forEach
+    sandboxForEach as forEach,
+    SandboxCondition as c
 } from "../lib/sandbox/sandbox-refs";
 import {
     domEventMessage,
@@ -286,6 +287,89 @@ describe('sandbox-refs', () => {
             expect(callback.mock.calls[2][0]).toEqual({"coordinate": ["C", '5', "two"], "event": "click", "viewState": vs2.items[2].subItems[0]})
             expect(callback.mock.calls[3][0]).toEqual({"coordinate": ["D", '6', "two"], "event": "click", "viewState": undefined})
             expect(callback.mock.calls[4][0]).toEqual({"coordinate": ["E", '9', "two"], "event": "click", "viewState": vs2.items[3].subItems[0]})
+        })
+    })
+
+    describe("dynamic condition", () => {
+        const vs = {condition: true, condition2: true}
+        const vs2 = {condition: false, condition2: true}
+        const vs3 = {condition: true, condition2: false}
+        const vs4 = {condition: false, condition2: false}
+
+        function setup(creationViewState = vs) {
+            let endpoint = mkEndpoint();
+            let bridgeElement = mkBridgeElement(creationViewState, endpoint,() => [
+                c(vs => vs.condition, [
+                    de('one'),
+                    c(vs => vs.condition2, [de('two')])
+                ])
+            ], ['one', 'two'])
+            return {endpoint, bridgeElement}
+        }
+
+        it('should register events --> JPMAddEventListener', () => {
+            let {endpoint, bridgeElement} = setup();
+
+            bridgeElement.refs.one.onclick(() => {});
+
+            expect(endpoint.outMessages).toHaveLength(1)
+            expect(endpoint.outMessages[0].type).toBe(JayPortMessageType.addEventListener)
+            expect(endpoint.outMessages[0].eventType).toBe('click')
+            expect(endpoint.outMessages[0].refName).toBe('one')
+        })
+
+        it('should trigger events on JPMDomEvent --> callback', () => {
+            let {endpoint, bridgeElement} = setup();
+            let callback = jest.fn();
+
+            bridgeElement.refs.one.onclick(callback);
+            endpoint.invoke(domEventMessage('click', ['one']))
+
+            expect(callback.mock.calls).toHaveLength(1)
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": "click", "viewState": vs})
+        })
+
+        it('should trigger with undefined (unmounted) if created with condition === false', () => {
+            let {endpoint, bridgeElement} = setup(vs2);
+            let callback = jest.fn();
+
+            bridgeElement.refs.one.onclick(callback);
+            endpoint.invoke(domEventMessage('click', ['one']))
+
+            expect(callback.mock.calls).toHaveLength(1)
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": "click", "viewState": undefined})
+        })
+
+        it('should trigger with undefined (unmounted) if condition updated to false', () => {
+            let {endpoint, bridgeElement} = setup();
+            let callback = jest.fn();
+
+            bridgeElement.update(vs2)
+            bridgeElement.refs.one.onclick(callback);
+            endpoint.invoke(domEventMessage('click', ['one']))
+
+            expect(callback.mock.calls).toHaveLength(1)
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": "click", "viewState": undefined})
+        })
+
+        it('should support nested conditions - only have view state if both conditions are true', () => {
+            let {endpoint, bridgeElement} = setup();
+            let callback = jest.fn();
+
+            bridgeElement.refs.two.onclick(callback);
+            endpoint.invoke(domEventMessage('click', ['two']))
+            bridgeElement.update(vs2)
+            endpoint.invoke(domEventMessage('click', ['two']))
+            bridgeElement.update(vs3)
+            endpoint.invoke(domEventMessage('click', ['two']))
+            bridgeElement.update(vs4)
+            endpoint.invoke(domEventMessage('click', ['two']))
+
+            expect(callback.mock.calls).toHaveLength(4)
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": vs})
+            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": undefined})
+            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": undefined})
+            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": undefined})
         })
     })
 })

@@ -134,6 +134,44 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
     }
 }
 
+export function SandboxCondition<ViewState>(condition: (newData: ViewState) => boolean, children: SandboxElement<ViewState>[]): SandboxElement<ViewState> {
+    let {viewState} = useContext(SANDBOX_CREATION_CONTEXT)
+    let state = condition(viewState);
+    let mounted = true;
+    let childMounted = true;
+    const updateChild = () => {
+        let newState = condition(viewState);
+        if (mounted) {
+            if (newState !== state || childMounted !== newState) {
+                newState ? children.forEach(_ => _.mount()) :
+                    children.forEach(_ => _.unmount());
+                childMounted = newState;
+            }
+        }
+        else {
+            if (childMounted)
+                children.forEach(_ => _.unmount());
+            childMounted = false;
+        }
+    };
+    updateChild();
+
+    const update = (newViewState) => {
+        viewState = newViewState;
+        children.forEach(_ => _.update(newViewState))
+        updateChild();
+    }
+    const mount = () => {
+        mounted = true;
+        updateChild();
+    }
+    const unmount = () => {
+        mounted = false;
+        updateChild();
+    }
+    return {update, mount, unmount}
+}
+
 interface SandboxBridgeElement<ViewState> {
     update: updateFunc<ViewState>
     mount: MountFunc,
