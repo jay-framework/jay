@@ -268,6 +268,25 @@ describe('sandbox-refs', () => {
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B", '3', "two"], "event": "click", "viewState": vs.items[1].subItems[0]})
         })
 
+        it('should support view state updates', () => {
+            let {endpoint, bridgeElement} = setup();
+            let callback = jest.fn();
+
+            bridgeElement.update(vs2);
+            bridgeElement.refs.two.onclick(callback);
+            endpoint.invoke(domEventMessage('click', ['A', '2.5', 'two'])) // added sub item
+            endpoint.invoke(domEventMessage('click', ['B', '4', 'two'])) // removed sub item
+            endpoint.invoke(domEventMessage('click', ['C', '5', 'two'])) // updated sub item
+            endpoint.invoke(domEventMessage('click', ['D', '6', 'two'])) // removed item
+            endpoint.invoke(domEventMessage('click', ['E', '9', 'two'])) // added item
+
+            expect(callback.mock.calls).toHaveLength(5)
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["A", '2.5', "two"], "event": "click", "viewState": vs2.items[0].subItems[2]})
+            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ["B", '4', "two"], "event": "click", "viewState": undefined})
+            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ["C", '5', "two"], "event": "click", "viewState": vs2.items[2].subItems[0]})
+            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ["D", '6', "two"], "event": "click", "viewState": undefined})
+            expect(callback.mock.calls[4][0]).toEqual({"coordinate": ["E", '9', "two"], "event": "click", "viewState": vs2.items[3].subItems[0]})
+        })
     })
 })
 
