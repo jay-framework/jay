@@ -300,10 +300,10 @@ describe('sandbox-refs', () => {
             let endpoint = mkEndpoint();
             let bridgeElement = mkBridgeElement(creationViewState, endpoint,() => [
                 c(vs => vs.condition, [
-                    de('one'),
-                    c(vs => vs.condition2, [de('two')])
+                    e('one'),
+                    c(vs => vs.condition2, [e('two')])
                 ])
-            ], ['one', 'two'])
+            ], [])
             return {endpoint, bridgeElement}
         }
 
@@ -329,7 +329,7 @@ describe('sandbox-refs', () => {
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": "click", "viewState": vs})
         })
 
-        it('should trigger with undefined (unmounted) if created with condition === false', () => {
+        it('should trigger event even if condition === false', () => {
             let {endpoint, bridgeElement} = setup(vs2);
             let callback = jest.fn();
 
@@ -337,10 +337,10 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": "click", "viewState": undefined})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": "click", "viewState": vs2})
         })
 
-        it('should trigger with undefined (unmounted) if condition updated to false', () => {
+        it('should trigger with if condition updated to false', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
@@ -349,10 +349,10 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": "click", "viewState": undefined})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": "click", "viewState": vs2})
         })
 
-        it('should support nested conditions - only have view state if both conditions are true', () => {
+        it('should support nested conditions', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
@@ -367,9 +367,9 @@ describe('sandbox-refs', () => {
 
             expect(callback.mock.calls).toHaveLength(4)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": vs})
-            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": undefined})
-            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": undefined})
-            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": undefined})
+            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": vs2})
+            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": vs3})
+            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": vs4})
         })
     })
 })
