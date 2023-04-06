@@ -15,13 +15,13 @@ import {
     updateFunc,
     useContext
 } from "jay-runtime";
-import {checkModified, getRevision} from "jay-reactive";
+import {checkModified, getRevision, Reactive} from "jay-reactive";
 import {
     addEventListenerMessage,
     JayEndpoint,
     JayPortMessageType,
     JPMMessage,
-    removeEventListenerMessage
+    removeEventListenerMessage, renderMessage
 } from "../comm-channel";
 
 type Refs = Record<string, HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any>>
@@ -35,7 +35,7 @@ interface SandboxCreationContext<ViewState> {
 
 const SANDBOX_CREATION_CONTEXT = createJayContext<SandboxCreationContext<any>>()
 
-interface SandboxElement<ViewState> {
+export interface SandboxElement<ViewState> {
     update: updateFunc<ViewState>
     mount: MountFunc,
     unmount: MountFunc
@@ -189,7 +189,8 @@ export function SandboxCondition<ViewState>(condition: (newData: ViewState) => b
     return {update, mount, unmount}
 }
 
-interface SandboxBridgeElement<ViewState> {
+export interface SandboxBridgeElement<ViewState> {
+    dom: undefined,
     update: updateFunc<ViewState>
     mount: MountFunc,
     unmount: MountFunc
@@ -318,6 +319,7 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
 
 export function mkBridgeElement<ViewState>(viewState: ViewState,
                                            endpoint: JayEndpoint,
+                                           reactive: Reactive,
                                            sandboxElements: () => SandboxElement<ViewState>[],
                                            dynamicRefs: string[] = []): SandboxBridgeElement<ViewState> {
     let refs = {};
@@ -326,18 +328,22 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
     })
     return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState, refs, dataIds: []}, () => {
         let elements = sandboxElements();
-        let update = normalizeUpdates(elements.map(el => el.update));
+        let postUpdateMessage = (newViewState) => endpoint.post(renderMessage(newViewState))
+        let update = normalizeUpdates([postUpdateMessage, ...elements.map(el => el.update)]);
 
         endpoint.onUpdate((inMessage: JPMMessage) => {
             switch (inMessage.type) {
                 case JayPortMessageType.DOMEvent: {
-                    refs[inMessage.coordinate.slice(-1)[0]].invoke(inMessage.eventType, inMessage.coordinate)
+                    reactive.batchReactions(() => {
+                        refs[inMessage.coordinate.slice(-1)[0]].invoke(inMessage.eventType, inMessage.coordinate)
+                    })
                     break;
                 }
             }
         })
 
         return {
+            dom: undefined,
             refs,
             update,
             mount: () => {},

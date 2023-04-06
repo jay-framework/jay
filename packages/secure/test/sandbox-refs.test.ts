@@ -13,15 +13,23 @@ import {
     JPMAddEventListener,
     JPMDomEvent
 } from "../lib/comm-channel";
+import {Reactive} from "jay-reactive";
 
 describe('sandbox-refs', () => {
     describe('static refs', () => {
         const vs = {data: 'some data'}
         const vs2 = {data: 'some new data'}
 
-        it('should register events --> JPMAddEventListener', () => {
+        function setup() {
             let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,() => [e('one'), e('two')])
+            let reactive = new Reactive();
+            let bridgeElement = mkBridgeElement(vs, endpoint, reactive, () => [e('one'), e('two')])
+            return {endpoint, bridgeElement}
+
+        }
+
+        it('should register events --> JPMAddEventListener', () => {
+            let {endpoint, bridgeElement} = setup();
 
             bridgeElement.refs.one.onclick(() => {});
 
@@ -32,8 +40,7 @@ describe('sandbox-refs', () => {
         })
 
         it('should trigger events on JPMDomEvent --> callback', () => {
-            let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,() => [e('one'), e('two')])
+            let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
             bridgeElement.refs.one.onclick(callback);
@@ -44,8 +51,7 @@ describe('sandbox-refs', () => {
         })
 
         it('should pass the new viewState on viewState update', () => {
-            let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,() => [e('one'), e('two')])
+            let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
             bridgeElement.update(vs2)
@@ -57,8 +63,7 @@ describe('sandbox-refs', () => {
         })
 
         it('should add event listener using addEventListener', () => {
-            let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,() => [e('one'), e('two')])
+            let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
             bridgeElement.refs.one.addEventListener('click', callback);
@@ -70,8 +75,7 @@ describe('sandbox-refs', () => {
         })
 
         it('should remove event listener using removeEventListener', () => {
-            let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,() => [e('one'), e('two')])
+            let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
             bridgeElement.refs.one.addEventListener('click', callback);
@@ -87,8 +91,7 @@ describe('sandbox-refs', () => {
         })
 
         it('after removing, event handler should not be invoked', () => {
-            let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,() => [e('one'), e('two')])
+            let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
             bridgeElement.refs.one.addEventListener('click', callback);
@@ -99,8 +102,7 @@ describe('sandbox-refs', () => {
         })
 
         it.skip('should register $events --> JPMAddEventListener', () => {
-            let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,() => [e('one'), e('two')])
+            let {endpoint, bridgeElement} = setup();
 
             bridgeElement.refs.one.$onclick(() => {});
 
@@ -125,7 +127,8 @@ describe('sandbox-refs', () => {
 
         function setup() {
             let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(baseViewState, endpoint,() => [
+            let reactive = new Reactive();
+            let bridgeElement = mkBridgeElement(baseViewState, endpoint, reactive,() => [
                 forEach(vs => vs.items, 'name', () => [de('one')])
             ], ['one'])
             return {endpoint, bridgeElement}
@@ -221,7 +224,8 @@ describe('sandbox-refs', () => {
 
         function setup() {
             let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,() => [
+            let reactive = new Reactive();
+            let bridgeElement = mkBridgeElement(vs, endpoint, reactive,() => [
                 forEach<VS, VSItem>(vs => vs.items, 'name', () => [
                     de('one'),
                     forEach<VSItem, VSSubItem>(vs => vs.subItems, 'id', () => [
@@ -287,7 +291,8 @@ describe('sandbox-refs', () => {
 
         function setup(creationViewState = vs) {
             let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(creationViewState, endpoint,() => [
+            let reactive = new Reactive();
+            let bridgeElement = mkBridgeElement(creationViewState, endpoint, reactive,() => [
                 c(vs => vs.condition, [
                     e('one'),
                     c(vs => vs.condition2, [e('two')])
@@ -377,7 +382,8 @@ describe('sandbox-refs', () => {
 
         function setup() {
             let endpoint = mkEndpoint();
-            let bridgeElement = mkBridgeElement(vs, endpoint,() => [
+            let reactive = new Reactive();
+            let bridgeElement = mkBridgeElement(vs, endpoint, reactive, () => [
                 forEach<VS, VSItem>(vs => vs.items, 'name', () => [
                     de('one'),
                     c(vs => vs.test, [

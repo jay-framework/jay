@@ -10,5 +10,5 @@ export interface BasicRefs {}
 export type BasicElement = JayElement<BasicViewState, BasicRefs>
 
 export function render(viewState: BasicViewState): BasicElement {
-    return elementBridge(viewState);
+    return elementBridge(viewState, () => []);
 }
