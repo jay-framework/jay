@@ -49,7 +49,7 @@ describe('events synthetic tests', () => {
         await channel.toBeClean()
 
         await eventually10ms(async () => {
-            expect(result.textContent).toBe('static button was clicked')
+            expect(result.textContent).toBe('dynamic button alpha was clicked')
         })
     })
 })

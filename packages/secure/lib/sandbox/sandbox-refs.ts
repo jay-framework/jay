@@ -110,7 +110,7 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
     let childElementsMap: Map<string, SandboxElement<ItemViewState>[]> = new Map();
 
     let update = (viewState: ParentViewState) => {
-        let newItems = getItems(viewState);
+        let newItems = getItems(viewState) || [];
         let isModified, newItemsRevisioned;
         [newItemsRevisioned, isModified] = checkModified(newItems, lastItems);
         if (isModified) {
