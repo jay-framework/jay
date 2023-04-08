@@ -42,6 +42,22 @@ describe('events synthetic tests', () => {
         })
     })
 
+    it('should react to static input value change', async () => {
+        let {channel, result, input} = await mkElement();
+
+        input.value = 'a new value entered via input'
+        const event = new Event('input', {
+            bubbles: true,
+            cancelable: true
+        });
+        input.dispatchEvent(event);
+        await channel.toBeClean()
+
+        await eventually10ms(async () => {
+            expect(result.textContent).toBe('a new value entered via input')
+        })
+    })
+
     it('should react to dynamic buttons (under forEach) click', async () => {
         let {channel, result, button, getDynamicButtonById} = await mkElement();
 

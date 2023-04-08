@@ -208,14 +208,13 @@ const proxyHandler = {
             }
             if (prop.indexOf("$on") === 0) {
                 let eventName = prop.substring(3);
-                return (nativeHandler) => {
+                return ($func) => {
                     let regularHandler;
                     const handler = ({event, viewState, coordinate}) => {
-                        const returnedEvent = nativeHandler({event, viewState, coordinate});
                         if (regularHandler)
-                            regularHandler({event: returnedEvent, viewState, coordinate});
+                            regularHandler({event, viewState, coordinate});
                     }
-                    target.addEventListener(eventName, handler);
+                    target.addEventListener(eventName, handler,undefined,$func.id);
                     return {
                         then: (handler) => {
                             regularHandler = handler;
@@ -233,9 +232,9 @@ function proxyRef<ViewState>(refDef: StaticRefImplementation<ViewState> | Dynami
 }
 
 interface RefImplementation<ViewState> {
-    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: boolean | AddEventListenerOptions): void
-    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: EventListenerOptions | boolean): void
-    invoke: (type: string, coordinate: Coordinate) => void
+    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any>, options?: boolean | AddEventListenerOptions, nativeId?: string): void
+    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any>, options?: EventListenerOptions | boolean): void
+    invoke: (type: string, coordinate: Coordinate, eventData: any) => void
     update(newViewState: ViewState)
 }
 
@@ -246,20 +245,20 @@ export class StaticRefImplementation<ViewState> implements HTMLElementProxyTarge
         private ref: string, private ep: JayEndpoint, private viewState: ViewState) {
     }
 
-    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: boolean | AddEventListenerOptions): void {
-        this.ep.post(addEventListenerMessage(this.ref, type));
+    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any>, options?: boolean | AddEventListenerOptions, nativeId?: string): void {
+        this.ep.post(addEventListenerMessage(this.ref, type, nativeId));
         this.listeners.set(type, listener)
     }
-    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: EventListenerOptions | boolean): void {
+    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any>, options?: EventListenerOptions | boolean): void {
         this.ep.post(removeEventListenerMessage(this.ref, type));
         this.listeners.delete(type)
     }
 
-    invoke = (type: string, coordinate: Coordinate) => {
+    invoke = (type: string, coordinate: Coordinate, eventData?: any) => {
         let listener = this.listeners.get(type)
         if (listener)
             listener({
-                event: type,
+                event: eventData,
                 viewState: this.viewState,
                 coordinate: coordinate
             })
@@ -280,8 +279,8 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
         private ref: string, private ep: JayEndpoint) {
     }
 
-    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: boolean | AddEventListenerOptions): void {
-        this.ep.post(addEventListenerMessage(this.ref, type));
+    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: boolean | AddEventListenerOptions, nativeId?: string): void {
+        this.ep.post(addEventListenerMessage(this.ref, type, nativeId));
         this.listeners.set(type, listener)
     }
     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: EventListenerOptions | boolean): void {
@@ -335,7 +334,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
             switch (inMessage.type) {
                 case JayPortMessageType.DOMEvent: {
                     reactive.batchReactions(() => {
-                        refs[inMessage.coordinate.slice(-1)[0]].invoke(inMessage.eventType, inMessage.coordinate)
+                        refs[inMessage.coordinate.slice(-1)[0]].invoke(inMessage.eventType, inMessage.coordinate, inMessage.eventData)
                     })
                     break;
                 }

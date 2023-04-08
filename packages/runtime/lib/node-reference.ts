@@ -17,15 +17,15 @@ import {
 } from "./node-reference-types";
 
 interface Ref<ViewState> extends HTMLNativeExec<ViewState, any> {
-    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void
-    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void
+    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void
+    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: EventListenerOptions | boolean): void
     viewState: ViewState
     coordinate: Coordinate
 }
 
 interface RefCollection<ViewState>{
-    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void
-    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void
+    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void
+    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: EventListenerOptions | boolean): void
     addRef(ref: Ref<ViewState>)
     removeRef(ref: Ref<ViewState>)
 }
@@ -124,7 +124,7 @@ class ReferenceCollection<ViewState> implements RefCollection<ViewState>, HTMLEl
     protected elements: Set<Ref<ViewState>> = new Set();
     private listeners = [];
 
-    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: boolean | AddEventListenerOptions): void {
+    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void {
         this.listeners.push({type, listener, options})
         this.elements.forEach(ref =>
           ref.addEventListener(type, listener, options))
@@ -136,7 +136,7 @@ class ReferenceCollection<ViewState> implements RefCollection<ViewState>, HTMLEl
           ref.addEventListener(listener.type, listener.listener, listener.options))
     }
 
-    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void {
+    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: EventListenerOptions | boolean): void {
         this.listeners = this.listeners.filter(item => item.type !== type || item.listener !== listener);
         this.elements.forEach(ref =>
           ref.removeEventListener(type, listener, options))
@@ -201,7 +201,7 @@ export class HTMLElementRefImpl<ViewState> implements Ref<ViewState>, HTMLElemen
         this.listeners.push({type, listener, wrappedHandler})
     }
 
-    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any> | null, options?: EventListenerOptions | boolean): void {
+    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: EventListenerOptions | boolean): void {
         let index = this.listeners.findIndex(item => item.type === type && item.listener === listener)
         if (index > -1) {
             let item = this.listeners[index];

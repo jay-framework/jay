@@ -18,6 +18,7 @@ export interface JPMAddEventListener extends JayPortMessage {
     readonly type: JayPortMessageType.addEventListener
     eventType: string
     refName: string
+    nativeId?: string
 }
 export interface JPMRemoveEventListener extends JayPortMessage {
     readonly type: JayPortMessageType.removeEventListener
@@ -62,8 +63,8 @@ export interface JayEndpoint {
 export function renderMessage(viewState): JPMRender {
     return ({viewState, type: JayPortMessageType.render});
 }
-export function addEventListenerMessage(refName: string, eventType: string): JPMAddEventListener {
-    return ({refName, eventType, type: JayPortMessageType.addEventListener});
+export function addEventListenerMessage(refName: string, eventType: string, nativeId?: string): JPMAddEventListener {
+    return ({refName, eventType, nativeId, type: JayPortMessageType.addEventListener});
 }
 export function removeEventListenerMessage(refName: string, eventType: string): JPMRemoveEventListener {
     return ({refName, eventType, type: JayPortMessageType.removeEventListener});

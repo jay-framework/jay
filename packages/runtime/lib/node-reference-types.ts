@@ -198,8 +198,8 @@ export interface GlobalJayEvents<ViewState> {
 }
 
 export interface HTMLElementCollectionProxyTarget<ViewState, ElementType extends HTMLElement> {
-  addEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>)
-  removeEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>)
+  addEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions)
+  removeEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>, options?: EventListenerOptions | boolean)
 
   find(predicate: (t: ViewState) => boolean): HTMLNativeExec<ViewState, ElementType>
   map<ResultType>(handler: (element: HTMLNativeExec<ViewState, ElementType>, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType>
@@ -212,8 +212,8 @@ export interface HTMLNativeExec<ViewState, ElementType extends HTMLElement> {
 }
 
 export interface HTMLElementProxyTarget<ViewState, ElementType extends HTMLElement> extends HTMLNativeExec<ViewState, ElementType>{
-  addEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>)
-  removeEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>)
+  addEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions)
+  removeEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>, options?: EventListenerOptions | boolean)
 }
 
 export interface HTMLElementProxy<ViewState, ElementType extends HTMLElement> extends GlobalJayEvents<ViewState>, HTMLElementProxyTarget<ViewState, ElementType>{}
@@ -228,8 +228,8 @@ export interface EventEmitter<EventType, ViewState> {
 export type EventTypeFrom<Type> = Type extends EventEmitter<infer X, any> ? X : null
 
 export interface ComponentCollectionProxyOperations<ViewState, ComponentType extends JayComponent<any, any, any>> {
-  addEventListener(type: string, handler: JayEventHandler<any, ViewState, void>): void
-  removeEventListener(type: string, handler: JayEventHandler<any, ViewState, void>): void
+  addEventListener(type: string, handler: JayEventHandler<any, ViewState, void>, options?: boolean | AddEventListenerOptions): void
+  removeEventListener(type: string, handler: JayEventHandler<any, ViewState, void>, options?: EventListenerOptions | boolean): void
 
   map<ResultType>(handler: (comp: ComponentType, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType>
   find(predicate: (t: ViewState) => boolean): ComponentType
