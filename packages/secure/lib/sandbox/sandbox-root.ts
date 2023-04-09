@@ -26,7 +26,7 @@ export function sandboxRoot(comps: Array<WorkerChildComp<any, any>>) {
         let viewState = inMessage.viewState;
         comps.forEach(workerChildComp => {
             if (!workerChildComp.comp) {
-                let context = {port, endpoint, compId: 0, coordinate: workerChildComp.refName}
+                let context = {port, endpoint, compId: 0, coordinate: [workerChildComp.refName]}
                 workerChildComp.comp = provideContext(SANDBOX_MARKER, context, () => {
                     return workerChildComp.compCreator(workerChildComp.getProps(viewState))
                 })

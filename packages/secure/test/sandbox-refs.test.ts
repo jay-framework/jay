@@ -47,7 +47,7 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["one"], "event": "click", "viewState": vs})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["one"], "event": undefined, "viewState": vs})
         })
 
         it('should pass the new viewState on viewState update', () => {
@@ -59,7 +59,7 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["one"], "event": "click", "viewState": vs2})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["one"], "event": undefined, "viewState": vs2})
         })
 
         it('should add event listener using addEventListener', () => {
@@ -153,7 +153,7 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['B', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": "click", "viewState": baseViewState.items[1]})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": baseViewState.items[1]})
         })
 
         it('in case of event with coordinate of non existing element, should not throw error, but instead return undefined viewState', () => {
@@ -164,7 +164,7 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['D', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["D","one"], "event": "click", "viewState": undefined})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["D","one"], "event": undefined, "viewState": undefined})
         })
 
         it('in case of event with coordinate of a removed element, should not throw error, but instead return undefined viewState', () => {
@@ -176,7 +176,7 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['B', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": "click", "viewState": undefined})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": undefined})
         })
 
         it('should support viewState updates - additional item', () => {
@@ -188,7 +188,7 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['D', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["D","one"], "event": "click", "viewState": addItemViewState.items[3]})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["D","one"], "event": undefined, "viewState": addItemViewState.items[3]})
         })
 
         it('should support viewState updates - updated item', () => {
@@ -200,7 +200,7 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['B', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": "click", "viewState": updateItemViewState.items[1]})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": updateItemViewState.items[1]})
         })
     });
 
@@ -259,7 +259,7 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['B', '3', 'two']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B", '3', "two"], "event": "click", "viewState": vs.items[1].subItems[0]})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B", '3', "two"], "event": undefined, "viewState": vs.items[1].subItems[0]})
         })
 
         it('should support view state updates', () => {
@@ -275,11 +275,11 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['E', '9', 'two'])) // added item
 
             expect(callback.mock.calls).toHaveLength(5)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["A", '2.5', "two"], "event": "click", "viewState": vs2.items[0].subItems[2]})
-            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ["B", '4', "two"], "event": "click", "viewState": undefined})
-            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ["C", '5', "two"], "event": "click", "viewState": vs2.items[2].subItems[0]})
-            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ["D", '6', "two"], "event": "click", "viewState": undefined})
-            expect(callback.mock.calls[4][0]).toEqual({"coordinate": ["E", '9', "two"], "event": "click", "viewState": vs2.items[3].subItems[0]})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["A", '2.5', "two"], "event": undefined, "viewState": vs2.items[0].subItems[2]})
+            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ["B", '4', "two"], "event": undefined, "viewState": undefined})
+            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ["C", '5', "two"], "event": undefined, "viewState": vs2.items[2].subItems[0]})
+            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ["D", '6', "two"], "event": undefined, "viewState": undefined})
+            expect(callback.mock.calls[4][0]).toEqual({"coordinate": ["E", '9', "two"], "event": undefined, "viewState": vs2.items[3].subItems[0]})
         })
     })
 
@@ -320,7 +320,7 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": "click", "viewState": vs})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": undefined, "viewState": vs})
         })
 
         it('should trigger event even if condition === false', () => {
@@ -331,7 +331,7 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": "click", "viewState": vs2})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": undefined, "viewState": vs2})
         })
 
         it('should trigger with if condition updated to false', () => {
@@ -343,7 +343,7 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": "click", "viewState": vs2})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": undefined, "viewState": vs2})
         })
 
         it('should support nested conditions', () => {
@@ -360,10 +360,10 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['two']))
 
             expect(callback.mock.calls).toHaveLength(4)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": vs})
-            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": vs2})
-            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": vs3})
-            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ['two'], "event": "click", "viewState": vs4})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['two'], "event": undefined, "viewState": vs})
+            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ['two'], "event": undefined, "viewState": vs2})
+            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ['two'], "event": undefined, "viewState": vs3})
+            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ['two'], "event": undefined, "viewState": vs4})
         })
     })
 
@@ -405,10 +405,10 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['D', 'two']))
 
             expect(callback.mock.calls).toHaveLength(4)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["A", "two"], "event": "click", "viewState": vs.items[0]})
-            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ["B", "two"], "event": "click", "viewState": vs.items[1]})
-            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ["C", "two"], "event": "click", "viewState": undefined})
-            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ["D", "two"], "event": "click", "viewState": undefined})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["A", "two"], "event": undefined, "viewState": vs.items[0]})
+            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ["B", "two"], "event": undefined, "viewState": vs.items[1]})
+            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ["C", "two"], "event": undefined, "viewState": undefined})
+            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ["D", "two"], "event": undefined, "viewState": undefined})
         })
 
         it('after update, should trigger events with view state for mounted elements, and with undefined for unmounted elements (parent condition === false)', () => {
@@ -423,10 +423,10 @@ describe('sandbox-refs', () => {
             endpoint.invoke(domEventMessage('click', ['E', 'two']))
 
             expect(callback.mock.calls).toHaveLength(4)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["A", "two"], "event": "click", "viewState": vs2.items[0]})
-            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ["B", "two"], "event": "click", "viewState": undefined})
-            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ["C", "two"], "event": "click", "viewState": undefined})
-            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ["E", "two"], "event": "click", "viewState": vs2.items[3]})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["A", "two"], "event": undefined, "viewState": vs2.items[0]})
+            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ["B", "two"], "event": undefined, "viewState": undefined})
+            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ["C", "two"], "event": undefined, "viewState": undefined})
+            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ["E", "two"], "event": undefined, "viewState": vs2.items[3]})
         })
     })
 })
