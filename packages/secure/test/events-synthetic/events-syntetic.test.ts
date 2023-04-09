@@ -55,7 +55,7 @@ describe('events synthetic tests', () => {
         getDynamicButtonById('a').click()
         await channel.toBeClean()
 
-        expect(result.textContent).toBe('dynamic button alpha was clicked')
+        expect(result.textContent).toBe('dynamic button alpha was clicked at coordinate [a,itemButton]')
     })
 
     it('should react to dynamic input value change', async () => {
@@ -66,6 +66,6 @@ describe('events synthetic tests', () => {
         dispatchEvent(input, 'input');
         await channel.toBeClean()
 
-        expect(result.textContent).toBe('dynamic input gamma updated with value \'a new value entered via input c\'')
+        expect(result.textContent).toBe('dynamic input gamma updated with value \'a new value entered via input c\' at coordinate [c,itemInput]')
     })
 })
