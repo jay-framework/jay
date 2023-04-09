@@ -6,6 +6,7 @@ export enum JayPortMessageType {
     root = 2,
     DOMEvent = 3,
     removeEventListener,
+    nativeExec
 }
 export interface JayPortMessage {
     readonly type: JayPortMessageType;
@@ -19,6 +20,12 @@ export interface JPMAddEventListener extends JayPortMessage {
     eventType: string
     refName: string
     nativeId?: string
+}
+export interface JPMNativeExec extends JayPortMessage {
+    readonly type: JayPortMessageType.nativeExec
+    refName: string
+    nativeId?: string
+    correlationId: number
 }
 export interface JPMRemoveEventListener extends JayPortMessage {
     readonly type: JayPortMessageType.removeEventListener
@@ -74,6 +81,9 @@ export function domEventMessage(eventType: string, coordinate: Coordinate, event
 }
 export function rootComponentViewState(viewState: any): JPMRootComponentViewState {
     return ({viewState, type: JayPortMessageType.root});
+}
+export function nativeExec(refName: string, nativeId: string, correlationId: number): JPMNativeExec {
+    return ({refName, nativeId, correlationId, type: JayPortMessageType.nativeExec})
 }
 
 let _channel: JayChannel

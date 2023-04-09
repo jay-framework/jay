@@ -20,9 +20,10 @@ import {
     addEventListenerMessage,
     JayEndpoint,
     JayPortMessageType,
-    JPMMessage,
+    JPMMessage, nativeExec,
     removeEventListenerMessage, renderMessage
 } from "../comm-channel";
+import {$JayNativeFunction} from "../main/function-repository-types";
 
 type Refs = Record<string, HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any>>
 
@@ -264,6 +265,7 @@ export class StaticRefImplementation<ViewState> implements HTMLElementProxyTarge
             })
     }
     $exec<ResultType>(handler: JayNativeFunction<any, any, ResultType>): Promise<ResultType> {
+        this.ep.post(nativeExec(this.ref, (handler as $JayNativeFunction<any, any, ResultType>).id, 0));
         return null;
     }
     update = (newViewState: ViewState) => {
