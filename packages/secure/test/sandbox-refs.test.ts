@@ -11,7 +11,7 @@ import {
     JayEndpoint,
     JayPortInMessageHandler, JayPortMessageType,
     JPMAddEventListener,
-    JPMDomEvent, JPMNativeExec
+    JPMDomEvent, JPMNativeExec, JPMNativeExecResult, nativeExecResult
 } from "../lib/comm-channel";
 import {Reactive} from "jay-reactive";
 import {$func, $handler} from "../lib/$func";
@@ -132,6 +132,27 @@ describe('sandbox-refs', () => {
             expect(message.refName).toBe('one')
             expect(message.nativeId).toBe('3')
             expect(typeof message.correlationId).toBe('number')
+        })
+
+        it('should run $exec --> JPMNativeExec --> JPMNativeExecResult (success)', async () => {
+            let {endpoint, bridgeElement} = setup();
+
+            let $result = (bridgeElement.refs.one as HTMLElementProxy<ViewState, HTMLDivElement>).$exec($func("3"));
+            let execMessage = endpoint.outMessages[0] as JPMNativeExec
+            endpoint.invoke(nativeExecResult('one', execMessage.correlationId, 12))
+            let result = await $result;
+
+            expect(result).toBe(12)
+        })
+
+        it('should run $exec --> JPMNativeExec --> JPMNativeExecResult (fail)', async () => {
+            let {endpoint, bridgeElement} = setup();
+
+            let $result = (bridgeElement.refs.one as HTMLElementProxy<ViewState, HTMLDivElement>).$exec($func("3"));
+            let execMessage = endpoint.outMessages[0] as JPMNativeExec
+            endpoint.invoke(nativeExecResult('one', execMessage.correlationId, undefined, "failed"))
+
+            await expect($result).rejects.toThrow('failed');
         })
     });
 
@@ -472,7 +493,7 @@ describe('sandbox-refs', () => {
 
 interface TestJayEndpoint extends JayEndpoint {
     readonly outMessages: (JPMAddEventListener | JPMNativeExec)[]
-    invoke(inMessage: JPMDomEvent)
+    invoke(inMessage: JPMDomEvent | JPMNativeExecResult)
 }
 
 function mkEndpoint(): TestJayEndpoint {
@@ -492,7 +513,7 @@ function mkEndpoint(): TestJayEndpoint {
         get outMessages() {
             return _outMessages;
         },
-        invoke(inMessage: JPMDomEvent) {
+        invoke(inMessage: JPMDomEvent | JPMNativeExecResult) {
             _handler(inMessage)
         }
     }

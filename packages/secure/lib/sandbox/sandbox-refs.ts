@@ -24,6 +24,7 @@ import {
     removeEventListenerMessage, renderMessage
 } from "../comm-channel";
 import {$JayNativeFunction} from "../main/function-repository-types";
+import {correlatedPromise, rejectCorrelatedPromise, resolveCorrelatedPromise} from "../$func";
 
 type Refs = Record<string, HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any>>
 
@@ -265,8 +266,9 @@ export class StaticRefImplementation<ViewState> implements HTMLElementProxyTarge
             })
     }
     $exec<ResultType>(handler: JayNativeFunction<any, any, ResultType>): Promise<ResultType> {
-        this.ep.post(nativeExec(this.ref, (handler as $JayNativeFunction<any, any, ResultType>).id, 0));
-        return null;
+        let {$execPromise, correlationId} = correlatedPromise<ResultType>();
+        this.ep.post(nativeExec(this.ref, (handler as $JayNativeFunction<any, any, ResultType>).id, correlationId));
+        return $execPromise;
     }
     update = (newViewState: ViewState) => {
         this.viewState = newViewState
@@ -339,6 +341,15 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
                         refs[inMessage.coordinate.slice(-1)[0]].invoke(inMessage.eventType, inMessage.coordinate, inMessage.eventData)
                     })
                     break;
+                }
+                case JayPortMessageType.nativeExecResult: {
+                    reactive.batchReactions(() => {
+                        if (inMessage.error)
+                            rejectCorrelatedPromise(inMessage.correlationId, new Error(inMessage.error))
+                        else
+                            resolveCorrelatedPromise(inMessage.correlationId, inMessage.result)
+                    })
+
                 }
             }
         })

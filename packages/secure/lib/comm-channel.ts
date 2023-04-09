@@ -6,7 +6,8 @@ export enum JayPortMessageType {
     root = 2,
     DOMEvent = 3,
     removeEventListener,
-    nativeExec
+    nativeExec,
+    nativeExecResult,
 }
 export interface JayPortMessage {
     readonly type: JayPortMessageType;
@@ -27,6 +28,13 @@ export interface JPMNativeExec extends JayPortMessage {
     nativeId?: string
     correlationId: number
 }
+export interface JPMNativeExecResult extends JayPortMessage {
+    readonly type: JayPortMessageType.nativeExecResult
+    refName: string
+    correlationId: number
+    result: any
+    error: any
+}
 export interface JPMRemoveEventListener extends JayPortMessage {
     readonly type: JayPortMessageType.removeEventListener
     eventType: string
@@ -43,9 +51,7 @@ export interface JPMRootComponentViewState extends JayPortMessage {
     viewState: object
 }
 
-export type JPMMessage = JPMRootComponentViewState | JPMRender | JPMAddEventListener | JPMDomEvent
-
-export const ROOT_MESSAGE = 0;
+export type JPMMessage = JPMRootComponentViewState | JPMRender | JPMAddEventListener | JPMDomEvent | JPMNativeExecResult | JPMNativeExec
 
 export type JayPortInMessageHandler = (inMessage: JPMMessage) => void;
 
@@ -84,6 +90,9 @@ export function rootComponentViewState(viewState: any): JPMRootComponentViewStat
 }
 export function nativeExec(refName: string, nativeId: string, correlationId: number): JPMNativeExec {
     return ({refName, nativeId, correlationId, type: JayPortMessageType.nativeExec})
+}
+export function nativeExecResult(refName: string, correlationId: number, result: any, error?: any): JPMNativeExecResult {
+    return ({refName, result, correlationId, error, type: JayPortMessageType.nativeExecResult})
 }
 
 let _channel: JayChannel
