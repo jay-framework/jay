@@ -288,11 +288,11 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
         this.listeners.delete(type)
     }
 
-    invoke = (type: string, coordinate: Coordinate) => {
+    invoke = (type: string, coordinate: Coordinate, eventData?: any) => {
         let listener = this.listeners.get(type)
         if (listener)
             listener({
-                event: type,
+                event: eventData,
                 viewState: this.items.get(coordinate.slice(0, -1).toString()),
                 coordinate: coordinate
             })

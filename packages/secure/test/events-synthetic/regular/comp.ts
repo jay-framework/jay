@@ -18,7 +18,7 @@ function CompConstructor({}: Props<CompProps>, refs: CompRefs) {
 
     refs.itemButton.onclick(({viewState: item}) => setText(`dynamic button ${item.text} was clicked`))
     refs.itemInput.$oninput(({event}) => (event.target as HTMLInputElement).value)
-        .then(({viewState: item, event}) => items[item.id].value = event)
+        .then(({viewState: item, event}) => setText(`dynamic input ${item.text} updated with value '${event}'`))
 
     return {
         render: () => ({text, items}),

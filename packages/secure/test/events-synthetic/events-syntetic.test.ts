@@ -5,7 +5,7 @@ import {CompProps} from "./secure/main/comp";
 import {CompViewState} from "./secure/main/comp.jay.html";
 import {render} from "./secure/main/app.jay.html";
 import {setChannel} from "../../lib/comm-channel";
-import {eventually10ms} from "../util/eventually";
+import {dispatchEvent} from "../util/dispatch-event";
 
 describe('events synthetic tests', () => {
 
@@ -19,16 +19,15 @@ describe('events synthetic tests', () => {
         let input = appElement.dom.querySelector('[data-id="input"]') as HTMLInputElement;
 
         let getDynamicButtonById = (id) => appElement.dom.querySelector(`[data-id="${id}-itemButton"]`) as HTMLButtonElement;
+        let getDynamicInputById = (id) => appElement.dom.querySelector(`[data-id="${id}-itemInput"]`) as HTMLButtonElement;
 
         await channel.toBeClean();
-        return {channel, appElement, result, button, input, getDynamicButtonById}
+        return {channel, appElement, result, button, input, getDynamicButtonById, getDynamicInputById}
     }
 
     it('should render the component with default result', async () => {
         let {result} = await mkElement();
-        await eventually10ms(async () => {
-            expect(result.textContent).toBe('default result')
-        })
+        expect(result.textContent).toBe('default result')
     })
 
     it('should react to button click', async () => {
@@ -37,25 +36,17 @@ describe('events synthetic tests', () => {
         button.click()
         await channel.toBeClean()
 
-        await eventually10ms(async () => {
-            expect(result.textContent).toBe('static button was clicked')
-        })
+        expect(result.textContent).toBe('static button was clicked')
     })
 
     it('should react to static input value change', async () => {
         let {channel, result, input} = await mkElement();
 
         input.value = 'a new value entered via input'
-        const event = new Event('input', {
-            bubbles: true,
-            cancelable: true
-        });
-        input.dispatchEvent(event);
+        dispatchEvent(input, 'input');
         await channel.toBeClean()
 
-        await eventually10ms(async () => {
-            expect(result.textContent).toBe('a new value entered via input')
-        })
+        expect(result.textContent).toBe('a new value entered via input')
     })
 
     it('should react to dynamic buttons (under forEach) click', async () => {
@@ -64,8 +55,17 @@ describe('events synthetic tests', () => {
         getDynamicButtonById('a').click()
         await channel.toBeClean()
 
-        await eventually10ms(async () => {
-            expect(result.textContent).toBe('dynamic button alpha was clicked')
-        })
+        expect(result.textContent).toBe('dynamic button alpha was clicked')
+    })
+
+    it('should react to dynamic input value change', async () => {
+        let {channel, result, getDynamicInputById} = await mkElement();
+
+        let input = getDynamicInputById('c')
+        input.value = 'a new value entered via input c'
+        dispatchEvent(input, 'input');
+        await channel.toBeClean()
+
+        expect(result.textContent).toBe('dynamic input gamma updated with value \'a new value entered via input c\'')
     })
 })

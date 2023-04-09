@@ -1,6 +1,6 @@
 import {CompRefs, CompViewState, Item, render as CompRender} from './comp.jay.html';
 import {makeJayComponent, Props, createMemo, createState, createMutableState} from 'jay-component';
-import {$func} from "../../../../$func";
+import {$func} from "../../../../lib/$func";
 
 export interface CompProps {
 }
@@ -19,7 +19,7 @@ function CompConstructor({}: Props<CompProps>, refs: CompRefs) {
 
     refs.itemButton.onclick(({viewState: item}) => setText(`dynamic button ${item.text} was clicked`))
     refs.itemInput.$oninput($func<Event, Item, any>('2'))
-        .then(({viewState: item, event}) => items[item.id].value = event)
+        .then(({viewState: item, event}) => setText(`dynamic input ${item.text} updated with value '${event}'`))
 
     return {
         render: () => ({text, items}),
