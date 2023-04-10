@@ -280,6 +280,19 @@ describe('sandbox-refs', () => {
             expect(typeof message.correlationId).toBe('number')
         })
 
+        it('should run find --> $exec --> JPMNativeExec --> JPMNativeExecResult (success)', async () => {
+            let {endpoint, bridgeElement} = setup();
+
+            let $result = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
+                .find(item => item.title === B.title)
+                .$exec($func("4"));
+            let execMessage = endpoint.outMessages[0] as JPMNativeExec
+            endpoint.invoke(nativeExecResult('one', execMessage.correlationId, 14))
+            let result = await $result;
+
+            expect(result).toEqual(14)
+        })
+
         it('should run find --> undefined for non existing view state', () => {
             let {endpoint, bridgeElement} = setup();
 
