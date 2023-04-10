@@ -26,7 +26,8 @@ export interface JPMNativeExec extends JayPortMessage {
     readonly type: JayPortMessageType.nativeExec
     refName: string
     nativeId?: string
-    correlationId: number
+    correlationId: number,
+    coordinate: Coordinate
 }
 export interface JPMNativeExecResult extends JayPortMessage {
     readonly type: JayPortMessageType.nativeExecResult
@@ -88,8 +89,8 @@ export function domEventMessage(eventType: string, coordinate: Coordinate, event
 export function rootComponentViewState(viewState: any): JPMRootComponentViewState {
     return ({viewState, type: JayPortMessageType.root});
 }
-export function nativeExec(refName: string, nativeId: string, correlationId: number): JPMNativeExec {
-    return ({refName, nativeId, correlationId, type: JayPortMessageType.nativeExec})
+export function nativeExec(refName: string, nativeId: string, correlationId: number, coordinate: Coordinate): JPMNativeExec {
+    return ({refName, nativeId, correlationId, coordinate, type: JayPortMessageType.nativeExec})
 }
 export function nativeExecResult(refName: string, correlationId: number, result: any, error?: any): JPMNativeExecResult {
     return ({refName, result, correlationId, error, type: JayPortMessageType.nativeExecResult})

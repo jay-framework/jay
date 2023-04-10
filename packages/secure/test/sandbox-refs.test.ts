@@ -15,7 +15,7 @@ import {
 } from "../lib/comm-channel";
 import {Reactive} from "jay-reactive";
 import {$func, $handler} from "../lib/$func";
-import {HTMLElementProxy, HTMLElementProxyTarget} from "jay-runtime";
+import {HTMLElementCollectionProxy, HTMLElementProxy, HTMLElementProxyTarget} from "jay-runtime";
 
 describe('sandbox-refs', () => {
     describe('static refs', () => {
@@ -157,6 +157,10 @@ describe('sandbox-refs', () => {
     });
 
     describe('dynamic forEach refs - one level', () => {
+        interface Item {
+            name: string,
+            title: string
+        }
         const A = {name: 'A', title: 'Alpha'}
         const B = {name: 'B', title: 'Beta'}
         const B2 = {name: 'B', title: 'Beta Beta'}
@@ -258,6 +262,31 @@ describe('sandbox-refs', () => {
 
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": updateItemViewState.items[1]})
+        })
+
+        it('should run find --> $exec --> JPMNativeExec', () => {
+            let {endpoint, bridgeElement} = setup();
+
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
+                .find(item => item.title === B.title)
+                .$exec($func("4"));
+
+            expect(endpoint.outMessages).toHaveLength(1)
+            let message = endpoint.outMessages[0] as JPMNativeExec
+            expect(message.type).toBe(JayPortMessageType.nativeExec)
+            expect(message.refName).toBe('one')
+            expect(message.nativeId).toBe('4')
+            expect(message.coordinate).toEqual([B.name, 'one'])
+            expect(typeof message.correlationId).toBe('number')
+        })
+
+        it('should run find --> undefined for non existing view state', () => {
+            let {endpoint, bridgeElement} = setup();
+
+            let findResult = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
+                .find(item => item.title === 'non existing item');
+
+            expect(findResult).not.toBeDefined()
         })
     });
 
