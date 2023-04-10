@@ -305,12 +305,14 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
 
     invoke = (type: string, coordinate: Coordinate, eventData?: any) => {
         let listener = this.listeners.get(type)
-        if (listener)
+        if (listener) {
+            let coordinateAndItem = this.items.get(coordinate.slice(0, -1).toString())
             listener({
                 event: eventData,
-                viewState: this.items.get(coordinate.slice(0, -1).toString())[1],
+                viewState: coordinateAndItem?coordinateAndItem[1]:undefined,
                 coordinate: coordinate
             })
+        }
     }
     find(predicate: (t: ViewState) => boolean): HTMLNativeExec<ViewState, any> | undefined {
         for (const [id, item] of this.items)
