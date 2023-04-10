@@ -201,7 +201,7 @@ export interface HTMLElementCollectionProxyTarget<ViewState, ElementType extends
   addEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions)
   removeEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>, options?: EventListenerOptions | boolean)
 
-  find(predicate: (t: ViewState) => boolean): HTMLNativeExec<ViewState, ElementType>
+  find(predicate: (t: ViewState) => boolean): HTMLNativeExec<ViewState, ElementType> | undefined
   map<ResultType>(handler: (element: HTMLNativeExec<ViewState, ElementType>, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType>
 }
 

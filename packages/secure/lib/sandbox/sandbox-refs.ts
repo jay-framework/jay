@@ -320,7 +320,15 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
             }
     }
     map<ResultType>(handler: (element: HTMLNativeExec<ViewState, any>, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType> {
-
+        let promises: Array<ResultType> = [];
+        for (const [id, item] of this.items) {
+            const coordinate = [...item[0], this.ref];
+            const nativeExec = new DynamicNativeExec<ViewState>(this.ref, coordinate, this.ep);
+            const handlerResponse = handler(nativeExec, item[1], coordinate)
+            if (handlerResponse)
+                promises.push(handlerResponse)
+        }
+        return promises
     }
     update(newViewState: ViewState) {
         console.log(newViewState);

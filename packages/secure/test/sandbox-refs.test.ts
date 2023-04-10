@@ -288,6 +288,38 @@ describe('sandbox-refs', () => {
 
             expect(findResult).not.toBeDefined()
         })
+
+        it('should run map handler on all items - passing view state and coordinate', () => {
+            let {endpoint, bridgeElement} = setup();
+
+            let viewStateSet = new Set();
+            let coordinateSet = new Set();
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
+                .map((element, viewState, coordinate) => {
+                    viewStateSet.add(viewState)
+                    coordinateSet.add(coordinate)
+                })
+
+            expect(viewStateSet).toContain(A)
+            expect(viewStateSet).toContain(B)
+            expect(viewStateSet).toContain(C)
+            expect(coordinateSet).toContainEqual([A.name, 'one'])
+            expect(coordinateSet).toContainEqual([B.name, 'one'])
+            expect(coordinateSet).toContainEqual([C.name, 'one'])
+        })
+
+        it('should map items to some result', () => {
+            let {endpoint, bridgeElement} = setup();
+
+            let mapResult = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
+                .map((element, viewState, coordinate) => {
+                    return {viewState, coordinate}
+                })
+
+            expect(mapResult).toContainEqual({viewState: A, coordinate: [A.name, 'one']})
+            expect(mapResult).toContainEqual({viewState: B, coordinate: [B.name, 'one']})
+            expect(mapResult).toContainEqual({viewState: C, coordinate: [C.name, 'one']})
+        })
     });
 
     describe('dynamic foreach refs - multi-level', () => {
