@@ -264,74 +264,132 @@ describe('sandbox-refs', () => {
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": updateItemViewState.items[1]})
         })
 
-        it('should run find --> $exec --> JPMNativeExec', () => {
-            let {endpoint, bridgeElement} = setup();
+        describe('find', () => {
+            it('should run find --> $exec --> JPMNativeExec', () => {
+                let {endpoint, bridgeElement} = setup();
 
-            (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
-                .find(item => item.title === B.title)
-                .$exec($func("4"));
+                (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
+                    .find(item => item.title === B.title)
+                    .$exec($func("4"));
 
-            expect(endpoint.outMessages).toHaveLength(1)
-            let message = endpoint.outMessages[0] as JPMNativeExec
-            expect(message.type).toBe(JayPortMessageType.nativeExec)
-            expect(message.refName).toBe('one')
-            expect(message.nativeId).toBe('4')
-            expect(message.coordinate).toEqual([B.name, 'one'])
-            expect(typeof message.correlationId).toBe('number')
+                expect(endpoint.outMessages).toHaveLength(1)
+                let message = endpoint.outMessages[0] as JPMNativeExec
+                expect(message.type).toBe(JayPortMessageType.nativeExec)
+                expect(message.refName).toBe('one')
+                expect(message.nativeId).toBe('4')
+                expect(message.coordinate).toEqual([B.name, 'one'])
+                expect(typeof message.correlationId).toBe('number')
+            })
+
+            it('should run find --> $exec --> JPMNativeExec --> JPMNativeExecResult (success)', async () => {
+                let {endpoint, bridgeElement} = setup();
+
+                let $result = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
+                    .find(item => item.title === B.title)
+                    .$exec($func("4"));
+                let execMessage = endpoint.outMessages[0] as JPMNativeExec
+                endpoint.invoke(nativeExecResult('one', execMessage.correlationId, 14))
+                let result = await $result;
+
+                expect(result).toEqual(14)
+            })
+
+            it('should run find --> undefined for non existing view state', () => {
+                let {endpoint, bridgeElement} = setup();
+
+                let findResult = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
+                    .find(item => item.title === 'non existing item');
+
+                expect(findResult).not.toBeDefined()
+            })
         })
 
-        it('should run find --> $exec --> JPMNativeExec --> JPMNativeExecResult (success)', async () => {
-            let {endpoint, bridgeElement} = setup();
+        describe('map', () => {
+            it('should run map handler on all items - passing view state and coordinate', () => {
+                let {endpoint, bridgeElement} = setup();
 
-            let $result = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
-                .find(item => item.title === B.title)
-                .$exec($func("4"));
-            let execMessage = endpoint.outMessages[0] as JPMNativeExec
-            endpoint.invoke(nativeExecResult('one', execMessage.correlationId, 14))
-            let result = await $result;
+                let viewStateSet = new Set();
+                let coordinateSet = new Set();
+                (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
+                    .map((element, viewState, coordinate) => {
+                        viewStateSet.add(viewState)
+                        coordinateSet.add(coordinate)
+                    })
 
-            expect(result).toEqual(14)
-        })
+                expect(viewStateSet).toContain(A)
+                expect(viewStateSet).toContain(B)
+                expect(viewStateSet).toContain(C)
+                expect(coordinateSet).toContainEqual([A.name, 'one'])
+                expect(coordinateSet).toContainEqual([B.name, 'one'])
+                expect(coordinateSet).toContainEqual([C.name, 'one'])
+            })
 
-        it('should run find --> undefined for non existing view state', () => {
-            let {endpoint, bridgeElement} = setup();
+            it('should map items to some result', () => {
+                let {endpoint, bridgeElement} = setup();
 
-            let findResult = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
-                .find(item => item.title === 'non existing item');
+                let mapResult = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
+                    .map((element, viewState, coordinate) => {
+                        return {viewState, coordinate}
+                    })
 
-            expect(findResult).not.toBeDefined()
-        })
+                expect(mapResult).toContainEqual({viewState: A, coordinate: [A.name, 'one']})
+                expect(mapResult).toContainEqual({viewState: B, coordinate: [B.name, 'one']})
+                expect(mapResult).toContainEqual({viewState: C, coordinate: [C.name, 'one']})
+            })
 
-        it('should run map handler on all items - passing view state and coordinate', () => {
-            let {endpoint, bridgeElement} = setup();
+            it('should support $exec on the element --> $exec --> JPMNativeExec', () => {
+                let {endpoint, bridgeElement} = setup();
 
-            let viewStateSet = new Set();
-            let coordinateSet = new Set();
-            (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
-                .map((element, viewState, coordinate) => {
-                    viewStateSet.add(viewState)
-                    coordinateSet.add(coordinate)
-                })
+                let mapResult = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
+                    .map((element, viewState, coordinate) => {
+                        element.$exec($func("4"))
+                    })
+                expect(endpoint.outMessages.length).toBe(3)
+                let execMessageA = endpoint.outMessages[0] as JPMNativeExec
+                let execMessageB = endpoint.outMessages[1] as JPMNativeExec
+                let execMessageC = endpoint.outMessages[2] as JPMNativeExec
 
-            expect(viewStateSet).toContain(A)
-            expect(viewStateSet).toContain(B)
-            expect(viewStateSet).toContain(C)
-            expect(coordinateSet).toContainEqual([A.name, 'one'])
-            expect(coordinateSet).toContainEqual([B.name, 'one'])
-            expect(coordinateSet).toContainEqual([C.name, 'one'])
-        })
+                expect(execMessageA.type).toBe(JayPortMessageType.nativeExec)
+                expect(execMessageA.refName).toBe('one')
+                expect(execMessageA.nativeId).toBe('4')
+                expect(execMessageA.coordinate).toEqual([A.name, 'one'])
+                expect(typeof execMessageA.correlationId).toBe('number')
 
-        it('should map items to some result', () => {
-            let {endpoint, bridgeElement} = setup();
+                expect(execMessageB.type).toBe(JayPortMessageType.nativeExec)
+                expect(execMessageB.refName).toBe('one')
+                expect(execMessageB.nativeId).toBe('4')
+                expect(execMessageB.coordinate).toEqual([B.name, 'one'])
+                expect(typeof execMessageB.correlationId).toBe('number')
 
-            let mapResult = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
-                .map((element, viewState, coordinate) => {
-                    return {viewState, coordinate}
-                })
+                expect(execMessageC.type).toBe(JayPortMessageType.nativeExec)
+                expect(execMessageC.refName).toBe('one')
+                expect(execMessageC.nativeId).toBe('4')
+                expect(execMessageC.coordinate).toEqual([C.name, 'one'])
+                expect(typeof execMessageC.correlationId).toBe('number')
+            })
 
-            expect(mapResult).toContainEqual({viewState: A, coordinate: [A.name, 'one']})
-            expect(mapResult).toContainEqual({viewState: B, coordinate: [B.name, 'one']})
-            expect(mapResult).toContainEqual({viewState: C, coordinate: [C.name, 'one']})
+            it('should support $exec on the element --> $exec --> JPMNativeExec --> JPMNativeExecResult (success)', async () => {
+                let {endpoint, bridgeElement} = setup();
+
+                let $mapResult = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
+                    .map((element, viewState, coordinate) => {
+                        return element.$exec($func("4"))
+                    })
+                expect(endpoint.outMessages.length).toBe(3)
+                let execMessageA = endpoint.outMessages[0] as JPMNativeExec
+                let execMessageB = endpoint.outMessages[1] as JPMNativeExec
+                let execMessageC = endpoint.outMessages[2] as JPMNativeExec
+
+                endpoint.invoke(nativeExecResult('one', execMessageA.correlationId, 20))
+                endpoint.invoke(nativeExecResult('one', execMessageB.correlationId, 30))
+                endpoint.invoke(nativeExecResult('one', execMessageC.correlationId, 40))
+
+                let mapResults = await Promise.all($mapResult);
+
+                expect(mapResults[0]).toBe(20)
+                expect(mapResults[1]).toBe(30)
+                expect(mapResults[2]).toBe(40)
+            })
         })
     });
 
