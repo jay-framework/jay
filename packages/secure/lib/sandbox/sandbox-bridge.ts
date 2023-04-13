@@ -3,6 +3,7 @@ import {useContext} from "jay-runtime";
 import {SANDBOX_MARKER} from "./sandbox-context";
 import {mkBridgeElement, SandboxElement} from "./sandbox-refs";
 import {COMPONENT_CONTEXT} from "jay-component";
+import {Reactive} from "jay-reactive";
 
 export function elementBridge<ElementViewState>(viewState: ElementViewState, sandboxElements: () => SandboxElement<ElementViewState>[],
                                                 dynamicRefs: string[] = []) {
@@ -10,5 +11,6 @@ export function elementBridge<ElementViewState>(viewState: ElementViewState, san
     let {reactive} = useContext(COMPONENT_CONTEXT);
     let ep = parentContext.port.getEndpoint(parentContext.compId, parentContext.coordinate)
     ep.post(renderMessage(viewState));
-    return mkBridgeElement(viewState, ep, reactive, sandboxElements, dynamicRefs);
+    // for some reason typescript insists that the types Reactive !== Reactive...
+    return mkBridgeElement(viewState, ep, reactive as unknown as Reactive, sandboxElements, dynamicRefs);
 }
