@@ -1,6 +1,10 @@
 import {JayElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
 import {elementBridge} from "../../../../lib/sandbox/sandbox-bridge";
-import {sandboxElement as e, sandboxForEach as forEach, sandboxDynamicElement as de} from "../../../../lib/sandbox/sandbox-refs";
+import {
+    sandboxDynamicElement as de,
+    sandboxElement as e,
+    sandboxForEach as forEach
+} from "../../../../lib/sandbox/sandbox-element";
 
 export interface Item {
     id: string,

@@ -1,9 +1,10 @@
 import {renderMessage} from "../comm-channel";
 import {useContext} from "jay-runtime";
 import {SANDBOX_MARKER} from "./sandbox-context";
-import {mkBridgeElement, SandboxElement} from "./sandbox-refs";
+import {mkBridgeElement} from "./sandbox-refs";
 import {COMPONENT_CONTEXT} from "jay-component";
 import {Reactive} from "jay-reactive";
+import {SandboxElement} from "./sandbox-element";
 
 export function elementBridge<ElementViewState>(viewState: ElementViewState, sandboxElements: () => SandboxElement<ElementViewState>[],
                                                 dynamicRefs: string[] = []) {

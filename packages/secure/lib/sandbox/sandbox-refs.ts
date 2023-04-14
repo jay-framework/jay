@@ -1,6 +1,5 @@
 import {
     Coordinate,
-    createJayContext,
     HTMLElementCollectionProxy,
     HTMLElementCollectionProxyTarget,
     HTMLElementProxy,
@@ -9,187 +8,25 @@ import {
     JayEventHandler,
     JayNativeFunction,
     MountFunc,
-    noopMount,
     normalizeUpdates,
     provideContext,
-    updateFunc,
-    useContext
+    updateFunc
 } from "jay-runtime";
-import {checkModified, getRevision, Reactive} from "jay-reactive";
+import {Reactive} from "jay-reactive";
 import {
     addEventListenerMessage,
     JayEndpoint,
     JayPortMessageType,
-    JPMMessage, nativeExec,
-    removeEventListenerMessage, renderMessage
+    JPMMessage,
+    nativeExec,
+    removeEventListenerMessage,
+    renderMessage
 } from "../comm-channel";
 import {$JayNativeFunction} from "../main/function-repository-types";
 import {correlatedPromise, rejectCorrelatedPromise, resolveCorrelatedPromise} from "../$func";
+import {Refs, SANDBOX_CREATION_CONTEXT} from "./sandbox-context";
+import {SandboxElement} from "./sandbox-element";
 
-type Refs = Record<string, HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any>>
-
-interface SandboxCreationContext<ViewState> {
-    viewState: ViewState,
-    endpoint: JayEndpoint,
-    refs: Refs,
-    dataIds: string[]
-}
-
-const SANDBOX_CREATION_CONTEXT = createJayContext<SandboxCreationContext<any>>()
-
-export interface SandboxElement<ViewState> {
-    update: updateFunc<ViewState>
-    mount: MountFunc,
-    unmount: MountFunc
-}
-
-export function sandboxElement<ViewState>(refName: string): SandboxElement<ViewState> {
-    const {viewState, endpoint, refs} = useContext(SANDBOX_CREATION_CONTEXT)
-    let refImpl = new StaticRefImplementation(refName, endpoint, viewState);
-    refs[refName] = proxyRef(refImpl)
-    return {
-        update: refImpl.update,
-        mount: noopMount,
-        unmount: noopMount
-    }
-}
-
-export function sandboxDynamicElement<ViewState>(refName: string): SandboxElement<ViewState> {
-    let {viewState, refs, dataIds} = useContext(SANDBOX_CREATION_CONTEXT);
-    let ref = (refs[refName] as any as DynamicRefImplementation<ViewState>);
-    ref.setItem(dataIds, viewState)
-    let mounted = true;
-    return {
-        update: (newViewState) => {
-            viewState = newViewState;
-            if (mounted)
-                ref.setItem(dataIds, newViewState)
-        },
-        mount: () => {
-            mounted = true;
-            ref.setItem(dataIds, viewState)
-        },
-        unmount: () => {
-            mounted = false;
-            ref.removeItem(dataIds)
-        }
-    }
-}
-
-function compareLists<ItemViewState extends object>(oldList: ItemViewState[], newList: ItemViewState[], matchBy: string):
-    {removedItems: ItemViewState[], addedItems: ItemViewState[], itemsToUpdate: ItemViewState[]} {
-    let removedItems = [];
-    let addedItems = [];
-    let itemsToUpdate = [];
-    let newListIds = new Set(newList.map(item => item[matchBy]));
-    let oldListIdsMap = new Map(oldList.map(item => [item[matchBy], item]));
-    oldList.forEach(oldItem => {
-        if (!newListIds.has(oldItem[matchBy]))
-            removedItems.push(oldItem)
-    })
-    newList.forEach(newItem => {
-        if (!oldListIdsMap.has(newItem[matchBy]))
-            addedItems.push(newItem)
-        else {
-            let oldItem = oldListIdsMap.get(newItem[matchBy]);
-            let oldItemRevisioned = getRevision(oldItem);
-            let [, isModified] = checkModified(newItem, oldItemRevisioned)
-            if (isModified)
-                itemsToUpdate.push(newItem);
-        }
-
-    })
-    return {removedItems, addedItems, itemsToUpdate}
-}
-
-export function sandboxForEach<ParentViewState, ItemViewState extends object>(
-    getItems: (viewState: ParentViewState) => ItemViewState[],
-    matchBy: string,
-    children: () => SandboxElement<ItemViewState>[]
-): SandboxElement<ParentViewState> {
-    const {viewState, endpoint, refs, dataIds} = useContext(SANDBOX_CREATION_CONTEXT)
-    let lastItems = getRevision<ItemViewState[]>([]);
-    let childElementsMap: Map<string, SandboxElement<ItemViewState>[]> = new Map();
-
-    let update = (viewState: ParentViewState) => {
-        let newItems = getItems(viewState) || [];
-        let isModified, newItemsRevisioned;
-        [newItemsRevisioned, isModified] = checkModified(newItems, lastItems);
-        if (isModified) {
-            let {removedItems, addedItems, itemsToUpdate} = compareLists(lastItems.value, newItems, matchBy)
-            addedItems.forEach(item => {
-                let childElements = provideContext(SANDBOX_CREATION_CONTEXT,
-                    {endpoint, viewState: item, refs, dataIds: [...dataIds, item[matchBy]]}, children)
-                childElementsMap.set(item[matchBy], childElements);
-            })
-            removedItems.forEach(item => {
-                let childElements = childElementsMap.get(item[matchBy])
-                childElements.forEach(childElement => childElement.unmount())
-                childElementsMap.delete(item[matchBy])
-            })
-            itemsToUpdate.forEach(item => {
-                childElementsMap.get(item[matchBy]).forEach(childElement => {
-                    childElement.update(item);
-                })
-            })
-        }
-        lastItems = newItemsRevisioned;
-    }
-
-    let mountUnmount = (op) => () => {
-        childElementsMap.forEach((childElements) =>
-            childElements.forEach(childElement => childElement[op]())
-        )
-    }
-    let mount = mountUnmount('mount')
-    let unmount = mountUnmount('unmount')
-
-    update(viewState)
-
-    return {
-        update,
-        mount: mount,
-        unmount: unmount
-    }
-}
-
-export function SandboxCondition<ViewState>(condition: (newData: ViewState) => boolean, children: SandboxElement<ViewState>[]): SandboxElement<ViewState> {
-    let {viewState} = useContext(SANDBOX_CREATION_CONTEXT)
-    let state = condition(viewState);
-    let mounted = true;
-    let childMounted = true;
-    const updateChild = () => {
-        let newState = condition(viewState);
-        if (mounted) {
-            if (newState !== state || childMounted !== newState) {
-                newState ? children.forEach(_ => _.mount()) :
-                    children.forEach(_ => _.unmount());
-                childMounted = newState;
-            }
-        }
-        else {
-            if (childMounted)
-                children.forEach(_ => _.unmount());
-            childMounted = false;
-        }
-    };
-    updateChild();
-
-    const update = (newViewState) => {
-        viewState = newViewState;
-        children.forEach(_ => _.update(newViewState))
-        updateChild();
-    }
-    const mount = () => {
-        mounted = true;
-        updateChild();
-    }
-    const unmount = () => {
-        mounted = false;
-        updateChild();
-    }
-    return {update, mount, unmount}
-}
 
 export interface SandboxBridgeElement<ViewState> {
     dom: undefined,
@@ -229,18 +66,18 @@ const proxyHandler = {
     }
 }
 
-function proxyRef<ViewState>(refDef: StaticRefImplementation<ViewState> | DynamicRefImplementation<ViewState>): HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> {
+export function proxyRef<ViewState>(refDef: StaticRefImplementation<ViewState> | DynamicRefImplementation<ViewState>): HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> {
     return new Proxy(refDef, proxyHandler) as any as HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any>;
 }
 
 interface RefImplementation<ViewState> {
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any>, options?: boolean | AddEventListenerOptions, nativeId?: string): void
     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any>, options?: EventListenerOptions | boolean): void
-    invoke: (type: string, coordinate: Coordinate, eventData: any) => void
+    invoke: (type: string, coordinate: Coordinate, eventData?: any) => void
     update(newViewState: ViewState)
 }
 
-export class StaticRefImplementation<ViewState> implements HTMLElementProxyTarget<ViewState, any>{
+export class StaticRefImplementation<ViewState> implements HTMLElementProxyTarget<ViewState, any>, RefImplementation<ViewState>{
     listeners = new Map<string, JayEventHandler<any, any, any>>()
 
     constructor(
@@ -286,7 +123,7 @@ class DynamicNativeExec<ViewState> implements HTMLNativeExec<ViewState, any>{
     }
 }
 
-export class DynamicRefImplementation<ViewState> implements HTMLElementCollectionProxyTarget<ViewState, any> {
+export class DynamicRefImplementation<ViewState> implements HTMLElementCollectionProxyTarget<ViewState, any>, RefImplementation<ViewState> {
     listeners = new Map<string, JayEventHandler<any, any, any>>()
     items = new Map<string, [string[], ViewState]>();
 

@@ -1,10 +1,6 @@
 import {describe, expect, it} from '@jest/globals'
 import {
-    mkBridgeElement,
-    sandboxElement as e,
-    sandboxDynamicElement as de,
-    sandboxForEach as forEach,
-    SandboxCondition as c
+    mkBridgeElement
 } from "../lib/sandbox/sandbox-refs";
 import {
     domEventMessage,
@@ -16,6 +12,11 @@ import {
 import {Reactive} from "jay-reactive";
 import {$func, $handler} from "../lib/$func";
 import {HTMLElementCollectionProxy, HTMLElementProxy, HTMLElementProxyTarget} from "jay-runtime";
+import {
+    SandboxCondition as c,
+    sandboxDynamicElement as de, sandboxElement as e,
+    sandboxForEach as forEach
+} from "../lib/sandbox/sandbox-element";
 
 describe('sandbox-refs', () => {
     describe('static refs', () => {

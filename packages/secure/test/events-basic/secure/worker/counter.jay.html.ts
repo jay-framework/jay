@@ -1,6 +1,6 @@
 import {HTMLElementProxy, JayElement} from "jay-runtime";
 import {elementBridge} from "../../../../lib/sandbox/sandbox-bridge";
-import {sandboxElement as e} from "../../../../lib/sandbox/sandbox-refs";
+import {sandboxElement as e} from "../../../../lib/sandbox/sandbox-element";
 
 export interface CounterViewState {
     title: string,
