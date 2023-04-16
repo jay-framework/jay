@@ -14,9 +14,12 @@ import {$func, $handler} from "../lib/$func";
 import {HTMLElementCollectionProxy, HTMLElementProxy, HTMLElementProxyTarget} from "jay-runtime";
 import {
     SandboxCondition as c,
-    sandboxDynamicElement as de, sandboxElement as e,
-    sandboxForEach as forEach
+    sandboxDynamicElement as de,
+    sandboxElement as e,
+    sandboxForEach as forEach,
+    sandboxChildComp as childComp
 } from "../lib/sandbox/sandbox-element";
+import {componentInstance, Item, ItemProps} from "./item-component/item";
 
 describe('sandbox-refs', () => {
     describe('static refs', () => {
@@ -620,6 +623,37 @@ describe('sandbox-refs', () => {
             expect(callback.mock.calls[1][0]).toEqual({"coordinate": ["B", "two"], "event": undefined, "viewState": undefined})
             expect(callback.mock.calls[2][0]).toEqual({"coordinate": ["C", "two"], "event": undefined, "viewState": undefined})
             expect(callback.mock.calls[3][0]).toEqual({"coordinate": ["E", "two"], "event": undefined, "viewState": vs2.items[3]})
+        })
+    })
+
+    describe('static component', () => {
+
+        const vs: ItemProps = {text: 'some data', dataId: 'a'}
+        const vs2: ItemProps = {text: 'some new data', dataId: 'a'}
+
+        function setup() {
+            let endpoint = mkEndpoint();
+            let reactive = new Reactive();
+            let bridgeElement = mkBridgeElement(vs, endpoint, reactive, () => [
+                childComp(Item, vs => vs, 'comp1')
+            ])
+            return {endpoint, bridgeElement}
+        }
+
+        it('should create the component with the provided props', () => {
+            let {endpoint, bridgeElement} = setup();
+            let instance = componentInstance(vs.dataId);
+
+            expect(instance.getItemSummary()).toBe('item some data - Done: false - mounted: true')
+        })
+
+        it('should update the component with the new props', () => {
+            let {endpoint, bridgeElement} = setup();
+            let instance = componentInstance(vs.dataId);
+
+            bridgeElement.update(vs2)
+
+            expect(instance.getItemSummary()).toBe('item some new data - Done: false - mounted: true')
         })
     })
 })
