@@ -75,7 +75,6 @@ interface RefImplementation<ViewState> {
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any>, options?: boolean | AddEventListenerOptions, nativeId?: string): void
     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any>, options?: EventListenerOptions | boolean): void
     invoke: (type: string, coordinate: Coordinate, eventData?: any) => void
-    update(newViewState: ViewState)
 }
 
 export class StaticRefImplementation<ViewState> implements HTMLElementProxyTarget<ViewState, any>, RefImplementation<ViewState>{
@@ -167,9 +166,6 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
         }
         return promises
     }
-    update(newViewState: ViewState) {
-        console.log(newViewState);
-    }
 
     setItem(coordinate: string[], viewState: ViewState, refItem: DynamicNativeExec<ViewState>) {
         this.items.set(coordinate.toString(), [coordinate, viewState, refItem])
@@ -214,9 +210,6 @@ export class DynamicCompRefImplementation<ViewState, CompType extends JayCompone
                 promises.push(handlerResponse)
         }
         return promises
-    }
-    update(newViewState: ViewState) {
-        console.log(newViewState);
     }
 
     setItem(coordinate: string[], viewState: ViewState, refItem: CompType) {

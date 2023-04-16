@@ -807,7 +807,22 @@ describe('sandbox-refs', () => {
         })
 
         it('should support map components', () => {
+            let {bridgeElement} = setup();
 
+            let mapResult = (bridgeElement.refs.comp1 as ComponentCollectionProxy<ItemType, ReturnType<typeof Item>>)
+                .map((comp, viewState, coordinate) => {
+                    return `comp.getItemSummary(): ${comp.getItemSummary()}\nviewState: ${JSON.stringify(viewState)}\ncoordinate: [${coordinate}]`
+                })
+
+            expect(mapResult).toContain(`comp.getItemSummary(): item some data - Done: false - mounted: true
+viewState: ${JSON.stringify(A)}
+coordinate: [a,comp1]`)
+            expect(mapResult).toContain(`comp.getItemSummary(): item B data - Done: false - mounted: true
+viewState: ${JSON.stringify(B)}
+coordinate: [b,comp1]`)
+            expect(mapResult).toContain(`comp.getItemSummary(): item C data - Done: false - mounted: true
+viewState: ${JSON.stringify(C)}
+coordinate: [c,comp1]`)
         })
     })
 })
