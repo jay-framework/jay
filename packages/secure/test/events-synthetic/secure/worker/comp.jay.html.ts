@@ -33,5 +33,5 @@ export function render(viewState: CompViewState, options?: RenderElementOptions)
             e('itemInput')
             ]
         )
-    ]) as unknown as CompElement;
+    ], ['itemButton', 'itemInput']) as unknown as CompElement;
 }
