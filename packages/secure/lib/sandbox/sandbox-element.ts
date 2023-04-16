@@ -54,6 +54,29 @@ export function sandboxElement<ViewState>(refName: string): SandboxElement<ViewS
     }
 }
 
+export function sandboxChildComp<ParentVS, Props>(
+    compCreator: JayComponentConstructor<Props>,
+    getProps: (t: ParentVS) => Props,
+    refName: string): SandboxElement<ParentVS> {
+    const {viewState, endpoint, refs, dataIds, isDynamic} = useContext(SANDBOX_CREATION_CONTEXT)
+    let childComp = compCreator(getProps(viewState))
+    if (isDynamic) {
+        // if (!refs[refName]) {
+        //     refs[refName] = proxyRef(new DynamicRefImplementation(refName, endpoint))
+        // }
+        // let ref = (refs[refName] as any as DynamicRefImplementation<ViewState>);
+    }
+    else {
+        refs[refName] = childComp;
+    }
+    let update = (t: ParentVS) => childComp.update(getProps(t));
+    let mount = childComp.mount
+    let unmount = childComp.unmount
+    return {
+        update, mount, unmount
+    }
+}
+
 function compareLists<ItemViewState extends object>(oldList: ItemViewState[], newList: ItemViewState[], matchBy: string):
     { removedItems: ItemViewState[], addedItems: ItemViewState[], itemsToUpdate: ItemViewState[] } {
     let removedItems = [];
@@ -166,20 +189,4 @@ export function SandboxCondition<ViewState>(condition: (newData: ViewState) => b
         updateChild();
     }
     return {update, mount, unmount}
-}
-
-export function sandboxChildComp<ParentVS, Props, ChildT,
-    ChildElement extends BaseJayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
-    compCreator: JayComponentConstructor<Props>,
-    getProps: (t: ParentVS) => Props,
-    refName: string): SandboxElement<ParentVS> {
-    const {viewState, endpoint, refs, dataIds} = useContext(SANDBOX_CREATION_CONTEXT)
-    let childComp = compCreator(getProps(viewState))
-    refs[refName] = childComp;
-    let update = (t: ParentVS) => childComp.update(getProps(t));
-    let mount = childComp.mount
-    let unmount = childComp.unmount
-    return {
-        update, mount, unmount
-    }
 }

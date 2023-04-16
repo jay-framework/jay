@@ -728,6 +728,75 @@ describe('sandbox-refs', () => {
             expect(instance.getItemSummary()).toBe('item some new data - Done: false - mounted: true')
         })
     })
+
+    describe('dynamic forEach components', () => {
+
+        const A = {text: 'some data', dataId: 'a'}
+        const A2 = {text: 'some new data', dataId: 'a'}
+        const B = {text: 'B data', dataId: 'b'}
+        const C = {text: 'C data', dataId: 'c'}
+        const D = {text: 'D data', dataId: 'd'}
+
+        const vs = {items: [A, B, C]}
+        const vs2 = {items: [A2, C, D]}
+        type ItemType = typeof A
+        type ViewStateType = typeof vs
+
+        beforeEach(() => {
+            clearInstances();
+        })
+
+        function setup() {
+            let endpoint = mkEndpoint();
+            let reactive = new Reactive();
+            let bridgeElement = mkBridgeElement(vs, endpoint, reactive, () => [
+                forEach<ViewStateType, ItemType>(vs => vs.items, "dataId",
+                    () => [childComp<ItemType, ItemProps>(Item, vs => vs, 'comp1')]
+                )
+            ])
+            return {endpoint, bridgeElement}
+        }
+
+        it('should create the components with the provided props', () => {
+            setup();
+
+            expect(componentInstance(A.dataId).getItemSummary()).toBe('item some data - Done: false - mounted: true')
+            expect(componentInstance(B.dataId).getItemSummary()).toBe('item B data - Done: false - mounted: true')
+            expect(componentInstance(C.dataId).getItemSummary()).toBe('item C data - Done: false - mounted: true')
+        })
+
+        it('should update the components with the new instances and props, unmounting removed components', () => {
+            let {bridgeElement} = setup();
+            bridgeElement.update(vs2)
+
+            expect(componentInstance(A.dataId).getItemSummary()).toBe('item some new data - Done: false - mounted: true')
+            expect(componentInstance(B.dataId).getItemSummary()).toBe('item B data - Done: false - mounted: false')
+            expect(componentInstance(C.dataId).getItemSummary()).toBe('item C data - Done: false - mounted: true')
+            expect(componentInstance(D.dataId).getItemSummary()).toBe('item D data - Done: false - mounted: true')
+        })
+
+        it('should register and invoke events on the components', () => {
+            let {bridgeElement} = setup();
+            let callback = jest.fn();
+
+            bridgeElement.refs.comp1.addEventListener('remove', callback)
+            componentInstance(B.dataId)._removeClick();
+            componentInstance(C.dataId)._removeClick();
+
+            expect(callback.mock.calls.length).toBe(2)
+            expect(callback.mock.calls[0][0]).toEqual({event: 'item B data - false is removed'})
+            expect(callback.mock.calls[1][0]).toEqual({event: 'item C data - false is removed'})
+        })
+
+        it.skip('should support component APIs', () => {
+            setup();
+            let instance = componentInstance(vs.dataId);
+
+            instance._doneClick();
+
+            expect(instance.getItemSummary()).toBe('item some data - Done: true - mounted: true')
+        })
+    })
 })
 
 interface TestJayEndpoint extends JayEndpoint {
