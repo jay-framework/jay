@@ -25,9 +25,6 @@ export interface SandboxElement<ViewState> {
 export function sandboxElement<ViewState>(refName: string): SandboxElement<ViewState> {
     let {viewState, endpoint, refs, isDynamic, dataIds} = useContext(SANDBOX_CREATION_CONTEXT)
     if (isDynamic) {
-        if (!refs[refName]) {
-            refs[refName] = proxyRef(new DynamicRefImplementation(refName, endpoint))
-        }
         let ref = (refs[refName] as any as DynamicRefImplementation<ViewState>);
         let coordinate = [...dataIds, refName];
         let refItem = new DynamicNativeExec<ViewState>(refName, coordinate, endpoint);
@@ -67,9 +64,6 @@ export function sandboxChildComp<ParentVS, Props>(
     let {viewState, refs, dataIds, isDynamic} = useContext(SANDBOX_CREATION_CONTEXT)
     let childComp = compCreator(getProps(viewState))
     if (isDynamic) {
-        if (!refs[refName]) {
-            refs[refName] = proxyRef(new DynamicCompRefImplementation())
-        }
         let ref = (refs[refName] as any as DynamicCompRefImplementation<ParentVS, ReturnType<typeof compCreator>>);
         let coordinate = [...dataIds, refName];
         ref.setItem(coordinate, viewState, childComp);
@@ -78,7 +72,7 @@ export function sandboxChildComp<ParentVS, Props>(
             update: (newViewState) => {
                 viewState = newViewState;
                 if (mounted) {
-                    ref.setItem(coordinate, newViewState, childComp)
+                    ref.update(coordinate, newViewState)
                     childComp.update(getProps(newViewState))
                 }
             },
@@ -89,7 +83,7 @@ export function sandboxChildComp<ParentVS, Props>(
             },
             unmount: () => {
                 mounted = false;
-                ref.removeItem(coordinate)
+                ref.removeItem(coordinate, childComp)
                 childComp.unmount();
             }
         }

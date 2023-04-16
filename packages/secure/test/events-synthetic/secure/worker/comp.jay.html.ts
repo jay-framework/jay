@@ -1,7 +1,6 @@
 import {JayElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
 import {elementBridge} from "../../../../lib/sandbox/sandbox-bridge";
 import {
-    sandboxDynamicElement as de,
     sandboxElement as e,
     sandboxForEach as forEach
 } from "../../../../lib/sandbox/sandbox-element";
@@ -30,9 +29,9 @@ export function render(viewState: CompViewState, options?: RenderElementOptions)
         e('button'),
         e('input'),
         forEach((viewState: CompViewState) => viewState.items, 'id', () => [
-            de('itemButton'),
-            de('itemInput')
+            e('itemButton'),
+            e('itemInput')
             ]
         )
-    ], ['itemButton', 'itemInput']) as unknown as CompElement;
+    ]) as unknown as CompElement;
 }

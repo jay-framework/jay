@@ -171,8 +171,8 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
         this.items.set(coordinate.toString(), [coordinate, viewState, refItem])
     }
 
-    removeItem(dataIds: string[]) {
-        this.items.delete(dataIds.toString())
+    removeItem(coordinate: string[]) {
+        this.items.delete(coordinate.toString())
     }
 }
 
@@ -212,20 +212,30 @@ export class DynamicCompRefImplementation<ViewState, CompType extends JayCompone
         return promises
     }
 
-    setItem(coordinate: string[], viewState: ViewState, refItem: CompType) {
-        this.items.set(coordinate.toString(), [coordinate, viewState, refItem])
+    update(coordinate: string[], viewState: ViewState) {
+        this.items.get(coordinate.toString())[1] = viewState;
     }
 
-    removeItem(dataIds: string[]) {
-        this.items.delete(dataIds.toString())
+    setItem(coordinate: string[], viewState: ViewState, refItem: CompType) {
+        this.items.set(coordinate.toString(), [coordinate, viewState, refItem])
+        this.listeners.forEach((listener, type) => refItem.addEventListener(type, listener));
+
+    }
+
+    removeItem(coordinate: string[], refItem: CompType) {
+        this.items.delete(coordinate.toString())
+        this.listeners.forEach((listener, type) => refItem.removeEventListener(type, listener));
     }
 }
 
 export function mkBridgeElement<ViewState>(viewState: ViewState,
                                            endpoint: JayEndpoint,
                                            reactive: Reactive,
-                                           sandboxElements: () => SandboxElement<ViewState>[]): SandboxBridgeElement<ViewState> {
+                                           sandboxElements: () => SandboxElement<ViewState>[],
+                                           dynamicElements: string[] = [], dynamicComponents: string[] = []): SandboxBridgeElement<ViewState> {
     let refs = {};
+    dynamicComponents.forEach(compRef => refs[compRef] = proxyRef(new DynamicCompRefImplementation()))
+    dynamicElements.forEach(elemRef => refs[elemRef] = proxyRef(new DynamicRefImplementation(elemRef, endpoint)))
     return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState, refs, dataIds: [], isDynamic: false}, () => {
         let elements = sandboxElements();
         let postUpdateMessage = (newViewState) => endpoint.post(renderMessage(newViewState))

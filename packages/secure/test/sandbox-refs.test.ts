@@ -174,18 +174,31 @@ describe('sandbox-refs', () => {
         const addItemViewState =          {items: [A, B,  C, D]}
         const addAndRemoveItemViewState = {items: [A,     C, D]}
         const updateItemViewState =       {items: [A, B2, C]}
+        const empty =                     {items: []}
 
-        function setup() {
+        function setup(vs = baseViewState) {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let bridgeElement = mkBridgeElement(baseViewState, endpoint, reactive,() => [
+            let bridgeElement = mkBridgeElement(vs, endpoint, reactive,() => [
                 forEach(vs => vs.items, 'name', () => [e('one')])
-            ])
+            ], ['one'])
             return {endpoint, bridgeElement}
         }
 
         it('should register events --> JPMAddEventListener', () => {
             let {endpoint, bridgeElement} = setup();
+
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(() => {});
+
+            expect(endpoint.outMessages).toHaveLength(1)
+            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(message.type).toBe(JayPortMessageType.addEventListener)
+            expect(message.eventType).toBe('click')
+            expect(message.refName).toBe('one')
+        })
+
+        it('should register events --> JPMAddEventListener also if items is an empty array', () => {
+            let {endpoint, bridgeElement} = setup(empty);
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(() => {});
 
@@ -424,7 +437,7 @@ describe('sandbox-refs', () => {
                         e('two')
                     ])
                 ])
-            ])
+            ], ['one', 'two'])
             return {endpoint, bridgeElement}
         }
 
@@ -585,7 +598,7 @@ describe('sandbox-refs', () => {
                         e('two')
                     ])
                 ])
-            ])
+            ], ['one', 'two'])
             return {endpoint, bridgeElement}
         }
 
@@ -739,6 +752,7 @@ describe('sandbox-refs', () => {
 
         const vs = {items: [A, B, C]}
         const vs2 = {items: [A2, C, D]}
+        const empty = {items: []}
         type ItemType = typeof A
         type ViewStateType = typeof vs
 
@@ -746,14 +760,14 @@ describe('sandbox-refs', () => {
             clearInstances();
         })
 
-        function setup() {
+        function setup(viewState = vs) {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let bridgeElement = mkBridgeElement(vs, endpoint, reactive, () => [
+            let bridgeElement = mkBridgeElement(viewState, endpoint, reactive, () => [
                 forEach<ViewStateType, ItemType>(vs => vs.items, "dataId",
                     () => [childComp<ItemType, ItemProps>(Item, vs => vs, 'comp1')]
                 )
-            ])
+            ], [], ['comp1'])
             return {endpoint, bridgeElement}
         }
 
@@ -785,6 +799,20 @@ describe('sandbox-refs', () => {
 
             expect(callback.mock.calls.length).toBe(2)
             expect(callback.mock.calls[0][0]).toEqual({event: 'item B data - false is removed'})
+            expect(callback.mock.calls[1][0]).toEqual({event: 'item C data - false is removed'})
+        })
+
+        it('should register events on empty collection', () => {
+            let {bridgeElement} = setup(empty);
+            let callback = jest.fn();
+
+            bridgeElement.refs.comp1.addEventListener('remove', callback)
+            bridgeElement.update(vs)
+            componentInstance(A.dataId)._removeClick();
+            componentInstance(C.dataId)._removeClick();
+
+            expect(callback.mock.calls.length).toBe(2)
+            expect(callback.mock.calls[0][0]).toEqual({event: 'item some data - false is removed'})
             expect(callback.mock.calls[1][0]).toEqual({event: 'item C data - false is removed'})
         })
 
