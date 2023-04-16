@@ -172,6 +172,7 @@ export function sandboxChildComp<ParentVS, Props, ChildT,
     refName: string): SandboxElement<ParentVS> {
     const {viewState, endpoint, refs, dataIds} = useContext(SANDBOX_CREATION_CONTEXT)
     let childComp = compCreator(getProps(viewState))
+    refs[refName] = childComp;
     let update = (t: ParentVS) => childComp.update(getProps(t));
     let mount = childComp.mount
     let unmount = childComp.unmount

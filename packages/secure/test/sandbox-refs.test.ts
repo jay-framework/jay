@@ -19,7 +19,7 @@ import {
     sandboxForEach as forEach,
     sandboxChildComp as childComp
 } from "../lib/sandbox/sandbox-element";
-import {componentInstance, Item, ItemProps} from "./item-component/item";
+import {clearInstances, componentInstance, Item, ItemProps} from "./item-component/item";
 
 describe('sandbox-refs', () => {
     describe('static refs', () => {
@@ -38,7 +38,7 @@ describe('sandbox-refs', () => {
         it('should register events --> JPMAddEventListener', () => {
             let {endpoint, bridgeElement} = setup();
 
-            bridgeElement.refs.one.onclick(() => {});
+            (bridgeElement.refs.one as HTMLElementProxy<any, any>).onclick(() => {});
 
             expect(endpoint.outMessages).toHaveLength(1)
             let message = endpoint.outMessages[0] as JPMAddEventListener
@@ -51,7 +51,7 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.refs.one.onclick(callback);
+            (bridgeElement.refs.one as HTMLElementProxy<any, any>).onclick(callback);
             endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
@@ -62,8 +62,8 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.update(vs2)
-            bridgeElement.refs.one.onclick(callback);
+            bridgeElement.update(vs2);
+            (bridgeElement.refs.one as HTMLElementProxy<any, any>).onclick(callback);
             endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
@@ -74,7 +74,7 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.refs.one.addEventListener('click', callback);
+            (bridgeElement.refs.one as HTMLElementProxy<any, any>).addEventListener('click', callback);
 
             expect(endpoint.outMessages).toHaveLength(1)
             let message = endpoint.outMessages[0] as JPMAddEventListener
@@ -115,7 +115,7 @@ describe('sandbox-refs', () => {
         it('should register $events --> JPMAddEventListener', () => {
             let {endpoint, bridgeElement} = setup();
 
-            bridgeElement.refs.one.$onclick($handler("1"));
+            (bridgeElement.refs.one as HTMLElementProxy<any, any>).$onclick($handler("1"));
 
             expect(endpoint.outMessages).toHaveLength(1)
             let message = endpoint.outMessages[0] as JPMAddEventListener
@@ -188,7 +188,7 @@ describe('sandbox-refs', () => {
         it('should register events --> JPMAddEventListener', () => {
             let {endpoint, bridgeElement} = setup();
 
-            bridgeElement.refs.one.onclick(() => {});
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(() => {});
 
             expect(endpoint.outMessages).toHaveLength(1)
             let message = endpoint.outMessages[0] as JPMAddEventListener;
@@ -200,7 +200,7 @@ describe('sandbox-refs', () => {
         it('should register $events --> JPMAddEventListener', () => {
             let {endpoint, bridgeElement} = setup();
 
-            bridgeElement.refs.one.$onclick($handler("2"));
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).$onclick($handler("2"));
 
             expect(endpoint.outMessages).toHaveLength(1)
             let message = endpoint.outMessages[0] as JPMAddEventListener
@@ -214,7 +214,7 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.refs.one.onclick(callback);
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(domEventMessage('click', ['B', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
@@ -225,7 +225,7 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.refs.one.onclick(callback);
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(domEventMessage('click', ['D', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
@@ -237,7 +237,7 @@ describe('sandbox-refs', () => {
             let callback = jest.fn();
 
             bridgeElement.update(addAndRemoveItemViewState);
-            bridgeElement.refs.one.onclick(callback);
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(domEventMessage('click', ['B', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
@@ -248,8 +248,8 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.update(addItemViewState)
-            bridgeElement.refs.one.onclick(callback);
+            bridgeElement.update(addItemViewState);
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(domEventMessage('click', ['D', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
@@ -260,8 +260,8 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.update(updateItemViewState)
-            bridgeElement.refs.one.onclick(callback);
+            bridgeElement.update(updateItemViewState);
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(domEventMessage('click', ['B', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
@@ -432,8 +432,8 @@ describe('sandbox-refs', () => {
         it('should register events --> JPMAddEventListener', () => {
             let {endpoint, bridgeElement} = setup();
 
-            bridgeElement.refs.one.onclick(() => {});
-            bridgeElement.refs.two.onclick(() => {});
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(() => {});
+            (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(() => {});
 
             expect(endpoint.outMessages).toHaveLength(2)
             let message = endpoint.outMessages[0] as JPMAddEventListener
@@ -450,7 +450,7 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.refs.two.onclick(callback);
+            (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(domEventMessage('click', ['B', '3', 'two']))
 
             expect(callback.mock.calls).toHaveLength(1)
@@ -462,7 +462,7 @@ describe('sandbox-refs', () => {
             let callback = jest.fn();
 
             bridgeElement.update(vs2);
-            bridgeElement.refs.two.onclick(callback);
+            (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(domEventMessage('click', ['A', '2.5', 'two'])) // added sub item
             endpoint.invoke(domEventMessage('click', ['B', '4', 'two'])) // removed sub item
             endpoint.invoke(domEventMessage('click', ['C', '5', 'two'])) // updated sub item
@@ -499,7 +499,7 @@ describe('sandbox-refs', () => {
         it('should register events --> JPMAddEventListener', () => {
             let {endpoint, bridgeElement} = setup();
 
-            bridgeElement.refs.one.onclick(() => {});
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(() => {});
 
             expect(endpoint.outMessages).toHaveLength(1)
             let message = endpoint.outMessages[0] as JPMAddEventListener
@@ -512,7 +512,7 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.refs.one.onclick(callback);
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
@@ -523,7 +523,7 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup(vs2);
             let callback = jest.fn();
 
-            bridgeElement.refs.one.onclick(callback);
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
@@ -534,8 +534,8 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.update(vs2)
-            bridgeElement.refs.one.onclick(callback);
+            bridgeElement.update(vs2);
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
@@ -546,7 +546,7 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.refs.two.onclick(callback);
+            (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(domEventMessage('click', ['two']))
             bridgeElement.update(vs2)
             endpoint.invoke(domEventMessage('click', ['two']))
@@ -594,7 +594,7 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.refs.two.onclick(callback);
+            (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(domEventMessage('click', ['A', 'two']))
             endpoint.invoke(domEventMessage('click', ['B', 'two']))
             endpoint.invoke(domEventMessage('click', ['C', 'two']))
@@ -611,8 +611,8 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.update(vs2)
-            bridgeElement.refs.two.onclick(callback);
+            bridgeElement.update(vs2);
+            (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(domEventMessage('click', ['A', 'two']))
             endpoint.invoke(domEventMessage('click', ['B', 'two']))
             endpoint.invoke(domEventMessage('click', ['C', 'two']))
@@ -631,6 +631,10 @@ describe('sandbox-refs', () => {
         const vs: ItemProps = {text: 'some data', dataId: 'a'}
         const vs2: ItemProps = {text: 'some new data', dataId: 'a'}
 
+        beforeEach(() => {
+            clearInstances();
+        })
+
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
@@ -641,19 +645,31 @@ describe('sandbox-refs', () => {
         }
 
         it('should create the component with the provided props', () => {
-            let {endpoint, bridgeElement} = setup();
+            setup();
             let instance = componentInstance(vs.dataId);
 
             expect(instance.getItemSummary()).toBe('item some data - Done: false - mounted: true')
         })
 
         it('should update the component with the new props', () => {
-            let {endpoint, bridgeElement} = setup();
+            let {bridgeElement} = setup();
             let instance = componentInstance(vs.dataId);
 
             bridgeElement.update(vs2)
 
             expect(instance.getItemSummary()).toBe('item some new data - Done: false - mounted: true')
+        })
+
+        it('should register events on the component', () => {
+            let {bridgeElement} = setup();
+            let instance = componentInstance(vs.dataId);
+            let callback = jest.fn();
+
+            bridgeElement.refs.comp1.addEventListener('remove', callback)
+            instance._removeClick();
+
+            expect(callback.mock.calls.length).toBe(1)
+            expect(callback.mock.calls[0][0]).toEqual({event: 'item some data - false is removed'})
         })
     })
 })
