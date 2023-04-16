@@ -3,13 +3,13 @@ Runtime
 
 - [x] basics - elements, strings
 - [x] update function
-- [ ] type formatters
+- [ ] type formatters (date, boolean, numbers)
 - [ ] dynamic styles
 - [x] dynamic dom attributes
-- [ ] inputs
+- [x] inputs
 - [x] events
 - [ ] slots
-- [ ] composites (component in component)
+- [x] composites (component in component)
 - [ ] server side rendering
 - [ ] hydration
 - [ ] canvas
@@ -30,11 +30,18 @@ Testing
 
 - [ ] generate component drivers
 
+Secure Support
+----
+- [x] elements
+- [x] events
+- [x] native $events
+- [x] components & component events
+
 Example Project
 ---
 
 - [x] basic benchmark
 - [x] Counter
-- [ ] TodoMVC
+- [x] TodoMVC
 
 worth looking at solid.js control flow and rendering APIs. those are well made

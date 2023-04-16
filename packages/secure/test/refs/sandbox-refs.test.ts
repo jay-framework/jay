@@ -1,23 +1,23 @@
 import {describe, expect, it} from '@jest/globals'
 import {
     mkBridgeElement
-} from "../lib/sandbox/sandbox-refs";
+} from "../../lib/sandbox/sandbox-refs";
 import {
     domEventMessage,
     JayEndpoint,
     JayPortInMessageHandler, JayPortMessageType,
     JPMAddEventListener,
     JPMDomEvent, JPMNativeExec, JPMNativeExecResult, nativeExecResult
-} from "../lib/comm-channel";
+} from "../../lib/comm-channel";
 import {Reactive} from "jay-reactive";
-import {$func, $handler} from "../lib/$func";
+import {$func, $handler} from "../../lib/$func";
 import {ComponentCollectionProxy, HTMLElementCollectionProxy, HTMLElementProxy} from "jay-runtime";
 import {
     SandboxCondition as c,
     sandboxElement as e,
     sandboxForEach as forEach,
     sandboxChildComp as childComp
-} from "../lib/sandbox/sandbox-element";
+} from "../../lib/sandbox/sandbox-element";
 import {clearInstances, componentInstance, Item, ItemProps} from "./item-component/item";
 
 describe('sandbox-refs', () => {
