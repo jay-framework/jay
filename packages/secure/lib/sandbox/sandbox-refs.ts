@@ -66,7 +66,7 @@ const proxyHandler = {
     }
 }
 
-export function proxyRef<ViewState>(refDef: StaticRefImplementation<ViewState> | DynamicRefImplementation<ViewState>): HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> {
+export function proxyRef<ViewState>(refDef: StaticRefImplementation<ViewState> | DynamicRefImplementation<ViewState, any>): HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> {
     return new Proxy(refDef, proxyHandler) as any as HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any>;
 }
 
@@ -112,7 +112,7 @@ export class StaticRefImplementation<ViewState> implements HTMLElementProxyTarge
     }
 }
 
-class DynamicNativeExec<ViewState> implements HTMLNativeExec<ViewState, any>{
+export class DynamicNativeExec<ViewState> implements HTMLNativeExec<ViewState, any>{
     constructor(private ref: string, private coordinate: Coordinate, private ep: JayEndpoint) {
     }
 
@@ -123,9 +123,9 @@ class DynamicNativeExec<ViewState> implements HTMLNativeExec<ViewState, any>{
     }
 }
 
-export class DynamicRefImplementation<ViewState> implements HTMLElementCollectionProxyTarget<ViewState, any>, RefImplementation<ViewState> {
+export class DynamicRefImplementation<ViewState, RefItem> implements RefImplementation<ViewState> {
     listeners = new Map<string, JayEventHandler<any, any, any>>()
-    items = new Map<string, [string[], ViewState]>();
+    items = new Map<string, [string[], ViewState, RefItem]>();
 
     constructor(
         private ref: string, private ep: JayEndpoint) {
@@ -151,19 +151,18 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
             })
         }
     }
-    find(predicate: (t: ViewState) => boolean): HTMLNativeExec<ViewState, any> | undefined {
-        for (const [id, item] of this.items)
-            if (predicate(item[1])) {
-                const coordinate = [...item[0], this.ref];
-                return new DynamicNativeExec(this.ref, coordinate, this.ep);
+    find(predicate: (t: ViewState) => boolean): RefItem | undefined {
+        for (const [id, [dataIds, vs, refItem]] of this.items)
+            if (predicate(vs)) {
+                const coordinate = [...dataIds, this.ref];
+                return refItem;
             }
     }
-    map<ResultType>(handler: (element: HTMLNativeExec<ViewState, any>, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType> {
+    map<ResultType>(handler: (element: RefItem, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType> {
         let promises: Array<ResultType> = [];
-        for (const [id, item] of this.items) {
-            const coordinate = [...item[0], this.ref];
-            const nativeExec = new DynamicNativeExec<ViewState>(this.ref, coordinate, this.ep);
-            const handlerResponse = handler(nativeExec, item[1], coordinate)
+        for (const [id, [dataIds, vs, refItem]] of this.items) {
+            const coordinate = [...dataIds, this.ref];
+            const handlerResponse = handler(refItem, vs, coordinate)
             if (handlerResponse)
                 promises.push(handlerResponse)
         }
@@ -173,8 +172,8 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
         console.log(newViewState);
     }
 
-    setItem(dataIds: string[], viewState: ViewState) {
-        this.items.set(dataIds.toString(), [dataIds, viewState])
+    setItem(dataIds: string[], viewState: ViewState, refItem: RefItem) {
+        this.items.set(dataIds.toString(), [dataIds, viewState, refItem])
     }
 
     removeItem(dataIds: string[]) {

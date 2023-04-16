@@ -232,7 +232,7 @@ export interface ComponentCollectionProxyOperations<ViewState, ComponentType ext
   removeEventListener(type: string, handler: JayEventHandler<any, ViewState, void>, options?: EventListenerOptions | boolean): void
 
   map<ResultType>(handler: (comp: ComponentType, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType>
-  find(predicate: (t: ViewState) => boolean): ComponentType
+  find(predicate: (t: ViewState) => boolean): ComponentType | undefined
 }
 
 export type ComponentCollectionProxy<ViewState, ComponentType extends JayComponent<any, any, any>> =

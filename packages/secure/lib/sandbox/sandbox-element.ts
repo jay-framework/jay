@@ -10,7 +10,7 @@ import {
     useContext
 } from "jay-runtime";
 import {SANDBOX_CREATION_CONTEXT} from "./sandbox-context";
-import {DynamicRefImplementation, proxyRef, StaticRefImplementation} from "./sandbox-refs";
+import {DynamicNativeExec, DynamicRefImplementation, proxyRef, StaticRefImplementation} from "./sandbox-refs";
 
 export interface SandboxElement<ViewState> {
     update: updateFunc<ViewState>
@@ -24,18 +24,19 @@ export function sandboxElement<ViewState>(refName: string): SandboxElement<ViewS
         if (!refs[refName]) {
             refs[refName] = proxyRef(new DynamicRefImplementation(refName, endpoint))
         }
-        let ref = (refs[refName] as any as DynamicRefImplementation<ViewState>);
-        ref.setItem(dataIds, viewState)
+        let ref = (refs[refName] as any as DynamicRefImplementation<ViewState, DynamicNativeExec<ViewState>>);
+        let refItem = new DynamicNativeExec<ViewState>(refName, [...dataIds, refName], endpoint);
+        ref.setItem(dataIds, viewState, refItem)
         let mounted = true;
         return {
             update: (newViewState) => {
                 viewState = newViewState;
                 if (mounted)
-                    ref.setItem(dataIds, newViewState)
+                    ref.setItem(dataIds, newViewState, refItem)
             },
             mount: () => {
                 mounted = true;
-                ref.setItem(dataIds, viewState)
+                ref.setItem(dataIds, viewState, refItem)
             },
             unmount: () => {
                 mounted = false;

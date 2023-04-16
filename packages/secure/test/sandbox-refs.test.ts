@@ -790,11 +790,11 @@ describe('sandbox-refs', () => {
 
         it.skip('should support component APIs', () => {
             setup();
-            let instance = componentInstance(vs.dataId);
+            // let instance = componentInstance(vs.dataId);
 
-            instance._doneClick();
+            // instance._doneClick();
 
-            expect(instance.getItemSummary()).toBe('item some data - Done: true - mounted: true')
+            // expect(instance.getItemSummary()).toBe('item some data - Done: true - mounted: true')
         })
     })
 })
