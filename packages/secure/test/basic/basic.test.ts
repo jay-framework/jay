@@ -1,5 +1,5 @@
 import {describe, expect, it} from '@jest/globals'
-import {useMockCommunicationChannel} from "../comm-channel/mock-channel";
+import {useMockCommunicationChannel} from "../util/mock-channel";
 import {initializeWorker} from "./secure/worker/worker-root";
 import {BasicProps} from "./secure/main/basic";
 import {BasicViewState} from "./secure/main/basic.jay.html";
