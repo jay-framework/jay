@@ -11,7 +11,7 @@ import {
 } from "../lib/comm-channel";
 import {Reactive} from "jay-reactive";
 import {$func, $handler} from "../lib/$func";
-import {HTMLElementCollectionProxy, HTMLElementProxy, HTMLElementProxyTarget} from "jay-runtime";
+import {HTMLElementCollectionProxy, HTMLElementProxy} from "jay-runtime";
 import {
     SandboxCondition as c,
     sandboxDynamicElement as de,
@@ -299,7 +299,7 @@ describe('sandbox-refs', () => {
             })
 
             it('should run find --> undefined for non existing view state', () => {
-                let {endpoint, bridgeElement} = setup();
+                let {bridgeElement} = setup();
 
                 let findResult = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
                     .find(item => item.title === 'non existing item');
@@ -310,7 +310,7 @@ describe('sandbox-refs', () => {
 
         describe('map', () => {
             it('should run map handler on all items - passing view state and coordinate', () => {
-                let {endpoint, bridgeElement} = setup();
+                let {bridgeElement} = setup();
 
                 let viewStateSet = new Set();
                 let coordinateSet = new Set();
@@ -329,7 +329,7 @@ describe('sandbox-refs', () => {
             })
 
             it('should map items to some result', () => {
-                let {endpoint, bridgeElement} = setup();
+                let {bridgeElement} = setup();
 
                 let mapResult = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
                     .map((element, viewState, coordinate) => {
@@ -344,8 +344,8 @@ describe('sandbox-refs', () => {
             it('should support $exec on the element --> $exec --> JPMNativeExec', () => {
                 let {endpoint, bridgeElement} = setup();
 
-                let mapResult = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
-                    .map((element, viewState, coordinate) => {
+                (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
+                    .map((element) => {
                         element.$exec($func("4"))
                     })
                 expect(endpoint.outMessages.length).toBe(3)
@@ -376,7 +376,7 @@ describe('sandbox-refs', () => {
                 let {endpoint, bridgeElement} = setup();
 
                 let $mapResult = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
-                    .map((element, viewState, coordinate) => {
+                    .map((element) => {
                         return element.$exec($func("4"))
                     })
                 expect(endpoint.outMessages.length).toBe(3)
