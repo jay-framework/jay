@@ -660,7 +660,7 @@ describe('sandbox-refs', () => {
             expect(instance.getItemSummary()).toBe('item some new data - Done: false - mounted: true')
         })
 
-        it('should register events on the component', () => {
+        it('should register and invoke events on the component', () => {
             let {bridgeElement} = setup();
             let instance = componentInstance(vs.dataId);
             let callback = jest.fn();
@@ -670,6 +670,63 @@ describe('sandbox-refs', () => {
 
             expect(callback.mock.calls.length).toBe(1)
             expect(callback.mock.calls[0][0]).toEqual({event: 'item some data - false is removed'})
+        })
+
+        it('should support component APIs', () => {
+            setup();
+            let instance = componentInstance(vs.dataId);
+
+            instance._doneClick();
+
+            expect(instance.getItemSummary()).toBe('item some data - Done: true - mounted: true')
+        })
+    })
+
+    describe('dynamic conditional component', () => {
+
+        const vs = {text: 'some data', shown: true}
+        const vs2 = {text: 'some data', shown: false}
+        const vs3 = {text: 'some new data', shown: true}
+
+        beforeEach(() => {
+            clearInstances();
+        })
+
+        function setup() {
+            let endpoint = mkEndpoint();
+            let reactive = new Reactive();
+            let bridgeElement = mkBridgeElement(vs, endpoint, reactive, () => [
+                c(vs => vs.shown, [
+                    childComp(Item, vs => ({text: vs.text, dataId: 'a'}), 'comp1')
+                ])
+            ])
+            return {endpoint, bridgeElement}
+        }
+
+        it('should create the component as mounted', () => {
+            setup();
+            let instance = componentInstance('a');
+
+            expect(instance.getItemSummary()).toBe('item some data - Done: false - mounted: true')
+        })
+
+        it('should unmount the component if under false condition', () => {
+            let {bridgeElement} = setup();
+            let instance = componentInstance('a');
+
+            bridgeElement.update(vs2)
+
+            expect(instance.getItemSummary()).toBe('item some data - Done: false - mounted: false')
+        })
+
+        it('should re-mount the component if under true condition', () => {
+            let {bridgeElement} = setup();
+            let instance = componentInstance('a');
+
+            bridgeElement.update(vs2)
+            bridgeElement.update(vs3)
+
+            expect(instance.getItemSummary()).toBe('item some new data - Done: false - mounted: true')
         })
     })
 })
