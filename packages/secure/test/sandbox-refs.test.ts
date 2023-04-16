@@ -11,7 +11,7 @@ import {
 } from "../lib/comm-channel";
 import {Reactive} from "jay-reactive";
 import {$func, $handler} from "../lib/$func";
-import {ComponentCollectionProxy, HTMLElementCollectionProxy, HTMLElementProxy, JayComponent} from "jay-runtime";
+import {ComponentCollectionProxy, HTMLElementCollectionProxy, HTMLElementProxy} from "jay-runtime";
 import {
     SandboxCondition as c,
     sandboxElement as e,
@@ -86,8 +86,8 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.refs.one.addEventListener('click', callback);
-            bridgeElement.refs.one.removeEventListener('click', callback);
+            (bridgeElement.refs.one as HTMLElementProxy<any, any>).addEventListener('click', callback);
+            (bridgeElement.refs.one as HTMLElementProxy<any, any>).removeEventListener('click', callback);
 
             expect(endpoint.outMessages).toHaveLength(2)
             let message = endpoint.outMessages[0] as JPMAddEventListener
@@ -104,8 +104,8 @@ describe('sandbox-refs', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.refs.one.addEventListener('click', callback);
-            bridgeElement.refs.one.removeEventListener('click', callback);
+            (bridgeElement.refs.one as HTMLElementProxy<any, any>).addEventListener('click', callback);
+            (bridgeElement.refs.one as HTMLElementProxy<any, any>).removeEventListener('click', callback);
             endpoint.invoke(domEventMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(0)
@@ -677,7 +677,7 @@ describe('sandbox-refs', () => {
             let instance = componentInstance(vs.dataId);
             let callback = jest.fn();
 
-            bridgeElement.refs.comp1.addEventListener('remove', callback)
+            (bridgeElement.refs.comp1 as ReturnType<typeof Item>).addEventListener('remove', callback)
             instance._removeClick();
 
             expect(callback.mock.calls.length).toBe(1)
@@ -793,7 +793,7 @@ describe('sandbox-refs', () => {
             let {bridgeElement} = setup();
             let callback = jest.fn();
 
-            bridgeElement.refs.comp1.addEventListener('remove', callback)
+            (bridgeElement.refs.comp1 as ComponentCollectionProxy<ItemType, ReturnType<typeof Item>>).addEventListener('remove', callback)
             componentInstance(B.dataId)._removeClick();
             componentInstance(C.dataId)._removeClick();
 
@@ -806,7 +806,7 @@ describe('sandbox-refs', () => {
             let {bridgeElement} = setup(empty);
             let callback = jest.fn();
 
-            bridgeElement.refs.comp1.addEventListener('remove', callback)
+            (bridgeElement.refs.comp1 as ComponentCollectionProxy<ItemType, ReturnType<typeof Item>>).addEventListener('remove', callback)
             bridgeElement.update(vs)
             componentInstance(A.dataId)._removeClick();
             componentInstance(C.dataId)._removeClick();
