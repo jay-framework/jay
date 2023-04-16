@@ -1,7 +1,5 @@
 import {checkModified, getRevision} from "jay-reactive";
 import {
-    BaseJayElement,
-    JayComponent,
     JayComponentConstructor,
     MountFunc,
     noopMount,
@@ -10,7 +8,13 @@ import {
     useContext
 } from "jay-runtime";
 import {SANDBOX_CREATION_CONTEXT} from "./sandbox-context";
-import {DynamicNativeExec, DynamicRefImplementation, proxyRef, StaticRefImplementation} from "./sandbox-refs";
+import {
+    DynamicCompRefImplementation,
+    DynamicNativeExec,
+    DynamicRefImplementation,
+    proxyRef,
+    StaticRefImplementation
+} from "./sandbox-refs";
 
 export interface SandboxElement<ViewState> {
     update: updateFunc<ViewState>
@@ -24,23 +28,24 @@ export function sandboxElement<ViewState>(refName: string): SandboxElement<ViewS
         if (!refs[refName]) {
             refs[refName] = proxyRef(new DynamicRefImplementation(refName, endpoint))
         }
-        let ref = (refs[refName] as any as DynamicRefImplementation<ViewState, DynamicNativeExec<ViewState>>);
-        let refItem = new DynamicNativeExec<ViewState>(refName, [...dataIds, refName], endpoint);
-        ref.setItem(dataIds, viewState, refItem)
+        let ref = (refs[refName] as any as DynamicRefImplementation<ViewState>);
+        let coordinate = [...dataIds, refName];
+        let refItem = new DynamicNativeExec<ViewState>(refName, coordinate, endpoint);
+        ref.setItem(coordinate, viewState, refItem)
         let mounted = true;
         return {
             update: (newViewState) => {
                 viewState = newViewState;
                 if (mounted)
-                    ref.setItem(dataIds, newViewState, refItem)
+                    ref.setItem(coordinate, newViewState, refItem)
             },
             mount: () => {
                 mounted = true;
-                ref.setItem(dataIds, viewState, refItem)
+                ref.setItem(coordinate, viewState, refItem)
             },
             unmount: () => {
                 mounted = false;
-                ref.removeItem(dataIds)
+                ref.removeItem(coordinate)
             }
         }
     }
@@ -59,22 +64,44 @@ export function sandboxChildComp<ParentVS, Props>(
     compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentVS) => Props,
     refName: string): SandboxElement<ParentVS> {
-    const {viewState, endpoint, refs, dataIds, isDynamic} = useContext(SANDBOX_CREATION_CONTEXT)
+    let {viewState, refs, dataIds, isDynamic} = useContext(SANDBOX_CREATION_CONTEXT)
     let childComp = compCreator(getProps(viewState))
     if (isDynamic) {
-        // if (!refs[refName]) {
-        //     refs[refName] = proxyRef(new DynamicRefImplementation(refName, endpoint))
-        // }
-        // let ref = (refs[refName] as any as DynamicRefImplementation<ViewState>);
+        if (!refs[refName]) {
+            refs[refName] = proxyRef(new DynamicCompRefImplementation())
+        }
+        let ref = (refs[refName] as any as DynamicCompRefImplementation<ParentVS, ReturnType<typeof compCreator>>);
+        let coordinate = [...dataIds, refName];
+        ref.setItem(coordinate, viewState, childComp);
+        let mounted = true;
+        return {
+            update: (newViewState) => {
+                viewState = newViewState;
+                if (mounted) {
+                    ref.setItem(coordinate, newViewState, childComp)
+                    childComp.update(getProps(newViewState))
+                }
+            },
+            mount: () => {
+                mounted = true;
+                ref.setItem(coordinate, viewState, childComp)
+                childComp.mount();
+            },
+            unmount: () => {
+                mounted = false;
+                ref.removeItem(coordinate)
+                childComp.unmount();
+            }
+        }
     }
     else {
         refs[refName] = childComp;
-    }
-    let update = (t: ParentVS) => childComp.update(getProps(t));
-    let mount = childComp.mount
-    let unmount = childComp.unmount
-    return {
-        update, mount, unmount
+        let update = (t: ParentVS) => childComp.update(getProps(t));
+        let mount = childComp.mount
+        let unmount = childComp.unmount
+        return {
+            update, mount, unmount
+        }
     }
 }
 

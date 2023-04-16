@@ -1,10 +1,11 @@
 import {
+    ComponentCollectionProxyOperations,
     Coordinate,
     HTMLElementCollectionProxy,
     HTMLElementCollectionProxyTarget,
     HTMLElementProxy,
     HTMLElementProxyTarget,
-    HTMLNativeExec,
+    HTMLNativeExec, JayComponent,
     JayEventHandler,
     JayNativeFunction,
     MountFunc,
@@ -66,7 +67,7 @@ const proxyHandler = {
     }
 }
 
-export function proxyRef<ViewState>(refDef: StaticRefImplementation<ViewState> | DynamicRefImplementation<ViewState, any>): HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> {
+export function proxyRef<ViewState>(refDef: StaticRefImplementation<ViewState> | DynamicRefImplementation<ViewState> | DynamicCompRefImplementation<ViewState, any>): HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> {
     return new Proxy(refDef, proxyHandler) as any as HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any>;
 }
 
@@ -123,9 +124,9 @@ export class DynamicNativeExec<ViewState> implements HTMLNativeExec<ViewState, a
     }
 }
 
-export class DynamicRefImplementation<ViewState, RefItem> implements RefImplementation<ViewState> {
+export class DynamicRefImplementation<ViewState> implements HTMLElementCollectionProxyTarget<ViewState, any>, RefImplementation<ViewState> {
     listeners = new Map<string, JayEventHandler<any, any, any>>()
-    items = new Map<string, [string[], ViewState, RefItem]>();
+    items = new Map<string, [string[], ViewState, DynamicNativeExec<ViewState>]>();
 
     constructor(
         private ref: string, private ep: JayEndpoint) {
@@ -143,7 +144,7 @@ export class DynamicRefImplementation<ViewState, RefItem> implements RefImplemen
     invoke = (type: string, coordinate: Coordinate, eventData?: any) => {
         let listener = this.listeners.get(type)
         if (listener) {
-            let coordinateAndItem = this.items.get(coordinate.slice(0, -1).toString())
+            let coordinateAndItem = this.items.get(coordinate.toString())
             listener({
                 event: eventData,
                 viewState: coordinateAndItem?coordinateAndItem[1]:undefined,
@@ -151,17 +152,15 @@ export class DynamicRefImplementation<ViewState, RefItem> implements RefImplemen
             })
         }
     }
-    find(predicate: (t: ViewState) => boolean): RefItem | undefined {
-        for (const [id, [dataIds, vs, refItem]] of this.items)
+    find(predicate: (t: ViewState) => boolean): DynamicNativeExec<ViewState> | undefined {
+        for (const [id, [coordinate, vs, refItem]] of this.items)
             if (predicate(vs)) {
-                const coordinate = [...dataIds, this.ref];
                 return refItem;
             }
     }
-    map<ResultType>(handler: (element: RefItem, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType> {
+    map<ResultType>(handler: (element: DynamicNativeExec<ViewState>, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType> {
         let promises: Array<ResultType> = [];
-        for (const [id, [dataIds, vs, refItem]] of this.items) {
-            const coordinate = [...dataIds, this.ref];
+        for (const [id, [coordinate, vs, refItem]] of this.items) {
             const handlerResponse = handler(refItem, vs, coordinate)
             if (handlerResponse)
                 promises.push(handlerResponse)
@@ -172,8 +171,56 @@ export class DynamicRefImplementation<ViewState, RefItem> implements RefImplemen
         console.log(newViewState);
     }
 
-    setItem(dataIds: string[], viewState: ViewState, refItem: RefItem) {
-        this.items.set(dataIds.toString(), [dataIds, viewState, refItem])
+    setItem(coordinate: string[], viewState: ViewState, refItem: DynamicNativeExec<ViewState>) {
+        this.items.set(coordinate.toString(), [coordinate, viewState, refItem])
+    }
+
+    removeItem(dataIds: string[]) {
+        this.items.delete(dataIds.toString())
+    }
+}
+
+export class DynamicCompRefImplementation<ViewState, CompType extends JayComponent<any, any, any>>
+    implements ComponentCollectionProxyOperations<ViewState, CompType>, RefImplementation<ViewState> {
+    listeners = new Map<string, JayEventHandler<any, any, any>>()
+    items = new Map<string, [string[], ViewState, CompType]>();
+
+    constructor() {}
+
+    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: boolean | AddEventListenerOptions, nativeId?: string): void {
+        this.listeners.set(type, listener)
+        for (const [id, [coordinate, vs, comp]] of this.items)
+            comp.addEventListener(type, listener)
+    }
+    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: EventListenerOptions | boolean): void {
+        this.listeners.delete(type)
+        for (const [id, [coordinate, vs, comp]] of this.items)
+            comp.removeEventListener(type, listener)
+    }
+
+    invoke = (type: string, coordinate: Coordinate, eventData?: any) => {}
+
+    find = (predicate: (t: ViewState) => boolean): CompType | undefined => {
+        for (const [id, [coordinate, vs, comp]] of this.items)
+            if (predicate(vs)) {
+                return comp;
+            }
+    }
+    map = <ResultType>(handler: (element: CompType, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType> => {
+        let promises: Array<ResultType> = [];
+        for (const [id, [coordinate, vs, comp]] of this.items) {
+            const handlerResponse = handler(comp, vs, coordinate)
+            if (handlerResponse)
+                promises.push(handlerResponse)
+        }
+        return promises
+    }
+    update(newViewState: ViewState) {
+        console.log(newViewState);
+    }
+
+    setItem(coordinate: string[], viewState: ViewState, refItem: CompType) {
+        this.items.set(coordinate.toString(), [coordinate, viewState, refItem])
     }
 
     removeItem(dataIds: string[]) {

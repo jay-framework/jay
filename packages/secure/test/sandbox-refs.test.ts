@@ -11,7 +11,7 @@ import {
 } from "../lib/comm-channel";
 import {Reactive} from "jay-reactive";
 import {$func, $handler} from "../lib/$func";
-import {HTMLElementCollectionProxy, HTMLElementProxy} from "jay-runtime";
+import {ComponentCollectionProxy, HTMLElementCollectionProxy, HTMLElementProxy, JayComponent} from "jay-runtime";
 import {
     SandboxCondition as c,
     sandboxElement as e,
@@ -788,13 +788,26 @@ describe('sandbox-refs', () => {
             expect(callback.mock.calls[1][0]).toEqual({event: 'item C data - false is removed'})
         })
 
-        it.skip('should support component APIs', () => {
+        it('should support component APIs', () => {
             setup();
-            // let instance = componentInstance(vs.dataId);
+            let Binstance = componentInstance(B.dataId);
 
-            // instance._doneClick();
+            Binstance._doneClick();
 
-            // expect(instance.getItemSummary()).toBe('item some data - Done: true - mounted: true')
+            expect(Binstance.getItemSummary()).toBe('item B data - Done: true - mounted: true')
+        })
+
+        it('should support find component', () => {
+            let {bridgeElement} = setup();
+            let callback = jest.fn(item => item === B);
+
+            let foundComp = (bridgeElement.refs.comp1 as ComponentCollectionProxy<ItemType, ReturnType<typeof Item>>).find(callback)
+
+            expect(foundComp.getItemSummary()).toBe("item B data - Done: false - mounted: true")
+        })
+
+        it('should support map components', () => {
+
         })
     })
 })

@@ -1,4 +1,11 @@
-import {Coordinate, createJayContext, HTMLElementCollectionProxy, HTMLElementProxy, JayComponent} from "jay-runtime";
+import {
+    ComponentCollectionProxy,
+    Coordinate,
+    createJayContext,
+    HTMLElementCollectionProxy,
+    HTMLElementProxy,
+    JayComponent
+} from "jay-runtime";
 import {JayEndpoint, JayPort} from "../comm-channel";
 
 
@@ -9,7 +16,8 @@ export interface SandboxContext {
     coordinate: Coordinate
 }
 export const SANDBOX_MARKER = createJayContext<SandboxContext>()
-export type Refs = Record<string, HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> | JayComponent<any, any, any>>
+export type Refs = Record<string, HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> |
+    JayComponent<any, any, any> | ComponentCollectionProxy<any, JayComponent<any, any, any>>>
 
 interface SandboxCreationContext<ViewState> {
     viewState: ViewState,
