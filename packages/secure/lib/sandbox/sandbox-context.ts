@@ -15,7 +15,8 @@ interface SandboxCreationContext<ViewState> {
     viewState: ViewState,
     endpoint: JayEndpoint,
     refs: Refs,
-    dataIds: string[]
+    dataIds: string[],
+    isDynamic: boolean
 }
 
 export const SANDBOX_CREATION_CONTEXT = createJayContext<SandboxCreationContext<any>>()

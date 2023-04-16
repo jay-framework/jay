@@ -14,7 +14,6 @@ import {$func, $handler} from "../lib/$func";
 import {HTMLElementCollectionProxy, HTMLElementProxy} from "jay-runtime";
 import {
     SandboxCondition as c,
-    sandboxDynamicElement as de,
     sandboxElement as e,
     sandboxForEach as forEach,
     sandboxChildComp as childComp
@@ -180,8 +179,8 @@ describe('sandbox-refs', () => {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
             let bridgeElement = mkBridgeElement(baseViewState, endpoint, reactive,() => [
-                forEach(vs => vs.items, 'name', () => [de('one')])
-            ], ['one'])
+                forEach(vs => vs.items, 'name', () => [e('one')])
+            ])
             return {endpoint, bridgeElement}
         }
 
@@ -420,12 +419,12 @@ describe('sandbox-refs', () => {
             let reactive = new Reactive();
             let bridgeElement = mkBridgeElement(vs, endpoint, reactive,() => [
                 forEach<VS, VSItem>(vs => vs.items, 'name', () => [
-                    de('one'),
+                    e('one'),
                     forEach<VSItem, VSSubItem>(vs => vs.subItems, 'id', () => [
-                        de('two')
+                        e('two')
                     ])
                 ])
-            ], ['one', 'two'])
+            ])
             return {endpoint, bridgeElement}
         }
 
@@ -492,7 +491,7 @@ describe('sandbox-refs', () => {
                     e('one'),
                     c(vs => vs.condition2, [e('two')])
                 ])
-            ], [])
+            ])
             return {endpoint, bridgeElement}
         }
 
@@ -581,12 +580,12 @@ describe('sandbox-refs', () => {
             let reactive = new Reactive();
             let bridgeElement = mkBridgeElement(vs, endpoint, reactive, () => [
                 forEach<VS, VSItem>(vs => vs.items, 'name', () => [
-                    de('one'),
+                    e('one'),
                     c(vs => vs.test, [
-                        de('two')
+                        e('two')
                     ])
                 ])
-            ], ['one', 'two'])
+            ])
             return {endpoint, bridgeElement}
         }
 

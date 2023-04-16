@@ -19,34 +19,37 @@ export interface SandboxElement<ViewState> {
 }
 
 export function sandboxElement<ViewState>(refName: string): SandboxElement<ViewState> {
-    const {viewState, endpoint, refs} = useContext(SANDBOX_CREATION_CONTEXT)
-    let refImpl = new StaticRefImplementation(refName, endpoint, viewState);
-    refs[refName] = proxyRef(refImpl)
-    return {
-        update: refImpl.update,
-        mount: noopMount,
-        unmount: noopMount
+    let {viewState, endpoint, refs, isDynamic, dataIds} = useContext(SANDBOX_CREATION_CONTEXT)
+    if (isDynamic) {
+        if (!refs[refName]) {
+            refs[refName] = proxyRef(new DynamicRefImplementation(refName, endpoint))
+        }
+        let ref = (refs[refName] as any as DynamicRefImplementation<ViewState>);
+        ref.setItem(dataIds, viewState)
+        let mounted = true;
+        return {
+            update: (newViewState) => {
+                viewState = newViewState;
+                if (mounted)
+                    ref.setItem(dataIds, newViewState)
+            },
+            mount: () => {
+                mounted = true;
+                ref.setItem(dataIds, viewState)
+            },
+            unmount: () => {
+                mounted = false;
+                ref.removeItem(dataIds)
+            }
+        }
     }
-}
-
-export function sandboxDynamicElement<ViewState>(refName: string): SandboxElement<ViewState> {
-    let {viewState, refs, dataIds} = useContext(SANDBOX_CREATION_CONTEXT);
-    let ref = (refs[refName] as any as DynamicRefImplementation<ViewState>);
-    ref.setItem(dataIds, viewState)
-    let mounted = true;
-    return {
-        update: (newViewState) => {
-            viewState = newViewState;
-            if (mounted)
-                ref.setItem(dataIds, newViewState)
-        },
-        mount: () => {
-            mounted = true;
-            ref.setItem(dataIds, viewState)
-        },
-        unmount: () => {
-            mounted = false;
-            ref.removeItem(dataIds)
+    else {
+        let refImpl = new StaticRefImplementation(refName, endpoint, viewState);
+        refs[refName] = proxyRef(refImpl)
+        return {
+            update: refImpl.update,
+            mount: noopMount,
+            unmount: noopMount
         }
     }
 }
@@ -94,7 +97,7 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
             let {removedItems, addedItems, itemsToUpdate} = compareLists(lastItems.value, newItems, matchBy)
             addedItems.forEach(item => {
                 let childElements = provideContext(SANDBOX_CREATION_CONTEXT,
-                    {endpoint, viewState: item, refs, dataIds: [...dataIds, item[matchBy]]}, children)
+                    {endpoint, viewState: item, refs, dataIds: [...dataIds, item[matchBy]], isDynamic: true}, children)
                 childElementsMap.set(item[matchBy], childElements);
             })
             removedItems.forEach(item => {

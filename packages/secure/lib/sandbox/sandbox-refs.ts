@@ -185,13 +185,9 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
 export function mkBridgeElement<ViewState>(viewState: ViewState,
                                            endpoint: JayEndpoint,
                                            reactive: Reactive,
-                                           sandboxElements: () => SandboxElement<ViewState>[],
-                                           dynamicRefs: string[] = []): SandboxBridgeElement<ViewState> {
+                                           sandboxElements: () => SandboxElement<ViewState>[]): SandboxBridgeElement<ViewState> {
     let refs = {};
-    dynamicRefs.forEach(dynamicRef => {
-        refs[dynamicRef] = proxyRef(new DynamicRefImplementation(dynamicRef, endpoint));
-    })
-    return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState, refs, dataIds: []}, () => {
+    return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState, refs, dataIds: [], isDynamic: false}, () => {
         let elements = sandboxElements();
         let postUpdateMessage = (newViewState) => endpoint.post(renderMessage(newViewState))
         let update = normalizeUpdates([postUpdateMessage, ...elements.map(el => el.update)]);
