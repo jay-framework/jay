@@ -11,8 +11,8 @@
     "jay-events-synthetic": "node node_modules/jay-cli/dist/index.js runtime test/events-synthetic/regular",
     "d-tree": "node node_modules/jay-cli/dist/index.js definitions test/tree/regular",
     "jay-tree": "node node_modules/jay-cli/dist/index.js runtime test/tree/regular",
-    "d": "npm run d-basic & num run d-events-basic & npm run d-events-synthetic & npm run d-tree",
-    "jay": "npm run jay-basic & num run jay-events-basic & npm run jay-events-synthetic & npm run jay-tree",
+    "d": "npm run d-basic & npm run d-events-basic & npm run d-events-synthetic & npm run d-tree",
+    "jay": "npm run jay-basic & npm run jay-events-basic & npm run jay-events-synthetic & npm run jay-tree",
     "start": "tsc",
     "test": "jest",
     "build": "tsc"

@@ -1,9 +1,9 @@
-import {CompRefs, render as CompRender} from './comp.jay.html';
-import {makeJayComponent, Props, createMemo, createState, createMutableState} from 'jay-component';
+import {CompElementRefs, render as CompRender} from './comp.jay.html';
+import {makeJayComponent, Props, createState, createMutableState} from 'jay-component';
 
 export interface CompProps {
 }
-function CompConstructor({}: Props<CompProps>, refs: CompRefs) {
+function CompConstructor({}: Props<CompProps>, refs: CompElementRefs) {
 
     let [text, setText] = createState('default result')
     let items = createMutableState([

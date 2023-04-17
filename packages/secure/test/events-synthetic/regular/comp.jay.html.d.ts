@@ -10,13 +10,14 @@ export interface CompViewState {
   items: Array<Item>
 }
 
-export interface CompRefs {
+export interface CompElementRefs {
+  result: HTMLElementProxy<CompViewState, HTMLDivElement>,
   button: HTMLElementProxy<CompViewState, HTMLButtonElement>,
   input: HTMLElementProxy<CompViewState, HTMLInputElement>,
   itemButton: HTMLElementCollectionProxy<Item, HTMLButtonElement>,
   itemInput: HTMLElementCollectionProxy<Item, HTMLInputElement>
 }
 
-export type CompElement = JayElement<CompViewState, CompRefs>
+export type CompElement = JayElement<CompViewState, CompElementRefs>
 
 export declare function render(viewState: CompViewState, options?: RenderElementOptions): CompElement
