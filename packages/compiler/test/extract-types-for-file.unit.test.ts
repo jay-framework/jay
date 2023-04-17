@@ -29,7 +29,7 @@ describe('typescript-compiler', () => {
         expect(types).toEqual(
             expect.arrayContaining([
                 new JayElementType('render'),
-                new JayObjectType('AttributesRefs', {}),
+                new JayObjectType('AttributesElementRefs', {}),
                 new JayObjectType('AttributesViewState',
                     {
                         text: JayString,
@@ -47,7 +47,7 @@ describe('typescript-compiler', () => {
         expect(types).toEqual(
             expect.arrayContaining([
                 new JayElementType('render'),
-                new JayObjectType('AttributesRefs', {}),
+                new JayObjectType('AttributesElementRefs', {}),
                 new JayObjectType('AttributesViewState',
                     {
                         text: JayString,
@@ -65,7 +65,7 @@ describe('typescript-compiler', () => {
         expect(types).toEqual(
             expect.arrayContaining([
                 new JayElementType('render'),
-                new JayObjectType('DataTypesRefs', {}),
+                new JayObjectType('DataTypesElementRefs', {}),
                 O1,
                 A1,
                 new JayObjectType('DataTypesViewState',
@@ -86,7 +86,7 @@ describe('typescript-compiler', () => {
         expect(types).toEqual(
             expect.arrayContaining([
                 new JayElementType('render'),
-                new JayObjectType('DataTypesRefs', {}),
+                new JayObjectType('DataTypesElementRefs', {}),
                 O1,
                 A1,
                 new JayObjectType('DataTypesViewState',
