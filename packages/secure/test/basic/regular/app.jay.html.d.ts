@@ -5,8 +5,8 @@ export interface AppViewState {
 
 }
 
-export interface AppRefs {}
+export interface AppElementRefs {}
 
-export type AppElement = JayElement<AppViewState, AppRefs>
+export type AppElement = JayElement<AppViewState, AppElementRefs>
 
 export declare function render(viewState: AppViewState, options?: RenderElementOptions): AppElement

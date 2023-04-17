@@ -1,11 +1,11 @@
-import {BasicRefs, render as BasicRender} from './basic.jay.html';
+import {BasicElementRefs, render as BasicRender} from './basic.jay.html';
 import {makeJayComponent, Props, createMemo } from 'jay-component';
 
 export interface BasicProps {
     firstName: string,
     lastName: string
 }
-function BasicConstructor({firstName, lastName}: Props<BasicProps>, refs: BasicRefs) {
+function BasicConstructor({firstName, lastName}: Props<BasicProps>, refs: BasicElementRefs) {
     let text = createMemo(() => `hello ${firstName()} ${lastName()}`);
 
     return {

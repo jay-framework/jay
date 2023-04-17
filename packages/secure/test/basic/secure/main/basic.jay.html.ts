@@ -4,9 +4,9 @@ export interface BasicViewState {
   text: string
 }
 
-export interface BasicRefs {}
+export interface BasicElementRefs {}
 
-export type BasicElement = JayElement<BasicViewState, BasicRefs>
+export type BasicElement = JayElement<BasicViewState, BasicElementRefs>
 
 export function render(viewState: BasicViewState): BasicElement {
     return ConstructContext.withRootContext(viewState, () =>

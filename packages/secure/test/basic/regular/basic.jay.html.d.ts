@@ -4,8 +4,8 @@ export interface BasicViewState {
   text: string
 }
 
-export interface BasicRefs {}
+export interface BasicElementRefs {}
 
-export type BasicElement = JayElement<BasicViewState, BasicRefs>
+export type BasicElement = JayElement<BasicViewState, BasicElementRefs>
 
 export declare function render(viewState: BasicViewState, options?: RenderElementOptions): BasicElement

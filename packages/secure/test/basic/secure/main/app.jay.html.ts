@@ -7,9 +7,9 @@ export interface AppViewState {
     firstName: string, lastName: string
 }
 
-export interface AppRefs {}
+export interface AppElementRefs {}
 
-export type AppElement = JayElement<AppViewState, AppRefs>
+export type AppElement = JayElement<AppViewState, AppElementRefs>
 
 export function render(viewState: AppViewState, options?: RenderElementOptions): AppElement {
   return ConstructContext.withRootContext(viewState, () =>
