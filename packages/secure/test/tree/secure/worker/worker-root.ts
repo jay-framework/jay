@@ -1,6 +1,6 @@
 import {TreeNode, Node} from "./tree-node";
 import {getViewState} from "../../../lib/view-state-model";
-import {WorkerPort} from "../../../lib/comm-channel";
+import {WorkerPort} from "../../../../lib/comm-channel";
 
 class WorkerRoot<AppProps> {
     port: WorkerPort<AppProps>

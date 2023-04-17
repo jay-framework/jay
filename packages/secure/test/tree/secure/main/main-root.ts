@@ -1,4 +1,4 @@
-import {JayPort} from "../../../lib/comm-channel";
+import {JayPort} from "../../../../lib/comm-channel";
 import {render, TreeNodeViewState, TreeNodeElement} from "./tree-node.jay.html";
 
 export interface BasicProps {
