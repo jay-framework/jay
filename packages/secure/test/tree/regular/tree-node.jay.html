@@ -10,13 +10,13 @@ data:
 </head>
 <body>
 <div>
-    <div ref="head">
+    <div ref="head" data-ref="head={node.id}">
         <span class="tree-arrow">{headChar}</span>
         <span>{node.name}</span>
     </div>
-    <ul if="open">
+    <ul data-ref="list={node.id}" if="open">
         <li forEach="node.children" trackBy="id">
-            <TreeNode props="{.}"/>
+            <TreeNode props="{.}" ref="child"/>
         </li>
     </ul>
 </div>
