@@ -8,9 +8,9 @@ export interface AttributesViewState {
   color: string
 }
 
-export interface AttributesRefs {}
+export interface AttributesElementRefs {}
 
-export type AttributesElement = JayElement<AttributesViewState, AttributesRefs>
+export type AttributesElement = JayElement<AttributesViewState, AttributesElementRefs>
 
 export function render(viewState: AttributesViewState, options?: RenderElementOptions): AttributesElement {
   return ConstructContext.withRootContext(viewState, () =>

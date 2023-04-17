@@ -6,9 +6,9 @@ export interface ConditionsViewState {
   cond: boolean
 }
 
-export interface ConditionsRefs {}
+export interface ConditionsElementRefs {}
 
-export type ConditionsElement = JayElement<ConditionsViewState, ConditionsRefs>
+export type ConditionsElement = JayElement<ConditionsViewState, ConditionsElementRefs>
 
 export function render(viewState: ConditionsViewState, options?: RenderElementOptions): ConditionsElement {
   return ConstructContext.withRootContext(viewState, () =>

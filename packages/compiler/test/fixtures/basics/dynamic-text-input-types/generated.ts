@@ -5,9 +5,9 @@ export interface DynamicTextInputTypesViewState {
   n2: number
 }
 
-export interface DynamicTextInputTypesRefs {}
+export interface DynamicTextInputTypesElementRefs {}
 
-export type DynamicTextInputTypesElement = JayElement<DynamicTextInputTypesViewState, DynamicTextInputTypesRefs>
+export type DynamicTextInputTypesElement = JayElement<DynamicTextInputTypesViewState, DynamicTextInputTypesElementRefs>
 
 export function render(viewState: DynamicTextInputTypesViewState, options?: RenderElementOptions): DynamicTextInputTypesElement {
   return ConstructContext.withRootContext(viewState, () =>

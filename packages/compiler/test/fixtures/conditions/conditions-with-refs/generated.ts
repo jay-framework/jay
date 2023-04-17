@@ -6,12 +6,12 @@ export interface ConditionsWithRefsViewState {
   cond: boolean
 }
 
-export interface ConditionsWithRefsRefs {
+export interface ConditionsWithRefsElementRefs {
   text1: HTMLElementProxy<ConditionsWithRefsViewState, HTMLDivElement>,
   text2: HTMLElementProxy<ConditionsWithRefsViewState, HTMLSpanElement>
 }
 
-export type ConditionsWithRefsElement = JayElement<ConditionsWithRefsViewState, ConditionsWithRefsRefs>
+export type ConditionsWithRefsElement = JayElement<ConditionsWithRefsViewState, ConditionsWithRefsElementRefs>
 
 export function render(viewState: ConditionsWithRefsViewState, options?: RenderElementOptions): ConditionsWithRefsElement {
   return ConstructContext.withRootContext(viewState, () =>

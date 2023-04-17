@@ -6,9 +6,9 @@ export interface WhitespaceAndTextViewState {
   text3: string
 }
 
-export interface WhitespaceAndTextRefs {}
+export interface WhitespaceAndTextElementRefs {}
 
-export type WhitespaceAndTextElement = JayElement<WhitespaceAndTextViewState, WhitespaceAndTextRefs>
+export type WhitespaceAndTextElement = JayElement<WhitespaceAndTextViewState, WhitespaceAndTextElementRefs>
 
 export function render(viewState: WhitespaceAndTextViewState, options?: RenderElementOptions): WhitespaceAndTextElement {
   return ConstructContext.withRootContext(viewState, () =>

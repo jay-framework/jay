@@ -4,9 +4,9 @@ export interface SimpleDynamicTextViewState {
   s1: string
 }
 
-export interface SimpleDynamicTextRefs {}
+export interface SimpleDynamicTextElementRefs {}
 
-export type SimpleDynamicTextElement = JayElement<SimpleDynamicTextViewState, SimpleDynamicTextRefs>
+export type SimpleDynamicTextElement = JayElement<SimpleDynamicTextViewState, SimpleDynamicTextElementRefs>
 
 export function render(viewState: SimpleDynamicTextViewState, options?: RenderElementOptions): SimpleDynamicTextElement {
   return ConstructContext.withRootContext(viewState, () =>

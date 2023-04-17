@@ -18,9 +18,9 @@ export interface DataTypesViewState {
   a1: Array<A1>
 }
 
-export interface DataTypesRefs {}
+export interface DataTypesElementRefs {}
 
-export type DataTypesElement = JayElement<DataTypesViewState, DataTypesRefs>
+export type DataTypesElement = JayElement<DataTypesViewState, DataTypesElementRefs>
 
 export function render(viewState: DataTypesViewState, options?: RenderElementOptions): DataTypesElement {
   return ConstructContext.withRootContext(viewState, () =>

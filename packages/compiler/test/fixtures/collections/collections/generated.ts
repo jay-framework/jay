@@ -12,9 +12,9 @@ export interface CollectionsViewState {
   things: Array<Thing>
 }
 
-export interface CollectionsRefs {}
+export interface CollectionsElementRefs {}
 
-export type CollectionsElement = JayElement<CollectionsViewState, CollectionsRefs>
+export type CollectionsElement = JayElement<CollectionsViewState, CollectionsElementRefs>
 
 export function render(viewState: CollectionsViewState, options?: RenderElementOptions): CollectionsElement {
   return ConstructContext.withRootContext(viewState, () =>

@@ -373,7 +373,7 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
     let importedSymbols = new Set(importStatements.flatMap(_ => _.names.map(sym => sym.as? sym.as : sym.name)));
     let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), importedSymbols, new Indent('    '), false);
     let elementType = baseElementName + 'Element';
-    let refsType = baseElementName + 'Refs';
+    let refsType = baseElementName + 'ElementRefs';
     let imports = renderedRoot.imports.plus(Import.ConstructContext);
     let renderedRefs;
     let dynamicRefs = [];

@@ -10,11 +10,11 @@ export interface ComponentInComponentViewState {
   count4: CounterData
 }
 
-export interface ComponentInComponentRefs {
+export interface ComponentInComponentElementRefs {
   counter1: CounterRef<ComponentInComponentViewState>,
   counterTwo: CounterRef<ComponentInComponentViewState>
 }
 
-export type ComponentInComponentElement = JayElement<ComponentInComponentViewState, ComponentInComponentRefs>
+export type ComponentInComponentElement = JayElement<ComponentInComponentViewState, ComponentInComponentElementRefs>
 
 export declare function render(viewState: ComponentInComponentViewState, options?: RenderElementOptions): ComponentInComponentElement

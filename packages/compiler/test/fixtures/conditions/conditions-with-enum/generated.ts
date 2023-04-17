@@ -13,9 +13,9 @@ export interface ConditionsWithEnumViewState {
   cond: Cond
 }
 
-export interface ConditionsWithEnumRefs {}
+export interface ConditionsWithEnumElementRefs {}
 
-export type ConditionsWithEnumElement = JayElement<ConditionsWithEnumViewState, ConditionsWithEnumRefs>
+export type ConditionsWithEnumElement = JayElement<ConditionsWithEnumViewState, ConditionsWithEnumElementRefs>
 
 export function render(viewState: ConditionsWithEnumViewState, options?: RenderElementOptions): ConditionsWithEnumElement {
   return ConstructContext.withRootContext(viewState, () =>

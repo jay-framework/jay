@@ -4,9 +4,9 @@ export interface EmptyElementViewState {
 
 }
 
-export interface EmptyElementRefs {}
+export interface EmptyElementElementRefs {}
 
-export type EmptyElementElement = JayElement<EmptyElementViewState, EmptyElementRefs>
+export type EmptyElementElement = JayElement<EmptyElementViewState, EmptyElementElementRefs>
 
 export function render(viewState: EmptyElementViewState, options?: RenderElementOptions): EmptyElementElement {
   return ConstructContext.withRootContext(viewState, () =>

@@ -7,11 +7,11 @@ export interface TreeNodeViewState {
   open: boolean
 }
 
-export interface TreeNodeRefs {
+export interface TreeNodeElementRefs {
   head: HTMLElementProxy<TreeNodeViewState, HTMLDivElement>
 }
 
-export type TreeNodeElement = JayElement<TreeNodeViewState, TreeNodeRefs>
+export type TreeNodeElement = JayElement<TreeNodeViewState, TreeNodeElementRefs>
 
 export function render(viewState: TreeNodeViewState, options?: RenderElementOptions): TreeNodeElement {
   return ConstructContext.withRootContext(viewState, () =>

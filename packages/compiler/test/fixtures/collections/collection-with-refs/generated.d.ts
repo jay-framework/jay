@@ -12,14 +12,14 @@ export interface CollectionWithRefsViewState {
   items: Array<Item>
 }
 
-export interface CollectionWithRefsRefs {
+export interface CollectionWithRefsElementRefs {
   name: HTMLElementCollectionProxy<Item, HTMLSpanElement>,
   completed: HTMLElementCollectionProxy<Item, HTMLSpanElement>,
   cost: HTMLElementCollectionProxy<Item, HTMLSpanElement>,
   done: HTMLElementCollectionProxy<Item, HTMLButtonElement>
 }
 
-export type CollectionWithRefsElement = JayElement<CollectionWithRefsViewState, CollectionWithRefsRefs>
+export type CollectionWithRefsElement = JayElement<CollectionWithRefsViewState, CollectionWithRefsElementRefs>
 
 export declare function render(viewState: CollectionWithRefsViewState, options?: RenderElementOptions): CollectionWithRefsElement
 

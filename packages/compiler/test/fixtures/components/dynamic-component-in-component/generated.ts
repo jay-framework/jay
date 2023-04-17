@@ -13,12 +13,12 @@ export interface DynamicComponentInComponentViewState {
   count1: number
 }
 
-export interface DynamicComponentInComponentRefs {
+export interface DynamicComponentInComponentElementRefs {
   counter1: CounterRefs<NestedCounter>,
   counter2: CounterRef<DynamicComponentInComponentViewState>
 }
 
-export type DynamicComponentInComponentElement = JayElement<DynamicComponentInComponentViewState, DynamicComponentInComponentRefs>
+export type DynamicComponentInComponentElement = JayElement<DynamicComponentInComponentViewState, DynamicComponentInComponentElementRefs>
 
 export function render(viewState: DynamicComponentInComponentViewState, options?: RenderElementOptions): DynamicComponentInComponentElement {
   return ConstructContext.withRootContext(viewState, () =>

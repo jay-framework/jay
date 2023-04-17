@@ -5,9 +5,9 @@ export interface CompositeViewState {
   text2: string
 }
 
-export interface CompositeRefs {}
+export interface CompositeElementRefs {}
 
-export type CompositeElement = JayElement<CompositeViewState, CompositeRefs>
+export type CompositeElement = JayElement<CompositeViewState, CompositeElementRefs>
 
 export function render(viewState: CompositeViewState, options?: RenderElementOptions): CompositeElement {
   return ConstructContext.withRootContext(viewState, () =>

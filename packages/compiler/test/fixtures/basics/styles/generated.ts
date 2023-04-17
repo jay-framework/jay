@@ -5,9 +5,9 @@ export interface StylesViewState {
   text2: string
 }
 
-export interface StylesRefs {}
+export interface StylesElementRefs {}
 
-export type StylesElement = JayElement<StylesViewState, StylesRefs>
+export type StylesElement = JayElement<StylesViewState, StylesElementRefs>
 
 export function render(viewState: StylesViewState, options?: RenderElementOptions): StylesElement {
   return ConstructContext.withRootContext(viewState, () =>

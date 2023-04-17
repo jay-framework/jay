@@ -2,12 +2,12 @@ import {JayElement, element as e, dynamicText as dt, dynamicElement as de, forEa
 import {TreeNodeRefs} from './tree-node-refs';
 import {TreeNode, Node} from './tree-node';
 
-export interface RecursiveComponentsRefs {
+export interface RecursiveComponentsElementRefs {
   counter1: TreeNodeRefs<Node>,
   counterTwo: TreeNodeRefs<Node>
 }
 
-export type RecursiveComponentsElement = JayElement<Node, RecursiveComponentsRefs>
+export type RecursiveComponentsElement = JayElement<Node, RecursiveComponentsElementRefs>
 
 export function render(viewState: Node, options?: RenderElementOptions): RecursiveComponentsElement {
   return ConstructContext.withRootContext(viewState, () =>

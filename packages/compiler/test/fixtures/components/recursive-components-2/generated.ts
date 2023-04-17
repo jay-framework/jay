@@ -6,9 +6,9 @@ export interface RecursiveComponents2ViewState {
   node: Node
 }
 
-export interface RecursiveComponents2Refs {}
+export interface RecursiveComponents2ElementRefs {}
 
-export type RecursiveComponents2Element = JayElement<RecursiveComponents2ViewState, RecursiveComponents2Refs>
+export type RecursiveComponents2Element = JayElement<RecursiveComponents2ViewState, RecursiveComponents2ElementRefs>
 
 export function render(viewState: RecursiveComponents2ViewState, options?: RenderElementOptions): RecursiveComponents2Element {
   return ConstructContext.withRootContext(viewState, () =>
