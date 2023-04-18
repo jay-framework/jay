@@ -19,7 +19,9 @@ export function mainRoot<ViewState>(viewState: ViewState, elementConstructor: ()
             unmount: element.unmount,
             update: (newData: ViewState) => {
                 element.update(newData);
-                endpoint.post(rootComponentViewState(newData))
+                port.batch(() => {
+                    endpoint.post(rootComponentViewState(newData))
+                })
             }
         }
     })
