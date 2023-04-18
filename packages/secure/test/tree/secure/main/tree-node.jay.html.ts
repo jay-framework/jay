@@ -20,7 +20,7 @@ export function render(viewState: TreeNodeViewState, options?: RenderElementOpti
         de('div', {}, [
             e('div', {ref: 'head', "data-ref": da(vs => `head=${vs.node?.id}`)}, [
                 e('span', {class: 'tree-arrow'}, [dt(vs => vs.headChar)]),
-                e('span', {}, [dt(vs => vs.node?.name)])
+                e('span', {class: 'name'}, [dt(vs => vs.node?.name)])
             ]),
             c(vs => vs.open,
                 de('ul', {"data-ref": da(vs => `list=${vs.node?.id}`)}, [

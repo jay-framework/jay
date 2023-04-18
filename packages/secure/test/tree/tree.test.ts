@@ -3,32 +3,48 @@ import {useMockCommunicationChannel} from "../util/mock-channel";
 import {initializeWorker} from "./secure/worker/worker-root";
 import {Node} from "./secure/main/tree-node";
 import {TreeNodeViewState} from "./secure/main/tree-node.jay.html";
-import {render} from "./secure/main/tree-node.jay.html";
+import {render} from "./secure/main/main-root";
 import {setChannel} from "../../lib/comm-channel";
 
+const noChildrenNoArrow = "";
+const closedArrow = "►";
+const openArrow = "▼";
+const singleNode = {id: 'a', name: 'root', children: []};
 describe('events synthetic tests', () => {
 
-    async function mkElement() {
-        let channel = useMockCommunicationChannel<Node, TreeNodeViewState>();
+    async function mkElement(viewState: Node) {
+        let channel = useMockCommunicationChannel<Node, TreeNodeViewState>(true);
         setChannel(channel);
         initializeWorker();
-        let appElement = render({headChar: "►", open: false, node: {id: 'a', name: 'root', children: []}});
-        // let result = appElement.dom.querySelector('[data-id="result"]') as HTMLDivElement;
-        // let button = appElement.dom.querySelector('[data-id="button"]') as HTMLButtonElement;
-        // let input = appElement.dom.querySelector('[data-id="input"]') as HTMLInputElement;
-
-        // let getDynamicButtonById = (id) => appElement.dom.querySelector(`[data-id="${id}-itemButton"]`) as HTMLButtonElement;
-        // let getDynamicInputById = (id) => appElement.dom.querySelector(`[data-id="${id}-itemInput"]`) as HTMLButtonElement;
+        let appElement = render(viewState);
+        let getHeadById = (id) => appElement.dom.querySelector(`[data-ref="head=${id}"]`) as HTMLButtonElement;
+        let getHeadArrowById = (id) => appElement.dom.querySelector(`[data-ref="head=${id}"] .tree-arrow`) as HTMLButtonElement;
+        let getHeadNameById = (id) => appElement.dom.querySelector(`[data-ref="head=${id}"] .name`) as HTMLButtonElement;
+        let getListById = (id) => appElement.dom.querySelector(`[data-ref="list=${id}"]`) as HTMLButtonElement;
 
         await channel.toBeClean();
-        return {channel, appElement}
+        return {channel, getHeadById, getListById, getHeadArrowById, getHeadNameById, appElement}
     }
 
     it('should render the component with default result', async () => {
-        let {appElement} = await mkElement();
-        console.log(appElement.dom.outerHTML)
-        // expect(result.textContent).toBe('default result')
+        let {getListById, getHeadArrowById, getHeadNameById} = await mkElement(singleNode);
+
+        expect(getHeadArrowById(singleNode.id)?.innerHTML).toBe(noChildrenNoArrow)
+        expect(getHeadNameById(singleNode.id)?.innerHTML).toBe(singleNode.name)
+        expect(getListById(singleNode.id).children.length).toBe(0)
     })
+
+    // it('should expand the node on header click', async () => {
+    //     let {appElement, channel, getHeadById, getListById, getHeadArrowById, getHeadNameById} = await mkElement(singleNode);
+    //
+    //     getHeadById(singleNode.id).click();
+    //     await channel.toBeClean();
+    //
+    //     expect(getHeadArrowById(singleNode.id)?.innerHTML).toBe(closedArrow)
+    //     expect(getHeadNameById(singleNode.id)?.innerHTML).toBe(singleNode.name)
+    //     expect(getListById(singleNode.id)).toBeNull()
+    //     // expect(result.textContent).toBe('default result')
+    // })
 
     // it('should react to button click', async () => {
     //     let {channel, result, button} = await mkElement();

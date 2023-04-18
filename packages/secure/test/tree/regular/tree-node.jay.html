@@ -12,7 +12,7 @@ data:
 <div>
     <div ref="head" data-ref="head={node.id}">
         <span class="tree-arrow">{headChar}</span>
-        <span>{node.name}</span>
+        <span class="name">{node.name}</span>
     </div>
     <ul data-ref="list={node.id}" if="open">
         <li forEach="node.children" trackBy="id">

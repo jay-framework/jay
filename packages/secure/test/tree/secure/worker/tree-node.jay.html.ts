@@ -18,7 +18,7 @@ export type TreeNodeElement = JayElement<TreeNodeViewState, TreeNodeElementRefs>
 export function render(viewState: TreeNodeViewState): TreeNodeElement {
     return elementBridge(viewState, () => [
         e('head'),
-        forEach((viewState: TreeNodeViewState) => viewState.node.children, 'id', () => [
+        forEach((viewState: TreeNodeViewState) => viewState.node?.children, 'id', () => [
                 childComp(TreeNode, vs => vs, "child")
             ]
         )

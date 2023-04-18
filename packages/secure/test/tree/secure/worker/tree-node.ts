@@ -15,7 +15,7 @@ export function node(name: string, children: Node[] = []) {
 function TreeNodeConstructor({name, id, children}: Props<Node>, refs: TreeNodeElementRefs) {
 
     let [open, setOpen] = createState(true);
-    let headChar = createMemo(() => children().length > 0 ? (open()?"▼":"►"):"")
+    let headChar = createMemo(() => children()?.length > 0 ? (open()?"▼":"►"):"")
     let node = createMemo(() => ({name: name(), id: id(), children: children()}));
 
     refs.head.onclick(() => setOpen(!open()))
