@@ -1,8 +1,15 @@
-import {JayChannel, JayEndpoint, JayPort, JayPortInMessageHandler, JPMMessage} from '../../lib/comm-channel'
+import {
+    JayChannel,
+    JayEndpoint,
+    JayPort,
+    JayPortInMessageHandler,
+    JayPortMessageType,
+    JPMMessage
+} from '../../lib/comm-channel'
 import {Coordinate} from "jay-runtime";
 
-export function useMockCommunicationChannel<PropsT, ViewState>(): JayMockChannel<PropsT, ViewState> {
-    return new JayMockChannel<PropsT, ViewState>()
+export function useMockCommunicationChannel<PropsT, ViewState>(verbose: boolean = false): JayMockChannel<PropsT, ViewState> {
+    return new JayMockChannel<PropsT, ViewState>(verbose)
 }
 
 class JayMockChannel<PropsT, ViewState> implements JayChannel {
@@ -15,10 +22,10 @@ class JayMockChannel<PropsT, ViewState> implements JayChannel {
     private comps: Map<string, number> = new Map();
     private nextCompId: number = 1;
 
-    constructor() {
+    constructor(private verbose: boolean = false) {
         this.pendingMessages = 0;
-        this.main = new MockJayPort(this.messageCountCallback, this.getCompId);
-        this.worker = new MockJayPort(this.messageCountCallback, this.getCompId);
+        this.main = new MockJayPort(this.messageCountCallback, this.getCompId, verbose, 'main port');
+        this.worker = new MockJayPort(this.messageCountCallback, this.getCompId, verbose, 'sandbox port');
         this.main.setTarget(this.worker);
         this.worker.setTarget(this.main)
     }
@@ -52,7 +59,9 @@ class MockJayPort implements JayPort {
     private endpoints: Map<number, MockEndpointPort> = new Map();
 
     constructor(private messageCountCallback: (diff: number) => void, 
-                private getCompId:(parentCompId: number, coordinate: Coordinate) => number) {}
+                private getCompId:(parentCompId: number, coordinate: Coordinate) => number,
+                private verbose: boolean = false,
+                private name: string = '') {}
                 
     getEndpoint(parentCompId: number, parentCoordinate: Coordinate): JayEndpoint {
         let compId = this.getCompId(parentCompId, parentCoordinate);
@@ -66,6 +75,8 @@ class MockJayPort implements JayPort {
     }
 
     post(compId: number, outMessage: JPMMessage) {
+        if (this.verbose)
+            console.log(`${this.name} post - compId: ${compId} type: ${describeMessageType(outMessage.type)} message: ${JSON.stringify(outMessage)}`)
         this.messages.push([compId, outMessage]);
         this.messageCountCallback(1)
     }
@@ -87,7 +98,11 @@ class MockJayPort implements JayPort {
 
     invoke(messages: Array<[number, JPMMessage]>) {
         this.batch(() => {
-            messages.forEach(([compId, message]) => this.endpoints.get(compId)?.invoke(message))
+            messages.forEach(([compId, message]) => {
+                if (this.verbose)
+                    console.log(`${this.name} invoke - compId: ${compId} type: ${describeMessageType(message.type)} message: ${JSON.stringify(message)}`)
+                this.endpoints.get(compId)?.invoke(message)
+            })
         })
     }
 
@@ -123,4 +138,24 @@ function mkResolvablePromise() {
     let resolve;
     let promise = new Promise((res) => resolve = res);
     return [promise, resolve];
+}
+
+function describeMessageType(type: JayPortMessageType): string {
+    switch (type) {
+        case JayPortMessageType.render:
+            return 'render'
+        case JayPortMessageType.addEventListener:
+            return 'addEventListener'
+        case JayPortMessageType.root:
+            return 'root'
+        case JayPortMessageType.DOMEvent:
+            return 'DOMEvent'
+        case JayPortMessageType.removeEventListener:
+            return 'removeEventListener'
+        case JayPortMessageType.nativeExec:
+            return 'nativeExec'
+        case JayPortMessageType.nativeExecResult:
+            return 'nativeExecResult'
+    }
+    return 'unknown message'
 }
