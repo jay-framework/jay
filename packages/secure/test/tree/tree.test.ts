@@ -22,10 +22,10 @@ describe('events synthetic tests', () => {
         setChannel(channel);
         initializeWorker();
         let appElement = render(viewState);
-        let getHeadById = (id) => appElement.dom.querySelector(`[data-ref="head=${id}"]`) as HTMLButtonElement;
-        let getHeadArrowById = (id) => appElement.dom.querySelector(`[data-ref="head=${id}"] .tree-arrow`) as HTMLButtonElement;
-        let getHeadNameById = (id) => appElement.dom.querySelector(`[data-ref="head=${id}"] .name`) as HTMLButtonElement;
-        let getListById = (id) => appElement.dom.querySelector(`[data-ref="list=${id}"]`) as HTMLButtonElement;
+        let getHeadById = (id) => appElement.dom.querySelector(`[data-ref="head=${id}"]`) as HTMLDivElement;
+        let getHeadArrowById = (id) => appElement.dom.querySelector(`[data-ref="head=${id}"] .tree-arrow`) as HTMLSpanElement;
+        let getHeadNameById = (id) => appElement.dom.querySelector(`[data-ref="head=${id}"] .name`) as HTMLSpanElement;
+        let getListById = (id) => appElement.dom.querySelector(`[data-ref="list=${id}"]`) as HTMLUListElement
 
         await channel.toBeClean();
         return {channel, getHeadById, getListById, getHeadArrowById, getHeadNameById, appElement}
@@ -39,12 +39,32 @@ describe('events synthetic tests', () => {
         expect(getListById(singleNode.id).children.length).toBe(0)
     })
 
-    it('should render two level tree', async () => {
-        let {getListById, getHeadArrowById, getHeadNameById} = await mkElement(oneLevelTreeOneChild);
+    describe('two level tree', () => {
+        it('render closed tree by default', async () => {
+            let {getListById, getHeadArrowById, getHeadNameById, appElement} = await mkElement(oneLevelTreeOneChild);
 
-        expect(getHeadArrowById(singleNode.id)?.innerHTML).toBe(noChildrenNoArrow)
-        expect(getHeadNameById(singleNode.id)?.innerHTML).toBe(singleNode.name)
-        expect(getListById(singleNode.id).children.length).toBe(0)
+            console.log(appElement.dom.outerHTML)
+
+            expect(getHeadArrowById(oneLevelTreeOneChild.id)?.innerHTML).toBe(closedArrow)
+            expect(getHeadNameById(oneLevelTreeOneChild.id)?.innerHTML).toBe(oneLevelTreeOneChild.name)
+            expect(getListById(oneLevelTreeOneChild.id)).toBeNull();
+        })
+
+        it('should expand the child on click', async () => {
+            let {channel, getListById, getHeadArrowById, getHeadNameById, getHeadById, appElement} = await mkElement(oneLevelTreeOneChild);
+
+            console.log(appElement.dom.outerHTML)
+            getHeadById(oneLevelTreeOneChild.id).click();
+            await channel.toBeClean()
+
+            console.log(appElement.dom.outerHTML)
+            expect(getHeadArrowById(oneLevelTreeOneChild.id)?.innerHTML).toBe(openArrow)
+            expect(getHeadNameById(oneLevelTreeOneChild.id)?.innerHTML).toBe(oneLevelTreeOneChild.name)
+            expect(getListById(oneLevelTreeOneChild.id)).toBeDefined();
+            expect(getHeadArrowById(B.id)?.innerHTML).toBe(noChildrenNoArrow)
+            expect(getHeadNameById(B.id)?.innerHTML).toBe(B.name)
+            expect(getListById(B.id)).toBeNull();
+        })
     })
 
     // it('should expand the node on header click', async () => {
