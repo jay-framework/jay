@@ -16,7 +16,7 @@ import {
 import {Reactive} from "jay-reactive";
 import {
     addEventListenerMessage,
-    JayEndpoint,
+    JayEndpoint, JayPort,
     JayPortMessageType,
     JPMMessage,
     nativeExec,
@@ -229,6 +229,7 @@ export class DynamicCompRefImplementation<ViewState, CompType extends JayCompone
 }
 
 export function mkBridgeElement<ViewState>(viewState: ViewState,
+                                           port: JayPort,
                                            endpoint: JayEndpoint,
                                            reactive: Reactive,
                                            sandboxElements: () => SandboxElement<ViewState>[],
@@ -236,7 +237,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
     let refs = {};
     dynamicComponents.forEach(compRef => refs[compRef] = proxyRef(new DynamicCompRefImplementation()))
     dynamicElements.forEach(elemRef => refs[elemRef] = proxyRef(new DynamicRefImplementation(elemRef, endpoint)))
-    return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState, refs, dataIds: [], isDynamic: false}, () => {
+    return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, port, viewState, refs, dataIds: [], isDynamic: false}, () => {
         let elements = sandboxElements();
         let postUpdateMessage = (newViewState) => endpoint.post(renderMessage(newViewState))
         let update = normalizeUpdates([postUpdateMessage, ...elements.map(el => el.update)]);

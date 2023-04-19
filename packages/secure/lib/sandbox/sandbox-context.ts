@@ -11,7 +11,6 @@ import {JayEndpoint, JayPort} from "../comm-channel";
 
 export interface SandboxContext {
     port: JayPort
-    endpoint: JayEndpoint
     compId: number,
     coordinate: Coordinate
 }
@@ -20,6 +19,7 @@ export type Refs = Record<string, HTMLElementCollectionProxy<any, any> | HTMLEle
     JayComponent<any, any, any> | ComponentCollectionProxy<any, JayComponent<any, any, any>>>
 
 interface SandboxCreationContext<ViewState> {
+    port: JayPort,
     viewState: ViewState,
     endpoint: JayEndpoint,
     refs: Refs,

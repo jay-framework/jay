@@ -7,7 +7,7 @@ import {
     updateFunc,
     useContext
 } from "jay-runtime";
-import {SANDBOX_CREATION_CONTEXT} from "./sandbox-context";
+import {SANDBOX_CREATION_CONTEXT, SANDBOX_MARKER} from "./sandbox-context";
 import {
     DynamicCompRefImplementation,
     DynamicNativeExec,
@@ -61,11 +61,14 @@ export function sandboxChildComp<ParentVS, Props>(
     compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentVS) => Props,
     refName: string): SandboxElement<ParentVS> {
-    let {viewState, refs, dataIds, isDynamic} = useContext(SANDBOX_CREATION_CONTEXT)
-    let childComp = compCreator(getProps(viewState))
+    let {viewState, refs, dataIds, isDynamic, endpoint, port} = useContext(SANDBOX_CREATION_CONTEXT)
+    let coordinate = [...dataIds, refName];
+    let context = {port, compId: endpoint.compId, coordinate}
+    let childComp = provideContext(SANDBOX_MARKER, context, () => {
+        return compCreator(getProps(viewState))
+    })
     if (isDynamic) {
         let ref = (refs[refName] as any as DynamicCompRefImplementation<ParentVS, ReturnType<typeof compCreator>>);
-        let coordinate = [...dataIds, refName];
         ref.setItem(coordinate, viewState, childComp);
         let mounted = true;
         return {
@@ -130,7 +133,7 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
     matchBy: string,
     children: () => SandboxElement<ItemViewState>[]
 ): SandboxElement<ParentViewState> {
-    const {viewState, endpoint, refs, dataIds} = useContext(SANDBOX_CREATION_CONTEXT)
+    const {viewState, endpoint, refs, dataIds, port} = useContext(SANDBOX_CREATION_CONTEXT)
     let lastItems = getRevision<ItemViewState[]>([]);
     let childElementsMap: Map<string, SandboxElement<ItemViewState>[]> = new Map();
 
@@ -142,7 +145,7 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
             let {removedItems, addedItems, itemsToUpdate} = compareLists(lastItems.value, newItems, matchBy)
             addedItems.forEach(item => {
                 let childElements = provideContext(SANDBOX_CREATION_CONTEXT,
-                    {endpoint, viewState: item, refs, dataIds: [...dataIds, item[matchBy]], isDynamic: true}, children)
+                    {endpoint, viewState: item, refs, dataIds: [...dataIds, item[matchBy]], isDynamic: true, port}, children)
                 childElementsMap.set(item[matchBy], childElements);
             })
             removedItems.forEach(item => {
