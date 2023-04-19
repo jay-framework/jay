@@ -22,5 +22,5 @@ export function render(viewState: TreeNodeViewState): TreeNodeElement {
                 childComp(TreeNode, vs => vs, "child")
             ]
         )
-    ], ['itemButton', 'itemInput']) as unknown as TreeNodeElement;
+    ], ['child']) as unknown as TreeNodeElement;
 }

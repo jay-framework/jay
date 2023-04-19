@@ -10,6 +10,11 @@ const noChildrenNoArrow = "";
 const closedArrow = "►";
 const openArrow = "▼";
 const singleNode = {id: 'a', name: 'root', children: []};
+const B = {id: 'b', name: 'b node', children: []};
+const C = {id: 'c', name: 'c node', children: []};
+const D = {id: 'd', name: 'd node', children: []};
+const oneLevelTreeOneChild = {id: 'r', name: 'root', children: [B]}
+
 describe('events synthetic tests', () => {
 
     async function mkElement(viewState: Node) {
@@ -26,8 +31,16 @@ describe('events synthetic tests', () => {
         return {channel, getHeadById, getListById, getHeadArrowById, getHeadNameById, appElement}
     }
 
-    it('should render the component with default result', async () => {
+    it('should render one level tree', async () => {
         let {getListById, getHeadArrowById, getHeadNameById} = await mkElement(singleNode);
+
+        expect(getHeadArrowById(singleNode.id)?.innerHTML).toBe(noChildrenNoArrow)
+        expect(getHeadNameById(singleNode.id)?.innerHTML).toBe(singleNode.name)
+        expect(getListById(singleNode.id).children.length).toBe(0)
+    })
+
+    it('should render two level tree', async () => {
+        let {getListById, getHeadArrowById, getHeadNameById} = await mkElement(oneLevelTreeOneChild);
 
         expect(getHeadArrowById(singleNode.id)?.innerHTML).toBe(noChildrenNoArrow)
         expect(getHeadNameById(singleNode.id)?.innerHTML).toBe(singleNode.name)
