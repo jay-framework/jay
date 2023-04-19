@@ -1,6 +1,20 @@
-import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, conditional as c, dynamicElement as de, forEach, ConstructContext, HTMLElementProxy, childComp, RenderElementOptions} from "jay-runtime";
+import {
+    JayElement,
+    element as e,
+    dynamicText as dt,
+    dynamicAttribute as da,
+    conditional as c,
+    dynamicElement as de,
+    forEach,
+    ConstructContext,
+    HTMLElementProxy,
+    RenderElementOptions,
+    useContext, provideContext
+} from "jay-runtime";
+import {secureChildComp as childComp} from "../../../../lib/main/main-child-comp";
 import {TreeNodeRefs} from './tree-node-refs';
 import {TreeNode, Node} from './tree-node';
+import {SECURE_COMPONENT_MARKER} from "../../../../lib/main/main-contexts";
 
 export interface TreeNodeViewState {
     headChar: string,
@@ -16,6 +30,7 @@ export interface TreeNodeElementRefs {
 export type TreeNodeElement = JayElement<TreeNodeViewState, TreeNodeElementRefs>
 
 export function render(viewState: TreeNodeViewState, options?: RenderElementOptions): TreeNodeElement {
+    let context = useContext(SECURE_COMPONENT_MARKER);
     return ConstructContext.withRootContext(viewState, () =>
         de('div', {}, [
             e('div', {ref: 'head', "data-ref": da(vs => `head=${vs.node?.id}`)}, [
@@ -25,9 +40,12 @@ export function render(viewState: TreeNodeViewState, options?: RenderElementOpti
             c(vs => vs.open,
                 de('ul', {"data-ref": da(vs => `list=${vs.node?.id}`)}, [
                     forEach(vs => vs.node?.children, (vs1: Node) => {
-                        return e('li', {}, [
-                            childComp(TreeNode, vs => vs, 'child')
-                        ])}, 'id')
+                        return provideContext(SECURE_COMPONENT_MARKER, context, () => {
+                            return e('li', {}, [
+                                childComp(TreeNode, vs => vs, 'child')
+                            ])
+                        })
+                    }, 'id')
                 ])
             )
         ]), options, ['child']);
