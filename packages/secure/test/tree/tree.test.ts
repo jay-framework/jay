@@ -9,12 +9,26 @@ import {setChannel} from "../../lib/comm-channel";
 const noChildrenNoArrow = "";
 const closedArrow = "►";
 const openArrow = "▼";
-const singleNode = {id: 'a', name: 'root', children: []};
-const B = {id: 'b', name: 'b node', children: []};
-const C = {id: 'c', name: 'c node', children: []};
-const D = {id: 'd', name: 'd node', children: []};
-const oneLevelTreeOneChild = {id: 'r', name: 'root', children: [B]}
-const oneLevelTreeOneChildMultipleChildren = {id: 'r', name: 'root', children: [B, C, D]}
+const Tree1 = {id: 'a', name: 'root', children: []};
+
+const Tree2_B = {id: 'b', name: 'b node', children: []};
+const Tree2_C = {id: 'c', name: 'c node', children: []};
+const Tree2_D = {id: 'd', name: 'd node', children: []};
+const Tree2_1 = {id: 'r', name: 'root', children: [Tree2_B]}
+const Tree2_2 = {id: 'r', name: 'root', children: [Tree2_B, Tree2_C, Tree2_D]}
+
+const Tree3_A_A = {id: 'aa', name: 'aa node', children: []};
+const Tree3_A_B = {id: 'ab', name: 'ab node', children: []};
+const Tree3_A = {id: 'a', name: 'a node', children: [Tree3_A_A, Tree3_A_B]};
+const Tree3_B_A = {id: 'ba', name: 'ba node', children: []};
+const Tree3_B = {id: 'b', name: 'b node', children: [Tree3_B_A]};
+const Tree3_C_A = {id: 'ca', name: 'ca node', children: []};
+const Tree3_C_B = {id: 'cb', name: 'cb node', children: []};
+const Tree3_C_C = {id: 'cc', name: 'cc node', children: []};
+const Tree3_C = {id: 'c', name: 'c node', children: [Tree3_C_A, Tree3_C_B, Tree3_C_C]};
+const Tree3_D = {id: 'd', name: 'd node', children: [Tree3_B_A]};
+const Tree3_1 = {id: 'r', name: 'root', children: [Tree3_A, Tree3_B, Tree3_C, Tree3_D]}
+
 
 describe('events synthetic tests', () => {
 
@@ -23,155 +37,123 @@ describe('events synthetic tests', () => {
         setChannel(channel);
         initializeWorker();
         let appElement = render(viewState);
-        let getHeadById = (id) => appElement.dom.querySelector(`[data-ref="head=${id}"]`) as HTMLDivElement;
+        let getHeadById = (node: Node) => appElement.dom.querySelector(`[data-ref="head=${node.id}"]`) as HTMLDivElement;
         let getHeadArrowById = (id) => appElement.dom.querySelector(`[data-ref="head=${id}"] .tree-arrow`) as HTMLSpanElement;
         let getHeadNameById = (id) => appElement.dom.querySelector(`[data-ref="head=${id}"] .name`) as HTMLSpanElement;
         let getListById = (id) => appElement.dom.querySelector(`[data-ref="list=${id}"]`) as HTMLUListElement
 
+        let expectTreeNode = (node: Node, arrow: string, hasChildren: boolean) => {
+            expect(getHeadArrowById(node.id)?.innerHTML).toBe(arrow)
+            expect(getHeadNameById(node.id)?.innerHTML).toBe(node.name)
+            if (hasChildren)
+                expect(getListById(node.id)).toBeDefined()
+            else
+                expect(getListById(node.id)).toBeNull()
+        }
+
         await channel.toBeClean();
-        return {channel, getHeadById, getListById, getHeadArrowById, getHeadNameById, appElement}
+        return {channel, getHeadById, appElement, expectTreeNode}
     }
 
     it('should render one level tree', async () => {
-        let {getListById, getHeadArrowById, getHeadNameById} = await mkElement(singleNode);
+        let {expectTreeNode} = await mkElement(Tree1);
 
-        expect(getHeadArrowById(singleNode.id)?.innerHTML).toBe(noChildrenNoArrow)
-        expect(getHeadNameById(singleNode.id)?.innerHTML).toBe(singleNode.name)
-        expect(getListById(singleNode.id)).toBeNull()
+        expectTreeNode(Tree1, noChildrenNoArrow, false);
     })
 
     describe('two level tree', () => {
         it('render closed tree by default', async () => {
-            let {getListById, getHeadArrowById, getHeadNameById, appElement} = await mkElement(oneLevelTreeOneChild);
+            let {expectTreeNode, appElement} = await mkElement(Tree2_1);
 
             console.log(appElement.dom.outerHTML)
 
-            expect(getHeadArrowById(oneLevelTreeOneChild.id)?.innerHTML).toBe(closedArrow)
-            expect(getHeadNameById(oneLevelTreeOneChild.id)?.innerHTML).toBe(oneLevelTreeOneChild.name)
-            expect(getListById(oneLevelTreeOneChild.id)).toBeNull();
+            expectTreeNode(Tree2_1, noChildrenNoArrow, false);
         })
 
         it('should expand the child on click', async () => {
-            let {channel, getListById, getHeadArrowById, getHeadNameById, getHeadById, appElement} = await mkElement(oneLevelTreeOneChild);
+            let {expectTreeNode, channel, getHeadById, appElement} = await mkElement(Tree2_1);
 
             console.log(appElement.dom.outerHTML)
-            getHeadById(oneLevelTreeOneChild.id).click();
+            getHeadById(Tree2_1).click();
             await channel.toBeClean()
 
             console.log(appElement.dom.outerHTML)
-            expect(getHeadArrowById(oneLevelTreeOneChild.id)?.innerHTML).toBe(openArrow)
-            expect(getHeadNameById(oneLevelTreeOneChild.id)?.innerHTML).toBe(oneLevelTreeOneChild.name)
-            expect(getListById(oneLevelTreeOneChild.id)).toBeDefined();
-            expect(getHeadArrowById(B.id)?.innerHTML).toBe(noChildrenNoArrow)
-            expect(getHeadNameById(B.id)?.innerHTML).toBe(B.name)
-            expect(getListById(B.id)).toBeNull();
+            expectTreeNode(Tree2_1, openArrow, true);
+            expectTreeNode(Tree2_B, noChildrenNoArrow, false);
         })
 
         it('render closed tree with 3 children', async () => {
-            let {getListById, getHeadArrowById, getHeadNameById, appElement} = await mkElement(oneLevelTreeOneChildMultipleChildren);
+            let {expectTreeNode, appElement} = await mkElement(Tree2_2);
 
             console.log(appElement.dom.outerHTML)
 
-            expect(getHeadArrowById(oneLevelTreeOneChild.id)?.innerHTML).toBe(closedArrow)
-            expect(getHeadNameById(oneLevelTreeOneChild.id)?.innerHTML).toBe(oneLevelTreeOneChild.name)
-            expect(getListById(oneLevelTreeOneChild.id)).toBeNull();
+            expectTreeNode(Tree2_1, closedArrow, false);
         })
 
         it('update to open tree with 3 children', async () => {
-            let {channel, getHeadById, getListById, getHeadArrowById, getHeadNameById, appElement} = await mkElement(oneLevelTreeOneChildMultipleChildren);
+            let {expectTreeNode, channel, getHeadById, appElement} = await mkElement(Tree2_2);
 
             console.log(appElement.dom.outerHTML)
-            getHeadById(oneLevelTreeOneChild.id).click();
+            getHeadById(Tree2_1).click();
             await channel.toBeClean()
             console.log(appElement.dom.outerHTML)
 
-            expect(getHeadArrowById(oneLevelTreeOneChild.id)?.innerHTML).toBe(openArrow)
-            expect(getHeadNameById(oneLevelTreeOneChild.id)?.innerHTML).toBe(oneLevelTreeOneChild.name)
-            expect(getListById(oneLevelTreeOneChild.id)).toBeDefined();
-            expect(getHeadArrowById(B.id)?.innerHTML).toBe(noChildrenNoArrow)
-            expect(getHeadNameById(B.id)?.innerHTML).toBe(B.name)
-            expect(getListById(B.id)).toBeNull();
-            expect(getHeadArrowById(C.id)?.innerHTML).toBe(noChildrenNoArrow)
-            expect(getHeadNameById(C.id)?.innerHTML).toBe(C.name)
-            expect(getListById(C.id)).toBeNull();
-            expect(getHeadArrowById(D.id)?.innerHTML).toBe(noChildrenNoArrow)
-            expect(getHeadNameById(D.id)?.innerHTML).toBe(D.name)
-            expect(getListById(D.id)).toBeNull();
+            expectTreeNode(Tree2_1, openArrow, true);
+            expectTreeNode(Tree2_B, noChildrenNoArrow, false);
+            expectTreeNode(Tree2_C, noChildrenNoArrow, false);
+            expectTreeNode(Tree2_D, noChildrenNoArrow, false);
         })
 
         it('update a single child tree to a 3 child tree', async () => {
-            let {getHeadById, channel, getListById, getHeadArrowById, getHeadNameById, appElement} = await mkElement(oneLevelTreeOneChild);
-            getHeadById(oneLevelTreeOneChild.id).click();
+            let {expectTreeNode, getHeadById, channel, appElement} = await mkElement(Tree2_1);
+            getHeadById(Tree2_1).click();
             await channel.toBeClean()
 
             console.log(appElement.dom.outerHTML)
-            appElement.update(oneLevelTreeOneChildMultipleChildren)
+            appElement.update(Tree2_2)
             await channel.toBeClean()
 
             console.log(appElement.dom.outerHTML)
-            expect(getHeadArrowById(oneLevelTreeOneChild.id)?.innerHTML).toBe(openArrow)
-            expect(getHeadNameById(oneLevelTreeOneChild.id)?.innerHTML).toBe(oneLevelTreeOneChild.name)
-            expect(getListById(oneLevelTreeOneChild.id)).toBeDefined();
-            expect(getHeadArrowById(B.id)?.innerHTML).toBe(noChildrenNoArrow)
-            expect(getHeadNameById(B.id)?.innerHTML).toBe(B.name)
-            expect(getListById(B.id)).toBeNull();
-            expect(getHeadArrowById(C.id)?.innerHTML).toBe(noChildrenNoArrow)
-            expect(getHeadNameById(C.id)?.innerHTML).toBe(C.name)
-            expect(getListById(C.id)).toBeNull();
-            expect(getHeadArrowById(D.id)?.innerHTML).toBe(noChildrenNoArrow)
-            expect(getHeadNameById(D.id)?.innerHTML).toBe(D.name)
-            expect(getListById(D.id)).toBeNull();
+            expectTreeNode(Tree2_1, openArrow, true);
+            expectTreeNode(Tree2_B, noChildrenNoArrow, false);
+            expectTreeNode(Tree2_C, noChildrenNoArrow, false);
+            expectTreeNode(Tree2_D, noChildrenNoArrow, false);
         })
     })
 
-    // it('should expand the node on header click', async () => {
-    //     let {appElement, channel, getHeadById, getListById, getHeadArrowById, getHeadNameById} = await mkElement(singleNode);
-    //
-    //     getHeadById(singleNode.id).click();
-    //     await channel.toBeClean();
-    //
-    //     expect(getHeadArrowById(singleNode.id)?.innerHTML).toBe(closedArrow)
-    //     expect(getHeadNameById(singleNode.id)?.innerHTML).toBe(singleNode.name)
-    //     expect(getListById(singleNode.id)).toBeNull()
-    //     // expect(result.textContent).toBe('default result')
-    // })
+    describe('tree level tree', () => {
+        it('render closed tree by default', async () => {
+            let {expectTreeNode, appElement} = await mkElement(Tree3_1);
 
-    // it('should react to button click', async () => {
-    //     let {channel, result, button} = await mkElement();
-    //
-    //     button.click()
-    //     await channel.toBeClean()
-    //
-    //     expect(result.textContent).toBe('static button was clicked')
-    // })
-    //
-    // it('should react to static input value change', async () => {
-    //     let {channel, result, input} = await mkElement();
-    //
-    //     input.value = 'a new value entered via input'
-    //     dispatchEvent(input, 'input');
-    //     await channel.toBeClean()
-    //
-    //     expect(result.textContent).toBe('a new value entered via input')
-    // })
-    //
-    // it('should react to dynamic buttons (under forEach) click', async () => {
-    //     let {channel, result, button, getDynamicButtonById} = await mkElement();
-    //
-    //     getDynamicButtonById('a').click()
-    //     await channel.toBeClean()
-    //
-    //     expect(result.textContent).toBe('dynamic button alpha was clicked at coordinate [a,itemButton]')
-    // })
-    //
-    // it('should react to dynamic input value change', async () => {
-    //     let {channel, result, getDynamicInputById} = await mkElement();
-    //
-    //     let input = getDynamicInputById('c')
-    //     input.value = 'a new value entered via input c'
-    //     dispatchEvent(input, 'input');
-    //     await channel.toBeClean()
-    //
-    //     expect(result.textContent).toBe('dynamic input gamma updated with value \'a new value entered via input c\' at coordinate [c,itemInput]')
-    // })
+            console.log(appElement.dom.outerHTML)
+
+            expectTreeNode(Tree3_1, closedArrow, false);
+        })
+
+        it('expand the whole tree', async () => {
+            let {channel, expectTreeNode, appElement, getHeadById} = await mkElement(Tree3_1);
+
+            getHeadById(Tree3_1).click()
+            await channel.toBeClean()
+            getHeadById(Tree3_A).click()
+            await channel.toBeClean()
+            getHeadById(Tree3_B).click()
+            await channel.toBeClean()
+            getHeadById(Tree3_C).click()
+            await channel.toBeClean()
+            console.log(appElement.dom.outerHTML)
+
+            expectTreeNode(Tree3_1, openArrow, true);
+            expectTreeNode(Tree3_A, openArrow, true);
+            expectTreeNode(Tree3_A_A, noChildrenNoArrow, false);
+            expectTreeNode(Tree3_A_B, noChildrenNoArrow, false);
+            expectTreeNode(Tree3_B, openArrow, true);
+            expectTreeNode(Tree3_B_A, noChildrenNoArrow, false);
+            expectTreeNode(Tree3_C, openArrow, true);
+            expectTreeNode(Tree3_C_A, noChildrenNoArrow, false);
+            expectTreeNode(Tree3_C_B, noChildrenNoArrow, false);
+            expectTreeNode(Tree3_C_C, noChildrenNoArrow, false);
+        })
+    })
+
 })
