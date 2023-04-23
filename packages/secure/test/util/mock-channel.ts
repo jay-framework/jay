@@ -60,6 +60,7 @@ class MockJayPort implements JayPort {
     private messages: Array<[number, JPMMessage]> = []
     private target: MockJayPort
     private endpoints: Map<number, MockEndpointPort> = new Map();
+    private futureEndpointMessages: Map<number, JPMMessage[]> = new Map();
 
     constructor(private channel,
                 private verbose: boolean = false,
@@ -69,6 +70,7 @@ class MockJayPort implements JayPort {
         let compId = this.channel.getCompId(parentCompId, parentCoordinate);
         let ep = new MockEndpointPort(compId, this);
         this.endpoints.set(compId, ep)
+        ep.setInitMessages(this.futureEndpointMessages.get(compId) || [])
         return ep;
     }
 
@@ -106,7 +108,16 @@ class MockJayPort implements JayPort {
                     console.log(`${this.name}.invoke - compId: ${compId} ${this.endpoints.get(compId)?"":"[COMP NOT FOUND] "}type: ${describeMessageType(message.type)} message: ${JSON.stringify(message)}`)
                 this.channel.messageLog
                     .find(item => item[0] === message)[1] = 'invoked'
-                this.endpoints.get(compId)?.invoke(message)
+                let endpoint = this.endpoints.get(compId);
+                if (endpoint)
+                    endpoint.invoke(message)
+                else {
+                    if (!this.futureEndpointMessages.has(compId))
+                        this.futureEndpointMessages.set(compId, [message])
+                    else
+                        this.futureEndpointMessages.get(compId).push(message);
+                }
+
             })
         })
     }
@@ -122,6 +133,7 @@ class MockJayPort implements JayPort {
 class MockEndpointPort implements JayEndpoint {
 
     private handler: JayPortInMessageHandler
+    private initMessages: JPMMessage[] = [];
     constructor(
         readonly compId: number,
         public readonly port: MockJayPort) {}
@@ -132,10 +144,15 @@ class MockEndpointPort implements JayEndpoint {
 
     onUpdate(handler: JayPortInMessageHandler) {
         this.handler = handler
+        this.initMessages.forEach(message => handler(message))
     }
 
     invoke(inMessage: JPMMessage) {
         this?.handler(inMessage);
+    }
+
+    setInitMessages(initMessages: JPMMessage[]) {
+        this.initMessages = initMessages;
     }
 }
 

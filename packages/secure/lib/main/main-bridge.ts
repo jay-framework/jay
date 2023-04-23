@@ -56,6 +56,7 @@ export function makeJayComponentBridge<
         let {coordinate} = useContext(SECURE_COORDINATE_MARKER);
         let endpoint = port.getEndpoint(compId, coordinate);
         let newSecureComponentContext = {endpoint, compId: endpoint.compId, port, funcRepository}
+        console.log('create main component ', props['id'])
         return provideContext(SECURE_COMPONENT_MARKER, newSecureComponentContext, () => {
             return component(props);
         })
