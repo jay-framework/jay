@@ -69,6 +69,7 @@ export interface JayPort {
 }
 
 export interface JayEndpoint {
+    port: JayPort
     post(outMessage: JayPortMessage);
     onUpdate(handler: JayPortInMessageHandler);
     readonly compId: number;

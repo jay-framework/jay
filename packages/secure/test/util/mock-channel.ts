@@ -27,8 +27,8 @@ class JayMockChannel<PropsT, ViewState> implements JayChannel {
 
     constructor(private verbose: boolean = false) {
         this.pendingMessages = 0;
-        this.main = new MockJayPort(this, verbose, 'main');
-        this.worker = new MockJayPort(this, verbose, 'sandbox');
+        this.main = new MockJayPort(this, verbose, 'MAIN');
+        this.worker = new MockJayPort(this, verbose, 'SANDBOX');
         this.main.setTarget(this.worker);
         this.worker.setTarget(this.main)
     }
@@ -103,7 +103,7 @@ class MockJayPort implements JayPort {
         this.batch(() => {
             messages.forEach(([compId, message]) => {
                 if (this.verbose)
-                    console.log(`${this.name}.invoke - compId: ${compId} type: ${describeMessageType(message.type)} message: ${JSON.stringify(message)}`)
+                    console.log(`${this.name}.invoke - compId: ${compId} ${this.endpoints.get(compId)?"":"[COMP NOT FOUND] "}type: ${describeMessageType(message.type)} message: ${JSON.stringify(message)}`)
                 this.channel.messageLog
                     .find(item => item[0] === message)[1] = 'invoked'
                 this.endpoints.get(compId)?.invoke(message)
@@ -124,7 +124,7 @@ class MockEndpointPort implements JayEndpoint {
     private handler: JayPortInMessageHandler
     constructor(
         readonly compId: number,
-        private readonly port: MockJayPort) {}
+        public readonly port: MockJayPort) {}
 
     post(outMessage: JPMMessage) {
         this.port.post(this.compId, outMessage)

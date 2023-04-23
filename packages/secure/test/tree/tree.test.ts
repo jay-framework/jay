@@ -36,7 +36,7 @@ describe('events synthetic tests', () => {
 
         expect(getHeadArrowById(singleNode.id)?.innerHTML).toBe(noChildrenNoArrow)
         expect(getHeadNameById(singleNode.id)?.innerHTML).toBe(singleNode.name)
-        expect(getListById(singleNode.id).children.length).toBe(0)
+        expect(getListById(singleNode.id)).toBeNull()
     })
 
     describe('two level tree', () => {

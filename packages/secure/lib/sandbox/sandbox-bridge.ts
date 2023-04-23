@@ -11,5 +11,5 @@ export function elementBridge<ElementViewState>(viewState: ElementViewState, san
     let {reactive} = useContext(COMPONENT_CONTEXT);
     let ep = parentContext.port.getEndpoint(parentContext.compId, parentContext.coordinate)
     // for some reason typescript insists that the types Reactive !== Reactive...
-    return mkBridgeElement(viewState, parentContext.port, ep, reactive as unknown as Reactive, sandboxElements, dynamicElements, dynamicComponents);
+    return mkBridgeElement(viewState, ep, reactive as unknown as Reactive, sandboxElements, dynamicElements, dynamicComponents);
 }

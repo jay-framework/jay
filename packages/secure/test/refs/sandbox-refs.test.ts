@@ -865,6 +865,9 @@ function mkEndpoint(): TestJayEndpoint {
     let _outMessages = [];
     let _handler;
     return {
+        get port() {
+            return undefined;
+        },
         post(outMessage: JPMAddEventListener) {
             _outMessages.push(outMessage);
         },
