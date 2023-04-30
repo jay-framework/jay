@@ -63,11 +63,9 @@ function notifyAndWait(writtenBytes) {
     // reset the bit to wait on
     Atomics.store(ctrlBuffer, 0, 0)
     // write number of bytes written
-    Atomics.store(ctrlBuffer, 2, writtenBytes)
-    // write next message index
-    // Atomics.store(ctrlBuffer, 2, 1)
+    Atomics.store(ctrlBuffer, 1, writtenBytes)
     // notify on next message index
-    Atomics.notify(ctrlBuffer, 2)
+    Atomics.notify(ctrlBuffer, 1)
     // wait on the wait biy
     Atomics.wait(ctrlBuffer, 0, 0)
     // return number of bytes to read

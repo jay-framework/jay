@@ -53,22 +53,19 @@ function readMessage(resSize) {
 
 function notifyAndWait(writtenBytes) {
     // reset the bit to wait on
-    Atomics.store(ctrlBuffer, 2, 0)
+    Atomics.store(ctrlBuffer, 1, 0)
     // write number of bytes written
-    // Atomics.store(ctrlBuffer, 1, writtenBytes)
-    // write next message index
     Atomics.store(ctrlBuffer, 0, writtenBytes)
     // notify on next message index
     Atomics.notify(ctrlBuffer, 0)
     // wait on the wait biy
-    let waitResult = Atomics.waitAsync(ctrlBuffer, 2, 0)
+    let waitResult = Atomics.waitAsync(ctrlBuffer, 1, 0)
     if (!waitResult.async) {
         // the worker has finished between the call to notify(0) and waitAsync(2), so we can just return the value
-        return Promise.resolve(ctrlBuffer[2])
+        return Promise.resolve(ctrlBuffer[1])
     }
     return waitResult.value.then(() => {
-        // console.log('main - wait', ctrlBuffer[2], ctrlBuffer[3])
-        return ctrlBuffer[2]
+        return ctrlBuffer[1]
     })
 }
 
