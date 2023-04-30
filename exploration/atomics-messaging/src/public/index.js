@@ -39,10 +39,12 @@ function notifyAndWait(writtenBytes) {
     // wait on the wait biy
     let waitResult = Atomics.waitAsync(ctrlBuffer, 1, 0)
     if (!waitResult.async) {
-        // the worker has finished between the call to notify(0) and waitAsync(2), so we can just return the value
+        // the worker has finished between the call to notify(0) and waitAsync(1)
+        // we exchange the value of the cntl bit, return it and reset it to 0
         return Promise.resolve(Atomics.exchange(ctrlBuffer, 1, 0))
     }
     return waitResult.value.then(() => {
+        // we exchange the value of the cntl bit, return it and reset it to 0
         return Atomics.exchange(ctrlBuffer, 1, 0)
     })
 }

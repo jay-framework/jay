@@ -45,11 +45,11 @@ function readMessage(resSize) {
 function notifyAndWait(writtenBytes) {
     // write number of bytes written
     Atomics.store(ctrlBuffer, 1, writtenBytes)
-    // notify on next message index
+    // notify the main thread to wake up as we have a new number
     Atomics.notify(ctrlBuffer, 1)
     // wait on the wait biy
     Atomics.wait(ctrlBuffer, 0, 0)
-    // return number of bytes to read
+    // return number of bytes to read and reset the value to 0
     return Atomics.exchange(ctrlBuffer, 0, 0)
 }
 
