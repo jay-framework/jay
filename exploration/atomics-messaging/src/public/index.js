@@ -10,12 +10,11 @@ const sharedValueBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * R
 const valueBuffer = new Int32Array(sharedValueBuffer)
 const encodeBuffer = new Uint8Array(RES_SIZE) // TextEncoder cant use SharedArrayBuffers
 const decodeBuffer = new Uint8Array(RES_SIZE) // TextDecoder cant use SharedArrayBuffers
-var messageIndex = 0;
 
 function ctrlSignal (value) {
     // console.log('main - signal', value)
     Atomics.store(ctrlBuffer, 1, value)
-    Atomics.store(ctrlBuffer, 0, messageIndex++)
+    Atomics.store(ctrlBuffer, 0, 1)
     Atomics.notify(ctrlBuffer, 0)
 }
 
@@ -27,27 +26,49 @@ function writeMessage(res) {
     for (let i = 0; i < resJson.length; i++) {
         Atomics.store(valueBuffer, i, encodeBuffer[i])
     }
-    ctrlSignal(resJson.length)
+    return resJson.length;
+    // ctrlSignal(resJson.length)
 }
 
 function ctrlWait () {
     Atomics.store(ctrlBuffer, 2, 0)
     let waitResult = Atomics.waitAsync(ctrlBuffer, 2, 0)
+    if (!waitResult.async)
+        console.log(waitResult.value)
     return waitResult.value.then(() => {
         // console.log('main - wait', ctrlBuffer[2], ctrlBuffer[3])
         return ctrlBuffer[3]
     })
 }
 
-function readMessage() {
+function readMessage(resSize) {
     // console.log('main - read message')
-    return ctrlWait().then(resSize => {
         for (let i = 0; i < resSize; i++) {
             decodeBuffer[i] = Atomics.load(valueBuffer, i)
         }
         var res = decoder.decode(decodeBuffer.slice(0, resSize))
         // console.log('main - read message', res)
         return JSON.parse(res)
+}
+
+function notifyAndWait(writtenBytes) {
+    // reset the bit to wait on
+    Atomics.store(ctrlBuffer, 2, 0)
+    // write number of bytes written
+    // Atomics.store(ctrlBuffer, 1, writtenBytes)
+    // write next message index
+    Atomics.store(ctrlBuffer, 0, writtenBytes)
+    // notify on next message index
+    Atomics.notify(ctrlBuffer, 0)
+    // wait on the wait biy
+    let waitResult = Atomics.waitAsync(ctrlBuffer, 2, 0)
+    if (!waitResult.async) {
+        // the worker has finished between the call to notify(0) and waitAsync(2), so we can just return the value
+        return Promise.resolve(ctrlBuffer[2])
+    }
+    return waitResult.value.then(() => {
+        // console.log('main - wait', ctrlBuffer[2], ctrlBuffer[3])
+        return ctrlBuffer[2]
     })
 }
 
@@ -59,7 +80,7 @@ myWorker.onmessage = (e) => {
     // console.debug('calling', methodName, methodArgs)
     var res = exportedMethods[methodName](...methodArgs)
 
-    writeMessage(res);
+    // writeMessage(res);
 }
 console.log('posting init message to worker')
 myWorker.postMessage({action: 'init', sharedCtrlBuffer, sharedValueBuffer})
@@ -72,8 +93,11 @@ window.onload = () => {
 
 function handleMessage(m) {
     // console.log('main received', m)
-    writeMessage({id: m.id, payload: m.payload + ' back'});
-    readMessage().then(handleMessage)
+    let bytesWritten = writeMessage({id: m.id, payload: m.payload + ' back'});
+    notifyAndWait(bytesWritten)
+        .then(bytesToRead => readMessage(bytesToRead))
+        .then(handleMessage)
 }
 
-readMessage().then(handleMessage)
+handleMessage({id: 0, payload: 'start'})
+// readMessage().then(handleMessage)
