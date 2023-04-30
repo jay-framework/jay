@@ -23,13 +23,6 @@ self.addEventListener('message', e => {
         main()
 }, false)
 
-function ctrlWait () {
-    // console.log('worker - wait')
-    Atomics.store(ctrlBuffer, 0, 0)
-    Atomics.wait(ctrlBuffer, 0, 0)
-    return ctrlBuffer[0]
-}
-
 function ctrlSignal (value) {
     // console.log('worker - signal', value)
     Atomics.store(ctrlBuffer, 1, value)
@@ -47,6 +40,13 @@ function writeMessage(res) {
     ctrlSignal(resJson.length)
 }
 
+function ctrlWait () {
+    // console.log('worker - wait')
+    Atomics.store(ctrlBuffer, 0, 0)
+    Atomics.wait(ctrlBuffer, 0, 0)
+    return ctrlBuffer[0]
+}
+
 function readMessage() {
     // console.log('worker - read')
     var resSize = ctrlWait()
@@ -59,35 +59,13 @@ function readMessage() {
     return JSON.parse(res)
 }
 
-function syncCall (...args) {
-    writeMessage(args);
-    //self.postMessage(args)
-    return readMessage();
-}
-
 function main () {
     console.log('worker main starting')
-    console.log(syncCall('hello', 'world'))
 
-    // benchmark
-    //
-
-    console.time('local')
-    var r1 = []
     for (let i = 0; i < 1000; i++) {
-        r1.push(hello(i)) // this will get inlined so it's not really a great benchmark
+        writeMessage({id: i, payload: 'hello'});
+        let res = readMessage();
+        console.log('worker received', res);
     }
-    console.timeEnd('local')
-
-    console.time('remote')
-    var r2 = []
-    for (let i = 0; i < 1000; i++) {
-        r2.push(syncCall('hello', i))
-    }
-    console.timeEnd('remote')
     console.log('end')
-}
-
-function hello (str) {
-    return `hello ${str}`
 }

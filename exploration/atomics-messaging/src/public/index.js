@@ -4,12 +4,6 @@ const decoder = new TextDecoder('utf8')
 
 var myWorker = new Worker('/worker.js')
 
-const exportedMethods = {
-    hello (str) {
-        return `hello ${str}`
-    }
-}
-
 const sharedCtrlBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT*2)
 const ctrlBuffer = new Int32Array(sharedCtrlBuffer)
 const sharedValueBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * RES_SIZE)
@@ -61,12 +55,9 @@ myWorker.onmessage = (e) => {
     // console.debug('calling', methodName, methodArgs)
     var res = exportedMethods[methodName](...methodArgs)
 
-    // write response
-    // console.debug('writing response')
     writeMessage(res);
 }
-console.log('posting message to worker')
-
+console.log('posting init message to worker')
 myWorker.postMessage({action: 'init', sharedCtrlBuffer, sharedValueBuffer})
 
 window.onload = () => {
@@ -76,9 +67,8 @@ window.onload = () => {
 };
 
 function handleMessage(m) {
-    var [methodName, ...methodArgs] = m;
-    var res = exportedMethods[methodName](...methodArgs)
-    writeMessage(res);
+    console.log('main received', m)
+    writeMessage({id: m.id, payload: m.payload + ' back'});
     readMessage().then(handleMessage)
 }
 
