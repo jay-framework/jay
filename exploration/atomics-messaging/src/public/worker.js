@@ -6,7 +6,7 @@ var ctrlBuffer
 var valueBuffer
 var decodeBuffer = new Uint8Array(RES_SIZE) // TextDecoder cant use SharedArrayBuffers
 const encodeBuffer = new Uint8Array(RES_SIZE) // TextEncoder cant use SharedArrayBuffers
-
+var messageIndex = 0;
 
 console.log('worker starting!!!')
 
@@ -25,8 +25,9 @@ self.addEventListener('message', e => {
 
 function ctrlSignal (value) {
     // console.log('worker - signal', value)
-    Atomics.store(ctrlBuffer, 1, value)
-    Atomics.notify(ctrlBuffer, 1)
+    Atomics.store(ctrlBuffer, 3, value)
+    Atomics.store(ctrlBuffer, 2, messageIndex++)
+    Atomics.notify(ctrlBuffer, 2)
 }
 
 function writeMessage(res) {
@@ -41,10 +42,10 @@ function writeMessage(res) {
 }
 
 function ctrlWait () {
-    // console.log('worker - wait')
     Atomics.store(ctrlBuffer, 0, 0)
     Atomics.wait(ctrlBuffer, 0, 0)
-    return ctrlBuffer[0]
+    // console.log('worker - wait', ctrlBuffer[0], ctrlBuffer[1])
+    return ctrlBuffer[1]
 }
 
 function readMessage() {
@@ -65,7 +66,7 @@ function main () {
     for (let i = 0; i < 1000; i++) {
         writeMessage({id: i, payload: 'hello'});
         let res = readMessage();
-        console.log('worker received', res);
+        // console.log('worker received', res);
     }
     console.log('end')
 }

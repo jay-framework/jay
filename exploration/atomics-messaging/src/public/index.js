@@ -4,16 +4,18 @@ const decoder = new TextDecoder('utf8')
 
 var myWorker = new Worker('/worker.js')
 
-const sharedCtrlBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT*2)
+const sharedCtrlBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT*4)
 const ctrlBuffer = new Int32Array(sharedCtrlBuffer)
 const sharedValueBuffer = new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT * RES_SIZE)
 const valueBuffer = new Int32Array(sharedValueBuffer)
 const encodeBuffer = new Uint8Array(RES_SIZE) // TextEncoder cant use SharedArrayBuffers
 const decodeBuffer = new Uint8Array(RES_SIZE) // TextDecoder cant use SharedArrayBuffers
+var messageIndex = 0;
 
 function ctrlSignal (value) {
     // console.log('main - signal', value)
-    Atomics.store(ctrlBuffer, 0, value)
+    Atomics.store(ctrlBuffer, 1, value)
+    Atomics.store(ctrlBuffer, 0, messageIndex++)
     Atomics.notify(ctrlBuffer, 0)
 }
 
@@ -29,10 +31,12 @@ function writeMessage(res) {
 }
 
 function ctrlWait () {
-    // console.log('main - wait')
-    Atomics.store(ctrlBuffer, 1, 0)
-    let waitResult = Atomics.waitAsync(ctrlBuffer, 1, 0)
-    return waitResult.value.then(() => ctrlBuffer[1])
+    Atomics.store(ctrlBuffer, 2, 0)
+    let waitResult = Atomics.waitAsync(ctrlBuffer, 2, 0)
+    return waitResult.value.then(() => {
+        // console.log('main - wait', ctrlBuffer[2], ctrlBuffer[3])
+        return ctrlBuffer[3]
+    })
 }
 
 function readMessage() {
@@ -67,7 +71,7 @@ window.onload = () => {
 };
 
 function handleMessage(m) {
-    console.log('main received', m)
+    // console.log('main received', m)
     writeMessage({id: m.id, payload: m.payload + ' back'});
     readMessage().then(handleMessage)
 }
