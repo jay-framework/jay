@@ -1,6 +1,6 @@
 import {JayComponent, JayComponentConstructor, provideContext} from "jay-runtime";
 import {JayPort, JPMRootComponentViewState, useWorkerPort} from "../comm-channel";
-import {SANDBOX_CONTEXT} from "./sandbox-context";
+import {SANDBOX_BRIDGE_CONTEXT} from "./sandbox-context";
 
 interface WorkerChildComp<ParentVS extends object, PropsT extends object> {
     refName: string
@@ -27,7 +27,7 @@ export function sandboxRoot(comps: Array<WorkerChildComp<any, any>>) {
         comps.forEach(workerChildComp => {
             if (!workerChildComp.comp) {
                 let context = {port, endpoint, compId: 0, coordinate: [workerChildComp.refName]}
-                workerChildComp.comp = provideContext(SANDBOX_CONTEXT, context, () => {
+                workerChildComp.comp = provideContext(SANDBOX_BRIDGE_CONTEXT, context, () => {
                     return workerChildComp.compCreator(workerChildComp.getProps(viewState))
                 })
             }
