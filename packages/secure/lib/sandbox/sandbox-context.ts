@@ -14,7 +14,7 @@ export interface SandboxContext {
     compId: number,
     coordinate: Coordinate
 }
-export const SANDBOX_MARKER = createJayContext<SandboxContext>()
+export const SANDBOX_CONTEXT = createJayContext<SandboxContext>()
 export type Refs = Record<string, HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> |
     JayComponent<any, any, any> | ComponentCollectionProxy<any, JayComponent<any, any, any>>>
 

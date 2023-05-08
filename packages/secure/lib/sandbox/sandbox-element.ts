@@ -7,7 +7,7 @@ import {
     updateFunc,
     useContext
 } from "jay-runtime";
-import {SANDBOX_CREATION_CONTEXT, SANDBOX_MARKER} from "./sandbox-context";
+import {SANDBOX_CREATION_CONTEXT, SANDBOX_CONTEXT} from "./sandbox-context";
 import {
     DynamicCompRefImplementation,
     DynamicNativeExec,
@@ -64,7 +64,7 @@ export function sandboxChildComp<ParentVS, Props>(
     let {viewState, refs, dataIds, isDynamic, endpoint} = useContext(SANDBOX_CREATION_CONTEXT)
     let coordinate = [...dataIds, refName];
     let context = {compId: endpoint.compId, coordinate, port: endpoint.port}
-    let childComp = provideContext(SANDBOX_MARKER, context, () => {
+    let childComp = provideContext(SANDBOX_CONTEXT, context, () => {
         return compCreator(getProps(viewState))
     })
     if (isDynamic) {

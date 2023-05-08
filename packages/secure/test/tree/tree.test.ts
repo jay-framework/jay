@@ -67,7 +67,7 @@ describe('events synthetic tests', () => {
 
             console.log(appElement.dom.outerHTML)
 
-            expectTreeNode(Tree2_1, noChildrenNoArrow, false);
+            expectTreeNode(Tree2_1, closedArrow, false);
         })
 
         it('should expand the child on click', async () => {
