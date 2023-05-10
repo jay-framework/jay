@@ -20,15 +20,19 @@ const Tree2_2 = {id: 'r', name: 'root', children: [Tree2_B, Tree2_C, Tree2_D]}
 const Tree3_A_A = {id: 'aa', name: 'aa node', children: []};
 const Tree3_A_B = {id: 'ab', name: 'ab node', children: []};
 const Tree3_A = {id: 'a', name: 'a node', children: [Tree3_A_A, Tree3_A_B]};
+const Tree3_A_2 = {id: 'a', name: 'a node', children: [Tree3_A_A]};
 const Tree3_B_A = {id: 'ba', name: 'ba node', children: []};
 const Tree3_B = {id: 'b', name: 'b node', children: [Tree3_B_A]};
 const Tree3_C_A = {id: 'ca', name: 'ca node', children: []};
 const Tree3_C_B = {id: 'cb', name: 'cb node', children: []};
 const Tree3_C_C = {id: 'cc', name: 'cc node', children: []};
 const Tree3_C = {id: 'c', name: 'c node', children: [Tree3_C_A, Tree3_C_B, Tree3_C_C]};
-const Tree3_D = {id: 'd', name: 'd node', children: [Tree3_B_A]};
+const Tree3_D_A = {id: 'da', name: 'da node', children: []};
+const Tree3_D = {id: 'd', name: 'd node', children: [Tree3_D_A]};
+const Tree3_E_A = {id: 'ea', name: 'ea node', children: []};
+const Tree3_E = {id: 'e', name: 'e node', children: [Tree3_E_A]};
 const Tree3_1 = {id: 'r', name: 'root', children: [Tree3_A, Tree3_B, Tree3_C, Tree3_D]}
-
+const Tree3_2 = {id: 'r', name: 'root', children: [Tree3_A_2, Tree3_B, Tree3_E, Tree3_D]}
 
 describe('events synthetic tests', () => {
 
@@ -51,8 +55,12 @@ describe('events synthetic tests', () => {
                 expect(getListById(node.id)).toBeNull()
         }
 
+        let expectNoTreeNode = (node: Node) => {
+            expect(getHeadById(node)).toBeNull()
+        }
+
         await channel.toBeClean();
-        return {channel, getHeadById, appElement, expectTreeNode}
+        return {channel, getHeadById, appElement, expectTreeNode, expectNoTreeNode}
     }
 
     it('should render one level tree', async () => {
@@ -141,6 +149,8 @@ describe('events synthetic tests', () => {
             await channel.toBeClean()
             getHeadById(Tree3_C).click()
             await channel.toBeClean()
+            getHeadById(Tree3_D).click()
+            await channel.toBeClean()
             console.log(appElement.dom.outerHTML)
 
             expectTreeNode(Tree3_1, openArrow, true);
@@ -153,6 +163,42 @@ describe('events synthetic tests', () => {
             expectTreeNode(Tree3_C_A, noChildrenNoArrow, false);
             expectTreeNode(Tree3_C_B, noChildrenNoArrow, false);
             expectTreeNode(Tree3_C_C, noChildrenNoArrow, false);
+            expectTreeNode(Tree3_D, openArrow, true);
+            expectTreeNode(Tree3_D_A, noChildrenNoArrow, false);
+        })
+
+        it('expand the whole tree and update tree', async () => {
+            let {channel, expectTreeNode, expectNoTreeNode, appElement, getHeadById} = await mkElement(Tree3_1);
+
+            getHeadById(Tree3_1).click()
+            await channel.toBeClean()
+            getHeadById(Tree3_A).click()
+            await channel.toBeClean()
+            getHeadById(Tree3_B).click()
+            await channel.toBeClean()
+            getHeadById(Tree3_C).click()
+            await channel.toBeClean()
+            getHeadById(Tree3_D).click()
+            await channel.toBeClean()
+            console.log(appElement.dom.outerHTML)
+
+            appElement.update(Tree3_2)
+            await channel.toBeClean()
+            console.log(appElement.dom.outerHTML)
+
+            expectTreeNode(Tree3_1, openArrow, true);
+            expectTreeNode(Tree3_A, openArrow, true);
+            expectTreeNode(Tree3_A_A, noChildrenNoArrow, false);
+            expectNoTreeNode(Tree3_A_B);
+            expectTreeNode(Tree3_B, openArrow, true);
+            expectTreeNode(Tree3_B_A, noChildrenNoArrow, false);
+            expectNoTreeNode(Tree3_C);
+            expectNoTreeNode(Tree3_C_A);
+            expectNoTreeNode(Tree3_C_B);
+            expectNoTreeNode(Tree3_C_C);
+            expectTreeNode(Tree3_D, openArrow, true);
+            expectTreeNode(Tree3_D_A, noChildrenNoArrow, false);
+            expectTreeNode(Tree3_E, closedArrow, false);
         })
     })
 
