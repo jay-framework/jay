@@ -67,7 +67,7 @@ export function sandboxChildComp<ParentVS, Props>(
     let childComp = provideContext(SANDBOX_BRIDGE_CONTEXT, context, () => {
         return compCreator(getProps(viewState))
     })
-    if (isDynamic) {
+    if (isDynamic && refs) {
         let ref = (refs[refName] as any as DynamicCompRefImplementation<ParentVS, ReturnType<typeof compCreator>>);
         ref.setItem(coordinate, viewState, childComp);
         let mounted = true;
@@ -92,7 +92,8 @@ export function sandboxChildComp<ParentVS, Props>(
         }
     }
     else {
-        refs[refName] = childComp;
+        if (refs)
+            refs[refName] = childComp;
         let update = (t: ParentVS) => childComp.update(getProps(t));
         let mount = childComp.mount
         let unmount = childComp.unmount

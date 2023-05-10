@@ -1,38 +1,22 @@
-import {JayComponent, JayComponentConstructor, provideContext} from "jay-runtime";
+import {provideContext} from "jay-runtime";
 import {JayPort, JPMRootComponentViewState, useWorkerPort} from "../comm-channel";
-import {SANDBOX_BRIDGE_CONTEXT} from "./sandbox-context";
+import {SANDBOX_CREATION_CONTEXT, SandboxCreationContext} from "./sandbox-context";
+import {SandboxElement} from "./sandbox-element";
 
-interface WorkerChildComp<ParentVS extends object, PropsT extends object> {
-    refName: string
-    compCreator: (PropsT) => JayComponent<PropsT, any, any>
-    getProps: (t: ParentVS) => PropsT
-    comp?
-}
-
-export function childComp<
-    ParentVS extends object,
-    PropsT extends object>(
-    compCreator: JayComponentConstructor<PropsT>,
-    getProps: (t: ParentVS) => PropsT,
-    refName?: string):
-    WorkerChildComp<ParentVS, PropsT>{
-    return {refName, compCreator, getProps}
-}
-
-export function sandboxRoot(comps: Array<WorkerChildComp<any, any>>) {
+export function sandboxRoot<ViewState>(sandboxElements: () => Array<SandboxElement<ViewState>>) {
     let port: JayPort = useWorkerPort();
     let endpoint = port.getRootEndpoint();
+    let elements: Array<SandboxElement<ViewState>>;
     endpoint.onUpdate((inMessage: JPMRootComponentViewState)  => {
-        let viewState = inMessage.viewState;
-        comps.forEach(workerChildComp => {
-            if (!workerChildComp.comp) {
-                let context = {port, endpoint, compId: 0, coordinate: [workerChildComp.refName]}
-                workerChildComp.comp = provideContext(SANDBOX_BRIDGE_CONTEXT, context, () => {
-                    return workerChildComp.compCreator(workerChildComp.getProps(viewState))
-                })
-            }
-            else
-                workerChildComp.comp.update(workerChildComp.getProps(viewState));
-        })
+        let viewState = inMessage.viewState as unknown as ViewState;
+        if (!elements) {
+            let context: SandboxCreationContext<ViewState> = {viewState, endpoint, isDynamic: false, dataIds: []}
+            elements = provideContext(SANDBOX_CREATION_CONTEXT, context, () => {
+                return sandboxElements();
+            })
+        }
+        else {
+            elements.forEach(element => element.update(viewState))
+        }
     })
 }

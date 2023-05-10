@@ -18,10 +18,10 @@ export const SANDBOX_BRIDGE_CONTEXT = createJayContext<SandboxContext>()
 export type Refs = Record<string, HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> |
     JayComponent<any, any, any> | ComponentCollectionProxy<any, JayComponent<any, any, any>>>
 
-interface SandboxCreationContext<ViewState> {
+export interface SandboxCreationContext<ViewState> {
     viewState: ViewState,
     endpoint: JayEndpoint,
-    refs: Refs,
+    refs?: Refs,
     dataIds: string[],
     isDynamic: boolean
 }
