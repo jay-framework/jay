@@ -4,8 +4,9 @@ import {makeJayComponent, Props, createMemo, createState} from 'jay-component';
 export interface CounterProps {
     title: string
     initialCount: number
+    id: string
 }
-function CounterConstructor({title, initialCount}: Props<CounterProps>, refs: CounterElementRefs) {
+function CounterConstructor({title, initialCount, id}: Props<CounterProps>, refs: CounterElementRefs) {
 
     let [count, setCount] = createState(initialCount)
 
@@ -13,7 +14,7 @@ function CounterConstructor({title, initialCount}: Props<CounterProps>, refs: Co
     refs.adder.onclick(() => setCount(count() + 1));
 
     return {
-        render: () => ({title, count}),
+        render: () => ({title, count, id}),
     }
 }
 

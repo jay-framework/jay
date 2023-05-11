@@ -20,9 +20,9 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
   return ConstructContext.withRootContext(viewState, () =>
     de('div', {}, [
       c(vs => vs.cond,
-        childComp(Counter, vs => ({title: 'conditional counter', initialCount: vs.initialCount}))
+        childComp(Counter, vs => ({title: 'conditional counter', initialCount: vs.initialCount, id: 'cond'}))
       ),
       forEach(vs => vs.counters, (vs1: Counter) => {
-        return childComp(Counter, vs => ({title: `collection counter ${vs.id}`, initialCount: vs.initialCount}))}, 'id')
+        return childComp(Counter, vs => ({title: `collection counter ${vs.id}`, initialCount: vs.initialCount, id: vs.id}))}, 'id')
     ]), options);
 }

@@ -5,10 +5,10 @@ import {sandboxChildComp, sandboxCondition, sandboxForEach} from "../../../../li
 export function initializeWorker() {
     sandboxRoot(() => [
         sandboxCondition(vs => vs.cond, [
-            sandboxChildComp<any, any>(Counter, vs => ({title: 'conditional counter', initialCount: vs.initialCount}), 'comp1')
+            sandboxChildComp<any, any>(Counter, vs => ({title: 'conditional counter', initialCount: vs.initialCount, id: 'cond'}), 'comp1')
         ]),
         sandboxForEach<any, any>(vs => vs.counters, "id", () => [
-            sandboxChildComp<any, any>(Counter, vs => ({title: `collection counter ${vs.id}`, initialCount: vs.initialCount}), 'comp2')
+            sandboxChildComp<any, any>(Counter, vs => ({title: `collection counter ${vs.id}`, initialCount: vs.initialCount, id: vs.id}), 'comp2')
         ])
     ])
 }

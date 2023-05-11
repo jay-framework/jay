@@ -4,7 +4,8 @@ import {sandboxElement as e} from "../../../../lib/sandbox/sandbox-element";
 
 export interface CounterViewState {
     title: string,
-    count: number
+    count: number,
+    id: string
 }
 
 export interface CounterElementRefs {
