@@ -6,6 +6,7 @@ import {CounterViewState} from "./secure/main/counter.jay.html";
 import {AppViewState, render} from "./secure/main/app.jay.html";
 import {setChannel} from "../../lib/comm-channel";
 
+const cond = 'cond'
 const viewState: AppViewState = {cond: true, initialCount: 12, counters: [
         {id: 'a', initialCount: 13},
         {id: 'b', initialCount: 14},
@@ -18,20 +19,24 @@ describe('top level collections and conditions', () => {
         setChannel(channel);
         initializeWorker();
         let appElement = render(viewState);
-        // let title = appElement.dom.querySelector('[data-id="title"]') as HTMLDivElement;
-        // let add = appElement.dom.querySelector('[data-id="add"]') as HTMLButtonElement;
-        // let sub = appElement.dom.querySelector('[data-id="sub"]') as HTMLButtonElement;
-        // let count = appElement.dom.querySelector('[data-id="count"]')  as HTMLSpanElement;
+        let title = (id) => appElement.dom.querySelector(`[data-id="${id}-title"]`) as HTMLDivElement;
+        let add = (id) => appElement.dom.querySelector(`[data-id="${id}-add"]`) as HTMLButtonElement;
+        let sub = (id) => appElement.dom.querySelector(`[data-id="${id}-sub"]`) as HTMLButtonElement;
+        let count = (id) => appElement.dom.querySelector(`[data-id="${id}-count"]`)  as HTMLSpanElement;
         await channel.toBeClean();
-        return {channel, appElement};
+        return {channel, appElement, add, title, sub, count};
     }
 
-    it('should render a counter component, secure', async () => {
-        let {appElement} = await mkElement()
+    it('should render 3 counter components', async () => {
+        let {appElement, title, count} = await mkElement()
 
         console.log(appElement.dom.outerHTML)
-        // expect(title.textContent).toBe('first counter')
-        // expect(count.textContent).toBe('12')
+        expect(title(cond).textContent).toBe('conditional counter')
+        expect(count(cond).textContent).toBe('12')
+        expect(title(viewState.counters[0].id).textContent).toBe(`collection counter ${viewState.counters[0].id}`)
+        expect(count(viewState.counters[0].id).textContent).toBe(''+viewState.counters[0].initialCount)
+        expect(title(viewState.counters[1].id).textContent).toBe(`collection counter ${viewState.counters[1].id}`)
+        expect(count(viewState.counters[1].id).textContent).toBe(''+viewState.counters[1].initialCount)
     })
 
     // it('should handle click event in secure counter', async () => {
