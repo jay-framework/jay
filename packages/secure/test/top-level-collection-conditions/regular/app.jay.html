@@ -1,0 +1,19 @@
+<html>
+<head>
+    <link rel="import" href="./counter" names="Counter"/>
+    <script type="application/yaml-jay">
+data:
+    cond: boolean
+    initialCount: number
+    counters:
+    -  id: string
+       initialCount: number
+    </script>
+</head>
+<body>
+<div>
+    <Counter if="cond" title="conditional counter" initialCount="{initialCount}" />
+    <Counter forEach="counters" trackBy="id" title="collection counter {id}" initialCount="{initialCount}" />
+</div>
+</body>
+</html>

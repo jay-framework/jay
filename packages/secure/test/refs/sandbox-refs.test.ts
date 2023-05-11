@@ -13,7 +13,7 @@ import {Reactive} from "jay-reactive";
 import {$func, $handler} from "../../lib/$func";
 import {ComponentCollectionProxy, HTMLElementCollectionProxy, HTMLElementProxy} from "jay-runtime";
 import {
-    SandboxCondition as c,
+    sandboxCondition as c,
     sandboxElement as e,
     sandboxForEach as forEach,
     sandboxChildComp as childComp

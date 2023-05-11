@@ -180,7 +180,7 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
     }
 }
 
-export function SandboxCondition<ViewState>(condition: (newData: ViewState) => boolean, children: SandboxElement<ViewState>[]): SandboxElement<ViewState> {
+export function sandboxCondition<ViewState>(condition: (newData: ViewState) => boolean, children: SandboxElement<ViewState>[]): SandboxElement<ViewState> {
     let {viewState} = useContext(SANDBOX_CREATION_CONTEXT)
     let state = condition(viewState);
     let mounted = true;
