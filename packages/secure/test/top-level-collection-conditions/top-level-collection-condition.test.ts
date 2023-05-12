@@ -6,10 +6,17 @@ import {CounterViewState} from "./secure/main/counter.jay.html";
 import {AppViewState, render} from "./secure/main/app.jay.html";
 import {setChannel} from "../../lib/comm-channel";
 
-const cond = 'cond'
+const condCounter = 'cond'
+const collCounterId_a = 'a'
+const collCounterId_b = 'b'
+const initialCountById = (id: string) => viewState.counters
+    .find(_ => _.id === id)
+    .initialCount;
+const condCounterTitle = 'conditional counter'
+const collCounterTitle = (id: string) => `collection counter ${id}`
 const viewState: AppViewState = {cond: true, initialCount: 12, counters: [
-        {id: 'a', initialCount: 13},
-        {id: 'b', initialCount: 14},
+        {id: collCounterId_a, initialCount: 13},
+        {id: collCounterId_b, initialCount: 14},
     ]}
 
 describe('top level collections and conditions', () => {
@@ -31,12 +38,35 @@ describe('top level collections and conditions', () => {
         let {appElement, title, count} = await mkElement()
 
         console.log(appElement.dom.outerHTML)
-        expect(title(cond).textContent).toBe('conditional counter')
-        expect(count(cond).textContent).toBe('12')
-        expect(title(viewState.counters[0].id).textContent).toBe(`collection counter ${viewState.counters[0].id}`)
-        expect(count(viewState.counters[0].id).textContent).toBe(''+viewState.counters[0].initialCount)
-        expect(title(viewState.counters[1].id).textContent).toBe(`collection counter ${viewState.counters[1].id}`)
-        expect(count(viewState.counters[1].id).textContent).toBe(''+viewState.counters[1].initialCount)
+        expect(title(condCounter).textContent).toBe(condCounterTitle)
+        expect(count(condCounter).textContent).toBe(''+viewState.initialCount)
+        expect(title(collCounterId_a).textContent).toBe(collCounterTitle(collCounterId_a))
+        expect(count(collCounterId_a).textContent).toBe(''+initialCountById(collCounterId_a))
+        expect(title(collCounterId_b).textContent).toBe(collCounterTitle(collCounterId_b))
+        expect(count(collCounterId_b).textContent).toBe(''+initialCountById(collCounterId_b))
+    })
+
+    it('the counter components should work', async () => {
+        let {appElement, channel, title, count, add, sub} = await mkElement()
+
+        add(condCounter).click();
+        await channel.toBeClean();
+        add(condCounter).click();
+        await channel.toBeClean();
+        add(collCounterId_a).click();
+        await channel.toBeClean();
+        sub(collCounterId_b).click();
+        await channel.toBeClean();
+        sub(collCounterId_b).click();
+        await channel.toBeClean();
+
+        console.log(appElement.dom.outerHTML)
+        expect(title(condCounter).textContent).toBe(condCounterTitle)
+        expect(count(condCounter).textContent).toBe('' + (viewState.initialCount + 2))
+        expect(title(collCounterId_a).textContent).toBe(collCounterTitle(collCounterId_a))
+        expect(count(collCounterId_a).textContent).toBe('' + (initialCountById(collCounterId_a) + 1))
+        expect(title(collCounterId_b).textContent).toBe(collCounterTitle(collCounterId_b))
+        expect(count(collCounterId_b).textContent).toBe('' + (initialCountById(collCounterId_b) - 2))
     })
 
     // it('should handle click event in secure counter', async () => {
