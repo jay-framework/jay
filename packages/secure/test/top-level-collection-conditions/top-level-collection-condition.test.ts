@@ -116,12 +116,23 @@ describe('top level collections and conditions', () => {
         expect(count(COUNTER_B_ID).textContent).toBe(''+initialCountById(COUNTER_B_ID))
     })
 
-    it('supports root component APIs', () => {
+    it('supports root component APIs', async () => {
+        let {appElement, channel, title, count} = await mkElement(viewState)
+
+        expect(await appElement.refs.comp1.counterDescription()).toBe('not this value')
 
     })
 
-    it('supports root component events', () => {
+    it('supports root component events', async () => {
+        let {appElement, channel, add, title, count} = await mkElement(viewState)
+        let fn = jest.fn();
 
+        appElement.refs.comp1.onChange(fn);
+        await channel.toBeClean();
+        add(COUNTER_COND).click();
+        await channel.toBeClean();
+
+        expect(fn).toBeCalled()
     })
 
 })

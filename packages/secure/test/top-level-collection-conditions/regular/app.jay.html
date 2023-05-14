@@ -12,8 +12,8 @@ data:
 </head>
 <body>
 <div>
-    <Counter if="cond" title="conditional counter" initialCount="{initialCount}" id="cond"/>
-    <Counter forEach="counters" trackBy="id" title="collection counter {id}" initialCount="{initialCount}" id="{id}"/>
+    <Counter if="cond" title="conditional counter" initialCount="{initialCount}" id="cond" ref="comp1"/>
+    <Counter forEach="counters" trackBy="id" title="collection counter {id}" initialCount="{initialCount}" id="{id}" ref="comp2"/>
 </div>
 </body>
 </html>

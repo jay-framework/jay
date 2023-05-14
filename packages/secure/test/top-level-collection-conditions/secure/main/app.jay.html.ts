@@ -8,6 +8,7 @@ import {
 import {Counter} from './counter';
 import {mainRoot as mr} from "../../../../lib/main/main-root";
 import {secureChildComp} from "../../../../lib/main/main-child-comp";
+import {CounterRef, CounterRefs} from "./counter-refs";
 
 export interface Counter {
     id: string,
@@ -20,7 +21,10 @@ export interface AppViewState {
     counters: Array<Counter>
 }
 
-export interface AppElementRefs {}
+export interface AppElementRefs {
+    comp1: CounterRef<AppViewState>,
+    comp2: CounterRefs<Counter>
+}
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>
 
