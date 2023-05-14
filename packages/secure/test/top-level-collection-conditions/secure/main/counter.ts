@@ -7,4 +7,4 @@ export interface CounterProps {
     id: string
 }
 
-export const Counter = makeJayComponentBridge(render);
+export const Counter = makeJayComponentBridge(render, {events: ['onChange'], functions: ['counterDescription']});

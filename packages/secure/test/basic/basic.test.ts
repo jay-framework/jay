@@ -11,7 +11,7 @@ const updatedData = {firstName: 'John', lastName: 'Green'};
 describe('basic secure rendering', () => {
 
     async function mkElement() {
-        let channel = useMockCommunicationChannel<BasicProps, BasicViewState>(true);
+        let channel = useMockCommunicationChannel<BasicProps, BasicViewState>(false);
         setChannel(channel);
         initializeWorker();
         let appElement = render(initialData);

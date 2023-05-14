@@ -1,13 +1,19 @@
-import {JayElement, JayEvent, provideContext, RenderElement, useContext} from "jay-runtime";
+import {JayComponent, JayElement, JayEvent, provideContext, RenderElement, useContext} from "jay-runtime";
 import {createState, JayComponentCore, makeJayComponent, Props, useReactive} from "jay-component";
 import {
-    domEventMessage,
+    domEventMessage, JayEndpoint,
     JayPortMessageType,
     JPMMessage
 } from "../comm-channel";
 import {SECURE_COMPONENT_MARKER} from "./main-contexts";
 import {SECURE_COORDINATE_MARKER} from "./main-child-comp";
 import {FunctionsRepository} from "./function-repository-types";
+
+interface CompBridgeOptions {
+    events?: Array<string>,
+    functions?: Array<string>,
+    funcRepository?: FunctionsRepository
+}
 
 function makeComponentBridgeConstructor<
     PropsT extends object,
@@ -43,21 +49,32 @@ function makeComponentBridgeConstructor<
     }
 }
 
+function makeCompAPIProxy(comp: object, endpoint: JayEndpoint, options: CompBridgeOptions) {
+    if (options?.events)
+        comp['addEventListener'] = (eventType: string, handler: Function) => console.log('event api', eventType, handler);
+
+    options?.functions?.forEach(functionName => {
+        comp[functionName] = (...args) => console.log('comp api', args);
+    })
+}
+
 export function makeJayComponentBridge<
     PropsT extends object,
     ViewState extends object,
     Refs extends object,
     JayElementT extends JayElement<ViewState, Refs>>
 (render: RenderElement<ViewState, Refs, JayElementT>,
- funcRepository?: FunctionsRepository) {
+ options?: CompBridgeOptions) {
     let component = makeJayComponent(render, makeComponentBridgeConstructor);
     return (props: PropsT) => {
         let {compId, port} = useContext(SECURE_COMPONENT_MARKER);
         let {coordinate} = useContext(SECURE_COORDINATE_MARKER);
         let endpoint = port.getEndpoint(compId, coordinate);
-        let newSecureComponentContext = {endpoint, compId: endpoint.compId, port, funcRepository}
+        let newSecureComponentContext = {endpoint, compId: endpoint.compId, port, funcRepository: options?.funcRepository}
         return provideContext(SECURE_COMPONENT_MARKER, newSecureComponentContext, () => {
-            return component(props);
+            let comp = component(props);
+            makeCompAPIProxy(comp, endpoint, options);
+            return comp;
         })
     }
 }

@@ -34,10 +34,12 @@ const Tree3_E = {id: 'e', name: 'e node', children: [Tree3_E_A]};
 const Tree3_1 = {id: 'r', name: 'root', children: [Tree3_A, Tree3_B, Tree3_C, Tree3_D]}
 const Tree3_2 = {id: 'r', name: 'root', children: [Tree3_A_2, Tree3_B, Tree3_E, Tree3_D]}
 
+const VERBOSE = false;
+
 describe('events synthetic tests', () => {
 
     async function mkElement(viewState: Node) {
-        let channel = useMockCommunicationChannel<Node, TreeNodeViewState>(true);
+        let channel = useMockCommunicationChannel<Node, TreeNodeViewState>(VERBOSE);
         setChannel(channel);
         initializeWorker();
         let appElement = render(viewState);
@@ -73,7 +75,7 @@ describe('events synthetic tests', () => {
         it('render closed tree by default', async () => {
             let {expectTreeNode, appElement} = await mkElement(Tree2_1);
 
-            console.log(appElement.dom.outerHTML)
+            VERBOSE && console.log(appElement.dom.outerHTML)
 
             expectTreeNode(Tree2_1, closedArrow, false);
         })
@@ -81,11 +83,11 @@ describe('events synthetic tests', () => {
         it('should expand the child on click', async () => {
             let {expectTreeNode, channel, getHeadById, appElement} = await mkElement(Tree2_1);
 
-            console.log(appElement.dom.outerHTML)
+            VERBOSE && console.log(appElement.dom.outerHTML)
             getHeadById(Tree2_1).click();
             await channel.toBeClean()
 
-            console.log(appElement.dom.outerHTML)
+            VERBOSE && console.log(appElement.dom.outerHTML)
             expectTreeNode(Tree2_1, openArrow, true);
             expectTreeNode(Tree2_B, noChildrenNoArrow, false);
         })
@@ -93,7 +95,7 @@ describe('events synthetic tests', () => {
         it('render closed tree with 3 children', async () => {
             let {expectTreeNode, appElement} = await mkElement(Tree2_2);
 
-            console.log(appElement.dom.outerHTML)
+            VERBOSE && console.log(appElement.dom.outerHTML)
 
             expectTreeNode(Tree2_1, closedArrow, false);
         })
@@ -101,10 +103,10 @@ describe('events synthetic tests', () => {
         it('update to open tree with 3 children', async () => {
             let {expectTreeNode, channel, getHeadById, appElement} = await mkElement(Tree2_2);
 
-            console.log(appElement.dom.outerHTML)
+            VERBOSE && console.log(appElement.dom.outerHTML)
             getHeadById(Tree2_1).click();
             await channel.toBeClean()
-            console.log(appElement.dom.outerHTML)
+            VERBOSE && console.log(appElement.dom.outerHTML)
 
             expectTreeNode(Tree2_1, openArrow, true);
             expectTreeNode(Tree2_B, noChildrenNoArrow, false);
@@ -117,11 +119,11 @@ describe('events synthetic tests', () => {
             getHeadById(Tree2_1).click();
             await channel.toBeClean()
 
-            console.log(appElement.dom.outerHTML)
+            VERBOSE && console.log(appElement.dom.outerHTML)
             appElement.update(Tree2_2)
             await channel.toBeClean()
 
-            console.log(appElement.dom.outerHTML)
+            VERBOSE && console.log(appElement.dom.outerHTML)
             expectTreeNode(Tree2_1, openArrow, true);
             expectTreeNode(Tree2_B, noChildrenNoArrow, false);
             expectTreeNode(Tree2_C, noChildrenNoArrow, false);
@@ -133,7 +135,7 @@ describe('events synthetic tests', () => {
         it('render closed tree by default', async () => {
             let {expectTreeNode, appElement} = await mkElement(Tree3_1);
 
-            console.log(appElement.dom.outerHTML)
+            VERBOSE && console.log(appElement.dom.outerHTML)
 
             expectTreeNode(Tree3_1, closedArrow, false);
         })
@@ -151,7 +153,7 @@ describe('events synthetic tests', () => {
             await channel.toBeClean()
             getHeadById(Tree3_D).click()
             await channel.toBeClean()
-            console.log(appElement.dom.outerHTML)
+            VERBOSE && console.log(appElement.dom.outerHTML)
 
             expectTreeNode(Tree3_1, openArrow, true);
             expectTreeNode(Tree3_A, openArrow, true);
@@ -180,11 +182,11 @@ describe('events synthetic tests', () => {
             await channel.toBeClean()
             getHeadById(Tree3_D).click()
             await channel.toBeClean()
-            console.log(appElement.dom.outerHTML)
+            VERBOSE && console.log(appElement.dom.outerHTML)
 
             appElement.update(Tree3_2)
             await channel.toBeClean()
-            console.log(appElement.dom.outerHTML)
+            VERBOSE && console.log(appElement.dom.outerHTML)
 
             expectTreeNode(Tree3_1, openArrow, true);
             expectTreeNode(Tree3_A, openArrow, true);

@@ -13,7 +13,7 @@ export function node(name: string, children: Node[] = []) {
 }
 
 function TreeNodeConstructor({name, id, children}: Props<Node>, refs: TreeNodeElementRefs) {
-    console.log('create sandbox component', id())
+    // console.log('create sandbox component', id())
     let [open, setOpen] = createState(false);
     let headChar = createMemo(() => children()?.length > 0 ? (open()?"▼":"►"):"")
     let node = createMemo(() => ({name: name(), id: id(), children: children()}));

@@ -5,4 +5,4 @@ import {funcRepository} from "./native-funcs";
 export interface CompProps {
 }
 
-export const Comp = makeJayComponentBridge(render, funcRepository);
+export const Comp = makeJayComponentBridge(render, {funcRepository});
