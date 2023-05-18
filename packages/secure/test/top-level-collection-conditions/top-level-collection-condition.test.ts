@@ -10,7 +10,7 @@ const COUNTER_COND = 'cond'
 const COUNTER_A_ID = 'a'
 const COUNTER_B_ID = 'b'
 const COUNTER_C_ID = 'c'
-const initialCountById = (id: string) => viewState.counters
+const initialCountById = (viewState: AppViewState, id: string) => viewState.counters
     .find(_ => _.id === id)
     .initialCount;
 const condCounterTitle = 'conditional counter'
@@ -56,9 +56,9 @@ describe('top level collections and conditions', () => {
         expect(title(COUNTER_COND).textContent).toBe(condCounterTitle)
         expect(count(COUNTER_COND).textContent).toBe(''+viewState.initialCount)
         expect(title(COUNTER_A_ID).textContent).toBe(collCounterTitle(COUNTER_A_ID))
-        expect(count(COUNTER_A_ID).textContent).toBe(''+initialCountById(COUNTER_A_ID))
+        expect(count(COUNTER_A_ID).textContent).toBe(''+initialCountById(viewState, COUNTER_A_ID))
         expect(title(COUNTER_B_ID).textContent).toBe(collCounterTitle(COUNTER_B_ID))
-        expect(count(COUNTER_B_ID).textContent).toBe(''+initialCountById(COUNTER_B_ID))
+        expect(count(COUNTER_B_ID).textContent).toBe(''+initialCountById(viewState, COUNTER_B_ID))
     })
 
     it('the counter components should work', async () => {
@@ -79,9 +79,9 @@ describe('top level collections and conditions', () => {
         expect(title(COUNTER_COND).textContent).toBe(condCounterTitle)
         expect(count(COUNTER_COND).textContent).toBe('' + (viewState.initialCount + 2))
         expect(title(COUNTER_A_ID).textContent).toBe(collCounterTitle(COUNTER_A_ID))
-        expect(count(COUNTER_A_ID).textContent).toBe('' + (initialCountById(COUNTER_A_ID) + 1))
+        expect(count(COUNTER_A_ID).textContent).toBe('' + (initialCountById(viewState, COUNTER_A_ID) + 1))
         expect(title(COUNTER_B_ID).textContent).toBe(collCounterTitle(COUNTER_B_ID))
-        expect(count(COUNTER_B_ID).textContent).toBe('' + (initialCountById(COUNTER_B_ID) - 2))
+        expect(count(COUNTER_B_ID).textContent).toBe('' + (initialCountById(viewState, COUNTER_B_ID) - 2))
     })
 
     it('should not render the cond counter if condition === false', async () => {
@@ -90,9 +90,9 @@ describe('top level collections and conditions', () => {
         VERBOSE && console.log(appElement.dom.outerHTML)
         expect(title(COUNTER_COND)).toBeNull()
         expect(title(COUNTER_A_ID).textContent).toBe(collCounterTitle(COUNTER_A_ID))
-        expect(count(COUNTER_A_ID).textContent).toBe(''+initialCountById(COUNTER_A_ID))
+        expect(count(COUNTER_A_ID).textContent).toBe(''+initialCountById(viewState2, COUNTER_A_ID))
         expect(title(COUNTER_B_ID).textContent).toBe(collCounterTitle(COUNTER_B_ID))
-        expect(count(COUNTER_B_ID).textContent).toBe(''+initialCountById(COUNTER_B_ID))
+        expect(count(COUNTER_B_ID).textContent).toBe(''+initialCountById(viewState2, COUNTER_B_ID))
     })
 
     it('should not render the cond counter if condition is updated to false', async () => {
@@ -104,9 +104,9 @@ describe('top level collections and conditions', () => {
         VERBOSE && console.log(appElement.dom.outerHTML)
         expect(title(COUNTER_COND)).toBeNull()
         expect(title(COUNTER_A_ID).textContent).toBe(collCounterTitle(COUNTER_A_ID))
-        expect(count(COUNTER_A_ID).textContent).toBe(''+initialCountById(COUNTER_A_ID))
+        expect(count(COUNTER_A_ID).textContent).toBe(''+initialCountById(viewState2, COUNTER_A_ID))
         expect(title(COUNTER_B_ID).textContent).toBe(collCounterTitle(COUNTER_B_ID))
-        expect(count(COUNTER_B_ID).textContent).toBe(''+initialCountById(COUNTER_B_ID))
+        expect(count(COUNTER_B_ID).textContent).toBe(''+initialCountById(viewState2, COUNTER_B_ID))
     })
 
     it('should update the collection counters', async () => {
@@ -116,11 +116,12 @@ describe('top level collections and conditions', () => {
         await channel.toBeClean();
 
         VERBOSE && console.log(appElement.dom.outerHTML)
-        expect(title(COUNTER_COND)).toBeNull()
+        expect(title(COUNTER_COND).textContent).toBe(condCounterTitle)
+        expect(count(COUNTER_COND).textContent).toBe('' + (viewState.initialCount))
         expect(title(COUNTER_A_ID).textContent).toBe(collCounterTitle(COUNTER_A_ID))
-        expect(count(COUNTER_A_ID).textContent).toBe(''+initialCountById(COUNTER_A_ID))
+        expect(count(COUNTER_A_ID).textContent).toBe(''+initialCountById(viewState3, COUNTER_A_ID))
         expect(title(COUNTER_C_ID).textContent).toBe(collCounterTitle(COUNTER_C_ID))
-        expect(count(COUNTER_C_ID).textContent).toBe(''+initialCountById(COUNTER_C_ID))
+        expect(count(COUNTER_C_ID).textContent).toBe(''+initialCountById(viewState3, COUNTER_C_ID))
     })
 
     it('supports root component APIs', async () => {

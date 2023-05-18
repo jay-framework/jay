@@ -51,6 +51,21 @@ export function useOptionalContext<ContextType>(marker: ContextMarker<ContextTyp
     return undefined;
 }
 
+export function saveContext() {
+    return currentContext;
+}
+
+export function restoreContext<Returns>(savedContext: ContextStack<any>, callback: () => Returns): Returns {
+    let aContext = currentContext
+    try {
+        currentContext = savedContext;
+        return callback();
+    }
+    finally {
+        currentContext = aContext;
+    }
+}
+
 
 
 export const CONSTRUCTION_CONTEXT_MARKER = createJayContext<ConstructContext<any>>();

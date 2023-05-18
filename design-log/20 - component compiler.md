@@ -268,9 +268,7 @@ export interface CounterProps {
 }
 function CounterConstructor({id, 
                                 initialCount, 
-                                dbConnection$, 
-                                translationsService$$, 
-                                language$$}: Props<CounterProps>, 
+                                dbConnection$}: Props<CounterProps>, 
                             refs: CounterElementRefs) {
 
     let [count, setCount] = createState(initialCount)

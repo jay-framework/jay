@@ -15,7 +15,7 @@ import './element-test-types';
 import {
     CONSTRUCTION_CONTEXT_MARKER,
     currentConstructionContext,
-    provideContext,
+    provideContext, restoreContext, saveContext,
     wrapWithModifiedCheck
 } from "./context";
 
@@ -164,6 +164,7 @@ export function mkUpdateCollectionInternal<ViewState, Item>(child: ForEach<ViewS
     let unmount = () => lastItemsList.forEach((value, attach) => attach.unmount);
     // todo handle data updates of the parent contexts
     let parentContext = currentConstructionContext();
+    let savedContext = saveContext();
     const update = (newData: ViewState) => {
         const items = child.getItems(newData) || [];
         let isModified;
@@ -172,8 +173,9 @@ export function mkUpdateCollectionInternal<ViewState, Item>(child: ForEach<ViewS
             let itemsList = new List<Item, BaseJayElement<Item>>(items, child.matchBy);
             let instructions = listCompare<Item, BaseJayElement<Item>>(lastItemsList, itemsList, (item, id) => {
                 let childContext = parentContext.forItem(item);
-                return provideContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () =>
-                    wrapWithModifiedCheck(currentConstructionContext().currData, child.elemCreator(item, id)))
+                return restoreContext(savedContext, () =>
+                    provideContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () =>
+                        wrapWithModifiedCheck(currentConstructionContext().currData, child.elemCreator(item, id))))
             });
             lastItemsList = itemsList;
             applyChanges(instructions)

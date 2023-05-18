@@ -1,14 +1,8 @@
-import {beforeEach, describe, expect, it} from '@jest/globals'
-import {ConstructContext, currentConstructionContext, dynamicProperty as dp, element as e} from "../../lib";
-import {createJayContext, provideContext, useContext, useOptionalContext} from "../../lib/context";
-
-const SOME_VALUE = 'some text in the element';
+import {describe, expect, it} from '@jest/globals'
+import {createJayContext, provideContext, useContext, useOptionalContext} from "../../lib";
+import {restoreContext, saveContext} from "../../lib/context";
 
 describe('context', () => {
-    interface ViewState {
-        text: string
-    }
-    let data: ViewState = {text: SOME_VALUE};
     interface TestContext {
         name: string
     }
@@ -79,5 +73,20 @@ describe('context', () => {
         expect(foundContext_2).toEqual(CONTEXT_VALUE_2)
     })
 
+    it('should support saving current context and restoring it later, to be used for forEach updates', () => {
+        let foundContext, foundContext_2, savedContext;
+        provideContext(TEST_CONTEXT, CONTEXT_VALUE, () => {
+            provideContext(TEST_CONTEXT_2, CONTEXT_VALUE_2, () => {
+                savedContext = saveContext();
+            })
+        })
+
+        restoreContext(savedContext, () => {
+            foundContext = useContext(TEST_CONTEXT);
+            foundContext_2 = useContext(TEST_CONTEXT_2);
+        })
+        expect(foundContext).toEqual(CONTEXT_VALUE)
+        expect(foundContext_2).toEqual(CONTEXT_VALUE_2)
+    })
 });
 
