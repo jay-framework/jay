@@ -69,7 +69,7 @@ export interface JPMRootAPIReturns extends JayPortMessage {
 }
 
 export type JPMMessage = JPMRootComponentViewState | JPMRender | JPMAddEventListener | JPMDomEvent | JPMNativeExecResult |
-                         JPMNativeExec | JPMRootAPIInvoke | JPMRootAPIReturns
+                         JPMNativeExec | JPMRootAPIInvoke | JPMRootAPIReturns | JPMRemoveEventListener
 
 export type JayPortInMessageHandler = (inMessage: JPMMessage) => void;
 

@@ -6,23 +6,25 @@ import {
     HTMLElementProxy,
     HTMLElementProxyTarget,
     HTMLNativeExec,
-    JayComponent,
+    JayComponent, JayEvent,
     JayEventHandler,
     JayNativeFunction,
     MountFunc,
     normalizeUpdates,
     provideContext,
-    updateFunc, useContext
+    updateFunc,
+    useContext
 } from "jay-runtime";
-import {Reactive} from "jay-reactive";
 import {
-    addEventListenerMessage,
+    addEventListenerMessage, domEventMessage,
     JayEndpoint,
     JayPortMessageType,
-    JPMMessage, JPMRootAPIInvoke,
+    JPMMessage,
+    JPMRootAPIInvoke,
     nativeExec,
     removeEventListenerMessage,
-    renderMessage, rootApiReturns
+    renderMessage,
+    rootApiReturns
 } from "../comm-channel";
 import {$JayNativeFunction} from "../main/function-repository-types";
 import {correlatedPromise, rejectCorrelatedPromise, resolveCorrelatedPromise} from "../$func";
@@ -239,6 +241,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
     let endpoint = parentContext.port.getEndpoint(parentContext.compId, parentContext.coordinate)
 
     let refs = {};
+    let events = {}
     dynamicComponents.forEach(compRef => refs[compRef] = proxyRef(new DynamicCompRefImplementation()))
     dynamicElements.forEach(elemRef => refs[elemRef] = proxyRef(new DynamicRefImplementation(elemRef, endpoint)))
     return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState, refs, dataIds: [], isDynamic: false}, () => {
@@ -276,6 +279,21 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
                             endpoint.post(rootApiReturns(message.callId, undefined, err))
                         })
                     }
+                    break;
+                }
+                case JayPortMessageType.addEventListener: {
+                    let handler = ({event, viewState, coordinate}: JayEvent<any, any>) => {
+                        parentContext.port.batch(() => {
+                            endpoint.post(domEventMessage(inMessage.eventType, coordinate, event))
+                        })
+                    }
+                    events[inMessage.eventType] = handler;
+                    getComponentInstance().addEventListener(inMessage.eventType, handler)
+                    break;
+                }
+                case JayPortMessageType.removeEventListener: {
+                    getComponentInstance().removeEventListener(inMessage.eventType, events[inMessage.eventType]);
+                    delete events[inMessage.eventType]
                 }
             }
         })

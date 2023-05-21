@@ -1,6 +1,13 @@
-import {JayElement, JayEvent, provideContext, RenderElement, useContext} from "jay-runtime";
+import {JayElement, JayEvent, JayEventHandler, provideContext, RenderElement, useContext} from "jay-runtime";
 import {createState, JayComponentCore, makeJayComponent, Props, useReactive} from "jay-component";
-import {domEventMessage, JayEndpoint, JayPortMessageType, JPMMessage, rootApiInvoke} from "../comm-channel";
+import {
+    addEventListenerMessage,
+    domEventMessage,
+    JayEndpoint,
+    JayPortMessageType,
+    JPMMessage,
+    rootApiInvoke
+} from "../comm-channel";
 import {SECURE_COMPONENT_MARKER} from "./main-contexts";
 import {SECURE_COORDINATE_MARKER} from "./main-child-comp";
 import {FunctionsRepository} from "./function-repository-types";
@@ -31,6 +38,7 @@ function makeComponentBridgeConstructor<
     let {endpoint, port, funcRepository} = useContext(SECURE_COMPONENT_MARKER);
 
     let ongoingAPICalls: Record<number, [PromiseResolve, PromiseReject]> = {};
+    let eventHandlers: Record<string, JayEventHandler<any, any, any>> = {}
 
     endpoint.onUpdate((message: JPMMessage) => {
         switch (message.type) {
@@ -59,6 +67,11 @@ function makeComponentBridgeConstructor<
                     delete ongoingAPICalls[callId]
                 }
                 break;
+            case JayPortMessageType.DOMEvent:
+                let {eventType, eventData} = message;
+                // to fix
+                eventHandlers[eventType]({event: eventData, coordinate:[''], viewState:null})
+                break;
         }
     })
 
@@ -72,8 +85,11 @@ function makeComponentBridgeConstructor<
             ongoingAPICalls[callId] = [resolve, reject]
         });
     }
-    let registerEvent = (eventType: string, handler: Function) => {
-
+    let registerEvent = (eventType: string, handler: JayEventHandler<any, any, any>) => {
+        eventHandlers[eventType] = handler;
+        port.batch(() => {
+            endpoint.post(addEventListenerMessage('', eventType))
+        })
     }
     return {
         render: viewState,
@@ -84,7 +100,7 @@ function makeComponentBridgeConstructor<
 
 function defineCompPublicAPI(comp: MainComponentBridge, endpoint: JayEndpoint, options: CompBridgeOptions) {
     if (options?.events)
-        comp['addEventListener'] = (eventType: string, handler: Function) => console.log('event api', eventType, handler);
+        comp['addEventListener'] = (eventType: string, handler: Function) => comp.registerEvent(eventType, handler);
 
     options?.functions?.forEach(functionName => {
         comp[functionName] = (...args) => {

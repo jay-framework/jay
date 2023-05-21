@@ -1,4 +1,4 @@
-import {CounterRefs, render} from './generated';
+import {CounterElementRefs, render} from './generated';
 // @ts-ignore
 import {createEvent, createState, makeJayComponent, Props} from 'jay-component';
 
@@ -6,7 +6,7 @@ export interface CounterProps {
   initialValue: number
 }
 
-function CounterComponent({initialValue}: Props<CounterProps>, refs: CounterRefs) {
+function CounterComponent({initialValue}: Props<CounterProps>, refs: CounterElementRefs) {
   let [count, setCount] = createState(initialValue);
   refs.adderButton.onclick = () => setCount(count() + 1);
   refs.subtracter.onclick = () => setCount(count() - 1);
