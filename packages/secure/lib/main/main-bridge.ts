@@ -45,32 +45,34 @@ function makeComponentBridgeConstructor<
             case JayPortMessageType.render:
                 reactive.batchReactions(() => setViewState(message.viewState));
                 break;
-            case JayPortMessageType.addEventListener:
-                refs[message.refName].addEventListener(message.eventType, (event: JayEvent<any, any>) => {
+            case JayPortMessageType.addEventListener: {
+                let {eventType, nativeId} = message;
+                refs[message.refName].addEventListener(eventType, (event: JayEvent<any, any>) => {
                     port.batch(() => {
                         if (message.nativeId) {
-                            let eventData = funcRepository[message.nativeId](event);
-                            endpoint.post(domEventMessage(message.eventType, event.coordinate, eventData))
+                            let eventData = funcRepository[nativeId](event);
+                            endpoint.post(domEventMessage(eventType, event.coordinate, eventData))
                         }
                         else
-                            endpoint.post(domEventMessage(message.eventType, event.coordinate))
+                            endpoint.post(domEventMessage(eventType, event.coordinate))
                     })
-                })
+                })}
                 break;
             case JayPortMessageType.rootApiReturns:
-                let callId = message.callId;
+                let {callId, error, returns} = message;
                 if (ongoingAPICalls[callId]) {
-                    if (message.error)
-                        ongoingAPICalls[callId][1](message.error)
+                    if (error)
+                        ongoingAPICalls[callId][1](error)
                     else
-                        ongoingAPICalls[callId][0](message.returns)
+                        ongoingAPICalls[callId][0](returns)
                     delete ongoingAPICalls[callId]
                 }
                 break;
-            case JayPortMessageType.DOMEvent:
+            case JayPortMessageType.DOMEvent: {
                 let {eventType, eventData} = message;
-                eventHandlers[eventType]({event: eventData, coordinate:[''], viewState:null})
+                eventHandlers[eventType]({event: eventData, coordinate: [''], viewState: null})
                 break;
+            }
         }
     })
 

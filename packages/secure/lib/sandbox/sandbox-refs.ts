@@ -268,17 +268,16 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
                 }
                 case JayPortMessageType.rootApiInvoke: {
                     let message = inMessage as JPMRootAPIInvoke;
+                    let returns, error
                     try {
-                        let returns = await getComponentInstance()[message.apiName](message.params);
-                        parentContext.port.batch(() => {
-                            endpoint.post(rootApiReturns(message.callId, returns))
-                        })
+                        returns = await getComponentInstance()[message.apiName](message.params);
                     }
                     catch (err) {
-                        parentContext.port.batch(() => {
-                            endpoint.post(rootApiReturns(message.callId, undefined, err))
-                        })
+                        error = err;
                     }
+                    parentContext.port.batch(() => {
+                        endpoint.post(rootApiReturns(message.callId, returns, error))
+                    })
                     break;
                 }
                 case JayPortMessageType.addEventListener: {
