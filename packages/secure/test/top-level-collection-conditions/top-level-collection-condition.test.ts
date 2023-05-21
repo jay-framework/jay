@@ -6,8 +6,10 @@ import {CounterViewState} from "./secure/main/counter.jay.html";
 import {AppViewState, render} from "./secure/main/app.jay.html";
 import {setChannel} from "../../lib/comm-channel";
 
+const COUNTER_COND_COORDINATE = ['comp1']
 const COUNTER_COND = 'cond'
 const COUNTER_A_ID = 'a'
+const COUNTER_A_COORDINATE = ['comp2', COUNTER_A_ID]
 const COUNTER_B_ID = 'b'
 const COUNTER_C_ID = 'c'
 const initialCountById = (viewState: AppViewState, id: string) => viewState.counters
@@ -124,14 +126,22 @@ describe('top level collections and conditions', () => {
         expect(count(COUNTER_C_ID).textContent).toBe(''+initialCountById(viewState3, COUNTER_C_ID))
     })
 
-    it('supports root component APIs', async () => {
+    it('supports root component APIs for conditional component', async () => {
         let {appElement, channel, title, count} = await mkElement(viewState)
 
         expect(await appElement.refs.comp1.counterDescription()).toBe('conditional counter: 12')
 
     })
 
-    it('supports root component events', async () => {
+    it('supports root component APIs for collection component', async () => {
+        let {appElement, channel, title, count} = await mkElement(viewState)
+
+        expect(await appElement.refs.comp2.find(_ => _.id === COUNTER_A_ID).counterDescription())
+            .toBe('collection counter a: 13')
+
+    })
+
+    it('supports root component events for conditional component', async () => {
         let {appElement, channel, add, title, count} = await mkElement(viewState)
         let fn = jest.fn();
 
@@ -141,6 +151,20 @@ describe('top level collections and conditions', () => {
         await channel.toBeClean();
 
         expect(fn).toBeCalled()
+        expect(fn).toBeCalledWith({event: {value: viewState.initialCount+1}, viewState, coordinate: COUNTER_COND_COORDINATE})
+    })
+
+    it('supports root component events for collection component', async () => {
+        let {appElement, channel, add, title, count} = await mkElement(viewState)
+        let fn = jest.fn();
+
+        appElement.refs.comp2.onChange(fn);
+        await channel.toBeClean();
+        add(COUNTER_A_ID).click();
+        await channel.toBeClean();
+
+        expect(fn).toBeCalled()
+        expect(fn).toBeCalledWith({event: {value: COUNTER_A.initialCount+1}, COUNTER_A, coordinate: COUNTER_A_COORDINATE})
     })
 
 })
