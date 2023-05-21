@@ -9,7 +9,7 @@ import {setChannel} from "../../lib/comm-channel";
 const COUNTER_COND_COORDINATE = ['comp1']
 const COUNTER_COND = 'cond'
 const COUNTER_A_ID = 'a'
-const COUNTER_A_COORDINATE = ['comp2', COUNTER_A_ID]
+const COUNTER_A_COORDINATE = [COUNTER_A_ID, 'comp2']
 const COUNTER_B_ID = 'b'
 const COUNTER_C_ID = 'c'
 const initialCountById = (viewState: AppViewState, id: string) => viewState.counters
@@ -150,7 +150,7 @@ describe('top level collections and conditions', () => {
         add(COUNTER_COND).click();
         await channel.toBeClean();
 
-        expect(fn).toBeCalled()
+        expect(fn).toBeCalledTimes(1)
         expect(fn).toBeCalledWith({event: {value: viewState.initialCount+1}, viewState, coordinate: COUNTER_COND_COORDINATE})
     })
 
@@ -158,13 +158,14 @@ describe('top level collections and conditions', () => {
         let {appElement, channel, add, title, count} = await mkElement(viewState)
         let fn = jest.fn();
 
+        // this does not batch messages!!!
         appElement.refs.comp2.onChange(fn);
         await channel.toBeClean();
         add(COUNTER_A_ID).click();
         await channel.toBeClean();
 
-        expect(fn).toBeCalled()
-        expect(fn).toBeCalledWith({event: {value: COUNTER_A.initialCount+1}, COUNTER_A, coordinate: COUNTER_A_COORDINATE})
+        expect(fn).toBeCalledTimes(1)
+        expect(fn).toBeCalledWith({event: {value: COUNTER_A.initialCount+1}, viewState: COUNTER_A, coordinate: COUNTER_A_COORDINATE})
     })
 
 })

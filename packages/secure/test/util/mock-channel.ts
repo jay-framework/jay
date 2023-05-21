@@ -61,6 +61,7 @@ class MockJayPort implements JayPort {
     private target: MockJayPort
     private endpoints: Map<number, MockEndpointPort> = new Map();
     private futureEndpointMessages: Map<number, JPMMessage[]> = new Map();
+    private inBatch = false;
 
     constructor(private channel,
                 private verbose: boolean = false,
@@ -91,6 +92,9 @@ class MockJayPort implements JayPort {
     }
 
     batch<T>(handler: () => T): T {
+        if (this.inBatch)
+            return handler();
+        this.inBatch = true;
         this.messages = [];
         try {
             return handler()
@@ -98,6 +102,7 @@ class MockJayPort implements JayPort {
         finally {
             if (this.messages.length > 0)
                 this.flush();
+            this.inBatch = false;
         }
     }
 
@@ -123,9 +128,10 @@ class MockJayPort implements JayPort {
     }
 
     flush() {
+        let messages = this.messages;
         process.nextTick(() => {
-            this.target.invoke(this.messages);
-            this.channel.messageCountCallback(-this.messages.length)
+            this.target.invoke(messages);
+            this.channel.messageCountCallback(-messages.length)
         })
     }
 }
