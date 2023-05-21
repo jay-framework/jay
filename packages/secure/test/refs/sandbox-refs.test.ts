@@ -4,14 +4,14 @@ import {
 } from "../../lib/sandbox/sandbox-refs";
 import {
     domEventMessage,
-    JayEndpoint,
+    JayEndpoint, JayPort,
     JayPortInMessageHandler, JayPortMessageType,
     JPMAddEventListener,
     JPMDomEvent, JPMNativeExec, JPMNativeExecResult, nativeExecResult
 } from "../../lib/comm-channel";
 import {Reactive} from "jay-reactive";
 import {$func, $handler} from "../../lib/$func";
-import {ComponentCollectionProxy, HTMLElementCollectionProxy, HTMLElementProxy} from "jay-runtime";
+import {ComponentCollectionProxy, Coordinate, HTMLElementCollectionProxy, HTMLElementProxy} from "jay-runtime";
 import {
     sandboxCondition as c,
     sandboxElement as e,
@@ -20,6 +20,7 @@ import {
 } from "../../lib/sandbox/sandbox-element";
 import {clearInstances, componentInstance, Item, ItemProps} from "./item-component/item";
 
+const getNullComponentInstance = () => undefined;
 describe('sandbox-refs', () => {
     describe('static refs', () => {
         const vs = {data: 'some data'}
@@ -29,7 +30,9 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let bridgeElement = mkBridgeElement(vs, endpoint, reactive, () => [e('one'), e('two')])
+            let bridgeElement =
+                mkBridgeElement(vs,() => [e('one'), e('two')], [], [],
+                    endpoint, reactive, getNullComponentInstance)
             return {endpoint, bridgeElement}
 
         }
@@ -179,9 +182,11 @@ describe('sandbox-refs', () => {
         function setup(vs = baseViewState) {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let bridgeElement = mkBridgeElement(vs, endpoint, reactive,() => [
+            let bridgeElement =
+                mkBridgeElement(vs, () => [
                 forEach(vs => vs.items, 'name', () => [e('one')])
-            ], ['one'])
+            ], ['one'], [],
+                    endpoint, reactive, getNullComponentInstance)
             return {endpoint, bridgeElement}
         }
 
@@ -430,14 +435,15 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let bridgeElement = mkBridgeElement(vs, endpoint, reactive,() => [
+            let bridgeElement = mkBridgeElement(vs,() => [
                 forEach<VS, VSItem>(vs => vs.items, 'name', () => [
                     e('one'),
                     forEach<VSItem, VSSubItem>(vs => vs.subItems, 'id', () => [
                         e('two')
                     ])
                 ])
-            ], ['one', 'two'])
+            ], ['one', 'two'], [],
+                endpoint, reactive, getNullComponentInstance)
             return {endpoint, bridgeElement}
         }
 
@@ -499,12 +505,12 @@ describe('sandbox-refs', () => {
         function setup(creationViewState = vs) {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let bridgeElement = mkBridgeElement(creationViewState, endpoint, reactive,() => [
+            let bridgeElement = mkBridgeElement(creationViewState, () => [
                 c(vs => vs.condition, [
                     e('one'),
                     c(vs => vs.condition2, [e('two')])
                 ])
-            ])
+            ], [], [], endpoint, reactive, getNullComponentInstance)
             return {endpoint, bridgeElement}
         }
 
@@ -591,14 +597,14 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let bridgeElement = mkBridgeElement(vs, endpoint, reactive, () => [
+            let bridgeElement = mkBridgeElement(vs, () => [
                 forEach<VS, VSItem>(vs => vs.items, 'name', () => [
                     e('one'),
                     c(vs => vs.test, [
                         e('two')
                     ])
                 ])
-            ], ['one', 'two'])
+            ], ['one', 'two'], [], endpoint, reactive, getNullComponentInstance)
             return {endpoint, bridgeElement}
         }
 
@@ -650,9 +656,9 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let bridgeElement = mkBridgeElement(vs, endpoint, reactive, () => [
+            let bridgeElement = mkBridgeElement(vs, () => [
                 childComp(Item, vs => vs, 'comp1')
-            ])
+            ], [], [], endpoint, reactive, getNullComponentInstance)
             return {endpoint, bridgeElement}
         }
 
@@ -707,11 +713,11 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let bridgeElement = mkBridgeElement(vs, endpoint, reactive, () => [
+            let bridgeElement = mkBridgeElement(vs, () => [
                 c(vs => vs.shown, [
                     childComp(Item, vs => ({text: vs.text, dataId: 'a'}), 'comp1')
                 ])
-            ])
+            ], [], [], endpoint, reactive, getNullComponentInstance)
             return {endpoint, bridgeElement}
         }
 
@@ -763,11 +769,11 @@ describe('sandbox-refs', () => {
         function setup(viewState = vs) {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let bridgeElement = mkBridgeElement(viewState, endpoint, reactive, () => [
+            let bridgeElement = mkBridgeElement(viewState, () => [
                 forEach<ViewStateType, ItemType>(vs => vs.items, "dataId",
                     () => [childComp<ItemType, ItemProps>(Item, vs => vs, 'comp1')]
                 )
-            ], [], ['comp1'])
+            ], [], ['comp1'], endpoint, reactive, getNullComponentInstance)
             return {endpoint, bridgeElement}
         }
 
@@ -864,9 +870,24 @@ function mkEndpoint(): TestJayEndpoint {
     let _compId = 1;
     let _outMessages = [];
     let _handler;
+
+    let port: JayPort = {
+        batch<T>(handler: () => T): T {
+            return undefined;
+        },
+        flush() {
+        },
+        getEndpoint(parentCompId: number, parentCoordinate: Coordinate): JayEndpoint {
+            return undefined;
+        },
+        getRootEndpoint(): JayEndpoint {
+            return undefined;
+        }
+    }
+
     return {
         get port() {
-            return undefined;
+            return port;
         },
         post(outMessage: JPMAddEventListener) {
             _outMessages.push(outMessage);

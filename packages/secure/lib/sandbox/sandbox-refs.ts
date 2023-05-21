@@ -17,7 +17,7 @@ import {
 } from "jay-runtime";
 import {
     addEventListenerMessage, domEventMessage,
-    JayEndpoint,
+    JayEndpoint, JayPort,
     JayPortMessageType,
     JPMMessage,
     JPMRootAPIInvoke,
@@ -31,6 +31,7 @@ import {correlatedPromise, rejectCorrelatedPromise, resolveCorrelatedPromise} fr
 import {Refs, SANDBOX_BRIDGE_CONTEXT, SANDBOX_CREATION_CONTEXT} from "./sandbox-context";
 import {SandboxElement} from "./sandbox-element";
 import {COMPONENT_CONTEXT} from "jay-component";
+import {Reactive} from "jay-reactive";
 
 
 export interface SandboxBridgeElement<ViewState> {
@@ -235,13 +236,14 @@ export class DynamicCompRefImplementation<ViewState, CompType extends JayCompone
 export function mkBridgeElement<ViewState>(viewState: ViewState,
                                            sandboxElements: () => SandboxElement<ViewState>[],
                                            dynamicElements: string[] = [],
-                                           dynamicComponents: string[] = []): SandboxBridgeElement<ViewState> {
-    let parentContext = useContext(SANDBOX_BRIDGE_CONTEXT);
-    let {reactive, getComponentInstance} = useContext(COMPONENT_CONTEXT);
-    let endpoint = parentContext.port.getEndpoint(parentContext.compId, parentContext.coordinate)
+                                           dynamicComponents: string[] = [],
+                                           endpoint: JayEndpoint,
+                                           reactive: Reactive,
+                                           getComponentInstance: () => JayComponent<any, any, any>): SandboxBridgeElement<ViewState> {
 
     let refs = {};
     let events = {}
+    let port = endpoint.port;
     dynamicComponents.forEach(compRef => refs[compRef] = proxyRef(new DynamicCompRefImplementation()))
     dynamicElements.forEach(elemRef => refs[elemRef] = proxyRef(new DynamicRefImplementation(elemRef, endpoint)))
     return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState, refs, dataIds: [], isDynamic: false}, () => {
@@ -275,14 +277,14 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
                     catch (err) {
                         error = err;
                     }
-                    parentContext.port.batch(() => {
+                    port.batch(() => {
                         endpoint.post(rootApiReturns(message.callId, returns, error))
                     })
                     break;
                 }
                 case JayPortMessageType.addEventListener: {
                     let handler = ({event, viewState, coordinate}: JayEvent<any, any>) => {
-                        parentContext.port.batch(() => {
+                        port.batch(() => {
                             endpoint.post(domEventMessage(inMessage.eventType, coordinate, event))
                         })
                     }
