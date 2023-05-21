@@ -9,10 +9,10 @@ export function elementBridge<ElementViewState>(viewState: ElementViewState,
                                                 sandboxElements: () => SandboxElement<ElementViewState>[],
                                                 dynamicElements: string[] = [],
                                                 dynamicComponents: string[] = []) {
-    let parentContext = useContext(SANDBOX_BRIDGE_CONTEXT);
+    let parentComponentContext = useContext(SANDBOX_BRIDGE_CONTEXT);
     let {reactive, getComponentInstance} = useContext(COMPONENT_CONTEXT);
-    let endpoint = parentContext.port.getEndpoint(parentContext.compId, parentContext.coordinate)
+    let thisComponentEndpoint = parentComponentContext.port.getEndpoint(parentComponentContext.compId, parentComponentContext.coordinate)
     // for some reason typescript insists that the types Reactive !== Reactive...
-    return mkBridgeElement(viewState, sandboxElements, dynamicElements, dynamicComponents, endpoint,
+    return mkBridgeElement(viewState, sandboxElements, dynamicElements, dynamicComponents, thisComponentEndpoint,
         reactive as unknown as Reactive, getComponentInstance);
 }
