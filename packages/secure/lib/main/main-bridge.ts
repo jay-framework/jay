@@ -69,7 +69,6 @@ function makeComponentBridgeConstructor<
                 break;
             case JayPortMessageType.DOMEvent:
                 let {eventType, eventData} = message;
-                // to fix
                 eventHandlers[eventType]({event: eventData, coordinate:[''], viewState:null})
                 break;
         }
