@@ -178,6 +178,10 @@ function describeMessageType(type: JayPortMessageType): string {
             return 'nativeExec'
         case JayPortMessageType.nativeExecResult:
             return 'nativeExecResult'
+        case JayPortMessageType.rootApiReturns:
+            return 'rootAPIReturns'
+        case JayPortMessageType.rootApiInvoke:
+            return 'rootAPIInvoke'
     }
     return 'unknown message'
 }

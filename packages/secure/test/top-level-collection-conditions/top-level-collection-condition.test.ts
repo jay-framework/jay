@@ -32,7 +32,7 @@ const viewState3: AppViewState = {cond: true, initialCount: 12, counters: [
         COUNTER_A
     ]}
 
-const VERBOSE = false;
+const VERBOSE = true;
 
 describe('top level collections and conditions', () => {
 
@@ -127,7 +127,7 @@ describe('top level collections and conditions', () => {
     it('supports root component APIs', async () => {
         let {appElement, channel, title, count} = await mkElement(viewState)
 
-        expect(await appElement.refs.comp1.counterDescription()).toBe('not this value')
+        expect(await appElement.refs.comp1.counterDescription()).toBe('conditional counter: 12')
 
     })
 

@@ -38,6 +38,7 @@ type ConcreteJayComponent<PropsT extends object, ViewState, Refs,
 
 interface ComponentContext {
     reactive: Reactive,
+    getComponentInstance: () => JayComponent<any, any, any>
     mounts: MountFunc[],
     unmounts: MountFunc[]
 }
@@ -126,8 +127,12 @@ export function makeJayComponent<PropsT extends object, ViewState extends object
         let reactive = new Reactive();
         let mounts: MountFunc[] = [];
         let unmounts: MountFunc[] = [];
+        let componentInstance = null;
+        let getComponentInstance = () => {
+            return componentInstance
+        };
         let componentContext = {
-            reactive, mounts, unmounts
+            reactive, mounts, unmounts, getComponentInstance
         }
         return provideContext(COMPONENT_CONTEXT, componentContext, () => {
             return reactive.record(() => {
@@ -184,7 +189,7 @@ export function makeJayComponent<PropsT extends object, ViewState extends object
                     }
                 }
 
-                return component as unknown as ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>
+                return componentInstance = component as unknown as ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>
             })
         })
     }

@@ -23,6 +23,7 @@ const {makePropsProxy} = forTesting
 describe('state management', () => {
     describe('Props', () => {
 
+        const contextTestDefaults = {mounts: [], unmounts: [], getComponentInstance: () => null}
         it('should transform an object into a getters object', () => {
             let reactive = new Reactive();
             const props = {
@@ -30,7 +31,7 @@ describe('state management', () => {
                 age: 12
             }
             let propsGetters = provideContext(COMPONENT_CONTEXT,
-                {reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
+                {reactive, ...contextTestDefaults}, () => makePropsProxy(reactive, props))
 
             expect(propsGetters.name()).toBe('abc')
             expect(propsGetters.age()).toBe(12)
@@ -43,7 +44,7 @@ describe('state management', () => {
                 age: 12
             }
             let propsGetters = provideContext(COMPONENT_CONTEXT,
-                {reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
+                {reactive, ...contextTestDefaults}, () => makePropsProxy(reactive, props))
 
             propsGetters.name()
             propsGetters.age()
@@ -61,7 +62,7 @@ describe('state management', () => {
                 age: 12
             }
             let propsGetters = provideContext(COMPONENT_CONTEXT,
-                {reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
+                {reactive, ...contextTestDefaults}, () => makePropsProxy(reactive, props))
 
             expect(propsGetters.props()).toEqual(props)
         })
@@ -73,7 +74,7 @@ describe('state management', () => {
                 age: 12
             }
             let propsGetters = provideContext(COMPONENT_CONTEXT,
-                {reactive, mounts: [], unmounts: []}, () => makePropsProxy(reactive, props))
+                {reactive, ...contextTestDefaults}, () => makePropsProxy(reactive, props))
 
             propsGetters.name()
             propsGetters.age()

@@ -1,10 +1,6 @@
-import {JayComponent, JayElement, JayEvent, provideContext, RenderElement, useContext} from "jay-runtime";
+import {JayElement, JayEvent, provideContext, RenderElement, useContext} from "jay-runtime";
 import {createState, JayComponentCore, makeJayComponent, Props, useReactive} from "jay-component";
-import {
-    domEventMessage, JayEndpoint,
-    JayPortMessageType,
-    JPMMessage
-} from "../comm-channel";
+import {domEventMessage, JayEndpoint, JayPortMessageType, JPMMessage, rootApiInvoke} from "../comm-channel";
 import {SECURE_COMPONENT_MARKER} from "./main-contexts";
 import {SECURE_COORDINATE_MARKER} from "./main-child-comp";
 import {FunctionsRepository} from "./function-repository-types";
@@ -15,15 +11,26 @@ interface CompBridgeOptions {
     funcRepository?: FunctionsRepository
 }
 
+interface MainComponentBridge {
+    invokeAPI: (functionName: string, args: any[]) => Promise<any>
+    registerEvent: (eventType: string, handler: Function) => void
+}
+
+type PromiseResolve = (result: any | PromiseLike<any>) => void
+type PromiseReject = (reason?: any) => void
+
+
 function makeComponentBridgeConstructor<
     PropsT extends object,
     Refs extends object,
     ViewState extends object>
-(props: Props<PropsT>, refs: Refs): JayComponentCore<PropsT, ViewState> {
+(props: Props<PropsT>, refs: Refs): JayComponentCore<PropsT, ViewState> & MainComponentBridge {
 
     let [viewState, setViewState] = createState<ViewState>({} as ViewState);
     let reactive = useReactive();
     let {endpoint, port, funcRepository} = useContext(SECURE_COMPONENT_MARKER);
+
+    let ongoingAPICalls: Record<number, [PromiseResolve, PromiseReject]> = {};
 
     endpoint.onUpdate((message: JPMMessage) => {
         switch (message.type) {
@@ -42,19 +49,47 @@ function makeComponentBridgeConstructor<
                     })
                 })
                 break;
+            case JayPortMessageType.rootApiReturns:
+                let callId = message.callId;
+                if (ongoingAPICalls[callId]) {
+                    if (message.error)
+                        ongoingAPICalls[callId][1](message.error)
+                    else
+                        ongoingAPICalls[callId][0](message.returns)
+                    delete ongoingAPICalls[callId]
+                }
+                break;
         }
     })
+
+    let nextCallId = 0;
+    let invokeAPI = (functionName: string, args: any[]) => {
+        let callId = nextCallId++;
+        port.batch(() => {
+            endpoint.post(rootApiInvoke(functionName, callId, args))
+        })
+        return new Promise((resolve, reject) => {
+            ongoingAPICalls[callId] = [resolve, reject]
+        });
+    }
+    let registerEvent = (eventType: string, handler: Function) => {
+
+    }
     return {
-        render: viewState
+        render: viewState,
+        invokeAPI,
+        registerEvent
     }
 }
 
-function makeCompAPIProxy(comp: object, endpoint: JayEndpoint, options: CompBridgeOptions) {
+function defineCompPublicAPI(comp: MainComponentBridge, endpoint: JayEndpoint, options: CompBridgeOptions) {
     if (options?.events)
         comp['addEventListener'] = (eventType: string, handler: Function) => console.log('event api', eventType, handler);
 
     options?.functions?.forEach(functionName => {
-        comp[functionName] = (...args) => console.log('comp api', args);
+        comp[functionName] = (...args) => {
+            return comp.invokeAPI(functionName, args)
+        }
     })
 }
 
@@ -73,7 +108,7 @@ export function makeJayComponentBridge<
         let newSecureComponentContext = {endpoint, compId: endpoint.compId, port, funcRepository: options?.funcRepository}
         return provideContext(SECURE_COMPONENT_MARKER, newSecureComponentContext, () => {
             let comp = component(props);
-            makeCompAPIProxy(comp, endpoint, options);
+            defineCompPublicAPI(comp as unknown as MainComponentBridge, endpoint, options);
             return comp;
         })
     }

@@ -8,6 +8,8 @@ export enum JayPortMessageType {
     removeEventListener,
     nativeExec,
     nativeExecResult,
+    rootApiInvoke,
+    rootApiReturns
 }
 export interface JayPortMessage {
     readonly type: JayPortMessageType;
@@ -52,7 +54,22 @@ export interface JPMRootComponentViewState extends JayPortMessage {
     viewState: object
 }
 
-export type JPMMessage = JPMRootComponentViewState | JPMRender | JPMAddEventListener | JPMDomEvent | JPMNativeExecResult | JPMNativeExec
+export interface JPMRootAPIInvoke extends JayPortMessage {
+    readonly type: JayPortMessageType.rootApiInvoke
+    apiName: string,
+    callId: number,
+    params: Array<any>
+}
+
+export interface JPMRootAPIReturns extends JayPortMessage {
+    readonly type: JayPortMessageType.rootApiReturns
+    callId: number,
+    returns: any,
+    error?: any
+}
+
+export type JPMMessage = JPMRootComponentViewState | JPMRender | JPMAddEventListener | JPMDomEvent | JPMNativeExecResult |
+                         JPMNativeExec | JPMRootAPIInvoke | JPMRootAPIReturns
 
 export type JayPortInMessageHandler = (inMessage: JPMMessage) => void;
 
@@ -95,6 +112,12 @@ export function nativeExec(refName: string, nativeId: string, correlationId: num
 }
 export function nativeExecResult(refName: string, correlationId: number, result: any, error?: any): JPMNativeExecResult {
     return ({refName, result, correlationId, error, type: JayPortMessageType.nativeExecResult})
+}
+export function rootApiInvoke(apiName: string, callId: number, params: Array<any>): JPMRootAPIInvoke {
+    return ({apiName, callId, params, type: JayPortMessageType.rootApiInvoke})
+}
+export function rootApiReturns(callId: number, returns: any, error?: any): JPMRootAPIReturns {
+    return ({callId, returns, error, type: JayPortMessageType.rootApiReturns})
 }
 
 let _channel: JayChannel

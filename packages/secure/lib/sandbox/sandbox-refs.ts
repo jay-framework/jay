@@ -5,28 +5,30 @@ import {
     HTMLElementCollectionProxyTarget,
     HTMLElementProxy,
     HTMLElementProxyTarget,
-    HTMLNativeExec, JayComponent,
+    HTMLNativeExec,
+    JayComponent,
     JayEventHandler,
     JayNativeFunction,
     MountFunc,
     normalizeUpdates,
     provideContext,
-    updateFunc
+    updateFunc, useContext
 } from "jay-runtime";
 import {Reactive} from "jay-reactive";
 import {
     addEventListenerMessage,
     JayEndpoint,
     JayPortMessageType,
-    JPMMessage,
+    JPMMessage, JPMRootAPIInvoke,
     nativeExec,
     removeEventListenerMessage,
-    renderMessage
+    renderMessage, rootApiReturns
 } from "../comm-channel";
 import {$JayNativeFunction} from "../main/function-repository-types";
 import {correlatedPromise, rejectCorrelatedPromise, resolveCorrelatedPromise} from "../$func";
-import {Refs, SANDBOX_CREATION_CONTEXT} from "./sandbox-context";
+import {Refs, SANDBOX_BRIDGE_CONTEXT, SANDBOX_CREATION_CONTEXT} from "./sandbox-context";
 import {SandboxElement} from "./sandbox-element";
+import {COMPONENT_CONTEXT} from "jay-component";
 
 
 export interface SandboxBridgeElement<ViewState> {
@@ -229,10 +231,13 @@ export class DynamicCompRefImplementation<ViewState, CompType extends JayCompone
 }
 
 export function mkBridgeElement<ViewState>(viewState: ViewState,
-                                           endpoint: JayEndpoint,
-                                           reactive: Reactive,
                                            sandboxElements: () => SandboxElement<ViewState>[],
-                                           dynamicElements: string[] = [], dynamicComponents: string[] = []): SandboxBridgeElement<ViewState> {
+                                           dynamicElements: string[] = [],
+                                           dynamicComponents: string[] = []): SandboxBridgeElement<ViewState> {
+    let parentContext = useContext(SANDBOX_BRIDGE_CONTEXT);
+    let {reactive, getComponentInstance} = useContext(COMPONENT_CONTEXT);
+    let endpoint = parentContext.port.getEndpoint(parentContext.compId, parentContext.coordinate)
+
     let refs = {};
     dynamicComponents.forEach(compRef => refs[compRef] = proxyRef(new DynamicCompRefImplementation()))
     dynamicElements.forEach(elemRef => refs[elemRef] = proxyRef(new DynamicRefImplementation(elemRef, endpoint)))
@@ -241,7 +246,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
         let postUpdateMessage = (newViewState) => endpoint.post(renderMessage(newViewState))
         let update = normalizeUpdates([postUpdateMessage, ...elements.map(el => el.update)]);
 
-        endpoint.onUpdate((inMessage: JPMMessage) => {
+        endpoint.onUpdate(async (inMessage: JPMMessage) => {
             switch (inMessage.type) {
                 case JayPortMessageType.DOMEvent: {
                     reactive.batchReactions(() => {
@@ -256,7 +261,21 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
                         else
                             resolveCorrelatedPromise(inMessage.correlationId, inMessage.result)
                     })
-
+                    break;
+                }
+                case JayPortMessageType.rootApiInvoke: {
+                    let message = inMessage as JPMRootAPIInvoke;
+                    try {
+                        let returns = await getComponentInstance()[message.apiName](message.params);
+                        parentContext.port.batch(() => {
+                            endpoint.post(rootApiReturns(message.callId, returns))
+                        })
+                    }
+                    catch (err) {
+                        parentContext.port.batch(() => {
+                            endpoint.post(rootApiReturns(message.callId, undefined, err))
+                        })
+                    }
                 }
             }
         })
