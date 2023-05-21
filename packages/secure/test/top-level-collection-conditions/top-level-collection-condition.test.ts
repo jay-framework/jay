@@ -34,7 +34,7 @@ const viewState3: AppViewState = {cond: true, initialCount: 12, counters: [
         COUNTER_A
     ]}
 
-const VERBOSE = true;
+const VERBOSE = false;
 
 describe('top level collections and conditions', () => {
 
