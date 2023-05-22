@@ -72,6 +72,7 @@ class MockJayPort implements JayPort {
         let ep = new MockEndpointPort(compId, this);
         this.endpoints.set(compId, ep)
         ep.setInitMessages(this.futureEndpointMessages.get(compId) || [])
+        this.futureEndpointMessages.delete(compId);
         return ep;
     }
 
