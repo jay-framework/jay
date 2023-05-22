@@ -152,6 +152,7 @@ class MockEndpointPort implements JayEndpoint {
     onUpdate(handler: JayPortInMessageHandler) {
         this.handler = handler
         this.initMessages.forEach(message => handler(message))
+        this.initMessages = [];
     }
 
     invoke(inMessage: JPMMessage) {
