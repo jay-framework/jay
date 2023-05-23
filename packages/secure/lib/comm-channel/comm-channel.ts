@@ -15,8 +15,8 @@ export type JPMMessage = JPMRootComponentViewState | JPMRender | JPMAddEventList
 export type JayPortInMessageHandler = (inMessage: JPMMessage) => void;
 
 export interface JayChannel {
-    mainPort: IJayPort,
-    workerPort: IJayPort
+    postMessages(messages: Array<[number, JPMMessage]>, newCompIdMessages: Array<[string, number]>);
+    onMessages(handler: (messages: Array<[number, JPMMessage]>, newCompIdMessages: Array<[string, number]>) => void)
 }
 
 export interface IJayPort {
@@ -33,8 +33,13 @@ export interface IJayEndpoint {
     readonly compId: number;
 }
 
-let _channel: JayChannel
-export function setChannel(channel: JayChannel) {
+export interface MockJayChannel {
+    mainPort: IJayPort,
+    workerPort: IJayPort
+}
+
+let _channel: MockJayChannel
+export function setChannel(channel: MockJayChannel) {
     _channel = channel;
 }
 export function useMainPort(): IJayPort {

@@ -1,0 +1,120 @@
+import {IJayEndpoint, IJayPort, JayChannel, JayPortInMessageHandler, JPMMessage} from "./comm-channel";
+import {Coordinate} from "jay-runtime";
+
+
+export interface JayPortLogger {
+    logPost(compId: number, message: JPMMessage): void;
+    logInvoke(compId: number, message: JPMMessage): void;
+}
+
+export class JayPort implements IJayPort {
+    private messages: Array<[number, JPMMessage]> = []
+    private endpoints: Map<number, JayEndpoint> = new Map();
+    private futureEndpointMessages: Map<number, JPMMessage[]> = new Map();
+    private inBatch = false;
+    private comps: Map<string, number> = new Map();
+    private nextCompId: number = 1;
+    private newCompIdMessages: Array<[string, number]> = [];
+
+    constructor(private channel: JayChannel,
+                private logger? : JayPortLogger) {
+        channel.onMessages((messages, newCompIdMessages) => this.invoke(messages, newCompIdMessages))
+    }
+
+    private getCompId = (parentCompId: number, coordinate: Coordinate): number => {
+        let fullId = `${parentCompId}-${coordinate}`;
+        if (!this.comps.has(fullId)) {
+            let compId = this.nextCompId++;
+            this.comps.set(fullId, compId);
+            this.newCompIdMessages.push([fullId, compId])
+        }
+        return this.comps.get(fullId) as number;
+    }
+
+    getEndpoint(parentCompId: number, parentCoordinate: Coordinate): IJayEndpoint {
+        let compId = this.getCompId(parentCompId, parentCoordinate);
+        let ep = new JayEndpoint(compId, this);
+        this.endpoints.set(compId, ep)
+        ep.setInitMessages(this.futureEndpointMessages.get(compId) || [])
+        this.futureEndpointMessages.delete(compId);
+        return ep;
+    }
+
+    getRootEndpoint(): IJayEndpoint {
+        return this.getEndpoint(-1, [''])
+    }
+
+    post(compId: number, outMessage: JPMMessage) {
+        if (this.logger)
+            this.logger.logPost(compId, outMessage)
+        this.messages.push([compId, outMessage]);
+    }
+
+    batch<T>(handler: () => T): T {
+        if (this.inBatch)
+            return handler();
+        this.inBatch = true;
+        this.messages = [];
+        try {
+            return handler()
+        }
+        finally {
+            if (this.messages.length > 0)
+                this.flush();
+            this.inBatch = false;
+        }
+    }
+
+    invoke(messages: Array<[number, JPMMessage]>, newCompIdMessages: Array<[string, number]>) {
+        newCompIdMessages.forEach(([fullId, compId]) => this.comps.set(fullId, compId));
+        this.batch(() => {
+            messages.forEach(([compId, message]) => {
+                if (this.logger)
+                    this.logger.logInvoke(compId, message)
+                let endpoint = this.endpoints.get(compId);
+                if (endpoint)
+                    endpoint.invoke(message)
+                else {
+                    if (!this.futureEndpointMessages.has(compId))
+                        this.futureEndpointMessages.set(compId, [message])
+                    else
+                        this.futureEndpointMessages.get(compId).push(message);
+                }
+
+            })
+        })
+    }
+
+    flush() {
+        this.channel.postMessages(this.messages, this.newCompIdMessages);
+        this.messages = [];
+        this.newCompIdMessages = [];
+    }
+}
+
+export class JayEndpoint implements IJayEndpoint {
+
+    private handler: JayPortInMessageHandler
+    private initMessages: JPMMessage[] = [];
+    constructor(
+        readonly compId: number,
+        public readonly port: JayPort) {}
+
+    post(outMessage: JPMMessage) {
+        this.port.post(this.compId, outMessage)
+    }
+
+    onUpdate(handler: JayPortInMessageHandler) {
+        this.handler = handler
+        this.initMessages.forEach(message => handler(message))
+        this.initMessages = [];
+    }
+
+    invoke(inMessage: JPMMessage) {
+        this?.handler(inMessage);
+    }
+
+    setInitMessages(initMessages: JPMMessage[]) {
+        this.initMessages = initMessages;
+    }
+}

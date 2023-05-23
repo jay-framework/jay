@@ -1,5 +1,5 @@
 import {
-    JayChannel,
+    MockJayChannel,
     IJayEndpoint,
     IJayPort,
     JayPortInMessageHandler,
@@ -14,7 +14,7 @@ export function useMockCommunicationChannel<PropsT, ViewState>(verbose: boolean 
 
 type MessageStatus = 'posted' | 'invoked';
 
-class JayMockChannel<PropsT, ViewState> implements JayChannel {
+class JayMockChannel<PropsT, ViewState> implements MockJayChannel {
 
     private readonly main: MockJayPort
     private readonly worker: MockJayPort
