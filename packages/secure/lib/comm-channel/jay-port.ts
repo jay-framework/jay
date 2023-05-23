@@ -13,7 +13,7 @@ export class JayPort implements IJayPort {
     private futureEndpointMessages: Map<number, JPMMessage[]> = new Map();
     private inBatch = false;
     private comps: Map<string, number> = new Map();
-    private nextCompId: number = 1;
+    private lastCompId: number = 0;
     private newCompIdMessages: Array<[string, number]> = [];
 
     constructor(private channel: JayChannel,
@@ -24,7 +24,8 @@ export class JayPort implements IJayPort {
     private getCompId = (parentCompId: number, coordinate: Coordinate): number => {
         let fullId = `${parentCompId}-${coordinate}`;
         if (!this.comps.has(fullId)) {
-            let compId = this.nextCompId++;
+            let compId = Math.max(this.lastCompId, parentCompId) + 1;
+            this.lastCompId = compId;
             this.comps.set(fullId, compId);
             this.newCompIdMessages.push([fullId, compId])
         }
@@ -66,7 +67,10 @@ export class JayPort implements IJayPort {
     }
 
     invoke(messages: Array<[number, JPMMessage]>, newCompIdMessages: Array<[string, number]>) {
-        newCompIdMessages.forEach(([fullId, compId]) => this.comps.set(fullId, compId));
+        newCompIdMessages.forEach(([fullId, compId]) => {
+            this.comps.set(fullId, compId)
+            this.lastCompId = Math.max(this.lastCompId, compId)
+        });
         this.batch(() => {
             messages.forEach(([compId, message]) => {
                 if (this.logger)

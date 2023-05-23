@@ -20,7 +20,7 @@ describe('jay-port', () => {
             let endpoint = port.getEndpoint(1, ['comp1'])
             port.flush();
 
-            expect(channel.messagesFromPort).toContainEqual({messages: [], newCompIdMessages: [["1-comp1", 1]]})
+            expect(channel.messagesFromPort).toContainEqual({messages: [], newCompIdMessages: [["1-comp1", 2]]})
         })
 
         it('should send a component message', () => {
@@ -32,8 +32,8 @@ describe('jay-port', () => {
 
             expect(channel.messagesFromPort)
                 .toContainEqual({
-                    messages: [[1, renderMessage({foo: 'bar'})]],
-                    newCompIdMessages: [["1-comp1", 1]]})
+                    messages: [[2, renderMessage({foo: 'bar'})]],
+                    newCompIdMessages: [["1-comp1", 2]]})
         })
 
         it('should send a component message using batch', () => {
@@ -46,8 +46,8 @@ describe('jay-port', () => {
 
             expect(channel.messagesFromPort)
                 .toContainEqual({
-                    messages: [[1, renderMessage({foo: 'bar'})]],
-                    newCompIdMessages: [["1-comp1", 1]]})
+                    messages: [[2, renderMessage({foo: 'bar'})]],
+                    newCompIdMessages: [["1-comp1", 2]]})
         })
 
         it('should send multiple components and multiple messages', () => {
@@ -63,17 +63,53 @@ describe('jay-port', () => {
 
             expect(channel.messagesFromPort)
                 .toContainEqual({
-                    messages: [[1, renderMessage({foo: 'bar'})],
-                        [2, renderMessage({foo: 'poo'})],
-                        [2, addEventListenerMessage('add', 'click')]],
-                    newCompIdMessages: [["1-comp1", 1], ["1-comp2,a", 2]]})
+                    messages: [[2, renderMessage({foo: 'bar'})],
+                        [3, renderMessage({foo: 'poo'})],
+                        [3, addEventListenerMessage('add', 'click')]],
+                    newCompIdMessages: [["1-comp1", 2], ["1-comp2,a", 3]]})
+        })
+    })
+
+    describe('compId handshake between two ports', () => {
+        it('should accept compId and use it for a comp endpoint, not creating another newCompIdMessage', () => {
+            let {port: port1, channel: channel1} = mkPort();
+            let {port: port2, channel: channel2} = mkPort();
+
+            // generate comp id on the first port
+            let endpoint1 = port1.getEndpoint(1, ['comp1'])
+            port1.flush();
+            // send the newCompIdMessage to port2
+            channel2.postMessagesToPort(channel1.messagesFromPort[0].messages, channel1.messagesFromPort[0].newCompIdMessages)
+            // get the endpoint on port2
+            let endpoint2 = port2.getEndpoint(1, ['comp1'])
+            port2.flush();
+            // validate endpoint on port2 does not generate another newCompIdMessage
+            expect(channel2.messagesFromPort).toContainEqual({messages: [], newCompIdMessages: []})
+        })
+
+        it('should accept compId and use it for a comp endpoint, and use it for next messages', () => {
+            let {port: port1, channel: channel1} = mkPort();
+            let {port: port2, channel: channel2} = mkPort();
+
+            // generate comp id on the first port
+            let endpoint1 = port1.getEndpoint(1, ['comp1'])
+            port1.flush();
+            let generatedCompId = channel1.messagesFromPort[0].newCompIdMessages[0][1];
+            // send the newCompIdMessage to port2
+            channel2.postMessagesToPort(channel1.messagesFromPort[0].messages, channel1.messagesFromPort[0].newCompIdMessages)
+            // get the endpoint on port2
+            let endpoint2 = port2.getEndpoint(1, ['comp1'])
+            endpoint2.post(renderMessage({foo: 'bar'}))
+            port2.flush();
+
+            expect(channel2.messagesFromPort).toContainEqual({messages: [[generatedCompId, renderMessage({foo: 'bar'})]], newCompIdMessages: []})
         })
     })
 
 })
 
 class TestJayChannel implements JayChannel {
-    messagesFromPort = []
+    messagesFromPort: Array<{messages: Array<[number, JPMMessage]>, newCompIdMessages: Array<[string, number]>}> = []
     handler;
 
     postMessagesToPort(messages: Array<[number, JPMMessage]>, newCompIdMessages: Array<[string, number]>) {
