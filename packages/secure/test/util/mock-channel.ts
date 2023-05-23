@@ -3,10 +3,10 @@ import {
     JayEndpoint,
     JayPort,
     JayPortInMessageHandler,
-    JayPortMessageType,
     JPMMessage
-} from '../../lib/comm-channel'
+} from '../../lib/comm-channel/comm-channel'
 import {Coordinate} from "jay-runtime";
+import {JayPortMessageType} from "../../lib/comm-channel/messages";
 
 export function useMockCommunicationChannel<PropsT, ViewState>(verbose: boolean = false): JayMockChannel<PropsT, ViewState> {
     return new JayMockChannel<PropsT, ViewState>(verbose)

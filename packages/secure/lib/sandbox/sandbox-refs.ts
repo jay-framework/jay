@@ -12,26 +12,24 @@ import {
     MountFunc,
     normalizeUpdates,
     provideContext,
-    updateFunc,
-    useContext
+    updateFunc
 } from "jay-runtime";
 import {
-    addEventListenerMessage, domEventMessage,
-    JayEndpoint, JayPort,
-    JayPortMessageType,
-    JPMMessage,
-    JPMRootAPIInvoke,
-    nativeExec,
-    removeEventListenerMessage,
-    renderMessage,
-    rootApiReturns
-} from "../comm-channel";
+    JayEndpoint,
+    JPMMessage
+} from "../comm-channel/comm-channel";
 import {$JayNativeFunction} from "../main/function-repository-types";
 import {correlatedPromise, rejectCorrelatedPromise, resolveCorrelatedPromise} from "../$func";
-import {Refs, SANDBOX_BRIDGE_CONTEXT, SANDBOX_CREATION_CONTEXT} from "./sandbox-context";
+import {Refs, SANDBOX_CREATION_CONTEXT} from "./sandbox-context";
 import {SandboxElement} from "./sandbox-element";
-import {COMPONENT_CONTEXT} from "jay-component";
 import {Reactive} from "jay-reactive";
+import {
+    addEventListenerMessage,
+    domEventMessage, JayPortMessageType, JPMRootAPIInvoke,
+    nativeExec,
+    removeEventListenerMessage, renderMessage,
+    rootApiReturns
+} from "../comm-channel/messages";
 
 
 export interface SandboxBridgeElement<ViewState> {

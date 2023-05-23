@@ -1,6 +1,7 @@
 import {BaseJayElement, provideContext} from "jay-runtime";
-import {rootComponentViewState, useMainPort} from "../comm-channel";
+import {useMainPort} from "../comm-channel/comm-channel";
 import {SECURE_COMPONENT_MARKER} from "./main-contexts";
+import {rootComponentViewState} from "../comm-channel/messages";
 
 
 export function mainRoot<ViewState>(viewState: ViewState, elementConstructor: () => BaseJayElement<ViewState>): BaseJayElement<ViewState> {

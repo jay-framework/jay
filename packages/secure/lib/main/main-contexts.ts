@@ -1,5 +1,5 @@
 import {createJayContext} from "jay-runtime";
-import {JayEndpoint, JayPort} from "../comm-channel";
+import {JayEndpoint, JayPort} from "../comm-channel/comm-channel";
 import {FunctionsRepository} from "./function-repository-types";
 
 export interface SecureComponentContext {

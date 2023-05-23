@@ -4,7 +4,7 @@ import {initializeWorker} from "./secure/worker/worker-root";
 import {CompProps} from "./secure/main/comp";
 import {CompViewState} from "./secure/main/comp.jay.html";
 import {render} from "./secure/main/app.jay.html";
-import {setChannel} from "../../lib/comm-channel";
+import {setChannel} from "../../lib/comm-channel/comm-channel";
 import {dispatchEvent} from "../util/dispatch-event";
 
 describe('events synthetic tests', () => {

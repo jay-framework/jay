@@ -6,7 +6,7 @@ import {
     HTMLElementProxy,
     JayComponent
 } from "jay-runtime";
-import {JayEndpoint, JayPort} from "../comm-channel";
+import {JayEndpoint, JayPort} from "../comm-channel/comm-channel";
 
 
 export interface SandboxContext {

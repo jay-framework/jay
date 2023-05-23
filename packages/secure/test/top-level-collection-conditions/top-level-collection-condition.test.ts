@@ -4,7 +4,7 @@ import {initializeWorker} from "./secure/worker/worker-root";
 import {CounterProps} from "./secure/main/counter";
 import {CounterViewState} from "./secure/main/counter.jay.html";
 import {AppViewState, render} from "./secure/main/app.jay.html";
-import {setChannel} from "../../lib/comm-channel";
+import {setChannel} from "../../lib/comm-channel/comm-channel";
 
 const COUNTER_COND_COORDINATE = ['comp1']
 const COUNTER_COND = 'cond'

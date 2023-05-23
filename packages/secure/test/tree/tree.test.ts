@@ -4,7 +4,7 @@ import {initializeWorker} from "./secure/worker/worker-root";
 import {Node} from "./secure/main/tree-node";
 import {TreeNodeViewState} from "./secure/main/tree-node.jay.html";
 import {render} from "./secure/main/main-root";
-import {setChannel} from "../../lib/comm-channel";
+import {setChannel} from "../../lib/comm-channel/comm-channel";
 
 const noChildrenNoArrow = "";
 const closedArrow = "►";

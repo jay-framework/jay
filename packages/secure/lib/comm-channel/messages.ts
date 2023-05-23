@@ -68,65 +68,38 @@ export interface JPMRootAPIReturns extends JayPortMessage {
     error?: any
 }
 
-export type JPMMessage = JPMRootComponentViewState | JPMRender | JPMAddEventListener | JPMDomEvent | JPMNativeExecResult |
-                         JPMNativeExec | JPMRootAPIInvoke | JPMRootAPIReturns | JPMRemoveEventListener
-
-export type JayPortInMessageHandler = (inMessage: JPMMessage) => void;
-
-export interface JayChannel {
-    mainPort: JayPort,
-    workerPort: JayPort
-}
-
-export interface JayPort {
-    getRootEndpoint(): JayEndpoint;
-    getEndpoint(parentCompId: number, parentCoordinate: Coordinate): JayEndpoint;
-    batch<T>(handler: () => T): T
-    flush()
-}
-
-export interface JayEndpoint {
-    port: JayPort
-    post(outMessage: JayPortMessage);
-    onUpdate(handler: JayPortInMessageHandler);
-    readonly compId: number;
+export function rootApiReturns(callId: number, returns: any, error?: any): JPMRootAPIReturns {
+    return ({callId, returns, error, type: JayPortMessageType.rootApiReturns})
 }
 
 export function renderMessage(viewState): JPMRender {
     return ({viewState, type: JayPortMessageType.render});
 }
+
 export function addEventListenerMessage(refName: string, eventType: string, nativeId?: string): JPMAddEventListener {
     return ({refName, eventType, nativeId, type: JayPortMessageType.addEventListener});
 }
+
 export function removeEventListenerMessage(refName: string, eventType: string): JPMRemoveEventListener {
     return ({refName, eventType, type: JayPortMessageType.removeEventListener});
 }
+
 export function domEventMessage(eventType: string, coordinate: Coordinate, eventData?: any): JPMDomEvent {
     return ({coordinate, eventType, eventData, type: JayPortMessageType.DOMEvent});
 }
+
 export function rootComponentViewState(viewState: any): JPMRootComponentViewState {
     return ({viewState, type: JayPortMessageType.root});
 }
+
 export function nativeExec(refName: string, nativeId: string, correlationId: number, coordinate: Coordinate): JPMNativeExec {
     return ({refName, nativeId, correlationId, coordinate, type: JayPortMessageType.nativeExec})
 }
+
 export function nativeExecResult(refName: string, correlationId: number, result: any, error?: any): JPMNativeExecResult {
     return ({refName, result, correlationId, error, type: JayPortMessageType.nativeExecResult})
 }
+
 export function rootApiInvoke(apiName: string, callId: number, params: Array<any>): JPMRootAPIInvoke {
     return ({apiName, callId, params, type: JayPortMessageType.rootApiInvoke})
-}
-export function rootApiReturns(callId: number, returns: any, error?: any): JPMRootAPIReturns {
-    return ({callId, returns, error, type: JayPortMessageType.rootApiReturns})
-}
-
-let _channel: JayChannel
-export function setChannel(channel: JayChannel) {
-    _channel = channel;
-}
-export function useMainPort(): JayPort {
-    return _channel.mainPort
-}
-export function useWorkerPort(): JayPort {
-    return _channel.workerPort
 }

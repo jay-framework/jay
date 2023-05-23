@@ -1,16 +1,13 @@
 import {JayElement, JayEvent, JayEventHandler, provideContext, RenderElement, useContext} from "jay-runtime";
 import {createState, JayComponentCore, makeJayComponent, Props, useReactive} from "jay-component";
 import {
-    addEventListenerMessage,
-    domEventMessage,
     JayEndpoint,
-    JayPortMessageType,
-    JPMMessage,
-    rootApiInvoke
-} from "../comm-channel";
+    JPMMessage
+} from "../comm-channel/comm-channel";
 import {SECURE_COMPONENT_MARKER} from "./main-contexts";
 import {SECURE_COORDINATE_MARKER} from "./main-child-comp";
 import {FunctionsRepository} from "./function-repository-types";
+import {addEventListenerMessage, domEventMessage, JayPortMessageType, rootApiInvoke} from "../comm-channel/messages";
 
 interface CompBridgeOptions {
     events?: Array<string>,

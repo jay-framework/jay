@@ -4,7 +4,7 @@ import {initializeWorker} from "./secure/worker/worker-root";
 import {CounterProps} from "./secure/main/counter";
 import {CounterViewState} from "./secure/main/counter.jay.html";
 import {render} from "./secure/main/app.jay.html";
-import {setChannel} from "../../lib/comm-channel";
+import {setChannel} from "../../lib/comm-channel/comm-channel";
 
 describe('basic events - using counter component', () => {
 

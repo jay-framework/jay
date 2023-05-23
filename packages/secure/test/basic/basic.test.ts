@@ -4,7 +4,8 @@ import {initializeWorker} from "./secure/worker/worker-root";
 import {BasicProps} from "./secure/main/basic";
 import {BasicViewState} from "./secure/main/basic.jay.html";
 import {render} from "./secure/main/app.jay.html";
-import {JayPortMessageType, setChannel} from "../../lib/comm-channel";
+import {setChannel} from "../../lib/comm-channel/comm-channel";
+import {JayPortMessageType} from "../../lib/comm-channel/messages";
 
 const initialData = {firstName: 'Joe', lastName: 'Smith'};
 const updatedData = {firstName: 'John', lastName: 'Green'};

@@ -1,5 +1,5 @@
 import {provideContext} from "jay-runtime";
-import {JayPort, JPMRootComponentViewState, useWorkerPort} from "../comm-channel";
+import {JayPort, JPMRootComponentViewState, useWorkerPort} from "../comm-channel/comm-channel";
 import {SANDBOX_CREATION_CONTEXT, SandboxCreationContext} from "./sandbox-context";
 import {SandboxElement} from "./sandbox-element";
 

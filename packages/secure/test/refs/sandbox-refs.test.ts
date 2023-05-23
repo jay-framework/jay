@@ -3,12 +3,9 @@ import {
     mkBridgeElement
 } from "../../lib/sandbox/sandbox-refs";
 import {
-    domEventMessage,
     JayEndpoint, JayPort,
-    JayPortInMessageHandler, JayPortMessageType,
-    JPMAddEventListener,
-    JPMDomEvent, JPMNativeExec, JPMNativeExecResult, nativeExecResult
-} from "../../lib/comm-channel";
+    JayPortInMessageHandler
+} from "../../lib/comm-channel/comm-channel";
 import {Reactive} from "jay-reactive";
 import {$func, $handler} from "../../lib/$func";
 import {ComponentCollectionProxy, Coordinate, HTMLElementCollectionProxy, HTMLElementProxy} from "jay-runtime";
@@ -19,6 +16,12 @@ import {
     sandboxChildComp as childComp
 } from "../../lib/sandbox/sandbox-element";
 import {clearInstances, componentInstance, Item, ItemProps} from "./item-component/item";
+import {
+    domEventMessage,
+    JayPortMessageType,
+    JPMAddEventListener, JPMDomEvent, JPMNativeExec, JPMNativeExecResult,
+    nativeExecResult
+} from "../../lib/comm-channel/messages";
 
 const getNullComponentInstance = () => undefined;
 describe('sandbox-refs', () => {
