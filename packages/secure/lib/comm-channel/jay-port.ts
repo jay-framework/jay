@@ -4,7 +4,7 @@ import {Coordinate} from "jay-runtime";
 
 export interface JayPortLogger {
     logPost(compId: number, message: JPMMessage): void;
-    logInvoke(compId: number, message: JPMMessage): void;
+    logInvoke(compId: number, message: JPMMessage, endpointFound: boolean): void;
 }
 
 export class JayPort implements IJayPort {
@@ -73,9 +73,9 @@ export class JayPort implements IJayPort {
         });
         this.batch(() => {
             messages.forEach(([compId, message]) => {
-                if (this.logger)
-                    this.logger.logInvoke(compId, message)
                 let endpoint = this.endpoints.get(compId);
+                if (this.logger)
+                    this.logger.logInvoke(compId, message, !!endpoint)
                 if (endpoint)
                     endpoint.invoke(message)
                 else {

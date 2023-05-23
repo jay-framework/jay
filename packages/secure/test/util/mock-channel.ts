@@ -1,14 +1,12 @@
 import {
-    IJayEndpoint,
     IJayPort,
-    JayPortInMessageHandler,
     JPMMessage, setMainPort, setWorkerPort
 } from '../../lib/comm-channel/comm-channel'
-import {Coordinate} from "jay-runtime";
 import {JayPortMessageType} from "../../lib/comm-channel/messages";
+import {JayPort, JayPortLogger} from "../../lib/comm-channel/jay-port";
 
-export function useMockCommunicationChannel<PropsT, ViewState>(verbose: boolean = false): JayMockChannel<PropsT, ViewState> {
-    return new JayMockChannel<PropsT, ViewState>(verbose)
+export function useMockCommunicationChannel<PropsT, ViewState>(verbose: boolean = false): JayMockChannel2<PropsT, ViewState> {
+    return new JayMockChannel2<PropsT, ViewState>(verbose)
 }
 
 type MessageStatus = 'posted' | 'invoked';
@@ -24,30 +22,75 @@ export function setChannel(channel: MockJayChannel) {
     setMainPort(channel.mainPort);
     setWorkerPort(channel.workerPort);
 }
-class JayMockChannel<PropsT, ViewState> implements MockJayChannel {
 
-    private readonly main: MockJayPort
-    private readonly worker: MockJayPort
-    private pendingMessages: number = 0;
+class JayMockLogger implements JayPortLogger {
+    constructor(private name: string, private verbose: boolean) {}
+
+    logInvoke(compId: number, message: JPMMessage, endpointFound: boolean): void {
+        if (this.verbose)
+            console.log(`${this.name}.invoke - compId: ${compId} ${endpointFound?"":"[COMP NOT FOUND] "}type: ${describeMessageType(message.type)} message: ${JSON.stringify(message)}`)
+    }
+
+    logPost(compId: number, message: JPMMessage): void {
+        if (this.verbose)
+            console.log(`${this.name}.post - compId: ${compId} type: ${describeMessageType(message.type)} message: ${JSON.stringify(message)}`)
+    }
+}
+
+class JayMockChannel2<PropsT, ViewState> implements MockJayChannel {
+    readonly mainPort: IJayPort
+    readonly workerPort: IJayPort
     private dirty = Promise.resolve();
     private dirtyResolve: () => void
-    private comps: Map<string, number> = new Map();
-    private nextCompId: number = 1;
+    private pendingMessages: number = 0;
+    private mainOnMessageHandler: (messages: Array<[number, JPMMessage]>, newCompIdMessages: Array<[string, number]>) => void;
+    private workerOnMessageHandler: (messages: Array<[number, JPMMessage]>, newCompIdMessages: Array<[string, number]>) => void;
     public readonly messageLog: Array<[JPMMessage, MessageStatus]> = [];
 
     constructor(private verbose: boolean = false) {
-        this.pendingMessages = 0;
-        this.main = new MockJayPort(this, verbose, 'MAIN');
-        this.worker = new MockJayPort(this, verbose, 'SANDBOX');
-        this.main.setTarget(this.worker);
-        this.worker.setTarget(this.main)
+        this.mainPort = new JayPort({
+            postMessages: (...args) => this.mainPostingMessages(...args),
+            onMessages: (...args) => this.sendMessagesToMain(...args)
+        }, new JayMockLogger('MAIN', verbose))
+
+        this.workerPort = new JayPort({
+            postMessages: (...args) => this.workerPostingMessages(...args),
+            onMessages: (...args) => this.sendMessagesToWorker(...args)
+        }, new JayMockLogger('WORKER', verbose))
     }
 
-    getCompId = (parentCompId: number, coordinate: Coordinate): number => {
-        let fullId = `${parentCompId}-${coordinate}`;
-        if (!this.comps.has(fullId))
-            this.comps.set(fullId, this.nextCompId++);
-        return this.comps.get(fullId) as number;
+    mainPostingMessages(messages: Array<[number, JPMMessage]>, newCompIdMessages: Array<[string, number]>) {
+        this.messageCountCallback(1)
+        messages.forEach(([compId, message]) => this.messageLog.push([message, 'posted']));
+        process.nextTick(() => {
+            this.workerOnMessageHandler(messages, newCompIdMessages);
+            messages.forEach(([compId, message]) =>
+                this.messageLog
+                    .find(item => item[0] === message)[1] = 'invoked'
+            );
+            this.messageCountCallback(-1)
+        })
+    }
+
+    sendMessagesToMain(handler: (messages: Array<[number, JPMMessage]>, newCompIdMessages: Array<[string, number]>) => void) {
+        this.mainOnMessageHandler = handler;
+    }
+
+    workerPostingMessages(messages: Array<[number, JPMMessage]>, newCompIdMessages: Array<[string, number]>) {
+        this.messageCountCallback(1)
+        messages.forEach(([compId, message]) => this.messageLog.push([message, 'posted']));
+        process.nextTick(() => {
+            this.mainOnMessageHandler(messages, newCompIdMessages);
+            messages.forEach(([compId, message]) =>
+                this.messageLog
+                    .find(item => item[0] === message)[1] = 'invoked'
+            );
+            this.messageCountCallback(-1)
+        })
+    }
+
+    sendMessagesToWorker(handler: (messages: Array<[number, JPMMessage]>, newCompIdMessages: Array<[string, number]>) => void) {
+        this.workerOnMessageHandler = handler;
     }
 
     messageCountCallback = (diff) => {
@@ -62,116 +105,6 @@ class JayMockChannel<PropsT, ViewState> implements MockJayChannel {
         return this.dirty;
     }
 
-    get mainPort(): IJayPort {return this.main}
-    get workerPort(): IJayPort {return this.worker}
-}
-
-class MockJayPort implements IJayPort {
-    private messages: Array<[number, JPMMessage]> = []
-    private target: MockJayPort
-    private endpoints: Map<number, MockEndpointPort> = new Map();
-    private futureEndpointMessages: Map<number, JPMMessage[]> = new Map();
-    private inBatch = false;
-
-    constructor(private channel,
-                private verbose: boolean = false,
-                private name: string = '') {}
-                
-    getEndpoint(parentCompId: number, parentCoordinate: Coordinate): IJayEndpoint {
-        let compId = this.channel.getCompId(parentCompId, parentCoordinate);
-        let ep = new MockEndpointPort(compId, this);
-        this.endpoints.set(compId, ep)
-        ep.setInitMessages(this.futureEndpointMessages.get(compId) || [])
-        this.futureEndpointMessages.delete(compId);
-        return ep;
-    }
-
-    getRootEndpoint(): IJayEndpoint {
-        return this.getEndpoint(-1, [''])
-    }
-
-    post(compId: number, outMessage: JPMMessage) {
-        if (this.verbose)
-            console.log(`${this.name}.post - compId: ${compId} type: ${describeMessageType(outMessage.type)} message: ${JSON.stringify(outMessage)}`)
-        this.channel.messageLog.push([outMessage, 'posted']);
-        this.messages.push([compId, outMessage]);
-        this.channel.messageCountCallback(1)
-    }
-
-    setTarget(target: MockJayPort) {
-        this.target = target;
-    }
-
-    batch<T>(handler: () => T): T {
-        if (this.inBatch)
-            return handler();
-        this.inBatch = true;
-        this.messages = [];
-        try {
-            return handler()
-        }
-        finally {
-            if (this.messages.length > 0)
-                this.flush();
-            this.inBatch = false;
-        }
-    }
-
-    invoke(messages: Array<[number, JPMMessage]>) {
-        this.batch(() => {
-            messages.forEach(([compId, message]) => {
-                if (this.verbose)
-                    console.log(`${this.name}.invoke - compId: ${compId} ${this.endpoints.get(compId)?"":"[COMP NOT FOUND] "}type: ${describeMessageType(message.type)} message: ${JSON.stringify(message)}`)
-                this.channel.messageLog
-                    .find(item => item[0] === message)[1] = 'invoked'
-                let endpoint = this.endpoints.get(compId);
-                if (endpoint)
-                    endpoint.invoke(message)
-                else {
-                    if (!this.futureEndpointMessages.has(compId))
-                        this.futureEndpointMessages.set(compId, [message])
-                    else
-                        this.futureEndpointMessages.get(compId).push(message);
-                }
-
-            })
-        })
-    }
-
-    flush() {
-        let messages = this.messages;
-        process.nextTick(() => {
-            this.target.invoke(messages);
-            this.channel.messageCountCallback(-messages.length)
-        })
-    }
-}
-
-class MockEndpointPort implements IJayEndpoint {
-
-    private handler: JayPortInMessageHandler
-    private initMessages: JPMMessage[] = [];
-    constructor(
-        readonly compId: number,
-        public readonly port: MockJayPort) {}
-
-    post(outMessage: JPMMessage) {
-        this.port.post(this.compId, outMessage)
-    }
-
-    onUpdate(handler: JayPortInMessageHandler) {
-        this.handler = handler
-        this.initMessages.forEach(message => handler(message))
-        this.initMessages = [];
-    }
-
-    invoke(inMessage: JPMMessage) {
-        this?.handler(inMessage);
-    }
-
-    setInitMessages(initMessages: JPMMessage[]) {
-        this.initMessages = initMessages;
-    }
 }
 
 function mkResolvablePromise() {
