@@ -1,8 +1,14 @@
 import {describe, expect, it} from '@jest/globals'
 import {JayPort, JayPortLogger} from "../../lib/comm-channel/jay-port";
 import {JayChannel, JPMMessage} from "../../lib/comm-channel/comm-channel";
-import {addEventListenerMessage, renderMessage} from "../../lib/comm-channel/messages";
+import {addEventListenerMessage, eventInvocationMessage, renderMessage} from "../../lib/comm-channel/messages";
 
+const MESSAGE_RENDER_1 = renderMessage({foo: 'bar'});
+const MESSAGE_RENDER_2 = renderMessage({foo: 'goo'});
+const MESSAGE_ADD_EVENT_LISTENER_CLICK_ADD = addEventListenerMessage('add', 'click');
+const MESSAGE_ADD_EVENT_LISTENER_CLICK_DEC = addEventListenerMessage('dec', 'click');
+const MESSAGE_EVENT_CLICK_ADD = eventInvocationMessage('click', ['add']);
+const MESSAGE_EVENT_CLICK_DEC = eventInvocationMessage('click', ['dec']);
 describe('jay-port', () => {
 
     function mkPort() {
@@ -27,12 +33,12 @@ describe('jay-port', () => {
             let {port, logger, channel} = mkPort();
 
             let endpoint = port.getEndpoint(1, ['comp1'])
-            endpoint.post(renderMessage({foo: 'bar'}))
+            endpoint.post(MESSAGE_RENDER_1)
             port.flush();
 
             expect(channel.messagesFromPort)
                 .toContainEqual({
-                    messages: [[2, renderMessage({foo: 'bar'})]],
+                    messages: [[2, MESSAGE_RENDER_1]],
                     newCompIdMessages: [["1-comp1", 2]]})
         })
 
@@ -41,12 +47,12 @@ describe('jay-port', () => {
 
             port.batch(() => {
                 let endpoint = port.getEndpoint(1, ['comp1'])
-                endpoint.post(renderMessage({foo: 'bar'}))
+                endpoint.post(MESSAGE_RENDER_1)
             })
 
             expect(channel.messagesFromPort)
                 .toContainEqual({
-                    messages: [[2, renderMessage({foo: 'bar'})]],
+                    messages: [[2, MESSAGE_RENDER_1]],
                     newCompIdMessages: [["1-comp1", 2]]})
         })
 
@@ -55,17 +61,17 @@ describe('jay-port', () => {
 
             port.batch(() => {
                 let endpoint1 = port.getEndpoint(1, ['comp1'])
-                endpoint1.post(renderMessage({foo: 'bar'}))
+                endpoint1.post(MESSAGE_RENDER_1)
                 let endpoint2 = port.getEndpoint(1, ['comp2', 'a'])
-                endpoint2.post(renderMessage({foo: 'poo'}))
-                endpoint2.post(addEventListenerMessage('add', 'click'))
+                endpoint2.post(MESSAGE_RENDER_2)
+                endpoint2.post(MESSAGE_ADD_EVENT_LISTENER_CLICK_ADD)
             })
 
             expect(channel.messagesFromPort)
                 .toContainEqual({
-                    messages: [[2, renderMessage({foo: 'bar'})],
-                        [3, renderMessage({foo: 'poo'})],
-                        [3, addEventListenerMessage('add', 'click')]],
+                    messages: [[2, MESSAGE_RENDER_1],
+                        [3, MESSAGE_RENDER_2],
+                        [3, MESSAGE_ADD_EVENT_LISTENER_CLICK_ADD]],
                     newCompIdMessages: [["1-comp1", 2], ["1-comp2,a", 3]]})
         })
     })
@@ -99,10 +105,75 @@ describe('jay-port', () => {
             channel2.postMessagesToPort(channel1.messagesFromPort[0].messages, channel1.messagesFromPort[0].newCompIdMessages)
             // get the endpoint on port2
             let endpoint2 = port2.getEndpoint(1, ['comp1'])
-            endpoint2.post(renderMessage({foo: 'bar'}))
+            endpoint2.post(MESSAGE_RENDER_1)
             port2.flush();
 
-            expect(channel2.messagesFromPort).toContainEqual({messages: [[generatedCompId, renderMessage({foo: 'bar'})]], newCompIdMessages: []})
+            expect(channel2.messagesFromPort).toContainEqual({messages: [[generatedCompId, MESSAGE_RENDER_1]], newCompIdMessages: []})
+        })
+    })
+
+    describe('receive messages', () => {
+        it('should support sending messages to a component based on compId', () => {
+            let {port, channel} = mkPort();
+            let endpointUpdate = jest.fn();
+
+            let endpoint = port.getEndpoint(1, ['comp1'])
+            port.flush();
+            let compId = channel.messagesFromPort[0].newCompIdMessages[0][1];
+
+            endpoint.onUpdate(endpointUpdate);
+            channel.postMessagesToPort([
+                [compId, MESSAGE_RENDER_1],
+                [compId, MESSAGE_ADD_EVENT_LISTENER_CLICK_ADD],
+                [compId, MESSAGE_ADD_EVENT_LISTENER_CLICK_DEC]
+            ], [])
+
+            expect(endpointUpdate).toBeCalledTimes(3)
+            expect(endpointUpdate).toBeCalledWith(MESSAGE_RENDER_1)
+            expect(endpointUpdate).toBeCalledWith(MESSAGE_ADD_EVENT_LISTENER_CLICK_ADD)
+            expect(endpointUpdate).toBeCalledWith(MESSAGE_ADD_EVENT_LISTENER_CLICK_DEC)
+        })
+
+        it('should support sending messages to a component before it is created, and it should receive the messages on endpoint creation', () => {
+            let {port, channel} = mkPort();
+            let endpointUpdate = jest.fn();
+
+            let compId = Math.random() * 100;
+            channel.postMessagesToPort([
+                [compId, MESSAGE_RENDER_1],
+                [compId, MESSAGE_ADD_EVENT_LISTENER_CLICK_ADD],
+                [compId, MESSAGE_ADD_EVENT_LISTENER_CLICK_DEC]
+            ], [['1-comp1', compId]])
+
+            let endpoint = port.getEndpoint(1, ['comp1'])
+            port.flush();
+
+            endpoint.onUpdate(endpointUpdate);
+
+            expect(endpointUpdate).toBeCalledTimes(3)
+            expect(endpointUpdate).toBeCalledWith(MESSAGE_RENDER_1)
+            expect(endpointUpdate).toBeCalledWith(MESSAGE_ADD_EVENT_LISTENER_CLICK_ADD)
+            expect(endpointUpdate).toBeCalledWith(MESSAGE_ADD_EVENT_LISTENER_CLICK_DEC)
+        })
+
+        it('on publishing incoming messages during handing a message, should auto batch outgoing messages', () => {
+            let {port, channel} = mkPort();
+
+            let endpoint = port.getEndpoint(1, ['comp1'])
+            port.flush();
+            let compId = channel.messagesFromPort[0].newCompIdMessages[0][1];
+            let endpointUpdate = (message) => {
+                endpoint.post(MESSAGE_EVENT_CLICK_ADD)
+                endpoint.post(MESSAGE_EVENT_CLICK_ADD)
+                endpoint.post(MESSAGE_EVENT_CLICK_DEC)
+            }
+            endpoint.onUpdate(endpointUpdate);
+
+            channel.postMessagesToPort([[compId, MESSAGE_RENDER_1]], [])
+
+            expect(channel.messagesFromPort).toContainEqual({
+                messages: [[compId, MESSAGE_EVENT_CLICK_ADD], [compId, MESSAGE_EVENT_CLICK_ADD], [compId, MESSAGE_EVENT_CLICK_DEC]],
+                newCompIdMessages: []})
         })
     })
 

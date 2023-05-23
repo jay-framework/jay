@@ -178,7 +178,7 @@ function describeMessageType(type: JayPortMessageType): string {
             return 'addEventListener'
         case JayPortMessageType.root:
             return 'root'
-        case JayPortMessageType.DOMEvent:
+        case JayPortMessageType.eventInvocation:
             return 'DOMEvent'
         case JayPortMessageType.removeEventListener:
             return 'removeEventListener'

@@ -4,7 +4,7 @@ export enum JayPortMessageType {
     render = 0,
     addEventListener = 1,
     root = 2,
-    DOMEvent = 3,
+    eventInvocation = 3,
     removeEventListener,
     nativeExec,
     nativeExecResult,
@@ -44,7 +44,7 @@ export interface JPMRemoveEventListener extends JayPortMessage {
     refName: string
 }
 export interface JPMDomEvent extends JayPortMessage {
-    readonly type: JayPortMessageType.DOMEvent
+    readonly type: JayPortMessageType.eventInvocation
     eventType: string
     coordinate: Coordinate
     eventData: any
@@ -84,8 +84,8 @@ export function removeEventListenerMessage(refName: string, eventType: string): 
     return ({refName, eventType, type: JayPortMessageType.removeEventListener});
 }
 
-export function domEventMessage(eventType: string, coordinate: Coordinate, eventData?: any): JPMDomEvent {
-    return ({coordinate, eventType, eventData, type: JayPortMessageType.DOMEvent});
+export function eventInvocationMessage(eventType: string, coordinate: Coordinate, eventData?: any): JPMDomEvent {
+    return ({coordinate, eventType, eventData, type: JayPortMessageType.eventInvocation});
 }
 
 export function rootComponentViewState(viewState: any): JPMRootComponentViewState {

@@ -17,7 +17,7 @@ import {
 } from "../../lib/sandbox/sandbox-element";
 import {clearInstances, componentInstance, Item, ItemProps} from "./item-component/item";
 import {
-    domEventMessage,
+    eventInvocationMessage,
     JayPortMessageType,
     JPMAddEventListener, JPMDomEvent, JPMNativeExec, JPMNativeExecResult,
     nativeExecResult
@@ -57,7 +57,7 @@ describe('sandbox-refs', () => {
             let callback = jest.fn();
 
             (bridgeElement.refs.one as HTMLElementProxy<any, any>).onclick(callback);
-            endpoint.invoke(domEventMessage('click', ['one']))
+            endpoint.invoke(eventInvocationMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["one"], "event": undefined, "viewState": vs})
@@ -69,7 +69,7 @@ describe('sandbox-refs', () => {
 
             bridgeElement.update(vs2);
             (bridgeElement.refs.one as HTMLElementProxy<any, any>).onclick(callback);
-            endpoint.invoke(domEventMessage('click', ['one']))
+            endpoint.invoke(eventInvocationMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["one"], "event": undefined, "viewState": vs2})
@@ -112,7 +112,7 @@ describe('sandbox-refs', () => {
 
             (bridgeElement.refs.one as HTMLElementProxy<any, any>).addEventListener('click', callback);
             (bridgeElement.refs.one as HTMLElementProxy<any, any>).removeEventListener('click', callback);
-            endpoint.invoke(domEventMessage('click', ['one']))
+            endpoint.invoke(eventInvocationMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(0)
         })
@@ -235,7 +235,7 @@ describe('sandbox-refs', () => {
             let callback = jest.fn();
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
-            endpoint.invoke(domEventMessage('click', ['B', 'one']))
+            endpoint.invoke(eventInvocationMessage('click', ['B', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": baseViewState.items[1]})
@@ -246,7 +246,7 @@ describe('sandbox-refs', () => {
             let callback = jest.fn();
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
-            endpoint.invoke(domEventMessage('click', ['D', 'one']))
+            endpoint.invoke(eventInvocationMessage('click', ['D', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["D","one"], "event": undefined, "viewState": undefined})
@@ -258,7 +258,7 @@ describe('sandbox-refs', () => {
 
             bridgeElement.update(addAndRemoveItemViewState);
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
-            endpoint.invoke(domEventMessage('click', ['B', 'one']))
+            endpoint.invoke(eventInvocationMessage('click', ['B', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": undefined})
@@ -270,7 +270,7 @@ describe('sandbox-refs', () => {
 
             bridgeElement.update(addItemViewState);
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
-            endpoint.invoke(domEventMessage('click', ['D', 'one']))
+            endpoint.invoke(eventInvocationMessage('click', ['D', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["D","one"], "event": undefined, "viewState": addItemViewState.items[3]})
@@ -282,7 +282,7 @@ describe('sandbox-refs', () => {
 
             bridgeElement.update(updateItemViewState);
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
-            endpoint.invoke(domEventMessage('click', ['B', 'one']))
+            endpoint.invoke(eventInvocationMessage('click', ['B', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": updateItemViewState.items[1]})
@@ -472,7 +472,7 @@ describe('sandbox-refs', () => {
             let callback = jest.fn();
 
             (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(callback);
-            endpoint.invoke(domEventMessage('click', ['B', '3', 'two']))
+            endpoint.invoke(eventInvocationMessage('click', ['B', '3', 'two']))
 
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B", '3', "two"], "event": undefined, "viewState": vs.items[1].subItems[0]})
@@ -484,11 +484,11 @@ describe('sandbox-refs', () => {
 
             bridgeElement.update(vs2);
             (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(callback);
-            endpoint.invoke(domEventMessage('click', ['A', '2.5', 'two'])) // added sub item
-            endpoint.invoke(domEventMessage('click', ['B', '4', 'two'])) // removed sub item
-            endpoint.invoke(domEventMessage('click', ['C', '5', 'two'])) // updated sub item
-            endpoint.invoke(domEventMessage('click', ['D', '6', 'two'])) // removed item
-            endpoint.invoke(domEventMessage('click', ['E', '9', 'two'])) // added item
+            endpoint.invoke(eventInvocationMessage('click', ['A', '2.5', 'two'])) // added sub item
+            endpoint.invoke(eventInvocationMessage('click', ['B', '4', 'two'])) // removed sub item
+            endpoint.invoke(eventInvocationMessage('click', ['C', '5', 'two'])) // updated sub item
+            endpoint.invoke(eventInvocationMessage('click', ['D', '6', 'two'])) // removed item
+            endpoint.invoke(eventInvocationMessage('click', ['E', '9', 'two'])) // added item
 
             expect(callback.mock.calls).toHaveLength(5)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["A", '2.5', "two"], "event": undefined, "viewState": vs2.items[0].subItems[2]})
@@ -534,7 +534,7 @@ describe('sandbox-refs', () => {
             let callback = jest.fn();
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
-            endpoint.invoke(domEventMessage('click', ['one']))
+            endpoint.invoke(eventInvocationMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": undefined, "viewState": vs})
@@ -545,7 +545,7 @@ describe('sandbox-refs', () => {
             let callback = jest.fn();
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
-            endpoint.invoke(domEventMessage('click', ['one']))
+            endpoint.invoke(eventInvocationMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": undefined, "viewState": vs2})
@@ -557,7 +557,7 @@ describe('sandbox-refs', () => {
 
             bridgeElement.update(vs2);
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
-            endpoint.invoke(domEventMessage('click', ['one']))
+            endpoint.invoke(eventInvocationMessage('click', ['one']))
 
             expect(callback.mock.calls).toHaveLength(1)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['one'], "event": undefined, "viewState": vs2})
@@ -568,13 +568,13 @@ describe('sandbox-refs', () => {
             let callback = jest.fn();
 
             (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(callback);
-            endpoint.invoke(domEventMessage('click', ['two']))
+            endpoint.invoke(eventInvocationMessage('click', ['two']))
             bridgeElement.update(vs2)
-            endpoint.invoke(domEventMessage('click', ['two']))
+            endpoint.invoke(eventInvocationMessage('click', ['two']))
             bridgeElement.update(vs3)
-            endpoint.invoke(domEventMessage('click', ['two']))
+            endpoint.invoke(eventInvocationMessage('click', ['two']))
             bridgeElement.update(vs4)
-            endpoint.invoke(domEventMessage('click', ['two']))
+            endpoint.invoke(eventInvocationMessage('click', ['two']))
 
             expect(callback.mock.calls).toHaveLength(4)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ['two'], "event": undefined, "viewState": vs})
@@ -616,10 +616,10 @@ describe('sandbox-refs', () => {
             let callback = jest.fn();
 
             (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(callback);
-            endpoint.invoke(domEventMessage('click', ['A', 'two']))
-            endpoint.invoke(domEventMessage('click', ['B', 'two']))
-            endpoint.invoke(domEventMessage('click', ['C', 'two']))
-            endpoint.invoke(domEventMessage('click', ['D', 'two']))
+            endpoint.invoke(eventInvocationMessage('click', ['A', 'two']))
+            endpoint.invoke(eventInvocationMessage('click', ['B', 'two']))
+            endpoint.invoke(eventInvocationMessage('click', ['C', 'two']))
+            endpoint.invoke(eventInvocationMessage('click', ['D', 'two']))
 
             expect(callback.mock.calls).toHaveLength(4)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["A", "two"], "event": undefined, "viewState": vs.items[0]})
@@ -634,10 +634,10 @@ describe('sandbox-refs', () => {
 
             bridgeElement.update(vs2);
             (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(callback);
-            endpoint.invoke(domEventMessage('click', ['A', 'two']))
-            endpoint.invoke(domEventMessage('click', ['B', 'two']))
-            endpoint.invoke(domEventMessage('click', ['C', 'two']))
-            endpoint.invoke(domEventMessage('click', ['E', 'two']))
+            endpoint.invoke(eventInvocationMessage('click', ['A', 'two']))
+            endpoint.invoke(eventInvocationMessage('click', ['B', 'two']))
+            endpoint.invoke(eventInvocationMessage('click', ['C', 'two']))
+            endpoint.invoke(eventInvocationMessage('click', ['E', 'two']))
 
             expect(callback.mock.calls).toHaveLength(4)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["A", "two"], "event": undefined, "viewState": vs2.items[0]})

@@ -7,7 +7,7 @@ import {
 import {SECURE_COMPONENT_MARKER} from "./main-contexts";
 import {SECURE_COORDINATE_MARKER} from "./main-child-comp";
 import {FunctionsRepository} from "./function-repository-types";
-import {addEventListenerMessage, domEventMessage, JayPortMessageType, rootApiInvoke} from "../comm-channel/messages";
+import {addEventListenerMessage, eventInvocationMessage, JayPortMessageType, rootApiInvoke} from "../comm-channel/messages";
 
 interface CompBridgeOptions {
     events?: Array<string>,
@@ -48,10 +48,10 @@ function makeComponentBridgeConstructor<
                     port.batch(() => {
                         if (message.nativeId) {
                             let eventData = funcRepository[nativeId](event);
-                            endpoint.post(domEventMessage(eventType, event.coordinate, eventData))
+                            endpoint.post(eventInvocationMessage(eventType, event.coordinate, eventData))
                         }
                         else
-                            endpoint.post(domEventMessage(eventType, event.coordinate))
+                            endpoint.post(eventInvocationMessage(eventType, event.coordinate))
                     })
                 })}
                 break;
@@ -65,7 +65,7 @@ function makeComponentBridgeConstructor<
                     delete ongoingAPICalls[callId]
                 }
                 break;
-            case JayPortMessageType.DOMEvent: {
+            case JayPortMessageType.eventInvocation: {
                 let {eventType, eventData} = message;
                 eventHandlers[eventType]({event: eventData, coordinate: [''], viewState: null})
                 break;

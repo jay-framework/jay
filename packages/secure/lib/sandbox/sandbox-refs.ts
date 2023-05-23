@@ -25,7 +25,7 @@ import {SandboxElement} from "./sandbox-element";
 import {Reactive} from "jay-reactive";
 import {
     addEventListenerMessage,
-    domEventMessage, JayPortMessageType, JPMRootAPIInvoke,
+    eventInvocationMessage, JayPortMessageType, JPMRootAPIInvoke,
     nativeExec,
     removeEventListenerMessage, renderMessage,
     rootApiReturns
@@ -251,7 +251,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
 
         endpoint.onUpdate(async (inMessage: JPMMessage) => {
             switch (inMessage.type) {
-                case JayPortMessageType.DOMEvent: {
+                case JayPortMessageType.eventInvocation: {
                     reactive.batchReactions(() => {
                         refs[inMessage.coordinate.slice(-1)[0]].invoke(inMessage.eventType, inMessage.coordinate, inMessage.eventData)
                     })
@@ -283,7 +283,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
                 case JayPortMessageType.addEventListener: {
                     let handler = ({event, viewState, coordinate}: JayEvent<any, any>) => {
                         port.batch(() => {
-                            endpoint.post(domEventMessage(inMessage.eventType, coordinate, event))
+                            endpoint.post(eventInvocationMessage(inMessage.eventType, coordinate, event))
                         })
                     }
                     events[inMessage.eventType] = handler;
