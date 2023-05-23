@@ -3,7 +3,7 @@ import {
     mkBridgeElement
 } from "../../lib/sandbox/sandbox-refs";
 import {
-    JayEndpoint, JayPort,
+    IJayEndpoint, IJayPort,
     JayPortInMessageHandler
 } from "../../lib/comm-channel/comm-channel";
 import {Reactive} from "jay-reactive";
@@ -864,7 +864,7 @@ coordinate: [c,comp1]`)
     })
 })
 
-interface TestJayEndpoint extends JayEndpoint {
+interface TestJayEndpoint extends IJayEndpoint {
     readonly outMessages: (JPMAddEventListener | JPMNativeExec)[]
     invoke(inMessage: JPMDomEvent | JPMNativeExecResult)
 }
@@ -874,16 +874,16 @@ function mkEndpoint(): TestJayEndpoint {
     let _outMessages = [];
     let _handler;
 
-    let port: JayPort = {
+    let port: IJayPort = {
         batch<T>(handler: () => T): T {
             return undefined;
         },
         flush() {
         },
-        getEndpoint(parentCompId: number, parentCoordinate: Coordinate): JayEndpoint {
+        getEndpoint(parentCompId: number, parentCoordinate: Coordinate): IJayEndpoint {
             return undefined;
         },
-        getRootEndpoint(): JayEndpoint {
+        getRootEndpoint(): IJayEndpoint {
             return undefined;
         }
     }

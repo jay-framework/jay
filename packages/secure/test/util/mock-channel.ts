@@ -1,7 +1,7 @@
 import {
     JayChannel,
-    JayEndpoint,
-    JayPort,
+    IJayEndpoint,
+    IJayPort,
     JayPortInMessageHandler,
     JPMMessage
 } from '../../lib/comm-channel/comm-channel'
@@ -52,11 +52,11 @@ class JayMockChannel<PropsT, ViewState> implements JayChannel {
         return this.dirty;
     }
 
-    get mainPort(): JayPort {return this.main}
-    get workerPort(): JayPort {return this.worker}
+    get mainPort(): IJayPort {return this.main}
+    get workerPort(): IJayPort {return this.worker}
 }
 
-class MockJayPort implements JayPort {
+class MockJayPort implements IJayPort {
     private messages: Array<[number, JPMMessage]> = []
     private target: MockJayPort
     private endpoints: Map<number, MockEndpointPort> = new Map();
@@ -67,7 +67,7 @@ class MockJayPort implements JayPort {
                 private verbose: boolean = false,
                 private name: string = '') {}
                 
-    getEndpoint(parentCompId: number, parentCoordinate: Coordinate): JayEndpoint {
+    getEndpoint(parentCompId: number, parentCoordinate: Coordinate): IJayEndpoint {
         let compId = this.channel.getCompId(parentCompId, parentCoordinate);
         let ep = new MockEndpointPort(compId, this);
         this.endpoints.set(compId, ep)
@@ -76,7 +76,7 @@ class MockJayPort implements JayPort {
         return ep;
     }
 
-    getRootEndpoint(): JayEndpoint {
+    getRootEndpoint(): IJayEndpoint {
         return this.getEndpoint(-1, [''])
     }
 
@@ -137,7 +137,7 @@ class MockJayPort implements JayPort {
     }
 }
 
-class MockEndpointPort implements JayEndpoint {
+class MockEndpointPort implements IJayEndpoint {
 
     private handler: JayPortInMessageHandler
     private initMessages: JPMMessage[] = [];

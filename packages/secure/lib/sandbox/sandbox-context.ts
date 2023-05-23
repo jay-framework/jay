@@ -6,11 +6,11 @@ import {
     HTMLElementProxy,
     JayComponent
 } from "jay-runtime";
-import {JayEndpoint, JayPort} from "../comm-channel/comm-channel";
+import {IJayEndpoint, IJayPort} from "../comm-channel/comm-channel";
 
 
 export interface SandboxContext {
-    port: JayPort,
+    port: IJayPort,
     compId: number,
     coordinate: Coordinate
 }
@@ -20,7 +20,7 @@ export type Refs = Record<string, HTMLElementCollectionProxy<any, any> | HTMLEle
 
 export interface SandboxCreationContext<ViewState> {
     viewState: ViewState,
-    endpoint: JayEndpoint,
+    endpoint: IJayEndpoint,
     refs?: Refs,
     dataIds: string[],
     isDynamic: boolean

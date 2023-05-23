@@ -15,7 +15,7 @@ import {
     updateFunc
 } from "jay-runtime";
 import {
-    JayEndpoint,
+    IJayEndpoint,
     JPMMessage
 } from "../comm-channel/comm-channel";
 import {$JayNativeFunction} from "../main/function-repository-types";
@@ -84,7 +84,7 @@ export class StaticRefImplementation<ViewState> implements HTMLElementProxyTarge
     listeners = new Map<string, JayEventHandler<any, any, any>>()
 
     constructor(
-        private ref: string, private ep: JayEndpoint, private viewState: ViewState) {
+        private ref: string, private ep: IJayEndpoint, private viewState: ViewState) {
     }
 
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any>, options?: boolean | AddEventListenerOptions, nativeId?: string): void {
@@ -116,7 +116,7 @@ export class StaticRefImplementation<ViewState> implements HTMLElementProxyTarge
 }
 
 export class DynamicNativeExec<ViewState> implements HTMLNativeExec<ViewState, any>{
-    constructor(private ref: string, private coordinate: Coordinate, private ep: JayEndpoint) {
+    constructor(private ref: string, private coordinate: Coordinate, private ep: IJayEndpoint) {
     }
 
     $exec<ResultType>(handler: JayNativeFunction<any, ViewState, ResultType>): Promise<ResultType> {
@@ -131,7 +131,7 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
     items = new Map<string, [string[], ViewState, DynamicNativeExec<ViewState>]>();
 
     constructor(
-        private ref: string, private ep: JayEndpoint) {
+        private ref: string, private ep: IJayEndpoint) {
     }
 
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: boolean | AddEventListenerOptions, nativeId?: string): void {
@@ -235,7 +235,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
                                            sandboxElements: () => SandboxElement<ViewState>[],
                                            dynamicElements: string[] = [],
                                            dynamicComponents: string[] = [],
-                                           endpoint: JayEndpoint,
+                                           endpoint: IJayEndpoint,
                                            reactive: Reactive,
                                            getComponentInstance: () => JayComponent<any, any, any>): SandboxBridgeElement<ViewState> {
 

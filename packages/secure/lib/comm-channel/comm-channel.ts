@@ -15,19 +15,19 @@ export type JPMMessage = JPMRootComponentViewState | JPMRender | JPMAddEventList
 export type JayPortInMessageHandler = (inMessage: JPMMessage) => void;
 
 export interface JayChannel {
-    mainPort: JayPort,
-    workerPort: JayPort
+    mainPort: IJayPort,
+    workerPort: IJayPort
 }
 
-export interface JayPort {
-    getRootEndpoint(): JayEndpoint;
-    getEndpoint(parentCompId: number, parentCoordinate: Coordinate): JayEndpoint;
+export interface IJayPort {
+    getRootEndpoint(): IJayEndpoint;
+    getEndpoint(parentCompId: number, parentCoordinate: Coordinate): IJayEndpoint;
     batch<T>(handler: () => T): T
     flush()
 }
 
-export interface JayEndpoint {
-    port: JayPort
+export interface IJayEndpoint {
+    port: IJayPort
     post(outMessage: JPMMessage);
     onUpdate(handler: JayPortInMessageHandler);
     readonly compId: number;
@@ -37,9 +37,9 @@ let _channel: JayChannel
 export function setChannel(channel: JayChannel) {
     _channel = channel;
 }
-export function useMainPort(): JayPort {
+export function useMainPort(): IJayPort {
     return _channel.mainPort
 }
-export function useWorkerPort(): JayPort {
+export function useWorkerPort(): IJayPort {
     return _channel.workerPort
 }

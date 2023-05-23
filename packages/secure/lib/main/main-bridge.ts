@@ -1,7 +1,7 @@
 import {JayElement, JayEvent, JayEventHandler, provideContext, RenderElement, useContext} from "jay-runtime";
 import {createState, JayComponentCore, makeJayComponent, Props, useReactive} from "jay-component";
 import {
-    JayEndpoint,
+    IJayEndpoint,
     JPMMessage
 } from "../comm-channel/comm-channel";
 import {SECURE_COMPONENT_MARKER} from "./main-contexts";
@@ -96,7 +96,7 @@ function makeComponentBridgeConstructor<
     }
 }
 
-function defineCompPublicAPI(comp: MainComponentBridge, endpoint: JayEndpoint, options: CompBridgeOptions) {
+function defineCompPublicAPI(comp: MainComponentBridge, endpoint: IJayEndpoint, options: CompBridgeOptions) {
     if (options?.events)
         comp['addEventListener'] = (eventType: string, handler: Function) => comp.registerEvent(eventType, handler);
 
