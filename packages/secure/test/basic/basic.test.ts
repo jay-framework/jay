@@ -1,10 +1,9 @@
 import {describe, expect, it} from '@jest/globals'
-import {useMockCommunicationChannel} from "../util/mock-channel";
+import {setChannel, useMockCommunicationChannel} from "../util/mock-channel";
 import {initializeWorker} from "./secure/worker/worker-root";
 import {BasicProps} from "./secure/main/basic";
 import {BasicViewState} from "./secure/main/basic.jay.html";
 import {render} from "./secure/main/app.jay.html";
-import {setChannel} from "../../lib/comm-channel/comm-channel";
 import {JayPortMessageType} from "../../lib/comm-channel/messages";
 
 const initialData = {firstName: 'Joe', lastName: 'Smith'};

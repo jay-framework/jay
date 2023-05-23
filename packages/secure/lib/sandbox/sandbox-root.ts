@@ -1,7 +1,8 @@
 import {provideContext} from "jay-runtime";
-import {IJayPort, JPMRootComponentViewState, useWorkerPort} from "../comm-channel/comm-channel";
+import {IJayPort, useWorkerPort} from "../comm-channel/comm-channel";
 import {SANDBOX_CREATION_CONTEXT, SandboxCreationContext} from "./sandbox-context";
 import {SandboxElement} from "./sandbox-element";
+import {JPMRootComponentViewState} from "../comm-channel/messages";
 
 export function sandboxRoot<ViewState>(sandboxElements: () => Array<SandboxElement<ViewState>>) {
     let port: IJayPort = useWorkerPort();

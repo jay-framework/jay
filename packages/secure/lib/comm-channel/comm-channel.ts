@@ -32,19 +32,17 @@ export interface IJayEndpoint {
     onUpdate(handler: JayPortInMessageHandler);
     readonly compId: number;
 }
-
-export interface MockJayChannel {
-    mainPort: IJayPort,
-    workerPort: IJayPort
-}
-
-let _channel: MockJayChannel
-export function setChannel(channel: MockJayChannel) {
-    _channel = channel;
+let _mainPort: IJayPort
+export function setMainPort(port: IJayPort) {
+    _mainPort = port;
 }
 export function useMainPort(): IJayPort {
-    return _channel.mainPort
+    return _mainPort;
+}
+let _workerPort: IJayPort
+export function setWorkerPort(port: IJayPort) {
+    _workerPort = port;
 }
 export function useWorkerPort(): IJayPort {
-    return _channel.workerPort
+    return _workerPort;
 }

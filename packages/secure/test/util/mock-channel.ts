@@ -1,9 +1,8 @@
 import {
-    MockJayChannel,
     IJayEndpoint,
     IJayPort,
     JayPortInMessageHandler,
-    JPMMessage
+    JPMMessage, setMainPort, setWorkerPort
 } from '../../lib/comm-channel/comm-channel'
 import {Coordinate} from "jay-runtime";
 import {JayPortMessageType} from "../../lib/comm-channel/messages";
@@ -14,6 +13,17 @@ export function useMockCommunicationChannel<PropsT, ViewState>(verbose: boolean 
 
 type MessageStatus = 'posted' | 'invoked';
 
+export interface MockJayChannel {
+    mainPort: IJayPort,
+    workerPort: IJayPort
+}
+
+let _channel: MockJayChannel
+export function setChannel(channel: MockJayChannel) {
+    _channel = channel;
+    setMainPort(channel.mainPort);
+    setWorkerPort(channel.workerPort);
+}
 class JayMockChannel<PropsT, ViewState> implements MockJayChannel {
 
     private readonly main: MockJayPort
