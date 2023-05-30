@@ -15,7 +15,8 @@
     "packages/component",
     "packages/reactive",
     "packages/secure",
-    "exploration"
+    "exploration",
+    "exploration/message-comm-channel"
   ],
   "version": "1.0.0"
 }

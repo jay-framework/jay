@@ -9,7 +9,7 @@ interface WorkerSelf {
     addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void;
 }
 
-class HandshakeMessageJayChannel implements JayChannel {
+export class HandshakeMessageJayChannel implements JayChannel {
 
     private handler: (messages: Array<[number, JPMMessage]>, newCompIdMessages: Array<[string, number]>) => void;
     private worker: Worker | WorkerSelf;
