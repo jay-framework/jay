@@ -15,7 +15,7 @@ class MessageChannelMainSide implements JayChannel {
     private pendingMessages: Array<ChannelMessage> = []
 
     constructor(worker: Worker) {
-        worker.onmessage = (ev => {
+        worker.addEventListener('message', ev => {
             console.log('main', ev)
             if (((ev as MessageEvent).data === SYN || (ev as MessageEvent).data === ACK)) {
                 if (!this.handshakeComplete) {
