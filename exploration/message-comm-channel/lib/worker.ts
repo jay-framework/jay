@@ -53,9 +53,11 @@ class MessageChannelWorkerSide implements JayChannel {
     }
 }
 
-let channel = new MessageChannelWorkerSide(self);
+setTimeout(() => {
+    let channel = new MessageChannelWorkerSide(self);
 
-channel.postMessages([[-1, {viewState: {}, type: 0}]], [])
+    channel.postMessages([[-1, {viewState: {}, type: 0}]], [])
+}, Math.random() * 1000)
 
 
 // self.addEventListener('message', e => {

@@ -50,8 +50,11 @@ class MessageChannelMainSide implements JayChannel {
     }
 }
 
-let channel = new MessageChannelMainSide(myWorker);
+setTimeout(() => {
+    let channel = new MessageChannelMainSide(myWorker);
 
-channel.onMessages((messages, newCompIdMessages) => {
-    console.log(messages, newCompIdMessages)
-})
+    channel.onMessages((messages, newCompIdMessages) => {
+        console.log(messages, newCompIdMessages)
+    })
+}, Math.random() * 1000)
+
