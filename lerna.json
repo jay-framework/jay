@@ -5,7 +5,6 @@
     "examples",
     "examples/counter",
     "examples/counter-raw",
-    "examples/counter-secure",
     "examples/mini-benchmark",
     "examples/todo",
     "examples/todo-components",
