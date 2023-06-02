@@ -4,13 +4,16 @@
   "description": "",
   "scripts": {
     "d": "node node_modules/jay-cli/dist/index.js definitions ./lib",
+    "jay": "node node_modules/jay-cli/dist/index.js runtime ./lib",
     "rollup": "rollup --config ./rollup.config.js",
-    "build": "npm run d && npm run rollup"
+    "build": "npm run d && npm run rollup",
+    "mk-secure": "npm run jay && mv ./lib/counter.jay.html.ts ./lib-secure/main && cp .lib/counter.ts ./lib-secure/sandbox"
   },
   "dependencies": {
     "jay-component": "1.0.0",
     "jay-runtime": "1.0.0",
-    "jay-reactive": "1.0.3"
+    "jay-reactive": "1.0.3",
+    "jay-secure": "1.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.18.10",

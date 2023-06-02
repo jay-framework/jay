@@ -20,7 +20,7 @@ async function findAllEntryPoints(dir) {
 }
 
 async function makeRollupConfig() {
-  return {
+  return [{
     input: './lib/index.ts',
     output: [
       {
@@ -45,7 +45,54 @@ async function makeRollupConfig() {
           {src: './lib/index.html', dest: './dist'}
         ]
       })]
-  }
+  },
+    {
+      input: './lib-secure/main/index.ts',
+      output: [
+        {
+          file: './dist-secure/index.js',
+          format: 'iife',
+          name: 'jay'
+        },
+        {
+          file: './dist-secure/index.min.js',
+          format: 'iife',
+          name: 'jay',
+          plugins: [terser()]
+        }],
+      context: 'window',
+      plugins: [
+        typescript(),
+        nodeResolve(),
+        copy({
+          targets: [
+            {src: './lib-secure/**/*.css', dest: './dist-secure'},
+            {src: './lib-secure/main/index.html', dest: './dist-secure'}
+          ]
+        })]
+    },
+    {
+      input: './lib-secure/sandbox/worker-root.ts',
+      output: [
+        {
+          file: './dist-secure/worker.js',
+          format: 'iife',
+          name: 'jay'
+        },
+        {
+          file: './dist-secure/worker.min.js',
+          format: 'iife',
+          name: 'jay',
+          plugins: [terser()]
+        }],
+      context: 'window',
+      plugins: [
+        typescript(),
+        nodeResolve()
+        ]
+    }
+
+  ]
 }
 
 export default makeRollupConfig();
