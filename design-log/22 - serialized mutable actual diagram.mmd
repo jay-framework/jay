@@ -1,0 +1,10 @@
+sequenceDiagram
+    participant A as First Context
+    participant B as Second Context
+    A ->> A: Create mutable object O (rev 1)
+    A ->> B: Serialize and send O (rev 1)
+    B ->> B: Deserialize O (rev 1)
+    A ->> A: Update mutable object O (rev 2)
+    A ->> B: Serialize and send O (rev 2)
+    B ->> B: Deserialize into new O (rev 2)
+    Note right of B: the second context now has two copies of O:<br/>O (rev 1) and O (rev 2)

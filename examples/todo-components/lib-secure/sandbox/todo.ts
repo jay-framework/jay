@@ -5,13 +5,13 @@ import {uuid} from "./uuid";
 
 const ENTER_KEY = 13;
 
-interface TodoItem {
+export interface TodoItem {
     id: string,
     title: string,
     isCompleted: boolean
 }
 
-interface TodoProps {
+export interface TodoProps {
     initialTodos: Array<TodoItem>
 }
 
