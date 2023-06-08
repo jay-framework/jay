@@ -3,10 +3,11 @@ import {getRevision, mutableObject} from "../lib";
 import {serialize} from "../lib/mutable-serializer";
 import {deserialize} from "../lib/mutable-deserializer";
 
+const SIMPLE_OBJECT = {a: 1, b:2, c: "abcd", d: true};
 describe("mutable serialization", () => {
     describe("simple objects", () => {
         it("should deserialize to an equal object", () => {
-            let mutable = mutableObject({a: 1, b:2});
+            let mutable = mutableObject(SIMPLE_OBJECT);
             let [serialized, nextSerialize] = serialize(mutable);
             let [deserialized, nextDeserialize] = deserialize(serialized);
             expect(mutable).toEqual(deserialized);

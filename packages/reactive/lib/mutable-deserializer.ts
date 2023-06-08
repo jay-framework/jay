@@ -7,7 +7,7 @@ export function deserialize(mutable: string): [any, Deserialize] {
     if (revivied[REVNUM]) {
         let revnum = revivied[REVNUM]
         delete revivied[REVNUM]
-        return [_mutableObject(JSON.parse(mutable), undefined, revnum), deserialize]
+        return [_mutableObject(revivied, undefined, revnum), deserialize]
     }
     else
         return [revivied, deserialize]
