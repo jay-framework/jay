@@ -33,28 +33,27 @@ function update<T>(mutable: T, revivied: T) {
 }
 
 function deserializeObject<T extends object>(revivied: T) {
-    setRevision(revivied, revivied[REVNUM]);
-    delete revivied[REVNUM]
-    for (let key of Object.keys(revivied)) {
-        if (typeof revivied[key] === 'object') {
-            if (revivied[key][ARRAY]) {
-                let revnum = revivied[key][REVNUM];
-                delete revivied[key][REVNUM]
-                delete revivied[key][ARRAY]
-                let arr = Object.keys(revivied[key])
-                    .map((k) => {
-                        if (typeof revivied[key][k] === 'object')
-                        deserializeObject(revivied[key][k])
-                        return revivied[key][k]
-                    });
-                setRevision(arr, revnum);
-                revivied[key] = arr;
-            }
-            else
-                deserializeObject(revivied[key])
+    if (typeof revivied === "object") {
+        if (revivied[ARRAY]) {
+            let revnum = revivied[REVNUM];
+            delete revivied[REVNUM]
+            delete revivied[ARRAY]
+            let reviviedArray = Object.keys(revivied)
+                .map((k) => deserializeObject(revivied[k]));
+            setRevision(reviviedArray, revnum);
+            return reviviedArray;
         }
-
+        else {
+            setRevision(revivied, revivied[REVNUM]);
+            delete revivied[REVNUM]
+            for (let key of Object.keys(revivied)) {
+                revivied[key] = deserializeObject(revivied[key]);
+            }
+            return revivied
+        }
     }
+    else
+        return revivied;
 }
 
 function _deserialize<T extends object>(mutable: T): (serialized: string) => [T, Deserialize<T>] {
@@ -65,7 +64,7 @@ function _deserialize<T extends object>(mutable: T): (serialized: string) => [T,
                 return [update(mutable, revivied), _deserialize(mutable)];
             }
             else {
-                deserializeObject(revivied)
+                revivied = deserializeObject(revivied)
                 mutable = _mutableObject(revivied, undefined);
                 return [mutable, _deserialize(mutable)]
             }
