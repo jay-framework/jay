@@ -1,3 +1,3 @@
 export * from './reactive';
-export * from './revisioned';
-export * from './mutable';
+export {getRevision, touchRevision, REVISION, Revisioned, checkModified} from './revisioned';
+export {mutableObject, isMutable, addMutableListener, removeMutableListener} from './mutable';

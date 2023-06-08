@@ -12,16 +12,20 @@ export function getRevision<T extends object>(value: T): Revisioned<T> {
     return {value, revNum: value[REVISION] || NaN};
 }
 
-export function touchRevision<T extends object>(value: T): T {
+export function setRevision<T extends object>(value: T, revision: number): T {
     if (!Object.getOwnPropertyDescriptor(value, REVISION))
         Object.defineProperty(value, REVISION, {
-            value: nextRevision++,
+            value: revision,
             enumerable: false,
             writable: true
         });
     else
-        value[REVISION] = nextRevision++;
+        value[REVISION] = revision;
     return value
+}
+
+export function touchRevision<T extends object>(value: T): T {
+    return setRevision(value, nextRevision++);
 }
 
 export function checkModified<T>(value: T, oldValue?: Revisioned<T>): [Revisioned<T>, boolean] {

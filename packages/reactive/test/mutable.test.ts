@@ -1,6 +1,7 @@
 import {describe, expect, it, jest} from '@jest/globals'
 import {addMutableListener, isMutable, mutableObject, removeMutableListener} from "../lib";
 import {checkModified, getRevision} from "../lib";
+import {_mutableObject} from "../lib/mutable";
 
 describe("mutable", () => {
 
@@ -883,7 +884,7 @@ describe("mutable", () => {
     describe("mutation listener", () => {
         it('supports change listener in mutableObject', () => {
             let fn = jest.fn();
-            let mutable = mutableObject({a: 1, b:2}, fn);
+            let mutable = _mutableObject({a: 1, b:2}, fn);
 
             mutable.a = 3;
 
@@ -916,7 +917,7 @@ describe("mutable", () => {
 
         it('supports change listener in array of objects', () => {
             let fn = jest.fn();
-            let mutable = mutableObject([{a: 1, b:2}, {a: 3, b:4}, {a: 5, b:6}], fn);
+            let mutable = _mutableObject([{a: 1, b:2}, {a: 3, b:4}, {a: 5, b:6}], fn);
 
             mutable[1].a = 3;
 

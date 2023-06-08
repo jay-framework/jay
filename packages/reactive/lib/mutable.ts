@@ -1,4 +1,4 @@
-import {touchRevision} from "./revisioned";
+import {setRevision, touchRevision} from "./revisioned";
 
 const isProxy = Symbol.for("isProxy")
 const mutationListener = Symbol.for("listener")
@@ -41,14 +41,14 @@ function deleteProxy(obj: object, changeListener: ChangeListener) {
 }
 
 function wrapArrayReturn<T>(array: Array<T>, func: Function, notifyParent?: ChangeListener): Function {
-    return (...args) => mutableObject(func.apply(array, args), notifyParent)
+    return (...args) => _mutableObject(func.apply(array, args), notifyParent)
 }
 
 function wrapFilter<T>(array: Array<T>, func: Function, notifyParent?: ChangeListener): Function {
     return (...args) => {
         let [first, ...rest] = [...args];
-        let wrappedFirst = arg => first(mutableObject(arg, notifyParent));
-        return mutableObject(func.apply(array, [wrappedFirst, ...rest]), notifyParent)
+        let wrappedFirst = arg => first(_mutableObject(arg, notifyParent));
+        return _mutableObject(func.apply(array, [wrappedFirst, ...rest]), notifyParent)
     }
 }
 
@@ -59,13 +59,20 @@ const wrapArrayFuncs: Map<String, (array: Array<any>, func: Function, notifyPare
     ['flat',  wrapArrayReturn]
 ]);
 
-export function mutableObject<T extends object>(original: T, notifyParent?: ChangeListener): T
-export function mutableObject<T>(original: Array<T>, notifyParent?: ChangeListener): Array<T> {
+export function mutableObject<T extends object>(original: T): T
+export function mutableObject<T>(original: Array<T>): Array<T> {
+    return _mutableObject(original, undefined)
+}
+
+export function _mutableObject<T extends object>(original: T, notifyParent?: ChangeListener, forceRevision?: number): T
+export function _mutableObject<T>(original: Array<T>, notifyParent?: ChangeListener, forceRevision?: number): Array<T> {
     if (typeof original !== 'object')
         return original;
     if (getProxy(original))
         return getProxy(original);
-    touchRevision(original);
+    forceRevision?
+        setRevision(original, forceRevision):
+        touchRevision(original);
     const arrayFunctions = {};
     const changeListeners: Set<ChangeListener> = notifyParent? new Set([notifyParent]): new Set();
     const changed = () => {
@@ -104,7 +111,7 @@ export function mutableObject<T>(original: Array<T>, notifyParent?: ChangeListen
             }
             else if (typeof target[property] === 'object') {
                 if (!getProxy(target[property]))
-                    setProxy(target[property], mutableObject(target[property], changed))
+                    setProxy(target[property], _mutableObject(target[property], changed))
                 return getProxy(target[property])
             }
             else if (target instanceof Date && typeof target[property] === 'function')
