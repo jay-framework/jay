@@ -1,5 +1,5 @@
 import {_mutableObject, isMutable, originalSymbol} from "./mutable";
-import {REVNUM} from "./serialize-consts";
+import {ARRAY, REVNUM} from "./serialize-consts";
 import {REVISION, setRevision} from "./revisioned";
 
 type Deserialize<T> = (serialized: string) => [T, Deserialize<T>]
@@ -32,12 +32,28 @@ function update<T>(mutable: T, revivied: T) {
     return mutable;
 }
 
-function deserializeRevNum<T extends object>(revivied: T) {
+function deserializeObject<T extends object>(revivied: T) {
     setRevision(revivied, revivied[REVNUM]);
     delete revivied[REVNUM]
     for (let key of Object.keys(revivied)) {
-        if (typeof revivied[key] === 'object')
-            deserializeRevNum(revivied[key])
+        if (typeof revivied[key] === 'object') {
+            if (revivied[key][ARRAY]) {
+                let revnum = revivied[key][REVNUM];
+                delete revivied[key][REVNUM]
+                delete revivied[key][ARRAY]
+                let arr = Object.keys(revivied[key])
+                    .map((k) => {
+                        if (typeof revivied[key][k] === 'object')
+                        deserializeObject(revivied[key][k])
+                        return revivied[key][k]
+                    });
+                setRevision(arr, revnum);
+                revivied[key] = arr;
+            }
+            else
+                deserializeObject(revivied[key])
+        }
+
     }
 }
 
@@ -49,7 +65,7 @@ function _deserialize<T extends object>(mutable: T): (serialized: string) => [T,
                 return [update(mutable, revivied), _deserialize(mutable)];
             }
             else {
-                deserializeRevNum(revivied)
+                deserializeObject(revivied)
                 mutable = _mutableObject(revivied, undefined);
                 return [mutable, _deserialize(mutable)]
             }

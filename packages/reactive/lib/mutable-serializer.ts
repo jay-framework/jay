@@ -1,6 +1,6 @@
 import {isMutable} from "./mutable";
 import {getRevision} from "./revisioned";
-import {REVNUM} from "./serialize-consts";
+import {ARRAY, REVNUM} from "./serialize-consts";
 
 type Serialize = (mutable: any) => [string, Serialize]
 
@@ -9,6 +9,9 @@ function replacer(key: string, value: any) {
         let revisioned = getRevision(value)
         let newValue = {...value}
         newValue[REVNUM] = revisioned.revNum
+        if (Array.isArray(value)) {
+            newValue[ARRAY] = true;
+        }
         return newValue;
     }
     else
