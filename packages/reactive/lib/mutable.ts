@@ -104,6 +104,8 @@ export function _mutableObject<T>(original: Array<T>, notifyParent?: ChangeListe
                 return changeListeners;
             else if (property === originalSymbol)
                 return original;
+            else if (property === proxySymbol)
+                return undefined; // this line is here for mechanisms who insist on serializing un-enumerable properties
             else if (Array.isArray(target) && typeof property === 'string' && wrapArrayFuncs.has(property)) {
                 if (!arrayFunctions[property])
                     arrayFunctions[property] = wrapArrayFuncs.get(property)(target, target[property], changed);
