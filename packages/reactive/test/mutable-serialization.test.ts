@@ -24,5 +24,19 @@ describe("mutable serialization", () => {
 
             expect(revision.revNum).toEqual(deserializedRevision.revNum);
         })
+
+        it("should re-serialize and re-deserialize to an equal object", () => {
+            let mutable = mutableObject(SIMPLE_OBJECT);
+            let [serialized, nextSerialize] = serialize(mutable);
+            let [deserialized, nextDeserialize] = deserialize(serialized);
+
+            mutable.a = 12
+            mutable.c = 'efgh'
+            mutable.d = false;
+            [serialized, nextSerialize] = nextSerialize(mutable);
+            let [deserialized2, nextDeserialize2] = nextDeserialize(serialized)
+            expect(mutable).toEqual(deserialized2);
+            expect(deserialized).toBe(deserialized2);
+        })
     })
 })

@@ -5,7 +5,6 @@ import {REVNUM} from "./serialize-consts";
 type Serialize = (mutable: any) => [string, Serialize]
 
 function replacer(key: string, value: any) {
-    console.log(key, value)
     if (isMutable(value)) {
         let revisioned = getRevision(value)
         let newValue = {...value}

@@ -2,7 +2,7 @@ import {setRevision, touchRevision} from "./revisioned";
 
 const isProxy = Symbol.for("isProxy")
 const mutationListener = Symbol.for("listener")
-const originalSymbol = Symbol.for("original")
+export const originalSymbol = Symbol.for("original")
 const proxySymbol = Symbol.for("proxy")
 type ChangeListener = () => void;
 export function isMutable(obj: any): obj is object {
