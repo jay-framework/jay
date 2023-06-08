@@ -1,4 +1,4 @@
-import {setRevision, touchRevision} from "./revisioned";
+import {initRevision, setRevision, touchRevision} from "./revisioned";
 
 const isProxy = Symbol.for("isProxy")
 const mutationListener = Symbol.for("listener")
@@ -64,15 +64,13 @@ export function mutableObject<T>(original: Array<T>): Array<T> {
     return _mutableObject(original, undefined)
 }
 
-export function _mutableObject<T extends object>(original: T, notifyParent?: ChangeListener, forceRevision?: number): T
-export function _mutableObject<T>(original: Array<T>, notifyParent?: ChangeListener, forceRevision?: number): Array<T> {
+export function _mutableObject<T extends object>(original: T, notifyParent?: ChangeListener): T
+export function _mutableObject<T>(original: Array<T>, notifyParent?: ChangeListener): Array<T> {
     if (typeof original !== 'object')
         return original;
     if (getProxy(original))
         return getProxy(original);
-    forceRevision?
-        setRevision(original, forceRevision):
-        touchRevision(original);
+    initRevision(original)
     const arrayFunctions = {};
     const changeListeners: Set<ChangeListener> = notifyParent? new Set([notifyParent]): new Set();
     const changed = () => {

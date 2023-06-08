@@ -24,6 +24,10 @@ export function setRevision<T extends object>(value: T, revision: number): T {
     return value
 }
 
+export function initRevision<T extends object>(value: T): T {
+    return value[REVISION]?value:touchRevision(value)
+}
+
 export function touchRevision<T extends object>(value: T): T {
     return setRevision(value, nextRevision++);
 }
