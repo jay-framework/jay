@@ -8,10 +8,10 @@ const NESTED_OBJECT = {
     a: 1, b:2, name: {firstName: "Joe", lastName: "Smith"}
 };
 const NESTED_OBJECT_UPDATE = {firstName: "Mark", lastName: "Webber"}
-const NESTED_ARRAY = {
+const ARRAY_PRIMITIVES = {
     items: [1,2,3,4]
 }
-const NESTED_ARRAY_UPDATE = [1,2,3,4,5]
+const ARRAY_PRIMITIVES_UPDATE = [1,2,3,4,5]
 
 describe("mutable serialization", () => {
     describe("simple objects", () => {
@@ -85,34 +85,34 @@ describe("mutable serialization", () => {
 
     })
 
-    describe("nested array", () => {
+    describe("array of primitives", () => {
         it("should deserialize to an equal object", () => {
-            let mutable = mutableObject(NESTED_ARRAY);
+            let mutable = mutableObject(ARRAY_PRIMITIVES);
             let [serialized, nextSerialize] = serialize(mutable);
             let [deserialized, nextDeserialize] = deserialize(serialized);
             expect(mutable).toEqual(deserialized);
         })
 
         it("should serialize and deserialize the mutable revision", () => {
-            let mutable = mutableObject(NESTED_ARRAY);
+            let mutable = mutableObject(ARRAY_PRIMITIVES);
             let [serialized, nextSerialize] = serialize(mutable);
             let [deserialized, nextDeserialize] = deserialize(serialized);
 
             let revision = getRevision(mutable);
             let revision_items = getRevision(mutable.items);
             let deserializedRevision = getRevision(deserialized);
-            let deserializedRevision_items = getRevision((deserialized as typeof NESTED_ARRAY).items);
+            let deserializedRevision_items = getRevision((deserialized as typeof ARRAY_PRIMITIVES).items);
 
             expect(revision.revNum).toEqual(deserializedRevision.revNum);
             expect(revision_items.revNum).toEqual(deserializedRevision_items.revNum);
         })
 
         it("should re-serialize and re-deserialize to an equal object", () => {
-            let mutable = mutableObject(NESTED_ARRAY);
+            let mutable = mutableObject(ARRAY_PRIMITIVES);
             let [serialized, nextSerialize] = serialize(mutable);
             let [deserialized, nextDeserialize] = deserialize(serialized);
 
-            mutable.items = NESTED_ARRAY_UPDATE;
+            mutable.items = ARRAY_PRIMITIVES_UPDATE;
             [serialized, nextSerialize] = nextSerialize(mutable);
             let [deserialized2, nextDeserialize2] = nextDeserialize(serialized)
             expect(mutable).toEqual(deserialized2);
