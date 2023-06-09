@@ -11,6 +11,7 @@ function update<T>(mutable: T, revivied: T) {
     let mutableInstance = isMutable(mutable)?mutable[originalSymbol]:mutable;
     setRevision(mutableInstance, revivied[REVNUM]);
     delete revivied[REVNUM]
+    delete revivied[ARRAY]
     for (let key of Object.keys(revivied)) {
         let type = typeof revivied[key];
         switch (type) {
