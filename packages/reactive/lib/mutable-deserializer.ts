@@ -35,9 +35,9 @@ function update<T>(mutable: T, revivied: T) {
 
 function deserializeObject<T extends object>(revivied: T) {
     if (typeof revivied === "object") {
+        let revnum = revivied[REVNUM];
+        delete revivied[REVNUM]
         if (revivied[ARRAY]) {
-            let revnum = revivied[REVNUM];
-            delete revivied[REVNUM]
             delete revivied[ARRAY]
             let reviviedArray = Object.keys(revivied)
                 .map((k) => deserializeObject(revivied[k]));
@@ -45,8 +45,7 @@ function deserializeObject<T extends object>(revivied: T) {
             return reviviedArray;
         }
         else {
-            setRevision(revivied, revivied[REVNUM]);
-            delete revivied[REVNUM]
+            setRevision(revivied, revnum);
             for (let key of Object.keys(revivied)) {
                 revivied[key] = deserializeObject(revivied[key]);
             }
