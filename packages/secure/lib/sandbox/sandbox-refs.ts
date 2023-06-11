@@ -7,7 +7,7 @@ import {
     HTMLElementProxyTarget,
     HTMLNativeExec,
     JayComponent, JayEvent,
-    JayEventHandler,
+    JayEventHandler, JayEventHandlerWrapper,
     JayNativeFunction,
     MountFunc,
     normalizeUpdates,
@@ -230,6 +230,32 @@ export class DynamicCompRefImplementation<ViewState, CompType extends JayCompone
         this.listeners.forEach((listener, type) => refItem.removeEventListener(type, listener));
     }
 }
+
+export function componentWrapper<Comp extends JayComponent<any, any, any>, ViewState>(comp: Comp, viewState: ViewState, coordinate: Coordinate): [Comp, updateFunc<ViewState>] {
+    let compWrapper = new Proxy(comp, {
+        get: function(target, prop, receiver) {
+            if (typeof prop === 'string') {
+                if (prop === 'addEventListener') {
+                    return (eventName, handler) => {
+                        target.addEventListener(eventName, ({event}) => {
+                            return handler({event, viewState, coordinate})
+                        });
+                    }
+                }
+                if (prop === 'viewState')
+                    return viewState
+                if (prop === 'coordinate')
+                    return coordinate
+            }
+            return target[prop];
+        }
+    }) as any as Comp;
+    let update = (vs: ViewState) => {
+        viewState = vs;
+    }
+    return [compWrapper, update];
+}
+
 
 export function mkBridgeElement<ViewState>(viewState: ViewState,
                                            sandboxElements: () => SandboxElement<ViewState>[],

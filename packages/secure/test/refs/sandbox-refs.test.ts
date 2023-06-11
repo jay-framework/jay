@@ -5,7 +5,7 @@ import {
 import {
     IJayEndpoint, IJayPort,
     JayPortInMessageHandler
-} from "../../lib/comm-channel/comm-channel";
+} from "../../lib";
 import {Reactive} from "jay-reactive";
 import {$func, $handler} from "../../lib/$func";
 import {ComponentCollectionProxy, Coordinate, HTMLElementCollectionProxy, HTMLElementProxy} from "jay-runtime";
@@ -690,7 +690,28 @@ describe('sandbox-refs', () => {
             instance._removeClick();
 
             expect(callback.mock.calls.length).toBe(1)
-            expect(callback.mock.calls[0][0]).toEqual({event: 'item some data - false is removed'})
+            expect(callback.mock.calls[0][0]).toEqual({
+                event: 'item some data - false is removed',
+                viewState: vs,
+                coordinate: ['comp1']
+            })
+        })
+
+        it('should update the event view state on component update', () => {
+            let {bridgeElement} = setup();
+            let instance = componentInstance(vs.dataId);
+            let callback = jest.fn();
+
+            (bridgeElement.refs.comp1 as ReturnType<typeof Item>).addEventListener('remove', callback)
+            bridgeElement.update(vs2);
+            instance._removeClick();
+
+            expect(callback.mock.calls.length).toBe(1)
+            expect(callback.mock.calls[0][0]).toEqual({
+                event: 'item some new data - false is removed',
+                viewState: vs2,
+                coordinate: ['comp1']
+            })
         })
 
         it('should support component APIs', () => {
@@ -807,8 +828,16 @@ describe('sandbox-refs', () => {
             componentInstance(C.dataId)._removeClick();
 
             expect(callback.mock.calls.length).toBe(2)
-            expect(callback.mock.calls[0][0]).toEqual({event: 'item B data - false is removed'})
-            expect(callback.mock.calls[1][0]).toEqual({event: 'item C data - false is removed'})
+            expect(callback.mock.calls[0][0]).toEqual({
+                event: 'item B data - false is removed',
+                viewState: B,
+                coordinate: ['b', 'comp1']
+            })
+            expect(callback.mock.calls[1][0]).toEqual({
+                event: 'item C data - false is removed',
+                viewState: C,
+                coordinate: ['c', 'comp1']
+            })
         })
 
         it('should register events on empty collection', () => {
@@ -821,8 +850,16 @@ describe('sandbox-refs', () => {
             componentInstance(C.dataId)._removeClick();
 
             expect(callback.mock.calls.length).toBe(2)
-            expect(callback.mock.calls[0][0]).toEqual({event: 'item some data - false is removed'})
-            expect(callback.mock.calls[1][0]).toEqual({event: 'item C data - false is removed'})
+            expect(callback.mock.calls[0][0]).toEqual({
+                event: 'item some data - false is removed',
+                viewState: A,
+                coordinate: ['a', 'comp1']
+            })
+            expect(callback.mock.calls[1][0]).toEqual({
+                event: 'item C data - false is removed',
+                viewState: C,
+                coordinate: ['c', 'comp1']
+            })
         })
 
         it('should support component APIs', () => {

@@ -9,6 +9,7 @@ import {
 } from "jay-runtime";
 import {SANDBOX_CREATION_CONTEXT, SANDBOX_BRIDGE_CONTEXT} from "./sandbox-context";
 import {
+    componentWrapper,
     DynamicCompRefImplementation,
     DynamicNativeExec,
     DynamicRefImplementation,
@@ -67,15 +68,17 @@ export function sandboxChildComp<ParentVS, Props>(
     let childComp = provideContext(SANDBOX_BRIDGE_CONTEXT, context, () => {
         return compCreator(getProps(viewState))
     })
+    let [compWrapper, updateRef] = componentWrapper(childComp, viewState, coordinate);
     if (isDynamic && refs) {
         let ref = (refs[refName] as any as DynamicCompRefImplementation<ParentVS, ReturnType<typeof compCreator>>);
-        ref.setItem(coordinate, viewState, childComp);
+        ref.setItem(coordinate, viewState, compWrapper);
         let mounted = true;
         return {
             update: (newViewState) => {
                 viewState = newViewState;
                 if (mounted) {
                     ref.update(coordinate, newViewState)
+                    updateRef(newViewState);
                     childComp.update(getProps(newViewState))
                 }
             },
@@ -93,8 +96,11 @@ export function sandboxChildComp<ParentVS, Props>(
     }
     else {
         if (refs)
-            refs[refName] = childComp;
-        let update = (t: ParentVS) => childComp.update(getProps(t));
+            refs[refName] = compWrapper;
+        let update = (t: ParentVS) => {
+            updateRef(t);
+            childComp.update(getProps(t));
+        }
         let mount = childComp.mount
         let unmount = childComp.unmount
         return {
