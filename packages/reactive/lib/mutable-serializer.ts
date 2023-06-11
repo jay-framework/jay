@@ -2,7 +2,7 @@ import {isMutable} from "./mutable";
 import {getRevision} from "./revisioned";
 import {ARRAY, REVNUM} from "./serialize-consts";
 
-type Serialize = (mutable: any) => [string, Serialize]
+export type Serialize = (mutable: any) => [string, Serialize]
 
 function replacer(key: string, value: any) {
     if (isMutable(value)) {
