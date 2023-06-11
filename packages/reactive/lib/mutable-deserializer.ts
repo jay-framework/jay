@@ -39,24 +39,19 @@ function deserializeObject<T extends object>(revivied: T, parentMutable: boolean
         delete revivied[REVNUM]
         if (revivied[ARRAY]) {
             delete revivied[ARRAY]
-            let reviviedArray = Object.keys(revivied)
-                .map((k) => deserializeObject(revivied[k], !!revnum));
-            if (revnum) {
-                setRevision(reviviedArray, revnum);
-                return !parentMutable? mutableObject(reviviedArray):reviviedArray
-            }
-            return reviviedArray
+            revivied = Object.keys(revivied)
+                .map((k) => deserializeObject(revivied[k], !!revnum)) as T;
         }
         else {
             for (let key of Object.keys(revivied)) {
                 revivied[key] = deserializeObject(revivied[key], !!revnum);
             }
-            if (revnum) {
-                setRevision(revivied, revnum);
-                return !parentMutable?mutableObject(revivied):revivied;
-            }
-            return revivied
         }
+        if (revnum) {
+            setRevision(revivied, revnum);
+            return !parentMutable?mutableObject(revivied):revivied;
+        }
+        return revivied
     }
     else
         return revivied;
