@@ -8,6 +8,7 @@ import {SECURE_COMPONENT_MARKER} from "./main-contexts";
 import {SECURE_COORDINATE_MARKER} from "./main-child-comp";
 import {FunctionsRepository} from "./function-repository-types";
 import {addEventListenerMessage, eventInvocationMessage, JayPortMessageType, rootApiInvoke} from "../comm-channel/messages";
+import {deserialize, Deserialize} from "jay-reactive";
 
 interface CompBridgeOptions {
     events?: Array<string>,
@@ -37,10 +38,15 @@ function makeComponentBridgeConstructor<
     let ongoingAPICalls: Record<number, [PromiseResolve, PromiseReject]> = {};
     let eventHandlers: Record<string, JayEventHandler<any, any, any>> = {}
 
+    let deserializedViewState: ViewState, nextDeserialize: Deserialize<ViewState> = deserialize
+
     endpoint.onUpdate((message: JPMMessage) => {
         switch (message.type) {
             case JayPortMessageType.render:
-                reactive.batchReactions(() => setViewState(message.viewState));
+                reactive.batchReactions(() => {
+                    [deserializedViewState, nextDeserialize] = nextDeserialize(message.viewState);
+                    setViewState(deserializedViewState)
+                });
                 break;
             case JayPortMessageType.addEventListener: {
                 let {eventType, nativeId} = message;

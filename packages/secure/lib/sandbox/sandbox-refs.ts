@@ -22,7 +22,7 @@ import {$JayNativeFunction} from "../main/function-repository-types";
 import {correlatedPromise, rejectCorrelatedPromise, resolveCorrelatedPromise} from "../$func";
 import {Refs, SANDBOX_CREATION_CONTEXT} from "./sandbox-context";
 import {SandboxElement} from "./sandbox-element";
-import {Reactive} from "jay-reactive";
+import {Reactive, serialize} from "jay-reactive";
 import {
     addEventListenerMessage,
     eventInvocationMessage, JayPortMessageType, JPMRootAPIInvoke,
@@ -246,7 +246,11 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
     dynamicElements.forEach(elemRef => refs[elemRef] = proxyRef(new DynamicRefImplementation(elemRef, endpoint)))
     return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState, refs, dataIds: [], isDynamic: false}, () => {
         let elements = sandboxElements();
-        let postUpdateMessage = (newViewState) => endpoint.post(renderMessage(newViewState))
+        let serialized: string, nextSerialize = serialize;
+        let postUpdateMessage = (newViewState) => {
+            [serialized, nextSerialize] = serialize(newViewState);
+            endpoint.post(renderMessage(serialized))
+        }
         let update = normalizeUpdates([postUpdateMessage, ...elements.map(el => el.update)]);
 
         endpoint.onUpdate(async (inMessage: JPMMessage) => {

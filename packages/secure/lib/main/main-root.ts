@@ -2,6 +2,7 @@ import {BaseJayElement, provideContext} from "jay-runtime";
 import {useMainPort} from "../comm-channel/comm-channel";
 import {SECURE_COMPONENT_MARKER} from "./main-contexts";
 import {rootComponentViewState} from "../comm-channel/messages";
+import {serialize} from 'jay-reactive'
 
 
 export function mainRoot<ViewState>(viewState: ViewState, elementConstructor: () => BaseJayElement<ViewState>): BaseJayElement<ViewState> {
@@ -10,8 +11,10 @@ export function mainRoot<ViewState>(viewState: ViewState, elementConstructor: ()
     let context = {compId: endpoint.compId, endpoint, port}
 
     return provideContext(SECURE_COMPONENT_MARKER, context, () => {
+        let serialized: string, nextSerialize;
         let element = port.batch(() => {
-            endpoint.post(rootComponentViewState(viewState))
+            [serialized, nextSerialize] = serialize(viewState);
+            endpoint.post(rootComponentViewState(serialized))
             return elementConstructor();
         })
         return {
@@ -21,7 +24,8 @@ export function mainRoot<ViewState>(viewState: ViewState, elementConstructor: ()
             update: (newData: ViewState) => {
                 element.update(newData);
                 port.batch(() => {
-                    endpoint.post(rootComponentViewState(newData))
+                    [serialized, nextSerialize] = nextSerialize(newData);
+                    endpoint.post(rootComponentViewState(serialized))
                 })
             }
         }

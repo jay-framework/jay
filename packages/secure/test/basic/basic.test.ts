@@ -33,7 +33,7 @@ describe('basic secure rendering', () => {
             expect.arrayContaining([
                 expect.arrayContaining([
                     expect.objectContaining({
-                        type: JayPortMessageType.root, viewState: initialData
+                        type: JayPortMessageType.root, viewState: JSON.stringify(initialData)
                     }), 'invoked'
                 ]),
                 expect.arrayContaining([
@@ -65,7 +65,7 @@ describe('basic secure rendering', () => {
             expect.arrayContaining([
                 expect.arrayContaining([
                     expect.objectContaining({
-                        type: JayPortMessageType.root, viewState: initialData
+                        type: JayPortMessageType.root, viewState: JSON.stringify(initialData)
                     }), 'invoked'
                 ]),
                 expect.arrayContaining([
@@ -75,7 +75,7 @@ describe('basic secure rendering', () => {
                 ]),
                 expect.arrayContaining([
                     expect.objectContaining({
-                        type: JayPortMessageType.root, viewState: updatedData
+                        type: JayPortMessageType.root, viewState: JSON.stringify(updatedData)
                     }), 'invoked'
                 ]),
                 expect.arrayContaining([
