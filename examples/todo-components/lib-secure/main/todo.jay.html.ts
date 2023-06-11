@@ -1,4 +1,5 @@
-import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, dynamicProperty as dp, conditional as c, dynamicElement as de, forEach, ConstructContext, HTMLElementProxy, childComp, RenderElementOptions} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, dynamicProperty as dp, conditional as c, dynamicElement as de, forEach, ConstructContext, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
+import {secureChildComp as childComp} from "jay-secure";
 import {ItemRefs} from './item-refs';
 import {Item} from './item';
 
