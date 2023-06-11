@@ -17,7 +17,6 @@ describe("mutable serialization", () => {
         it("should serialize and deserialize the mutable revision", () => {
             let mutable = mutableObject(SIMPLE_OBJECT);
             let [serialized, nextSerialize] = serialize(mutable);
-            console.log(serialized);
             let [deserialized, nextDeserialize] = deserialize(serialized);
 
             let revision = getRevision(mutable);
@@ -80,12 +79,12 @@ describe("mutable serialization", () => {
         it("should serialize and deserialize the mutable revision", () => {
             let mutable = mutableObject(NESTED_OBJECT);
             let [serialized, nextSerialize] = serialize(mutable);
-            let [deserialized, nextDeserialize] = deserialize(serialized);
+            let [deserialized, nextDeserialize] = deserialize<any>(serialized);
 
             let revision = getRevision(mutable);
             let revision_name = getRevision(mutable.name);
             let deserializedRevision = getRevision(deserialized);
-            let deserializedRevision_name = getRevision((deserialized as typeof NESTED_OBJECT).name);
+            let deserializedRevision_name = getRevision(deserialized.name);
 
             expect(revision.revNum).toEqual(deserializedRevision.revNum);
             expect(revision_name.revNum).toEqual(deserializedRevision_name.revNum);
@@ -103,6 +102,16 @@ describe("mutable serialization", () => {
             expect(deserialized).toBe(deserialized2);
         })
 
+        it('should serialize mutable object child of immutable', () => {
+            let obj: any = NESTED_OBJECT;
+            obj.name = mutableObject(NESTED_OBJECT.name);
+            let [serialized, nextSerialize] = serialize(obj);
+            let [deserialized, nextDeserialize] = deserialize<any>(serialized);
+            expect(obj).toEqual(deserialized);
+            let revision_name = getRevision(obj.name);
+            let deserializedRevision_name = getRevision(deserialized.name);
+            expect(revision_name.revNum).toEqual(deserializedRevision_name.revNum);
+        })
     })
 
     describe("nested immutable object", () => {
