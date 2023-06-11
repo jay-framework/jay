@@ -11,7 +11,7 @@
   "dependencies": {
     "jay-component": "1.0.0",
     "jay-runtime": "1.0.0",
-    "jay-reactive": "1.0.3"
+    "jay-reactive": "1.0.4"
   },
   "devDependencies": {
     "@babel/core": "^7.18.10",
