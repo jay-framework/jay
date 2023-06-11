@@ -160,7 +160,7 @@ describe("mutable serialization", () => {
         })
 
         describe('array mutations', () => {
-            it("object update", () => {
+            it("array item update", () => {
                 let mutable = mutableObject(ARRAY_OBJECTS);
                 let [serialized, nextSerialize] = serialize(mutable);
                 let [deserialized, nextDeserialize] = deserialize(serialized);
@@ -170,6 +170,27 @@ describe("mutable serialization", () => {
                 let [deserialized2, nextDeserialize2] = nextDeserialize(serialized)
                 expect(mutable).toEqual(deserialized2);
                 expect(deserialized).toBe(deserialized2);
+            })
+
+            it.skip("move array items on re-deserialization", () => {
+                let mutable = mutableObject(ARRAY_OBJECTS);
+                let [serialized, nextSerialize] = serialize(mutable);
+                let [deserialized, nextDeserialize] = deserialize<any>(serialized);
+
+                // replace items 1 and 2
+                let i1 = mutable.items[1];
+                let i2 = mutable.items[2];
+                mutable.items[1] = i2;
+                mutable.items[2] = i1;
+
+                let deserializedItem_1 = deserialized.items[1];
+                let deserializedItem_2 = deserialized.items[2];
+                [serialized, nextSerialize] = nextSerialize(mutable);
+                let [deserialized2, nextDeserialize2] = nextDeserialize(serialized)
+                expect(mutable).toEqual(deserialized2);
+                expect(deserialized).toBe(deserialized2);
+                expect(deserialized.items[1]).toBe(deserializedItem_2)
+                expect(deserialized.items[2]).toBe(deserializedItem_1)
             })
         })
 

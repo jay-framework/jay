@@ -109,3 +109,35 @@ If,
 4. On re-deserialization, we reorder existing items and replace new items
 
 we have an algorithm for serializing mutable arrays.
+
+Building the algorithm
+-----------
+
+Assumptions and observations:
+* `jay-runtime` does not keep internal references to ViewState. 
+  (it keeps references only as last view from previous render to compare with). 
+  It supports both mutable or immutable ViewState by using the comparison function `checkModified` from `jay-reactive`.
+* An optimization of not serializing objects who did not change is mostly important for Arrays, at which child objects can
+  change or move within the Array
+* We also note that once we start optimizing (not sending all data for unchanged items), 
+  the notion of unchanged has to include both the item revision itself but also it's location in the render tree.
+  a simple example are two objects exchange (between two parent attributes or two locations in an Array),
+  even if both objects have not changed themselves, their changing location requires doing the same change
+  in the deserialized object. That change can be replacing them, or updating the existing object with the values of the other.
+* We note that replacing objects in a ViewState tree is rare, except for Arrays.
+* We note that the challenge is when an item is marked as unchanged but has moved, in which case sending it has unchanged is a mistake.
+* If the algorithm only focuses on optimizing arrays, the algorithm is scoped for a single Array instance.
+
+The algorithm for general serialization - 
+1. using `replacer` for `JSON.stringify` we serialize the revision symbol value as a property, and for arrays also add an array indication.
+   (why? because array regular notation of `[1,2,3,4]` does not play nice with another revision property, in which case JS turns the array into an object)
+2. serialization and re-serialization are the same.
+3. on deserialization we revive the revision symbol value and use the array marker to create array instances when needed.
+4. on re-deserialization we deserialize the new value, then update the mutable instance by selectively coping primitive values using a recursive function
+
+The algorithm for arrays with the optimization - 
+1. on array serialization, we generate an object id stored on a symbol property on the array items. 
+2. on an object who has the object id symbol serialization, we serialize the object id. If the object revision is smaller from the last time serialization happened,
+   we write a mark for not change and skip actual serialization
+3. on deserialization, we use the object id to reorder existing array items by the new order from the serialized object.
+4. on object deserialization, if the object has the not changed mark, we do nothing.
