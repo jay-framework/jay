@@ -1,0 +1,17 @@
+<html>
+<head>
+    <link rel="import" href="./child" names="Child, ChildProps"/>
+    <script type="application/yaml-jay">
+data:
+  text: string
+  childText: string
+    </script>
+</head>
+<body>
+<div>
+    <div>{text}</div>
+    <button ref="button">click</button>
+    <Child textFromParent="childText" ref="child"/>
+</div>
+</body>
+</html>

@@ -5,6 +5,8 @@
   "scripts": {
     "d-basic": "node node_modules/jay-cli/dist/index.js definitions ./test/basic/regular",
     "jay-basic": "node node_modules/jay-cli/dist/index.js runtime ./test/basic/regular",
+    "d-comp-in-comp": "node node_modules/jay-cli/dist/index.js definitions test/comp-in-comp/regular",
+    "jay-comp-in-comp": "node node_modules/jay-cli/dist/index.js runtime test/comp-in-comp/regular",
     "d-events-basic": "node node_modules/jay-cli/dist/index.js definitions test/events-basic/regular",
     "jay-events-basic": "node node_modules/jay-cli/dist/index.js runtime test/events-basic/regular",
     "d-events-synthetic": "node node_modules/jay-cli/dist/index.js definitions test/events-synthetic/regular",
