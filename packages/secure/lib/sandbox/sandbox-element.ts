@@ -1,6 +1,6 @@
 import {checkModified, getRevision} from "jay-reactive";
 import {
-    JayComponentConstructor,
+    JayComponentConstructor, JayEventHandlerWrapper,
     MountFunc,
     noopMount,
     provideContext,
@@ -62,13 +62,18 @@ export function sandboxChildComp<ParentVS, Props>(
     compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentVS) => Props,
     refName: string): SandboxElement<ParentVS> {
-    let {viewState, refs, dataIds, isDynamic, endpoint} = useContext(SANDBOX_CREATION_CONTEXT)
+    let {viewState, refs, dataIds, isDynamic, endpoint, parentComponentReactive} = useContext(SANDBOX_CREATION_CONTEXT)
     let coordinate = [...dataIds, refName];
     let context = {compId: endpoint.compId, coordinate, port: endpoint.port}
     let childComp = provideContext(SANDBOX_BRIDGE_CONTEXT, context, () => {
         return compCreator(getProps(viewState))
     })
-    let [compWrapper, updateRef] = componentWrapper(childComp, viewState, coordinate);
+    let eventWrapper: JayEventHandlerWrapper<any, any, any> = parentComponentReactive?
+        (orig, event) => {
+            return parentComponentReactive.batchReactions(() => orig(event))
+        }:
+        (orig, event) => orig(event);
+    let [compWrapper, updateRef] = componentWrapper(childComp, viewState, coordinate, eventWrapper);
     if (isDynamic && refs) {
         let ref = (refs[refName] as any as DynamicCompRefImplementation<ParentVS, ReturnType<typeof compCreator>>);
         ref.setItem(coordinate, viewState, compWrapper);
@@ -84,12 +89,12 @@ export function sandboxChildComp<ParentVS, Props>(
             },
             mount: () => {
                 mounted = true;
-                ref.setItem(coordinate, viewState, childComp)
+                ref.setItem(coordinate, viewState, compWrapper)
                 childComp.mount();
             },
             unmount: () => {
                 mounted = false;
-                ref.removeItem(coordinate, childComp)
+                ref.removeItem(coordinate, compWrapper)
                 childComp.unmount();
             }
         }
@@ -140,7 +145,7 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
     matchBy: string,
     children: () => SandboxElement<ItemViewState>[]
 ): SandboxElement<ParentViewState> {
-    const {viewState, endpoint, refs, dataIds} = useContext(SANDBOX_CREATION_CONTEXT)
+    const {viewState, endpoint, refs, dataIds, parentComponentReactive} = useContext(SANDBOX_CREATION_CONTEXT)
     let lastItems = getRevision<ItemViewState[]>([]);
     let childElementsMap: Map<string, SandboxElement<ItemViewState>[]> = new Map();
 
@@ -152,7 +157,7 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
             let {removedItems, addedItems, itemsToUpdate} = compareLists(lastItems.value, newItems, matchBy)
             addedItems.forEach(item => {
                 let childElements = provideContext(SANDBOX_CREATION_CONTEXT,
-                    {endpoint, viewState: item, refs, dataIds: [...dataIds, item[matchBy]], isDynamic: true}, children)
+                    {endpoint, viewState: item, refs, dataIds: [...dataIds, item[matchBy]], isDynamic: true, parentComponentReactive}, children)
                 childElementsMap.set(item[matchBy], childElements);
             })
             removedItems.forEach(item => {

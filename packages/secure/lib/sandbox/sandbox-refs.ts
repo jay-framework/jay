@@ -231,14 +231,14 @@ export class DynamicCompRefImplementation<ViewState, CompType extends JayCompone
     }
 }
 
-export function componentWrapper<Comp extends JayComponent<any, any, any>, ViewState>(comp: Comp, viewState: ViewState, coordinate: Coordinate): [Comp, updateFunc<ViewState>] {
+export function componentWrapper<Comp extends JayComponent<any, any, any>, ViewState>(comp: Comp, viewState: ViewState, coordinate: Coordinate, eventWrapper: JayEventHandlerWrapper<any, ViewState, any>): [Comp, updateFunc<ViewState>] {
     let compWrapper = new Proxy(comp, {
         get: function(target, prop, receiver) {
             if (typeof prop === 'string') {
                 if (prop === 'addEventListener') {
                     return (eventName, handler) => {
                         target.addEventListener(eventName, ({event}) => {
-                            return handler({event, viewState, coordinate})
+                            return eventWrapper(handler, {event, viewState, coordinate})
                         });
                     }
                 }
@@ -270,7 +270,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
     let port = endpoint.port;
     dynamicComponents.forEach(compRef => refs[compRef] = proxyRef(new DynamicCompRefImplementation()))
     dynamicElements.forEach(elemRef => refs[elemRef] = proxyRef(new DynamicRefImplementation(elemRef, endpoint)))
-    return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState, refs, dataIds: [], isDynamic: false}, () => {
+    return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState, refs, dataIds: [], isDynamic: false, parentComponentReactive: reactive}, () => {
         let elements = sandboxElements();
         let serialized: string, nextSerialize = serialize;
         let postUpdateMessage = (newViewState) => {

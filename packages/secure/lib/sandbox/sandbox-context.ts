@@ -7,6 +7,7 @@ import {
     JayComponent
 } from "jay-runtime";
 import {IJayEndpoint, IJayPort} from "../comm-channel/comm-channel";
+import {Reactive} from "jay-reactive";
 
 
 export interface SandboxContext {
@@ -23,7 +24,8 @@ export interface SandboxCreationContext<ViewState> {
     endpoint: IJayEndpoint,
     refs?: Refs,
     dataIds: string[],
-    isDynamic: boolean
+    isDynamic: boolean,
+    parentComponentReactive?: Reactive
 }
 
 export const SANDBOX_CREATION_CONTEXT = createJayContext<SandboxCreationContext<any>>()
