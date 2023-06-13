@@ -1,14 +1,12 @@
 import {describe, expect, it} from '@jest/globals'
 import {setChannel, useMockCommunicationChannel} from "../util/mock-channel";
 import {initializeWorker} from "./secure/worker/worker-root";
-import {CounterProps} from "./secure/main/counter";
-import {CounterViewState} from "./secure/main/counter.jay.html";
 import {render} from "./secure/main/app.jay.html";
 
 describe('basic events - using counter component', () => {
 
     async function mkElement() {
-        let channel = useMockCommunicationChannel<CounterProps, CounterViewState>();
+        let channel = useMockCommunicationChannel();
         setChannel(channel);
         initializeWorker();
         let appElement = render({});

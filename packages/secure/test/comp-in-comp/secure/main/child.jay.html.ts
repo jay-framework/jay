@@ -14,8 +14,8 @@ export type ChildElement = JayElement<ChildViewState, ChildElementRefs>
 export function render(viewState: ChildViewState, options?: RenderElementOptions): ChildElement {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
-      e('div', {id: 'child-text-1'}, [dt(vs => vs.text)]),
-      e('div', {id: 'child-text-2'}, [dt(vs => vs.text2)]),
-      e('button', {id: 'child-button', ref: 'button'}, ['click'])
+        e('div', {id: 'child-text-1'}, [dt(vs => vs.text)]),
+        e('div', {id: 'child-text-2'}, [dt(vs => vs.text2)]),
+        e('button', {id: 'child-button', ref: 'button'}, ['click'])
     ]), options);
 }

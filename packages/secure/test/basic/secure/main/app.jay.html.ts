@@ -1,7 +1,7 @@
 import {JayElement, element as e, ConstructContext, RenderElementOptions} from "jay-runtime";
-import {mainRoot as mr} from '../../../../lib/main/main-root'
+import {mainRoot as mr} from '../../../../lib/'
 import {Basic} from './basic';
-import {secureChildComp} from "../../../../lib/main/main-child-comp";
+import {secureChildComp} from "../../../../lib";
 
 export interface AppViewState {
     firstName: string, lastName: string

@@ -5,8 +5,8 @@ import {
 import {JayPortMessageType} from "../../lib/comm-channel/messages";
 import {JayPort, JayPortLogger} from "../../lib/comm-channel/jay-port";
 
-export function useMockCommunicationChannel<PropsT, ViewState>(verbose: boolean = false): JayMockChannel2<PropsT, ViewState> {
-    return new JayMockChannel2<PropsT, ViewState>(verbose)
+export function useMockCommunicationChannel(verbose: boolean = false): JayMockChannel2 {
+    return new JayMockChannel2(verbose)
 }
 
 type MessageStatus = 'posted' | 'invoked';
@@ -37,7 +37,7 @@ class JayMockLogger implements JayPortLogger {
     }
 }
 
-class JayMockChannel2<PropsT, ViewState> implements MockJayChannel {
+class JayMockChannel2 implements MockJayChannel {
     readonly mainPort: IJayPort
     readonly workerPort: IJayPort
     private dirty = Promise.resolve();
