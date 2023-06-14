@@ -26,6 +26,6 @@ export function render(viewState: ParentViewState, options?: RenderElementOption
       e('div', {id: 'coordinate-from-child-event'}, [dt(vs => vs.coordinateFromChildEvent)]),
       e('button', {id: 'parent-changes-child-prop-button', ref: 'parentChangesChildPropButton'}, ['parent changes child prop']),
       e('button', {id: 'parent-calls-child-api-button', ref: 'parentCallsChildApiButton'}, ['parent calls child api']),
-        secureChildComp(Child, vs => ({textFromParent: 'childText'}), 'child')
+        secureChildComp(Child, vs => ({textFromParent: vs.childText}), 'child')
     ]), options);
 }

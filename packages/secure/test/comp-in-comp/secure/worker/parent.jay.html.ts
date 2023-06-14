@@ -23,6 +23,6 @@ export function render(viewState: ParentViewState): ParentElement {
     return elementBridge(viewState, () => [
         e('parentChangesChildPropButton'),
         e('parentCallsChildApiButton'),
-        childComp(Child, vs => ({textFromParent: 'childText'}), 'child')
+        childComp(Child, vs => ({textFromParent: vs.childText}), 'child')
     ]);
 }

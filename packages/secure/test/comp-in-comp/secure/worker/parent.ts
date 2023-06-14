@@ -11,10 +11,10 @@ function ParentConstructor({}: Props<ParentProps>, refs: ParentElementRefs) {
 
     refs.parentChangesChildPropButton.onclick(
         ({event, coordinate, viewState}) =>
-            refs.child.setChildText(`event from parent ${event} ${coordinate} ${JSON.stringify(viewState)}`))
+            setChildText(`event from parent ${event} ${JSON.stringify(coordinate)} ${JSON.stringify(viewState)}`))
     refs.parentCallsChildApiButton.onclick(
         ({event, coordinate, viewState}) =>
-            refs.child.setChildText(`event from parent ${event} ${coordinate} ${JSON.stringify(viewState)}`))
+            refs.child.setChildText(`event from parent ${event} ${JSON.stringify(coordinate)} ${JSON.stringify(viewState)}`))
     refs.child.onChildClick(({event, viewState, coordinate}) => {
         setTextFromChildEvent(event.useCase)
         setViewStataFromChildEvent(JSON.stringify(viewState))
