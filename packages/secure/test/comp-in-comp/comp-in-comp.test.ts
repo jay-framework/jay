@@ -14,7 +14,7 @@ describe('comp in comp - parent child communication', () => {
         return {channel, appElement};
     }
 
-    it('should render simple component, secure', async () => {
+    it('should render the component in component structure', async () => {
         let {channel, appElement} = await mkElement();
         console.log(appElement.dom.outerHTML)
         expect(appElement.dom.childNodes[0].textContent).toBe('hello Joe Smith')

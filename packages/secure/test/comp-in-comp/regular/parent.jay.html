@@ -3,14 +3,19 @@
     <link rel="import" href="./child" names="Child, ChildProps"/>
     <script type="application/yaml-jay">
 data:
-  text: string
+  textFromChildEvent: string
+  viewStateFromChildEvent: string
+  coordinateFromChildEvent: string
   childText: string
     </script>
 </head>
 <body>
 <div>
-    <div id="parent-text">{text}</div>
-    <button id="parent-button" ref="button">click</button>
+    <div id="text-from-child-event">{textFromChildEvent}</div>
+    <div id="view-state-from-child-event">{viewStateFromChildEvent}</div>
+    <div id="coordinate-from-child-event">{coordinateFromChildEvent}</div>
+    <button id="parent-changes-child-prop-button" ref="parentChangesChildPropButton">parent changes child prop</button>
+    <button id="parent-calls-child-api-button" ref="parentCallsChildAPIButton">parent calls child api</button>
     <Child textFromParent="childText" ref="child"/>
 </div>
 </body>

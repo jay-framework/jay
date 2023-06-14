@@ -4,19 +4,29 @@ import {makeJayComponent, Props, createMemo, createEvent, createState} from 'jay
 export interface ChildProps {
     textFromParent: string
 }
+export interface ChildEvent {
+    useCase: string,
+    useCaseId: number
+}
 function ChildConstructor({textFromParent}: Props<ChildProps>, refs: ChildElementRefs) {
-    let text = createMemo(() => `text from parent: ${textFromParent()}`);
-    let [text2, setText2] = createState('text from parent API');
-    let onChildClick = createEvent<string>()
+    let textFromProp = createMemo(() => `text from parent: ${textFromParent()}`);
+    let [textFromAPI, setTextFromAPI] = createState('-');
+    let onChildClick = createEvent<ChildEvent>()
 
-    refs.button.onclick(
+    refs.eventToParent.onclick(
         ({event, viewState, coordinate}) =>
-            onChildClick.emit(`event from child: ${event} ${coordinate} ${JSON.stringify(viewState)}`))
+            onChildClick.emit({useCase: `event from child`, useCaseId: 0}))
+    refs.eventToParentToChildProp.onclick(
+        ({event, viewState, coordinate}) =>
+            onChildClick.emit({useCase: `event from child, parent changes child prop`, useCaseId: 1}))
+    refs.eventToParentToChildApi.onclick(
+        ({event, viewState, coordinate}) =>
+            onChildClick.emit({useCase: `event from child, parent calls child api`, useCaseId: 2}))
 
-    const setChildText = (text) => setText2(`text from parent API: ${text}`)
+    const setChildText = (text) => setTextFromAPI(text)
 
     return {
-        render: () => ({text, text2}),
+        render: () => ({textFromProp, textFromAPI}),
         onChildClick,
         setChildText
     }

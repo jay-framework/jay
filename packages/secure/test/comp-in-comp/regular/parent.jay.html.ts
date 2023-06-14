@@ -3,12 +3,15 @@ import {ChildRef} from './child-refs';
 import {Child, ChildProps} from './child';
 
 export interface ParentViewState {
-  text: string,
+  textFromChildEvent: string,
+  viewStateFromChildEvent: string,
+  coordinateFromChildEvent: string,
   childText: string
 }
 
 export interface ParentElementRefs {
-  button: HTMLElementProxy<ParentViewState, HTMLButtonElement>,
+  parentChangesChildPropButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>,
+  parentCallsChildApiButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>,
   child: ChildRef<ParentViewState>
 }
 
@@ -17,8 +20,11 @@ export type ParentElement = JayElement<ParentViewState, ParentElementRefs>
 export function render(viewState: ParentViewState, options?: RenderElementOptions): ParentElement {
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
-      e('div', {id: 'parent-text'}, [dt(vs => vs.text)]),
-      e('button', {id: 'parent-button', ref: 'button'}, ['click']),
+      e('div', {id: 'text-from-child-event'}, [dt(vs => vs.textFromChildEvent)]),
+      e('div', {id: 'view-state-from-child-event'}, [dt(vs => vs.viewStateFromChildEvent)]),
+      e('div', {id: 'coordinate-from-child-event'}, [dt(vs => vs.coordinateFromChildEvent)]),
+      e('button', {id: 'parent-changes-child-prop-button', ref: 'parentChangesChildPropButton'}, ['parent changes child prop']),
+      e('button', {id: 'parent-calls-child-api-button', ref: 'parentCallsChildApiButton'}, ['parent calls child api']),
       childComp(Child, vs => ({textFromParent: 'childText'}), 'child')
     ]), options);
 }

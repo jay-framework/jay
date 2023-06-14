@@ -3,12 +3,15 @@ import {ChildRef} from './child-refs';
 import {Child, ChildProps} from './child';
 
 export interface ParentViewState {
-  text: string,
+  textFromChildEvent: string,
+  viewStateFromChildEvent: string,
+  coordinateFromChildEvent: string,
   childText: string
 }
 
 export interface ParentElementRefs {
-  button: HTMLElementProxy<ParentViewState, HTMLButtonElement>,
+  parentChangesChildPropButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>,
+  parentCallsChildApiButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>,
   child: ChildRef<ParentViewState>
 }
 
