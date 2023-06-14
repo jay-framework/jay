@@ -3,18 +3,22 @@ import {elementBridge} from "../../../../lib";
 import {sandboxElement as e} from "../../../../lib/";
 
 export interface ChildViewState {
-  text: string,
-  text2: string
+    textFromProp: string,
+    textFromAPI: string
 }
 
 export interface ChildElementRefs {
-  button: HTMLElementProxy<ChildViewState, HTMLButtonElement>
+    eventToParent: HTMLElementProxy<ChildViewState, HTMLButtonElement>,
+    eventToParentToChildProp: HTMLElementProxy<ChildViewState, HTMLButtonElement>,
+    eventToParentToChildApi: HTMLElementProxy<ChildViewState, HTMLButtonElement>
 }
 
 export type ChildElement = JayElement<ChildViewState, ChildElementRefs>
 
 export function render(viewState: ChildViewState): ChildElement {
     return elementBridge(viewState, () => [
-        e('button')
+        e('eventToParent'),
+        e('eventToParentToChildProp'),
+        e('eventToParentToChildApi')
     ]);
 }

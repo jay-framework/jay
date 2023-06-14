@@ -5,12 +5,15 @@ import {ChildRef} from "../../regular/child-refs";
 import {Child} from "./child";
 
 export interface ParentViewState {
-    text: string,
+    textFromChildEvent: string,
+    viewStateFromChildEvent: string,
+    coordinateFromChildEvent: string,
     childText: string
 }
 
 export interface ParentElementRefs {
-    button: HTMLElementProxy<ParentViewState, HTMLButtonElement>,
+    parentChangesChildPropButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>,
+    parentCallsChildApiButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>,
     child: ChildRef<ParentViewState>
 }
 
@@ -18,7 +21,8 @@ export type ParentElement = JayElement<ParentViewState, ParentElementRefs>
 
 export function render(viewState: ParentViewState): ParentElement {
     return elementBridge(viewState, () => [
-        e('button'),
+        e('parentChangesChildPropButton'),
+        e('parentCallsChildApiButton'),
         childComp(Child, vs => ({textFromParent: 'childText'}), 'child')
     ]);
 }
