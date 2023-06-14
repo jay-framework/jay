@@ -29,7 +29,6 @@ describe('comp in comp - parent child communication', () => {
 
     it('should render the component in component structure', async () => {
         let {channel, appElement} = await mkElement();
-        console.log(appElement.dom.outerHTML)
         expect("not to have an error").toBe('not to have an error')
     })
 
@@ -76,7 +75,6 @@ describe('comp in comp - parent child communication', () => {
         await channel.toBeClean();
 
         let event = {useCase: `event from child`, useCaseId: 0}
-        console.log(appElement.dom.outerHTML)
 
         let viewState = {
             "textFromChildEvent":"-",
