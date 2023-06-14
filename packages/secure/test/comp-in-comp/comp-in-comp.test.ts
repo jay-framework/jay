@@ -70,14 +70,24 @@ describe('comp in comp - parent child communication', () => {
     })
 
     it('should support child sending event to parent', async () => {
-        let {channel, eventToParentButton, textFromChildEvent, viewStateFromChildEvent, coordinateFromChildEvent} = await mkElement();
+        let {channel, eventToParentButton, textFromChildEvent, viewStateFromChildEvent, coordinateFromChildEvent, appElement} = await mkElement();
 
         eventToParentButton.click();
         await channel.toBeClean();
 
-        expect(textFromChildEvent.textContent).toBe({})
-        expect(viewStateFromChildEvent.textContent).toBe(JSON.stringify({}))
-        expect(coordinateFromChildEvent.textContent).toBe(JSON.stringify(['child']))
+        let event = {useCase: `event from child`, useCaseId: 0}
+        console.log(appElement.dom.outerHTML)
+
+        let viewState = {
+            "textFromChildEvent":"-",
+            "viewStateFromChildEvent":"-",
+            "coordinateFromChildEvent":"-",
+            "childText":"-"
+        }
+        let coordinate = ['child']
+        expect(textFromChildEvent.textContent).toBe(event.useCase)
+        expect(viewStateFromChildEvent.textContent).toBe(JSON.stringify(viewState))
+        expect(coordinateFromChildEvent.textContent).toBe(JSON.stringify(coordinate))
     })
 
     it('should support child -> event -> parent -> api call -> child', async () => {
@@ -90,7 +100,7 @@ describe('comp in comp - parent child communication', () => {
         let viewState = {}
         let coordinate = ['child']
         expect(childTextFromAPI.textContent)
-            .toBe(`event from parent ${event} ${JSON.stringify(viewState)} ${JSON.stringify(coordinate)}`)
+            .toBe('parent calling child api')
     })
 
     it('should support child -> event -> parent -> prop change -> child', async () => {
@@ -103,7 +113,7 @@ describe('comp in comp - parent child communication', () => {
         let viewState = {}
         let coordinate = ['child']
         expect(childTextFromProp.textContent)
-            .toBe(`event from parent ${event} ${JSON.stringify(viewState)} ${JSON.stringify(coordinate)}`)
+            .toBe('text from parent: update from parent')
 
     })
 })

@@ -12,7 +12,7 @@ import {
     componentWrapper,
     DynamicCompRefImplementation,
     DynamicNativeExec,
-    DynamicRefImplementation,
+    DynamicRefImplementation, proxyCompRef,
     proxyRef,
     StaticRefImplementation
 } from "./sandbox-refs";
@@ -101,7 +101,7 @@ export function sandboxChildComp<ParentVS, Props>(
     }
     else {
         if (refs)
-            refs[refName] = compWrapper;
+            refs[refName] = proxyCompRef(compWrapper);
         let update = (t: ParentVS) => {
             updateRef(t);
             childComp.update(getProps(t));

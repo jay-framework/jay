@@ -1,4 +1,5 @@
 import {
+    BaseJayElement,
     ComponentCollectionProxyOperations,
     Coordinate,
     HTMLElementCollectionProxy,
@@ -41,7 +42,7 @@ export interface SandboxBridgeElement<ViewState> {
 }
 
 const proxyHandler = {
-    get: function(target: RefImplementation<any>, prop, receiver) {
+    get: function(target: RefImplementation<any> | JayComponent<any, any, any>, prop, receiver) {
         if (typeof prop === 'string') {
             if (prop.indexOf("on") === 0) {
                 let eventName = prop.substring(2);
@@ -72,6 +73,10 @@ const proxyHandler = {
 
 export function proxyRef<ViewState>(refDef: StaticRefImplementation<ViewState> | DynamicRefImplementation<ViewState> | DynamicCompRefImplementation<ViewState, any>): HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> {
     return new Proxy(refDef, proxyHandler) as any as HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any>;
+}
+
+export function proxyCompRef<A, B, C extends BaseJayElement<B>>(comp: JayComponent<A, B, C>): JayComponent<A, B, C> {
+    return new Proxy(comp, proxyHandler) as JayComponent<A, B, C>
 }
 
 interface RefImplementation<ViewState> {
