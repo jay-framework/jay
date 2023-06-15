@@ -31,7 +31,7 @@ describe('comp in comp - parent child communication', () => {
 
     it('should render the component in component structure', async () => {
         let {channel, appElement} = await mkElement();
-        console.log(appElement.dom.outerHTML)
+//        console.log(appElement.dom.outerHTML)
         expect("not to have an error").toBe('not to have an error')
     })
 
