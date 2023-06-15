@@ -6,7 +6,7 @@ import {
     IJayEndpoint, IJayPort,
     JayPortInMessageHandler
 } from "../../lib";
-import {Reactive} from "jay-reactive";
+import {mutableObject, Reactive} from "jay-reactive";
 import {$func, $handler} from "../../lib/$func";
 import {ComponentCollectionProxy, Coordinate, HTMLElementCollectionProxy, HTMLElementProxy} from "jay-runtime";
 import {
@@ -185,12 +185,17 @@ describe('sandbox-refs', () => {
         function setup(vs = baseViewState) {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
+            let childElementUpdateSpies = [];
             let bridgeElement =
                 mkBridgeElement(vs, () => [
-                forEach(vs => vs.items, 'name', () => [e('one')])
+                forEach(vs => vs.items, 'name', () => {
+                    let childElement = e('one');
+                    childElementUpdateSpies.push(jest.spyOn(childElement, 'update'));
+                    return [childElement]
+                })
             ], ['one'], [],
                     endpoint, reactive, getNullComponentInstance)
-            return {endpoint, bridgeElement}
+            return {endpoint, bridgeElement, childElementUpdateSpies}
         }
 
         it('should register events --> JPMAddEventListener', () => {
@@ -276,16 +281,38 @@ describe('sandbox-refs', () => {
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["D","one"], "event": undefined, "viewState": addItemViewState.items[3]})
         })
 
-        it('should support viewState updates - updated item', () => {
-            let {endpoint, bridgeElement} = setup();
+        it('should support viewState and child element updates - updated item', () => {
+            let {endpoint, bridgeElement, childElementUpdateSpies} = setup();
             let callback = jest.fn();
 
             bridgeElement.update(updateItemViewState);
+
+            // expect the second item update to have been called
+            expect(childElementUpdateSpies[1].mock.calls.length).toBe(1);
+
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(eventInvocationMessage('click', ['B', 'one']))
 
             expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": updateItemViewState.items[1]})
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": B2})
+        })
+
+        it('should support viewState and child element updates - for mutable updated item', () => {
+            let mutable = mutableObject(baseViewState);
+            let {endpoint, bridgeElement, childElementUpdateSpies} = setup(mutable);
+            let callback = jest.fn();
+
+            Object.assign(mutable.items[1], B2)
+            bridgeElement.update(mutable);
+
+            // expect the second item update to have been called
+            expect(childElementUpdateSpies[1].mock.calls.length).toBe(1);
+
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
+            endpoint.invoke(eventInvocationMessage('click', ['B', 'one']))
+
+            expect(callback.mock.calls).toHaveLength(1)
+            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": B2})
         })
 
         describe('find', () => {

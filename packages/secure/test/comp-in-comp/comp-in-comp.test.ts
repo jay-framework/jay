@@ -4,6 +4,7 @@ import {initializeWorker} from "./secure/worker/worker-root";
 import {render} from "./secure/main/app.jay.html";
 
 const STATIC_ID = 'static';
+const DYNAMIC_ID = 'A';
 describe('comp in comp - parent child communication', () => {
 
     async function mkElement() {
@@ -111,6 +112,88 @@ describe('comp in comp - parent child communication', () => {
             await channel.toBeClean();
 
             expect(childTextFromProp(STATIC_ID).textContent)
+                .toBe('text from parent: update from parent')
+
+        })
+    })
+
+    describe('parent to dynamic (forEach) child communication', () => {
+        it('should support parent updating property on child', async () => {
+            let {channel, parentChangesChildPropButton, childTextFromProp} = await mkElement();
+
+            parentChangesChildPropButton.click();
+            await channel.toBeClean();
+
+            let event = undefined;
+            let viewState = {
+                "textFromChildEvent":"-",
+                "viewStateFromChildEvent":"-",
+                "coordinateFromChildEvent":"-",
+                "childText":"-",
+                "dynamicChildren":[{"id":"A","childText":"-"}]
+            }
+            let coordinate = ['parentChangesChildPropButton']
+            expect(childTextFromProp(DYNAMIC_ID).textContent)
+                .toBe(`text from parent: event from parent ${event} ${JSON.stringify(coordinate)} ${JSON.stringify(viewState)}`)
+        })
+
+        it('should support parent calling child API', async () => {
+            let {channel, parentCallsChildAPIButton, childTextFromAPI} = await mkElement();
+
+            parentCallsChildAPIButton.click();
+            await channel.toBeClean();
+
+            let event = undefined;
+            let viewState = {
+                "textFromChildEvent":"-",
+                "viewStateFromChildEvent":"-",
+                "coordinateFromChildEvent":"-",
+                "childText":"-",
+                "dynamicChildren":[{"id":"A","childText":"-"}]
+            }
+            let coordinate = ['parentCallsChildApiButton']
+            expect(childTextFromAPI(DYNAMIC_ID).textContent)
+                .toBe(`event from parent ${event} ${JSON.stringify(coordinate)} ${JSON.stringify(viewState)}`)
+        })
+
+        it('should support child sending event to parent', async () => {
+            let {channel, eventToParentButton, textFromChildEvent, viewStateFromChildEvent, coordinateFromChildEvent, appElement} = await mkElement();
+
+            eventToParentButton(DYNAMIC_ID).click();
+            await channel.toBeClean();
+
+            let event = {useCase: `event from child`, useCaseId: 0}
+
+            let viewState = {
+                "textFromChildEvent":"-",
+                "viewStateFromChildEvent":"-",
+                "coordinateFromChildEvent":"-",
+                "childText":"-",
+                "dynamicChildren":[{"id":"A","childText":"-"}]
+            }
+            let coordinate = ['staticChild']
+            expect(textFromChildEvent.textContent).toBe(event.useCase)
+            expect(viewStateFromChildEvent.textContent).toBe(JSON.stringify(viewState))
+            expect(coordinateFromChildEvent.textContent).toBe(JSON.stringify(coordinate))
+        })
+
+        it('should support child -> event -> parent -> api call -> child', async () => {
+            let {channel, eventToParentToChildAPIButton, childTextFromAPI} = await mkElement();
+
+            eventToParentToChildAPIButton(DYNAMIC_ID).click();
+            await channel.toBeClean();
+
+            expect(childTextFromAPI(DYNAMIC_ID).textContent)
+                .toBe('parent calling child api')
+        })
+
+        it('should support child -> event -> parent -> prop change -> child', async () => {
+            let {channel, eventToParentToChildPropButton, childTextFromProp} = await mkElement();
+
+            eventToParentToChildPropButton(DYNAMIC_ID).click();
+            await channel.toBeClean();
+
+            expect(childTextFromProp(DYNAMIC_ID).textContent)
                 .toBe('text from parent: update from parent')
 
         })

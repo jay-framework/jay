@@ -1,4 +1,4 @@
-import {checkModified, getRevision} from "jay-reactive";
+import {checkModified, getRevision, Revisioned} from "jay-reactive";
 import {
     JayComponentConstructor, JayEventHandlerWrapper,
     MountFunc,
@@ -114,30 +114,30 @@ export function sandboxChildComp<ParentVS, Props>(
     }
 }
 
-function compareLists<ItemViewState extends object>(oldList: ItemViewState[], newList: ItemViewState[], matchBy: string):
-    { removedItems: ItemViewState[], addedItems: ItemViewState[], itemsToUpdate: ItemViewState[] } {
+function compareLists<ItemViewState extends object>(oldList: Revisioned<ItemViewState>[], newList: ItemViewState[], matchBy: string):
+    { removedItems: ItemViewState[], addedItems: ItemViewState[], itemsToUpdate: ItemViewState[], newListRevisioned: Revisioned<ItemViewState>[] } {
     let removedItems = [];
     let addedItems = [];
     let itemsToUpdate = [];
     let newListIds = new Set(newList.map(item => item[matchBy]));
-    let oldListIdsMap = new Map(oldList.map(item => [item[matchBy], item]));
+    let oldListIdsMap = new Map(oldList.map(item => [item.value[matchBy], item]));
     oldList.forEach(oldItem => {
-        if (!newListIds.has(oldItem[matchBy]))
-            removedItems.push(oldItem)
+        if (!newListIds.has(oldItem.value[matchBy]))
+            removedItems.push(oldItem.value)
     })
+    let newListRevisioned: Revisioned<ItemViewState>[] = [];
     newList.forEach(newItem => {
         if (!oldListIdsMap.has(newItem[matchBy]))
             addedItems.push(newItem)
         else {
-            let oldItem = oldListIdsMap.get(newItem[matchBy]);
-            let oldItemRevisioned = getRevision(oldItem);
+            let oldItemRevisioned = oldListIdsMap.get(newItem[matchBy]);
             let [, isModified] = checkModified(newItem, oldItemRevisioned)
             if (isModified)
                 itemsToUpdate.push(newItem);
         }
-
+        newListRevisioned.push(getRevision(newItem))
     })
-    return {removedItems, addedItems, itemsToUpdate}
+    return {removedItems, addedItems, itemsToUpdate, newListRevisioned}
 }
 
 export function sandboxForEach<ParentViewState, ItemViewState extends object>(
@@ -148,13 +148,13 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
     const {viewState, endpoint, refs, dataIds, parentComponentReactive} = useContext(SANDBOX_CREATION_CONTEXT)
     let lastItems = getRevision<ItemViewState[]>([]);
     let childElementsMap: Map<string, SandboxElement<ItemViewState>[]> = new Map();
-
+    let lastListRevisioned: Revisioned<ItemViewState>[] = [];
     let update = (viewState: ParentViewState) => {
         let newItems = getItems(viewState) || [];
         let isModified, newItemsRevisioned;
         [newItemsRevisioned, isModified] = checkModified(newItems, lastItems);
         if (isModified) {
-            let {removedItems, addedItems, itemsToUpdate} = compareLists(lastItems.value, newItems, matchBy)
+            let {removedItems, addedItems, itemsToUpdate, newListRevisioned} = compareLists(lastListRevisioned, newItems, matchBy)
             addedItems.forEach(item => {
                 let childElements = provideContext(SANDBOX_CREATION_CONTEXT,
                     {endpoint, viewState: item, refs, dataIds: [...dataIds, item[matchBy]], isDynamic: true, parentComponentReactive}, children)
@@ -170,6 +170,8 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
                     childElement.update(item);
                 })
             })
+
+            lastListRevisioned = newListRevisioned;
         }
         lastItems = newItemsRevisioned;
     }
