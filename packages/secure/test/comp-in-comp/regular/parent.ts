@@ -20,7 +20,9 @@ function ParentConstructor({}: Props<ParentProps>, refs: ParentElementRefs) {
     refs.parentCallsChildApiButton.onclick(
         ({event, coordinate, viewState}) => {
             refs.staticChild.setChildText(`event from parent ${event} ${JSON.stringify(coordinate)} ${JSON.stringify(viewState)}`)
-            dynamicChildren()[0].childText = `event from parent ${event} ${JSON.stringify(coordinate)} ${JSON.stringify(viewState)}`
+            refs.dynamicChildren
+                .find(dynamicChild => dynamicChild.id === 'A')
+                .setChildText(`event from parent ${event} ${JSON.stringify(coordinate)} ${JSON.stringify(viewState)}`)
         })
     refs.staticChild.onChildClick(({event, viewState, coordinate}) => {
         setTextFromChildEvent(event.useCase)

@@ -164,14 +164,8 @@ describe('comp in comp - parent child communication', () => {
 
             let event = {useCase: `event from child`, useCaseId: 0}
 
-            let viewState = {
-                "textFromChildEvent":"-",
-                "viewStateFromChildEvent":"-",
-                "coordinateFromChildEvent":"-",
-                "childText":"-",
-                "dynamicChildren":[{"id":"A","childText":"-"}]
-            }
-            let coordinate = ['staticChild']
+            let viewState = {"id":"A","childText":"-"}
+            let coordinate = ['A', 'dynamicChildren']
             expect(textFromChildEvent.textContent).toBe(event.useCase)
             expect(viewStateFromChildEvent.textContent).toBe(JSON.stringify(viewState))
             expect(coordinateFromChildEvent.textContent).toBe(JSON.stringify(coordinate))
