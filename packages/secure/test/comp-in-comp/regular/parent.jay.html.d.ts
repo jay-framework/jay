@@ -1,18 +1,25 @@
 import {JayElement, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
-import {ChildRef} from './child-refs';
+import {ChildRef, ChildRefs} from './child-refs';
 import {Child, ChildProps} from './child';
+
+export interface DynamicChild {
+  id: string,
+  childText: string
+}
 
 export interface ParentViewState {
   textFromChildEvent: string,
   viewStateFromChildEvent: string,
   coordinateFromChildEvent: string,
-  childText: string
+  childText: string,
+  dynamicChildren: Array<DynamicChild>
 }
 
 export interface ParentElementRefs {
   parentChangesChildPropButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>,
   parentCallsChildApiButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>,
-  child: ChildRef<ParentViewState>
+  staticChild: ChildRef<ParentViewState>,
+  dynamicChildren: ChildRefs<DynamicChild>
 }
 
 export type ParentElement = JayElement<ParentViewState, ParentElementRefs>

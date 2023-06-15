@@ -2,7 +2,8 @@ import {JayElement, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
 
 export interface ChildViewState {
   textFromProp: string,
-  textFromAPI: string
+  textFromAPI: string,
+  id: string
 }
 
 export interface ChildElementRefs {

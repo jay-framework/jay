@@ -3,12 +3,13 @@ import {makeJayComponent, Props, createMemo, createEvent, createState} from 'jay
 
 export interface ChildProps {
     textFromParent: string
+    id: string
 }
 export interface ChildEvent {
     useCase: string,
     useCaseId: number
 }
-function ChildConstructor({textFromParent}: Props<ChildProps>, refs: ChildElementRefs) {
+function ChildConstructor({textFromParent, id}: Props<ChildProps>, refs: ChildElementRefs) {
     let textFromProp = createMemo(() => `text from parent: ${textFromParent()}`);
     let [textFromAPI, setTextFromAPI] = createState('-');
     let onChildClick = createEvent<ChildEvent>()
@@ -26,7 +27,7 @@ function ChildConstructor({textFromParent}: Props<ChildProps>, refs: ChildElemen
     const setChildText = (text) => setTextFromAPI(text)
 
     return {
-        render: () => ({textFromProp, textFromAPI}),
+        render: () => ({textFromProp, textFromAPI, id}),
         onChildClick,
         setChildText
     }
