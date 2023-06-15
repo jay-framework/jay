@@ -4,14 +4,22 @@
   "description": "",
   "scripts": {
     "d": "node node_modules/jay-cli/dist/index.js definitions ./lib",
-    "runtime": "node node_modules/jay-cli/dist/index.js runtime ./lib ./build/main",
+    "jay-secure": "node node_modules/jay-cli/dist/index.js runtime ./lib ./lib-secure/main",
     "rollup": "rollup --config ./rollup.config.js",
-    "build": "npm run d && npm run rollup"
+    "build": "npm run d && npm run rollup",
+    "copy": "cp ./lib/main.ts ./lib-secure/sandbox/ && cp ./lib/benchmark.ts ./lib-secure/sandbox/",
+    "copy-basic": "mkdir ./lib-secure/sandbox/basic/ && cp ./lib/basic/basic-data.ts ./lib-secure/sandbox/basic/",
+    "copy-collection": "mkdir ./lib-secure/sandbox/collections/ && cp ./lib/collections/collections-data.ts ./lib-secure/sandbox/collections/",
+    "copy-composite": "mkdir ./lib-secure/sandbox/composite/ && cp ./lib/composite/composite-data.ts ./lib-secure/sandbox/composite/",
+    "copy-condition": "mkdir ./lib-secure/sandbox/conditions/ && cp ./lib/conditions/conditions-data.ts ./lib-secure/sandbox/conditions/",
+    "copy-table": "mkdir ./lib-secure/sandbox/table/ && cp ./lib/table/table-host.ts ./lib-secure/sandbox/table/ && cp ./lib/table/table.ts ./lib-secure/sandbox/table/",
+    "mk-secure": "npm run jay-secure && npm run copy && npm run copy-basic && npm run copy-collection && npm run copy-composite && npm run copy-condition && npm run copy-table"
   },
   "dependencies": {
     "jay-component": "1.0.0",
     "jay-runtime": "1.0.0",
-    "jay-reactive": "1.0.4"
+    "jay-reactive": "1.0.4",
+    "jay-secure": "1.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.18.10",

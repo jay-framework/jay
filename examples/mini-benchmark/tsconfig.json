@@ -10,9 +10,9 @@
       "es2016",
       "dom"
     ],
-    "rootDir": "lib"
+    "rootDirs": ["lib", "lib-secure"]
   },
   "lib": ["es2015"],
-  "include": ["lib/**/*"]
+  "include": ["lib/**/*", "lib-secure/**/*"]
 
 }
