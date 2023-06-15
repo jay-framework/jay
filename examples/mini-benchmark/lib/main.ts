@@ -1,5 +1,5 @@
 import {createState, makeJayComponent, Props} from 'jay-component';
-import {MainRefs, render, SelectedExample} from "./main.jay.html";
+import {MainElementRefs, render, SelectedExample} from "./main.jay.html";
 
 interface MainProps {}
 
@@ -7,7 +7,7 @@ const examples = Object.keys(SelectedExample)
     .filter(_ => !isNaN(Number(_)))
     .map(_ => ({value: _, name: SelectedExample[_]}))
 
-function MainConstructor({}: Props<MainProps>, refs: MainRefs) {
+function MainConstructor({}: Props<MainProps>, refs: MainElementRefs) {
 
     let [selectedExample, setSelectedExample] = createState<SelectedExample>(SelectedExample.basic);
     let [cycles, setCycles] = createState(1000);

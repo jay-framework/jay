@@ -1,4 +1,4 @@
-import {render, TableRefs} from './table.jay.html';
+import {render, TableElementRefs} from './table.jay.html';
 import {createState, makeJayComponent, Props } from 'jay-component';
 import { mutableObject } from 'jay-reactive';
 
@@ -7,7 +7,7 @@ interface TableProps {
     numCellsToUpdate: number
 }
 
-function TableConstructor({tableSize, numCellsToUpdate}: Props<TableProps>, refs: TableRefs) {
+function TableConstructor({tableSize, numCellsToUpdate}: Props<TableProps>, refs: TableElementRefs) {
 
     let [line, _] = createState(() => {
         let tableLines = []

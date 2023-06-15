@@ -1,4 +1,4 @@
-import {render, CollectionsRefs} from './collections.jay.html';
+import {render, CollectionsElementRefs} from './collections.jay.html';
 import {createState, makeJayComponent, useReactive, Props, createMemo} from 'jay-component';
 import benchmark from "../benchmark";
 import {mutableObject} from 'jay-reactive';
@@ -7,7 +7,7 @@ interface CollectionsProps {
     cycles: number
 }
 
-function CollectionsConstructor({cycles}: Props<CollectionsProps>, refs: CollectionsRefs) {
+function CollectionsConstructor({cycles}: Props<CollectionsProps>, refs: CollectionsElementRefs) {
     let [title] = createState('collection');
     let reactive = useReactive();
     let [items] = createState(mutableObject([

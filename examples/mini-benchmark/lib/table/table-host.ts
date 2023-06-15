@@ -1,12 +1,12 @@
 import benchmark from "../benchmark";
 import {createState, makeJayComponent, Props } from 'jay-component';
-import {render as TableHostRender, TableHostRefs} from "./table-host.jay.html";
+import {render as TableHostRender, TableHostElementRefs} from "./table-host.jay.html";
 
 interface TableHostProps {
     cycles: number
 }
 
-function TableHostConstructor({cycles}: Props<TableHostProps>, refs: TableHostRefs) {
+function TableHostConstructor({cycles}: Props<TableHostProps>, refs: TableHostElementRefs) {
 
     let [size, setSize] = createState(100);
     let [updates, setUpdates] = createState(100);

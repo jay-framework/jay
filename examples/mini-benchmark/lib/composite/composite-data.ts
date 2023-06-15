@@ -1,4 +1,4 @@
-import {render, CompositeRefs} from './composite.jay.html';
+import {render, CompositeElementRefs} from './composite.jay.html';
 import {createState, makeJayComponent, useReactive, Props } from 'jay-component';
 import benchmark from "../benchmark";
 
@@ -6,7 +6,7 @@ interface CompositeProps {
     cycles: number
 }
 
-function CompositeConstructor({cycles}: Props<CompositeProps>, refs: CompositeRefs) {
+function CompositeConstructor({cycles}: Props<CompositeProps>, refs: CompositeElementRefs) {
     let [text, setText] = createState('name');
     let [text2, setText2] = createState('text 2');
     let reactive = useReactive();
