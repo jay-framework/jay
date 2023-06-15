@@ -1,5 +1,6 @@
-import {render, ItemElementRefs} from "./item.jay.html";
+import {render, ItemElementRefs, ItemViewState} from "./item.jay.html";
 import {createEvent, createState, makeJayComponent, Props } from "jay-component";
+import {$handler} from "jay-secure/dist/$func";
 
 export interface ItemProps {
     title: string,
@@ -36,10 +37,10 @@ function ItemConstructor({title, isCompleted}: Props<ItemProps>, refs: ItemEleme
     refs.button.onclick(() => onRemove.emit(null))
     refs.title.onblur(() => handleSubmit())
     refs.title
-        .$onchange(({event}) => (event.target as HTMLInputElement).value)
+        .$onchange($handler<Event, ItemViewState, any>('1'))
         .then(({event: value}) => setEditText(value))
     refs.title
-        .$onkeydown(({event}) => (event.which))
+        .$onkeydown($handler<KeyboardEvent, ItemViewState, any>('2'))
         .then(({event:which, viewState: todo})=> {
             if (which === ESCAPE_KEY) {
                 todo.editText = todo.title;

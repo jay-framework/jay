@@ -1,5 +1,6 @@
 import {render} from "./todo.jay.html";
 import {makeJayComponentBridge} from "jay-secure";
+import {funcRepository} from "./native-funcs";
 
 export interface TodoItem {
     id: string,
@@ -11,4 +12,4 @@ export interface TodoProps {
     initialTodos: Array<TodoItem>
 }
 
-export const Todo = makeJayComponentBridge(render);
+export const Todo = makeJayComponentBridge(render, {funcRepository});

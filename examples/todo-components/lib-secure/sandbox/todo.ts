@@ -1,7 +1,8 @@
-import {Filter, render, ShownTodo, TodoElementRefs} from './todo.jay.html';
+import {Filter, render, ShownTodo, TodoElementRefs, TodoViewState} from './todo.jay.html';
 import {createMemo, createState, makeJayComponent, Props} from 'jay-component';
 import {mutableObject} from 'jay-reactive';
 import {uuid} from "./uuid";
+import {$handler} from "jay-secure/dist/$func";
 
 const ENTER_KEY = 13;
 
@@ -46,10 +47,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
     refs.filterAll.onclick(() => setFilter(Filter.all))
 
     refs.newTodo
-        .$onkeydown(({event}) => {
-            (event.keyCode === ENTER_KEY)?event.preventDefault():''
-            return event.keyCode;
-        })
+        .$onkeydown($handler<KeyboardEvent, TodoViewState, any>('3'))
         .then(({event: keyCode}) => {
             if (keyCode !== ENTER_KEY)
                 return;
@@ -70,7 +68,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
         })
 
     refs.newTodo
-        .$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .$oninput($handler<Event, TodoViewState, any>('4'))
         .then(({event: value}) => {
             setNewTodo(value)
         })
@@ -95,7 +93,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
     })
 
     refs.toggleAll
-        .$onchange(({event}) => (event.target as HTMLInputElement).checked)
+        .$onchange($handler<Event, TodoViewState, any>('5'))
         .then(({event: completed}) => {
             setTodos(todos().map(todo => ({...todo, isCompleted: completed})))
         })
