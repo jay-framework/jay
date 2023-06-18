@@ -1,6 +1,6 @@
 import {HTMLElementProxy, JayElement,} from "jay-runtime";
 import {Table as TableComp} from './table';
-import {elementBridge, secureChildComp as childComp, sandboxElement as e} from "jay-secure";
+import {elementBridge, sandboxChildComp as childComp, sandboxElement as e} from "jay-secure";
 import {TableRef} from "../../main/table/table-refs";
 
 export interface TableHostViewState {
