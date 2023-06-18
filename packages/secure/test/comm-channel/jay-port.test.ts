@@ -2,6 +2,7 @@ import {describe, expect, it} from '@jest/globals'
 import {JayPort, JayPortLogger} from "../../lib/comm-channel/jay-port";
 import {JayChannel, JPMMessage} from "../../lib/comm-channel/comm-channel";
 import {addEventListenerMessage, eventInvocationMessage, renderMessage} from "../../lib/comm-channel/messages";
+import {eventually10ms} from "../util/eventually";
 
 const MESSAGE_RENDER_1 = renderMessage({foo: 'bar'});
 const MESSAGE_RENDER_2 = renderMessage({foo: 'goo'});
@@ -74,6 +75,26 @@ describe('jay-port', () => {
                         [3, MESSAGE_ADD_EVENT_LISTENER_CLICK_ADD]],
                     newCompIdMessages: [["1-comp1", 2], ["1-comp2,a", 3]]})
         })
+
+        it('should auto batch and flush messages', async () => {
+            let {port, logger, channel} = mkPort();
+
+            let endpoint1 = port.getEndpoint(1, ['comp1'])
+            endpoint1.post(MESSAGE_RENDER_1)
+            let endpoint2 = port.getEndpoint(1, ['comp2', 'a'])
+            endpoint2.post(MESSAGE_RENDER_2)
+            endpoint2.post(MESSAGE_ADD_EVENT_LISTENER_CLICK_ADD)
+
+            await eventually10ms(() => {
+                expect(channel.messagesFromPort)
+                    .toContainEqual({
+                        messages: [[2, MESSAGE_RENDER_1],
+                            [3, MESSAGE_RENDER_2],
+                            [3, MESSAGE_ADD_EVENT_LISTENER_CLICK_ADD]],
+                        newCompIdMessages: [["1-comp1", 2], ["1-comp2,a", 3]]})
+            })
+        })
+
     })
 
     describe('compId handshake between two ports', () => {

@@ -15,6 +15,8 @@ export class JayPort implements IJayPort {
     private comps: Map<string, number> = new Map();
     private lastCompId: number = 0;
     private newCompIdMessages: Array<[string, number]> = [];
+    private isAutoFlushScheduled: boolean = false;
+    private autoFlushTimeout: any = undefined;
 
     constructor(private channel: JayChannel,
                 private logger? : JayPortLogger) {
@@ -49,6 +51,8 @@ export class JayPort implements IJayPort {
         if (this.logger)
             this.logger.logPost(compId, outMessage)
         this.messages.push([compId, outMessage]);
+        if (!this.inBatch)
+            this.scheduleFlush();
     }
 
     batch<T>(handler: () => T): T {
@@ -93,6 +97,19 @@ export class JayPort implements IJayPort {
         this.channel.postMessages(this.messages, this.newCompIdMessages);
         this.messages = [];
         this.newCompIdMessages = [];
+        if (this.isAutoFlushScheduled) {
+            this.isAutoFlushScheduled = false;
+            clearTimeout(this.autoFlushTimeout);
+        }
+    }
+
+    private scheduleFlush() {
+        this.isAutoFlushScheduled = true;
+        this.autoFlushTimeout = setTimeout(() => {
+            this.autoFlushTimeout = undefined;
+            this.isAutoFlushScheduled = false;
+            this.flush();
+        })
     }
 }
 
