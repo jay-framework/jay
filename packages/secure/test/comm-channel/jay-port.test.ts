@@ -4,8 +4,8 @@ import {JayChannel, JPMMessage} from "../../lib/comm-channel/comm-channel";
 import {addEventListenerMessage, eventInvocationMessage, renderMessage} from "../../lib/comm-channel/messages";
 import {eventually10ms} from "../util/eventually";
 
-const MESSAGE_RENDER_1 = renderMessage({foo: 'bar'});
-const MESSAGE_RENDER_2 = renderMessage({foo: 'goo'});
+const MESSAGE_RENDER_1 = renderMessage(JSON.stringify({foo: 'bar'}));
+const MESSAGE_RENDER_2 = renderMessage(JSON.stringify({foo: 'goo'}));
 const MESSAGE_ADD_EVENT_LISTENER_CLICK_ADD = addEventListenerMessage('add', 'click');
 const MESSAGE_ADD_EVENT_LISTENER_CLICK_DEC = addEventListenerMessage('dec', 'click');
 const MESSAGE_EVENT_CLICK_ADD = eventInvocationMessage('click', ['add']);
