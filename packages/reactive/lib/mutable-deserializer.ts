@@ -1,5 +1,5 @@
 import {_mutableObject, isMutable, mutableObject, originalSymbol} from "./mutable";
-import {ARRAY, REVNUM} from "./serialize-consts";
+import {ARRAY, NOT_CHANGED, REVNUM} from "./serialize-consts";
 import {REVISION, setRevision} from "./revisioned";
 
 export type Deserialize<T> = (serialized: string) => [T, Deserialize<T>]
@@ -14,6 +14,8 @@ function update<T>(mutable: T, revivied: T) {
     delete revivied[ARRAY]
     for (let key of Object.keys(revivied)) {
         let type = typeof revivied[key];
+        if (revivied[key] === NOT_CHANGED)
+            continue;
         switch (type) {
             case "string":
             case "number":

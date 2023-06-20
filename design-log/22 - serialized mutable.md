@@ -128,16 +128,26 @@ Assumptions and observations:
 * We note that the challenge is when an item is marked as unchanged but has moved, in which case sending it has unchanged is a mistake.
 * If the algorithm only focuses on optimizing arrays, the algorithm is scoped for a single Array instance.
 
+The main idea of supporting *unchanged optimization* is to identify when an item has not change and has not moved - which 
+can be done locally (per object to be serialized) by creating the pairs `(prop/index, child revision)`.
+1. if the child object was updated, the `child revision` will be different
+2. if the child object has moved, the `prop/index` will be different
+3. for arrays, we can find an object with the same `child revision` but for a different `index`, we know it moved
+
+Lets build the algorithm - 
+
 The algorithm for general serialization - 
 1. using `replacer` for `JSON.stringify` we serialize the revision symbol value as a property, and for arrays also add an array indication.
-   (why? because array regular notation of `[1,2,3,4]` does not play nice with another revision property, in which case JS turns the array into an object)
+   (why? because array regular notation of `[1,2,3,4]` does not play nice with another revision property, in which case we serialize an array as an object `{1: 1, 2:2, 3:3, 4:4}`)
 2. serialization and re-serialization are the same.
 3. on deserialization we revive the revision symbol value and use the array marker to create array instances when needed.
 4. on re-deserialization we deserialize the new value, then update the mutable instance by selectively coping primitive values using a recursive function
 
-The algorithm for arrays with the optimization - 
-1. on array serialization, we generate an object id stored on a symbol property on the array items. 
-2. on an object who has the object id symbol serialization, we serialize the object id. If the object revision is smaller from the last time serialization happened,
-   we write a mark for not change and skip actual serialization
-3. on deserialization, we use the object id to reorder existing array items by the new order from the serialized object.
-4. on object deserialization, if the object has the not changed mark, we do nothing.
+The algorithm for arrays / objects with the optimization -
+1. at serialization time for `object` or `array`, we stores on the mutable object a map of property / index to revision of child objects.
+2. at re-serealization, for each `object`, for each `property`, if the revision has not change, we serialize `unchanged`
+3. for each `array`, we create a map of revisions and compare object revisions to the previous object revisions. 
+   1. for existing `revisions`, we serialize  `(index, previousIndex, unchanged)`
+   2. for new `revisions`, we serialize `(index, object)`
+4. on deserialization, for `objects`, we do not update when seeing `unchanged`
+5. for `arrays`, we build a new the array according to the serialized representation, including updating the `array revision`. 

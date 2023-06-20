@@ -1,3 +1,4 @@
+import {setPrivateProperty} from "./private-property";
 
 
 export const REVISION = Symbol.for('revision');
@@ -13,15 +14,7 @@ export function getRevision<T extends object>(value: T): Revisioned<T> {
 }
 
 export function setRevision<T extends object>(value: T, revision: number): T {
-    if (!Object.getOwnPropertyDescriptor(value, REVISION))
-        Object.defineProperty(value, REVISION, {
-            value: revision,
-            enumerable: false,
-            writable: true
-        });
-    else
-        value[REVISION] = revision;
-    return value
+    return setPrivateProperty(value, REVISION, revision);
 }
 
 export function initRevision<T extends object>(value: T): T {

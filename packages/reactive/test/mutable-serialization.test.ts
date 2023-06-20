@@ -1,11 +1,14 @@
-import {describe, expect, it, jest} from '@jest/globals'
+import {describe, expect, it, jest, beforeEach} from '@jest/globals'
 import {getRevision, mutableObject} from "../lib";
 import {serialize} from "../lib";
 import {deserialize} from "../lib";
 
 describe("mutable serialization", () => {
     describe("simple mutable objects", () => {
-        const SIMPLE_OBJECT = {a: 1, b:2, c: "abcd", d: true};
+        let SIMPLE_OBJECT;
+        beforeEach(() => {
+            SIMPLE_OBJECT = {a: 1, b:2, c: "abcd", d: true};
+        })
 
         it("should deserialize to an equal object", () => {
             let mutable = mutableObject(SIMPLE_OBJECT);
@@ -21,7 +24,6 @@ describe("mutable serialization", () => {
 
             let revision = getRevision(mutable);
             let deserializedRevision = getRevision(deserialized);
-
             expect(revision.revNum).toEqual(deserializedRevision.revNum);
         })
 
@@ -64,53 +66,87 @@ describe("mutable serialization", () => {
     })
 
     describe("nested mutable object", () => {
-        const NESTED_OBJECT = {
-            a: 1, b:2, name: {firstName: "Joe", lastName: "Smith"}
-        };
-        const NESTED_OBJECT_UPDATE = {firstName: "Mark", lastName: "Webber"}
 
-        it("should deserialize to an equal object", () => {
-            let mutable = mutableObject(NESTED_OBJECT);
-            let [serialized, nextSerialize] = serialize(mutable);
-            let [deserialized, nextDeserialize] = deserialize(serialized);
-            expect(mutable).toEqual(deserialized);
+        describe("basic serialization", () => {
+            let NESTED_OBJECT;
+            let NESTED_OBJECT_UPDATE;
+            beforeEach(() => {
+                NESTED_OBJECT = {
+                    a: 1, b:2, name: {firstName: "Joe", lastName: "Smith"}
+                };
+                NESTED_OBJECT_UPDATE = {firstName: "Mark", lastName: "Webber"}
+            })
+
+            it("should deserialize to an equal object", () => {
+                let mutable = mutableObject(NESTED_OBJECT);
+                let [serialized, nextSerialize] = serialize(mutable);
+                let [deserialized, nextDeserialize] = deserialize(serialized);
+                expect(mutable).toEqual(deserialized);
+            })
+
+            it("should serialize and deserialize the mutable revision", () => {
+                let mutable = mutableObject(NESTED_OBJECT);
+                let [serialized, nextSerialize] = serialize(mutable);
+                let [deserialized, nextDeserialize] = deserialize<any>(serialized);
+
+                let revision = getRevision(mutable);
+                let revision_name = getRevision(mutable.name);
+                let deserializedRevision = getRevision(deserialized);
+                let deserializedRevision_name = getRevision(deserialized.name);
+
+                expect(revision.revNum).toEqual(deserializedRevision.revNum);
+                expect(revision_name.revNum).toEqual(deserializedRevision_name.revNum);
+            })
+
+            it("should re-serialize and re-deserialize to an equal object", () => {
+                let mutable = mutableObject(NESTED_OBJECT);
+                let [serialized, nextSerialize] = serialize(mutable);
+                let [deserialized, nextDeserialize] = deserialize(serialized);
+
+                mutable.name = NESTED_OBJECT_UPDATE;
+                [serialized, nextSerialize] = nextSerialize(mutable);
+                let [deserialized2, nextDeserialize2] = nextDeserialize(serialized)
+                expect(mutable).toEqual(deserialized2);
+                expect(deserialized).toBe(deserialized2);
+            })
+
+            it('should serialize mutable object child of immutable', () => {
+                let obj: any = NESTED_OBJECT;
+                obj.name = mutableObject(NESTED_OBJECT.name);
+                let [serialized, nextSerialize] = serialize(obj);
+                let [deserialized, nextDeserialize] = deserialize<any>(serialized);
+                expect(obj).toEqual(deserialized);
+                let revision_name = getRevision(obj.name);
+                let deserializedRevision_name = getRevision(deserialized.name);
+                expect(revision_name.revNum).toEqual(deserializedRevision_name.revNum);
+            })
         })
 
-        it("should serialize and deserialize the mutable revision", () => {
-            let mutable = mutableObject(NESTED_OBJECT);
-            let [serialized, nextSerialize] = serialize(mutable);
-            let [deserialized, nextDeserialize] = deserialize<any>(serialized);
+        describe('unchanged nested mutable objects optimization', () => {
+            let NESTED_OBJECT;
+            let NESTED_OBJECT_UPDATE;
+            beforeEach(() => {
+                NESTED_OBJECT = {
+                    a: 1,
+                    b:2,
+                    name: {firstName: "Joe", lastName: "Smith"},
+                    address: {street: "124 main st", city: "springfield", state: "alabama"}
+                };
+                NESTED_OBJECT_UPDATE = {firstName: "Mark", lastName: "Webber"}
+            })
 
-            let revision = getRevision(mutable);
-            let revision_name = getRevision(mutable.name);
-            let deserializedRevision = getRevision(deserialized);
-            let deserializedRevision_name = getRevision(deserialized.name);
+            it("should not re-serialize unchanged object (address), yet preserve it on re-deserialize", () => {
+                let mutable = mutableObject(NESTED_OBJECT);
+                let [serialized, nextSerialize] = serialize(mutable);
+                let [deserialized, nextDeserialize] = deserialize(serialized);
 
-            expect(revision.revNum).toEqual(deserializedRevision.revNum);
-            expect(revision_name.revNum).toEqual(deserializedRevision_name.revNum);
-        })
+                mutable.name = NESTED_OBJECT_UPDATE;
+                [serialized, nextSerialize] = nextSerialize(mutable);
+                let [deserialized2, nextDeserialize2] = nextDeserialize(serialized)
+                expect(mutable).toEqual(deserialized2);
+                expect(deserialized).toBe(deserialized2);
+            })
 
-        it("should re-serialize and re-deserialize to an equal object", () => {
-            let mutable = mutableObject(NESTED_OBJECT);
-            let [serialized, nextSerialize] = serialize(mutable);
-            let [deserialized, nextDeserialize] = deserialize(serialized);
-
-            mutable.name = NESTED_OBJECT_UPDATE;
-            [serialized, nextSerialize] = nextSerialize(mutable);
-            let [deserialized2, nextDeserialize2] = nextDeserialize(serialized)
-            expect(mutable).toEqual(deserialized2);
-            expect(deserialized).toBe(deserialized2);
-        })
-
-        it('should serialize mutable object child of immutable', () => {
-            let obj: any = NESTED_OBJECT;
-            obj.name = mutableObject(NESTED_OBJECT.name);
-            let [serialized, nextSerialize] = serialize(obj);
-            let [deserialized, nextDeserialize] = deserialize<any>(serialized);
-            expect(obj).toEqual(deserialized);
-            let revision_name = getRevision(obj.name);
-            let deserializedRevision_name = getRevision(deserialized.name);
-            expect(revision_name.revNum).toEqual(deserializedRevision_name.revNum);
         })
     })
 
@@ -142,10 +178,14 @@ describe("mutable serialization", () => {
     })
 
     describe("mutable array of primitives", () => {
-        const ARRAY_PRIMITIVES = {
-            items: [1,2,3,4]
-        }
-        const ARRAY_PRIMITIVES_UPDATE = [1,2,3,4,5]
+        let ARRAY_PRIMITIVES
+        let ARRAY_PRIMITIVES_UPDATE
+        beforeEach(() => {
+            ARRAY_PRIMITIVES = {
+                items: [1,2,3,4]
+            }
+            ARRAY_PRIMITIVES_UPDATE = [1,2,3,4,5]
+        })
 
         it("should deserialize to an equal object", () => {
             let mutable = mutableObject(ARRAY_PRIMITIVES);
@@ -210,14 +250,19 @@ describe("mutable serialization", () => {
     })
 
     describe("mutable array of objects", () => {
-        const ARRAY_OBJECTS = {
-            items: [
-                {id: "one", name: "Joe", age: 12},
-                {id: "two", name: "Mark", age: 24},
-                {id: "three", name: "Bill", age: 53}
-            ]
-        }
-        const ARRAY_OBJECTS_ITEM_1_UPDATE = {id: "two", name: "Mark Smith", age: 37}
+        let ARRAY_OBJECTS;
+        let ARRAY_OBJECTS_ITEM_1_UPDATE;
+
+        beforeEach(() => {
+            ARRAY_OBJECTS = {
+                items: [
+                    {id: "one", name: "Joe", age: 12},
+                    {id: "two", name: "Mark", age: 24},
+                    {id: "three", name: "Bill", age: 53}
+                ]
+            }
+            ARRAY_OBJECTS_ITEM_1_UPDATE = {id: "two", name: "Mark Smith", age: 37}
+        })
 
         it("should deserialize to an equal object", () => {
             let mutable = mutableObject(ARRAY_OBJECTS);

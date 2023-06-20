@@ -1,4 +1,5 @@
-import {initRevision, setRevision, touchRevision} from "./revisioned";
+import {initRevision, touchRevision} from "./revisioned";
+import {setPrivateProperty} from "./private-property";
 
 const isProxy = Symbol.for("isProxy")
 const mutationListener = Symbol.for("listener")
@@ -18,15 +19,7 @@ export function removeMutableListener(obj: object, changeListener: ChangeListene
 }
 
 function setProxy(obj: object, proxy: object) {
-    if (!Object.getOwnPropertyDescriptor(obj, proxySymbol))
-        Object.defineProperty(obj, proxySymbol, {
-            value: proxy,
-            enumerable: false,
-            configurable: true,
-            writable: true
-        });
-    else
-        obj[proxySymbol] = proxy;
+    return setPrivateProperty(obj, proxySymbol, proxy);
 }
 
 function getProxy(obj: object) {
