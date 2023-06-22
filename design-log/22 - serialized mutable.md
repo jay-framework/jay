@@ -150,4 +150,104 @@ The algorithm for arrays / objects with the optimization -
    1. for existing `revisions`, we serialize  `(index, previousIndex, unchanged)`
    2. for new `revisions`, we serialize `(index, object)`
 4. on deserialization, for `objects`, we do not update when seeing `unchanged`
-5. for `arrays`, we build a new the array according to the serialized representation, including updating the `array revision`. 
+5. for `arrays`, we build a new the array according to the serialized representation, including updating the `array revision`.
+
+
+Update
+====
+
+Seems that this algorithm includes double copy of objects - once to mutate the objects, transforming arrays to objects 
+and adding the revision, then serializing the transformed objects.
+
+Not Working!
+
+So now, we are looking for alternatives that are more effective serialization. 
+We keep in mind the process we have -
+
+![Diagram](22%20-%20serialized%20mutable%20flow.svg)
+
+We need to make all the process performant
+* `Array` - can be mutable or immutable. 
+
+  `immer` does a great job at creating a new immutable array that can then be serialized.
+  
+  `jay mutable` does a great job at updating the mutable array and tracking which object changed
+* `serialized` - can be full object serialization or a patch (only serialize what has changed)
+  
+  `immer` and most similar json diff algorithms are great for value updates, but fail on array `unshift` with a very
+  inefficient diff **see note 1 below**
+
+  `jay mutable` serialization is challenging because the revision number serialization requires that we transform array 
+  into another representation **see note 2 below**. Still, it is a form of a patch based serialization.
+
+* `revived array` - the array we get after serialization. 
+
+  default serialization of the whole object results in an all new object, which is missing all the `===` optimizations
+  in the `jay-runtime` package.
+
+  patch based serialization works as objects who have not been changed remain as sub-trees of the new patched object
+
+* `diff against previous DOM` - the algorithm is at [list-compare](../packages/runtime/lib/list-compare.ts)
+  It is a type of a patch algorithm that takes into account the `track-by` / `key` as objects ids, and calculates the
+  minimal mutation from the previous status to the current array status.
+
+  Given a patch, we can optimize this algorithm to use the patch instructions. 
+  However, it is fast until about 10,000 Array items, so no real need to make the optimization
+
+
+#### Note 1 - optimizing json diff
+the problem with json diff is that given two `array`s, without any additional knowledge, to figure out if an item was 
+pushed to the front, we have to do a `===` comparison between the array items, which is `O(n^2)` complexity.
+
+```typescript
+for (let a = 0; a < A.length; a++) {
+    for (let b = 0; b < A.length; b++) {
+        if (A[a] === B[b])
+            // compute the diff    
+    }    
+}
+```
+
+However, we can create an algorithm focused on small changes that has complexity `O(n)` with a cutoff. 
+The algorithm makes the assumption that *small* changes can be found fast and require small number of mutations to describe.
+The cutoff is set at `let limit = log(min(A.length, B.length))` and the algorithm has complexity `O(limit^2) ~ O(n)`
+
+The algorithm - 
+```typescript
+let limit = log(min(A.length, B.length));
+let a=0, b=0;
+mainLoop: while (a < A.length && b < B.length) {
+    if (A(a) === B(b)) {
+        a += 1;
+        b += 1
+    }
+    continue;
+    for (let seekSize = 1; seekSize < limit; seekSize++) {
+        for (let index = 1; index <= seekSize; index++) {
+            if (A[a+index] === B[b+seekSize-index])
+                // we have a match, the elements from A between (a..a+index) and replace them with the items from B between (b..b+seekSize-index)
+            continue mainLoop;    
+        }
+    }
+    // revert to direct comparison of attributes json diff model (the standard model used by all other algorithms)
+}
+```
+
+#### Note 2 - optimizing serialization of mutable
+
+The problem with mutable serialization is the requirement to serialize the `revnum`.
+
+however, if we drop this requirement, can we turn mutable serialization into a json diff like structure?
+
+We note that mutable `revnum` is per object, and if an object was updated after the last serialization, it's `revnum` will be higher.
+however, mutable updates the `revnum` of parent objects as well and does not track fine grained attribute changes, only tracking the fact
+the parent object was modified.
+
+Still, mutable does know, at the mutation time what has changed, and can generate a json diff instruction on the spot.
+The advantage of this method is that `array.splice(4,2, {...}, {...}, {...})` turns almost trivially into two json diff `delete` instructions 
+and three json diff `add` instructions.
+
+Then, we can serialize the json diff generated from mutable. 
+Applying the json diff on deserialization on another mutable will update the `revnum` allowing runtime to work in an optimal way 
+on the mutated mutable. Still, the `revnum` of the same object across contexts will be different, but we are not sure it is significant.
+
