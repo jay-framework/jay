@@ -54,7 +54,7 @@
     
         Jay.registerTemplate('CompDiv1', ({inputOnChange, value}: {inputOnChange: any,value: string })=>{
             
-            return <inputOnChange onChange={inputOnChange} value={value}/>
+            return <input onChange={inputOnChange} value={value}/>
         })
     }
        
@@ -84,7 +84,7 @@ const Comp2 = ({title}: {title: string})=>{
     // client
 ``
     Jay.registerTemplate('CompDiv_guid1', ({title}: {title: string})=>{
-        return <div><Comp2 key='innerCompKey'/>{title}</div>
+        return <div><Comp2 key='innerCompKey' title={title}/></div>
     })
 }
     
@@ -123,6 +123,7 @@ const Comp2 = ({title}: {title: string})=>{
     Jay.registerTemplate('CompDiv1', ({titles}: {titles: string[]})=>{
         return <div>{titles.map(t=>(
             <div key={t}>
+                {/** notice the client does not supply the props to the inner component */}
                 <Comp key={`${t}|innerCompKey`}/>
             </div>
         ))}</div>
