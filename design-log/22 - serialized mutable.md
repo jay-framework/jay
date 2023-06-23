@@ -251,3 +251,26 @@ Then, we can serialize the json diff generated from mutable.
 Applying the json diff on deserialization on another mutable will update the `revnum` allowing runtime to work in an optimal way 
 on the mutated mutable. Still, the `revnum` of the same object across contexts will be different, but we are not sure it is significant.
 
+#### Note 3 - Style difference
+
+Given the above, the performance of using immer or jay mutable will be small. However, there is still a bit of style difference
+
+With immer, a todo item change will look like
+
+```typescript
+let [todo, setTodo] = createState([...])
+
+refs.done.onclick((viewState: item) => {
+    setTodo(produce(todo(), draft => draft.find(_.id === item.id).done = !item.done))
+})
+```
+
+With mutable, a todo item change will look like
+
+```typescript
+let [todo, setTodo] = createMutableState([...])
+
+refs.done.onclick((viewState: item) => {
+    item.todo = !item.todo
+})
+```
