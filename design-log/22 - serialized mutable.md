@@ -260,7 +260,7 @@ With immer, a todo item change will look like
 ```typescript
 let [todo, setTodo] = createState([...])
 
-refs.done.onclick((viewState: item) => {
+refs.done.onclick(({viewState: item}) => {
     setTodo(produce(todo(), draft => draft.find(_.id === item.id).done = !item.done))
 })
 ```
@@ -270,7 +270,7 @@ With mutable, a todo item change will look like
 ```typescript
 let [todo, setTodo] = createMutableState([...])
 
-refs.done.onclick((viewState: item) => {
+refs.done.onclick(({viewState: item}) => {
     item.todo = !item.todo
 })
 ```
