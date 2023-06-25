@@ -13,6 +13,12 @@ function CompConstructor({}: Props<CompProps>, refs: CompElementRefs) {
     ])
 
     refs.button.onclick(() => setText('static button was clicked'))
+    refs.buttonExec$.onclick(async () => {
+        let buttonText = refs.buttonExec$.$exec((elem, viewState) => {
+            return elem.innerText;
+        })
+        setText(buttonText + ' was clicked')
+    })
     refs.input.$oninput(({event}) => (event.target as HTMLInputElement).value)
         .then(({event}) => setText(event))
 

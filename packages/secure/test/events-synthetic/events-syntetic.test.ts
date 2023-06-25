@@ -1,27 +1,27 @@
 import {describe, expect, it} from '@jest/globals'
 import {setChannel, useMockCommunicationChannel} from "../util/mock-channel";
 import {initializeWorker} from "./secure/worker/worker-root";
-import {CompProps} from "./secure/main/comp";
-import {CompViewState} from "./secure/main/comp.jay.html";
 import {render} from "./secure/main/app.jay.html";
 import {dispatchEvent} from "../util/dispatch-event";
+import {eventually10ms} from "../util/eventually";
 
 describe('events synthetic tests', () => {
 
     async function mkElement() {
-        let channel = useMockCommunicationChannel<CompProps, CompViewState>();
+        let channel = useMockCommunicationChannel();
         setChannel(channel);
         initializeWorker();
         let appElement = render({});
         let result = appElement.dom.querySelector('[data-id="result"]') as HTMLDivElement;
         let button = appElement.dom.querySelector('[data-id="button"]') as HTMLButtonElement;
+        let buttonExec$ = appElement.dom.querySelector('[data-id="button-exec$"]') as HTMLButtonElement;
         let input = appElement.dom.querySelector('[data-id="input"]') as HTMLInputElement;
 
         let getDynamicButtonById = (id) => appElement.dom.querySelector(`[data-id="${id}-itemButton"]`) as HTMLButtonElement;
         let getDynamicInputById = (id) => appElement.dom.querySelector(`[data-id="${id}-itemInput"]`) as HTMLButtonElement;
 
         await channel.toBeClean();
-        return {channel, appElement, result, button, input, getDynamicButtonById, getDynamicInputById}
+        return {channel, appElement, result, button, input, buttonExec$, getDynamicButtonById, getDynamicInputById}
     }
 
     it('should render the component with default result', async () => {
@@ -36,6 +36,15 @@ describe('events synthetic tests', () => {
         await channel.toBeClean()
 
         expect(result.textContent).toBe('static button was clicked')
+    })
+
+    it('should run $exec on button click and return a value', async () => {
+        let {channel, result, buttonExec$} = await mkElement();
+
+        buttonExec$.click()
+        eventually10ms(() => {
+            expect(result.textContent).toBe('button exec native was clicked')
+        })
     })
 
     it('should react to static input value change', async () => {

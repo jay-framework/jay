@@ -13,6 +13,7 @@ export interface CompViewState {
 export interface CompElementRefs {
     result: HTMLElementProxy<CompViewState, HTMLDivElement>,
     button: HTMLElementProxy<CompViewState, HTMLButtonElement>,
+    buttonExec$: HTMLElementProxy<CompViewState, HTMLButtonElement>,
     input: HTMLElementProxy<CompViewState, HTMLInputElement>,
     itemButton: HTMLElementCollectionProxy<Item, HTMLButtonElement>,
     itemInput: HTMLElementCollectionProxy<Item, HTMLInputElement>
@@ -25,6 +26,7 @@ export function render(viewState: CompViewState, options?: RenderElementOptions)
         de('div', {}, [
             e('div', {ref: 'result', "data-id": 'result'}, [dt(vs => vs.text)]),
             e('button', {ref: 'button', "data-id": 'button'}, ['button']),
+            e('button', {ref: 'buttonExec$', "data-id": 'button-exec$'}, ['button exec native']),
             e('input', {ref: 'input', "data-id": 'input'}, []),
             forEach(vs => vs.items, (vs1: Item) => {
                 return e('div', {}, [
