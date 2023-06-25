@@ -89,6 +89,7 @@ function makeComponentBridgeConstructor<
             case JayPortMessageType.nativeExec: {
                 let {nativeId, refName, coordinate, correlationId} = message;
                 let ref = refs[refName]
+                // todo support for dynamic references
                 port.batch(async () => {
                     try {
                         let result = await ref.$exec((elem, vs) =>
