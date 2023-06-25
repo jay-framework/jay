@@ -1,0 +1,5 @@
+flowchart LR
+    B[serialized as json diff]-->C[mutable object]-->D[diff against previous DOM]
+    A[immutable object]-->A2[compute json patch]-->B
+    E[immer]-->E2[get json patch]-->B
+    F[mutable]-->F2[get json patch]-->B

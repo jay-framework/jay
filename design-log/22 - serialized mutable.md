@@ -233,6 +233,14 @@ mainLoop: while (a < A.length && b < B.length) {
 }
 ```
 
+#### Note 1.1 - update on Immer
+
+Reading the Immer source again, I can see that for objects there is the `state.assigned_` member which marks which object 
+properties have been updated or deleted.
+
+We can extend the idea for `array`s to also include `added` and `removed` `array` items, those making the above algorithm 
+redundant and making for a simpler solution.
+
 #### Note 2 - optimizing serialization of mutable
 
 The problem with mutable serialization is the requirement to serialize the `revnum`.
@@ -274,3 +282,22 @@ refs.done.onclick(({viewState: item}) => {
     item.todo = !item.todo
 })
 ```
+
+# New The Plan
+
+The new plan is to have different solutions on main and sandbox. We support immer, mutable and immutable objects, each 
+with a different algorithm. We will make both immer and mutable (on the sandbox side) into optional packages.
+
+On the main side, we will use mutable in any case as it is the most optimized
+
+![Diagram](22%20-%20serialized%20mutable%20flow%202.svg)
+
+Sandbox:
+* `Immer` can create JSON Patch, which we can serialize. It has sub-optimal JSON Patch for arrays changes, 
+  but it can improved by the Immer project later 
+* `jay-mutable` can track assignments and create JSON Patch.
+* `Immutable` objects can be diffed for creating JSON Patch, taking into account an algorithm similar to note 1 above.
+
+Main:
+* `jay-mutable` tracks assignments using the `revnum` attribute. Applying a patch to a `jay-mutable` object will increase the `revnum`,
+  causing optimal rendering by `jay-runtime` based only on changed `revnum` or new array items.
