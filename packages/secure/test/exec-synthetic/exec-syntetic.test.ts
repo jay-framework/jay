@@ -30,12 +30,14 @@ describe('exec synthetic tests', () => {
         })
     })
 
-    it.skip('should run global $exec return value', async () => {
+    it('should run global $exec return value', async () => {
         let {result, buttonExec$Global} = await mkElement();
+
+        document.title = "hello from global exec test"
 
         buttonExec$Global.click()
         await eventually10ms(() => {
-            expect(result.textContent).toBe('button with text button exec element was clicked')
+            expect(result.textContent).toBe('global exec was clicked. document.title: hello from global exec test')
         })
     })
 

@@ -1,4 +1,5 @@
 import {JayEventHandler, JayNativeFunction} from "jay-runtime";
+import {JayGlobalNativeFunction} from "./main/function-repository-types";
 
 function nativeExecId(id) {
     let fn = () => null;
@@ -15,7 +16,7 @@ export function $func<ElementType extends HTMLElement, ViewState, ResultType>(id
     return nativeExecId(id);
 }
 
-export function $funcGlobal<R>(id): () => Promise<R> {
+export function $funcGlobal<R>(id): JayGlobalNativeFunction<R> {
     return nativeExecId(id);
 }
 

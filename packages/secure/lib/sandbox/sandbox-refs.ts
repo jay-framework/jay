@@ -112,7 +112,7 @@ export class StaticRefImplementation<ViewState> implements HTMLElementProxyTarge
     }
     $exec<ResultType>(handler: JayNativeFunction<any, any, ResultType>): Promise<ResultType> {
         let {$execPromise, correlationId} = correlatedPromise<ResultType>();
-        this.ep.post(nativeExec(this.ref, (handler as $JayNativeFunction<any, any, ResultType>).id, correlationId, [this.ref]));
+        this.ep.post(nativeExec((handler as $JayNativeFunction<any, any, ResultType>).id, correlationId, this.ref, [this.ref]));
         return $execPromise;
     }
     update = (newViewState: ViewState) => {
@@ -126,7 +126,7 @@ export class DynamicNativeExec<ViewState> implements HTMLNativeExec<ViewState, a
 
     $exec<ResultType>(handler: JayNativeFunction<any, ViewState, ResultType>): Promise<ResultType> {
         let {$execPromise, correlationId} = correlatedPromise<ResultType>();
-        this.ep.post(nativeExec(this.ref, (handler as $JayNativeFunction<any, any, ResultType>).id, correlationId, this.coordinate));
+        this.ep.post(nativeExec((handler as $JayNativeFunction<any, any, ResultType>).id, correlationId, this.ref, this.coordinate));
         return $execPromise;
     }
 }

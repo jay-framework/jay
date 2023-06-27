@@ -148,7 +148,7 @@ describe('sandbox-refs', () => {
 
             let $result = (bridgeElement.refs.one as HTMLElementProxy<ViewState, HTMLDivElement>).$exec($func("3"));
             let execMessage = endpoint.outMessages[0] as JPMNativeExec
-            endpoint.invoke(nativeExecResult('one', execMessage.correlationId, 12))
+            endpoint.invoke(nativeExecResult(execMessage.correlationId, 12, undefined, 'one'))
             let result = await $result;
 
             expect(result).toBe(12)
@@ -159,7 +159,7 @@ describe('sandbox-refs', () => {
 
             let $result = (bridgeElement.refs.one as HTMLElementProxy<ViewState, HTMLDivElement>).$exec($func("3"));
             let execMessage = endpoint.outMessages[0] as JPMNativeExec
-            endpoint.invoke(nativeExecResult('one', execMessage.correlationId, undefined, "failed"))
+            endpoint.invoke(nativeExecResult(execMessage.correlationId, undefined, "failed", 'one'))
 
             await expect($result).rejects.toThrow('failed');
         })
@@ -339,7 +339,7 @@ describe('sandbox-refs', () => {
                     .find(item => item.title === B.title)
                     .$exec($func("4"));
                 let execMessage = endpoint.outMessages[0] as JPMNativeExec
-                endpoint.invoke(nativeExecResult('one', execMessage.correlationId, 14))
+                endpoint.invoke(nativeExecResult(execMessage.correlationId, 14, undefined, 'one'))
                 let result = await $result;
 
                 expect(result).toEqual(14)
@@ -431,9 +431,9 @@ describe('sandbox-refs', () => {
                 let execMessageB = endpoint.outMessages[1] as JPMNativeExec
                 let execMessageC = endpoint.outMessages[2] as JPMNativeExec
 
-                endpoint.invoke(nativeExecResult('one', execMessageA.correlationId, 20))
-                endpoint.invoke(nativeExecResult('one', execMessageB.correlationId, 30))
-                endpoint.invoke(nativeExecResult('one', execMessageC.correlationId, 40))
+                endpoint.invoke(nativeExecResult(execMessageA.correlationId, 20, undefined, 'one'))
+                endpoint.invoke(nativeExecResult(execMessageB.correlationId, 30, undefined, 'one'))
+                endpoint.invoke(nativeExecResult(execMessageC.correlationId, 40, undefined, 'one'))
 
                 let mapResults = await Promise.all($mapResult);
 

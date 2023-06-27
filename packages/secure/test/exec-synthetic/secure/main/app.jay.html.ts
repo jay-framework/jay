@@ -1,7 +1,8 @@
 import {JayElement, element as e, ConstructContext, RenderElementOptions} from "jay-runtime";
 import {mainRoot as mr} from '../../../../lib/main/main-root'
 import {Comp} from './comp';
-import {secureChildComp} from "../../../../lib/main/main-child-comp";
+import {secureChildComp} from "../../../../lib";
+import {funcRepository} from "./native-funcs";
 
 export interface AppViewState {
 }
@@ -15,6 +16,6 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
     mr(viewState, () =>
       e('div', {}, [
           secureChildComp(Comp, vs => ({}), 'comp1')
-      ])
+      ]), funcRepository
     ), options);
 }

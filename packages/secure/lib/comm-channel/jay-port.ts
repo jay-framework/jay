@@ -36,6 +36,8 @@ export class JayPort implements IJayPort {
 
     getEndpoint(parentCompId: number, parentCoordinate: Coordinate): IJayEndpoint {
         let compId = this.getCompId(parentCompId, parentCoordinate);
+        if (this.endpoints.has(compId))
+            return this.endpoints.get(compId);
         let ep = new JayEndpoint(compId, this);
         this.endpoints.set(compId, ep)
         ep.setInitMessages(this.futureEndpointMessages.get(compId) || [])

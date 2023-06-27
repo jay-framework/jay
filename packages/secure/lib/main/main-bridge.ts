@@ -94,10 +94,10 @@ function makeComponentBridgeConstructor<
                     try {
                         let result = await ref.$exec((elem, vs) =>
                                 (funcRepository[nativeId] as JayNativeFunction<any, any, any>)(elem, vs));
-                        endpoint.post(nativeExecResult(refName, correlationId, result))
+                        endpoint.post(nativeExecResult(correlationId, result, undefined, refName))
                     }
                     catch (err) {
-                        endpoint.post(nativeExecResult(refName, correlationId, undefined, err.message))
+                        endpoint.post(nativeExecResult(correlationId, undefined, err.message, refName))
                     }
                 });
             }
