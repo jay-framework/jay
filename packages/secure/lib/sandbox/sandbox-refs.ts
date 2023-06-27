@@ -162,9 +162,9 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
             })
         }
     }
-    find(predicate: (t: ViewState) => boolean): DynamicNativeExec<ViewState> | undefined {
+    find(predicate: (t: ViewState, c: Coordinate) => boolean): DynamicNativeExec<ViewState> | undefined {
         for (const [id, [coordinate, vs, refItem]] of this.items)
-            if (predicate(vs)) {
+            if (predicate(vs, coordinate)) {
                 return refItem;
             }
     }

@@ -161,7 +161,7 @@ describe('sandbox-refs', () => {
             let execMessage = endpoint.outMessages[0] as JPMNativeExec
             endpoint.invoke(nativeExecResult(execMessage.correlationId, undefined, "failed", 'one'))
 
-            await expect($result).rejects.toThrow('failed');
+            await expect($result).rejects.toEqual('failed');
         })
     });
 

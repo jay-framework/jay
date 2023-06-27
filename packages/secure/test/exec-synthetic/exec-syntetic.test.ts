@@ -41,12 +41,12 @@ describe('exec synthetic tests', () => {
         })
     })
 
-    it.skip('should run $exec on a dynamic element and return value', async () => {
+    it('should run $exec on a dynamic element and return value', async () => {
         let {result, getDynamicButtonById} = await mkElement();
 
         getDynamicButtonById('b').click()
         await eventually10ms(() => {
-            expect(result.textContent).toBe('button with text button exec element was clicked')
+            expect(result.textContent).toBe('item button with text item beta exec element was clicked')
         })
     })
 })

@@ -1,4 +1,5 @@
 import {
+    HTMLElementCollectionProxy,
     JayElement,
     JayEvent,
     JayEventHandler,
@@ -92,8 +93,13 @@ function makeComponentBridgeConstructor<
                 // todo support for dynamic references
                 port.batch(async () => {
                     try {
-                        let result = await ref.$exec((elem, vs) =>
-                                (funcRepository[nativeId] as JayNativeFunction<any, any, any>)(elem, vs));
+                        let result = ref.find?
+                            await (ref as HTMLElementCollectionProxy<any, any>)
+                                .find((vs, c) =>
+                                    c.length === coordinate.length && coordinate.reduce((acc, el1, i) => acc && c[i] === el1, true))
+                                .$exec((elem, vs) => (funcRepository[nativeId] as JayNativeFunction<any, any, any>)(elem, vs))
+                            :
+                            await ref.$exec((elem, vs) => (funcRepository[nativeId] as JayNativeFunction<any, any, any>)(elem, vs));
                         endpoint.post(nativeExecResult(correlationId, result, undefined, refName))
                     }
                     catch (err) {
