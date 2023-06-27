@@ -94,8 +94,20 @@ describe('ReferencesManager operations', () => {
             expect(mockCallback.mock.calls[1][1]).toBe(DATA_CONTEXT_2);
         })
 
-        it("find should find the first element proxy meeting a criteria", () => {
-            let element2 = jayRootElement.refs.id1.find(vs => vs === DATA_CONTEXT_2)
+        it("find should find the first element proxy meeting a criteria based on view state", () => {
+            let element2 =
+                jayRootElement.refs.id1.find(vs => vs === DATA_CONTEXT_2)
+
+            expect(element2).toBe(refs_id1[1])
+            element2.$exec(mockCallback)
+            expect(mockCallback.mock.calls.length).toBe(1);
+            expect(mockCallback.mock.calls[0][0]).toBe(je2.dom);
+            expect(mockCallback.mock.calls[0][1]).toBe(DATA_CONTEXT_2);
+        })
+
+        it("find should find the first element proxy meeting a criteria based on coordinate", () => {
+            let element2 =
+                jayRootElement.refs.id1.find((vs, coordinate) => coordinate === COORDINATE_12)
 
             expect(element2).toBe(refs_id1[1])
             element2.$exec(mockCallback)
