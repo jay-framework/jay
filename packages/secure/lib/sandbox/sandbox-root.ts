@@ -4,7 +4,7 @@ import {SANDBOX_CREATION_CONTEXT, SandboxCreationContext} from "./sandbox-contex
 import {SandboxElement} from "./sandbox-element";
 import {JayPortMessageType, JPMNativeExecResult, JPMRootComponentViewState} from "../comm-channel/messages";
 import {deserialize, Deserialize} from "jay-reactive";
-import {rejectCorrelatedPromise, resolveCorrelatedPromise} from "../$func";
+import {completeCorrelatedPromise} from "../$func";
 
 export function sandboxRoot<ViewState extends object>(sandboxElements: () => Array<SandboxElement<ViewState>>) {
     let port: IJayPort = useWorkerPort();
@@ -33,10 +33,8 @@ export function sandboxRoot<ViewState extends object>(sandboxElements: () => Arr
                 break;
             }
             case JayPortMessageType.nativeExecResult: {
-                if (inMessage.error)
-                    rejectCorrelatedPromise(inMessage.correlationId, new Error(inMessage.error))
-                else
-                    resolveCorrelatedPromise(inMessage.correlationId, inMessage.result)
+                completeCorrelatedPromise(inMessage);
+                break;
             }
         }
     })

@@ -1,5 +1,6 @@
 import {JayEventHandler, JayNativeFunction} from "jay-runtime";
 import {JayGlobalNativeFunction} from "./main/function-repository-types";
+import {JPMNativeExecResult} from "./comm-channel/messages";
 
 function nativeExecId(id) {
     let fn = () => null;
@@ -42,12 +43,10 @@ export function correlatedPromise<T>() {
     return corrPromise
 }
 
-export function resolveCorrelatedPromise(correlationId: number, value: any) {
-    $promises.get(correlationId)?.resolve(value)
-    $promises.delete(correlationId)
-}
-
-export function rejectCorrelatedPromise(correlationId: number, error: Error) {
-    $promises.get(correlationId)?.reject(error)
-    $promises.delete(correlationId)
+export function completeCorrelatedPromise(message: JPMNativeExecResult) {
+    if (message.error)
+        $promises.get(message.correlationId)?.reject(message.error)
+    else
+        $promises.get(message.correlationId)?.resolve(message.result)
+    $promises.delete(message.correlationId)
 }

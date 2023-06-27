@@ -20,7 +20,10 @@ import {
     JPMMessage
 } from "../comm-channel/comm-channel";
 import {$JayNativeFunction} from "../main/function-repository-types";
-import {correlatedPromise, rejectCorrelatedPromise, resolveCorrelatedPromise} from "../$func";
+import {
+    completeCorrelatedPromise,
+    correlatedPromise
+} from "../$func";
 import {Refs, SANDBOX_CREATION_CONTEXT} from "./sandbox-context";
 import {SandboxElement} from "./sandbox-element";
 import {Reactive, serialize} from "jay-reactive";
@@ -294,10 +297,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
                 }
                 case JayPortMessageType.nativeExecResult: {
                     reactive.batchReactions(() => {
-                        if (inMessage.error)
-                            rejectCorrelatedPromise(inMessage.correlationId, new Error(inMessage.error))
-                        else
-                            resolveCorrelatedPromise(inMessage.correlationId, inMessage.result)
+                        completeCorrelatedPromise(inMessage)
                     })
                     break;
                 }
