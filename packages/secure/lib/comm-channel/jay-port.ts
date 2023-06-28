@@ -61,7 +61,6 @@ export class JayPort implements IJayPort {
         if (this.inBatch)
             return handler();
         this.inBatch = true;
-        this.messages = [];
         try {
             return handler()
         }

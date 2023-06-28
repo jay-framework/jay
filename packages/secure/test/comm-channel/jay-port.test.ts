@@ -95,6 +95,26 @@ describe('jay-port', () => {
             })
         })
 
+        it('should auto batch and batch should place nice - both should consolidate into a single batch', async () => {
+            let {port, logger, channel} = mkPort();
+
+            let endpoint1 = port.getEndpoint(1, ['comp1'])
+            endpoint1.post(MESSAGE_RENDER_1)
+            let endpoint2 = port.getEndpoint(1, ['comp2', 'a'])
+            endpoint2.post(MESSAGE_RENDER_2)
+            port.batch(() => {
+                endpoint2.post(MESSAGE_ADD_EVENT_LISTENER_CLICK_ADD)
+            })
+
+            expect(channel.messagesFromPort)
+                .toContainEqual({
+                    messages: [[2, MESSAGE_RENDER_1],
+                        [3, MESSAGE_RENDER_2],
+                        [3, MESSAGE_ADD_EVENT_LISTENER_CLICK_ADD]],
+                    newCompIdMessages: [["1-comp1", 2], ["1-comp2,a", 3]]})
+
+        })
+
     })
 
     describe('compId handshake between two ports', () => {
