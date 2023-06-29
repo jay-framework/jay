@@ -1,6 +1,6 @@
 import {_mutableObject, isMutable, mutableObject, originalSymbol} from "./mutable";
 import {ARRAY, NOT_CHANGED, REVNUM} from "./serialize-consts";
-import {REVISION, setRevision} from "./revisioned";
+import {setRevision} from "./revisioned";
 
 export type Deserialize<T> = (serialized: string) => [T, Deserialize<T>]
 export function deserialize<T extends object>(serialized: string): [T, Deserialize<T>] {

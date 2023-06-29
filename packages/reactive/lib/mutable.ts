@@ -1,22 +1,8 @@
-import {initRevision, touchRevision} from "./revisioned";
+import {nextRevNum, touchRevision} from "./revisioned";
 import {setPrivateProperty} from "./private-property";
+import {ChangeListener, isMutable, MutableContract} from "./reactive-contract";
 
-const isProxy = Symbol.for("isProxy")
-const mutationListener = Symbol.for("listener")
-export const originalSymbol = Symbol.for("original")
 const proxySymbol = Symbol.for("proxy")
-type ChangeListener = () => void;
-export function isMutable(obj: any): obj is object {
-    return (typeof obj === "object") && !!obj[isProxy];
-}
-
-export function addMutableListener(obj: object, changeListener: ChangeListener) {
-    (obj[mutationListener] as Set<ChangeListener>).add(changeListener);
-}
-
-export function removeMutableListener(obj: object, changeListener: ChangeListener) {
-    (obj[mutationListener] as Set<ChangeListener>).delete(changeListener)
-}
 
 function setProxy(obj: object, proxy: object) {
     return setPrivateProperty(obj, proxySymbol, proxy);
@@ -27,8 +13,9 @@ function getProxy(obj: object) {
 }
 
 function deleteProxy(obj: object, changeListener: ChangeListener) {
+    if (isMutable(obj[proxySymbol]))
+        obj[proxySymbol].removeMutableListener(changeListener)
     if (obj[proxySymbol]) {
-        removeMutableListener(obj[proxySymbol], changeListener);
         delete obj[proxySymbol];
     }
 }
@@ -41,7 +28,8 @@ function wrapFilter<T>(array: Array<T>, func: Function, notifyParent?: ChangeLis
     return (...args) => {
         let [first, ...rest] = [...args];
         let wrappedFirst = arg => first(_mutableObject(arg, notifyParent));
-        return _mutableObject(func.apply(array, [wrappedFirst, ...rest]), notifyParent)
+        let filteredItems = func.apply(array, [wrappedFirst, ...rest]);
+        return _mutableObject(filteredItems, notifyParent)
     }
 }
 
@@ -57,60 +45,76 @@ export function mutableObject<T>(original: Array<T>): Array<T> {
     return _mutableObject(original, undefined)
 }
 
+interface State /*extends MutableContract*/ {
+    revNum: number,
+    original: object
+    changeListeners: Set<ChangeListener>
+    arrayFunctions: object
+}
+const MUTABLE_CONTEXT_FUNCTIONS = {
+    isMutable: (state: State) => () => true,
+    getRevision: (state: State) => () => state.revNum,
+    setRevision: (state: State) => (revNum: number) => state.revNum = revNum,
+    addMutableListener: (state: State) => (changeListener: ChangeListener) => state.changeListeners.add(changeListener),
+    removeMutableListener: (state: State) => (changeListener: ChangeListener) => state.changeListeners.delete(changeListener),
+    getOriginal: (state: State) => () => state.original,
+}
+
 export function _mutableObject<T extends object>(original: T, notifyParent?: ChangeListener): T
 export function _mutableObject<T>(original: Array<T>, notifyParent?: ChangeListener): Array<T> {
     if (typeof original !== 'object')
         return original;
     if (getProxy(original))
         return getProxy(original);
-    initRevision(original)
-    const arrayFunctions = {};
-    const changeListeners: Set<ChangeListener> = notifyParent? new Set([notifyParent]): new Set();
-    const changed = () => {
-        touchRevision(original)
-        changeListeners.forEach(_ => _());
+    let state: State = {
+        revNum: nextRevNum(),
+        original,
+        changeListeners: notifyParent? new Set([notifyParent]): new Set(),
+        arrayFunctions: {}
     }
-    for (let prop in original)
-        if (typeof original[prop] === 'object' && getProxy(original[prop] as unknown as object))
-            getProxy(original[prop] as unknown as object)[mutationListener].add(changed);
+    const changed = () => {
+        state.revNum = nextRevNum();
+        state.changeListeners.forEach(_ => _());
+    }
+    for (let prop in original) {
+        let propValue = original[prop];
+        if (typeof propValue === 'object' && getProxy(propValue as unknown as object))
+            getProxy(propValue as unknown as object).addMutableListener(changed);
+        }
 
     return new Proxy(original, {
         deleteProperty: function(target, property) {
-            deleteProxy(target[property], changed);
-            delete target[property];
+            deleteProxy(state.original[property], changed);
+            delete state.original[property];
             changed();
             return true;
         },
         set: function(target, property, value) {
-            if (target[property])
-                deleteProxy(target[property], changed);
-            target[property] = isMutable(value)?value[originalSymbol]:value;
+            if (state.original[property])
+                deleteProxy(state.original[property], changed);
+            state.original[property] = isMutable(value)?value.getOriginal():value;
             changed();
             return true;
         },
         get: function(target, property: PropertyKey) {
-            if (property === isProxy)
-                return true;
-            else if (property === mutationListener)
-                return changeListeners;
-            else if (property === originalSymbol)
-                return original;
-            else if (property === proxySymbol)
+            if (MUTABLE_CONTEXT_FUNCTIONS.hasOwnProperty(property))
+                return MUTABLE_CONTEXT_FUNCTIONS[property](state);
+            if (property === proxySymbol)
                 return undefined; // this line is here for mechanisms who insist on serializing un-enumerable properties
-            else if (Array.isArray(target) && typeof property === 'string' && wrapArrayFuncs.has(property)) {
-                if (!arrayFunctions[property])
-                    arrayFunctions[property] = wrapArrayFuncs.get(property)(target, target[property], changed);
-                return arrayFunctions[property];
+            else if (Array.isArray(state.original) && typeof property === 'string' && wrapArrayFuncs.has(property)) {
+                if (!state.arrayFunctions[property])
+                    state.arrayFunctions[property] = wrapArrayFuncs.get(property)(state.original, state.original[property], changed);
+                return state.arrayFunctions[property];
             }
-            else if (typeof target[property] === 'object') {
-                if (!getProxy(target[property]))
-                    setProxy(target[property], _mutableObject(target[property], changed))
-                return getProxy(target[property])
+            else if (typeof state.original[property] === 'object') {
+                if (!getProxy(state.original[property]))
+                    setProxy(state.original[property], _mutableObject(state.original[property], changed))
+                return getProxy(state.original[property])
             }
-            else if (target instanceof Date && typeof target[property] === 'function')
-                return target[property].bind(target);
+            else if (state.original instanceof Date && typeof state.original[property] === 'function')
+                return state.original[property].bind(state.original);
             else
-                return target[property];
+                return state.original[property];
         }
-    });
+    }) as unknown as T[];
 }
