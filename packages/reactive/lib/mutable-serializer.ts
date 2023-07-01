@@ -1,6 +1,6 @@
-import {isMutable} from "./mutable";
 import {getRevision} from "./revisioned";
 import {ARRAY, REVNUM} from "./serialize-consts";
+import {isMutable} from "./reactive-contract";
 
 export type Serialize = (mutable: any) => [string, Serialize]
 

@@ -1,6 +1,7 @@
-import {_mutableObject, isMutable, mutableObject, originalSymbol} from "./mutable";
+import {_mutableObject, mutableObject} from "./mutable";
 import {ARRAY, NOT_CHANGED, REVNUM} from "./serialize-consts";
 import {setRevision} from "./revisioned";
+import {isMutable} from "./reactive-contract";
 
 export type Deserialize<T> = (serialized: string) => [T, Deserialize<T>]
 export function deserialize<T extends object>(serialized: string): [T, Deserialize<T>] {
@@ -8,8 +9,8 @@ export function deserialize<T extends object>(serialized: string): [T, Deseriali
 }
 
 function update<T>(mutable: T, revivied: T) {
-    let mutableInstance = isMutable(mutable)?mutable[originalSymbol]:mutable;
-    setRevision(mutableInstance, revivied[REVNUM]);
+    let mutableInstance = isMutable(mutable)?mutable.getOriginal():mutable;
+    // isMutable(mutable) && mutable.setRevision(revivied[REVNUM]);
     delete revivied[REVNUM]
     delete revivied[ARRAY]
     for (let key of Object.keys(revivied)) {
@@ -21,14 +22,14 @@ function update<T>(mutable: T, revivied: T) {
             case "number":
             case "bigint":
             case "boolean": {
-                mutableInstance[key] = revivied[key]
+                mutable[key] = revivied[key]
                 break;
             }
             case "object": {
-                if (mutableInstance[key])
-                    update(mutableInstance[key], revivied[key])
+                if (mutable[key])
+                    update(mutable[key], revivied[key])
                 else
-                    mutableInstance[key] = revivied[key]
+                    mutable[key] = revivied[key]
             }
         }
     }

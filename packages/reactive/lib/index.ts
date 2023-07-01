@@ -3,5 +3,5 @@ export {getRevision, touchRevision, Revisioned, checkModified} from './revisione
 export {mutableObject} from './mutable';
 export {deserialize, Deserialize} from './mutable-deserializer'
 export {serialize, Serialize} from './mutable-serializer'
-export {MutableContract} from "./reactive-contract";
+export {MutableContract, isMutable} from "./reactive-contract";
 export {ChangeListener} from "./reactive-contract";

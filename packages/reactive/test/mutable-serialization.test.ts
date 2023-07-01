@@ -22,23 +22,26 @@ describe("mutable serialization", () => {
             let [serialized, nextSerialize] = serialize(mutable);
             let [deserialized, nextDeserialize] = deserialize(serialized);
 
-            let revision = getRevision(mutable);
+            let originalRevision = getRevision(mutable);
             let deserializedRevision = getRevision(deserialized);
-            expect(revision.revNum).toEqual(deserializedRevision.revNum);
+            expect(originalRevision.revNum).toBeLessThan(deserializedRevision.revNum);
         })
 
         it("should re-serialize and re-deserialize to an equal object", () => {
             let mutable = mutableObject(SIMPLE_OBJECT);
             let [serialized, nextSerialize] = serialize(mutable);
             let [deserialized, nextDeserialize] = deserialize(serialized);
+            let deserialized_revition_1 = getRevision(deserialized);
 
             mutable.a = 12
             mutable.c = 'efgh'
             mutable.d = false;
             [serialized, nextSerialize] = nextSerialize(mutable);
             let [deserialized2, nextDeserialize2] = nextDeserialize(serialized)
+            let deserialized_revition_2 = getRevision(deserialized);
             expect(mutable).toEqual(deserialized2);
             expect(deserialized).toBe(deserialized2);
+            expect(deserialized_revition_2.revNum).toBeGreaterThan(deserialized_revition_1.revNum)
         })
     })
 
@@ -89,25 +92,31 @@ describe("mutable serialization", () => {
                 let [serialized, nextSerialize] = serialize(mutable);
                 let [deserialized, nextDeserialize] = deserialize<any>(serialized);
 
-                let revision = getRevision(mutable);
-                let revision_name = getRevision(mutable.name);
+                let originalRevision = getRevision(mutable);
+                let originalRevision_name = getRevision(mutable.name);
                 let deserializedRevision = getRevision(deserialized);
                 let deserializedRevision_name = getRevision(deserialized.name);
 
-                expect(revision.revNum).toEqual(deserializedRevision.revNum);
-                expect(revision_name.revNum).toEqual(deserializedRevision_name.revNum);
+                expect(originalRevision.revNum).toBeLessThan(deserializedRevision.revNum);
+                expect(originalRevision_name.revNum).toBeLessThan(deserializedRevision_name.revNum);
             })
 
             it("should re-serialize and re-deserialize to an equal object", () => {
                 let mutable = mutableObject(NESTED_OBJECT);
                 let [serialized, nextSerialize] = serialize(mutable);
                 let [deserialized, nextDeserialize] = deserialize(serialized);
+                let deserialized_revition_1 = getRevision(deserialized);
+                let deserialized_revition_name_1 = getRevision((deserialized as any).name);
 
                 mutable.name = NESTED_OBJECT_UPDATE;
                 [serialized, nextSerialize] = nextSerialize(mutable);
                 let [deserialized2, nextDeserialize2] = nextDeserialize(serialized)
+                let deserialized_revition_2 = getRevision(deserialized);
+                let deserialized_revition_name_2 = getRevision((deserialized as any).name);
                 expect(mutable).toEqual(deserialized2);
                 expect(deserialized).toBe(deserialized2);
+                expect(deserialized_revition_2.revNum).toBeGreaterThan(deserialized_revition_1.revNum)
+                expect(deserialized_revition_name_2.revNum).toBeGreaterThan(deserialized_revition_name_1.revNum)
             })
 
             it('should serialize mutable object child of immutable', () => {
@@ -116,9 +125,10 @@ describe("mutable serialization", () => {
                 let [serialized, nextSerialize] = serialize(obj);
                 let [deserialized, nextDeserialize] = deserialize<any>(serialized);
                 expect(obj).toEqual(deserialized);
-                let revision_name = getRevision(obj.name);
+
+                let original_revision_name = getRevision(obj.name);
                 let deserializedRevision_name = getRevision(deserialized.name);
-                expect(revision_name.revNum).toEqual(deserializedRevision_name.revNum);
+                expect(original_revision_name.revNum).toBeLessThan(deserializedRevision_name.revNum);
             })
         })
 
@@ -199,13 +209,13 @@ describe("mutable serialization", () => {
             let [serialized, nextSerialize] = serialize(mutable);
             let [deserialized, nextDeserialize] = deserialize(serialized);
 
-            let revision = getRevision(mutable);
-            let revision_items = getRevision(mutable.items);
+            let originalRevision = getRevision(mutable);
+            let originalRevision_items = getRevision(mutable.items);
             let deserializedRevision = getRevision(deserialized);
             let deserializedRevision_items = getRevision((deserialized as typeof ARRAY_PRIMITIVES).items);
 
-            expect(revision.revNum).toEqual(deserializedRevision.revNum);
-            expect(revision_items.revNum).toEqual(deserializedRevision_items.revNum);
+            expect(originalRevision.revNum).toBeLessThan(deserializedRevision.revNum);
+            expect(originalRevision_items.revNum).toBeLessThan(deserializedRevision_items.revNum);
         })
 
         it("should re-serialize and re-deserialize to an equal object", () => {
@@ -276,17 +286,17 @@ describe("mutable serialization", () => {
             let [serialized, nextSerialize] = serialize(mutable);
             let [deserialized, nextDeserialize] = deserialize(serialized);
 
-            let revision = getRevision(mutable);
-            let revision_items = getRevision(mutable.items);
+            let originalRevision = getRevision(mutable);
+            let originalRevision_items = getRevision(mutable.items);
             let deserializedRevision = getRevision(deserialized);
             let deserializedRevision_items = getRevision((deserialized as typeof ARRAY_OBJECTS).items);
 
-            expect(revision.revNum).toEqual(deserializedRevision.revNum);
-            expect(revision_items.revNum).toEqual(deserializedRevision_items.revNum);
+            expect(originalRevision.revNum).toBeLessThan(deserializedRevision.revNum);
+            expect(originalRevision_items.revNum).toBeLessThan(deserializedRevision_items.revNum);
             for (let i=0; i < 3; i++) {
                 let itemRev = getRevision(mutable.items[i]);
                 let deserializedItemRev = getRevision((deserialized as typeof ARRAY_OBJECTS).items[i]);
-                expect(itemRev.revNum).toEqual(deserializedItemRev.revNum);
+                expect(itemRev.revNum).toBeLessThan(deserializedItemRev.revNum);
             }
         })
 
