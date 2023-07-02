@@ -15,7 +15,6 @@ function TableConstructor({tableSize, numCellsToUpdate}: Props<TableProps>, refs
             tableLines[x] = {id: x, cell: []};
             for (let y = 0; y < tableSize(); y++) {
                 tableLines[x].cell[y] = {id: y, value: Math.round(Math.random()*100)};
-
             }
         }
         return mutableObject(tableLines)
