@@ -1,4 +1,4 @@
-import {_mutableObject, mutableObject} from "./mutable";
+import {mutableObject} from "./mutable";
 import {ARRAY, NOT_CHANGED, REVNUM} from "./serialize-consts";
 import {setRevision} from "./revisioned";
 import {isMutable} from "./reactive-contract";

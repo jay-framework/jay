@@ -1,7 +1,5 @@
-// import {setPrivateProperty} from "./private-property";
 import {isMutable} from "./reactive-contract";
 
-// export const REVISION = Symbol.for('revision');
 let nextRevision = 1;
 
 export interface Revisioned<T> {

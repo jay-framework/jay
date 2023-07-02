@@ -1,6 +1,6 @@
-import {nextRevNum, touchRevision} from "./revisioned";
+import {nextRevNum} from "./revisioned";
 import {setPrivateProperty} from "./private-property";
-import {ChangeListener, isMutable, MutableContract} from "./reactive-contract";
+import {ChangeListener, isMutable} from "./reactive-contract";
 
 const proxySymbol = Symbol.for("proxy")
 
