@@ -1,6 +1,6 @@
 import {Filter, render, ShownTodo, TodoElementRefs} from './todo.jay.html';
 import {createMemo, createState, makeJayComponent, Props} from 'jay-component';
-import {mutableObject} from 'jay-reactive';
+import {mutableObject} from 'jay-mutable';
 import {uuid} from "./uuid";
 
 const ENTER_KEY = 13;

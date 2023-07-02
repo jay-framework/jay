@@ -7,7 +7,8 @@ import {
     RenderElement,
     createJayContext, useContext, provideContext
 } from 'jay-runtime'
-import {ValueOrGetter, Getter, Reactive, Setter, mutableObject} from 'jay-reactive'
+import {ValueOrGetter, Getter, Reactive, Setter} from 'jay-reactive'
+import {mutableObject} from "jay-mutable"
 
 export type hasProps<PropsT> = {props: Getter<PropsT>}
 export type Props<PropsT> = hasProps<PropsT> & {

@@ -2,7 +2,7 @@ import {BaseJayElement, provideContext} from "jay-runtime";
 import {useMainPort} from "../comm-channel/comm-channel";
 import {SECURE_COMPONENT_MARKER} from "./main-contexts";
 import {JayPortMessageType, nativeExecResult, rootComponentViewState} from "../comm-channel/messages";
-import {serialize} from 'jay-reactive'
+import {serialize} from 'jay-serialization'
 import {FunctionsRepository, JayGlobalNativeFunction} from "./function-repository-types";
 
 

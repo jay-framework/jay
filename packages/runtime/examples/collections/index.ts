@@ -1,5 +1,5 @@
 import render from './output';
-import {mutableObject} from 'jay-reactive';
+import {mutableObject} from 'jay-mutable';
 
 export default {
     render,

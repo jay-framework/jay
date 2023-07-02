@@ -6,7 +6,8 @@ import {
     IJayEndpoint, IJayPort,
     JayPortInMessageHandler
 } from "../../lib";
-import {mutableObject, Reactive} from "jay-reactive";
+import {Reactive} from "jay-reactive";
+import {mutableObject} from "jay-mutable";
 import {$func, $handler} from "../../lib/$func";
 import {ComponentCollectionProxy, Coordinate, HTMLElementCollectionProxy, HTMLElementProxy} from "jay-runtime";
 import {

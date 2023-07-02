@@ -1,5 +1,6 @@
 import {describe, expect, it, jest, beforeEach} from '@jest/globals'
-import {getRevision, mutableObject} from "../lib";
+import {mutableObject} from "jay-mutable";
+import {getRevision} from "jay-reactive";
 import {serialize} from "../lib";
 import {deserialize} from "../lib";
 

@@ -1,7 +1,7 @@
-import {mutableObject} from "./mutable";
+import {mutableObject} from "jay-mutable/";
 import {ARRAY, NOT_CHANGED, REVNUM} from "./serialize-consts";
-import {setRevision} from "./revisioned";
-import {isMutable} from "./reactive-contract";
+import {setRevision} from "jay-reactive";
+import {isMutable} from "jay-reactive";
 
 export type Deserialize<T> = (serialized: string) => [T, Deserialize<T>]
 export function deserialize<T extends object>(serialized: string): [T, Deserialize<T>] {

@@ -1,6 +1,6 @@
 import {render, TableElementRefs} from './table.jay.html';
 import {createState, makeJayComponent, Props } from 'jay-component';
-import { mutableObject } from 'jay-reactive';
+import { mutableObject } from 'jay-mutable';
 
 interface TableProps {
     tableSize: number

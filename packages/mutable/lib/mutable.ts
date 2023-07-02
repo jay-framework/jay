@@ -1,6 +1,6 @@
-import {nextRevNum} from "./revisioned";
+import {nextRevNum} from "jay-reactive";
 import {setPrivateProperty} from "./private-property";
-import {ChangeListener, isMutable} from "./reactive-contract";
+import {ChangeListener, isMutable} from "jay-reactive";
 
 const proxySymbol = Symbol.for("proxy")
 

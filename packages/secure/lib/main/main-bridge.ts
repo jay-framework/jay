@@ -19,7 +19,7 @@ import {
     JayPortMessageType, nativeExecResult,
     rootApiInvoke
 } from "../comm-channel/messages";
-import {deserialize, Deserialize} from "jay-reactive";
+import {deserialize, Deserialize} from "jay-serialization";
 
 interface CompBridgeOptions {
     events?: Array<string>,

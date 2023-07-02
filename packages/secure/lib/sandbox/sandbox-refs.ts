@@ -26,7 +26,8 @@ import {
 } from "../$func";
 import {Refs, SANDBOX_CREATION_CONTEXT} from "./sandbox-context";
 import {SandboxElement} from "./sandbox-element";
-import {Reactive, serialize} from "jay-reactive";
+import {Reactive} from "jay-reactive";
+import {serialize} from "jay-serialization";
 import {
     addEventListenerMessage,
     eventInvocationMessage, JayPortMessageType, JPMRootAPIInvoke,

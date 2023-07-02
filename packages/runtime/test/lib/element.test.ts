@@ -5,9 +5,9 @@ import {
     dynamicProperty as dp
 } from '../../lib/element';
 import {beforeEach, describe, expect, it} from '@jest/globals'
-import { mutableObject } from 'jay-reactive';
+import { mutableObject } from 'jay-mutable';
 import {BaseJayElement, JayElement, noopUpdate} from "../../lib";
-import {ConstructContext} from "../../lib/context";
+import {ConstructContext} from "../../lib";
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';

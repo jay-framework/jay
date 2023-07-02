@@ -3,7 +3,7 @@ import {IJayPort, useWorkerPort} from "../comm-channel/comm-channel";
 import {SANDBOX_CREATION_CONTEXT, SandboxCreationContext} from "./sandbox-context";
 import {SandboxElement} from "./sandbox-element";
 import {JayPortMessageType, JPMNativeExecResult, JPMRootComponentViewState} from "../comm-channel/messages";
-import {deserialize, Deserialize} from "jay-reactive";
+import {deserialize, Deserialize} from "jay-serialization";
 import {completeCorrelatedPromise} from "../$func";
 
 export function sandboxRoot<ViewState extends object>(sandboxElements: () => Array<SandboxElement<ViewState>>) {

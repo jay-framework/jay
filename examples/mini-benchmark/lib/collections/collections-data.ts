@@ -1,7 +1,7 @@
 import {render, CollectionsElementRefs} from './collections.jay.html';
 import {createState, makeJayComponent, useReactive, Props, createMemo} from 'jay-component';
 import benchmark from "../benchmark";
-import {mutableObject} from 'jay-reactive';
+import {mutableObject} from 'jay-mutable';
 
 interface CollectionsProps {
     cycles: number

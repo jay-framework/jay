@@ -1,6 +1,5 @@
 import {describe, expect, it, jest} from '@jest/globals'
 import {Reactive, touchRevision} from "../lib";
-import {mutableObject} from "../lib";
 import {mockMutable} from "./mock-mutable";
 
 describe('reactive', () => {

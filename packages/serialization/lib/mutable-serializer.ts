@@ -1,6 +1,6 @@
-import {getRevision} from "./revisioned";
+import {getRevision} from "jay-reactive";
 import {ARRAY, REVNUM} from "./serialize-consts";
-import {isMutable} from "./reactive-contract";
+import {isMutable} from "jay-reactive";
 
 export type Serialize = (mutable: any) => [string, Serialize]
 
