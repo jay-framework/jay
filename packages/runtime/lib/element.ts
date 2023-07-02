@@ -157,7 +157,7 @@ function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<Ma
     });
 }
 
-export function mkUpdateCollectionInternal<ViewState, Item>(child: ForEach<ViewState, Item>, applyChanges: (instructions: Array<MatchResult<Item, BaseJayElement<Item>>>) => void): [updateFunc<ViewState>, MountFunc, MountFunc] {
+export function mkUpdateCollection<ViewState, Item>(child: ForEach<ViewState, Item>, group: KindergartenGroup): [updateFunc<ViewState>, MountFunc, MountFunc] {
     let lastItems = getRevision([]);
     let lastItemsList = new List<Item, BaseJayElement<Item>>([], child.matchBy);
     let mount = () => lastItemsList.forEach((value, attach) => attach.mount);
@@ -178,17 +178,12 @@ export function mkUpdateCollectionInternal<ViewState, Item>(child: ForEach<ViewS
                         wrapWithModifiedCheck(currentConstructionContext().currData, child.elemCreator(item, id))))
             });
             lastItemsList = itemsList;
-            applyChanges(instructions)
+            applyListChanges(group, instructions)
             itemsList.forEach((value, elem) => elem.update(value))
         }
     };
     return [update, mount, unmount]
 }
-
-function mkUpdateCollection<ViewState, Item>(child: ForEach<ViewState, Item>, group: KindergartenGroup): [updateFunc<ViewState>, MountFunc, MountFunc] {
-    return mkUpdateCollectionInternal(child, instructions => applyListChanges(group, instructions));
-}
-
 
 function mkUpdateCondition<ViewState>(child: Conditional<ViewState>, group: KindergartenGroup): [updateFunc<ViewState>, MountFunc, MountFunc] {
 
