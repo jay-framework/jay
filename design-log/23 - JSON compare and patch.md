@@ -65,4 +65,10 @@ has also a good apply algorithm which updates in place
 **Candidate algorithm**
 
 **NO** - simple validation on a 100x100 matrix with 100 updates shows seconds of runtime!!!
+see [/exploration/rfc6902](../exploration/rfc6902)
+
+## [immer](https://github.com/immerjs/immer)
+
+Immer has a json patch algorithm that is not decoupled from immer, can only be used as part of immer.
+The algorithm does a comparison between objects that does not handle array added, removed or moved items.
 
