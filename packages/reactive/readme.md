@@ -22,6 +22,7 @@ The package has 2 modules
 * [Revisioned](#revisioned)
   * [checkModified](#checkModified)
   * [touchRevision](#touchRevision)
+  * [isMutable](#isMutable)
   * [getRevision](#getRevision)
   * [setRevision](#setRevision)
   * [getRevNum](#getRevNum)
@@ -242,6 +243,12 @@ the `touchRevision` function marks an object as mutable and updates the object r
 
 ```typescript
 declare function touchRevision<T extends object>(value: T): T
+```
+
+## <a name="isMutable">isMutable</a>
+the `isMutable` function checks if any value is a mutable object
+```typescript
+declare function isMutable(obj): obj is MutableContract
 ```
 
 ## <a name="getRevision">getRevision</a>
