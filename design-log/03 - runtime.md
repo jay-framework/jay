@@ -88,9 +88,9 @@ per the instructions in the JayFile
 The main components of the Runtime
 --
             
-1. [Random Access Linked List](../packages/runtime/lib/random-access-linked-list.ts) - (RAList) an implementation of a double-sided linked list with random access based on id.
+1. [Random Access Linked List](../packages/list-compare/lib/random-access-linked-list.ts) - (RAList) an implementation of a double-sided linked list with random access based on id.
 1. [Kindergarden](../packages/runtime/lib/kindergarden.ts) - a wrapper for an HTML element to manage it's children.
-1. [List Compare](../packages/runtime/lib/list-compare.ts) - an algorithm to mutate one RAList into another, creating a list of instructions to apply later.
+1. [List Compare](../packages/list-compare/lib/list-compare.ts) - an algorithm to mutate one RAList into another, creating a list of instructions to apply later.
 1. [element](../packages/runtime/lib/element.ts) - declares the different constructor functions such as `element`, `dynamicText`, etc.
 
 Random Access Linked List

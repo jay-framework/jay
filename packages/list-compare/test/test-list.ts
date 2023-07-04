@@ -1,4 +1,4 @@
-import {EoF, LinkedListItem, RandomAccessLinkedList} from "../../lib/random-access-linked-list";
+import {EoF, LinkedListItem, RandomAccessLinkedList} from "../lib";
 
 
 export class TestList<T, S> extends RandomAccessLinkedList<T, S> {

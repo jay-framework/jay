@@ -4,8 +4,8 @@ import {
     LinkedListItem,
     RandomAccessLinkedList,
     UntypedRandomAccessLinkedList
-} from '../../lib/random-access-linked-list';
-import {describe, expect, it} from '@jest/globals'
+} from '../lib';
+import {describe, expect, it, jest} from '@jest/globals'
 
 interface Item {
     id: string,

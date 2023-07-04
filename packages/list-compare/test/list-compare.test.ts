@@ -1,7 +1,7 @@
-import {listCompare, ITEM_ADDED, ITEM_REMOVED, ITEM_MOVED} from '../../lib/list-compare';
+import {describe, expect, it} from '@jest/globals';
+import {listCompare, ITEM_ADDED, ITEM_REMOVED, ITEM_MOVED} from '../lib';
 import {TestList as List} from "./test-list";
-import {describe, expect, it} from '@jest/globals'
-import {EoF} from "../../lib/random-access-linked-list";
+import {EoF} from "../lib";
 
 
 interface Item {

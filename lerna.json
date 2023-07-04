@@ -17,6 +17,7 @@
     "packages/secure",
     "packages/mutable",
     "packages/serialization",
+    "packages/list-compare",
     "exploration",
     "exploration/message-comm-channel"
   ],

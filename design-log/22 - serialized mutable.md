@@ -187,7 +187,7 @@ We need to make all the process performant
 
   patch based serialization works as objects who have not been changed remain as sub-trees of the new patched object
 
-* `diff against previous DOM` - the algorithm is at [list-compare](../packages/runtime/lib/list-compare.ts)
+* `diff against previous DOM` - the algorithm is at [list-compare](../packages/list-compare/lib/list-compare.ts)
   It is a type of a patch algorithm that takes into account the `track-by` / `key` as objects ids, and calculates the
   minimal mutation from the previous status to the current array status.
 
@@ -297,12 +297,12 @@ Sandbox:
   but it can improved by the Immer project later 
 * `jay-mutable` can track assignments and create JSON Patch.
 * `Immutable` objects can generate JSON Patch, taking into account an algorithm similar to note 1 above.
-  Another alternative with Immutable object is to take the [list-compare](../packages/runtime/lib/list-compare.ts) algorithm
+  Another alternative with Immutable object is to take the [list-compare](../packages/list-compare/lib/list-compare.ts) algorithm
   from Runtime, and using the `jay-compiler` provide the path to arrays and key to the algorithm, to generate optimal 
   JSON Diff for the specific array and specific array usage in the view state.
 
 Main:
 * `jay-mutable` tracks assignments using the `revnum` attribute. Applying a patch to a `jay-mutable` object will increase the `revnum`,
   causing optimal rendering by `jay-runtime` based only on changed `revnum` or new array items.
-* A potential optimization is to skip the [list-compare](../packages/runtime/lib/list-compare.ts) algorithm for arrays, 
+* A potential optimization is to skip the [list-compare](../packages/list-compare/lib/list-compare.ts) algorithm for arrays, 
   given the quality of the JSON patch is good enough.
