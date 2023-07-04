@@ -16,7 +16,9 @@ export interface CompViewState {
 }
 
 export interface CompElementRefs {
+    result: HTMLElementProxy<CompViewState, HTMLDivElement>,
     button: HTMLElementProxy<CompViewState, HTMLButtonElement>,
+    buttonExec$: HTMLElementProxy<CompViewState, HTMLButtonElement>,
     input: HTMLElementProxy<CompViewState, HTMLInputElement>,
     itemButton: HTMLElementCollectionProxy<Item, HTMLButtonElement>,
     itemInput: HTMLElementCollectionProxy<Item, HTMLInputElement>
@@ -27,6 +29,7 @@ export type CompElement = JayElement<CompViewState, CompElementRefs>
 export function render(viewState: CompViewState, options?: RenderElementOptions): CompElement {
     return elementBridge(viewState, () => [
         e('button'),
+        e('buttonExec$'),
         e('input'),
         forEach((viewState: CompViewState) => viewState.items, 'id', () => [
             e('itemButton'),

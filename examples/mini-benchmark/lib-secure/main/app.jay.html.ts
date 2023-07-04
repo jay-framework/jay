@@ -2,6 +2,7 @@ import {JayElement, ConstructContext, RenderElementOptions} from "jay-runtime";
 import {Main, MainProps} from './main';
 import {mainRoot as mr} from "jay-secure";
 import {secureChildComp} from "jay-secure";
+import {funcRepository} from "./native-funcs";
 
 export interface AppViewState {
 }
@@ -14,5 +15,5 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
     return ConstructContext.withRootContext(viewState, () =>
         mr(viewState, () =>
             secureChildComp(Main, vs => ({}), 'a')
-        ), options);
+        , funcRepository), options);
 }

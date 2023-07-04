@@ -1,0 +1,7 @@
+{
+  "name": "jay-exploration-rfc-6902",
+  "version": "1.0.0",
+  "dependencies": {
+    "rfc6902": "^5.0.1"
+  }
+}

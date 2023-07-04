@@ -128,16 +128,181 @@ Assumptions and observations:
 * We note that the challenge is when an item is marked as unchanged but has moved, in which case sending it has unchanged is a mistake.
 * If the algorithm only focuses on optimizing arrays, the algorithm is scoped for a single Array instance.
 
+The main idea of supporting *unchanged optimization* is to identify when an item has not change and has not moved - which 
+can be done locally (per object to be serialized) by creating the pairs `(prop/index, child revision)`.
+1. if the child object was updated, the `child revision` will be different
+2. if the child object has moved, the `prop/index` will be different
+3. for arrays, we can find an object with the same `child revision` but for a different `index`, we know it moved
+
+Lets build the algorithm - 
+
 The algorithm for general serialization - 
 1. using `replacer` for `JSON.stringify` we serialize the revision symbol value as a property, and for arrays also add an array indication.
-   (why? because array regular notation of `[1,2,3,4]` does not play nice with another revision property, in which case JS turns the array into an object)
+   (why? because array regular notation of `[1,2,3,4]` does not play nice with another revision property, in which case we serialize an array as an object `{1: 1, 2:2, 3:3, 4:4}`)
 2. serialization and re-serialization are the same.
 3. on deserialization we revive the revision symbol value and use the array marker to create array instances when needed.
 4. on re-deserialization we deserialize the new value, then update the mutable instance by selectively coping primitive values using a recursive function
 
-The algorithm for arrays with the optimization - 
-1. on array serialization, we generate an object id stored on a symbol property on the array items. 
-2. on an object who has the object id symbol serialization, we serialize the object id. If the object revision is smaller from the last time serialization happened,
-   we write a mark for not change and skip actual serialization
-3. on deserialization, we use the object id to reorder existing array items by the new order from the serialized object.
-4. on object deserialization, if the object has the not changed mark, we do nothing.
+The algorithm for arrays / objects with the optimization -
+1. at serialization time for `object` or `array`, we stores on the mutable object a map of property / index to revision of child objects.
+2. at re-serealization, for each `object`, for each `property`, if the revision has not change, we serialize `unchanged`
+3. for each `array`, we create a map of revisions and compare object revisions to the previous object revisions. 
+   1. for existing `revisions`, we serialize  `(index, previousIndex, unchanged)`
+   2. for new `revisions`, we serialize `(index, object)`
+4. on deserialization, for `objects`, we do not update when seeing `unchanged`
+5. for `arrays`, we build a new the array according to the serialized representation, including updating the `array revision`.
+
+
+Update
+====
+
+Seems that this algorithm includes double copy of objects - once to mutate the objects, transforming arrays to objects 
+and adding the revision, then serializing the transformed objects.
+
+Not Working!
+
+So now, we are looking for alternatives that are more effective serialization. 
+We keep in mind the process we have -
+
+![Diagram](22%20-%20serialized%20mutable%20flow.svg)
+
+We need to make all the process performant
+* `Array` - can be mutable or immutable. 
+
+  `immer` does a great job at creating a new immutable array that can then be serialized.
+  
+  `jay mutable` does a great job at updating the mutable array and tracking which object changed
+* `serialized` - can be full object serialization or a patch (only serialize what has changed)
+  
+  `immer` and most similar json diff algorithms are great for value updates, but fail on array `unshift` with a very
+  inefficient diff **see note 1 below**
+
+  `jay mutable` serialization is challenging because the revision number serialization requires that we transform array 
+  into another representation **see note 2 below**. Still, it is a form of a patch based serialization.
+
+* `revived array` - the array we get after serialization. 
+
+  default serialization of the whole object results in an all new object, which is missing all the `===` optimizations
+  in the `jay-runtime` package.
+
+  patch based serialization works as objects who have not been changed remain as sub-trees of the new patched object
+
+* `diff against previous DOM` - the algorithm is at [list-compare](../packages/runtime/lib/list-compare.ts)
+  It is a type of a patch algorithm that takes into account the `track-by` / `key` as objects ids, and calculates the
+  minimal mutation from the previous status to the current array status.
+
+  Given a patch, we can optimize this algorithm to use the patch instructions. 
+  However, it is fast until about 10,000 Array items, so no real need to make the optimization
+
+
+#### Note 1 - optimizing json diff
+the problem with json diff is that given two `array`s, without any additional knowledge, to figure out if an item was 
+pushed to the front, we have to do a `===` comparison between the array items, which is `O(n^2)` complexity.
+
+```typescript
+for (let a = 0; a < A.length; a++) {
+    for (let b = 0; b < A.length; b++) {
+        if (A[a] === B[b])
+            // compute the diff    
+    }    
+}
+```
+
+However, we can create an algorithm focused on small changes that has complexity `O(n)` with a cutoff. 
+The algorithm makes the assumption that *small* changes can be found fast and require small number of mutations to describe.
+The cutoff is set at `let limit = log(min(A.length, B.length))` and the algorithm has complexity `O(limit^2) ~ O(n)`
+
+The algorithm - 
+```typescript
+let limit = log(min(A.length, B.length));
+let a=0, b=0;
+mainLoop: while (a < A.length && b < B.length) {
+    if (A(a) === B(b)) {
+        a += 1;
+        b += 1
+    }
+    continue;
+    for (let seekSize = 1; seekSize < limit; seekSize++) {
+        for (let index = 1; index <= seekSize; index++) {
+            if (A[a+index] === B[b+seekSize-index])
+                // we have a match, the elements from A between (a..a+index) and replace them with the items from B between (b..b+seekSize-index)
+            continue mainLoop;    
+        }
+    }
+    // revert to direct comparison of attributes json diff model (the standard model used by all other algorithms)
+}
+```
+
+#### Note 1.1 - update on Immer
+
+Reading the Immer source again, I can see that for objects there is the `state.assigned_` member which marks which object 
+properties have been updated or deleted.
+
+We can extend the idea for `array`s to also include `added` and `removed` `array` items, those making the above algorithm 
+redundant and making for a simpler solution.
+
+#### Note 2 - optimizing serialization of mutable
+
+The problem with mutable serialization is the requirement to serialize the `revnum`.
+
+however, if we drop this requirement, can we turn mutable serialization into a json diff like structure?
+
+We note that mutable `revnum` is per object, and if an object was updated after the last serialization, it's `revnum` will be higher.
+however, mutable updates the `revnum` of parent objects as well and does not track fine grained attribute changes, only tracking the fact
+the parent object was modified.
+
+Still, mutable does know, at the mutation time what has changed, and can generate a json diff instruction on the spot.
+The advantage of this method is that `array.splice(4,2, {...}, {...}, {...})` turns almost trivially into two json diff `delete` instructions 
+and three json diff `add` instructions.
+
+Then, we can serialize the json diff generated from mutable. 
+Applying the json diff on deserialization on another mutable will update the `revnum` allowing runtime to work in an optimal way 
+on the mutated mutable. Still, the `revnum` of the same object across contexts will be different, but we are not sure it is significant.
+
+#### Note 3 - Style difference
+
+Given the above, the performance of using immer or jay mutable will be small. However, there is still a bit of style difference
+
+With immer, a todo item change will look like
+
+```typescript
+let [todo, setTodo] = createState([...])
+
+refs.done.onclick(({viewState: item}) => {
+    setTodo(produce(todo(), draft => draft.find(_.id === item.id).done = !item.done))
+})
+```
+
+With mutable, a todo item change will look like
+
+```typescript
+let [todo, setTodo] = createMutableState([...])
+
+refs.done.onclick(({viewState: item}) => {
+    item.todo = !item.todo
+})
+```
+
+# New The Plan
+
+The new plan is to have different solutions on main and sandbox. We support immer, mutable and immutable objects, each 
+with a different algorithm. We will make both immer and mutable (on the sandbox side) into optional packages.
+
+On the main side, we will use mutable in any case as it is the most optimized
+
+![Diagram](22%20-%20serialized%20mutable%20flow%202.svg)
+
+Sandbox:
+* `Immer` can create JSON Patch, which we can serialize. It has sub-optimal JSON Patch for arrays changes, 
+  but it can improved by the Immer project later 
+* `jay-mutable` can track assignments and create JSON Patch.
+* `Immutable` objects can generate JSON Patch, taking into account an algorithm similar to note 1 above.
+  Another alternative with Immutable object is to take the [list-compare](../packages/runtime/lib/list-compare.ts) algorithm
+  from Runtime, and using the `jay-compiler` provide the path to arrays and key to the algorithm, to generate optimal 
+  JSON Diff for the specific array and specific array usage in the view state.
+
+Main:
+* `jay-mutable` tracks assignments using the `revnum` attribute. Applying a patch to a `jay-mutable` object will increase the `revnum`,
+  causing optimal rendering by `jay-runtime` based only on changed `revnum` or new array items.
+* A potential optimization is to skip the [list-compare](../packages/runtime/lib/list-compare.ts) algorithm for arrays, 
+  given the quality of the JSON patch is good enough.

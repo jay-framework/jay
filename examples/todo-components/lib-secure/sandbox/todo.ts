@@ -1,6 +1,6 @@
 import {Filter, render, ShownTodo, TodoElementRefs, TodoViewState} from './todo.jay.html';
 import {createMemo, createState, makeJayComponent, Props} from 'jay-component';
-import {mutableObject} from 'jay-reactive';
+import {mutableObject} from 'jay-mutable';
 import {uuid} from "./uuid";
 import {$handler} from "jay-secure/dist/$func";
 

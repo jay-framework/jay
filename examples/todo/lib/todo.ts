@@ -1,6 +1,6 @@
-import {Filter, render, ShownTodo, TodoRefs} from './todo.jay.html';
+import {Filter, render, ShownTodo, TodoElementRefs} from './todo.jay.html';
 import {createMemo, createState, makeJayComponent, Props} from 'jay-component';
-import {mutableObject} from 'jay-reactive';
+import {mutableObject} from 'jay-mutable';
 import {uuid} from "./uuid";
 
 const ENTER_KEY = 13;
@@ -16,7 +16,7 @@ interface TodoProps {
     initialTodos: Array<TodoItem>
 }
 
-function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoRefs) {
+function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoElementRefs) {
 
     const [todos, setTodos] = createState(mutableObject(
         initialTodos().map(_ => ({..._, isEditing: false, editText: ''}))));

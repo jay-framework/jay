@@ -1,6 +1,7 @@
 import benchmark from "../benchmark";
 import {createState, makeJayComponent, Props } from 'jay-component';
-import {render as TableHostRender, TableHostElementRefs} from "./table-host.jay.html";
+import {render as TableHostRender, TableHostElementRefs, TableHostViewState} from "./table-host.jay.html";
+import {$handler} from "jay-secure/dist/$func";
 
 interface TableHostProps {
     cycles: number
@@ -12,11 +13,11 @@ function TableHostConstructor({cycles}: Props<TableHostProps>, refs: TableHostEl
     let [updates, setUpdates] = createState(100);
 
     refs.size
-        .$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .$oninput($handler<Event, TableHostViewState, any>('2'))
         .then(({event: size}) => setSize(Number(size)));
 
     refs.updates
-        .$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .$oninput($handler<Event, TableHostViewState, any>('2'))
         .then(({event: updates}) => setUpdates(Number(updates)));
 
     const run = (progressCallback: (string) => void) => {

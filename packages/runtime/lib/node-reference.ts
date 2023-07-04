@@ -152,9 +152,9 @@ class ReferenceCollection<ViewState> implements RefCollection<ViewState>, HTMLEl
         return [...this.elements].map(ref => handler(ref, ref.viewState, ref.coordinate));
     }
 
-    find(predicate: (viewState: ViewState) => boolean) {
+    find(predicate: (viewState: ViewState, c: Coordinate) => boolean) {
         for (let ref of this.elements)
-            if (predicate(ref.viewState))
+            if (predicate(ref.viewState, ref.coordinate))
                 return ref
     }
 

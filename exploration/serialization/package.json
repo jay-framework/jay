@@ -1,0 +1,20 @@
+{
+  "name": "serialization-exploration",
+  "version": "1.0.0",
+  "scripts": {
+    "rollup": "rollup --config ./rollup.config.js",
+    "ts": "tsc",
+    "copy": "cp lib/index.html dist/index.html",
+    "build": "npm run rollup & npm run copy"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^13.3.0",
+    "@rollup/plugin-typescript": "^8.3.4",
+    "rollup": "^2.77.2",
+    "tslib": "^2.4.0",
+    "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "immer": "^10.0.2"
+  }
+}

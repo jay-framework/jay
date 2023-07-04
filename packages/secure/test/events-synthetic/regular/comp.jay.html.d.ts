@@ -13,6 +13,7 @@ export interface CompViewState {
 export interface CompElementRefs {
   result: HTMLElementProxy<CompViewState, HTMLDivElement>,
   button: HTMLElementProxy<CompViewState, HTMLButtonElement>,
+  buttonExec$: HTMLElementProxy<CompViewState, HTMLButtonElement>,
   input: HTMLElementProxy<CompViewState, HTMLInputElement>,
   itemButton: HTMLElementCollectionProxy<Item, HTMLButtonElement>,
   itemInput: HTMLElementCollectionProxy<Item, HTMLInputElement>

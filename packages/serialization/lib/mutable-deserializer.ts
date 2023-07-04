@@ -1,6 +1,7 @@
-import {_mutableObject, isMutable, mutableObject, originalSymbol} from "./mutable";
-import {ARRAY, REVNUM} from "./serialize-consts";
-import {REVISION, setRevision} from "./revisioned";
+import {mutableObject} from "jay-mutable/";
+import {ARRAY, NOT_CHANGED, REVNUM} from "./serialize-consts";
+import {setRevision} from "jay-reactive";
+import {isMutable} from "jay-reactive";
 
 export type Deserialize<T> = (serialized: string) => [T, Deserialize<T>]
 export function deserialize<T extends object>(serialized: string): [T, Deserialize<T>] {
@@ -8,25 +9,27 @@ export function deserialize<T extends object>(serialized: string): [T, Deseriali
 }
 
 function update<T>(mutable: T, revivied: T) {
-    let mutableInstance = isMutable(mutable)?mutable[originalSymbol]:mutable;
-    setRevision(mutableInstance, revivied[REVNUM]);
+    let mutableInstance = isMutable(mutable)?mutable.getOriginal():mutable;
+    // isMutable(mutable) && mutable.setRevision(revivied[REVNUM]);
     delete revivied[REVNUM]
     delete revivied[ARRAY]
     for (let key of Object.keys(revivied)) {
         let type = typeof revivied[key];
+        if (revivied[key] === NOT_CHANGED)
+            continue;
         switch (type) {
             case "string":
             case "number":
             case "bigint":
             case "boolean": {
-                mutableInstance[key] = revivied[key]
+                mutable[key] = revivied[key]
                 break;
             }
             case "object": {
-                if (mutableInstance[key])
-                    update(mutableInstance[key], revivied[key])
+                if (mutable[key])
+                    update(mutable[key], revivied[key])
                 else
-                    mutableInstance[key] = revivied[key]
+                    mutable[key] = revivied[key]
             }
         }
     }

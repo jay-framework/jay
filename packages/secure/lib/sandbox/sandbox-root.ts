@@ -2,8 +2,9 @@ import {provideContext} from "jay-runtime";
 import {IJayPort, useWorkerPort} from "../comm-channel/comm-channel";
 import {SANDBOX_CREATION_CONTEXT, SandboxCreationContext} from "./sandbox-context";
 import {SandboxElement} from "./sandbox-element";
-import {JPMRootComponentViewState} from "../comm-channel/messages";
-import {deserialize, Deserialize} from "jay-reactive";
+import {JayPortMessageType, JPMNativeExecResult, JPMRootComponentViewState} from "../comm-channel/messages";
+import {deserialize, Deserialize} from "jay-serialization";
+import {completeCorrelatedPromise} from "../$func";
 
 export function sandboxRoot<ViewState extends object>(sandboxElements: () => Array<SandboxElement<ViewState>>) {
     let port: IJayPort = useWorkerPort();
@@ -11,17 +12,30 @@ export function sandboxRoot<ViewState extends object>(sandboxElements: () => Arr
     let elements: Array<SandboxElement<ViewState>>;
     let viewState: ViewState, nextDeserialize: Deserialize<ViewState> = deserialize;
 
-    endpoint.onUpdate((inMessage: JPMRootComponentViewState)  => {
-        [viewState, nextDeserialize] = deserialize<ViewState>(inMessage.viewState)
-        if (!elements) {
-            let context: SandboxCreationContext<ViewState> = {viewState, endpoint, isDynamic: false, dataIds: []}
-            elements = provideContext(SANDBOX_CREATION_CONTEXT, context, () => {
-                return sandboxElements();
-            })
-        }
-        else {
-            [viewState, nextDeserialize] = nextDeserialize(inMessage.viewState)
-            elements.forEach(element => element.update(viewState))
+    endpoint.onUpdate((inMessage: JPMRootComponentViewState | JPMNativeExecResult)  => {
+        switch(inMessage.type) {
+            case JayPortMessageType.root: {
+                [viewState, nextDeserialize] = deserialize<ViewState>(inMessage.viewState)
+                if (!elements) {
+                    let context: SandboxCreationContext<ViewState> = {
+                        viewState,
+                        endpoint,
+                        isDynamic: false,
+                        dataIds: []
+                    }
+                    elements = provideContext(SANDBOX_CREATION_CONTEXT, context, () => {
+                        return sandboxElements();
+                    })
+                } else {
+                    [viewState, nextDeserialize] = nextDeserialize(inMessage.viewState)
+                    elements.forEach(element => element.update(viewState))
+                }
+                break;
+            }
+            case JayPortMessageType.nativeExecResult: {
+                completeCorrelatedPromise(inMessage);
+                break;
+            }
         }
     })
 }

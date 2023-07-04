@@ -20,10 +20,14 @@ import {
     JPMMessage
 } from "../comm-channel/comm-channel";
 import {$JayNativeFunction} from "../main/function-repository-types";
-import {correlatedPromise, rejectCorrelatedPromise, resolveCorrelatedPromise} from "../$func";
+import {
+    completeCorrelatedPromise,
+    correlatedPromise
+} from "../$func";
 import {Refs, SANDBOX_CREATION_CONTEXT} from "./sandbox-context";
 import {SandboxElement} from "./sandbox-element";
-import {Reactive, serialize} from "jay-reactive";
+import {Reactive} from "jay-reactive";
+import {serialize} from "jay-serialization";
 import {
     addEventListenerMessage,
     eventInvocationMessage, JayPortMessageType, JPMRootAPIInvoke,
@@ -112,7 +116,7 @@ export class StaticRefImplementation<ViewState> implements HTMLElementProxyTarge
     }
     $exec<ResultType>(handler: JayNativeFunction<any, any, ResultType>): Promise<ResultType> {
         let {$execPromise, correlationId} = correlatedPromise<ResultType>();
-        this.ep.post(nativeExec(this.ref, (handler as $JayNativeFunction<any, any, ResultType>).id, correlationId, [this.ref]));
+        this.ep.post(nativeExec((handler as $JayNativeFunction<any, any, ResultType>).id, correlationId, this.ref, [this.ref]));
         return $execPromise;
     }
     update = (newViewState: ViewState) => {
@@ -126,7 +130,7 @@ export class DynamicNativeExec<ViewState> implements HTMLNativeExec<ViewState, a
 
     $exec<ResultType>(handler: JayNativeFunction<any, ViewState, ResultType>): Promise<ResultType> {
         let {$execPromise, correlationId} = correlatedPromise<ResultType>();
-        this.ep.post(nativeExec(this.ref, (handler as $JayNativeFunction<any, any, ResultType>).id, correlationId, this.coordinate));
+        this.ep.post(nativeExec((handler as $JayNativeFunction<any, any, ResultType>).id, correlationId, this.ref, this.coordinate));
         return $execPromise;
     }
 }
@@ -159,9 +163,9 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
             })
         }
     }
-    find(predicate: (t: ViewState) => boolean): DynamicNativeExec<ViewState> | undefined {
+    find(predicate: (t: ViewState, c: Coordinate) => boolean): DynamicNativeExec<ViewState> | undefined {
         for (const [id, [coordinate, vs, refItem]] of this.items)
-            if (predicate(vs)) {
+            if (predicate(vs, coordinate)) {
                 return refItem;
             }
     }
@@ -294,10 +298,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
                 }
                 case JayPortMessageType.nativeExecResult: {
                     reactive.batchReactions(() => {
-                        if (inMessage.error)
-                            rejectCorrelatedPromise(inMessage.correlationId, new Error(inMessage.error))
-                        else
-                            resolveCorrelatedPromise(inMessage.correlationId, inMessage.result)
+                        completeCorrelatedPromise(inMessage)
                     })
                     break;
                 }

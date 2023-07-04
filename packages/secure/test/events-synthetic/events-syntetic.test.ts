@@ -1,15 +1,13 @@
 import {describe, expect, it} from '@jest/globals'
 import {setChannel, useMockCommunicationChannel} from "../util/mock-channel";
 import {initializeWorker} from "./secure/worker/worker-root";
-import {CompProps} from "./secure/main/comp";
-import {CompViewState} from "./secure/main/comp.jay.html";
 import {render} from "./secure/main/app.jay.html";
 import {dispatchEvent} from "../util/dispatch-event";
 
 describe('events synthetic tests', () => {
 
     async function mkElement() {
-        let channel = useMockCommunicationChannel<CompProps, CompViewState>();
+        let channel = useMockCommunicationChannel();
         setChannel(channel);
         initializeWorker();
         let appElement = render({});

@@ -1,5 +1,6 @@
 import {describe, expect, it} from '@jest/globals'
-import {checkModified, touchRevision} from "../lib/revisioned";
+import {checkModified, touchRevision} from "../lib";
+import {mockMutable} from "./mock-mutable";
 
 describe('isModified', () => {
     it('should return true for first number', () => {
@@ -72,7 +73,7 @@ describe('isModified', () => {
     })
 
     describe('support for mutable objects', () => {
-        const objA = touchRevision({});
+        const objA = mockMutable({});
         it('should return false for objects with the same revision', () => {
             let [value, isModified] = checkModified(objA);
             [value, isModified] = checkModified(objA, value);

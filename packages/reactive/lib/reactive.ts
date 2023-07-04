@@ -1,6 +1,5 @@
-import { checkModified, Revisioned } from "./revisioned";
-import {addMutableListener, isMutable, removeMutableListener} from "./mutable";
-
+import {checkModified, Revisioned} from "./revisioned";
+import {isMutable} from "./reactive-contract";
 
 export type Next<T> = (t: T) => T
 export type Setter<T> = (t: T | Next<T>) => T
@@ -52,12 +51,12 @@ export class Reactive {
         let setter = (value: T | Next<T>) => {
             let isModified;
             if (current && isMutable(current.value))
-                removeMutableListener(current.value, triggerReactions);
+                current.value.removeMutableListener(triggerReactions);
             [current, isModified] = checkModified((typeof value === 'function') ? (value as Next<T>)(current?.value) : value, current);
             if (isModified)
                 triggerReactions();
             if (isMutable(current.value))
-                addMutableListener(current.value, triggerReactions)
+                current.value.addMutableListener(triggerReactions)
             return current.value;
         }
 

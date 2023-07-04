@@ -1,4 +1,4 @@
-import {FunctionsRepository} from "../../../../lib/main/function-repository-types";
+import {FunctionsRepository} from "../../../../lib";
 
 export const funcRepository: FunctionsRepository = {
     "1": ({event: Event}) => (event.target as HTMLInputElement).value,

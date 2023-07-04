@@ -1,7 +1,7 @@
 import {describe, expect, it, jest} from '@jest/globals'
-import {addMutableListener, isMutable, mutableObject, removeMutableListener} from "../lib";
-import {checkModified, getRevision} from "../lib";
-import {_mutableObject} from "../lib/mutable";
+import {mutableObject} from "../lib";
+import {_mutableObject} from "../lib/mutable"
+import {checkModified, getRevision, isMutable} from "jay-reactive";
 
 describe("mutable", () => {
 
@@ -197,7 +197,7 @@ describe("mutable", () => {
             it('filter on objects should respect the same mutable listeners', () => {
                 let fn1 = jest.fn();
                 let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}]);
-                addMutableListener(mutableArr, fn1);
+                isMutable(mutableArr) && mutableArr.addMutableListener(fn1);
 
                 const result = mutableArr.filter(item => item.a > 2);
                 result[0].a = 7;
@@ -219,11 +219,11 @@ describe("mutable", () => {
                 let fn1 = jest.fn();
                 let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}, {a: 7, b: 8}]);
                 let item3 = mutableArr[3];
-                addMutableListener(mutableArr, fn1);
+                isMutable(mutableArr) && mutableArr.addMutableListener(fn1);
 
                 const result = mutableArr.filter(item => item.a > 2);
-                removeMutableListener(mutableArr, fn1);
-                addMutableListener(result, fn1);
+                isMutable(mutableArr) && mutableArr.removeMutableListener(fn1);
+                isMutable(result) && result.addMutableListener(fn1);
                 result[0].a = 7;
                 expect(fn1.mock.calls.length).toBe(1);
 
@@ -258,7 +258,7 @@ describe("mutable", () => {
             it('returned object should respect the same mutable listeners', () => {
                 let fn1 = jest.fn();
                 let mutableArr = mutableObject([{a: 1, b: 4}, {a: 2, b: 5}, {a: 3, b: 6}]);
-                addMutableListener(mutableArr, fn1);
+                isMutable(mutableArr) && mutableArr.addMutableListener(fn1);
 
                 const found = mutableArr.find(_ => _.a === 2)
                 found.b = 9;
@@ -331,7 +331,7 @@ describe("mutable", () => {
             it('flat on objects should respect the same mutable listeners', () => {
                 let fn1 = jest.fn();
                 let mutableArr = mutableObject([{a: 1, b: 2}, [{a: 3, b: 4}, {a: 5, b: 6}]]);
-                addMutableListener(mutableArr, fn1);
+                isMutable(mutableArr) && mutableArr.addMutableListener(fn1);
 
                 // @ts-ignore
                 const result = mutableArr.flat();
@@ -375,7 +375,7 @@ describe("mutable", () => {
             it('flatMap on objects should respect the same mutable listeners', () => {
                 let fn1 = jest.fn();
                 let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}]);
-                addMutableListener(mutableArr, fn1);
+                isMutable(mutableArr) && mutableArr.addMutableListener(fn1);
 
                 // @ts-ignore
                 const result = mutableArr.flatMap(x => [{a: x.a}, {b: x.b}]);
@@ -515,7 +515,7 @@ describe("mutable", () => {
             it('map on objects should respect the same mutable listeners', () => {
                 let fn1 = jest.fn();
                 let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}]);
-                addMutableListener(mutableArr, fn1);
+                isMutable(mutableArr) && mutableArr.addMutableListener(fn1);
 
                 const result = mutableArr.map(item => {item.a *= 2; return item});
                 result[0].a = 7;
@@ -894,7 +894,7 @@ describe("mutable", () => {
         it('supports change listener in mutableObject', () => {
             let fn = jest.fn();
             let mutable = mutableObject({a: 1, b:2});
-            addMutableListener(mutable, fn);
+            isMutable(mutable) && mutable.addMutableListener(fn);
 
             mutable.a = 3;
 
@@ -905,9 +905,9 @@ describe("mutable", () => {
             let fn1 = jest.fn();
             let fn2 = jest.fn();
             let mutable = mutableObject({a: 1, b:2});
-            addMutableListener(mutable, fn1);
-            addMutableListener(mutable, fn2);
-            removeMutableListener(mutable, fn1);
+            isMutable(mutable) && mutable.addMutableListener(fn1);
+            isMutable(mutable) && mutable.addMutableListener(fn2);
+            isMutable(mutable) && mutable.removeMutableListener(fn1);
 
             mutable.a = 3;
 

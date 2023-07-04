@@ -1,6 +1,6 @@
 import {describe, expect, it, jest} from '@jest/globals'
 import {Reactive, touchRevision} from "../lib";
-import {mutableObject} from "../lib";
+import {mockMutable} from "./mock-mutable";
 
 describe('reactive', () => {
 
@@ -159,7 +159,7 @@ describe('reactive', () => {
         it('should not rerun when state it depends on is updated with the same mutable (same revision) value', () => {
             const reaction = jest.fn();
             let state, setState
-            let value = touchRevision({name: 'abc'});
+            let value = mockMutable({name: 'abc'});
             new Reactive().record((reactive) => {
                 [state, setState] = reactive.createState(value);
                 reactive.createReaction(() => {
@@ -176,7 +176,7 @@ describe('reactive', () => {
         it('should rerun when state it depends on is updated with updated mutable (different revision) value', async () => {
             const reaction = jest.fn();
 
-            let value = touchRevision({name: 'abc'});
+            let value = mockMutable({name: 'abc'});
             let reactive = new Reactive();
             let [setState] = reactive.record((reactive) => {
                 let [state, setState] = reactive.createState(value);
@@ -517,7 +517,7 @@ describe('reactive', () => {
             let reactive = new Reactive();
             let {reaction, state} = reactive.record((reactive) => {
                 const reaction = jest.fn();
-                let [state, ] = reactive.createState(mutableObject({a: 1, b: 2}));
+                let [state, ] = reactive.createState(mockMutable({a: 1, b: 2}));
                 reactive.createReaction(() => {
                     reaction(state())
                 })
@@ -539,7 +539,7 @@ describe('reactive', () => {
             let reactive = new Reactive();
             let {reaction, state} = reactive.record((reactive) => {
                 const reaction = jest.fn();
-                let [state, ] = reactive.createState(mutableObject({a: 1, b: 2, c: {d: 4, e: 5}}));
+                let [state, ] = reactive.createState(mockMutable({a: 1, b: 2, c: {d: 4, e: 5}}));
                 reactive.createReaction(() => {
                     reaction(state())
                 })
@@ -558,7 +558,7 @@ describe('reactive', () => {
         })
 
         it("should run a reaction setting a new mutable object, and it changes", async () => {
-            let originalMutable = mutableObject({a: 1, b: 2});
+            let originalMutable = mockMutable({a: 1, b: 2});
             let reactive = new Reactive();
             let {reaction, setState, state} = reactive.record((reactive) => {
                 const reaction = jest.fn();
@@ -569,7 +569,7 @@ describe('reactive', () => {
                 return {reaction, setState, state}
             })
 
-            setState(mutableObject({a: 3, b: 4}))
+            setState(mockMutable({a: 3, b: 4}))
             state().a = 5;
 
             await reactive.toBeClean()
@@ -581,7 +581,7 @@ describe('reactive', () => {
         })
 
         it("should not run a reaction when a mutable object that was replaced in state is updated", async () => {
-            let originalMutable = mutableObject({a: 1, b: 2});
+            let originalMutable = mockMutable({a: 1, b: 2});
             let reactive = new Reactive();
             let {reaction, setState, state} = reactive.record((reactive) => {
                 const reaction = jest.fn();
@@ -592,7 +592,7 @@ describe('reactive', () => {
                 return {reaction, setState, state}
             })
 
-            setState(mutableObject({a: 3, b: 4}))
+            setState(mockMutable({a: 3, b: 4}))
             originalMutable.a = 5;
 
             await reactive.toBeClean()

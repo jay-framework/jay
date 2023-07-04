@@ -25,7 +25,7 @@ export function listCompare<T, S>(oldArray: RandomAccessLinkedList<T, S>,
     let newListItem_ = newList.first();
     let oldIndex = 0;
     let index = 0;
-    let instructions = [];
+    let instructions: MatchResult<T, S>[] = [];
 
     function addNewItem(newListItem: LinkedListItem<T, S>) {
         let newElement = mkElement(newListItem.value, newListItem.id);

@@ -9,7 +9,8 @@
   },
   "jest": {},
   "dependencies": {
-    "jay-reactive": "1.0.4"
+    "jay-reactive": "1.0.4",
+    "jay-mutable": "1.0.0"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.14.2",

@@ -1,17 +1,24 @@
 import {JayEventHandler, JayNativeFunction} from "jay-runtime";
+import {JayGlobalNativeFunction} from "./main/function-repository-types";
+import {JPMNativeExecResult} from "./comm-channel/messages";
 
-export function $handler<EventType, ViewState, Returns>(id): JayEventHandler<EventType, ViewState, Returns> {
+function nativeExecId(id) {
     let fn = () => null;
     // @ts-ignore
     fn.id = id;
     return fn;
 }
 
+export function $handler<EventType, ViewState, Returns>(id): JayEventHandler<EventType, ViewState, Returns> {
+    return nativeExecId(id);
+}
+
 export function $func<ElementType extends HTMLElement, ViewState, ResultType>(id): JayNativeFunction<ElementType, ViewState, ResultType> {
-    let fn = () => null;
-    // @ts-ignore
-    fn.id = id;
-    return fn;
+    return nativeExecId(id);
+}
+
+export function $funcGlobal<R>(id): JayGlobalNativeFunction<R> {
+    return nativeExecId(id);
 }
 
 interface CorrelatedPromise<T> {
@@ -36,12 +43,10 @@ export function correlatedPromise<T>() {
     return corrPromise
 }
 
-export function resolveCorrelatedPromise(correlationId: number, value: any) {
-    $promises.get(correlationId)?.resolve(value)
-    $promises.delete(correlationId)
-}
-
-export function rejectCorrelatedPromise(correlationId: number, error: Error) {
-    $promises.get(correlationId)?.reject(error)
-    $promises.delete(correlationId)
+export function completeCorrelatedPromise(message: JPMNativeExecResult) {
+    if (message.error)
+        $promises.get(message.correlationId)?.reject(message.error)
+    else
+        $promises.get(message.correlationId)?.resolve(message.result)
+    $promises.delete(message.correlationId)
 }

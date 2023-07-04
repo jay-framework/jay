@@ -1,14 +1,25 @@
-import {JayElement, JayEvent, JayEventHandler, provideContext, RenderElement, useContext} from "jay-runtime";
-import {createState, JayComponentCore, makeJayComponent, Props, useReactive} from "jay-component";
 import {
-    IJayEndpoint,
-    JPMMessage
-} from "../comm-channel/comm-channel";
+    HTMLElementCollectionProxy,
+    JayElement,
+    JayEvent,
+    JayEventHandler,
+    JayNativeFunction,
+    provideContext,
+    RenderElement,
+    useContext
+} from "jay-runtime";
+import {createState, JayComponentCore, makeJayComponent, Props, useReactive} from "jay-component";
+import {IJayEndpoint, JPMMessage} from "../comm-channel/comm-channel";
 import {SECURE_COMPONENT_MARKER} from "./main-contexts";
 import {SECURE_COORDINATE_MARKER} from "./main-child-comp";
 import {FunctionsRepository} from "./function-repository-types";
-import {addEventListenerMessage, eventInvocationMessage, JayPortMessageType, rootApiInvoke} from "../comm-channel/messages";
-import {deserialize, Deserialize} from "jay-reactive";
+import {
+    addEventListenerMessage,
+    eventInvocationMessage,
+    JayPortMessageType, nativeExecResult,
+    rootApiInvoke
+} from "../comm-channel/messages";
+import {deserialize, Deserialize} from "jay-serialization";
 
 interface CompBridgeOptions {
     events?: Array<string>,
@@ -40,7 +51,7 @@ function makeComponentBridgeConstructor<
 
     let deserializedViewState: ViewState, nextDeserialize: Deserialize<ViewState> = deserialize
 
-    endpoint.onUpdate((message: JPMMessage) => {
+    endpoint.onUpdate( (message: JPMMessage) => {
         switch (message.type) {
             case JayPortMessageType.render:
                 reactive.batchReactions(() => {
@@ -53,7 +64,7 @@ function makeComponentBridgeConstructor<
                 refs[message.refName].addEventListener(eventType, (event: JayEvent<any, any>) => {
                     port.batch(() => {
                         if (message.nativeId) {
-                            let eventData = funcRepository[nativeId](event);
+                            let eventData = (funcRepository[nativeId] as JayEventHandler<any, any, any>)(event);
                             endpoint.post(eventInvocationMessage(eventType, event.coordinate, eventData))
                         }
                         else
@@ -75,6 +86,26 @@ function makeComponentBridgeConstructor<
                 let {eventType, eventData} = message;
                 eventHandlers[eventType]({event: eventData, coordinate: [''], viewState: null})
                 break;
+            }
+            case JayPortMessageType.nativeExec: {
+                let {nativeId, refName, coordinate, correlationId} = message;
+                let ref = refs[refName]
+                // todo support for dynamic references
+                port.batch(async () => {
+                    try {
+                        let result = ref.find?
+                            await (ref as HTMLElementCollectionProxy<any, any>)
+                                .find((vs, c) =>
+                                    c.length === coordinate.length && coordinate.reduce((acc, el1, i) => acc && c[i] === el1, true))
+                                .$exec((elem, vs) => (funcRepository[nativeId] as JayNativeFunction<any, any, any>)(elem, vs))
+                            :
+                            await ref.$exec((elem, vs) => (funcRepository[nativeId] as JayNativeFunction<any, any, any>)(elem, vs));
+                        endpoint.post(nativeExecResult(correlationId, result, undefined, refName))
+                    }
+                    catch (err) {
+                        endpoint.post(nativeExecResult(correlationId, undefined, err.message, refName))
+                    }
+                });
             }
         }
     })
