@@ -3,11 +3,52 @@ Jay.renderTemplate = (type: string, props: Record<string, unknown>)=>{
     //
 }
 
-Jay.registerComp = (id: string, Comp: unknown)=>undefined
-Jay.registerTemplate = (id: string, Comp: unknown)=>undefined
-Jay.useState = <T>(initial: T): [ value: T, setState:(val: T)=>void,]=>{
-    let value = initial;
-    return [value, (val: T)=>value=val, ]
+Jay.prerendered = {} as Record<string, JayNode>
+Jay.renderToString = (content: JayNode)=>{
+    return ''
+}
+Jay.serverMemo =( _id: string,node: JayNode)=>{
+    return node;
+}
+
+Jay.map =<T, U>(arr: Signal<T[]>, cb: (val: Signal<T>)=>U):Signal<U[]>=>{
+    return arr as any as Signal<U[]>;
+}
+
+Jay.fetch =<T>( url: string): Promise<Signal<T>>=>{
+    return url as any as Promise<Signal<T>>;
+}
+
+Jay.saveForClient =<T extends  Signal<any> | string | number | JayNode>( _id: string,node:T):T=>{
+    return node;
+}
+Jay.getClientData =<T extends  Signal<any> | string | number | JayNode>( _id: string):T=>{
+    return {} as any;
+}
+Jay.registerPrerendered = <T>(id: string, res: string)=>{};
+Jay.registerComp = <T>(id: string, Comp: unknown)=>Comp
+Jay.registerTemplate = <T>(id: string, Comp: T)=>Comp
+Jay.useState = <T>(initial: T | Signal<T>)=>{
+    return new ClientSignal<T>()
+}
+
+Jay.Signal = <T>(defaultValue: T)=>new ClientSignal<T>()
+Jay.BuildSignal = <T>(defaultValue: T)=>new Signal<T>()
+Jay.ServerSignal = <T>(defaultValue: T)=>new Signal<T>()
+export interface CompiledJay<P, TP>{
+    logic: (p:P)=>TP,
+    template: (p: TP & P)=>JayNode
+}
+
+export class Signal<T>{
+    value: T;
+    id: string;
+}
+
+
+export class ClientSignal<T> extends Signal<T>{
+    value: T;
+    set:(t:T)=>void
 }
 
 type JSXElementConstructor<P> = ((
@@ -15,9 +56,8 @@ type JSXElementConstructor<P> = ((
     /**
      * @deprecated https://legacy.reactjs.org/docs/legacy-context.html#referencing-context-in-stateless-function-components
      */
-    deprecatedLegacyContext?: any,
-) => JayNode)
-type JayNode =
+) => JayNode | Promise<JayNode>)
+export type JayNode =
 | JayElement
 | string
 | number
@@ -25,6 +65,7 @@ type JayNode =
 | null
 | undefined
 | JayNode[]
+| Signal<JayNode>
 
 interface JayElement<P = any, T extends string | JSXElementConstructor<any> = string | JSXElementConstructor<any>> {
     type: T;
@@ -60,7 +101,7 @@ declare global {
         interface ElementAttributesProperty { props: {}; }
         interface ElementChildrenAttribute { children: {}; }
 
-        type LibraryManagedAttributes<C, P> = P
+        type LibraryManagedAttributes<C, P> = P | { workerRendered: true; saveForClient?: boolean}
 
         type HTMLProps<P, E> = P & WithKey & WithRef<E> & {
             onChange?: (ev: Event & {target:E})=>void
@@ -74,6 +115,8 @@ declare global {
 
         interface WithKey {
             key?: Key | null | undefined;
+            // is hidden allows rendering components and hiding 
+            isHidden?: boolean
         }
         type IntrinsicAttributes<COMP > = WithKey
 
@@ -81,7 +124,9 @@ declare global {
         
           interface IntrinsicElements {
             // HTML
-            a: NonVoidElementHTMLProps<{}, HTMLAnchorElement>;
+            a: NonVoidElementHTMLProps<{
+                href: string
+            }, HTMLAnchorElement>;
             abbr: NonVoidElementHTMLProps<{}, HTMLElement>;
             address: NonVoidElementHTMLProps<{}, HTMLElement>;
             area: NonVoidElementHTMLProps<{}, HTMLAreaElement>;
@@ -134,7 +179,7 @@ declare global {
             html: NonVoidElementHTMLProps<{}, HTMLHtmlElement>;
             i: NonVoidElementHTMLProps<{}, HTMLElement>;
             iframe: NonVoidElementHTMLProps<{}, HTMLIFrameElement>;
-            img: NonVoidElementHTMLProps<{}, HTMLImageElement>;
+            img: NonVoidElementHTMLProps<{src: string}, HTMLImageElement>;
             input: NonVoidElementHTMLProps<{
                 value?: string | number
             }, HTMLInputElement>;
@@ -265,6 +310,7 @@ declare global {
         }
     }
 }
+
 
 export default Jay;
 

@@ -1,6 +1,6 @@
 
-import Jay, { JayNode, Signal } from './jay';
-import languages from './supported-languages.json'
+import Jay, { JayNode, Signal } from '../jay';
+import languages from '../supported-languages.json'
 
  
 /**
@@ -54,24 +54,18 @@ const App = Jay(({ user, lang}:{ user: Signal<User>
         <div >
             current lang: {selectedLang}
             {/** needs client representation */}
-            <Accordion title={lang.value.chooseLang}>
+            <Accordion key="Accordion0" workerRendered>
                 {/** can be rendered once in build */}
-                <LangSelector supporetdLangs={supportedLangs}/>
+                {Jay.prerendered.LangSelector1}
 
             </Accordion>
             {/** can be rendered once in server */}
-            <UserDisplay user={user} lang={lang}/>
-            <CartComp/>
+            <UserDisplay key="UserDisplay0" workerRendered/>
+            <CartComp  key="CartComp0" />
         </div>
     </div>
 })
 
-// lang selector can be rendered once in build
-const LangSelector = Jay(({supporetdLangs}:{supporetdLangs: Signal<LanguageInfo[]>})=>{
-    return <div>{
-            supporetdLangs.value.map(lang=><a href={lang.id} key={lang.id}>{lang.name}</a>)
-        }</div>
-})
 
 const Accordion = Jay((props:{children: JayNode, title: JayNode})=>{
     const isOpen = Jay.Signal(false);
@@ -92,7 +86,7 @@ const CartComp = Jay(async ()=>{
     const serverItems = await Jay.fetch<CartItem[]>('my-db:query');
     const state = Jay.useState(serverItems);
     return <div>
-        {Jay.map(state ,item=><CartItemComp key={item.id} item={item} />)}
+        <div>{Jay.map(state ,item=><CartItemComp key={`CartItemComp0:${item.id}`} workerRendered />)}</div>
     </div>
 })
 const CartItemComp = Jay(({item}:{ item:Signal<CartItem>})=>{

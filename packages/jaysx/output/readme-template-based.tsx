@@ -1,4 +1,5 @@
 
+import { CompiledJay } from '../jay';
 import Jay, { JayNode, Signal } from './jay';
 import languages from './supported-languages.json'
 
@@ -44,6 +45,31 @@ interface User{
  * 
  */
 const supportedLangs = Jay.BuildSignal(languages)
+
+const App1: CompiledJay<{ user: Signal<User>
+    , lang: Signal<Language>}, {selectedLang:any}> = {
+    logic({ user, lang}){
+        const selectedLang = supportedLangs.value.find(lang=>lang.id===user.value.lang).name;
+        return { selectedLang }
+    },
+    template({selectedLang, lang, user}) {
+        return <div>
+        <div >
+            current lang: {selectedLang}
+            {/** needs client representation */}
+            <Accordion title={lang.value.chooseLang}>
+                {/** can be rendered once in build */}
+                <LangSelector supporetdLangs={supportedLangs}/>
+
+            </Accordion>
+            {/** can be rendered once in server */}
+            <UserDisplay user={user} lang={lang}/>
+            <CartComp/>
+            </div>
+        </div>
+    },
+
+}
 
 const App = Jay(({ user, lang}:{ user: Signal<User>
     , lang: Signal<Language>})=>{

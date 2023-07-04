@@ -1,7 +1,9 @@
 {
     "compilerOptions": {
     "jsx": "react",
-    "jsxFactory": "Jay.createElement"
-
+    "jsxFactory": "Jay.createElement",
+"jsxFragmentFactory": "Jay.Fragment",
+"resolveJsonModule": true,
+"esModuleInterop": true
     }
 }
