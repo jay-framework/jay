@@ -1,32 +1,6 @@
 import {ITEM_ADDED, ITEM_MOVED, ITEM_REMOVED, listCompare, RandomAccessLinkedList as List} from "jay-list-compare";
+import {ADD, JSONPatch, JSONPointer, MOVE, REMOVE, REPLACE} from "../types";
 
-export const ADD = "add"
-export const REPLACE = "replace"
-export const REMOVE = "remove"
-export const MOVE = "move"
-type JSONPointer = string[]
-
-interface JSONPatchAdd {
-    op: typeof ADD,
-    path: JSONPointer,
-    value: any
-}
-interface JSONPatchReplace {
-    op: typeof REPLACE,
-    path: JSONPointer,
-    value: any
-}
-interface JSONPatchRemove {
-    op: typeof REMOVE,
-    path: JSONPointer,
-}
-interface JSONPatchMove {
-    op: typeof MOVE,
-    from: JSONPointer,
-    path: JSONPointer
-}
-type JSONPatchOperation = JSONPatchAdd | JSONPatchReplace | JSONPatchRemove | JSONPatchMove;
-type JSONPatch = JSONPatchOperation[]
 type MeasureOfChange = number
 type DataFields = number
 type ArrayContext = {
