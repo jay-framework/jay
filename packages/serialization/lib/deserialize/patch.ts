@@ -12,6 +12,6 @@ function applyPatchOperation(target: object, patchOperation: JSONPatchOperation)
         delete target[path[dirLength]];
 }
 
-export function applyPatch(target: object, patch: JSONPatch) {
+export function patch(target: object, patch: JSONPatch) {
     patch.forEach(patchOperation => applyPatchOperation(target, patchOperation))
 }

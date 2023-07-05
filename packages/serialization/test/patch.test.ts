@@ -1,13 +1,13 @@
 import {describe, expect, it} from '@jest/globals'
 import {mutableObject} from "jay-mutable";
-import {applyPatch} from "../lib/deserialize/apply-patch";
+import {patch} from "../lib/deserialize/patch";
 import {ADD, REMOVE, REPLACE} from "../lib/types";
 
 describe('apply JSON patch', () => {
     describe("flat object", () => {
         it('should apply a replace patch', () => {
             let obj = mutableObject({a: 1, b: 2, c:3})
-            applyPatch(obj, [
+            patch(obj, [
                 {op: REPLACE, path: ['b'], value: 4},
                 {op: REPLACE, path: ['c'], value: 5}
             ])
@@ -16,7 +16,7 @@ describe('apply JSON patch', () => {
 
         it('should apply an add patch', () => {
             let obj = mutableObject({a: 1, b: 2, c:3})
-            applyPatch(obj, [
+            patch(obj, [
                 {op: ADD, path: ['d'], value: 4}
             ])
             expect(obj).toEqual({a: 1, b: 2, c: 3, d: 4});
@@ -24,7 +24,7 @@ describe('apply JSON patch', () => {
 
         it('should apply a remove patch', () => {
             let obj = mutableObject({a: 1, b: 2, c:3})
-            applyPatch(obj, [
+            patch(obj, [
                 {op: REMOVE, path: ['c']}
             ])
             expect(obj).toEqual({a: 1, b: 2});
@@ -34,7 +34,7 @@ describe('apply JSON patch', () => {
     describe("nested object", () => {
         it('should apply a replace patch', () => {
             let obj = mutableObject({x: {a: 1, b: 2, c:3}})
-            applyPatch(obj, [
+            patch(obj, [
                 {op: REPLACE, path: ['x', 'b'], value: 4},
                 {op: REPLACE, path: ['x', 'c'], value: 5}
             ])
@@ -43,7 +43,7 @@ describe('apply JSON patch', () => {
 
         it('should apply an add patch', () => {
             let obj = mutableObject({x: {a: 1, b: 2, c:3}})
-            applyPatch(obj, [
+            patch(obj, [
                 {op: ADD, path: ['x', 'd'], value: 4}
             ])
             expect(obj).toEqual({x: {a: 1, b: 2, c: 3, d: 4}});
@@ -51,7 +51,7 @@ describe('apply JSON patch', () => {
 
         it('should apply a remove patch', () => {
             let obj = mutableObject({x: {a: 1, b: 2, c:3}})
-            applyPatch(obj, [
+            patch(obj, [
                 {op: REMOVE, path: ['x', 'c']}
             ])
             expect(obj).toEqual({x: {a: 1, b: 2}});
