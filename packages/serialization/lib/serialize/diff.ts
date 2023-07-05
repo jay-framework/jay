@@ -1,4 +1,4 @@
-import {ITEM_ADDED, ITEM_MOVED, listCompare, RandomAccessLinkedList as List} from "jay-list-compare";
+import {ITEM_ADDED, ITEM_MOVED, ITEM_REMOVED, listCompare, RandomAccessLinkedList as List} from "jay-list-compare";
 
 export const ADD = "add"
 export const REPLACE = "replace"
@@ -33,7 +33,15 @@ type ArrayContext = {
     matchBy: string,
     lastArray: List<any, any>,
 }
-type ArrayContexts = [JSONPointer, ArrayContext][]
+export type ArrayContexts = [JSONPointer, ArrayContext][]
+
+const LIST_COMPARE_RESULT_TO_JSON_PATCH = {};
+LIST_COMPARE_RESULT_TO_JSON_PATCH[ITEM_ADDED] =
+    (instruction, path) => ({op: ADD, value: instruction.item, path: [...path, instruction.pos]})
+LIST_COMPARE_RESULT_TO_JSON_PATCH[ITEM_MOVED] =
+    (instruction, path) => ({op: MOVE, from: [...path, instruction.fromPos], path: [...path, instruction.pos]})
+LIST_COMPARE_RESULT_TO_JSON_PATCH[ITEM_REMOVED] =(instruction, path) =>
+    ({op: REMOVE, path: [...path, instruction.pos]})
 
 function findArrayContext(contexts: ArrayContexts, path: JSONPointer): ArrayContext {
     let foundContext = contexts?.find(([pointer, context]) => {
@@ -60,6 +68,15 @@ function diffObject(newValue: unknown, oldValue: unknown, diffResults: [JSONPatc
     }
 }
 
+function flattenPatch(diffResults: [JSONPatch, MeasureOfChange, DataFields][], path: string[], newValue: unknown): [JSONPatch, MeasureOfChange, DataFields] {
+    let [measureOfChange, dataFields] = diffResults.reduce((prev, curr) =>
+        [prev[0] + curr[1], prev[1] + curr[2]], [0, 0])
+    if (measureOfChange / dataFields > 0.5)
+        return [[{op: REPLACE, path, value: newValue}], 1, 1]
+    else
+        return [diffResults.map(_ => _[0]).flat(), measureOfChange, dataFields];
+}
+
 export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayContexts, path: JSONPointer = []): [JSONPatch, MeasureOfChange, DataFields] => {
     // Primitives
     if (newValue === oldValue) return [[], 0, 1];
@@ -68,7 +85,7 @@ export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayConte
 
     if (newValue && oldValue && typeof newValue === 'object' && typeof oldValue === 'object') {
         // Arrays
-        let length, i, keys, diffResults: [JSONPatch, MeasureOfChange, DataFields][] = [];
+        let diffResults: [JSONPatch, MeasureOfChange, DataFields][] = [];
         if (Array.isArray(newValue) && Array.isArray(oldValue)) {
             let context = findArrayContext(contexts, path);
             if (context) {
@@ -76,15 +93,15 @@ export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayConte
                 lastArray = lastArray || new List<any, any>(oldValue, matchBy);
                 let newArray = new List<any, any>(newValue, matchBy);
                 let instructions = listCompare<any, any>(lastArray, newArray, () => {})
-                let arrayPatch: JSONPatch = instructions.map(instruction => {
-                    if (instruction.action === ITEM_ADDED)
-                        return {op: ADD, value: instruction.item, path: [...path, instruction.pos]}
-                    else if (instruction.action === ITEM_MOVED)
-                        return {op: MOVE, from: [...path, instruction.fromPos], path: [...path, instruction.pos]}
-                    else
-                        return {op: REMOVE, path: [...path, instruction.pos]}
-                }) as JSONPatch;
-                return [arrayPatch, instructions.length, newValue.length]
+                let arrayPatch: JSONPatch = instructions.map(instruction =>
+                    LIST_COMPARE_RESULT_TO_JSON_PATCH[instruction.action](instruction, path)) as JSONPatch;
+                let arrayItemPatches: [JSONPatch, MeasureOfChange, DataFields][] = [[arrayPatch, instructions.length, newValue.length]];
+                newArray.forEach((newArrayItem, _, index) => {
+                    let oldArrayItem = lastArray.get(newArrayItem[matchBy])
+                    if (oldArrayItem)
+                        arrayItemPatches.push(diff(newArrayItem, oldArrayItem.value, contexts, [...path, ""+index]))
+                })
+                return flattenPatch(arrayItemPatches, path, newValue)
             }
         }
         if (Array.isArray(newValue) !== Array.isArray(oldValue))
@@ -93,12 +110,7 @@ export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayConte
         // Objects
         diffObject(newValue, oldValue, diffResults, contexts, path);
         // check it there are a lot of diffs, better to just replace the whole object
-        let [measureOfChange, dataFields] = diffResults.reduce((prev, curr) =>
-             [prev[0] + curr[1], prev[1] + curr[2]], [0,0])
-        if (measureOfChange / dataFields > 0.5)
-            return [[{op:REPLACE, path, value:newValue}], 1, 1]
-        else
-            return [diffResults.map(_ => _[0]).flat(), measureOfChange, dataFields];
+        return flattenPatch(diffResults, path, newValue);
 
     }
 

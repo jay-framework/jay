@@ -1,5 +1,5 @@
 import {describe, expect, it, jest, beforeEach} from '@jest/globals'
-import {ADD, diff, REMOVE, REPLACE} from '../lib/serialize/diff'
+import {ADD, ArrayContexts, diff, MOVE, REMOVE, REPLACE} from '../lib/serialize/diff'
 
 describe('diff', () => {
     describe('atomic values', () => {
@@ -194,6 +194,79 @@ describe('diff', () => {
     })
 
     describe('object array values', () => {
+
+        describe('with an array context', () => {
+
+            const TOP_LEVEL_ARRAY_CONTEXT: ArrayContexts = [[[], {lastArray: null, matchBy: 'id'}]];
+            const NESTED_ARRAY_CONTEXT: ArrayContexts = [[['b'], {lastArray: null, matchBy: 'id'}]];
+            it("should return empty for the same array with a context", () => {
+                let patch = diff(
+                    [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}],
+                    [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}],
+                    TOP_LEVEL_ARRAY_CONTEXT
+                )
+                expect(patch[0]).toEqual([])
+            })
+
+            it("should return add patch for an added item", () => {
+                let patch = diff(
+                    [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}, {id: 4, c:"4"}],
+                    [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}],
+                    TOP_LEVEL_ARRAY_CONTEXT
+                )
+                expect(patch[0]).toEqual([
+                    {op: ADD, path: [3], value: {id: 4, c:"4"}}
+                ])
+            })
+
+            it("should return remove patch for a removed item", () => {
+                let patch = diff(
+                    [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}],
+                    [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}, {id: 4, c:"4"}],
+                    TOP_LEVEL_ARRAY_CONTEXT
+                )
+                expect(patch[0]).toEqual([
+                    {op: REMOVE, path: [3]}
+                ])
+            })
+
+            it("should return move patch for a moved item", () => {
+                let patch = diff(
+                    [{id: 1, c:"1"}, {id: 3, c:"3"}, {id: 2, c:"2"}],
+                    [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}],
+                    TOP_LEVEL_ARRAY_CONTEXT
+                )
+                expect(patch[0]).toEqual([
+                    {op: MOVE, path: [1], from: [2]}
+                ])
+            })
+
+            it("should return a patch for object property update", () => {
+                let patch = diff(
+                    [{id: 1, c:"1"}, {id: 2, c:"4"}, {id: 3, c:"3"}],
+                    [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}],
+                    TOP_LEVEL_ARRAY_CONTEXT
+                )
+                expect(patch[0]).toEqual([
+                    {op: REPLACE, path: ['1', 'c'], value: "4"}
+                ])
+            })
+
+            it("should return a composite array patch", () => {
+                let patch = diff(
+                    {a: 1, b: [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}, {id: 5, c:"5"}, {id: 7, c: "7"}, {id: 6, c:"6"}]},
+                    {a: 1, b: [{id: 1, c:"1"}, {id: 3, c:"3"}, {id: 4, c:"4"}, {id: 2, c:"2"}, {id: 5, c:"5"}, {id: 6, c:"6"}]},
+                    NESTED_ARRAY_CONTEXT
+                )
+                expect(patch[0]).toEqual([
+                    {op: MOVE, from: ['b', 3], path: ['b', 1]},
+                    {op: REMOVE, path: ['b', 3]},
+                    {op: ADD, path: ['b', 4], value: {id: 7, c: "7"}}
+                ])
+            })
+
+        })
+
         it("should return empty for the same array", () => {
             let patch = diff(
                 [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}],
@@ -203,22 +276,7 @@ describe('diff', () => {
             expect(patch[0]).toEqual([])
         })
 
-        it("should return empty for the same array with a context", () => {
-            let patch = diff(
-                [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}],
-                [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}],
-                [[[], {lastArray: null, matchBy: 'id'}]]
-            )
-            expect(patch[0]).toEqual([])
-        })
 
-        it("should return array diff", () => {
-            let patch = diff(
-                {a: 1, b: [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}]},
-                {a: 1, b: [{id: 1, c:"1"}, {id: 3, c:"3"}, {id: 4, c:"4"}, {id: 2, c:"2"}]},
-                [[['b'], {lastArray: null, matchBy: 'id'}]]
-            )
-            expect(patch[0]).toEqual([])
-        })
+
     })
 })
