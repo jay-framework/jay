@@ -52,7 +52,8 @@ function findArrayContext(contexts: ArrayContexts, path: JSONPointer): ArrayCont
     return foundContext?foundContext[1]:undefined;
 }
 
-function diffObject(newValue: unknown, oldValue: unknown, diffResults: [JSONPatch, MeasureOfChange, DataFields][], contexts: ArrayContexts, path: string[]) {
+function diffObjectOrArray(newValue: unknown, oldValue: unknown, contexts: ArrayContexts, path: string[]) {
+    let diffResults: [JSONPatch, MeasureOfChange, DataFields][] = [];
     let keys, i, length
     keys = Object.keys(newValue);
     let oldKeys = Object.keys(oldValue);
@@ -66,15 +67,34 @@ function diffObject(newValue: unknown, oldValue: unknown, diffResults: [JSONPatc
         if (!newValue[key])
             diffResults.push([[{op: REMOVE, path: [...path, key]}], 1, 1])
     }
+    return flattenPatch(diffResults, path, newValue);
 }
 
 function flattenPatch(diffResults: [JSONPatch, MeasureOfChange, DataFields][], path: string[], newValue: unknown): [JSONPatch, MeasureOfChange, DataFields] {
+    // check it there are a lot of diffs, better to just replace the whole object
     let [measureOfChange, dataFields] = diffResults.reduce((prev, curr) =>
         [prev[0] + curr[1], prev[1] + curr[2]], [0, 0])
     if (measureOfChange / dataFields > 0.5)
         return [[{op: REPLACE, path, value: newValue}], 1, 1]
     else
         return [diffResults.map(_ => _[0]).flat(), measureOfChange, dataFields];
+}
+
+function diffArrayWithContext(context: ArrayContext, oldValue: any[], newValue: any[], path: string[], contexts: [JSONPointer, ArrayContext][]) {
+    let {matchBy, lastArray} = context;
+    lastArray = lastArray || new List<any, any>(oldValue, matchBy);
+    let newArray = new List<any, any>(newValue, matchBy);
+    let instructions = listCompare<any, any>(lastArray, newArray, () => {
+    })
+    let arrayPatch: JSONPatch = instructions.map(instruction =>
+        LIST_COMPARE_RESULT_TO_JSON_PATCH[instruction.action](instruction, path)) as JSONPatch;
+    let arrayItemPatches: [JSONPatch, MeasureOfChange, DataFields][] = [[arrayPatch, instructions.length, newValue.length]];
+    newArray.forEach((newArrayItem, _, index) => {
+        let oldArrayItem = lastArray.get(newArrayItem[matchBy])
+        if (oldArrayItem)
+            arrayItemPatches.push(diff(newArrayItem, oldArrayItem.value, contexts, [...path, "" + index]))
+    })
+    return flattenPatch(arrayItemPatches, path, newValue)
 }
 
 export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayContexts, path: JSONPointer = []): [JSONPatch, MeasureOfChange, DataFields] => {
@@ -85,33 +105,17 @@ export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayConte
 
     if (newValue && oldValue && typeof newValue === 'object' && typeof oldValue === 'object') {
         // Arrays
-        let diffResults: [JSONPatch, MeasureOfChange, DataFields][] = [];
         if (Array.isArray(newValue) && Array.isArray(oldValue)) {
             let context = findArrayContext(contexts, path);
             if (context) {
-                let {matchBy, lastArray} = context;
-                lastArray = lastArray || new List<any, any>(oldValue, matchBy);
-                let newArray = new List<any, any>(newValue, matchBy);
-                let instructions = listCompare<any, any>(lastArray, newArray, () => {})
-                let arrayPatch: JSONPatch = instructions.map(instruction =>
-                    LIST_COMPARE_RESULT_TO_JSON_PATCH[instruction.action](instruction, path)) as JSONPatch;
-                let arrayItemPatches: [JSONPatch, MeasureOfChange, DataFields][] = [[arrayPatch, instructions.length, newValue.length]];
-                newArray.forEach((newArrayItem, _, index) => {
-                    let oldArrayItem = lastArray.get(newArrayItem[matchBy])
-                    if (oldArrayItem)
-                        arrayItemPatches.push(diff(newArrayItem, oldArrayItem.value, contexts, [...path, ""+index]))
-                })
-                return flattenPatch(arrayItemPatches, path, newValue)
+                return diffArrayWithContext(context, oldValue, newValue, path, contexts);
             }
         }
         if (Array.isArray(newValue) !== Array.isArray(oldValue))
             return [[{op: REPLACE, path, value:newValue}], 1, 1];
 
         // Objects
-        diffObject(newValue, oldValue, diffResults, contexts, path);
-        // check it there are a lot of diffs, better to just replace the whole object
-        return flattenPatch(diffResults, path, newValue);
-
+        return diffObjectOrArray(newValue, oldValue, contexts, path);
     }
 
     return [[{op: REPLACE, path, value:newValue}], 1, 1];
