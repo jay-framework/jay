@@ -125,4 +125,89 @@ describe('diff', () => {
             ])
         })
     });
+
+    describe("primitive array values", () => {
+        it("should return empty for the same array", () => {
+            let patch = diff(
+                [1,2,3],
+                [1,2,3],
+                []
+            )
+            expect(patch[0]).toEqual([])
+        })
+
+        it("should return patch for added item", () => {
+            let patch = diff(
+                [1,2,3, 4],
+                [1,2,3],
+                []
+            )
+            expect(patch[0]).toEqual([
+                {op: ADD, path: ['3'], value: 4}]
+            )
+        })
+
+        it("should return patch for removed item", () => {
+            let patch = diff(
+                [1,2,3],
+                [1,2,3, 4],
+                []
+            )
+            expect(patch[0]).toEqual([
+                {op: REMOVE, path: ['3']}]
+            )
+        })
+
+        it("should return patch for changed item", () => {
+            let patch = diff(
+                [1,2,3],
+                [1,4,3],
+                []
+            )
+            expect(patch[0]).toEqual([
+                {op: REPLACE, path: ['1'], value: 2}]
+            )
+        })
+
+        it("should return patch for changes in a nested array", () => {
+            let patch = diff(
+                {a: [1,2,3,5]},
+                {a: [1,4,3]},
+                []
+            )
+            expect(patch[0]).toEqual([
+                {op: ADD, path: ['a', '3'], value: 5},
+                {op: REPLACE, path: ['a', '1'], value: 2}
+            ])
+        })
+    })
+
+    describe('object array values', () => {
+        it("should return empty for the same array", () => {
+            let patch = diff(
+                [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}],
+                [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}],
+                []
+            )
+            expect(patch[0]).toEqual([])
+        })
+
+        it("should return empty for the same array with a context", () => {
+            let patch = diff(
+                [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}],
+                [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}],
+                [[[], {lastArray: null, matchBy: 'id'}]]
+            )
+            expect(patch[0]).toEqual([])
+        })
+
+        it("should return array diff", () => {
+            let patch = diff(
+                {a: 1, b: [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}]},
+                {a: 1, b: [{id: 1, c:"1"}, {id: 3, c:"3"}, {id: 4, c:"4"}, {id: 2, c:"2"}]},
+                [[['b'], {lastArray: null, matchBy: 'id'}]]
+            )
+            expect(patch[0]).toEqual([])
+        })
+    })
 })

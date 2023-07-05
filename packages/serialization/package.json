@@ -14,7 +14,9 @@
   ],
   "dependencies": {
     "jay-reactive": "1.0.4",
-    "jay-mutable": "1.0.0"
+    "jay-mutable": "1.0.0",
+    "jay-runtime": "1.0.0",
+    "jay-list-compare": "1.0.0"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.18.10",
