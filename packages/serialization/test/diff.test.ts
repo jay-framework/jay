@@ -169,6 +169,17 @@ describe('diff', () => {
             )
         })
 
+        it("should replace all the array if there is a large change", () => {
+            let patch = diff(
+                [1,2,3],
+                [4,5,6],
+                []
+            )
+            expect(patch[0]).toEqual([
+                {op: REPLACE, path: [], value: [1,2,3]}]
+            )
+        })
+
         it("should return patch for changes in a nested array", () => {
             let patch = diff(
                 {a: [1,2,3,5]},
