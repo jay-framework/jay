@@ -104,7 +104,6 @@ export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayConte
         return [[{op:ADD, path, value: newValue}], 1, 1]
 
     if (newValue && oldValue && typeof newValue === 'object' && typeof oldValue === 'object') {
-        // Arrays
         if (Array.isArray(newValue) && Array.isArray(oldValue)) {
             let context = findArrayContext(contexts, path);
             if (context) {
@@ -114,7 +113,6 @@ export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayConte
         if (Array.isArray(newValue) !== Array.isArray(oldValue))
             return [[{op: REPLACE, path, value:newValue}], 1, 1];
 
-        // Objects
         return diffObjectOrArray(newValue, oldValue, contexts, path);
     }
 
