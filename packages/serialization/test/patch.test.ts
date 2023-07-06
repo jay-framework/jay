@@ -1,7 +1,7 @@
 import {describe, expect, it} from '@jest/globals'
 import {mutableObject} from "jay-mutable";
 import {patch} from "../lib/deserialize/patch";
-import {ADD, REMOVE, REPLACE} from "../lib/types";
+import {ADD, MOVE, REMOVE, REPLACE} from "../lib/types";
 
 describe('apply JSON patch', () => {
     describe("flat object", () => {
@@ -82,6 +82,40 @@ describe('apply JSON patch', () => {
                 {op: REMOVE, path: [1]},
             ])
             expect(obj).toEqual([1,3]);
+        })
+    })
+
+    describe('object arrays', () => {
+        it('should apply a replace patch', () => {
+            let obj = mutableObject([{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}])
+            patch(obj, [
+                {op: REPLACE, path: [1], value: {id: 4, c: '4'}}
+            ])
+            expect(obj).toEqual([{id: 1, c:"1"}, {id: 4, c:"4"}, {id: 3, c:"3"}]);
+        })
+
+        it('should apply an add patch', () => {
+            let obj = mutableObject([{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}])
+            patch(obj, [
+                {op: ADD, path: [3], value: {id: 4, c:"4"}}
+            ])
+            expect(obj).toEqual([{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}, {id: 4, c:"4"}]);
+        })
+
+        it('should apply a remove patch', () => {
+            let obj = mutableObject([{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}])
+            patch(obj, [
+                {op: REMOVE, path: [1]},
+            ])
+            expect(obj).toEqual([{id: 1, c:"1"}, {id: 3, c:"3"}]);
+        })
+
+        it('should apply a move patch', () => {
+            let obj = mutableObject([{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}])
+            patch(obj, [
+                {op: MOVE, path: [1], from:[2]},
+            ])
+            expect(obj).toEqual([{id: 1, c:"1"}, {id: 3, c:"3"}, {id: 2, c:"2"}]);
         })
     })
 
