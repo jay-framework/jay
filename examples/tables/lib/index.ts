@@ -1,3 +1,5 @@
+import {enablePatches} from 'immer'
+enablePatches()
 import {Main} from "./main";
 
 
