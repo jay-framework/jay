@@ -56,6 +56,7 @@ describe('apply JSON patch', () => {
             ])
             expect(obj).toEqual({x: {a: 1, b: 2}});
         })
+
     })
 
     describe('primitive arrays', () => {
@@ -119,6 +120,23 @@ describe('apply JSON patch', () => {
         })
     })
 
+    describe('problems', () => {
+        it('should ignore replace for non existing path', () => {
+            let obj = mutableObject({a: {b: {c: {d: 1}}}})
+            patch(obj, [
+                {op: REPLACE, path: ['a', 'x', 'y', 'z'], value: 5}
+            ])
+            expect(obj).toEqual({a: {b: {c: {d: 1}}}});
+        })
+    })
+
+    it('should ignore add for non existing path', () => {
+        let obj = mutableObject({x: {a: 1, b: 2, c:3}})
+        patch(obj, [
+            {op: ADD, path: ['x', 'y', 'z'], value: 12}
+        ])
+        expect(obj).toEqual({x: {a: 1, b: 2}});
+    })
 })
 
 

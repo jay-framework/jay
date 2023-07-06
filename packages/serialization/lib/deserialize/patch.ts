@@ -5,6 +5,8 @@ function applyPatchOperation(target: object, patchOperation: JSONPatchOperation)
     let dirLength = path.length - 1;
     for (let i = 0; i < dirLength; i++) {
         target = target[path[i]];
+        if (!target)
+            return;
     }
     if (patchOperation.op === REPLACE || patchOperation.op === ADD)
         target[path[dirLength]] = patchOperation.value
