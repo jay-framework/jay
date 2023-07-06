@@ -26,7 +26,7 @@ function findArrayContext(contexts: ArrayContexts, path: JSONPointer): ArrayCont
     return foundContext?foundContext[1]:undefined;
 }
 
-function diffObjectOrArray(newValue: unknown, oldValue: unknown, contexts: ArrayContexts, path: string[]) {
+function diffObjectOrArray(newValue: unknown, oldValue: unknown, contexts: ArrayContexts, path: JSONPointer) {
     let diffResults: [JSONPatch, MeasureOfChange, DataFields][] = [];
     let keys, i, length
     keys = Object.keys(newValue);
@@ -44,7 +44,7 @@ function diffObjectOrArray(newValue: unknown, oldValue: unknown, contexts: Array
     return flattenPatch(diffResults, path, newValue);
 }
 
-function flattenPatch(diffResults: [JSONPatch, MeasureOfChange, DataFields][], path: string[], newValue: unknown): [JSONPatch, MeasureOfChange, DataFields] {
+function flattenPatch(diffResults: [JSONPatch, MeasureOfChange, DataFields][], path: JSONPointer, newValue: unknown): [JSONPatch, MeasureOfChange, DataFields] {
     // check it there are a lot of diffs, better to just replace the whole object
     let [measureOfChange, dataFields] = diffResults.reduce((prev, curr) =>
         [prev[0] + curr[1], prev[1] + curr[2]], [0, 0])
@@ -54,7 +54,7 @@ function flattenPatch(diffResults: [JSONPatch, MeasureOfChange, DataFields][], p
         return [diffResults.map(_ => _[0]).flat(), measureOfChange, dataFields];
 }
 
-function diffArrayWithContext(context: ArrayContext, oldValue: any[], newValue: any[], path: string[], contexts: [JSONPointer, ArrayContext][]) {
+function diffArrayWithContext(context: ArrayContext, oldValue: any[], newValue: any[], path: JSONPointer, contexts: [JSONPointer, ArrayContext][]) {
     let {matchBy, lastArray} = context;
     lastArray = lastArray || new List<any, any>(oldValue, matchBy);
     let newArray = new List<any, any>(newValue, matchBy);
