@@ -8,8 +8,12 @@ function applyPatchOperation(target: object, patchOperation: JSONPatchOperation)
     }
     if (patchOperation.op === REPLACE || patchOperation.op === ADD)
         target[path[dirLength]] = patchOperation.value
-    else if (op === REMOVE)
-        delete target[path[dirLength]];
+    else if (op === REMOVE) {
+        if (Array.isArray(target))
+            target.splice(path[dirLength] as number, 1)
+        else
+            delete target[path[dirLength]];
+    }
 }
 
 export function patch(target: object, patch: JSONPatch) {

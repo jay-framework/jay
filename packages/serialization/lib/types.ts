@@ -2,7 +2,7 @@ export const ADD = "add"
 export const REPLACE = "replace"
 export const REMOVE = "remove"
 export const MOVE = "move"
-export type JSONPointer = string[]
+export type JSONPointer = (string|number)[]
 
 interface JSONPatchAdd {
     op: typeof ADD,

@@ -58,6 +58,33 @@ describe('apply JSON patch', () => {
         })
     })
 
+    describe('primitive arrays', () => {
+        it('should apply a replace patch', () => {
+            let obj = mutableObject([1,2,3])
+            patch(obj, [
+                {op: REPLACE, path: [0], value: 4},
+                {op: REPLACE, path: [1], value: 5}
+            ])
+            expect(obj).toEqual([4,5,3]);
+        })
+
+        it('should apply an add patch', () => {
+            let obj = mutableObject([1,2,3])
+            patch(obj, [
+                {op: ADD, path: [3], value: 4}
+            ])
+            expect(obj).toEqual([1,2,3,4]);
+        })
+
+        it('should apply a remove patch', () => {
+            let obj = mutableObject([1,2,3])
+            patch(obj, [
+                {op: REMOVE, path: [1]},
+            ])
+            expect(obj).toEqual([1,3]);
+        })
+    })
+
 })
 
 
