@@ -4,24 +4,24 @@ export const REMOVE = "remove"
 export const MOVE = "move"
 export type JSONPointer = (string|number)[]
 
-interface JSONPatchAdd {
+export interface JSONPatchAdd {
     op: typeof ADD,
     path: JSONPointer,
     value: any
 }
 
-interface JSONPatchReplace {
+export interface JSONPatchReplace {
     op: typeof REPLACE,
     path: JSONPointer,
     value: any
 }
 
-interface JSONPatchRemove {
+export interface JSONPatchRemove {
     op: typeof REMOVE,
     path: JSONPointer,
 }
 
-interface JSONPatchMove {
+export interface JSONPatchMove {
     op: typeof MOVE,
     from: JSONPointer,
     path: JSONPointer

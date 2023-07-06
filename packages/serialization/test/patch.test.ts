@@ -128,15 +128,25 @@ describe('apply JSON patch', () => {
             ])
             expect(obj).toEqual({a: {b: {c: {d: 1}}}});
         })
+
+        it('should ignore add for non existing path', () => {
+            let obj = mutableObject({x: {a: 1, b: 2, c:3}})
+            patch(obj, [
+                {op: ADD, path: ['x', 'y', 'z'], value: 12}
+            ])
+            expect(obj).toEqual({x: {a: 1, b: 2, c:3}});
+        })
+
+        it('should ignore move not from the same array', () => {
+            let obj = mutableObject({a: [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}], b: []})
+            patch(obj, [
+                {op: MOVE, path: ['b', 1], from:['a', 2]},
+            ])
+            expect(obj).toEqual({a: [{id: 1, c:"1"}, {id: 2, c:"2"}, {id: 3, c:"3"}], b: []});
+        })
+
     })
 
-    it('should ignore add for non existing path', () => {
-        let obj = mutableObject({x: {a: 1, b: 2, c:3}})
-        patch(obj, [
-            {op: ADD, path: ['x', 'y', 'z'], value: 12}
-        ])
-        expect(obj).toEqual({x: {a: 1, b: 2}});
-    })
 })
 
 

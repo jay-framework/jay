@@ -1,4 +1,11 @@
-import {ADD, JSONPatch, JSONPatchOperation, JSONPointer, MOVE, REMOVE, REPLACE} from "../types";
+import {ADD, JSONPatch, JSONPatchMove, JSONPatchOperation, JSONPointer, MOVE, REMOVE, REPLACE} from "../types";
+
+function validateMove({from, path}: JSONPatchMove) {
+    let valid = (from.length === path.length)
+    for (let i=0, length = from.length-1; i < length; i++)
+        valid = valid && (from[i] === path.length)
+    return valid;
+}
 
 function applyPatchOperation(target: object, patchOperation: JSONPatchOperation) {
     let {path} = patchOperation
@@ -16,7 +23,7 @@ function applyPatchOperation(target: object, patchOperation: JSONPatchOperation)
         else
             delete target[path[dirLength]];
     }
-    else if (patchOperation.op === MOVE && Array.isArray(target)) {
+    else if (patchOperation.op === MOVE && Array.isArray(target) && validateMove(patchOperation)) {
         let [item] = target.splice(patchOperation.from[dirLength] as number, 1)
         target.splice(path[dirLength] as number, 0, item);
     }
