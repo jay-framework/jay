@@ -219,19 +219,21 @@ describe("mutable", () => {
                 let fn1 = jest.fn();
                 let mutableArr = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}, {a: 7, b: 8}]);
                 let item3 = mutableArr[3];
-                isMutable(mutableArr) && mutableArr.addMutableListener(fn1);
 
                 const result = mutableArr.filter(item => item.a > 2);
-                isMutable(mutableArr) && mutableArr.removeMutableListener(fn1);
                 isMutable(result) && result.addMutableListener(fn1);
-                result[0].a = 7;
+
+                result[0].a = 7; // should trigger listener on result
                 expect(fn1.mock.calls.length).toBe(1);
 
-                mutableArr[2].a = 9;
-                expect(fn1.mock.calls.length).toBe(1);
-
-                item3.a = 10;
+                mutableArr[2].a = 9; // this item is in both arrays, and those should trigger the result listener
                 expect(fn1.mock.calls.length).toBe(2);
+
+                item3.a = 10; // this item is in both arrays, and those should trigger the result listener
+                expect(fn1.mock.calls.length).toBe(3);
+
+                mutableArr[0].a = 11; //should not trigger the result event listener as the item is not in result
+                expect(fn1.mock.calls.length).toBe(3);
             })
         })
 
@@ -935,14 +937,6 @@ describe("mutable", () => {
                 expect(mutable.getPatch()).toEqual([{op: REPLACE, path: ['a'], value: 3}])
             })
 
-            it('should clear the patch after retrieval using `getPatch`', () => {
-                let mutable = mutableObject({a: 1, b:2}, true);
-
-                mutable.a = 3
-                expect(mutable.getPatch()).toEqual([{op: REPLACE, path: ['a'], value: 3}])
-                expect(mutable.getPatch()).toEqual([])
-            })
-
             it('should make add JSONPatch for new  property', () => {
                 let mutable: any = mutableObject({a: 1, b:2}, true);
 
@@ -1079,6 +1073,43 @@ describe("mutable", () => {
                     {op: ADD, path: ["1"], value: 5},
                     {op: ADD, path: ["2"], value: 6},
                 ])
+            })
+        })
+
+        describe('general aspects', () => {
+            it('should clear the patch after retrieval using `getPatch`', () => {
+                let mutable = mutableObject({a: 1, b:2}, true);
+
+                mutable.a = 3
+                expect(mutable.getPatch()).toEqual([{op: REPLACE, path: ['a'], value: 3}])
+                expect(mutable.getPatch()).toEqual([])
+            })
+
+            it('should support patch of nested objects', () => {
+                let mutable = mutableObject({a: 1, b:2, c: {d: 4, e: [5,6,7]}}, true);
+
+                mutable.a = 12
+                mutable.c.d = 13
+                mutable.c.e.push(14)
+                expect(mutable.getPatch()).toEqual([
+                    {op: REPLACE, path: ['a'], value: 12},
+                    {op: REPLACE, path: ['c', 'd'], value: 13},
+                    {op: ADD, path: ['c', 'e', '3'], value: 14}
+                ])
+            })
+
+            it('should clear the patch after retrieval for nested objects', () => {
+                let mutable = mutableObject({a: 1, b:2, c: {d: 4, e: [5,6,7]}}, true);
+
+                mutable.a = 12
+                mutable.c.d = 13
+                mutable.c.e.push(14)
+                expect(mutable.getPatch()).toEqual([
+                    {op: REPLACE, path: ['a'], value: 12},
+                    {op: REPLACE, path: ['c', 'd'], value: 13},
+                    {op: ADD, path: ['c', 'e', '3'], value: 14}
+                ])
+                expect(mutable.getPatch()).toEqual([])
             })
         })
     })

@@ -20,16 +20,16 @@ function deleteProxy(obj: object, changeListener: ChangeListener) {
     }
 }
 
-function wrapArrayReturn<T>(state: State, property: string, mkJsonPatch: boolean, notifyParent?: ChangeListener): Function {
-    return (...args) => _mutableObject(state.original[property].apply(state.original, args), mkJsonPatch, notifyParent)
+function wrapArrayReturn<T>(state: State, property: string, mkJsonPatch: boolean): Function {
+    return (...args) => _mutableObject(state.original[property].apply(state.original, args), mkJsonPatch, state.changed)
 }
 
-function wrapFilter<T>(state: State, property: string, mkJsonPatch: boolean, notifyParent?: ChangeListener): Function {
+function wrapFilter<T>(state: State, property: string, mkJsonPatch: boolean): Function {
     return (...args) => {
         let [first, ...rest] = [...args];
-        let wrappedFirst = arg => first(_mutableObject(arg, mkJsonPatch, notifyParent));
+        let wrappedFirst = arg => first(_mutableObject(arg, mkJsonPatch, state.changed));
         let filteredItems = state.original[property].apply(state.original, [wrappedFirst, ...rest]);
-        return _mutableObject(filteredItems, mkJsonPatch, notifyParent)
+        return _mutableObject(filteredItems, mkJsonPatch)
     }
 }
 
@@ -43,41 +43,60 @@ function suppressPatch<T>(state: State, op: () => T): T {
     }
 }
 
-function wrapArrayShift<T>(state: State, property: string, mkJsonPatch: boolean, notifyParent?: ChangeListener): Function {
-    return () => {
-        return suppressPatch(state, () => {
-            state.original[property].apply(state.original)
-            state.patch.push({op: REMOVE, path: ["0"]})
-        })
-    }
+function wrapArrayShift<T>(state: State, property: string, mkJsonPatch: boolean): Function {
+    // if (!mkJsonPatch)
+    //     return (state.original as Array<any>).shift
+    // else
+        return () => {
+            return suppressPatch(state, () => {
+                let res = (state.original as Array<any>).shift.apply(state.original)
+                state.changed();
+                state.patch.push({op: REMOVE, path: ["0"]})
+                return res;
+            })
+        }
 }
 
-function wrapArrayUnshift<T>(state: State, property: string, mkJsonPatch: boolean, notifyParent?: ChangeListener): Function {
-    return (...args) => {
-        return suppressPatch(state, () => {
-            state.original[property].apply(state.original, args)
-            for (let i=0; i < args.length; i++)
-                state.patch.push({op: ADD, path: [""+i], value: args[i]})
-        })
-    }
+function wrapArrayUnshift<T>(state: State, property: string, mkJsonPatch: boolean): Function {
+    // if (!mkJsonPatch)
+    //     return (state.original as Array<any>).unshift
+    // else
+        return (...args) => {
+            return suppressPatch(state, () => {
+                let res = (state.original as Array<any>).unshift.apply(state.original, args)
+                state.changed();
+                for (let i=0; i < args.length; i++)
+                    state.patch.push({op: ADD, path: [""+i], value: args[i]})
+                return res;
+            })
+        }
 }
 
-function wrapArrayReverse<T>(state: State, property: string, mkJsonPatch: boolean, notifyParent?: ChangeListener): Function {
+function wrapArrayReverse<T>(state: State, property: string, mkJsonPatch: boolean): Function {
+    // if (!mkJsonPatch)
+    //     return (state.original as Array<any>).reverse
+    // else
     return () => {
         return suppressPatch(state, () => {
-            state.original[property].apply(state.original)
+            (state.original as Array<any>).reverse.apply(state.original)
+            state.changed();
             let from = ["" + ((state.original as Array<any>).length - 1)]
             for (let i=0; i < (state.original as Array<any>).length-1; i++)
                 state.patch.push({op: MOVE, path: [""+i], from})
+            return state.proxy;
         })
     }
 }
 
-function wrapArraySplice<T>(state: State, property: string, mkJsonPatch: boolean, notifyParent?: ChangeListener): Function {
+function wrapArraySplice<T>(state: State, property: string, mkJsonPatch: boolean): Function {
+    // if (!mkJsonPatch)
+    //     return (state.original as Array<any>).splice
+    // else
     return (...args) => {
         return suppressPatch(state, () => {
             let start = args[0], remove = args[1], add = args.length - 2, replace = Math.min(remove, add);
-            state.original[property].apply(state.original, args)
+            (state.original as Array<any>).splice.apply(state.original, args)
+            state.changed();
             for (let i=0; i < replace; i++)
                 state.patch.push({op: REPLACE, path: [""+(start+i)], value: args[i+2]})
             for (let i = remove; i < add; i++)
@@ -88,7 +107,7 @@ function wrapArraySplice<T>(state: State, property: string, mkJsonPatch: boolean
     }
 }
 
-const WRAP_ARRAY_FUNCTIONS: Map<String, (state: State, property: string, mkJsonPatch: boolean, notifyParent?: ChangeListener) => Function> = new Map([
+const WRAP_ARRAY_FUNCTIONS: Map<String, (state: State, property: string, mkJsonPatch: boolean) => Function> = new Map([
     ['map', wrapArrayReturn],
     ['filter', wrapFilter],
     ['flatMap',  wrapArrayReturn],
@@ -105,6 +124,7 @@ export function mutableObject<T>(original: Array<T>, mkJsonPatch?: boolean): Arr
 }
 
 interface State /*extends MutableContract*/ {
+    proxy?: any & MutableContract;
     revNum: number,
     original: object
     changeListeners: Set<ChangeListener>
@@ -112,6 +132,7 @@ interface State /*extends MutableContract*/ {
     patch: JSONPatch,
     isArray: boolean
     suppressPatch: boolean;
+    changed: ChangeListener
 }
 const MUTABLE_CONTEXT_FUNCTIONS = {
     isMutable: (state: State) => () => true,
@@ -121,9 +142,20 @@ const MUTABLE_CONTEXT_FUNCTIONS = {
     removeMutableListener: (state: State) => (changeListener: ChangeListener) => state.changeListeners.delete(changeListener),
     getOriginal: (state: State) => () => state.original,
     getPatch: (state: State) => () => {
-        let patch = state.patch;
+        let patches = [state.patch];
+        for (let prop in state.original) {
+            let childMutableProxy = getProxy(state.original[prop]);
+            if (childMutableProxy)
+                patches.push(childMutableProxy.getPatch()
+                    .map(patchOperation => {
+                        patchOperation.path.unshift(prop);
+                        if (patchOperation.from)
+                            patchOperation.from.unshift(prop);
+                        return patchOperation;
+                    }))
+        }
         state.patch = []
-        return patch
+        return patches.flat()
     }
 }
 
@@ -140,34 +172,34 @@ export function _mutableObject<T>(original: Array<T>, mkJsonPatch: boolean, noti
         arrayFunctions: {},
         patch: [],
         isArray: Array.isArray(original),
-        suppressPatch:  false
-    }
-    const changed = () => {
-        state.revNum = nextRevNum();
-        state.changeListeners.forEach(_ => _());
+        suppressPatch:  false,
+        changed: () => {
+            state.revNum = nextRevNum();
+            state.changeListeners.forEach(_ => _());
+        }
     }
     for (let prop in original) {
         let propValue = original[prop];
         if (typeof propValue === 'object' && getProxy(propValue as unknown as object))
-            getProxy(propValue as unknown as object).addMutableListener(changed);
+            getProxy(propValue as unknown as object).addMutableListener(state.changed);
         }
 
-    return new Proxy(original, {
+    state.proxy = new Proxy(original, {
         deleteProperty: function(target, property) {
-            deleteProxy(state.original[property], changed);
+            deleteProxy(state.original[property], state.changed);
             if ( mkJsonPatch && typeof property === 'string' && !state.suppressPatch)
                 state.patch.push({op: REMOVE, path: [property]})
             delete state.original[property];
-            changed();
+            state.changed();
             return true;
         },
         set: function(target, property, value) {
             if (state.original[property])
-                deleteProxy(state.original[property], changed);
+                deleteProxy(state.original[property], state.changed);
             if ( mkJsonPatch && typeof property === 'string' && (!state.isArray || property !== "length") && !state.suppressPatch)
                 state.patch.push({op: state.original[property]?REPLACE:ADD, path: [property], value})
             state.original[property] = isMutable(value)?value.getOriginal():value;
-            changed();
+            state.changed();
             return true;
         },
         get: function(target, property: PropertyKey) {
@@ -177,12 +209,12 @@ export function _mutableObject<T>(original: Array<T>, mkJsonPatch: boolean, noti
                 return undefined; // this line is here for mechanisms who insist on serializing un-enumerable properties
             else if (state.isArray && typeof property === 'string' && WRAP_ARRAY_FUNCTIONS.has(property)) {
                 if (!state.arrayFunctions[property])
-                    state.arrayFunctions[property] = WRAP_ARRAY_FUNCTIONS.get(property)(state, property, mkJsonPatch, changed);
+                    state.arrayFunctions[property] = WRAP_ARRAY_FUNCTIONS.get(property)(state, property, mkJsonPatch);
                 return state.arrayFunctions[property];
             }
             else if (typeof state.original[property] === 'object') {
                 if (!getProxy(state.original[property]))
-                    setProxy(state.original[property], _mutableObject(state.original[property], mkJsonPatch, changed))
+                    setProxy(state.original[property], _mutableObject(state.original[property], mkJsonPatch, state.changed))
                 return getProxy(state.original[property])
             }
             else if (state.original instanceof Date && typeof state.original[property] === 'function')
@@ -191,4 +223,7 @@ export function _mutableObject<T>(original: Array<T>, mkJsonPatch: boolean, noti
                 return state.original[property];
         }
     }) as unknown as T[] & MutableContract;
+
+    setProxy(original, state.proxy)
+    return state.proxy;
 }
