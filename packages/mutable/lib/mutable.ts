@@ -44,9 +44,9 @@ function suppressPatch<T>(state: State, op: () => T): T {
 }
 
 function wrapArrayShift<T>(state: State, property: string, mkJsonPatch: boolean): Function {
-    // if (!mkJsonPatch)
-    //     return (state.original as Array<any>).shift
-    // else
+    if (!mkJsonPatch)
+        return (state.original as Array<any>).shift
+    else
         return () => {
             return suppressPatch(state, () => {
                 let res = (state.original as Array<any>).shift.apply(state.original)
@@ -58,9 +58,9 @@ function wrapArrayShift<T>(state: State, property: string, mkJsonPatch: boolean)
 }
 
 function wrapArrayUnshift<T>(state: State, property: string, mkJsonPatch: boolean): Function {
-    // if (!mkJsonPatch)
-    //     return (state.original as Array<any>).unshift
-    // else
+    if (!mkJsonPatch)
+        return (state.original as Array<any>).unshift
+    else
         return (...args) => {
             return suppressPatch(state, () => {
                 let res = (state.original as Array<any>).unshift.apply(state.original, args)
@@ -73,38 +73,38 @@ function wrapArrayUnshift<T>(state: State, property: string, mkJsonPatch: boolea
 }
 
 function wrapArrayReverse<T>(state: State, property: string, mkJsonPatch: boolean): Function {
-    // if (!mkJsonPatch)
-    //     return (state.original as Array<any>).reverse
-    // else
-    return () => {
-        return suppressPatch(state, () => {
-            (state.original as Array<any>).reverse.apply(state.original)
-            state.changed();
-            let from = ["" + ((state.original as Array<any>).length - 1)]
-            for (let i=0; i < (state.original as Array<any>).length-1; i++)
-                state.patch.push({op: MOVE, path: [""+i], from})
-            return state.proxy;
-        })
-    }
+    if (!mkJsonPatch)
+        return (state.original as Array<any>).reverse
+    else
+        return () => {
+            return suppressPatch(state, () => {
+                (state.original as Array<any>).reverse.apply(state.original)
+                state.changed();
+                let from = ["" + ((state.original as Array<any>).length - 1)]
+                for (let i=0; i < (state.original as Array<any>).length-1; i++)
+                    state.patch.push({op: MOVE, path: [""+i], from})
+                return state.proxy;
+            })
+        }
 }
 
 function wrapArraySplice<T>(state: State, property: string, mkJsonPatch: boolean): Function {
-    // if (!mkJsonPatch)
-    //     return (state.original as Array<any>).splice
-    // else
-    return (...args) => {
-        return suppressPatch(state, () => {
-            let start = args[0], remove = args[1], add = args.length - 2, replace = Math.min(remove, add);
-            (state.original as Array<any>).splice.apply(state.original, args)
-            state.changed();
-            for (let i=0; i < replace; i++)
-                state.patch.push({op: REPLACE, path: [""+(start+i)], value: args[i+2]})
-            for (let i = remove; i < add; i++)
-                state.patch.push({op: ADD, path: [""+(start+i)], value: args[i+2]})
-            for (let i = add; i < remove; i++)
-                state.patch.push({op: REMOVE, path: [""+(start+i)]})
-        })
-    }
+    if (!mkJsonPatch)
+        return (state.original as Array<any>).splice
+    else
+        return (...args) => {
+            return suppressPatch(state, () => {
+                let start = args[0], remove = args[1], add = args.length - 2, replace = Math.min(remove, add);
+                (state.original as Array<any>).splice.apply(state.original, args)
+                state.changed();
+                for (let i=0; i < replace; i++)
+                    state.patch.push({op: REPLACE, path: [""+(start+i)], value: args[i+2]})
+                for (let i = remove; i < add; i++)
+                    state.patch.push({op: ADD, path: [""+(start+i)], value: args[i+2]})
+                for (let i = add; i < remove; i++)
+                    state.patch.push({op: REMOVE, path: [""+(start+i)]})
+            })
+        }
 }
 
 const WRAP_ARRAY_FUNCTIONS: Map<String, (state: State, property: string, mkJsonPatch: boolean) => Function> = new Map([
