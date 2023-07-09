@@ -72,6 +72,16 @@ function diffArrayWithContext(context: ArrayContext, oldValue: any[], newValue: 
 }
 
 export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayContexts, path: JSONPointer = []): [JSONPatch, MeasureOfChange, DataFields] => {
+    if (typeof newValue === "object" && (newValue as any).getPatch) {
+        let patch = (newValue as any)
+            .getPatch();
+        patch.forEach(patchOp => {
+            patchOp.path = [...path, ...patchOp.path]
+            if (patchOp.from)
+                patchOp.from = [...path, ...patchOp.from]
+        })
+        return [patch, patch.length?1:0, 1];
+    }
     // Primitives
     if (newValue === oldValue) return [[], 0, 1];
     if (oldValue === undefined || oldValue === null)

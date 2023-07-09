@@ -18,13 +18,13 @@ describe('diff', () => {
     })
 
     describe('objects values', () => {
-       it("should return empty for equal objects", () => {
-         let patch = diff(
-             {a: 1, b: 2, c: {d: 4, e: 5}},
-             {a: 1, b: 2, c: {d: 4, e: 5}}
-         )
-           expect(patch[0]).toEqual([])
-       })
+        it("should return empty for equal objects", () => {
+            let patch = diff(
+                {a: 1, b: 2, c: {d: 4, e: 5}},
+                {a: 1, b: 2, c: {d: 4, e: 5}}
+            )
+            expect(patch[0]).toEqual([])
+        })
 
         it("should return replace for top level property replacement", () => {
             let patch = diff(
@@ -279,5 +279,33 @@ describe('diff', () => {
 
 
 
+    })
+
+    describe('objects who calculate JSON Patch using `.getPatch()`', () => {
+        it('should use `.getPatch()` of `newValue` if supported', () => {
+            let patch = diff(
+                {a: 1, b: 2, c: {d: 4, e: 5}, getPatch() {
+                    return [{op: ADD, path: ['a', 'b', 'c'], value: 12}]
+                    }},
+                {a: 1, b: 2, c: {d: 4, e: 5}}
+            )
+            expect(patch[0]).toEqual([{op: ADD, path: ['a', 'b', 'c'], value: 12}])
+        })
+
+        it('should use `.getPatch()` of nested property of `newValue` if supported', () => {
+            let patch = diff(
+                {a: 1, b: 2, c: {d: 4, e: 5, getPatch() {
+                            return [
+                                {op: ADD, path: ['a', 'b', 'c'], value: 12},
+                                {op: MOVE, path: ['a', 'x', '1'], from: ['a', 'x', '2']}
+                            ]
+                        }}},
+                {a: 1, b: 2, c: {d: 4, e: 5}}
+            )
+            expect(patch[0]).toEqual([
+                {op: ADD, path: ['c', 'a', 'b', 'c'], value: 12},
+                {op: MOVE, path: ['c', 'a', 'x', '1'], from: ['c', 'a', 'x', '2']}
+            ])
+        })
     })
 })
