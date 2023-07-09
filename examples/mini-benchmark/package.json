@@ -16,6 +16,7 @@
     "mk-secure": "npm run jay-secure && npm run copy && npm run copy-basic && npm run copy-collection && npm run copy-composite && npm run copy-condition && npm run copy-table"
   },
   "dependencies": {
+    "immer": "^10.0.2",
     "jay-component": "1.0.0",
     "jay-mutable": "1.0.0",
     "jay-runtime": "1.0.0",

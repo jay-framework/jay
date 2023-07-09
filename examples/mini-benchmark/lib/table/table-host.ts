@@ -10,6 +10,7 @@ function TableHostConstructor({cycles}: Props<TableHostProps>, refs: TableHostEl
 
     let [size, setSize] = createState(100);
     let [updates, setUpdates] = createState(100);
+    let [stateManagement, setStateManagement] = createState('mutable');
 
     refs.size
         .$oninput(({event}) => (event.target as HTMLInputElement).value)
@@ -19,11 +20,15 @@ function TableHostConstructor({cycles}: Props<TableHostProps>, refs: TableHostEl
         .$oninput(({event}) => (event.target as HTMLInputElement).value)
         .then(({event: updates}) => setUpdates(Number(updates)));
 
+    refs.stateManagement
+        .$oninput(({event}) => (event.target as HTMLSelectElement).value)
+        .then(({event: updates}) => setStateManagement(updates));
+
     const run = (progressCallback: (string) => void) => {
         benchmark(index => refs.table.updateData(index), cycles(), progressCallback);
     }
     return {
-        render: () => ({size, updates}),
+        render: () => ({size, updates, stateManagement}),
         run
     }
 }
