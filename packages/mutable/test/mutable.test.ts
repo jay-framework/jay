@@ -2,6 +2,7 @@ import {describe, expect, it, jest} from '@jest/globals'
 import {mutableObject} from "../lib";
 import {_mutableObject} from "../lib/mutable"
 import {checkModified, getRevision, isMutable} from "jay-reactive";
+import {ADD, MOVE, REMOVE, REPLACE} from "../lib/types";
 
 describe("mutable", () => {
 
@@ -30,7 +31,6 @@ describe("mutable", () => {
         })
 
         it('should support property updates', () => {
-
             let mutable = mutableObject({a: 1, b:2});
             let revisioned = getRevision(mutable);
 
@@ -202,7 +202,7 @@ describe("mutable", () => {
                 const result = mutableArr.filter(item => item.a > 2);
                 result[0].a = 7;
                 mutableArr[2].a = 9;
-                
+
                 expect(fn1.mock.calls.length).toBe(2);
             })
 
@@ -827,7 +827,7 @@ describe("mutable", () => {
                 a: 1,
                 b: 2,
                 c: [3,4,5]
-        });
+            });
             let rootRevision = getRevision(mutable);
             let childRevision = getRevision(mutable.c);
 
@@ -884,7 +884,7 @@ describe("mutable", () => {
     describe("mutation listener", () => {
         it('supports change listener in mutableObject', () => {
             let fn = jest.fn();
-            let mutable = _mutableObject({a: 1, b:2}, fn);
+            let mutable = _mutableObject({a: 1, b:2}, false, fn);
 
             mutable.a = 3;
 
@@ -917,11 +917,169 @@ describe("mutable", () => {
 
         it('supports change listener in array of objects', () => {
             let fn = jest.fn();
-            let mutable = _mutableObject([{a: 1, b:2}, {a: 3, b:4}, {a: 5, b:6}], fn);
+            let mutable = _mutableObject([{a: 1, b:2}, {a: 3, b:4}, {a: 5, b:6}], false, fn);
 
             mutable[1].a = 3;
 
             expect(fn.mock.calls.length).toBe(1);
+        })
+    })
+
+    describe('JSON Patch', () => {
+
+        describe('for objects', () => {
+            it('should make replace JSONPatch for replaced property', () => {
+                let mutable = mutableObject({a: 1, b:2}, true);
+
+                mutable.a = 3
+                expect(mutable.getPatch()).toEqual([{op: REPLACE, path: ['a'], value: 3}])
+            })
+
+            it('should clear the patch after retrieval using `getPatch`', () => {
+                let mutable = mutableObject({a: 1, b:2}, true);
+
+                mutable.a = 3
+                expect(mutable.getPatch()).toEqual([{op: REPLACE, path: ['a'], value: 3}])
+                expect(mutable.getPatch()).toEqual([])
+            })
+
+            it('should make add JSONPatch for new  property', () => {
+                let mutable: any = mutableObject({a: 1, b:2}, true);
+
+                mutable.c = 3
+                expect(mutable.getPatch()).toEqual([{op: ADD, path: ['c'], value: 3}])
+            })
+
+            it('should make remove JSONPatch for removed property', () => {
+                let mutable = mutableObject({a: 1, b:2}, true);
+
+                delete mutable.a
+                expect(mutable.getPatch()).toEqual([{op: REMOVE, path: ['a']}])
+            })
+        })
+
+        describe('for arrays', () => {
+            it('should support JSON patch for setting an array element', () => {
+                let mutableArr = mutableObject([1,2,3], true);
+                mutableArr[1] = 4
+                expect(mutableArr.getPatch()).toEqual([{op: REPLACE, path: ["1"], value: 4}])
+            })
+
+            it('should support JSON patch for copyWithin', () => {
+                let mutableArr = mutableObject([1,2,3,4,5,6,7,8], true);
+                mutableArr.copyWithin(0, 5, 8);
+                expect(mutableArr.getPatch()).toEqual([
+                    {op: REPLACE, path: ["0"], value: 6},
+                    {op: REPLACE, path: ["1"], value: 7},
+                    {op: REPLACE, path: ["2"], value: 8}
+                ])
+            })
+
+            it('should support JSON patch for fill', () => {
+                let mutableArr = mutableObject([1,2,3,4,5,6,7], true);
+                mutableArr.fill(0, 2, 5)
+                expect(mutableArr.getPatch()).toEqual([
+                    {op: REPLACE, path: ["2"], value: 0},
+                    {op: REPLACE, path: ["3"], value: 0},
+                    {op: REPLACE, path: ["4"], value: 0}
+                ])
+            })
+
+            it('should support JSON patch for pop', () => {
+                let mutableArr = mutableObject([1,2,3], true);
+                mutableArr.pop()
+                expect(mutableArr.getPatch()).toEqual([{op: REMOVE, path: ["2"]}])
+            })
+
+            it('should support JSON patch for push', () => {
+                let mutableArr = mutableObject([1,2,3], true);
+                mutableArr.push(4,5)
+                expect(mutableArr.getPatch()).toEqual([
+                    {op: ADD, path: ["3"], value: 4},
+                    {op: ADD, path: ["4"], value: 5}
+                ])
+            })
+
+            it('should support JSON patch for shift', () => {
+                let mutableArr = mutableObject([1,2,3], true);
+                mutableArr.shift()
+                expect(mutableArr.getPatch()).toEqual([{op: REMOVE, path: ["0"]}])
+            })
+
+            // optimal sort patch requires doing another sort algorithm, and it makes no sense to
+            // repeat an O(N log N) with another O(N log N) or even O(N^2) algorithm.
+            it.skip('should support JSON patch for sort', () => {
+                let mutableArr = mutableObject([6,5,4,1,2,3], true);
+                mutableArr.sort()
+                expect(mutableArr.getPatch()).toEqual([
+                    {op: MOVE, path: ["0"], from: ["3"], value: 1},
+                    {op: MOVE, path: ["1"], from: ["4"], value: 2},
+                    {op: MOVE, path: ["2"], from: ["5"], value: 3},
+                    {op: MOVE, path: ["3"], from: ["2"], value: 4},
+                    {op: MOVE, path: ["4"], from: ["1"], value: 5},
+                    {op: MOVE, path: ["5"], from: ["0"], value: 6}
+                ])
+            })
+
+            describe('should support JSON patch for splice', () => {
+                it('remove items', () => {
+                    let mutableArr = mutableObject([1,2,3,4,5,6,7,8], true);
+                    mutableArr.splice(2, 3);
+                    expect(mutableArr.getPatch()).toEqual([
+                        {op: REMOVE, path: ["2"]},
+                        {op: REMOVE, path: ["3"]},
+                        {op: REMOVE, path: ["4"]}
+                    ])
+                })
+
+                it('add items', () => {
+                    let mutableArr = mutableObject([1,2,3,4,5,6,7,8], true);
+                    mutableArr.splice(2, 0, 10, 11);
+                    expect(mutableArr.getPatch()).toEqual([
+                        {op: ADD, path: ["2"], value: 10},
+                        {op: ADD, path: ["3"], value: 11}
+                    ])
+                })
+
+                it('remove item < add items', () => {
+                    let mutableArr = mutableObject([1,2,3,4,5,6,7,8], true);
+                    mutableArr.splice(2, 2, 10, 11, 12);
+                    expect(mutableArr.getPatch()).toEqual([
+                        {op: REPLACE, path: ["2"], value: 10},
+                        {op: REPLACE, path: ["3"], value: 11},
+                        {op: ADD, path: ["4"], value: 12}
+                    ])
+                })
+
+                it('remove item > add items', () => {
+                    let mutableArr = mutableObject([1,2,3,4,5,6,7,8], true);
+                    mutableArr.splice(2, 3, 10, 11);
+                    expect(mutableArr.getPatch()).toEqual([
+                        {op: REPLACE, path: ["2"], value: 10},
+                        {op: REPLACE, path: ["3"], value: 11},
+                        {op: REMOVE, path: ["4"]}
+                    ])
+                })
+            })
+
+            it('should support JSON patch for reverse', () => {
+                let mutableArr = mutableObject([1,2,3], true);
+                mutableArr.reverse()
+                expect(mutableArr.getPatch()).toEqual([
+                    {op: MOVE, path: ["0"], from: ["2"]},
+                    {op: MOVE, path: ["1"], from: ["2"]}
+                ])
+            })
+            it('should support JSON patch for unshift', () => {
+                let mutableArr = mutableObject([1,2,3], true);
+                mutableArr.unshift(4,5,6)
+                console.log(mutableArr)
+                expect(mutableArr.getPatch()).toEqual([
+                    {op: ADD, path: ["0"], value: 4},
+                    {op: ADD, path: ["1"], value: 5},
+                    {op: ADD, path: ["2"], value: 6},
+                ])
+            })
         })
     })
 })
