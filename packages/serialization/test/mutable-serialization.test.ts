@@ -1,8 +1,7 @@
-import {describe, expect, it, jest, beforeEach} from '@jest/globals'
+import {beforeEach, describe, expect, it} from '@jest/globals'
 import {mutableObject} from "jay-mutable";
 import {getRevision} from "jay-reactive";
-import {serialize} from "../lib";
-import {deserialize} from "../lib";
+import {deserialize, serialize} from "../lib";
 
 describe("mutable serialization", () => {
     describe("simple mutable objects", () => {
@@ -12,36 +11,36 @@ describe("mutable serialization", () => {
         })
 
         it("should deserialize to an equal object", () => {
-            let mutable = mutableObject(SIMPLE_OBJECT, true);
-            let [patch, nextSerialize] = serialize(mutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
-            expect(mutable).toEqual(deserialized);
+            let original = mutableObject(SIMPLE_OBJECT, true);
+            let [patch, nextSerialize] = serialize(original);
+            let [target, nextDeserialize] = deserialize(patch);
+            expect(original).toEqual(target);
         })
 
         it("should serialize and deserialize the mutable revision", () => {
-            let mutable = mutableObject(SIMPLE_OBJECT, true);
-            let [patch, nextSerialize] = serialize(mutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
-            let originalRevision = getRevision(mutable);
-            let deserializedRevision = getRevision(deserialized);
-            expect(deserializedRevision.revNum).toBeGreaterThan(originalRevision.revNum);
+            let original = mutableObject(SIMPLE_OBJECT, true);
+            let [patch, nextSerialize] = serialize(original);
+            let [target, nextDeserialize] = deserialize(patch);
+            let origRev = getRevision(original);
+            let targetRev = getRevision(target);
+            expect(targetRev.revNum).toBeGreaterThan(origRev.revNum);
         })
 
         it("should re-serialize and re-deserialize to an equal object", () => {
-            let mutable = mutableObject(SIMPLE_OBJECT, true);
-            let [patch, nextSerialize] = serialize(mutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
-            let deserialized_revition_1 = getRevision(deserialized);
+            let original = mutableObject(SIMPLE_OBJECT, true);
+            let [patch, nextSerialize] = serialize(original);
+            let [target, nextDeserialize] = deserialize(patch);
+            let targetRev_1 = getRevision(target);
 
-            mutable.a = 12
-            mutable.c = 'efgh'
-            mutable.d = false;
-            [patch, nextSerialize] = nextSerialize(mutable);
-            let [deserialized2, nextDeserialize2] = nextDeserialize(patch)
-            let deserialized_revition_2 = getRevision(deserialized);
-            expect(mutable).toEqual(deserialized2);
-            expect(deserialized).toBe(deserialized2);
-            expect(deserialized_revition_2.revNum).toBeGreaterThan(deserialized_revition_1.revNum)
+            original.a = 12
+            original.c = 'efgh'
+            original.d = false;
+            [patch, nextSerialize] = nextSerialize(original);
+            let [target_2, nextDeserialize2] = nextDeserialize(patch)
+            let targetRev_2 = getRevision(target);
+            expect(original).toEqual(target_2);
+            expect(target).toBe(target_2);
+            expect(targetRev_2.revNum).toBeGreaterThan(targetRev_1.revNum)
         })
     })
 
@@ -51,32 +50,32 @@ describe("mutable serialization", () => {
         it("should deserialize to an equal object", () => {
             let immutable = SIMPLE_OBJECT;
             let [patch, nextSerialize] = serialize(immutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
-            expect(immutable).toEqual(deserialized);
+            let [target, nextDeserialize] = deserialize(patch);
+            expect(immutable).toEqual(target);
         })
 
         it("should re-serialize and re-deserialize to an equal and the same mutable object", () => {
             let immutable = SIMPLE_OBJECT;
             let [patch, nextSerialize] = serialize(immutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
+            let [target, nextDeserialize] = deserialize(patch);
 
             immutable = {...immutable, a: 12};
             [patch, nextSerialize] = nextSerialize(immutable);
-            let [deserialized2, nextDeserialize2] = nextDeserialize(patch)
-            expect(immutable).toEqual(deserialized2);
-            expect(deserialized).toBe(deserialized2);
+            let [target_2, nextDeserialize2] = nextDeserialize(patch)
+            expect(immutable).toEqual(target_2);
+            expect(target).toBe(target_2);
         })
 
         it("given a large change that patch sends the whole object, should update the result mutable with the change", () => {
             let immutable = SIMPLE_OBJECT;
             let [patch, nextSerialize] = serialize(immutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
+            let [target, nextDeserialize] = deserialize(patch);
 
             immutable = {...immutable, a: 12, c: 'efgh', d: false};
             [patch, nextSerialize] = nextSerialize(immutable);
-            let [deserialized2, nextDeserialize2] = nextDeserialize(patch)
-            expect(immutable).toEqual(deserialized2);
-            expect(deserialized).toBe(deserialized2);
+            let [target_2, nextDeserialize2] = nextDeserialize(patch)
+            expect(immutable).toEqual(target_2);
+            expect(target).toBe(target_2);
         })
     })
 
@@ -93,54 +92,54 @@ describe("mutable serialization", () => {
             })
 
             it("should deserialize to an equal object", () => {
-                let mutable = mutableObject(NESTED_OBJECT);
-                let [patch, nextSerialize] = serialize(mutable);
-                let [deserialized, nextDeserialize] = deserialize(patch);
-                expect(mutable).toEqual(deserialized);
+                let original = mutableObject(NESTED_OBJECT);
+                let [patch, nextSerialize] = serialize(original);
+                let [target, nextDeserialize] = deserialize(patch);
+                expect(original).toEqual(target);
             })
 
             it("should serialize and deserialize the mutable revision", () => {
-                let mutable = mutableObject(NESTED_OBJECT);
-                let [patch, nextSerialize] = serialize(mutable);
-                let [deserialized, nextDeserialize] = deserialize<any>(patch);
+                let original = mutableObject(NESTED_OBJECT);
+                let [patch, nextSerialize] = serialize(original);
+                let [target, nextDeserialize] = deserialize<any>(patch);
 
-                let originalRevision = getRevision(mutable);
-                let originalRevision_name = getRevision(mutable.name);
-                let deserializedRevision = getRevision(deserialized);
-                let deserializedRevision_name = getRevision(deserialized.name);
+                let origRev = getRevision(original);
+                let origRev_name = getRevision(original.name);
+                let targetRev = getRevision(target);
+                let targetRev_name = getRevision(target.name);
 
-                expect(originalRevision.revNum).toBeLessThan(deserializedRevision.revNum);
-                expect(originalRevision_name.revNum).toBeLessThan(deserializedRevision_name.revNum);
+                expect(origRev.revNum).toBeLessThan(targetRev.revNum);
+                expect(origRev_name.revNum).toBeLessThan(targetRev_name.revNum);
             })
 
             it("should re-serialize and re-deserialize to an equal object", () => {
-                let mutable = mutableObject(NESTED_OBJECT, true);
-                let [patch, nextSerialize] = serialize(mutable);
-                let [deserialized, nextDeserialize] = deserialize(patch);
-                let deserialized_revition_1 = getRevision(deserialized);
-                let deserialized_revition_name_1 = getRevision((deserialized as any).name);
+                let original = mutableObject(NESTED_OBJECT, true);
+                let [patch, nextSerialize] = serialize(original);
+                let [target, nextDeserialize] = deserialize(patch);
+                let targetRev_1 = getRevision(target);
+                let targetRev_name_1 = getRevision((target as any).name);
 
-                mutable.name = NESTED_OBJECT_UPDATE;
-                [patch, nextSerialize] = nextSerialize(mutable);
-                let [deserialized2, nextDeserialize2] = nextDeserialize(patch)
-                let deserialized_revition_2 = getRevision(deserialized);
-                let deserialized_revition_name_2 = getRevision((deserialized as any).name);
-                expect(mutable).toEqual(deserialized2);
-                expect(deserialized).toBe(deserialized2);
-                expect(deserialized_revition_2.revNum).toBeGreaterThan(deserialized_revition_1.revNum)
-                expect(deserialized_revition_name_2.revNum).toBeGreaterThan(deserialized_revition_name_1.revNum)
+                original.name = NESTED_OBJECT_UPDATE;
+                [patch, nextSerialize] = nextSerialize(original);
+                let [target_2, nextDeserialize2] = nextDeserialize(patch)
+                let targetRev_2 = getRevision(target);
+                let targetRev_name_2 = getRevision((target as any).name);
+                expect(original).toEqual(target_2);
+                expect(target).toBe(target_2);
+                expect(targetRev_2.revNum).toBeGreaterThan(targetRev_1.revNum)
+                expect(targetRev_name_2.revNum).toBeGreaterThan(targetRev_name_1.revNum)
             })
 
             it('should serialize mutable object child of immutable', () => {
                 let obj: any = NESTED_OBJECT;
                 obj.name = mutableObject(NESTED_OBJECT.name, true);
                 let [patch, nextSerialize] = serialize(obj);
-                let [deserialized, nextDeserialize] = deserialize<any>(patch);
-                expect(obj).toEqual(deserialized);
+                let [target, nextDeserialize] = deserialize<any>(patch);
+                expect(obj).toEqual(target);
 
-                let original_revision_name = getRevision(obj.name);
-                let deserializedRevision_name = getRevision(deserialized.name);
-                expect(original_revision_name.revNum).toBeLessThan(deserializedRevision_name.revNum);
+                let origRev_name = getRevision(obj.name);
+                let targetRev_name = getRevision(target.name);
+                expect(origRev_name.revNum).toBeLessThan(targetRev_name.revNum);
             })
         })
 
@@ -158,15 +157,15 @@ describe("mutable serialization", () => {
             })
 
             it("should not re-serialize unchanged object (address), yet preserve it on re-deserialize", () => {
-                let mutable = mutableObject(NESTED_OBJECT, true);
-                let [patch, nextSerialize] = serialize(mutable);
-                let [deserialized, nextDeserialize] = deserialize(patch);
+                let original = mutableObject(NESTED_OBJECT, true);
+                let [patch, nextSerialize] = serialize(original);
+                let [target, nextDeserialize] = deserialize(patch);
 
-                mutable.name = NESTED_OBJECT_UPDATE;
-                [patch, nextSerialize] = nextSerialize(mutable);
-                let [deserialized2, nextDeserialize2] = nextDeserialize(patch)
-                expect(mutable).toEqual(deserialized2);
-                expect(deserialized).toBe(deserialized2);
+                original.name = NESTED_OBJECT_UPDATE;
+                [patch, nextSerialize] = nextSerialize(original);
+                let [target_2, nextDeserialize2] = nextDeserialize(patch)
+                expect(original).toEqual(target_2);
+                expect(target).toBe(target_2);
             })
 
         })
@@ -181,20 +180,20 @@ describe("mutable serialization", () => {
         it("should deserialize to an equal object", () => {
             let immutable = NESTED_OBJECT;
             let [patch, nextSerialize] = serialize(immutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
-            expect(immutable).toEqual(deserialized);
+            let [target, nextDeserialize] = deserialize(patch);
+            expect(immutable).toEqual(target);
         })
 
         it("should re-serialize and re-deserialize to an equal and same object", () => {
             let immutable = NESTED_OBJECT;
             let [patch, nextSerialize] = serialize(immutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
+            let [target, nextDeserialize] = deserialize(patch);
 
             immutable = {...immutable, name: NESTED_OBJECT_UPDATE};
             [patch, nextSerialize] = nextSerialize(immutable);
-            let [deserialized2, nextDeserialize2] = nextDeserialize(patch)
-            expect(immutable).toEqual(deserialized2);
-            expect(deserialized).toBe(deserialized2);
+            let [target_2, nextDeserialize2] = nextDeserialize(patch)
+            expect(immutable).toEqual(target_2);
+            expect(target).toBe(target_2);
         })
 
     })
@@ -210,36 +209,36 @@ describe("mutable serialization", () => {
         })
 
         it("should deserialize to an equal object", () => {
-            let mutable = mutableObject(ARRAY_PRIMITIVES, true);
-            let [patch, nextSerialize] = serialize(mutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
-            expect(mutable).toEqual(deserialized);
+            let original = mutableObject(ARRAY_PRIMITIVES, true);
+            let [patch, nextSerialize] = serialize(original);
+            let [target, nextDeserialize] = deserialize(patch);
+            expect(original).toEqual(target);
         })
 
         it("should serialize and deserialize the mutable revision", () => {
-            let mutable = mutableObject(ARRAY_PRIMITIVES, true);
-            let [patch, nextSerialize] = serialize(mutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
+            let original = mutableObject(ARRAY_PRIMITIVES, true);
+            let [patch, nextSerialize] = serialize(original);
+            let [target, nextDeserialize] = deserialize(patch);
 
-            let originalRevision = getRevision(mutable);
-            let originalRevision_items = getRevision(mutable.items);
-            let deserializedRevision = getRevision(deserialized);
-            let deserializedRevision_items = getRevision((deserialized as typeof ARRAY_PRIMITIVES).items);
+            let origRev = getRevision(original);
+            let origRev_items = getRevision(original.items);
+            let targetRev = getRevision(target);
+            let targetRev_items = getRevision((target as typeof ARRAY_PRIMITIVES).items);
 
-            expect(originalRevision.revNum).toBeLessThan(deserializedRevision.revNum);
-            expect(originalRevision_items.revNum).toBeLessThan(deserializedRevision_items.revNum);
+            expect(origRev.revNum).toBeLessThan(targetRev.revNum);
+            expect(origRev_items.revNum).toBeLessThan(targetRev_items.revNum);
         })
 
         it("should re-serialize and re-deserialize to an equal object", () => {
-            let mutable = mutableObject(ARRAY_PRIMITIVES, true);
-            let [patch, nextSerialize] = serialize(mutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
+            let original = mutableObject(ARRAY_PRIMITIVES, true);
+            let [patch, nextSerialize] = serialize(original);
+            let [target, nextDeserialize] = deserialize(patch);
 
-            mutable.items = ARRAY_PRIMITIVES_UPDATE;
-            [patch, nextSerialize] = nextSerialize(mutable);
-            let [deserialized2, nextDeserialize2] = nextDeserialize(patch)
-            expect(mutable).toEqual(deserialized2);
-            expect(deserialized).toBe(deserialized2);
+            original.items = ARRAY_PRIMITIVES_UPDATE;
+            [patch, nextSerialize] = nextSerialize(original);
+            let [target_2, nextDeserialize2] = nextDeserialize(patch)
+            expect(original).toEqual(target_2);
+            expect(target).toBe(target_2);
         })
 
     })
@@ -253,20 +252,20 @@ describe("mutable serialization", () => {
         it("should deserialize to an equal object", () => {
             let immutable = ARRAY_PRIMITIVES;
             let [patch, nextSerialize] = serialize(immutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
-            expect(immutable).toEqual(deserialized);
+            let [target, nextDeserialize] = deserialize(patch);
+            expect(immutable).toEqual(target);
         })
 
         it("should re-serialize and re-deserialize to an equal, the same object", () => {
             let immutable = ARRAY_PRIMITIVES;
             let [patch, nextSerialize] = serialize(immutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
+            let [target, nextDeserialize] = deserialize(patch);
 
             immutable = {...immutable, items: ARRAY_PRIMITIVES_UPDATE};
             [patch, nextSerialize] = nextSerialize(immutable);
-            let [deserialized2, nextDeserialize2] = nextDeserialize(patch)
-            expect(immutable).toEqual(deserialized2);
-            expect(deserialized).toBe(deserialized2);
+            let [target_2, nextDeserialize2] = nextDeserialize(patch)
+            expect(immutable).toEqual(target_2);
+            expect(target).toBe(target_2);
         })
 
     })
@@ -287,63 +286,62 @@ describe("mutable serialization", () => {
         })
 
         it("should deserialize to an equal object", () => {
-            let mutable = mutableObject(ARRAY_OBJECTS, true);
-            let [patch, nextSerialize] = serialize(mutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
-            expect(mutable).toEqual(deserialized);
+            let original = mutableObject(ARRAY_OBJECTS, true);
+            let [patch, nextSerialize] = serialize(original);
+            let [target, nextDeserialize] = deserialize(patch);
+            expect(original).toEqual(target);
         })
 
-        it("should serialize and deserialize the mutable revision", () => {
-            let mutable = mutableObject(ARRAY_OBJECTS, true);
-            let [patch, nextSerialize] = serialize(mutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
+        it("should serialize and deserialize the original revision", () => {
+            let original = mutableObject(ARRAY_OBJECTS, true);
+            let [patch, nextSerialize] = serialize(original);
+            let [target, nextDeserialize] = deserialize(patch);
 
-            let originalRevision = getRevision(mutable);
-            let originalRevision_items = getRevision(mutable.items);
-            let deserializedRevision = getRevision(deserialized);
-            let deserializedRevision_items = getRevision((deserialized as typeof ARRAY_OBJECTS).items);
+            let origRev = getRevision(original);
+            let origRev_items = getRevision(original.items);
+            let targetRev = getRevision(target);
+            let targetRev_items = getRevision((target as typeof ARRAY_OBJECTS).items);
 
-            expect(originalRevision.revNum).toBeLessThan(deserializedRevision.revNum);
-            expect(originalRevision_items.revNum).toBeLessThan(deserializedRevision_items.revNum);
+            expect(origRev.revNum).toBeLessThan(targetRev.revNum);
+            expect(origRev_items.revNum).toBeLessThan(targetRev_items.revNum);
             for (let i=0; i < 3; i++) {
-                let itemRev = getRevision(mutable.items[i]);
-                let deserializedItemRev = getRevision((deserialized as typeof ARRAY_OBJECTS).items[i]);
+                let itemRev = getRevision(original.items[i]);
+                let deserializedItemRev = getRevision((target as typeof ARRAY_OBJECTS).items[i]);
                 expect(itemRev.revNum).toBeLessThan(deserializedItemRev.revNum);
             }
         })
 
         describe('array mutations', () => {
             it("array item update", () => {
-                let mutable = mutableObject(ARRAY_OBJECTS, true);
-                let [patch, nextSerialize] = serialize(mutable);
-                let [deserialized, nextDeserialize] = deserialize(patch);
+                let original = mutableObject(ARRAY_OBJECTS, true);
+                let [patch, nextSerialize] = serialize(original);
+                let [target, nextDeserialize] = deserialize(patch);
 
-                Object.assign(mutable.items[1], ARRAY_OBJECTS_ITEM_1_UPDATE);
-                [patch, nextSerialize] = nextSerialize(mutable);
-                let [deserialized2, nextDeserialize2] = nextDeserialize(patch)
-                expect(mutable).toEqual(deserialized2);
-                expect(deserialized).toBe(deserialized2);
+                Object.assign(original.items[1], ARRAY_OBJECTS_ITEM_1_UPDATE);
+                [patch, nextSerialize] = nextSerialize(original);
+                let [target_2, nextDeserialize2] = nextDeserialize(patch)
+                expect(original).toEqual(target_2);
+                expect(target).toBe(target_2);
             })
 
             it.skip("move array items on re-deserialization", () => {
-                let mutable = mutableObject(ARRAY_OBJECTS, true);
-                let [patch, nextSerialize] = serialize(mutable);
-                let [deserialized, nextDeserialize] = deserialize<any>(patch);
+                let original = mutableObject(ARRAY_OBJECTS, true);
+                let [patch, nextSerialize] = serialize(original);
+                let [target, nextDeserialize] = deserialize<any>(patch);
 
                 // replace items 1 and 2
-                let i1 = mutable.items[1];
-                let i2 = mutable.items[2];
-                mutable.items[1] = i2;
-                mutable.items[2] = i1;
+                let i1 = original.items[1];
+                original.items[1] = original.items[2];
+                original.items[2] = i1;
 
-                let deserializedItem_1 = deserialized.items[1];
-                let deserializedItem_2 = deserialized.items[2];
-                [patch, nextSerialize] = nextSerialize(mutable);
-                let [deserialized2, nextDeserialize2] = nextDeserialize(patch)
-                expect(mutable).toEqual(deserialized2);
-                expect(deserialized).toBe(deserialized2);
-                expect(deserialized.items[1]).toBe(deserializedItem_2)
-                expect(deserialized.items[2]).toBe(deserializedItem_1)
+                let target_item_1 = target.items[1];
+                let target_item_2 = target.items[2];
+                [patch, nextSerialize] = nextSerialize(original);
+                let [target_2, nextDeserialize2] = nextDeserialize(patch)
+                expect(original).toEqual(target_2);
+                expect(target).toBe(target_2);
+                expect(target.items[1]).toBe(target_item_2)
+                expect(target.items[2]).toBe(target_item_1)
             })
         })
 
@@ -362,45 +360,45 @@ describe("mutable serialization", () => {
         it("should deserialize to an equal object", () => {
             let immutable = ARRAY_OBJECTS;
             let [patch, nextSerialize] = serialize(immutable);
-            let [deserialized, nextDeserialize] = deserialize(patch);
-            expect(immutable).toEqual(deserialized);
+            let [target, nextDeserialize] = deserialize(patch);
+            expect(immutable).toEqual(target);
         })
 
         describe('array mutations', () => {
             it("array item update", () => {
                 let immutable = ARRAY_OBJECTS;
                 let [patch, nextSerialize] = serialize(immutable);
-                let [deserialized, nextDeserialize] = deserialize(patch);
+                let [target, nextDeserialize] = deserialize(patch);
 
                 immutable = {...immutable,
                     items: immutable.items
                         .map((item, index) => index === 1?ARRAY_OBJECTS_ITEM_1_UPDATE:item)
                 };
                 [patch, nextSerialize] = nextSerialize(immutable);
-                let [deserialized2, nextDeserialize2] = nextDeserialize(patch)
-                expect(immutable).toEqual(deserialized2);
-                expect(deserialized).toBe(deserialized2);
+                let [target_2, nextDeserialize2] = nextDeserialize(patch)
+                expect(immutable).toEqual(target_2);
+                expect(target).toBe(target_2);
             })
 
             it.skip("move array items on re-deserialization", () => {
-                let mutable = mutableObject(ARRAY_OBJECTS, true);
-                let [patch, nextSerialize] = serialize(mutable);
-                let [deserialized, nextDeserialize] = deserialize<any>(patch);
+                let original = mutableObject(ARRAY_OBJECTS, true);
+                let [patch, nextSerialize] = serialize(original);
+                let [target, nextDeserialize] = deserialize<any>(patch);
 
                 // replace items 1 and 2
-                let i1 = mutable.items[1];
-                let i2 = mutable.items[2];
-                mutable.items[1] = i2;
-                mutable.items[2] = i1;
+                let i1 = original.items[1];
+                let i2 = original.items[2];
+                original.items[1] = i2;
+                original.items[2] = i1;
 
-                let deserializedItem_1 = deserialized.items[1];
-                let deserializedItem_2 = deserialized.items[2];
-                [patch, nextSerialize] = nextSerialize(mutable);
-                let [deserialized2, nextDeserialize2] = nextDeserialize(patch)
-                expect(mutable).toEqual(deserialized2);
-                expect(deserialized).toBe(deserialized2);
-                expect(deserialized.items[1]).toBe(deserializedItem_2)
-                expect(deserialized.items[2]).toBe(deserializedItem_1)
+                let target_item_1 = target.items[1];
+                let target_item_2 = target.items[2];
+                [patch, nextSerialize] = nextSerialize(original);
+                let [target_2, nextDeserialize2] = nextDeserialize(patch)
+                expect(original).toEqual(target_2);
+                expect(target).toBe(target_2);
+                expect(target.items[1]).toBe(target_item_2)
+                expect(target.items[2]).toBe(target_item_1)
             })
         })
 
