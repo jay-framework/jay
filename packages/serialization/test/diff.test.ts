@@ -3,6 +3,16 @@ import {ArrayContexts, diff} from '../lib/serialize/diff'
 import {ADD, MOVE, REMOVE, REPLACE} from "../lib/types";
 
 describe('diff', () => {
+
+    describe('new object', () => {
+        it('should return ADD patch for a new object', () => {
+            let patch = diff({a: 1, b: 2},undefined)
+            expect(patch[0]).toEqual([
+                {op: ADD, path: [], value: {a: 1, b: 2}}
+            ])
+        })
+    })
+
     describe('atomic values', () => {
         it('should return empty patch for same value', () => {
             let patch = diff(1,1)

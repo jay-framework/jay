@@ -1,5 +1,6 @@
 import {ITEM_ADDED, ITEM_MOVED, ITEM_REMOVED, listCompare, RandomAccessLinkedList as List} from "jay-list-compare";
 import {ADD, JSONPatch, JSONPointer, MOVE, REMOVE, REPLACE} from "../types";
+import {isMutable} from "jay-reactive";
 
 type MeasureOfChange = number
 type DataFields = number
@@ -85,7 +86,7 @@ export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayConte
     // Primitives
     if (newValue === oldValue) return [[], 0, 1];
     if (oldValue === undefined || oldValue === null)
-        return [[{op:ADD, path, value: newValue}], 1, 1]
+        return [[{op:ADD, path, value: isMutable(newValue)?structuredClone(newValue.getOriginal()):newValue}], 1, 1]
 
     if (newValue && oldValue && typeof newValue === 'object' && typeof oldValue === 'object') {
         if (Array.isArray(newValue) && Array.isArray(oldValue)) {
