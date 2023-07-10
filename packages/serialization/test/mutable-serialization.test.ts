@@ -12,14 +12,14 @@ describe("mutable serialization", () => {
         })
 
         it("should deserialize to an equal object", () => {
-            let mutable = mutableObject(SIMPLE_OBJECT);
+            let mutable = mutableObject(SIMPLE_OBJECT, true);
             let [serialized, nextSerialize] = serialize(mutable);
             let [deserialized, nextDeserialize] = deserialize(serialized);
             expect(mutable).toEqual(deserialized);
         })
 
         it("should serialize and deserialize the mutable revision", () => {
-            let mutable = mutableObject(SIMPLE_OBJECT);
+            let mutable = mutableObject(SIMPLE_OBJECT, true);
             let [serialized, nextSerialize] = serialize(mutable);
             let [deserialized, nextDeserialize] = deserialize(serialized);
             let originalRevision = getRevision(mutable);
@@ -28,7 +28,7 @@ describe("mutable serialization", () => {
         })
 
         it("should re-serialize and re-deserialize to an equal object", () => {
-            let mutable = mutableObject(SIMPLE_OBJECT);
+            let mutable = mutableObject(SIMPLE_OBJECT, true);
             let [serialized, nextSerialize] = serialize(mutable);
             let [deserialized, nextDeserialize] = deserialize(serialized);
             let deserialized_revition_1 = getRevision(deserialized);

@@ -73,6 +73,8 @@ function diffArrayWithContext(context: ArrayContext, oldValue: any[], newValue: 
 }
 
 export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayContexts, path: JSONPointer = []): [JSONPatch, MeasureOfChange, DataFields] => {
+    if (oldValue === undefined || oldValue === null)
+        return [[{op:ADD, path, value: isMutable(newValue)?structuredClone(newValue.getOriginal()):newValue}], 1, 1]
     if (typeof newValue === "object" && (newValue as any).getPatch) {
         let patch = (newValue as any)
             .getPatch();
@@ -85,8 +87,6 @@ export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayConte
     }
     // Primitives
     if (newValue === oldValue) return [[], 0, 1];
-    if (oldValue === undefined || oldValue === null)
-        return [[{op:ADD, path, value: isMutable(newValue)?structuredClone(newValue.getOriginal()):newValue}], 1, 1]
 
     if (newValue && oldValue && typeof newValue === 'object' && typeof oldValue === 'object') {
         if (Array.isArray(newValue) && Array.isArray(oldValue)) {

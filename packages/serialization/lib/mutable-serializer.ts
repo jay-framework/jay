@@ -11,6 +11,6 @@ export function serialize(entity: any): [JSONPatch, Serialize] {
 export function _serialize<T>(lastEntity: T): (entity: T) => [JSONPatch, Serialize] {
     return (entity: T) => {
         let patch = diff(entity, lastEntity)
-        return [patch[0], serialize]
+        return [patch[0], _serialize(entity)]
     }
 }
