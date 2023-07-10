@@ -45,7 +45,7 @@ describe("mutable serialization", () => {
         })
     })
 
-    describe("simple immutable objects", () => {
+    describe("simple immutable objects serialized into mutable", () => {
         const SIMPLE_OBJECT = {a: 1, b:2, c: "abcd", d: true};
 
         it("should deserialize to an equal object", () => {
@@ -55,7 +55,19 @@ describe("mutable serialization", () => {
             expect(immutable).toEqual(deserialized);
         })
 
-        it("should re-serialize and re-deserialize to an equal, yet different object", () => {
+        it("should re-serialize and re-deserialize to an equal and the same mutable object", () => {
+            let immutable = SIMPLE_OBJECT;
+            let [serialized, nextSerialize] = serialize(immutable);
+            let [deserialized, nextDeserialize] = deserialize(serialized);
+
+            immutable = {...immutable, a: 12};
+            [serialized, nextSerialize] = nextSerialize(immutable);
+            let [deserialized2, nextDeserialize2] = nextDeserialize(serialized)
+            expect(immutable).toEqual(deserialized2);
+            expect(deserialized).toBe(deserialized2);
+        })
+
+        it("given a large change that patch sends the whole object, should update the result mutable with the change", () => {
             let immutable = SIMPLE_OBJECT;
             let [serialized, nextSerialize] = serialize(immutable);
             let [deserialized, nextDeserialize] = deserialize(serialized);
@@ -64,7 +76,7 @@ describe("mutable serialization", () => {
             [serialized, nextSerialize] = nextSerialize(immutable);
             let [deserialized2, nextDeserialize2] = nextDeserialize(serialized)
             expect(immutable).toEqual(deserialized2);
-            expect(deserialized).not.toBe(deserialized2);
+            expect(deserialized).toBe(deserialized2);
         })
     })
 

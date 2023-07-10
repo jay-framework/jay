@@ -38,5 +38,6 @@ export interface MutableContract {
     getRevision(): number
     setRevision(revNum: number)
     getOriginal(): object
+    setOriginal(newOriginal): void
     getPatch(): JSONPatch
 }

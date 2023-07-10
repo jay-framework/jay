@@ -154,6 +154,11 @@ const MUTABLE_CONTEXT_FUNCTIONS = {
     addMutableListener: (state: State) => (changeListener: ChangeListener) => state.changeListeners.add(changeListener),
     removeMutableListener: (state: State) => (changeListener: ChangeListener) => state.changeListeners.delete(changeListener),
     getOriginal: (state: State) => () => state.original,
+    setOriginal: (state: State) => (newOriginal) => {
+        deleteProxy(state.original, undefined);
+        state.original = newOriginal
+        setProxy(state.original, state.proxy)
+    },
 }
 
 const getPatch = (state: State) => () => {

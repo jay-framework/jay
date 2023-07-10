@@ -7,6 +7,7 @@ export interface MutableContract {
     getRevision(): number
     setRevision(revNum: number)
     getOriginal(): object
+    setOriginal(newOriginal): void
 }
 
 export function isMutable(obj): obj is MutableContract {
