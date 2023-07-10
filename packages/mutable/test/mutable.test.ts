@@ -1067,7 +1067,6 @@ describe("mutable", () => {
             it('should support JSON patch for unshift', () => {
                 let mutableArr = mutableObject([1,2,3], true);
                 mutableArr.unshift(4,5,6)
-                console.log(mutableArr)
                 expect(mutableArr.getPatch()).toEqual([
                     {op: ADD, path: ["0"], value: 4},
                     {op: ADD, path: ["1"], value: 5},
