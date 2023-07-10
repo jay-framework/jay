@@ -2,21 +2,34 @@ import {ChangeListener, isMutable, nextRevNum} from "jay-reactive";
 import {setPrivateProperty} from "./private-property";
 import {ADD, JSONPatch, MOVE, MutableContract, REMOVE, REPLACE} from "./types";
 
-const proxySymbol = Symbol.for("proxy")
+export const MUTABLE_PROXY_SYMBOL = Symbol.for("proxy")
+
+/* using `structuredClone` in `jest` tests requires add `jest.config.js` with the following config
+const config = {
+  testEnvironment: "node",
+  globals: {
+    structuredClone: structuredClone,
+  },
+};
+module.exports = config;
+
+we introduce the const here to enable minification of the function name
+*/
+const _structuredClone = structuredClone
 
 function setProxy(obj: object, proxy: object) {
-    return setPrivateProperty(obj, proxySymbol, proxy);
+    return setPrivateProperty(obj, MUTABLE_PROXY_SYMBOL, proxy);
 }
 
 function getProxy(obj: object) {
-    return obj[proxySymbol];
+    return obj[MUTABLE_PROXY_SYMBOL];
 }
 
 function deleteProxy(obj: object, changeListener: ChangeListener) {
-    if (isMutable(obj[proxySymbol]))
-        obj[proxySymbol].removeMutableListener(changeListener)
-    if (obj[proxySymbol]) {
-        delete obj[proxySymbol];
+    if (isMutable(obj[MUTABLE_PROXY_SYMBOL]))
+        obj[MUTABLE_PROXY_SYMBOL].removeMutableListener(changeListener)
+    if (obj[MUTABLE_PROXY_SYMBOL]) {
+        delete obj[MUTABLE_PROXY_SYMBOL];
     }
 }
 
@@ -66,7 +79,7 @@ function wrapArrayUnshift<T>(state: State, property: string, mkJsonPatch: boolea
                 let res = (state.original as Array<any>).unshift.apply(state.original, args)
                 state.changed();
                 for (let i=0; i < args.length; i++)
-                    state.patch.push({op: ADD, path: [""+i], value: args[i]})
+                    state.patch.push({op: ADD, path: [""+i], value: _structuredClone(args[i])})
                 return res;
             })
         }
@@ -98,9 +111,9 @@ function wrapArraySplice<T>(state: State, property: string, mkJsonPatch: boolean
                 (state.original as Array<any>).splice.apply(state.original, args)
                 state.changed();
                 for (let i=0; i < replace; i++)
-                    state.patch.push({op: REPLACE, path: [""+(start+i)], value: args[i+2]})
+                    state.patch.push({op: REPLACE, path: [""+(start+i)], value: _structuredClone(args[i+2])})
                 for (let i = remove; i < add; i++)
-                    state.patch.push({op: ADD, path: [""+(start+i)], value: args[i+2]})
+                    state.patch.push({op: ADD, path: [""+(start+i)], value: _structuredClone(args[i+2])})
                 for (let i = add; i < remove; i++)
                     state.patch.push({op: REMOVE, path: [""+(start+i)]})
             })
@@ -141,23 +154,26 @@ const MUTABLE_CONTEXT_FUNCTIONS = {
     addMutableListener: (state: State) => (changeListener: ChangeListener) => state.changeListeners.add(changeListener),
     removeMutableListener: (state: State) => (changeListener: ChangeListener) => state.changeListeners.delete(changeListener),
     getOriginal: (state: State) => () => state.original,
-    getPatch: (state: State) => () => {
-        let patches = [state.patch];
-        for (let prop in state.original) {
-            let childMutableProxy = getProxy(state.original[prop]);
-            if (childMutableProxy)
-                patches.push(childMutableProxy.getPatch()
-                    .map(patchOperation => {
-                        patchOperation.path.unshift(prop);
-                        if (patchOperation.from)
-                            patchOperation.from.unshift(prop);
-                        return patchOperation;
-                    }))
-        }
-        state.patch = []
-        return patches.flat()
-    }
 }
+
+const getPatch = (state: State) => () => {
+    let patches = [state.patch];
+    for (let prop in state.original) {
+        let childMutableProxy = getProxy(state.original[prop]);
+        if (childMutableProxy)
+            patches.push(childMutableProxy.getPatch()
+                .map(patchOperation => {
+                    patchOperation.path.unshift(prop);
+                    if (patchOperation.from)
+                        patchOperation.from.unshift(prop);
+                    return patchOperation;
+                }))
+    }
+    state.patch = []
+    return patches.flat()
+}
+
+
 
 export function _mutableObject<T extends object>(original: T, mkJsonPatch: boolean, notifyParent?: ChangeListener): T & MutableContract
 export function _mutableObject<T>(original: Array<T>, mkJsonPatch: boolean, notifyParent?: ChangeListener): Array<T> & MutableContract{
@@ -197,7 +213,7 @@ export function _mutableObject<T>(original: Array<T>, mkJsonPatch: boolean, noti
             if (state.original[property])
                 deleteProxy(state.original[property], state.changed);
             if ( mkJsonPatch && typeof property === 'string' && (!state.isArray || property !== "length") && !state.suppressPatch)
-                state.patch.push({op: state.original[property]?REPLACE:ADD, path: [property], value})
+                state.patch.push({op: state.original[property]?REPLACE:ADD, path: [property], value: _structuredClone(value)})
             state.original[property] = isMutable(value)?value.getOriginal():value;
             state.changed();
             return true;
@@ -205,7 +221,9 @@ export function _mutableObject<T>(original: Array<T>, mkJsonPatch: boolean, noti
         get: function(target, property: PropertyKey) {
             if (MUTABLE_CONTEXT_FUNCTIONS.hasOwnProperty(property))
                 return MUTABLE_CONTEXT_FUNCTIONS[property](state);
-            if (property === proxySymbol)
+            if (property === 'getPatch' && mkJsonPatch)
+                return getPatch(state);
+            else if (property === MUTABLE_PROXY_SYMBOL)
                 return undefined; // this line is here for mechanisms who insist on serializing un-enumerable properties
             else if (state.isArray && typeof property === 'string' && WRAP_ARRAY_FUNCTIONS.has(property)) {
                 if (!state.arrayFunctions[property])

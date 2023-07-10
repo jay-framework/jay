@@ -1,8 +1,8 @@
 import {describe, expect, it, jest} from '@jest/globals'
 import {mutableObject} from "../lib";
-import {_mutableObject} from "../lib/mutable"
+import {_mutableObject, MUTABLE_PROXY_SYMBOL} from "../lib/mutable"
 import {checkModified, getRevision, isMutable} from "jay-reactive";
-import {ADD, MOVE, REMOVE, REPLACE} from "../lib/types";
+import {ADD, JSONPatchReplace, MOVE, REMOVE, REPLACE} from "../lib/types";
 
 describe("mutable", () => {
 
@@ -1110,6 +1110,47 @@ describe("mutable", () => {
                     {op: ADD, path: ['c', 'e', '3'], value: 14}
                 ])
                 expect(mutable.getPatch()).toEqual([])
+            })
+
+            it("should have .getPatch function for mutables who are making JSON Patch", () => {
+                let mutable = mutableObject({a: 1, b:2}, true);
+                expect(mutable.getPatch).toBeDefined()
+            })
+
+            it("should not have .getPatch function for mutables who are making JSON Patch", () => {
+                let mutable = mutableObject({a: 1, b:2});
+                expect(mutable.getPatch).not.toBeDefined()
+            })
+
+            it('should create JSON Patch that does not include mutable instances', () => {
+                let mutable = mutableObject({a: 1, b: {c: 1, d: 2}}, true);
+
+                mutable.b = {c: 3, d: 4}
+                mutable.b.c = 5;
+                let patch = mutable.getPatch();
+                for (let patchOp of patch) {
+                    let replacementValue = (patchOp as JSONPatchReplace).value;
+                    expect(isMutable(replacementValue)).toBe(false);
+                    expect(replacementValue[MUTABLE_PROXY_SYMBOL]).toBeUndefined()
+                }
+            })
+
+            it('should create JSON Patch that does not include mutable instances 2', () => {
+                let mutable = mutableObject(
+                    {a: 1, b: [
+                            {c: 1, d: 2},
+                            {c: 3, d: 4},
+                            {c: 5, d: 6}
+                        ]}, true);
+
+                mutable.b.push({c: 7, d: 8})
+                mutable.b[2].c = 12;
+                let patch = mutable.getPatch();
+                for (let patchOp of patch) {
+                    let replacementValue = (patchOp as JSONPatchReplace).value;
+                    expect(isMutable(replacementValue)).toBe(false);
+                    expect(replacementValue[MUTABLE_PROXY_SYMBOL]).toBeUndefined()
+                }
             })
         })
     })
