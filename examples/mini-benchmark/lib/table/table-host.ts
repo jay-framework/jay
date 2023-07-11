@@ -1,5 +1,5 @@
 import benchmark from "../benchmark";
-import {createState, makeJayComponent, Props } from 'jay-component';
+import {createState, makeJayComponent, Props} from 'jay-component';
 import {render as TableHostRender, TableHostElementRefs} from "./table-host.jay.html";
 
 interface TableHostProps {
@@ -22,7 +22,7 @@ function TableHostConstructor({cycles}: Props<TableHostProps>, refs: TableHostEl
 
     refs.stateManagement
         .$oninput(({event}) => (event.target as HTMLSelectElement).value)
-        .then(({event: updates}) => setStateManagement(updates));
+        .then(({event: newStateManagement}) => setStateManagement(newStateManagement));
 
     const run = (progressCallback: (string) => void) => {
         benchmark(index => refs.table.updateData(index), cycles(), progressCallback);
