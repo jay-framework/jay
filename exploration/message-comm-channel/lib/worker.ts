@@ -3,5 +3,5 @@ import {HandshakeMessageJayChannel} from "../../../packages/secure/dist/comm-cha
 setTimeout(() => {
     let channel = new HandshakeMessageJayChannel(self);
 
-    channel.postMessages([[-1, {viewState: {}, type: 0}]], [])
+    channel.postMessages([[-1, {patch: {}, type: 0}]], [])
 }, Math.random() * 1000)
