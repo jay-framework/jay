@@ -4,6 +4,7 @@ import {SECURE_COMPONENT_MARKER} from "./main-contexts";
 import {JayPortMessageType, nativeExecResult, rootComponentViewState} from "../comm-channel/messages";
 import {serialize} from 'jay-serialization'
 import {FunctionsRepository, JayGlobalNativeFunction} from "./function-repository-types";
+import {JSONPatch} from "jay-mutable-contract";
 
 
 export function mainRoot<ViewState>(viewState: ViewState,
@@ -32,10 +33,10 @@ export function mainRoot<ViewState>(viewState: ViewState,
     })
 
     return provideContext(SECURE_COMPONENT_MARKER, context, () => {
-        let serialized: string, nextSerialize;
+        let patch: JSONPatch, nextSerialize;
         let element = port.batch(() => {
-            [serialized, nextSerialize] = serialize(viewState);
-            endpoint.post(rootComponentViewState(serialized))
+            [patch, nextSerialize] = serialize(viewState);
+            endpoint.post(rootComponentViewState(patch))
             return elementConstructor();
         })
         return {
@@ -45,8 +46,8 @@ export function mainRoot<ViewState>(viewState: ViewState,
             update: (newData: ViewState) => {
                 element.update(newData);
                 port.batch(() => {
-                    [serialized, nextSerialize] = nextSerialize(newData);
-                    endpoint.post(rootComponentViewState(serialized))
+                    [patch, nextSerialize] = nextSerialize(newData);
+                    endpoint.post(rootComponentViewState(patch))
                 })
             }
         }

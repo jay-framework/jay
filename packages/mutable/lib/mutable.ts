@@ -1,6 +1,6 @@
-import {ChangeListener, isMutable, nextRevNum} from "jay-reactive";
+import {nextRevNum} from "jay-reactive";
 import {setPrivateProperty} from "./private-property";
-import {ADD, JSONPatch, MOVE, MutableContract, REMOVE, REPLACE} from "./types";
+import {ADD, ChangeListener, isMutable, JSONPatch, MOVE, MutableContract, REMOVE, REPLACE} from "jay-mutable-contract";
 
 export const MUTABLE_PROXY_SYMBOL = Symbol.for("proxy")
 

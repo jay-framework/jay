@@ -1,17 +1,16 @@
 import {describe, expect, it} from '@jest/globals'
 import {setChannel, useMockCommunicationChannel} from "../util/mock-channel";
 import {initializeWorker} from "./secure/worker/worker-root";
-import {BasicProps} from "./secure/main/basic";
-import {BasicViewState} from "./secure/main/basic.jay.html";
 import {render} from "./secure/main/app.jay.html";
 import {JayPortMessageType} from "../../lib/comm-channel/messages";
+import {ADD, REPLACE} from "jay-mutable-contract";
 
 const initialData = {firstName: 'Joe', lastName: 'Smith'};
 const updatedData = {firstName: 'John', lastName: 'Green'};
 describe('basic secure rendering', () => {
 
     async function mkElement() {
-        let channel = useMockCommunicationChannel<BasicProps, BasicViewState>(false);
+        let channel = useMockCommunicationChannel(false);
         setChannel(channel);
         initializeWorker();
         let appElement = render(initialData);
@@ -33,7 +32,7 @@ describe('basic secure rendering', () => {
             expect.arrayContaining([
                 expect.arrayContaining([
                     expect.objectContaining({
-                        type: JayPortMessageType.root, viewState: JSON.stringify(initialData)
+                        type: JayPortMessageType.root
                     }), 'invoked'
                 ]),
                 expect.arrayContaining([
@@ -65,7 +64,7 @@ describe('basic secure rendering', () => {
             expect.arrayContaining([
                 expect.arrayContaining([
                     expect.objectContaining({
-                        type: JayPortMessageType.root, viewState: JSON.stringify(initialData)
+                        type: JayPortMessageType.root, patch: [{op: ADD, path: [], value: initialData}]
                     }), 'invoked'
                 ]),
                 expect.arrayContaining([
@@ -75,7 +74,7 @@ describe('basic secure rendering', () => {
                 ]),
                 expect.arrayContaining([
                     expect.objectContaining({
-                        type: JayPortMessageType.root, viewState: JSON.stringify(updatedData)
+                        type: JayPortMessageType.root, patch: [{op: REPLACE, path: [], value: updatedData}]
                     }), 'invoked'
                 ]),
                 expect.arrayContaining([

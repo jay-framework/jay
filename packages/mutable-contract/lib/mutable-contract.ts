@@ -1,3 +1,5 @@
+import {JSONPatch} from "./json-patch-contract";
+
 export type ChangeListener = () => void;
 
 export interface MutableContract {
@@ -8,6 +10,7 @@ export interface MutableContract {
     setRevision(revNum: number)
     getOriginal(): object
     setOriginal(newOriginal): void
+    getPatch(): JSONPatch
 }
 
 export function isMutable(obj): obj is MutableContract {

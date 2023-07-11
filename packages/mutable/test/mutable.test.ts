@@ -1,8 +1,8 @@
 import {describe, expect, it, jest} from '@jest/globals'
 import {mutableObject} from "../lib";
 import {_mutableObject, MUTABLE_PROXY_SYMBOL} from "../lib/mutable"
-import {checkModified, getRevision, isMutable} from "jay-reactive";
-import {ADD, JSONPatchReplace, MOVE, REMOVE, REPLACE} from "../lib/types";
+import {checkModified, getRevision} from "jay-reactive";
+import {ADD, isMutable, JSONPatchReplace, MOVE, REMOVE, REPLACE} from "jay-mutable-contract";
 
 describe("mutable", () => {
 

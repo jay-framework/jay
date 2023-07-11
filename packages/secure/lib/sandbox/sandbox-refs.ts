@@ -35,6 +35,7 @@ import {
     removeEventListenerMessage, renderMessage,
     rootApiReturns
 } from "../comm-channel/messages";
+import {JSONPatch} from "jay-mutable-contract";
 
 
 export interface SandboxBridgeElement<ViewState> {
@@ -281,10 +282,10 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
     dynamicElements.forEach(elemRef => refs[elemRef] = proxyRef(new DynamicRefImplementation(elemRef, endpoint)))
     return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState, refs, dataIds: [], isDynamic: false, parentComponentReactive: reactive}, () => {
         let elements = sandboxElements();
-        let serialized: string, nextSerialize = serialize;
+        let patch: JSONPatch, nextSerialize = serialize;
         let postUpdateMessage = (newViewState) => {
-            [serialized, nextSerialize] = serialize(newViewState);
-            endpoint.post(renderMessage(serialized))
+            [patch, nextSerialize] = serialize(newViewState);
+            endpoint.post(renderMessage(patch))
         }
         let update = normalizeUpdates([postUpdateMessage, ...elements.map(el => el.update)]);
 

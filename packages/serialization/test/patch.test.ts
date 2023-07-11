@@ -1,7 +1,7 @@
 import {describe, expect, it} from '@jest/globals'
 import {mutableObject} from "jay-mutable";
 import {patch} from "../lib/deserialize/patch";
-import {ADD, MOVE, REMOVE, REPLACE} from "../lib/types";
+import {ADD, MOVE, REMOVE, REPLACE} from "jay-mutable-contract";
 
 describe('apply JSON patch', () => {
     describe("flat object", () => {

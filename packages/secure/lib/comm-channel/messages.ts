@@ -1,4 +1,5 @@
 import {Coordinate} from "jay-runtime";
+import {JSONPatch} from "jay-mutable-contract";
 
 export enum JayPortMessageType {
     render = 0,
@@ -16,7 +17,7 @@ export interface JayPortMessage {
 }
 export interface JPMRender extends JayPortMessage {
     readonly type: JayPortMessageType.render
-    viewState: string
+    patch: JSONPatch
 }
 export interface JPMAddEventListener extends JayPortMessage {
     readonly type: JayPortMessageType.addEventListener
@@ -51,7 +52,7 @@ export interface JPMDomEvent extends JayPortMessage {
 }
 export interface JPMRootComponentViewState extends JayPortMessage {
     readonly type: JayPortMessageType.root
-    viewState: string
+    patch: JSONPatch
 }
 
 export interface JPMRootAPIInvoke extends JayPortMessage {
@@ -72,8 +73,8 @@ export function rootApiReturns(callId: number, returns: any, error?: any): JPMRo
     return ({callId, returns, error, type: JayPortMessageType.rootApiReturns})
 }
 
-export function renderMessage(viewState: string): JPMRender {
-    return ({viewState, type: JayPortMessageType.render});
+export function renderMessage(patch: JSONPatch): JPMRender {
+    return ({patch, type: JayPortMessageType.render});
 }
 
 export function addEventListenerMessage(refName: string, eventType: string, nativeId?: string): JPMAddEventListener {
@@ -88,8 +89,8 @@ export function eventInvocationMessage(eventType: string, coordinate: Coordinate
     return ({coordinate, eventType, eventData, type: JayPortMessageType.eventInvocation});
 }
 
-export function rootComponentViewState(viewState: string): JPMRootComponentViewState {
-    return ({viewState, type: JayPortMessageType.root});
+export function rootComponentViewState(patch: JSONPatch): JPMRootComponentViewState {
+    return ({patch, type: JayPortMessageType.root});
 }
 
 export function nativeExec(nativeId: string, correlationId: number, refName?: string, coordinate?: Coordinate): JPMNativeExec {

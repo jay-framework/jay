@@ -1,6 +1,5 @@
 import {ITEM_ADDED, ITEM_MOVED, ITEM_REMOVED, listCompare, RandomAccessLinkedList as List} from "jay-list-compare";
-import {ADD, JSONPatch, JSONPointer, MOVE, REMOVE, REPLACE} from "../types";
-import {isMutable} from "jay-reactive";
+import {ADD, isMutable, JSONPatch, JSONPointer, MOVE, REMOVE, REPLACE} from "jay-mutable-contract";
 
 type MeasureOfChange = number
 type DataFields = number

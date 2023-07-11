@@ -1,5 +1,5 @@
 import {checkModified, Revisioned} from "./revisioned";
-import {isMutable} from "./reactive-contract";
+import {isMutable} from "jay-mutable-contract";
 
 export type Next<T> = (t: T) => T
 export type Setter<T> = (t: T | Next<T>) => T

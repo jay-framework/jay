@@ -14,6 +14,7 @@
   "dependencies": {
     "jay-reactive": "1.0.4",
     "jay-mutable": "1.0.0",
+    "jay-mutable-contract": "1.0.0",
     "jay-list-compare": "1.0.0"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-import {isMutable} from "./reactive-contract";
+import {isMutable} from "jay-mutable-contract";
 
 let nextRevision = 1;
 

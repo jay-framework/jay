@@ -1,8 +1,5 @@
-import {JSONPatch} from "./types";
 import {diff} from "./serialize/diff";
-import {isMutable} from "jay-reactive";
-import {MutableContract} from "jay-mutable";
-
+import {isMutable, JSONPatch} from "jay-mutable-contract";
 
 export type Serialize = (entity: any) => [JSONPatch, Serialize]
 

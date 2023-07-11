@@ -55,7 +55,7 @@ function makeComponentBridgeConstructor<
         switch (message.type) {
             case JayPortMessageType.render:
                 reactive.batchReactions(() => {
-                    [deserializedViewState, nextDeserialize] = nextDeserialize(message.viewState);
+                    [deserializedViewState, nextDeserialize] = nextDeserialize(message.patch);
                     setViewState(deserializedViewState)
                 });
                 break;

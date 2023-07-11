@@ -1,5 +1,4 @@
 const config = {
-  verbose: true,
   testEnvironment: "node",
   globals: {
     structuredClone: structuredClone,

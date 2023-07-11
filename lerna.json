@@ -17,6 +17,7 @@
     "packages/reactive",
     "packages/secure",
     "packages/mutable",
+    "packages/mutable-contract",
     "packages/serialization",
     "packages/list-compare",
     "exploration",
