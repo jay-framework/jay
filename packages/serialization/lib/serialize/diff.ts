@@ -77,7 +77,7 @@ const stripMutable = (value: any) => isMutable(value)?structuredClone(value.getO
 export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayContexts, path: JSONPointer = []): [JSONPatch, MeasureOfChange, DataFields] => {
     if (oldValue === undefined || oldValue === null)
         return [[{op:ADD, path, value: stripMutable(newValue)}], 1, 1]
-    if (typeof newValue === "object" && (newValue as any).getPatch) {
+    if (typeof newValue === "object" && (newValue as any).getPatch && newValue === oldValue /* same mutable */) {
         let patch = (newValue as any)
             .getPatch();
         patch.forEach(patchOp => {
