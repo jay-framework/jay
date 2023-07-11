@@ -1,4 +1,4 @@
-import {render, TableElementRefs} from './table.jay.html';
+import {Line, render, TableElementRefs} from './table.jay.html';
 import {createState, makeJayComponent, Props } from 'jay-component';
 import { mutableObject } from 'jay-mutable';
 import {produce} from 'immer'
@@ -9,7 +9,7 @@ interface TableProps {
     stateManagement: "mutable" | "immutable" | "immer"
 }
 
-function initTable(tableSize: number) {
+function initTable(tableSize: number): Line[] {
     let tableLines = []
     for (let x = 0; x < tableSize; x++) {
         tableLines[x] = {id: x, cell: []};
@@ -24,7 +24,7 @@ function TableConstructor({tableSize, numCellsToUpdate, stateManagement}: Props<
 
     let [line, setLine] = createState(() => {
         if (stateManagement() === "mutable")
-            return mutableObject(initTable(tableSize()))
+            return mutableObject(initTable(tableSize()), true)
         else
             return initTable(tableSize())
     });

@@ -1,5 +1,5 @@
 import {render, CollectionsElementRefs} from './collections.jay.html';
-import {createState, makeJayComponent, useReactive, Props, createMemo} from 'jay-component';
+import {createState, makeJayComponent, useReactive, Props, createMemo, createMutableState} from 'jay-component';
 import benchmark from "../benchmark";
 import {mutableObject} from 'jay-mutable';
 
@@ -10,11 +10,11 @@ interface CollectionsProps {
 function CollectionsConstructor({cycles}: Props<CollectionsProps>, refs: CollectionsElementRefs) {
     let [title] = createState('collection');
     let reactive = useReactive();
-    let [items] = createState(mutableObject([
+    let items = createMutableState([
         {name: 'car', completed: false, cost: 10, id: 'a'},
         {name: 'plane', completed: true, cost: 100, id: 'b'},
         {name: 'boat', completed: false, cost: 50, id: 'c'}
-    ]));
+    ]);
     let numberOfItems = createMemo(() => items().length)
 
     let nextId = 0;
