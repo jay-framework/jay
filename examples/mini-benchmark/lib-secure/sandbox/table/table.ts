@@ -1,32 +1,25 @@
-import {Line, render, TableElementRefs} from './table.jay.html';
-import {createEffect, createMutableState, makeJayComponent, Props} from 'jay-component';
+import {render, TableElementRefs} from './table.jay.html';
+import {createState, makeJayComponent, Props } from 'jay-component';
+import { mutableObject } from 'jay-mutable';
 
 interface TableProps {
     tableSize: number
     numCellsToUpdate: number
 }
 
-function initTable(tableSize: number): Line[] {
-    let tableLines = []
-    for (let x = 0; x < tableSize; x++) {
-        tableLines[x] = {id: x, cell: []};
-        for (let y = 0; y < tableSize; y++) {
-            tableLines[x].cell[y] = {id: y, value: Math.round(Math.random()*100)};
-        }
-    }
-    return tableLines;
-}
-
 function TableConstructor({tableSize, numCellsToUpdate}: Props<TableProps>, refs: TableElementRefs) {
 
-    let line = createMutableState(initTable(tableSize()));
+    let [line, _] = createState(() => {
+        let tableLines = []
+        for (let x = 0; x < tableSize(); x++) {
+            tableLines[x] = {id: x, cell: []};
+            for (let y = 0; y < tableSize(); y++) {
+                tableLines[x].cell[y] = {id: y, value: Math.round(Math.random()*100)};
 
-    createEffect(() => {
-        let table = initTable(tableSize())
-        if (line().length !== tableSize()) {
-            table.forEach((item, index) => table[index] = item)
+            }
         }
-    })
+        return mutableObject(tableLines, true)
+    });
 
     const updateData = (cycle: number) => {
         for (let i = 0; i < numCellsToUpdate(); i++) {
