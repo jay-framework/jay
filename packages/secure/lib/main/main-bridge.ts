@@ -153,10 +153,10 @@ export function makeJayComponentBridge<
  options?: CompBridgeOptions) {
     let component = makeJayComponent(render, makeComponentBridgeConstructor);
     return (props: PropsT) => {
-        let {compId, port} = useContext(SECURE_COMPONENT_MARKER);
+        let {compId, port, funcRepository} = useContext(SECURE_COMPONENT_MARKER);
         let {coordinate} = useContext(SECURE_COORDINATE_MARKER);
         let endpoint = port.getEndpoint(compId, coordinate);
-        let newSecureComponentContext = {endpoint, compId: endpoint.compId, port, funcRepository: options?.funcRepository}
+        let newSecureComponentContext = {endpoint, compId: endpoint.compId, port, funcRepository: funcRepository || options?.funcRepository}
         return provideContext(SECURE_COMPONENT_MARKER, newSecureComponentContext, () => {
             let comp = component(props);
             defineCompPublicAPI(comp as unknown as MainComponentBridge, endpoint, options);

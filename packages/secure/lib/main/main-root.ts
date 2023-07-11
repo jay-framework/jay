@@ -12,7 +12,7 @@ export function mainRoot<ViewState>(viewState: ViewState,
                                     funcRepository?: FunctionsRepository): BaseJayElement<ViewState> {
     let port = useMainPort();
     let endpoint = port.getRootEndpoint();
-    let context = {compId: endpoint.compId, endpoint, port}
+    let context = {compId: endpoint.compId, endpoint, port, funcRepository}
 
     endpoint.onUpdate(message => {
         switch (message.type) {
