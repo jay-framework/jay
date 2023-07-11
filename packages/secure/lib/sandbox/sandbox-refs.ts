@@ -284,7 +284,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
         let elements = sandboxElements();
         let patch: JSONPatch, nextSerialize = serialize;
         let postUpdateMessage = (newViewState) => {
-            [patch, nextSerialize] = serialize(newViewState);
+            [patch, nextSerialize] = nextSerialize(newViewState);
             endpoint.post(renderMessage(patch))
         }
         let update = normalizeUpdates([postUpdateMessage, ...elements.map(el => el.update)]);
