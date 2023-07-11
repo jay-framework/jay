@@ -81,7 +81,7 @@ export function createState<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: S
 }
 
 export function createMutableState<T extends object>(value: T): Getter<T> {
-    let [get, set] = createState(mutableObject(value))
+    let [get, set] = createState(mutableObject(value, true))
     return get
 }
 
