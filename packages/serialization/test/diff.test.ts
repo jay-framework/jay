@@ -96,6 +96,14 @@ describe('diff', () => {
             ])
         })
 
+        it("should not remove property values that evaluate as false", () => {
+            let patch = diff(
+                {a: 1, b: 0},
+                {a: 1, b: 0}
+            )
+            expect(patch[0]).toEqual([])
+        })
+
         it("should return replace object with primitive", () => {
             let patch = diff(
                 {a: 1, b: 2, c: 4},

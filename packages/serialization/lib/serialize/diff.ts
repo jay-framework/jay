@@ -26,7 +26,7 @@ function findArrayContext(contexts: ArrayContexts, path: JSONPointer): ArrayCont
     return foundContext?foundContext[1]:undefined;
 }
 
-function diffObjectOrArray(newValue: unknown, oldValue: unknown, contexts: ArrayContexts, path: JSONPointer) {
+function diffObjectOrArray(newValue: object, oldValue: object, contexts: ArrayContexts, path: JSONPointer) {
     let diffResults: [JSONPatch, MeasureOfChange, DataFields][] = [];
     let keys, i, length
     keys = Object.keys(newValue);
@@ -38,7 +38,7 @@ function diffObjectOrArray(newValue: unknown, oldValue: unknown, contexts: Array
     }
     for (i = oldKeys.length; i-- !== 0;) {
         const key = oldKeys[i];
-        if (!newValue[key])
+        if (!(key in newValue))
             diffResults.push([[{op: REMOVE, path: [...path, key]}], 1, 1])
     }
     return flattenPatch(diffResults, path, newValue);
