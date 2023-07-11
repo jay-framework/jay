@@ -11,7 +11,7 @@ export function _serialize<T>(lastEntity: T): (entity: T) => [JSONPatch, Seriali
     return (entity: T) => {
         // special case - immutable object with a direct mutable child
         let copy: any = {}
-        if (typeof entity === 'object' && !Array.isArray(entity) && !isMutable(entity)) {
+        if (lastEntity === undefined && typeof entity === 'object' && !Array.isArray(entity) && !isMutable(entity)) {
             for (let prop in entity) {
                 let value = entity[prop];
                 if (isMutable(value))

@@ -141,6 +141,21 @@ describe("mutable serialization", () => {
                 let targetRev_name = getRevision(target.name);
                 expect(origRev_name.revNum).toBeLessThan(targetRev_name.revNum);
             })
+
+            it('should re-serialize mutable object child of immutable using `mutable.getPatch()`', () => {
+                let obj: any = NESTED_OBJECT;
+                obj.name = mutableObject(NESTED_OBJECT.name, true);
+                let [patch, nextSerialize] = serialize(obj);
+                let [target, nextDeserialize] = deserialize<any>(patch);
+
+                obj.name.firstName = NESTED_OBJECT_UPDATE.firstName;
+                obj.name.lastName = NESTED_OBJECT_UPDATE.lastName;
+                [patch, nextSerialize] = nextSerialize(obj);
+                // serialize should call getPatch and clear the patch buffer, so the next patch should be empty
+                expect(obj.name.getPatch()).toEqual([])
+                let [target_2, nextDeserialize2] = nextDeserialize(patch)
+                expect(target_2.name).toEqual(NESTED_OBJECT_UPDATE)
+            })
         })
 
         describe('unchanged nested mutable objects optimization', () => {
