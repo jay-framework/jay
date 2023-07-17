@@ -1,6 +1,15 @@
 import {nextRevNum} from "jay-reactive";
 import {setPrivateProperty} from "./private-property";
-import {ADD, ChangeListener, isMutable, JSONPatch, MOVE, MutableContract, REMOVE, REPLACE} from "jay-mutable-contract";
+import {
+    ADD,
+    ChangeListener,
+    isMutable, JSONPatch,
+    JSONPatchOperation,
+    MOVE,
+    MutableContract,
+    REMOVE,
+    REPLACE
+} from "jay-mutable-contract";
 
 export const MUTABLE_PROXY_SYMBOL = Symbol.for("proxy")
 
@@ -17,6 +26,13 @@ we introduce the const here to enable minification of the function name
 */
 const _structuredClone = structuredClone
 
+type TemporalOrdered = {
+    tOrder: number;
+}
+let temporalOrder = 0;
+
+type TemporalOrderedJSONPatch = Array<JSONPatchOperation & TemporalOrdered>
+
 function setProxy(obj: object, proxy: object) {
     return setPrivateProperty(obj, MUTABLE_PROXY_SYMBOL, proxy);
 }
@@ -26,9 +42,9 @@ function getProxy(obj: object) {
 }
 
 function deleteProxy(obj: object, changeListener: ChangeListener) {
-    if (isMutable(obj[MUTABLE_PROXY_SYMBOL]))
+    if (obj && isMutable(obj[MUTABLE_PROXY_SYMBOL]))
         obj[MUTABLE_PROXY_SYMBOL].removeMutableListener(changeListener)
-    if (obj[MUTABLE_PROXY_SYMBOL]) {
+    if (obj && obj[MUTABLE_PROXY_SYMBOL]) {
         delete obj[MUTABLE_PROXY_SYMBOL];
     }
 }
@@ -64,7 +80,7 @@ function wrapArrayShift<T>(state: State, property: string, mkJsonPatch: boolean)
             return suppressPatch(state, () => {
                 let res = (state.original as Array<any>).shift.apply(state.original)
                 state.changed();
-                state.patch.push({op: REMOVE, path: ["0"]})
+                state.patch.push({op: REMOVE, path: ["0"], tOrder: temporalOrder++})
                 return res;
             })
         }
@@ -79,7 +95,7 @@ function wrapArrayUnshift<T>(state: State, property: string, mkJsonPatch: boolea
                 let res = (state.original as Array<any>).unshift.apply(state.original, args)
                 state.changed();
                 for (let i=0; i < args.length; i++)
-                    state.patch.push({op: ADD, path: [""+i], value: _structuredClone(args[i])})
+                    state.patch.push({op: ADD, path: [""+i], value: _structuredClone(args[i]), tOrder: temporalOrder++})
                 return res;
             })
         }
@@ -95,7 +111,7 @@ function wrapArrayReverse<T>(state: State, property: string, mkJsonPatch: boolea
                 state.changed();
                 let from = ["" + ((state.original as Array<any>).length - 1)]
                 for (let i=0; i < (state.original as Array<any>).length-1; i++)
-                    state.patch.push({op: MOVE, path: [""+i], from})
+                    state.patch.push({op: MOVE, path: [""+i], from, tOrder: temporalOrder++})
                 return state.proxy;
             })
         }
@@ -108,14 +124,15 @@ function wrapArraySplice<T>(state: State, property: string, mkJsonPatch: boolean
         return (...args) => {
             return suppressPatch(state, () => {
                 let start = args[0], remove = args[1], add = args.length - 2, replace = Math.min(remove, add);
-                (state.original as Array<any>).splice.apply(state.original, args)
+                let res = (state.original as Array<any>).splice.apply(state.original, args)
                 state.changed();
                 for (let i=0; i < replace; i++)
-                    state.patch.push({op: REPLACE, path: [""+(start+i)], value: _structuredClone(args[i+2])})
+                    state.patch.push({op: REPLACE, path: [""+(start+i)], value: _structuredClone(args[i+2]), tOrder: temporalOrder++})
                 for (let i = remove; i < add; i++)
-                    state.patch.push({op: ADD, path: [""+(start+i)], value: _structuredClone(args[i+2])})
+                    state.patch.push({op: ADD, path: [""+(start+i)], value: _structuredClone(args[i+2]), tOrder: temporalOrder++})
                 for (let i = add; i < remove; i++)
-                    state.patch.push({op: REMOVE, path: [""+(start+i)]})
+                    state.patch.push({op: REMOVE, path: [""+(start+i)], tOrder: temporalOrder++})
+                return res;
             })
         }
 }
@@ -142,13 +159,13 @@ interface State /*extends MutableContract*/ {
     original: object
     changeListeners: Set<ChangeListener>
     arrayFunctions: object,
-    patch: JSONPatch,
+    patch: TemporalOrderedJSONPatch,
     isArray: boolean
     suppressPatch: boolean;
     changed: ChangeListener
 }
 const MUTABLE_CONTEXT_FUNCTIONS = {
-    isMutable: (state: State) => () => true,
+    isMutable: () => () => true,
     getRevision: (state: State) => () => state.revNum,
     setRevision: (state: State) => (revNum: number) => state.revNum = revNum,
     addMutableListener: (state: State) => (changeListener: ChangeListener) => state.changeListeners.add(changeListener),
@@ -161,12 +178,12 @@ const MUTABLE_CONTEXT_FUNCTIONS = {
     },
 }
 
-const getPatch = (state: State) => () => {
+const getPatch = (state: State) => (sort: boolean = true) => {
     let patches = [state.patch];
     for (let prop in state.original) {
         let childMutableProxy = getProxy(state.original[prop]);
         if (childMutableProxy)
-            patches.push(childMutableProxy.getPatch()
+            patches.push(childMutableProxy.getPatch(false)
                 .map(patchOperation => {
                     patchOperation.path.unshift(prop);
                     if (patchOperation.from)
@@ -175,7 +192,13 @@ const getPatch = (state: State) => () => {
                 }))
     }
     state.patch = []
-    return patches.flat()
+    let patch = patches.flat()
+    if (sort) {
+        patch
+            .sort((a, b) => a.tOrder - b.tOrder)
+            .forEach(patchOp => delete patchOp.tOrder);
+    }
+    return patch as JSONPatch
 }
 
 
@@ -209,7 +232,7 @@ export function _mutableObject<T>(original: Array<T>, mkJsonPatch: boolean, noti
         deleteProperty: function(target, property) {
             deleteProxy(state.original[property], state.changed);
             if ( mkJsonPatch && typeof property === 'string' && !state.suppressPatch)
-                state.patch.push({op: REMOVE, path: [property]})
+                state.patch.push({op: REMOVE, path: [property], tOrder: temporalOrder++})
             delete state.original[property];
             state.changed();
             return true;
@@ -218,7 +241,7 @@ export function _mutableObject<T>(original: Array<T>, mkJsonPatch: boolean, noti
             if (state.original[property])
                 deleteProxy(state.original[property], state.changed);
             if ( mkJsonPatch && typeof property === 'string' && (!state.isArray || property !== "length") && !state.suppressPatch)
-                state.patch.push({op: state.original[property]?REPLACE:ADD, path: [property], value: _structuredClone(value)})
+                state.patch.push({op: state.original[property]?REPLACE:ADD, path: [property], value: _structuredClone(value), tOrder: temporalOrder++})
             state.original[property] = isMutable(value)?value.getOriginal():value;
             state.changed();
             return true;
