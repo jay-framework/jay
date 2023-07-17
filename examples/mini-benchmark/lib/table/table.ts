@@ -38,14 +38,14 @@ function TableConstructor({tableSize, numCellsToUpdate, stateManagement}: Props<
             }
         }
         else if (stateManagement() === "immutable") {
-            let copy = line().map(aLine => ({
-                id: aLine.id,
-                cell: aLine.cell.map(cell => ({...cell}))
-            }))
+            let copy = [...line()]
             for (let i = 0; i < numCellsToUpdate(); i++) {
                 let x = Math.floor(Math.random()*tableSize());
                 let y = Math.floor(Math.random()*tableSize());
-                copy[x].cell[y].value = Math.round(Math.random()*100);
+                copy[x] = {...copy[x]}
+                let cellCopy = [...(copy[x].cell)];
+                cellCopy[y] = {...cellCopy[y], value: Math.round(Math.random()*100)};
+                copy[x].cell = cellCopy;
             }
             setLine(copy);
         }

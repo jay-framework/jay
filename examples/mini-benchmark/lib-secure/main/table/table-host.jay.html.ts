@@ -1,16 +1,18 @@
 import {JayElement, element as e, dynamicProperty as dp, ConstructContext, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
 import {Table as TableComp} from './table';
-import {secureChildComp as childComp} from "jay-secure";
 import {TableRef} from "./table-refs";
+import {secureChildComp as childComp} from "jay-secure";
 
 export interface TableHostViewState {
   size: number,
-  updates: number
+  updates: number,
+  stateManagement: string
 }
 
 export interface TableHostElementRefs {
   size: HTMLElementProxy<TableHostViewState, HTMLInputElement>,
   updates: HTMLElementProxy<TableHostViewState, HTMLInputElement>,
+  stateManagement: HTMLElementProxy<TableHostViewState, HTMLSelectElement>,
   table: TableRef<TableHostViewState>
 }
 
@@ -27,6 +29,14 @@ export function render(viewState: TableHostViewState, options?: RenderElementOpt
         e('label', {for: 'updates'}, ['Number of updates at each cycle: ']),
         e('input', {id: 'updates', ref: 'updates', value: dp(vs => vs.updates)}, [])
       ]),
-      childComp(TableComp, vs => ({tableSize: vs.size, numCellsToUpdate: vs.updates}), 'table')
+      e('div', {}, [
+        e('label', {for: 'state-management'}, ['Number of updates at each cycle: ']),
+        e('select', {id: 'state-management', ref: 'stateManagement'}, [
+          e('option', {value: 'mutable', selected: ''}, ['mutable']),
+          e('option', {value: 'immutable'}, ['immutable']),
+          e('option', {value: 'immer'}, ['immer'])
+        ])
+      ]),
+      childComp(TableComp, vs => ({tableSize: vs.size, numCellsToUpdate: vs.updates, stateManagement: vs.stateManagement}), 'table')
     ]), options);
 }

@@ -74,7 +74,12 @@ async function makeRollupConfig() {
       context: 'window',
       plugins: [
         typescript(),
-        nodeResolve()
+        nodeResolve(),
+        copy({
+          targets: [
+            {src: './lib-secure/sandbox/immer-workaround.js', dest: './dist-secure'},
+          ]
+        })
       ]
     }
   ]

@@ -6,11 +6,13 @@ import {TableRef} from "../../main/table/table-refs";
 export interface TableHostViewState {
   size: number,
   updates: number
+  stateManagement: string
 }
 
 export interface TableHostElementRefs {
   size: HTMLElementProxy<TableHostViewState, HTMLInputElement>,
   updates: HTMLElementProxy<TableHostViewState, HTMLInputElement>,
+  stateManagement: HTMLElementProxy<TableHostViewState, HTMLSelectElement>,
   table: TableRef<TableHostViewState>
 }
 
@@ -20,6 +22,7 @@ export function render(viewState: TableHostViewState): TableHostElement {
     return elementBridge(viewState, () => [
         e('size'),
         e('updates'),
-        childComp(TableComp, vs => ({tableSize: vs.size, numCellsToUpdate: vs.updates}), 'table')
+        e('stateManagement'),
+        childComp(TableComp, vs => ({tableSize: vs.size, numCellsToUpdate: vs.updates, stateManagement: vs.stateManagement}), 'table')
     ])
 }
