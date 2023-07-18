@@ -9,6 +9,7 @@ import {
 } from 'jay-runtime'
 import {ValueOrGetter, Getter, Reactive, Setter} from 'jay-reactive'
 import {mutableObject} from "jay-mutable"
+import {isMutable} from "jay-mutable-contract";
 
 export type hasProps<PropsT> = {props: Getter<PropsT>}
 export type Props<PropsT> = hasProps<PropsT> & {
@@ -108,11 +109,12 @@ export function createEvent<EventType>(eventEffect?: (emitter: EventEmitter<Even
 function materializeViewState<ViewState extends object>(vsValueOrGetter: ViewStateGetters<ViewState>): ViewState {
     let vs = {};
     for (let key in vsValueOrGetter) {
-        const value = vsValueOrGetter[key];
+        let value = vsValueOrGetter[key];
         if (typeof value === 'function')
-            vs[key as string] = value();
-        else
-            vs[key as string] = value;
+            value = value();
+        if (isMutable(value))
+            value = value.freeze();
+        vs[key as string] = value;
     }
     return vs as ViewState;
 }

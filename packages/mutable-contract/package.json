@@ -4,7 +4,6 @@
 	"main": "dist/index.js",
 	"scripts": {
 		"start": "tsc",
-		"test": "jest",
 		"build": "tsc"
 	},
 	"jest": {},
