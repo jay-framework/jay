@@ -15,6 +15,7 @@ describe("mutable serialization", () => {
         it("should deserialize to an equal object", () => {
             let original = mutableObject(SIMPLE_OBJECT);
             let [patch, nextSerialize] = serialize(original.freeze());
+            patch = structuredClone(patch);
             let [target, nextDeserialize] = deserialize(patch);
             expect(original).toEqual(target);
         })
@@ -22,6 +23,7 @@ describe("mutable serialization", () => {
         it("should serialize and deserialize the mutable revision", () => {
             let original = mutableObject(SIMPLE_OBJECT);
             let [patch, nextSerialize] = serialize(original.freeze());
+            patch = structuredClone(patch);
             let [target, nextDeserialize] = deserialize(patch);
             let origRev = getRevision(original);
             let targetRev = getRevision(target);
@@ -31,6 +33,7 @@ describe("mutable serialization", () => {
         it("should re-serialize and re-deserialize to an equal object", () => {
             let original = mutableObject(SIMPLE_OBJECT);
             let [patch, nextSerialize] = serialize(original.freeze());
+            patch = structuredClone(patch);
             let [target, nextDeserialize] = deserialize(patch);
             let targetRev_1 = getRevision(target);
 
