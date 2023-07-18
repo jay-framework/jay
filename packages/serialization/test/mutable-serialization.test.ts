@@ -2,6 +2,8 @@ import {beforeEach, describe, expect, it} from '@jest/globals'
 import {mutableObject} from "jay-mutable";
 import {getRevision} from "jay-reactive";
 import {deserialize, serialize} from "../lib";
+import {ArrayContexts} from "../lib/serialize/diff";
+import {MOVE} from "jay-mutable-contract";
 
 describe("mutable serialization", () => {
     describe("simple mutable objects", () => {
@@ -11,15 +13,15 @@ describe("mutable serialization", () => {
         })
 
         it("should deserialize to an equal object", () => {
-            let original = mutableObject(SIMPLE_OBJECT, true);
-            let [patch, nextSerialize] = serialize(original);
+            let original = mutableObject(SIMPLE_OBJECT);
+            let [patch, nextSerialize] = serialize(original.freeze());
             let [target, nextDeserialize] = deserialize(patch);
             expect(original).toEqual(target);
         })
 
         it("should serialize and deserialize the mutable revision", () => {
-            let original = mutableObject(SIMPLE_OBJECT, true);
-            let [patch, nextSerialize] = serialize(original);
+            let original = mutableObject(SIMPLE_OBJECT);
+            let [patch, nextSerialize] = serialize(original.freeze());
             let [target, nextDeserialize] = deserialize(patch);
             let origRev = getRevision(original);
             let targetRev = getRevision(target);
@@ -27,15 +29,16 @@ describe("mutable serialization", () => {
         })
 
         it("should re-serialize and re-deserialize to an equal object", () => {
-            let original = mutableObject(SIMPLE_OBJECT, true);
-            let [patch, nextSerialize] = serialize(original);
+            let original = mutableObject(SIMPLE_OBJECT);
+            let [patch, nextSerialize] = serialize(original.freeze());
             let [target, nextDeserialize] = deserialize(patch);
             let targetRev_1 = getRevision(target);
 
             original.a = 12
             original.c = 'efgh'
             original.d = false;
-            [patch, nextSerialize] = nextSerialize(original);
+            [patch, nextSerialize] = nextSerialize(original.freeze());
+            patch = structuredClone(patch);
             let [target_2, nextDeserialize2] = nextDeserialize(patch)
             let targetRev_2 = getRevision(target);
             expect(original).toEqual(target_2);
@@ -93,14 +96,16 @@ describe("mutable serialization", () => {
 
             it("should deserialize to an equal object", () => {
                 let original = mutableObject(NESTED_OBJECT);
-                let [patch, nextSerialize] = serialize(original);
+                let [patch, nextSerialize] = serialize(original.freeze());
+                patch = structuredClone(patch);
                 let [target, nextDeserialize] = deserialize(patch);
                 expect(original).toEqual(target);
             })
 
             it("should serialize and deserialize the mutable revision", () => {
                 let original = mutableObject(NESTED_OBJECT);
-                let [patch, nextSerialize] = serialize(original);
+                let [patch, nextSerialize] = serialize(original.freeze());
+                patch = structuredClone(patch);
                 let [target, nextDeserialize] = deserialize<any>(patch);
 
                 let origRev = getRevision(original);
@@ -113,14 +118,16 @@ describe("mutable serialization", () => {
             })
 
             it("should re-serialize and re-deserialize to an equal object", () => {
-                let original = mutableObject(NESTED_OBJECT, true);
-                let [patch, nextSerialize] = serialize(original);
+                let original = mutableObject(NESTED_OBJECT);
+                let [patch, nextSerialize] = serialize(original.freeze());
+                patch = structuredClone(patch);
                 let [target, nextDeserialize] = deserialize(patch);
                 let targetRev_1 = getRevision(target);
                 let targetRev_name_1 = getRevision((target as any).name);
 
                 original.name = NESTED_OBJECT_UPDATE;
-                [patch, nextSerialize] = nextSerialize(original);
+                [patch, nextSerialize] = nextSerialize(original.freeze());
+                patch = structuredClone(patch);
                 let [target_2, nextDeserialize2] = nextDeserialize(patch)
                 let targetRev_2 = getRevision(target);
                 let targetRev_name_2 = getRevision((target as any).name);
@@ -132,8 +139,9 @@ describe("mutable serialization", () => {
 
             it('should serialize mutable object child of immutable', () => {
                 let obj: any = NESTED_OBJECT;
-                obj.name = mutableObject(NESTED_OBJECT.name, true);
-                let [patch, nextSerialize] = serialize(obj);
+                obj.name = mutableObject(NESTED_OBJECT.name);
+                let [patch, nextSerialize] = serialize({...obj, name: obj.name.freeze()});
+                patch = structuredClone(patch);
                 let [target, nextDeserialize] = deserialize<any>(patch);
                 expect(obj).toEqual(target);
 
@@ -144,15 +152,16 @@ describe("mutable serialization", () => {
 
             it('should re-serialize mutable object child of immutable using `mutable.getPatch()`', () => {
                 let obj: any = NESTED_OBJECT;
-                obj.name = mutableObject(NESTED_OBJECT.name, true);
-                let [patch, nextSerialize] = serialize(obj);
+                obj.name = mutableObject(NESTED_OBJECT.name);
+                let [patch, nextSerialize] = serialize({...obj, name: obj.name.freeze()});
+                patch = structuredClone(patch);
                 let [target, nextDeserialize] = deserialize<any>(patch);
 
                 obj.name.firstName = NESTED_OBJECT_UPDATE.firstName;
                 obj.name.lastName = NESTED_OBJECT_UPDATE.lastName;
-                [patch, nextSerialize] = nextSerialize(obj);
-                // serialize should call getPatch and clear the patch buffer, so the next patch should be empty
-                expect(obj.name.getPatch()).toEqual([])
+                [patch, nextSerialize] = nextSerialize({...obj, name: obj.name.freeze()});
+                patch = structuredClone(patch);
+
                 let [target_2, nextDeserialize2] = nextDeserialize(patch)
                 expect(target_2.name).toEqual(NESTED_OBJECT_UPDATE)
             })
@@ -172,12 +181,14 @@ describe("mutable serialization", () => {
             })
 
             it("should not re-serialize unchanged object (address), yet preserve it on re-deserialize", () => {
-                let original = mutableObject(NESTED_OBJECT, true);
-                let [patch, nextSerialize] = serialize(original);
+                let original = mutableObject(NESTED_OBJECT);
+                let [patch, nextSerialize] = serialize(original.freeze());
+                patch = structuredClone(patch);
                 let [target, nextDeserialize] = deserialize(patch);
 
                 original.name = NESTED_OBJECT_UPDATE;
-                [patch, nextSerialize] = nextSerialize(original);
+                [patch, nextSerialize] = nextSerialize(original.freeze());
+                patch = structuredClone(patch);
                 let [target_2, nextDeserialize2] = nextDeserialize(patch)
                 expect(original).toEqual(target_2);
                 expect(target).toBe(target_2);
@@ -224,15 +235,17 @@ describe("mutable serialization", () => {
         })
 
         it("should deserialize to an equal object", () => {
-            let original = mutableObject(ARRAY_PRIMITIVES, true);
-            let [patch, nextSerialize] = serialize(original);
+            let original = mutableObject(ARRAY_PRIMITIVES);
+            let [patch, nextSerialize] = serialize(original.freeze());
+            patch = structuredClone(patch);
             let [target, nextDeserialize] = deserialize(patch);
             expect(original).toEqual(target);
         })
 
         it("should serialize and deserialize the mutable revision", () => {
-            let original = mutableObject(ARRAY_PRIMITIVES, true);
-            let [patch, nextSerialize] = serialize(original);
+            let original = mutableObject(ARRAY_PRIMITIVES);
+            let [patch, nextSerialize] = serialize(original.freeze());
+            patch = structuredClone(patch);
             let [target, nextDeserialize] = deserialize(patch);
 
             let origRev = getRevision(original);
@@ -245,12 +258,14 @@ describe("mutable serialization", () => {
         })
 
         it("should re-serialize and re-deserialize to an equal object", () => {
-            let original = mutableObject(ARRAY_PRIMITIVES, true);
-            let [patch, nextSerialize] = serialize(original);
+            let original = mutableObject(ARRAY_PRIMITIVES);
+            let [patch, nextSerialize] = serialize(original.freeze());
+            patch = structuredClone(patch);
             let [target, nextDeserialize] = deserialize(patch);
 
             original.items = ARRAY_PRIMITIVES_UPDATE;
-            [patch, nextSerialize] = nextSerialize(original);
+            [patch, nextSerialize] = nextSerialize(original.freeze());
+            patch = structuredClone(patch);
             let [target_2, nextDeserialize2] = nextDeserialize(patch)
             expect(original).toEqual(target_2);
             expect(target).toBe(target_2);
@@ -301,15 +316,17 @@ describe("mutable serialization", () => {
         })
 
         it("should deserialize to an equal object", () => {
-            let original = mutableObject(ARRAY_OBJECTS, true);
-            let [patch, nextSerialize] = serialize(original);
+            let original = mutableObject(ARRAY_OBJECTS);
+            let [patch, nextSerialize] = serialize(original.freeze());
+            patch = structuredClone(patch);
             let [target, nextDeserialize] = deserialize(patch);
             expect(original).toEqual(target);
         })
 
         it("should serialize and deserialize the original revision", () => {
-            let original = mutableObject(ARRAY_OBJECTS, true);
-            let [patch, nextSerialize] = serialize(original);
+            let original = mutableObject(ARRAY_OBJECTS);
+            let [patch, nextSerialize] = serialize(original.freeze());
+            patch = structuredClone(patch);
             let [target, nextDeserialize] = deserialize(patch);
 
             let origRev = getRevision(original);
@@ -329,19 +346,23 @@ describe("mutable serialization", () => {
         describe('array mutations', () => {
             it("array item update", () => {
                 let original = mutableObject(ARRAY_OBJECTS, true);
-                let [patch, nextSerialize] = serialize(original);
+                let [patch, nextSerialize] = serialize(original.freeze());
+                patch = structuredClone(patch);
                 let [target, nextDeserialize] = deserialize(patch);
 
                 Object.assign(original.items[1], ARRAY_OBJECTS_ITEM_1_UPDATE);
-                [patch, nextSerialize] = nextSerialize(original);
+                [patch, nextSerialize] = nextSerialize(original.freeze());
+                patch = structuredClone(patch);
                 let [target_2, nextDeserialize2] = nextDeserialize(patch)
                 expect(original).toEqual(target_2);
                 expect(target).toBe(target_2);
             })
 
-            it.skip("move array items on re-deserialization", () => {
-                let original = mutableObject(ARRAY_OBJECTS, true);
-                let [patch, nextSerialize] = serialize(original);
+            it("move array items using a move patch", () => {
+                let original = mutableObject(ARRAY_OBJECTS);
+                let contexts: ArrayContexts = [[['items'], {matchBy: 'id'}]]
+                let [patch, nextSerialize] = serialize(original.freeze(), contexts);
+                patch = structuredClone(patch);
                 let [target, nextDeserialize] = deserialize<any>(patch);
 
                 // replace items 1 and 2
@@ -351,7 +372,10 @@ describe("mutable serialization", () => {
 
                 let target_item_1 = target.items[1];
                 let target_item_2 = target.items[2];
-                [patch, nextSerialize] = nextSerialize(original);
+                [patch, nextSerialize] = nextSerialize(original.freeze());
+                patch = structuredClone(patch);
+                expect(patch.length).toBe(1)
+                expect(patch[0].op).toBe(MOVE);
                 let [target_2, nextDeserialize2] = nextDeserialize(patch)
                 expect(original).toEqual(target_2);
                 expect(target).toBe(target_2);
@@ -395,9 +419,11 @@ describe("mutable serialization", () => {
                 expect(target).toBe(target_2);
             })
 
-            it.skip("move array items on re-deserialization", () => {
-                let original = mutableObject(ARRAY_OBJECTS, true);
-                let [patch, nextSerialize] = serialize(original);
+            it("move array items on re-deserialization, given a context", () => {
+                let original = mutableObject(ARRAY_OBJECTS);
+                let contexts: ArrayContexts = [[['items'], {matchBy: 'id'}]]
+                let [patch, nextSerialize] = serialize(original.freeze(), contexts);
+                patch = structuredClone(patch);
                 let [target, nextDeserialize] = deserialize<any>(patch);
 
                 // replace items 1 and 2
@@ -408,12 +434,36 @@ describe("mutable serialization", () => {
 
                 let target_item_1 = target.items[1];
                 let target_item_2 = target.items[2];
-                [patch, nextSerialize] = nextSerialize(original);
+                [patch, nextSerialize] = nextSerialize(original.freeze());
+                patch = structuredClone(patch);
                 let [target_2, nextDeserialize2] = nextDeserialize(patch)
                 expect(original).toEqual(target_2);
                 expect(target).toBe(target_2);
                 expect(target.items[1]).toBe(target_item_2)
                 expect(target.items[2]).toBe(target_item_1)
+            })
+
+            it("update to an equal array if not given a context", () => {
+                let original = mutableObject(ARRAY_OBJECTS);
+                let [patch, nextSerialize] = serialize(original.freeze());
+                patch = structuredClone(patch);
+                let [target, nextDeserialize] = deserialize<any>(patch);
+
+                // replace items 1 and 2
+                let i1 = original.items[1];
+                let i2 = original.items[2];
+                original.items[1] = i2;
+                original.items[2] = i1;
+
+                let target_item_1 = target.items[1];
+                let target_item_2 = target.items[2];
+                [patch, nextSerialize] = nextSerialize(original.freeze());
+                patch = structuredClone(patch);
+                let [target_2, nextDeserialize2] = nextDeserialize(patch)
+                expect(original).toEqual(target_2);
+                expect(target).toBe(target_2);
+                expect(target.items[1]).toEqual(target_item_2)
+                expect(target.items[2]).toEqual(target_item_1)
             })
         })
 

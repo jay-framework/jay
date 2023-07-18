@@ -3,7 +3,7 @@ import {ADD, JSONPatch, JSONPatchMove, JSONPatchOperation, MOVE, REMOVE, REPLACE
 function validateMove({from, path}: JSONPatchMove) {
     let valid = (from.length === path.length)
     for (let i=0, length = from.length-1; i < length; i++)
-        valid = valid && (from[i] === path.length)
+        valid = valid && (from[i] === path[i])
     return valid;
 }
 

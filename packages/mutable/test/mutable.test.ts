@@ -1,8 +1,8 @@
 import {describe, expect, it, jest} from '@jest/globals'
 import {mutableObject} from "../lib";
-import {_mutableObject, MUTABLE_PROXY_SYMBOL} from "../lib/mutable"
+import {_mutableObject} from "../lib/mutable"
 import {checkModified, getRevision} from "jay-reactive";
-import {ADD, isMutable, JSONPatchReplace, MOVE, REMOVE, REPLACE} from "jay-mutable-contract";
+import {isMutable} from "jay-mutable-contract";
 
 describe("mutable", () => {
 
@@ -888,7 +888,7 @@ describe("mutable", () => {
     describe("mutation listener", () => {
         it('supports change listener in mutableObject', () => {
             let fn = jest.fn();
-            let mutable = _mutableObject({a: 1, b:2}, false, fn);
+            let mutable = _mutableObject({a: 1, b:2}, fn);
 
             mutable.a = 3;
 
@@ -921,7 +921,7 @@ describe("mutable", () => {
 
         it('supports change listener in array of objects', () => {
             let fn = jest.fn();
-            let mutable = _mutableObject([{a: 1, b:2}, {a: 3, b:4}, {a: 5, b:6}], false, fn);
+            let mutable = _mutableObject([{a: 1, b:2}, {a: 3, b:4}, {a: 5, b:6}], fn);
 
             mutable[1].a = 3;
 

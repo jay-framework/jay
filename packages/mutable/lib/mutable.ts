@@ -1,14 +1,9 @@
 import {nextRevNum} from "jay-reactive";
 import {setPrivateProperty} from "./private-property";
 import {
-    ADD,
     ChangeListener,
-    isMutable, JSONPatch,
-    JSONPatchOperation,
-    MOVE,
-    MutableContract,
-    REMOVE,
-    REPLACE
+    isMutable,
+    MutableContract
 } from "jay-mutable-contract";
 
 export const MUTABLE_PROXY_SYMBOL = Symbol.for("proxy")
@@ -26,13 +21,6 @@ we introduce the const here to enable minification of the function name
 */
 const _structuredClone = structuredClone
 
-type TemporalOrdered = {
-    tOrder: number;
-}
-let temporalOrder = 0;
-
-type TemporalOrderedJSONPatch = Array<JSONPatchOperation & TemporalOrdered>
-
 function setProxy(obj: object, proxy: object) {
     return setPrivateProperty(obj, MUTABLE_PROXY_SYMBOL, proxy);
 }
@@ -44,113 +32,34 @@ function getProxy(obj: object) {
 function deleteProxy(obj: object, changeListener: ChangeListener) {
     if (obj && isMutable(obj[MUTABLE_PROXY_SYMBOL]))
         obj[MUTABLE_PROXY_SYMBOL].removeMutableListener(changeListener)
-    if (obj && obj[MUTABLE_PROXY_SYMBOL]) {
-        delete obj[MUTABLE_PROXY_SYMBOL];
-    }
+    // if (obj && obj[MUTABLE_PROXY_SYMBOL]) {
+    //     delete obj[MUTABLE_PROXY_SYMBOL];
+    // }
 }
 
-function wrapArrayReturn<T>(state: State, property: string, mkJsonPatch: boolean): Function {
-    return (...args) => _mutableObject(state.original[property].apply(state.original, args), mkJsonPatch, state.changed)
+function wrapArrayReturn<T>(state: State, property: string): Function {
+    return (...args) => _mutableObject(state.original[property].apply(state.original, args), state.changed)
 }
 
-function wrapFilter<T>(state: State, property: string, mkJsonPatch: boolean): Function {
+function wrapFilter<T>(state: State, property: string): Function {
     return (...args) => {
         let [first, ...rest] = [...args];
-        let wrappedFirst = arg => first(_mutableObject(arg, mkJsonPatch, state.changed));
+        let wrappedFirst = arg => first(_mutableObject(arg, state.changed));
         let filteredItems = state.original[property].apply(state.original, [wrappedFirst, ...rest]);
-        return _mutableObject(filteredItems, mkJsonPatch)
+        return _mutableObject(filteredItems)
     }
 }
 
-function suppressPatch<T>(state: State, op: () => T): T {
-    try {
-        state.suppressPatch = true;
-        return op();
-    }
-    finally {
-        state.suppressPatch = false;
-    }
-}
-
-function wrapArrayShift<T>(state: State, property: string, mkJsonPatch: boolean): Function {
-    if (!mkJsonPatch)
-        return (state.original as Array<any>).shift
-    else
-        return () => {
-            return suppressPatch(state, () => {
-                let res = (state.original as Array<any>).shift.apply(state.original)
-                state.changed();
-                state.patch.push({op: REMOVE, path: ["0"], tOrder: temporalOrder++})
-                return res;
-            })
-        }
-}
-
-function wrapArrayUnshift<T>(state: State, property: string, mkJsonPatch: boolean): Function {
-    if (!mkJsonPatch)
-        return (state.original as Array<any>).unshift
-    else
-        return (...args) => {
-            return suppressPatch(state, () => {
-                let res = (state.original as Array<any>).unshift.apply(state.original, args)
-                state.changed();
-                for (let i=0; i < args.length; i++)
-                    state.patch.push({op: ADD, path: [""+i], value: _structuredClone(args[i]), tOrder: temporalOrder++})
-                return res;
-            })
-        }
-}
-
-function wrapArrayReverse<T>(state: State, property: string, mkJsonPatch: boolean): Function {
-    if (!mkJsonPatch)
-        return (state.original as Array<any>).reverse
-    else
-        return () => {
-            return suppressPatch(state, () => {
-                (state.original as Array<any>).reverse.apply(state.original)
-                state.changed();
-                let from = ["" + ((state.original as Array<any>).length - 1)]
-                for (let i=0; i < (state.original as Array<any>).length-1; i++)
-                    state.patch.push({op: MOVE, path: [""+i], from, tOrder: temporalOrder++})
-                return state.proxy;
-            })
-        }
-}
-
-function wrapArraySplice<T>(state: State, property: string, mkJsonPatch: boolean): Function {
-    if (!mkJsonPatch)
-        return (state.original as Array<any>).splice
-    else
-        return (...args) => {
-            return suppressPatch(state, () => {
-                let start = args[0], remove = args[1], add = args.length - 2, replace = Math.min(remove, add);
-                let res = (state.original as Array<any>).splice.apply(state.original, args)
-                state.changed();
-                for (let i=0; i < replace; i++)
-                    state.patch.push({op: REPLACE, path: [""+(start+i)], value: _structuredClone(args[i+2]), tOrder: temporalOrder++})
-                for (let i = remove; i < add; i++)
-                    state.patch.push({op: ADD, path: [""+(start+i)], value: _structuredClone(args[i+2]), tOrder: temporalOrder++})
-                for (let i = add; i < remove; i++)
-                    state.patch.push({op: REMOVE, path: [""+(start+i)], tOrder: temporalOrder++})
-                return res;
-            })
-        }
-}
-
-const WRAP_ARRAY_FUNCTIONS: Map<String, (state: State, property: string, mkJsonPatch: boolean) => Function> = new Map([
+const WRAP_ARRAY_FUNCTIONS: Map<String, (state: State, property: string) => Function> = new Map([
     ['map', wrapArrayReturn],
     ['filter', wrapFilter],
     ['flatMap',  wrapArrayReturn],
     ['flat',  wrapArrayReturn],
-    ['shift', wrapArrayShift],
-    ['splice', wrapArraySplice],
-    ['reverse', wrapArrayReverse],
-    ['unshift', wrapArrayUnshift]
 ]);
 
-export function mutableObject<T extends object>(original: T, mkJsonPatch?: boolean): T & MutableContract
-export function mutableObject<T>(original: Array<T>, mkJsonPatch?: boolean): Array<T> & MutableContract {
-    return _mutableObject(original, mkJsonPatch, undefined)
+export function mutableObject<T extends object>(original: T): T & MutableContract
+export function mutableObject<T>(original: Array<T>): Array<T> & MutableContract {
+    return _mutableObject(original, undefined)
 }
 
 interface State /*extends MutableContract*/ {
@@ -158,11 +67,10 @@ interface State /*extends MutableContract*/ {
     revNum: number,
     original: object
     changeListeners: Set<ChangeListener>
-    arrayFunctions: object,
-    patch: TemporalOrderedJSONPatch,
+    functionsCache: object,
     isArray: boolean
-    suppressPatch: boolean;
-    changed: ChangeListener
+    changed: ChangeListener,
+    frozen?: object
 }
 const MUTABLE_CONTEXT_FUNCTIONS = {
     isMutable: () => () => true,
@@ -175,36 +83,32 @@ const MUTABLE_CONTEXT_FUNCTIONS = {
         deleteProxy(state.original, undefined);
         state.original = newOriginal
         setProxy(state.original, state.proxy)
+        state.revNum = nextRevNum();
     },
+    freeze: (state) => () => {
+        if (!state.frozen) {
+            if (state.isArray) {
+                state.frozen = Object.freeze([...state.proxy]
+                    .map(item => (typeof item === 'object' && isMutable(item))?item.freeze():item))
+            }
+            else {
+                let copy = {};
+                for (let prop in state.proxy) {
+                    let propValue = state.proxy[prop];
+                    if (typeof propValue === 'object' && isMutable(propValue))
+                        copy[prop] = propValue.freeze();
+                    else
+                        copy[prop] = propValue;
+                }
+                state.frozen = Object.freeze(copy);
+            }
+        }
+        return state.frozen;
+    }
 }
 
-const getPatch = (state: State) => (sort: boolean = true) => {
-    let patches = [state.patch];
-    for (let prop in state.original) {
-        let childMutableProxy = getProxy(state.original[prop]);
-        if (childMutableProxy)
-            patches.push(childMutableProxy.getPatch(false)
-                .map(patchOperation => {
-                    patchOperation.path.unshift(prop);
-                    if (patchOperation.from)
-                        patchOperation.from.unshift(prop);
-                    return patchOperation;
-                }))
-    }
-    state.patch = []
-    let patch = patches.flat()
-    if (sort) {
-        patch
-            .sort((a, b) => a.tOrder - b.tOrder)
-            .forEach(patchOp => delete patchOp.tOrder);
-    }
-    return patch as JSONPatch
-}
-
-
-
-export function _mutableObject<T extends object>(original: T, mkJsonPatch: boolean, notifyParent?: ChangeListener): T & MutableContract
-export function _mutableObject<T>(original: Array<T>, mkJsonPatch: boolean, notifyParent?: ChangeListener): Array<T> & MutableContract{
+export function _mutableObject<T extends object>(original: T, notifyParent?: ChangeListener): T & MutableContract
+export function _mutableObject<T>(original: Array<T>, notifyParent?: ChangeListener): Array<T> & MutableContract{
     if (typeof original !== 'object')
         return original;
     if (getProxy(original))
@@ -213,11 +117,10 @@ export function _mutableObject<T>(original: Array<T>, mkJsonPatch: boolean, noti
         revNum: nextRevNum(),
         original,
         changeListeners: notifyParent? new Set([notifyParent]): new Set(),
-        arrayFunctions: {},
-        patch: [],
+        functionsCache: {},
         isArray: Array.isArray(original),
-        suppressPatch:  false,
         changed: () => {
+            state.frozen = undefined;
             state.revNum = nextRevNum();
             state.changeListeners.forEach(_ => _());
         }
@@ -231,8 +134,6 @@ export function _mutableObject<T>(original: Array<T>, mkJsonPatch: boolean, noti
     state.proxy = new Proxy(original, {
         deleteProperty: function(target, property) {
             deleteProxy(state.original[property], state.changed);
-            if ( mkJsonPatch && typeof property === 'string' && !state.suppressPatch)
-                state.patch.push({op: REMOVE, path: [property], tOrder: temporalOrder++})
             delete state.original[property];
             state.changed();
             return true;
@@ -240,27 +141,26 @@ export function _mutableObject<T>(original: Array<T>, mkJsonPatch: boolean, noti
         set: function(target, property, value) {
             if (state.original[property])
                 deleteProxy(state.original[property], state.changed);
-            if ( mkJsonPatch && typeof property === 'string' && (!state.isArray || property !== "length") && !state.suppressPatch)
-                state.patch.push({op: state.original[property]?REPLACE:ADD, path: [property], value: _structuredClone(value), tOrder: temporalOrder++})
             state.original[property] = isMutable(value)?value.getOriginal():value;
             state.changed();
             return true;
         },
         get: function(target, property: PropertyKey) {
-            if (MUTABLE_CONTEXT_FUNCTIONS.hasOwnProperty(property))
-                return MUTABLE_CONTEXT_FUNCTIONS[property](state);
-            if (property === 'getPatch' && mkJsonPatch)
-                return getPatch(state);
-            else if (property === MUTABLE_PROXY_SYMBOL)
+            if (MUTABLE_CONTEXT_FUNCTIONS.hasOwnProperty(property)) {
+                if (!state.functionsCache[property])
+                    state.functionsCache[property] = MUTABLE_CONTEXT_FUNCTIONS[property](state);
+                return state.functionsCache[property];
+            }
+            if (property === MUTABLE_PROXY_SYMBOL)
                 return undefined; // this line is here for mechanisms who insist on serializing un-enumerable properties
             else if (state.isArray && typeof property === 'string' && WRAP_ARRAY_FUNCTIONS.has(property)) {
-                if (!state.arrayFunctions[property])
-                    state.arrayFunctions[property] = WRAP_ARRAY_FUNCTIONS.get(property)(state, property, mkJsonPatch);
-                return state.arrayFunctions[property];
+                if (!state.functionsCache[property])
+                    state.functionsCache[property] = WRAP_ARRAY_FUNCTIONS.get(property)(state, property);
+                return state.functionsCache[property];
             }
             else if (typeof state.original[property] === 'object') {
                 if (!getProxy(state.original[property]))
-                    setProxy(state.original[property], _mutableObject(state.original[property], mkJsonPatch, state.changed))
+                    setProxy(state.original[property], _mutableObject(state.original[property], state.changed))
                 return getProxy(state.original[property])
             }
             else if (state.original instanceof Date && typeof state.original[property] === 'function')

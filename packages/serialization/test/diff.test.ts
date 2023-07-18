@@ -298,47 +298,4 @@ describe('diff', () => {
 
 
     })
-
-    describe('objects who calculate JSON Patch using `.getPatch()`', () => {
-        it('should use `.getPatch()` of `newValue` if supported', () => {
-            const mutableInstance = {a: 1, b: 2, c: {d: 4, e: 5}, getPatch() {
-                    return [{op: ADD, path: ['a', 'b', 'c'], value: 12}]
-                }};
-            let patch = diff(
-                mutableInstance,
-                mutableInstance
-            )
-            expect(patch[0]).toEqual([{op: ADD, path: ['a', 'b', 'c'], value: 12}])
-        })
-
-        it('should use `.getPatch()` of nested property of `newValue` if supported', () => {
-            let patch = diff(
-                {a: 1, b: 2, c: {d: 4, e: 5, getPatch() {
-                            return [
-                                {op: ADD, path: ['a', 'b', 'c'], value: 12},
-                                {op: MOVE, path: ['a', 'x', '1'], from: ['a', 'x', '2']}
-                            ]
-                        }}},
-                {a: 1, b: 2, c: {d: 4, e: 5}}
-            )
-            expect(patch[0]).toEqual([
-                {op: ADD, path: ['c', 'a', 'b', 'c'], value: 12},
-                {op: MOVE, path: ['c', 'a', 'x', '1'], from: ['c', 'a', 'x', '2']}
-            ])
-        })
-
-        it('should revert to regular diff if we are using a different mutable object', () => {
-            const newMutableInstance = {a: 1, b: 4, c: {d: 4, e: 5}, getPatch() {
-                    return [{op: ADD, path: ['a', 'b', 'c'], value: 12}]
-                }};
-            const oldMutableInstance = {a: 1, b: 2, c: {d: 4, e: 5}, getPatch() {
-                    return []
-                }};
-            let patch = diff(
-                newMutableInstance,
-                oldMutableInstance
-            )
-            expect(patch[0]).toContainEqual({op: REPLACE, path: ['b'], value: 4})
-        })
-    })
 })

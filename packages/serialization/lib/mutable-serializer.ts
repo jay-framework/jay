@@ -1,14 +1,15 @@
-import {diff} from "./serialize/diff";
+import {ArrayContexts, diff} from "./serialize/diff";
 import {isMutable, JSONPatch} from "jay-mutable-contract";
 
-export type Serialize = (entity: any) => [JSONPatch, Serialize]
+export type Serialize = (entity: any, contexts?: ArrayContexts) => [JSONPatch, Serialize]
 
-export function serialize(entity: any): [JSONPatch, Serialize] {
-    return _serialize(undefined)(entity);
+export function serialize(entity: any, contexts?: ArrayContexts): [JSONPatch, Serialize] {
+    return _serialize(undefined, contexts)(entity);
 }
 
-export function _serialize<T>(lastEntity: T): (entity: T) => [JSONPatch, Serialize] {
+export function _serialize<T>(lastEntity: T, contexts?: ArrayContexts): (entity: T) => [JSONPatch, Serialize] {
     return (entity: T) => {
+        // TODO to be removed
         // special case - immutable object with a direct mutable child
         let copy: any = {}
         if (lastEntity === undefined && typeof entity === 'object' && !Array.isArray(entity) && !isMutable(entity)) {
@@ -22,7 +23,7 @@ export function _serialize<T>(lastEntity: T): (entity: T) => [JSONPatch, Seriali
         }
         else
             copy = entity;
-        let patch = diff(copy, lastEntity)
-        return [patch[0], _serialize(copy)]
+        let patch = diff(copy, lastEntity, contexts)
+        return [patch[0], _serialize(copy, contexts)]
     }
 }
