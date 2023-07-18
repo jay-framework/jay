@@ -38,7 +38,7 @@ const VERBOSE = false;
 describe('top level collections and conditions', () => {
 
     async function mkElement(viewState: AppViewState) {
-        let channel = useMockCommunicationChannel<CounterProps, CounterViewState>(VERBOSE);
+        let channel = useMockCommunicationChannel(VERBOSE);
         setChannel(channel);
         initializeWorker();
         let appElement = render(viewState);
