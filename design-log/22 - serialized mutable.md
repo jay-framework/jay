@@ -283,7 +283,7 @@ refs.done.onclick(({viewState: item}) => {
 })
 ```
 
-# New The Plan
+# The New Plan
 
 The new plan is to have different solutions on main and sandbox. We support immer, mutable and immutable objects, each 
 with a different algorithm. We will make both immer and mutable (on the sandbox side) into optional packages.
@@ -306,3 +306,78 @@ Main:
   causing optimal rendering by `jay-runtime` based only on changed `revnum` or new array items.
 * A potential optimization is to skip the [list-compare](../packages/list-compare/lib/list-compare.ts) algorithm for arrays, 
   given the quality of the JSON patch is good enough.
+
+# Update - Failure to create JSON Patch from Mutable
+
+To summarize the failure - see this test
+```typescript
+            it('should preserve temporal order for array and nested objects', () => {
+  let obj = mutableObject([
+    {a: 1, b: 2},
+    {a: 3, b: 4},
+    {a: 5, b: 6}
+  ], true);
+  obj[2].a = 13
+  obj[0].a = 11
+  obj.splice(1, 0, {a: 7, b: 8})
+  obj[1].a = 17
+  expect(obj.getPatch()).toEqual([
+    {op: REPLACE, path: ["2", "a"], value: 13},
+    {op: REPLACE, path: ["0", "a"], value: 11},
+    {op: ADD, path: ["1"], value: {a: 7, b: 8}},
+    {op: REPLACE, path: ["1", "a"], value: 17}
+  ])
+})
+```
+
+The test fails with the first patch operation as `{"op": "replace", "path": ["3","a"], "value": 13}` instead 
+of `{"op": "replace", "path": ["2","a"], "value": 13}`. Note the path `3` instead of `2`. 
+
+This is happening because when we did the update `obj[2].a = 13`, the updated item was at index `2`. 
+However, by the time we extracted the patch using `obj.getPatch()` the item has moved to index `3` because of the `obj.splice(1, 0, {a: 7, b: 8})`.
+
+The source of the problem is that the `getPatch()` function constructs the path at the time it is called, which is wrong. 
+We also note that we cannot know that at the time of the update, our object was at index `2` - the object itself is not aware of it's index within 
+the parent array. What if we have the item in multiple arrays, using for instance `array.filter`? what is the index of the item in this case? 
+
+We also cannot use the access pattern and store the index `2` someplace, because it assumes a lot - 
+for instance, doing the following will break
+```typescript
+let tmp = obj[2];
+obj.splice(1, 0, {a: 7, b: 8})
+tmp.a = 13
+```
+now, the update should be `{"op": "replace", "path": ["3","a"], "value": 13}` but using the access pattern will get us index `2`.
+
+The only option that works correctly is that at the time of applying a change to a mutable object, the mutable will call parent objects 
+(potentially multiple parents, like with `trackChanges`) passing the json patch operation. Each parent will have to search for the source object within 
+it's child properties or indexes and append to the path. However, this is a `O(N*M)` operation per mutable object change 
+(N - number of indexes / properties, M - depth of the mutable tree).
+
+As a side note, another problem is that `Array` APIs do not have the notion of moving elements. 
+To move elements in an array, we need to call two different `Array` APIs, like
+
+```typescript
+let items = array.splice(rand, 1);
+array.splice(rand2, 0, ...items);
+```
+
+to generate a `MOVE` JSON Patch operation, we need to make assumptions and replace two subsequent `REMOVE` and `ADD` operations into one `MOVE`.
+
+summary - 
+
+**We cannot create a JSON Patch from a mutable object by recording changes**
+
+Time for a new plan.
+
+# The New New Plan
+
+Given `Mutable` cannot create JSON Patch, and given `Immer` JSON patch generation is sub-optimal, we consolidate to the following 
+pattern
+
+![Diagram](22%20-%20serialized%20mutable%20flow%203.svg)
+
+the new plan is to materialize a mutable object into an immutable frozen object, which is then diffed with the 
+previous version and serialized as a JSON Patch.
+
+It also raises the question should on the other side of deserialization we use mutable or immutable objects?

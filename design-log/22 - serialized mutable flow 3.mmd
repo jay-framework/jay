@@ -1,0 +1,10 @@
+graph TB
+    A[immutable object]-->A2["immutable object
+    updated copy"]-->B
+    E[immutable object]-->E2[mutate using immer]-->E3[immutable copy]-->B
+    F[mutable]-->F2[immutable copy]-->B
+    B[compute json patch]-->B2[send json patch]
+    B2-->C["apply patch on
+    mutable object"]-->D[diff against previous DOM]
+    B2-->C2["apply patch on
+    immutable object"]-->D[diff against previous DOM]
