@@ -11,7 +11,7 @@ function _deserialize<T extends object>(mutable: T): (jsonPatch: JSONPatch) => [
     return (jsonPatch: JSONPatch) => {
         if (jsonPatch.length === 1 && jsonPatch[0].op === ADD && jsonPatch[0].path.length === 0) {
             mutable = mutableObject(jsonPatch[0].value) as T;
-            return [mutable, _deserialize(mutable)]
+            return [(mutable as MutableContract).freeze(), _deserialize(mutable)]
         }
         if (!mutable)
             mutable = mutableObject({}) as any as T;
@@ -19,6 +19,6 @@ function _deserialize<T extends object>(mutable: T): (jsonPatch: JSONPatch) => [
             (mutable as MutableContract).setOriginal(jsonPatch[0].value)
         else
             patch(mutable, jsonPatch)
-        return [mutable, _deserialize(mutable)]
+        return [(mutable as MutableContract).freeze(), _deserialize(mutable)]
     }
 }
