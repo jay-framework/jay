@@ -258,6 +258,7 @@ describe('freeze', () => {
 
         it("should freeze array nested objects", () => {
             let mutable = mutableObject([{a: 1, b: 2}, {a: 3, b: 4}, {a: 5, b: 6}])
+            mutable[1]
             let frozen: any = mutable.freeze();
 
             expect(Object.isFrozen(frozen)).toBeTruthy();

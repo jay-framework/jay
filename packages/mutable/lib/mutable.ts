@@ -84,24 +84,19 @@ const MUTABLE_CONTEXT_FUNCTIONS = {
         state.original = newOriginal
         setProxy(state.original, state.proxy)
         state.revNum = nextRevNum();
+        state.frozen = undefined;
     },
     freeze: (state) => () => {
         if (!state.frozen) {
-            if (state.isArray) {
-                state.frozen = Object.freeze([...state.proxy]
-                    .map(item => (typeof item === 'object' && isMutable(item))?item.freeze():item))
+            let copy = state.isArray?[]:{};
+            for (let prop in state.proxy) {
+                let propValue = state.proxy[prop];
+                if (typeof propValue === 'object' && isMutable(propValue))
+                    copy[prop] = propValue.freeze();
+                else
+                    copy[prop] = propValue;
             }
-            else {
-                let copy = {};
-                for (let prop in state.proxy) {
-                    let propValue = state.proxy[prop];
-                    if (typeof propValue === 'object' && isMutable(propValue))
-                        copy[prop] = propValue.freeze();
-                    else
-                        copy[prop] = propValue;
-                }
-                state.frozen = Object.freeze(copy);
-            }
+            state.frozen = Object.freeze(copy);
         }
         return state.frozen;
     }
@@ -112,7 +107,7 @@ export function _mutableObject<T>(original: Array<T>, notifyParent?: ChangeListe
     if (typeof original !== 'object')
         return original;
     if (Object.isFrozen(original))
-        original = {...original};
+        original = structuredClone(original);
     if (getProxy(original))
         return getProxy(original);
     let state: State = {
@@ -166,6 +161,7 @@ export function _mutableObject<T>(original: Array<T>, notifyParent?: ChangeListe
             }
             else if (typeof state.original[property] === 'object') {
                 if (!getProxy(state.original[property]))
+                    // state.original[property] = _mutableObject(state.original[property], state.changed)
                     setProxy(state.original[property], _mutableObject(state.original[property], state.changed))
                 return getProxy(state.original[property])
             }
