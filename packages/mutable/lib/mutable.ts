@@ -112,7 +112,7 @@ export function _mutableObject<T>(original: Array<T>, notifyParent?: ChangeListe
     if (typeof original !== 'object')
         return original;
     if (Object.isFrozen(original))
-        original = structuredClone(original);
+        original = {...original};
     if (getProxy(original))
         return getProxy(original);
     let state: State = {
