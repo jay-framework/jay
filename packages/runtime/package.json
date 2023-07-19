@@ -4,16 +4,12 @@
   "main": "dist/index",
   "scripts": {
     "start": "tsc",
-    "test": "jest",
+    "test": "jest --runInBand",
     "rollup": "rollup --config ./rollup.config.js",
     "copy": "cp examples/index.html build/index.html && cp examples/index.css build/index.css",
     "build": "npm run rollup && npm run copy && echo 'build lib' && tsc && echo 'build examples' && tsc -p tsconfig-examples.json"
   },
-  "jest": {
-    "setupFilesAfterEnv": [
-      "./jest-setup.js"
-    ]
-  },
+  "jest": {},
   "dependencies": {
     "jay-reactive": "1.0.4",
     "jay-list-compare": "1.0.0"

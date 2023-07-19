@@ -20,7 +20,7 @@
     "d": "npm run d-basic & npm run d-events-basic & npm run d-events-synthetic & npm run d-tree % npm run d-top-level-collection-conditions & npm run d-exec-synthetic",
     "jay": "npm run jay-basic & npm run jay-events-basic & npm run jay-events-synthetic & npm run jay-tree & npm run jay-top-level-collection-conditions & npm run jay-exec-synthetic",
     "start": "tsc",
-    "test": "jest",
+    "test": "jest --runInBand",
     "build": "tsc"
   },
   "jest": {

@@ -4,7 +4,7 @@
   "main": "dist/index.js",
   "scripts": {
     "start": "tsc",
-    "test": "jest",
+    "test": "jest --runInBand",
     "build": "tsc"
   },
   "jest": {},
