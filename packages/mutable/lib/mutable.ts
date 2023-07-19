@@ -141,7 +141,11 @@ export function _mutableObject<T>(original: Array<T>, notifyParent?: ChangeListe
         set: function(target, property, value) {
             if (state.original[property])
                 deleteProxy(state.original[property], state.changed);
-            state.original[property] = isMutable(value)?value.getOriginal():value;
+            state.original[property] = isMutable(value)?
+                value.getOriginal():
+                (Object.isFrozen(value)?
+                    structuredClone(value):
+                    value);
             state.changed();
             return true;
         },
