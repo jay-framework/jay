@@ -111,6 +111,8 @@ export function _mutableObject<T extends object>(original: T, notifyParent?: Cha
 export function _mutableObject<T>(original: Array<T>, notifyParent?: ChangeListener): Array<T> & MutableContract{
     if (typeof original !== 'object')
         return original;
+    if (Object.isFrozen(original))
+        original = structuredClone(original);
     if (getProxy(original))
         return getProxy(original);
     let state: State = {

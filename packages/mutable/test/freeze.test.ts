@@ -293,12 +293,17 @@ describe('freeze', () => {
         })
     })
 
-    describe("update mutable with a frozen object ", () => {
-        it("should create a mutable copy", () => {
+    describe("frozen object", () => {
+        it("update with a frozen object should create a mutable copy", () => {
             let mutable = mutableObject({a: 1, b: 2, c: {d:4, e: 5}})
             mutable.c = Object.freeze({d:7, e: 8})
             mutable.c.d = 9
             expect(mutable).toEqual({a:1, b: 2, c: {d: 9, e: 8}})
+        })
+
+        it("create mutable from frozen object", () => {
+            let mutable = mutableObject(Object.freeze({a: 1, b: 2, c: {d:4, e: 5}}))
+            expect(mutable).toEqual({a:1, b: 2, c: {d: 4, e: 5}})
         })
     })
 })
