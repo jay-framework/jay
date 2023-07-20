@@ -19,13 +19,13 @@ describe('basic secure rendering', () => {
     }
 
     it('should render simple component, secure', async () => {
-        let {channel, appElement} = await mkElement();
+        let {appElement} = await mkElement();
 
         expect(appElement.dom.childNodes[0].textContent).toBe('hello Joe Smith')
     })
 
     it('should render simple component, with only 2 messages', async () => {
-        let {channel, appElement} = await mkElement();
+        let {channel} = await mkElement();
 
         expect(channel.messageLog.length).toBe(2);
         expect(channel.messageLog).toEqual(
