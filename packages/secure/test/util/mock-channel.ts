@@ -1,9 +1,9 @@
 import {
     IJayPort,
     JPMMessage, setMainPort, setWorkerPort
-} from '../../lib/comm-channel/comm-channel'
+} from '../../lib'
 import {JayPortMessageType} from "../../lib/comm-channel/messages";
-import {JayPort, JayPortLogger} from "../../lib/comm-channel/jay-port";
+import {JayPort, JayPortLogger} from "../../lib";
 
 export function useMockCommunicationChannel(verbose: boolean = false): JayMockChannel2 {
     return new JayMockChannel2(verbose)
@@ -63,7 +63,7 @@ class JayMockChannel2 implements MockJayChannel {
         this.messageCountCallback(1)
         messages.forEach(([compId, message]) => this.messageLog.push([message, 'posted']));
         process.nextTick(() => {
-            this.workerOnMessageHandler(messages, newCompIdMessages);
+            this.workerOnMessageHandler(structuredClone(messages), newCompIdMessages);
             messages.forEach(([compId, message]) =>
                 this.messageLog
                     .find(item => item[0] === message)[1] = 'invoked'
@@ -80,7 +80,7 @@ class JayMockChannel2 implements MockJayChannel {
         this.messageCountCallback(1)
         messages.forEach(([compId, message]) => this.messageLog.push([message, 'posted']));
         process.nextTick(() => {
-            this.mainOnMessageHandler(messages, newCompIdMessages);
+            this.mainOnMessageHandler(structuredClone(messages), newCompIdMessages);
             messages.forEach(([compId, message]) =>
                 this.messageLog
                     .find(item => item[0] === message)[1] = 'invoked'
