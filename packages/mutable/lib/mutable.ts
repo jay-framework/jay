@@ -96,7 +96,7 @@ const MUTABLE_CONTEXT_FUNCTIONS = {
                 else
                     copy[prop] = propValue;
             }
-            state.frozen = Object.freeze(copy);
+            state.frozen = copy;
         }
         return state.frozen;
     }
