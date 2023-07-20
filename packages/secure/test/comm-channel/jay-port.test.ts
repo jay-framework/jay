@@ -1,11 +1,12 @@
 import {describe, expect, it} from '@jest/globals'
-import {JayPort, JayPortLogger} from "../../lib/comm-channel/jay-port";
-import {JayChannel, JPMMessage} from "../../lib/comm-channel/comm-channel";
+import {JayPort, JayPortLogger} from "../../lib";
+import {JayChannel, JPMMessage} from "../../lib";
 import {addEventListenerMessage, eventInvocationMessage, renderMessage} from "../../lib/comm-channel/messages";
 import {eventually10ms} from "../util/eventually";
+import {REPLACE} from "jay-mutable-contract";
 
-const MESSAGE_RENDER_1 = renderMessage(JSON.stringify({foo: 'bar'}));
-const MESSAGE_RENDER_2 = renderMessage(JSON.stringify({foo: 'goo'}));
+const MESSAGE_RENDER_1 = renderMessage([{op: REPLACE, path: ['a'], value: {foo: 'bar'}}]);
+const MESSAGE_RENDER_2 = renderMessage([{op: REPLACE, path: ['a'], value: {foo: 'goo'}}]);
 const MESSAGE_ADD_EVENT_LISTENER_CLICK_ADD = addEventListenerMessage('add', 'click');
 const MESSAGE_ADD_EVENT_LISTENER_CLICK_DEC = addEventListenerMessage('dec', 'click');
 const MESSAGE_EVENT_CLICK_ADD = eventInvocationMessage('click', ['add']);
