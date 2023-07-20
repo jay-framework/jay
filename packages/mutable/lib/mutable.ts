@@ -88,15 +88,21 @@ const MUTABLE_CONTEXT_FUNCTIONS = {
     },
     freeze: (state) => () => {
         if (!state.frozen) {
-            let copy = state.isArray?[]:{};
-            for (let prop in state.proxy) {
-                let propValue = state.proxy[prop];
-                if (typeof propValue === 'object' && isMutable(propValue))
-                    copy[prop] = propValue.freeze();
-                else
-                    copy[prop] = propValue;
+            if (state.isArray) {
+                state.frozen = state.original.map((propValue, index) =>
+                    (typeof propValue === 'object')?
+                        state.proxy[index].freeze(): propValue
+                )
             }
-            state.frozen = copy;
+            else {
+                let copy = {};
+                for (let prop in state.proxy) {
+                    let propValue = state.proxy[prop];
+                    copy[prop] = (typeof propValue === 'object')?
+                        state.proxy[prop].freeze(): propValue
+                }
+                state.frozen = copy;
+            }
         }
         return state.frozen;
     }
@@ -107,7 +113,7 @@ export function _mutableObject<T>(original: Array<T>, notifyParent?: ChangeListe
     if (typeof original !== 'object')
         return original;
     if (Object.isFrozen(original))
-        original = structuredClone(original);
+        original = _structuredClone(original);
     if (getProxy(original))
         return getProxy(original);
     let state: State = {
@@ -141,7 +147,7 @@ export function _mutableObject<T>(original: Array<T>, notifyParent?: ChangeListe
             state.original[property] = isMutable(value)?
                 value.getOriginal():
                 (Object.isFrozen(value)?
-                    structuredClone(value):
+                    _structuredClone(value):
                     value);
             state.changed();
             return true;
