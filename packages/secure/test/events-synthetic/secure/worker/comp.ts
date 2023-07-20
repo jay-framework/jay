@@ -25,7 +25,6 @@ function CompConstructor({}: Props<CompProps>, refs: CompElementRefs) {
 
     return {
         render: () => ({text, items}),
-
     }
 }
 
