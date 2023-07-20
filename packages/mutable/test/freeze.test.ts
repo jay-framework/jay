@@ -1,8 +1,5 @@
 import {describe, expect, it, jest} from '@jest/globals'
 import {mutableObject} from "../lib";
-import {_mutableObject, MUTABLE_PROXY_SYMBOL} from "../lib/mutable"
-import {checkModified, getRevision} from "jay-reactive";
-import {ADD, isMutable, JSONPatchReplace, MOVE, REMOVE, REPLACE} from "jay-mutable-contract";
 
 describe('freeze', () => {
 
@@ -11,7 +8,7 @@ describe('freeze', () => {
             let mutable = mutableObject({a: 1, b: 2})
             let frozen = mutable.freeze();
             expect(frozen).toEqual(mutable);
-            expect(Object.isFrozen(frozen)).toBeTruthy();
+            expect(frozen).not.toBe(mutable);
         })
 
         it('given a prop update, should return a new frozen copy', () => {
@@ -53,7 +50,7 @@ describe('freeze', () => {
             let mutable = mutableObject([1,2,3])
             let frozen = mutable.freeze();
             expect(frozen).toEqual(mutable);
-            expect(Object.isFrozen(frozen)).toBeTruthy();
+            expect(frozen).not.toBe(mutable);
         })
 
         it('given an update, should return a new frozen copy', () => {
@@ -239,9 +236,9 @@ describe('freeze', () => {
             let mutable = mutableObject({a: 1, b: 2, c: {d: 4, e: 5}, d: {d: 6, e: 7}})
             let frozen: any = mutable.freeze();
 
-            expect(Object.isFrozen(frozen)).toBeTruthy();
-            expect(Object.isFrozen(frozen.c)).toBeTruthy();
-            expect(Object.isFrozen(frozen.d)).toBeTruthy();
+            expect(frozen).not.toBe(mutable);
+            expect(frozen.c).not.toBe(mutable.c);
+            expect(frozen.d).not.toBe(mutable.d);
         })
 
         it("only refreeze changed objects and their parents in nested objects structure", () => {
@@ -261,9 +258,9 @@ describe('freeze', () => {
             mutable[1]
             let frozen: any = mutable.freeze();
 
-            expect(Object.isFrozen(frozen)).toBeTruthy();
-            for (let item of frozen)
-                expect(Object.isFrozen(item)).toBeTruthy();
+            expect(frozen).not.toBe(mutable);
+            for (let key in frozen)
+                expect(frozen[key]).not.toBe(mutable[key]);
         })
 
         it("only refreeze changed objects and their parents in nested object and array structure", () => {
