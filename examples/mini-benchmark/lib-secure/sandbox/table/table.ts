@@ -24,7 +24,7 @@ function TableConstructor({tableSize, numCellsToUpdate, stateManagement}: Props<
 
     let [line, setLine] = createState(() => {
         if (stateManagement() === "mutable")
-            return mutableObject(initTable(tableSize()), true)
+            return mutableObject(initTable(tableSize()))
         else
             return initTable(tableSize())
     });
