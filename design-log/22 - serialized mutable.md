@@ -381,3 +381,58 @@ the new plan is to materialize a mutable object into an immutable frozen object,
 previous version and serialized as a JSON Patch.
 
 It also raises the question should on the other side of deserialization we use mutable or immutable objects?
+
+# Another update
+comparing mutable and immutable deserialization, (see [deserialization-benchmark](../exploration/deserialization-benchmark))
+it is clear that `immutable` is way faster compared to `mutable`
+
+and example of the output on my mac pro on node.js - 
+```
+mutable (avg of 1000 runs):   1.455638417005539
+immutable (avg of 1000 runs): 0.054917582988739014
+mutable (avg of 1000 runs):   1.3774844170212746
+immutable (avg of 1000 runs): 0.05344700002670288
+mutable (avg of 1000 runs):   1.3876245409846306
+immutable (avg of 1000 runs): 0.052621833980083466
+mutable (avg of 1000 runs):   1.409355624973774
+immutable (avg of 1000 runs): 0.04785041695833206
+mutable (avg of 1000 runs):   1.3800874159932137
+immutable (avg of 1000 runs): 0.04846541601419449
+mutable (avg of 1000 runs):   1.375096333026886
+immutable (avg of 1000 runs): 0.0486883749961853
+mutable (avg of 1000 runs):   1.4298095830082893
+immutable (avg of 1000 runs): 0.05050541698932648
+mutable (avg of 1000 runs):   1.3853110830187798
+immutable (avg of 1000 runs): 0.047022374987602235
+mutable (avg of 1000 runs):   1.3960099170207978
+immutable (avg of 1000 runs): 0.04937041699886322
+mutable (avg of 1000 runs):   1.4480939999818803
+immutable (avg of 1000 runs): 0.06387054097652435
+```
+
+same benchmark in chrome - 
+```
+mutable (avg of 1000 runs):   1.1126999999955296
+index.js:304 immutable (avg of 1000 runs): 0.15619999999552966
+index.js:286 mutable (avg of 1000 runs):   1.1189000000059606
+index.js:304 immutable (avg of 1000 runs): 0.1538999999985099
+index.js:286 mutable (avg of 1000 runs):   1.1157000000029802
+index.js:304 immutable (avg of 1000 runs): 0.15510000000149013
+index.js:286 mutable (avg of 1000 runs):   1.0897999999970198
+index.js:304 immutable (avg of 1000 runs): 0.1545
+index.js:286 mutable (avg of 1000 runs):   1.14760000000149
+index.js:304 immutable (avg of 1000 runs): 0.1545
+index.js:286 mutable (avg of 1000 runs):   1.0888999999985098
+index.js:304 immutable (avg of 1000 runs): 0.15479999999701977
+index.js:286 mutable (avg of 1000 runs):   1.0925
+index.js:304 immutable (avg of 1000 runs): 0.1538999999985099
+index.js:286 mutable (avg of 1000 runs):   1.0886000000014902
+index.js:304 immutable (avg of 1000 runs): 0.15460000000149013
+index.js:286 mutable (avg of 1000 runs):   1.0992999999970197
+index.js:304 immutable (avg of 1000 runs): 0.1553999999985099
+index.js:286 mutable (avg of 1000 runs):   1.09439999999851
+index.js:304 immutable (avg of 1000 runs): 0.21320000000298023
+```
+
+we can see performance advantage of `x3` on node.js and `x6` on browser
+for the immutable option.
