@@ -2,9 +2,69 @@ import {beforeEach, describe, expect, it} from '@jest/globals'
 import {mutableObject} from "jay-mutable";
 import {deserialize, serialize} from "../lib";
 import {ArrayContexts} from "../lib/serialize/diff";
-import {MOVE, REPLACE} from "jay-mutable-contract";
+import {ADD, JSONPatch, MOVE, REPLACE} from "jay-mutable-contract";
 
 describe("mutable serialization", () => {
+
+    describe('serialize', () => {
+        const SIMPLE_OBJECT_1 = {a: 1, b:2, c: "abcd", d: true};
+        const PATCH_1 = {op: ADD, path: [], value: SIMPLE_OBJECT_1}
+        const SIMPLE_OBJECT_2 = {a: 11, b:2, c: "abcd", d: true};
+        const PATCH_2 = {op: REPLACE, path: ['a'], value: 11}
+        const SIMPLE_OBJECT_3 = {a: 11, b:12, c: "abcd", d: true};
+        const PATCH_3 = {op: REPLACE, path: ['b'], value: 12}
+
+        it('first time, create a patch with the whole object at path===[]', () => {
+           let [patch, nextSerialize] = serialize(SIMPLE_OBJECT_1)
+           expect(patch.length).toBe(1)
+           expect(patch[0]).toEqual(PATCH_1)
+        })
+
+        it('second time, create a patch to update', () => {
+            let [patch, nextSerialize] = serialize(SIMPLE_OBJECT_1);
+            [patch, nextSerialize] = nextSerialize(SIMPLE_OBJECT_2)
+
+            expect(patch.length).toBe(1)
+            expect(patch[0]).toEqual(PATCH_2)
+        })
+
+        it('third time, create a patch to update only the updated property', () => {
+            let [patch, nextSerialize] = serialize(SIMPLE_OBJECT_1);
+            [patch, nextSerialize] = nextSerialize(SIMPLE_OBJECT_2);
+            [patch, nextSerialize] = nextSerialize(SIMPLE_OBJECT_3)
+
+            expect(patch.length).toBe(1)
+            expect(patch[0]).toEqual(PATCH_3)
+        })
+    })
+
+    describe('deserialize', () => {
+        const SIMPLE_OBJECT_1 = {a: 1, b:2, c: "abcd", d: true};
+        const PATCH_1: JSONPatch = [{op: ADD, path: [], value: SIMPLE_OBJECT_1}]
+        const SIMPLE_OBJECT_2 = {a: 11, b:2, c: "abcd", d: true};
+        const PATCH_2: JSONPatch = [{op: REPLACE, path: ['a'], value: 11}]
+        const SIMPLE_OBJECT_3 = {a: 11, b:12, c: "abcd", d: true};
+        const PATCH_3: JSONPatch = [{op: REPLACE, path: ['b'], value: 12}]
+
+        it('first time, create the base object', () => {
+            let [target, nextSerialize] = deserialize(PATCH_1)
+            expect(target).toEqual(SIMPLE_OBJECT_1)
+        })
+
+        it('second time, update the target object', () => {
+            let [target, nextSerialize] = deserialize(PATCH_1);
+            [target, nextSerialize] = nextSerialize(PATCH_2)
+            expect(target).toEqual(SIMPLE_OBJECT_2)
+        })
+
+        it('second time, update the target object', () => {
+            let [target, nextSerialize] = deserialize(PATCH_1);
+            [target, nextSerialize] = nextSerialize(PATCH_2);
+            [target, nextSerialize] = nextSerialize(PATCH_3)
+            expect(target).toEqual(SIMPLE_OBJECT_3)
+        })
+    })
+
     describe("simple mutable objects", () => {
         let SIMPLE_OBJECT;
         beforeEach(() => {
@@ -33,6 +93,33 @@ describe("mutable serialization", () => {
             let [target_2] = nextDeserialize(patch)
             expect(original).toEqual(target_2);
             expect(target).not.toBe(target_2);
+        })
+
+        it("should support multiple serialization cycles", () => {
+            let original = mutableObject(SIMPLE_OBJECT);
+            let [patch, nextSerialize] = serialize(original.freeze());
+            patch = structuredClone(patch);
+            let [target, nextDeserialize] = deserialize(patch);
+
+            original.a = 12;
+
+            [patch, nextSerialize] = nextSerialize(original.freeze());
+            patch = structuredClone(patch);
+            [target, nextDeserialize] = nextDeserialize(patch)
+
+            original.c = 'efgh';
+
+            [patch, nextSerialize] = nextSerialize(original.freeze());
+            patch = structuredClone(patch);
+            [target, nextDeserialize] = nextDeserialize(patch)
+
+            original.d = false;
+
+            [patch, nextSerialize] = nextSerialize(original.freeze());
+            patch = structuredClone(patch);
+            [target, nextDeserialize] = nextDeserialize(patch)
+
+            expect(original).toEqual(target);
         })
     })
 

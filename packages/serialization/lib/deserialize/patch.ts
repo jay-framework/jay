@@ -1,4 +1,4 @@
-import {ADD, JSONPatch, JSONPatchMove, JSONPatchOperation, MOVE, REMOVE, REPLACE} from "jay-mutable-contract";
+import {ADD, JSONPatch, JSONPatchMove, MOVE, REMOVE, REPLACE} from "jay-mutable-contract";
 
 function validateMove({from, path}: JSONPatchMove) {
     let valid = (from.length === path.length)
@@ -7,28 +7,36 @@ function validateMove({from, path}: JSONPatchMove) {
     return valid;
 }
 
-function applyPatchOperation(target: object, patchOperation: JSONPatchOperation) {
-    let {path} = patchOperation
-    let dirLength = path.length - 1;
-    for (let i = 0; i < dirLength; i++) {
-        target = target[path[i]];
-        if (!target)
-            return;
-    }
-    if (patchOperation.op === REPLACE || patchOperation.op === ADD)
-        target[path[dirLength]] = patchOperation.value
-    else if (patchOperation.op === REMOVE) {
-        if (Array.isArray(target))
-            target.splice(path[dirLength] as number, 1)
-        else
-            delete target[path[dirLength]];
-    }
-    else if (patchOperation.op === MOVE && Array.isArray(target) && validateMove(patchOperation)) {
-        let [item] = target.splice(patchOperation.from[dirLength] as number, 1)
-        target.splice(path[dirLength] as number, 0, item);
-    }
-}
+export function patch<T>(target: T, jsonPatch: JSONPatch, level = 0): T {
+    let copy: T = (Array.isArray(target)?[...target]:{...target}) as T
+    let patchesGroupedByProp = jsonPatch.reduce((prev, patchOperation) => {
 
-export function patch(target: object, patch: JSONPatch) {
-    patch.forEach(patchOperation => applyPatchOperation(target, patchOperation))
+        const pathItem = patchOperation.path[level];
+        const op = patchOperation.op;
+        if (patchOperation.path.length - 1 === level) {
+            if (op === REPLACE || op === ADD)
+                copy[pathItem] = patchOperation.value
+            else if (op === REMOVE) {
+                if (Array.isArray(copy))
+                    copy.splice(pathItem as number, 1)
+                else
+                    delete copy[pathItem];
+            }
+            else if (op === MOVE && Array.isArray(copy) && validateMove(patchOperation)) {
+                let [item] = copy.splice(patchOperation.from[level] as number, 1)
+                copy.splice(pathItem as number, 0, item);
+            }
+        }
+        else if (!prev[pathItem])
+            prev[pathItem] = [patchOperation]
+        else
+            prev[pathItem].push(patchOperation)
+        return prev;
+    }, {})
+
+    Object.keys(patchesGroupedByProp).forEach(key => {
+        if (copy[key])
+            copy[key] = patch(copy[key], patchesGroupedByProp[key], level+1)
+    })
+    return copy;
 }
