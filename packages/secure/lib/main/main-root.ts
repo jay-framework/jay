@@ -14,19 +14,21 @@ export function mainRoot<ViewState>(viewState: ViewState,
     let endpoint = port.getRootEndpoint();
     let context = {compId: endpoint.compId, endpoint, port, funcRepository}
 
-    endpoint.onUpdate(message => {
+    endpoint.onUpdate(async message => {
         switch (message.type) {
             case JayPortMessageType.nativeExec: {
                 let {nativeId, correlationId} = message;
-                port.batch(async () => {
                     try {
                         let result = await (funcRepository[nativeId] as JayGlobalNativeFunction<any>)();
-                        endpoint.post(nativeExecResult(correlationId, result, undefined))
+                        port.batch(async () => {
+                            endpoint.post(nativeExecResult(correlationId, result, undefined))
+                        })
                     }
                     catch (err) {
-                        endpoint.post(nativeExecResult(correlationId, undefined, err.message))
+                        port.batch(async () => {
+                            endpoint.post(nativeExecResult(correlationId, undefined, err.message))
+                        })
                     }
-                });
                 break;
             }
         }
