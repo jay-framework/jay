@@ -9,7 +9,7 @@ import {
 } from 'jay-runtime'
 import {ValueOrGetter, Getter, Reactive, Setter} from 'jay-reactive'
 import {mutableObject} from "jay-mutable"
-import {isMutable} from "jay-mutable-contract";
+import {isMutable, MutableContract} from "jay-mutable-contract";
 
 export type hasProps<PropsT> = {props: Getter<PropsT>}
 export type Props<PropsT> = hasProps<PropsT> & {
@@ -81,9 +81,13 @@ export function createState<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: S
     return currentComponentContext().reactive.createState(value);
 }
 
-export function createMutableState<T extends object>(value: T): Getter<T> {
-    let [get, set] = createState(mutableObject(value))
-    return get
+export function createMutableState<T extends object>(value: T): [T & MutableContract, Getter<T>] {
+    let mutable = mutableObject(value);
+    let [get, set] = createState(value)
+    mutable.addMutableListener(() => {
+        set(mutable.freeze());
+    })
+    return [mutable, get]
 }
 
 export function useReactive(): Reactive {

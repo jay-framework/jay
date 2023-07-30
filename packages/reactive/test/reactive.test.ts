@@ -1,6 +1,5 @@
 import {describe, expect, it, jest} from '@jest/globals'
-import {Reactive, touchRevision} from "../lib";
-import {mockMutable} from "./mock-mutable";
+import {Reactive} from "../lib";
 
 describe('reactive', () => {
 
@@ -154,44 +153,6 @@ describe('reactive', () => {
 
             expect(reaction.mock.calls.length).toBe(1);
             expect(reaction.mock.calls[0][0]).toBe(12);
-        })
-
-        it('should not rerun when state it depends on is updated with the same mutable (same revision) value', () => {
-            const reaction = jest.fn();
-            let state, setState
-            let value = mockMutable({name: 'abc'});
-            new Reactive().record((reactive) => {
-                [state, setState] = reactive.createState(value);
-                reactive.createReaction(() => {
-                    reaction(state().name)
-                })
-            })
-            value.name = 'def'
-            setState(value);
-
-            expect(reaction.mock.calls.length).toBe(1);
-            expect(reaction.mock.calls[0][0]).toBe('abc');
-        })
-
-        it('should rerun when state it depends on is updated with updated mutable (different revision) value', async () => {
-            const reaction = jest.fn();
-
-            let value = mockMutable({name: 'abc'});
-            let reactive = new Reactive();
-            let [setState] = reactive.record((reactive) => {
-                let [state, setState] = reactive.createState(value);
-                reactive.createReaction(() => {
-                    reaction(state().name)
-                })
-                return [setState]
-            })
-            value.name = 'def'
-            touchRevision(value);
-            setState(value);
-            await reactive.toBeClean();
-
-            expect(reaction.mock.calls.length).toBe(2);
-            expect(reaction.mock.calls[1][0]).toBe('def');
         })
     });
 
@@ -509,98 +470,6 @@ describe('reactive', () => {
             expect(state2()).toBe(5)
             expect(state3()).toBe(6)
             expect(reaction2.mock.calls[1][0]).toBe(26)
-        })
-    })
-
-    describe("reactive with mutable state", () => {
-        it("should run a reaction when mutable object state changes", async () => {
-            let reactive = new Reactive();
-            let {reaction, state} = reactive.record((reactive) => {
-                const reaction = jest.fn();
-                let [state, ] = reactive.createState(mockMutable({a: 1, b: 2}));
-                reactive.createReaction(() => {
-                    reaction(state())
-                })
-                return {reaction, state}
-            })
-
-            state().a = 3;
-
-            await reactive.toBeClean()
-
-            expect(reaction.mock.calls.length).toBe(2);
-            expect(reaction.mock.calls[1][0]).toEqual({a: 3, b: 2});
-            expect(reaction.mock.calls[0][0]).toBe(state());
-            expect(reaction.mock.calls[1][0]).toBe(state());
-
-        })
-
-        it("should run a reaction when mutable sub-object state changes", async () => {
-            let reactive = new Reactive();
-            let {reaction, state} = reactive.record((reactive) => {
-                const reaction = jest.fn();
-                let [state, ] = reactive.createState(mockMutable({a: 1, b: 2, c: {d: 4, e: 5}}));
-                reactive.createReaction(() => {
-                    reaction(state())
-                })
-                return {reaction, state}
-            })
-
-            state().c.d = 8;
-
-            await reactive.toBeClean()
-
-            expect(reaction.mock.calls.length).toBe(2);
-            expect(reaction.mock.calls[1][0]).toEqual({a: 1, b: 2, c: {d: 8, e: 5}});
-            expect(reaction.mock.calls[0][0]).toBe(state());
-            expect(reaction.mock.calls[1][0]).toBe(state());
-
-        })
-
-        it("should run a reaction setting a new mutable object, and it changes", async () => {
-            let originalMutable = mockMutable({a: 1, b: 2});
-            let reactive = new Reactive();
-            let {reaction, setState, state} = reactive.record((reactive) => {
-                const reaction = jest.fn();
-                let [state, setState] = reactive.createState(originalMutable);
-                reactive.createReaction(() => {
-                    reaction(state())
-                })
-                return {reaction, setState, state}
-            })
-
-            setState(mockMutable({a: 3, b: 4}))
-            state().a = 5;
-
-            await reactive.toBeClean()
-
-            expect(reaction.mock.calls.length).toBe(2);
-            expect(reaction.mock.calls[1][0]).toEqual({a: 5, b: 4});
-            expect(reaction.mock.calls[0][0]).toBe(originalMutable);
-            expect(reaction.mock.calls[1][0]).toBe(state());
-        })
-
-        it("should not run a reaction when a mutable object that was replaced in state is updated", async () => {
-            let originalMutable = mockMutable({a: 1, b: 2});
-            let reactive = new Reactive();
-            let {reaction, setState, state} = reactive.record((reactive) => {
-                const reaction = jest.fn();
-                let [state, setState] = reactive.createState(originalMutable);
-                reactive.createReaction(() => {
-                    reaction(state())
-                })
-                return {reaction, setState, state}
-            })
-
-            setState(mockMutable({a: 3, b: 4}))
-            originalMutable.a = 5;
-
-            await reactive.toBeClean()
-
-            expect(reaction.mock.calls.length).toBe(2);
-            expect(reaction.mock.calls[1][0]).toEqual({a: 3, b: 4});
-            expect(reaction.mock.calls[0][0]).toBe(originalMutable);
-            expect(reaction.mock.calls[1][0]).toBe(state());
         })
     })
 });

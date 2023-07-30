@@ -6,7 +6,6 @@ import {
 } from '../../lib/element';
 import {describe, expect, it} from '@jest/globals'
 import {expectE} from "./test-utils";
-import { mutableObject } from 'jay-mutable';
 import {JayElement, HTMLElementCollectionProxy} from "../../lib";
 import {ConstructContext} from "../../lib";
 
@@ -117,7 +116,7 @@ describe('collection-element', () => {
         })
     })
 
-    describe('mutable and immutable collection items', () => {
+    describe('immutable collection items', () => {
 
         function makeElement(data: ViewState): [JayElement<ViewState, any>, Set<string>] {
             let renderedItemNames = new Set<string>();
@@ -159,29 +158,10 @@ describe('collection-element', () => {
             expect(renderedItemNames).toEqual(new Set([item2_1.name]))
         })
 
-        it('should re-render mutable array if the array content has changed', () => {
-            let items = mutableObject([item1, item2, item3]);
-            let [jayElement, renderedItemNames] = makeElement({items});
-            renderedItemNames.clear();
-            items[1] = item2_1;
-            jayElement.update({items});
-
-            expect(renderedItemNames).toEqual(new Set([item2_1.name]))
-        })
         it('should re-render new immutable objects in array, not rendering un-replaced objects', () => {
             let [jayElement, renderedItemNames] = makeElement({items: [item1, item2, item3]});
             renderedItemNames.clear();
             jayElement.update({items: [item1, item2_1, item3]});
-
-            expect(renderedItemNames).toEqual(new Set([item2_1.name]))
-        })
-
-        it('should re-render updated mutable objects in array, not rendering unchanged mutable objects', () => {
-            let items = mutableObject([{...item1}, {...item2}, {...item3}]);
-            let [jayElement, renderedItemNames] = makeElement({items});
-            renderedItemNames.clear();
-            items[1].name = item2_1.name;
-            jayElement.update({items});
 
             expect(renderedItemNames).toEqual(new Set([item2_1.name]))
         })

@@ -214,14 +214,14 @@ describe('state management', () => {
 
             function LabelComponentWithInternalState(props: Props<Name>, refs: LabelRefs) {
 
-                let label = createMutableState({greeting: 'Hello ' + props.name()});
+                let [mutableLabel, label] = createMutableState({greeting: 'Hello ' + props.name()});
                 let reactive = useReactive();
 
                 return {
                     render: () => ({
                         label: () => label().greeting
                     }),
-                    label,
+                    mutableLabel,
                     reactive
                 }
             }
@@ -237,7 +237,7 @@ describe('state management', () => {
 
             it('should update the component as state changes', async() => {
                 let instance = label({name: 'world'});
-                instance.label().greeting = 'hello mars';
+                instance.mutableLabel.greeting = 'hello mars';
                 instance.reactive.flush()
                 await instance.element.refs.label.$exec(elem =>
                     expect(elem.textContent).toBe('hello mars')
@@ -280,12 +280,12 @@ describe('state management', () => {
 
             function ComplexLabelComponentWithInternalState(props: Props<Name>, refs: ComplexLabelRefs) {
 
-                let payload = createMutableState({label: 'Hello ' + props.name()});
+                let [mutablePayload, payload] = createMutableState({label: 'Hello ' + props.name()});
                 let reactive = useReactive();
 
                 return {
                     render: () => ({payload}),
-                    payload,
+                    mutablePayload,
                     reactive
                 }
             }
@@ -301,7 +301,7 @@ describe('state management', () => {
             it('should freeze mutable in view state (serialization assumed frozen objects)', async() => {
                 let {label, recordedVSs} = mkComponent()
                 let instance = label({name: 'world'});
-                instance.payload().label = 'hello mars';
+                instance.mutablePayload.label = 'hello mars';
                 instance.reactive.flush()
 
                 expect(recordedVSs.length).toBe(2)

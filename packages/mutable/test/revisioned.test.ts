@@ -1,5 +1,5 @@
 import {describe, expect, it} from '@jest/globals'
-import {checkModified, touchRevision} from "../lib";
+import {checkModified, touchRevision} from "../lib/revisioned";
 import {mockMutable} from "./mock-mutable";
 
 describe('isModified', () => {

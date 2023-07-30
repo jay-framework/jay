@@ -1,4 +1,4 @@
-import {ADD, JSONPatch, REPLACE, MutableContract} from "jay-mutable-contract";
+import {ADD, JSONPatch, REPLACE} from "jay-mutable-contract";
 import {patch} from "./deserialize/patch";
 
 export type Deserialize<T extends object> = (jsonPatch: JSONPatch) => [T, Deserialize<T>]

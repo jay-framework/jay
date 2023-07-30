@@ -1,7 +1,6 @@
 import {Kindergarten, KindergartenGroup} from "./kindergarden";
 import {ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult} from "jay-list-compare";
 import {RandomAccessLinkedList as List} from "jay-list-compare";
-import {checkModified, getRevision} from "jay-reactive";
 import {
     BaseJayElement,
     JayComponent,
@@ -158,7 +157,7 @@ function applyListChanges<Item>(group: KindergartenGroup, instructions: Array<Ma
 }
 
 export function mkUpdateCollection<ViewState, Item>(child: ForEach<ViewState, Item>, group: KindergartenGroup): [updateFunc<ViewState>, MountFunc, MountFunc] {
-    let lastItems = getRevision([]);
+    let lastItems = [];
     let lastItemsList = new List<Item, BaseJayElement<Item>>([], child.matchBy);
     let mount = () => lastItemsList.forEach((value, attach) => attach.mount);
     let unmount = () => lastItemsList.forEach((value, attach) => attach.unmount);
@@ -167,8 +166,8 @@ export function mkUpdateCollection<ViewState, Item>(child: ForEach<ViewState, It
     let savedContext = saveContext();
     const update = (newData: ViewState) => {
         const items = child.getItems(newData) || [];
-        let isModified;
-        [lastItems, isModified] = checkModified(items, lastItems);
+        let isModified = items !== lastItems;
+        lastItems = items;
         if (isModified) {
             let itemsList = new List<Item, BaseJayElement<Item>>(items, child.matchBy);
             let instructions = listCompare<Item, BaseJayElement<Item>>(lastItemsList, itemsList, (item, id) => {

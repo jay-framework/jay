@@ -1,4 +1,4 @@
-import {touchRevision} from "../lib";
+import {touchRevision} from "../lib/revisioned";
 import {ChangeListener, MutableContract} from "jay-mutable-contract";
 
 

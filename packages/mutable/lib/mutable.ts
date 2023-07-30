@@ -1,4 +1,4 @@
-import {nextRevNum} from "jay-reactive";
+import {nextRevNum} from "./revisioned";
 import {setPrivateProperty} from "./private-property";
 import {
     ChangeListener,

@@ -1,6 +1,3 @@
-import {checkModified, Revisioned} from "./revisioned";
-import {isMutable} from "jay-mutable-contract";
-
 export type Next<T> = (t: T) => T
 export type Setter<T> = (t: T | Next<T>) => T
 export type Getter<T> = () => T
@@ -33,7 +30,7 @@ export class Reactive {
     }
 
     createState<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: Setter<T>] {
-        let current: Revisioned<T>;
+        let current: T;
         let reactionsToRerun: boolean[] = [];
 
         const triggerReactions = () => {
@@ -49,22 +46,19 @@ export class Reactive {
         }
 
         let setter = (value: T | Next<T>) => {
-            let isModified;
-            if (current && isMutable(current.value))
-                current.value.removeMutableListener(triggerReactions);
-            [current, isModified] = checkModified((typeof value === 'function') ? (value as Next<T>)(current?.value) : value, current);
+            let materializedValue = (typeof value === 'function') ? (value as Next<T>)(current) : value;
+            let isModified = materializedValue !== current;
+            current = materializedValue;
             if (isModified)
                 triggerReactions();
-            if (isMutable(current.value))
-                current.value.addMutableListener(triggerReactions)
-            return current.value;
+            return current;
         }
 
         let getter = () => {
             if (this.recording && this.inCreateReaction) {
                 reactionsToRerun[this.reactionIndex] = true;
             }
-            return current.value;
+            return current;
         }
 
         if (typeof value === 'function') {

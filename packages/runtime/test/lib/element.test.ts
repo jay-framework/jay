@@ -290,7 +290,7 @@ describe('element', () => {
         })
     })
 
-    describe('mutable and immutable ViewState', () => {
+    describe('immutable ViewState', () => {
         interface ViewState {
             text: string,
             text2: string,
@@ -335,22 +335,6 @@ describe('element', () => {
             expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(ANOTHER_VALUE);
             expect(jayElement.dom.childNodes[1].childNodes[1].textContent).toBe(VALUE_3);
         })
-
-        it('should update in case of same object, if the object is marked as mutable', () => {
-            let data: ViewState = mutableObject({text: SOME_VALUE, text2: ANOTHER_VALUE, text3: VALUE_3});
-            let jayElement = makeElement(data);
-
-            data.text = VALUE_4;
-            data.text2 = VALUE_5;
-            data.text3 = VALUE_6;
-
-            jayElement.update(data);
-
-            expect(jayElement.dom.childNodes[0].textContent).toBe(VALUE_4);
-            expect(jayElement.dom.childNodes[1].childNodes[0].textContent).toBe(VALUE_5);
-            expect(jayElement.dom.childNodes[1].childNodes[1].textContent).toBe(VALUE_6);
-        })
-
     })
 });
 

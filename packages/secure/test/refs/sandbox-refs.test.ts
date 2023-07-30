@@ -298,24 +298,6 @@ describe('sandbox-refs', () => {
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": B2})
         })
 
-        it('should support viewState and child element updates - for mutable updated item', () => {
-            let mutable = mutableObject(baseViewState);
-            let {endpoint, bridgeElement, childElementUpdateSpies} = setup(mutable);
-            let callback = jest.fn();
-
-            Object.assign(mutable.items[1], B2)
-            bridgeElement.update(mutable);
-
-            // expect the second item update to have been called
-            expect(childElementUpdateSpies[1].mock.calls.length).toBe(1);
-
-            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
-            endpoint.invoke(eventInvocationMessage('click', ['B', 'one']))
-
-            expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": B2})
-        })
-
         describe('find', () => {
             it('should run find --> $exec --> JPMNativeExec', () => {
                 let {endpoint, bridgeElement} = setup();

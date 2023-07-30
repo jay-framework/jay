@@ -6,7 +6,6 @@ import {
     JayEventHandlerWrapper,
     RenderElementOptions
 } from "./element-types";
-import {checkModified, getRevision} from "jay-reactive";
 import {ReferencesManager} from "./node-reference";
 
 let currentContext: ContextStack<any> = undefined;
@@ -76,12 +75,13 @@ export function currentConstructionContext() {
 
 export function wrapWithModifiedCheck<T extends object>(initialData: T, baseJayElement: BaseJayElement<T>): BaseJayElement<T> {
     let update = baseJayElement.update;
-    let current = getRevision(initialData)
+    let current = initialData
     let isModified;
     baseJayElement.update = (newData: T) => {
-        [current, isModified] = checkModified(newData, current);
+        isModified = newData !== current;
+        current = newData;
         if (isModified)
-            update(current.value)
+            update(current)
     }
     return baseJayElement;
 }

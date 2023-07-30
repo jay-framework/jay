@@ -5,9 +5,7 @@
   "scripts": {
     "start": "tsc",
     "test": "jest --runInBand",
-    "rollup": "rollup --config ./rollup.config.js",
-    "copy": "cp examples/index.html build/index.html && cp examples/index.css build/index.css",
-    "build": "npm run rollup && npm run copy && echo 'build lib' && tsc && echo 'build examples' && tsc -p tsconfig-examples.json"
+    "build": "tsc"
   },
   "jest": {},
   "dependencies": {
