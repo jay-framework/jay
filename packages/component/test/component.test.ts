@@ -44,16 +44,17 @@ describe('state management', () => {
                 name: 'abc',
                 age: 12
             }
-            let propsGetters = provideContext(COMPONENT_CONTEXT,
+            let updatableProps = provideContext(COMPONENT_CONTEXT,
                 {reactive, ...contextTestDefaults}, () => makePropsProxy(reactive, props))
 
-            propsGetters.name()
-            propsGetters.age()
+            updatableProps.name()
+            updatableProps.age()
 
-            propsGetters.update({name: 'def'})
+            updatableProps.update({name: 'def', age: 12})
 
-            expect(propsGetters.name()).toBe('def')
-            expect(propsGetters.age()).toBe(12)
+            expect(props.name).toBe('abc'); // should not update the original props object
+            expect(updatableProps.name()).toBe('def')
+            expect(updatableProps.age()).toBe(12)
         })
 
         it('should give back the props using the .props property', () => {
@@ -80,7 +81,7 @@ describe('state management', () => {
             propsGetters.name()
             propsGetters.age()
 
-            propsGetters.update({name: 'def'})
+            propsGetters.update({name: 'def', age: 12})
 
             expect(propsGetters.props()).toEqual({
                     name: 'def',

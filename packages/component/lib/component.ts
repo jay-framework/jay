@@ -21,7 +21,7 @@ export type ViewStateGetters<ViewState> = {
 }
 
 export type UpdatableProps<PropsT> = Props<PropsT> & {
-    update(newProps: Partial<PropsT>)
+    update(newProps: PropsT)
 }
 
 export interface JayComponentCore<PropsT, ViewState> {
@@ -205,9 +205,8 @@ function makePropsProxy<PropsT extends object>(reactive: Reactive, props: PropsT
 
     const update = (newProps: PropsT) => {
         reactive.batchReactions(() => {
-            let props = _props();
+            _setProps(newProps);
             for (const prop in newProps) {
-                props[prop] = newProps[prop]
                 if (!stateMap.hasOwnProperty(prop))
                     stateMap[prop as string] = reactive.createState(newProps[prop])
                 else
