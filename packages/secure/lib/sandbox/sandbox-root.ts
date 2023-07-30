@@ -15,7 +15,7 @@ export function sandboxRoot<ViewState extends object>(sandboxElements: () => Arr
     endpoint.onUpdate((inMessage: JPMRootComponentViewState | JPMNativeExecResult)  => {
         switch(inMessage.type) {
             case JayPortMessageType.root: {
-                [viewState, nextDeserialize] = deserialize<ViewState>(inMessage.patch)
+                [viewState, nextDeserialize] = nextDeserialize(inMessage.patch)
                 if (!elements) {
                     let context: SandboxCreationContext<ViewState> = {
                         viewState,

@@ -38,7 +38,7 @@ const VERBOSE = false;
 describe('events synthetic tests', () => {
 
     async function mkElement(viewState: Node) {
-        let channel = useMockCommunicationChannel<Node, TreeNodeViewState>(VERBOSE);
+        let channel = useMockCommunicationChannel(VERBOSE);
         setChannel(channel);
         initializeWorker();
         let appElement = render(viewState);
