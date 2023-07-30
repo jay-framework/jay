@@ -254,6 +254,7 @@ describe('state management', () => {
             interface ComplexLabelViewState {
                 payload: {
                     label: string
+                    tags: Array<{id: string, tag: string}>
                 }
             }
 
@@ -266,7 +267,8 @@ describe('state management', () => {
                 return function (viewState: ComplexLabelViewState) {
                     let element = ConstructContext.withRootContext(viewState, () =>
                         e('div', {}, [
-                            e('div', {ref: 'label'}, [dt(vs => vs.payload?.label)])
+                            e('div', {ref: 'label'}, [dt(vs => vs.payload?.label)]),
+                            e('div', {ref: 'tags'}, [dt(vs => vs.payload?.tags?.map(_ => _.tag).join(','))])
                         ])
                     ) as ComplexLabelElement;
                     let update = element.update;
@@ -280,7 +282,10 @@ describe('state management', () => {
 
             function ComplexLabelComponentWithInternalState(props: Props<Name>, refs: ComplexLabelRefs) {
 
-                let [mutablePayload, payload] = createMutableState({label: 'Hello ' + props.name()});
+                let [mutablePayload, payload] = createMutableState({
+                    label: 'Hello ' + props.name(),
+                    tags: [{id: 'a', tag:'alpha'}, {id:'b', tag: "beta"}, {id: 'c', tag: 'gamma'}]
+                });
                 let reactive = useReactive();
 
                 return {
@@ -297,6 +302,38 @@ describe('state management', () => {
                 const label = makeJayComponent(render, ComplexLabelComponentWithInternalState)
                 return {recordedVSs, label}
             }
+
+            it('should rerender on mutable element change', async() => {
+                let {label, recordedVSs} = mkComponent()
+                let instance = label({name: 'world'});
+                instance.mutablePayload.label = 'hello mars';
+                instance.reactive.flush()
+
+                expect(recordedVSs.length).toBe(2)
+                expect(recordedVSs[1]).toEqual({
+                    payload: {
+                        label: 'hello mars', tags: [
+                            {id: 'a', tag:'alpha'},
+                            {id:'b', tag: "beta"},
+                            {id: 'c', tag: 'gamma'}
+                        ]}})
+            })
+
+            it('should rerender on mutable array derivative change', async() => {
+                let {label, recordedVSs} = mkComponent()
+                let instance = label({name: 'world'});
+                instance.mutablePayload.tags.filter(_ => _.id === 'b')[0].tag = 'delta';
+                instance.reactive.flush()
+
+                expect(recordedVSs.length).toBe(2)
+                expect(recordedVSs[1]).toEqual({
+                    payload: {
+                        label: 'Hello world', tags: [
+                            {id: 'a', tag:'alpha'},
+                            {id:'b', tag: "delta"},
+                            {id: 'c', tag: 'gamma'}
+                        ]}})
+            })
 
             it('should freeze mutable in view state (serialization assumed frozen objects)', async() => {
                 let {label, recordedVSs} = mkComponent()
