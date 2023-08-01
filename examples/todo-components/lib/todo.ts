@@ -1,24 +1,25 @@
 import {Filter, render, ShownTodo, TodoElementRefs} from './todo.jay.html';
 import {createMemo, createState, makeJayComponent, Props} from 'jay-component';
-import {mutableObject} from 'jay-mutable';
 import {uuid} from "./uuid";
+import {patch} from 'jay-serialization'
+import {ADD, REPLACE} from "jay-mutable-contract";
 
 const ENTER_KEY = 13;
 
-interface TodoItem {
+export interface TodoItem {
     id: string,
     title: string,
     isCompleted: boolean
 }
 
-interface TodoProps {
+export interface TodoProps {
     initialTodos: Array<TodoItem>
 }
 
 function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoElementRefs) {
 
-    const [todos, setTodos] = createState(mutableObject(
-        initialTodos().map(_ => ({..._, isEditing: false, editText: ''}))));
+    const [todos, setTodos] = createState(
+        initialTodos().map(_ => ({..._, isEditing: false, editText: ''})));
 
     const activeTodoCount = createMemo(() =>
         todos().reduce(function (accum: number, todo: ShownTodo) {
@@ -58,13 +59,15 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
             let val = newValue.trim();
 
             if (val) {
-                todos().push({
-                    id: uuid(),
-                    title: val,
-                    isEditing: false,
-                    editText: '',
-                    isCompleted: false
-                })
+                setTodos(patch(todos(), [{
+                    op: ADD, path: [todos().length],
+                    value: {
+                        id: uuid(),
+                        title: val,
+                        isEditing: false,
+                        editText: '',
+                        isCompleted: false
+                    }}]))
             }
             setNewTodo('');
         })
@@ -83,11 +86,17 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
     })
 
     refs.items.onCompletedToggle(({event: newCompleted, viewState: item}) => {
-        item.isCompleted = newCompleted
+        let itemIndex = todos().findIndex(_ => _.id === item.id)
+        setTodos(patch(todos(), [{
+            op: REPLACE, path: [itemIndex, 'isCompleted'], value: newCompleted
+        }]))
     })
 
     refs.items.onTitleChanged(({event: newTitle, viewState: item}) => {
-        item.title = newTitle
+        let itemIndex = todos().findIndex(_ => _.id === item.id)
+        setTodos(patch(todos(), [{
+            op: REPLACE, path: [itemIndex, 'title'], value: newTitle
+        }]))
     })
 
     refs.items.onRemove(({viewState: item}) => {
