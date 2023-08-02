@@ -1,5 +1,7 @@
-import {DynamicChild, ParentElementRefs, render as ParentRender} from './parent.jay.html';
-import {makeJayComponent, Props, createState, createMutableState} from 'jay-component';
+import {ParentElementRefs, render as ParentRender} from './parent.jay.html';
+import {makeJayComponent, Props, createState} from 'jay-component';
+import {patch} from "jay-serialization";
+import {REPLACE} from "jay-mutable-contract";
 
 export interface ParentProps {}
 function ParentConstructor({}: Props<ParentProps>, refs: ParentElementRefs) {
@@ -8,14 +10,15 @@ function ParentConstructor({}: Props<ParentProps>, refs: ParentElementRefs) {
     let [viewStateFromChildEvent, setViewStataFromChildEvent] = createState('-');
     let [coordinateFromChildEvent, setCoordinateFromChildEvent] = createState('-');
     let [childText, setChildText] = createState('-');
-    let dynamicChildren = createMutableState([
+    let [dynamicChildren, setDynamicChildren] = createState([
         {id: 'A', childText: '-'}
     ])
 
     refs.parentChangesChildPropButton.onclick(
         ({event, coordinate, viewState}) => {
             setChildText(`event from parent ${event} ${JSON.stringify(coordinate)} ${JSON.stringify(viewState)}`)
-            dynamicChildren()[0].childText = `event from parent ${event} ${JSON.stringify(coordinate)} ${JSON.stringify(viewState)}`
+            setDynamicChildren(patch(dynamicChildren(), [
+                {op: REPLACE, path: [0, 'childText'], value: `event from parent ${event} ${JSON.stringify(coordinate)} ${JSON.stringify(viewState)}`}]))
         })
     refs.parentCallsChildApiButton.onclick(
         ({event, coordinate, viewState}) => {
@@ -38,7 +41,8 @@ function ParentConstructor({}: Props<ParentProps>, refs: ParentElementRefs) {
         setViewStataFromChildEvent(JSON.stringify(viewState))
         setCoordinateFromChildEvent(JSON.stringify(coordinate))
         if (event.useCaseId === 1 /* update prop */)
-            dynamicChildren()[0].childText = 'update from parent';
+            setDynamicChildren(patch(dynamicChildren(), [
+                {op: REPLACE, path: [0, 'childText'], value: 'update from parent'}]))
         else if (event.useCaseId === 2 /* call child api */)
             refs.dynamicChildren
                 .find(dynamicChild => dynamicChild.id === 'A')
