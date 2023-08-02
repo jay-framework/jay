@@ -14,8 +14,12 @@ export function patch<T>(target: T, jsonPatch: JSONPatch, level = 0): T {
         const pathItem = patchOperation.path[level];
         const op = patchOperation.op;
         if (patchOperation.path.length - 1 === level) {
-            if (op === REPLACE || op === ADD)
-                copy[pathItem] = patchOperation.value
+            if (op === REPLACE || op === ADD) {
+                if (Array.isArray(copy) && op === ADD)
+                    copy.splice(pathItem as number, 0, patchOperation.value)
+                else
+                    copy[pathItem] = patchOperation.value
+            }
             else if (op === REMOVE) {
                 if (Array.isArray(copy))
                     copy.splice(pathItem as number, 1)

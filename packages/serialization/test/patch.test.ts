@@ -1,6 +1,6 @@
 import {describe, expect, it} from '@jest/globals'
-import {patch} from "../lib/deserialize/patch";
-import {ADD, MOVE, REMOVE, REPLACE} from "jay-mutable-contract";
+import {patch} from "../lib";
+import {ADD, JSONPatch, MOVE, REMOVE, REPLACE} from "jay-mutable-contract";
 
 describe('apply JSON patch', () => {
     describe("flat object", () => {
@@ -68,7 +68,15 @@ describe('apply JSON patch', () => {
             expect(obj).toEqual([4,5,3]);
         })
 
-        it('should apply an add patch', () => {
+        it('should apply an add patch at the middle', () => {
+            let obj = [1,2,3]
+            obj = patch(obj, [
+                {op: ADD, path: [1], value: 4}
+            ])
+            expect(obj).toEqual([1,4,2,3]);
+        })
+
+        it('should apply an add patch at the end', () => {
             let obj = [1,2,3]
             obj = patch(obj, [
                 {op: ADD, path: [3], value: 4}
@@ -116,6 +124,48 @@ describe('apply JSON patch', () => {
                 {op: MOVE, path: [1], from:[2]},
             ])
             expect(obj).toEqual([{id: 1, c:"1"}, {id: 3, c:"3"}, {id: 2, c:"2"}]);
+        })
+    })
+
+    describe('complex object with both arrays and objects', () => {
+        const originalTree = {
+            "headChar": "▼",
+            "node": {
+                "name": "root",
+                "id": "r",
+                "children": [
+                    {"id": "a", "name": "a node", "children": [
+                            {"id": "aa", "name": "aa node", "children": []},
+                            {"id": "ab", "name": "ab node", "children": []}
+                        ]},
+                    {"id": "b", "name": "b node", "children": [
+                            {"id": "ba", "name": "ba node", "children": []}
+                        ]},
+                    {"id": "c", "name": "c node", "children": [
+                            {"id": "ca", "name": "ca node", "children": []},
+                            {"id": "cb", "name": "cb node", "children": []},
+                            {"id": "cc", "name": "cc node", "children": []}
+                        ]},
+                    {"id": "d", "name": "d node", "children": [
+                            {"id": "da", "name": "da node", "children": []}
+                        ]}
+                ]},
+            "open": true
+        }
+
+        const patchForTree: JSONPatch = [
+            {"op": "remove", "path": ["node", "children", 2]},
+            {"op": "add", "path": ["node", "children", 2], "value": {
+                    "id": "e", "name": "e node",
+                    "children": [{"id": "ea", "name": "ea node", "children": []}]
+                }
+            },
+            {"op": "remove", "path": ["node", "children", "0", "children", "1"]}
+        ]
+
+        it('should patch a complex tree', () => {
+            const result = patch(originalTree, patchForTree)
+            expect(result.node.children.length).toBe(4)
         })
     })
 
