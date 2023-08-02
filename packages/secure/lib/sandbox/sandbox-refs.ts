@@ -36,6 +36,7 @@ import {
     rootApiReturns
 } from "../comm-channel/messages";
 import {JSONPatch} from "jay-mutable-contract";
+import {ArrayContexts} from "jay-serialization/dist/serialize/diff";
 
 
 export interface SandboxBridgeElement<ViewState> {
@@ -273,7 +274,8 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
                                            dynamicComponents: string[] = [],
                                            endpoint: IJayEndpoint,
                                            reactive: Reactive,
-                                           getComponentInstance: () => JayComponent<any, any, any>): SandboxBridgeElement<ViewState> {
+                                           getComponentInstance: () => JayComponent<any, any, any>,
+                                           arraySerializationContext: ArrayContexts): SandboxBridgeElement<ViewState> {
 
     let refs = {};
     let events = {}
@@ -282,10 +284,11 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
     dynamicElements.forEach(elemRef => refs[elemRef] = proxyRef(new DynamicRefImplementation(elemRef, endpoint)))
     return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState, refs, dataIds: [], isDynamic: false, parentComponentReactive: reactive}, () => {
         let elements = sandboxElements();
-        let patch: JSONPatch, nextSerialize = serialize;
+        let patch: JSONPatch, nextSerialize = serialize; // TODO add diff context
         let postUpdateMessage = (newViewState) => {
-            [patch, nextSerialize] = nextSerialize(newViewState);
-            endpoint.post(renderMessage(patch))
+            [patch, nextSerialize] = nextSerialize(newViewState, arraySerializationContext);
+            if (patch.length)
+                endpoint.post(renderMessage(patch))
         }
         let update = normalizeUpdates([postUpdateMessage, ...elements.map(el => el.update)]);
 
