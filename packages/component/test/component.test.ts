@@ -11,14 +11,13 @@ import {
 import {
     COMPONENT_CONTEXT,
     createEffect, createEvent,
-    createMemo, createMutableState,
+    createMemo,
     createState,
     forTesting,
     makeJayComponent,
     Props, useReactive
 } from "../lib/component";
 import {Reactive} from "jay-reactive";
-import {isMutable} from "jay-mutable-contract";
 const {makePropsProxy} = forTesting
 
 describe('state management', () => {
@@ -203,148 +202,6 @@ describe('state management', () => {
                 await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('Hello world')
                 )
-            })
-        });
-
-        describe('with mutable state', () => {
-
-            interface Name {
-                name: string
-            }
-
-            function LabelComponentWithInternalState(props: Props<Name>, refs: LabelRefs) {
-
-                let [mutableLabel, label] = createMutableState({greeting: 'Hello ' + props.name()});
-                let reactive = useReactive();
-
-                return {
-                    render: () => ({
-                        label: () => label().greeting
-                    }),
-                    mutableLabel,
-                    reactive
-                }
-            }
-
-            let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
-
-            it('should render the component using state', async () => {
-                let instance = label({name: 'world'});
-                await instance.element.refs.label.$exec(elem =>
-                    expect(elem.textContent).toBe('Hello world')
-                )
-            })
-
-            it('should update the component as state changes', async() => {
-                let instance = label({name: 'world'});
-                instance.mutableLabel.greeting = 'hello mars';
-                instance.reactive.flush()
-                await instance.element.refs.label.$exec(elem =>
-                    expect(elem.textContent).toBe('hello mars')
-                )
-            })
-        });
-
-        describe('with complex mutable state', () => {
-
-            interface Name {
-                name: string
-            }
-
-            interface ComplexLabelViewState {
-                payload: {
-                    label: string
-                    tags: Array<{id: string, tag: string}>
-                }
-            }
-
-            interface ComplexLabelRefs {
-                label: HTMLElementProxy<ViewState, HTMLElement>
-            }
-            interface ComplexLabelElement extends JayElement<ComplexLabelViewState, ComplexLabelRefs> {}
-
-            function renderComplexLabelElement(updateCallback): (viewState: ComplexLabelViewState) => ComplexLabelElement {
-                return function (viewState: ComplexLabelViewState) {
-                    let element = ConstructContext.withRootContext(viewState, () =>
-                        e('div', {}, [
-                            e('div', {ref: 'label'}, [dt(vs => vs.payload?.label)]),
-                            e('div', {ref: 'tags'}, [dt(vs => vs.payload?.tags?.map(_ => _.tag).join(','))])
-                        ])
-                    ) as ComplexLabelElement;
-                    let update = element.update;
-                    element.update = (newData) => {
-                        updateCallback(newData);
-                        update(newData)
-                    }
-                    return element;
-                }
-            }
-
-            function ComplexLabelComponentWithInternalState(props: Props<Name>, refs: ComplexLabelRefs) {
-
-                let [mutablePayload, payload] = createMutableState({
-                    label: 'Hello ' + props.name(),
-                    tags: [{id: 'a', tag:'alpha'}, {id:'b', tag: "beta"}, {id: 'c', tag: 'gamma'}]
-                });
-                let reactive = useReactive();
-
-                return {
-                    render: () => ({payload}),
-                    mutablePayload,
-                    reactive
-                }
-            }
-
-            function mkComponent() {
-                const recordedVSs = [];
-                const updateCallback = (vs) => recordedVSs.push(vs)
-                const render = renderComplexLabelElement(updateCallback);
-                const label = makeJayComponent(render, ComplexLabelComponentWithInternalState)
-                return {recordedVSs, label}
-            }
-
-            it('should rerender on mutable element change', async() => {
-                let {label, recordedVSs} = mkComponent()
-                let instance = label({name: 'world'});
-                instance.mutablePayload.label = 'hello mars';
-                instance.reactive.flush()
-
-                expect(recordedVSs.length).toBe(2)
-                expect(recordedVSs[1]).toEqual({
-                    payload: {
-                        label: 'hello mars', tags: [
-                            {id: 'a', tag:'alpha'},
-                            {id:'b', tag: "beta"},
-                            {id: 'c', tag: 'gamma'}
-                        ]}})
-            })
-
-            it('should rerender on mutable array derivative change', async() => {
-                let {label, recordedVSs} = mkComponent()
-                let instance = label({name: 'world'});
-                instance.mutablePayload.tags.filter(_ => _.id === 'b')[0].tag = 'delta';
-                instance.reactive.flush()
-
-                expect(recordedVSs.length).toBe(2)
-                expect(recordedVSs[1]).toEqual({
-                    payload: {
-                        label: 'Hello world', tags: [
-                            {id: 'a', tag:'alpha'},
-                            {id:'b', tag: "delta"},
-                            {id: 'c', tag: 'gamma'}
-                        ]}})
-            })
-
-            it('should freeze mutable in view state (serialization assumed frozen objects)', async() => {
-                let {label, recordedVSs} = mkComponent()
-                let instance = label({name: 'world'});
-                instance.mutablePayload.label = 'hello mars';
-                instance.reactive.flush()
-
-                expect(recordedVSs.length).toBe(2)
-                recordedVSs.forEach(vs => {
-                    expect(isMutable(vs.payload)).toBeFalsy();
-                })
             })
         });
 

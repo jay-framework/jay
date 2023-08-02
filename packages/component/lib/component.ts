@@ -81,15 +81,6 @@ export function createState<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: S
     return currentComponentContext().reactive.createState(value);
 }
 
-export function createMutableState<T extends object>(value: T): [T & MutableContract, Getter<T>] {
-    let mutable = mutableObject(value);
-    let [get, set] = createState(value)
-    mutable.addMutableListener(() => {
-        set(mutable.freeze());
-    })
-    return [mutable, get]
-}
-
 export function useReactive(): Reactive {
     return currentComponentContext().reactive;
 }
