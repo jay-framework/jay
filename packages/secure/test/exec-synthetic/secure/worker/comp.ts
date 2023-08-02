@@ -1,5 +1,5 @@
 import {CompElementRefs, render as CompRender} from './comp.jay.html';
-import {makeJayComponent, Props, createState, createMutableState} from 'jay-component';
+import {makeJayComponent, Props, createState} from 'jay-component';
 import {exec$} from "../../../../lib/sandbox/exec";
 import {$func, $funcGlobal} from "../../../../lib/$func";
 
@@ -8,7 +8,7 @@ export interface CompProps {
 function CompConstructor({}: Props<CompProps>, refs: CompElementRefs) {
 
     let [text, setText] = createState('default result')
-    let items = createMutableState([
+    let [items] = createState([
         {id: 'a', text: "alpha"},
         {id: 'b', text: "beta"},
         {id: 'c', text: "gamma"}
