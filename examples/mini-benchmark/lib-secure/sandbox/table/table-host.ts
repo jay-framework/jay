@@ -11,7 +11,7 @@ function TableHostConstructor({cycles}: Props<TableHostProps>, refs: TableHostEl
 
     let [size, setSize] = createState(100);
     let [updates, setUpdates] = createState(100);
-    let [stateManagement, setStateManagement] = createState('mutable');
+    let [stateManagement, setStateManagement] = createState('immutable');
 
     refs.size
         .$oninput($handler<Event, TableHostViewState, any>('2'))

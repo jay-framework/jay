@@ -1,12 +1,11 @@
 import {Line, render, TableElementRefs} from './table.jay.html';
 import {createState, makeJayComponent, Props } from 'jay-component';
-import { mutableObject } from 'jay-mutable';
 import {produce} from 'immer'
 
 interface TableProps {
     tableSize: number
     numCellsToUpdate: number
-    stateManagement: "mutable" | "immutable" | "immer"
+    stateManagement: "immutable" | "immer"
 }
 
 function initTable(tableSize: number): Line[] {
@@ -22,22 +21,10 @@ function initTable(tableSize: number): Line[] {
 
 function TableConstructor({tableSize, numCellsToUpdate, stateManagement}: Props<TableProps>, refs: TableElementRefs) {
 
-    let [line, setLine] = createState(() => {
-        if (stateManagement() === "mutable")
-            return mutableObject(initTable(tableSize()))
-        else
-            return initTable(tableSize())
-    });
+    let [line, setLine] = createState(() => initTable(tableSize()));
 
     const updateData = (cycle: number) => {
-        if (stateManagement() === "mutable") {
-            for (let i = 0; i < numCellsToUpdate(); i++) {
-                let x = Math.floor(Math.random() * tableSize());
-                let y = Math.floor(Math.random() * tableSize());
-                line()[x].cell[y].value = Math.round(Math.random() * 100);
-            }
-        }
-        else if (stateManagement() === "immutable") {
+        if (stateManagement() === "immutable") {
             let copy = [...line()]
             for (let i = 0; i < numCellsToUpdate(); i++) {
                 let x = Math.floor(Math.random()*tableSize());

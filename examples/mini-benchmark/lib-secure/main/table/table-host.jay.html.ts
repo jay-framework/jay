@@ -32,8 +32,7 @@ export function render(viewState: TableHostViewState, options?: RenderElementOpt
       e('div', {}, [
         e('label', {for: 'state-management'}, ['Number of updates at each cycle: ']),
         e('select', {id: 'state-management', ref: 'stateManagement'}, [
-          e('option', {value: 'mutable', selected: ''}, ['mutable']),
-          e('option', {value: 'immutable'}, ['immutable']),
+          e('option', {value: 'immutable', selected: ''}, ['immutable']),
           e('option', {value: 'immer'}, ['immer'])
         ])
       ]),
