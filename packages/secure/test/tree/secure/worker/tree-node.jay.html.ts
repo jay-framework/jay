@@ -1,6 +1,6 @@
 import {HTMLElementProxy, JayElement} from "jay-runtime";
 import {Node, TreeNode} from "./tree-node";
-import {elementBridge} from "../../../../lib/sandbox/sandbox-bridge";
+import {elementBridge} from "../../../../lib";
 import {sandboxElement as e, sandboxForEach as forEach, sandboxChildComp as childComp} from "../../../../lib/sandbox/sandbox-element";
 
 export interface TreeNodeViewState {
@@ -22,5 +22,8 @@ export function render(viewState: TreeNodeViewState): TreeNodeElement {
                 childComp(TreeNode, vs => vs, "child")
             ]
         )
-    ], [], ['child']) as unknown as TreeNodeElement;
+    ],
+        [],
+        ['child'],
+        [[['node', 'children'], {matchBy: 'id'}]]) as unknown as TreeNodeElement;
 }

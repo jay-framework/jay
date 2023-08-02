@@ -4,6 +4,8 @@ import {initializeWorker} from "./secure/worker/worker-root";
 import {Node} from "./secure/main/tree-node";
 import {TreeNodeViewState} from "./secure/main/tree-node.jay.html";
 import {render} from "./secure/main/main-root";
+import {MOVE} from "jay-mutable-contract";
+import {JayPortMessageType, renderMessage} from "../../lib/comm-channel/messages";
 
 const noChildrenNoArrow = "";
 const closedArrow = "►";
@@ -15,6 +17,7 @@ const Tree2_C = {id: 'c', name: 'c node', children: []};
 const Tree2_D = {id: 'd', name: 'd node', children: []};
 const Tree2_1 = {id: 'r', name: 'root', children: [Tree2_B]}
 const Tree2_2 = {id: 'r', name: 'root', children: [Tree2_B, Tree2_C, Tree2_D]}
+const Tree2_3 = {id: 'r', name: 'root', children: [Tree2_D, Tree2_B, Tree2_C]}
 
 const Tree3_A_A = {id: 'aa', name: 'aa node', children: []};
 const Tree3_A_B = {id: 'ab', name: 'ab node', children: []};
@@ -127,6 +130,23 @@ describe('events synthetic tests', () => {
             expectTreeNode(Tree2_B, noChildrenNoArrow, false);
             expectTreeNode(Tree2_C, noChildrenNoArrow, false);
             expectTreeNode(Tree2_D, noChildrenNoArrow, false);
+        })
+
+        it('reorder tree children by moving them, not recreating / overriding, and not including empty patches', async () => {
+            let {expectTreeNode, getHeadById, channel, appElement} = await mkElement(Tree2_2);
+            getHeadById(Tree2_2).click();
+            await channel.toBeClean()
+
+            channel.messageLog.splice(0, channel.messageLog.length)
+            VERBOSE && console.log(appElement.dom.outerHTML)
+            appElement.update(Tree2_3)
+            await channel.toBeClean()
+
+            VERBOSE && console.log(appElement.dom.outerHTML)
+            expect(channel.messageLog).toContainEqual([renderMessage([
+                {op: MOVE, from: ["node", "children", 2], path: ["node", "children", 0]}
+            ]), "invoked"])
+            expect(channel.messageLog).not.toContainEqual([renderMessage([]), "invoked"])
         })
     })
 
