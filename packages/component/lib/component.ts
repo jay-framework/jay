@@ -8,8 +8,7 @@ import {
     createJayContext, useContext, provideContext
 } from 'jay-runtime'
 import {ValueOrGetter, Getter, Reactive, Setter} from 'jay-reactive'
-import {mutableObject} from "jay-mutable"
-import {isMutable, MutableContract} from "jay-mutable-contract";
+import {isMutable} from "jay-mutable-contract";
 
 export type hasProps<PropsT> = {props: Getter<PropsT>}
 export type Props<PropsT> = hasProps<PropsT> & {

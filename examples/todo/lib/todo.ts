@@ -1,7 +1,8 @@
 import {Filter, render, ShownTodo, TodoElementRefs} from './todo.jay.html';
 import {createMemo, createState, makeJayComponent, Props} from 'jay-component';
-import {mutableObject} from 'jay-mutable';
 import {uuid} from "./uuid";
+import {patch} from "jay-serialization";
+import {ADD, REPLACE} from "jay-serialization/dist/types";
 
 const ENTER_KEY = 13;
 const ESCAPE_KEY = 27;
@@ -18,8 +19,8 @@ interface TodoProps {
 
 function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoElementRefs) {
 
-    const [todos, setTodos] = createState(mutableObject(
-        initialTodos().map(_ => ({..._, isEditing: false, editText: ''}))));
+    const [todos, setTodos] = createState(
+        initialTodos().map(_ => ({..._, isEditing: false, editText: ''})));
 
     const activeTodoCount = createMemo(() =>
         todos().reduce(function (accum: number, todo: ShownTodo) {
@@ -45,8 +46,11 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
     let handleSubmit = todo => {
         let val = todo.editText.trim();
         if (val) {
-            todo.title = val;
-            todo.isEditing = false;
+            let itemIndex = todos().findIndex(_ => _.id === todo.id)
+            setTodos(patch(todos(), [
+                {op: REPLACE, path: [itemIndex, 'title'], value: val},
+                {op: REPLACE, path: [itemIndex, 'isEditing'], value: false}
+            ]))
         } else {
             setTodos(todos().filter(_ => _ !== todo));
         }
@@ -69,13 +73,15 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
             let val = newValue.trim();
 
             if (val) {
-                todos().push({
-                    id: uuid(),
-                    title: val,
-                    isEditing: false,
-                    editText: '',
-                    isCompleted: false
-                })
+                setTodos(patch(todos(), [{
+                    op: ADD, path: [todos().length],
+                    value: {
+                        id: uuid(),
+                        title: val,
+                        isEditing: false,
+                        editText: '',
+                        isCompleted: false
+                    }}]))
             }
             setNewTodo('');
         })
@@ -94,8 +100,11 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
 
     refs.completed.onchange(({viewState: todo}) => todo.isCompleted = !todo.isCompleted)
     refs.label.ondblclick(({viewState: todo}) => {
-        todo.isEditing = true;
-        todo.editText = todo.title;
+        let itemIndex = todos().findIndex(_ => _.id === todo.id)
+        setTodos(patch(todos(), [
+            {op: REPLACE, path: [itemIndex, 'title'], value: todo.title},
+            {op: REPLACE, path: [itemIndex, 'isEditing'], value: true}
+        ]))
     })
     refs.button.onclick(({viewState: todo}) => {
         setTodos(todos().filter(_ => _ !== todo));
@@ -106,14 +115,20 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
     refs.title
         .$onchange(({event}) => (event.target as HTMLInputElement).value)
         .then(({event: value, viewState: todo}) => {
-            todo.editText = value;
+            let itemIndex = todos().findIndex(_ => _.id === todo.id)
+            setTodos(patch(todos(), [
+                {op: REPLACE, path: [itemIndex, 'editText'], value}
+            ]))
         })
     refs.title
         .$onkeydown(({event}) => (event.which))
         .then(({event:which, viewState: todo})=> {
             if (which === ESCAPE_KEY) {
-                todo.editText = todo.title;
-                todo.isEditing = false;
+                let itemIndex = todos().findIndex(_ => _.id === todo.id)
+                setTodos(patch(todos(), [
+                    {op: REPLACE, path: [itemIndex, 'editText'], value: todo.title},
+                    {op: REPLACE, path: [itemIndex, 'editText'], value: false}
+                ]))
             } else if (which === ENTER_KEY) {
                 handleSubmit(todo);
             }
