@@ -1,5 +1,5 @@
 import {ITEM_ADDED, ITEM_MOVED, ITEM_REMOVED, listCompare, RandomAccessLinkedList as List} from "jay-list-compare";
-import {ADD, JSONPatch, JSONPointer, MOVE, REMOVE, REPLACE} from "../../../json-patch";
+import {ADD, JSONPatch, JSONPointer, MOVE, REMOVE, REPLACE} from "../json-patch-contract";
 
 type MeasureOfChange = number
 type DataFields = number

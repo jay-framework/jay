@@ -1,5 +1,5 @@
-import {ArrayContexts, diff} from "./serialize/diff";
-import {JSONPatch} from "../../json-patch";
+import {ArrayContexts, diff} from "jay-json-patch";
+import {JSONPatch} from "jay-json-patch";
 
 export type Serialize = (entity: any, contexts?: ArrayContexts) => [JSONPatch, Serialize]
 
