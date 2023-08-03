@@ -1,9 +1,7 @@
 import {Filter, render, ShownTodo, TodoElementRefs} from './todo.jay.html';
-import {createMemo, createState, makeJayComponent, Props} from 'jay-component';
+import {createMemo, createPatchableState, createState, makeJayComponent, Props} from 'jay-component';
 import {uuid} from "./uuid";
-import {patch} from "jay-serialization";
-import {ADD, JSONPatch, REPLACE} from "jay-serialization/dist/types";
-import {Getter, Setter, ValueOrGetter} from "jay-reactive";
+import {ADD, REPLACE} from "jay-json-patch";
 
 const ENTER_KEY = 13;
 const ESCAPE_KEY = 27;
@@ -17,18 +15,10 @@ interface TodoItem {
 interface TodoProps {
     initialTodos: Array<TodoItem>
 }
-//
-// type Patcher<T> = (patch: JSONPatch) => void
-// function createPatchableState<T>(value: ValueOrGetter<T>): [get: Getter<T>, patchFunc: Patcher<T>] {
-//     const [get, set] = createState(value)
-//     const patchFunc = (jsonPatch: JSONPatch) =>
-//         set(patch(get(), jsonPatch));
-//     return [get, patchFunc]
-// }
 
 function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoElementRefs) {
 
-    const [todos, setTodos] = createState(
+    const [todos, setTodos, patchTodos] = createPatchableState(
         initialTodos().map(_ => ({..._, isEditing: false, editText: ''})));
 
     const activeTodoCount = createMemo(() =>
@@ -56,10 +46,8 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
         let val = todo.editText.trim();
         if (val) {
             let itemIndex = todos().findIndex(_ => _.id === todo.id)
-            setTodos(patch(todos(), [
-                {op: REPLACE, path: [itemIndex, 'title'], value: val},
-                {op: REPLACE, path: [itemIndex, 'isEditing'], value: false}
-            ]))
+            patchTodos({op: REPLACE, path: [itemIndex, 'title'], value: val},
+                {op: REPLACE, path: [itemIndex, 'isEditing'], value: false})
         } else {
             setTodos(todos().filter(_ => _ !== todo));
         }
@@ -82,7 +70,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
             let val = newValue.trim();
 
             if (val) {
-                setTodos(patch(todos(), [{
+                patchTodos({
                     op: ADD, path: [todos().length],
                     value: {
                         id: uuid(),
@@ -90,7 +78,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
                         isEditing: false,
                         editText: '',
                         isCompleted: false
-                    }}]))
+                    }})
             }
             setNewTodo('');
         })
@@ -107,13 +95,17 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
         }));
     })
 
-    refs.completed.onchange(({viewState: todo}) => todo.isCompleted = !todo.isCompleted)
+    refs.completed.onchange(({viewState: todo}) => {
+        let itemIndex = todos().findIndex(_ => _.id === todo.id)
+        patchTodos({op: REPLACE, path: [itemIndex, 'isCompleted'], value: !todo.isCompleted})
+        // todo.isCompleted = !todo.isCompleted
+    })
     refs.label.ondblclick(({viewState: todo}) => {
         let itemIndex = todos().findIndex(_ => _.id === todo.id)
-        setTodos(patch(todos(), [
+        patchTodos(
             {op: REPLACE, path: [itemIndex, 'editText'], value: todo.title},
             {op: REPLACE, path: [itemIndex, 'isEditing'], value: true}
-        ]))
+        )
     })
     refs.button.onclick(({viewState: todo}) => {
         setTodos(todos().filter(_ => _ !== todo));
@@ -125,19 +117,19 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
         .$onchange(({event}) => (event.target as HTMLInputElement).value)
         .then(({event: value, viewState: todo}) => {
             let itemIndex = todos().findIndex(_ => _.id === todo.id)
-            setTodos(patch(todos(), [
+            patchTodos(
                 {op: REPLACE, path: [itemIndex, 'editText'], value}
-            ]))
+            )
         })
     refs.title
         .$onkeydown(({event}) => (event.which))
         .then(({event:which, viewState: todo})=> {
             if (which === ESCAPE_KEY) {
                 let itemIndex = todos().findIndex(_ => _.id === todo.id)
-                setTodos(patch(todos(), [
+                patchTodos(
                     {op: REPLACE, path: [itemIndex, 'editText'], value: todo.title},
                     {op: REPLACE, path: [itemIndex, 'editText'], value: false}
-                ]))
+                )
             } else if (which === ENTER_KEY) {
                 handleSubmit(todo);
             }

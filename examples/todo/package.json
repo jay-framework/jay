@@ -10,6 +10,7 @@
   "dependencies": {
     "jay-component": "1.0.0",
     "jay-runtime": "1.0.0",
+    "jay-json-patch": "1.0.0",
     "jay-reactive": "1.0.4",
     "jay-serialization": "1.0.0"
   },
