@@ -35,7 +35,7 @@ import {
     removeEventListenerMessage, renderMessage,
     rootApiReturns
 } from "../comm-channel/messages";
-import {JSONPatch} from "jay-mutable-contract";
+import {JSONPatch} from "../../../json-patch";
 import {ArrayContexts} from "jay-serialization/dist/serialize/diff";
 
 

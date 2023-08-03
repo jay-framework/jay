@@ -4,7 +4,7 @@ import {
     ChangeListener,
     isMutable,
     MutableContract
-} from "jay-mutable-contract";
+} from "jay-json-patch";
 
 export const MUTABLE_PROXY_SYMBOL = Symbol.for("proxy")
 

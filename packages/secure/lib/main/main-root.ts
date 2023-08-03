@@ -4,7 +4,7 @@ import {SECURE_COMPONENT_MARKER} from "./main-contexts";
 import {JayPortMessageType, nativeExecResult, rootComponentViewState} from "../comm-channel/messages";
 import {serialize} from 'jay-serialization'
 import {FunctionsRepository, JayGlobalNativeFunction} from "./function-repository-types";
-import {JSONPatch} from "jay-mutable-contract";
+import {JSONPatch} from "../../../json-patch";
 
 
 export function mainRoot<ViewState>(viewState: ViewState,

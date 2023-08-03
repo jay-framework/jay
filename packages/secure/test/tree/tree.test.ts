@@ -4,7 +4,7 @@ import {initializeWorker} from "./secure/worker/worker-root";
 import {Node} from "./secure/main/tree-node";
 import {TreeNodeViewState} from "./secure/main/tree-node.jay.html";
 import {render} from "./secure/main/main-root";
-import {MOVE} from "jay-mutable-contract";
+import {MOVE} from "../../../json-patch";
 import {JayPortMessageType, renderMessage} from "../../lib/comm-channel/messages";
 
 const noChildrenNoArrow = "";

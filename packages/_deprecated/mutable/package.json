@@ -13,7 +13,7 @@
   ],
   "dependencies": {
     "jay-reactive": "1.0.4",
-    "jay-mutable-contract": "1.0.0"
+    "jay-json-patch": "1.0.0"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.18.10",

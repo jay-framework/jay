@@ -1,5 +1,5 @@
 import {mutableObject} from '../../../packages/mutable'
-import { REPLACE } from '../../../packages/mutable-contract';
+import { REPLACE } from '../../../packages/json-patch';
 import {patchMutable} from "./patch-mutable";
 import {patchImmutable} from "./patch-immutable";
 

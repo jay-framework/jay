@@ -1,4 +1,4 @@
-import {ADD, JSONPatch, JSONPatchMove, MOVE, REMOVE, REPLACE} from "jay-mutable-contract";
+import {ADD, JSONPatch, JSONPatchMove, MOVE, REMOVE, REPLACE} from "../../../json-patch";
 
 function validateMove({from, path}: JSONPatchMove) {
     let valid = (from.length === path.length)

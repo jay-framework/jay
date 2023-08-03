@@ -1,7 +1,7 @@
 import {render, CollectionsElementRefs} from './collections.jay.html';
 import {createState, makeJayComponent, useReactive, Props, createMemo} from 'jay-component';
 import benchmark from "../benchmark";
-import {ADD, JSONPatch, MOVE, REMOVE, REPLACE} from "jay-mutable-contract";
+import {ADD, JSONPatch, MOVE, REMOVE, REPLACE} from "../../../../../packages/json-patch";
 import {patch} from "jay-serialization";
 
 interface CollectionsProps {

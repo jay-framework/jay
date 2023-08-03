@@ -1,6 +1,6 @@
 import {describe, expect, it} from '@jest/globals'
 import {patch} from "../lib";
-import {ADD, JSONPatch, MOVE, REMOVE, REPLACE} from "jay-mutable-contract";
+import {ADD, JSONPatch, MOVE, REMOVE, REPLACE} from "../../json-patch";
 
 describe('apply JSON patch', () => {
     describe("flat object", () => {

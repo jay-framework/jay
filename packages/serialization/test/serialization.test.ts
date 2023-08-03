@@ -1,7 +1,7 @@
 import {beforeEach, describe, expect, it} from '@jest/globals'
 import {deserialize, serialize} from "../lib";
 import {ArrayContexts} from "../lib/serialize/diff";
-import {ADD, JSONPatch, MOVE, REPLACE} from "jay-mutable-contract";
+import {ADD, JSONPatch, MOVE, REPLACE} from "../../json-patch";
 
 describe("mutable serialization", () => {
 

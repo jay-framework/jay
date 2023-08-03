@@ -1,6 +1,6 @@
 import {describe, expect, it, jest, beforeEach} from '@jest/globals'
 import {ArrayContexts, diff} from '../lib/serialize/diff'
-import {ADD, MOVE, REMOVE, REPLACE} from "jay-mutable-contract";
+import {ADD, MOVE, REMOVE, REPLACE} from "../../json-patch";
 
 describe('diff', () => {
 

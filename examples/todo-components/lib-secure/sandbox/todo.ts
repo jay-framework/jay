@@ -2,7 +2,7 @@ import {Filter, render, ShownTodo, TodoElementRefs, TodoViewState} from './todo.
 import {createMemo, createState, makeJayComponent, Props} from 'jay-component';
 import {uuid} from "./uuid";
 import {patch} from 'jay-serialization'
-import {ADD, REPLACE} from "jay-mutable-contract";
+import {ADD, REPLACE} from "../../../../packages/json-patch";
 import {$handler} from "jay-secure/dist/$func";
 
 const ENTER_KEY = 13;

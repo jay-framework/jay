@@ -16,7 +16,7 @@
     "packages/component",
     "packages/reactive",
     "packages/secure",
-    "packages/mutable-contract",
+    "packages/json-patch",
     "packages/serialization",
     "packages/list-compare",
     "exploration",

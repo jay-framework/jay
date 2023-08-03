@@ -1,7 +1,7 @@
 import {ParentElementRefs, render as ParentRender} from './parent.jay.html';
 import {makeJayComponent, Props, createState} from 'jay-component';
 import {patch} from "jay-serialization";
-import {REPLACE} from "jay-mutable-contract";
+import {REPLACE} from "../../../../json-patch";
 
 export interface ParentProps {}
 function ParentConstructor({}: Props<ParentProps>, refs: ParentElementRefs) {

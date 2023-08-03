@@ -1,5 +1,5 @@
 import {Coordinate} from "jay-runtime";
-import {JSONPatch} from "jay-mutable-contract";
+import {JSONPatch} from "../../../json-patch";
 
 export enum JayPortMessageType {
     render = 0,

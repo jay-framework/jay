@@ -1,5 +1,5 @@
 import {ITEM_ADDED, ITEM_MOVED, ITEM_REMOVED, listCompare, RandomAccessLinkedList as List} from "jay-list-compare";
-import {ADD, isMutable, JSONPatch, JSONPointer, MOVE, REMOVE, REPLACE} from "jay-mutable-contract";
+import {ADD, JSONPatch, JSONPointer, MOVE, REMOVE, REPLACE} from "../../../json-patch";
 
 type MeasureOfChange = number
 type DataFields = number
@@ -11,14 +11,14 @@ export type ArrayContexts = [JSONPointer, ArrayContext][]
 
 const LIST_COMPARE_RESULT_TO_JSON_PATCH = {};
 LIST_COMPARE_RESULT_TO_JSON_PATCH[ITEM_ADDED] =
-    (instruction, path) => ({op: ADD, value: stripMutable(instruction.item), path: [...path, instruction.pos]})
+    (instruction, path) => ({op: ADD, value: instruction.item, path: [...path, instruction.pos]})
 LIST_COMPARE_RESULT_TO_JSON_PATCH[ITEM_MOVED] =
     (instruction, path) => ({op: MOVE, from: [...path, instruction.fromPos], path: [...path, instruction.pos]})
 LIST_COMPARE_RESULT_TO_JSON_PATCH[ITEM_REMOVED] =(instruction, path) =>
     ({op: REMOVE, path: [...path, instruction.pos]})
 
 function findArrayContext(contexts: ArrayContexts, path: JSONPointer): ArrayContext {
-    let foundContext = contexts?.find(([pointer, context]) => {
+    let foundContext = contexts?.find(([pointer]) => {
         return path.length === pointer.length && path.reduce((prev, curr, index) => {
             return prev && (curr === '*')? true : curr === path[index]
         }, true)
@@ -49,7 +49,7 @@ function flattenPatch(diffResults: [JSONPatch, MeasureOfChange, DataFields][], p
         [prev[0] + curr[1], prev[1] + curr[2]], [0, 0])
 
     if (measureOfChange / dataFields > 0.5)
-        return [[{op: REPLACE, path, value: stripMutable(newValue)}], 1, 1]
+        return [[{op: REPLACE, path, value: newValue}], 1, 1]
     else
         return [diffResults.map(_ => _[0]).flat(), measureOfChange, dataFields];
 }
@@ -71,11 +71,9 @@ function diffArrayWithContext(context: ArrayContext, oldValue: any[], newValue: 
     return flattenPatch(arrayItemPatches, path, newValue)
 }
 
-const stripMutable = (value: any) => isMutable(value)?structuredClone(value.getOriginal()):value
-
 export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayContexts, path: JSONPointer = []): [JSONPatch, MeasureOfChange, DataFields] => {
     if (oldValue === undefined || oldValue === null)
-        return [[{op:ADD, path, value: stripMutable(newValue)}], 1, 1]
+        return [[{op:ADD, path, value: newValue}], 1, 1]
     // Primitives
     if (newValue === oldValue) return [[], 0, 1];
 
@@ -87,10 +85,10 @@ export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayConte
             }
         }
         if (Array.isArray(newValue) !== Array.isArray(oldValue))
-            return [[{op: REPLACE, path, value:stripMutable(newValue)}], 1, 1];
+            return [[{op: REPLACE, path, value: newValue}], 1, 1];
 
         return diffObjectOrArray(newValue, oldValue, contexts, path);
     }
 
-    return [[{op: REPLACE, path, value:stripMutable(newValue)}], 1, 1];
+    return [[{op: REPLACE, path, value: newValue}], 1, 1];
 };

@@ -3,7 +3,7 @@ import {setChannel, useMockCommunicationChannel} from "../util/mock-channel";
 import {initializeWorker} from "./secure/worker/worker-root";
 import {render} from "./secure/main/app.jay.html";
 import {JayPortMessageType} from "../../lib/comm-channel/messages";
-import {ADD, REPLACE} from "jay-mutable-contract";
+import {ADD, REPLACE} from "../../../json-patch";
 
 const initialData = {firstName: 'Joe', lastName: 'Smith'};
 const updatedData = {firstName: 'John', lastName: 'Green'};

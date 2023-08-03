@@ -3,7 +3,7 @@ import {JayPort, JayPortLogger} from "../../lib";
 import {JayChannel, JPMMessage} from "../../lib";
 import {addEventListenerMessage, eventInvocationMessage, renderMessage} from "../../lib/comm-channel/messages";
 import {eventually10ms} from "../util/eventually";
-import {REPLACE} from "jay-mutable-contract";
+import {REPLACE} from "../../../json-patch";
 
 const MESSAGE_RENDER_1 = renderMessage([{op: REPLACE, path: ['a'], value: {foo: 'bar'}}]);
 const MESSAGE_RENDER_2 = renderMessage([{op: REPLACE, path: ['a'], value: {foo: 'goo'}}]);

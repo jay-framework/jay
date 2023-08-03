@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "jay-component": "1.0.0",
-    "jay-mutable-contract": "1.0.0",
+    "jay-json-patch": "1.0.0",
     "jay-runtime": "1.0.0",
     "jay-reactive": "1.0.4",
     "jay-secure": "1.0.0",
