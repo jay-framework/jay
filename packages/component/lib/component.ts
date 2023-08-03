@@ -8,7 +8,9 @@ import {
     createJayContext, useContext, provideContext
 } from 'jay-runtime'
 import {ValueOrGetter, Getter, Reactive, Setter} from 'jay-reactive'
+import {JSONPatch, patch} from "jay-json-patch";
 
+export type Patcher<T> = (...patch: JSONPatch) => void
 export type hasProps<PropsT> = {props: Getter<PropsT>}
 export type Props<PropsT> = hasProps<PropsT> & {
     [K in keyof PropsT]: Getter<PropsT[K]>
@@ -77,6 +79,13 @@ export function createEffect(effect: () => void | EffectCleanup) {
 
 export function createState<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: Setter<T>] {
     return currentComponentContext().reactive.createState(value);
+}
+
+export function createPatchableState<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: Setter<T>, patchFunc: Patcher<T>] {
+    const [get, set] = createState(value)
+    const patchFunc = (...jsonPatch: JSONPatch) =>
+        set(patch(get(), jsonPatch));
+    return [get, set, patchFunc]
 }
 
 export function useReactive(): Reactive {

@@ -11,13 +11,14 @@ import {
 import {
     COMPONENT_CONTEXT,
     createEffect, createEvent,
-    createMemo,
+    createMemo, createPatchableState,
     createState,
     forTesting,
     makeJayComponent,
     Props, useReactive
 } from "../lib/component";
 import {Reactive} from "jay-reactive";
+import {REPLACE} from "jay-json-patch";
 const {makePropsProxy} = forTesting
 
 describe('state management', () => {
@@ -201,6 +202,36 @@ describe('state management', () => {
                 instance.update({name: 'mars'})
                 await instance.element.refs.label.$exec(elem =>
                   expect(elem.textContent).toBe('Hello world')
+                )
+            })
+        });
+
+        describe('with patchable state', () => {
+
+            interface Name {
+                name: string
+            }
+
+            function LabelComponentWithInternalState(props: Props<Name>, refs: LabelRefs) {
+
+                let [data, setData, patchData] =
+                    createPatchableState({label: 'Hello ' + props.name()});
+
+                return {
+                    render: () => ({
+                        label: data().label
+                    }),
+                    patchData
+                }
+            }
+
+            let label = makeJayComponent(renderLabelElement, LabelComponentWithInternalState)
+
+            it('should update the component as data is patched', async() => {
+                let instance = label({name: 'world'});
+                instance.patchData({op: REPLACE, path: ['label'], value: 'hello mars'})
+                await instance.element.refs.label.$exec(elem =>
+                    expect(elem.textContent).toBe('hello mars')
                 )
             })
         });
