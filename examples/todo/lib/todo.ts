@@ -2,7 +2,8 @@ import {Filter, render, ShownTodo, TodoElementRefs} from './todo.jay.html';
 import {createMemo, createState, makeJayComponent, Props} from 'jay-component';
 import {uuid} from "./uuid";
 import {patch} from "jay-serialization";
-import {ADD, REPLACE} from "jay-serialization/dist/types";
+import {ADD, JSONPatch, REPLACE} from "jay-serialization/dist/types";
+import {Getter, Setter, ValueOrGetter} from "jay-reactive";
 
 const ENTER_KEY = 13;
 const ESCAPE_KEY = 27;
@@ -16,6 +17,14 @@ interface TodoItem {
 interface TodoProps {
     initialTodos: Array<TodoItem>
 }
+//
+// type Patcher<T> = (patch: JSONPatch) => void
+// function createPatchableState<T>(value: ValueOrGetter<T>): [get: Getter<T>, patchFunc: Patcher<T>] {
+//     const [get, set] = createState(value)
+//     const patchFunc = (jsonPatch: JSONPatch) =>
+//         set(patch(get(), jsonPatch));
+//     return [get, patchFunc]
+// }
 
 function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoElementRefs) {
 
@@ -102,7 +111,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
     refs.label.ondblclick(({viewState: todo}) => {
         let itemIndex = todos().findIndex(_ => _.id === todo.id)
         setTodos(patch(todos(), [
-            {op: REPLACE, path: [itemIndex, 'title'], value: todo.title},
+            {op: REPLACE, path: [itemIndex, 'editText'], value: todo.title},
             {op: REPLACE, path: [itemIndex, 'isEditing'], value: true}
         ]))
     })
