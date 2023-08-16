@@ -92,12 +92,11 @@ export class ConstructContext<A extends Array<any>> {
     forStaticElements: boolean
 
     constructor(data: A,
-                dynamicRefs: Array<string> = [],
                 eventWrapper?: JayEventHandlerWrapper<any, any, any>,
                 dm?: ReferencesManager,
                 forStaticElements: boolean = true) {
         this.data = data;
-        this.refManager = dm ? dm : new ReferencesManager(dynamicRefs, eventWrapper);
+        this.refManager = dm ? dm : new ReferencesManager(eventWrapper);
         this.forStaticElements = forStaticElements;
     }
 
@@ -105,11 +104,11 @@ export class ConstructContext<A extends Array<any>> {
         return this.data[this.data.length - 1];
     }
 
-    coordinate(ref): Coordinate {
+    coordinate = (refName: string): Coordinate => {
         return [...this.data
             .slice(1)
             .map(_ => _.id)
-            .reverse(), ref];
+            .reverse(), refName];
     }
 
     static acc<A extends Array<any>, B>(a: A, b: B): [...A, B] {
@@ -117,23 +116,17 @@ export class ConstructContext<A extends Array<any>> {
     }
 
     forItem<T>(t: T) {
-        return new ConstructContext(ConstructContext.acc(this.data, t), [], undefined, this.refManager, false)
+        return new ConstructContext(ConstructContext.acc(this.data, t), undefined, this.refManager, false)
     }
 
     static withRootContext<ViewState, Refs>(viewState: ViewState,
                                             elementConstructor: () => BaseJayElement<ViewState>,
-                                            options?: RenderElementOptions,
-                                            dynamicRefs?: Array<string>):
+                                            options?: RenderElementOptions):
         JayElement<ViewState, Refs> {
-        let context = new ConstructContext([viewState], dynamicRefs, options?.eventWrapper)
+        let context = new ConstructContext([viewState], options?.eventWrapper)
         let element = provideContext(CONSTRUCTION_CONTEXT_MARKER, context, () =>
             wrapWithModifiedCheck(currentConstructionContext().currData, elementConstructor()))
         element.mount();
         return context.refManager.applyToElement(element);
     }
 }
-
-
-// export function useParentContext<ContextType>(marker: ContextMarker<ContextType>): ContextType {
-//
-// }

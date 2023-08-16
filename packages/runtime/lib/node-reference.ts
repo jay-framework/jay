@@ -5,16 +5,39 @@ import {
     updateFunc,
     JayComponent,
     JayEvent,
-    Coordinate
+    Coordinate, MountFunc
 } from "./element-types";
 import {JayEventHandlerWrapper} from "./element-types";
-import {ConstructContext} from "./context";
+import {ConstructContext, currentConstructionContext} from "./context";
 import {
-    GlobalJayEvents,
-    HTMLElementCollectionProxyTarget,
+    GlobalJayEvents, HTMLElementCollectionProxy,
+    HTMLElementCollectionProxyTarget, HTMLElementProxy,
     HTMLElementProxyTarget,
     HTMLNativeExec
 } from "./node-reference-types";
+
+export interface PublicRef {
+
+}
+
+export interface ManagedRef {
+    getPublicAPI(): PublicRef;
+}
+
+export interface ManagedCollectionRef<ViewState> extends ManagedRef {
+    addRef(ref: PrivateRef<ViewState>)
+    removeRef(ref: PrivateRef<ViewState>)
+}
+
+export interface PrivateRef<ViewState> {
+    update: updateFunc<ViewState>,
+    mount: MountFunc,
+    unmount: MountFunc,
+    viewState: ViewState,
+    coordinate: Coordinate,
+    getPublicAPI(): any;
+    set(referenced: HTMLElement | JayComponent<any, ViewState, any>): void;
+}
 
 interface Ref<ViewState> extends HTMLNativeExec<ViewState, any> {
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void
@@ -36,14 +59,26 @@ function defaultEventWrapper<EventType, ViewState, Returns>(
   return orig(event)
 }
 export class ReferencesManager {
-    private refs: Record<string, Ref<any>> = {};
-    private refCollections: Record<string, RefCollection<any>> = {};
+    private refs: Record<string, ManagedRef> = {};
+    // private refCollections: Record<string, RefCollection<any>> = {};
 
-    constructor(dynamicRefs?: Array<string>,
-                private eventWrapper: JayEventHandlerWrapper<any, any, any> = defaultEventWrapper) {
-        dynamicRefs?.forEach(id => this.refCollections[id] = new ReferenceCollection())
+    constructor(
+                public readonly eventWrapper: JayEventHandlerWrapper<any, any, any> = defaultEventWrapper) {
+        // dynamicRefs?.forEach(id => this.refCollections[id] = new ReferenceCollection())
     }
 
+    add<Ref extends ManagedRef>(refName: string, ref: Ref): Ref {
+        return this.refs[refName] = ref;
+    }
+
+    get(refName: string): ManagedRef {
+        return this.refs[refName];
+    }
+
+
+    /**
+     * @deprecated
+     */
     mkRef<ViewState>(referenced: HTMLElement | JayComponent<any, any, any>,
                      context: ConstructContext<any>,
                      refName: string,
@@ -57,67 +92,44 @@ export class ReferencesManager {
         }
     }
 
+    /**
+     * @deprecated
+     */
     getRefCollection(id: string, autoCreate: boolean = false): RefCollection<any> {
         if (!this.refCollections[id] && autoCreate)
             this.refCollections[id] = new ReferenceCollection();
         return this.refCollections[id];
     }
 
+    /**
+     * @deprecated
+     */
     addStaticRef(id: string, ref: Ref<any>) {
         this.refs[id] = ref;
     }
 
+    /**
+     * @deprecated
+     */
     addDynamicRef(id: string, ref: Ref<any>) {
         this.getRefCollection(id, true).addRef(ref);
     }
 
+    /**
+     * @deprecated
+     */
     removeDynamicRef(id: string, ref: Ref<any>) {
         this.refCollections[id]?.removeRef(ref);
     }
 
     applyToElement<T, Refs>(element:BaseJayElement<T>): JayElement<T, Refs> {
-        let allRefs = {...this.refCollections, ...this.refs};
-        let enrichedDynamicRefs = Object.keys(allRefs).reduce((enriched, key) => {
-            enriched[key] = newReferenceProxy(allRefs[key])
-            return enriched;
+        let enrichedDynamicRefs = Object.keys(this.refs).reduce((publicRefAPIs, key) => {
+            publicRefAPIs[key] = this.refs[key].getPublicAPI();
+            return publicRefAPIs;
         }, {})
         let refs = enrichedDynamicRefs as Refs
         return {...element, refs};
     }
-}
-
-const proxyHandler = {
-    get: function(target, prop, receiver) {
-        if (typeof prop === 'string') {
-            if (prop.indexOf("on") === 0) {
-                let eventName = prop.substring(2);
-                return (handler) => {
-                    target.addEventListener(eventName, handler);
-                }
-            }
-            if (prop.indexOf("$on") === 0) {
-                let eventName = prop.substring(3);
-                return (nativeHandler) => {
-                    let regularHandler;
-                    const handler = ({event, viewState, coordinate}) => {
-                        const returnedEvent = nativeHandler({event, viewState, coordinate});
-                        if (regularHandler)
-                            regularHandler({event: returnedEvent, viewState, coordinate});
-                    }
-                    target.addEventListener(eventName, handler);
-                    return {
-                        then: (handler) => {
-                            regularHandler = handler;
-                        }
-                    }
-                }
-            }
-        }
-        return target[prop];
-    }
-}
-export function newReferenceProxy<ViewState, T>(ref: T): T & GlobalJayEvents<ViewState> {
-    return new Proxy(ref, proxyHandler);
 }
 
 class ReferenceCollection<ViewState> implements RefCollection<ViewState>, HTMLElementCollectionProxyTarget<ViewState, any>{
@@ -185,12 +197,91 @@ export function ComponentRef<ViewState>(comp: JayComponent<any, any, any>, viewS
     return [ref, update];
 }
 
-export class HTMLElementRefImpl<ViewState> implements Ref<ViewState>, HTMLElementProxyTarget<ViewState, any>{
+
+
+
+export function elemCollectionRef<ViewState, ElementType extends HTMLElement>(refName: string) {
+    let {currData, coordinate, refManager} = currentConstructionContext();
+    let ref = new HTMLElementRefImpl<ViewState, ElementType>(currData, coordinate(refName), refManager.eventWrapper);
+    if (!refManager.get(refName)) {
+        let collRef = new HTMLElementCollectionRefImpl<ViewState, ElementType>();
+        collRef.addRef(ref)
+        refManager.add(refName, collRef);
+    }
+    else
+        (refManager.get(refName) as HTMLElementCollectionRefImpl<ViewState, ElementType>).addRef(ref);
+    return ref;
+}
+
+export function elemRef(refName: string): PrivateRef<any> {
+    let {currData, coordinate, refManager} = currentConstructionContext();
+    return refManager.add(refName, new HTMLElementRefImpl(currData, coordinate(refName), refManager.eventWrapper));
+}
+
+class HTMLElementCollectionRefImpl<ViewState, ElementType extends HTMLElement> implements ManagedCollectionRef<ViewState>, HTMLElementCollectionProxyTarget<ViewState, any>{
+    protected elements: Set<HTMLElementRefImpl<ViewState, ElementType>> = new Set();
     private listeners = [];
 
-    constructor(private readonly element: HTMLElement, public viewState: ViewState, public coordinate: Coordinate, private eventWrapper: JayEventHandlerWrapper<any, ViewState, any>) {
-        this.element = element;
+    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void {
+        this.listeners.push({type, listener, options})
+        this.elements.forEach(ref =>
+            ref.addEventListener(type, listener, options))
+    }
+
+    addRef(ref: HTMLElementRefImpl<ViewState, ElementType>) {
+        this.elements.add(ref);
+        this.listeners.forEach(listener =>
+            ref.addEventListener(listener.type, listener.listener, listener.options))
+    }
+
+    removeRef(ref: HTMLElementRefImpl<ViewState, ElementType>) {
+        this.elements.delete(ref);
+        this.listeners.forEach(listener =>
+            ref.removeEventListener(listener.type, listener.listener, listener.options))
+    }
+
+    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: EventListenerOptions | boolean): void {
+        this.listeners = this.listeners.filter(item => item.type !== type || item.listener !== listener);
+        this.elements.forEach(ref =>
+            ref.removeEventListener(type, listener, options))
+    }
+
+    map<ResultType>(handler: (referenced: HTMLNativeExec<ViewState, any>, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType> {
+        return [...this.elements].map(ref => handler(ref, ref.viewState, ref.coordinate));
+    }
+
+    find(predicate: (viewState: ViewState, c: Coordinate) => boolean) {
+        for (let ref of this.elements)
+            if (predicate(ref.viewState, ref.coordinate))
+                return ref
+    }
+
+    getPublicAPI(): HTMLElementCollectionProxy<ViewState, ElementType> {
+        return newReferenceProxy<ViewState, HTMLElementCollectionProxyTarget<ViewState, ElementType>>(this)
+    }
+}
+
+export class HTMLElementRefImpl<ViewState, ElementType extends HTMLElement> implements PrivateRef<ViewState>, HTMLElementProxyTarget<ViewState, any>{
+    private listeners = [];
+    private element: ElementType;
+
+    constructor(
+        public viewState: ViewState,
+        public coordinate: Coordinate,
+        private eventWrapper: JayEventHandlerWrapper<any, ViewState, any>,
+        private parentCollection?: HTMLElementCollectionRefImpl<ViewState, ElementType>) {
         this.viewState = viewState
+    }
+
+    set(referenced: ElementType | JayComponent<any, ViewState, any>): void {
+        this.element = referenced as ElementType;
+    }
+
+    mount = () => {
+        this.parentCollection?.addRef(this)
+    }
+    unmount = () => {
+        this.parentCollection?.removeRef(this)
     }
 
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void {
@@ -214,7 +305,7 @@ export class HTMLElementRefImpl<ViewState> implements Ref<ViewState>, HTMLElemen
         this.viewState = newData;
     }
 
-    $exec<T>(handler: (elem: Element, viewState: ViewState) => T): Promise<T> {
+    $exec<T>(handler: (elem: ElementType, viewState: ViewState) => T): Promise<T> {
         return new Promise((resolve, reject) => {
             try {
                 resolve(handler(this.element, this.viewState));
@@ -224,4 +315,42 @@ export class HTMLElementRefImpl<ViewState> implements Ref<ViewState>, HTMLElemen
             }
         })
     }
+
+    getPublicAPI(): HTMLElementProxy<ViewState, ElementType> {
+        return newReferenceProxy<ViewState, HTMLElementProxyTarget<ViewState, ElementType>>(this)
+    }
+}
+
+const HTMLElementRefProxy = {
+    get: function(target, prop, receiver) {
+        if (typeof prop === 'string') {
+            if (prop.indexOf("on") === 0) {
+                let eventName = prop.substring(2);
+                return (handler) => {
+                    target.addEventListener(eventName, handler);
+                }
+            }
+            if (prop.indexOf("$on") === 0) {
+                let eventName = prop.substring(3);
+                return (nativeHandler) => {
+                    let regularHandler;
+                    const handler = ({event, viewState, coordinate}) => {
+                        const returnedEvent = nativeHandler({event, viewState, coordinate});
+                        if (regularHandler)
+                            regularHandler({event: returnedEvent, viewState, coordinate});
+                    }
+                    target.addEventListener(eventName, handler);
+                    return {
+                        then: (handler) => {
+                            regularHandler = handler;
+                        }
+                    }
+                }
+            }
+        }
+        return target[prop];
+    }
+}
+export function newReferenceProxy<ViewState, T>(ref: T): T & GlobalJayEvents<ViewState> {
+    return new Proxy(ref, HTMLElementRefProxy);
 }

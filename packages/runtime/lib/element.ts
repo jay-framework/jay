@@ -17,36 +17,29 @@ import {
     provideContext, restoreContext, saveContext,
     wrapWithModifiedCheck
 } from "./context";
+import {PrivateRef} from "./node-reference";
 
 const STYLE = 'style';
-const REF = 'ref';
 
-function mkRef(refName: string, referenced: HTMLElement | JayComponent<any, any, any>, updates: updateFunc<any>[], mounts: MountFunc[], unmounts: MountFunc[], isComp: boolean) {
-    let context = currentConstructionContext();
-    let [ref, update] = context.refManager.mkRef(referenced, context, refName, isComp);
-    updates.push(update);
-    if (context.forStaticElements) {
-        context.refManager.addStaticRef(refName, ref);
-    }
-    else {
-        let refManager = context.refManager;
-        mounts.push(() => refManager.addDynamicRef(refName, ref))
-        unmounts.push(() => refManager.removeDynamicRef(refName, ref))
-    }
+function mkRef<ViewState>(ref: PrivateRef<ViewState>, referenced: HTMLElement | JayComponent<any, ViewState, any>, updates: updateFunc<ViewState>[], mounts: MountFunc[], unmounts: MountFunc[]) {
+    updates.push(ref.update);
+    ref.set(referenced)
+    mounts.push(ref.mount)
+    unmounts.push(ref.unmount)
 }
 
 export function childComp<ParentVS, Props, ChildT,
     ChildElement extends BaseJayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
     compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentVS) => Props,
-    refName?: string): BaseJayElement<ParentVS> {
+    ref?: PrivateRef<ParentVS>): BaseJayElement<ParentVS> {
     let context = currentConstructionContext();
     let childComp = compCreator(getProps(context.currData))
     let updates: updateFunc<ParentVS>[] = [(t: ParentVS) => childComp.update(getProps(t))];
     let mounts: MountFunc[] = [childComp.mount]
     let unmounts: MountFunc[] = [childComp.unmount]
-    if (refName) {
-        mkRef(refName, childComp, updates, mounts, unmounts, true)
+    if (ref) {
+        mkRef(ref, childComp, updates, mounts, unmounts)
     }
     return {
         dom: childComp.element.dom,
@@ -241,9 +234,10 @@ export function dynamicText<ViewState>(
 export function element<ViewState>(
     tagName: string,
     attributes: Attributes<ViewState>,
+    ref?: PrivateRef<ViewState>,
     children: Array<BaseJayElement<ViewState> | TextElement<ViewState> | string> = []):
     BaseJayElement<ViewState> {
-    let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes);
+    let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes, ref);
     
     children.forEach(child => {
         if (typeof child === 'string')
@@ -267,9 +261,10 @@ export function element<ViewState>(
 export function dynamicElement<ViewState>(
     tagName: string,
     attributes: Attributes<ViewState>,
+    ref?: PrivateRef<ViewState>,
     children: Array<Conditional<ViewState> | ForEach<ViewState, any> | TextElement<ViewState> | BaseJayElement<ViewState> | string> = []):
     BaseJayElement<ViewState> {
-    let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes);
+    let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes, ref);
 
     let kindergarten = new Kindergarten(e);
     children.forEach(child => {
@@ -313,20 +308,19 @@ export function dynamicElement<ViewState>(
     };
 }
 
-function createBaseElement<ViewState>(tagName: string, attributes: Attributes<ViewState>):
+function createBaseElement<ViewState>(tagName: string, attributes: Attributes<ViewState>, ref?: PrivateRef<ViewState>):
     {e: HTMLElement, updates: updateFunc<ViewState>[], mounts: MountFunc[], unmounts: MountFunc[]} {
     let e = document.createElement(tagName);
     let updates: updateFunc<ViewState>[] = [];
     let mounts: MountFunc[] = []
     let unmounts: MountFunc[] = []
+    if (ref)
+        mkRef(ref, e, updates, mounts, unmounts)
     Object.entries(attributes).forEach(([key, value]) => {
         if (key === STYLE) {
             Object.entries(value).forEach(([styleKey, styleValue]) => {
                 setAttribute(e.style, styleKey, styleValue as string | DynamicAttributeOrProperty<ViewState, any>, updates);
             })
-        }
-        else if (key === REF) {
-            mkRef(value as string, e, updates, mounts, unmounts, false)
         }
         else {
             setAttribute(e, key, value as string | DynamicAttributeOrProperty<ViewState, any>, updates);
