@@ -256,7 +256,7 @@ class HTMLElementCollectionRefImpl<ViewState, ElementType extends HTMLElement> i
     }
 
     getPublicAPI(): HTMLElementCollectionProxy<ViewState, ElementType> {
-        return newReferenceProxy<ViewState, HTMLElementCollectionProxyTarget<ViewState, ElementType>>(this)
+        return newHTMLElementyPublicApiProxy<ViewState, HTMLElementCollectionProxyTarget<ViewState, ElementType>>(this)
     }
 }
 
@@ -318,40 +318,61 @@ export class HTMLElementRefImpl<ViewState, ElementType extends HTMLElement> impl
     }
 
     getPublicAPI(): HTMLElementProxy<ViewState, ElementType> {
-        return newReferenceProxy<ViewState, HTMLElementProxyTarget<ViewState, ElementType>>(this)
+        return newHTMLElementyPublicApiProxy<ViewState, HTMLElementProxyTarget<ViewState, ElementType>>(this)
     }
 }
 
-const HTMLElementRefProxy = {
-    get: function(target, prop, receiver) {
-        if (typeof prop === 'string') {
-            if (prop.indexOf("on") === 0) {
-                let eventName = prop.substring(2);
-                return (handler) => {
-                    target.addEventListener(eventName, handler);
-                }
+const EVENT_TRAP = (target, prop, receiver) => {
+    if (typeof prop === 'string') {
+        if (prop.indexOf("on") === 0) {
+            let eventName = prop.substring(2);
+            return (handler) => {
+                target.addEventListener(eventName, handler);
             }
-            if (prop.indexOf("$on") === 0) {
-                let eventName = prop.substring(3);
-                return (nativeHandler) => {
-                    let regularHandler;
-                    const handler = ({event, viewState, coordinate}) => {
-                        const returnedEvent = nativeHandler({event, viewState, coordinate});
-                        if (regularHandler)
-                            regularHandler({event: returnedEvent, viewState, coordinate});
-                    }
-                    target.addEventListener(eventName, handler);
-                    return {
-                        then: (handler) => {
-                            regularHandler = handler;
-                        }
+        }
+    }
+    return false;
+}
+
+const EVENT$_TRAP = (target, prop, receiver) => {
+    if (typeof prop === 'string') {
+        if (prop.indexOf("$on") === 0) {
+            let eventName = prop.substring(3);
+            return (nativeHandler) => {
+                let regularHandler;
+                const handler = ({event, viewState, coordinate}) => {
+                    const returnedEvent = nativeHandler({event, viewState, coordinate});
+                    if (regularHandler)
+                        regularHandler({event: returnedEvent, viewState, coordinate});
+                }
+                target.addEventListener(eventName, handler);
+                return {
+                    then: (handler) => {
+                        regularHandler = handler;
                     }
                 }
             }
         }
-        return target[prop];
+    }
+    return false;
+}
+
+const GetTrapProxy = (getTraps: Array<(target: any, p: string | symbol, receiver: any) => any>) => {
+    return {
+        get: function(target, prop, receiver) {
+            let result;
+            for (let getTrap of getTraps) {
+                result = getTrap(target, prop, receiver)
+                if (result)
+                    return result;
+            }
+            return target[prop];
+        }
     }
 }
-export function newReferenceProxy<ViewState, T>(ref: T): T & GlobalJayEvents<ViewState> {
+
+const HTMLElementRefProxy = GetTrapProxy([EVENT_TRAP, EVENT$_TRAP])
+
+export function newHTMLElementyPublicApiProxy<ViewState, T>(ref: T): T & GlobalJayEvents<ViewState> {
     return new Proxy(ref, HTMLElementRefProxy);
 }
