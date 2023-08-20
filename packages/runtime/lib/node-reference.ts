@@ -200,17 +200,16 @@ export function ComponentRef<ViewState>(comp: JayComponent<any, any, any>, viewS
 
 
 
-export function elemCollectionRef<ViewState, ElementType extends HTMLElement>(refName: string) {
-    let {currData, coordinate, refManager} = currentConstructionContext();
-    let ref = new HTMLElementRefImpl<ViewState, ElementType>(currData, coordinate(refName), refManager.eventWrapper);
-    if (!refManager.get(refName)) {
-        let collRef = new HTMLElementCollectionRefImpl<ViewState, ElementType>();
+export function elemCollectionRef<ViewState, ElementType extends HTMLElement>(refName: string): () => PrivateRef<ViewState> {
+    let {refManager} = currentConstructionContext();
+    let collRef = new HTMLElementCollectionRefImpl<ViewState, ElementType>()
+    refManager.add(refName, collRef);
+    return () => {
+        let {currData, coordinate, refManager} = currentConstructionContext();
+        let ref = new HTMLElementRefImpl<ViewState, ElementType>(currData, coordinate(refName), refManager.eventWrapper);
         collRef.addRef(ref)
-        refManager.add(refName, collRef);
+        return ref;
     }
-    else
-        (refManager.get(refName) as HTMLElementCollectionRefImpl<ViewState, ElementType>).addRef(ref);
-    return ref;
 }
 
 export function elemRef(refName: string): PrivateRef<any> {
@@ -275,6 +274,8 @@ export class HTMLElementRefImpl<ViewState, ElementType extends HTMLElement> impl
 
     set(referenced: ElementType | JayComponent<any, ViewState, any>): void {
         this.element = referenced as ElementType;
+        this.listeners.forEach(({type, wrappedHandler, options}) =>
+            this.element.addEventListener(type, wrappedHandler, options))
     }
 
     mount = () => {
@@ -288,8 +289,8 @@ export class HTMLElementRefImpl<ViewState, ElementType extends HTMLElement> impl
         let wrappedHandler = (event) => {
             return this.eventWrapper(listener, {event, viewState: this.viewState, coordinate: this.coordinate});
         }
-        this.element.addEventListener(type, wrappedHandler, options)
-        this.listeners.push({type, listener, wrappedHandler})
+        this.element?.addEventListener(type, wrappedHandler, options)
+        this.listeners.push({type, listener, wrappedHandler, options})
     }
 
     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: EventListenerOptions | boolean): void {
@@ -297,7 +298,7 @@ export class HTMLElementRefImpl<ViewState, ElementType extends HTMLElement> impl
         if (index > -1) {
             let item = this.listeners[index];
             this.listeners.splice(index, 1)
-            this.element.removeEventListener(type, item.wrappedHandler, options)
+            this.element?.removeEventListener(type, item.wrappedHandler, options)
         }
     }
 
