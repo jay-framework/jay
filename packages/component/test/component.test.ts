@@ -535,7 +535,7 @@ describe('state management', () => {
                         e('button', {}, ['dec'], elemRef('dec')),
                         e('div', {}, [dt(vs => vs.value)], elemRef('value')),
                         e('button', {}, ['inc'], elemRef('inc'))
-                    ]), options, []
+                    ]), options
                 ) as CounterElement;
             }
 
@@ -625,7 +625,7 @@ describe('state management', () => {
                     e('div', {}, [
                         e('div', {}, [dt(trackingLabelGetter)], elemRef('label')),
                         e('button', {}, ['click'], elemRef('button'))
-                    ]), options, []
+                    ]), options
                 ) as LabelAndButtonElement;
             }
 
