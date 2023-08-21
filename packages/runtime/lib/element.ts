@@ -21,7 +21,7 @@ import {PrivateRef} from "./node-reference";
 
 const STYLE = 'style';
 
-function mkRef<ViewState>(ref: PrivateRef<ViewState>, referenced: HTMLElement | JayComponent<any, ViewState, any>, updates: updateFunc<ViewState>[], mounts: MountFunc[], unmounts: MountFunc[]) {
+function mkRef<ViewState>(ref: PrivateRef<ViewState, any>, referenced: HTMLElement | JayComponent<any, ViewState, any>, updates: updateFunc<ViewState>[], mounts: MountFunc[], unmounts: MountFunc[]) {
     updates.push(ref.update);
     ref.set(referenced)
     mounts.push(ref.mount)
@@ -32,7 +32,7 @@ export function childComp<ParentVS, Props, ChildT,
     ChildElement extends BaseJayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
     compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentVS) => Props,
-    ref?: PrivateRef<ParentVS>): BaseJayElement<ParentVS> {
+    ref?: PrivateRef<ParentVS, ChildComp>): BaseJayElement<ParentVS> {
     let context = currentConstructionContext();
     let childComp = compCreator(getProps(context.currData))
     let updates: updateFunc<ParentVS>[] = [(t: ParentVS) => childComp.update(getProps(t))];
@@ -234,8 +234,8 @@ export function dynamicText<ViewState>(
 export function element<ViewState>(
     tagName: string,
     attributes: Attributes<ViewState>,
-    ref?: PrivateRef<ViewState>,
-    children: Array<BaseJayElement<ViewState> | TextElement<ViewState> | string> = []):
+    children: Array<BaseJayElement<ViewState> | TextElement<ViewState> | string> = [],
+    ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>):
     BaseJayElement<ViewState> {
     let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes, ref);
     
@@ -261,8 +261,8 @@ export function element<ViewState>(
 export function dynamicElement<ViewState>(
     tagName: string,
     attributes: Attributes<ViewState>,
-    ref?: PrivateRef<ViewState>,
-    children: Array<Conditional<ViewState> | ForEach<ViewState, any> | TextElement<ViewState> | BaseJayElement<ViewState> | string> = []):
+    children: Array<Conditional<ViewState> | ForEach<ViewState, any> | TextElement<ViewState> | BaseJayElement<ViewState> | string> = [],
+    ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>):
     BaseJayElement<ViewState> {
     let {e, updates, mounts, unmounts} = createBaseElement(tagName, attributes, ref);
 
@@ -308,7 +308,7 @@ export function dynamicElement<ViewState>(
     };
 }
 
-function createBaseElement<ViewState>(tagName: string, attributes: Attributes<ViewState>, ref?: PrivateRef<ViewState>):
+function createBaseElement<ViewState>(tagName: string, attributes: Attributes<ViewState>, ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>):
     {e: HTMLElement, updates: updateFunc<ViewState>[], mounts: MountFunc[], unmounts: MountFunc[]} {
     let e = document.createElement(tagName);
     let updates: updateFunc<ViewState>[] = [];

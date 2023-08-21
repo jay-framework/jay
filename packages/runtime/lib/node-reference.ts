@@ -10,6 +10,7 @@ import {
 import {JayEventHandlerWrapper} from "./element-types";
 import {ConstructContext, currentConstructionContext} from "./context";
 import {
+    ComponentCollectionProxy,
     GlobalJayEvents, HTMLElementCollectionProxy,
     HTMLElementCollectionProxyTarget, HTMLElementProxy,
     HTMLElementProxyTarget,
@@ -218,6 +219,12 @@ export function elemRef(refName: string): PrivateRef<any, any> {
     return refManager.add(refName, new HTMLElementRefImpl(currData, coordinate(refName), refManager.eventWrapper));
 }
 
+export function compRef(refName: string): PrivateRef<any, any> {
+    let {currData, coordinate, refManager} = currentConstructionContext();
+    return refManager.add(refName, new ComponentRefImpl(currData, coordinate(refName), refManager.eventWrapper));
+}
+
+
 abstract class CollectionRefImpl<ViewState,
     ElementType extends ReferenceTarget<ViewState>,
     PublicRefAPI, PublicCollectionRefAPI,
@@ -310,9 +317,11 @@ export abstract class RefImpl<
         this.parentCollection?.removeRef(this as any as RefType)
     }
 
+    abstract formatEvent(event: any): JayEvent<any, ViewState>
+
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void {
         let wrappedHandler = (event) => {
-            return this.eventWrapper(listener, {event, viewState: this.viewState, coordinate: this.coordinate});
+            return this.eventWrapper(listener, this.formatEvent(event));
         }
         this.element?.addEventListener(type, wrappedHandler, options)
         this.listeners.push({type, listener, wrappedHandler, options})
@@ -341,6 +350,10 @@ export class HTMLElementRefImpl<ViewState, ElementType extends HTMLElement> exte
     implements HTMLElementProxyTarget<ViewState, any>
 {
 
+    formatEvent(event: Event): JayEvent<Event, ViewState> {
+        return {event, viewState: this.viewState, coordinate: this.coordinate};
+    }
+
     getPublicAPI(): HTMLElementProxy<ViewState, ElementType> {
         return newHTMLElementyPublicApiProxy<ViewState, HTMLElementProxyTarget<ViewState, ElementType>>(this)
     }
@@ -356,6 +369,22 @@ export class HTMLElementRefImpl<ViewState, ElementType extends HTMLElement> exte
         })
     }
 
+}
+
+export class ComponentRefImpl<ViewState, ComponentType extends JayComponent<any, ViewState, any>> extends
+    RefImpl<ViewState, ComponentType,
+        ComponentType,
+        ComponentCollectionProxy<ViewState, ComponentType>,
+        ComponentRefImpl<ViewState, ComponentType>>
+{
+
+    formatEvent(event: any): JayEvent<any, ViewState> {
+        return {...event, viewState: this.viewState, coordinate: this.coordinate}
+    }
+
+    getPublicAPI(): ComponentType {
+        return newComponentPublicApiProxy<ViewState, ComponentType>(this) as any as ComponentType
+    }
 }
 
 
@@ -412,4 +441,10 @@ const HTMLElementRefProxy = GetTrapProxy([EVENT_TRAP, EVENT$_TRAP])
 
 export function newHTMLElementyPublicApiProxy<ViewState, T>(ref: T): T & GlobalJayEvents<ViewState> {
     return new Proxy(ref, HTMLElementRefProxy);
+}
+
+const ComponentRefProxy = GetTrapProxy([EVENT_TRAP])
+
+export function newComponentPublicApiProxy<ViewState, C extends JayComponent<any, ViewState, any>>(ref: ComponentRefImpl<ViewState, C>): JayComponent<any, ViewState, any> {
+    return new Proxy(ref, ComponentRefProxy);
 }

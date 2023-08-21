@@ -4,6 +4,7 @@ import {HTMLElementProxy} from "../../../lib";
 import {JayEventHandler} from "../../../lib";
 import {mkComponentEventHandler} from "./make-component-event-handler";
 import {ConstructContext} from "../../../lib/context";
+import {elemRef} from "../../../lib/node-reference";
 
 export interface ItemVS {
     text: string,
@@ -18,10 +19,10 @@ export interface ItemElement extends JayElement<ItemVS, ItemRefs> {}
 
 function renderItem(viewState: ItemVS): ItemElement {
     return ConstructContext.withRootContext(viewState, () =>
-        e('div', {'data-id': viewState.dataId}, [
+        e('div', {'data-id': viewState.dataId},[
             e('span', {}, [dt(vs => `${vs.text} - ${vs.done?'done':'tbd'}`)]),
-            e('button', {'data-id': 'done', ref: 'done'}, ['done']),
-            e('button', {'data-id': 'remove', ref: 'remove'}, ['remove'])])
+            e('button', {'data-id': 'done'}, ['done'], elemRef('done')),
+            e('button', {'data-id': 'remove'}, ['remove'], elemRef('remove'))])
     ) as ItemElement;
 }
 
