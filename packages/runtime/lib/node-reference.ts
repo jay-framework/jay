@@ -272,6 +272,10 @@ export class ComponentRefImpl<ViewState, ComponentType extends JayComponent<any,
         ComponentRefImpl<ViewState, ComponentType>>
 {
 
+    getFromComponent(prop) {
+        return this.element[prop];
+    }
+
     formatEvent(event: any): JayEvent<any, ViewState> {
         return {...event, viewState: this.viewState, coordinate: this.coordinate}
     }
@@ -317,6 +321,11 @@ const EVENT$_TRAP = (target, prop, receiver) => {
     return false;
 }
 
+const DELEGATE_TO_COMP_TRAP = (target, prop, receiver) => {
+    return target.getFromComponent(prop)
+}
+
+
 const GetTrapProxy = (getTraps: Array<(target: any, p: string | symbol, receiver: any) => any>) => {
     return {
         get: function(target, prop, receiver) {
@@ -337,7 +346,7 @@ export function newHTMLElementyPublicApiProxy<ViewState, T>(ref: T): T & GlobalJ
     return new Proxy(ref, HTMLElementRefProxy);
 }
 
-const ComponentRefProxy = GetTrapProxy([EVENT_TRAP])
+const ComponentRefProxy = GetTrapProxy([EVENT_TRAP, DELEGATE_TO_COMP_TRAP])
 
 export function newComponentPublicApiProxy<ViewState, C extends JayComponent<any, ViewState, any>>(ref: ComponentRefImpl<ViewState, C>): JayComponent<any, ViewState, any> {
     return new Proxy(ref, ComponentRefProxy);

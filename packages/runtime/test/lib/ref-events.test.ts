@@ -143,8 +143,8 @@ describe('ReferencesManager events', () => {
             items: Array<RootElementViewStateItem>
         }
         interface RootElementRefs {
-            refName1: HTMLElementCollectionProxy<RootElementViewState, HTMLDivElement>
-            refName2: HTMLElementCollectionProxy<RootElementViewState, HTMLDivElement>
+            refName1: HTMLElementCollectionProxy<RootElementViewStateItem, HTMLDivElement>
+            refName2: HTMLElementCollectionProxy<RootElementViewStateItem, HTMLDivElement>
         }
 
         const VIEW_STATE: RootElementViewState = {
