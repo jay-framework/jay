@@ -19,6 +19,7 @@ import {
 } from "../lib/component";
 import {Reactive} from "jay-reactive";
 import {REPLACE} from "jay-json-patch";
+import {elemRef} from "jay-runtime/dist/node-reference";
 const {makePropsProxy} = forTesting
 
 describe('state management', () => {
@@ -104,7 +105,7 @@ describe('state management', () => {
         function renderLabelElement(viewState: ViewState): LabelElement {
             return ConstructContext.withRootContext(viewState, () =>
                 e('div', {}, [
-                    e('div', {ref: 'label'}, [dt(vs => vs.label)])
+                    e('div', {}, [dt(vs => vs.label)], elemRef('label'))
                 ])
             ) as LabelElement;
         }
@@ -123,8 +124,8 @@ describe('state management', () => {
         function renderTwoLabelElement(viewState: TwoLabelsViewState): TwoLabelsElement {
             return ConstructContext.withRootContext(viewState, () =>
                 e('div', {}, [
-                    e('div', {ref: 'label1'}, [dt(vs => vs.label1)]),
-                    e('div', {ref: 'label2'}, [dt(vs => vs.label2)])
+                    e('div', {}, [dt(vs => vs.label1)], elemRef('label1')),
+                    e('div', {}, [dt(vs => vs.label2)], elemRef('label2'))
                 ])
             ) as TwoLabelsElement;
         }
@@ -531,9 +532,9 @@ describe('state management', () => {
             function renderCounterElement(viewState: CounterViewState, options?: RenderElementOptions): CounterElement {
                 return ConstructContext.withRootContext(viewState, () =>
                     e('div', {}, [
-                        e('button', {ref: 'dec'}, ['dec']),
-                        e('div', {ref: 'value'}, [dt(vs => vs.value)]),
-                        e('button', {ref: 'inc'}, ['inc'])
+                        e('button', {}, ['dec'], elemRef('dec')),
+                        e('div', {}, [dt(vs => vs.value)], elemRef('value')),
+                        e('button', {}, ['inc'], elemRef('inc'))
                     ]), options, []
                 ) as CounterElement;
             }
@@ -622,8 +623,8 @@ describe('state management', () => {
             function renderTwoLabelElement(viewState: LabelAndButtonViewState, options?: RenderElementOptions): LabelAndButtonElement {
                 return ConstructContext.withRootContext(viewState, () =>
                     e('div', {}, [
-                        e('div', {ref: 'label'}, [dt(trackingLabelGetter)]),
-                        e('button', {ref: 'button'}, ['click'])
+                        e('div', {}, [dt(trackingLabelGetter)], elemRef('label')),
+                        e('button', {}, ['click'], elemRef('button'))
                     ]), options, []
                 ) as LabelAndButtonElement;
             }
