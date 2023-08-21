@@ -1,5 +1,10 @@
 import {beforeEach, describe, expect, it} from '@jest/globals'
-import {compRef, elemCollectionRef, elemRef, HTMLElementRefImpl, ReferencesManager} from "../../lib/node-reference";
+import {
+    compCollectionRef,
+    compRef,
+    elemCollectionRef,
+    elemRef
+} from "../../lib/node-reference";
 import {
     childComp,
     ConstructContext,
@@ -31,7 +36,6 @@ const COORDINATE_22 = [id2, refName2]
 const ITEM_PROPS = {text: 'hello', dataId: 'A'};
 const ITEM_PROPS_2 = {text: 'hi', dataId: 'B'};
 const ITEM_PROPS_3 = {text: 'hey there', dataId: 'C'};
-const UNIT_WRAPPER = (orig, event) => orig(event);
 
 
 describe('ReferencesManager events', () => {
@@ -421,7 +425,7 @@ describe('ReferencesManager events', () => {
             items: ItemViewState[]
         }
         interface RootElementRefs {
-            id1: ItemRefs<ItemViewState>
+            refName1: ItemRefs<ItemViewState>
         }
 
         let jayComponents: ItemRef<ViewState>[],
@@ -439,17 +443,19 @@ describe('ReferencesManager events', () => {
         }
 
         function constructElement(viewState: ViewState) {
-            return ConstructContext.withRootContext(viewState, () =>
-              de('div', {}, [
-                  forEach((vs: typeof viewState) => vs.items,
-                    (item) =>
-                      childComp((props) => {
-                          let comp = Item<ViewState>(props as ItemProps);
-                          jayComponents.push(comp)
-                          return comp;
-                      }, vs => ITEM_PROPS, refName1),
-                    'id')
-              ]), undefined, [refName1]);
+            return ConstructContext.withRootContext(viewState, () => {
+                const ref_1 = compCollectionRef(refName1);
+                return de('div', {}, [
+                    forEach((vs: typeof viewState) => vs.items,
+                        (item) =>
+                            childComp((props) => {
+                                let comp = Item<ViewState>(props as ItemProps);
+                                jayComponents.push(comp)
+                                return comp;
+                            }, vs => ITEM_PROPS, ref_1()),
+                        'id')
+                ])})
+                ;
         }
 
         describe('default tests', () => {
@@ -461,7 +467,7 @@ describe('ReferencesManager events', () => {
             })
 
             it('should enrich root element with the ref and allow registering events using addEventListener', () => {
-                jayRootElement.refs.id1.addEventListener('remove', mockCallback);
+                jayRootElement.refs.refName1.addEventListener('remove', mockCallback);
                 let button = jayComponents[1].element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
                 button.click();
 
@@ -469,7 +475,7 @@ describe('ReferencesManager events', () => {
             })
 
             it('should enrich root element with the ref and allow registering events using onremove', () => {
-                jayRootElement.refs.id1.onremove(mockCallback);
+                jayRootElement.refs.refName1.onremove(mockCallback);
                 let button = jayComponents[1].element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
                 button.click();
 
@@ -477,7 +483,7 @@ describe('ReferencesManager events', () => {
             })
 
             it('event parameters', () => {
-                jayRootElement.refs.id1.onremove(mockCallback);
+                jayRootElement.refs.refName1.onremove(mockCallback);
                 let button = jayComponents[1].element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
                 button.click();
 
@@ -488,8 +494,8 @@ describe('ReferencesManager events', () => {
             })
 
             it('should remove event using removeEventListener', () => {
-                jayRootElement.refs.id1.addEventListener('remove', mockCallback);
-                jayRootElement.refs.id1.removeEventListener('remove', mockCallback);
+                jayRootElement.refs.refName1.addEventListener('remove', mockCallback);
+                jayRootElement.refs.refName1.removeEventListener('remove', mockCallback);
                 let button = jayComponents[1].element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
                 button.click();
 
@@ -506,7 +512,7 @@ describe('ReferencesManager events', () => {
             })
 
             it('should enrich root element with the ref and allow registering events on components (using onremove)', () => {
-                jayRootElement.refs.id1.onremove(mockCallback);
+                jayRootElement.refs.refName1.onremove(mockCallback);
                 jayRootElement.update(viewState);
                 let button = jayComponents[1].element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
                 button.click();

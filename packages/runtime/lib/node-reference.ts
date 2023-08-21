@@ -41,20 +41,6 @@ export interface PrivateRef<ViewState, PublicRefAPI> {
     removeEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>, options?: EventListenerOptions | boolean)
 }
 
-// interface Ref<ViewState> extends HTMLNativeExec<ViewState, any> {
-//     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void
-//     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: EventListenerOptions | boolean): void
-//     viewState: ViewState
-//     coordinate: Coordinate
-// }
-//
-// interface RefCollection<ViewState>{
-//     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void
-//     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: EventListenerOptions | boolean): void
-//     addRef(ref: Ref<ViewState>)
-//     removeRef(ref: Ref<ViewState>)
-// }
-//
 function defaultEventWrapper<EventType, ViewState, Returns>(
   orig: JayEventHandler<EventType, ViewState, Returns>,
   event: JayEvent<EventType, ViewState>): Returns {
@@ -62,11 +48,9 @@ function defaultEventWrapper<EventType, ViewState, Returns>(
 }
 export class ReferencesManager {
     private refs: Record<string, ManagedRef<any>> = {};
-    // private refCollections: Record<string, RefCollection<any>> = {};
 
     constructor(
-                public readonly eventWrapper: JayEventHandlerWrapper<any, any, any> = defaultEventWrapper) {
-        // dynamicRefs?.forEach(id => this.refCollections[id] = new ReferenceCollection())
+        public readonly eventWrapper: JayEventHandlerWrapper<any, any, any> = defaultEventWrapper) {
     }
 
     add<Ref extends ManagedRef<any>>(refName: string, ref: Ref): Ref {
@@ -77,53 +61,6 @@ export class ReferencesManager {
         return this.refs[refName];
     }
 
-    //
-    // /**
-    //  * @deprecated
-    //  */
-    // mkRef<ViewState>(referenced: HTMLElement | JayComponent<any, any, any>,
-    //                  context: ConstructContext<any>,
-    //                  refName: string,
-    //                  isComp: boolean): [Ref<ViewState>, updateFunc<ViewState>] {
-    //     if (isComp) {
-    //         return ComponentRef(referenced as JayComponent<any, any, any>, context.currData, context.coordinate(refName), this.eventWrapper)
-    //     }
-    //     else {
-    //         let ref = new HTMLElementRefImpl(referenced as HTMLElement, context.currData, context.coordinate(refName), this.eventWrapper)
-    //         return [ref, ref.update]
-    //     }
-    // }
-    //
-    // /**
-    //  * @deprecated
-    //  */
-    // getRefCollection(id: string, autoCreate: boolean = false): RefCollection<any> {
-    //     if (!this.refCollections[id] && autoCreate)
-    //         this.refCollections[id] = new ReferenceCollection();
-    //     return this.refCollections[id];
-    // }
-    //
-    // /**
-    //  * @deprecated
-    //  */
-    // addStaticRef(id: string, ref: Ref<any>) {
-    //     this.refs[id] = ref;
-    // }
-    //
-    // /**
-    //  * @deprecated
-    //  */
-    // addDynamicRef(id: string, ref: Ref<any>) {
-    //     this.getRefCollection(id, true).addRef(ref);
-    // }
-    //
-    // /**
-    //  * @deprecated
-    //  */
-    // removeDynamicRef(id: string, ref: Ref<any>) {
-    //     this.refCollections[id]?.removeRef(ref);
-    // }
-
     applyToElement<T, Refs>(element:BaseJayElement<T>): JayElement<T, Refs> {
         let enrichedDynamicRefs = Object.keys(this.refs).reduce((publicRefAPIs, key) => {
             publicRefAPIs[key] = this.refs[key].getPublicAPI();
@@ -133,74 +70,6 @@ export class ReferencesManager {
         return {...element, refs};
     }
 }
-
-// class ReferenceCollection<ViewState> implements RefCollection<ViewState>, HTMLElementCollectionProxyTarget<ViewState, any>{
-//     protected elements: Set<Ref<ViewState>> = new Set();
-//     private listeners = [];
-//
-//     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions): void {
-//         this.listeners.push({type, listener, options})
-//         this.elements.forEach(ref =>
-//           ref.addEventListener(type, listener, options))
-//     }
-//
-//     addRef(ref: Ref<ViewState>) {
-//         this.elements.add(ref);
-//         this.listeners.forEach(listener =>
-//           ref.addEventListener(listener.type, listener.listener, listener.options))
-//     }
-//
-//     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, ViewState, any>, options?: EventListenerOptions | boolean): void {
-//         this.listeners = this.listeners.filter(item => item.type !== type || item.listener !== listener);
-//         this.elements.forEach(ref =>
-//           ref.removeEventListener(type, listener, options))
-//     }
-//
-//     removeRef(ref: Ref<ViewState>) {
-//         this.elements.delete(ref);
-//         this.listeners.forEach(listener =>
-//           ref.removeEventListener(listener.type, listener.listener, listener.options))
-//     }
-//
-//     map<ResultType>(handler: (referenced: HTMLNativeExec<ViewState, any>, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType> {
-//         return [...this.elements].map(ref => handler(ref, ref.viewState, ref.coordinate));
-//     }
-//
-//     find(predicate: (viewState: ViewState, c: Coordinate) => boolean) {
-//         for (let ref of this.elements)
-//             if (predicate(ref.viewState, ref.coordinate))
-//                 return ref
-//     }
-//
-// }
-
-// export function ComponentRef<ViewState>(comp: JayComponent<any, any, any>, viewState: ViewState, coordinate: Coordinate, eventWrapper: JayEventHandlerWrapper<any, ViewState, any>): [Ref<ViewState>, updateFunc<ViewState>] {
-//     let ref = new Proxy(comp, {
-//         get: function(target, prop, receiver) {
-//             if (typeof prop === 'string') {
-//                 if (prop === 'addEventListener') {
-//                     return (eventName, handler) => {
-//                         target.addEventListener(eventName, ({event}) => {
-//                             return eventWrapper(handler, {event, viewState, coordinate})
-//                         });
-//                     }
-//                 }
-//                 if (prop === 'viewState')
-//                     return viewState
-//                 if (prop === 'coordinate')
-//                     return coordinate
-//             }
-//             return target[prop];
-//         }
-//     }) as any as Ref<ViewState>;
-//     let update = (vs: ViewState) => {
-//         viewState = vs;
-//     }
-//     return [ref, update];
-// }
-//
-
-
 
 export function elemCollectionRef<ViewState, ElementType extends HTMLElement>(refName: string): () => PrivateRef<ViewState, any> {
     let {refManager} = currentConstructionContext();
@@ -217,6 +86,18 @@ export function elemCollectionRef<ViewState, ElementType extends HTMLElement>(re
 export function elemRef(refName: string): PrivateRef<any, any> {
     let {currData, coordinate, refManager} = currentConstructionContext();
     return refManager.add(refName, new HTMLElementRefImpl(currData, coordinate(refName), refManager.eventWrapper));
+}
+
+export function compCollectionRef<ViewState, ComponentType extends JayComponent<any, ViewState, any>>(refName: string): () => PrivateRef<ViewState, any> {
+    let {refManager} = currentConstructionContext();
+    let collRef = new ComponentCollectionRefImpl<ViewState, ComponentType>()
+    refManager.add(refName, collRef);
+    return () => {
+        let {currData, coordinate, refManager} = currentConstructionContext();
+        let ref = new ComponentRefImpl<ViewState, ComponentType>(currData, coordinate(refName), refManager.eventWrapper);
+        collRef.addRef(ref)
+        return ref;
+    }
 }
 
 export function compRef(refName: string): PrivateRef<any, any> {
@@ -280,6 +161,19 @@ class HTMLElementCollectionRefImpl<ViewState, ElementType extends HTMLElement> e
 
     getPublicAPI(): HTMLElementCollectionProxy<ViewState, ElementType> {
         return newHTMLElementyPublicApiProxy<ViewState, HTMLElementCollectionProxyTarget<ViewState, ElementType>>(this)
+    }
+}
+
+class ComponentCollectionRefImpl<ViewState, ComponentType extends JayComponent<any, ViewState, any>> extends
+    CollectionRefImpl<
+        ViewState,
+        ComponentType,
+        ComponentType,
+        ComponentCollectionProxy<ViewState, ComponentType>,
+        ComponentRefImpl<ViewState, ComponentType>> {
+
+    getPublicAPI(): ComponentCollectionProxy<ViewState, ComponentType> {
+        return newComponentCollectionPublicApiProxy<ViewState, ComponentType>(this)
     }
 }
 
@@ -447,4 +341,11 @@ const ComponentRefProxy = GetTrapProxy([EVENT_TRAP])
 
 export function newComponentPublicApiProxy<ViewState, C extends JayComponent<any, ViewState, any>>(ref: ComponentRefImpl<ViewState, C>): JayComponent<any, ViewState, any> {
     return new Proxy(ref, ComponentRefProxy);
+}
+
+const ComponentCollectionRefProxy = GetTrapProxy([EVENT_TRAP])
+
+export function newComponentCollectionPublicApiProxy<ViewState, ComponentType extends JayComponent<any, ViewState, any>>(ref: ComponentCollectionRefImpl<ViewState, ComponentType>):
+    ComponentCollectionProxy<ViewState, ComponentType> {
+    return new Proxy(ref, ComponentCollectionRefProxy);
 }
