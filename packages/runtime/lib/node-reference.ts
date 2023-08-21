@@ -77,7 +77,7 @@ export function elemCollectionRef<ViewState, ElementType extends HTMLElement>(re
     refManager.add(refName, collRef);
     return () => {
         let {currData, coordinate, refManager} = currentConstructionContext();
-        let ref = new HTMLElementRefImpl<ViewState, ElementType>(currData, coordinate(refName), refManager.eventWrapper);
+        let ref = new HTMLElementRefImpl<ViewState, ElementType>(currData, coordinate(refName), refManager.eventWrapper, collRef);
         collRef.addRef(ref)
         return ref;
     }
@@ -94,7 +94,7 @@ export function compCollectionRef<ViewState, ComponentType extends JayComponent<
     refManager.add(refName, collRef);
     return () => {
         let {currData, coordinate, refManager} = currentConstructionContext();
-        let ref = new ComponentRefImpl<ViewState, ComponentType>(currData, coordinate(refName), refManager.eventWrapper);
+        let ref = new ComponentRefImpl<ViewState, ComponentType>(currData, coordinate(refName), refManager.eventWrapper, collRef);
         collRef.addRef(ref)
         return ref;
     }

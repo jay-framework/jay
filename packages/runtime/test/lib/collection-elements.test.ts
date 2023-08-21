@@ -8,6 +8,7 @@ import {describe, expect, it} from '@jest/globals'
 import {expectE} from "./test-utils";
 import {JayElement, HTMLElementCollectionProxy} from "../../lib";
 import {ConstructContext} from "../../lib";
+import {elemCollectionRef} from "../../lib/node-reference";
 
 const item1 = {name: 'name 1', id: 'id-1'};
 const item2 = {name: 'name 2', id: 'id-2'};
@@ -174,20 +175,21 @@ describe('collection-element', () => {
         interface TodoListElement extends JayElement<ViewState, TodoListRefs> {}
         
         function makeElement(data: ViewState): TodoListElement {
-            return ConstructContext.withRootContext(data, () =>
+            return ConstructContext.withRootContext(data, () => {
                 // noinspection DuplicatedCode
-                de('div', {}, [
+                const ref = elemCollectionRef('done')
+                return de('div', {}, [
                     forEach(
                         (newViewState) => newViewState.items,
                         (item: Item) => {
                             return e('div', {"class":"item", id: item.id}, [
                                 dt(item => item.name),
-                                e('button', {ref: 'done'}, ["done"])
+                                e('button', {}, ["done"], ref())
                             ])
                         },
                         'id'
                     )
-                ])
+                ])}
             ) as TodoListElement
         }
 
