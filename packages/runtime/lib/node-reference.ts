@@ -8,13 +8,12 @@ import {
     Coordinate, MountFunc
 } from "./element-types";
 import {JayEventHandlerWrapper} from "./element-types";
-import {ConstructContext, currentConstructionContext} from "./context";
+import {currentConstructionContext} from "./context";
 import {
     ComponentCollectionProxy,
     GlobalJayEvents, HTMLElementCollectionProxy,
     HTMLElementCollectionProxyTarget, HTMLElementProxy,
-    HTMLElementProxyTarget,
-    HTMLNativeExec
+    HTMLElementProxyTarget
 } from "./node-reference-types";
 
 export interface ManagedRef<PublicRefAPI> {
@@ -162,7 +161,7 @@ class HTMLElementCollectionRefImpl<ViewState, ElementType extends HTMLElement> e
         HTMLElementRefImpl<ViewState, ElementType>> {
 
     getPublicAPI(): HTMLElementCollectionProxy<ViewState, ElementType> {
-        return newHTMLElementyPublicApiProxy<ViewState, HTMLElementCollectionProxyTarget<ViewState, ElementType>>(this)
+        return newHTMLElementPublicApiProxy<ViewState, HTMLElementCollectionProxyTarget<ViewState, ElementType>>(this)
     }
 }
 
@@ -251,7 +250,7 @@ export class HTMLElementRefImpl<ViewState, ElementType extends HTMLElement> exte
     }
 
     getPublicAPI(): HTMLElementProxy<ViewState, ElementType> {
-        return newHTMLElementyPublicApiProxy<ViewState, HTMLElementProxyTarget<ViewState, ElementType>>(this)
+        return newHTMLElementPublicApiProxy<ViewState, HTMLElementProxyTarget<ViewState, ElementType>>(this)
     }
 
     $exec<T>(handler: (elem: ElementType, viewState: ViewState) => T): Promise<T> {
@@ -288,7 +287,7 @@ export class ComponentRefImpl<ViewState, ComponentType extends JayComponent<any,
 }
 
 
-const EVENT_TRAP = (target, prop, receiver) => {
+const EVENT_TRAP = (target, prop) => {
     if (typeof prop === 'string') {
         if (prop.indexOf("on") === 0) {
             let eventName = prop.substring(2);
@@ -300,7 +299,7 @@ const EVENT_TRAP = (target, prop, receiver) => {
     return false;
 }
 
-const EVENT$_TRAP = (target, prop, receiver) => {
+const EVENT$_TRAP = (target, prop) => {
     if (typeof prop === 'string') {
         if (prop.indexOf("$on") === 0) {
             let eventName = prop.substring(3);
@@ -323,7 +322,7 @@ const EVENT$_TRAP = (target, prop, receiver) => {
     return false;
 }
 
-const DELEGATE_TO_COMP_TRAP = (target, prop, receiver) => {
+const DELEGATE_TO_COMP_TRAP = (target, prop) => {
     return target.getFromComponent(prop)
 }
 
@@ -344,7 +343,7 @@ const GetTrapProxy = (getTraps: Array<(target: any, p: string | symbol, receiver
 
 const HTMLElementRefProxy = GetTrapProxy([EVENT_TRAP, EVENT$_TRAP])
 
-export function newHTMLElementyPublicApiProxy<ViewState, T>(ref: T): T & GlobalJayEvents<ViewState> {
+export function newHTMLElementPublicApiProxy<ViewState, T>(ref: T): T & GlobalJayEvents<ViewState> {
     return new Proxy(ref, HTMLElementRefProxy);
 }
 
