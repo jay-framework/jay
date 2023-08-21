@@ -8,6 +8,7 @@ import {
 import '../../lib/element-test-types';
 import {Item, ItemProps} from "./comps/item";
 import {ItemRef, ItemRefs} from "./comps/item-refs";
+import {compCollectionRef, compRef} from "../../lib/node-reference";
 
 describe('nested components', () => {
     describe('single nested component', () => {
@@ -26,7 +27,7 @@ describe('nested components', () => {
 
             return ConstructContext.withRootContext(viewState, () =>
                 e('div', {}, [
-                    childComp((props: ItemProps) => Item(props), vs => ({text: vs.staticItem, dataId: 'AAA'}), 'staticComponent')
+                    childComp((props: ItemProps) => Item(props), vs => ({text: vs.staticItem, dataId: 'AAA'}), compRef('staticComponent'))
                 ])
             ) as TestElement;
         }
@@ -88,7 +89,7 @@ describe('nested components', () => {
             return ConstructContext.withRootContext(viewState, () =>
                 de('div', {}, [
                     conditional(vs => vs.condition,
-                        childComp((props: ItemProps) => Item(props), vs => ({text: vs.staticItem, dataId: 'condition'}), 'conditional'))
+                        childComp((props: ItemProps) => Item(props), vs => ({text: vs.staticItem, dataId: 'condition'}), compRef('conditional')))
                 ])
             ) as TestElement;
         }
@@ -121,14 +122,15 @@ describe('nested components', () => {
 
         function renderComposite(viewState: ViewState): TestElement {
 
-            return ConstructContext.withRootContext(viewState, () =>
-                de('div', {}, [
-                    forEach(vs => vs.items,
+            return ConstructContext.withRootContext(viewState, () => {
+                const ref = compCollectionRef('forEachOfComponents')
+                return de('div', {}, [
+                    forEach((vs: ViewState) => vs.items,
                         item => childComp(
                             (props: ItemProps) => Item(props),
-                            dataItem => ({text: dataItem.value, dataId: dataItem.id}), 'forEachOfComponents'),
+                            (dataItem: DataItem) => ({text: dataItem.value, dataId: dataItem.id}), ref()),
                         'id')
-                ])
+                ])}
             ) as TestElement;
         }
 

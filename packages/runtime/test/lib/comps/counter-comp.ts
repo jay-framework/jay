@@ -1,8 +1,9 @@
 import {dynamicText as dt, element as e} from "../../../lib/element";
-import {JayElement, JayEventHandler} from "../../../lib";
+import {Coordinate, JayElement, JayEventHandler} from "../../../lib";
 import {HTMLElementProxy} from "../../../lib";
 import {mkComponentEventHandler} from "./make-component-event-handler";
 import {ConstructContext} from "../../../lib/context";
+import {elemRef} from "../../../lib/node-reference";
 
 export interface ViewState {
     count: number
@@ -20,9 +21,9 @@ function renderCounter(viewState: ViewState): CounterElement {
 
     return ConstructContext.withRootContext(viewState, () =>
         e('div', {}, [
-                e('div', {ref: 'dec'}, ['-']),
-                e('div', {ref: 'count'}, [dt(vs => vs.count)]),
-                e('div', {ref: 'inc'}, ['+'])])
+                e('div', {}, ['-'], elemRef('dec')),
+                e('div', {}, [dt(vs => vs.count)], elemRef('count')),
+                e('div', {}, ['+'], elemRef('inc'))])
     ) as CounterElement;
 }
 
@@ -32,7 +33,7 @@ export interface CounterData {
 
 export interface CounterEvent {
     count: number,
-    innerCoordinate: string
+    innerCoordinate: Coordinate
 }
 
 export function Counter<ParentVS>(initialValue: number) {
@@ -59,7 +60,7 @@ export function Counter<ParentVS>(initialValue: number) {
     let reset = () => {
         count = 0;
         jayElement.update({count});
-        onChange.emit({count, innerCoordinate: ''});
+        onChange.emit({count, innerCoordinate: []});
     }
 
     return {

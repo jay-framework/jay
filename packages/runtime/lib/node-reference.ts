@@ -121,9 +121,11 @@ abstract class CollectionRefImpl<ViewState,
     }
 
     addRef(ref: RefType) {
-        this.elements.add(ref);
-        this.listeners.forEach(listener =>
-            ref.addEventListener(listener.type, listener.listener, listener.options))
+        if (!this.elements.has(ref)) {
+            this.elements.add(ref);
+            this.listeners.forEach(listener =>
+                ref.addEventListener(listener.type, listener.listener, listener.options))
+        }
     }
 
     removeRef(ref: RefType) {

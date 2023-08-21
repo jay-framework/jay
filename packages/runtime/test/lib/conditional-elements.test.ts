@@ -10,6 +10,7 @@ import {expectE} from "./test-utils";
 import {JSDOM} from 'jsdom';
 import {JayElement, HTMLElementProxy} from "../../lib";
 import {ConstructContext} from "../../lib/context";
+import {elemRef} from "../../lib/node-reference";
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -79,10 +80,10 @@ describe('conditional-element', () => {
                 // noinspection DuplicatedCode
                 de('div', {}, [
                     conditional((newViewState) => newViewState.condition,
-                        e('div', {style: {cssText: 'color:red'}, "ref":"text1"}, [dt(data => data.text1)])
+                        e('div', {style: {cssText: 'color:red'}}, [dt(data => data.text1)], elemRef('text1'))
                     ),
                     conditional((newViewState) => !newViewState.condition,
-                        e('div', {style: {cssText: 'color:green'}, "ref":"text2"}, [dt(data => data.text2)])
+                        e('div', {style: {cssText: 'color:green'}}, [dt(data => data.text2)], elemRef('text2'))
                     )
                 ])) as ConditionalElement
         }
