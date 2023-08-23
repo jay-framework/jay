@@ -1,4 +1,4 @@
-import {JayElement, element as e, conditional as c, dynamicElement as de, forEach, ConstructContext, childComp, RenderElementOptions} from "jay-runtime";
+import {JayElement, element as e, conditional as c, dynamicElement as de, forEach, ConstructContext, childComp, RenderElementOptions, compRef as cr, compCollectionRef as ccr} from "jay-runtime";
 import {CounterRef, CounterRefs} from '../counter/counter-refs';
 import {Counter} from '../counter/counter';
 
@@ -21,13 +21,14 @@ export interface DynamicComponentInComponentElementRefs {
 export type DynamicComponentInComponentElement = JayElement<DynamicComponentInComponentViewState, DynamicComponentInComponentElementRefs>
 
 export function render(viewState: DynamicComponentInComponentViewState, options?: RenderElementOptions): DynamicComponentInComponentElement {
-  return ConstructContext.withRootContext(viewState, () =>
-    de('div', {}, [
+  return ConstructContext.withRootContext(viewState, () => {
+    const refCounter1 = ccr('counter1')
+    return de('div', {}, [
       forEach(vs => vs.nestedCounters, (vs1: NestedCounter) => {
-        return childComp(Counter, vs => ({initialValue: vs.counter}), 'counter1')}, 'id'),
+        return childComp(Counter, (vs: NestedCounter) => ({initialValue: vs.counter}), refCounter1())}, 'id'),
       c(vs => vs.condition,
-        childComp(Counter, vs => ({initialValue: vs.count1}), 'counter2')
+        childComp(Counter, vs => ({initialValue: vs.count1}), cr('counter2'))
       )
-    ]), options, ['counter1']);
+    ])}, options);
 }
 

@@ -5,16 +5,51 @@ export enum Import {
     jayElement,
     element,
     dynamicText,
+    dynamicAttribute,
+    dynamicProperty,
     conditional,
     dynamicElement,
     forEach,
     ConstructContext,
     HTMLElementCollectionProxy,
     HTMLElementProxy,
-    dynamicAttribute,
-    dynamicProperty,
-    childComp
+    childComp,
+    elemRef,
+    elemCollectionRef,
+    compRef,
+    compCollectionRef
 }
+
+export enum ImportsFor {
+    definition, implementation
+}
+
+interface ImportStatementFragment {
+    statement: string,
+    usage: ImportsFor[]
+}
+
+const ImportsToStatements: Record<Import, ImportStatementFragment> = {} as Record<Import, ImportStatementFragment>;
+function importStatementFragment(importKey: Import, statement: string, ...usage: ImportsFor[]) {
+    ImportsToStatements[importKey] = {statement, usage}
+}
+importStatementFragment(Import.jayElement,'JayElement', ImportsFor.definition, ImportsFor.implementation)
+importStatementFragment(Import.element,'element as e', ImportsFor.implementation)
+importStatementFragment(Import.dynamicText,'dynamicText as dt', ImportsFor.implementation)
+importStatementFragment(Import.conditional,'conditional as c', ImportsFor.implementation)
+importStatementFragment(Import.dynamicElement,'dynamicElement as de', ImportsFor.implementation)
+importStatementFragment(Import.forEach,'forEach', ImportsFor.implementation)
+importStatementFragment(Import.ConstructContext,'ConstructContext', ImportsFor.implementation)
+importStatementFragment(Import.HTMLElementCollectionProxy, 'HTMLElementCollectionProxy', ImportsFor.definition, ImportsFor.implementation)
+importStatementFragment(Import.HTMLElementProxy, 'HTMLElementProxy', ImportsFor.definition, ImportsFor.implementation)
+importStatementFragment(Import.dynamicAttribute, 'dynamicAttribute as da', ImportsFor.implementation)
+importStatementFragment(Import.dynamicProperty, 'dynamicProperty as dp', ImportsFor.implementation)
+importStatementFragment(Import.childComp, 'childComp', ImportsFor.implementation)
+importStatementFragment(Import.elemRef, 'elemRef as er', ImportsFor.implementation)
+importStatementFragment(Import.elemCollectionRef, 'elemCollectionRef as ecr', ImportsFor.implementation)
+importStatementFragment(Import.compRef, 'compRef as cr', ImportsFor.implementation)
+importStatementFragment(Import.compCollectionRef, 'compCollectionRef as ccr', ImportsFor.implementation)
+
 
 export class Imports {
     private readonly imports: Array<boolean>;
@@ -36,6 +71,17 @@ export class Imports {
 
     has(anImport: Import) {
         return !!this.imports[anImport];
+    }
+
+    render(importsFor: ImportsFor) {
+        let toBeRenderedImports = [];
+        for (let importKey in Import) {
+            // iterate over Typescript enum numeric keys only (excluding string keys)
+            if (!isNaN(Number(importKey)) && this.imports[importKey] && ImportsToStatements[importKey].usage.includes(importsFor))
+                toBeRenderedImports.push(ImportsToStatements[importKey].statement)
+        }
+        toBeRenderedImports.push('RenderElementOptions')
+        return `import {${toBeRenderedImports.join(', ')}} from "jay-runtime";`;
     }
 
     static none(): Imports {

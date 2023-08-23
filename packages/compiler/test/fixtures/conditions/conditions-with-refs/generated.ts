@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, conditional as c, dynamicElement as de, ConstructContext, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, conditional as c, dynamicElement as de, ConstructContext, HTMLElementProxy, elemRef as er, RenderElementOptions} from "jay-runtime";
 
 export interface ConditionsWithRefsViewState {
   text1: string,
@@ -17,11 +17,11 @@ export function render(viewState: ConditionsWithRefsViewState, options?: RenderE
   return ConstructContext.withRootContext(viewState, () =>
     de('div', {}, [
       c(vs => vs.cond,
-        e('div', {style: {cssText: 'color:red'}, ref: 'text1'}, [dt(vs => vs.text1)])
+        e('div', {style: {cssText: 'color:red'}}, [dt(vs => vs.text1)], er('text1'))
       ),
       c(vs => !vs.cond,
         e('div', {style: {cssText: 'color:green'}}, [
-          e('span', {ref: 'text2'}, [dt(vs => vs.text2)])
+          e('span', {}, [dt(vs => vs.text2)], er('text2'))
         ])
       )
     ]), options);

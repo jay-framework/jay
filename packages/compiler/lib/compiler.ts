@@ -9,7 +9,7 @@ import {
 } from "./parse-jay-file";
 import {HTMLElement, NodeType} from "node-html-parser";
 import Node from "node-html-parser/dist/nodes/node";
-import {Import, Imports, Ref, RenderFragment} from "./render-fragment";
+import {Import, Imports, ImportsFor, Ref, RenderFragment} from "./render-fragment";
 import {
     parseAccessor, parseAttributeExpression, parseClassExpression, parseComponentPropExpression,
     parseCondition, parsePropertyExpression,
@@ -64,26 +64,9 @@ export function generateTypes(types: JayType): string {
     return renderInterface(types);
 }
 
-enum ImportsFor {
-    definition, implementation
-}
 
 function renderImports(imports: Imports, importsFor: ImportsFor, componentImports: Array<JayImportLink>, refImportsInUse: Set<string>): string {
-    let toBeRenderedImports = [];
-    if (imports.has(Import.jayElement)) toBeRenderedImports.push('JayElement');
-    if (imports.has(Import.element) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('element as e');
-    if (imports.has(Import.dynamicText) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('dynamicText as dt');
-    if (imports.has(Import.dynamicAttribute) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('dynamicAttribute as da');
-    if (imports.has(Import.dynamicProperty) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('dynamicProperty as dp');
-    if (imports.has(Import.conditional) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('conditional as c');
-    if (imports.has(Import.dynamicElement) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('dynamicElement as de');
-    if (imports.has(Import.forEach) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('forEach');
-    if (imports.has(Import.ConstructContext) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('ConstructContext');
-    if (imports.has(Import.HTMLElementCollectionProxy)) toBeRenderedImports.push('HTMLElementCollectionProxy');
-    if (imports.has(Import.HTMLElementProxy)) toBeRenderedImports.push('HTMLElementProxy');
-    if (imports.has(Import.childComp) && importsFor === ImportsFor.implementation) toBeRenderedImports.push('childComp');
-    toBeRenderedImports.push('RenderElementOptions')
-    let runtimeImport =  `import {${toBeRenderedImports.join(', ')}} from "jay-runtime";`;
+    let runtimeImport = imports.render(importsFor);
 
     // todo validate the actual imported file
     let renderedComponentImports = componentImports.map(importStatement => {
@@ -147,7 +130,6 @@ function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: 
                 elementType: elementNameToJayType(element),
                 viewStateType: variables.currentType
             }];
-            renderedAttributes.push(new RenderFragment(`${attrKey}: '${camelCase(attributes[attrName])}'`))
         }
         else if (attrCanonical === 'style')
             renderedAttributes.push(new RenderFragment(`style: {cssText: '${attributes[attrName]}'}`))
@@ -169,10 +151,30 @@ function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: 
         }
     })
 
-    const refsRenderFragment = new RenderFragment('', Imports.none(), [], refs);
+    // const refsRenderFragment = new RenderFragment('', Imports.none(), [], refs);
     return renderedAttributes
-        .reduce((prev, current) => RenderFragment.merge(prev, current, ', '), refsRenderFragment)
+        .reduce((prev, current) => RenderFragment.merge(prev, current, ', '), RenderFragment.empty())
         .map(_ => `{${_}}`);
+}
+
+function renderElementRef(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
+    if (element.attributes.ref) {
+        let refName = camelCase(element.attributes.ref);
+        let refs = [{
+            ref: refName,
+            dynamicRef,
+            elementType: elementNameToJayType(element),
+            viewStateType: variables.currentType
+        }];
+        if (dynamicRef) {
+            let refConst = camelCase(`ref ${refName}`)
+            return new RenderFragment(`${refConst}()`, Imports.for(Import.elemCollectionRef), [], refs)
+        }
+        else
+            return new RenderFragment(`er('${refName}')`, Imports.for(Import.elemRef), [], refs)
+    }
+    else
+        return RenderFragment.empty();
 }
 
 function isConditional(node: Node): boolean {
@@ -255,18 +257,20 @@ function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variabl
 
 function renderNode(variables: Variables, node: Node, importedSymbols: Set<string>, indent: Indent, dynamicRef: boolean): RenderFragment {
 
-    function de(tagName: string, attributes: RenderFragment, children: RenderFragment, currIndent: Indent = indent): RenderFragment {
-        return new RenderFragment(`${currIndent.firstLine}de('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}])`,
-            children.imports.plus(Import.dynamicElement).plus(attributes.imports),
-            [...attributes.validations, ...children.validations],
-            [...attributes.refs, ...children.refs]);
+    function de(tagName: string, attributes: RenderFragment, children: RenderFragment, ref: RenderFragment, currIndent: Indent = indent): RenderFragment {
+        const refWithPrefixComma = ref.rendered.length? `, ${ref.rendered}`:'';
+        return new RenderFragment(`${currIndent.firstLine}de('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}]${refWithPrefixComma})`,
+            children.imports.plus(Import.dynamicElement).plus(attributes.imports).plus(ref.imports),
+            [...attributes.validations, ...children.validations, ...ref.validations],
+            [...attributes.refs, ...children.refs, ...ref.refs]);
     }
 
-    function e(tagName: string, attributes: RenderFragment, children: RenderFragment, currIndent: Indent = indent): RenderFragment {
-        return new RenderFragment(`${currIndent.firstLine}e('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}])`,
-            children.imports.plus(Import.element).plus(attributes.imports),
-            [...attributes.validations, ...children.validations],
-            [...attributes.refs, ...children.refs]);
+    function e(tagName: string, attributes: RenderFragment, children: RenderFragment, ref: RenderFragment, currIndent: Indent = indent): RenderFragment {
+        const refWithPrefixComma = ref.rendered.length? `, ${ref.rendered}`:'';
+        return new RenderFragment(`${currIndent.firstLine}e('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}]${refWithPrefixComma})`,
+            children.imports.plus(Import.element).plus(attributes.imports).plus(ref.imports),
+            [...attributes.validations, ...children.validations, ...ref.validations],
+            [...attributes.refs, ...children.refs, ...ref.refs]);
     }
 
     function renderHtmlElement(htmlElement, newVariables: Variables, currIndent: Indent = indent) {
@@ -293,11 +297,12 @@ function renderNode(variables: Variables, node: Node, importedSymbols: Set<strin
                 .map(children => childIndent.firstLineBreak ? `\n${children}\n${currIndent.firstLine}` : children);
 
         let attributes = renderAttributes(htmlElement, dynamicRef, newVariables);
+        let renderedRef = renderElementRef(htmlElement, dynamicRef, newVariables);
 
         if (needDynamicElement)
-            return de(htmlElement.rawTagName, attributes, childRenders, currIndent);
+            return de(htmlElement.rawTagName, attributes, childRenders, renderedRef, currIndent);
         else
-            return e(htmlElement.rawTagName, attributes, childRenders, currIndent);
+            return e(htmlElement.rawTagName, attributes, childRenders, renderedRef, currIndent);
     }
 
     function c(renderedCondition: RenderFragment, childElement: RenderFragment) {
