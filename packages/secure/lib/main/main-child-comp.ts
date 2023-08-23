@@ -7,6 +7,7 @@ import {
     provideContext
 } from "jay-runtime";
 import {currentConstructionContext} from "jay-runtime/dist/context";
+import {PrivateRef} from "jay-runtime/dist/node-reference";
 
 export interface SecureCoordinateContext {
     coordinate: Coordinate
@@ -17,11 +18,11 @@ export function secureChildComp<ParentVS, Props, ChildT,
     ChildElement extends BaseJayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
     compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentVS) => Props,
-    refName: string): BaseJayElement<ParentVS> {
+    ref: PrivateRef<ParentVS, ChildComp>): BaseJayElement<ParentVS> {
     let constructContext = currentConstructionContext();
-    let coordinate = constructContext.coordinate(refName)
+    let coordinate = ref.coordinate;
 
     return provideContext(SECURE_COORDINATE_MARKER, {coordinate}, () => {
-        return childComp(compCreator, getProps, refName)
+        return childComp(compCreator, getProps, ref)
     })
 }

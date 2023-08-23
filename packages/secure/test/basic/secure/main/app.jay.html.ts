@@ -1,4 +1,4 @@
-import {JayElement, element as e, ConstructContext, RenderElementOptions} from "jay-runtime";
+import {JayElement, element as e, ConstructContext, compRef as cr, RenderElementOptions} from "jay-runtime";
 import {mainRoot as mr} from '../../../../lib/'
 import {Basic} from './basic';
 import {secureChildComp} from "../../../../lib";
@@ -15,7 +15,7 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
   return ConstructContext.withRootContext(viewState, () =>
     mr(viewState, () =>
       e('div', {}, [
-          secureChildComp(Basic, vs => ({safe: '', firstName: vs.firstName, lastName: vs.lastName}), 'comp1')
+          secureChildComp(Basic, (vs: AppViewState) => ({safe: '', firstName: vs.firstName, lastName: vs.lastName}), cr('comp1'))
       ])
     ), options);
 }
