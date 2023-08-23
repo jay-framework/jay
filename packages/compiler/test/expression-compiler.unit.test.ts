@@ -2,7 +2,7 @@ import {describe, expect, it} from '@jest/globals'
 import {
     Accessor,
     parseAccessor, parseAttributeExpression,
-    parseClassExpression,
+    parseClassExpression, parseComponentPropExpression,
     parseCondition, parseEnumValues, parseImportNames, parseIsEnum, parsePropertyExpression,
     parseTextExpression,
     Variables
@@ -208,6 +208,43 @@ describe('expression-compiler', () => {
             expect(actual.imports.has(Import.dynamicProperty)).toBeTruthy()
         })
     });
+
+    describe('parseComponentPropExpression', () => {
+        let defaultVars = new Variables(new JayObjectType('data', {
+            string1: JayString,
+            string3: JayString
+        }))
+
+        it("constant string expression", () => {
+            const actual = parseComponentPropExpression('some constant string', defaultVars);
+            expect(actual.rendered).toEqual('\'some constant string\'')
+            expect(actual.imports.has(Import.dynamicProperty)).toBeFalsy()
+        })
+
+        it("constant number expression", () => {
+            const actual = parseComponentPropExpression('123123', defaultVars);
+            expect(actual.rendered).toEqual('123123')
+            expect(actual.imports.has(Import.dynamicProperty)).toBeFalsy()
+        })
+
+        // it("single accessor", () => {
+        //     const actual = parseComponentPropExpression('{string1}', defaultVars);
+        //     expect(actual.rendered).toEqual('dp(vs => vs.string1)')
+        //     expect(actual.imports.has(Import.dynamicProperty)).toBeTruthy()
+        // })
+        //
+        // it("single accessor in text", () => {
+        //     const actual = parseComponentPropExpression('some {string1} thing', defaultVars);
+        //     expect(actual.rendered).toEqual('dp(vs => \`some ${vs.string1} thing\`)')
+        //     expect(actual.imports.has(Import.dynamicProperty)).toBeTruthy()
+        // })
+        //
+        // it("parse {.} (the self accessor)", () => {
+        //     const actual = parseComponentPropExpression('{.}', defaultVars);
+        //     expect(actual.rendered).toEqual('dp(vs => vs)')
+        //     expect(actual.imports.has(Import.dynamicProperty)).toBeTruthy()
+        // })
+    })
 
     describe('parseTextExpression', () => {
 

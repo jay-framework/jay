@@ -23,7 +23,8 @@ export function render(viewState: ComponentInComponentViewState, options?: Rende
       childComp(Counter, (vs: ComponentInComponentViewState) => ({initialValue: vs.count1}), cr('counter1')),
       childComp(Counter, (vs: ComponentInComponentViewState) => ({initialValue: vs.count2}), cr('counterTwo')),
       childComp(Counter, (vs: ComponentInComponentViewState) => ({initialValue: vs.count3})),
-      childComp(Counter, (vs: ComponentInComponentViewState) => ({initialValue: vs.count4?.count}))
+      childComp(Counter, (vs: ComponentInComponentViewState) => ({initialValue: vs.count4?.count})),
+      childComp(Counter, (vs: ComponentInComponentViewState) => ({initialValue: 25}))
     ]), options);
 }
 

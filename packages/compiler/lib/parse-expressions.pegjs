@@ -66,7 +66,10 @@ dynamicAttribute
 }
 
 dynamicComponentProp
-  = template:template {
+  = num:integer {
+    return new RenderFragment(num)
+  }
+  / template:template {
   let [renderFragment, isDynamic] = template;
   return renderFragment;
 }
