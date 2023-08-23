@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, dynamicElement as de, forEach, ConstructContext, childComp, RenderElementOptions, compCollectionRef as ccr} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, dynamicElement as de, forEach, ConstructContext, childComp, compCollectionRef as ccr, RenderElementOptions} from "jay-runtime";
 import {TreeNodeRefs} from './tree-node-refs';
 import {TreeNode, Node} from './tree-node';
 
@@ -11,11 +11,11 @@ export type RecursiveComponentsElement = JayElement<Node, RecursiveComponentsEle
 
 export function render(viewState: Node, options?: RenderElementOptions): RecursiveComponentsElement {
   return ConstructContext.withRootContext(viewState, () => {
-    const refCounter1 = ccr('counter1')
-    const refCounterTwo = ccr('counterTwo')
+    const refCounter1 = ccr('counter1');
+    const refCounterTwo = ccr('counterTwo');
     return e('div', {}, [
       e('div', {}, [dt(vs => vs.name)]),
-      childComp(TreeNode, vs => vs.firstChild),
+      childComp(TreeNode, (vs: Node) => vs.firstChild),
       de('ul', {}, [
         forEach(vs => vs.children, (vs1: Node) => {
           return e('li', {}, [
