@@ -115,23 +115,14 @@ const propertyMapping = {
 const attributesRequiresQuotes = /[- ]/;
 function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
     let attributes = element.attributes;
-    let refs: Ref[] = [];
     let renderedAttributes = [];
     Object.keys(attributes).forEach(attrName => {
         let attrCanonical = attrName.toLowerCase();
         let tagAttrCanonical = element.tagName.toLowerCase() + ':' + attrCanonical;
         let attrKey = attrCanonical.match(attributesRequiresQuotes) ? `"${attrCanonical}"` : attrCanonical;
-        if (attrCanonical === 'if' || attrCanonical === 'foreach' || attrCanonical === 'trackby')
+        if (attrCanonical === 'if' || attrCanonical === 'foreach' || attrCanonical === 'trackby' || attrCanonical === 'ref')
             return;
-        if (attrCanonical === 'ref') {
-            refs = [{
-                ref: camelCase(attributes[attrName]),
-                dynamicRef,
-                elementType: elementNameToJayType(element),
-                viewStateType: variables.currentType
-            }];
-        }
-        else if (attrCanonical === 'style')
+        if (attrCanonical === 'style')
             renderedAttributes.push(new RenderFragment(`style: {cssText: '${attributes[attrName]}'}`))
         else if (attrCanonical === 'class') {
             let classExpression = parseClassExpression(attributes[attrName], variables);
@@ -151,7 +142,6 @@ function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: 
         }
     })
 
-    // const refsRenderFragment = new RenderFragment('', Imports.none(), [], refs);
     return renderedAttributes
         .reduce((prev, current) => RenderFragment.merge(prev, current, ', '), RenderFragment.empty())
         .map(_ => `{${_}}`);
@@ -159,19 +149,22 @@ function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: 
 
 function renderElementRef(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
     if (element.attributes.ref) {
-        let refName = camelCase(element.attributes.ref);
+        let originalName = element.attributes.ref;
+        let refName = camelCase(originalName);
+        let constName = camelCase(`ref ${refName}`)
         let refs = [{
             ref: refName,
+            originalName,
+            constName,
             dynamicRef,
             elementType: elementNameToJayType(element),
             viewStateType: variables.currentType
         }];
         if (dynamicRef) {
-            let refConst = camelCase(`ref ${refName}`)
-            return new RenderFragment(`${refConst}()`, Imports.for(Import.elemCollectionRef), [], refs)
+            return new RenderFragment(`${constName}()`, Imports.for(Import.elemCollectionRef), [], refs)
         }
         else
-            return new RenderFragment(`er('${refName}')`, Imports.for(Import.elemRef), [], refs)
+            return new RenderFragment(`er('${originalName}')`, Imports.for(Import.elemRef), [], refs)
     }
     else
         return RenderFragment.empty();
@@ -381,30 +374,30 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
     let refsType = baseElementName + 'ElementRefs';
     let imports = renderedRoot.imports.plus(Import.ConstructContext);
     let renderedRefs;
-    let dynamicRefs = [];
+    let dynamicRefs: Ref[] = [];
     let refImportsInUse = new Set<string>();
     if (renderedRoot.refs.length > 0) {
-        const renderedReferences = renderedRoot.refs.map(_ => {
+        const renderedReferences = renderedRoot.refs.map(ref => {
             let referenceType;
-            if (isComponentCollectionRef(_)) {
-                referenceType = `${_.elementType.name}Refs<${_.viewStateType.name}>`
-                dynamicRefs.push(_.ref);
-                refImportsInUse.add(`${_.elementType.name}Refs`)
+            if (isComponentCollectionRef(ref)) {
+                referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`
+                dynamicRefs.push(ref);
+                refImportsInUse.add(`${ref.elementType.name}Refs`)
             }
-            else if (isCollectionRef(_)) {
-                referenceType = `HTMLElementCollectionProxy<${_.viewStateType.name}, ${_.elementType.name}>`;
+            else if (isCollectionRef(ref)) {
+                referenceType = `HTMLElementCollectionProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
                 imports = imports.plus(Import.HTMLElementCollectionProxy)
-                dynamicRefs.push(_.ref);
+                dynamicRefs.push(ref);
             }
-            else if (isComponentRef(_)) {
-                referenceType = `${_.elementType.name}Ref<${_.viewStateType.name}>`;
-                refImportsInUse.add(`${_.elementType.name}Ref`)
+            else if (isComponentRef(ref)) {
+                referenceType = `${ref.elementType.name}Ref<${ref.viewStateType.name}>`;
+                refImportsInUse.add(`${ref.elementType.name}Ref`)
             }
             else {
-                referenceType = `HTMLElementProxy<${_.viewStateType.name}, ${_.elementType.name}>`;
+                referenceType = `HTMLElementProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
                 imports = imports.plus(Import.HTMLElementProxy)
             }
-            return `  ${_.ref}: ${referenceType}`
+            return `  ${ref.ref}: ${referenceType}`
         }).join(',\n');
         renderedRefs = `export interface ${refsType} {
 ${renderedReferences}
@@ -415,9 +408,18 @@ ${renderedReferences}
 
     let renderedElement = `export type ${elementType} = JayElement<${types.name}, ${refsType}>`
 
-    let body = `export function render(viewState: ${types.name}, options?: RenderElementOptions): ${elementType} {
+    let body;
+    if (dynamicRefs.length > 0) {
+        body = `export function render(viewState: ${types.name}, options?: RenderElementOptions): ${elementType} {
+  return ConstructContext.withRootContext(viewState, () => {
+${dynamicRefs.map(ref => `    const ${ref.constName} = ${isCollectionRef(ref)?'ecr':'ccr'}('${ref.originalName}');`).join('\n')}
+    return ${renderedRoot.rendered.trim()}}, options);
+}`;
+    }
+    else
+        body = `export function render(viewState: ${types.name}, options?: RenderElementOptions): ${elementType} {
   return ConstructContext.withRootContext(viewState, () =>
-${renderedRoot.rendered}, options${dynamicRefs.length > 0?`, [${dynamicRefs.map(_ => `'${_}'`).join(', ')}]`:''});
+${renderedRoot.rendered}, options);
 }`;
     return {
         renderedRefs,

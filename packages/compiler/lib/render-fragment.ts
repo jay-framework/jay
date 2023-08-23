@@ -104,6 +104,8 @@ export class Imports {
 
 export interface Ref {
     ref: string,
+    constName: string,
+    originalName: string,
     dynamicRef: boolean,
     viewStateType: JayType
     elementType: JayType
