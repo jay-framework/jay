@@ -164,7 +164,7 @@ function renderElementRef(element: HTMLElement, dynamicRef: boolean, variables: 
             return new RenderFragment(`${constName}()`, Imports.for(Import.elemCollectionRef), [], refs)
         }
         else
-            return new RenderFragment(`er('${originalName}')`, Imports.for(Import.elemRef), [], refs)
+            return new RenderFragment(`er('${refName}')`, Imports.for(Import.elemRef), [], refs)
     }
     else
         return RenderFragment.empty();
