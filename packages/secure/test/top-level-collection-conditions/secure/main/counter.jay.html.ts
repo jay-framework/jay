@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, ConstructContext, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, ConstructContext, HTMLElementProxy, elemRef as er, RenderElementOptions} from "jay-runtime";
 
 export interface CounterViewState {
     title: string,
@@ -18,9 +18,9 @@ export function render(viewState: CounterViewState, options?: RenderElementOptio
         e('div', {}, [
             e('div', {"data-id": da(vs => `${vs.id}-title`)}, [dt(vs => vs.title)]),
             e('div', {}, [
-                e('button', {"data-id": da(vs => `${vs.id}-sub`), ref: 'subtracter'}, ['-']),
+                e('button', {"data-id": da(vs => `${vs.id}-sub`)}, ['-'], er('subtracter')),
                 e('span', {"data-id": da(vs => `${vs.id}-count`), style: {cssText: 'margin: 0 16px'}}, [dt(vs => vs.count)]),
-                e('button', {"data-id": da(vs => `${vs.id}-add`), ref: 'adder'}, ['+'])
+                e('button', {"data-id": da(vs => `${vs.id}-add`)}, ['+'], er('adder'))
             ])
         ]), options);
 }

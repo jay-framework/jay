@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, conditional as c, dynamicElement as de, forEach, ConstructContext, HTMLElementProxy, childComp, RenderElementOptions} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, conditional as c, dynamicElement as de, forEach, ConstructContext, HTMLElementProxy, childComp, elemRef as er, compCollectionRef as ccr, RenderElementOptions} from "jay-runtime";
 import {TreeNodeRefs} from './tree-node-refs';
 import {TreeNode, Node} from './tree-node';
 
@@ -16,19 +16,20 @@ export interface TreeNodeElementRefs {
 export type TreeNodeElement = JayElement<TreeNodeViewState, TreeNodeElementRefs>
 
 export function render(viewState: TreeNodeViewState, options?: RenderElementOptions): TreeNodeElement {
-  return ConstructContext.withRootContext(viewState, () =>
-    de('div', {}, [
-      e('div', {ref: 'head', "data-ref": da(vs => `head=${vs.node?.id}`)}, [
+  return ConstructContext.withRootContext(viewState, () => {
+    const refChild = ccr('child');
+    return de('div', {}, [
+      e('div', {"data-ref": da(vs => `head=${vs.node?.id}`)}, [
         e('span', {class: 'tree-arrow'}, [dt(vs => vs.headChar)]),
         e('span', {class: 'name'}, [dt(vs => vs.node?.name)])
-      ]),
+      ], er('head')),
       c(vs => vs.open,
         de('ul', {"data-ref": da(vs => `list=${vs.node?.id}`)}, [
           forEach(vs => vs.node?.children, (vs1: Node) => {
             return e('li', {}, [
-              childComp(TreeNode, vs => vs, 'child')
+              childComp(TreeNode, (vs: Node) => vs, refChild())
             ])}, 'id')
         ])
       )
-    ]), options, ['child']);
+    ])}, options);
 }
