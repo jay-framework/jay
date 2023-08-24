@@ -6,7 +6,8 @@ import {
     JayEventHandlerWrapper,
     RenderElementOptions
 } from "./element-types";
-import {ReferencesManager} from "./node-reference";
+
+import {ReferencesManager} from "./references-manager";
 
 let currentContext: ContextStack<any> = undefined;
 interface ContextStack<ContextType> {

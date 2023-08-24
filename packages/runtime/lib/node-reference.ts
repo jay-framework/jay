@@ -1,24 +1,22 @@
 import {
-    BaseJayElement,
-    JayElement,
-    JayEventHandler,
-    updateFunc,
+    Coordinate,
     JayComponent,
     JayEvent,
-    Coordinate, MountFunc
+    JayEventHandler,
+    JayEventHandlerWrapper,
+    MountFunc,
+    updateFunc
 } from "./element-types";
-import {JayEventHandlerWrapper} from "./element-types";
 import {currentConstructionContext} from "./context";
 import {
     ComponentCollectionProxy,
-    GlobalJayEvents, HTMLElementCollectionProxy,
-    HTMLElementCollectionProxyTarget, HTMLElementProxy,
+    GlobalJayEvents,
+    HTMLElementCollectionProxy,
+    HTMLElementCollectionProxyTarget,
+    HTMLElementProxy,
     HTMLElementProxyTarget
 } from "./node-reference-types";
-
-export interface ManagedRef<PublicRefAPI> {
-    getPublicAPI(): PublicRefAPI;
-}
+import {ManagedRef} from "./references-manager";
 
 export interface ManagedCollectionRef<ViewState, PublicRefAPI, PublicRefCollectionAPI> extends ManagedRef<PublicRefCollectionAPI>{
     addRef(ref: PrivateRef<ViewState, PublicRefAPI>)
@@ -38,36 +36,6 @@ export interface PrivateRef<ViewState, PublicRefAPI> {
     set(referenced: ReferenceTarget<ViewState>): void;
     addEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>, options?: boolean | AddEventListenerOptions)
     removeEventListener<E extends Event>(type: string, handler: JayEventHandler<E, ViewState, any>, options?: EventListenerOptions | boolean)
-}
-
-function defaultEventWrapper<EventType, ViewState, Returns>(
-  orig: JayEventHandler<EventType, ViewState, Returns>,
-  event: JayEvent<EventType, ViewState>): Returns {
-  return orig(event)
-}
-export class ReferencesManager {
-    private refs: Record<string, ManagedRef<any>> = {};
-
-    constructor(
-        public readonly eventWrapper: JayEventHandlerWrapper<any, any, any> = defaultEventWrapper) {
-    }
-
-    add<Ref extends ManagedRef<any>>(refName: string, ref: Ref): Ref {
-        return this.refs[refName] = ref;
-    }
-
-    get(refName: string): ManagedRef<any> {
-        return this.refs[refName];
-    }
-
-    applyToElement<T, Refs>(element:BaseJayElement<T>): JayElement<T, Refs> {
-        let enrichedDynamicRefs = Object.keys(this.refs).reduce((publicRefAPIs, key) => {
-            publicRefAPIs[key] = this.refs[key].getPublicAPI();
-            return publicRefAPIs;
-        }, {})
-        let refs = enrichedDynamicRefs as Refs
-        return {...element, refs};
-    }
 }
 
 export function elemCollectionRef<ViewState, ElementType extends HTMLElement>(refName: string): () => PrivateRef<ViewState, any> {
