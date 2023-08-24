@@ -15,7 +15,7 @@ data:
     <button ref="buttonExec$" data-id="button-exec$">button exec native</button>
     <input ref="input" data-id="input"/>
 
-    <div forEach="items" matchBy="id">
+    <div forEach="items" trackBy="id">
         <button ref="itemButton" data-id="{id}-itemButton">{text}</button>
         <input ref="itemInput" data-id="{id}-itemInput"/>
     </div>
