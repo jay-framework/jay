@@ -8,7 +8,7 @@ const DYNAMIC_ID = 'A';
 describe('comp in comp - parent child communication', () => {
 
     async function mkElement() {
-        let channel = useMockCommunicationChannel(false);
+        let channel = useMockCommunicationChannel(true);
         setChannel(channel);
         initializeWorker();
         let appElement = render({});
@@ -119,11 +119,11 @@ describe('comp in comp - parent child communication', () => {
 
     describe('parent to dynamic (forEach) child communication', () => {
         it('should support parent updating property on child', async () => {
-            let {channel, parentChangesChildPropButton, childTextFromProp} = await mkElement();
+            let {channel, parentChangesChildPropButton, childTextFromProp, appElement} = await mkElement();
 
             parentChangesChildPropButton.click();
             await channel.toBeClean();
-
+            console.log(appElement.dom.outerHTML)
             let event = undefined;
             let viewState = {
                 "textFromChildEvent":"-",
