@@ -424,7 +424,7 @@ ${renderedReferences}
     if (dynamicRefs.length > 0) {
         body = `export function render(viewState: ${types.name}, options?: RenderElementOptions): ${elementType} {
   return ConstructContext.withRootContext(viewState, () => {
-${dynamicRefs.map(ref => `    const ${ref.constName} = ${isComponentRef(ref)?'ccr':'ecr'}('${ref.originalName}');`).join('\n')}
+${dynamicRefs.map(ref => `    const ${ref.constName} = ${isComponentRef(ref)?'ccr':'ecr'}('${ref.ref}');`).join('\n')}
     return ${renderedRoot.rendered.trim()}}, options);
 }`;
     }

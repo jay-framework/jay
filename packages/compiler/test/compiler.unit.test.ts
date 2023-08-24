@@ -165,6 +165,13 @@ describe('compiler', () => {
                 expect(runtimeFile.val).toEqual(await readGeneratedFile('basics/styles'));
             })
 
+            it('refs', async () => {
+                const jayFile = await readSourceJayFile('basics/refs');
+                let runtimeFile = generateRuntimeFile(jayFile, 'refs.jay.html', './test/');
+                expect(runtimeFile.validations).toEqual([]);
+                expect(runtimeFile.val).toEqual(await readGeneratedFile('basics/refs'));
+            })
+
             it('with different attributes and properties', async () => {
                 const jayFile = await readSourceJayFile('basics/attributes');
                 let runtimeFile = generateRuntimeFile(jayFile, 'attributes.jay.html', './test/');
