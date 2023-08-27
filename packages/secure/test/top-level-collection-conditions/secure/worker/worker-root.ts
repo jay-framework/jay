@@ -1,14 +1,18 @@
 import {Counter} from "./counter";
-import {sandboxRoot} from "../../../../lib/sandbox/sandbox-root";
-import {sandboxChildComp, sandboxCondition, sandboxForEach} from "../../../../lib/sandbox/sandbox-element";
+import {compCollectionRef, sandboxRoot} from "../../../../lib/";
+import {sandboxChildComp, sandboxCondition, sandboxForEach} from "../../../../lib/";
+import {compRef} from "../../../../lib";
 
 export function initializeWorker() {
-    sandboxRoot(() => [
-        sandboxCondition(vs => vs.cond, [
-            sandboxChildComp<any, any>(Counter, vs => ({title: 'conditional counter', initialCount: vs.initialCount, id: 'cond'}), 'comp1')
-        ]),
-        sandboxForEach<any, any>(vs => vs.counters, "id", () => [
-            sandboxChildComp<any, any>(Counter, vs => ({title: `collection counter ${vs.id}`, initialCount: vs.initialCount, id: vs.id}), 'comp2')
-        ])
-    ])
+    sandboxRoot(() => {
+        const refComp2 = compCollectionRef('comp2')
+        return [
+            sandboxCondition(vs => vs.cond, [
+                sandboxChildComp(Counter, vs => ({title: 'conditional counter', initialCount: vs.initialCount, id: 'cond'}), compRef('comp1'))
+            ]),
+            sandboxForEach<any, any>(vs => vs.counters, "id", () => [
+                sandboxChildComp(Counter, (vs: any) => ({title: `collection counter ${vs.id}`, initialCount: vs.initialCount, id: vs.id}), refComp2())
+            ])
+        ]
+    })
 }

@@ -29,7 +29,7 @@ export function sandboxChildComp<ParentVS, Props, ChildT,
     getProps: (t: ParentVS) => Props,
     ref: PrivateRef<ParentVS, ChildComp>): SandboxElement<ParentVS> {
     let {viewState, dataIds, endpoint, parentComponentReactive} = useContext(SANDBOX_CREATION_CONTEXT)
-    let coordinate = [...dataIds, ref.coordinate];
+    let coordinate = ref.coordinate;
     let context = {compId: endpoint.compId, coordinate, port: endpoint.port}
     let childComp = provideContext(SANDBOX_BRIDGE_CONTEXT, context, () => {
         return compCreator(getProps(viewState))
