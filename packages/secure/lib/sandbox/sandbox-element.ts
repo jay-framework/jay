@@ -35,12 +35,6 @@ export function sandboxChildComp<ParentVS, Props, ChildT,
         return compCreator(getProps(viewState))
     })
     ref.set(childComp);
-    // TODO component wrapper
-    let eventWrapper: JayEventHandlerWrapper<any, any, any> = parentComponentReactive?
-        (orig, event) => {
-            return parentComponentReactive.batchReactions(() => orig(event))
-        }:
-        (orig, event) => orig(event);
 
     return {
       update: (newViewState) => {
