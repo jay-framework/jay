@@ -15,7 +15,7 @@ export function clearInstances() {
     instances = {};
 }
 
-interface ItemType<ParentVS> {
+export interface ItemType<ParentVS> {
     element: any,
     update: (ItemProps) => void,
     mount: () => void,

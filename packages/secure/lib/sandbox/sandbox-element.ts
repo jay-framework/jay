@@ -1,4 +1,6 @@
 import {
+    BaseJayElement,
+    JayComponent,
     JayComponentConstructor, JayEventHandlerWrapper,
     MountFunc,
     noopMount,
@@ -15,6 +17,7 @@ import {
     SecureElementRef,
     StaticRefImplementation
 } from "./sandbox-refs";
+import {PrivateRef} from "jay-runtime/dist/node-reference";
 
 export interface SandboxElement<ViewState> {
     update: updateFunc<ViewState>
@@ -26,60 +29,80 @@ export function sandboxElement<ViewState>(ref: SecureElementRef<any, any>): Sand
     return ref;
 }
 
-export function sandboxChildComp<ParentVS, Props>(
+export function sandboxChildComp<ParentVS, Props, ChildT,
+    ChildElement extends BaseJayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
     compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentVS) => Props,
-    refName: string): SandboxElement<ParentVS> {
+    ref: PrivateRef<ParentVS, ChildComp>): SandboxElement<ParentVS> {
     let {viewState, refs, dataIds, isDynamic, endpoint, parentComponentReactive} = useContext(SANDBOX_CREATION_CONTEXT)
-    let coordinate = [...dataIds, refName];
+    let coordinate = [...dataIds, ref.coordinate];
     let context = {compId: endpoint.compId, coordinate, port: endpoint.port}
     let childComp = provideContext(SANDBOX_BRIDGE_CONTEXT, context, () => {
         return compCreator(getProps(viewState))
     })
+    ref.set(childComp);
+    // TODO component wrapper
     let eventWrapper: JayEventHandlerWrapper<any, any, any> = parentComponentReactive?
         (orig, event) => {
             return parentComponentReactive.batchReactions(() => orig(event))
         }:
         (orig, event) => orig(event);
-    let [compWrapper, updateRef] = componentWrapper(childComp, viewState, coordinate, eventWrapper);
-    if (isDynamic && refs) {
-        let ref = (refs[refName] as any as DynamicCompRefImplementation<ParentVS, ReturnType<typeof compCreator>>);
-        ref.setItem(coordinate, viewState, compWrapper);
-        let mounted = true;
-        return {
-            update: (newViewState) => {
-                viewState = newViewState;
-                if (mounted) {
-                    ref.update(coordinate, newViewState)
-                    updateRef(newViewState);
-                    childComp.update(getProps(newViewState))
-                }
-            },
-            mount: () => {
-                mounted = true;
-                ref.setItem(coordinate, viewState, compWrapper)
-                childComp.mount();
-            },
-            unmount: () => {
-                mounted = false;
-                ref.removeItem(coordinate, compWrapper)
-                childComp.unmount();
-            }
-        }
+    // let [compWrapper, updateRef] = componentWrapper(childComp, viewState, coordinate, eventWrapper);
+
+    return {
+      update: (newViewState) => {
+          ref.update(newViewState);
+          childComp.update(getProps(newViewState));
+      },
+      mount: () => {
+          ref.mount();
+          childComp.mount()
+      },
+      unmount: () => {
+          ref.unmount();
+          childComp.unmount()
+      }
     }
-    else {
-        if (refs)
-            refs[refName] = proxyCompRef(compWrapper);
-        let update = (t: ParentVS) => {
-            updateRef(t);
-            childComp.update(getProps(t));
-        }
-        let mount = childComp.mount
-        let unmount = childComp.unmount
-        return {
-            update, mount, unmount
-        }
-    }
+
+
+    // if (isDynamic && refs) {
+    //     let ref = (refs[refName] as any as DynamicCompRefImplementation<ParentVS, ReturnType<typeof compCreator>>);
+    //     ref.setItem(coordinate, viewState, compWrapper);
+    //     let mounted = true;
+    //     return {
+    //         update: (newViewState) => {
+    //             viewState = newViewState;
+    //             if (mounted) {
+    //                 ref.update(coordinate, newViewState)
+    //                 updateRef(newViewState);
+    //                 childComp.update(getProps(newViewState))
+    //             }
+    //         },
+    //         mount: () => {
+    //             mounted = true;
+    //             ref.setItem(coordinate, viewState, compWrapper)
+    //             childComp.mount();
+    //         },
+    //         unmount: () => {
+    //             mounted = false;
+    //             ref.removeItem(coordinate, compWrapper)
+    //             childComp.unmount();
+    //         }
+    //     }
+    // }
+    // else {
+    //     if (refs)
+    //         refs[refName] = proxyCompRef(compWrapper);
+    //     let update = (t: ParentVS) => {
+    //         updateRef(t);
+    //         childComp.update(getProps(t));
+    //     }
+    //     let mount = childComp.mount
+    //     let unmount = childComp.unmount
+    //     return {
+    //         update, mount, unmount
+    //     }
+    // }
 }
 
 function compareLists<ItemViewState extends object>(oldList: ItemViewState[], newList: ItemViewState[], matchBy: string):

@@ -1,5 +1,6 @@
 import {describe, expect, it} from '@jest/globals'
 import {
+    compRef,
     elemCollectionRef,
     elemRef,
     mkBridgeElement
@@ -17,7 +18,7 @@ import {
     sandboxForEach as forEach,
     sandboxChildComp as childComp
 } from "../../lib/sandbox/sandbox-element";
-import {clearInstances, componentInstance, Item, ItemProps} from "./item-component/item";
+import {clearInstances, componentInstance, Item, ItemProps, ItemType} from "./item-component/item";
 import {
     eventInvocationMessage,
     JayPortMessageType,
@@ -454,15 +455,18 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let bridgeElement = mkBridgeElement(vs,() => [
-                forEach<VS, VSItem>(vs => vs.items, 'name', () => [
-                    e('one'),
-                    forEach<VSItem, VSSubItem>(vs => vs.subItems, 'id', () => [
-                        e('two')
+            let bridgeElement = mkBridgeElement(vs,() => {
+                const refOne = elemCollectionRef('one')
+                const refTwo = elemCollectionRef('two')
+                return [
+                    forEach<VS, VSItem>(vs => vs.items, 'name', () => [
+                        e(refOne()),
+                        forEach<VSItem, VSSubItem>(vs => vs.subItems, 'id', () => [
+                            e(refTwo())
+                        ])
                     ])
-                ])
-            ], ['one', 'two'], [],
-                endpoint, reactive, getNullComponentInstance)
+                ]}, [], [],
+                    endpoint, reactive, getNullComponentInstance, [])
             return {endpoint, bridgeElement}
         }
 
@@ -506,12 +510,10 @@ describe('sandbox-refs', () => {
             endpoint.invoke(eventInvocationMessage('click', ['D', '6', 'two'])) // removed item
             endpoint.invoke(eventInvocationMessage('click', ['E', '9', 'two'])) // added item
 
-            expect(callback.mock.calls).toHaveLength(5)
+            expect(callback.mock.calls).toHaveLength(3)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["A", '2.5', "two"], "event": undefined, "viewState": vs2.items[0].subItems[2]})
-            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ["B", '4', "two"], "event": undefined, "viewState": undefined})
-            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ["C", '5', "two"], "event": undefined, "viewState": vs2.items[2].subItems[0]})
-            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ["D", '6', "two"], "event": undefined, "viewState": undefined})
-            expect(callback.mock.calls[4][0]).toEqual({"coordinate": ["E", '9', "two"], "event": undefined, "viewState": vs2.items[3].subItems[0]})
+            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ["C", '5', "two"], "event": undefined, "viewState": vs2.items[2].subItems[0]})
+            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ["E", '9', "two"], "event": undefined, "viewState": vs2.items[3].subItems[0]})
         })
     })
 
@@ -526,10 +528,10 @@ describe('sandbox-refs', () => {
             let reactive = new Reactive();
             let bridgeElement = mkBridgeElement(creationViewState, () => [
                 c(vs => vs.condition, [
-                    e('one'),
-                    c(vs => vs.condition2, [e('two')])
+                    e(elemRef('one')),
+                    c(vs => vs.condition2, [e(elemRef('two'))])
                 ])
-            ], [], [], endpoint, reactive, getNullComponentInstance)
+            ], [], [], endpoint, reactive, getNullComponentInstance, [])
             return {endpoint, bridgeElement}
         }
 
@@ -616,14 +618,17 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let bridgeElement = mkBridgeElement(vs, () => [
-                forEach<VS, VSItem>(vs => vs.items, 'name', () => [
-                    e('one'),
-                    c(vs => vs.test, [
-                        e('two')
+            let bridgeElement = mkBridgeElement(vs, () => {
+                const refOne = elemCollectionRef('one')
+                const refTwo = elemCollectionRef('two')
+                return [
+                    forEach<VS, VSItem>(vs => vs.items, 'name', () => [
+                        e(refOne()),
+                        c(vs => vs.test, [
+                            e(refTwo())
+                        ])
                     ])
-                ])
-            ], ['one', 'two'], [], endpoint, reactive, getNullComponentInstance)
+                ]}, ['one', 'two'], [], endpoint, reactive, getNullComponentInstance, [])
             return {endpoint, bridgeElement}
         }
 
@@ -637,11 +642,9 @@ describe('sandbox-refs', () => {
             endpoint.invoke(eventInvocationMessage('click', ['C', 'two']))
             endpoint.invoke(eventInvocationMessage('click', ['D', 'two']))
 
-            expect(callback.mock.calls).toHaveLength(4)
+            expect(callback.mock.calls).toHaveLength(2)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["A", "two"], "event": undefined, "viewState": vs.items[0]})
             expect(callback.mock.calls[1][0]).toEqual({"coordinate": ["B", "two"], "event": undefined, "viewState": vs.items[1]})
-            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ["C", "two"], "event": undefined, "viewState": undefined})
-            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ["D", "two"], "event": undefined, "viewState": undefined})
         })
 
         it('after update, should trigger events with view state for mounted elements, and with undefined for unmounted elements (parent condition === false)', () => {
@@ -655,11 +658,9 @@ describe('sandbox-refs', () => {
             endpoint.invoke(eventInvocationMessage('click', ['C', 'two']))
             endpoint.invoke(eventInvocationMessage('click', ['E', 'two']))
 
-            expect(callback.mock.calls).toHaveLength(4)
+            expect(callback.mock.calls).toHaveLength(2)
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["A", "two"], "event": undefined, "viewState": vs2.items[0]})
-            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ["B", "two"], "event": undefined, "viewState": undefined})
-            expect(callback.mock.calls[2][0]).toEqual({"coordinate": ["C", "two"], "event": undefined, "viewState": undefined})
-            expect(callback.mock.calls[3][0]).toEqual({"coordinate": ["E", "two"], "event": undefined, "viewState": vs2.items[3]})
+            expect(callback.mock.calls[1][0]).toEqual({"coordinate": ["E", "two"], "event": undefined, "viewState": vs2.items[3]})
         })
     })
 
@@ -672,38 +673,38 @@ describe('sandbox-refs', () => {
             clearInstances();
         })
 
+        type CompType = ItemType<ItemProps>;
+
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
             let bridgeElement = mkBridgeElement(vs, () => [
-                childComp(Item, vs => vs, 'comp1')
-            ], [], [], endpoint, reactive, getNullComponentInstance)
-            return {endpoint, bridgeElement}
+                childComp(Item, vs => vs, compRef('comp1'))
+            ], [], [], endpoint, reactive, getNullComponentInstance, [])
+            let childCompRef = bridgeElement.refs.comp1 as CompType;
+            return {endpoint, bridgeElement, childCompRef}
         }
 
         it('should create the component with the provided props', () => {
-            setup();
-            let instance = componentInstance(vs.dataId);
+            let {childCompRef} = setup();
 
-            expect(instance.getItemSummary()).toBe('item some data - Done: false - mounted: true')
+            expect(childCompRef.getItemSummary()).toBe('item some data - Done: false - mounted: true')
         })
 
         it('should update the component with the new props', () => {
-            let {bridgeElement} = setup();
-            let instance = componentInstance(vs.dataId);
+            let {bridgeElement, childCompRef} = setup();
 
             bridgeElement.update(vs2)
 
-            expect(instance.getItemSummary()).toBe('item some new data - Done: false - mounted: true')
+            expect(childCompRef.getItemSummary()).toBe('item some new data - Done: false - mounted: true')
         })
 
         it('should register and invoke events on the component', () => {
-            let {bridgeElement} = setup();
-            let instance = componentInstance(vs.dataId);
+            let {childCompRef} = setup();
             let callback = jest.fn();
 
-            (bridgeElement.refs.comp1 as ReturnType<typeof Item>).addEventListener('remove', callback)
-            instance._removeClick();
+            childCompRef.addEventListener('remove', callback)
+            childCompRef._removeClick();
 
             expect(callback.mock.calls.length).toBe(1)
             expect(callback.mock.calls[0][0]).toEqual({
@@ -714,13 +715,12 @@ describe('sandbox-refs', () => {
         })
 
         it('should update the event view state on component update', () => {
-            let {bridgeElement} = setup();
-            let instance = componentInstance(vs.dataId);
+            let {bridgeElement, childCompRef} = setup();
             let callback = jest.fn();
 
-            (bridgeElement.refs.comp1 as ReturnType<typeof Item>).addEventListener('remove', callback)
+            childCompRef.addEventListener('remove', callback)
             bridgeElement.update(vs2);
-            instance._removeClick();
+            childCompRef._removeClick();
 
             expect(callback.mock.calls.length).toBe(1)
             expect(callback.mock.calls[0][0]).toEqual({
@@ -731,12 +731,11 @@ describe('sandbox-refs', () => {
         })
 
         it('should support component APIs', () => {
-            setup();
-            let instance = componentInstance(vs.dataId);
+            let {childCompRef} = setup();
 
-            instance._doneClick();
+            childCompRef._doneClick();
 
-            expect(instance.getItemSummary()).toBe('item some data - Done: true - mounted: true')
+            expect(childCompRef.getItemSummary()).toBe('item some data - Done: true - mounted: true')
         })
     })
 

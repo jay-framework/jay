@@ -42,6 +42,7 @@ import {
     EVENT_TRAP,
     GetTrapProxy
 } from "jay-runtime";
+import {ComponentRefImpl, PrivateRef} from "jay-runtime/dist/node-reference";
 
 
 export interface SandboxBridgeElement<ViewState> {
@@ -120,6 +121,13 @@ export function elemCollectionRef<ViewState, ElementType extends HTMLElement>(re
         return ref;
     }
 }
+
+export function compRef(refName: string): PrivateRef<any, any> {
+    let {viewState, dataIds, refs} = useContext(SANDBOX_CREATION_CONTEXT);
+    let coordinate = [...dataIds, refName]
+    return refs.add(refName, new ComponentRefImpl(viewState, coordinate, refs.eventWrapper));
+}
+
 
 export class StaticRefImplementation<ViewState, ElementType extends HTMLElement> implements
     SecureElementRef<ViewState, HTMLElementProxy<ViewState, ElementType>>,
@@ -284,82 +292,83 @@ export class DynamicRefImplementation<ViewState, ElementType extends HTMLElement
     }
 }
 
-export class DynamicCompRefImplementation<ViewState, CompType extends JayComponent<any, any, any>>
-    implements ComponentCollectionProxyOperations<ViewState, CompType>, RefImplementation<ViewState> {
-    listeners = new Map<string, JayEventHandler<any, any, any>>()
-    items = new Map<string, [string[], ViewState, CompType]>();
 
-    constructor() {}
-
-    addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: boolean | AddEventListenerOptions, nativeId?: string): void {
-        this.listeners.set(type, listener)
-        for (const [id, [coordinate, vs, comp]] of this.items)
-            comp.addEventListener(type, listener)
-    }
-    removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: EventListenerOptions | boolean): void {
-        this.listeners.delete(type)
-        for (const [id, [coordinate, vs, comp]] of this.items)
-            comp.removeEventListener(type, listener)
-    }
-
-    invoke = (type: string, coordinate: Coordinate, eventData?: any) => {}
-
-    find = (predicate: (t: ViewState) => boolean): CompType | undefined => {
-        for (const [id, [coordinate, vs, comp]] of this.items)
-            if (predicate(vs)) {
-                return comp;
-            }
-    }
-    map = <ResultType>(handler: (element: CompType, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType> => {
-        let promises: Array<ResultType> = [];
-        for (const [id, [coordinate, vs, comp]] of this.items) {
-            const handlerResponse = handler(comp, vs, coordinate)
-            if (handlerResponse)
-                promises.push(handlerResponse)
-        }
-        return promises
-    }
-
-    update(coordinate: string[], viewState: ViewState) {
-        this.items.get(coordinate.toString())[1] = viewState;
-    }
-
-    setItem(coordinate: string[], viewState: ViewState, refItem: CompType) {
-        this.items.set(coordinate.toString(), [coordinate, viewState, refItem])
-        this.listeners.forEach((listener, type) => refItem.addEventListener(type, listener));
-
-    }
-
-    removeItem(coordinate: string[], refItem: CompType) {
-        this.items.delete(coordinate.toString())
-        this.listeners.forEach((listener, type) => refItem.removeEventListener(type, listener));
-    }
-}
-
-export function componentWrapper<Comp extends JayComponent<any, any, any>, ViewState>(comp: Comp, viewState: ViewState, coordinate: Coordinate, eventWrapper: JayEventHandlerWrapper<any, ViewState, any>): [Comp, updateFunc<ViewState>] {
-    let compWrapper = new Proxy(comp, {
-        get: function(target, prop, receiver) {
-            if (typeof prop === 'string') {
-                if (prop === 'addEventListener') {
-                    return (eventName, handler) => {
-                        target.addEventListener(eventName, ({event}) => {
-                            return eventWrapper(handler, {event, viewState, coordinate})
-                        });
-                    }
-                }
-                if (prop === 'viewState')
-                    return viewState
-                if (prop === 'coordinate')
-                    return coordinate
-            }
-            return target[prop];
-        }
-    }) as any as Comp;
-    let update = (vs: ViewState) => {
-        viewState = vs;
-    }
-    return [compWrapper, update];
-}
+// export class DynamicCompRefImplementation<ViewState, CompType extends JayComponent<any, any, any>>
+//     implements ComponentCollectionProxyOperations<ViewState, CompType>, RefImplementation<ViewState> {
+//     listeners = new Map<string, JayEventHandler<any, any, any>>()
+//     items = new Map<string, [string[], ViewState, CompType]>();
+//
+//     constructor() {}
+//
+//     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: boolean | AddEventListenerOptions, nativeId?: string): void {
+//         this.listeners.set(type, listener)
+//         for (const [id, [coordinate, vs, comp]] of this.items)
+//             comp.addEventListener(type, listener)
+//     }
+//     removeEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: EventListenerOptions | boolean): void {
+//         this.listeners.delete(type)
+//         for (const [id, [coordinate, vs, comp]] of this.items)
+//             comp.removeEventListener(type, listener)
+//     }
+//
+//     invoke = (type: string, coordinate: Coordinate, eventData?: any) => {}
+//
+//     find = (predicate: (t: ViewState) => boolean): CompType | undefined => {
+//         for (const [id, [coordinate, vs, comp]] of this.items)
+//             if (predicate(vs)) {
+//                 return comp;
+//             }
+//     }
+//     map = <ResultType>(handler: (element: CompType, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType> => {
+//         let promises: Array<ResultType> = [];
+//         for (const [id, [coordinate, vs, comp]] of this.items) {
+//             const handlerResponse = handler(comp, vs, coordinate)
+//             if (handlerResponse)
+//                 promises.push(handlerResponse)
+//         }
+//         return promises
+//     }
+//
+//     update(coordinate: string[], viewState: ViewState) {
+//         this.items.get(coordinate.toString())[1] = viewState;
+//     }
+//
+//     setItem(coordinate: string[], viewState: ViewState, refItem: CompType) {
+//         this.items.set(coordinate.toString(), [coordinate, viewState, refItem])
+//         this.listeners.forEach((listener, type) => refItem.addEventListener(type, listener));
+//
+//     }
+//
+//     removeItem(coordinate: string[], refItem: CompType) {
+//         this.items.delete(coordinate.toString())
+//         this.listeners.forEach((listener, type) => refItem.removeEventListener(type, listener));
+//     }
+// }
+//
+// export function componentWrapper<Comp extends JayComponent<any, any, any>, ViewState>(comp: Comp, viewState: ViewState, coordinate: Coordinate, eventWrapper: JayEventHandlerWrapper<any, ViewState, any>): [Comp, updateFunc<ViewState>] {
+//     let compWrapper = new Proxy(comp, {
+//         get: function(target, prop, receiver) {
+//             if (typeof prop === 'string') {
+//                 if (prop === 'addEventListener') {
+//                     return (eventName, handler) => {
+//                         target.addEventListener(eventName, ({event}) => {
+//                             return eventWrapper(handler, {event, viewState, coordinate})
+//                         });
+//                     }
+//                 }
+//                 if (prop === 'viewState')
+//                     return viewState
+//                 if (prop === 'coordinate')
+//                     return coordinate
+//             }
+//             return target[prop];
+//         }
+//     }) as any as Comp;
+//     let update = (vs: ViewState) => {
+//         viewState = vs;
+//     }
+//     return [compWrapper, update];
+// }
 
 
 export function mkBridgeElement<ViewState>(viewState: ViewState,
