@@ -1,5 +1,10 @@
 import {HTMLElementProxy, JayElement} from "jay-runtime";
-import {sandboxElement as e, sandboxCondition as c, sandboxForEach as forEach, sandboxChildComp as childComp} from "jay-secure";
+import {
+  sandboxElement as e,
+  sandboxCondition as c,
+  sandboxChildComp as childComp,
+  elemRef, compRef
+} from "jay-secure";
 import {BasicRef} from '../main/basic/basic-data-refs';
 import {Basic} from './basic/basic-data';
 import {CollectionsRef} from '../main/collections/collections-data-refs';
@@ -47,23 +52,23 @@ export type MainElement = JayElement<MainViewState, MainElementRefs>
 
 export function render(viewState: MainViewState): MainElement {
   return elementBridge(viewState, () => [
-    e('chooseExample'),
-    e('cycles'),
-    e('run'),
+    e(elemRef('chooseExample')),
+    e(elemRef('cycles')),
+    e(elemRef('run')),
     c(vs => vs.selectedExample === SelectedExample.basic,
-        [childComp(Basic, vs => ({cycles: vs.cycles}), 'basic')]
+        [childComp(Basic, vs => ({cycles: vs.cycles}), compRef('basic'))]
     ),
     c(vs => vs.selectedExample === SelectedExample.collections,
-        [childComp(Collections, vs => ({cycles: vs.cycles}), 'collections')]
+        [childComp(Collections, vs => ({cycles: vs.cycles}), compRef('collections'))]
     ),
     c(vs => vs.selectedExample === SelectedExample.composite,
-        [childComp(Composite, vs => ({cycles: vs.cycles}), 'composite')]
+        [childComp(Composite, vs => ({cycles: vs.cycles}), compRef('composite'))]
     ),
     c(vs => vs.selectedExample === SelectedExample.conditions,
-        [childComp(Conditions, vs => ({cycles: vs.cycles}), 'conditions')]
+        [childComp(Conditions, vs => ({cycles: vs.cycles}), compRef('conditions'))]
     ),
     c(vs => vs.selectedExample === SelectedExample.table,
-        [childComp(TableHost, vs => ({cycles: vs.cycles}), 'table')]
+        [childComp(TableHost, vs => ({cycles: vs.cycles}), compRef('table'))]
     )
   ])
 }

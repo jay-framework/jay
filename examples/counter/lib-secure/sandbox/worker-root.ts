@@ -1,10 +1,10 @@
-import {Counter, CounterProps} from "./counter";
-import {HandshakeMessageJayChannel, JayPort, sandboxRoot, setWorkerPort} from "jay-secure";
+import {Counter} from "./counter";
+import {compRef, HandshakeMessageJayChannel, JayPort, sandboxRoot, setWorkerPort} from "jay-secure";
 import {sandboxChildComp} from "jay-secure";
 
 export function initializeWorker() {
     sandboxRoot(() => [
-        sandboxChildComp<any, CounterProps>(Counter, vs => ({initialValue: 12}), 'a')
+        sandboxChildComp(Counter, vs => ({initialValue: 12}), compRef('a'))
     ])
 }
 

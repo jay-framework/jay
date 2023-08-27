@@ -1,10 +1,10 @@
 import {TodoComponent, TodoProps} from "./todo";
-import {HandshakeMessageJayChannel, JayPort, sandboxRoot, setWorkerPort} from "jay-secure";
+import {compRef, HandshakeMessageJayChannel, JayPort, sandboxRoot, setWorkerPort} from "jay-secure";
 import {sandboxChildComp} from "jay-secure";
 
 export function initializeWorker() {
     sandboxRoot(() => [
-        sandboxChildComp<any, TodoProps>(TodoComponent, vs => (vs.todos), 'a')
+        sandboxChildComp(TodoComponent, vs => (vs.todos), compRef('a'))
     ])
 }
 

@@ -1,5 +1,5 @@
 import {HTMLElementProxy, JayElement} from "jay-runtime";
-import {elementBridge} from "jay-secure";
+import {compCollectionRef, elementBridge, elemRef} from "jay-secure";
 import {sandboxElement as e, sandboxCondition as c, sandboxForEach as forEach, sandboxChildComp as childComp} from "jay-secure";
 import {ItemRefs} from "../main/item-refs";
 import {Item, ItemProps} from "./item";
@@ -40,19 +40,21 @@ export interface TodoElementRefs {
 export type TodoElement = JayElement<TodoViewState, TodoElementRefs>
 
 export function render(viewState: TodoViewState): TodoElement {
-    return elementBridge(viewState, () => [
-        e('newTodo'),
-        c(vs => vs.hasItems, [
-            e('toggleAll'),
-            forEach(vs => vs.shownTodos, 'id', () => [
-                childComp<ShownTodo, ItemProps>(Item, vs => ({title: vs.title, isCompleted: vs.isCompleted}), 'items')
+    return elementBridge(viewState, () => {
+        const refItems = compCollectionRef('items')
+        return [
+            e(elemRef('newTodo')),
+            c(vs => vs.hasItems, [
+                e(elemRef('toggleAll')),
+                forEach(vs => vs.shownTodos, 'id', () => [
+                    childComp(Item, (vs: ShownTodo) => ({title: vs.title, isCompleted: vs.isCompleted}), refItems())
+                ])
+            ]),
+            c(vs => vs.hasItems, [
+                e(elemRef('filterAll')),
+                e(elemRef('filterActive')),
+                e(elemRef('filterCompleted')),
+                e(elemRef('clearCompleted')),
             ])
-        ]),
-        c(vs => vs.hasItems, [
-            e('filterAll'),
-            e('filterActive'),
-            e('filterCompleted'),
-            e('clearCompleted'),
-        ])
-    ], [], ['items']) as unknown as TodoElement;
+        ]}, [], ['items']) as unknown as TodoElement;
 }

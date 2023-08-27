@@ -1,5 +1,5 @@
 import {HTMLElementProxy, JayElement} from "jay-runtime";
-import {elementBridge} from "jay-secure";
+import {elementBridge, elemRef} from "jay-secure";
 import {sandboxElement as e} from "jay-secure";
 
 export interface ItemViewState {
@@ -20,9 +20,9 @@ export type ItemElement = JayElement<ItemViewState, ItemElementRefs>
 
 export function render(viewState: ItemViewState): ItemElement {
     return elementBridge(viewState, () => [
-        e('completed'),
-        e('label'),
-        e('button'),
-        e('title')
+        e(elemRef('completed')),
+        e(elemRef('label')),
+        e(elemRef('button')),
+        e(elemRef('title'))
     ]) as unknown as ItemElement;
 }

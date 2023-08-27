@@ -1,13 +1,12 @@
-
-import {Main, MainProps} from "./main";
-import {HandshakeMessageJayChannel, JayPort, sandboxRoot, setWorkerPort} from "jay-secure";
+import {Main} from "./main";
+import {compRef, HandshakeMessageJayChannel, JayPort, sandboxRoot, setWorkerPort} from "jay-secure";
 import {sandboxChildComp} from "jay-secure";
 
 
 
 export function initializeWorker() {
     sandboxRoot(() => [
-        sandboxChildComp<any, MainProps>(Main, vs => ({}), 'a')
+        sandboxChildComp(Main, vs => ({}), compRef('a'))
     ])
 }
 

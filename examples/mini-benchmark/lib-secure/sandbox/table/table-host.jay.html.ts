@@ -1,6 +1,6 @@
 import {HTMLElementProxy, JayElement,} from "jay-runtime";
 import {Table as TableComp} from './table';
-import {elementBridge, sandboxChildComp as childComp, sandboxElement as e} from "jay-secure";
+import {compRef, elementBridge, elemRef, sandboxChildComp as childComp, sandboxElement as e} from "jay-secure";
 import {TableRef} from "../../main/table/table-refs";
 
 export interface TableHostViewState {
@@ -20,9 +20,9 @@ export type TableHostElement = JayElement<TableHostViewState, TableHostElementRe
 
 export function render(viewState: TableHostViewState): TableHostElement {
     return elementBridge(viewState, () => [
-        e('size'),
-        e('updates'),
-        e('stateManagement'),
-        childComp(TableComp, vs => ({tableSize: vs.size, numCellsToUpdate: vs.updates, stateManagement: vs.stateManagement}), 'table')
+        e(elemRef('size')),
+        e(elemRef('updates')),
+        e(elemRef('stateManagement')),
+        childComp(TableComp, vs => ({tableSize: vs.size, numCellsToUpdate: vs.updates, stateManagement: vs.stateManagement}), compRef('table'))
     ])
 }
