@@ -4,7 +4,7 @@ import {initializeWorker} from "./secure/worker/worker-root";
 import {render} from "./secure/main/app.jay.html";
 import {dispatchEvent} from "../util/dispatch-event";
 
-const VERBOSE = true;
+const VERBOSE = false;
 describe('events synthetic tests', () => {
 
     async function mkElement() {
@@ -48,7 +48,7 @@ describe('events synthetic tests', () => {
     })
 
     it('should react to dynamic buttons (under forEach) click', async () => {
-        let {channel, result, button, getDynamicButtonById} = await mkElement();
+        let {channel, result, getDynamicButtonById} = await mkElement();
 
         getDynamicButtonById('a').click()
         await channel.toBeClean()

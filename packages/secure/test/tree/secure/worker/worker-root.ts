@@ -1,9 +1,10 @@
 import {Node, TreeNode} from "./tree-node";
-import {sandboxRoot} from "../../../../lib/sandbox/sandbox-root";
-import {sandboxChildComp} from "../../../../lib/sandbox/sandbox-element";
+import {sandboxRoot} from "../../../../lib/";
+import {sandboxChildComp} from "../../../../lib/";
+import {compRef} from "../../../../lib";
 
 export function initializeWorker() {
     sandboxRoot(() => [
-        sandboxChildComp<any, Node>(TreeNode, vs => vs, 'comp1')
+        sandboxChildComp(TreeNode, vs => vs, compRef('comp1'))
     ])
 }

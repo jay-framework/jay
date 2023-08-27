@@ -1,8 +1,6 @@
 import {describe, expect, it} from '@jest/globals'
 import {setChannel, useMockCommunicationChannel} from "../util/mock-channel";
 import {initializeWorker} from "./secure/worker/worker-root";
-import {CounterProps} from "./secure/main/counter";
-import {CounterViewState} from "./secure/main/counter.jay.html";
 import {AppViewState, render} from "./secure/main/app.jay.html";
 
 const COUNTER_COND_COORDINATE = ['comp1']
@@ -33,7 +31,7 @@ const viewState3: AppViewState = {cond: true, initialCount: 12, counters: [
         COUNTER_A
     ]}
 
-const VERBOSE = true;
+const VERBOSE = false;
 
 describe('top level collections and conditions', () => {
 
@@ -126,14 +124,14 @@ describe('top level collections and conditions', () => {
     })
 
     it('supports root component APIs for conditional component', async () => {
-        let {appElement, channel, title, count} = await mkElement(viewState)
+        let {appElement} = await mkElement(viewState)
 
         expect(await appElement.refs.comp1.counterDescription()).toBe('conditional counter: 12')
 
     })
 
     it('supports root component APIs for collection component', async () => {
-        let {appElement, channel, title, count} = await mkElement(viewState)
+        let {appElement} = await mkElement(viewState)
 
         expect(await appElement.refs.comp2.find(_ => _.id === COUNTER_A_ID).counterDescription())
             .toBe('collection counter a: 13')
@@ -141,7 +139,7 @@ describe('top level collections and conditions', () => {
     })
 
     it('supports root component events for conditional component', async () => {
-        let {appElement, channel, add, title, count} = await mkElement(viewState)
+        let {appElement, channel, add} = await mkElement(viewState)
         let fn = jest.fn();
 
         appElement.refs.comp1.onChange(fn);
@@ -154,7 +152,7 @@ describe('top level collections and conditions', () => {
     })
 
     it('supports root component events for collection component', async () => {
-        let {appElement, channel, add, title, count} = await mkElement(viewState)
+        let {appElement, channel, add} = await mkElement(viewState)
         let fn = jest.fn();
 
         // this does not batch messages!!!

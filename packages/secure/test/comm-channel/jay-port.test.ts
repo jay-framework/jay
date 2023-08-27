@@ -3,7 +3,7 @@ import {JayPort, JayPortLogger} from "../../lib";
 import {JayChannel, JPMMessage} from "../../lib";
 import {addEventListenerMessage, eventInvocationMessage, renderMessage} from "../../lib/comm-channel/messages";
 import {eventually10ms} from "../util/eventually";
-import {REPLACE} from "../../../json-patch";
+import {REPLACE} from "jay-json-patch";
 
 const MESSAGE_RENDER_1 = renderMessage([{op: REPLACE, path: ['a'], value: {foo: 'bar'}}]);
 const MESSAGE_RENDER_2 = renderMessage([{op: REPLACE, path: ['a'], value: {foo: 'goo'}}]);
@@ -11,6 +11,7 @@ const MESSAGE_ADD_EVENT_LISTENER_CLICK_ADD = addEventListenerMessage('add', 'cli
 const MESSAGE_ADD_EVENT_LISTENER_CLICK_DEC = addEventListenerMessage('dec', 'click');
 const MESSAGE_EVENT_CLICK_ADD = eventInvocationMessage('click', ['add']);
 const MESSAGE_EVENT_CLICK_DEC = eventInvocationMessage('click', ['dec']);
+
 describe('jay-port', () => {
 
     function mkPort() {

@@ -2,10 +2,9 @@ import {describe, expect, it} from '@jest/globals'
 import {setChannel, useMockCommunicationChannel} from "../util/mock-channel";
 import {initializeWorker} from "./secure/worker/worker-root";
 import {Node} from "./secure/main/tree-node";
-import {TreeNodeViewState} from "./secure/main/tree-node.jay.html";
 import {render} from "./secure/main/main-root";
-import {MOVE} from "../../../json-patch";
-import {JayPortMessageType, renderMessage} from "../../lib/comm-channel/messages";
+import {MOVE} from "jay-json-patch";
+import {renderMessage} from "../../lib/comm-channel/messages";
 
 const noChildrenNoArrow = "";
 const closedArrow = "►";

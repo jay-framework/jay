@@ -1,7 +1,7 @@
 import {HTMLElementProxy, JayElement} from "jay-runtime";
 import {Node, TreeNode} from "./tree-node";
-import {elementBridge} from "../../../../lib";
-import {sandboxElement as e, sandboxForEach as forEach, sandboxChildComp as childComp} from "../../../../lib/sandbox/sandbox-element";
+import {compCollectionRef, elementBridge, elemRef} from "../../../../lib";
+import {sandboxElement as e, sandboxForEach as forEach, sandboxChildComp as childComp} from "../../../../lib/";
 
 export interface TreeNodeViewState {
     headChar: string,
@@ -16,14 +16,17 @@ export interface TreeNodeElementRefs {
 export type TreeNodeElement = JayElement<TreeNodeViewState, TreeNodeElementRefs>
 
 export function render(viewState: TreeNodeViewState): TreeNodeElement {
-    return elementBridge(viewState, () => [
-        e('head'),
-        forEach((viewState: TreeNodeViewState) => viewState.node?.children, 'id', () => [
-                childComp(TreeNode, vs => vs, "child")
+    return elementBridge(viewState, () => {
+            const refChild = compCollectionRef('child')
+            return [
+                e(elemRef('head')),
+                forEach((viewState: TreeNodeViewState) => viewState.node?.children, 'id', () => [
+                    childComp(TreeNode, vs => vs, refChild())
+                    ]
+                )
             ]
-        )
-    ],
+        },
         [],
-        ['child'],
+        [''],
         [[['node', 'children'], {matchBy: 'id'}]]) as unknown as TreeNodeElement;
 }
