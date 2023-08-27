@@ -1,5 +1,6 @@
 import {describe, expect, it} from '@jest/globals'
 import {
+    compCollectionRef,
     compRef,
     elemCollectionRef,
     elemRef,
@@ -754,9 +755,9 @@ describe('sandbox-refs', () => {
             let reactive = new Reactive();
             let bridgeElement = mkBridgeElement(vs, () => [
                 c(vs => vs.shown, [
-                    childComp(Item, vs => ({text: vs.text, dataId: 'a'}), 'comp1')
+                    childComp(Item, vs => ({text: vs.text, dataId: 'a'}), compRef('comp1'))
                 ])
-            ], [], [], endpoint, reactive, getNullComponentInstance)
+            ], [], [], endpoint, reactive, getNullComponentInstance, [])
             return {endpoint, bridgeElement}
         }
 
@@ -808,11 +809,13 @@ describe('sandbox-refs', () => {
         function setup(viewState = vs) {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let bridgeElement = mkBridgeElement(viewState, () => [
-                forEach<ViewStateType, ItemType>(vs => vs.items, "dataId",
-                    () => [childComp<ItemType, ItemProps>(Item, vs => vs, 'comp1')]
-                )
-            ], [], ['comp1'], endpoint, reactive, getNullComponentInstance)
+            let bridgeElement = mkBridgeElement(viewState, () => {
+                const refComp1 = compCollectionRef('comp1');
+                return [
+                    forEach<ViewStateType, ItemType>(vs => vs.items, "dataId",
+                        () => [childComp(Item, vs => vs, refComp1())]
+                    )
+                ]}, [], ['comp1'], endpoint, reactive, getNullComponentInstance, [])
             return {endpoint, bridgeElement}
         }
 

@@ -133,7 +133,7 @@ class HTMLElementCollectionRefImpl<ViewState, ElementType extends HTMLElement> e
     }
 }
 
-class ComponentCollectionRefImpl<ViewState, ComponentType extends JayComponent<any, ViewState, any>> extends
+export class ComponentCollectionRefImpl<ViewState, ComponentType extends JayComponent<any, ViewState, any>> extends
     CollectionRefImpl<
         ViewState,
         ComponentType,

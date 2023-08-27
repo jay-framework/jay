@@ -1,6 +1,6 @@
 import {
     BaseJayElement,
-    ComponentCollectionProxyOperations,
+    ComponentCollectionProxyOperations, ComponentCollectionRefImpl,
     Coordinate, GlobalJayEvents,
     HTMLElementCollectionProxy,
     HTMLElementCollectionProxyTarget,
@@ -126,6 +126,19 @@ export function compRef(refName: string): PrivateRef<any, any> {
     let {viewState, dataIds, refs} = useContext(SANDBOX_CREATION_CONTEXT);
     let coordinate = [...dataIds, refName]
     return refs.add(refName, new ComponentRefImpl(viewState, coordinate, refs.eventWrapper));
+}
+
+export function compCollectionRef<ViewState, ComponentType extends JayComponent<any, ViewState, any>>(refName: string): () => PrivateRef<ViewState, any> {
+    let {refs} = useContext(SANDBOX_CREATION_CONTEXT);
+    let collRef = new ComponentCollectionRefImpl<ViewState, ComponentType>()
+    refs.add(refName, collRef);
+    return () => {
+        let {viewState, dataIds, refs} = useContext(SANDBOX_CREATION_CONTEXT);
+        let coordinate = [...dataIds, refName]
+        let ref = new ComponentRefImpl<ViewState, ComponentType>(viewState, coordinate, refs.eventWrapper);
+        collRef.addRef(ref);
+        return ref;
+    }
 }
 
 
