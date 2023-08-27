@@ -1,4 +1,4 @@
-import {JayElement, ConstructContext, RenderElementOptions} from "jay-runtime";
+import {JayElement, ConstructContext, RenderElementOptions, compRef} from "jay-runtime";
 import {Main, MainProps} from './main';
 import {mainRoot as mr} from "jay-secure";
 import {secureChildComp} from "jay-secure";
@@ -14,6 +14,6 @@ export type AppElement = JayElement<AppViewState, AppElementRefs>
 export function render(viewState: AppViewState, options?: RenderElementOptions): AppElement {
     return ConstructContext.withRootContext(viewState, () =>
         mr(viewState, () =>
-            secureChildComp(Main, vs => ({}), 'a')
+            secureChildComp(Main, vs => ({}), compRef('a'))
         , funcRepository), options);
 }

@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, dynamicProperty as dp, conditional as c, dynamicElement as de, forEach, ConstructContext, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, dynamicProperty as dp, conditional as c, dynamicElement as de, forEach, ConstructContext, HTMLElementProxy, elemRef as er, compRef as cr, RenderElementOptions} from "jay-runtime";
 import {BasicRef} from './basic/basic-data-refs';
 import {Basic} from './basic/basic-data';
 import {CollectionsRef} from './collections/collections-data-refs';
@@ -50,32 +50,32 @@ export function render(viewState: MainViewState, options?: RenderElementOptions)
       e('div', {class: 'title'}, ['Jay Benchmarks - the Jay Project']),
       e('div', {class: 'select-example'}, [
         e('label', {for: 'choose-example'}, ['Select example to view']),
-        de('select', {id: 'choose-example', ref: 'chooseExample'}, [
+        de('select', {id: 'choose-example'}, [
           forEach(vs => vs.examples, (vs1: Example) => {
             return e('option', {value: 'value'}, [dt(vs => vs.name)            ])}, 'value')
-        ])
+        ], er('chooseExample'))
       ]),
       e('div', {class: 'cycles'}, [
         e('label', {for: 'cycles'}, ['Select number of cycles']),
-        e('input', {id: 'cycles', value: dp(vs => vs.cycles), ref: 'cycles'}, [])
+        e('input', {id: 'cycles', value: dp(vs => vs.cycles)}, [], er('cycles'))
       ]),
       e('div', {class: 'progress'}, [dt(vs => vs.progress)]),
-      e('button', {ref: 'run'}, ['run']),
+      e('button', {}, ['run'], er('run')),
       de('div', {class: 'stage'}, [
         c(vs => vs.selectedExample === SelectedExample.basic,
-          childComp(Basic, vs => ({cycles: vs.cycles}), 'basic')
+          childComp(Basic, (vs: MainViewState) => ({cycles: vs.cycles}), cr('basic'))
         ),
         c(vs => vs.selectedExample === SelectedExample.collections,
-          childComp(Collections, vs => ({cycles: vs.cycles}), 'collections')
+          childComp(Collections, (vs: MainViewState) => ({cycles: vs.cycles}), cr('collections'))
         ),
         c(vs => vs.selectedExample === SelectedExample.composite,
-          childComp(Composite, vs => ({cycles: vs.cycles}), 'composite')
+          childComp(Composite, (vs: MainViewState) => ({cycles: vs.cycles}), cr('composite'))
         ),
         c(vs => vs.selectedExample === SelectedExample.conditions,
-          childComp(Conditions, vs => ({cycles: vs.cycles}), 'conditions')
+          childComp(Conditions, (vs: MainViewState) => ({cycles: vs.cycles}), cr('conditions'))
         ),
         c(vs => vs.selectedExample === SelectedExample.table,
-          childComp(TableHost, vs => ({cycles: vs.cycles}), 'table')
+          childComp(TableHost, (vs: MainViewState) => ({cycles: vs.cycles}), cr('table'))
         )
       ])
     ]), options);

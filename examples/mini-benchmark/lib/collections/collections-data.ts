@@ -1,8 +1,8 @@
 import {CollectionsElementRefs, render} from './collections.jay.html';
 import {createMemo, createState, makeJayComponent, Props, useReactive} from 'jay-component';
 import benchmark from "../benchmark";
-import {ADD, JSONPatch, MOVE, REMOVE, REPLACE} from "../../../../packages/json-patch";
-import {patch} from "jay-serialization";
+import {ADD, JSONPatch, MOVE, REMOVE, REPLACE} from "jay-json-patch";
+import {patch} from "jay-json-patch";
 
 interface CollectionsProps {
     cycles: number
