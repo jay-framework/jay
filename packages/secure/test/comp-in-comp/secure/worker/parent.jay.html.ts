@@ -1,5 +1,5 @@
 import {JayElement, HTMLElementProxy} from "jay-runtime";
-import {elementBridge} from "../../../../lib";
+import {compCollectionRef, compRef, elementBridge, elemRef} from "../../../../lib";
 import {sandboxElement as e, sandboxChildComp as childComp, sandboxForEach as forEach} from "../../../../lib/";
 import {ChildRef} from "../../regular/child-refs";
 import {Child, ChildProps} from "./child";
@@ -28,12 +28,14 @@ export interface ParentElementRefs {
 export type ParentElement = JayElement<ParentViewState, ParentElementRefs>
 
 export function render(viewState: ParentViewState): ParentElement {
-    return elementBridge(viewState, () => [
-        e('parentChangesChildPropButton'),
-        e('parentCallsChildApiButton'),
-        childComp(Child, vs => ({textFromParent: vs.childText, id: 'static'}), 'staticChild'),
-        forEach(vs => vs.dynamicChildren, 'id', () => [
-            childComp<DynamicChild, ChildProps>(Child, vs => ({textFromParent: vs.childText, id: vs.id}), 'dynamicChildren'),
-        ])
-    ], [], ['dynamicChildren']);
+    return elementBridge(viewState, () => {
+        const refDynamicChildren = compCollectionRef('dynamicChildren')
+        return [
+            e(elemRef('parentChangesChildPropButton')),
+            e(elemRef('parentCallsChildApiButton')),
+            childComp(Child, vs => ({textFromParent: vs.childText, id: 'static'}), compRef('staticChild')),
+            forEach(vs => vs.dynamicChildren, 'id', () => [
+                childComp(Child, (vs: DynamicChild) => ({textFromParent: vs.childText, id: vs.id}), refDynamicChildren()),
+            ])
+        ]}, [], ['']);
 }
