@@ -1,7 +1,7 @@
 import {
     BaseJayElement,
     JayComponent,
-    JayComponentConstructor, JayEventHandlerWrapper,
+    JayComponentConstructor,
     MountFunc,
     provideContext,
     updateFunc,
@@ -28,7 +28,7 @@ export function sandboxChildComp<ParentVS, Props, ChildT,
     compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentVS) => Props,
     ref: PrivateRef<ParentVS, ChildComp>): SandboxElement<ParentVS> {
-    let {viewState, dataIds, endpoint, parentComponentReactive} = useContext(SANDBOX_CREATION_CONTEXT)
+    let {viewState, endpoint} = useContext(SANDBOX_CREATION_CONTEXT)
     let coordinate = ref.coordinate;
     let context = {compId: endpoint.compId, coordinate, port: endpoint.port}
     let childComp = provideContext(SANDBOX_BRIDGE_CONTEXT, context, () => {

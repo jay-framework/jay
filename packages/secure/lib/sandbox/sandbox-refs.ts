@@ -237,14 +237,14 @@ export class DynamicRefImplementation<ViewState, ElementType extends HTMLElement
         }
     }
     find(predicate: (t: ViewState, c: Coordinate) => boolean): HTMLElementProxy<ViewState, ElementType> | undefined {
-        for (const [id, item] of this.items)
+        for (const [, item] of this.items)
             if (predicate(item.viewState, item.coordinate)) {
                 return item.getPublicAPI();
             }
     }
     map<ResultType>(handler: (element: HTMLElementProxy<ViewState, ElementType>, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType> {
         let promises: Array<ResultType> = [];
-        for (const [id, item] of this.items) {
+        for (const [, item] of this.items) {
             const handlerResponse = handler(item.getPublicAPI(), item.viewState, item.coordinate)
             if (handlerResponse)
                 promises.push(handlerResponse)
