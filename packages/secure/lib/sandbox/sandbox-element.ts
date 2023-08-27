@@ -28,7 +28,7 @@ export function sandboxChildComp<ParentVS, Props, ChildT,
     compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentVS) => Props,
     ref: PrivateRef<ParentVS, ChildComp>): SandboxElement<ParentVS> {
-    let {viewState, refs, dataIds, isDynamic, endpoint, parentComponentReactive} = useContext(SANDBOX_CREATION_CONTEXT)
+    let {viewState, dataIds, endpoint, parentComponentReactive} = useContext(SANDBOX_CREATION_CONTEXT)
     let coordinate = [...dataIds, ref.coordinate];
     let context = {compId: endpoint.compId, coordinate, port: endpoint.port}
     let childComp = provideContext(SANDBOX_BRIDGE_CONTEXT, context, () => {
@@ -127,7 +127,7 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
     matchBy: string,
     children: () => SandboxElement<ItemViewState>[]
 ): SandboxElement<ParentViewState> {
-    const {viewState, endpoint, refs, dataIds, parentComponentReactive} = useContext(SANDBOX_CREATION_CONTEXT)
+    const {viewState, endpoint, refManager, dataIds, parentComponentReactive} = useContext(SANDBOX_CREATION_CONTEXT)
     let lastItems: ItemViewState[] = [];
     let childElementsMap: Map<string, SandboxElement<ItemViewState>[]> = new Map();
     let update = (viewState: ParentViewState) => {
@@ -137,7 +137,7 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
             let {removedItems, addedItems, itemsToUpdate} = compareLists(lastItems, newItems, matchBy)
             addedItems.forEach(item => {
                 let childElements = provideContext(SANDBOX_CREATION_CONTEXT,
-                    {endpoint, viewState: item, refs, dataIds: [...dataIds, item[matchBy]], isDynamic: true, parentComponentReactive}, children)
+                    {endpoint, viewState: item, refManager, dataIds: [...dataIds, item[matchBy]], isDynamic: true, parentComponentReactive}, children)
                 childElementsMap.set(item[matchBy], childElements);
             })
             removedItems.forEach(item => {

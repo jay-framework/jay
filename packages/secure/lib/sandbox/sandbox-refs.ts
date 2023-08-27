@@ -1,14 +1,12 @@
 import {
-    BaseJayElement,
-    ComponentCollectionProxyOperations, ComponentCollectionRefImpl,
+    ComponentCollectionRefImpl,
     Coordinate, GlobalJayEvents,
     HTMLElementCollectionProxy,
     HTMLElementCollectionProxyTarget,
     HTMLElementProxy,
     HTMLElementProxyTarget,
-    HTMLNativeExec,
     JayComponent, JayEvent,
-    JayEventHandler, JayEventHandlerWrapper,
+    JayEventHandler,
     JayNativeFunction,
     MountFunc,
     normalizeUpdates,
@@ -104,15 +102,15 @@ export interface SecureElementRef<ViewState, PublicRefAPI> {
 
 
 export function elemRef(refName: string): SecureElementRef<any, any> {
-    let {viewState, endpoint, refs, dataIds} = useContext(SANDBOX_CREATION_CONTEXT)
+    let {viewState, endpoint, refManager, dataIds} = useContext(SANDBOX_CREATION_CONTEXT)
     let coordinate = [...dataIds, refName]
-    return refs.add(refName, new StaticRefImplementation(refName, endpoint, viewState, coordinate));
+    return refManager.add(refName, new StaticRefImplementation(refName, endpoint, viewState, coordinate));
 }
 
 export function elemCollectionRef<ViewState, ElementType extends HTMLElement>(refName: string): () => SecureElementRef<ViewState, any> {
-    let {endpoint, refs} = useContext(SANDBOX_CREATION_CONTEXT)
+    let {endpoint, refManager} = useContext(SANDBOX_CREATION_CONTEXT)
     let collRef = new DynamicRefImplementation<ViewState, ElementType>(refName, endpoint);
-    refs.add(refName, collRef);
+    refManager.add(refName, collRef);
     return () => {
         let {viewState, endpoint, dataIds} = useContext(SANDBOX_CREATION_CONTEXT)
         let coordinate = [...dataIds, refName]
@@ -123,19 +121,19 @@ export function elemCollectionRef<ViewState, ElementType extends HTMLElement>(re
 }
 
 export function compRef(refName: string): PrivateRef<any, any> {
-    let {viewState, dataIds, refs} = useContext(SANDBOX_CREATION_CONTEXT);
+    let {viewState, dataIds, refManager} = useContext(SANDBOX_CREATION_CONTEXT);
     let coordinate = [...dataIds, refName]
-    return refs.add(refName, new ComponentRefImpl(viewState, coordinate, refs.eventWrapper));
+    return refManager.add(refName, new ComponentRefImpl(viewState, coordinate, refManager.eventWrapper));
 }
 
 export function compCollectionRef<ViewState, ComponentType extends JayComponent<any, ViewState, any>>(refName: string): () => PrivateRef<ViewState, any> {
-    let {refs} = useContext(SANDBOX_CREATION_CONTEXT);
+    let {refManager} = useContext(SANDBOX_CREATION_CONTEXT);
     let collRef = new ComponentCollectionRefImpl<ViewState, ComponentType>()
-    refs.add(refName, collRef);
+    refManager.add(refName, collRef);
     return () => {
-        let {viewState, dataIds, refs} = useContext(SANDBOX_CREATION_CONTEXT);
+        let {viewState, dataIds, refManager} = useContext(SANDBOX_CREATION_CONTEXT);
         let coordinate = [...dataIds, refName]
-        let ref = new ComponentRefImpl<ViewState, ComponentType>(viewState, coordinate, refs.eventWrapper);
+        let ref = new ComponentRefImpl<ViewState, ComponentType>(viewState, coordinate, refManager.eventWrapper);
         collRef.addRef(ref);
         return ref;
     }
@@ -225,18 +223,6 @@ export function newSecureHTMLElementPublicApiProxy<ViewState, ElementType extend
     Target extends StaticRefImplementation<ViewState, ElementType> | DynamicRefImplementation<ViewState, ElementType>>(
     ref: Target): Target & GlobalJayEvents<ViewState> {
     return new Proxy(ref, SecureHTMLElementRefProxy) as Target & GlobalJayEvents<ViewState>;
-}
-
-
-export class DynamicNativeExec<ViewState> implements HTMLNativeExec<ViewState, any>{
-    constructor(private ref: string, private coordinate: Coordinate, private ep: IJayEndpoint) {
-    }
-
-    $exec<ResultType>(handler: JayNativeFunction<any, ViewState, ResultType>): Promise<ResultType> {
-        let {$execPromise, correlationId} = correlatedPromise<ResultType>();
-        this.ep.post(nativeExec((handler as $JayNativeFunction<any, any, ResultType>).id, correlationId, this.ref, this.coordinate));
-        return $execPromise;
-    }
 }
 
 export class DynamicRefImplementation<ViewState, ElementType extends HTMLElement> implements
@@ -393,12 +379,12 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
                                            getComponentInstance: () => JayComponent<any, any, any>,
                                            arraySerializationContext: ArrayContexts): SandboxBridgeElement<ViewState> {
 
-    let refs = new ReferencesManager();
+    let refManager = new ReferencesManager();
     let events = {}
     let port = endpoint.port;
     // dynamicComponents.forEach(compRef => refs[compRef] = proxyRef(new DynamicCompRefImplementation()))
     // dynamicElements.forEach(elemRef => refs[elemRef] = proxyRef(new DynamicRefImplementation(elemRef, endpoint)))
-    return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState, refs, dataIds: [], isDynamic: false, parentComponentReactive: reactive}, () => {
+    return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState, refManager, dataIds: [], isDynamic: false, parentComponentReactive: reactive}, () => {
         let elements = sandboxElements();
         let patch: JSONPatch, nextSerialize = serialize; // TODO add diff context
         let postUpdateMessage = (newViewState) => {
@@ -412,7 +398,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
             switch (inMessage.type) {
                 case JayPortMessageType.eventInvocation: {
                     reactive.batchReactions(() => {
-                        (refs.get(inMessage.coordinate.slice(-1)[0]) as StaticRefImplementation<ViewState, any>).invoke(inMessage.eventType, inMessage.coordinate, inMessage.eventData)
+                        (refManager.get(inMessage.coordinate.slice(-1)[0]) as StaticRefImplementation<ViewState, any>).invoke(inMessage.eventType, inMessage.coordinate, inMessage.eventData)
                     })
                     break;
                 }
@@ -453,7 +439,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
             }
         })
 
-        return refs.applyToElement({
+        return refManager.applyToElement({
             dom: undefined,
             update,
             mount: () => {},

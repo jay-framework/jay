@@ -23,7 +23,7 @@ export type Refs = Record<string, HTMLElementCollectionProxy<any, any> | HTMLEle
 export interface SandboxCreationContext<ViewState> {
     viewState: ViewState,
     endpoint: IJayEndpoint,
-    refs?: ReferencesManager,
+    refManager?: ReferencesManager,
     dataIds: string[],
     isDynamic: boolean,
     parentComponentReactive?: Reactive
