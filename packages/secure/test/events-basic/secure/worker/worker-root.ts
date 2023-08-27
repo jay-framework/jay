@@ -1,9 +1,10 @@
 import {Counter, CounterProps} from "./counter";
-import {sandboxRoot} from "../../../../lib/sandbox/sandbox-root";
-import {sandboxChildComp} from "../../../../lib/sandbox/sandbox-element";
+import {sandboxRoot} from "../../../../lib/";
+import {sandboxChildComp} from "../../../../lib/";
+import {compRef} from "../../../../lib";
 
 export function initializeWorker() {
     sandboxRoot(() => [
-        sandboxChildComp<any, CounterProps>(Counter, vs => ({title: 'first counter', initialCount: 12}), 'a')
+        sandboxChildComp<any, CounterProps, any, any, any>(Counter, vs => ({title: 'first counter', initialCount: 12}), compRef('a'))
     ])
 }

@@ -1,9 +1,9 @@
 import {Comp, CompProps} from "./comp";
-import {sandboxRoot} from "../../../../lib/sandbox/sandbox-root";
-import {sandboxChildComp} from "../../../../lib/sandbox/sandbox-element";
+import {compRef, sandboxRoot} from "../../../../lib/";
+import {sandboxChildComp} from "../../../../lib/";
 
 export function initializeWorker() {
     sandboxRoot(() => [
-        sandboxChildComp<any, CompProps>(Comp, vs => ({}), 'comp1')
+        sandboxChildComp<any, CompProps, any, any, any>(Comp, vs => ({}), compRef('comp1'))
     ])
 }
