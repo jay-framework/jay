@@ -1,7 +1,7 @@
 import {CompElementRefs, render as CompRender} from './comp.jay.html';
 import {makeJayComponent, Props, createState} from 'jay-component';
-import {exec$} from "../../../../lib/sandbox/exec";
-import {$func, $funcGlobal} from "../../../../lib/$func";
+import {exec$} from "../../../../lib";
+import {$func, $funcGlobal} from "../../../../lib";
 
 export interface CompProps {
 }
@@ -19,7 +19,7 @@ function CompConstructor({}: Props<CompProps>, refs: CompElementRefs) {
         setText(`button with text ${buttonText} was clicked`)
     })
     refs.buttonExecGlobal.onclick(async () => {
-        let title = await exec$($funcGlobal(2))
+        let title = await exec$($funcGlobal('2'))
         setText(`global exec was clicked. document.title: ${title}`)
     })
 

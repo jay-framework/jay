@@ -8,6 +8,7 @@ import {
 } from "jay-runtime";
 import {IJayEndpoint, IJayPort} from "../comm-channel/comm-channel";
 import {Reactive} from "jay-reactive";
+import {ReferencesManager} from "jay-runtime/dist/references-manager";
 
 
 export interface SandboxContext {
@@ -22,7 +23,7 @@ export type Refs = Record<string, HTMLElementCollectionProxy<any, any> | HTMLEle
 export interface SandboxCreationContext<ViewState> {
     viewState: ViewState,
     endpoint: IJayEndpoint,
-    refs?: Refs,
+    refs?: ReferencesManager,
     dataIds: string[],
     isDynamic: boolean,
     parentComponentReactive?: Reactive

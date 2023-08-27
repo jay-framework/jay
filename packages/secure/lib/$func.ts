@@ -2,23 +2,27 @@ import {JayEventHandler, JayNativeFunction} from "jay-runtime";
 import {JayGlobalNativeFunction} from "./main/function-repository-types";
 import {JPMNativeExecResult} from "./comm-channel/messages";
 
-function nativeExecId(id) {
+export type NativeIdMarker = {
+    (): void,
+    id: number
+}
+function nativeExecId(id: string): NativeIdMarker {
     let fn = () => null;
     // @ts-ignore
     fn.id = id;
-    return fn;
+    return fn as NativeIdMarker;
 }
 
-export function $handler<EventType, ViewState, Returns>(id): JayEventHandler<EventType, ViewState, Returns> {
-    return nativeExecId(id);
+export function $handler<EventType, ViewState, Returns>(id: string): JayEventHandler<EventType, ViewState, Returns> {
+    return nativeExecId(id) as any as JayEventHandler<EventType, ViewState, Returns>;
 }
 
-export function $func<ElementType extends HTMLElement, ViewState, ResultType>(id): JayNativeFunction<ElementType, ViewState, ResultType> {
-    return nativeExecId(id);
+export function $func<ElementType extends HTMLElement, ViewState, ResultType>(id: string): JayNativeFunction<ElementType, ViewState, ResultType> {
+    return nativeExecId(id) as any as JayNativeFunction<ElementType, ViewState, ResultType>;
 }
 
-export function $funcGlobal<R>(id): JayGlobalNativeFunction<R> {
-    return nativeExecId(id);
+export function $funcGlobal<R>(id: string): JayGlobalNativeFunction<R> {
+    return nativeExecId(id) as any as JayGlobalNativeFunction<R>;
 }
 
 interface CorrelatedPromise<T> {

@@ -1,14 +1,15 @@
 import {describe, expect, it} from '@jest/globals'
 import {
+    elemCollectionRef,
+    elemRef,
     mkBridgeElement
-} from "../../lib/sandbox/sandbox-refs";
+} from "../../lib/";
 import {
     IJayEndpoint, IJayPort,
     JayPortInMessageHandler
 } from "../../lib";
 import {Reactive} from "jay-reactive";
-import {mutableObject} from "jay-mutable";
-import {$func, $handler} from "../../lib/$func";
+import {$func, $handler} from "../../lib";
 import {ComponentCollectionProxy, Coordinate, HTMLElementCollectionProxy, HTMLElementProxy} from "jay-runtime";
 import {
     sandboxCondition as c,
@@ -35,8 +36,11 @@ describe('sandbox-refs', () => {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
             let bridgeElement =
-                mkBridgeElement(vs,() => [e('one'), e('two')], [], [],
-                    endpoint, reactive, getNullComponentInstance)
+                mkBridgeElement(vs,() => [
+                        e(elemRef('one')),
+                        e(elemRef('two'))
+                    ], [], [],
+                    endpoint, reactive, getNullComponentInstance, [])
             return {endpoint, bridgeElement}
 
         }
@@ -188,14 +192,16 @@ describe('sandbox-refs', () => {
             let reactive = new Reactive();
             let childElementUpdateSpies = [];
             let bridgeElement =
-                mkBridgeElement(vs, () => [
-                forEach(vs => vs.items, 'name', () => {
-                    let childElement = e('one');
-                    childElementUpdateSpies.push(jest.spyOn(childElement, 'update'));
-                    return [childElement]
-                })
-            ], ['one'], [],
-                    endpoint, reactive, getNullComponentInstance)
+                mkBridgeElement(vs, () => {
+                    const refOne = elemCollectionRef('one')
+                    return [
+                        forEach(vs => vs.items, 'name', () => {
+                            let childElement = e(refOne());
+                            childElementUpdateSpies.push(jest.spyOn(childElement, 'update'));
+                            return [childElement]
+                        })
+                    ]}, ['one'], [],
+                        endpoint, reactive, getNullComponentInstance, [])
             return {endpoint, bridgeElement, childElementUpdateSpies}
         }
 
@@ -247,18 +253,18 @@ describe('sandbox-refs', () => {
             expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": baseViewState.items[1]})
         })
 
-        it('in case of event with coordinate of non existing element, should not throw error, but instead return undefined viewState', () => {
+        it('in case of event with coordinate of non existing element, should not trigger the event', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(eventInvocationMessage('click', ['D', 'one']))
 
-            expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["D","one"], "event": undefined, "viewState": undefined})
+            expect(callback.mock.calls).toHaveLength(0)
+            // expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["D","one"], "event": undefined, "viewState": undefined})
         })
 
-        it('in case of event with coordinate of a removed element, should not throw error, but instead return undefined viewState', () => {
+        it('in case of event with coordinate of a removed element, should not trigger the event', () => {
             let {endpoint, bridgeElement} = setup();
             let callback = jest.fn();
 
@@ -266,8 +272,8 @@ describe('sandbox-refs', () => {
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(eventInvocationMessage('click', ['B', 'one']))
 
-            expect(callback.mock.calls).toHaveLength(1)
-            expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": undefined})
+            expect(callback.mock.calls).toHaveLength(0)
+            // expect(callback.mock.calls[0][0]).toEqual({"coordinate": ["B","one"], "event": undefined, "viewState": undefined})
         })
 
         it('should support viewState updates - additional item', () => {

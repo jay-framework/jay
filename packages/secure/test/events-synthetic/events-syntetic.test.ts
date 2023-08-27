@@ -4,10 +4,11 @@ import {initializeWorker} from "./secure/worker/worker-root";
 import {render} from "./secure/main/app.jay.html";
 import {dispatchEvent} from "../util/dispatch-event";
 
+const VERBOSE = true;
 describe('events synthetic tests', () => {
 
     async function mkElement() {
-        let channel = useMockCommunicationChannel();
+        let channel = useMockCommunicationChannel(VERBOSE);
         setChannel(channel);
         initializeWorker();
         let appElement = render({});

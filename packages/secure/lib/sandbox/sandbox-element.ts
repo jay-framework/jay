@@ -11,8 +11,8 @@ import {
     componentWrapper,
     DynamicCompRefImplementation,
     DynamicNativeExec,
-    DynamicRefImplementation, proxyCompRef,
-    proxyRef,
+    DynamicRefImplementation,
+    SecureElementRef,
     StaticRefImplementation
 } from "./sandbox-refs";
 
@@ -22,39 +22,8 @@ export interface SandboxElement<ViewState> {
     unmount: MountFunc
 }
 
-export function sandboxElement<ViewState>(refName: string): SandboxElement<ViewState> {
-    let {viewState, endpoint, refs, isDynamic, dataIds} = useContext(SANDBOX_CREATION_CONTEXT)
-    if (isDynamic) {
-        let ref = (refs[refName] as any as DynamicRefImplementation<ViewState>);
-        let coordinate = [...dataIds, refName];
-        let refItem = new DynamicNativeExec<ViewState>(refName, coordinate, endpoint);
-        ref.setItem(coordinate, viewState, refItem)
-        let mounted = true;
-        return {
-            update: (newViewState) => {
-                viewState = newViewState;
-                if (mounted)
-                    ref.setItem(coordinate, newViewState, refItem)
-            },
-            mount: () => {
-                mounted = true;
-                ref.setItem(coordinate, viewState, refItem)
-            },
-            unmount: () => {
-                mounted = false;
-                ref.removeItem(coordinate)
-            }
-        }
-    }
-    else {
-        let refImpl = new StaticRefImplementation(refName, endpoint, viewState);
-        refs[refName] = proxyRef(refImpl)
-        return {
-            update: refImpl.update,
-            mount: noopMount,
-            unmount: noopMount
-        }
-    }
+export function sandboxElement<ViewState>(ref: SecureElementRef<any, any>): SandboxElement<ViewState> {
+    return ref;
 }
 
 export function sandboxChildComp<ParentVS, Props>(

@@ -255,7 +255,7 @@ export class ComponentRefImpl<ViewState, ComponentType extends JayComponent<any,
 }
 
 
-const EVENT_TRAP = (target, prop) => {
+export const EVENT_TRAP = (target, prop) => {
     if (typeof prop === 'string') {
         if (prop.indexOf("on") === 0) {
             let eventName = prop.substring(2);
@@ -295,7 +295,7 @@ const DELEGATE_TO_COMP_TRAP = (target, prop) => {
 }
 
 
-const GetTrapProxy = (getTraps: Array<(target: any, p: string | symbol, receiver: any) => any>) => {
+export const GetTrapProxy = (getTraps: Array<(target: any, p: string | symbol, receiver: any) => any>) => {
     return {
         get: function(target, prop, receiver) {
             let result;

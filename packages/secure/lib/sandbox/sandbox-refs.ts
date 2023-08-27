@@ -1,7 +1,7 @@
 import {
     BaseJayElement,
     ComponentCollectionProxyOperations,
-    Coordinate,
+    Coordinate, GlobalJayEvents,
     HTMLElementCollectionProxy,
     HTMLElementCollectionProxyTarget,
     HTMLElementProxy,
@@ -13,7 +13,7 @@ import {
     MountFunc,
     normalizeUpdates,
     provideContext,
-    updateFunc
+    updateFunc, useContext
 } from "jay-runtime";
 import {
     IJayEndpoint,
@@ -22,7 +22,7 @@ import {
 import {$JayNativeFunction} from "../main/function-repository-types";
 import {
     completeCorrelatedPromise,
-    correlatedPromise
+    correlatedPromise, NativeIdMarker
 } from "../$func";
 import {Refs, SANDBOX_CREATION_CONTEXT} from "./sandbox-context";
 import {SandboxElement} from "./sandbox-element";
@@ -35,55 +35,59 @@ import {
     removeEventListenerMessage, renderMessage,
     rootApiReturns
 } from "../comm-channel/messages";
-import {JSONPatch} from "../../../json-patch";
+import {JSONPatch} from "jay-json-patch";
 import {ArrayContexts} from "jay-serialization/dist/serialize/diff";
+import {ManagedRef, ReferencesManager} from "jay-runtime/dist/references-manager";
+import {
+    EVENT_TRAP,
+    GetTrapProxy
+} from "jay-runtime";
 
 
 export interface SandboxBridgeElement<ViewState> {
-    dom: undefined,
     update: updateFunc<ViewState>
     mount: MountFunc,
     unmount: MountFunc
     refs: Refs
 }
 
-const proxyHandler = {
-    get: function(target: RefImplementation<any> | JayComponent<any, any, any>, prop, receiver) {
-        if (typeof prop === 'string') {
-            if (prop.indexOf("on") === 0) {
-                let eventName = prop.substring(2);
-                return (handler) => {
-                    target.addEventListener(eventName, handler);
-                }
-            }
-            if (prop.indexOf("$on") === 0) {
-                let eventName = prop.substring(3);
-                return ($func) => {
-                    let regularHandler;
-                    const handler = ({event, viewState, coordinate}) => {
-                        if (regularHandler)
-                            regularHandler({event, viewState, coordinate});
-                    }
-                    target.addEventListener(eventName, handler,undefined,$func.id);
-                    return {
-                        then: (handler) => {
-                            regularHandler = handler;
-                        }
-                    }
-                }
-            }
-        }
-        return target[prop];
-    }
-}
+// const proxyHandler = {
+//     get: function(target: RefImplementation<any> | JayComponent<any, any, any>, prop, receiver) {
+//         if (typeof prop === 'string') {
+//             if (prop.indexOf("on") === 0) {
+//                 let eventName = prop.substring(2);
+//                 return (handler) => {
+//                     target.addEventListener(eventName, handler);
+//                 }
+//             }
+//             if (prop.indexOf("$on") === 0) {
+//                 let eventName = prop.substring(3);
+//                 return ($func) => {
+//                     let regularHandler;
+//                     const handler = ({event, viewState, coordinate}) => {
+//                         if (regularHandler)
+//                             regularHandler({event, viewState, coordinate});
+//                     }
+//                     target.addEventListener(eventName, handler,undefined,$func.id);
+//                     return {
+//                         then: (handler) => {
+//                             regularHandler = handler;
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//         return target[prop];
+//     }
+// }
 
-export function proxyRef<ViewState>(refDef: StaticRefImplementation<ViewState> | DynamicRefImplementation<ViewState> | DynamicCompRefImplementation<ViewState, any>): HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> {
-    return new Proxy(refDef, proxyHandler) as any as HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any>;
-}
-
-export function proxyCompRef<A, B, C extends BaseJayElement<B>>(comp: JayComponent<A, B, C>): JayComponent<A, B, C> {
-    return new Proxy(comp, proxyHandler) as JayComponent<A, B, C>
-}
+// export function proxyRef<ViewState>(refDef: StaticRefImplementation<ViewState> | DynamicRefImplementation<ViewState> | DynamicCompRefImplementation<ViewState, any>): HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any> {
+//     return new Proxy(refDef, proxyHandler) as any as HTMLElementCollectionProxy<any, any> | HTMLElementProxy<any, any>;
+// }
+//
+// export function proxyCompRef<A, B, C extends BaseJayElement<B>>(comp: JayComponent<A, B, C>): JayComponent<A, B, C> {
+//     return new Proxy(comp, proxyHandler) as JayComponent<A, B, C>
+// }
 
 interface RefImplementation<ViewState> {
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any>, options?: boolean | AddEventListenerOptions, nativeId?: string): void
@@ -91,11 +95,45 @@ interface RefImplementation<ViewState> {
     invoke: (type: string, coordinate: Coordinate, eventData?: any) => void
 }
 
-export class StaticRefImplementation<ViewState> implements HTMLElementProxyTarget<ViewState, any>, RefImplementation<ViewState>{
+export interface SecureElementRef<ViewState, PublicRefAPI> {
+    update: updateFunc<ViewState>,
+    mount: MountFunc,
+    unmount: MountFunc,
+}
+
+
+export function elemRef(refName: string): SecureElementRef<any, any> {
+    let {viewState, endpoint, refs, dataIds} = useContext(SANDBOX_CREATION_CONTEXT)
+    let coordinate = [...dataIds, refName]
+    return refs.add(refName, new StaticRefImplementation(refName, endpoint, viewState, coordinate));
+}
+
+export function elemCollectionRef<ViewState, ElementType extends HTMLElement>(refName: string): () => SecureElementRef<ViewState, any> {
+    let {endpoint, refs} = useContext(SANDBOX_CREATION_CONTEXT)
+    let collRef = new DynamicRefImplementation<ViewState, ElementType>(refName, endpoint);
+    refs.add(refName, collRef);
+    return () => {
+        let {viewState, endpoint, dataIds} = useContext(SANDBOX_CREATION_CONTEXT)
+        let coordinate = [...dataIds, refName]
+        let ref = new StaticRefImplementation<any, ElementType>(refName, endpoint, viewState, coordinate, collRef);
+        collRef.addRef(ref)
+        return ref;
+    }
+}
+
+export class StaticRefImplementation<ViewState, ElementType extends HTMLElement> implements
+    SecureElementRef<ViewState, HTMLElementProxy<ViewState, ElementType>>,
+    HTMLElementProxyTarget<ViewState, ElementType>,
+    RefImplementation<ViewState>,
+    ManagedRef<HTMLElementProxy<ViewState, ElementType>> {
     listeners = new Map<string, JayEventHandler<any, any, any>>()
 
     constructor(
-        private ref: string, private ep: IJayEndpoint, private viewState: ViewState) {
+        private ref: string,
+        private ep: IJayEndpoint,
+        public viewState: ViewState,
+        public readonly coordinate: Coordinate,
+        private parentCollection?: DynamicRefImplementation<ViewState, ElementType>) {
     }
 
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any>, options?: boolean | AddEventListenerOptions, nativeId?: string): void {
@@ -118,13 +156,56 @@ export class StaticRefImplementation<ViewState> implements HTMLElementProxyTarge
     }
     $exec<ResultType>(handler: JayNativeFunction<any, any, ResultType>): Promise<ResultType> {
         let {$execPromise, correlationId} = correlatedPromise<ResultType>();
-        this.ep.post(nativeExec((handler as $JayNativeFunction<any, any, ResultType>).id, correlationId, this.ref, [this.ref]));
+        this.ep.post(nativeExec((handler as $JayNativeFunction<any, any, ResultType>).id, correlationId, this.ref, this.coordinate));
         return $execPromise;
     }
     update = (newViewState: ViewState) => {
         this.viewState = newViewState
     }
+
+    mount(): void {
+        this.parentCollection?.addRef(this)
+    }
+
+    unmount(): void {
+        this.parentCollection?.removeRef(this)
+    }
+
+    getPublicAPI(): HTMLElementProxy<ViewState, ElementType> {
+        return newSecureHTMLElementPublicApiProxy(this)
+    };
 }
+
+const SECURE_EVENT$_TRAP = (target, prop) => {
+    if (typeof prop === 'string') {
+        if (prop.indexOf("$on") === 0) {
+            let eventName = prop.substring(3);
+            return (func$: NativeIdMarker) => {
+                let regularHandler;
+                const handler = ({event, viewState, coordinate}) => {
+                    if (regularHandler)
+                        regularHandler({event, viewState, coordinate});
+                }
+                target.addEventListener(eventName, handler, undefined, func$.id);
+                return {
+                    then: (handler) => {
+                        regularHandler = handler;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
+const SecureHTMLElementRefProxy = GetTrapProxy([EVENT_TRAP, SECURE_EVENT$_TRAP])
+
+export function newSecureHTMLElementPublicApiProxy<ViewState, ElementType extends HTMLElement,
+    Target extends StaticRefImplementation<ViewState, ElementType> | DynamicRefImplementation<ViewState, ElementType>>(
+    ref: Target): Target & GlobalJayEvents<ViewState> {
+    return new Proxy(ref, SecureHTMLElementRefProxy) as Target & GlobalJayEvents<ViewState>;
+}
+
 
 export class DynamicNativeExec<ViewState> implements HTMLNativeExec<ViewState, any>{
     constructor(private ref: string, private coordinate: Coordinate, private ep: IJayEndpoint) {
@@ -137,12 +218,20 @@ export class DynamicNativeExec<ViewState> implements HTMLNativeExec<ViewState, a
     }
 }
 
-export class DynamicRefImplementation<ViewState> implements HTMLElementCollectionProxyTarget<ViewState, any>, RefImplementation<ViewState> {
+export class DynamicRefImplementation<ViewState, ElementType extends HTMLElement> implements
+    HTMLElementCollectionProxyTarget<ViewState, ElementType>,
+    RefImplementation<ViewState>,
+    ManagedRef<HTMLElementCollectionProxy<ViewState, ElementType>>{
+
     listeners = new Map<string, JayEventHandler<any, any, any>>()
-    items = new Map<string, [string[], ViewState, DynamicNativeExec<ViewState>]>();
+    items = new Map<string, StaticRefImplementation<ViewState, ElementType>>();
 
     constructor(
         private ref: string, private ep: IJayEndpoint) {
+    }
+
+    getPublicAPI(): HTMLElementCollectionProxy<ViewState, ElementType> {
+        return newSecureHTMLElementPublicApiProxy(this)
     }
 
     addEventListener<E extends Event>(type: string, listener: JayEventHandler<E, any, any> | null, options?: boolean | AddEventListenerOptions, nativeId?: string): void {
@@ -154,39 +243,44 @@ export class DynamicRefImplementation<ViewState> implements HTMLElementCollectio
         this.listeners.delete(type)
     }
 
+    addRef(ref: StaticRefImplementation<ViewState, ElementType>) {
+        let key = ref.coordinate.toString();
+        if (!this.items.has(key)) {
+            this.items.set(key, ref);
+        }
+    }
+
+    removeRef(ref: StaticRefImplementation<ViewState, ElementType>) {
+        this.items.delete(ref.coordinate.toString())
+    }
+
+
     invoke = (type: string, coordinate: Coordinate, eventData?: any) => {
         let listener = this.listeners.get(type)
         if (listener) {
-            let coordinateAndItem = this.items.get(coordinate.toString())
-            listener({
-                event: eventData,
-                viewState: coordinateAndItem?coordinateAndItem[1]:undefined,
-                coordinate: coordinate
-            })
+            let item = this.items.get(coordinate.toString())
+            if (item)
+                listener({
+                    event: eventData,
+                    viewState: item.viewState,
+                    coordinate: item.coordinate
+                })
         }
     }
-    find(predicate: (t: ViewState, c: Coordinate) => boolean): DynamicNativeExec<ViewState> | undefined {
-        for (const [id, [coordinate, vs, refItem]] of this.items)
-            if (predicate(vs, coordinate)) {
-                return refItem;
+    find(predicate: (t: ViewState, c: Coordinate) => boolean): HTMLElementProxy<ViewState, ElementType> | undefined {
+        for (const [id, item] of this.items)
+            if (predicate(item.viewState, item.coordinate)) {
+                return item.getPublicAPI();
             }
     }
-    map<ResultType>(handler: (element: DynamicNativeExec<ViewState>, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType> {
+    map<ResultType>(handler: (element: HTMLElementProxy<ViewState, ElementType>, viewState: ViewState, coordinate: Coordinate) => ResultType): Array<ResultType> {
         let promises: Array<ResultType> = [];
-        for (const [id, [coordinate, vs, refItem]] of this.items) {
-            const handlerResponse = handler(refItem, vs, coordinate)
+        for (const [id, item] of this.items) {
+            const handlerResponse = handler(item.getPublicAPI(), item.viewState, item.coordinate)
             if (handlerResponse)
                 promises.push(handlerResponse)
         }
         return promises
-    }
-
-    setItem(coordinate: string[], viewState: ViewState, refItem: DynamicNativeExec<ViewState>) {
-        this.items.set(coordinate.toString(), [coordinate, viewState, refItem])
-    }
-
-    removeItem(coordinate: string[]) {
-        this.items.delete(coordinate.toString())
     }
 }
 
@@ -277,11 +371,11 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
                                            getComponentInstance: () => JayComponent<any, any, any>,
                                            arraySerializationContext: ArrayContexts): SandboxBridgeElement<ViewState> {
 
-    let refs = {};
+    let refs = new ReferencesManager();
     let events = {}
     let port = endpoint.port;
-    dynamicComponents.forEach(compRef => refs[compRef] = proxyRef(new DynamicCompRefImplementation()))
-    dynamicElements.forEach(elemRef => refs[elemRef] = proxyRef(new DynamicRefImplementation(elemRef, endpoint)))
+    // dynamicComponents.forEach(compRef => refs[compRef] = proxyRef(new DynamicCompRefImplementation()))
+    // dynamicElements.forEach(elemRef => refs[elemRef] = proxyRef(new DynamicRefImplementation(elemRef, endpoint)))
     return provideContext(SANDBOX_CREATION_CONTEXT, {endpoint, viewState, refs, dataIds: [], isDynamic: false, parentComponentReactive: reactive}, () => {
         let elements = sandboxElements();
         let patch: JSONPatch, nextSerialize = serialize; // TODO add diff context
@@ -296,7 +390,7 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
             switch (inMessage.type) {
                 case JayPortMessageType.eventInvocation: {
                     reactive.batchReactions(() => {
-                        refs[inMessage.coordinate.slice(-1)[0]].invoke(inMessage.eventType, inMessage.coordinate, inMessage.eventData)
+                        (refs.get(inMessage.coordinate.slice(-1)[0]) as StaticRefImplementation<ViewState, any>).invoke(inMessage.eventType, inMessage.coordinate, inMessage.eventData)
                     })
                     break;
                 }
@@ -337,12 +431,11 @@ export function mkBridgeElement<ViewState>(viewState: ViewState,
             }
         })
 
-        return {
+        return refs.applyToElement({
             dom: undefined,
-            refs,
             update,
             mount: () => {},
             unmount: () => {}
-        }
+        })
     })
 }

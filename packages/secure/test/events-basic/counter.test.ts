@@ -3,10 +3,11 @@ import {setChannel, useMockCommunicationChannel} from "../util/mock-channel";
 import {initializeWorker} from "./secure/worker/worker-root";
 import {render} from "./secure/main/app.jay.html";
 
+const VERBOSE = false;
 describe('basic events - using counter component', () => {
 
     async function mkElement() {
-        let channel = useMockCommunicationChannel();
+        let channel = useMockCommunicationChannel(VERBOSE);
         setChannel(channel);
         initializeWorker();
         let appElement = render({});
