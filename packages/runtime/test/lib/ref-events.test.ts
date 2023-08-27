@@ -387,7 +387,7 @@ describe('ReferencesManager events', () => {
                 button.click();
 
                 expect(mockCallback.mock.calls.length).toBe(1);
-                expect(mockCallback.mock.calls[0][0]).toEqual({event: 'item hello - false is removed', viewState: VIEW_STATE, coordinate: [refName1]});
+                expect(mockCallback).toHaveBeenCalledWith({event: 'item hello - false is removed', viewState: VIEW_STATE, coordinate: [refName1]})
             })
 
             it('event parameters when using addEventListener', () => {
@@ -397,7 +397,7 @@ describe('ReferencesManager events', () => {
                 button.click();
 
                 expect(mockCallback.mock.calls.length).toBe(1);
-                expect(mockCallback.mock.calls[0][0]).toEqual({event: 'item hello - false is removed', viewState: VIEW_STATE, coordinate: [refName1]});
+                expect(mockCallback).toHaveBeenCalledWith({event: 'item hello - false is removed', viewState: VIEW_STATE, coordinate: [refName1]})
             })
 
             it('should remove event using removeEventListener', () => {

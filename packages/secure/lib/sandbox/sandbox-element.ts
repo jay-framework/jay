@@ -3,19 +3,13 @@ import {
     JayComponent,
     JayComponentConstructor, JayEventHandlerWrapper,
     MountFunc,
-    noopMount,
     provideContext,
     updateFunc,
     useContext
 } from "jay-runtime";
 import {SANDBOX_CREATION_CONTEXT, SANDBOX_BRIDGE_CONTEXT} from "./sandbox-context";
 import {
-    componentWrapper,
-    DynamicCompRefImplementation,
-    DynamicNativeExec,
-    DynamicRefImplementation,
-    SecureElementRef,
-    StaticRefImplementation
+    SecureElementRef
 } from "./sandbox-refs";
 import {PrivateRef} from "jay-runtime/dist/node-reference";
 
@@ -47,7 +41,6 @@ export function sandboxChildComp<ParentVS, Props, ChildT,
             return parentComponentReactive.batchReactions(() => orig(event))
         }:
         (orig, event) => orig(event);
-    // let [compWrapper, updateRef] = componentWrapper(childComp, viewState, coordinate, eventWrapper);
 
     return {
       update: (newViewState) => {
