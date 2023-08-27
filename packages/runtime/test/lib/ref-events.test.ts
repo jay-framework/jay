@@ -4,7 +4,7 @@ import {
     compRef,
     elemCollectionRef,
     elemRef
-} from "../../lib/node-reference";
+} from "../../lib";
 import {
     childComp,
     ConstructContext,
@@ -383,6 +383,16 @@ describe('ReferencesManager events', () => {
             it('event parameters', () => {
                 let {jayRootElement, jayComponent, mockCallback} = mkElement()
                 jayRootElement.refs.refName1.onremove(mockCallback);
+                let button = jayComponent.element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
+                button.click();
+
+                expect(mockCallback.mock.calls.length).toBe(1);
+                expect(mockCallback.mock.calls[0][0]).toEqual({event: 'item hello - false is removed', viewState: VIEW_STATE, coordinate: [refName1]});
+            })
+
+            it('event parameters when using addEventListener', () => {
+                let {jayRootElement, jayComponent, mockCallback} = mkElement()
+                jayRootElement.refs.refName1.addEventListener('remove', mockCallback);
                 let button = jayComponent.element.dom.querySelector('button[data-id="remove"]') as HTMLButtonElement;
                 button.click();
 

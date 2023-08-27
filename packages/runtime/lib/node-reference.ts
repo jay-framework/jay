@@ -263,6 +263,8 @@ export const EVENT_TRAP = (target, prop) => {
                 target.addEventListener(eventName, handler);
             }
         }
+        if (prop === 'addEventListener')
+            return target.addEventListener.bind(target)
     }
     return false;
 }
