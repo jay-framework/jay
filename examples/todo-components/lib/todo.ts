@@ -1,8 +1,8 @@
 import {Filter, render, ShownTodo, TodoElementRefs} from './todo.jay.html';
 import {createMemo, createState, makeJayComponent, Props} from 'jay-component';
 import {uuid} from "./uuid";
-import {patch} from 'jay-serialization'
-import {ADD, REPLACE} from "../../../packages/json-patch";
+import {patch} from 'jay-json-patch'
+import {ADD, REPLACE} from "jay-json-patch";
 
 const ENTER_KEY = 13;
 

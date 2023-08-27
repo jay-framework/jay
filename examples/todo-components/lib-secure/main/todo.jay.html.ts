@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, dynamicProperty as dp, conditional as c, dynamicElement as de, forEach, ConstructContext, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, dynamicProperty as dp, conditional as c, dynamicElement as de, forEach, ConstructContext, HTMLElementProxy, elemRef as er, compCollectionRef as ccr, RenderElementOptions} from "jay-runtime";
 import {secureChildComp as childComp} from "jay-secure";
 import {ItemRefs} from './item-refs';
 import {Item} from './item';
@@ -39,21 +39,22 @@ export interface TodoElementRefs {
 export type TodoElement = JayElement<TodoViewState, TodoElementRefs>
 
 export function render(viewState: TodoViewState, options?: RenderElementOptions): TodoElement {
-  return ConstructContext.withRootContext(viewState, () =>
-    e('div', {}, [
+  return ConstructContext.withRootContext(viewState, () => {
+    const refItems = ccr('items');
+    return e('div', {}, [
       e('section', {class: 'todoapp'}, [
         de('div', {}, [
           e('header', {class: 'header'}, [
             e('h1', {class: 'main-title'}, ['todos']),
-            e('input', {class: 'new-todo', placeholder: 'What needs to be done?', value: dp(vs => vs.newTodo), ref: 'newTodo', autofocus: ''}, [])
+            e('input', {class: 'new-todo', placeholder: 'What needs to be done?', value: dp(vs => vs.newTodo), autofocus: ''}, [], er('newTodo'))
           ]),
           c(vs => vs.hasItems,
             e('section', {class: 'main'}, [
-              e('input', {id: 'toggle-all', class: 'toggle-all', type: 'checkbox', ref: 'toggleAll', checked: dp(vs => vs.noActiveItems)}, []),
+              e('input', {id: 'toggle-all', class: 'toggle-all', type: 'checkbox', checked: dp(vs => vs.noActiveItems)}, [], er('toggleAll')),
               e('label', {for: 'toggle-all'}, []),
               de('ul', {class: 'todo-list'}, [
                 forEach(vs => vs.shownTodos, (vs1: ShownTodo) => {
-                  return childComp(Item, vs => ({title: vs.title, isCompleted: vs.isCompleted}), 'items')}, 'id')
+                  return childComp(Item, (vs: ShownTodo) => ({title: vs.title, isCompleted: vs.isCompleted}), refItems())}, 'id')
               ])
             ])
           ),
@@ -67,19 +68,19 @@ export function render(viewState: TodoViewState, options?: RenderElementOptions)
               ]),
               e('ul', {class: 'filters'}, [
                 e('li', {}, [
-                  e('a', {ref: 'filterAll', class: da(vs => `${vs.filter === Filter.all?'selected':''}`)}, ['All'])
+                  e('a', {class: da(vs => `${vs.filter === Filter.all?'selected':''}`)}, ['All'], er('filterAll'))
                 ]),
                 e('span', {}, [' ']),
                 e('li', {}, [
-                  e('a', {ref: 'filterActive', class: da(vs => `${vs.filter === Filter.active?'selected':''}`)}, ['Active'])
+                  e('a', {class: da(vs => `${vs.filter === Filter.active?'selected':''}`)}, ['Active'], er('filterActive'))
                 ]),
                 e('span', {}, [' ']),
                 e('li', {}, [
-                  e('a', {ref: 'filterCompleted', class: da(vs => `${vs.filter === Filter.completed?'selected':''}`)}, ['Completed'])
+                  e('a', {class: da(vs => `${vs.filter === Filter.completed?'selected':''}`)}, ['Completed'], er('filterCompleted'))
                 ])
               ]),
               c(vs => vs.showClearCompleted,
-                e('button', {class: 'clear-completed', ref: 'clearCompleted'}, [' Clear completed '])
+                e('button', {class: 'clear-completed'}, [' Clear completed '], er('clearCompleted'))
               )
             ])
           )
@@ -96,5 +97,5 @@ export function render(viewState: TodoViewState, options?: RenderElementOptions)
           e('a', {href: 'http://todomvc.com'}, ['TodoMVC'])
         ])
       ])
-    ]), options, ['items']);
+    ])}, options);
 }
