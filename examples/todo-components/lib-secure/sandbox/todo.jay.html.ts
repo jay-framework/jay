@@ -56,5 +56,5 @@ export function render(viewState: TodoViewState): TodoElement {
                 e(elemRef('filterCompleted')),
                 e(elemRef('clearCompleted')),
             ])
-        ]}, [], ['items']) as unknown as TodoElement;
+        ]}) as unknown as TodoElement;
 }
