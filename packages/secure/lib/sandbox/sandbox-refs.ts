@@ -255,8 +255,6 @@ export class DynamicRefImplementation<ViewState, ElementType extends HTMLElement
 
 export function mkBridgeElement<ViewState>(viewState: ViewState,
                                            sandboxElements: () => SandboxElement<ViewState>[],
-                                           dynamicElements: string[] = [],
-                                           dynamicComponents: string[] = [],
                                            endpoint: IJayEndpoint,
                                            reactive: Reactive,
                                            getComponentInstance: () => JayComponent<any, any, any>,

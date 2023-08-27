@@ -1,5 +1,5 @@
 import {JayElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
-import {elementBridge} from "../../../../lib/sandbox/sandbox-bridge";
+import {elementBridge} from "../../../../lib/";
 import {
     sandboxElement as e,
     sandboxForEach as forEach

@@ -25,8 +25,5 @@ export function render(viewState: TreeNodeViewState): TreeNodeElement {
                     ]
                 )
             ]
-        },
-        [],
-        [''],
-        [[['node', 'children'], {matchBy: 'id'}]]) as unknown as TreeNodeElement;
+        }, [[['node', 'children'], {matchBy: 'id'}]]) as unknown as TreeNodeElement;
 }

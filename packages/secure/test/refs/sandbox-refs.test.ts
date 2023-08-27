@@ -41,8 +41,7 @@ describe('sandbox-refs', () => {
                 mkBridgeElement(vs,() => [
                         e(elemRef('one')),
                         e(elemRef('two'))
-                    ], [], [],
-                    endpoint, reactive, getNullComponentInstance, [])
+                    ], endpoint, reactive, getNullComponentInstance, [])
             return {endpoint, bridgeElement}
 
         }
@@ -202,8 +201,7 @@ describe('sandbox-refs', () => {
                             childElementUpdateSpies.push(jest.spyOn(childElement, 'update'));
                             return [childElement]
                         })
-                    ]}, ['one'], [],
-                        endpoint, reactive, getNullComponentInstance, [])
+                    ]}, endpoint, reactive, getNullComponentInstance, [])
             return {endpoint, bridgeElement, childElementUpdateSpies}
         }
 
@@ -466,8 +464,7 @@ describe('sandbox-refs', () => {
                             e(refTwo())
                         ])
                     ])
-                ]}, [], [],
-                    endpoint, reactive, getNullComponentInstance, [])
+                ]}, endpoint, reactive, getNullComponentInstance, [])
             return {endpoint, bridgeElement}
         }
 
@@ -532,7 +529,7 @@ describe('sandbox-refs', () => {
                     e(elemRef('one')),
                     c(vs => vs.condition2, [e(elemRef('two'))])
                 ])
-            ], [], [], endpoint, reactive, getNullComponentInstance, [])
+            ], endpoint, reactive, getNullComponentInstance, [])
             return {endpoint, bridgeElement}
         }
 
@@ -629,7 +626,7 @@ describe('sandbox-refs', () => {
                             e(refTwo())
                         ])
                     ])
-                ]}, ['one', 'two'], [], endpoint, reactive, getNullComponentInstance, [])
+                ]}, endpoint, reactive, getNullComponentInstance, [])
             return {endpoint, bridgeElement}
         }
 
@@ -681,7 +678,7 @@ describe('sandbox-refs', () => {
             let reactive = new Reactive();
             let bridgeElement = mkBridgeElement(vs, () => [
                 childComp(Item, vs => vs, compRef('comp1'))
-            ], [], [], endpoint, reactive, getNullComponentInstance, [])
+            ], endpoint, reactive, getNullComponentInstance, [])
             let childCompRef = bridgeElement.refs.comp1 as CompType;
             return {endpoint, bridgeElement, childCompRef}
         }
@@ -757,7 +754,7 @@ describe('sandbox-refs', () => {
                 c(vs => vs.shown, [
                     childComp(Item, vs => ({text: vs.text, dataId: 'a'}), compRef('comp1'))
                 ])
-            ], [], [], endpoint, reactive, getNullComponentInstance, [])
+            ], endpoint, reactive, getNullComponentInstance, [])
             return {endpoint, bridgeElement}
         }
 
@@ -815,7 +812,7 @@ describe('sandbox-refs', () => {
                     forEach<ViewStateType, ItemType>(vs => vs.items, "dataId",
                         () => [childComp(Item, vs => vs, refComp1())]
                     )
-                ]}, [], ['comp1'], endpoint, reactive, getNullComponentInstance, [])
+                ]}, endpoint, reactive, getNullComponentInstance, [])
             return {endpoint, bridgeElement}
         }
 

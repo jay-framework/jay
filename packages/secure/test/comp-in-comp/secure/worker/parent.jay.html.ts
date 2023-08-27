@@ -37,5 +37,5 @@ export function render(viewState: ParentViewState): ParentElement {
             forEach(vs => vs.dynamicChildren, 'id', () => [
                 childComp(Child, (vs: DynamicChild) => ({textFromParent: vs.childText, id: vs.id}), refDynamicChildren()),
             ])
-        ]}, [], ['']);
+        ]});
 }

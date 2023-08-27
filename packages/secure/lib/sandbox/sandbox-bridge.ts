@@ -8,13 +8,11 @@ import {ArrayContexts} from "jay-serialization/dist/serialize/diff";
 
 export function elementBridge<ElementViewState, ElementRef>(viewState: ElementViewState,
                                                             sandboxElements: () => SandboxElement<ElementViewState>[],
-                                                            dynamicElements: string[] = [],
-                                                            dynamicComponents: string[] = [],
                                                             arraySerializationContext: ArrayContexts = []): JayElement<ElementViewState, ElementRef> {
     let parentComponentContext = useContext(SANDBOX_BRIDGE_CONTEXT);
     let {reactive, getComponentInstance} = useContext(COMPONENT_CONTEXT);
     let thisComponentEndpoint = parentComponentContext.port.getEndpoint(parentComponentContext.compId, parentComponentContext.coordinate)
     // for some reason typescript insists that the types Reactive !== Reactive...
-    return mkBridgeElement(viewState, sandboxElements, dynamicElements, dynamicComponents, thisComponentEndpoint,
+    return mkBridgeElement(viewState, sandboxElements, thisComponentEndpoint,
         reactive as unknown as Reactive, getComponentInstance, arraySerializationContext) as unknown as JayElement<ElementViewState, ElementRef>;
 }
