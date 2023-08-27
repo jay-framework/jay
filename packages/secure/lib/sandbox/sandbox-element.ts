@@ -11,7 +11,7 @@ import {SANDBOX_CREATION_CONTEXT, SANDBOX_BRIDGE_CONTEXT} from "./sandbox-contex
 import {
     SecureElementRef
 } from "./sandbox-refs";
-import {PrivateRef} from "jay-runtime/dist/node-reference";
+import {PrivateRef} from "jay-runtime/";
 
 export interface SandboxElement<ViewState> {
     update: updateFunc<ViewState>
