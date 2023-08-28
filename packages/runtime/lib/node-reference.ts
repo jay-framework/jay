@@ -221,7 +221,7 @@ export class HTMLElementRefImpl<ViewState, ElementType extends HTMLElement> exte
         return newHTMLElementPublicApiProxy<ViewState, HTMLElementProxyTarget<ViewState, ElementType>>(this)
     }
 
-    $exec<T>(handler: (elem: ElementType, viewState: ViewState) => T): Promise<T> {
+    exec$<T>(handler: (elem: ElementType, viewState: ViewState) => T): Promise<T> {
         return new Promise((resolve, reject) => {
             try {
                 resolve(handler(this.element, this.viewState));
@@ -271,8 +271,8 @@ export const EVENT_TRAP = (target, prop) => {
 
 const EVENT$_TRAP = (target, prop) => {
     if (typeof prop === 'string') {
-        if (prop.indexOf("$on") === 0) {
-            let eventName = prop.substring(3);
+        if (prop.indexOf("on") === 0 && prop.at(-1) === "$") {
+            let eventName = prop.slice(2,-1);
             return (nativeHandler) => {
                 let regularHandler;
                 const handler = ({event, viewState, coordinate}) => {
@@ -311,7 +311,7 @@ export const GetTrapProxy = (getTraps: Array<(target: any, p: string | symbol, r
     }
 }
 
-const HTMLElementRefProxy = GetTrapProxy([EVENT_TRAP, EVENT$_TRAP])
+const HTMLElementRefProxy = GetTrapProxy([EVENT$_TRAP, EVENT_TRAP])
 
 export function newHTMLElementPublicApiProxy<ViewState, T>(ref: T): T & GlobalJayEvents<ViewState> {
     return new Proxy(ref, HTMLElementRefProxy);

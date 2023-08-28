@@ -3,7 +3,7 @@ import {createMemo, createState, makeJayComponent, Props} from 'jay-component';
 import {uuid} from "./uuid";
 import {patch} from 'jay-json-patch'
 import {ADD, REPLACE} from "jay-json-patch";
-import {$handler} from "jay-secure/dist/$func";
+import {handler$} from "jay-secure/dist/$func";
 
 const ENTER_KEY = 13;
 
@@ -48,7 +48,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
     refs.filterAll.onclick(() => setFilter(Filter.all))
 
     refs.newTodo
-        .$onkeydown($handler<KeyboardEvent, TodoViewState, any>('3'))
+        .onkeydown$(handler$<KeyboardEvent, TodoViewState, any>('3'))
         .then(({event: keyCode}) => {
             if (keyCode !== ENTER_KEY)
                 return;
@@ -71,7 +71,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
         })
 
     refs.newTodo
-        .$oninput($handler<Event, TodoViewState, any>('4'))
+        .oninput$(handler$<Event, TodoViewState, any>('4'))
         .then(({event: value}) => {
             setNewTodo(value)
         })
@@ -102,7 +102,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
     })
 
     refs.toggleAll
-        .$onchange($handler<Event, TodoViewState, any>('5'))
+        .onchange$(handler$<Event, TodoViewState, any>('5'))
         .then(({event: completed}) => {
             setTodos(todos().map(todo => ({...todo, isCompleted: completed})))
         })

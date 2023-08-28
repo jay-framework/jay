@@ -14,7 +14,7 @@ function CompConstructor({}: Props<CompProps>, refs: CompElementRefs) {
     ])
 
     refs.buttonExecElement.onclick(async () => {
-        let buttonText = await refs.buttonExecElement.$exec((elem, viewState) => {
+        let buttonText = await refs.buttonExecElement.exec$((elem, viewState) => {
             return elem.innerHTML;
         })
         setText(`button with text ${buttonText} was clicked`)
@@ -29,7 +29,7 @@ function CompConstructor({}: Props<CompProps>, refs: CompElementRefs) {
     refs.itemButtonExecElement.onclick(async ({viewState: item, coordinate}) => {
         let buttonText = await refs.itemButtonExecElement
             .find(_ => _.id === item.id)
-            .$exec((elem, viewState) => {
+            .exec$((elem, viewState) => {
                 return elem.innerHTML;
             })
         setText(`item button with text ${buttonText} was clicked`)

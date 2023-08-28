@@ -13,12 +13,12 @@ function CompConstructor({}: Props<CompProps>, refs: CompElementRefs) {
     ])
 
     refs.button.onclick(() => setText('static button was clicked'))
-    refs.input.$oninput(({event}) => (event.target as HTMLInputElement).value)
+    refs.input.oninput$(({event}) => (event.target as HTMLInputElement).value)
         .then(({event}) => setText(event))
 
     refs.itemButton.onclick(({viewState: item, coordinate}) =>
         setText(`dynamic button ${item.text} was clicked at coordinate [${coordinate}]`))
-    refs.itemInput.$oninput(({event}) => (event.target as HTMLInputElement).value)
+    refs.itemInput.oninput$(({event}) => (event.target as HTMLInputElement).value)
         .then(({viewState: item, event, coordinate}) =>
             setText(`dynamic input ${item.text} updated with value '${event}' at coordinate [${coordinate}]`))
 

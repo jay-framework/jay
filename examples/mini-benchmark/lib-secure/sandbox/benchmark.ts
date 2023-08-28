@@ -1,6 +1,6 @@
 // benchmark
 import {exec$} from "jay-secure/dist/sandbox/exec";
-import {$funcGlobal} from "jay-secure/dist/$func";
+import {funcGlobal$} from "jay-secure/dist/$func";
 
 const defaultCycles = 1000;
 
@@ -12,7 +12,7 @@ export default function benchmark(action: (number) => void, cycles: number, prog
     let frameStarts = [];
 
     const requestAnimationFrame$ = async (callback) => {
-        await exec$($funcGlobal("3"))
+        await exec$(funcGlobal$("3"))
         callback()
     }
     const animationFrame = () => {

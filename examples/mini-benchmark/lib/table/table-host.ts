@@ -13,15 +13,15 @@ function TableHostConstructor({cycles}: Props<TableHostProps>, refs: TableHostEl
     let [stateManagement, setStateManagement] = createState('immutable');
 
     refs.size
-        .$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .oninput$(({event}) => (event.target as HTMLInputElement).value)
         .then(({event: size}) => setSize(Number(size)));
 
     refs.updates
-        .$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .oninput$(({event}) => (event.target as HTMLInputElement).value)
         .then(({event: updates}) => setUpdates(Number(updates)));
 
     refs.stateManagement
-        .$oninput(({event}) => (event.target as HTMLSelectElement).value)
+        .oninput$(({event}) => (event.target as HTMLSelectElement).value)
         .then(({event: newStateManagement}) => setStateManagement(newStateManagement));
 
     const run = (progressCallback: (string) => void) => {

@@ -58,7 +58,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
     refs.filterAll.onclick(() => setFilter(Filter.all))
 
     refs.newTodo
-        .$onkeydown(({event}) => {
+        .onkeydown$(({event}) => {
             (event.keyCode === ENTER_KEY)?event.preventDefault():''
             return event.keyCode;
         })
@@ -84,7 +84,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
         })
 
     refs.newTodo
-        .$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .oninput$(({event}) => (event.target as HTMLInputElement).value)
         .then(({event: value}) => {
             setNewTodo(value)
         })
@@ -114,7 +114,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
         handleSubmit(todo);
     })
     refs.title
-        .$onchange(({event}) => (event.target as HTMLInputElement).value)
+        .onchange$(({event}) => (event.target as HTMLInputElement).value)
         .then(({event: value, viewState: todo}) => {
             let itemIndex = todos().findIndex(_ => _.id === todo.id)
             patchTodos(
@@ -122,7 +122,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
             )
         })
     refs.title
-        .$onkeydown(({event}) => (event.which))
+        .onkeydown$(({event}) => (event.which))
         .then(({event:which, viewState: todo})=> {
             if (which === ESCAPE_KEY) {
                 let itemIndex = todos().findIndex(_ => _.id === todo.id)
@@ -135,7 +135,7 @@ function TodoComponentConstructor({initialTodos}: Props<TodoProps>, refs: TodoEl
             }
         })
     refs.toggleAll
-        .$onchange(({event}) => (event.target as HTMLInputElement).checked)
+        .onchange$(({event}) => (event.target as HTMLInputElement).checked)
         .then(({event: completed}) => {
         setTodos(todos().map(todo => ({...todo, isCompleted: completed})))
     })

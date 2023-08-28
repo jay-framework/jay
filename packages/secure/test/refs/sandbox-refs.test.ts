@@ -11,7 +11,7 @@ import {
     JayPortInMessageHandler
 } from "../../lib";
 import {Reactive} from "jay-reactive";
-import {$func, $handler} from "../../lib";
+import {func$, handler$} from "../../lib";
 import {ComponentCollectionProxy, Coordinate, HTMLElementCollectionProxy, HTMLElementProxy} from "jay-runtime";
 import {
     sandboxCondition as c,
@@ -126,7 +126,7 @@ describe('sandbox-refs', () => {
         it('should register $events --> JPMAddEventListener', () => {
             let {endpoint, bridgeElement} = setup();
 
-            (bridgeElement.refs.one as HTMLElementProxy<any, any>).$onclick($handler("1"));
+            (bridgeElement.refs.one as HTMLElementProxy<any, any>).onclick$(handler$("1"));
 
             expect(endpoint.outMessages).toHaveLength(1)
             let message = endpoint.outMessages[0] as JPMAddEventListener
@@ -139,7 +139,7 @@ describe('sandbox-refs', () => {
         it('should run $exec --> JPMNativeExec', () => {
             let {endpoint, bridgeElement} = setup();
 
-            (bridgeElement.refs.one as HTMLElementProxy<ViewState, HTMLDivElement>).$exec($func("3"));
+            (bridgeElement.refs.one as HTMLElementProxy<ViewState, HTMLDivElement>).exec$(func$("3"));
 
             expect(endpoint.outMessages).toHaveLength(1)
             let message = endpoint.outMessages[0] as JPMNativeExec
@@ -152,7 +152,7 @@ describe('sandbox-refs', () => {
         it('should run $exec --> JPMNativeExec --> JPMNativeExecResult (success)', async () => {
             let {endpoint, bridgeElement} = setup();
 
-            let $result = (bridgeElement.refs.one as HTMLElementProxy<ViewState, HTMLDivElement>).$exec($func("3"));
+            let $result = (bridgeElement.refs.one as HTMLElementProxy<ViewState, HTMLDivElement>).exec$(func$("3"));
             let execMessage = endpoint.outMessages[0] as JPMNativeExec
             endpoint.invoke(nativeExecResult(execMessage.correlationId, 12, undefined, 'one'))
             let result = await $result;
@@ -163,7 +163,7 @@ describe('sandbox-refs', () => {
         it('should run $exec --> JPMNativeExec --> JPMNativeExecResult (fail)', async () => {
             let {endpoint, bridgeElement} = setup();
 
-            let $result = (bridgeElement.refs.one as HTMLElementProxy<ViewState, HTMLDivElement>).$exec($func("3"));
+            let $result = (bridgeElement.refs.one as HTMLElementProxy<ViewState, HTMLDivElement>).exec$(func$("3"));
             let execMessage = endpoint.outMessages[0] as JPMNativeExec
             endpoint.invoke(nativeExecResult(execMessage.correlationId, undefined, "failed", 'one'))
 
@@ -232,7 +232,7 @@ describe('sandbox-refs', () => {
         it('should register $events --> JPMAddEventListener', () => {
             let {endpoint, bridgeElement} = setup();
 
-            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).$onclick($handler("2"));
+            (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick$(handler$("2"));
 
             expect(endpoint.outMessages).toHaveLength(1)
             let message = endpoint.outMessages[0] as JPMAddEventListener
@@ -310,7 +310,7 @@ describe('sandbox-refs', () => {
 
                 (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
                     .find(item => item.title === B.title)
-                    .$exec($func("4"));
+                    .exec$(func$("4"));
 
                 expect(endpoint.outMessages).toHaveLength(1)
                 let message = endpoint.outMessages[0] as JPMNativeExec
@@ -326,7 +326,7 @@ describe('sandbox-refs', () => {
 
                 let $result = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
                     .find(item => item.title === B.title)
-                    .$exec($func("4"));
+                    .exec$(func$("4"));
                 let execMessage = endpoint.outMessages[0] as JPMNativeExec
                 endpoint.invoke(nativeExecResult(execMessage.correlationId, 14, undefined, 'one'))
                 let result = await $result;
@@ -382,7 +382,7 @@ describe('sandbox-refs', () => {
 
                 (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
                     .map((element) => {
-                        element.$exec($func("4"))
+                        element.exec$(func$("4"))
                     })
                 expect(endpoint.outMessages.length).toBe(3)
                 let execMessageA = endpoint.outMessages[0] as JPMNativeExec
@@ -413,7 +413,7 @@ describe('sandbox-refs', () => {
 
                 let $mapResult = (bridgeElement.refs.one as HTMLElementCollectionProxy<Item, HTMLDivElement>)
                     .map((element) => {
-                        return element.$exec($func("4"))
+                        return element.exec$(func$("4"))
                     })
                 expect(endpoint.outMessages.length).toBe(3)
                 let execMessageA = endpoint.outMessages[0] as JPMNativeExec

@@ -17,7 +17,7 @@ import {
     IJayEndpoint,
     JPMMessage
 } from "../comm-channel/comm-channel";
-import {$JayNativeFunction} from "../main/function-repository-types";
+import {JayNativeFunction$} from "../main/function-repository-types";
 import {
     completeCorrelatedPromise,
     correlatedPromise, NativeIdMarker
@@ -135,10 +135,10 @@ export class StaticRefImplementation<ViewState, ElementType extends HTMLElement>
                 coordinate: coordinate
             })
     }
-    $exec<ResultType>(handler: JayNativeFunction<any, any, ResultType>): Promise<ResultType> {
-        let {$execPromise, correlationId} = correlatedPromise<ResultType>();
-        this.ep.post(nativeExec((handler as $JayNativeFunction<any, any, ResultType>).id, correlationId, this.ref, this.coordinate));
-        return $execPromise;
+    exec$<ResultType>(handler: JayNativeFunction<any, any, ResultType>): Promise<ResultType> {
+        let {execPromise$, correlationId} = correlatedPromise<ResultType>();
+        this.ep.post(nativeExec((handler as JayNativeFunction$<any, any, ResultType>).id, correlationId, this.ref, this.coordinate));
+        return execPromise$;
     }
     update = (newViewState: ViewState) => {
         this.viewState = newViewState
@@ -159,8 +159,8 @@ export class StaticRefImplementation<ViewState, ElementType extends HTMLElement>
 
 const SECURE_EVENT$_TRAP = (target, prop) => {
     if (typeof prop === 'string') {
-        if (prop.indexOf("$on") === 0) {
-            let eventName = prop.substring(3);
+        if (prop.indexOf("on") === 0 && prop.at(-1) === "$") {
+            let eventName = prop.slice(2, -1);
             return (func$: NativeIdMarker) => {
                 let regularHandler;
                 const handler = ({event, viewState, coordinate}) => {
@@ -179,7 +179,7 @@ const SECURE_EVENT$_TRAP = (target, prop) => {
     return false;
 }
 
-const SecureHTMLElementRefProxy = GetTrapProxy([EVENT_TRAP, SECURE_EVENT$_TRAP])
+const SecureHTMLElementRefProxy = GetTrapProxy([SECURE_EVENT$_TRAP, EVENT_TRAP])
 
 export function newSecureHTMLElementPublicApiProxy<ViewState, ElementType extends HTMLElement,
     Target extends StaticRefImplementation<ViewState, ElementType> | DynamicRefImplementation<ViewState, ElementType>>(

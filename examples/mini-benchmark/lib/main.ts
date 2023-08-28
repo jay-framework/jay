@@ -14,11 +14,11 @@ function MainConstructor({}: Props<MainProps>, refs: MainElementRefs) {
     let [progress, setProgress] = createState('');
 
     refs.chooseExample
-        .$onchange(({event}) => (event.target as HTMLSelectElement).selectedIndex)
+        .onchange$(({event}) => (event.target as HTMLSelectElement).selectedIndex)
         .then(({event:index}) => setSelectedExample(Number(examples[index].value)))
 
     refs.cycles
-        .$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .oninput$(({event}) => (event.target as HTMLInputElement).value)
         .then(({event: cycles}) => setCycles(Number(cycles)))
 
     refs.run.onclick(() => {

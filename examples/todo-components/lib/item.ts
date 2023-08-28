@@ -36,10 +36,10 @@ function ItemConstructor({title, isCompleted}: Props<ItemProps>, refs: ItemEleme
     refs.button.onclick(() => onRemove.emit(null))
     refs.title.onblur(() => handleSubmit())
     refs.title
-        .$onchange(({event}) => (event.target as HTMLInputElement).value)
+        .onchange$(({event}) => (event.target as HTMLInputElement).value)
         .then(({event: value}) => setEditText(value))
     refs.title
-        .$onkeydown(({event}) => (event.which))
+        .onkeydown$(({event}) => (event.which))
         .then(({event:which, viewState: todo})=> {
             if (which === ESCAPE_KEY) {
                 todo.editText = todo.title;

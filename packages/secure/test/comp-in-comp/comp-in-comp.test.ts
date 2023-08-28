@@ -5,10 +5,11 @@ import {render} from "./secure/main/app.jay.html";
 
 const STATIC_ID = 'static';
 const DYNAMIC_ID = 'A';
+const VERBOSE = false;
 describe('comp in comp - parent child communication', () => {
 
     async function mkElement() {
-        let channel = useMockCommunicationChannel(true);
+        let channel = useMockCommunicationChannel(VERBOSE);
         setChannel(channel);
         initializeWorker();
         let appElement = render({});
@@ -123,7 +124,7 @@ describe('comp in comp - parent child communication', () => {
 
             parentChangesChildPropButton.click();
             await channel.toBeClean();
-            console.log(appElement.dom.outerHTML)
+            VERBOSE && console.log(appElement.dom.outerHTML)
             let event = undefined;
             let viewState = {
                 "textFromChildEvent":"-",

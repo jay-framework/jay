@@ -108,7 +108,7 @@ describe('ReferencesManager events', () => {
             it('should support the native event registration', () => {
                 let {jayRootElement, mockCallback, mockCallback2, jayElement1} = mkJayElement();
 
-                jayRootElement.refs.refName1.$onclick(mockCallback)
+                jayRootElement.refs.refName1.onclick$(mockCallback)
                   .then(mockCallback2);
                 jayElement1.dom.click();
 
@@ -120,7 +120,7 @@ describe('ReferencesManager events', () => {
                 let {jayRootElement, mockCallback, mockCallback2, jayElement1} = mkJayElement();
 
                 mockCallback.mockReturnValueOnce(SOME_VALUE)
-                jayRootElement.refs.refName1.$onclick(mockCallback)
+                jayRootElement.refs.refName1.onclick$(mockCallback)
                   .then(mockCallback2);
                 jayElement1.dom.click();
 
@@ -289,7 +289,7 @@ describe('ReferencesManager events', () => {
                 let {jayRootElement, jayElements, mockCallback, mockCallback2} =
                     mkJayElement();
 
-                jayRootElement.refs.refName1.$onclick(mockCallback)
+                jayRootElement.refs.refName1.onclick$(mockCallback)
                   .then(mockCallback2);
                 jayElements[0].dom.click();
                 jayElements[1].dom.click();
@@ -305,7 +305,7 @@ describe('ReferencesManager events', () => {
                 mockCallback
                     .mockReturnValueOnce(SOME_VALUE)
                     .mockReturnValueOnce(ANOTHER_VALUE)
-                jayRootElement.refs.refName1.$onclick(mockCallback)
+                jayRootElement.refs.refName1.onclick$(mockCallback)
                     .then(mockCallback2);
                 jayElements[0].dom.click();
                 jayElements[1].dom.click();

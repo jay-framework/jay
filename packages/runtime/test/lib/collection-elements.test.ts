@@ -8,7 +8,7 @@ import {describe, expect, it} from '@jest/globals'
 import {expectE} from "./test-utils";
 import {JayElement, HTMLElementCollectionProxy} from "../../lib";
 import {ConstructContext} from "../../lib";
-import {elemCollectionRef} from "../../lib/node-reference";
+import {elemCollectionRef} from "../../lib/";
 
 const item1 = {name: 'name 1', id: 'id-1'};
 const item2 = {name: 'name 2', id: 'id-2'};
@@ -210,7 +210,7 @@ describe('collection-element', () => {
             })
             todoListElement.refs.done
               .find(item => item === item2)
-              .$exec(el => el.click())
+              .exec$(el => el.click())
             expect(savedItem).toBe(item2)
             expect(eventCount).toBe(1);
         })
@@ -221,7 +221,7 @@ describe('collection-element', () => {
             todoListElement.refs.done.onclick(fn)
             todoListElement.refs.done
               .find(item => item === item2)
-              .$exec(el => el.click())
+              .exec$(el => el.click())
             expect(fn.mock.calls[0][0].viewState).toBe(item2)
             expect(fn.mock.calls[0][0].coordinate).toEqual(['id-2', 'done']);
         })
@@ -233,7 +233,7 @@ describe('collection-element', () => {
             })
             todoListElement.refs.done
               .find(item => item === item2)
-              .$exec(el => el.click())
+              .exec$(el => el.click())
             let count = 0;
             todoListElement.refs.done.map(el => count += 1)
             expect(count).toBe(2);

@@ -98,7 +98,7 @@ describe('conditional-element', () => {
             let jayElement = makeElement({text1: SOME_VALUE, condition: true, text2: ANOTHER_VALUE});
             let mockCallback = jest.fn();
             jayElement.refs.text1.onclick(mockCallback);
-            jayElement.refs.text1.$exec((elem) => elem.click());
+            jayElement.refs.text1.exec$((elem) => elem.click());
             expect(mockCallback.mock.calls.length).toBe(1);
         })
 

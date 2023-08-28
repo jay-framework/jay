@@ -6,15 +6,15 @@ describe('counter component', () => {
     it("create counter with initial value 6", () => {
         let counter = Counter(6);
 
-        counter.element.refs.count.$exec(elem =>
+        counter.element.refs.count.exec$(elem =>
           expect(elem.textContent).toBe('6'));
     });
 
     it("inc the counter", () => {
         let counter = Counter(6);
 
-        counter.element.refs.inc.$exec(elem => elem.click());
-        counter.element.refs.count.$exec(elem =>
+        counter.element.refs.inc.exec$(elem => elem.click());
+        counter.element.refs.count.exec$(elem =>
           expect(elem.textContent).toBe('7'));
 
     });
@@ -22,11 +22,11 @@ describe('counter component', () => {
     it("inc and dec the counter", () => {
         let counter = Counter(6);
 
-        counter.element.refs.inc.$exec(elem => elem.click());
-        counter.element.refs.inc.$exec(elem => elem.click());
-        counter.element.refs.inc.$exec(elem => elem.click());
-        counter.element.refs.dec.$exec(elem => elem.click());
-        counter.element.refs.count.$exec(elem =>
+        counter.element.refs.inc.exec$(elem => elem.click());
+        counter.element.refs.inc.exec$(elem => elem.click());
+        counter.element.refs.inc.exec$(elem => elem.click());
+        counter.element.refs.dec.exec$(elem => elem.click());
+        counter.element.refs.count.exec$(elem =>
           expect(elem.textContent).toBe('8'));
     });
 
@@ -36,10 +36,10 @@ describe('counter component', () => {
 
         counter.onChange(fn);
 
-        counter.element.refs.inc.$exec(elem => elem.click());
-        counter.element.refs.inc.$exec(elem => elem.click());
-        counter.element.refs.inc.$exec(elem => elem.click());
-        counter.element.refs.dec.$exec(elem => elem.click());
+        counter.element.refs.inc.exec$(elem => elem.click());
+        counter.element.refs.inc.exec$(elem => elem.click());
+        counter.element.refs.inc.exec$(elem => elem.click());
+        counter.element.refs.dec.exec$(elem => elem.click());
 
         expect(fn.mock.calls.length).toBe(4)
     });
@@ -50,10 +50,10 @@ describe('counter component', () => {
 
         counter.onChange(fn);
 
-        counter.element.refs.inc.$exec(elem => elem.click());
-        counter.element.refs.inc.$exec(elem => elem.click());
-        counter.element.refs.inc.$exec(elem => elem.click());
-        counter.element.refs.dec.$exec(elem => elem.click());
+        counter.element.refs.inc.exec$(elem => elem.click());
+        counter.element.refs.inc.exec$(elem => elem.click());
+        counter.element.refs.inc.exec$(elem => elem.click());
+        counter.element.refs.dec.exec$(elem => elem.click());
 
         expect(fn.mock.calls.length).toBe(4)
         expect(fn.mock.calls[0][0]).toEqual({event: {count: 7, innerCoordinate: ['inc']}})

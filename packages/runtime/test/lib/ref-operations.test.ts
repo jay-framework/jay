@@ -4,7 +4,7 @@ import {
     compRef,
     elemCollectionRef,
     elemRef
-} from "../../lib/node-reference";
+} from "../../lib/";
 import {
     childComp,
     ConstructContext,
@@ -53,7 +53,7 @@ describe('ReferencesManager operations', () => {
 
         it('$exec should run for with the native html element', () => {
             let {jayRootElement, jayElement1, mockCallback} = mkElement();
-            jayRootElement.refs.refName1.$exec(mockCallback)
+            jayRootElement.refs.refName1.exec$(mockCallback)
             expect(mockCallback.mock.calls.length).toBe(1);
             expect(mockCallback).toHaveBeenCalledWith(jayElement1.dom, DATA_CONTEXT)
         })
@@ -106,7 +106,7 @@ describe('ReferencesManager operations', () => {
 
         function expectRefToJayElement(htmlNativeExec: HTMLNativeExec<any, any>, jayElement: JayElement<any, any>) {
             let mockCallback = jest.fn(() => undefined);
-            htmlNativeExec.$exec(mockCallback)
+            htmlNativeExec.exec$(mockCallback)
             expect(mockCallback.mock.calls.length).toBe(1);
             expect(mockCallback.mock.calls[0][0]).toBe(jayElement.dom);
         }

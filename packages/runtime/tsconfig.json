@@ -1,19 +1,19 @@
 {
   "compilerOptions": {
     "jsx": "preserve",
-    "module": "es2015",
+    "module": "es2022",
     "esModuleInterop": true,
-    "target": "es2019",
+    "target": "es2022",
     "moduleResolution": "node",
     "sourceMap": true,
     "rootDir": "./lib",
     "outDir": "dist",
     "lib": [
-      "es2019",
+      "es2022",
       "dom"
     ],
     "declaration": true
   },
-  "lib": ["es2019"],
+  "lib": ["es2022"],
   "exclude": ["test", "examples", "dist", "build"]
 }
