@@ -33,7 +33,8 @@ export function render(viewState: TableHostViewState, options?: RenderElementOpt
         e('label', {for: 'state-management'}, ['Number of updates at each cycle: ']),
         e('select', {id: 'state-management'}, [
           e('option', {value: 'immutable'}, ['immutable']),
-          e('option', {value: 'immer'}, ['immer'])
+          e('option', {value: 'immer'}, ['immer']),
+          e('option', {value: 'json-patch'}, ['json-patch'])
         ], er('stateManagement'))
       ]),
       childComp(TableComp, (vs: TableHostViewState) => ({tableSize: vs.size, numCellsToUpdate: vs.updates, stateManagement: vs.stateManagement}), cr('table'))

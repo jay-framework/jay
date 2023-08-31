@@ -1,6 +1,7 @@
 import {Line, render, TableElementRefs} from './table.jay.html';
 import {createState, makeJayComponent, Props } from 'jay-component';
 import {produce} from 'immer'
+import {JSONPatch, patch, REPLACE} from "jay-json-patch";
 
 interface TableProps {
     tableSize: number
@@ -36,7 +37,7 @@ function TableConstructor({tableSize, numCellsToUpdate, stateManagement}: Props<
             }
             setLine(copy);
         }
-        else {
+        else if (stateManagement() === "immer") {
             setLine(produce(line(), draft => {
                 for (let i = 0; i < numCellsToUpdate(); i++) {
                     let x = Math.floor(Math.random()*tableSize());
@@ -44,6 +45,15 @@ function TableConstructor({tableSize, numCellsToUpdate, stateManagement}: Props<
                     draft[x].cell[y].value = Math.round(Math.random()*100);
                 }
             }))
+        }
+        else {
+            let jsonPatch: JSONPatch = [];
+            for (let i = 0; i < numCellsToUpdate(); i++) {
+                let x = Math.floor(Math.random()*tableSize());
+                let y = Math.floor(Math.random()*tableSize());
+                jsonPatch.push({op: REPLACE, path: [x, 'cell', y, 'value'], value: Math.round(Math.random()*100)})
+            }
+            setLine(patch(line(), jsonPatch));
         }
     }
 
