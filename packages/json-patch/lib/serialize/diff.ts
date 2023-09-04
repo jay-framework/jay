@@ -71,7 +71,7 @@ function diffArrayWithContext(context: ArrayContext, oldValue: any[], newValue: 
     return flattenPatch(arrayItemPatches, path, newValue)
 }
 
-export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayContexts, path: JSONPointer = []): [JSONPatch, MeasureOfChange, DataFields] => {
+export function diff<T>(newValue: T, oldValue: T, contexts?: ArrayContexts, path: JSONPointer = []): [JSONPatch, MeasureOfChange, DataFields] {
     if (oldValue === undefined || oldValue === null)
         return [[{op:ADD, path, value: newValue}], 1, 1]
     // Primitives
@@ -87,8 +87,8 @@ export const diff = (newValue: unknown, oldValue: unknown, contexts?: ArrayConte
         if (Array.isArray(newValue) !== Array.isArray(oldValue))
             return [[{op: REPLACE, path, value: newValue}], 1, 1];
 
-        return diffObjectOrArray(newValue, oldValue, contexts, path);
+        return diffObjectOrArray(newValue as any as object, oldValue as any as object, contexts, path);
     }
 
     return [[{op: REPLACE, path, value: newValue}], 1, 1];
-};
+}
