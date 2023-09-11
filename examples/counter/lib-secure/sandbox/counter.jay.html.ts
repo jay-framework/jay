@@ -1,6 +1,5 @@
 import {HTMLElementProxy, JayElement} from "jay-runtime";
-import {elementBridge, elemRef} from "jay-secure";
-import {sandboxElement as e} from "jay-secure";
+import {elementBridge, elemRef, sandboxElement as e} from "jay-secure";
 
 export interface CounterViewState {
     count: number
@@ -17,5 +16,5 @@ export function render(viewState: CounterViewState): CounterElement {
     return elementBridge(viewState, () => [
         e(elemRef('subtracter')),
         e(elemRef('adder'))
-    ]) as unknown as CounterElement;
+    ]);
 }

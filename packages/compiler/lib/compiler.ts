@@ -474,3 +474,7 @@ export function generateRuntimeFile(html: string, filename: string, filePath: st
         return new WithValidations(renderedFile, renderedImplementation.validations);
     })
 }
+
+export function generateSandboxRuntimeFile(html: string, filename: string, filePath: string): WithValidations<string> {
+    return new WithValidations<string>('', [])
+}

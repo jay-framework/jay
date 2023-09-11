@@ -37,6 +37,7 @@
     "@types/node": "^14.18.23",
     "jay-component": "1.0.0",
     "jay-runtime": "1.0.0",
+    "jay-secure": "1.0.0",
     "jest": "^26.6.0"
   }
 }
