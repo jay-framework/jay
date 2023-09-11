@@ -24,7 +24,7 @@ describe('typescript-compiler', () => {
         });
 
     it('should extract types from a file', () => {
-        let types = extractTypesForFile('./test/fixtures/basics/attributes/generated.ts', {relativePath: 'tsconfig-tests.json'});
+        let types = extractTypesForFile('./test/fixtures/basics/attributes/generated-element.ts', {relativePath: 'tsconfig-tests.json'});
 
         expect(types).toEqual(
             expect.arrayContaining([
@@ -42,7 +42,7 @@ describe('typescript-compiler', () => {
     })
 
     it('should extract types from a file, adding .ts extension automatically', () => {
-        let types = extractTypesForFile('./test/fixtures/basics/attributes/generated', {relativePath: 'tsconfig-tests.json'});
+        let types = extractTypesForFile('./test/fixtures/basics/attributes/generated-element', {relativePath: 'tsconfig-tests.json'});
 
         expect(types).toEqual(
             expect.arrayContaining([
@@ -60,7 +60,7 @@ describe('typescript-compiler', () => {
     })
 
     it('should extract types from a definition file', () => {
-        let types = extractTypesForFile('./test/fixtures/basics/data-types/generated', {relativePath: 'tsconfig-tests.json'});
+        let types = extractTypesForFile('./test/fixtures/basics/data-types/generated-element', {relativePath: 'tsconfig-tests.json'});
 
         expect(types).toEqual(
             expect.arrayContaining([
@@ -81,7 +81,7 @@ describe('typescript-compiler', () => {
     })
 
     it('should extract types from a definition file, auto adding .d.ts', () => {
-        let types = extractTypesForFile('./test/fixtures/basics/data-types/generated', {relativePath: 'tsconfig-tests.json'});
+        let types = extractTypesForFile('./test/fixtures/basics/data-types/generated-element', {relativePath: 'tsconfig-tests.json'});
 
         expect(types).toEqual(
             expect.arrayContaining([
