@@ -17,7 +17,8 @@ export enum Import {
     elemRef,
     elemCollectionRef,
     compRef,
-    compCollectionRef
+    compCollectionRef,
+    RenderElementOptions
 }
 
 export enum ImportsFor {
@@ -49,6 +50,7 @@ importStatementFragment(Import.elemRef, 'elemRef as er', ImportsFor.implementati
 importStatementFragment(Import.elemCollectionRef, 'elemCollectionRef as ecr', ImportsFor.implementation)
 importStatementFragment(Import.compRef, 'compRef as cr', ImportsFor.implementation)
 importStatementFragment(Import.compCollectionRef, 'compCollectionRef as ccr', ImportsFor.implementation)
+importStatementFragment(Import.RenderElementOptions,'RenderElementOptions', ImportsFor.implementation, ImportsFor.definition)
 
 
 export class Imports {
@@ -80,7 +82,6 @@ export class Imports {
             if (!isNaN(Number(importKey)) && this.imports[importKey] && ImportsToStatements[importKey].usage.includes(importsFor))
                 toBeRenderedImports.push(ImportsToStatements[importKey].statement)
         }
-        toBeRenderedImports.push('RenderElementOptions')
         return `import {${toBeRenderedImports.join(', ')}} from "jay-runtime";`;
     }
 

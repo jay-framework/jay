@@ -384,7 +384,9 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
     let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), importedSymbols, new Indent('    '), false);
     let elementType = baseElementName + 'Element';
     let refsType = baseElementName + 'ElementRefs';
-    let imports = renderedRoot.imports.plus(Import.ConstructContext);
+    let imports = renderedRoot.imports
+        .plus(Import.ConstructContext)
+        .plus(Import.RenderElementOptions);
     let renderedRefs;
     let dynamicRefs: Ref[] = [];
     let refImportsInUse = new Set<string>();
@@ -446,7 +448,8 @@ export function generateDefinitionFile(html: string, filename: string, filePath:
     let parsedFile = parseJayFile(html, filename, filePath);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        let {renderedRefs, renderedElement, elementType, renderedImplementation, refImportsInUse} = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, jayFile.baseElementName);
+        let {renderedRefs, renderedElement, elementType, renderedImplementation, refImportsInUse} =
+            renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, jayFile.baseElementName);
         return [
             renderImports(renderedImplementation.imports.plus(Import.jayElement), ImportsFor.definition, jayFile.imports, refImportsInUse),
             types,
