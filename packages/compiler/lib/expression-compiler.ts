@@ -2,7 +2,7 @@ import {RenderFragment} from './render-fragment';
 import {parse} from '../lib/parse-expressions'
 import {JayImportedType, JayImportName, JayObjectType, JayType, JayUnknown} from "./parse-jay-file";
 import {JayValidations} from "./with-validations";
-import {RuntimeImport, Imports} from "./imports";
+import {Import, Imports} from "./imports";
 
 export class Accessor {
     readonly terms: Array<string>;
@@ -66,9 +66,9 @@ function doParse(expression: string, startRule, vars?: Variables) {
         return parse(expression, {
             vars, RenderFragment,
             none: Imports.none(),
-            dt: Imports.for(RuntimeImport.dynamicText),
-            da: Imports.for(RuntimeImport.dynamicAttribute),
-            dp: Imports.for(RuntimeImport.dynamicProperty),
+            dt: Imports.for(Import.dynamicText),
+            da: Imports.for(Import.dynamicAttribute),
+            dp: Imports.for(Import.dynamicProperty),
             startRule
         });
     } catch (e) {

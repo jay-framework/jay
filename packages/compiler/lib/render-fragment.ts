@@ -1,6 +1,6 @@
 import {JayValidations} from "./with-validations";
 import {JayType} from "./parse-jay-file";
-import {RuntimeImport, Imports} from "./imports";
+import {Imports} from "./imports";
 
 
 
@@ -30,7 +30,7 @@ export class RenderFragment {
         return new RenderFragment(f(this.rendered), this.imports, this.validations, this.refs);
     }
 
-    plusImport(imp: RuntimeImport): RenderFragment {
+    plusImport(imp: Imports): RenderFragment {
         return new RenderFragment(this.rendered, this.imports.plus(imp), this.validations, this.refs);
     }
 

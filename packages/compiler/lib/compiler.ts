@@ -18,7 +18,7 @@ import {
 } from './expression-compiler';
 import {htmlElementTagNameMap} from "./html-element-tag-name-map";
 import {camelCase} from "camel-case";
-import {RuntimeImport, Imports, ImportsFor} from "./imports";
+import {Import, Imports, ImportsFor} from "./imports";
 
 function renderInterface(aType: JayType): string {
 
@@ -162,10 +162,10 @@ function renderElementRef(element: HTMLElement, dynamicRef: boolean, variables: 
             viewStateType: variables.currentType
         }];
         if (dynamicRef) {
-            return new RenderFragment(`${constName}()`, Imports.for(RuntimeImport.elemCollectionRef), [], refs)
+            return new RenderFragment(`${constName}()`, Imports.for(Import.elemCollectionRef), [], refs)
         }
         else
-            return new RenderFragment(`er('${refName}')`, Imports.for(RuntimeImport.elemRef), [], refs)
+            return new RenderFragment(`er('${refName}')`, Imports.for(Import.elemRef), [], refs)
     }
     else
         return RenderFragment.empty();
@@ -233,7 +233,7 @@ function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variabl
                 elementType: new JayComponentType(element.rawTagName, []),
                 viewStateType: variables.currentType
             }];
-            imports = dynamicRef? Imports.for(RuntimeImport.compCollectionRef) : Imports.for(RuntimeImport.compRef)
+            imports = dynamicRef? Imports.for(Import.compCollectionRef) : Imports.for(Import.compRef)
         }
         else {
             let prop = parseComponentPropExpression(attributes[attrName], variables);
@@ -258,7 +258,7 @@ function renderNode(variables: Variables, node: Node, importedSymbols: Set<strin
     function de(tagName: string, attributes: RenderFragment, children: RenderFragment, ref: RenderFragment, currIndent: Indent = indent): RenderFragment {
         const refWithPrefixComma = ref.rendered.length? `, ${ref.rendered}`:'';
         return new RenderFragment(`${currIndent.firstLine}de('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}]${refWithPrefixComma})`,
-            children.imports.plus(RuntimeImport.dynamicElement).plus(attributes.imports).plus(ref.imports),
+            children.imports.plus(Import.dynamicElement).plus(attributes.imports).plus(ref.imports),
             [...attributes.validations, ...children.validations, ...ref.validations],
             [...attributes.refs, ...children.refs, ...ref.refs]);
     }
@@ -266,7 +266,7 @@ function renderNode(variables: Variables, node: Node, importedSymbols: Set<strin
     function e(tagName: string, attributes: RenderFragment, children: RenderFragment, ref: RenderFragment, currIndent: Indent = indent): RenderFragment {
         const refWithPrefixComma = ref.rendered.length? `, ${ref.rendered}`:'';
         return new RenderFragment(`${currIndent.firstLine}e('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}]${refWithPrefixComma})`,
-            children.imports.plus(RuntimeImport.element).plus(attributes.imports).plus(ref.imports),
+            children.imports.plus(Import.element).plus(attributes.imports).plus(ref.imports),
             [...attributes.validations, ...children.validations, ...ref.validations],
             [...attributes.refs, ...children.refs, ...ref.refs]);
     }
@@ -305,14 +305,14 @@ function renderNode(variables: Variables, node: Node, importedSymbols: Set<strin
 
     function c(renderedCondition: RenderFragment, childElement: RenderFragment) {
         return new RenderFragment(`${indent.firstLine}c(${renderedCondition.rendered},\n${childElement.rendered}\n${indent.firstLine})`,
-            Imports.merge(childElement.imports, renderedCondition.imports).plus(RuntimeImport.conditional),
+            Imports.merge(childElement.imports, renderedCondition.imports).plus(Import.conditional),
             [...renderedCondition.validations, ...childElement.validations],
             [...renderedCondition.refs, ...childElement.refs]);
     }
 
     function renderForEach(renderedForEach: RenderFragment, collectionVariables: Variables, trackBy: string, childElement: RenderFragment) {
         return new RenderFragment(`${indent.firstLine}forEach(${renderedForEach.rendered}, (${collectionVariables.currentVar}: ${collectionVariables.currentType.name}) => {
-${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imports.plus(RuntimeImport.forEach),
+${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imports.plus(Import.forEach),
             [...renderedForEach.validations, ...childElement.validations], childElement.refs)
     }
 
@@ -328,7 +328,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
         }
         let getProps = `(vs: ${newVariables.currentType.name}) => ${propsGetterAndRefs.rendered}`
         return new RenderFragment(`${currIndent.firstLine}childComp(${htmlElement.rawTagName}, ${getProps}${refsFragment})`,
-            Imports.for(RuntimeImport.childComp).plus(propsGetterAndRefs.imports),
+            Imports.for(Import.childComp).plus(propsGetterAndRefs.imports),
             propsGetterAndRefs.validations, propsGetterAndRefs.refs);
     }
 
@@ -386,8 +386,8 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
     let elementType = baseElementName + 'Element';
     let refsType = baseElementName + 'ElementRefs';
     let imports = renderedRoot.imports
-        .plus(RuntimeImport.ConstructContext)
-        .plus(RuntimeImport.RenderElementOptions);
+        .plus(Import.ConstructContext)
+        .plus(Import.RenderElementOptions);
     let renderedRefs;
     let dynamicRefs: Ref[] = [];
     let refImportsInUse = new Set<string>();
@@ -401,7 +401,7 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
             }
             else if (isCollectionRef(ref)) {
                 referenceType = `HTMLElementCollectionProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
-                imports = imports.plus(RuntimeImport.HTMLElementCollectionProxy)
+                imports = imports.plus(Import.HTMLElementCollectionProxy)
                 dynamicRefs.push(ref);
             }
             else if (isComponentRef(ref)) {
@@ -410,7 +410,7 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
             }
             else {
                 referenceType = `HTMLElementProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
-                imports = imports.plus(RuntimeImport.HTMLElementProxy)
+                imports = imports.plus(Import.HTMLElementProxy)
             }
             return `  ${ref.ref}: ${referenceType}`
         }).join(',\n');
@@ -452,7 +452,7 @@ export function generateDefinitionFile(html: string, filename: string, filePath:
         let {renderedRefs, renderedElement, elementType, renderedImplementation, refImportsInUse} =
             renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, jayFile.baseElementName);
         return [
-            renderImports(renderedImplementation.imports.plus(RuntimeImport.jayElement), ImportsFor.definition, jayFile.imports, refImportsInUse),
+            renderImports(renderedImplementation.imports.plus(Import.jayElement), ImportsFor.definition, jayFile.imports, refImportsInUse),
             types,
             renderedRefs,
             renderedElement,
@@ -468,7 +468,7 @@ export function generateRuntimeFile(html: string, filename: string, filePath: st
         let types = generateTypes(jayFile.types);
         let {renderedRefs, renderedElement, renderedImplementation, refImportsInUse} = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, jayFile.baseElementName);
         let renderedFile = [
-            renderImports(renderedImplementation.imports.plus(RuntimeImport.element).plus(RuntimeImport.jayElement), ImportsFor.implementation, jayFile.imports, refImportsInUse),
+            renderImports(renderedImplementation.imports.plus(Import.element).plus(Import.jayElement), ImportsFor.implementation, jayFile.imports, refImportsInUse),
             types,
             renderedRefs,
             renderedElement,
