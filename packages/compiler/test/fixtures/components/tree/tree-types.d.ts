@@ -1,5 +1,5 @@
 import {JayComponent, EventEmitter, ComponentCollectionProxy} from 'jay-runtime';
-import {TreeNodeElement, TreeNodeViewState} from "./generated";
+import {TreeNodeElement, TreeNodeViewState} from "./generated-element";
 import {Node} from "./tree-node";
 
 export interface TreeComponent<ParentVS> extends JayComponent<Node, TreeNodeViewState, TreeNodeElement>{
