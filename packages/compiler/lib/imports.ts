@@ -1,6 +1,6 @@
 
 export enum ImportsFor {
-    definition, implementation
+    definition, implementation, elementBridge
 }
 
 interface ImportName {
@@ -19,7 +19,7 @@ function mkImports(): PackageImports {
         ImportsToStatements[key] = {module, index: nextKey++, statement, usage}
     }
 
-    importStatementFragment('jay-runtime', 'jayElement','JayElement', ImportsFor.definition, ImportsFor.implementation)
+    importStatementFragment('jay-runtime', 'jayElement','JayElement', ImportsFor.definition, ImportsFor.implementation, ImportsFor.elementBridge)
     importStatementFragment('jay-runtime', 'element','element as e', ImportsFor.implementation)
     importStatementFragment('jay-runtime', 'dynamicText','dynamicText as dt', ImportsFor.implementation)
     importStatementFragment('jay-runtime', 'dynamicAttribute', 'dynamicAttribute as da', ImportsFor.implementation)
@@ -28,14 +28,17 @@ function mkImports(): PackageImports {
     importStatementFragment('jay-runtime', 'dynamicElement','dynamicElement as de', ImportsFor.implementation)
     importStatementFragment('jay-runtime', 'forEach','forEach', ImportsFor.implementation)
     importStatementFragment('jay-runtime', 'ConstructContext','ConstructContext', ImportsFor.implementation)
-    importStatementFragment('jay-runtime', 'HTMLElementCollectionProxy', 'HTMLElementCollectionProxy', ImportsFor.definition, ImportsFor.implementation)
-    importStatementFragment('jay-runtime', 'HTMLElementProxy', 'HTMLElementProxy', ImportsFor.definition, ImportsFor.implementation)
+    importStatementFragment('jay-runtime', 'HTMLElementCollectionProxy', 'HTMLElementCollectionProxy', ImportsFor.definition, ImportsFor.implementation, ImportsFor.elementBridge)
+    importStatementFragment('jay-runtime', 'HTMLElementProxy', 'HTMLElementProxy', ImportsFor.definition, ImportsFor.implementation, ImportsFor.elementBridge)
     importStatementFragment('jay-runtime', 'childComp', 'childComp', ImportsFor.implementation)
     importStatementFragment('jay-runtime', 'elemRef', 'elemRef as er', ImportsFor.implementation)
     importStatementFragment('jay-runtime', 'elemCollectionRef', 'elemCollectionRef as ecr', ImportsFor.implementation)
     importStatementFragment('jay-runtime', 'compRef', 'compRef as cr', ImportsFor.implementation)
     importStatementFragment('jay-runtime', 'compCollectionRef', 'compCollectionRef as ccr', ImportsFor.implementation)
     importStatementFragment('jay-runtime', 'RenderElementOptions','RenderElementOptions', ImportsFor.implementation, ImportsFor.definition)
+    importStatementFragment('jay-secure', 'sandboxElementBridge','elementBridge', ImportsFor.elementBridge)
+    importStatementFragment('jay-secure', 'sandboxElemRef','elemRef', ImportsFor.elementBridge)
+    importStatementFragment('jay-secure', 'sandboxElement','sandboxElement as e', ImportsFor.elementBridge)
     return ImportsToStatements;
 }
 export const Import: PackageImports = mkImports();
@@ -58,13 +61,25 @@ export class Imports {
     }
 
     render(importsFor: ImportsFor) {
+        let moduleImportStatements = [];
+        moduleImportStatements.push(this.renderModule(importsFor, 'jay-runtime'))
+        moduleImportStatements.push(this.renderModule(importsFor, 'jay-secure'))
+        return moduleImportStatements
+            .filter(_ => !!_)
+            .join('\n')
+    }
+
+    renderModule(importsFor: ImportsFor, module: string) {
         let toBeRenderedImports = [];
         for (let importKey in Import) {
             let importName = Import[importKey];
-            if (this.imports[importName.index] && importName.usage.includes(importsFor))
+            if (this.imports[importName.index] && importName.usage.includes(importsFor) && importName.module === module)
                 toBeRenderedImports.push(importName.statement)
         }
-        return `import {${toBeRenderedImports.join(', ')}} from "jay-runtime";`;
+        if (toBeRenderedImports.length > 0)
+            return `import {${toBeRenderedImports.join(', ')}} from "jay-runtime";`;
+        else
+            return undefined;
     }
 
     static none(): Imports {
