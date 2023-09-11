@@ -77,7 +77,7 @@ export class Imports {
                 toBeRenderedImports.push(importName.statement)
         }
         if (toBeRenderedImports.length > 0)
-            return `import {${toBeRenderedImports.join(', ')}} from "jay-runtime";`;
+            return `import {${toBeRenderedImports.join(', ')}} from "${module}";`;
         else
             return undefined;
     }

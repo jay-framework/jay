@@ -445,6 +445,16 @@ ${renderedRoot.rendered}, options);
     };
 }
 
+function renderElementBridgeNode(element: HTMLElement, indent: Indent) {
+
+}
+
+function renderBridge(types: JayType, ootBodyElement: HTMLElement, elementType: string) {
+    return new RenderFragment(`export function render(viewState: ${types.name}): ${elementType} {
+  return elementBridge(viewState, () => [])
+}`, Imports.for(Import.sandboxElementBridge))
+}
+
 export function generateDefinitionFile(html: string, filename: string, filePath: string): WithValidations<string> {
     let parsedFile = parseJayFile(html, filename, filePath);
     return parsedFile.map((jayFile: JayFile) => {
@@ -466,19 +476,37 @@ export function generateRuntimeFile(html: string, filename: string, filePath: st
     let parsedFile = parseJayFile(html, filename, filePath);
     return parsedFile.flatMap((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
-        let {renderedRefs, renderedElement, renderedImplementation, refImportsInUse} = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, jayFile.baseElementName);
+        let {renderedRefs, renderedElement, renderedImplementation, refImportsInUse} =
+            renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, jayFile.baseElementName);
         let renderedFile = [
             renderImports(renderedImplementation.imports.plus(Import.element).plus(Import.jayElement), ImportsFor.implementation, jayFile.imports, refImportsInUse),
             types,
             renderedRefs,
             renderedElement,
             renderedImplementation.rendered
-        ]   .filter(_ => _ !== null && _ !== '')
+        ].filter(_ => _ !== null && _ !== '')
             .join('\n\n');
         return new WithValidations(renderedFile, renderedImplementation.validations);
     })
 }
 
 export function generateSandboxRuntimeFile(html: string, filename: string, filePath: string): WithValidations<string> {
-    return new WithValidations<string>('', [])
+    let parsedFile = parseJayFile(html, filename, filePath);
+    return parsedFile.map((jayFile: JayFile) => {
+        let types = generateTypes(jayFile.types);
+        let {renderedRefs, renderedElement, elementType, renderedImplementation, refImportsInUse} =
+            renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, jayFile.baseElementName);
+        let renderedBridge = renderBridge(jayFile.types, jayFile.body, elementType)
+        return [
+            renderImports(renderedImplementation.imports
+                .plus(Import.element)
+                .plus(Import.jayElement)
+                .plus(renderedBridge.imports), ImportsFor.elementBridge, jayFile.imports, refImportsInUse),
+            types,
+            renderedRefs,
+            renderedElement,
+            renderedBridge.rendered
+        ].filter(_ => _ !== null && _ !== '')
+            .join('\n\n');
+    });
 }
