@@ -257,10 +257,10 @@ function renderChildCompRef(element: HTMLElement, dynamicRef: boolean, variables
             viewStateType: variables.currentType
         }];
         if (dynamicRef) {
-            return new RenderFragment(`${constName}()`, Imports.for(Import.compCollectionRef), [], refs)
+            return new RenderFragment(`${constName}()`, Imports.for(Import.compCollectionRef, Import.sandboxCompCollectionRef), [], refs)
         }
         else
-            return new RenderFragment(`cr('${refName}')`, Imports.for(Import.compRef), [], refs)
+            return new RenderFragment(`cr('${refName}')`, Imports.for(Import.compRef, Import.sandboxCompRef), [], refs)
     }
     else
         return RenderFragment.empty();

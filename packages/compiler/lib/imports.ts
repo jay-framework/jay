@@ -10,38 +10,36 @@ interface ImportName {
     usage: ImportsFor[]
 }
 
-type PackageImports = Record<string, ImportName>
-
-function mkImports(): PackageImports {
-    let ImportsToStatements: PackageImports = {} as PackageImports;
-    let nextKey = 0;
-    function importStatementFragment(module: string, key: string, statement: string, ...usage: ImportsFor[]) {
-        ImportsToStatements[key] = {module, index: nextKey++, statement, usage}
-    }
-
-    importStatementFragment('jay-runtime', 'jayElement','JayElement', ImportsFor.definition, ImportsFor.implementation, ImportsFor.elementBridge)
-    importStatementFragment('jay-runtime', 'element','element as e', ImportsFor.implementation)
-    importStatementFragment('jay-runtime', 'dynamicText','dynamicText as dt', ImportsFor.implementation)
-    importStatementFragment('jay-runtime', 'dynamicAttribute', 'dynamicAttribute as da', ImportsFor.implementation)
-    importStatementFragment('jay-runtime', 'dynamicProperty', 'dynamicProperty as dp', ImportsFor.implementation)
-    importStatementFragment('jay-runtime', 'conditional','conditional as c', ImportsFor.implementation)
-    importStatementFragment('jay-runtime', 'dynamicElement','dynamicElement as de', ImportsFor.implementation)
-    importStatementFragment('jay-runtime', 'forEach','forEach', ImportsFor.implementation)
-    importStatementFragment('jay-runtime', 'ConstructContext','ConstructContext', ImportsFor.implementation)
-    importStatementFragment('jay-runtime', 'HTMLElementCollectionProxy', 'HTMLElementCollectionProxy', ImportsFor.definition, ImportsFor.implementation, ImportsFor.elementBridge)
-    importStatementFragment('jay-runtime', 'HTMLElementProxy', 'HTMLElementProxy', ImportsFor.definition, ImportsFor.implementation, ImportsFor.elementBridge)
-    importStatementFragment('jay-runtime', 'childComp', 'childComp', ImportsFor.implementation)
-    importStatementFragment('jay-runtime', 'elemRef', 'elemRef as er', ImportsFor.implementation)
-    importStatementFragment('jay-runtime', 'elemCollectionRef', 'elemCollectionRef as ecr', ImportsFor.implementation)
-    importStatementFragment('jay-runtime', 'compRef', 'compRef as cr', ImportsFor.implementation)
-    importStatementFragment('jay-runtime', 'compCollectionRef', 'compCollectionRef as ccr', ImportsFor.implementation)
-    importStatementFragment('jay-runtime', 'RenderElementOptions','RenderElementOptions', ImportsFor.implementation, ImportsFor.definition)
-    importStatementFragment('jay-secure', 'sandboxElementBridge','elementBridge', ImportsFor.elementBridge)
-    importStatementFragment('jay-secure', 'sandboxElemRef','elemRef', ImportsFor.elementBridge)
-    importStatementFragment('jay-secure', 'sandboxElement','sandboxElement as e', ImportsFor.elementBridge)
-    return ImportsToStatements;
+let nextKey = 0;
+function importStatementFragment(module: string, statement: string, ...usage: ImportsFor[]) {
+    return {module, index: nextKey++, statement, usage}
 }
-export const Import: PackageImports = mkImports();
+
+export const Import = {
+    jayElement: importStatementFragment('jay-runtime','JayElement', ImportsFor.definition, ImportsFor.implementation, ImportsFor.elementBridge),
+    element: importStatementFragment('jay-runtime', 'element as e', ImportsFor.implementation),
+    dynamicText: importStatementFragment('jay-runtime', 'dynamicText as dt', ImportsFor.implementation),
+    dynamicAttribute: importStatementFragment('jay-runtime',  'dynamicAttribute as da', ImportsFor.implementation),
+    dynamicProperty: importStatementFragment('jay-runtime',  'dynamicProperty as dp', ImportsFor.implementation),
+    conditional: importStatementFragment('jay-runtime', 'conditional as c', ImportsFor.implementation),
+    dynamicElement: importStatementFragment('jay-runtime', 'dynamicElement as de', ImportsFor.implementation),
+    forEach: importStatementFragment('jay-runtime', 'forEach', ImportsFor.implementation),
+    ConstructContext: importStatementFragment('jay-runtime', 'ConstructContext', ImportsFor.implementation),
+    HTMLElementCollectionProxy: importStatementFragment('jay-runtime',  'HTMLElementCollectionProxy', ImportsFor.definition, ImportsFor.implementation, ImportsFor.elementBridge),
+    HTMLElementProxy: importStatementFragment('jay-runtime',  'HTMLElementProxy', ImportsFor.definition, ImportsFor.implementation, ImportsFor.elementBridge),
+    childComp: importStatementFragment('jay-runtime',  'childComp', ImportsFor.implementation),
+    elemRef: importStatementFragment('jay-runtime',  'elemRef as er', ImportsFor.implementation),
+    elemCollectionRef: importStatementFragment('jay-runtime',  'elemCollectionRef as ecr', ImportsFor.implementation),
+    compRef: importStatementFragment('jay-runtime',  'compRef as cr', ImportsFor.implementation),
+    compCollectionRef: importStatementFragment('jay-runtime',  'compCollectionRef as ccr', ImportsFor.implementation),
+    RenderElementOptions: importStatementFragment('jay-runtime', 'RenderElementOptions', ImportsFor.implementation, ImportsFor.definition),
+    sandboxElementBridge: importStatementFragment('jay-secure', 'elementBridge', ImportsFor.elementBridge),
+    sandboxElement: importStatementFragment('jay-secure', 'sandboxElement as e', ImportsFor.elementBridge),
+    sandboxElemRef: importStatementFragment('jay-secure', 'elemRef as er', ImportsFor.elementBridge),
+    sandboxElemCollectionRef: importStatementFragment('jay-secure', 'elemCollectionRef as ecr', ImportsFor.elementBridge),
+    sandboxCompRef: importStatementFragment('jay-secure', 'compRef as cr', ImportsFor.elementBridge),
+    sandboxCompCollectionRef: importStatementFragment('jay-secure', 'compCollectionRef as ccr', ImportsFor.elementBridge),
+}
 
 export class Imports {
     constructor(private readonly imports: Array<boolean>) {}
