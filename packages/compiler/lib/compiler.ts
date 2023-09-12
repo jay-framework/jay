@@ -212,7 +212,6 @@ class Indent {
 
 function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
     let attributes = element.attributes;
-    let refs: Ref[] = [];
     let props = [];
     let isPropsDirectAssignment: boolean = false;
     let imports = Imports.none();
@@ -225,15 +224,7 @@ function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variabl
             isPropsDirectAssignment = true;
         }
         if (attrCanonical === 'ref') {
-            refs = [{
-                ref: camelCase(attributes[attrName]),
-                originalName: attributes[attrName],
-                constName: camelCase(`ref ${attributes[attrName]}`),
-                dynamicRef,
-                elementType: new JayComponentType(element.rawTagName, []),
-                viewStateType: variables.currentType
-            }];
-            imports = dynamicRef? Imports.for(Import.compCollectionRef) : Imports.for(Import.compRef)
+            return;
         }
         else {
             let prop = parseComponentPropExpression(attributes[attrName], variables);
@@ -243,15 +234,38 @@ function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variabl
 
     if (isPropsDirectAssignment) {
         let prop = parseComponentPropExpression(attributes.props, variables);
-        return RenderFragment.merge(prop, new RenderFragment('', imports, [], refs));
+        return RenderFragment.merge(prop, new RenderFragment('', imports, [], []));
     }
     else {
-        const refsRenderFragment = new RenderFragment('', imports, [], refs);
         return props
-            .reduce((prev, current) => RenderFragment.merge(prev, current, ', '), refsRenderFragment)
+            .reduce((prev, current) => RenderFragment.merge(prev, current, ', '), RenderFragment.empty())
             .map(_ => `({${_}})`);
     }
 }
+
+function renderChildCompRef(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
+    if (element.attributes.ref) {
+        let originalName = element.attributes.ref;
+        let refName = camelCase(originalName);
+        let constName = camelCase(`ref ${refName}`)
+        let refs = [{
+            ref: refName,
+            originalName,
+            constName,
+            dynamicRef,
+            elementType: new JayComponentType(element.rawTagName, []),
+            viewStateType: variables.currentType
+        }];
+        if (dynamicRef) {
+            return new RenderFragment(`${constName}()`, Imports.for(Import.compCollectionRef), [], refs)
+        }
+        else
+            return new RenderFragment(`cr('${refName}')`, Imports.for(Import.compRef), [], refs)
+    }
+    else
+        return RenderFragment.empty();
+}
+
 
 function renderNode(variables: Variables, node: Node, importedSymbols: Set<string>, indent: Indent, dynamicRef: boolean): RenderFragment {
 
@@ -318,18 +332,13 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
 
     function renderNestedComponent(htmlElement: HTMLElement, newVariables: Variables, currIndent: Indent = indent): RenderFragment {
         let propsGetterAndRefs = renderChildCompProps(htmlElement, dynamicRef, newVariables);
-        let refsFragment = '';
-        if (propsGetterAndRefs.refs.length > 0) {
-            let ref = propsGetterAndRefs.refs[0]
-            if (ref.dynamicRef)
-                refsFragment = `, ${ref.constName}()`;
-            else
-                refsFragment = `, cr('${ref.ref}')`;
-        }
+        let renderedRef = renderChildCompRef(htmlElement, dynamicRef, newVariables);
+        if (renderedRef.rendered !== '')
+            renderedRef = renderedRef.map(_ => ', ' + _)
         let getProps = `(vs: ${newVariables.currentType.name}) => ${propsGetterAndRefs.rendered}`
-        return new RenderFragment(`${currIndent.firstLine}childComp(${htmlElement.rawTagName}, ${getProps}${refsFragment})`,
-            Imports.for(Import.childComp).plus(propsGetterAndRefs.imports),
-            propsGetterAndRefs.validations, propsGetterAndRefs.refs);
+        return new RenderFragment(`${currIndent.firstLine}childComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
+            Imports.for(Import.childComp).plus(propsGetterAndRefs.imports).plus(renderedRef.imports),
+            propsGetterAndRefs.validations, renderedRef.refs);
     }
 
     switch(node.nodeType) {
