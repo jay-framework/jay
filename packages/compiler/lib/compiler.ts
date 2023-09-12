@@ -162,10 +162,10 @@ function renderElementRef(element: HTMLElement, dynamicRef: boolean, variables: 
             viewStateType: variables.currentType
         }];
         if (dynamicRef) {
-            return new RenderFragment(`${constName}()`, Imports.for(Import.elemCollectionRef), [], refs)
+            return new RenderFragment(`${constName}()`, Imports.for(Import.elemCollectionRef, Import.sandboxElemCollectionRef), [], refs)
         }
         else
-            return new RenderFragment(`er('${refName}')`, Imports.for(Import.elemRef), [], refs)
+            return new RenderFragment(`er('${refName}')`, Imports.for(Import.elemRef, Import.sandboxElemRef), [], refs)
     }
     else
         return RenderFragment.empty();

@@ -13,6 +13,13 @@ describe('generate the sandbox runtime file', () => {
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(await readGeneratedElementBridgeFile('basics/empty-element'));
         })
+
+        it('for simple file with dynamic text', async () => {
+            const jayFile = await readSourceJayFile('basics/simple-dynamic-text');
+            let runtimeFile = generateSandboxRuntimeFile(jayFile, 'simple-dynamic-text.jay.html', './test/');
+            expect(runtimeFile.validations).toEqual([]);
+            expect(runtimeFile.val).toEqual(await readGeneratedElementBridgeFile('basics/simple-dynamic-text'));
+        })
     })
 })
 
