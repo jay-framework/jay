@@ -6,7 +6,8 @@ export interface RefsViewState {
 
 export interface RefsElementRefs {
   ref1: HTMLElementProxy<RefsViewState, HTMLDivElement>,
-  ref: HTMLElementProxy<RefsViewState, HTMLDivElement>
+  ref: HTMLElementProxy<RefsViewState, HTMLDivElement>,
+  ref3: HTMLElementProxy<RefsViewState, HTMLDivElement>
 }
 
 export type RefsElement = JayElement<RefsViewState, RefsElementRefs>
@@ -15,6 +16,9 @@ export function render(viewState: RefsViewState, options?: RenderElementOptions)
   return ConstructContext.withRootContext(viewState, () =>
     e('div', {}, [
       e('div', {}, [dt(vs => vs.text)], er('ref1')),
-      e('div', {}, [dt(vs => vs.text)], er('ref'))
+      e('div', {}, [dt(vs => vs.text)], er('ref')),
+      e('div', {}, [
+        e('div', {}, [dt(vs => vs.text)], er('ref3'))
+      ])
     ]), options);
 }
