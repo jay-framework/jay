@@ -456,7 +456,7 @@ ${renderedRoot.rendered}, options);
     };
 }
 
-function renderElementBridgeNode(node: Node, variables: Variables, indent: Indent, dynamicRef: boolean): RenderFragment {
+function renderElementBridgeNode(node: Node, variables: Variables, importedSymbols: Set<string>, indent: Indent, dynamicRef: boolean): RenderFragment {
 
     function renderHtmlElement(htmlElement, currIndent: Indent = indent) {
         let childNodes = node.childNodes.length > 1 ?
@@ -466,11 +466,14 @@ function renderElementBridgeNode(node: Node, variables: Variables, indent: Inden
         let childRenders = childNodes.length === 0 ?
             RenderFragment.empty() :
             childNodes
-                .map(_ => renderElementBridgeNode(_, variables, currIndent, dynamicRef))
+                .map(_ => renderElementBridgeNode(_, variables, importedSymbols, currIndent, dynamicRef))
                 .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
                 // .map(children => currIndent.firstLineBreak ? `\n${children}\n${currIndent.firstLine}` : children);
-
-        let renderedRef = renderElementRef(htmlElement, dynamicRef, variables);
+        let renderedRef;
+        if (importedSymbols.has(htmlElement.rawTagName))
+            renderedRef = renderChildCompRef(htmlElement, dynamicRef, variables);
+        else
+            renderedRef = renderElementRef(htmlElement, dynamicRef, variables);
         if (renderedRef.refs.length > 0)
             return new RenderFragment(`${currIndent.firstLine}e(${renderedRef.rendered})`,
                 childRenders.imports.plus(Import.sandboxElement),
@@ -491,9 +494,10 @@ function renderElementBridgeNode(node: Node, variables: Variables, indent: Inden
     return RenderFragment.empty();
 }
 
-function renderBridge(types: JayType, rootBodyElement: HTMLElement, elementType: string) {
+function renderBridge(types: JayType, rootBodyElement: HTMLElement, importStatements: JayImportLink[], elementType: string) {
     let variables = new Variables(types);
-    let renderedBridge = renderElementBridgeNode(rootBodyElement, variables, new Indent('    '), false);
+    let importedSymbols = new Set(importStatements.flatMap(_ => _.names.map(sym => sym.as? sym.as : sym.name)));
+    let renderedBridge = renderElementBridgeNode(rootBodyElement, variables, importedSymbols, new Indent('    '), false);
     let refsPath = (renderedBridge.rendered.length > 0)?
 `
 ${renderedBridge.rendered}
@@ -545,7 +549,7 @@ export function generateSandboxRuntimeFile(html: string, filename: string, fileP
         let types = generateTypes(jayFile.types);
         let {renderedRefs, renderedElement, elementType, renderedImplementation, refImportsInUse} =
             renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, jayFile.baseElementName);
-        let renderedBridge = renderBridge(jayFile.types, jayFile.body, elementType)
+        let renderedBridge = renderBridge(jayFile.types, jayFile.body, jayFile.imports, elementType)
         return [
             renderImports(renderedImplementation.imports
                 .plus(Import.element)

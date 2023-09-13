@@ -28,5 +28,15 @@ describe('generate the sandbox runtime file', () => {
             expect(runtimeFile.val).toEqual(await readGeneratedElementBridgeFile('basics/refs'));
         })
     })
+
+    describe('components', () => {
+        it('counter component', async () => {
+            const jayFile = await readSourceJayFile('components/counter');
+            let runtimeFile = generateSandboxRuntimeFile(jayFile, 'counter.jay.html', './test/');
+            expect(runtimeFile.validations).toEqual([]);
+            expect(runtimeFile.val).toEqual(await readGeneratedElementBridgeFile('components/counter'));
+        })
+    })
+
 })
 
