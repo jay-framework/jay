@@ -2,7 +2,7 @@ import {JayElement} from "jay-runtime";
 import {elementBridge} from "jay-secure";
 
 export interface SimpleDynamicTextViewState {
-
+  s1: string
 }
 
 export interface SimpleDynamicTextElementRefs {}

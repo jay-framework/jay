@@ -387,6 +387,36 @@ const isComponentRef = (ref: Ref) => (ref.elementType instanceof JayComponentTyp
 const isCollectionRef = (ref: Ref) => (ref.dynamicRef)
 const isComponentCollectionRef = (ref: Ref) => (isCollectionRef(ref) && isComponentRef(ref))
 
+function renderRefsType(refs: Ref[], refsType: string) {
+    let renderedRefs = '';
+    let imports = Imports.none();
+    let refImportsInUse = new Set<string>();
+    if (refs.length > 0) {
+        const renderedReferences = refs.map(ref => {
+            let referenceType;
+            if (isComponentCollectionRef(ref)) {
+                referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`
+                refImportsInUse.add(`${ref.elementType.name}Refs`)
+            } else if (isCollectionRef(ref)) {
+                referenceType = `HTMLElementCollectionProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
+                imports = imports.plus(Import.HTMLElementCollectionProxy)
+            } else if (isComponentRef(ref)) {
+                referenceType = `${ref.elementType.name}Ref<${ref.viewStateType.name}>`;
+                refImportsInUse.add(`${ref.elementType.name}Ref`)
+            } else {
+                referenceType = `HTMLElementProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
+                imports = imports.plus(Import.HTMLElementProxy)
+            }
+            return `  ${ref.ref}: ${referenceType}`
+        }).join(',\n');
+        renderedRefs = `export interface ${refsType} {
+${renderedReferences}
+}`
+    } else
+        renderedRefs = `export interface ${refsType} {}`;
+    return {imports, renderedRefs, refImportsInUse};
+}
+
 function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLElement, importStatements: JayImportLink[], baseElementName: string):
     { renderedRefs: string; renderedElement: string; elementType: string; renderedImplementation: RenderFragment; refImportsInUse: Set<string> } {
     let variables = new Variables(types);
@@ -397,42 +427,14 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
     let imports = renderedRoot.imports
         .plus(Import.ConstructContext)
         .plus(Import.RenderElementOptions);
-    let renderedRefs;
-    let dynamicRefs: Ref[] = [];
-    let refImportsInUse = new Set<string>();
-    if (renderedRoot.refs.length > 0) {
-        const renderedReferences = renderedRoot.refs.map(ref => {
-            let referenceType;
-            if (isComponentCollectionRef(ref)) {
-                referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`
-                dynamicRefs.push(ref);
-                refImportsInUse.add(`${ref.elementType.name}Refs`)
-            }
-            else if (isCollectionRef(ref)) {
-                referenceType = `HTMLElementCollectionProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
-                imports = imports.plus(Import.HTMLElementCollectionProxy)
-                dynamicRefs.push(ref);
-            }
-            else if (isComponentRef(ref)) {
-                referenceType = `${ref.elementType.name}Ref<${ref.viewStateType.name}>`;
-                refImportsInUse.add(`${ref.elementType.name}Ref`)
-            }
-            else {
-                referenceType = `HTMLElementProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
-                imports = imports.plus(Import.HTMLElementProxy)
-            }
-            return `  ${ref.ref}: ${referenceType}`
-        }).join(',\n');
-        renderedRefs = `export interface ${refsType} {
-${renderedReferences}
-}`
-    }
-    else
-        renderedRefs = `export interface ${refsType} {}`;
+    const {imports: refImports, renderedRefs, refImportsInUse} =
+        renderRefsType(renderedRoot.refs, refsType);
+    imports = imports.plus(refImports);
 
     let renderedElement = `export type ${elementType} = JayElement<${types.name}, ${refsType}>`
 
     let body;
+    let dynamicRefs = renderedRoot.refs.filter(ref => isCollectionRef(ref) || isComponentCollectionRef(ref))
     if (dynamicRefs.length > 0) {
         body = `export function render(viewState: ${types.name}, options?: RenderElementOptions): ${elementType} {
   return ConstructContext.withRootContext(viewState, () => {
