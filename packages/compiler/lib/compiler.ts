@@ -456,14 +456,52 @@ ${renderedRoot.rendered}, options);
     };
 }
 
-function renderElementBridgeNode(element: HTMLElement, indent: Indent) {
+function renderElementBridgeNode(node: Node, variables: Variables, indent: Indent, dynamicRef: boolean): RenderFragment {
 
+    function renderHtmlElement(htmlElement, currIndent: Indent = indent) {
+        let childNodes = node.childNodes.length > 1 ?
+            node.childNodes.filter(_ => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '') :
+            node.childNodes;
+
+        let childRenders = childNodes.length === 0 ?
+            RenderFragment.empty() :
+            childNodes
+                .map(_ => renderElementBridgeNode(_, variables, currIndent, dynamicRef))
+                .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
+                // .map(children => currIndent.firstLineBreak ? `\n${children}\n${currIndent.firstLine}` : children);
+
+        let renderedRef = renderElementRef(htmlElement, dynamicRef, variables);
+        if (renderedRef.refs.length > 0)
+            return new RenderFragment(`${currIndent.firstLine}e(${renderedRef.rendered})`,
+                childRenders.imports.plus(Import.sandboxElement),
+                [...childRenders.validations, ...renderedRef.validations],
+                [...childRenders.refs, ...renderedRef.refs])
+        else
+            return childRenders;
+    }
+
+    if (node.nodeType === NodeType.ELEMENT_NODE) {
+        let htmlElement = node as HTMLElement;
+        if (isForEach(htmlElement)) {
+            dynamicRef = true;
+        }
+        else
+            return renderHtmlElement(htmlElement);
+    }
+    return RenderFragment.empty();
 }
 
-function renderBridge(types: JayType, ootBodyElement: HTMLElement, elementType: string) {
+function renderBridge(types: JayType, rootBodyElement: HTMLElement, elementType: string) {
+    let variables = new Variables(types);
+    let renderedBridge = renderElementBridgeNode(rootBodyElement, variables, new Indent('    '), false);
+    let refsPath = (renderedBridge.rendered.length > 0)?
+`
+${renderedBridge.rendered}
+  `:'';
     return new RenderFragment(`export function render(viewState: ${types.name}): ${elementType} {
-  return elementBridge(viewState, () => [])
-}`, Imports.for(Import.sandboxElementBridge))
+  return elementBridge(viewState, () => [${refsPath}])
+}`, Imports.for(Import.sandboxElementBridge).plus(renderedBridge.imports),
+        renderedBridge.validations, renderedBridge.refs)
 }
 
 export function generateDefinitionFile(html: string, filename: string, filePath: string): WithValidations<string> {
