@@ -9,6 +9,7 @@ export interface Ref {
     constName: string,
     originalName: string,
     dynamicRef: boolean,
+    autoRef: boolean
     viewStateType: JayType
     elementType: JayType
 }

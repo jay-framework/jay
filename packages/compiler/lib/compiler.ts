@@ -1,24 +1,81 @@
 import {WithValidations} from "./with-validations";
 import {
     JayArrayType,
-    JayAtomicType, JayComponentType, JayEnumType,
-    JayFile, JayHTMLType, JayImportedType, JayImportLink,
+    JayAtomicType,
+    JayComponentType,
+    JayEnumType,
+    JayFile,
+    JayHTMLType,
+    JayImportedType,
+    JayImportLink,
     JayObjectType,
-    JayType, JayTypeAlias, JayUnknown,
+    JayType,
+    JayTypeAlias,
+    JayUnknown,
     parseJayFile
 } from "./parse-jay-file";
 import {HTMLElement, NodeType} from "node-html-parser";
 import Node from "node-html-parser/dist/nodes/node";
 import {Ref, RenderFragment} from "./render-fragment";
 import {
-    parseAccessor, parseAttributeExpression, parseClassExpression, parseComponentPropExpression,
-    parseCondition, parsePropertyExpression,
+    parseAccessor,
+    parseAttributeExpression,
+    parseClassExpression,
+    parseComponentPropExpression,
+    parseCondition,
+    parsePropertyExpression,
     parseTextExpression,
     Variables
 } from './expression-compiler';
 import {htmlElementTagNameMap} from "./html-element-tag-name-map";
 import {camelCase} from "camel-case";
 import {Import, Imports, ImportsFor} from "./imports";
+
+class Indent {
+    private readonly base: string
+    readonly firstLineBreak: boolean
+    readonly lastLineIndent: boolean
+    constructor(parent: string, firstLineBreak = true, lastLineIndent = false) {
+        this.base = parent;
+        this.firstLineBreak = firstLineBreak;
+        this.lastLineIndent = lastLineIndent;
+    }
+    get firstLine(): string {
+        return this.firstLineBreak?this.base:'';
+    }
+    get curr(): string {
+        return this.base + '  ';
+    }
+    get lastLine(): string {
+        return this.lastLineIndent? this.base:'';
+    }
+
+    child(): Indent {
+        return new Indent(this.base + '  ')
+    }
+
+    noFirstLineBreak() {
+        return new Indent(this.base, false)
+    }
+    withLastLineBreak() {
+        return new Indent(this.base, false, true)
+    }
+}
+
+function newAutoRefNameGenerator() {
+    let nextId = 1;
+    return function (): string {
+        return 'aR' + nextId++;
+    }
+}
+
+interface RenderContext{
+    variables: Variables,
+    importedSymbols: Set<string>,
+    indent: Indent,
+    dynamicRef: boolean
+    nextAutoRefName: () => string
+}
 
 function renderInterface(aType: JayType): string {
 
@@ -86,9 +143,9 @@ function renderImports(imports: Imports, importsFor: ImportsFor, componentImport
                   importSymbols.push(compType+'Ref')
               if (refImportsInUse.has(compType+'Refs'))
                   importSymbols.push(compType+'Refs')
-              imports.push(`import {${importSymbols.join(', ')}} from '${importStatement.module}-refs';`)
+              imports.push(`import {${importSymbols.join(', ')}} from "${importStatement.module}-refs";`)
           })
-        imports.push(`import {${symbols}} from '${importStatement.module}';`);
+        imports.push(`import {${symbols}} from "${importStatement.module}";`);
         return imports.join('\n');
     });
 
@@ -114,7 +171,7 @@ const propertyMapping = {
     'input:checked': {type: 'property'}
 }
 const attributesRequiresQuotes = /[- ]/;
-function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
+function renderAttributes(element: HTMLElement, {variables}: RenderContext): RenderFragment {
     let attributes = element.attributes;
     let renderedAttributes = [];
     Object.keys(attributes).forEach(attrName => {
@@ -148,7 +205,7 @@ function renderAttributes(element: HTMLElement, dynamicRef: boolean, variables: 
         .map(_ => `{${_}}`);
 }
 
-function renderElementRef(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
+function renderElementRef(element: HTMLElement, {dynamicRef, variables}: RenderContext): RenderFragment {
     if (element.attributes.ref) {
         let originalName = element.attributes.ref;
         let refName = camelCase(originalName);
@@ -158,6 +215,7 @@ function renderElementRef(element: HTMLElement, dynamicRef: boolean, variables: 
             originalName,
             constName,
             dynamicRef,
+            autoRef: false,
             elementType: elementNameToJayType(element),
             viewStateType: variables.currentType
         }];
@@ -179,38 +237,7 @@ function isForEach(node: Node): boolean {
     return (node.nodeType !== NodeType.TEXT_NODE) && (node as HTMLElement).hasAttribute('forEach');
 }
 
-class Indent {
-    private readonly base: string
-    readonly firstLineBreak: boolean
-    readonly lastLineIndent: boolean
-    constructor(parent: string, firstLineBreak = true, lastLineIndent = false) {
-        this.base = parent;
-        this.firstLineBreak = firstLineBreak;
-        this.lastLineIndent = lastLineIndent;
-    }
-    get firstLine(): string {
-        return this.firstLineBreak?this.base:'';
-    }
-    get curr(): string {
-        return this.base + '  ';
-    }
-    get lastLine(): string {
-        return this.lastLineIndent? this.base:'';
-    }
-
-    child(): Indent {
-        return new Indent(this.base + '  ')
-    }
-
-    noFirstLineBreak() {
-        return new Indent(this.base, false)
-    }
-    withLastLineBreak() {
-        return new Indent(this.base, false, true)
-    }
-}
-
-function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
+function renderChildCompProps(element: HTMLElement, {dynamicRef, variables}: RenderContext): RenderFragment {
     let attributes = element.attributes;
     let props = [];
     let isPropsDirectAssignment: boolean = false;
@@ -243,31 +270,29 @@ function renderChildCompProps(element: HTMLElement, dynamicRef: boolean, variabl
     }
 }
 
-function renderChildCompRef(element: HTMLElement, dynamicRef: boolean, variables: Variables): RenderFragment {
-    if (element.attributes.ref) {
-        let originalName = element.attributes.ref;
-        let refName = camelCase(originalName);
-        let constName = camelCase(`ref ${refName}`)
-        let refs = [{
-            ref: refName,
-            originalName,
-            constName,
-            dynamicRef,
-            elementType: new JayComponentType(element.rawTagName, []),
-            viewStateType: variables.currentType
-        }];
-        if (dynamicRef) {
-            return new RenderFragment(`${constName}()`, Imports.for(Import.compCollectionRef, Import.sandboxCompCollectionRef), [], refs)
-        }
-        else
-            return new RenderFragment(`cr('${refName}')`, Imports.for(Import.compRef, Import.sandboxCompRef), [], refs)
+function renderChildCompRef(element: HTMLElement, {dynamicRef, variables, nextAutoRefName}: RenderContext): RenderFragment {
+    let originalName = element.attributes.ref || nextAutoRefName();
+    let refName = camelCase(originalName);
+    let constName = camelCase(`ref ${refName}`)
+    let refs = [{
+        ref: refName,
+        originalName,
+        constName,
+        dynamicRef,
+        autoRef: !element.attributes.ref,
+        elementType: new JayComponentType(element.rawTagName, []),
+        viewStateType: variables.currentType
+    }];
+    if (dynamicRef) {
+        return new RenderFragment(`${constName}()`, Imports.for(Import.compCollectionRef, Import.sandboxCompCollectionRef), [], refs)
     }
     else
-        return RenderFragment.empty();
+        return new RenderFragment(`cr('${refName}')`, Imports.for(Import.compRef, Import.sandboxCompRef), [], refs)
 }
 
 
-function renderNode(variables: Variables, node: Node, importedSymbols: Set<string>, indent: Indent, dynamicRef: boolean): RenderFragment {
+function renderNode(node: Node, context: RenderContext): RenderFragment {
+    let {variables, importedSymbols, indent, dynamicRef} = context;
 
     function de(tagName: string, attributes: RenderFragment, children: RenderFragment, ref: RenderFragment, currIndent: Indent = indent): RenderFragment {
         const refWithPrefixComma = ref.rendered.length? `, ${ref.rendered}`:'';
@@ -301,15 +326,17 @@ function renderNode(variables: Variables, node: Node, importedSymbols: Set<strin
             .map(_ => isConditional(_) || isForEach(_))
             .reduce((prev, current) => prev || current, false);
 
+        let childContext = {...context, variables: newVariables, indent: childIndent, dynamicRef};
+
         let childRenders = childNodes.length === 0 ?
             RenderFragment.empty() :
             childNodes
-                .map(_ => renderNode(newVariables, _, importedSymbols, childIndent, dynamicRef))
+                .map(_ => renderNode(_, childContext))
                 .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
                 .map(children => childIndent.firstLineBreak ? `\n${children}\n${currIndent.firstLine}` : children);
 
-        let attributes = renderAttributes(htmlElement, dynamicRef, newVariables);
-        let renderedRef = renderElementRef(htmlElement, dynamicRef, newVariables);
+        let attributes = renderAttributes(htmlElement, childContext);
+        let renderedRef = renderElementRef(htmlElement, childContext);
 
         if (needDynamicElement)
             return de(htmlElement.rawTagName, attributes, childRenders, renderedRef, currIndent);
@@ -331,8 +358,10 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`, childElement.imp
     }
 
     function renderNestedComponent(htmlElement: HTMLElement, newVariables: Variables, currIndent: Indent = indent): RenderFragment {
-        let propsGetterAndRefs = renderChildCompProps(htmlElement, dynamicRef, newVariables);
-        let renderedRef = renderChildCompRef(htmlElement, dynamicRef, newVariables);
+        let propsGetterAndRefs = renderChildCompProps(htmlElement, {...context, dynamicRef,
+            variables: newVariables});
+        let renderedRef = renderChildCompRef(htmlElement,
+            {...context, dynamicRef, variables: newVariables});
         if (renderedRef.rendered !== '')
             renderedRef = renderedRef.map(_ => ', ' + _)
         let getProps = `(vs: ${newVariables.currentType.name}) => ${propsGetterAndRefs.rendered}`
@@ -391,8 +420,9 @@ function renderRefsType(refs: Ref[], refsType: string) {
     let renderedRefs = '';
     let imports = Imports.none();
     let refImportsInUse = new Set<string>();
-    if (refs.length > 0) {
-        const renderedReferences = refs.map(ref => {
+    let refsToRender = refs.filter(_ => !_.autoRef)
+    if (refsToRender.length > 0) {
+        const renderedReferences = refsToRender.map(ref => {
             let referenceType;
             if (isComponentCollectionRef(ref)) {
                 referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`
@@ -421,7 +451,8 @@ function renderFunctionImplementation(types: JayType, rootBodyElement: HTMLEleme
     { renderedRefs: string; renderedElement: string; elementType: string; renderedImplementation: RenderFragment; refImportsInUse: Set<string> } {
     let variables = new Variables(types);
     let importedSymbols = new Set(importStatements.flatMap(_ => _.names.map(sym => sym.as? sym.as : sym.name)));
-    let renderedRoot = renderNode(variables, firstElementChild(rootBodyElement), importedSymbols, new Indent('    '), false);
+    let renderedRoot = renderNode(firstElementChild(rootBodyElement),
+        {variables, importedSymbols, indent: new Indent('    '), dynamicRef: false, nextAutoRefName: newAutoRefNameGenerator()});
     let elementType = baseElementName + 'Element';
     let refsType = baseElementName + 'ElementRefs';
     let imports = renderedRoot.imports
@@ -456,7 +487,19 @@ ${renderedRoot.rendered}, options);
     };
 }
 
-function renderElementBridgeNode(node: Node, variables: Variables, importedSymbols: Set<string>, indent: Indent, dynamicRef: boolean): RenderFragment {
+function renderElementBridgeNode(node: Node, context: RenderContext): RenderFragment {
+    let {variables, importedSymbols, indent, dynamicRef} = context;
+
+    function renderNestedComponent(htmlElement: HTMLElement, newVariables: Variables, currIndent: Indent): RenderFragment {
+        let propsGetterAndRefs = renderChildCompProps(htmlElement, {...context, dynamicRef, variables: newVariables});
+        let renderedRef = renderChildCompRef(htmlElement, {...context, dynamicRef, variables: newVariables});
+        if (renderedRef.rendered !== '')
+            renderedRef = renderedRef.map(_ => ', ' + _)
+        let getProps = `(vs: ${newVariables.currentType.name}) => ${propsGetterAndRefs.rendered}`
+        return new RenderFragment(`${currIndent.firstLine}childComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
+            Imports.for(Import.sandboxChildComp).plus(propsGetterAndRefs.imports).plus(renderedRef.imports),
+            propsGetterAndRefs.validations, renderedRef.refs);
+    }
 
     function renderHtmlElement(htmlElement, currIndent: Indent = indent) {
         let childNodes = node.childNodes.length > 1 ?
@@ -466,21 +509,22 @@ function renderElementBridgeNode(node: Node, variables: Variables, importedSymbo
         let childRenders = childNodes.length === 0 ?
             RenderFragment.empty() :
             childNodes
-                .map(_ => renderElementBridgeNode(_, variables, importedSymbols, currIndent, dynamicRef))
+                .map(_ => renderElementBridgeNode(_,{...context, indent: currIndent, dynamicRef}))
                 .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
                 // .map(children => currIndent.firstLineBreak ? `\n${children}\n${currIndent.firstLine}` : children);
-        let renderedRef;
-        if (importedSymbols.has(htmlElement.rawTagName))
-            renderedRef = renderChildCompRef(htmlElement, dynamicRef, variables);
-        else
-            renderedRef = renderElementRef(htmlElement, dynamicRef, variables);
-        if (renderedRef.refs.length > 0)
-            return new RenderFragment(`${currIndent.firstLine}e(${renderedRef.rendered})`,
-                childRenders.imports.plus(Import.sandboxElement),
-                [...childRenders.validations, ...renderedRef.validations],
-                [...childRenders.refs, ...renderedRef.refs])
-        else
-            return childRenders;
+        if (importedSymbols.has(htmlElement.rawTagName)) {
+            return renderNestedComponent(htmlElement, variables, currIndent);
+        }
+        else {
+            let renderedRef = renderElementRef(htmlElement, context);
+            if (renderedRef.refs.length > 0)
+                return new RenderFragment(`${currIndent.firstLine}e(${renderedRef.rendered})`,
+                    childRenders.imports.plus(Import.sandboxElement),
+                    [...childRenders.validations, ...renderedRef.validations],
+                    [...childRenders.refs, ...renderedRef.refs])
+            else
+                return childRenders;
+        }
     }
 
     if (node.nodeType === NodeType.ELEMENT_NODE) {
@@ -497,7 +541,8 @@ function renderElementBridgeNode(node: Node, variables: Variables, importedSymbo
 function renderBridge(types: JayType, rootBodyElement: HTMLElement, importStatements: JayImportLink[], elementType: string) {
     let variables = new Variables(types);
     let importedSymbols = new Set(importStatements.flatMap(_ => _.names.map(sym => sym.as? sym.as : sym.name)));
-    let renderedBridge = renderElementBridgeNode(rootBodyElement, variables, importedSymbols, new Indent('    '), false);
+    let renderedBridge = renderElementBridgeNode(rootBodyElement,
+        {variables, importedSymbols, indent: new Indent('    '), dynamicRef: false, nextAutoRefName: newAutoRefNameGenerator()});
     let refsPath = (renderedBridge.rendered.length > 0)?
 `
 ${renderedBridge.rendered}

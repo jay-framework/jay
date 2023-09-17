@@ -1,7 +1,7 @@
 import {JayElement, element as e, ConstructContext, childComp, compRef as cr, RenderElementOptions} from "jay-runtime";
-import {CounterRef} from '../counter/counter-refs';
-import {Counter} from '../counter/counter';
-import {CounterViewState as CounterData} from '../counter/generated-element';
+import {CounterRef} from "../counter/counter-refs";
+import {Counter} from "../counter/counter";
+import {CounterViewState as CounterData} from "../counter/generated-element";
 
 export interface ComponentInComponentViewState {
   count1: number,
@@ -22,9 +22,9 @@ export function render(viewState: ComponentInComponentViewState, options?: Rende
     e('div', {}, [
       childComp(Counter, (vs: ComponentInComponentViewState) => ({initialValue: vs.count1}), cr('counter1')),
       childComp(Counter, (vs: ComponentInComponentViewState) => ({initialValue: vs.count2}), cr('counterTwo')),
-      childComp(Counter, (vs: ComponentInComponentViewState) => ({initialValue: vs.count3})),
-      childComp(Counter, (vs: ComponentInComponentViewState) => ({initialValue: vs.count4?.count})),
-      childComp(Counter, (vs: ComponentInComponentViewState) => ({initialValue: 25}))
+      childComp(Counter, (vs: ComponentInComponentViewState) => ({initialValue: vs.count3}), cr('aR1')),
+      childComp(Counter, (vs: ComponentInComponentViewState) => ({initialValue: vs.count4?.count}), cr('aR2')),
+      childComp(Counter, (vs: ComponentInComponentViewState) => ({initialValue: 25}), cr('aR3'))
     ]), options);
 }
 

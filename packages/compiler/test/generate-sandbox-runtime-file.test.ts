@@ -36,6 +36,13 @@ describe('generate the sandbox runtime file', () => {
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(await readGeneratedElementBridgeFile('components/counter'));
         })
+
+        it('component in component', async () => {
+            const jayFile = await readSourceJayFile('components/component-in-component');
+            let runtimeFile = generateSandboxRuntimeFile(jayFile, 'component-in-component.jay.html', './test/fixtures/components/component-in-component');
+            expect(runtimeFile.validations).toEqual([]);
+            expect(runtimeFile.val).toEqual(await readGeneratedElementBridgeFile('components/component-in-component'));
+        })
     })
 
 })

@@ -1,5 +1,5 @@
 import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, dynamicElement as de, forEach, ConstructContext, RenderElementOptions} from "jay-runtime";
-import {treeNode, Node} from './tree-node';
+import {treeNode, Node} from "./tree-node";
 
 export interface RecursiveComponents2ViewState {
   headChar: string,

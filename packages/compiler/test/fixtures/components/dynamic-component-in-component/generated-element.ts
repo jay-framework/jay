@@ -1,6 +1,6 @@
 import {JayElement, element as e, conditional as c, dynamicElement as de, forEach, ConstructContext, childComp, compRef as cr, compCollectionRef as ccr, RenderElementOptions} from "jay-runtime";
-import {CounterRef, CounterRefs} from '../counter/counter-refs';
-import {Counter} from '../counter/counter';
+import {CounterRef, CounterRefs} from "../counter/counter-refs";
+import {Counter} from "../counter/counter";
 
 export interface NestedCounter {
   counter: number,

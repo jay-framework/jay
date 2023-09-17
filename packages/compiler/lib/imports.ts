@@ -35,6 +35,7 @@ export const Import = {
     RenderElementOptions: importStatementFragment('jay-runtime', 'RenderElementOptions', ImportsFor.implementation, ImportsFor.definition),
     sandboxElementBridge: importStatementFragment('jay-secure', 'elementBridge', ImportsFor.elementBridge),
     sandboxElement: importStatementFragment('jay-secure', 'sandboxElement as e', ImportsFor.elementBridge),
+    sandboxChildComp: importStatementFragment('jay-secure', 'sandboxChildComp as childComp', ImportsFor.elementBridge),
     sandboxElemRef: importStatementFragment('jay-secure', 'elemRef as er', ImportsFor.elementBridge),
     sandboxElemCollectionRef: importStatementFragment('jay-secure', 'elemCollectionRef as ecr', ImportsFor.elementBridge),
     sandboxCompRef: importStatementFragment('jay-secure', 'compRef as cr', ImportsFor.elementBridge),
