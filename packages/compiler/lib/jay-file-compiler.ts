@@ -1,17 +1,5 @@
 import {WithValidations} from "./with-validations";
 import {
-    JayArrayType,
-    JayAtomicType,
-    JayComponentType,
-    JayEnumType,
-    JayFile,
-    JayHTMLType,
-    JayImportedType,
-    JayImportLink,
-    JayObjectType,
-    JayType,
-    JayTypeAlias,
-    JayUnknown,
     parseJayFile
 } from "./jay-file-parser";
 import {HTMLElement, NodeType} from "node-html-parser";
@@ -30,6 +18,15 @@ import {
 import {htmlElementTagNameMap} from "./html-element-tag-name-map";
 import {camelCase} from "camel-case";
 import {Import, Imports, ImportsFor} from "./imports";
+import {
+    JayArrayType, JayAtomicType,
+    JayComponentType, JayEnumType,
+    JayFile,
+    JayHTMLType,
+    JayImportedType,
+    JayImportLink,
+    JayObjectType, JayType, JayTypeAlias, JayUnknown
+} from "./jay-file-types";
 
 class Indent {
     private readonly base: string

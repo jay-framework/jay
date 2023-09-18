@@ -1,8 +1,8 @@
 import {RenderFragment} from './render-fragment';
 import {parse} from './expression-parser'
-import {JayImportedType, JayImportName, JayObjectType, JayType, JayUnknown} from "./jay-file-parser";
 import {JayValidations} from "./with-validations";
 import {Import, Imports} from "./imports";
+import {JayImportedType, JayImportName, JayObjectType, JayType, JayUnknown} from "./jay-file-types";
 
 export class Accessor {
     readonly terms: Array<string>;

@@ -1,14 +1,14 @@
 import {describe, expect, it} from '@jest/globals'
 import {tsExtractTypes} from "../lib/ts-extract-types";
+
 import {
     JayArrayType,
     JayBoolean,
     JayComponentType,
-    JayElementType,
-    JayNumber,
-    JayObjectType,
-    JayString, JayUnknown
-} from "../lib/jay-file-parser";
+    JayElementType, JayNumber,
+    JayObjectType, JayString,
+    JayUnknown
+} from "../lib/jay-file-types";
 
 describe('typescript-compiler', () => {
 

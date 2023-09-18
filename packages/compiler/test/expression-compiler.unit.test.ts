@@ -7,6 +7,8 @@ import {
     parseTextExpression,
     Variables
 } from '../lib/expression-compiler'
+
+import {Import} from "../lib/imports";
 import {
     JayBoolean,
     JayEnumType,
@@ -15,9 +17,7 @@ import {
     JayObjectType,
     JayString,
     JayUnknown
-} from "../lib/jay-file-parser";
-
-import {Import} from "../lib/imports";
+} from "../lib/jay-file-types";
 
 describe('expression-compiler', () => {
 

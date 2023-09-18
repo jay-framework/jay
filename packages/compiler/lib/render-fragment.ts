@@ -1,6 +1,6 @@
 import {JayValidations} from "./with-validations";
-import {JayType} from "./jay-file-parser";
 import {Imports} from "./imports";
+import {JayType} from "./jay-file-types";
 
 
 

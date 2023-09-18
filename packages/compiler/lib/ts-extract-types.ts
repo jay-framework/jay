@@ -10,15 +10,15 @@ import {
 import * as ts from "typescript";
 import fs from 'fs';
 import path from "path";
+
 import {
-    JayArrayType, JayComponentApiMember,
+    JayArrayType,
+    JayComponentApiMember,
     JayComponentType,
     JayElementType,
-    JayObjectType,
-    JayType,
-    JayUnknown,
+    JayObjectType, JayType, JayUnknown,
     resolvePrimitiveType
-} from "./jay-file-parser";
+} from "./jay-file-types";
 
 function resolveTsConfig(options) {
 

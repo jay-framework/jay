@@ -1,14 +1,9 @@
 import {describe, expect, it} from '@jest/globals'
 
 import {
-    JayArrayType,
-    JayBoolean,
-    JayEnumType,
-    JayNumber,
-    JayObjectType,
-    JayString,
     parseJayFile
 } from "../lib/jay-file-parser";
+import {JayArrayType, JayBoolean, JayEnumType, JayNumber, JayObjectType, JayString} from "../lib/jay-file-types";
 
 function stripMargin(str) {
     const regexp = new RegExp(`^[ \t]+\\|`, 'gm')
