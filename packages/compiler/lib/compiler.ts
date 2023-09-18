@@ -57,8 +57,15 @@ class Indent {
     noFirstLineBreak() {
         return new Indent(this.base, false)
     }
+    withFirstLineBreak() {
+        return new Indent(this.base, true)
+    }
     withLastLineBreak() {
         return new Indent(this.base, false, true)
+    }
+
+    static forceIndent(code: string) {
+        return code.split('\n').map(_ => _.length > 0 ? '  ' + _ : _).join('\n');
     }
 }
 
@@ -501,15 +508,23 @@ function renderElementBridgeNode(node: Node, context: RenderContext): RenderFrag
             propsGetterAndRefs.validations, renderedRef.refs);
     }
 
+    function renderForEach(renderedForEach: RenderFragment, collectionVariables: Variables, trackBy: string, childElement: RenderFragment) {
+        return new RenderFragment(`${indent.firstLine}forEach(${renderedForEach.rendered}, '${trackBy}', () => [
+${childElement.rendered}
+${indent.firstLine}])`, childElement.imports.plus(Import.sandboxForEach),
+            [...renderedForEach.validations, ...childElement.validations], childElement.refs)
+    }
+
     function renderHtmlElement(htmlElement, currIndent: Indent = indent) {
         let childNodes = node.childNodes.length > 1 ?
             node.childNodes.filter(_ => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '') :
             node.childNodes;
 
+        let childIndent = currIndent.withFirstLineBreak();
         let childRenders = childNodes.length === 0 ?
             RenderFragment.empty() :
             childNodes
-                .map(_ => renderElementBridgeNode(_,{...context, indent: currIndent, dynamicRef}))
+                .map(_ => renderElementBridgeNode(_,{...context, indent: childIndent, dynamicRef}))
                 .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
                 // .map(children => currIndent.firstLineBreak ? `\n${children}\n${currIndent.firstLine}` : children);
         if (importedSymbols.has(htmlElement.rawTagName)) {
@@ -531,6 +546,17 @@ function renderElementBridgeNode(node: Node, context: RenderContext): RenderFrag
         let htmlElement = node as HTMLElement;
         if (isForEach(htmlElement)) {
             dynamicRef = true;
+            let forEach = htmlElement.getAttribute('forEach'); // todo extract type
+            let trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
+            let forEachAccessor = parseAccessor(forEach, variables);
+            // Todo check if type unknown throw exception
+            let forEachFragment = new RenderFragment(`vs => ${forEachAccessor.render()}`, Imports.none(), forEachAccessor.validations);
+            if (forEachAccessor.resolvedType === JayUnknown)
+                return new RenderFragment('', Imports.none(), [`forEach directive - failed to resolve type for forEach=${forEach}`]);
+            let itemType = (forEachAccessor.resolvedType as JayArrayType).itemType;
+            let forEachVariables = variables.childVariableFor(itemType)
+            let childElement = renderHtmlElement(htmlElement, indent.child().noFirstLineBreak().withLastLineBreak());
+            return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
         }
         else
             return renderHtmlElement(htmlElement);
@@ -543,12 +569,23 @@ function renderBridge(types: JayType, rootBodyElement: HTMLElement, importStatem
     let importedSymbols = new Set(importStatements.flatMap(_ => _.names.map(sym => sym.as? sym.as : sym.name)));
     let renderedBridge = renderElementBridgeNode(rootBodyElement,
         {variables, importedSymbols, indent: new Indent('    '), dynamicRef: false, nextAutoRefName: newAutoRefNameGenerator()});
-    let refsPath = (renderedBridge.rendered.length > 0)?
+    let refsPart = (renderedBridge.rendered.length > 0)?
 `
 ${renderedBridge.rendered}
   `:'';
-    return new RenderFragment(`export function render(viewState: ${types.name}): ${elementType} {
-  return elementBridge(viewState, () => [${refsPath}])
+
+    let dynamicRefs = renderedBridge.refs.filter(ref => isCollectionRef(ref) || isComponentCollectionRef(ref))
+    if (dynamicRefs.length > 0) {
+        return new RenderFragment(`export function render(viewState: ${types.name}): ${elementType} {
+  return elementBridge(viewState, () => {
+${dynamicRefs.map(ref => `    const ${ref.constName} = ${isComponentRef(ref)?'ccr':'ecr'}('${ref.ref}');`).join('\n')}
+    return [${Indent.forceIndent(refsPart)}]})
+}`, Imports.for(Import.sandboxElementBridge).plus(renderedBridge.imports),
+            renderedBridge.validations, renderedBridge.refs)
+    }
+    else
+        return new RenderFragment(`export function render(viewState: ${types.name}): ${elementType} {
+  return elementBridge(viewState, () => [${refsPart}])
 }`, Imports.for(Import.sandboxElementBridge).plus(renderedBridge.imports),
         renderedBridge.validations, renderedBridge.refs)
 }

@@ -40,6 +40,8 @@ export const Import = {
     sandboxElemCollectionRef: importStatementFragment('jay-secure', 'elemCollectionRef as ecr', ImportsFor.elementBridge),
     sandboxCompRef: importStatementFragment('jay-secure', 'compRef as cr', ImportsFor.elementBridge),
     sandboxCompCollectionRef: importStatementFragment('jay-secure', 'compCollectionRef as ccr', ImportsFor.elementBridge),
+    sandboxForEach: importStatementFragment('jay-secure', 'sandboxForEach as forEach', ImportsFor.elementBridge),
+
 }
 
 export class Imports {

@@ -45,5 +45,14 @@ describe('generate the sandbox runtime file', () => {
         })
     })
 
+    describe('collections', () => {
+        it('component in component', async () => {
+            const jayFile = await readSourceJayFile('collections/collection-with-refs');
+            let runtimeFile = generateSandboxRuntimeFile(jayFile, 'collection-with-refs.jay.html', './test/fixtures/collections/collection-with-refs');
+            expect(runtimeFile.validations).toEqual([]);
+            expect(runtimeFile.val).toEqual(await readGeneratedElementBridgeFile('collections/collection-with-refs'));
+        })
+    })
+
 })
 
