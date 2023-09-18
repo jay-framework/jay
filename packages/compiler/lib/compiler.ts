@@ -515,7 +515,7 @@ ${indent.firstLine}])`, childElement.imports.plus(Import.sandboxForEach),
             [...renderedForEach.validations, ...childElement.validations], childElement.refs)
     }
 
-    function renderHtmlElement(htmlElement, currIndent: Indent = indent) {
+    function renderHtmlElement(htmlElement, newVariables: Variables = variables, currIndent: Indent = indent) {
         let childNodes = node.childNodes.length > 1 ?
             node.childNodes.filter(_ => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '') :
             node.childNodes;
@@ -524,11 +524,11 @@ ${indent.firstLine}])`, childElement.imports.plus(Import.sandboxForEach),
         let childRenders = childNodes.length === 0 ?
             RenderFragment.empty() :
             childNodes
-                .map(_ => renderElementBridgeNode(_,{...context, indent: childIndent, dynamicRef}))
+                .map(_ => renderElementBridgeNode(_,{...context, indent: childIndent, dynamicRef, variables: newVariables}))
                 .reduce((prev, current) => RenderFragment.merge(prev, current, ',\n'), RenderFragment.empty())
                 // .map(children => currIndent.firstLineBreak ? `\n${children}\n${currIndent.firstLine}` : children);
         if (importedSymbols.has(htmlElement.rawTagName)) {
-            return renderNestedComponent(htmlElement, variables, currIndent);
+            return renderNestedComponent(htmlElement, newVariables, childIndent);
         }
         else {
             let renderedRef = renderElementRef(htmlElement, context);
@@ -555,7 +555,7 @@ ${indent.firstLine}])`, childElement.imports.plus(Import.sandboxForEach),
                 return new RenderFragment('', Imports.none(), [`forEach directive - failed to resolve type for forEach=${forEach}`]);
             let itemType = (forEachAccessor.resolvedType as JayArrayType).itemType;
             let forEachVariables = variables.childVariableFor(itemType)
-            let childElement = renderHtmlElement(htmlElement, indent.child().noFirstLineBreak().withLastLineBreak());
+            let childElement = renderHtmlElement(htmlElement, forEachVariables, indent.child().noFirstLineBreak().withLastLineBreak());
             return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
         }
         else

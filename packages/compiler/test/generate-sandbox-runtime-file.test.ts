@@ -43,6 +43,13 @@ describe('generate the sandbox runtime file', () => {
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(await readGeneratedElementBridgeFile('components/component-in-component'));
         })
+
+        it('dynamic component in component', async () => {
+            const jayFile = await readSourceJayFile('components/dynamic-component-in-component');
+            let runtimeFile = generateSandboxRuntimeFile(jayFile, 'dynamic-component-in-component.jay.html', './test/fixtures/components/dynamic-component-in-component');
+            expect(runtimeFile.validations).toEqual([]);
+            expect(runtimeFile.val).toEqual(await readGeneratedElementBridgeFile('components/dynamic-component-in-component'));
+        })
     })
 
     describe('collections', () => {
