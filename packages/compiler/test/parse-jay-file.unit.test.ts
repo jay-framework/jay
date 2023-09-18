@@ -8,7 +8,7 @@ import {
     JayObjectType,
     JayString,
     parseJayFile
-} from "../lib/parse-jay-file";
+} from "../lib/jay-file-parser";
 
 function stripMargin(str) {
     const regexp = new RegExp(`^[ \t]+\\|`, 'gm')

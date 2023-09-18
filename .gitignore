@@ -5,7 +5,7 @@ build
 *.iml
 *.lock
 package-lock.json
-/packages/compiler/lib/parse-expressions.js
+/packages/compiler/lib/expression-parser.js
 lerna-debug.log
 examples/**/*.d.ts
 **/coverage/

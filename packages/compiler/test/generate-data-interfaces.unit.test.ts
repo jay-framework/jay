@@ -1,7 +1,7 @@
 import {generateTypes} from '../lib';
 import {describe, expect, it} from '@jest/globals'
 import stripMargin from '@caiogondim/strip-margin'
-import {JayArrayType, JayBoolean, JayDate, JayNumber, JayObjectType, JayString} from "../lib/parse-jay-file";
+import {JayArrayType, JayBoolean, JayDate, JayNumber, JayObjectType, JayString} from "../lib/jay-file-parser";
 
 describe('generate data interfaces', () => {
     it('should generate simple interface', () => {

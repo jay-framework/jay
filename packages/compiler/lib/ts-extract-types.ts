@@ -18,7 +18,7 @@ import {
     JayType,
     JayUnknown,
     resolvePrimitiveType
-} from "./parse-jay-file";
+} from "./jay-file-parser";
 
 function resolveTsConfig(options) {
 
@@ -117,7 +117,7 @@ const JayComponentProperties = {
     addEventListener: true,
     removeEventListener: true
 }
-export function extractTypesForFile(filename: string, options = {}): JayType[] {
+export function tsExtractTypes(filename: string, options = {}): JayType[] {
     let tsConfigPath = resolveTsConfig(options);
     const project = new Project({
         tsConfigFilePath: tsConfigPath,

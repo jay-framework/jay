@@ -8,7 +8,7 @@
     "lib": "lib"
   },
   "scripts": {
-    "pegjs": "pegjs --allowed-start-rules dynamicAttribute,dynamicText,dynamicProperty,conditionFunc,accessor,Identifier,classExpression,dynamicComponentProp,importNames,enum,is_enum lib/parse-expressions.pegjs",
+    "pegjs": "pegjs --allowed-start-rules dynamicAttribute,dynamicText,dynamicProperty,conditionFunc,accessor,Identifier,classExpression,dynamicComponentProp,importNames,enum,is_enum lib/expression-parser.pegjs",
     "test": "npm run pegjs && jest",
     "build": "npm run pegjs && tsc"
   },

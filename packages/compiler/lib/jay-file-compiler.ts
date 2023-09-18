@@ -13,7 +13,7 @@ import {
     JayTypeAlias,
     JayUnknown,
     parseJayFile
-} from "./parse-jay-file";
+} from "./jay-file-parser";
 import {HTMLElement, NodeType} from "node-html-parser";
 import Node from "node-html-parser/dist/nodes/node";
 import {Ref, RenderFragment} from "./render-fragment";

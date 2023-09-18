@@ -4,7 +4,7 @@ import yaml from 'js-yaml';
 import {capitalCase, pascalCase} from 'change-case';
 import pluralize from 'pluralize';
 import {parseEnumValues, parseImportNames, parseIsEnum} from "./expression-compiler";
-import {extractTypesForFile} from "./extract-types-for-file";
+import {tsExtractTypes} from "./ts-extract-types";
 import path from 'path';
 
 export interface JayType {
@@ -196,7 +196,7 @@ function parseImports(importLinks: HTMLElement[], validations: JayValidations, f
                 validations.push(`import for module ${module} does not specify what to import`);
 
             let importedFile = path.resolve(filePath, module);
-            let exportedTypes = extractTypesForFile(importedFile);
+            let exportedTypes = tsExtractTypes(importedFile);
 
             for (let name of names) {
                 let exportedType = exportedTypes.find(_ => _.name === name.name);

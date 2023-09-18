@@ -15,7 +15,7 @@ import {
     JayObjectType,
     JayString,
     JayUnknown
-} from "../lib/parse-jay-file";
+} from "../lib/jay-file-parser";
 
 import {Import} from "../lib/imports";
 

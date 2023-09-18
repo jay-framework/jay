@@ -1,6 +1,6 @@
 import {RenderFragment} from './render-fragment';
-import {parse} from '../lib/parse-expressions'
-import {JayImportedType, JayImportName, JayObjectType, JayType, JayUnknown} from "./parse-jay-file";
+import {parse} from './expression-parser'
+import {JayImportedType, JayImportName, JayObjectType, JayType, JayUnknown} from "./jay-file-parser";
 import {JayValidations} from "./with-validations";
 import {Import, Imports} from "./imports";
 

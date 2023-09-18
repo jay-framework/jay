@@ -1,5 +1,5 @@
 import {describe, expect, it} from '@jest/globals'
-import {extractTypesForFile} from "../lib/extract-types-for-file";
+import {tsExtractTypes} from "../lib/ts-extract-types";
 import {
     JayArrayType,
     JayBoolean,
@@ -8,7 +8,7 @@ import {
     JayNumber,
     JayObjectType,
     JayString, JayUnknown
-} from "../lib/parse-jay-file";
+} from "../lib/jay-file-parser";
 
 describe('typescript-compiler', () => {
 
@@ -24,7 +24,7 @@ describe('typescript-compiler', () => {
         });
 
     it('should extract types from a file', () => {
-        let types = extractTypesForFile('./test/fixtures/basics/attributes/generated-element.ts', {relativePath: 'tsconfig-tests.json'});
+        let types = tsExtractTypes('./test/fixtures/basics/attributes/generated-element.ts', {relativePath: 'tsconfig-tests.json'});
 
         expect(types).toEqual(
             expect.arrayContaining([
@@ -42,7 +42,7 @@ describe('typescript-compiler', () => {
     })
 
     it('should extract types from a file, adding .ts extension automatically', () => {
-        let types = extractTypesForFile('./test/fixtures/basics/attributes/generated-element', {relativePath: 'tsconfig-tests.json'});
+        let types = tsExtractTypes('./test/fixtures/basics/attributes/generated-element', {relativePath: 'tsconfig-tests.json'});
 
         expect(types).toEqual(
             expect.arrayContaining([
@@ -60,7 +60,7 @@ describe('typescript-compiler', () => {
     })
 
     it('should extract types from a definition file', () => {
-        let types = extractTypesForFile('./test/fixtures/basics/data-types/generated-element', {relativePath: 'tsconfig-tests.json'});
+        let types = tsExtractTypes('./test/fixtures/basics/data-types/generated-element', {relativePath: 'tsconfig-tests.json'});
 
         expect(types).toEqual(
             expect.arrayContaining([
@@ -81,7 +81,7 @@ describe('typescript-compiler', () => {
     })
 
     it('should extract types from a definition file, auto adding .d.ts', () => {
-        let types = extractTypesForFile('./test/fixtures/basics/data-types/generated-element', {relativePath: 'tsconfig-tests.json'});
+        let types = tsExtractTypes('./test/fixtures/basics/data-types/generated-element', {relativePath: 'tsconfig-tests.json'});
 
         expect(types).toEqual(
             expect.arrayContaining([
@@ -102,7 +102,7 @@ describe('typescript-compiler', () => {
     })
 
     it('should extract types from a recursive file', () => {
-        let types = extractTypesForFile('./test/fixtures/components/recursive-components/tree-node', {relativePath: 'tsconfig-tests.json'});
+        let types = tsExtractTypes('./test/fixtures/components/recursive-components/tree-node', {relativePath: 'tsconfig-tests.json'});
 
         let nodeType = new JayObjectType('Node', {
             id: JayString,

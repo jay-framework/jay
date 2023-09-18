@@ -1,10 +1,10 @@
 import {WithValidations} from "./with-validations";
-import {extractTypesForFile} from "./extract-types-for-file";
-import {JayComponentType} from "./parse-jay-file";
+import {tsExtractTypes} from "./ts-extract-types";
+import {JayComponentType} from "./jay-file-parser";
 
 
 export function generateRefsFile(filepath: string): WithValidations<string> {
-  let types = extractTypesForFile(filepath)
+  let types = tsExtractTypes(filepath)
 
   let componentTypes: Array<JayComponentType> = types.filter(_ => _ instanceof JayComponentType) as Array<JayComponentType>;
 
