@@ -1,5 +1,5 @@
 import {describe, expect, it} from '@jest/globals'
-import {tsExtractTypes} from "../lib/ts-extract-types";
+import {tsExtractTypes} from "../lib/ts-file/ts-extract-types";
 
 import {
     JayArrayType,
@@ -8,7 +8,7 @@ import {
     JayElementType, JayNumber,
     JayObjectType, JayString,
     JayUnknown
-} from "../lib/jay-file-types";
+} from "../lib/core/jay-file-types";
 
 describe('typescript-compiler', () => {
 

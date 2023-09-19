@@ -1,7 +1,7 @@
-import {WithValidations} from "./with-validations";
+import {WithValidations} from "../core/with-validations";
 import {tsExtractTypes} from "./ts-extract-types";
 
-import {JayComponentType} from "./jay-file-types";
+import {JayComponentType} from "../core/jay-file-types";
 
 
 export function generateRefsFile(filepath: string): WithValidations<string> {

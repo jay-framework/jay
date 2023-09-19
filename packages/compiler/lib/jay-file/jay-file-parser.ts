@@ -1,10 +1,10 @@
 import {HTMLElement, parse} from "node-html-parser";
-import {JayValidations, WithValidations} from "./with-validations";
+import {JayValidations, WithValidations} from "../core/with-validations";
 import yaml from 'js-yaml';
 import {capitalCase, pascalCase} from 'change-case';
 import pluralize from 'pluralize';
-import {parseEnumValues, parseImportNames, parseIsEnum} from "./expression-compiler";
-import {tsExtractTypes} from "./ts-extract-types";
+import {parseEnumValues, parseImportNames, parseIsEnum} from "../expressions/expression-compiler";
+import {tsExtractTypes} from "../ts-file/ts-extract-types";
 import path from 'path';
 import {
     JayArrayType,
@@ -18,7 +18,7 @@ import {
     JayUnknown,
     JayYamlStructure,
     resolvePrimitiveType
-} from "./jay-file-types";
+} from "../core/jay-file-types";
 
 export function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj)

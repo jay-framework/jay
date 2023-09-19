@@ -1,10 +1,10 @@
-import {WithValidations} from "./with-validations";
+import {WithValidations} from "../core/with-validations";
 import {
     parseJayFile
 } from "./jay-file-parser";
 import {HTMLElement, NodeType} from "node-html-parser";
 import Node from "node-html-parser/dist/nodes/node";
-import {Ref, RenderFragment} from "./render-fragment";
+import {Ref, RenderFragment} from "../core/render-fragment";
 import {
     parseAccessor,
     parseAttributeExpression,
@@ -14,10 +14,10 @@ import {
     parsePropertyExpression,
     parseTextExpression,
     Variables
-} from './expression-compiler';
+} from '../expressions/expression-compiler';
 import {htmlElementTagNameMap} from "./html-element-tag-name-map";
 import {camelCase} from "camel-case";
-import {Import, Imports, ImportsFor} from "./imports";
+import {Import, Imports, ImportsFor} from "../core/imports";
 import {
     JayArrayType, JayAtomicType,
     JayComponentType, JayEnumType,
@@ -26,7 +26,7 @@ import {
     JayImportedType,
     JayImportLink,
     JayObjectType, JayType, JayTypeAlias, JayUnknown
-} from "./jay-file-types";
+} from "../core/jay-file-types";
 
 class Indent {
     private readonly base: string

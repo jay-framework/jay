@@ -18,7 +18,7 @@ import {
     JayElementType,
     JayObjectType, JayType, JayUnknown,
     resolvePrimitiveType
-} from "./jay-file-types";
+} from "../core/jay-file-types";
 
 function resolveTsConfig(options) {
 
