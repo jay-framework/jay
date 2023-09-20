@@ -6,6 +6,13 @@ const whitespace = /[\t ]+/g;
 
 const name = `toMatchStringIgnoringWhitespace`;
 
+declare global {
+    namespace jest {
+        interface Matchers<R> {
+            toMatchStringIgnoringWhitespace(expected: string): R
+        }
+    }
+}
 interface MatchersE<R> {
     toMatchStringIgnoringWhitespace(expected: string): R
 }

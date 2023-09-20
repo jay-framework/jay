@@ -1,5 +1,4 @@
 import {CounterElementRefs, render} from './generated-element';
-// @ts-ignore
 import {createEvent, createState, makeJayComponent, Props} from 'jay-component';
 
 export interface CounterProps {
