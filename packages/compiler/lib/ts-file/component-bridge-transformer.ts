@@ -31,7 +31,7 @@ function transformVariableStatement(node: ts.VariableStatement, factory: ts.Node
         return undefined;
 }
 
-function transformImport(node: ts.ImportDeclaration, factory: ts.NodeFactory) {
+function transformImport(node: ts.ImportDeclaration, factory: ts.NodeFactory, allowedJayElementModules: string[]) {
     if (ts.isStringLiteral(node.moduleSpecifier)) {
         const originalTarget = node.moduleSpecifier.text;
         if (originalTarget === 'jay-component')
@@ -47,25 +47,42 @@ function transformImport(node: ts.ImportDeclaration, factory: ts.NodeFactory) {
                 factory.createStringLiteral('jay-secure'),
                 node.assertClause,
             );
+        else if (allowedJayElementModules.indexOf(originalTarget) > -1) {
+            return factory.updateImportDeclaration(
+                node,
+                node.decorators,
+                node.modifiers,
+                factory.createImportClause(node.importClause.isTypeOnly, node.importClause.name,
+                    factory.createNamedImports([
+                        factory.createImportSpecifier(false, undefined,
+                            factory.createIdentifier('render'))])),
+                // node.importClause,
+                factory.createStringLiteral(originalTarget),
+                node.assertClause,
+            );
+        }
+        else return undefined;
     }
-    return node;
+    return undefined;
 }
 
-export function componentBridgeTransformer(context: ts.TransformationContext): ts.Transformer<ts.SourceFile> {
-    const { factory } = context;
-    return (sourceFile) => {
-        return ts.visitEachChild(sourceFile, visitor, context);
-    };
+export function componentBridgeTransformer(allowedJayElementModules: string[]): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
+    return (context: ts.TransformationContext) => {
+        const { factory } = context;
+        return (sourceFile) => {
+            return ts.visitEachChild(sourceFile, visitor, context);
+        };
 
-    function visitor(node: ts.Node): ts.Node | ts.Node[] | undefined {
-        if (ts.isFunctionDeclaration(node))
-            return undefined;
-        else if (ts.isInterfaceDeclaration(node))
-            return node;
-        else if (ts.isImportDeclaration(node))
-            return transformImport(node, factory)
-        else if (ts.isVariableStatement(node))
-            return transformVariableStatement(node, factory)
-        return ts.visitEachChild(node, visitor, context);
+        function visitor(node: ts.Node): ts.Node | ts.Node[] | undefined {
+            if (ts.isFunctionDeclaration(node))
+                return undefined;
+            else if (ts.isInterfaceDeclaration(node))
+                return node;
+            else if (ts.isImportDeclaration(node))
+                return transformImport(node, factory, allowedJayElementModules)
+            else if (ts.isVariableStatement(node))
+                return transformVariableStatement(node, factory)
+            return ts.visitEachChild(node, visitor, context);
+        }
     }
 }

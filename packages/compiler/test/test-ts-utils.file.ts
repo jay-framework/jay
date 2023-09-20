@@ -81,6 +81,6 @@ export function formatTypescript(code: string) {
             code = `${head}${edit.newText}${tail}`;
         });
 
-    return code;
+    return code.trim();
 
 }
