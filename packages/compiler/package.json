@@ -8,7 +8,7 @@
     "lib": "lib"
   },
   "scripts": {
-    "pegjs": "pegjs --allowed-start-rules dynamicAttribute,dynamicText,dynamicProperty,conditionFunc,accessor,Identifier,classExpression,dynamicComponentProp,importNames,enum,is_enum  -o lib/expressions/expression-parser.js lib/expressions/expression-parser.pegjs",
+    "pegjs": "pegjs --allowed-start-rules dynamicAttribute,dynamicText,dynamicProperty,conditionFunc,accessor,Identifier,classExpression,dynamicComponentProp,importNames,enum,is_enum  -o lib/expressions/expression-parser.js lib/expressions/expression-parser.pegjs & mkdir dist/expressions & cp lib/expressions/expression-parser.js dist/expressions/expression-parser.js",
     "test": "npm run pegjs && jest",
     "build": "npm run pegjs && tsc"
   },
