@@ -1,19 +1,23 @@
 <html>
-<head>
+  <head>
     <script type="application/yaml-jay">
-data:
-  textFromProp: string
-  textFromAPI: string
-  id: string
+      data:
+        textFromProp: string
+        textFromAPI: string
+        id: string
     </script>
-</head>
-<body>
-<div>
-    <div id="child-text-from-prop-{id}">{textFromProp}</div>
-    <div id="child-text-from-api-{id}">{textFromAPI}</div>
-    <button id="event-to-parent-button-{id}" ref="eventToParent">event to parent</button>
-    <button id="event-to-parent-to-child-prop-button-{id}" ref="eventToParentToChildProp">event to parent, parent update child prop</button>
-    <button id="event-to-parent-to-child-api-button-{id}" ref="eventToParentToChildAPI">event to parent, parent calls child api</button>
-</div>
-</body>
+  </head>
+  <body>
+    <div>
+      <div id="child-text-from-prop-{id}">{textFromProp}</div>
+      <div id="child-text-from-api-{id}">{textFromAPI}</div>
+      <button id="event-to-parent-button-{id}" ref="eventToParent">event to parent</button>
+      <button id="event-to-parent-to-child-prop-button-{id}" ref="eventToParentToChildProp">
+        event to parent, parent update child prop
+      </button>
+      <button id="event-to-parent-to-child-api-button-{id}" ref="eventToParentToChildAPI">
+        event to parent, parent calls child api
+      </button>
+    </div>
+  </body>
 </html>

@@ -1,8 +1,8 @@
-import {render} from './composite.jay.html';
-import {makeJayComponentBridge} from "jay-secure";
+import { render } from './composite.jay.html';
+import { makeJayComponentBridge } from 'jay-secure';
 
 interface CompositeProps {
-    cycles: number
+    cycles: number;
 }
 
 export const Composite = makeJayComponentBridge(render);

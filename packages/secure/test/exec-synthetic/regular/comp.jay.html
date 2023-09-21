@@ -1,21 +1,23 @@
 <html>
-<head>
+  <head>
     <script type="application/yaml-jay">
-data:
-  text: string
-  items:
-    - id: string
-      text: string
+      data:
+        text: string
+        items:
+          - id: string
+            text: string
     </script>
-</head>
-<body>
-<div>
-    <div ref="result" data-id="result">{text}</div>
-    <button ref="buttonExec$Global" data-id="button-exec-global">button exec global</button>
-    <button ref="buttonExec$Element" data-id="button-exec-element">button exec element</button>
-    <div forEach="items" trackBy="id">
-        <button ref="itemButtonExec$Element" data-id="item-{id}-button-exec-element">item {text} exec element</button>
+  </head>
+  <body>
+    <div>
+      <div ref="result" data-id="result">{text}</div>
+      <button ref="buttonExec$Global" data-id="button-exec-global">button exec global</button>
+      <button ref="buttonExec$Element" data-id="button-exec-element">button exec element</button>
+      <div forEach="items" trackBy="id">
+        <button ref="itemButtonExec$Element" data-id="item-{id}-button-exec-element">
+          item {text} exec element
+        </button>
+      </div>
     </div>
-</div>
-</body>
+  </body>
 </html>

@@ -1,20 +1,20 @@
 <html>
-<head>
+  <head>
     <script type="application/yaml-jay">
-data:
-  title: string
-  count: number
-  id: string
+      data:
+        title: string
+        count: number
+        id: string
     </script>
-</head>
-<body>
-<div>
-    <div data-id="{id}-title">{title}</div>
+  </head>
+  <body>
     <div>
+      <div data-id="{id}-title">{title}</div>
+      <div>
         <button data-id="{id}-sub" ref="subtracter">-</button>
         <span data-id="{id}-count" style="margin: 0 16px">{count}</span>
         <button data-id="{id}-add" ref="adder">+</button>
+      </div>
     </div>
-</div>
-</body>
+  </body>
 </html>

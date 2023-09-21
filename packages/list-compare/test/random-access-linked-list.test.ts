@@ -3,15 +3,17 @@ import {
     EoF,
     LinkedListItem,
     RandomAccessLinkedList,
-    UntypedRandomAccessLinkedList
+    UntypedRandomAccessLinkedList,
 } from '../lib';
-import {describe, expect, it, jest} from '@jest/globals'
+import { describe, expect, it, jest } from '@jest/globals';
 
 interface Item {
-    id: string,
-    val: number
+    id: string;
+    val: number;
 }
-const item = (id, val) => {return {id, val}};
+const item = (id, val) => {
+    return { id, val };
+};
 
 const itemA: Item = item('a', 123);
 const itemB: Item = item('b', 456);
@@ -32,7 +34,7 @@ const listToArray = (list) => {
         first = first.next;
     }
     return res;
-}
+};
 
 describe('random-access-linked-list', () => {
     it('create a list from array', () => {
@@ -63,7 +65,7 @@ describe('random-access-linked-list', () => {
     it('allows direct access to last', () => {
         const arr = [itemA, itemB, itemC, itemD, itemE];
 
-        const list = new RandomAccessLinkedList(arr, 'id')  as UntypedRandomAccessLinkedList;
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
 
         expect(list.last().value).toBe(itemE);
         expect(list.last().prev.value).toBe(itemD);
@@ -72,7 +74,7 @@ describe('random-access-linked-list', () => {
     it('allows random access to middle of the list by id', () => {
         const arr = [itemA, itemB, itemC, itemD, itemE];
 
-        const list = new RandomAccessLinkedList(arr, 'id')  as UntypedRandomAccessLinkedList;
+        const list = new RandomAccessLinkedList(arr, 'id') as UntypedRandomAccessLinkedList;
 
         expect(list.get(itemC.id).value).toBe(itemC);
         expect(list.get(itemC.id).next.value).toBe(itemD);
@@ -291,21 +293,25 @@ describe('random-access-linked-list', () => {
         expect(list.first().attach).toBe(attach1);
         expect(list.first().next.attach).toBe(attach2);
         expect(list.first().next.next.attach).toBe(attach3);
-    })
+    });
     it('moves items with attachements', () => {
-        const list = new RandomAccessLinkedList<Item, string>([], 'id') as UntypedRandomAccessLinkedList;
+        const list = new RandomAccessLinkedList<Item, string>(
+            [],
+            'id',
+        ) as UntypedRandomAccessLinkedList;
         list.add(itemA, EoF, attach1);
         list.add(itemB, EoF, attach2);
         list.add(itemC, EoF, attach3);
 
-        list.move((list.first() as LinkedListItem<Item, string>).next as LinkedListItem<Item, string>,
-            list.first() as LinkedListItem<Item, string>);
+        list.move(
+            (list.first() as LinkedListItem<Item, string>).next as LinkedListItem<Item, string>,
+            list.first() as LinkedListItem<Item, string>,
+        );
 
         expect(list.first().attach).toBe(attach2);
         expect(list.first().next.attach).toBe(attach1);
         expect(list.first().next.next.attach).toBe(attach3);
-
-    })
+    });
 
     it('runs for each on every item of the list', () => {
         const list = new RandomAccessLinkedList([], 'id') as UntypedRandomAccessLinkedList;
@@ -314,7 +320,7 @@ describe('random-access-linked-list', () => {
         list.add(itemC, EoF, attach3);
 
         const mockCallback = jest.fn((item, attach) => {});
-        list.forEach(mockCallback)
+        list.forEach(mockCallback);
 
         expect(mockCallback.mock.calls.length).toBe(3);
         expect(mockCallback.mock.calls[0][0]).toBe(itemA);
@@ -323,5 +329,5 @@ describe('random-access-linked-list', () => {
         expect(mockCallback.mock.calls[1][1]).toBe(attach2);
         expect(mockCallback.mock.calls[2][0]).toBe(itemC);
         expect(mockCallback.mock.calls[2][1]).toBe(attach3);
-    })
+    });
 });

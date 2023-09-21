@@ -1,14 +1,14 @@
-import {JayElement} from "jay-runtime";
-import {elementBridge} from "jay-secure";
+import { JayElement } from 'jay-runtime';
+import { elementBridge } from 'jay-secure';
 
 export interface BasicViewState {
-  text: string
+    text: string;
 }
 
 export interface BasicElementRefs {}
 
-export type BasicElement = JayElement<BasicViewState, BasicElementRefs>
+export type BasicElement = JayElement<BasicViewState, BasicElementRefs>;
 
 export function render(viewState: BasicViewState): BasicElement {
-    return elementBridge(viewState, () => [])
+    return elementBridge(viewState, () => []);
 }

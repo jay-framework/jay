@@ -1,8 +1,8 @@
-import {render as TableHostRender} from "./table-host.jay.html";
-import {makeJayComponentBridge} from "jay-secure";
+import { render as TableHostRender } from './table-host.jay.html';
+import { makeJayComponentBridge } from 'jay-secure';
 
 interface TableHostProps {
-    cycles: number
+    cycles: number;
 }
 
 export const TableHost = makeJayComponentBridge(TableHostRender);

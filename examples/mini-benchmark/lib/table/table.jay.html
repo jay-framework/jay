@@ -1,23 +1,23 @@
 <html>
-<head>
+  <head>
     <script type="application/yaml-jay">
-data:
-  line:
-  - id: number
-    cell:
-      - id: number
-        value: number
+      data:
+        line:
+        - id: number
+          cell:
+            - id: number
+              value: number
     </script>
-</head>
-<body>
-<div>
-    <table>
+  </head>
+  <body>
+    <div>
+      <table>
         <tbody>
-        <tr forEach="line" trackBy="id">
+          <tr forEach="line" trackBy="id">
             <td forEach="cell" trackBy="id">{value}</td>
-        </tr>
+          </tr>
         </tbody>
-    </table>
-</div>
-</body>
+      </table>
+    </div>
+  </body>
 </html>

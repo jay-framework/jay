@@ -1,24 +1,24 @@
 <html>
-<head>
-    <link rel="import" href="./tree-node" names="TreeNode, Node"/>
+  <head>
+    <link rel="import" href="./tree-node" names="TreeNode, Node" />
     <script type="application/yaml-jay">
-data:
-  headChar: string
-  node: Node
-  open: boolean
+      data:
+        headChar: string
+        node: Node
+        open: boolean
     </script>
-</head>
-<body>
-<div>
-    <div ref="head" data-ref="head={node.id}">
+  </head>
+  <body>
+    <div>
+      <div ref="head" data-ref="head={node.id}">
         <span class="tree-arrow">{headChar}</span>
         <span class="name">{node.name}</span>
-    </div>
-    <ul data-ref="list={node.id}" if="open">
+      </div>
+      <ul data-ref="list={node.id}" if="open">
         <li forEach="node.children" trackBy="id">
-            <TreeNode props="{.}" ref="child"/>
+          <TreeNode props="{.}" ref="child" />
         </li>
-    </ul>
-</div>
-</body>
+      </ul>
+    </div>
+  </body>
 </html>

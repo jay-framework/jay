@@ -1,1 +1,1 @@
-export {mutableObject} from './mutable';
+export { mutableObject } from './mutable';

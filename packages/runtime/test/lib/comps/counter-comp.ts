@@ -1,79 +1,87 @@
-import {dynamicText as dt, element as e} from "../../../lib/element";
-import {Coordinate, JayElement, JayEventHandler} from "../../../lib";
-import {HTMLElementProxy} from "../../../lib";
-import {mkComponentEventHandler} from "./make-component-event-handler";
-import {ConstructContext} from "../../../lib/context";
-import {elemRef} from "../../../lib/node-reference";
+import { dynamicText as dt, element as e } from '../../../lib/element';
+import { Coordinate, JayElement, JayEventHandler } from '../../../lib';
+import { HTMLElementProxy } from '../../../lib';
+import { mkComponentEventHandler } from './make-component-event-handler';
+import { ConstructContext } from '../../../lib/context';
+import { elemRef } from '../../../lib/node-reference';
 
 export interface ViewState {
-    count: number
+    count: number;
 }
 
 interface CounterRefs {
-    inc: HTMLElementProxy<ViewState, HTMLElement>,
-    dec: HTMLElementProxy<ViewState, HTMLElement>,
-    count: HTMLElementProxy<ViewState, HTMLElement>
+    inc: HTMLElementProxy<ViewState, HTMLElement>;
+    dec: HTMLElementProxy<ViewState, HTMLElement>;
+    count: HTMLElementProxy<ViewState, HTMLElement>;
 }
 
 export interface CounterElement extends JayElement<ViewState, CounterRefs> {}
 
 function renderCounter(viewState: ViewState): CounterElement {
-
     return ConstructContext.withRootContext(viewState, () =>
         e('div', {}, [
-                e('div', {}, ['-'], elemRef('dec')),
-                e('div', {}, [dt(vs => vs.count)], elemRef('count')),
-                e('div', {}, ['+'], elemRef('inc'))])
+            e('div', {}, ['-'], elemRef('dec')),
+            e('div', {}, [dt((vs) => vs.count)], elemRef('count')),
+            e('div', {}, ['+'], elemRef('inc')),
+        ]),
     ) as CounterElement;
 }
 
 export interface CounterData {
-    count: number
+    count: number;
 }
 
 export interface CounterEvent {
-    count: number,
-    innerCoordinate: Coordinate
+    count: number;
+    innerCoordinate: Coordinate;
 }
 
 export function Counter<ParentVS>(initialValue: number) {
-    let jayElement = renderCounter({count: initialValue});
+    let jayElement = renderCounter({ count: initialValue });
     let count = initialValue;
-    let onChange = mkComponentEventHandler<CounterEvent, ParentVS>()
+    let onChange = mkComponentEventHandler<CounterEvent, ParentVS>();
 
-    jayElement.refs.inc.onclick(({coordinate}) => {
+    jayElement.refs.inc.onclick(({ coordinate }) => {
         count += 1;
-        jayElement.update({count});
-        onChange.emit({count, innerCoordinate: coordinate});
+        jayElement.update({ count });
+        onChange.emit({ count, innerCoordinate: coordinate });
         // if (onChange)
         //     onChange({count}, coordinate)
-    })
+    });
 
-    jayElement.refs.dec.onclick(({coordinate}) => {
+    jayElement.refs.dec.onclick(({ coordinate }) => {
         count -= 1;
-        jayElement.update({count});
-        onChange.emit({count, innerCoordinate: coordinate});
+        jayElement.update({ count });
+        onChange.emit({ count, innerCoordinate: coordinate });
         // if (onChange)
         //     onChange({count}, coordinate)
-    })
+    });
 
     let reset = () => {
         count = 0;
-        jayElement.update({count});
-        onChange.emit({count, innerCoordinate: []});
-    }
+        jayElement.update({ count });
+        onChange.emit({ count, innerCoordinate: [] });
+    };
 
     return {
         element: jayElement,
         update: (value) => {
             count = value.count;
-            jayElement.update({count});
+            jayElement.update({ count });
         },
         mount: () => jayElement.mount(),
         unmount: () => jayElement.unmount(),
-        addEventListener: (type: string, handler: JayEventHandler<any, any, any>, options?: boolean | AddEventListenerOptions) => {},
-        removeEventListener: (type: string, handler: JayEventHandler<any, any, any>, options?: EventListenerOptions | boolean) => {},
+        addEventListener: (
+            type: string,
+            handler: JayEventHandler<any, any, any>,
+            options?: boolean | AddEventListenerOptions,
+        ) => {},
+        removeEventListener: (
+            type: string,
+            handler: JayEventHandler<any, any, any>,
+            options?: EventListenerOptions | boolean,
+        ) => {},
         onChange,
-        reset
-    }
+        reset,
+    };
 }

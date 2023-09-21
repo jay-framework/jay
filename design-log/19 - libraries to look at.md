@@ -1,8 +1,6 @@
-Libraries to look at
-==============
+# Libraries to look at
 
-bling
-------
+## bling
 
 interesting approach for file splitting client and server. Worth considering for Jay Components.
 

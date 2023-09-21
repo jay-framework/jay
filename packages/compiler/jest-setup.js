@@ -1,5 +1,5 @@
-import toMatchStringIgnoringWhitespace from "./test/equal-with-compressed-whitespace";
+import toMatchStringIgnoringWhitespace from './test/equal-with-compressed-whitespace';
 
 expect.extend({
-  toMatchStringIgnoringWhitespace: toMatchStringIgnoringWhitespace
+    toMatchStringIgnoringWhitespace: toMatchStringIgnoringWhitespace,
 });

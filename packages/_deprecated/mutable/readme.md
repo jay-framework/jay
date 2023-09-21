@@ -1,11 +1,11 @@
 # Mutable Module
 
-The mutable module is a simple proxy over an object which tracks changes to the object and implements the 
+The mutable module is a simple proxy over an object which tracks changes to the object and implements the
 `jay-reactive` `MutableContract` interface. The changes are indicated using both an update of the revision and the change listeners.
 
-The package consists of a single function -  
+The package consists of a single function -
 
-* [mutableObject](#mutableObject)
+- [mutableObject](#mutableObject)
 
 # <a name="mutable">Mutable</a>
 
@@ -17,37 +17,36 @@ each of its mutable listeners.
 The Mutable module is creating proxies for the original objects that are pass-trough, tracking the changes.
 
 Creating a mutable proxy
+
 ```typescript
 let obj = {
-    a: 1,
-    b: {
-        c: 2, 
-        d: 3
-    }, 
-    arr: [
-        {e: 4}, 
-        {e: 5}, 
-        {e:6}
-    ]};
+  a: 1,
+  b: {
+    c: 2,
+    d: 3,
+  },
+  arr: [{ e: 4 }, { e: 5 }, { e: 6 }],
+};
 let mutableObj = mutableObject(obj);
 ```
 
 updates that trigger revision update
+
 ```typescript
 // update revision of mutableObj
-mutableObj.a = 7
+mutableObj.a = 7;
 
 // update revision of mutableObj and mutableObj.b
-mutableObj.b.c = 7
+mutableObj.b.c = 7;
 
 // update revision of mutableObj and mutableObj.b
-mutableObj.b.c = 7
+mutableObj.b.c = 7;
 
-// update revision of mutableObj,  mutableObj.arr and mutableObj.arr[1] 
-mutableObj.arr[1].e = 7
+// update revision of mutableObj,  mutableObj.arr and mutableObj.arr[1]
+mutableObj.arr[1].e = 7;
 
 // update revision of mutableObj,  mutableObj.arr
-mutableObj.arr[1].push({e: 12})
+mutableObj.arr[1].push({ e: 12 });
 ```
 
 When using Mutable with `createState`, createState adds a change listener on the mutable object to run
@@ -61,7 +60,6 @@ reactive.createReaction(() => console.log(theState()));
 // updating the mutable object triggers change listener which triggers state change, and in turn triggers
 // the reaction to print to the console.
 obj.b.c = 7;
-
 ```
 
 ## <a name="mutableObject">mutableObject</a>
@@ -70,7 +68,6 @@ Creates a mutable proxy object or a mutable proxy array over a base object.
 The notify parent callback is called any time the mutable object changes.
 
 ```typescript
-declare function mutableObject<T extends object>(original: T, notifyParent?: ChangeListener): T
-declare function mutableObject<T>(original: Array<T>, notifyParent?: ChangeListener): Array<T>
+declare function mutableObject<T extends object>(original: T, notifyParent?: ChangeListener): T;
+declare function mutableObject<T>(original: Array<T>, notifyParent?: ChangeListener): Array<T>;
 ```
-

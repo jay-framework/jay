@@ -6,10 +6,7 @@
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "dist",
-    "lib": [
-      "ES2019",
-      "dom"
-    ],
+    "lib": ["ES2019", "dom"],
     "declaration": true
   },
   "lib": ["es2015"],

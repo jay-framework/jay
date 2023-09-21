@@ -1,8 +1,8 @@
 self.process = {
     env: {
-        NODE_ENV: "production"
-    }
+        NODE_ENV: 'production',
+    },
 };
 
 // @ts-ignore
-importScripts('./worker.js')
+importScripts('./worker.js');

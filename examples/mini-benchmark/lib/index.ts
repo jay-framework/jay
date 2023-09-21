@@ -1,11 +1,7 @@
-import {Main} from "./main";
+import { Main } from './main';
 
-
-window.onload = function() {
+window.onload = function () {
     let target = document.getElementById('target');
-    let main = Main({})
-    target.appendChild(main.element.dom)
-}
-
-
-
+    let main = Main({});
+    target.appendChild(main.element.dom);
+};

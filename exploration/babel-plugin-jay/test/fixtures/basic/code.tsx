@@ -1,10 +1,7 @@
 interface ViewState {
-    text: string
+    text: string;
 }
 
 export default function render(viewState: ViewState) {
-    return (
-        <div>{viewState.text}</div>
-    );
+    return <div>{viewState.text}</div>;
 }
-

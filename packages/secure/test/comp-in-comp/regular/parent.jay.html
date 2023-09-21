@@ -1,28 +1,32 @@
 <html>
-<head>
-    <link rel="import" href="./child" names="Child, ChildProps"/>
+  <head>
+    <link rel="import" href="./child" names="Child, ChildProps" />
     <script type="application/yaml-jay">
-data:
-  textFromChildEvent: string
-  viewStateFromChildEvent: string
-  coordinateFromChildEvent: string
-  childText: string
-  dynamicChildren:
-    - id: string
-      childText: string
+      data:
+        textFromChildEvent: string
+        viewStateFromChildEvent: string
+        coordinateFromChildEvent: string
+        childText: string
+        dynamicChildren:
+          - id: string
+            childText: string
     </script>
-</head>
-<body>
-<div>
-    <div id="text-from-child-event">{textFromChildEvent}</div>
-    <div id="view-state-from-child-event">{viewStateFromChildEvent}</div>
-    <div id="coordinate-from-child-event">{coordinateFromChildEvent}</div>
-    <button id="parent-changes-child-prop-button" ref="parentChangesChildPropButton">parent changes child prop</button>
-    <button id="parent-calls-child-api-button" ref="parentCallsChildAPIButton">parent calls child api</button>
-    <Child textFromParent="{childText}" id="static" ref="staticChild"/>
-    <div forEach="dynamicChildren" trackBy="id">
-        <Child textFromParent="{childText}" id="{id}" ref="dynamicChildren"/>
+  </head>
+  <body>
+    <div>
+      <div id="text-from-child-event">{textFromChildEvent}</div>
+      <div id="view-state-from-child-event">{viewStateFromChildEvent}</div>
+      <div id="coordinate-from-child-event">{coordinateFromChildEvent}</div>
+      <button id="parent-changes-child-prop-button" ref="parentChangesChildPropButton">
+        parent changes child prop
+      </button>
+      <button id="parent-calls-child-api-button" ref="parentCallsChildAPIButton">
+        parent calls child api
+      </button>
+      <Child textFromParent="{childText}" id="static" ref="staticChild" />
+      <div forEach="dynamicChildren" trackBy="id">
+        <Child textFromParent="{childText}" id="{id}" ref="dynamicChildren" />
+      </div>
     </div>
-</div>
-</body>
+  </body>
 </html>

@@ -1,14 +1,14 @@
-import {JayElement} from "jay-runtime";
-import {ElementEvents} from './ElementEvents';
+import { JayElement } from 'jay-runtime';
+import { ElementEvents } from './ElementEvents';
 
 interface ViewState {
-  count: number,
+    count: number;
 }
 
 interface Events {
-  dec?: ElementEvents
-  inc?: ElementEvents
-  count?: ElementEvents
+    dec?: ElementEvents;
+    inc?: ElementEvents;
+    count?: ElementEvents;
 }
 
-export declare function render(viewState: ViewState, events: Events): JayElement<ViewState>
+export declare function render(viewState: ViewState, events: Events): JayElement<ViewState>;

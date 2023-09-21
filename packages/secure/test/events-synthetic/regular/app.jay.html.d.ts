@@ -1,12 +1,10 @@
-import {JayElement, RenderElementOptions} from "jay-runtime";
-import {Comp} from './comp';
+import { JayElement, RenderElementOptions } from 'jay-runtime';
+import { Comp } from './comp';
 
-export interface AppViewState {
-
-}
+export interface AppViewState {}
 
 export interface AppElementRefs {}
 
-export type AppElement = JayElement<AppViewState, AppElementRefs>
+export type AppElement = JayElement<AppViewState, AppElementRefs>;
 
-export declare function render(viewState: AppViewState, options?: RenderElementOptions): AppElement
+export declare function render(viewState: AppViewState, options?: RenderElementOptions): AppElement;

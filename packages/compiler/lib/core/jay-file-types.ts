@@ -1,14 +1,11 @@
-import {HTMLElement} from "node-html-parser";
+import { HTMLElement } from 'node-html-parser';
 
 export interface JayType {
-    name: string
+    name: string;
 }
 
 export class JayAtomicType implements JayType {
-    constructor(
-        public readonly name: string
-    ) {
-    }
+    constructor(public readonly name: string) {}
 }
 
 export const JayString = new JayAtomicType('string');
@@ -17,96 +14,97 @@ export const JayBoolean = new JayAtomicType('boolean');
 export const JayDate = new JayAtomicType('Date');
 export const JayUnknown = new JayAtomicType('Unknown');
 const typesMap = {
-    'string': JayString,
-    'number': JayNumber,
-    'boolean': JayBoolean,
-    'date': JayDate
-}
+    string: JayString,
+    number: JayNumber,
+    boolean: JayBoolean,
+    date: JayDate,
+};
 
 export function resolvePrimitiveType(typeName: string): JayType {
-    return typesMap[typeName] || JayUnknown
+    return typesMap[typeName] || JayUnknown;
 }
 
 export class JayTypeAlias implements JayType {
-    constructor(public readonly name: string) {
-    }
+    constructor(public readonly name: string) {}
 }
 
 export class JayEnumType implements JayType {
-    constructor(public readonly name: string,
-                public readonly values: Array<string>) {
-    }
+    constructor(
+        public readonly name: string,
+        public readonly values: Array<string>,
+    ) {}
 }
 
 export class JayHTMLType implements JayType {
-    constructor(public readonly name: string) {
-    }
+    constructor(public readonly name: string) {}
 }
 
 export class JayImportedType implements JayType {
-    constructor(public readonly name: string,
-                public readonly type: JayType) {
-    }
+    constructor(
+        public readonly name: string,
+        public readonly type: JayType,
+    ) {}
 }
 
 export class JayElementType implements JayType {
-    constructor(public readonly name: string) {
-    }
+    constructor(public readonly name: string) {}
 }
 
 export class JayComponentApiMember {
     constructor(
         public readonly property: string,
-        public readonly isEvent: boolean) {
-    }
+        public readonly isEvent: boolean,
+    ) {}
 }
 
 export class JayComponentType implements JayType {
-    constructor(public readonly name: string, public readonly api: Array<JayComponentApiMember>) {
-    }
+    constructor(
+        public readonly name: string,
+        public readonly api: Array<JayComponentApiMember>,
+    ) {}
 }
 
 export class JayObjectType implements JayType {
-    constructor(public readonly name: string,
-                public readonly props: { [key: string]: JayType }) {
-    }
+    constructor(
+        public readonly name: string,
+        public readonly props: { [key: string]: JayType },
+    ) {}
 }
 
 export class JayArrayType implements JayType {
-    constructor(public readonly itemType: JayType) {
-    }
+    constructor(public readonly itemType: JayType) {}
 
     get name() {
-        return `Array<${this.itemType.name}>`
+        return `Array<${this.itemType.name}>`;
     }
 }
 
 interface JayExample {
-    name: string,
-    data: any
+    name: string;
+    data: any;
 }
 
 export interface JayImportName {
-    name: string,
-    as?: string,
-    type: JayType
+    name: string;
+    as?: string;
+    type: JayType;
 }
 
 export interface JayImportLink {
-    module: string,
-    names: JayImportName[]
+    module: string;
+    names: JayImportName[];
 }
 
 export interface JayFile {
-    types: JayType,
-    examples: Array<JayExample>,
-    imports: JayImportLink[],
-    body: HTMLElement
-    baseElementName: string
+    types: JayType;
+    examples: Array<JayExample>;
+    imports: JayImportLink[];
+    body: HTMLElement;
+    baseElementName: string;
 }
 
 export interface JayYamlStructure {
-    data: any,
-    imports: Record<string, Array<JayImportName>>,
-    examples: any
+    data: any;
+    imports: Record<string, Array<JayImportName>>;
+    examples: any;
 }

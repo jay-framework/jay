@@ -1,13 +1,14 @@
 {
-	"scripts": {
-		"test": "lerna run test",
-		"link": "lerna link",
-		"bootstrap": "lerna bootstrap",
-		"build": "lerna run build",
-		"release": "echo \"======= Lerna Releasing jay =======\" && npm run test && lerna publish"
-	},
-	"devDependencies": {
-		"lerna": "^3.22.1"
-	},
-	"name": "jay"
+  "scripts": {
+    "test": "lerna run test",
+    "link": "lerna link",
+    "bootstrap": "lerna bootstrap",
+    "build": "lerna run build",
+    "release": "echo \"======= Lerna Releasing jay =======\" && npm run test && lerna publish"
+  },
+  "devDependencies": {
+    "lerna": "^3.22.1",
+    "prettier": "3.0.3"
+  },
+  "name": "jay"
 }

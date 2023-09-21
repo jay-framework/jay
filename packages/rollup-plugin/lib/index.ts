@@ -1,11 +1,13 @@
-import {generateRuntimeFile}  from 'jay-compiler';
-import * as ts from "typescript";
-import path from "path";
-import * as fs from "fs";
+import { generateRuntimeFile } from 'jay-compiler';
+import * as ts from 'typescript';
+import path from 'path';
+import * as fs from 'fs';
 // rollup-plugin-my-example.js
 
 function readTsConfigFile(tsConfigPath) {
-    const { config, error } = ts.readConfigFile(tsConfigPath, (path) => fs.readFileSync(path, 'utf8'));
+    const { config, error } = ts.readConfigFile(tsConfigPath, (path) =>
+        fs.readFileSync(path, 'utf8'),
+    );
     if (error) {
         throw error;
     }
@@ -13,7 +15,6 @@ function readTsConfigFile(tsConfigPath) {
 }
 
 function resolveTsConfig(options) {
-
     const tsConfigPath = path.resolve(process.cwd(), options.relativePath || 'tsconfig.json');
     if (!ts.sys.fileExists(tsConfigPath)) {
         if (options.relativePath) {
@@ -26,9 +27,9 @@ function resolveTsConfig(options) {
     return tsConfigPath;
 }
 
-export default function jayCompiler (options = {}) {
+export default function jayCompiler(options = {}) {
     let tsConfigPath = resolveTsConfig(options);
-    let tsConfig = tsConfigPath?readTsConfigFile(tsConfigPath):{};
+    let tsConfig = tsConfigPath ? readTsConfigFile(tsConfigPath) : {};
     return {
         name: 'jay', // this name will show up in warnings and errors
         transform(code: string, id: string) {
@@ -38,19 +39,22 @@ export default function jayCompiler (options = {}) {
                     let dirName = path.dirname(id);
                     let tsCode = generateRuntimeFile(code, filename, dirName);
                     if (tsCode.validations.length > 0) {
-                        console.error('failed to run Jay Rollup Plugin for file ' + id + '\n' + tsCode.validations.join('\n'));
+                        console.error(
+                            'failed to run Jay Rollup Plugin for file ' +
+                                id +
+                                '\n' +
+                                tsCode.validations.join('\n'),
+                        );
                     }
                     let jsCode = ts.transpileModule(tsCode.val, tsConfig);
                     return jsCode.outputText;
-                }
-                else {
+                } else {
                     return code;
                 }
-            }
-            catch (e) {
+            } catch (e) {
                 console.error('failed to run Jay Rollup Plugin for file ' + id + '\n' + e.message);
                 throw e;
             }
-        }
+        },
     };
 }

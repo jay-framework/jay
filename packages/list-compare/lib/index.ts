@@ -1,2 +1,2 @@
-export * from './random-access-linked-list'
-export * from './list-compare'
+export * from './random-access-linked-list';
+export * from './list-compare';

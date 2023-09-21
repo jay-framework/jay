@@ -1,12 +1,11 @@
-export type Next<T> = (t: T) => T
-export type Setter<T> = (t: T | Next<T>) => T
-export type Getter<T> = () => T
-export type ValueOrGetter<T> = T | Getter<T>
-export const GetterMark = Symbol.for("getterMark");
-export const SetterMark = Symbol.for("setterMark");
+export type Next<T> = (t: T) => T;
+export type Setter<T> = (t: T | Next<T>) => T;
+export type Getter<T> = () => T;
+export type ValueOrGetter<T> = T | Getter<T>;
+export const GetterMark = Symbol.for('getterMark');
+export const SetterMark = Symbol.for('setterMark');
 
 export class Reactive {
-
     private recording = false;
     private inCreateReaction = false;
     private batchedReactionsToRun: boolean[] = [];
@@ -14,7 +13,7 @@ export class Reactive {
     private reactionIndex = 0;
     private reactions: Array<() => void> = [];
     private dirty: Promise<void> = Promise.resolve();
-    private dirtyResolve: () => void
+    private dirtyResolve: () => void;
     private timeout: any = undefined;
     private inBatchReactions: boolean;
     private inFlush: boolean;
@@ -23,8 +22,7 @@ export class Reactive {
         try {
             this.recording = true;
             return func(this);
-        }
-        finally {
+        } finally {
             this.recording = false;
         }
     }
@@ -36,43 +34,39 @@ export class Reactive {
         const triggerReactions = () => {
             for (let index = 0; index < reactionsToRerun.length; index++) {
                 if (reactionsToRerun[index]) {
-                    if (this.recording)
-                        this.reactions[index]();
-                    else if (!this.inBatchReactions)
-                        this.ScheduleAutoBatchRuns();
+                    if (this.recording) this.reactions[index]();
+                    else if (!this.inBatchReactions) this.ScheduleAutoBatchRuns();
                     this.batchedReactionsToRun[index] = true;
                 }
             }
-        }
+        };
 
         let setter = (value: T | Next<T>) => {
-            let materializedValue = (typeof value === 'function') ? (value as Next<T>)(current) : value;
+            let materializedValue =
+                typeof value === 'function' ? (value as Next<T>)(current) : value;
             let isModified = materializedValue !== current;
             current = materializedValue;
-            if (isModified)
-                triggerReactions();
+            if (isModified) triggerReactions();
             return current;
-        }
+        };
 
         let getter = () => {
             if (this.recording && this.inCreateReaction) {
                 reactionsToRerun[this.reactionIndex] = true;
             }
             return current;
-        }
+        };
 
         if (typeof value === 'function') {
             this.createReaction(() => {
                 let newValue = (value as Getter<T>)();
                 setter(newValue);
-            })
-        }
-        else
-            setter(value);
+            });
+        } else setter(value);
 
         getter[GetterMark] = true;
         setter[SetterMark] = true;
-        return [getter, setter]
+        return [getter, setter];
     }
 
     createReaction(func: () => void) {
@@ -80,37 +74,34 @@ export class Reactive {
         this.inCreateReaction = true;
         try {
             func();
-        }
-        finally {
+        } finally {
             this.reactionIndex += 1;
             this.inCreateReaction = false;
         }
     }
 
     batchReactions<T>(func: () => T) {
-        if (this.inBatchReactions || this.inFlush)
-            return func();
+        if (this.inBatchReactions || this.inFlush) return func();
         this.inBatchReactions = true;
-        [this.dirty, this.dirtyResolve] = mkResolvablePromise()
+        [this.dirty, this.dirtyResolve] = mkResolvablePromise();
         try {
             return func();
-        }
-        finally {
-            this.flush()
+        } finally {
+            this.flush();
             this.inBatchReactions = false;
             this.dirtyResolve();
         }
     }
 
     private ScheduleAutoBatchRuns() {
-       if (!this.isAutoBatchScheduled) {
-           this.isAutoBatchScheduled = true;
-           [this.dirty, this.dirtyResolve] = mkResolvablePromise()
-           this.timeout = setTimeout(() => {
-               this.timeout = undefined;
-               this.flush();
-           }, 0)
-       }
+        if (!this.isAutoBatchScheduled) {
+            this.isAutoBatchScheduled = true;
+            [this.dirty, this.dirtyResolve] = mkResolvablePromise();
+            this.timeout = setTimeout(() => {
+                this.timeout = undefined;
+                this.flush();
+            }, 0);
+        }
     }
 
     toBeClean(): Promise<void> {
@@ -118,23 +109,19 @@ export class Reactive {
     }
 
     flush() {
-        if (this.inFlush)
-            return;
+        if (this.inFlush) return;
         this.inFlush = true;
         try {
             for (let index = 0; index < this.batchedReactionsToRun.length; index++)
-                if (this.batchedReactionsToRun[index])
-                    this.reactions[index]();
+                if (this.batchedReactionsToRun[index]) this.reactions[index]();
             if (this.isAutoBatchScheduled) {
                 this.isAutoBatchScheduled = false;
-                if (this.timeout)
-                    clearTimeout(this.timeout);
+                if (this.timeout) clearTimeout(this.timeout);
                 this.timeout = undefined;
             }
             this.batchedReactionsToRun = [];
-            this.dirtyResolve()
-        }
-        finally {
+            this.dirtyResolve();
+        } finally {
             this.inFlush = false;
         }
     }
@@ -142,6 +129,6 @@ export class Reactive {
 
 function mkResolvablePromise() {
     let resolve;
-    let promise = new Promise((res) => resolve = res);
+    let promise = new Promise((res) => (resolve = res));
     return [promise, resolve];
 }

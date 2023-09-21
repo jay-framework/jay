@@ -1,8 +1,14 @@
-import {RenderFragment} from '../core/render-fragment';
-import {parse} from './expression-parser'
-import {JayValidations} from "../core/with-validations";
-import {Import, Imports} from "../core/imports";
-import {JayImportedType, JayImportName, JayObjectType, JayType, JayUnknown} from "../core/jay-file-types";
+import { RenderFragment } from '../core/render-fragment';
+import { parse } from './expression-parser';
+import { JayValidations } from '../core/with-validations';
+import { Import, Imports } from '../core/imports';
+import {
+    JayImportedType,
+    JayImportName,
+    JayObjectType,
+    JayType,
+    JayUnknown,
+} from '../core/jay-file-types';
 
 export class Accessor {
     readonly terms: Array<string>;
@@ -16,10 +22,8 @@ export class Accessor {
     }
 
     render() {
-        if (this.terms.length === 1 && this.terms[0] === ".")
-            return 'vs'
-        else
-            return 'vs.' + this.terms.join('?.');
+        if (this.terms.length === 1 && this.terms[0] === '.') return 'vs';
+        else return 'vs.' + this.terms.join('?.');
     }
 }
 
@@ -30,25 +34,23 @@ export class Variables {
     readonly parent: Variables;
     private readonly depth;
     constructor(currentTypes: JayType, parent: Variables = undefined, depth: number = 0) {
-        this.currentVar = (depth === 0)?'viewState':'vs'+depth;
-        this.currentContext = (depth === 0)?'context':'cx'+depth;
+        this.currentVar = depth === 0 ? 'viewState' : 'vs' + depth;
+        this.currentContext = depth === 0 ? 'context' : 'cx' + depth;
         this.depth = depth;
         this.parent = parent;
-        this.currentType = currentTypes instanceof JayImportedType ? currentTypes.type : currentTypes;
+        this.currentType =
+            currentTypes instanceof JayImportedType ? currentTypes.type : currentTypes;
     }
 
     resolveAccessor(accessor: Array<string>): Accessor {
         let curr: JayType = this.currentType;
         let validations = [];
         accessor.forEach((member) => {
-            if (member === '.')
-                return; // do not advance curr
+            if (member === '.') return; // do not advance curr
             else if (curr instanceof JayObjectType && curr.props[member]) {
                 curr = curr.props[member];
-                if (curr instanceof JayImportedType)
-                    curr = curr.type;
-            }
-            else {
+                if (curr instanceof JayImportedType) curr = curr.type;
+            } else {
                 validations.push(`the data field [${accessor.join('.')}] not found in Jay data`);
                 curr = JayUnknown;
             }
@@ -64,12 +66,13 @@ export class Variables {
 function doParse(expression: string, startRule, vars?: Variables) {
     try {
         return parse(expression, {
-            vars, RenderFragment,
+            vars,
+            RenderFragment,
             none: Imports.none(),
             dt: Imports.for(Import.dynamicText),
             da: Imports.for(Import.dynamicAttribute),
             dp: Imports.for(Import.dynamicProperty),
-            startRule
+            startRule,
         });
     } catch (e) {
         throw new Error(`failed to parse expression [${expression}]. ${e.message}`);
@@ -115,8 +118,7 @@ export function parseImportNames(expression: string): JayImportName[] {
 export function parseIsEnum(expression: string): boolean {
     try {
         return doParse(expression, 'is_enum');
-    }
-    catch (err) {
+    } catch (err) {
         return false;
     }
 }

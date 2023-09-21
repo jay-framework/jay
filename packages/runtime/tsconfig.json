@@ -8,10 +8,7 @@
     "sourceMap": true,
     "rootDir": "./lib",
     "outDir": "dist",
-    "lib": [
-      "es2022",
-      "dom"
-    ],
+    "lib": ["es2022", "dom"],
     "declaration": true
   },
   "lib": ["es2022"],

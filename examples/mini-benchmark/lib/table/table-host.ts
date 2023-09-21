@@ -1,36 +1,35 @@
-import benchmark from "../benchmark";
-import {createState, makeJayComponent, Props} from 'jay-component';
-import {render as TableHostRender, TableHostElementRefs} from "./table-host.jay.html";
+import benchmark from '../benchmark';
+import { createState, makeJayComponent, Props } from 'jay-component';
+import { render as TableHostRender, TableHostElementRefs } from './table-host.jay.html';
 
 interface TableHostProps {
-    cycles: number
+    cycles: number;
 }
 
-function TableHostConstructor({cycles}: Props<TableHostProps>, refs: TableHostElementRefs) {
-
+function TableHostConstructor({ cycles }: Props<TableHostProps>, refs: TableHostElementRefs) {
     let [size, setSize] = createState(100);
     let [updates, setUpdates] = createState(100);
     let [stateManagement, setStateManagement] = createState('immutable');
 
     refs.size
-        .oninput$(({event}) => (event.target as HTMLInputElement).value)
-        .then(({event: size}) => setSize(Number(size)));
+        .oninput$(({ event }) => (event.target as HTMLInputElement).value)
+        .then(({ event: size }) => setSize(Number(size)));
 
     refs.updates
-        .oninput$(({event}) => (event.target as HTMLInputElement).value)
-        .then(({event: updates}) => setUpdates(Number(updates)));
+        .oninput$(({ event }) => (event.target as HTMLInputElement).value)
+        .then(({ event: updates }) => setUpdates(Number(updates)));
 
     refs.stateManagement
-        .oninput$(({event}) => (event.target as HTMLSelectElement).value)
-        .then(({event: newStateManagement}) => setStateManagement(newStateManagement));
+        .oninput$(({ event }) => (event.target as HTMLSelectElement).value)
+        .then(({ event: newStateManagement }) => setStateManagement(newStateManagement));
 
     const run = (progressCallback: (string) => void) => {
-        benchmark(index => refs.table.updateData(index), cycles(), progressCallback);
-    }
+        benchmark((index) => refs.table.updateData(index), cycles(), progressCallback);
+    };
     return {
-        render: () => ({size, updates, stateManagement}),
-        run
-    }
+        render: () => ({ size, updates, stateManagement }),
+        run,
+    };
 }
 
 export const TableHost = makeJayComponent(TableHostRender, TableHostConstructor);

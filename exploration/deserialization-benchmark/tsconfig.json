@@ -8,12 +8,9 @@
     "sourceMap": true,
     "rootDir": "./lib",
     "outDir": "dist",
-    "lib": [
-      "es2019",
-      "dom"
-    ],
+    "lib": ["es2019", "dom"],
     "declaration": true
   },
   "lib": ["es2019"],
-  "exclude": ["dist"],
+  "exclude": ["dist"]
 }

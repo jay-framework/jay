@@ -1,15 +1,14 @@
-import {createState, makeJayComponent, Props} from 'jay-component';
-import {MainElementRefs, MainViewState, render, SelectedExample} from "./main.jay.html";
-import {handler$} from "jay-secure/dist/$func";
+import { createState, makeJayComponent, Props } from 'jay-component';
+import { MainElementRefs, MainViewState, render, SelectedExample } from './main.jay.html';
+import { handler$ } from 'jay-secure/dist/$func';
 
 export interface MainProps {}
 
 const examples = Object.keys(SelectedExample)
-    .filter(_ => !isNaN(Number(_)))
-    .map(_ => ({value: _, name: SelectedExample[_]}))
+    .filter((_) => !isNaN(Number(_)))
+    .map((_) => ({ value: _, name: SelectedExample[_] }));
 
 function MainConstructor({}: Props<MainProps>, refs: MainElementRefs) {
-
     let [selectedExample, setSelectedExample] = createState<SelectedExample>(SelectedExample.basic);
     let [cycles, setCycles] = createState(1000);
     let [progress, setProgress] = createState('');
@@ -17,30 +16,25 @@ function MainConstructor({}: Props<MainProps>, refs: MainElementRefs) {
     refs.chooseExample
         .onchange$(handler$<KeyboardEvent, MainViewState, any>('1'))
         // .$onchange(({event}) => (event.target as HTMLSelectElement).selectedIndex)
-        .then(({event:index}) => setSelectedExample(Number(examples[index].value)))
+        .then(({ event: index }) => setSelectedExample(Number(examples[index].value)));
 
     refs.cycles
         .oninput$(handler$<KeyboardEvent, MainViewState, any>('2'))
         // .$oninput(({event}) => (event.target as HTMLInputElement).value)
-        .then(({event: cycles}) => setCycles(Number(cycles)))
+        .then(({ event: cycles }) => setCycles(Number(cycles)));
 
     refs.run.onclick(() => {
-        if (selectedExample() === SelectedExample.basic)
-            refs.basic.run(setProgress)
+        if (selectedExample() === SelectedExample.basic) refs.basic.run(setProgress);
         else if (selectedExample() === SelectedExample.collections)
-            refs.collections.run(setProgress)
-        else if (selectedExample() === SelectedExample.conditions)
-            refs.conditions.run(setProgress)
-        else if (selectedExample() === SelectedExample.composite)
-            refs.composite.run(setProgress)
-        else if (selectedExample() === SelectedExample.table)
-            refs.table.run(setProgress)
-    })
+            refs.collections.run(setProgress);
+        else if (selectedExample() === SelectedExample.conditions) refs.conditions.run(setProgress);
+        else if (selectedExample() === SelectedExample.composite) refs.composite.run(setProgress);
+        else if (selectedExample() === SelectedExample.table) refs.table.run(setProgress);
+    });
 
     return {
-        render: () => ({examples, selectedExample, cycles, progress})
-    }
+        render: () => ({ examples, selectedExample, cycles, progress }),
+    };
 }
 
 export const Main = makeJayComponent(render, MainConstructor);
-

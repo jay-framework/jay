@@ -5,52 +5,57 @@ import {
     MountFunc,
     provideContext,
     updateFunc,
-    useContext
-} from "jay-runtime";
-import {SANDBOX_CREATION_CONTEXT, SANDBOX_BRIDGE_CONTEXT} from "./sandbox-context";
-import {
-    SecureElementRef
-} from "./sandbox-refs";
-import {PrivateRef} from "jay-runtime";
+    useContext,
+} from 'jay-runtime';
+import { SANDBOX_CREATION_CONTEXT, SANDBOX_BRIDGE_CONTEXT } from './sandbox-context';
+import { SecureElementRef } from './sandbox-refs';
+import { PrivateRef } from 'jay-runtime';
 
 export interface SandboxElement<ViewState> {
-    update: updateFunc<ViewState>
-    mount: MountFunc,
-    unmount: MountFunc
+    update: updateFunc<ViewState>;
+    mount: MountFunc;
+    unmount: MountFunc;
 }
 
-export function sandboxElement<ViewState>(ref: SecureElementRef<any, any>): SandboxElement<ViewState> {
+export function sandboxElement<ViewState>(
+    ref: SecureElementRef<any, any>,
+): SandboxElement<ViewState> {
     return ref;
 }
 
-export function sandboxChildComp<ParentVS, Props, ChildT,
-    ChildElement extends BaseJayElement<ChildT>, ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
+export function sandboxChildComp<
+    ParentVS,
+    Props,
+    ChildT,
+    ChildElement extends BaseJayElement<ChildT>,
+    ChildComp extends JayComponent<Props, ChildT, ChildElement>,
+>(
     compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentVS) => Props,
-    ref: PrivateRef<ParentVS, ChildComp>): SandboxElement<ParentVS> {
-    let {viewState, endpoint} = useContext(SANDBOX_CREATION_CONTEXT)
+    ref: PrivateRef<ParentVS, ChildComp>,
+): SandboxElement<ParentVS> {
+    let { viewState, endpoint } = useContext(SANDBOX_CREATION_CONTEXT);
     let coordinate = ref.coordinate;
-    let context = {compId: endpoint.compId, coordinate, port: endpoint.port}
+    let context = { compId: endpoint.compId, coordinate, port: endpoint.port };
     let childComp = provideContext(SANDBOX_BRIDGE_CONTEXT, context, () => {
-        return compCreator(getProps(viewState))
-    })
+        return compCreator(getProps(viewState));
+    });
     ref.set(childComp);
 
     return {
-      update: (newViewState) => {
-          ref.update(newViewState);
-          childComp.update(getProps(newViewState));
-      },
-      mount: () => {
-          ref.mount();
-          childComp.mount()
-      },
-      unmount: () => {
-          ref.unmount();
-          childComp.unmount()
-      }
-    }
-
+        update: (newViewState) => {
+            ref.update(newViewState);
+            childComp.update(getProps(newViewState));
+        },
+        mount: () => {
+            ref.mount();
+            childComp.mount();
+        },
+        unmount: () => {
+            ref.unmount();
+            childComp.unmount();
+        },
+    };
 
     // if (isDynamic && refs) {
     //     let ref = (refs[refName] as any as DynamicCompRefImplementation<ParentVS, ReturnType<typeof compCreator>>);
@@ -92,82 +97,100 @@ export function sandboxChildComp<ParentVS, Props, ChildT,
     // }
 }
 
-function compareLists<ItemViewState extends object>(oldList: ItemViewState[], newList: ItemViewState[], matchBy: string):
-    { removedItems: ItemViewState[], addedItems: ItemViewState[], itemsToUpdate: ItemViewState[]} {
+function compareLists<ItemViewState extends object>(
+    oldList: ItemViewState[],
+    newList: ItemViewState[],
+    matchBy: string,
+): { removedItems: ItemViewState[]; addedItems: ItemViewState[]; itemsToUpdate: ItemViewState[] } {
     let removedItems = [];
     let addedItems = [];
     let itemsToUpdate = [];
-    let newListIds = new Set(newList.map(item => item[matchBy]));
-    let oldListIdsMap = new Map(oldList.map(item => [item[matchBy], item]));
-    oldList.forEach(oldItem => {
-        if (!newListIds.has(oldItem[matchBy]))
-            removedItems.push(oldItem)
-    })
-    newList.forEach(newItem => {
-        if (!oldListIdsMap.has(newItem[matchBy]))
-            addedItems.push(newItem)
+    let newListIds = new Set(newList.map((item) => item[matchBy]));
+    let oldListIdsMap = new Map(oldList.map((item) => [item[matchBy], item]));
+    oldList.forEach((oldItem) => {
+        if (!newListIds.has(oldItem[matchBy])) removedItems.push(oldItem);
+    });
+    newList.forEach((newItem) => {
+        if (!oldListIdsMap.has(newItem[matchBy])) addedItems.push(newItem);
         else {
             let oldItem = oldListIdsMap.get(newItem[matchBy]);
             let isModified = newItem !== oldItem;
-            if (isModified)
-                itemsToUpdate.push(newItem);
+            if (isModified) itemsToUpdate.push(newItem);
         }
-    })
-    return {removedItems, addedItems, itemsToUpdate}
+    });
+    return { removedItems, addedItems, itemsToUpdate };
 }
 
 export function sandboxForEach<ParentViewState, ItemViewState extends object>(
     getItems: (viewState: ParentViewState) => ItemViewState[],
     matchBy: string,
-    children: () => SandboxElement<ItemViewState>[]
+    children: () => SandboxElement<ItemViewState>[],
 ): SandboxElement<ParentViewState> {
-    const {viewState, endpoint, refManager, dataIds, parentComponentReactive} = useContext(SANDBOX_CREATION_CONTEXT)
+    const { viewState, endpoint, refManager, dataIds, parentComponentReactive } =
+        useContext(SANDBOX_CREATION_CONTEXT);
     let lastItems: ItemViewState[] = [];
     let childElementsMap: Map<string, SandboxElement<ItemViewState>[]> = new Map();
     let update = (viewState: ParentViewState) => {
         let newItems = getItems(viewState) || [];
         let isModified = newItems !== lastItems;
         if (isModified) {
-            let {removedItems, addedItems, itemsToUpdate} = compareLists(lastItems, newItems, matchBy)
-            addedItems.forEach(item => {
-                let childElements = provideContext(SANDBOX_CREATION_CONTEXT,
-                    {endpoint, viewState: item, refManager, dataIds: [...dataIds, item[matchBy]], isDynamic: true, parentComponentReactive}, children)
+            let { removedItems, addedItems, itemsToUpdate } = compareLists(
+                lastItems,
+                newItems,
+                matchBy,
+            );
+            addedItems.forEach((item) => {
+                let childElements = provideContext(
+                    SANDBOX_CREATION_CONTEXT,
+                    {
+                        endpoint,
+                        viewState: item,
+                        refManager,
+                        dataIds: [...dataIds, item[matchBy]],
+                        isDynamic: true,
+                        parentComponentReactive,
+                    },
+                    children,
+                );
                 childElementsMap.set(item[matchBy], childElements);
-            })
-            removedItems.forEach(item => {
-                let childElements = childElementsMap.get(item[matchBy])
-                childElements.forEach(childElement => childElement.unmount())
-                childElementsMap.delete(item[matchBy])
-            })
-            itemsToUpdate.forEach(item => {
-                childElementsMap.get(item[matchBy]).forEach(childElement => {
+            });
+            removedItems.forEach((item) => {
+                let childElements = childElementsMap.get(item[matchBy]);
+                childElements.forEach((childElement) => childElement.unmount());
+                childElementsMap.delete(item[matchBy]);
+            });
+            itemsToUpdate.forEach((item) => {
+                childElementsMap.get(item[matchBy]).forEach((childElement) => {
                     childElement.update(item);
-                })
-            })
+                });
+            });
 
             lastItems = newItems;
         }
-    }
+    };
 
     let mountUnmount = (op) => () => {
         childElementsMap.forEach((childElements) =>
-            childElements.forEach(childElement => childElement[op]())
-        )
-    }
-    let mount = mountUnmount('mount')
-    let unmount = mountUnmount('unmount')
+            childElements.forEach((childElement) => childElement[op]()),
+        );
+    };
+    let mount = mountUnmount('mount');
+    let unmount = mountUnmount('unmount');
 
-    update(viewState)
+    update(viewState);
 
     return {
         update,
         mount: mount,
-        unmount: unmount
-    }
+        unmount: unmount,
+    };
 }
 
-export function sandboxCondition<ViewState>(condition: (newData: ViewState) => boolean, children: SandboxElement<ViewState>[]): SandboxElement<ViewState> {
-    let {viewState} = useContext(SANDBOX_CREATION_CONTEXT)
+export function sandboxCondition<ViewState>(
+    condition: (newData: ViewState) => boolean,
+    children: SandboxElement<ViewState>[],
+): SandboxElement<ViewState> {
+    let { viewState } = useContext(SANDBOX_CREATION_CONTEXT);
     let state = condition(viewState);
     let mounted = true;
     let childMounted = true;
@@ -175,13 +198,13 @@ export function sandboxCondition<ViewState>(condition: (newData: ViewState) => b
         let newState = condition(viewState);
         if (mounted) {
             if (newState !== state || childMounted !== newState) {
-                newState ? children.forEach(_ => _.mount()) :
-                    children.forEach(_ => _.unmount());
+                newState
+                    ? children.forEach((_) => _.mount())
+                    : children.forEach((_) => _.unmount());
                 childMounted = newState;
             }
         } else {
-            if (childMounted)
-                children.forEach(_ => _.unmount());
+            if (childMounted) children.forEach((_) => _.unmount());
             childMounted = false;
         }
     };
@@ -189,16 +212,16 @@ export function sandboxCondition<ViewState>(condition: (newData: ViewState) => b
 
     const update = (newViewState) => {
         viewState = newViewState;
-        children.forEach(_ => _.update(newViewState))
+        children.forEach((_) => _.update(newViewState));
         updateChild();
-    }
+    };
     const mount = () => {
         mounted = true;
         updateChild();
-    }
+    };
     const unmount = () => {
         mounted = false;
         updateChild();
-    }
-    return {update, mount, unmount}
+    };
+    return { update, mount, unmount };
 }

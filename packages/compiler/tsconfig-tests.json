@@ -7,10 +7,7 @@
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "build",
-    "lib": [
-      "es2016",
-      "dom"
-    ]
+    "lib": ["es2016", "dom"]
   },
   "lib": ["lib.es2015.d.ts", "lib.dom.d.ts"],
   "exclude": []

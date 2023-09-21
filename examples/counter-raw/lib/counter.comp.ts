@@ -1,28 +1,27 @@
-import {render} from './counter.jay.html';
+import { render } from './counter.jay.html';
 
 function Counter(initialValue: number) {
-    let jayElement = render({count: initialValue});
+    let jayElement = render({ count: initialValue });
     let count = initialValue;
 
     jayElement.refs.adder.onclick(() => {
         count += 1;
-        jayElement.update({count});
-    })
+        jayElement.update({ count });
+    });
 
     jayElement.refs.subtracter.onclick(() => {
         count -= 1;
-        jayElement.update({count});
-    })
+        jayElement.update({ count });
+    });
 
     return {
         element: jayElement,
-        update: () => {}
-    }
+        update: () => {},
+    };
 }
 
 export default function run(target) {
     let counter = Counter(12);
     target.innerHTML = '';
     target.appendChild(counter.element.dom);
-
 }

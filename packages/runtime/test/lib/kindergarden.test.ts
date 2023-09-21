@@ -1,15 +1,11 @@
-import {KindergardenGroupListener, Kindergarten} from '../../lib/kindergarden';
-import {describe, expect, test} from '@jest/globals'
-import {makeNode, makeParent} from "./test-utils";
-
+import { KindergardenGroupListener, Kindergarten } from '../../lib/kindergarden';
+import { describe, expect, test } from '@jest/globals';
+import { makeNode, makeParent } from './test-utils';
 
 describe('Kindergarten', () => {
-
     describe('Kindergarten one conditional group', () => {
-
         test('add a node in a group', () => {
-
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let node1 = makeNode(document, 'text1');
@@ -19,8 +15,7 @@ describe('Kindergarten', () => {
         });
 
         test('add a node twice - the node should be once', () => {
-
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let node1 = makeNode(document, 'text1');
@@ -32,8 +27,7 @@ describe('Kindergarten', () => {
         });
 
         test('add and remove a node in a group', () => {
-
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let node1 = makeNode(document, 'text1');
@@ -44,8 +38,7 @@ describe('Kindergarten', () => {
         });
 
         test('add and remove by position a node in a group', () => {
-
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let node1 = makeNode(document, 'text1');
@@ -58,8 +51,7 @@ describe('Kindergarten', () => {
 
     describe('Kindergarten preserves the ordering between groups', () => {
         test('add nodes group1, group 2', () => {
-
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let group2 = kindergarden.newGroup();
@@ -73,8 +65,7 @@ describe('Kindergarten', () => {
         });
 
         test('do not allow removing nodes of another group', () => {
-
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let group2 = kindergarden.newGroup();
@@ -84,12 +75,10 @@ describe('Kindergarten', () => {
             group2.ensureNode(node2);
 
             expect(parent.childNodes.length).toEqual(2);
-
         });
 
         test('add nodes group2, group 1', () => {
-
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let group2 = kindergarden.newGroup();
@@ -103,8 +92,7 @@ describe('Kindergarten', () => {
         });
 
         test('group 1, group 2, group 3, add nodes to groups 1, 2, 3', () => {
-
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let group2 = kindergarden.newGroup();
@@ -122,8 +110,7 @@ describe('Kindergarten', () => {
         });
 
         test('group 1, group 2, group 3, add nodes to groups 1, 2, 3, then remove node 2, node 1, then add node 1', () => {
-
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let group2 = kindergarden.newGroup();
@@ -144,9 +131,8 @@ describe('Kindergarten', () => {
     });
 
     describe('Kindergarten one collection group', () => {
-
         test('add node at the start', () => {
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let node1 = makeNode(document, 'text1');
@@ -159,7 +145,7 @@ describe('Kindergarten', () => {
         });
 
         test('add node at the end', () => {
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let node1 = makeNode(document, 'text1');
@@ -172,7 +158,7 @@ describe('Kindergarten', () => {
         });
 
         test('add nodes in a group', () => {
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let node1 = makeNode(document, 'text1');
@@ -188,7 +174,7 @@ describe('Kindergarten', () => {
         });
 
         test('move node using add remove - 3rd to 2nd', () => {
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let node1 = makeNode(document, 'text1');
@@ -206,7 +192,7 @@ describe('Kindergarten', () => {
         });
 
         test('move node using move - 3rd to 2nd', () => {
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let node1 = makeNode(document, 'text1');
@@ -224,7 +210,7 @@ describe('Kindergarten', () => {
         });
 
         test('move node using move - 2rd to 4nd', () => {
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let node1 = makeNode(document, 'text1');
@@ -248,7 +234,7 @@ describe('Kindergarten', () => {
         });
 
         test('move node - remove 2nd, then re-add it as first', () => {
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let node1 = makeNode(document, 'text1');
@@ -269,7 +255,7 @@ describe('Kindergarten', () => {
 
     describe('Kindergarten multiple collection groups', () => {
         test('two collection groups', () => {
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let group2 = kindergarden.newGroup();
@@ -295,7 +281,7 @@ describe('Kindergarten', () => {
         });
 
         test('two collection groups, in different order', () => {
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let group2 = kindergarden.newGroup();
@@ -321,7 +307,7 @@ describe('Kindergarten', () => {
         });
 
         test('two collection groups, with group mutations', () => {
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let group2 = kindergarden.newGroup();
@@ -357,7 +343,7 @@ describe('Kindergarten', () => {
         });
 
         test('two collection groups, with group mutations using removeAt', () => {
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let kindergarden = new Kindergarten(parent);
             let group1 = kindergarden.newGroup();
             let group2 = kindergarden.newGroup();
@@ -381,13 +367,10 @@ describe('Kindergarten', () => {
             expect(parent.childNodes[1]).toEqual(node13);
             expect(parent.childNodes[2]).toEqual(node21);
             expect(parent.childNodes[3]).toEqual(node23);
-
-        })
-
-    })
+        });
+    });
 
     describe('Kindergarten group listener', () => {
-
         class TestGroupListener implements KindergardenGroupListener {
             addedNodes = [];
             removedNodes = [];
@@ -396,31 +379,30 @@ describe('Kindergarten', () => {
             }
 
             removeNode(node: Node) {
-                this.removedNodes.push(node)
+                this.removedNodes.push(node);
             }
-
         }
 
         test('addNode is called with added nodes', () => {
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let listener = new TestGroupListener();
             let kindergarten = new Kindergarten(parent);
             let group1 = kindergarten.newGroup();
-            group1.addListener(listener)
+            group1.addListener(listener);
             let node1 = makeNode(document, 'text1');
             let node2 = makeNode(document, 'text2');
             group1.ensureNode(node1);
             group1.ensureNode(node2);
 
-            expect(listener.addedNodes).toEqual([node1,node2]);
+            expect(listener.addedNodes).toEqual([node1, node2]);
         });
 
         test('removeNode is called with removed nodes', () => {
-            let {document, parent} = makeParent();
+            let { document, parent } = makeParent();
             let listener = new TestGroupListener();
             let kindergarten = new Kindergarten(parent);
             let group1 = kindergarten.newGroup();
-            group1.addListener(listener)
+            group1.addListener(listener);
             let node1 = makeNode(document, 'text1');
             let node2 = makeNode(document, 'text2');
             group1.ensureNode(node1);

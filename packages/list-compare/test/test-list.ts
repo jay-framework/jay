@@ -1,5 +1,4 @@
-import {EoF, LinkedListItem, RandomAccessLinkedList} from "../lib";
-
+import { EoF, LinkedListItem, RandomAccessLinkedList } from '../lib';
 
 export class TestList<T, S> extends RandomAccessLinkedList<T, S> {
     constructor(arr: Array<T>, matchBy: string) {
@@ -28,10 +27,8 @@ export class TestList<T, S> extends RandomAccessLinkedList<T, S> {
 
     firstAsItem(): LinkedListItem<T, S> {
         const first = this.first();
-        if (first === EoF)
-            throw new Error('firstAsItem - no first item');
-        else
-            return first;
+        if (first === EoF) throw new Error('firstAsItem - no first item');
+        else return first;
     }
 
     at(index: number): LinkedListItem<T, S> {
@@ -40,9 +37,7 @@ export class TestList<T, S> extends RandomAccessLinkedList<T, S> {
             item = item.next;
             index--;
         }
-        if (item === EoF)
-            throw new Error(`item not found at ${index}`);
-        else
-            return item;
+        if (item === EoF) throw new Error(`item not found at ${index}`);
+        else return item;
     }
 }

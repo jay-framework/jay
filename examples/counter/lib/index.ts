@@ -1,11 +1,8 @@
-import {Counter} from './counter';
+import { Counter } from './counter';
 
-window.onload = function() {
+window.onload = function () {
     let target = document.getElementById('target');
-    let counter = Counter({initialValue: 12});
+    let counter = Counter({ initialValue: 12 });
     target.innerHTML = '';
     target.appendChild(counter.element.dom);
-}
-
-
-
+};

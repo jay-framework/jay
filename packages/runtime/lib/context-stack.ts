@@ -5,17 +5,16 @@ export class ContextStack<ContextType> {
         try {
             this.contexts.push(context);
             return fn();
-        }
-        finally {
+        } finally {
             this.contexts.pop();
         }
     }
 
     current(): ContextType {
-        return this.contexts[this.contexts.length-1];
+        return this.contexts[this.contexts.length - 1];
     }
 
     parent(): ContextType {
-        return (this.contexts.length > 1)?this.contexts[this.contexts.length-2]:undefined;
+        return this.contexts.length > 1 ? this.contexts[this.contexts.length - 2] : undefined;
     }
 }

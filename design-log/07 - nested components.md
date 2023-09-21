@@ -1,5 +1,4 @@
-Working on nested components
-====
+# Working on nested components
 
 adding nested components to Jay seems simple. A Component is built using a Jay Element and can easily be made to conform
 to the Jay Element interface.
@@ -14,10 +13,10 @@ We define a Jay Element initially as
 
 ```typescript
 interface JayComponent<Props, ViewState, jayElement extends JayElement<ViewState>> {
-    element: jayElement;
-    update: updateFunc<Props>;
-    mount: mountFunc;
-    unmount: mountFunc;
+  element: jayElement;
+  update: updateFunc<Props>;
+  mount: mountFunc;
+  unmount: mountFunc;
 }
 ```
 
@@ -26,23 +25,24 @@ constructor adjusts a JayComponent to the JayElement interface, allowing a JayCo
 JayElement
 
 ```typescript
-declare function childComp<ParentT, Props, ChildT,
-    ChildElement extends JayElement<ChildT>,
-    ChildComp extends JayComponent<Props, ChildT, ChildElement>>(
-    compCreator: (props: Props) => ChildComp,
-    getProps: (t: ParentT) => Props
-): JayElement<ParentT>;
+declare function childComp<
+  ParentT,
+  Props,
+  ChildT,
+  ChildElement extends JayElement<ChildT>,
+  ChildComp extends JayComponent<Props, ChildT, ChildElement>,
+>(compCreator: (props: Props) => ChildComp, getProps: (t: ParentT) => Props): JayElement<ParentT>;
 ```
 
 and the usage within a compiled Jay File is those
 
 ```typescript
 e('div', {}, [
-    childComp(
-        (props: ItemData) => Item(props),
-        vs => ({text: vs.staticItem, dataId: 'AAA'})
-    )
-])
+  childComp(
+    (props: ItemData) => Item(props),
+    (vs) => ({ text: vs.staticItem, dataId: 'AAA' }),
+  ),
+]);
 ```
 
 # References and Events
@@ -62,54 +62,51 @@ Assuming we have an Item component, it will look like
 `item.jay.html`
 
 ```html
-
 <html>
-<head>
+  <head>
     <script type="application/yaml-jay">
-data:
-    text: string
-    done: boolean
-    dataId: string    
-    
+      data:
+          text: string
+          done: boolean
+          dataId: string
     </script>
-</head>
-<body>
-<div data-id={dataId}>
-    <span>{text} - {done?done:tdb}</span>
-    <button ref="done">done</button>
-    <button ref="remove">remove</button>
-</div>
-</body>
+  </head>
+  <body>
+    <div data-id="{dataId}">
+      <span>{text} - {done?done:tdb}</span>
+      <button ref="done">done</button>
+      <button ref="remove">remove</button>
+    </div>
+  </body>
 </html>
 ```
 
 `item.ts`
 
 ```typescript
-import {render, ItemVS, ItemElement} from './item.jay.html';
-import {createEffect, createState, createEvents, makeJayComponent} from 'jay-hooks';
+import { render, ItemVS, ItemElement } from './item.jay.html';
+import { createEffect, createState, createEvents, makeJayComponent } from 'jay-hooks';
 
 export interface ItemData {
-    text: string,
-    dataId: string,
-    onRemove: () => void
+  text: string;
+  dataId: string;
+  onRemove: () => void;
 }
 
-export interface ItemComponent extends JayComponent<ItemData, ItemVS, ItemElement> {
-}
+export interface ItemComponent extends JayComponent<ItemData, ItemVS, ItemElement> {}
 
 export function Item(props: ItemData): ItemComponent {
-    const [text, setText] = createState(props.text);
-    const [done, setDone] = createState(false);
+  const [text, setText] = createState(props.text);
+  const [done, setDone] = createState(false);
 
-    jayElement.done.onclick = () => setDone(!done());
-    jayElement.remove.onclick = () => onRemove();
+  jayElement.done.onclick = () => setDone(!done());
+  jayElement.remove.onclick = () => onRemove();
 
-    return () => ({
-        text: text(),
-        done: done(),
-        dataId: props.dataId
-    })
+  return () => ({
+    text: text(),
+    done: done(),
+    dataId: props.dataId,
+  });
 }
 
 export default makeJayComponent(render, Item);
@@ -120,63 +117,60 @@ and an element and component using the item Component will look like
 `parent.jay.html`
 
 ```html
-
 <html>
-<head>
+  <head>
     <script type="application/yaml-jay">
-data:
-    text: string
-    onRemove: function    
-    
+      data:
+          text: string
+          onRemove: function
     </script>
-</head>
-<body>
-<div>
-    <Item text={text} data-id="AAA" on-remove={onRemove}></Item>
-</div>
-</body>
+  </head>
+  <body>
+    <div>
+      <Item text="{text}" data-id="AAA" on-remove="{onRemove}"></Item>
+    </div>
+  </body>
 </html>
 ```
 
 ```typescript
 // GENERATED ELEMENT CODE FROM A JAY FILE
 interface ParentVS {
-    text: string,
-    onRemove: () => void
+  text: string;
+  onRemove: () => void;
 }
 
-interface ParentElement extends JayElement<ParentVS> {
-}
+interface ParentElement extends JayElement<ParentVS> {}
 
 function renderComposite(viewState: ViewState): TestElement {
-    return ConstructContext.withRootContext(viewState, () =>
-        e('div', {}, [
-            childComp((props: ItemData) => Item(props),
-                vs => ({text: vs.text, dataId: 'AAA', onRemove: vs.onRemove}))
-        ])
-    ) as ParentElement;
+  return ConstructContext.withRootContext(viewState, () =>
+    e('div', {}, [
+      childComp(
+        (props: ItemData) => Item(props),
+        (vs) => ({ text: vs.text, dataId: 'AAA', onRemove: vs.onRemove }),
+      ),
+    ]),
+  ) as ParentElement;
 }
 ```
 
 `parent.ts`
 
 ```typescript
-import {render, ParentVS, ParentElement} from './parent.jay.html';
-import {createEffect, createState, createEvents, makeJayComponent} from 'jay-hooks';
+import { render, ParentVS, ParentElement } from './parent.jay.html';
+import { createEffect, createState, createEvents, makeJayComponent } from 'jay-hooks';
 
-export interface ParentProps {
-}
+export interface ParentProps {}
 
-export interface ParentComponent extends JayComponent<ParentProps, ParentVS, ParentElement> {
-}
+export interface ParentComponent extends JayComponent<ParentProps, ParentVS, ParentElement> {}
 
 export function Parent(props: ParentProps, je: ParentElement): ParentComponent {
-    const [removed, setRemoved] = createState(false);
+  const [removed, setRemoved] = createState(false);
 
-    return () => ({
-        text: 'some text for the child component',
-        onremove: () => doSomethingOnRemove()
-    })
+  return () => ({
+    text: 'some text for the child component',
+    onremove: () => doSomethingOnRemove(),
+  });
 }
 
 export default makeJayComponent(render, Item);
@@ -197,56 +191,54 @@ component type and use a new hook to invoke the event. The item component looks 
 `item.jay.html`
 
 ```html
-
 <html>
-<head>
+  <head>
     <script type="application/yaml-jay">
-data:
-    text: string
-    done: boolean
-    dataId: string    
-    
+      data:
+          text: string
+          done: boolean
+          dataId: string
     </script>
-</head>
-<body>
-<div data-id={dataId}>
-    <span>{text} - {done?done:tdb}</span>
-    <button ref="done">done</button>
-    <button ref="remove">remove</button>
-</div>
-</body>
+  </head>
+  <body>
+    <div data-id="{dataId}">
+      <span>{text} - {done?done:tdb}</span>
+      <button ref="done">done</button>
+      <button ref="remove">remove</button>
+    </div>
+  </body>
 </html>
 ```
 
 `item.ts`
 
 ```typescript
-import {render, ItemVS, ItemElement} from './item.jay.html';
-import {createEffect, createState, createEvents, makeJayComponent} from 'jay-hooks';
+import { render, ItemVS, ItemElement } from './item.jay.html';
+import { createEffect, createState, createEvents, makeJayComponent } from 'jay-hooks';
 
 export interface ItemData {
-    text: string,
-    dataId: string
+  text: string;
+  dataId: string;
 }
 
-// not sure we need to code the component interface - potentially it can be virtually created using TS language service 
+// not sure we need to code the component interface - potentially it can be virtually created using TS language service
 export interface ItemComponent extends JayComponent<ItemData, ItemVS, ItemElement> {
-    onremove: () => void
+  onremove: () => void;
 }
 
 export function Item(props: ItemData, je: ItemElement): ItemComponent {
-    const [text, setText] = createState(props.text);
-    const [done, setDone] = createState(false);
-    const onremove = createEvent('remove');
+  const [text, setText] = createState(props.text);
+  const [done, setDone] = createState(false);
+  const onremove = createEvent('remove');
 
-    jayElement.done.onclick = () => setDone(!done());
-    jayElement.remove.onclick = () => onremove();
+  jayElement.done.onclick = () => setDone(!done());
+  jayElement.remove.onclick = () => onremove();
 
-    return () => ({
-        text: text(),
-        done: done(),
-        dataId: props.dataId
-    })
+  return () => ({
+    text: text(),
+    done: done(),
+    dataId: props.dataId,
+  });
 }
 
 export default makeJayComponent(render, Item);
@@ -268,67 +260,63 @@ the element
 `parent.jay.html`
 
 ```html
-
 <html>
-<head>
+  <head>
     <script type="application/yaml-jay">
-data:
-    text: string
-    
+      data:
+          text: string
     </script>
-</head>
-<body>
-<div>
-    <Item ref="item" text={text} data-id="AAA"></Item>
-</div>
-</body>
+  </head>
+  <body>
+    <div>
+      <Item ref="item" text="{text}" data-id="AAA"></Item>
+    </div>
+  </body>
 </html>
 ```
 
 ```typescript
 // GENERATED ELEMENT CODE FROM A JAY FILE
 interface ParentVS {
-    text: string
+  text: string;
 }
 
 interface ParentElement extends JayElement<ParentVS> {
-    item: Item
+  item: Item;
 }
 
 function renderComposite(viewState: ViewState): TestElement {
-    return ConstructContext.withRootContext(viewState, () =>
-        e('div', {}, [
-            childComp({ref: 'item'}, (props: ItemData) => Item(props),
-                vs => ({text: vs.text, dataId: 'AAA'}))
-        ])
-    ) as ParentElement;
+  return ConstructContext.withRootContext(viewState, () =>
+    e('div', {}, [
+      childComp(
+        { ref: 'item' },
+        (props: ItemData) => Item(props),
+        (vs) => ({ text: vs.text, dataId: 'AAA' }),
+      ),
+    ]),
+  ) as ParentElement;
 }
 ```
 
 `parent.ts`
 
 ```typescript
-import {render, ParentVS, ParentElement} from './parent.jay.html';
-import {createEffect, createState, createEvents, makeJayComponent} from 'jay-hooks';
+import { render, ParentVS, ParentElement } from './parent.jay.html';
+import { createEffect, createState, createEvents, makeJayComponent } from 'jay-hooks';
 
-export interface ParentProps {
-}
+export interface ParentProps {}
 
 // not sure we need to code the component interface - potentially it can be virtually created using TS language service
-export interface ParentComponent extends JayComponent<ParentProps, ParentVS, ParentElement> {
-}
+export interface ParentComponent extends JayComponent<ParentProps, ParentVS, ParentElement> {}
 
 export function Parent(props: ParentProps, je: ParentElement): ParentComponent {
-    const [removed, setRemoved] = createState(false);
+  const [removed, setRemoved] = createState(false);
 
-    je.item.onremove = () => doSomethingOnRemove()
-    return () => ({
-        text: 'some text for the child component'
-    })
+  je.item.onremove = () => doSomethingOnRemove();
+  return () => ({
+    text: 'some text for the child component',
+  });
 }
 
 export default makeJayComponent(render, Item);
 ```
-
-                        
-                        

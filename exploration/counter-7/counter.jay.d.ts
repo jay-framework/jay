@@ -1,12 +1,15 @@
-import {JayElement} from "jay-runtime";
+import { JayElement } from 'jay-runtime';
 
 interface ViewState {
-  count: number,
+    count: number;
 }
 
 interface BindEvents {
-  on(event: string, callback: () => void): BindEvents
+    on(event: string, callback: () => void): BindEvents;
 }
 
 export declare function eventsFor(id: string): BindEvents;
-export declare function render(viewState: ViewState, events: Array<BindEvents>): JayElement<ViewState>
+export declare function render(
+    viewState: ViewState,
+    events: Array<BindEvents>,
+): JayElement<ViewState>;

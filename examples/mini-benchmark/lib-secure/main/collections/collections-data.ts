@@ -1,8 +1,8 @@
-import {render} from './collections.jay.html';
-import {makeJayComponentBridge} from "jay-secure";
+import { render } from './collections.jay.html';
+import { makeJayComponentBridge } from 'jay-secure';
 
 interface CollectionsProps {
-    cycles: number
+    cycles: number;
 }
 
 export const Collections = makeJayComponentBridge(render);

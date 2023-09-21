@@ -1,8 +1,8 @@
-import {render} from "./counter.jay.html";
-import {makeJayComponentBridge} from "jay-secure";
+import { render } from './counter.jay.html';
+import { makeJayComponentBridge } from 'jay-secure';
 
 export interface CounterProps {
-    initialCount: number
+    initialCount: number;
 }
 
 export const Counter = makeJayComponentBridge(render);

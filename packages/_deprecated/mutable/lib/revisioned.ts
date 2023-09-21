@@ -1,14 +1,14 @@
-import {isMutable} from "jay-mutable-contract";
+import { isMutable } from 'jay-mutable-contract';
 
 let nextRevision = 1;
 
 export interface Revisioned<T> {
-    value: T,
-    revNum: number
+    value: T;
+    revNum: number;
 }
 
 export function getRevision<T extends object>(value: T): Revisioned<T> {
-    return {value, revNum: isMutable(value)?value.getRevision(): NaN};
+    return { value, revNum: isMutable(value) ? value.getRevision() : NaN };
 }
 
 export function setRevision<T extends object>(value: T, revision: number) {
@@ -16,11 +16,11 @@ export function setRevision<T extends object>(value: T, revision: number) {
 }
 
 function getRevNum(value: any) {
-    return isMutable(value)?value.getRevision(): NaN;
+    return isMutable(value) ? value.getRevision() : NaN;
 }
 
 export function nextRevNum(): number {
-    return nextRevision++
+    return nextRevision++;
 }
 
 export function touchRevision<T extends object>(value: T): T {
@@ -31,13 +31,10 @@ export function touchRevision<T extends object>(value: T): T {
 export function checkModified<T>(value: T, oldValue?: Revisioned<T>): [Revisioned<T>, boolean] {
     let isObject = typeof value === 'object';
     let revNum = getRevNum(value);
-    let newValue = {value, revNum};
-    if (!oldValue)
-        return [newValue, true]
+    let newValue = { value, revNum };
+    if (!oldValue) return [newValue, true];
     else {
-        let modified = Number.isNaN(revNum)?
-            value !== oldValue.value :
-            revNum !== oldValue.revNum
-        return [newValue, modified]
+        let modified = Number.isNaN(revNum) ? value !== oldValue.value : revNum !== oldValue.revNum;
+        return [newValue, modified];
     }
 }

@@ -6,13 +6,9 @@
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "dist",
-    "lib": [
-      "es2016",
-      "dom"
-    ],
+    "lib": ["es2016", "dom"],
     "rootDir": "lib"
   },
   "lib": ["es2015"],
   "include": ["lib/**/*"]
-
 }

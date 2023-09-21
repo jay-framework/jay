@@ -1,9 +1,8 @@
-import {render as BasicRender} from './basic.jay.html';
-import {makeJayComponentBridge} from "jay-secure";
+import { render as BasicRender } from './basic.jay.html';
+import { makeJayComponentBridge } from 'jay-secure';
 
 interface BasicProps {
-    cycles: number
+    cycles: number;
 }
 
-export const Basic = makeJayComponentBridge(BasicRender)
-
+export const Basic = makeJayComponentBridge(BasicRender);

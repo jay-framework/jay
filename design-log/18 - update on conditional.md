@@ -1,13 +1,12 @@
-Update on Conditional
-==============
+# Update on Conditional
 
 Conditional, as implemented today, creates the condition child elements
 immediately on creation, even if the condition is `false`.
 
-This imposes a potential performance impact, as we may be doing 
+This imposes a potential performance impact, as we may be doing
 unneeded work on creation time.
 
-However, this design also simplifies `refs` as the `refs` to static 
+However, this design also simplifies `refs` as the `refs` to static
 elements as children of a condition are just static refs.
 
 If we change condition to create the children lazily on first turning to `true`,

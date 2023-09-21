@@ -1,39 +1,42 @@
 <html>
-<head>
-    <link rel="import" href="./basic/basic-data" names="Basic"/>
-    <link rel="import" href="./collections/collections-data" names="Collections"/>
-    <link rel="import" href="./composite/composite-data" names="Composite"/>
-    <link rel="import" href="./conditions/conditions-data" names="Conditions"/>
-    <link rel="import" href="./table/table-host" names="TableHost"/>
+  <head>
+    <link rel="import" href="./basic/basic-data" names="Basic" />
+    <link rel="import" href="./collections/collections-data" names="Collections" />
+    <link rel="import" href="./composite/composite-data" names="Composite" />
+    <link rel="import" href="./conditions/conditions-data" names="Conditions" />
+    <link rel="import" href="./table/table-host" names="TableHost" />
     <script type="application/yaml-jay">
-data:
-  cycles: number
-  selectedExample: enum(basic | collections | composite | conditions | table)
-  progress: string
-  examples:
-    - value: string
-      name: string
+      data:
+        cycles: number
+        selectedExample: enum(basic | collections | composite | conditions | table)
+        progress: string
+        examples:
+          - value: string
+            name: string
     </script>
-</head>
-<body>
-<div>
-    <div class="title">Jay Benchmarks - the Jay Project</div>
-    <div class="select-example">
+  </head>
+  <body>
+    <div>
+      <div class="title">Jay Benchmarks - the Jay Project</div>
+      <div class="select-example">
         <label for="choose-example">Select example to view</label>
         <select id="choose-example" ref="choose-example">
-            <option forEach="examples" trackBy="value" value="value">{name}</option>
+          <option forEach="examples" trackBy="value" value="value">{name}</option>
         </select>
+      </div>
+      <div class="cycles">
+        <label for="cycles">Select number of cycles</label
+        ><input id="cycles" value="{cycles}" ref="cycles" />
+      </div>
+      <div class="progress">{progress}</div>
+      <button ref="run">run</button>
+      <div class="stage">
+        <Basic ref="basic" if="selectedExample === basic" cycles="{cycles}" />
+        <Collections ref="collections" if="selectedExample === collections" cycles="{cycles}" />
+        <Composite ref="composite" if="selectedExample === composite" cycles="{cycles}" />
+        <Conditions ref="conditions" if="selectedExample === conditions" cycles="{cycles}" />
+        <TableHost ref="table" if="selectedExample === table" cycles="{cycles}" />
+      </div>
     </div>
-    <div class="cycles"><label for="cycles">Select number of cycles</label><input id="cycles" value="{cycles}" ref="cycles"/></div>
-    <div class="progress">{progress}</div>
-    <button ref="run">run</button>
-    <div class="stage">
-        <Basic ref="basic" if="selectedExample === basic" cycles="{cycles}"/>
-        <Collections ref="collections" if="selectedExample === collections" cycles="{cycles}"/>
-        <Composite ref="composite" if="selectedExample === composite" cycles="{cycles}"/>
-        <Conditions ref="conditions" if="selectedExample === conditions" cycles="{cycles}"/>
-        <TableHost ref="table" if="selectedExample === table" cycles="{cycles}"/>
-    </div>
-</div>
-</body>
+  </body>
 </html>
