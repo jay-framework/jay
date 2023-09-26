@@ -1,4 +1,4 @@
-## Transforming Typescript
+# building the code splitting compiler
 
 Resources:
 
