@@ -64,10 +64,13 @@ class Indent {
         return new Indent(this.base, false, true);
     }
 
-    static forceIndent(code: string) {
+    static forceIndent(code: string, size: number = 2) {
+        let indent = ''
+        for (let i=0; i < size; i++)
+            indent += ' ';
         return code
             .split('\n')
-            .map((_) => (_.length > 0 ? '  ' + _ : _))
+            .map((_) => (_.length > 0 ? indent + _ : _))
             .join('\n');
     }
 }
@@ -84,6 +87,7 @@ interface RenderContext {
     importedSymbols: Set<string>;
     indent: Indent;
     dynamicRef: boolean;
+    importedSandboxedSymbols: Set<string>;
     nextAutoRefName: () => string;
 }
 
@@ -92,36 +96,41 @@ function renderInterface(aType: JayType): string {
 
     let genInterface = '';
     if (aType instanceof JayObjectType) {
-        genInterface = `export interface ${aType.name} {\n`;
-        genInterface += Object.keys(aType.props)
-            .map((prop) => {
-                let childType = aType.props[prop];
-                if (childType instanceof JayImportedType) {
-                    return `  ${prop}: ${childType.name}`;
-                } else if (childType instanceof JayObjectType) {
-                    childInterfaces.push(renderInterface(childType));
-                    return `  ${prop}: ${childType.name}`;
-                } else if (childType instanceof JayArrayType) {
-                    let arrayItemType = childType.itemType;
-                    if (arrayItemType instanceof JayObjectType) {
-                        childInterfaces.push(renderInterface(arrayItemType));
-                        return `  ${prop}: Array<${arrayItemType.name}>`;
-                    } else {
-                        throw new Error('not implemented yet');
-                        // todo implement array of array or array of primitive
-                    }
-                } else if (childType instanceof JayAtomicType)
-                    return `  ${prop}: ${childType.name}`;
-                else if (childType instanceof JayEnumType) {
-                    let genEnum = `export enum ${childType.name} {\n${childType.values
-                        .map((_) => '  ' + _)
-                        .join(',\n')}\n}`;
-                    childInterfaces.push(genEnum);
-                    return `  ${prop}: ${childType.name}`;
-                } else throw new Error('unknown type');
-            })
-            .join(',\n');
-        genInterface += '\n}';
+        const propKeys = Object.keys(aType.props);
+        if (propKeys.length === 0)
+            genInterface = `export interface ${aType.name} {}`;
+        else {
+            genInterface = `export interface ${aType.name} {\n`;
+            genInterface += Object.keys(aType.props)
+                .map((prop) => {
+                    let childType = aType.props[prop];
+                    if (childType instanceof JayImportedType) {
+                        return `  ${prop}: ${childType.name}`;
+                    } else if (childType instanceof JayObjectType) {
+                        childInterfaces.push(renderInterface(childType));
+                        return `  ${prop}: ${childType.name}`;
+                    } else if (childType instanceof JayArrayType) {
+                        let arrayItemType = childType.itemType;
+                        if (arrayItemType instanceof JayObjectType) {
+                            childInterfaces.push(renderInterface(arrayItemType));
+                            return `  ${prop}: Array<${arrayItemType.name}>`;
+                        } else {
+                            throw new Error('not implemented yet');
+                            // todo implement array of array or array of primitive
+                        }
+                    } else if (childType instanceof JayAtomicType)
+                        return `  ${prop}: ${childType.name}`;
+                    else if (childType instanceof JayEnumType) {
+                        let genEnum = `export enum ${childType.name} {\n${childType.values
+                            .map((_) => '  ' + _)
+                            .join(',\n')}\n}`;
+                        childInterfaces.push(genEnum);
+                        return `  ${prop}: ${childType.name}`;
+                    } else throw new Error('unknown type');
+                })
+                .join(',\n');
+            genInterface += '\n}';
+        }
     }
     return [...childInterfaces, genInterface].join('\n\n');
 }
@@ -352,7 +361,7 @@ function renderChildCompRef(
 }
 
 function renderNode(node: Node, context: RenderContext): RenderFragment {
-    let { variables, importedSymbols, indent, dynamicRef } = context;
+    let { variables, importedSymbols, importedSandboxedSymbols, indent, dynamicRef } = context;
 
     function de(
         tagName: string,
@@ -471,14 +480,24 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
         });
         if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
         let getProps = `(vs: ${newVariables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
-        return new RenderFragment(
-            `${currIndent.firstLine}childComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
-            Imports.for(Import.childComp)
-                .plus(propsGetterAndRefs.imports)
-                .plus(renderedRef.imports),
-            propsGetterAndRefs.validations,
-            renderedRef.refs,
-        );
+        if (importedSandboxedSymbols.has(htmlElement.rawTagName))
+            return new RenderFragment(
+                `${currIndent.firstLine}secureChildComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
+                Imports.for(Import.secureChildComp)
+                    .plus(propsGetterAndRefs.imports)
+                    .plus(renderedRef.imports),
+                propsGetterAndRefs.validations,
+                renderedRef.refs,
+            );
+        else
+            return new RenderFragment(
+                `${currIndent.firstLine}childComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
+                Imports.for(Import.childComp)
+                    .plus(propsGetterAndRefs.imports)
+                    .plus(renderedRef.imports),
+                propsGetterAndRefs.validations,
+                renderedRef.refs,
+            );
     }
 
     switch (node.nodeType) {
@@ -567,6 +586,28 @@ ${renderedReferences}
     return { imports, renderedRefs, refImportsInUse };
 }
 
+function processImportedComponents(importStatements: JayImportLink[]) {
+    return importStatements.reduce((processedImports, importStatement) => {
+        importStatement.names.forEach(importName => {
+            let name = importName.as || importName.name
+            processedImports.importedSymbols.add(name);
+            if (importStatement.sandbox)
+                processedImports.importedSandboxedSymbols.add(name);
+        })
+        return processedImports;
+    }, {importedSymbols: new Set<string>(), importedSandboxedSymbols: new Set<string>()});
+
+}
+
+function renderDynanicRefs(dynamicRefs: Ref[]) {
+    return dynamicRefs
+        .map(
+            (ref) =>
+                `    const ${ref.constName} = ${isComponentRef(ref) ? 'ccr' : 'ecr'}('${ref.ref}');`,
+        )
+        .join('\n');
+}
+
 function renderFunctionImplementation(
     types: JayType,
     rootBodyElement: HTMLElement,
@@ -580,14 +621,13 @@ function renderFunctionImplementation(
     refImportsInUse: Set<string>;
 } {
     let variables = new Variables(types);
-    let importedSymbols = new Set(
-        importStatements.flatMap((_) => _.names.map((sym) => (sym.as ? sym.as : sym.name))),
-    );
+    let {importedSymbols, importedSandboxedSymbols} = processImportedComponents(importStatements);
     let renderedRoot = renderNode(firstElementChild(rootBodyElement), {
         variables,
         importedSymbols,
         indent: new Indent('    '),
         dynamicRef: false,
+        importedSandboxedSymbols,
         nextAutoRefName: newAutoRefNameGenerator(),
     });
     let elementType = baseElementName + 'Element';
@@ -608,17 +648,16 @@ function renderFunctionImplementation(
     let dynamicRefs = renderedRoot.refs.filter(
         (ref) => isCollectionRef(ref) || isComponentCollectionRef(ref),
     );
+    if (importedSandboxedSymbols.size > 0) {
+        imports = imports.plus(Import.secureMainRoot)
+        renderedRoot = renderedRoot.map(code =>
+            `      mr(viewState, () =>
+${Indent.forceIndent(code, 4)})`)
+    }
     if (dynamicRefs.length > 0) {
-        body = `export function render(viewState: ${
-            types.name
-        }, options?: RenderElementOptions): ${elementType} {
+        body = `export function render(viewState: ${types.name}, options?: RenderElementOptions): ${elementType} {
   return ConstructContext.withRootContext(viewState, () => {
-${dynamicRefs
-    .map(
-        (ref) =>
-            `    const ${ref.constName} = ${isComponentRef(ref) ? 'ccr' : 'ecr'}('${ref.ref}');`,
-    )
-    .join('\n')}
+${renderDynanicRefs(dynamicRefs)}
     return ${renderedRoot.rendered.trim()}}, options);
 }`;
     } else
@@ -763,14 +802,13 @@ function renderBridge(
     elementType: string,
 ) {
     let variables = new Variables(types);
-    let importedSymbols = new Set(
-        importStatements.flatMap((_) => _.names.map((sym) => (sym.as ? sym.as : sym.name))),
-    );
+    let {importedSymbols, importedSandboxedSymbols} = processImportedComponents(importStatements);
     let renderedBridge = renderElementBridgeNode(rootBodyElement, {
         variables,
         importedSymbols,
         indent: new Indent('    '),
         dynamicRef: false,
+        importedSandboxedSymbols,
         nextAutoRefName: newAutoRefNameGenerator(),
     });
     let refsPart =
@@ -787,12 +825,7 @@ ${renderedBridge.rendered}
         return new RenderFragment(
             `export function render(viewState: ${types.name}): ${elementType} {
   return elementBridge(viewState, () => {
-${dynamicRefs
-    .map(
-        (ref) =>
-            `    const ${ref.constName} = ${isComponentRef(ref) ? 'ccr' : 'ecr'}('${ref.ref}');`,
-    )
-    .join('\n')}
+${renderDynanicRefs(dynamicRefs)}
     return [${Indent.forceIndent(refsPart)}]})
 }`,
             Imports.for(Import.sandboxElementBridge).plus(renderedBridge.imports),

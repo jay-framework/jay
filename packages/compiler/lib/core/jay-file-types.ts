@@ -93,6 +93,7 @@ export interface JayImportName {
 export interface JayImportLink {
     module: string;
     names: JayImportName[];
+    sandbox?: boolean;
 }
 
 export interface JayFile {

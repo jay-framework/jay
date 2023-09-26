@@ -7,6 +7,8 @@ export const readSourceJayFile = async (folder) =>
     (await readFile(`./test/fixtures/${folder}/source.jay.html`)).toString().trim();
 export const readNamedSourceJayFile = async (folder, file) =>
     (await readFile(`./test/fixtures/${folder}/${file}.jay.html`)).toString().trim();
+export const readGeneratedNamedFile = async (folder, file) =>
+    (await readFile(`./test/fixtures/${folder}/${file}.ts`)).toString().trim();
 export const readGeneratedElementFile = async (folder) =>
     (await readFile(`./test/fixtures/${folder}/generated-element.ts`)).toString().trim();
 export const readGeneratedElementBridgeFile = async (folder) =>

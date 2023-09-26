@@ -116,6 +116,7 @@ function parseImports(
     return importLinks.map<JayImportLink>((importLink) => {
         let module = importLink.getAttribute('href');
         let rawNames = importLink.getAttribute('names');
+        let sandbox = !!importLink.getAttribute('sandbox');
         try {
             let names = parseImportNames(rawNames);
             if (names.length === 0)
@@ -138,7 +139,7 @@ function parseImports(
                     );
             }
 
-            return { module, names };
+            return { module, names, sandbox };
         } catch (e) {
             validations.push(`failed to parse import names for module ${module} - ${e.message}`);
             return { module, names: [] };

@@ -1,9 +1,7 @@
 import {JayElement} from "jay-runtime";
 import {elementBridge} from "jay-secure";
 
-export interface EmptyElementViewState {
-
-}
+export interface EmptyElementViewState {}
 
 export interface EmptyElementElementRefs {}
 

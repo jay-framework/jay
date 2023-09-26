@@ -129,6 +129,16 @@ export const Import = {
         'sandboxForEach as forEach',
         ImportsFor.elementBridge,
     ),
+    secureMainRoot: importStatementFragment(
+        'jay-secure',
+        'mainRoot as mr',
+        ImportsFor.implementation,
+    ),
+    secureChildComp: importStatementFragment(
+        'jay-secure',
+        'secureChildComp',
+        ImportsFor.implementation,
+    ),
 };
 
 export class Imports {

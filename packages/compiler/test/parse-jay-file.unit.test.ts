@@ -190,6 +190,7 @@ describe('compiler', () => {
                                 },
                             },
                         ],
+                        "sandbox": false
                     },
                     {
                         module: './fixtures/components/imports/component2.ts',
@@ -206,6 +207,7 @@ describe('compiler', () => {
                                 },
                             },
                         ],
+                        "sandbox": false
                     },
                 ]),
             );
