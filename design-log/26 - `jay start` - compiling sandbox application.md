@@ -62,3 +62,7 @@ The `jay start` command will start dev experience which will
    2. for each component, a dedicated page with a board showing the component
    3. preferably, a property panel to enter property values for the component
 
+here we have an hidden challenge - how do we find all the components?
+* do we demand a configuration file that lists all the components that the UI app shows?
+* do we scan the folders for any Jay Component and showing it? what if the component is not independent and requires 
+  some `context` or special `props` to operate? 
