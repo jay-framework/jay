@@ -1,7 +1,7 @@
 export enum ImportsFor {
     definition,
     implementation,
-    elementBridge,
+    elementSandbox,
 }
 
 interface ImportName {
@@ -22,7 +22,7 @@ export const Import = {
         'JayElement',
         ImportsFor.definition,
         ImportsFor.implementation,
-        ImportsFor.elementBridge,
+        ImportsFor.elementSandbox,
     ),
     element: importStatementFragment('jay-runtime', 'element as e', ImportsFor.implementation),
     dynamicText: importStatementFragment(
@@ -61,14 +61,14 @@ export const Import = {
         'HTMLElementCollectionProxy',
         ImportsFor.definition,
         ImportsFor.implementation,
-        ImportsFor.elementBridge,
+        ImportsFor.elementSandbox,
     ),
     HTMLElementProxy: importStatementFragment(
         'jay-runtime',
         'HTMLElementProxy',
         ImportsFor.definition,
         ImportsFor.implementation,
-        ImportsFor.elementBridge,
+        ImportsFor.elementSandbox,
     ),
     childComp: importStatementFragment('jay-runtime', 'childComp', ImportsFor.implementation),
     elemRef: importStatementFragment('jay-runtime', 'elemRef as er', ImportsFor.implementation),
@@ -92,42 +92,62 @@ export const Import = {
     sandboxElementBridge: importStatementFragment(
         'jay-secure',
         'elementBridge',
-        ImportsFor.elementBridge,
+        ImportsFor.elementSandbox,
+    ),
+    sandboxRoot: importStatementFragment(
+        'jay-secure',
+        'sandboxRoot',
+        ImportsFor.elementSandbox,
     ),
     sandboxElement: importStatementFragment(
         'jay-secure',
         'sandboxElement as e',
-        ImportsFor.elementBridge,
+        ImportsFor.elementSandbox,
     ),
     sandboxChildComp: importStatementFragment(
         'jay-secure',
         'sandboxChildComp as childComp',
-        ImportsFor.elementBridge,
+        ImportsFor.elementSandbox,
     ),
     sandboxElemRef: importStatementFragment(
         'jay-secure',
         'elemRef as er',
-        ImportsFor.elementBridge,
+        ImportsFor.elementSandbox,
     ),
     sandboxElemCollectionRef: importStatementFragment(
         'jay-secure',
         'elemCollectionRef as ecr',
-        ImportsFor.elementBridge,
+        ImportsFor.elementSandbox,
     ),
     sandboxCompRef: importStatementFragment(
         'jay-secure',
         'compRef as cr',
-        ImportsFor.elementBridge,
+        ImportsFor.elementSandbox,
     ),
     sandboxCompCollectionRef: importStatementFragment(
         'jay-secure',
         'compCollectionRef as ccr',
-        ImportsFor.elementBridge,
+        ImportsFor.elementSandbox,
     ),
     sandboxForEach: importStatementFragment(
         'jay-secure',
         'sandboxForEach as forEach',
-        ImportsFor.elementBridge,
+        ImportsFor.elementSandbox,
+    ),
+    handshakeMessageJayChannel: importStatementFragment(
+        'jay-secure',
+        'HandshakeMessageJayChannel',
+        ImportsFor.elementSandbox,
+    ),
+    jayPort: importStatementFragment(
+        'jay-secure',
+        'JayPort',
+        ImportsFor.elementSandbox,
+    ),
+    setWorkerPort: importStatementFragment(
+        'jay-secure',
+        'setWorkerPort',
+        ImportsFor.elementSandbox,
     ),
     secureMainRoot: importStatementFragment(
         'jay-secure',

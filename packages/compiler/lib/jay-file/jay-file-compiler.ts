@@ -1,8 +1,8 @@
-import { WithValidations } from '../core/with-validations';
-import { parseJayFile } from './jay-file-parser';
-import { HTMLElement, NodeType } from 'node-html-parser';
+import {WithValidations} from '../core/with-validations';
+import {parseJayFile} from './jay-file-parser';
+import {HTMLElement, NodeType} from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
-import { Ref, RenderFragment } from '../core/render-fragment';
+import {Ref, RenderFragment} from '../core/render-fragment';
 import {
     parseAccessor,
     parseAttributeExpression,
@@ -13,9 +13,9 @@ import {
     parseTextExpression,
     Variables,
 } from '../expressions/expression-compiler';
-import { htmlElementTagNameMap } from './html-element-tag-name-map';
-import { camelCase } from 'camel-case';
-import { Import, Imports, ImportsFor } from '../core/imports';
+import {htmlElementTagNameMap} from './html-element-tag-name-map';
+import {camelCase} from 'camel-case';
+import {Import, Imports, ImportsFor} from '../core/imports';
 import {
     JayArrayType,
     JayAtomicType,
@@ -843,6 +843,51 @@ ${renderDynanicRefs(dynamicRefs)}
         );
 }
 
+function renderSandboxRoot(
+    types: JayType,
+    rootBodyElement: HTMLElement,
+    importStatements: JayImportLink[]
+) {
+    let variables = new Variables(types);
+    let {importedSymbols, importedSandboxedSymbols} = processImportedComponents(importStatements);
+    let renderedBridge = renderElementBridgeNode(rootBodyElement, {
+        variables,
+        importedSymbols,
+        indent: new Indent('    '),
+        dynamicRef: false,
+        importedSandboxedSymbols,
+        nextAutoRefName: newAutoRefNameGenerator(),
+    });
+    let refsPart =
+        renderedBridge.rendered.length > 0
+            ? `
+${renderedBridge.rendered}
+  `
+            : '';
+
+    let dynamicRefs = renderedBridge.refs.filter(
+        (ref) => isCollectionRef(ref) || isComponentCollectionRef(ref),
+    );
+    if (dynamicRefs.length > 0) {
+        return new RenderFragment(
+            `() => {
+${renderDynanicRefs(dynamicRefs)}
+    return [${Indent.forceIndent(refsPart)}]})
+}`,
+            renderedBridge.imports,
+            renderedBridge.validations,
+            renderedBridge.refs,
+        );
+    } else
+        return new RenderFragment(
+            `() => [${refsPart}]`,
+            renderedBridge.imports,
+            renderedBridge.validations,
+            renderedBridge.refs,
+        );
+}
+
+
 export function generateElementDefinitionFile(
     html: string,
     filename: string,
@@ -945,7 +990,7 @@ export function generateElementBridgeFile(
                     .plus(Import.element)
                     .plus(Import.jayElement)
                     .plus(renderedBridge.imports),
-                ImportsFor.elementBridge,
+                ImportsFor.elementSandbox,
                 jayFile.imports,
                 refImportsInUse,
             ),
@@ -959,10 +1004,42 @@ export function generateElementBridgeFile(
     });
 }
 
+const CALL_INITIALIZE_WORKER = `setWorkerPort(new JayPort(new HandshakeMessageJayChannel(self)));
+initializeWorker();`
+
+
 export function generateSandboxRootFile(
     html: string,
     filename: string,
     filePath: string,
 ): WithValidations<string> {
-    return null;
+    let parsedFile = parseJayFile(html, filename, filePath);
+    return parsedFile.map((jayFile: JayFile) => {
+        let {importedSymbols, importedSandboxedSymbols} = processImportedComponents(jayFile.imports);
+        let types = generateTypes(jayFile.types);
+        let renderedSandboxRoot = renderSandboxRoot(
+            jayFile.types,
+            jayFile.body,
+            jayFile.imports
+        );
+        let renderedImports = renderImports(Imports.for(
+            Import.sandboxRoot,
+            Import.sandboxChildComp,
+            Import.handshakeMessageJayChannel,
+            Import.jayPort,
+            Import.setWorkerPort)
+            .plus(renderedSandboxRoot.imports), ImportsFor.elementSandbox, jayFile.imports, new Set())
+
+        let initializeWorker = `export function initializeWorker() {
+  sandboxRoot(${renderedSandboxRoot.rendered});
+}`
+        return [
+            renderedImports,
+            types,
+            initializeWorker,
+            CALL_INITIALIZE_WORKER
+        ]
+            .filter((_) => _ !== null && _ !== '')
+            .join('\n\n');
+    })
 }
