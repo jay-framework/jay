@@ -1,4 +1,4 @@
-import { generateRuntimeFile } from '../lib';
+import { generateElementFile } from '../lib';
 import { describe, expect, it } from '@jest/globals';
 import {
     readGeneratedElementFile,
@@ -11,7 +11,7 @@ describe('generate the runtime file', () => {
     describe('basics', () => {
         it('for simple file with dynamic text', async () => {
             const jayFile = await readSourceJayFile('basics/simple-dynamic-text');
-            let runtimeFile = generateRuntimeFile(
+            let runtimeFile = generateElementFile(
                 jayFile,
                 'simple-dynamic-text.jay.html',
                 './test/'
@@ -24,7 +24,7 @@ describe('generate the runtime file', () => {
 
         it('for simple file with static text', async () => {
             const jayFile = await readSourceJayFile('basics/simple-static-text');
-            let runtimeFile = generateRuntimeFile(
+            let runtimeFile = generateElementFile(
                 jayFile,
                 'simple-static-text.jay.html',
                 './test/'
@@ -37,56 +37,56 @@ describe('generate the runtime file', () => {
 
         it('for an empty element', async () => {
             const jayFile = await readSourceJayFile('basics/empty-element');
-            let runtimeFile = generateRuntimeFile(jayFile, 'empty-element.jay.html', './test/');
+            let runtimeFile = generateElementFile(jayFile, 'empty-element.jay.html', './test/');
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(await readGeneratedElementFile('basics/empty-element'));
         });
 
         it('for different data types', async () => {
             const jayFile = await readSourceJayFile('basics/data-types');
-            let runtimeFile = generateRuntimeFile(jayFile, 'data-types.jay.html', './test/');
+            let runtimeFile = generateElementFile(jayFile, 'data-types.jay.html', './test/');
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(await readGeneratedElementFile('basics/data-types'));
         });
 
         it('for a composition of divs', async () => {
             const jayFile = await readSourceJayFile('basics/composite');
-            let runtimeFile = generateRuntimeFile(jayFile, 'composite.jay.html', './test/');
+            let runtimeFile = generateElementFile(jayFile, 'composite.jay.html', './test/');
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(await readGeneratedElementFile('basics/composite'));
         });
 
         it('for composition of divs 2', async () => {
             const jayFile = await readSourceJayFile('basics/composite 2');
-            let runtimeFile = generateRuntimeFile(jayFile, 'composite 2.jay.html', './test/');
+            let runtimeFile = generateElementFile(jayFile, 'composite 2.jay.html', './test/');
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(await readGeneratedElementFile('basics/composite 2'));
         });
 
         it('for styles', async () => {
             const jayFile = await readSourceJayFile('basics/styles');
-            let runtimeFile = generateRuntimeFile(jayFile, 'styles.jay.html', './test/');
+            let runtimeFile = generateElementFile(jayFile, 'styles.jay.html', './test/');
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(await readGeneratedElementFile('basics/styles'));
         });
 
         it('refs', async () => {
             const jayFile = await readSourceJayFile('basics/refs');
-            let runtimeFile = generateRuntimeFile(jayFile, 'refs.jay.html', './test/');
+            let runtimeFile = generateElementFile(jayFile, 'refs.jay.html', './test/');
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(await readGeneratedElementFile('basics/refs'));
         });
 
         it('with different attributes and properties', async () => {
             const jayFile = await readSourceJayFile('basics/attributes');
-            let runtimeFile = generateRuntimeFile(jayFile, 'attributes.jay.html', './test/');
+            let runtimeFile = generateElementFile(jayFile, 'attributes.jay.html', './test/');
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(await readGeneratedElementFile('basics/attributes'));
         });
 
         it('with different view state input types', async () => {
             const jayFile = await readSourceJayFile('basics/dynamic-text-input-types');
-            let runtimeFile = generateRuntimeFile(
+            let runtimeFile = generateElementFile(
                 jayFile,
                 'dynamic-text-input-types.jay.html',
                 './test/'
@@ -99,7 +99,7 @@ describe('generate the runtime file', () => {
 
         it('whitespace collapsing and handling', async () => {
             const jayFile = await readSourceJayFile('basics/whitespace-and-text');
-            let runtimeFile = generateRuntimeFile(
+            let runtimeFile = generateElementFile(
                 jayFile,
                 'whitespace-and-text.jay.html',
                 './test/'
@@ -114,7 +114,7 @@ describe('generate the runtime file', () => {
     describe('conditions', () => {
         it('for conditional', async () => {
             const jayFile = await readSourceJayFile('conditions/conditions');
-            let runtimeFile = generateRuntimeFile(jayFile, 'conditions.jay.html', './test/');
+            let runtimeFile = generateElementFile(jayFile, 'conditions.jay.html', './test/');
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
                 await readGeneratedElementFile('conditions/conditions')
@@ -123,7 +123,7 @@ describe('generate the runtime file', () => {
 
         it('for conditional with refs', async () => {
             const jayFile = await readSourceJayFile('conditions/conditions-with-refs');
-            let runtimeFile = generateRuntimeFile(
+            let runtimeFile = generateElementFile(
                 jayFile,
                 'conditions-with-refs.jay.html',
                 './test/'
@@ -136,7 +136,7 @@ describe('generate the runtime file', () => {
 
         it('for enums and conditions', async () => {
             const jayFile = await readSourceJayFile('conditions/conditions-with-enum');
-            let runtimeFile = generateRuntimeFile(
+            let runtimeFile = generateElementFile(
                 jayFile,
                 'conditions-with-enum.jay.html',
                 './test/'
@@ -151,7 +151,7 @@ describe('generate the runtime file', () => {
     describe('collections', () => {
         it('for collections', async () => {
             const jayFile = await readSourceJayFile('collections/collections');
-            let runtimeFile = generateRuntimeFile(jayFile, 'collections.jay.html', './test/');
+            let runtimeFile = generateElementFile(jayFile, 'collections.jay.html', './test/');
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
                 await readGeneratedElementFile('collections/collections')
@@ -160,7 +160,7 @@ describe('generate the runtime file', () => {
 
         it('for collections with refs', async () => {
             const jayFile = await readSourceJayFile('collections/collection-with-refs');
-            let runtimeFile = generateRuntimeFile(
+            let runtimeFile = generateElementFile(
                 jayFile,
                 'collection-with-refs.jay.html',
                 './test/fixtures/collections'
@@ -175,14 +175,14 @@ describe('generate the runtime file', () => {
     describe('components', () => {
         it('for simple refs', async () => {
             const jayFile = await readSourceJayFile('components/counter');
-            let runtimeFile = generateRuntimeFile(jayFile, 'counter.jay.html', './test/');
+            let runtimeFile = generateElementFile(jayFile, 'counter.jay.html', './test/');
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(await readGeneratedElementFile('components/counter'));
         });
 
         it('nesting components in other components', async () => {
             const jayFile = await readSourceJayFile('components/component-in-component');
-            let runtimeFile = generateRuntimeFile(
+            let runtimeFile = generateElementFile(
                 jayFile,
                 'component-in-component.jay.html',
                 './test/fixtures/components/component-in-component'
@@ -195,7 +195,7 @@ describe('generate the runtime file', () => {
 
         it('dynamic nesting components in other components', async () => {
             const jayFile = await readSourceJayFile('components/dynamic-component-in-component');
-            let runtimeFile = generateRuntimeFile(
+            let runtimeFile = generateElementFile(
                 jayFile,
                 'dynamic-component-in-component.jay.html',
                 './test/fixtures/components/dynamic-component-in-component'
@@ -208,7 +208,7 @@ describe('generate the runtime file', () => {
 
         it('recursive-components', async () => {
             const jayFile = await readSourceJayFile('components/recursive-components');
-            let runtimeFile = generateRuntimeFile(
+            let runtimeFile = generateElementFile(
                 jayFile,
                 'recursive-components.jay.html',
                 './test/fixtures/components/recursive-components'
@@ -221,7 +221,7 @@ describe('generate the runtime file', () => {
 
         it('recursive-components-2', async () => {
             const jayFile = await readSourceJayFile('components/recursive-components-2');
-            let runtimeFile = generateRuntimeFile(
+            let runtimeFile = generateElementFile(
                 jayFile,
                 'recursive-components-2.jay.html',
                 './test/fixtures/components/recursive-components-2'
@@ -234,7 +234,7 @@ describe('generate the runtime file', () => {
 
         it('tree', async () => {
             const jayFile = await readNamedSourceJayFile('components/tree', 'tree-node');
-            let runtimeFile = generateRuntimeFile(
+            let runtimeFile = generateElementFile(
                 jayFile,
                 'tree-node.jay.html',
                 './test/fixtures/components/tree'
@@ -245,7 +245,7 @@ describe('generate the runtime file', () => {
 
         it('secure component host', async () => {
             const jayFile = await readNamedSourceJayFile('components/secure-counter', 'app');
-            let runtimeFile = generateRuntimeFile(
+            let runtimeFile = generateElementFile(
                 jayFile,
                 'app.jay.html',
                 './test/fixtures/components/secure-counter'
@@ -259,7 +259,7 @@ describe('generate the runtime file', () => {
 
     it.skip('tmp', async () => {
         const jayFile = await readSourceJayFile('tmp');
-        let runtimeFile = generateRuntimeFile(jayFile, 'tmp.jay.html', './test/');
+        let runtimeFile = generateElementFile(jayFile, 'tmp.jay.html', './test/');
         expect(runtimeFile.validations).toEqual([]);
         expect(runtimeFile.val).toEqual(await readGeneratedElementFile('tmp'));
     });

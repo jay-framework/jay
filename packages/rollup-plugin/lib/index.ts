@@ -1,4 +1,4 @@
-import { generateRuntimeFile } from 'jay-compiler';
+import { generateElementFile } from 'jay-compiler';
 import * as ts from 'typescript';
 import path from 'path';
 import * as fs from 'fs';
@@ -37,7 +37,7 @@ export default function jayCompiler(options = {}) {
                 if (id.indexOf('.jay.html') > -1) {
                     let filename = path.basename(id).replace('.jay.html', '');
                     let dirName = path.dirname(id);
-                    let tsCode = generateRuntimeFile(code, filename, dirName);
+                    let tsCode = generateElementFile(code, filename, dirName);
                     if (tsCode.validations.length > 0) {
                         console.error(
                             'failed to run Jay Rollup Plugin for file ' +

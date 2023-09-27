@@ -3,7 +3,7 @@ import { tsExtractTypes } from './ts-extract-types';
 
 import { JayComponentType } from '../core/jay-file-types';
 
-export function generateRefsFile(filepath: string): WithValidations<string> {
+export function generateComponentRefsDefinitionFile(filepath: string): WithValidations<string> {
     let types = tsExtractTypes(filepath);
 
     let componentTypes: Array<JayComponentType> = types.filter(

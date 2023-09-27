@@ -19,7 +19,7 @@ where the `sandbox` attribute can give a semantic name for the sandbox, allowing
 for now, we focus on creating the initial sandbox (one sandbox), but later we can expand the notion to multiple sandboxes.
 
 Once identified a jay element file with a `sandbox` indicator, we generate the element with support for sandboxed child components.
-This generation happens with the [`generateRuntimeFile`](../packages/compiler/lib/jay-file/jay-file-compiler.ts#850) 
+This generation happens with the [`generateElementFile`](../packages/compiler/lib/jay-file/jay-file-compiler.ts#883) 
 function, and should return, aside from the generated file, also the 
 list of sandboxed child components. 
 
@@ -37,9 +37,9 @@ Given this transformer and the previous generation step, the bundler can create 
 
 ## problem 3 - bundling 
 Given the element with the `sandbox` imports, we generate the for the same element a sandbox root (`worker-root.ts`) using
-[`generateSandboxRootFile`](../packages/compiler/lib/jay-file/jay-file-compiler.ts#...) which 
+[`generateSandboxRootFile`](../packages/compiler/lib/jay-file/jay-file-compiler.ts#962) which 
 is the start of the worker bundling process. Following the imports line, we import components as-is and element bridges generated 
-using [`generateSandboxRuntimeFile`](../packages/compiler/lib/jay-file/jay-file-compiler.ts#883).
+using [`generateElementBridgeFile`](../packages/compiler/lib/jay-file/jay-file-compiler.ts#916).
 
 ## open question
 

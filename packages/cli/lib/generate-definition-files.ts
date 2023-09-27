@@ -3,7 +3,7 @@ import {
     generateRefsForImportedComponents,
 } from './generate-component-refs-files';
 import { generateFiles } from './generate-files';
-import { generateDefinitionFile, generateRefsFile } from 'jay-compiler';
+import { generateElementDefinitionFile, generateComponentRefsDefinitionFile } from 'jay-compiler';
 import path from 'path';
 import { promises as fsp } from 'fs';
 import chalk from 'chalk';
@@ -12,7 +12,7 @@ export async function generateDefinitionFiles(source, dest) {
     let importsCollector: CollectedImport[] = [];
     await generateFiles(
         source,
-        generateDefinitionFile,
+        generateElementDefinitionFile,
         generateRefsForImportedComponents(importsCollector),
         '.d.ts',
         dest,
@@ -21,7 +21,7 @@ export async function generateDefinitionFiles(source, dest) {
     let uniqueComponentFiles = new Set(componentFiles);
     console.log(chalk.whiteBright('Jay generating component definition files'));
     for (let componentFilePath of uniqueComponentFiles) {
-        let refsFileContent = generateRefsFile(componentFilePath);
+        let refsFileContent = generateComponentRefsDefinitionFile(componentFilePath);
         let refsFileName = componentFilePath + '-refs.d.ts';
         let relativeComponentFilePath = path.relative(process.cwd(), componentFilePath);
         let relativeRefsFileName = path.relative(process.cwd(), refsFileName);

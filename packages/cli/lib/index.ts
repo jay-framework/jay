@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { generateRuntimeFile } from 'jay-compiler';
+import { generateElementFile } from 'jay-compiler';
 import { generateFiles } from './generate-files';
 import { generateDefinitionFiles } from './generate-definition-files';
 
@@ -21,7 +21,7 @@ program
     .argument('[destination]', 'destination folder for generated files')
     .description('generate code files (.ts) for jay files')
     .action((source, dest) => {
-        generateFiles(source, generateRuntimeFile, noop, '.ts', dest);
+        generateFiles(source, generateElementFile, noop, '.ts', dest);
     });
 
 program.parse(process.argv);

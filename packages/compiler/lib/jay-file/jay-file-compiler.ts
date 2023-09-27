@@ -843,7 +843,7 @@ ${renderDynanicRefs(dynamicRefs)}
         );
 }
 
-export function generateDefinitionFile(
+export function generateElementDefinitionFile(
     html: string,
     filename: string,
     filePath: string,
@@ -880,7 +880,7 @@ export function generateDefinitionFile(
     });
 }
 
-export function generateRuntimeFile(
+export function generateElementFile(
     html: string,
     filename: string,
     filePath: string,
@@ -913,7 +913,7 @@ export function generateRuntimeFile(
     });
 }
 
-export function generateSandboxRuntimeFile(
+export function generateElementBridgeFile(
     html: string,
     filename: string,
     filePath: string,
@@ -957,4 +957,12 @@ export function generateSandboxRuntimeFile(
             .filter((_) => _ !== null && _ !== '')
             .join('\n\n');
     });
+}
+
+export function generateSandboxRootFile(
+    html: string,
+    filename: string,
+    filePath: string,
+): WithValidations<string> {
+    return null;
 }
