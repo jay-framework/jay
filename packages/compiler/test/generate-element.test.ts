@@ -243,16 +243,16 @@ describe('generate the runtime file', () => {
             expect(runtimeFile.val).toEqual(await readGeneratedElementFile('components/tree'));
         });
 
-        it('secure component host', async () => {
-            const jayFile = await readNamedSourceJayFile('components/secure-counter', 'app');
+        it('sandbox component host', async () => {
+            const jayFile = await readNamedSourceJayFile('sandboxed/sandboxed-counter', 'app');
             let runtimeFile = generateElementFile(
                 jayFile,
                 'app.jay.html',
-                './test/fixtures/components/secure-counter'
+                './test/fixtures/sandboxed/sandboxed-counter'
             );
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
-                await readGeneratedNamedFile('components/secure-counter', 'generated-app.jay.html')
+                await readGeneratedNamedFile('sandboxed/sandboxed-counter', 'generated-app.jay.html')
             );
         });
     });
