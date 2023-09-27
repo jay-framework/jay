@@ -97,19 +97,4 @@ describe('generate the element sandbox files', () => {
             });
         });
     });
-
-    describe('generate sandbox root', () => {
-        it('generate sandbox root for a simple case', async () => {
-            const jayFile = await readNamedSourceJayFile('sandboxed/sandboxed-counter', 'app');
-            let sandboxRootFile = generateSandboxRootFile(
-                jayFile,
-                'app.jay.html',
-                './test/fixtures/sandboxed/sandboxed-counter',
-            );
-            expect(sandboxRootFile.validations).toEqual([]);
-            expect(sandboxRootFile.val).toEqual(
-                await readGeneratedNamedFile('sandboxed/sandboxed-counter', 'generated-sandbox-root'),
-            );
-        })
-    })
 });

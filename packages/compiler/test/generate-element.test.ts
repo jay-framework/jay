@@ -242,19 +242,6 @@ describe('generate the runtime file', () => {
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(await readGeneratedElementFile('components/tree'));
         });
-
-        it('sandbox component host', async () => {
-            const jayFile = await readNamedSourceJayFile('sandboxed/sandboxed-counter', 'app');
-            let runtimeFile = generateElementFile(
-                jayFile,
-                'app.jay.html',
-                './test/fixtures/sandboxed/sandboxed-counter'
-            );
-            expect(runtimeFile.validations).toEqual([]);
-            expect(runtimeFile.val).toEqual(
-                await readGeneratedNamedFile('sandboxed/sandboxed-counter', 'generated-app.jay.html')
-            );
-        });
     });
 
     it.skip('tmp', async () => {

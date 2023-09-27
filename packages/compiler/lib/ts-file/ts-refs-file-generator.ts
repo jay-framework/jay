@@ -25,20 +25,28 @@ export function generateComponentRefsDefinitionFile(filepath: string): WithValid
             .map((api) => {
                 return `${api.property}: EventEmitter<EventTypeFrom<${componentType}['${api.property}']>, ParentVS>`;
             });
+
+        let refMembersRendered = refMembers.length === 0 ?
+            '{}':
+            `{
+  ${refMembers.join('\n  ')}
+}`
+        let refsMembersRendered = refsMembers.length === 0 ?
+            '{}':
+            `{
+  ${refsMembers.join('\n  ')}
+}`
+
         return `export type ${comp.name}ComponentType = ReturnType<typeof ${comp.name}>;
 
 export interface ${comp.name}Ref<ParentVS> extends JayComponent<
   PropsFrom<${componentType}>,
   ViewStateFrom<${componentType}>,
-  ElementFrom<${componentType}>>{
-  ${refMembers.join('\n  ')}
-}
+  ElementFrom<${componentType}>>${refMembersRendered}
 
 export interface ${comp.name}Refs<ParentVS> extends ComponentCollectionProxy<ParentVS, ${
             comp.name
-        }Ref<ParentVS>> {
-  ${refsMembers.join('\n  ')}
-}`;
+        }Ref<ParentVS>> ${refsMembersRendered}`;
     });
 
     let code = `import {JayComponent, EventEmitter, ComponentCollectionProxy, EventTypeFrom, PropsFrom, ViewStateFrom, ElementFrom} from 'jay-runtime';
