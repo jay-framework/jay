@@ -1,8 +1,8 @@
-import { Counter } from './counter';
+import { render } from './app.jay.html';
 
 window.onload = function () {
     let target = document.getElementById('target');
-    let counter = Counter({ initialValue: 12 });
+    let app = render({});
     target.innerHTML = '';
-    target.appendChild(counter.element.dom);
+    target.appendChild(app.dom);
 };

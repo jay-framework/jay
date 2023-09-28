@@ -9,7 +9,7 @@ function CounterConstructor({ initialValue }: Props<CounterProps>, refs: Counter
     let [count, setCount] = createState(initialValue);
 
     refs.subtracter.onclick(() => setCount(count() - 1));
-    refs.adder.onclick(() => setCount(count() + 1));
+    refs.adderButton.onclick(() => setCount(count() + 1));
 
     return {
         render: () => ({ count }),

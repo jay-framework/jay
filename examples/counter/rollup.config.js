@@ -63,7 +63,7 @@ async function makeRollupConfig() {
             ],
         },
         {
-            input: './lib-secure/sandbox/worker-root.ts',
+            input: './lib-secure/sandbox/sandbox-root.ts',
             output: [
                 {
                     file: './dist-secure/worker.js',

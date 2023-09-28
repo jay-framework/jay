@@ -1,25 +1,20 @@
-import { JayElement, ConstructContext, compRef as cr, RenderElementOptions } from 'jay-runtime';
-import { Counter } from './counter';
-import { mainRoot as mr } from 'jay-secure';
-import { secureChildComp } from 'jay-secure';
+import {JayElement, element as e, ConstructContext, compRef as cr, RenderElementOptions} from "jay-runtime";
+import {mainRoot as mr, secureChildComp} from "jay-secure";
+import {CounterRef} from "./counter-refs";
+import {Counter} from "./counter";
 
 export interface AppViewState {}
 
-export interface AppElementRefs {}
+export interface AppElementRefs {
+  a: CounterRef<AppViewState>
+}
 
-export type AppElement = JayElement<AppViewState, AppElementRefs>;
+export type AppElement = JayElement<AppViewState, AppElementRefs>
 
 export function render(viewState: AppViewState, options?: RenderElementOptions): AppElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () =>
-            mr(viewState, () =>
-                secureChildComp(
-                    Counter,
-                    (vs) => ({ title: 'first counter', initialCount: 12 }),
-                    cr('a'),
-                ),
-            ),
-        options,
-    );
+  return ConstructContext.withRootContext(viewState, () =>
+      mr(viewState, () =>
+        e('div', {}, [
+          secureChildComp(Counter, (vs: AppViewState) => ({initialValue: 12}), cr('a'))
+        ])), options);
 }
