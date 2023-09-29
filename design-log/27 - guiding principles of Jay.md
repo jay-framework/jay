@@ -26,7 +26,7 @@ and not shipped to the next phase.
 
 ## 3. Reactive
 
-All updates are fine grained reactive, based on states (signals) and computer values.
+All updates are fine grained reactive, based on states (signals) and computed values.
 
 ## 4. immutable data
 Jay is built with the assumption that data is immutable.
@@ -52,8 +52,8 @@ Reconciliation on data means we do not reconcile DOM structures that are static 
 wrapper semantic / structural / layout elements, etc. We only reconcile on what the application can actually change on runtime.
 
 ## 6. All components are 3rd party security ready
-all jay components can run as secure / sandboxed 3rd party components. 
-There is special syntax for 3rd party components.
+All jay components can run as secure / sandboxed 3rd party components. 
+There is a special syntax for 3rd party components to ensure security.
 
 ## 7. Zero Trust
 Jay is based on the zero trust principle, meaning we consider all 3rd party code (any component code) as untrusted.
