@@ -8,12 +8,14 @@ data:
 </head>
 <body>
 <div class="task">
-    <h3>{title}</h3>
-    <p>{description}</p>
-    <button ref="prev">Move to Previous</button>
-    <button ref="next">Move to Next</button>
-    <button ref="up">Up</button>
-    <button ref="down">Down</button>
+    <h3 class="task-title">{title}</h3>
+    <p class="task-description">{description}</p>
+    <div class="action-buttons">
+        <button class="action-button prev" ref="prev">Move to Previous</button>
+        <button class="action-button next" ref="next">Move to Next</button>
+        <button class="action-button up" ref="up">Up</button>
+        <button class="action-button down" ref="down">Down</button>
+    </div>
 </div>
 </body>
 </html>

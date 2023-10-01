@@ -12,23 +12,28 @@ export interface PillarProps {
 }
 
 interface MoveTaskEvent {
-    taskId: string
+    task: PillarTask
 }
 
 function PillarConstructor({ title, tasks }: Props<PillarProps>, refs: PillarElementRefs) {
 
     let onMoveTaskToNext = createEvent<MoveTaskEvent>();
     let onMoveTaskToPrev = createEvent<MoveTaskEvent>();
+    let onMoveTaskUp = createEvent<MoveTaskEvent>();
+    let onMoveTaskDown = createEvent<MoveTaskEvent>();
 
-    refs.tasks.onNext(({viewState}) => {
-        onMoveTaskToNext.emit({taskId: viewState.id})
-    })
+    refs.tasks.onNext(({viewState}) =>
+        onMoveTaskToNext.emit({task: viewState}))
     refs.tasks.onPrev(({viewState}) =>
-        onMoveTaskToPrev.emit({taskId: viewState.id}))
+        onMoveTaskToPrev.emit({task: viewState}))
+    refs.tasks.onUp(({viewState}) =>
+        onMoveTaskUp.emit({task: viewState}))
+    refs.tasks.onDown(({viewState}) =>
+        onMoveTaskDown.emit({task: viewState}))
 
     return {
         render: () => ({ title, tasks }),
-        onMoveTaskToNext, onMoveTaskToPrev
+        onMoveTaskToNext, onMoveTaskToPrev, onMoveTaskDown, onMoveTaskUp
     };
 }
 

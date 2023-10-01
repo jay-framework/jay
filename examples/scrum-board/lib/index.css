@@ -3,22 +3,94 @@
   font-size: 24px;
 }
 
-.progress {
-  color: #11418c;
-  font-size: 16px;
-}
-
-.select-example {
-  color: #11418c;
-  font-size: 16px;
-}
-
-.cycles {
-  color: #11418c;
-  font-size: 16px;
-}
-
 .stage {
   margin-top: 20px;
   background-color: #c7efdb;
+}
+
+/* Overall board styling */
+.scrum-board {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 20px;
+  background-color: #f0f0f0;
+  border-radius: 5px;
+}
+
+/* Individual pillar styling */
+.pillar {
+  flex: 1;
+  background-color: #ffffff;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.pillar-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+/* Task styling */
+.task {
+  background-color: #f9f9f9;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.task-title {
+  font-size: 16px;
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.task-description {
+  font-size: 14px;
+  color: #555;
+}
+
+/* Action buttons for tasks */
+.action-buttons {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.action-button {
+  padding: 5px 10px;
+  border: none;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.action-button.up {
+  background-color: #3498db;
+  color: #fff;
+}
+
+.action-button.prev {
+  background-color: #e74c3c;
+  color: #fff;
+}
+
+.action-button.next {
+  background-color: #27ae60;
+  color: #fff;
+}
+
+.action-button.down {
+  background-color: #f39c12;
+  color: #fff;
+}
+
+/* Board title */
+.board-title {
+  font-size: 24px;
+  font-weight: bold;
+  margin-bottom: 20px;
 }
