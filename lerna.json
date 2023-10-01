@@ -11,6 +11,7 @@
     "examples/todo-raw",
     "examples/tree",
     "examples/tables",
+    "examples/scrum-board",
     "packages/rollup-plugin",
     "packages/cli",
     "packages/component",
