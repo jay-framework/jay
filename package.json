@@ -4,6 +4,7 @@
     "link": "lerna link",
     "bootstrap": "lerna bootstrap",
     "build": "lerna run build",
+    "prettier": "prettier . --write",
     "release": "echo \"======= Lerna Releasing jay =======\" && npm run test && lerna publish"
   },
   "devDependencies": {

@@ -1,7 +1,7 @@
-import { beforeEach, describe, expect, it } from '@jest/globals';
+import { describe, expect, it } from '@jest/globals';
 import { deserialize, serialize } from '../lib';
 import { ArrayContexts } from 'jay-json-patch';
-import { ADD, JSONPatch, MOVE, REPLACE } from 'jay-json-patch';
+import { ADD, JSONPatch, REPLACE } from 'jay-json-patch';
 
 describe('mutable serialization', () => {
     describe('serialize', () => {
@@ -13,7 +13,7 @@ describe('mutable serialization', () => {
         const PATCH_3 = { op: REPLACE, path: ['b'], value: 12 };
 
         it('first time, create a patch with the whole object at path===[]', () => {
-            let [patch, nextSerialize] = serialize(SIMPLE_OBJECT_1);
+            let [patch] = serialize(SIMPLE_OBJECT_1);
             expect(patch.length).toBe(1);
             expect(patch[0]).toEqual(PATCH_1);
         });

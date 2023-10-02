@@ -94,11 +94,7 @@ export const Import = {
         'elementBridge',
         ImportsFor.elementSandbox,
     ),
-    sandboxRoot: importStatementFragment(
-        'jay-secure',
-        'sandboxRoot',
-        ImportsFor.elementSandbox,
-    ),
+    sandboxRoot: importStatementFragment('jay-secure', 'sandboxRoot', ImportsFor.elementSandbox),
     sandboxElement: importStatementFragment(
         'jay-secure',
         'sandboxElement as e',
@@ -139,11 +135,7 @@ export const Import = {
         'HandshakeMessageJayChannel',
         ImportsFor.elementSandbox,
     ),
-    jayPort: importStatementFragment(
-        'jay-secure',
-        'JayPort',
-        ImportsFor.elementSandbox,
-    ),
+    jayPort: importStatementFragment('jay-secure', 'JayPort', ImportsFor.elementSandbox),
     setWorkerPort: importStatementFragment(
         'jay-secure',
         'setWorkerPort',

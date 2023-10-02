@@ -5,7 +5,11 @@ import { readGeneratedElementDefinitionFile, readSourceJayFile } from './test-fs
 describe('generate the definition file', () => {
     it('should generate definition file for simple file', async () => {
         const jayFile = await readSourceJayFile('basics/data-types');
-        let definitionFile = generateElementDefinitionFile(jayFile, 'data-types.jay.html', './test/');
+        let definitionFile = generateElementDefinitionFile(
+            jayFile,
+            'data-types.jay.html',
+            './test/',
+        );
         expect(definitionFile.validations).toEqual([]);
         expect(definitionFile.val).toEqual(
             await readGeneratedElementDefinitionFile('basics/data-types'),
@@ -14,7 +18,11 @@ describe('generate the definition file', () => {
 
     it('should generate definition file for collection file', async () => {
         const jayFile = await readSourceJayFile('collections/collections');
-        let definitionFile = generateElementDefinitionFile(jayFile, 'collections.jay.html', './test/');
+        let definitionFile = generateElementDefinitionFile(
+            jayFile,
+            'collections.jay.html',
+            './test/',
+        );
         expect(definitionFile.validations).toEqual([]);
         expect(definitionFile.val).toEqual(
             await readGeneratedElementDefinitionFile('collections/collections'),

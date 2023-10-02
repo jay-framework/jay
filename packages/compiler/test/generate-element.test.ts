@@ -2,7 +2,6 @@ import { generateElementFile } from '../lib';
 import { describe, expect, it } from '@jest/globals';
 import {
     readGeneratedElementFile,
-    readGeneratedNamedFile,
     readNamedSourceJayFile,
     readSourceJayFile,
 } from './test-fs-utils';
@@ -14,11 +13,11 @@ describe('generate the runtime file', () => {
             let runtimeFile = generateElementFile(
                 jayFile,
                 'simple-dynamic-text.jay.html',
-                './test/'
+                './test/',
             );
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
-                await readGeneratedElementFile('basics/simple-dynamic-text')
+                await readGeneratedElementFile('basics/simple-dynamic-text'),
             );
         });
 
@@ -27,11 +26,11 @@ describe('generate the runtime file', () => {
             let runtimeFile = generateElementFile(
                 jayFile,
                 'simple-static-text.jay.html',
-                './test/'
+                './test/',
             );
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
-                await readGeneratedElementFile('basics/simple-static-text')
+                await readGeneratedElementFile('basics/simple-static-text'),
             );
         });
 
@@ -89,11 +88,11 @@ describe('generate the runtime file', () => {
             let runtimeFile = generateElementFile(
                 jayFile,
                 'dynamic-text-input-types.jay.html',
-                './test/'
+                './test/',
             );
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
-                await readGeneratedElementFile('basics/dynamic-text-input-types')
+                await readGeneratedElementFile('basics/dynamic-text-input-types'),
             );
         });
 
@@ -102,11 +101,11 @@ describe('generate the runtime file', () => {
             let runtimeFile = generateElementFile(
                 jayFile,
                 'whitespace-and-text.jay.html',
-                './test/'
+                './test/',
             );
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
-                await readGeneratedElementFile('basics/whitespace-and-text')
+                await readGeneratedElementFile('basics/whitespace-and-text'),
             );
         });
     });
@@ -117,7 +116,7 @@ describe('generate the runtime file', () => {
             let runtimeFile = generateElementFile(jayFile, 'conditions.jay.html', './test/');
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
-                await readGeneratedElementFile('conditions/conditions')
+                await readGeneratedElementFile('conditions/conditions'),
             );
         });
 
@@ -126,11 +125,11 @@ describe('generate the runtime file', () => {
             let runtimeFile = generateElementFile(
                 jayFile,
                 'conditions-with-refs.jay.html',
-                './test/'
+                './test/',
             );
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
-                await readGeneratedElementFile('conditions/conditions-with-refs')
+                await readGeneratedElementFile('conditions/conditions-with-refs'),
             );
         });
 
@@ -139,11 +138,11 @@ describe('generate the runtime file', () => {
             let runtimeFile = generateElementFile(
                 jayFile,
                 'conditions-with-enum.jay.html',
-                './test/'
+                './test/',
             );
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
-                await readGeneratedElementFile('conditions/conditions-with-enum')
+                await readGeneratedElementFile('conditions/conditions-with-enum'),
             );
         });
     });
@@ -154,7 +153,7 @@ describe('generate the runtime file', () => {
             let runtimeFile = generateElementFile(jayFile, 'collections.jay.html', './test/');
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
-                await readGeneratedElementFile('collections/collections')
+                await readGeneratedElementFile('collections/collections'),
             );
         });
 
@@ -163,11 +162,11 @@ describe('generate the runtime file', () => {
             let runtimeFile = generateElementFile(
                 jayFile,
                 'collection-with-refs.jay.html',
-                './test/fixtures/collections'
+                './test/fixtures/collections',
             );
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
-                await readGeneratedElementFile('collections/collection-with-refs')
+                await readGeneratedElementFile('collections/collection-with-refs'),
             );
         });
     });
@@ -185,11 +184,11 @@ describe('generate the runtime file', () => {
             let runtimeFile = generateElementFile(
                 jayFile,
                 'component-in-component.jay.html',
-                './test/fixtures/components/component-in-component'
+                './test/fixtures/components/component-in-component',
             );
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
-                await readGeneratedElementFile('components/component-in-component')
+                await readGeneratedElementFile('components/component-in-component'),
             );
         }, 10000);
 
@@ -198,11 +197,11 @@ describe('generate the runtime file', () => {
             let runtimeFile = generateElementFile(
                 jayFile,
                 'dynamic-component-in-component.jay.html',
-                './test/fixtures/components/dynamic-component-in-component'
+                './test/fixtures/components/dynamic-component-in-component',
             );
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
-                await readGeneratedElementFile('components/dynamic-component-in-component')
+                await readGeneratedElementFile('components/dynamic-component-in-component'),
             );
         });
 
@@ -211,11 +210,11 @@ describe('generate the runtime file', () => {
             let runtimeFile = generateElementFile(
                 jayFile,
                 'recursive-components.jay.html',
-                './test/fixtures/components/recursive-components'
+                './test/fixtures/components/recursive-components',
             );
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
-                await readGeneratedElementFile('components/recursive-components')
+                await readGeneratedElementFile('components/recursive-components'),
             );
         });
 
@@ -224,11 +223,11 @@ describe('generate the runtime file', () => {
             let runtimeFile = generateElementFile(
                 jayFile,
                 'recursive-components-2.jay.html',
-                './test/fixtures/components/recursive-components-2'
+                './test/fixtures/components/recursive-components-2',
             );
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(
-                await readGeneratedElementFile('components/recursive-components-2')
+                await readGeneratedElementFile('components/recursive-components-2'),
             );
         });
 
@@ -237,7 +236,7 @@ describe('generate the runtime file', () => {
             let runtimeFile = generateElementFile(
                 jayFile,
                 'tree-node.jay.html',
-                './test/fixtures/components/tree'
+                './test/fixtures/components/tree',
             );
             expect(runtimeFile.validations).toEqual([]);
             expect(runtimeFile.val).toEqual(await readGeneratedElementFile('components/tree'));

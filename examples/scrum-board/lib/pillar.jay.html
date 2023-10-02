@@ -1,21 +1,21 @@
 <html>
-<head>
-    <link rel="import" href="./task" names="Task"/>
+  <head>
+    <link rel="import" href="./task" names="Task" />
     <script type="application/yaml-jay">
-data:
-  title: string
-  tasks:
-  - id: string
-    title: string
-    description: string
+      data:
+        title: string
+        tasks:
+        - id: string
+          title: string
+          description: string
     </script>
-</head>
-<body>
-<div class="pillar">
-    <h2 class="pillar-title">{title}</h2>
-    <div class="task-list">
-        <Task forEach="tasks" trackBy="id" props="{.}" ref="tasks"/>
+  </head>
+  <body>
+    <div class="pillar">
+      <h2 class="pillar-title">{title}</h2>
+      <div class="task-list">
+        <Task forEach="tasks" trackBy="id" props="{.}" ref="tasks" />
+      </div>
     </div>
-</div>
-</body>
+  </body>
 </html>

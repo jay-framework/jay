@@ -1,10 +1,8 @@
-import {generateElementBridgeFile, generateSandboxRootFile} from '../lib';
+import { generateElementBridgeFile } from '../lib';
 import { describe, expect, it } from '@jest/globals';
 import {
     readGeneratedElementBridgeFile,
-    readGeneratedNamedFile,
-    readNamedSourceJayFile,
-    readSourceJayFile
+    readSourceJayFile,
 } from './test-fs-utils';
 
 describe('generate the element sandbox files', () => {
@@ -40,9 +38,10 @@ describe('generate the element sandbox files', () => {
                 const jayFile = await readSourceJayFile('basics/refs');
                 let runtimeFile = generateElementBridgeFile(jayFile, 'refs.jay.html', './test/');
                 expect(runtimeFile.validations).toEqual([]);
-                expect(runtimeFile.val).toEqual(await readGeneratedElementBridgeFile('basics/refs'));
+                expect(runtimeFile.val).toEqual(
+                    await readGeneratedElementBridgeFile('basics/refs'),
+                );
             });
-
         });
 
         describe('components', () => {
@@ -69,7 +68,9 @@ describe('generate the element sandbox files', () => {
             });
 
             it('dynamic component in component', async () => {
-                const jayFile = await readSourceJayFile('components/dynamic-component-in-component');
+                const jayFile = await readSourceJayFile(
+                    'components/dynamic-component-in-component',
+                );
                 let runtimeFile = generateElementBridgeFile(
                     jayFile,
                     'dynamic-component-in-component.jay.html',
@@ -77,7 +78,9 @@ describe('generate the element sandbox files', () => {
                 );
                 expect(runtimeFile.validations).toEqual([]);
                 expect(runtimeFile.val).toEqual(
-                    await readGeneratedElementBridgeFile('components/dynamic-component-in-component'),
+                    await readGeneratedElementBridgeFile(
+                        'components/dynamic-component-in-component',
+                    ),
                 );
             });
         });

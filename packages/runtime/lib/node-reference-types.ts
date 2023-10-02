@@ -441,9 +441,7 @@ export interface EventEmitter<EventType, ViewState> {
     // this is a trick to ensure that given
     // createEvent() the event parameter is not required in emit, while given
     // createEvent<AType>() the event parameter is required
-    emit: unknown extends EventType?
-        () => void :
-        (event: EventType) => void
+    emit: unknown extends EventType ? () => void : (event: EventType) => void;
 }
 
 export type EventTypeFrom<Type> = Type extends EventEmitter<infer X, any> ? X : null;

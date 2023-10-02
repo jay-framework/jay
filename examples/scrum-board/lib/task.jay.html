@@ -1,21 +1,21 @@
 <html>
-<head>
+  <head>
     <script type="application/yaml-jay">
-data:
-  title: string
-  description: string
+      data:
+        title: string
+        description: string
     </script>
-</head>
-<body>
-<div class="task">
-    <h3 class="task-title">{title}</h3>
-    <p class="task-description">{description}</p>
-    <div class="action-buttons">
+  </head>
+  <body>
+    <div class="task">
+      <h3 class="task-title">{title}</h3>
+      <p class="task-description">{description}</p>
+      <div class="action-buttons">
         <button class="action-button prev" ref="prev">Move to Previous</button>
         <button class="action-button next" ref="next">Move to Next</button>
         <button class="action-button up" ref="up">Up</button>
         <button class="action-button down" ref="down">Down</button>
+      </div>
     </div>
-</div>
-</body>
+  </body>
 </html>

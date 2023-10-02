@@ -1,8 +1,8 @@
-import {WithValidations} from '../core/with-validations';
-import {parseJayFile} from './jay-file-parser';
-import {HTMLElement, NodeType} from 'node-html-parser';
+import { WithValidations } from '../core/with-validations';
+import { parseJayFile } from './jay-file-parser';
+import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
-import {Ref, RenderFragment} from '../core/render-fragment';
+import { Ref, RenderFragment } from '../core/render-fragment';
 import {
     parseAccessor,
     parseAttributeExpression,
@@ -13,9 +13,9 @@ import {
     parseTextExpression,
     Variables,
 } from '../expressions/expression-compiler';
-import {htmlElementTagNameMap} from './html-element-tag-name-map';
-import {camelCase} from 'camel-case';
-import {Import, Imports, ImportsFor} from '../core/imports';
+import { htmlElementTagNameMap } from './html-element-tag-name-map';
+import { camelCase } from 'camel-case';
+import { Import, Imports, ImportsFor } from '../core/imports';
 import {
     JayArrayType,
     JayAtomicType,
@@ -65,9 +65,8 @@ class Indent {
     }
 
     static forceIndent(code: string, size: number = 2) {
-        let indent = ''
-        for (let i=0; i < size; i++)
-            indent += ' ';
+        let indent = '';
+        for (let i = 0; i < size; i++) indent += ' ';
         return code
             .split('\n')
             .map((_) => (_.length > 0 ? indent + _ : _))
@@ -97,8 +96,7 @@ function renderInterface(aType: JayType): string {
     let genInterface = '';
     if (aType instanceof JayObjectType) {
         const propKeys = Object.keys(aType.props);
-        if (propKeys.length === 0)
-            genInterface = `export interface ${aType.name} {}`;
+        if (propKeys.length === 0) genInterface = `export interface ${aType.name} {}`;
         else {
             genInterface = `export interface ${aType.name} {\n`;
             genInterface += Object.keys(aType.props)
@@ -587,23 +585,26 @@ ${renderedReferences}
 }
 
 function processImportedComponents(importStatements: JayImportLink[]) {
-    return importStatements.reduce((processedImports, importStatement) => {
-        importStatement.names.forEach(importName => {
-            let name = importName.as || importName.name
-            processedImports.importedSymbols.add(name);
-            if (importStatement.sandbox)
-                processedImports.importedSandboxedSymbols.add(name);
-        })
-        return processedImports;
-    }, {importedSymbols: new Set<string>(), importedSandboxedSymbols: new Set<string>()});
-
+    return importStatements.reduce(
+        (processedImports, importStatement) => {
+            importStatement.names.forEach((importName) => {
+                let name = importName.as || importName.name;
+                processedImports.importedSymbols.add(name);
+                if (importStatement.sandbox) processedImports.importedSandboxedSymbols.add(name);
+            });
+            return processedImports;
+        },
+        { importedSymbols: new Set<string>(), importedSandboxedSymbols: new Set<string>() },
+    );
 }
 
 function renderDynanicRefs(dynamicRefs: Ref[]) {
     return dynamicRefs
         .map(
             (ref) =>
-                `    const ${ref.constName} = ${isComponentRef(ref) ? 'ccr' : 'ecr'}('${ref.ref}');`,
+                `    const ${ref.constName} = ${isComponentRef(ref) ? 'ccr' : 'ecr'}('${
+                    ref.ref
+                }');`,
         )
         .join('\n');
 }
@@ -621,7 +622,7 @@ function renderFunctionImplementation(
     refImportsInUse: Set<string>;
 } {
     let variables = new Variables(types);
-    let {importedSymbols, importedSandboxedSymbols} = processImportedComponents(importStatements);
+    let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(importStatements);
     let renderedRoot = renderNode(firstElementChild(rootBodyElement), {
         variables,
         importedSymbols,
@@ -649,13 +650,17 @@ function renderFunctionImplementation(
         (ref) => isCollectionRef(ref) || isComponentCollectionRef(ref),
     );
     if (importedSandboxedSymbols.size > 0) {
-        imports = imports.plus(Import.secureMainRoot)
-        renderedRoot = renderedRoot.map(code =>
-            `      mr(viewState, () =>
-${Indent.forceIndent(code, 4)})`)
+        imports = imports.plus(Import.secureMainRoot);
+        renderedRoot = renderedRoot.map(
+            (code) =>
+                `      mr(viewState, () =>
+${Indent.forceIndent(code, 4)})`,
+        );
     }
     if (dynamicRefs.length > 0) {
-        body = `export function render(viewState: ${types.name}, options?: RenderElementOptions): ${elementType} {
+        body = `export function render(viewState: ${
+            types.name
+        }, options?: RenderElementOptions): ${elementType} {
   return ConstructContext.withRootContext(viewState, () => {
 ${renderDynanicRefs(dynamicRefs)}
     return ${renderedRoot.rendered.trim()}}, options);
@@ -802,7 +807,7 @@ function renderBridge(
     elementType: string,
 ) {
     let variables = new Variables(types);
-    let {importedSymbols, importedSandboxedSymbols} = processImportedComponents(importStatements);
+    let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(importStatements);
     let renderedBridge = renderElementBridgeNode(rootBodyElement, {
         variables,
         importedSymbols,
@@ -846,10 +851,10 @@ ${renderDynanicRefs(dynamicRefs)}
 function renderSandboxRoot(
     types: JayType,
     rootBodyElement: HTMLElement,
-    importStatements: JayImportLink[]
+    importStatements: JayImportLink[],
 ) {
     let variables = new Variables(types);
-    let {importedSymbols, importedSandboxedSymbols} = processImportedComponents(importStatements);
+    let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(importStatements);
     let renderedBridge = renderElementBridgeNode(rootBodyElement, {
         variables,
         importedSymbols,
@@ -886,7 +891,6 @@ ${renderDynanicRefs(dynamicRefs)}
             renderedBridge.refs,
         );
 }
-
 
 export function generateElementDefinitionFile(
     html: string,
@@ -1005,8 +1009,7 @@ export function generateElementBridgeFile(
 }
 
 const CALL_INITIALIZE_WORKER = `setWorkerPort(new JayPort(new HandshakeMessageJayChannel(self)));
-initializeWorker();`
-
+initializeWorker();`;
 
 export function generateSandboxRootFile(
     html: string,
@@ -1015,31 +1018,29 @@ export function generateSandboxRootFile(
 ): WithValidations<string> {
     let parsedFile = parseJayFile(html, filename, filePath);
     return parsedFile.map((jayFile: JayFile) => {
-        let {importedSymbols, importedSandboxedSymbols} = processImportedComponents(jayFile.imports);
-        let types = generateTypes(jayFile.types);
-        let renderedSandboxRoot = renderSandboxRoot(
-            jayFile.types,
-            jayFile.body,
-            jayFile.imports
+        let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(
+            jayFile.imports,
         );
-        let renderedImports = renderImports(Imports.for(
-            Import.sandboxRoot,
-            Import.sandboxChildComp,
-            Import.handshakeMessageJayChannel,
-            Import.jayPort,
-            Import.setWorkerPort)
-            .plus(renderedSandboxRoot.imports), ImportsFor.elementSandbox, jayFile.imports, new Set())
+        let types = generateTypes(jayFile.types);
+        let renderedSandboxRoot = renderSandboxRoot(jayFile.types, jayFile.body, jayFile.imports);
+        let renderedImports = renderImports(
+            Imports.for(
+                Import.sandboxRoot,
+                Import.sandboxChildComp,
+                Import.handshakeMessageJayChannel,
+                Import.jayPort,
+                Import.setWorkerPort,
+            ).plus(renderedSandboxRoot.imports),
+            ImportsFor.elementSandbox,
+            jayFile.imports,
+            new Set(),
+        );
 
         let initializeWorker = `export function initializeWorker() {
   sandboxRoot(${renderedSandboxRoot.rendered});
-}`
-        return [
-            renderedImports,
-            types,
-            initializeWorker,
-            CALL_INITIALIZE_WORKER
-        ]
+}`;
+        return [renderedImports, types, initializeWorker, CALL_INITIALIZE_WORKER]
             .filter((_) => _ !== null && _ !== '')
             .join('\n\n');
-    })
+    });
 }
