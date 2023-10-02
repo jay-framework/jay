@@ -339,7 +339,7 @@ describe('ReferencesManager events', () => {
 
         describe('empty list of elements', () => {
             it('should enrich root element with the ref and allow registering events on element (using onclick)', () => {
-                let { jayRootElement, jayElements, mockCallback, mockCallback2 } =
+                let { jayRootElement, jayElements, mockCallback } =
                     mkJayElement(VIEW_STATE_EMPTY);
 
                 jayRootElement.refs.refName1.onclick(mockCallback);

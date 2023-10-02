@@ -289,7 +289,7 @@ function isForEach(node: Node): boolean {
 
 function renderChildCompProps(
     element: HTMLElement,
-    { dynamicRef, variables }: RenderContext,
+    { variables }: RenderContext,
 ): RenderFragment {
     let attributes = element.attributes;
     let props = [];
@@ -553,7 +553,7 @@ const isCollectionRef = (ref: Ref) => ref.dynamicRef;
 const isComponentCollectionRef = (ref: Ref) => isCollectionRef(ref) && isComponentRef(ref);
 
 function renderRefsType(refs: Ref[], refsType: string) {
-    let renderedRefs = '';
+    let renderedRefs;
     let imports = Imports.none();
     let refImportsInUse = new Set<string>();
     let refsToRender = refs.filter((_) => !_.autoRef);
@@ -1018,9 +1018,9 @@ export function generateSandboxRootFile(
 ): WithValidations<string> {
     let parsedFile = parseJayFile(html, filename, filePath);
     return parsedFile.map((jayFile: JayFile) => {
-        let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(
-            jayFile.imports,
-        );
+        // let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(
+        //     jayFile.imports,
+        // );
         let types = generateTypes(jayFile.types);
         let renderedSandboxRoot = renderSandboxRoot(jayFile.types, jayFile.body, jayFile.imports);
         let renderedImports = renderImports(
