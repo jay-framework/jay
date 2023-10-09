@@ -5,6 +5,7 @@
     let dt = options.dt;
     let da = options.da;
     let dp = options.dp;
+    let ba = options.ba;
 }
 
 classExpression
@@ -55,6 +56,14 @@ enum
   return next.reduce((acc, val) => {
     return [...acc, val[3]];
   }, [first])
+}
+
+booleanAttribute
+  = template:template {
+  let [renderFragment, isDynamic] = template;
+  return isDynamic ?
+      renderFragment.map(_ => `ba(vs => ${_})`).plusImport(ba):
+      renderFragment;
 }
 
 dynamicAttribute

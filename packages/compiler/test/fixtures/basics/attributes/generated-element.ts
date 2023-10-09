@@ -1,4 +1,4 @@
-import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, dynamicProperty as dp, ConstructContext, RenderElementOptions} from "jay-runtime";
+import {JayElement, element as e, dynamicText as dt, dynamicAttribute as da, booleanAttribute as ba, dynamicProperty as dp, ConstructContext, RenderElementOptions} from "jay-runtime";
 
 export interface AttributesViewState {
   text: string,
@@ -27,6 +27,8 @@ export function render(viewState: AttributesViewState, options?: RenderElementOp
       e('div', {"data-attribute": da(vs => vs.text)}, []),
       e('div', {"data-attribute": da(vs => `${vs.text}-abcd`)}, []),
       e('div', {"data-attribute": da(vs => `abcd-${vs.text}`)}, []),
-      e('div', {"data-attribute": da(vs => `abcd-${vs.text}-abcd`)}, [])
+      e('div', {"data-attribute": da(vs => `abcd-${vs.text}-abcd`)}, []),
+      e('button', {disabled: ba(vs => vs.bool1)}, []),
+      e('button', {disabled: ''}, [])
     ]), options);
 }

@@ -70,9 +70,11 @@ export interface TextElement<ViewState> {
     unmount: MountFunc;
 }
 
+const PROPERTY = 1, ATTRIBUTE = 2, BOOLEAN_ATTRIBUTE = 3;
+type AttributeStyle = typeof PROPERTY | typeof ATTRIBUTE | typeof BOOLEAN_ATTRIBUTE;
 export interface DynamicAttributeOrProperty<ViewState, S> {
     valueFunc: (data: ViewState) => S;
-    isAttribute: boolean;
+    style: AttributeStyle;
 }
 
 function isDynamicAttributeOrProperty<ViewState, S>(
@@ -84,13 +86,19 @@ function isDynamicAttributeOrProperty<ViewState, S>(
 export function dynamicAttribute<ViewState>(
     attributeValue: (data: ViewState) => string,
 ): DynamicAttributeOrProperty<ViewState, string> {
-    return { valueFunc: attributeValue, isAttribute: true };
+    return { valueFunc: attributeValue, style: ATTRIBUTE };
 }
 
 export function dynamicProperty<ViewState, S>(
     propertyValue: (data: ViewState) => S,
 ): DynamicAttributeOrProperty<ViewState, S> {
-    return { valueFunc: propertyValue, isAttribute: false };
+    return { valueFunc: propertyValue, style: PROPERTY };
+}
+
+export function booleanAttribute<ViewState, S>(
+    propertyValue: (data: ViewState) => S,
+): DynamicAttributeOrProperty<ViewState, S> {
+    return { valueFunc: propertyValue, style: BOOLEAN_ATTRIBUTE };
 }
 
 export type Attribute<ViewState, S> =
@@ -103,12 +111,20 @@ function doSetAttribute<S>(
     target: HTMLElement | CSSStyleDeclaration,
     key: string,
     value: S,
-    isAttribute: boolean,
+    attributeStyle: AttributeStyle,
 ) {
-    if (target instanceof HTMLElement && isAttribute) {
+    const isHTMLElement = target instanceof HTMLElement;
+    if (isHTMLElement && attributeStyle === ATTRIBUTE) {
         target.setAttribute(key, value as unknown as string);
+    }
+    if (isHTMLElement && attributeStyle === BOOLEAN_ATTRIBUTE) {
+        if (value)
+            target.setAttribute(key, value as unknown as string);
+        else
+            target.removeAttribute(key);
     } else target[key] = value;
 }
+
 function setAttribute<ViewState, S>(
     target: HTMLElement | CSSStyleDeclaration,
     key: string,
@@ -118,14 +134,14 @@ function setAttribute<ViewState, S>(
     if (isDynamicAttributeOrProperty(value)) {
         let context = currentConstructionContext();
         let attributeValue = value.valueFunc(context.currData);
-        doSetAttribute(target, key, attributeValue, value.isAttribute);
+        doSetAttribute(target, key, attributeValue, value.style);
         updates.push((newData: ViewState) => {
             let newAttributeValue = value.valueFunc(newData);
             if (newAttributeValue !== attributeValue)
-                doSetAttribute(target, key, newAttributeValue, value.isAttribute);
+                doSetAttribute(target, key, newAttributeValue, value.style);
             attributeValue = newAttributeValue;
         });
-    } else doSetAttribute(target, key, value, true);
+    } else doSetAttribute(target, key, value, ATTRIBUTE);
 }
 
 export function conditional<ViewState>(

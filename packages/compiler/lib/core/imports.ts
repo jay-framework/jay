@@ -35,6 +35,11 @@ export const Import = {
         'dynamicAttribute as da',
         ImportsFor.implementation,
     ),
+    booleanAttribute: importStatementFragment(
+        'jay-runtime',
+        'booleanAttribute as ba',
+        ImportsFor.implementation,
+    ),
     dynamicProperty: importStatementFragment(
         'jay-runtime',
         'dynamicProperty as dp',

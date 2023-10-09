@@ -5,7 +5,7 @@ import Node from 'node-html-parser/dist/nodes/node';
 import { Ref, RenderFragment } from '../core/render-fragment';
 import {
     parseAccessor,
-    parseAttributeExpression,
+    parseAttributeExpression, parseBooleanAttributeExpression,
     parseClassExpression,
     parseComponentPropExpression,
     parseCondition,
@@ -193,9 +193,11 @@ function elementNameToJayType(element: HTMLElement): JayType {
         : new JayHTMLType('HTMLElement');
 }
 
+const PROPERTY = 1, ATTRIBUTE = 2, BOOLEAN_ATTRIBUTE = 3;
 const propertyMapping = {
-    'input:value': { type: 'property' },
-    'input:checked': { type: 'property' },
+    'value': { type: PROPERTY },
+    'checked': { type: PROPERTY },
+    'disabled': { type: BOOLEAN_ATTRIBUTE },
 };
 const attributesRequiresQuotes = /[- ]/;
 function renderAttributes(element: HTMLElement, { variables }: RenderContext): RenderFragment {
@@ -221,8 +223,11 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
         else if (attrCanonical === 'class') {
             let classExpression = parseClassExpression(attributes[attrName], variables);
             renderedAttributes.push(classExpression.map((_) => `class: ${_}`));
-        } else if (propertyMapping[tagAttrCanonical]) {
+        } else if (propertyMapping[attrCanonical]?.type === PROPERTY) {
             let attributeExpression = parsePropertyExpression(attributes[attrName], variables);
+            renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
+        } else if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
+            let attributeExpression = parseBooleanAttributeExpression(attributes[attrName], variables);
             renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
         }
         // else if (attrCanonical === 'for') {

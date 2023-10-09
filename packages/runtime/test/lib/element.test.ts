@@ -1,11 +1,11 @@
 import {
     element as e,
     dynamicAttribute as da,
+    booleanAttribute as ba,
     dynamicText as dt,
     dynamicProperty as dp,
 } from '../../lib/element';
 import { beforeEach, describe, expect, it } from '@jest/globals';
-import { mutableObject } from 'jay-mutable';
 import { BaseJayElement, JayElement, noopUpdate } from '../../lib';
 import { ConstructContext } from '../../lib';
 
@@ -112,6 +112,35 @@ describe('element', () => {
         it('should update element two class two', () => {
             jayElement.update({ title: 'another value' });
             expect((jayElement.dom as HTMLInputElement).value).toBe('another value');
+        });
+    });
+
+    describe('boolean attribute', () => {
+        interface ViewState {
+            disabled: boolean;
+        }
+        let jayElement: JayElement<ViewState, void>;
+        let data: ViewState;
+        beforeEach(() => {
+            data = { disabled: true };
+            jayElement = ConstructContext.withRootContext(data, () =>
+                e(
+                    'input',
+                    {
+                        disabled: ba((vs) => vs.disabled),
+                    },
+                    ['some text'],
+                ),
+            );
+        });
+
+        it('should create element initial attribute value', () => {
+            expect((jayElement.dom as HTMLInputElement).disabled).toBe(true);
+        });
+
+        it('should update element two class two', () => {
+            jayElement.update({ disabled: false });
+            expect((jayElement.dom as HTMLInputElement).disabled).toBe(false);
         });
     });
 

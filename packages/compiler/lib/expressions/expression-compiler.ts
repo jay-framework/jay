@@ -72,6 +72,7 @@ function doParse(expression: string, startRule, vars?: Variables) {
             dt: Imports.for(Import.dynamicText),
             da: Imports.for(Import.dynamicAttribute),
             dp: Imports.for(Import.dynamicProperty),
+            ba: Imports.for(Import.booleanAttribute),
             startRule,
         });
     } catch (e) {
@@ -93,6 +94,10 @@ export function parseCondition(expression: string, vars: Variables): RenderFragm
 
 export function parseTextExpression(expression: string, vars: Variables): RenderFragment {
     return doParse(expression, 'dynamicText', vars);
+}
+
+export function parseBooleanAttributeExpression(expression: string, vars: Variables): RenderFragment {
+    return doParse(expression, 'booleanAttribute', vars);
 }
 
 export function parseAttributeExpression(expression: string, vars: Variables): RenderFragment {

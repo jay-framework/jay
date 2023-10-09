@@ -2,7 +2,7 @@ import { describe, expect, it } from '@jest/globals';
 import {
     Accessor,
     parseAccessor,
-    parseAttributeExpression,
+    parseAttributeExpression, parseBooleanAttributeExpression,
     parseClassExpression,
     parseComponentPropExpression,
     parseCondition,
@@ -201,6 +201,51 @@ describe('expression-compiler', () => {
             const actual = parseAttributeExpression('{string1} thing', defaultVars);
             expect(actual.rendered).toEqual('da(vs => `${vs.string1} thing`)');
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy();
+        });
+    });
+
+    describe('parseBooleanAttributeExpression', () => {
+        let defaultVars = new Variables(
+            new JayObjectType('data', {
+                string1: JayString,
+                string3: JayString,
+            }),
+        );
+
+        it('constant string expression', () => {
+            const actual = parseBooleanAttributeExpression('some constant string', defaultVars);
+            expect(actual.rendered).toEqual("'some constant string'");
+            expect(actual.imports.has(Import.booleanAttribute)).toBeFalsy();
+        });
+
+        it('constant number expression', () => {
+            const actual = parseBooleanAttributeExpression('123123', defaultVars);
+            expect(actual.rendered).toEqual("'123123'");
+            expect(actual.imports.has(Import.booleanAttribute)).toBeFalsy();
+        });
+
+        it('single accessor', () => {
+            const actual = parseBooleanAttributeExpression('{string1}', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => vs.string1)');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('single accessor in text', () => {
+            const actual = parseBooleanAttributeExpression('some {string1} thing', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => `some ${vs.string1} thing`)');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('single accessor with text before', () => {
+            const actual = parseBooleanAttributeExpression('some {string1}', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => `some ${vs.string1}`)');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('single accessor with text after', () => {
+            const actual = parseBooleanAttributeExpression('{string1} thing', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => `${vs.string1} thing`)');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
         });
     });
 
