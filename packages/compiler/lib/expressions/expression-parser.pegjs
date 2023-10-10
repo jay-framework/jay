@@ -100,7 +100,7 @@ dynamicText
 }
 
 template
-  = a:_ head:((string _)+)? tail:("{" _ accessor _ '}' _ (string _)*)* {
+  = a:_ head:((string _)+)? tail:("{" _ accessorExpression _ '}' _ (string _)*)* {
     const renderText = (w, h) => {
       return h?
         h.reduce((acc, str) => acc + str[0] + (str[1].length?' ':''), w.length?' ':''):
@@ -110,17 +110,21 @@ template
       return [new RenderFragment('\'' + renderText(a, head) + '\'', none), false];
     else if (tail.length === 1 && !head && a.length === 0 && tail[0][5].length === 0 && tail[0][6].length === 0) {
         let accessor = tail[0][2];
-        return [new RenderFragment(`${accessor.render()}`, none, accessor.validations), true];
+        return [accessor, true];
     }
     else {
       let reducedFragment = tail.reduce(function(result, element) {
         let accessor = element[2];
-        return RenderFragment.merge(result, new RenderFragment(`\${${accessor.render()}}${renderText(element[5], element[6])}`, none, accessor.validations));
+        return RenderFragment.merge(result, accessor.map(_ => `\${${_}}${renderText(element[5], element[6])}`));
       }, new RenderFragment(`\`${renderText(a, head)}`, none)).map(exp => exp + '\`')
 
       return [reducedFragment, true]
     }
   }
+
+accessorExpression
+  = booleanCondition
+  / accessor
 
 conditionFunc
   = cond:condition {
@@ -129,26 +133,21 @@ conditionFunc
 
 condition
   = enumCondition
-  / simpleCondition
+  / booleanCondition
 
-simpleCondition
+booleanCondition
   = not:bang? head:accessor {
     return not?
-      new RenderFragment(`!${head.render()}`, none, head.validations):
-      new RenderFragment(`${head.render()}`, none, head.validations)
+      head.render().map(_ => `!${_}`):
+      head.render()
   }
 
 enumCondition
   = head:accessor _ oper:EqualityOperator _ val:Identifier {
     if (oper.length === 2)
         oper = oper + "=";
-    return new RenderFragment(`${head.render()} ${oper} ${head.resolvedType.name}.${val}`, none, head.validations);
+    return head.render().map(_ => `${_} ${oper} ${head.resolvedType.name}.${val}`)
 }
-
-accessorFunction
-  = acc:accessor {
-    return acc.map(_ => 'vs => ' + _);
-  }
 
 accessor
   = selfAccessor

@@ -29,6 +29,7 @@ export function render(viewState: AttributesViewState, options?: RenderElementOp
       e('div', {"data-attribute": da(vs => `abcd-${vs.text}`)}, []),
       e('div', {"data-attribute": da(vs => `abcd-${vs.text}-abcd`)}, []),
       e('button', {disabled: ba(vs => vs.bool1)}, []),
+      e('button', {disabled: ba(vs => !vs.bool1)}, []),
       e('button', {disabled: ''}, [])
     ]), options);
 }

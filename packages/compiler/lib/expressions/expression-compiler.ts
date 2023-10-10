@@ -22,8 +22,11 @@ export class Accessor {
     }
 
     render() {
-        if (this.terms.length === 1 && this.terms[0] === '.') return 'vs';
-        else return 'vs.' + this.terms.join('?.');
+        let renderedAccessor =
+            (this.terms.length === 1 && this.terms[0] === '.')?
+                'vs':
+                'vs.' + this.terms.join('?.');
+        return new RenderFragment(`${renderedAccessor}`, Imports.none(), this.validations)
     }
 }
 

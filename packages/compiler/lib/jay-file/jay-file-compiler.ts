@@ -522,11 +522,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
 
                 let forEachAccessor = parseAccessor(forEach, variables);
                 // Todo check if type unknown throw exception
-                let forEachFragment = new RenderFragment(
-                    `vs => ${forEachAccessor.render()}`,
-                    Imports.none(),
-                    forEachAccessor.validations,
-                );
+                let forEachFragment = forEachAccessor.render().map(_ => `vs => ${_}`)
                 if (forEachAccessor.resolvedType === JayUnknown)
                     return new RenderFragment('', Imports.none(), [
                         `forEach directive - failed to resolve type for forEach=${forEach}`,
@@ -783,11 +779,7 @@ ${indent.firstLine}])`,
             let trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
             let forEachAccessor = parseAccessor(forEach, variables);
             // Todo check if type unknown throw exception
-            let forEachFragment = new RenderFragment(
-                `vs => ${forEachAccessor.render()}`,
-                Imports.none(),
-                forEachAccessor.validations,
-            );
+            let forEachFragment = forEachAccessor.render().map(_ => `vs => ${_}`)
             if (forEachAccessor.resolvedType === JayUnknown)
                 return new RenderFragment('', Imports.none(), [
                     `forEach directive - failed to resolve type for forEach=${forEach}`,
