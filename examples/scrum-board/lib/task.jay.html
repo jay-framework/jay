@@ -4,6 +4,10 @@
       data:
         title: string
         description: string
+        isTop: boolean
+        isBottom: boolean
+        hasNext: boolean
+        hasPrev: boolean
     </script>
   </head>
   <body>
@@ -11,10 +15,10 @@
       <h3 class="task-title">{title}</h3>
       <p class="task-description">{description}</p>
       <div class="action-buttons">
-        <button class="action-button prev" ref="prev">Move to Previous</button>
-        <button class="action-button next" ref="next">Move to Next</button>
-        <button class="action-button up" ref="up">Up</button>
-        <button class="action-button down" ref="down">Down</button>
+        <button class="action-button prev" ref="prev" disabled="{!hasPrev}">Move to Previous</button>
+        <button class="action-button next" ref="next" disabled="{!hasNext}">Move to Next</button>
+        <button class="action-button up" ref="up" disabled="{isTop}">Up</button>
+        <button class="action-button down" ref="down" disabled="{isBottom}">Down</button>
       </div>
     </div>
   </body>

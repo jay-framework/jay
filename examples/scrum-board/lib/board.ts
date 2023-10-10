@@ -1,8 +1,8 @@
-import { BoardElementRefs, render } from './board.jay.html';
-import { createState, makeJayComponent, Props } from 'jay-component';
+import {BoardElementRefs, BoardPillar, render} from './board.jay.html';
+import {createMemo, createState, makeJayComponent, Props} from 'jay-component';
 import { ADD, JSONPatch, patch, REMOVE } from 'jay-json-patch';
 import { DEFAULT_PILLARS } from './DEFAULT_PILLARS';
-import { PillarTask } from './pillar';
+
 
 export interface BoardProps {
     title: string;
@@ -11,49 +11,64 @@ export interface BoardProps {
 function BoardConstructor({ title }: Props<BoardProps>, refs: BoardElementRefs) {
     let [pillars, setPillars] = createState(DEFAULT_PILLARS);
 
+    const boardPillars = createMemo<BoardPillar[]>(() =>
+        pillars().map((pillar, index) => {
+            let {pillarId, title, pillarTasks} = pillar;
+            return {
+                pillarId,
+                pillarData: {
+                    pillarTasks,
+                    title,
+                    hasPrev: index > 0,
+                    hasNext: index < pillars().length - 1
+                }
+            }
+        })
+    )
+
     function moveTask(
         pillarId: string,
-        task: PillarTask,
+        taskId: string,
         pillarOffset: number,
         taskOffset: number,
     ) {
         let pillarIndex = pillars().findIndex((pillar) => pillar.pillarId === pillarId);
-        let taskIndex = pillars()[pillarIndex].pillarData.tasks.findIndex(
-            (aTask) => aTask.id === task.id,
+        let taskIndex = pillars()[pillarIndex].pillarTasks.findIndex(
+            (aTask) => aTask.id === taskId,
         );
         let newTaskIndex = Math.min(
             taskIndex + taskOffset,
-            pillars()[pillarIndex + pillarOffset].pillarData.tasks.length,
+            pillars()[pillarIndex + pillarOffset].pillarTasks.length,
         );
         if (pillarIndex + pillarOffset < 0 || pillarIndex + pillarOffset >= pillars().length)
             return;
         if (newTaskIndex < 0) return;
         let jsonPatch: JSONPatch = [
-            { op: REMOVE, path: [pillarIndex, 'pillarData', 'tasks', taskIndex] },
+            { op: REMOVE, path: [pillarIndex, 'pillarTasks', taskIndex] },
             {
                 op: ADD,
-                path: [pillarIndex + pillarOffset, 'pillarData', 'tasks', newTaskIndex],
-                value: task,
+                path: [pillarIndex + pillarOffset, 'pillarTasks', newTaskIndex],
+                value: pillars()[pillarIndex].pillarTasks[taskIndex],
             },
         ];
         setPillars(patch(pillars(), jsonPatch));
     }
 
     refs.pillars.onMoveTaskToNext(({ viewState, event }) => {
-        moveTask(viewState.pillarId, event.task, +1, 0);
+        moveTask(viewState.pillarId, event.taskId, +1, 0);
     });
     refs.pillars.onMoveTaskToPrev(({ viewState, event }) => {
-        moveTask(viewState.pillarId, event.task, -1, 0);
+        moveTask(viewState.pillarId, event.taskId, -1, 0);
     });
     refs.pillars.onMoveTaskUp(({ viewState, event }) => {
-        moveTask(viewState.pillarId, event.task, 0, -1);
+        moveTask(viewState.pillarId, event.taskId, 0, -1);
     });
     refs.pillars.onMoveTaskDown(({ viewState, event }) => {
-        moveTask(viewState.pillarId, event.task, 0, +1);
+        moveTask(viewState.pillarId, event.taskId, 0, +1);
     });
 
     return {
-        render: () => ({ title, pillars }),
+        render: () => ({ title, boardPillars }),
     };
 }
 

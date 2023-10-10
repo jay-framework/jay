@@ -1,20 +1,20 @@
 <html>
   <head>
-    <link rel="import" href="./task" names="Task" />
+    <link rel="import" href="./task" names="TaskProps, Task" />
+    <link rel="import" href="./task.jay.html.d" names="TaskViewState" />
     <script type="application/yaml-jay">
       data:
         title: string
-        tasks:
+        taskData:
         - id: string
-          title: string
-          description: string
+          taskProps: TaskProps
     </script>
   </head>
   <body>
     <div class="pillar">
       <h2 class="pillar-title">{title}</h2>
       <div class="task-list">
-        <Task forEach="tasks" trackBy="id" props="{.}" ref="tasks" />
+        <Task forEach="taskData" trackBy="id" props="{taskProps}" ref="tasks" />
       </div>
     </div>
   </body>

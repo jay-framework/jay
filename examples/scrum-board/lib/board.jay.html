@@ -4,7 +4,7 @@
     <script type="application/yaml-jay">
       data:
         title: string
-        pillars:
+        boardPillars:
         - pillarId: string
           pillarData: PillarProps
     </script>
@@ -12,7 +12,7 @@
   <body>
     <div class="scrum-board">
       <h1 class="board-title">{title}</h1>
-      <Pillar ref="pillars" forEach="pillars" trackBy="id" props="{pillarData}" />
+      <Pillar ref="pillars" forEach="boardPillars" trackBy="id" props="{pillarData}" />
     </div>
   </body>
 </html>

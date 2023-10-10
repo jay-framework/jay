@@ -88,6 +88,10 @@
   color: #fff;
 }
 
+.action-button.prev:disabled, .action-button.up:disabled, .action-button.down:disabled, .action-button.next:disabled {
+  background-color: #7f7f7f;
+}
+
 /* Board title */
 .board-title {
   font-size: 24px;
