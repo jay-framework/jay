@@ -26,6 +26,7 @@ export async function generateFiles(
 ) {
     console.log(chalk.whiteBright('Jay generating definition files for ', dir));
     let jayFiles = await findAllJayFiles(dir);
+    let generationFailed = false;
     for (const jayFile of jayFiles) {
         const content = await fsp.readFile(jayFile, 'utf-8');
         const generatedFile = codeGenerationFunction(
@@ -41,6 +42,7 @@ export async function generateFiles(
                 )}`,
             );
             generatedFile.validations.forEach((_) => console.log(chalk.red(_)));
+            generationFailed = true;
         } else {
             console.log(
                 `${chalk.green('generated')} ${chalk.yellow(jayFile)} → ${chalk.yellow(
@@ -69,5 +71,8 @@ export async function generateFiles(
             path.basename(jayFile.replace('.jay.html', '')),
             path.dirname(jayFile),
         );
+        if (generationFailed) {
+            throw new Error('Jay file generation failed, please fix the issues above.');
+        }
     }
 }

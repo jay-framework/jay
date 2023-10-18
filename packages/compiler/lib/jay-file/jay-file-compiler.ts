@@ -5,7 +5,8 @@ import Node from 'node-html-parser/dist/nodes/node';
 import { Ref, RenderFragment } from '../core/render-fragment';
 import {
     parseAccessor,
-    parseAttributeExpression, parseBooleanAttributeExpression,
+    parseAttributeExpression,
+    parseBooleanAttributeExpression,
     parseClassExpression,
     parseComponentPropExpression,
     parseCondition,
@@ -193,11 +194,13 @@ function elementNameToJayType(element: HTMLElement): JayType {
         : new JayHTMLType('HTMLElement');
 }
 
-const PROPERTY = 1, ATTRIBUTE = 2, BOOLEAN_ATTRIBUTE = 3;
+const PROPERTY = 1,
+    ATTRIBUTE = 2,
+    BOOLEAN_ATTRIBUTE = 3;
 const propertyMapping = {
-    'value': { type: PROPERTY },
-    'checked': { type: PROPERTY },
-    'disabled': { type: BOOLEAN_ATTRIBUTE },
+    value: { type: PROPERTY },
+    checked: { type: PROPERTY },
+    disabled: { type: BOOLEAN_ATTRIBUTE },
 };
 const attributesRequiresQuotes = /[- ]/;
 function renderAttributes(element: HTMLElement, { variables }: RenderContext): RenderFragment {
@@ -227,7 +230,10 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             let attributeExpression = parsePropertyExpression(attributes[attrName], variables);
             renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
         } else if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
-            let attributeExpression = parseBooleanAttributeExpression(attributes[attrName], variables);
+            let attributeExpression = parseBooleanAttributeExpression(
+                attributes[attrName],
+                variables,
+            );
             renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
         }
         // else if (attrCanonical === 'for') {
@@ -292,10 +298,7 @@ function isForEach(node: Node): boolean {
     return node.nodeType !== NodeType.TEXT_NODE && (node as HTMLElement).hasAttribute('forEach');
 }
 
-function renderChildCompProps(
-    element: HTMLElement,
-    { variables }: RenderContext,
-): RenderFragment {
+function renderChildCompProps(element: HTMLElement, { variables }: RenderContext): RenderFragment {
     let attributes = element.attributes;
     let props = [];
     let isPropsDirectAssignment: boolean = false;
@@ -522,7 +525,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
 
                 let forEachAccessor = parseAccessor(forEach, variables);
                 // Todo check if type unknown throw exception
-                let forEachFragment = forEachAccessor.render().map(_ => `vs => ${_}`)
+                let forEachFragment = forEachAccessor.render().map((_) => `vs => ${_}`);
                 if (forEachAccessor.resolvedType === JayUnknown)
                     return new RenderFragment('', Imports.none(), [
                         `forEach directive - failed to resolve type for forEach=${forEach}`,
@@ -779,7 +782,7 @@ ${indent.firstLine}])`,
             let trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
             let forEachAccessor = parseAccessor(forEach, variables);
             // Todo check if type unknown throw exception
-            let forEachFragment = forEachAccessor.render().map(_ => `vs => ${_}`)
+            let forEachFragment = forEachAccessor.render().map((_) => `vs => ${_}`);
             if (forEachAccessor.resolvedType === JayUnknown)
                 return new RenderFragment('', Imports.none(), [
                     `forEach directive - failed to resolve type for forEach=${forEach}`,

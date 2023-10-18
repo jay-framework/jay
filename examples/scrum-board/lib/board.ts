@@ -1,8 +1,7 @@
-import {BoardElementRefs, BoardPillar, render} from './board.jay.html';
-import {createMemo, createState, makeJayComponent, Props} from 'jay-component';
+import { BoardElementRefs, BoardPillar, render } from './board.jay.html';
+import { createMemo, createState, makeJayComponent, Props } from 'jay-component';
 import { ADD, JSONPatch, patch, REMOVE } from 'jay-json-patch';
 import { DEFAULT_PILLARS } from './DEFAULT_PILLARS';
-
 
 export interface BoardProps {
     title: string;
@@ -13,25 +12,20 @@ function BoardConstructor({ title }: Props<BoardProps>, refs: BoardElementRefs) 
 
     const boardPillars = createMemo<BoardPillar[]>(() =>
         pillars().map((pillar, index) => {
-            let {pillarId, title, pillarTasks} = pillar;
+            let { pillarId, title, pillarTasks } = pillar;
             return {
                 pillarId,
                 pillarData: {
                     pillarTasks,
                     title,
                     hasPrev: index > 0,
-                    hasNext: index < pillars().length - 1
-                }
-            }
-        })
-    )
+                    hasNext: index < pillars().length - 1,
+                },
+            };
+        }),
+    );
 
-    function moveTask(
-        pillarId: string,
-        taskId: string,
-        pillarOffset: number,
-        taskOffset: number,
-    ) {
+    function moveTask(pillarId: string, taskId: string, pillarOffset: number, taskOffset: number) {
         let pillarIndex = pillars().findIndex((pillar) => pillar.pillarId === pillarId);
         let taskIndex = pillars()[pillarIndex].pillarTasks.findIndex(
             (aTask) => aTask.id === taskId,

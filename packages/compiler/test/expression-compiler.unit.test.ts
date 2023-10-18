@@ -2,7 +2,8 @@ import { describe, expect, it } from '@jest/globals';
 import {
     Accessor,
     parseAccessor,
-    parseAttributeExpression, parseBooleanAttributeExpression,
+    parseAttributeExpression,
+    parseBooleanAttributeExpression,
     parseClassExpression,
     parseComponentPropExpression,
     parseCondition,

@@ -51,3 +51,15 @@ Jay as a potential of solving this problem by introducing two new concepts - **J
 run on the main window. **Jay Component** is the code the developer writes that imports the Jay Element. It is unsafe as it includes
 3rd party code - and those has to run inside an IFrame. However, Jay can run the **all Jay Components in a single IFrame** while supporting
 multiple components on the page, including component in component and such.
+
+## Contribution
+
+### Development Environment Setup
+
+Install Node version from [./.nvmrc]. Recommended to use [nvm](https://github.com/nvm-sh/nvm).
+
+```shell
+npm install
+npm run bootstrap
+npm run build
+```

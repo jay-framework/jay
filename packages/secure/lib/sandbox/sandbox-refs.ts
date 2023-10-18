@@ -33,8 +33,7 @@ import {
     renderMessage,
     rootApiReturns,
 } from '../comm-channel/messages';
-import { JSONPatch } from 'jay-json-patch';
-import { ArrayContexts } from 'jay-serialization/dist/serialize/diff';
+import { JSONPatch, ArrayContexts } from 'jay-json-patch';
 import { ManagedRef, ReferencesManager } from 'jay-runtime/dist/references-manager';
 import { EVENT_TRAP, GetTrapProxy } from 'jay-runtime';
 import { ComponentRefImpl, PrivateRef } from 'jay-runtime/dist/node-reference';
