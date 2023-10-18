@@ -22,7 +22,7 @@ When a state is updated, any of the dependent reactions are re-run.
 # <a name="record">Record</a>
 
 ```typescript
-declare function record<T>(func: (reactive: Reactive) => T): T
+declare function record<T>(func: (reactive: Reactive) => T): T;
 ```
 
 Used to create the reactive dependency tree.
@@ -45,10 +45,10 @@ reactive.record((reactive) => {
 # <a name="createState">createState</a>
 
 ```typescript
-type Next<T> = (t: T) => T
-type Setter<T> = (t: T | Next<T>) => T
-type Getter<T> = () => T
-declare function createState<T>(value: T | Getter<T>): [get: Getter<T>, set: Setter<T>]
+type Next<T> = (t: T) => T;
+type Setter<T> = (t: T | Next<T>) => T;
+type Getter<T> = () => T;
+declare function createState<T>(value: T | Getter<T>): [get: Getter<T>, set: Setter<T>];
 ```
 
 Creates a state getter / setter pair such that when setting state, any dependent reaction is rerun.
@@ -77,7 +77,7 @@ The function will trigger reactions if the value has changed - changed is define
 # <a name="createReaction">createReaction</a>
 
 ```typescript
-declare function createReaction(func: () => void)
+declare function createReaction(func: () => void);
 ```
 
 creates a reaction that re-runs when state it depends on changes.
@@ -109,7 +109,7 @@ reactive.createReaction(() => {
 # <a name="batchReactions">batchReactions</a>
 
 ```typescript
-declare function batchReactions(func: () => void)
+declare function batchReactions(func: () => void);
 ```
 
 Batch reaction enables to update multiple states while computing reactions only once. It is important for
@@ -136,7 +136,7 @@ reactive.batchReactions(() => {
 # <a name="toBeClean">toBeClean</a>
 
 ```typescript
-declare function toBeClean(): Promise<void>
+declare function toBeClean(): Promise<void>;
 ```
 
 returns a promise that is resolved when pending reactions have run. If there are no pending reactions, the promise
@@ -152,7 +152,7 @@ await reactive.toBeClean();
 # <a name="flush">flush</a>
 
 ```typescript
-declare function flush(): void
+declare function flush(): void;
 ```
 
 In the case of not using batch reactions, reactive will auto batch the reactions and run them async.
@@ -164,4 +164,3 @@ reactive.setStateB('Joe');
 // forces reactions to run
 reactive.flush();
 ```
-

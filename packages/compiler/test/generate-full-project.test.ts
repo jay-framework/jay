@@ -6,11 +6,7 @@ import {
     generateSandboxRootFile,
 } from '../lib';
 import { describe, expect, it } from '@jest/globals';
-import {
-    readGeneratedNamedFile,
-    readNamedSourceJayFile,
-    readTestFile,
-} from './test-fs-utils';
+import { readGeneratedNamedFile, readNamedSourceJayFile, readTestFile } from './test-fs-utils';
 import { printTsFile, readExpectedTsFile, readTsSourceFile } from './test-ts-utils.file';
 import * as ts from 'typescript';
 import { componentBridgeTransformer } from '../lib/ts-file/component-bridge-transformer';

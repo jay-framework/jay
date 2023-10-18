@@ -1,16 +1,16 @@
 interface BoardPillarTask {
-    id: string,
-    title: string,
-    description: string
+    id: string;
+    title: string;
+    description: string;
 }
 
 interface BoardPillar {
-    pillarId: string,
-    title: string,
-    pillarTasks: Array<BoardPillarTask>
+    pillarId: string;
+    title: string;
+    pillarTasks: Array<BoardPillarTask>;
 }
 
-type BoardData = BoardPillar[]
+type BoardData = BoardPillar[];
 
 export const DEFAULT_PILLARS: BoardData = [
     {

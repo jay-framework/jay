@@ -70,7 +70,9 @@ export interface TextElement<ViewState> {
     unmount: MountFunc;
 }
 
-const PROPERTY = 1, ATTRIBUTE = 2, BOOLEAN_ATTRIBUTE = 3;
+const PROPERTY = 1,
+    ATTRIBUTE = 2,
+    BOOLEAN_ATTRIBUTE = 3;
 type AttributeStyle = typeof PROPERTY | typeof ATTRIBUTE | typeof BOOLEAN_ATTRIBUTE;
 export interface DynamicAttributeOrProperty<ViewState, S> {
     valueFunc: (data: ViewState) => S;
@@ -118,10 +120,8 @@ function doSetAttribute<S>(
         target.setAttribute(key, value as unknown as string);
     }
     if (isHTMLElement && attributeStyle === BOOLEAN_ATTRIBUTE) {
-        if (value)
-            target.setAttribute(key, value as unknown as string);
-        else
-            target.removeAttribute(key);
+        if (value) target.setAttribute(key, value as unknown as string);
+        else target.removeAttribute(key);
     } else target[key] = value;
 }
 

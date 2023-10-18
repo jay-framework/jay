@@ -44,6 +44,7 @@ toolset for language services and building custom source files, such as for Vue 
 can be used for the data part of a jay file.
 
 # TS-SQL
+
 https://github.com/codemix/ts-sql/tree/master/src
 typescript library that uses TS type string matching to parse SQL strings and extract types from.
 seems very similar to the data part of a jay file.

@@ -4,7 +4,7 @@ import { JayElement, useContext } from 'jay-runtime';
 import { SANDBOX_BRIDGE_CONTEXT } from './sandbox-context';
 import { COMPONENT_CONTEXT } from 'jay-component';
 import { Reactive } from 'jay-reactive';
-import { ArrayContexts } from 'jay-serialization/dist/serialize/diff';
+import { ArrayContexts } from 'jay-json-patch';
 
 export function elementBridge<ElementViewState, ElementRef>(
     viewState: ElementViewState,

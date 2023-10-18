@@ -1,8 +1,7 @@
 import { render, TaskElementRefs, TaskViewState } from './task.jay.html';
 import { createEvent, makeJayComponent, Props } from 'jay-component';
 
-export interface TaskProps extends TaskViewState {
-}
+export interface TaskProps extends TaskViewState {}
 
 function TaskConstructor(props: Props<TaskProps>, refs: TaskElementRefs) {
     let onNext = createEvent();

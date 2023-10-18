@@ -57,7 +57,7 @@ wrapper semantic / structural / layout elements, etc. We only reconcile on what 
 
 ## 6. All components are 3rd party security ready
 
-All jay components can run as secure / sandboxed 3rd party components. 
+All jay components can run as secure / sandboxed 3rd party components.
 There is special syntax for 3rd party components to ensure security.
 
 ## 7. Zero Trust

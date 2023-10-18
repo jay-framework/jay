@@ -23,10 +23,8 @@ export class Accessor {
 
     render() {
         let renderedAccessor =
-            (this.terms.length === 1 && this.terms[0] === '.')?
-                'vs':
-                'vs.' + this.terms.join('?.');
-        return new RenderFragment(`${renderedAccessor}`, Imports.none(), this.validations)
+            this.terms.length === 1 && this.terms[0] === '.' ? 'vs' : 'vs.' + this.terms.join('?.');
+        return new RenderFragment(`${renderedAccessor}`, Imports.none(), this.validations);
     }
 }
 
@@ -99,7 +97,10 @@ export function parseTextExpression(expression: string, vars: Variables): Render
     return doParse(expression, 'dynamicText', vars);
 }
 
-export function parseBooleanAttributeExpression(expression: string, vars: Variables): RenderFragment {
+export function parseBooleanAttributeExpression(
+    expression: string,
+    vars: Variables,
+): RenderFragment {
     return doParse(expression, 'booleanAttribute', vars);
 }
 

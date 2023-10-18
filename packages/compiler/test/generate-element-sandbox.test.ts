@@ -1,9 +1,6 @@
 import { generateElementBridgeFile } from '../lib';
 import { describe, expect, it } from '@jest/globals';
-import {
-    readGeneratedElementBridgeFile,
-    readSourceJayFile,
-} from './test-fs-utils';
+import { readGeneratedElementBridgeFile, readSourceJayFile } from './test-fs-utils';
 
 describe('generate the element sandbox files', () => {
     describe('generate element bridges', () => {
