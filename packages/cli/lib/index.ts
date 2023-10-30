@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { Command } from 'commander';
 import { generateElementFile } from 'jay-compiler';
 import { generateFiles } from './generate-files';

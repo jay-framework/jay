@@ -1,8 +1,8 @@
 import { render, ShownTodo, TodoViewState } from './todo.jay.html';
 import { uuid } from './uuid';
 
-const ENTER_KEY = 13;
-const ESCAPE_KEY = 27;
+const ENTER_KEY = 'Enter';
+const ESCAPE_KEY = 'Escape';
 
 function Todo() {
     let data = {
@@ -101,9 +101,9 @@ function Todo() {
     });
 
     jayElement.refs.newTodo
-        .$onkeydown(({ event }) => {
-            event.keyCode === ENTER_KEY ? event.preventDefault() : '';
-            return event.keyCode;
+        .onkeydown$(({ event }) => {
+            event.key === ENTER_KEY ? event.preventDefault() : '';
+            return event.key;
         })
         .then(({ event: keyCode }) => {
             if (keyCode !== ENTER_KEY) {
@@ -125,7 +125,7 @@ function Todo() {
         });
 
     jayElement.refs.newTodo
-        .$oninput(({ event }) => (event.target as HTMLInputElement).value)
+        .oninput$(({ event }) => (event.target as HTMLInputElement).value)
         .then(({ event: value }) => {
             data.newTodo = value;
             update();
@@ -160,18 +160,18 @@ function Todo() {
         update();
     });
     jayElement.refs.title
-        .$onkeydown(({ event }) => event.which)
-        .then(({ event: which, viewState: todo }) => {
-            if (which === ESCAPE_KEY) {
+        .onkeydown$(({ event }) => event.key)
+        .then(({ event: key, viewState: todo }) => {
+            if (key === ESCAPE_KEY) {
                 todo.editText = todo.title;
                 todo.isEditing = false;
-            } else if (which === ENTER_KEY) {
+            } else if (key === ENTER_KEY) {
                 handleSubmit(todo);
             }
             update();
         });
     jayElement.refs.toggleAll
-        .$onchange(({ event }) => (event.target as HTMLInputElement).checked)
+        .onchange$(({ event }) => (event.target as HTMLInputElement).checked)
         .then(({ event: completed }) => {
             data.todos = data.todos.map((todo) => ({ ...todo, isCompleted: completed }));
             update();

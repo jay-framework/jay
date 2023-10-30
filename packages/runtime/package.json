@@ -3,31 +3,33 @@
   "version": "1.0.0",
   "main": "dist/index",
   "scripts": {
-    "start": "tsc",
-    "test": "jest --runInBand",
-    "build": "tsc"
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "test": "jest --runInBand"
   },
   "jest": {},
   "dependencies": {
-    "jay-reactive": "1.0.4",
-    "jay-list-compare": "1.0.0"
+    "@babel/core": "^7.23.2",
+    "jay-list-compare": "workspace:^",
+    "jay-reactive": "workspace:^"
   },
   "devDependencies": {
-    "@babel/preset-env": "^7.18.10",
-    "@babel/preset-typescript": "^7.18.6",
+    "@babel/preset-env": "^7.23.2",
+    "@babel/preset-typescript": "^7.23.2",
     "@jest/types": "^28.1.3",
     "@rollup/plugin-node-resolve": "^13.3.0",
-    "@rollup/plugin-typescript": "^8.3.4",
-    "@testing-library/jest-dom": "^5.16.4",
+    "@rollup/plugin-typescript": "^8.5.0",
+    "@testing-library/jest-dom": "^5.17.0",
+    "@types/babel__core": "^7.20.3",
     "@types/jsdom": "^16.2.15",
-    "@types/node": "^14.18.23",
-    "@types/testing-library__jest-dom": "^5.14.5",
+    "@types/node": "^20.8.10",
+    "@types/testing-library__jest-dom": "^5.14.9",
     "jest": "^26.6.3",
     "jsdom": "^16.7.0",
-    "rollup": "^2.77.2",
+    "rollup": "^2.79.1",
     "ts-jest": "^26.5.6",
     "ts-node": "^10.9.1",
-    "tslib": "^2.4.0",
-    "typescript": "^4.7.4"
+    "tslib": "^2.6.2",
+    "typescript": "^4.9.5"
   }
 }

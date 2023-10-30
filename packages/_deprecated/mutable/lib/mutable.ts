@@ -1,6 +1,6 @@
 import { nextRevNum } from './revisioned';
 import { setPrivateProperty } from './private-property';
-import { ChangeListener, isMutable, MutableContract } from 'jay-json-patch';
+import { ChangeListener, isMutable, MutableContract } from './mutable-contract';
 
 export const MUTABLE_PROXY_SYMBOL = Symbol.for('proxy');
 

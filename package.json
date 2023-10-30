@@ -1,15 +1,32 @@
 {
+  "name": "jay",
   "scripts": {
-    "test": "lerna run test",
-    "link": "lerna link",
-    "bootstrap": "lerna bootstrap",
-    "build": "lerna run build",
+    "build": "wsrun -te --report build",
+    "clean": "wsrun clean",
+    "clean:node_modules": "rm -rf node_modules && rm -rf packages/*/node_modules && rm -rf examples/*/node_modules && rm -rf exploration/*/node_modules",
+    "clean:node_modules:with-cache": "npm run clean:node_modules && yarn cache clean",
+    "deps:upgrade": "yarn upgrade-interactive && yarn && yarn deduplicate",
+    "deduplicate": "yarn dedupe --strategy highest",
     "prettier": "prettier . --write",
+    "rebuild": "yarn run clean && yarn run build",
+    "reinstall": "npm run clean:node_modules && yarn install && yarn run rebuild",
+    "test": "wsrun -te --report test",
     "release": "echo \"======= Lerna Releasing jay =======\" && npm run test && lerna publish"
   },
-  "devDependencies": {
-    "lerna": "^3.22.1",
-    "prettier": "3.0.3"
+  "packageManager": "yarn@3.6.4",
+  "workspaces": {
+    "packages": [
+      "packages/*",
+      "packages/_deprecated/*",
+      "examples/*",
+      "exploration/*"
+    ]
   },
-  "name": "jay"
+  "devDependencies": {
+    "prettier": "3.0.3",
+    "wsrun": "^5.2.4"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
 }

@@ -2,7 +2,7 @@ import { describe, expect, it, jest } from '@jest/globals';
 import { mutableObject } from '../lib';
 import { _mutableObject } from '../lib/mutable';
 import { checkModified, getRevision } from '../lib/revisioned';
-import { isMutable } from 'jay-mutable-contract';
+import { isMutable } from 'jay-mutable';
 
 describe('mutable', () => {
     describe('object', () => {

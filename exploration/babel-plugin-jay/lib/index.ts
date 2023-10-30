@@ -1,22 +1,21 @@
 import * as babel from '@babel/core';
-import { BabelFile, NodePath, PluginObj, PluginPass } from '@babel/core';
-import { ImportDeclaration } from '@babel/types';
+import { BabelFile, PluginObj } from '@babel/core';
 
 // import {stylesheet} from "./parser";
 
 // Main Babel Plugin Function
-export default function ({ types: t }: typeof babel): PluginObj {
+export default function ({}: typeof babel): PluginObj {
     return {
         name: 'identifier reverse',
-        pre: (pluginPass: PluginPass, file: BabelFile): void => {
-            console.log(pluginPass, require('util').inspect(pluginPass?.ast, false, 10, true));
+        pre: (_file: BabelFile): void => {
+            console.log(this, require('util').inspect(this?.ast, false, 10, true));
         },
         visitor: {
-            Identifier(idPath, path, state) {
-                console.log('***', idPath.node.name, path, state);
+            Identifier(idPath, path) {
+                console.log('***', idPath.node.name, path);
             },
-            JSXElement(idPath, path, state) {
-                console.log('jsx', idPath.node, path, state);
+            JSXElement(idPath, path) {
+                console.log('jsx', idPath.node, path);
             },
         },
     };

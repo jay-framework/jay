@@ -9,6 +9,7 @@ export default [
             file: 'dist/index.js',
             format: 'iife',
             name: 'jay',
+            sourcemap: true,
         },
         plugins: [typescript({ tsconfig: './tsconfig.json' }), nodeResolve()],
     },

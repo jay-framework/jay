@@ -3,25 +3,25 @@
   "version": "1.0.0",
   "main": "dist/index",
   "scripts": {
-    "d-basic": "node node_modules/jay-cli/dist/index.js definitions ./test/basic/regular",
-    "jay-basic": "node node_modules/jay-cli/dist/index.js runtime ./test/basic/regular",
-    "d-comp-in-comp": "node node_modules/jay-cli/dist/index.js definitions test/comp-in-comp/regular",
-    "jay-comp-in-comp": "node node_modules/jay-cli/dist/index.js runtime test/comp-in-comp/regular",
-    "d-events-basic": "node node_modules/jay-cli/dist/index.js definitions test/events-basic/regular",
-    "jay-events-basic": "node node_modules/jay-cli/dist/index.js runtime test/events-basic/regular",
-    "d-events-synthetic": "node node_modules/jay-cli/dist/index.js definitions test/events-synthetic/regular",
-    "jay-events-synthetic": "node node_modules/jay-cli/dist/index.js runtime test/events-synthetic/regular",
-    "d-exec-synthetic": "node node_modules/jay-cli/dist/index.js definitions test/exec-synthetic/regular",
-    "jay-exec-synthetic": "node node_modules/jay-cli/dist/index.js runtime test/exec-synthetic/regular",
-    "d-tree": "node node_modules/jay-cli/dist/index.js definitions test/tree/regular",
-    "jay-tree": "node node_modules/jay-cli/dist/index.js runtime test/tree/regular",
-    "d-top-level-collection-conditions": "node node_modules/jay-cli/dist/index.js definitions test/top-level-collection-conditions/regular",
-    "jay-top-level-collection-conditions": "node node_modules/jay-cli/dist/index.js runtime test/top-level-collection-conditions/regular",
+    "d-basic": "jay-cli definitions ./test/basic/regular",
+    "jay-basic": "jay-cli runtime ./test/basic/regular",
+    "d-comp-in-comp": "jay-cli definitions test/comp-in-comp/regular",
+    "jay-comp-in-comp": "jay-cli runtime test/comp-in-comp/regular",
+    "d-events-basic": "jay-cli definitions test/events-basic/regular",
+    "jay-events-basic": "jay-cli runtime test/events-basic/regular",
+    "d-events-synthetic": "jay-cli definitions test/events-synthetic/regular",
+    "jay-events-synthetic": "jay-cli runtime test/events-synthetic/regular",
+    "d-exec-synthetic": "jay-cli definitions test/exec-synthetic/regular",
+    "jay-exec-synthetic": "jay-cli runtime test/exec-synthetic/regular",
+    "d-tree": "jay-cli definitions test/tree/regular",
+    "jay-tree": "jay-cli runtime test/tree/regular",
+    "d-top-level-collection-conditions": "jay-cli definitions test/top-level-collection-conditions/regular",
+    "jay-top-level-collection-conditions": "jay-cli runtime test/top-level-collection-conditions/regular",
     "d": "npm run d-basic & npm run d-events-basic & npm run d-events-synthetic & npm run d-tree % npm run d-top-level-collection-conditions & npm run d-exec-synthetic & npm run d-",
     "jay": "npm run jay-basic & npm run jay-events-basic & npm run jay-events-synthetic & npm run jay-tree & npm run jay-top-level-collection-conditions & npm run jay-exec-synthetic & npm run jay-comp-in-comp",
-    "start": "tsc",
-    "test": "jest --runInBand",
-    "build": "tsc"
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "test": "jest --runInBand"
   },
   "jest": {
     "setupFilesAfterEnv": [
@@ -29,24 +29,26 @@
     ]
   },
   "dependencies": {
-    "jay-runtime": "1.0.0",
-    "jay-component": "1.0.0",
-    "jay-reactive": "1.0.4",
-    "jay-json-patch": "1.0.0",
-    "jay-serialization": "1.0.0"
+    "@babel/core": "^7.23.2",
+    "jay-component": "workspace:^",
+    "jay-json-patch": "workspace:^",
+    "jay-reactive": "workspace:^",
+    "jay-runtime": "workspace:^",
+    "jay-serialization": "workspace:^"
   },
   "devDependencies": {
-    "@babel/preset-env": "^7.18.10",
-    "@babel/preset-typescript": "^7.18.6",
-    "@testing-library/jest-dom": "^5.16.4",
+    "@babel/preset-env": "^7.23.2",
+    "@babel/preset-typescript": "^7.23.2",
+    "@testing-library/jest-dom": "^5.17.0",
+    "@types/babel__core": "^7.20.3",
     "@types/jsdom": "^16.2.15",
-    "@types/node": "^18.16.1",
-    "@types/testing-library__jest-dom": "^5.14.5",
-    "caniuse-lite": "^1.0.30001374",
+    "@types/node": "^18.18.8",
+    "@types/testing-library__jest-dom": "^5.14.9",
+    "caniuse-lite": "^1.0.30001559",
     "jest": "^26.6.3",
-    "jsdom": "^16.5.3",
+    "jsdom": "^16.7.0",
     "ts-jest": "^26.5.6",
-    "tslib": "^2.4.0",
-    "typescript": "^4.7.4"
+    "tslib": "^2.6.2",
+    "typescript": "^4.9.5"
   }
 }

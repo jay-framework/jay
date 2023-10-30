@@ -1,6 +1,11 @@
 {
   "name": "jay-exploration-rfc-6902",
   "version": "1.0.0",
+  "scripts": {
+    "build": ":",
+    "clean": ":",
+    "test": ":"
+  },
   "dependencies": {
     "rfc6902": "^5.0.1"
   }

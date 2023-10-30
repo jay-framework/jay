@@ -59,7 +59,26 @@ multiple components on the page, including component in component and such.
 Install Node version from [./.nvmrc]. Recommended to use [nvm](https://github.com/nvm-sh/nvm).
 
 ```shell
-npm install
-npm run bootstrap
-npm run build
+# setup yarn
+npm i -g npm # making sure you're using newest npm
+npm i -g corepack
+corepack enable
+yarn set version 3.6.4
+npm run reinstall
+
+yarn run build
+```
+
+Mark `.yarn` directory as excluded in IntelliJ.
+
+### Running commands from packages
+
+If you get errors of some dependency not found when running commands from packages, try running then with yarn:
+
+```bash
+yarn run build # for commands
+
+# for custom scripts, yarn analog for npx
+npm install -g ynpx
+ynpx tsc
 ```
