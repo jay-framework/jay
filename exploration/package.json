@@ -2,6 +2,6 @@
   "name": "jay-exploration",
   "version": "1.0.0",
   "devDependencies": {
-    "jay-runtime": "1.0.0"
+    "jay-runtime": "workspace:^"
   }
 }

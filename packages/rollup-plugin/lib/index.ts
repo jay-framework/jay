@@ -34,7 +34,7 @@ export default function jayCompiler(options = {}) {
         name: 'jay', // this name will show up in warnings and errors
         transform(code: string, id: string) {
             try {
-                if (id.indexOf('.jay.html') > -1) {
+                if (id.endsWith('.jay.html') && !id.startsWith('.jay.html')) {
                     let filename = path.basename(id).replace('.jay.html', '');
                     let dirName = path.dirname(id);
                     let tsCode = generateElementFile(code, filename, dirName);

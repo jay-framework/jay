@@ -1,8 +1,7 @@
 import { createState, makeJayComponent, Props } from 'jay-component';
-import { MainElementRefs, MainViewState, render, SelectedExample } from './main.jay.html';
-import { handler$ } from 'jay-secure/dist/$func';
+import { MainElementRefs, render, SelectedExample } from './main.jay.html';
 
-export interface MainProps {}
+interface MainProps {}
 
 const examples = Object.keys(SelectedExample)
     .filter((_) => !isNaN(Number(_)))
@@ -14,13 +13,11 @@ function MainConstructor({}: Props<MainProps>, refs: MainElementRefs) {
     let [progress, setProgress] = createState('');
 
     refs.chooseExample
-        .onchange$(handler$<KeyboardEvent, MainViewState, any>('1'))
-        // .$onchange(({event}) => (event.target as HTMLSelectElement).selectedIndex)
+        .onchange$(({ event }) => (event.target as HTMLSelectElement).selectedIndex)
         .then(({ event: index }) => setSelectedExample(Number(examples[index].value)));
 
     refs.cycles
-        .oninput$(handler$<KeyboardEvent, MainViewState, any>('2'))
-        // .$oninput(({event}) => (event.target as HTMLInputElement).value)
+        .oninput$(({ event }) => (event.target as HTMLInputElement).value)
         .then(({ event: cycles }) => setCycles(Number(cycles)));
 
     refs.run.onclick(() => {

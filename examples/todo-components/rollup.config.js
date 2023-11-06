@@ -4,8 +4,6 @@ import { terser } from 'rollup-plugin-terser';
 import jay from 'rollup-plugin-jay';
 import copy from 'rollup-plugin-copy';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
-import { promises as fs } from 'fs';
-import path from 'path';
 
 async function makeRollupConfig() {
     return [
@@ -16,12 +14,14 @@ async function makeRollupConfig() {
                     file: './dist/index.js',
                     format: 'iife',
                     name: 'jay',
+                    sourcemap: true,
                 },
                 {
                     file: './dist/index.min.js',
                     format: 'iife',
                     name: 'jay',
                     plugins: [terser()],
+                    sourcemap: true,
                 },
             ],
             context: 'window',
@@ -44,12 +44,14 @@ async function makeRollupConfig() {
                     file: './dist-secure/index.js',
                     format: 'iife',
                     name: 'jay',
+                    sourcemap: true,
                 },
                 {
                     file: './dist-secure/index.min.js',
                     format: 'iife',
                     name: 'jay',
                     plugins: [terser()],
+                    sourcemap: true,
                 },
             ],
             context: 'window',
@@ -71,12 +73,14 @@ async function makeRollupConfig() {
                     file: './dist-secure/worker.js',
                     format: 'iife',
                     name: 'jay',
+                    sourcemap: true,
                 },
                 {
                     file: './dist-secure/worker.min.js',
                     format: 'iife',
                     name: 'jay',
                     plugins: [terser()],
+                    sourcemap: true,
                 },
             ],
             context: 'window',

@@ -5,16 +5,18 @@
     "rollup": "rollup --config ./rollup.config.js",
     "ts": "tsc",
     "copy": "cp lib/index.html dist/index.html",
-    "build": "npm run rollup & npm run copy"
+    "build": "npm run ts && npm run rollup & npm run copy",
+    "clean": "rm -rf dist",
+    "test": ":"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^13.3.0",
-    "@rollup/plugin-typescript": "^8.3.4",
-    "rollup": "^2.77.2",
-    "tslib": "^2.4.0",
-    "typescript": "^4.7.4"
+    "@rollup/plugin-typescript": "^8.5.0",
+    "rollup": "^2.79.1",
+    "tslib": "^2.6.2",
+    "typescript": "^4.9.5"
   },
   "dependencies": {
-    "immer": "^10.0.2"
+    "immer": "^10.0.3"
   }
 }

@@ -6,7 +6,7 @@ import {
     MOVE,
     REMOVE,
     REPLACE,
-} from '../../../packages/json-patch';
+} from 'jay-json-patch';
 
 function validateMove({ from, path }: JSONPatchMove) {
     let valid = from.length === path.length;
