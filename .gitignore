@@ -10,3 +10,4 @@ lerna-debug.log
 examples/**/*.d.ts
 examples/**/*.jay.html.ts
 **/coverage/
+.yarn/install-state.gz
