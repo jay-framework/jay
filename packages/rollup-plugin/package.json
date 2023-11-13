@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "jay-compiler": "workspace:^",
-    "typescript": "^4.9.5"
+    "typescript": "^5.2.2"
   },
   "devDependencies": {
     "@types/node": "^20.9.0",
