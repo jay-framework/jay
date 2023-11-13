@@ -10,15 +10,15 @@
   },
   "jest": {},
   "dependencies": {
-    "@babel/core": "^7.23.2",
+    "@babel/core": "^7.23.3",
     "jay-json-patch": "workspace:^",
     "jay-reactive": "workspace:^"
   },
   "devDependencies": {
-    "@babel/preset-env": "^7.23.2",
-    "@babel/preset-typescript": "^7.23.2",
-    "@types/babel__core": "^7.20.3",
-    "@types/node": "^20.8.10",
+    "@babel/preset-env": "^7.23.3",
+    "@babel/preset-typescript": "^7.23.3",
+    "@types/babel__core": "^7.20.4",
+    "@types/node": "^20.9.0",
     "jay-runtime": "workspace:^",
     "jest": "^26.6.3",
     "ts-jest": "^26.5.6",
