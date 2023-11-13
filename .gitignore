@@ -4,7 +4,6 @@ dist-secure
 build
 *.iml
 /packages/compiler/lib/expressions/expression-parser.js
-lerna-debug.log
 examples/**/*.d.ts
 examples/**/*.jay.html.ts
 **/coverage/
