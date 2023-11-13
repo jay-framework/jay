@@ -3,8 +3,6 @@ dist
 dist-secure
 build
 *.iml
-*.lock
-package-lock.json
 /packages/compiler/lib/expressions/expression-parser.js
 lerna-debug.log
 examples/**/*.d.ts
