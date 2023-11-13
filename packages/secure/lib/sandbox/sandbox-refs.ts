@@ -34,9 +34,9 @@ import {
     rootApiReturns,
 } from '../comm-channel/messages';
 import { JSONPatch, ArrayContexts } from 'jay-json-patch';
-import { ManagedRef, ReferencesManager } from 'jay-runtime/dist/references-manager';
+import { ManagedRef, ReferencesManager } from 'jay-runtime';
 import { EVENT_TRAP, GetTrapProxy } from 'jay-runtime';
-import { ComponentRefImpl, PrivateRef } from 'jay-runtime/dist/node-reference';
+import { ComponentRefImpl, PrivateRef } from 'jay-runtime';
 
 export interface SandboxBridgeElement<ViewState> {
     update: updateFunc<ViewState>;

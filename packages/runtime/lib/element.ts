@@ -440,7 +440,7 @@ export function normalizeUpdates<ViewState>(
             if (updates[i]._origUpdates) updates.splice(i, 1, ...updates[i]._origUpdates);
         }
         let updateFunc: updateFunc<ViewState> = (newData) => {
-            updates.forEach((__update) => __update(newData));
+            updates.forEach((updateFn) => updateFn(newData));
         };
         updateFunc._origUpdates = updates;
         return updateFunc;
@@ -453,7 +453,7 @@ export function normalizeMount(mounts: Array<MountFunc>): MountFunc {
     if (mounts.length === 1) return mounts[0];
     else if (mounts.length > 0) {
         return () => {
-            mounts.forEach((__update) => __update());
+            mounts.forEach((updateFn) => updateFn());
         };
     } else {
         return noopMount;

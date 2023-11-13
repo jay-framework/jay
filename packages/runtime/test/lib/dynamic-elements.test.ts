@@ -5,7 +5,6 @@ import {
     dynamicText as dt,
     conditional,
 } from '../../lib/element';
-import { describe, expect, it } from '@jest/globals';
 import { JayElement } from '../../lib';
 import { ConstructContext } from '../../lib/context';
 

@@ -1,4 +1,3 @@
-import { describe, expect, it } from '@jest/globals';
 import { patch } from '../lib';
 import { ADD, JSONPatch, MOVE, REMOVE, REPLACE } from '../lib';
 

@@ -1,4 +1,3 @@
-import { describe, expect, it, jest, beforeEach } from '@jest/globals';
 import { ArrayContexts, diff } from '../lib';
 import { ADD, MOVE, REMOVE, REPLACE } from '../lib';
 

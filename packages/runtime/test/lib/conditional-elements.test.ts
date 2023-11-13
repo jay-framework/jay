@@ -4,9 +4,6 @@ import {
     element as e,
     dynamicText as dt,
 } from '../../lib/element';
-import '@testing-library/jest-dom/extend-expect';
-import { describe, expect, it } from '@jest/globals';
-import { expectE } from './test-utils';
 import { JSDOM } from 'jsdom';
 import { JayElement, HTMLElementProxy } from '../../lib';
 import { ConstructContext } from '../../lib/context';
@@ -50,7 +47,7 @@ describe('conditional-element', () => {
                 condition: true,
                 text2: ANOTHER_VALUE,
             });
-            expectE(jayElement.dom.querySelector('#text1')).toHaveTextContent(SOME_VALUE);
+            expect(jayElement.dom.querySelector('#text1')).toHaveTextContent(SOME_VALUE);
             expect(jayElement.dom.querySelector('#text2')).toBeNull();
         });
 
@@ -61,7 +58,7 @@ describe('conditional-element', () => {
                 text2: ANOTHER_VALUE,
             });
             expect(jayElement.dom.querySelector('#text1')).toBeNull();
-            expectE(jayElement.dom.querySelector('#text2')).toHaveTextContent(ANOTHER_VALUE);
+            expect(jayElement.dom.querySelector('#text2')).toHaveTextContent(ANOTHER_VALUE);
         });
 
         it('should update condition to false', () => {
@@ -72,7 +69,7 @@ describe('conditional-element', () => {
             });
             jayElement.update({ text1: SOME_VALUE, condition: false, text2: ANOTHER_VALUE });
             expect(jayElement.dom.querySelector('#text1')).toBeNull();
-            expectE(jayElement.dom.querySelector('#text2')).toHaveTextContent(ANOTHER_VALUE);
+            expect(jayElement.dom.querySelector('#text2')).toHaveTextContent(ANOTHER_VALUE);
         });
 
         it('should update condition to false and update text', () => {
@@ -83,7 +80,7 @@ describe('conditional-element', () => {
             });
             jayElement.update({ text1: SOME_VALUE, condition: false, text2: VALUE_3 });
             expect(jayElement.dom.querySelector('#text1')).toBeNull();
-            expectE(jayElement.dom.querySelector('#text2')).toHaveTextContent(VALUE_3);
+            expect(jayElement.dom.querySelector('#text2')).toHaveTextContent(VALUE_3);
         });
     });
 
@@ -136,7 +133,7 @@ describe('conditional-element', () => {
                 condition: true,
                 text2: ANOTHER_VALUE,
             });
-            let mockCallback = jest.fn();
+            let mockCallback = vi.fn();
             jayElement.refs.text1.onclick(mockCallback);
             jayElement.refs.text1.exec$((elem) => elem.click());
             expect(mockCallback.mock.calls.length).toBe(1);
@@ -171,7 +168,7 @@ describe('conditional-element', () => {
                     ),
                 ]),
             ) as ConditionalElement;
-            dom.window.document.querySelector('body').appendChild(element.dom);
+            dom.window.document.querySelector('body')!.appendChild(element.dom);
             element.refs.input1.onblur = () => {
                 console.log('blur');
                 blurCount += 1;

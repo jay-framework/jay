@@ -1,4 +1,3 @@
-import { describe, it } from '@jest/globals';
 import { Counter } from './comps/counter-comp';
 import '../../lib/element-test-types';
 
@@ -27,7 +26,7 @@ describe('counter component', () => {
     });
 
     it('support component events', () => {
-        let fn = jest.fn();
+        let fn = vi.fn();
         let counter = Counter(6);
 
         counter.onChange(fn);
@@ -41,7 +40,7 @@ describe('counter component', () => {
     });
 
     it('validate events view state and coordinate via the counter component', () => {
-        let fn = jest.fn();
+        let fn = vi.fn();
         let counter = Counter(6);
 
         counter.onChange(fn);

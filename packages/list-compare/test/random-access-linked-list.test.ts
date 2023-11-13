@@ -5,7 +5,6 @@ import {
     RandomAccessLinkedList,
     UntypedRandomAccessLinkedList,
 } from '../lib';
-import { describe, expect, it, jest } from '@jest/globals';
 
 interface Item {
     id: string;
@@ -319,7 +318,7 @@ describe('random-access-linked-list', () => {
         list.add(itemB, EoF, attach2);
         list.add(itemC, EoF, attach3);
 
-        const mockCallback = jest.fn((item, attach) => {});
+        const mockCallback = vi.fn((item, attach) => {});
         list.forEach(mockCallback);
 
         expect(mockCallback.mock.calls.length).toBe(3);

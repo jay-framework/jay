@@ -13,7 +13,3 @@ export function makeParent(): { document: Document; parent: HTMLElement } {
     const document = window.document;
     return { document, parent: document.getElementById('parent') };
 }
-
-export function expectE<T>(t: T): jest.Matchers<T, any> {
-    return expect(t) as any as jest.Matchers<T, any>;
-}

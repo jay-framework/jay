@@ -9,7 +9,7 @@ import {
 } from '../comm-channel/messages';
 import { deserialize, Deserialize } from 'jay-serialization';
 import { completeCorrelatedPromise } from '../$func';
-import { ReferencesManager } from 'jay-runtime/dist/references-manager';
+import { ReferencesManager } from 'jay-runtime';
 
 export function sandboxRoot<ViewState extends object>(
     sandboxElements: () => Array<SandboxElement<ViewState>>,

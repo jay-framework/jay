@@ -9,6 +9,7 @@ export function mkComponentEventHandler<EventType, PropsType>(): EventEmitter<
     eventDefinition = function (handler: JayEventHandler<EventType, PropsType, void>) {
         _handler = handler;
     } as EventEmitter<EventType, PropsType>;
+    // @ts-expect-error Type '(event: EventType) => void' is not assignable to type 'unknown extends EventType ? () => void : (event: EventType) => void'
     eventDefinition.emit = (event: EventType) =>
         _handler &&
         _handler({

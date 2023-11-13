@@ -1,4 +1,3 @@
-import { beforeEach, describe, expect, it } from '@jest/globals';
 import { compCollectionRef, compRef, elemCollectionRef, elemRef } from '../../lib';
 import {
     childComp,
@@ -56,8 +55,8 @@ describe('ReferencesManager events', () => {
                 },
                 options,
             );
-            mockCallback = jest.fn(() => undefined);
-            mockCallback2 = jest.fn(() => undefined);
+            mockCallback = vi.fn(() => undefined);
+            mockCallback2 = vi.fn(() => undefined);
 
             return { jayElement1, jayElement2, jayRootElement, mockCallback, mockCallback2 };
         }
@@ -94,7 +93,7 @@ describe('ReferencesManager events', () => {
             });
 
             it('should support event handler wrapper', () => {
-                let eventsWrapper = jest.fn((orig, event) => orig(event));
+                let eventsWrapper = vi.fn((orig, event) => orig(event));
                 let { jayRootElement, mockCallback, jayElement1 } = mkJayElement(eventsWrapper);
 
                 jayRootElement.refs.refName1.onclick(mockCallback);
@@ -201,8 +200,8 @@ describe('ReferencesManager events', () => {
                     ),
                 ]);
             });
-            mockCallback = jest.fn(() => undefined);
-            mockCallback2 = jest.fn(() => undefined);
+            mockCallback = vi.fn(() => undefined);
+            mockCallback2 = vi.fn(() => undefined);
 
             return { jayElements, jayElements2, jayRootElement, mockCallback, mockCallback2 };
         }
@@ -372,7 +371,7 @@ describe('ReferencesManager events', () => {
                         ]),
                     { eventWrapper },
                 ) as JayElement<RootElementViewState, RootElementRefs>;
-            let mockCallback = jest.fn(() => undefined);
+            let mockCallback = vi.fn(() => undefined);
             return { jayRootElement, mockCallback, jayComponent };
         }
 
@@ -445,9 +444,9 @@ describe('ReferencesManager events', () => {
         });
 
         it('should support event wrapper', () => {
-            let eventWrapper = jest.fn((orig, event) => orig(event));
+            let eventWrapper = vi.fn((orig, event) => orig(event));
             let { jayRootElement, jayComponent } = mkElement(eventWrapper);
-            let mockCallback = jest.fn(() => undefined);
+            let mockCallback = vi.fn(() => undefined);
 
             jayRootElement.refs.refName1.onremove(mockCallback);
             let button = jayComponent.element.dom.querySelector(
@@ -516,7 +515,7 @@ describe('ReferencesManager events', () => {
                     RootElementRefs
                 >;
 
-                mockCallback = jest.fn();
+                mockCallback = vi.fn();
             });
 
             it('should enrich root element with the ref and allow registering events using addEventListener', () => {
@@ -575,7 +574,7 @@ describe('ReferencesManager events', () => {
                     RootElementRefs
                 >;
 
-                mockCallback = jest.fn();
+                mockCallback = vi.fn();
             });
 
             it('should enrich root element with the ref and allow registering events on components (using onremove)', () => {

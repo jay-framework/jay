@@ -16,6 +16,7 @@
   "packageManager": "yarn@3.6.4",
   "workspaces": {
     "packages": [
+      "dev-environment",
       "packages/*",
       "packages/_deprecated/*",
       "examples/*",

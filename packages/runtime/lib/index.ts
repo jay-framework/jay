@@ -10,7 +10,7 @@ export {
     GetTrapProxy,
     ComponentCollectionRefImpl,
     ComponentRefImpl,
-    PrivateRef,
+    type PrivateRef,
 } from './node-reference';
 export {
     createJayContext,
@@ -18,4 +18,6 @@ export {
     useContext,
     useOptionalContext,
     ConstructContext,
+    currentConstructionContext,
 } from './context';
+export { type ManagedRef, ReferencesManager } from './references-manager';
