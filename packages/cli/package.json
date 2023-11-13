@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "chalk": "^4.1.2",
-    "commander": "^8.3.0",
+    "commander": "^11.1.0",
     "jay-compiler": "workspace:^"
   },
   "devDependencies": {

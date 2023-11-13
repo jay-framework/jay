@@ -25,7 +25,7 @@
     "@types/js-yaml": "^4.0.9",
     "change-case": "^4.1.2",
     "js-yaml": "^4.1.0",
-    "node-html-parser": "^2.2.1",
+    "node-html-parser": "^6.1.11",
     "pegjs": "^0.10.0",
     "pluralize": "^8.0.0",
     "ts-morph": "^13.0.3",
