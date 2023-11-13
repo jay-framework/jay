@@ -1,8 +1,4 @@
-import ts, { ConstKeyword, LeftHandSideExpression, SyntaxKind } from 'typescript';
-
-function deleteFunctionDeclarations(node: ts.Node) {
-    return undefined;
-}
+import ts from 'typescript';
 
 function transformVariableStatement(node: ts.VariableStatement, factory: ts.NodeFactory) {
     let declarations = node.declarationList.declarations;
@@ -46,7 +42,6 @@ function transformImport(
         if (originalTarget === 'jay-component')
             return factory.updateImportDeclaration(
                 node,
-                node.decorators,
                 node.modifiers,
                 factory.createImportClause(
                     node.importClause.isTypeOnly,
@@ -66,7 +61,6 @@ function transformImport(
         else if (allowedJayElementModules.indexOf(originalTarget) > -1) {
             return factory.updateImportDeclaration(
                 node,
-                node.decorators,
                 node.modifiers,
                 factory.createImportClause(
                     node.importClause.isTypeOnly,
