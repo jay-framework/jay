@@ -1,5 +1,4 @@
-import {JayElement, element as e, dynamicProperty as dp, ConstructContext, HTMLElementProxy, childComp, elemRef as er, compRef as cr, RenderElementOptions} from "jay-runtime";
-import {TableRef} from "./table-refs";
+import {JayElement, element as e, dynamicAttribute as da, dynamicProperty as dp, ConstructContext, HTMLElementProxy, elemRef as er, RenderElementOptions} from "jay-runtime";
 import {Table} from "./table";
 
 export interface TableHostViewState {
@@ -12,7 +11,7 @@ export interface TableHostElementRefs {
   size: HTMLElementProxy<TableHostViewState, HTMLInputElement>,
   updates: HTMLElementProxy<TableHostViewState, HTMLInputElement>,
   stateManagement: HTMLElementProxy<TableHostViewState, HTMLSelectElement>,
-  table: TableRef<TableHostViewState>
+  table: HTMLElementProxy<TableHostViewState, HTMLTableElement>
 }
 
 export type TableHostElement = JayElement<TableHostViewState, TableHostElementRefs>
@@ -36,6 +35,6 @@ export function render(viewState: TableHostViewState, options?: RenderElementOpt
           e('option', {value: 'json-patch'}, ['json-patch'])
         ], er('stateManagement'))
       ]),
-      childComp(Table, (vs: TableHostViewState) => ({tableSize: vs.size, numCellsToUpdate: vs.updates, stateManagement: vs.stateManagement}), cr('table'))
+      e('table', {tablesize: da(vs => vs.size), numcellstoupdate: da(vs => vs.updates), statemanagement: da(vs => vs.stateManagement)}, [], er('table'))
     ]), options);
 }

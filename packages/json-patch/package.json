@@ -12,14 +12,14 @@
     "dist"
   ],
   "dependencies": {
-    "@babel/core": "^7.23.2",
+    "@babel/core": "^7.23.3",
     "jay-list-compare": "workspace:^"
   },
   "devDependencies": {
-    "@babel/preset-env": "^7.23.2",
-    "@babel/preset-typescript": "^7.23.2",
-    "@types/babel__core": "^7.20.3",
-    "@types/node": "^18.18.8",
+    "@babel/preset-env": "^7.23.3",
+    "@babel/preset-typescript": "^7.23.3",
+    "@types/babel__core": "^7.20.4",
+    "@types/node": "^18.18.9",
     "jest": "^26.6.3",
     "ts-jest": "^26.5.6",
     "tslib": "^2.6.2",
