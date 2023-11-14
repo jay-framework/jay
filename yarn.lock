@@ -5685,18 +5685,16 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "jay-component@workspace:packages/component"
   dependencies:
-    "@babel/core": ^7.23.3
-    "@babel/preset-env": ^7.23.3
-    "@babel/preset-typescript": ^7.23.3
-    "@types/babel__core": ^7.20.4
+    "@testing-library/jest-dom": ^6.1.4
     "@types/node": ^20.9.0
+    jay-dev-environment: "workspace:^"
     jay-json-patch: "workspace:^"
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
-    jest: ^26.6.3
-    ts-jest: ^26.5.6
-    tslib: ^2.6.2
+    tsup: ^7.2.0
     typescript: ^5.2.2
+    vite: ^4.5.0
+    vitest: ^0.34.6
   languageName: unknown
   linkType: soft
 
@@ -5967,8 +5965,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "jay-runtime@workspace:packages/runtime"
   dependencies:
-    "@rollup/plugin-node-resolve": ^13.3.0
-    "@rollup/plugin-typescript": ^8.5.0
     "@testing-library/jest-dom": ^6.1.4
     "@types/node": ^20.9.0
     jay-dev-environment: "workspace:^"

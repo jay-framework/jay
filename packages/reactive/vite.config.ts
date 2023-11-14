@@ -7,7 +7,7 @@ export default defineConfig({
         target: 'es2020',
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
-            name: 'jsonPatch',
+            name: 'reactive',
             fileName: 'index',
             formats: ['es'],
         },
