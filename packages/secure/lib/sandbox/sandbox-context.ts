@@ -8,7 +8,7 @@ import {
 } from 'jay-runtime';
 import { IJayEndpoint, IJayPort } from '../comm-channel/comm-channel';
 import { Reactive } from 'jay-reactive';
-import { ReferencesManager } from 'jay-runtime/dist/references-manager';
+import { ReferencesManager } from 'jay-runtime';
 
 export interface SandboxContext {
     port: IJayPort;

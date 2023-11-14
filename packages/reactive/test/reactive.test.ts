@@ -1,10 +1,9 @@
-import { describe, expect, it, jest } from '@jest/globals';
 import { Reactive } from '../lib';
 
 describe('reactive', () => {
     describe('create reactive', () => {
         it('should call the constructor function', () => {
-            const myMock = jest.fn();
+            const myMock = vi.fn();
 
             new Reactive().record(() => {
                 myMock();
@@ -90,7 +89,7 @@ describe('reactive', () => {
 
     describe('create reaction', () => {
         it('should run the reaction on creation', () => {
-            const reaction = jest.fn();
+            const reaction = vi.fn();
 
             new Reactive().record((reactive) => {
                 reactive.createReaction(() => {
@@ -102,7 +101,7 @@ describe('reactive', () => {
         });
 
         it('should rerun when it depends on state, and state changes', async () => {
-            const reaction = jest.fn();
+            const reaction = vi.fn();
             let reactive = new Reactive();
             let [setState] = reactive.record((reactive) => {
                 let [state, setState] = reactive.createState(12);
@@ -121,7 +120,7 @@ describe('reactive', () => {
         });
 
         it('should not rerun when state it does not depends on changes', () => {
-            const reaction = jest.fn();
+            const reaction = vi.fn();
             let state, setState;
             let state2, setState2;
             new Reactive().record((reactive) => {
@@ -139,7 +138,7 @@ describe('reactive', () => {
         });
 
         it('should not rerun when state it depends on is updated with the same immutable (===) value', () => {
-            const reaction = jest.fn();
+            const reaction = vi.fn();
             let state, setState;
             new Reactive().record((reactive) => {
                 [state, setState] = reactive.createState(12);
@@ -157,7 +156,7 @@ describe('reactive', () => {
 
     describe('batch reactions', () => {
         it('should batch re-calculations using the batch operation (single state)', () => {
-            const reaction = jest.fn();
+            const reaction = vi.fn();
             let state, setState;
             let reactive = new Reactive();
             reactive.record((reactive) => {
@@ -180,7 +179,7 @@ describe('reactive', () => {
         });
 
         it('should run a reaction once even if multiple states it depends on are updated', () => {
-            const reaction = jest.fn();
+            const reaction = vi.fn();
             let state, setState, state2, setState2;
             let reactive = new Reactive();
             reactive.record((reactive) => {
@@ -204,7 +203,7 @@ describe('reactive', () => {
         });
 
         it('should batch re-calculations using the batch operation (multiple states)', () => {
-            const reaction = jest.fn();
+            const reaction = vi.fn();
             let a, b, c, setA, setB, setC;
             let reactive = new Reactive();
             reactive.record((reactive) => {
@@ -366,7 +365,7 @@ describe('reactive', () => {
 
     describe('auto batch reactions', () => {
         it('should auto batch re-calculations when not using batch operation', async () => {
-            const reaction = jest.fn();
+            const reaction = vi.fn();
             let reactive = new Reactive();
 
             let [setState, setState2] = reactive.record((reactive) => {
@@ -389,7 +388,7 @@ describe('reactive', () => {
         });
 
         it('should flush pending auto batch re-calculations (when not using batch operation)', () => {
-            const reaction = jest.fn();
+            const reaction = vi.fn();
             let reactive = new Reactive();
 
             let [setState, setState2] = reactive.record((reactive) => {
@@ -412,8 +411,8 @@ describe('reactive', () => {
         });
 
         it('auto batched reactions should merge into batchReactions later call', () => {
-            const reaction1 = jest.fn();
-            const reaction2 = jest.fn();
+            const reaction1 = vi.fn();
+            const reaction2 = vi.fn();
             let reactive = new Reactive();
 
             let [setState, setState2] = reactive.record((reactive) => {
@@ -444,7 +443,7 @@ describe('reactive', () => {
 
     describe('reaction ordering', () => {
         it('should run reactions in dependency order', () => {
-            const reaction2 = jest.fn();
+            const reaction2 = vi.fn();
             let state, setState, state2, setState2, state3, setState3, state4, setState4;
             let reactive = new Reactive();
             reactive.record((reactive) => {

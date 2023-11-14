@@ -1,4 +1,3 @@
-import { beforeEach, describe, expect, it } from '@jest/globals';
 import { compCollectionRef, compRef, elemCollectionRef, elemRef } from '../../lib/';
 import {
     childComp,
@@ -41,7 +40,7 @@ describe('ReferencesManager operations', () => {
                 DATA_CONTEXT,
                 () => e('div', {}, [(jayElement1 = e('div', {}, [SOME_VALUE], elemRef(refName1)))]),
             );
-            let mockCallback = jest.fn(() => undefined);
+            let mockCallback = vi.fn(() => undefined);
             return { jayRootElement, jayElement1, mockCallback };
         }
 
@@ -106,8 +105,8 @@ describe('ReferencesManager operations', () => {
                     ),
                 ]);
             });
-            mockCallback = jest.fn(() => undefined);
-            mockCallback2 = jest.fn(() => undefined);
+            mockCallback = vi.fn(() => undefined);
+            mockCallback2 = vi.fn(() => undefined);
 
             return { jayElements, jayElements2, jayRootElement, mockCallback, mockCallback2 };
         }
@@ -116,10 +115,10 @@ describe('ReferencesManager operations', () => {
             htmlNativeExec: HTMLNativeExec<any, any>,
             jayElement: JayElement<any, any>,
         ) {
-            let mockCallback = jest.fn(() => undefined);
+            let mockCallback = vi.fn(() => undefined);
             htmlNativeExec.exec$(mockCallback);
             expect(mockCallback.mock.calls.length).toBe(1);
-            expect(mockCallback.mock.calls[0][0]).toBe(jayElement.dom);
+            expect((mockCallback.mock.calls[0] as HTMLElement[])[0]).toBe(jayElement.dom);
         }
 
         function sameCoordinate(a: Coordinate, b: Coordinate) {
@@ -184,7 +183,7 @@ describe('ReferencesManager operations', () => {
                 ]),
             ) as JayElement<RootElementViewState, RootElementRefs>;
 
-            mockCallback = jest.fn(() => undefined);
+            mockCallback = vi.fn(() => undefined);
         });
 
         it('should allow using component APIs', () => {
@@ -235,7 +234,7 @@ describe('ReferencesManager operations', () => {
                 ]);
             }) as JayElement<RootElementViewState, RootElementRefs>;
 
-            mockCallback = jest.fn();
+            mockCallback = vi.fn();
         });
 
         it('map should allow using component APIs and return array of callback return values', () => {

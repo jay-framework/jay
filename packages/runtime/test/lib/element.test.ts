@@ -5,7 +5,6 @@ import {
     dynamicText as dt,
     dynamicProperty as dp,
 } from '../../lib/element';
-import { beforeEach, describe, expect, it } from '@jest/globals';
 import { BaseJayElement, JayElement, noopUpdate } from '../../lib';
 import { ConstructContext } from '../../lib';
 
@@ -267,7 +266,7 @@ describe('element', () => {
                     e('div', {}, [
                         e('div', {
                             textContent: dp((vs) => {
-                                stack = new Error().stack;
+                                stack = new Error().stack!;
                                 return vs.text;
                             }),
                         }),
@@ -300,7 +299,7 @@ describe('element', () => {
                     e('div', {}, [
                         e('div', {
                             textContent: dp((vs) => {
-                                stack = new Error().stack;
+                                stack = new Error().stack!;
                                 return vs.text;
                             }),
                         }),
@@ -321,7 +320,7 @@ describe('element', () => {
             expect(jayElement.dom.childNodes[1].childNodes[1].textContent).toBe(VALUE_6);
 
             // check that __update appears only once in the stack trace of an update function
-            const count_update_regex = /__update/gm;
+            const count_update_regex = /updateFunc/gm;
             let countUpdates = 0;
             let m;
             do {

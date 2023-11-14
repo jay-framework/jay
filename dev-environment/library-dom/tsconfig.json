@@ -1,0 +1,7 @@
+{
+  "extends": "../library/tsconfig.json",
+  "compilerOptions": {
+    "lib": ["es2022", "dom"],
+    "types": ["vitest/globals", "@testing-library/jest-dom/vitest"]
+  }
+}

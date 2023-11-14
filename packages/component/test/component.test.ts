@@ -22,7 +22,7 @@ import {
 } from '../lib/component';
 import { Reactive } from 'jay-reactive';
 import { REPLACE } from 'jay-json-patch';
-import { elemRef } from 'jay-runtime/dist/node-reference';
+import { elemRef } from 'jay-runtime';
 const { makePropsProxy } = forTesting;
 
 describe('state management', () => {

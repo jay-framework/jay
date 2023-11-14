@@ -7,8 +7,7 @@ import {
     JayComponentConstructor,
     provideContext,
 } from 'jay-runtime';
-import { currentConstructionContext } from 'jay-runtime/dist/context';
-import { PrivateRef } from 'jay-runtime/dist/node-reference';
+import { currentConstructionContext, PrivateRef } from 'jay-runtime';
 
 export interface SecureCoordinateContext {
     coordinate: Coordinate;

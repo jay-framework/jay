@@ -1,6 +1,4 @@
 import { forEach, dynamicElement as de, element as e, dynamicText as dt } from '../../lib/element';
-import { describe, expect, it } from '@jest/globals';
-import { expectE } from './test-utils';
 import { JayElement, HTMLElementCollectionProxy } from '../../lib';
 import { ConstructContext } from '../../lib';
 import { elemCollectionRef } from '../../lib/';
@@ -54,28 +52,28 @@ describe('collection-element', () => {
         it('should render collection of items', () => {
             let jayElement = makeElement({ items: [item1, item2, item3] });
             expect(jayElement.dom.querySelectorAll('.item')).toHaveLength(3);
-            expectE(jayElement.dom.querySelector('#' + item1.id)).toHaveTextContent(item1.name);
-            expectE(jayElement.dom.querySelector('#' + item2.id)).toHaveTextContent(item2.name);
-            expectE(jayElement.dom.querySelector('#' + item3.id)).toHaveTextContent(item3.name);
-            expectE(jayElement.dom.children[0]).toHaveTextContent(item1.name);
-            expectE(jayElement.dom.children[1]).toHaveTextContent(item2.name);
-            expectE(jayElement.dom.children[2]).toHaveTextContent(item3.name);
+            expect(jayElement.dom.querySelector('#' + item1.id)).toHaveTextContent(item1.name);
+            expect(jayElement.dom.querySelector('#' + item2.id)).toHaveTextContent(item2.name);
+            expect(jayElement.dom.querySelector('#' + item3.id)).toHaveTextContent(item3.name);
+            expect(jayElement.dom.children[0]).toHaveTextContent(item1.name);
+            expect(jayElement.dom.children[1]).toHaveTextContent(item2.name);
+            expect(jayElement.dom.children[2]).toHaveTextContent(item3.name);
         });
 
         it('should update items of the collection', () => {
             let jayElement = makeElement({ items: [item1, item2, item3] });
             jayElement.update({ items: [item5, item3, item4, item2, item1] });
             expect(jayElement.dom.querySelectorAll('.item')).toHaveLength(5);
-            expectE(jayElement.dom.querySelector('#' + item1.id)).toHaveTextContent(item1.name);
-            expectE(jayElement.dom.querySelector('#' + item2.id)).toHaveTextContent(item2.name);
-            expectE(jayElement.dom.querySelector('#' + item3.id)).toHaveTextContent(item3.name);
-            expectE(jayElement.dom.querySelector('#' + item4.id)).toHaveTextContent(item4.name);
-            expectE(jayElement.dom.querySelector('#' + item5.id)).toHaveTextContent(item5.name);
-            expectE(jayElement.dom.children[0]).toHaveTextContent(item5.name);
-            expectE(jayElement.dom.children[1]).toHaveTextContent(item3.name);
-            expectE(jayElement.dom.children[2]).toHaveTextContent(item4.name);
-            expectE(jayElement.dom.children[3]).toHaveTextContent(item2.name);
-            expectE(jayElement.dom.children[4]).toHaveTextContent(item1.name);
+            expect(jayElement.dom.querySelector('#' + item1.id)).toHaveTextContent(item1.name);
+            expect(jayElement.dom.querySelector('#' + item2.id)).toHaveTextContent(item2.name);
+            expect(jayElement.dom.querySelector('#' + item3.id)).toHaveTextContent(item3.name);
+            expect(jayElement.dom.querySelector('#' + item4.id)).toHaveTextContent(item4.name);
+            expect(jayElement.dom.querySelector('#' + item5.id)).toHaveTextContent(item5.name);
+            expect(jayElement.dom.children[0]).toHaveTextContent(item5.name);
+            expect(jayElement.dom.children[1]).toHaveTextContent(item3.name);
+            expect(jayElement.dom.children[2]).toHaveTextContent(item4.name);
+            expect(jayElement.dom.children[3]).toHaveTextContent(item2.name);
+            expect(jayElement.dom.children[4]).toHaveTextContent(item1.name);
         });
 
         it('should support multiple updates', () => {
@@ -87,28 +85,28 @@ describe('collection-element', () => {
             jayElement.update({ items: [item3, item2, item5, item4] });
             jayElement.update({ items: [item1, item3, item2, item5, item4] });
             expect(jayElement.dom.querySelectorAll('.item')).toHaveLength(5);
-            expectE(jayElement.dom.querySelector('#' + item1.id)).toHaveTextContent(item1.name);
-            expectE(jayElement.dom.querySelector('#' + item2.id)).toHaveTextContent(item2.name);
-            expectE(jayElement.dom.querySelector('#' + item3.id)).toHaveTextContent(item3.name);
-            expectE(jayElement.dom.querySelector('#' + item4.id)).toHaveTextContent(item4.name);
-            expectE(jayElement.dom.querySelector('#' + item5.id)).toHaveTextContent(item5.name);
-            expectE(jayElement.dom.children[0]).toHaveTextContent(item1.name);
-            expectE(jayElement.dom.children[1]).toHaveTextContent(item3.name);
-            expectE(jayElement.dom.children[2]).toHaveTextContent(item2.name);
-            expectE(jayElement.dom.children[3]).toHaveTextContent(item5.name);
-            expectE(jayElement.dom.children[4]).toHaveTextContent(item4.name);
+            expect(jayElement.dom.querySelector('#' + item1.id)).toHaveTextContent(item1.name);
+            expect(jayElement.dom.querySelector('#' + item2.id)).toHaveTextContent(item2.name);
+            expect(jayElement.dom.querySelector('#' + item3.id)).toHaveTextContent(item3.name);
+            expect(jayElement.dom.querySelector('#' + item4.id)).toHaveTextContent(item4.name);
+            expect(jayElement.dom.querySelector('#' + item5.id)).toHaveTextContent(item5.name);
+            expect(jayElement.dom.children[0]).toHaveTextContent(item1.name);
+            expect(jayElement.dom.children[1]).toHaveTextContent(item3.name);
+            expect(jayElement.dom.children[2]).toHaveTextContent(item2.name);
+            expect(jayElement.dom.children[3]).toHaveTextContent(item5.name);
+            expect(jayElement.dom.children[4]).toHaveTextContent(item4.name);
         });
 
         it('should update item content', () => {
             let jayElement = makeElement({ items: [item1, item2, item3] });
             jayElement.update({ items: [item1, item2_1, item3] });
             expect(jayElement.dom.querySelectorAll('.item')).toHaveLength(3);
-            expectE(jayElement.dom.querySelector('#' + item1.id)).toHaveTextContent(item1.name);
-            expectE(jayElement.dom.querySelector('#' + item2.id)).toHaveTextContent(item2_1.name);
-            expectE(jayElement.dom.querySelector('#' + item3.id)).toHaveTextContent(item3.name);
-            expectE(jayElement.dom.children[0]).toHaveTextContent(item1.name);
-            expectE(jayElement.dom.children[1]).toHaveTextContent(item2_1.name);
-            expectE(jayElement.dom.children[2]).toHaveTextContent(item3.name);
+            expect(jayElement.dom.querySelector('#' + item1.id)).toHaveTextContent(item1.name);
+            expect(jayElement.dom.querySelector('#' + item2.id)).toHaveTextContent(item2_1.name);
+            expect(jayElement.dom.querySelector('#' + item3.id)).toHaveTextContent(item3.name);
+            expect(jayElement.dom.children[0]).toHaveTextContent(item1.name);
+            expect(jayElement.dom.children[1]).toHaveTextContent(item2_1.name);
+            expect(jayElement.dom.children[2]).toHaveTextContent(item3.name);
         });
     });
 
@@ -212,7 +210,7 @@ describe('collection-element', () => {
 
         it('should have the view state and dynamic coordinate "id-2/done" as event parameters', () => {
             let todoListElement = makeElement({ items: [item1, item2, item3] });
-            let fn = jest.fn();
+            let fn = vi.fn();
             todoListElement.refs.done.onclick(fn);
             todoListElement.refs.done.find((item) => item === item2).exec$((el) => el.click());
             expect(fn.mock.calls[0][0].viewState).toBe(item2);
@@ -299,10 +297,10 @@ describe('collection-element', () => {
             });
             let tableCells = jayElement.dom.querySelectorAll('td');
             expect(tableCells).toHaveLength(4);
-            expectE(tableCells[0]).toHaveTextContent('abc');
-            expectE(tableCells[1]).toHaveTextContent('def');
-            expectE(tableCells[2]).toHaveTextContent('ghi');
-            expectE(tableCells[3]).toHaveTextContent('jkl');
+            expect(tableCells[0]).toHaveTextContent('abc');
+            expect(tableCells[1]).toHaveTextContent('def');
+            expect(tableCells[2]).toHaveTextContent('ghi');
+            expect(tableCells[3]).toHaveTextContent('jkl');
         });
 
         it('should update basic table', () => {
@@ -344,10 +342,10 @@ describe('collection-element', () => {
             });
             let tableCells = jayElement.dom.querySelectorAll('td');
             expect(tableCells).toHaveLength(4);
-            expectE(tableCells[0]).toHaveTextContent('123');
-            expectE(tableCells[1]).toHaveTextContent('456');
-            expectE(tableCells[2]).toHaveTextContent('789');
-            expectE(tableCells[3]).toHaveTextContent('101');
+            expect(tableCells[0]).toHaveTextContent('123');
+            expect(tableCells[1]).toHaveTextContent('456');
+            expect(tableCells[2]).toHaveTextContent('789');
+            expect(tableCells[3]).toHaveTextContent('101');
         });
     });
 });

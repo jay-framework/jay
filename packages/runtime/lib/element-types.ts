@@ -10,7 +10,7 @@ export const noopUpdate: updateFunc<any> = (_newData: any): void => {};
 export const noopMount: MountFunc = (): void => {};
 
 export interface BaseJayElement<ViewState> {
-    // dom: HTMLElement,
+    // dom: HTMLElement, - provided by element-test-types.ts
     update: updateFunc<ViewState>;
     mount: MountFunc;
     unmount: MountFunc;

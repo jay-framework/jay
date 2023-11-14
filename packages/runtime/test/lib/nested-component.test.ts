@@ -1,4 +1,3 @@
-import { describe, it } from '@jest/globals';
 import {
     ConstructContext,
     element as e,
@@ -67,7 +66,7 @@ describe('nested components', () => {
         });
 
         it('handle events on nested component', () => {
-            let handler = jest.fn();
+            let handler = vi.fn();
             let composite = renderComposite({
                 staticItem: 'hello world',
             });
@@ -210,7 +209,7 @@ describe('nested components', () => {
         });
 
         it('should process nested component external events', () => {
-            let fn = jest.fn();
+            let fn = vi.fn();
             let viewState = {
                 items: [
                     { id: 'A', value: 'eleven' },

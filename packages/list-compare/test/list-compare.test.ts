@@ -1,4 +1,3 @@
-import { describe, expect, it } from '@jest/globals';
 import { listCompare, ITEM_ADDED, ITEM_REMOVED, ITEM_MOVED } from '../lib';
 import { TestList as List } from './test-list';
 import { EoF } from '../lib';
