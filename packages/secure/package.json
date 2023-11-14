@@ -1,35 +1,35 @@
 {
   "name": "jay-secure",
   "version": "1.0.0",
-  "main": "dist/index",
+  "type": "module",
+  "main": "dist/index.js",
   "scripts": {
-    "d-basic": "jay-cli definitions ./test/basic/regular",
-    "jay-basic": "jay-cli runtime ./test/basic/regular",
-    "d-comp-in-comp": "jay-cli definitions test/comp-in-comp/regular",
-    "jay-comp-in-comp": "jay-cli runtime test/comp-in-comp/regular",
-    "d-events-basic": "jay-cli definitions test/events-basic/regular",
-    "jay-events-basic": "jay-cli runtime test/events-basic/regular",
-    "d-events-synthetic": "jay-cli definitions test/events-synthetic/regular",
-    "jay-events-synthetic": "jay-cli runtime test/events-synthetic/regular",
-    "d-exec-synthetic": "jay-cli definitions test/exec-synthetic/regular",
-    "jay-exec-synthetic": "jay-cli runtime test/exec-synthetic/regular",
-    "d-tree": "jay-cli definitions test/tree/regular",
-    "jay-tree": "jay-cli runtime test/tree/regular",
-    "d-top-level-collection-conditions": "jay-cli definitions test/top-level-collection-conditions/regular",
-    "jay-top-level-collection-conditions": "jay-cli runtime test/top-level-collection-conditions/regular",
-    "d": "npm run d-basic & npm run d-events-basic & npm run d-events-synthetic & npm run d-tree % npm run d-top-level-collection-conditions & npm run d-exec-synthetic & npm run d-",
-    "jay": "npm run jay-basic & npm run jay-events-basic & npm run jay-events-synthetic & npm run jay-tree & npm run jay-top-level-collection-conditions & npm run jay-exec-synthetic & npm run jay-comp-in-comp",
-    "build": "tsc",
+    "definitions:basic": "jay-cli definitions ./test/basic/regular",
+    "runtime:basic": "jay-cli runtime ./test/basic/regular",
+    "definitions:comp-in-comp": "jay-cli definitions test/comp-in-comp/regular",
+    "runtime:comp-in-comp": "jay-cli runtime test/comp-in-comp/regular",
+    "definitions:events-basic": "jay-cli definitions test/events-basic/regular",
+    "runtime:events-basic": "jay-cli runtime test/events-basic/regular",
+    "definitions:events-synthetic": "jay-cli definitions test/events-synthetic/regular",
+    "runtime:events-synthetic": "jay-cli runtime test/events-synthetic/regular",
+    "definitions:exec-synthetic": "jay-cli definitions test/exec-synthetic/regular",
+    "runtime:exec-synthetic": "jay-cli runtime test/exec-synthetic/regular",
+    "definitions:tree": "jay-cli definitions test/tree/regular",
+    "runtime:tree": "jay-cli runtime test/tree/regular",
+    "definitions:top-level-collection-conditions": "jay-cli definitions test/top-level-collection-conditions/regular",
+    "runtime:top-level-collection-conditions": "jay-cli runtime test/top-level-collection-conditions/regular",
+    "definitions": "run-p --continue-on-error --aggregate-output --print-label 'definitions:*'",
+    "runtime": "run-p --continue-on-error --aggregate-output --print-label 'runtime:*'",
+    "build": "npm run build:js && npm run build:types",
+    "build:js": "vite build",
+    "build:types": "tsup lib/index.ts --dts-only --format esm ",
+    "build:check-types": "tsc",
     "clean": "rm -rf dist",
-    "test": "jest --runInBand"
-  },
-  "jest": {
-    "setupFilesAfterEnv": [
-      "./jest-setup.js"
-    ]
+    "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
-    "@babel/core": "^7.23.3",
     "jay-component": "workspace:^",
     "jay-json-patch": "workspace:^",
     "jay-reactive": "workspace:^",
@@ -37,18 +37,15 @@
     "jay-serialization": "workspace:^"
   },
   "devDependencies": {
-    "@babel/preset-env": "^7.23.3",
-    "@babel/preset-typescript": "^7.23.3",
-    "@testing-library/jest-dom": "^5.17.0",
-    "@types/babel__core": "^7.20.4",
-    "@types/jsdom": "^16.2.15",
+    "@testing-library/jest-dom": "^6.1.4",
     "@types/node": "^20.9.0",
-    "@types/testing-library__jest-dom": "^5.14.9",
     "caniuse-lite": "^1.0.30001561",
-    "jest": "^26.6.3",
-    "jsdom": "^16.7.0",
-    "ts-jest": "^26.5.6",
-    "tslib": "^2.6.2",
-    "typescript": "^5.2.2"
+    "jay-cli": "workspace:^",
+    "jay-dev-environment": "workspace:^",
+    "npm-run-all2": "^6.1.1",
+    "tsup": "^7.2.0",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.0",
+    "vitest": "^0.34.6"
   }
 }

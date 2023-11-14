@@ -1,4 +1,3 @@
-import { describe, expect, it } from '@jest/globals';
 import { setChannel, useMockCommunicationChannel } from '../util/mock-channel';
 import { initializeWorker } from './secure/worker/worker-root';
 import { render } from './secure/main/app.jay.html';
