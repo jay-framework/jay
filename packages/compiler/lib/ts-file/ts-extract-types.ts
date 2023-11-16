@@ -8,7 +8,7 @@ import {
     Type,
     TypeAliasDeclaration,
 } from 'ts-morph';
-import * as ts from 'typescript';
+import ts from 'typescript';
 import fs from 'fs';
 import path from 'path';
 

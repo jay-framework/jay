@@ -6,6 +6,7 @@ import { ADD, REPLACE } from 'jay-json-patch';
 
 const initialData = { firstName: 'Joe', lastName: 'Smith' };
 const updatedData = { firstName: 'John', lastName: 'Green' };
+
 describe('basic secure rendering', () => {
     async function mkElement() {
         let channel = useMockCommunicationChannel(false);
