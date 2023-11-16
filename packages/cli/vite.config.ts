@@ -14,6 +14,9 @@ export default defineConfig({
         },
         rollupOptions: {
             external: ['jay-compiler'],
+            output: {
+                banner: '#!/usr/bin/env node',
+            },
         },
     },
     test: {

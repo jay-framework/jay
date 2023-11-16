@@ -5,9 +5,10 @@
   "main": "dist/index.js",
   "bin": "dist/index.js",
   "scripts": {
-    "build": "npm run build:js",
+    "build": "npm run build:js && npm run build:executable-bin",
     "build:js": "vite build",
     "build:check-types": "tsc",
+    "build:executable-bin": "chmod +x dist/index.js",
     "clean": "rm -rf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
     "test": ":",
