@@ -1,8 +1,6 @@
-import { describe, expect, it, jest } from '@jest/globals';
-import { mutableObject } from '../lib';
+import { mutableObject, isMutable } from '../lib';
 import { _mutableObject } from '../lib/mutable';
 import { checkModified, getRevision } from '../lib/revisioned';
-import { isMutable } from 'jay-mutable';
 
 describe('mutable', () => {
     describe('object', () => {
@@ -211,7 +209,7 @@ describe('mutable', () => {
             });
 
             it('filter on objects should respect the same mutable listeners', () => {
-                let fn1 = jest.fn();
+                let fn1 = vi.fn();
                 let mutableArr = mutableObject([
                     { a: 1, b: 2 },
                     { a: 3, b: 4 },
@@ -236,7 +234,7 @@ describe('mutable', () => {
             });
 
             it('remove from original and add to filtered array should respect change listener', () => {
-                let fn1 = jest.fn();
+                let fn1 = vi.fn();
                 let mutableArr = mutableObject([
                     { a: 1, b: 2 },
                     { a: 3, b: 4 },
@@ -287,7 +285,7 @@ describe('mutable', () => {
             });
 
             it('returned object should respect the same mutable listeners', () => {
-                let fn1 = jest.fn();
+                let fn1 = vi.fn();
                 let mutableArr = mutableObject([
                     { a: 1, b: 4 },
                     { a: 2, b: 5 },
@@ -380,7 +378,7 @@ describe('mutable', () => {
             });
 
             it('flat on objects should respect the same mutable listeners', () => {
-                let fn1 = jest.fn();
+                let fn1 = vi.fn();
                 let mutableArr = mutableObject([
                     { a: 1, b: 2 },
                     [
@@ -444,7 +442,7 @@ describe('mutable', () => {
             });
 
             it('flatMap on objects should respect the same mutable listeners', () => {
-                let fn1 = jest.fn();
+                let fn1 = vi.fn();
                 let mutableArr = mutableObject([
                     { a: 1, b: 2 },
                     { a: 3, b: 4 },
@@ -462,7 +460,7 @@ describe('mutable', () => {
 
         describe('forEach', () => {
             it('should support primitives', () => {
-                let fn = jest.fn();
+                let fn = vi.fn();
                 let mutableArr = mutableObject(['a', 'b', 'c']);
                 let revisioned = getRevision(mutableArr);
 
@@ -604,7 +602,7 @@ describe('mutable', () => {
             });
 
             it('map on objects should respect the same mutable listeners', () => {
-                let fn1 = jest.fn();
+                let fn1 = vi.fn();
                 let mutableArr = mutableObject([
                     { a: 1, b: 2 },
                     { a: 3, b: 4 },
@@ -1009,7 +1007,7 @@ describe('mutable', () => {
 
     describe('mutation listener', () => {
         it('supports change listener in mutableObject', () => {
-            let fn = jest.fn();
+            let fn = vi.fn();
             let mutable = _mutableObject({ a: 1, b: 2 }, fn);
 
             mutable.a = 3;
@@ -1018,7 +1016,7 @@ describe('mutable', () => {
         });
 
         it('supports change listener in mutableObject', () => {
-            let fn = jest.fn();
+            let fn = vi.fn();
             let mutable = mutableObject({ a: 1, b: 2 });
             isMutable(mutable) && mutable.addMutableListener(fn);
 
@@ -1028,8 +1026,8 @@ describe('mutable', () => {
         });
 
         it('supports removing change listener in mutableObject', () => {
-            let fn1 = jest.fn();
-            let fn2 = jest.fn();
+            let fn1 = vi.fn();
+            let fn2 = vi.fn();
             let mutable = mutableObject({ a: 1, b: 2 });
             isMutable(mutable) && mutable.addMutableListener(fn1);
             isMutable(mutable) && mutable.addMutableListener(fn2);
@@ -1042,7 +1040,7 @@ describe('mutable', () => {
         });
 
         it('supports change listener in array of objects', () => {
-            let fn = jest.fn();
+            let fn = vi.fn();
             let mutable = _mutableObject(
                 [
                     { a: 1, b: 2 },
