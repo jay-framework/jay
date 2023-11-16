@@ -1,14 +1,14 @@
 {
   "compilerOptions": {
     "jsx": "preserve",
-    "module": "es2015",
+    "module": "ESNext",
     "esModuleInterop": true,
-    "target": "es2015",
+    "target": "esnext",
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "build",
-    "lib": ["es2016", "dom"]
+    "lib": ["ESNext", "DOM"]
   },
-  "lib": ["lib.es2015.d.ts", "lib.dom.d.ts"],
+  "lib": ["lib.esnext.d.ts", "lib.dom.d.ts"],
   "exclude": []
 }

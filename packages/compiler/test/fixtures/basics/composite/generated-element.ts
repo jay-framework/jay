@@ -1,20 +1,32 @@
-import {JayElement, element as e, dynamicText as dt, ConstructContext, RenderElementOptions} from "jay-runtime";
+import {
+    JayElement,
+    element as e,
+    dynamicText as dt,
+    ConstructContext,
+    RenderElementOptions,
+} from 'jay-runtime';
 
 export interface CompositeViewState {
-  text: string,
-  text2: string
+    text: string;
+    text2: string;
 }
 
 export interface CompositeElementRefs {}
 
-export type CompositeElement = JayElement<CompositeViewState, CompositeElementRefs>
+export type CompositeElement = JayElement<CompositeViewState, CompositeElementRefs>;
 
-export function render(viewState: CompositeViewState, options?: RenderElementOptions): CompositeElement {
-  return ConstructContext.withRootContext(viewState, () =>
-    e('div', {}, [
-      e('div', {}, [dt(vs => vs.text)]),
-      e('div', {}, ['static']),
-      e('div', {}, [dt(vs => vs.text2)])
-    ]), options);
+export function render(
+    viewState: CompositeViewState,
+    options?: RenderElementOptions,
+): CompositeElement {
+    return ConstructContext.withRootContext(
+        viewState,
+        () =>
+            e('div', {}, [
+                e('div', {}, [dt((vs) => vs.text)]),
+                e('div', {}, ['static']),
+                e('div', {}, [dt((vs) => vs.text2)]),
+            ]),
+        options,
+    );
 }
-

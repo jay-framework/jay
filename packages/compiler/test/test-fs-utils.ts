@@ -1,17 +1,16 @@
-import { promises } from 'fs';
+import { promises } from 'node:fs';
+import path from 'node:path';
 
 const readFile = promises.readFile;
 export const readTestFile = async (folder, filename) =>
-    (await readFile(`./test/fixtures/${folder}/${filename}`)).toString().trim();
-export const readSourceJayFile = async (folder) =>
-    (await readFile(`./test/fixtures/${folder}/source.jay.html`)).toString().trim();
+    (await readFile(path.resolve(__dirname, `./fixtures/${folder}/${filename}`))).toString();
+export const readSourceJayFile = async (folder) => readTestFile(folder, 'source.jay.html');
 export const readNamedSourceJayFile = async (folder, file) =>
-    (await readFile(`./test/fixtures/${folder}/${file}.jay.html`)).toString().trim();
-export const readGeneratedNamedFile = async (folder, file) =>
-    (await readFile(`./test/fixtures/${folder}/${file}.ts`)).toString().trim();
+    readTestFile(folder, `${file}.jay.html`);
+export const readGeneratedNamedFile = async (folder, file) => readTestFile(folder, `${file}.ts`);
 export const readGeneratedElementFile = async (folder) =>
-    (await readFile(`./test/fixtures/${folder}/generated-element.ts`)).toString().trim();
+    readTestFile(folder, 'generated-element.ts');
 export const readGeneratedElementBridgeFile = async (folder) =>
-    (await readFile(`./test/fixtures/${folder}/generated-element-bridge.ts`)).toString().trim();
+    readTestFile(folder, 'generated-element-bridge.ts');
 export const readGeneratedElementDefinitionFile = async (folder) =>
-    (await readFile(`./test/fixtures/${folder}/generated-element.d.ts`)).toString().trim();
+    readTestFile(folder, 'generated-element.d.ts');

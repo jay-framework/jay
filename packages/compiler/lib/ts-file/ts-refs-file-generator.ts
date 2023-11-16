@@ -1,10 +1,13 @@
 import { WithValidations } from '../core/with-validations';
-import { tsExtractTypes } from './ts-extract-types';
+import { ResolveTsConfigOptions, tsExtractTypes } from './ts-extract-types';
 
 import { JayComponentType } from '../core/jay-file-types';
 
-export function generateComponentRefsDefinitionFile(filepath: string): WithValidations<string> {
-    let types = tsExtractTypes(filepath);
+export function generateComponentRefsDefinitionFile(
+    filepath: string,
+    options?: ResolveTsConfigOptions,
+): WithValidations<string> {
+    let types = tsExtractTypes(filepath, options);
 
     let componentTypes: Array<JayComponentType> = types.filter(
         (_) => _ instanceof JayComponentType,

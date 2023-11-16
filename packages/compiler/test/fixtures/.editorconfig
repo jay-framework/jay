@@ -1,4 +1,0 @@
-# Indentation override for all JS under lib directory
-[**/**.ts]
-indent_style = space
-indent_size = 2

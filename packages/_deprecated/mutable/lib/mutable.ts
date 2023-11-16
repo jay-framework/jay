@@ -146,8 +146,8 @@ export function _mutableObject<T>(
             state.original[property] = isMutable(value)
                 ? value.getOriginal()
                 : Object.isFrozen(value)
-                ? _structuredClone(value)
-                : value;
+                  ? _structuredClone(value)
+                  : value;
             state.changed();
             return true;
         },

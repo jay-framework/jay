@@ -1,4 +1,3 @@
-import { describe, expect, it } from '@jest/globals';
 import { tsExtractTypes } from '../lib/ts-file/ts-extract-types';
 
 import {
@@ -21,10 +20,11 @@ describe('typescript-compiler', () => {
         s3: JayString,
         n3: JayNumber,
     });
+    const relativePath = './test/fixtures/tsconfig.json';
 
     it('should extract types from a file', () => {
         let types = tsExtractTypes('./test/fixtures/basics/attributes/generated-element.ts', {
-            relativePath: 'tsconfig-tests.json',
+            relativePath,
         });
 
         expect(types).toEqual(
@@ -44,7 +44,7 @@ describe('typescript-compiler', () => {
 
     it('should extract types from a file, adding .ts extension automatically', () => {
         let types = tsExtractTypes('./test/fixtures/basics/attributes/generated-element', {
-            relativePath: 'tsconfig-tests.json',
+            relativePath,
         });
 
         expect(types).toEqual(
@@ -64,7 +64,7 @@ describe('typescript-compiler', () => {
 
     it('should extract types from a definition file', () => {
         let types = tsExtractTypes('./test/fixtures/basics/data-types/generated-element', {
-            relativePath: 'tsconfig-tests.json',
+            relativePath,
         });
 
         expect(types).toEqual(
@@ -87,7 +87,7 @@ describe('typescript-compiler', () => {
 
     it('should extract types from a definition file, auto adding .d.ts', () => {
         let types = tsExtractTypes('./test/fixtures/basics/data-types/generated-element', {
-            relativePath: 'tsconfig-tests.json',
+            relativePath,
         });
 
         expect(types).toEqual(
@@ -110,7 +110,7 @@ describe('typescript-compiler', () => {
 
     it('should extract types from a recursive file', () => {
         let types = tsExtractTypes('./test/fixtures/components/recursive-components/tree-node', {
-            relativePath: 'tsconfig-tests.json',
+            relativePath,
         });
 
         let nodeType = new JayObjectType('Node', {

@@ -4,14 +4,16 @@ import {
     generateElementDefinitionFile,
     generateElementFile,
     generateSandboxRootFile,
+    prettify,
 } from '../lib';
-import { describe, expect, it } from '@jest/globals';
 import { readGeneratedNamedFile, readNamedSourceJayFile, readTestFile } from './test-fs-utils';
-import { printTsFile, readExpectedTsFile, readTsSourceFile } from './test-ts-utils.file';
+import { printTsFile, readTsSourceFile } from './test-ts-utils.file';
 import * as ts from 'typescript';
 import { componentBridgeTransformer } from '../lib/ts-file/component-bridge-transformer';
 
 describe('generate full project', () => {
+    const relativePath = './test/fixtures/tsconfig.json';
+
     describe('sandboxed counter', () => {
         describe('sandbox target', () => {
             it('generates sandbox root', async () => {
@@ -25,7 +27,7 @@ describe('generate full project', () => {
                     './test/fixtures/sandboxed/sandboxed-counter/source',
                 );
                 expect(sandboxRootFile.validations).toEqual([]);
-                expect(sandboxRootFile.val).toEqual(
+                expect(await prettify(sandboxRootFile.val)).toEqual(
                     await readGeneratedNamedFile(
                         'sandboxed/sandboxed-counter/generated/sandbox',
                         'sandbox-root',
@@ -44,7 +46,7 @@ describe('generate full project', () => {
                     './sandboxed/sandboxed-counter-source',
                 );
                 expect(runtimeFile.validations).toEqual([]);
-                expect(runtimeFile.val).toEqual(
+                expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
                         'sandboxed/sandboxed-counter/generated/sandbox',
                         'counter.jay.html',
@@ -65,7 +67,7 @@ describe('generate full project', () => {
                     './sandboxed/sandboxed-counter-source',
                 );
                 expect(runtimeFile.validations).toEqual([]);
-                expect(runtimeFile.val).toEqual(
+                expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
                         'sandboxed/sandboxed-counter/source',
                         'counter.jay.html.d',
@@ -86,7 +88,7 @@ describe('generate full project', () => {
                     './test/fixtures/sandboxed/sandboxed-counter/source',
                 );
                 expect(runtimeFile.validations).toEqual([]);
-                expect(runtimeFile.val).toEqual(
+                expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
                         'sandboxed/sandboxed-counter/generated/main',
                         'app.jay.html',
@@ -105,7 +107,7 @@ describe('generate full project', () => {
                     './test/fixtures/sandboxed/sandboxed-counter/source',
                 );
                 expect(runtimeFile.validations).toEqual([]);
-                expect(runtimeFile.val).toEqual(
+                expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
                         'sandboxed/sandboxed-counter/generated/main',
                         'counter.jay.html',
@@ -116,9 +118,10 @@ describe('generate full project', () => {
             it('generates counter refs file', async () => {
                 let refsFile = generateComponentRefsDefinitionFile(
                     './test/fixtures/sandboxed/sandboxed-counter/source/counter',
+                    { relativePath },
                 );
                 expect(refsFile.validations).toEqual([]);
-                expect(refsFile.val).toEqual(
+                expect(await prettify(refsFile.val)).toEqual(
                     await readTestFile(
                         './sandboxed/sandboxed-counter/generated/main',
                         'counter-refs.d.ts',
@@ -137,11 +140,8 @@ describe('generate full project', () => {
                 ]);
 
                 const outputCode = await printTsFile(outputFile);
-                expect(outputCode).toEqual(
-                    await readExpectedTsFile(
-                        'sandboxed/sandboxed-counter/generated/main',
-                        'counter.ts',
-                    ),
+                expect(await prettify(outputCode)).toEqual(
+                    await readTestFile('sandboxed/sandboxed-counter/generated/main', 'counter.ts'),
                 );
             });
         });

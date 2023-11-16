@@ -1,5 +1,4 @@
-import { generateElementBridgeFile } from '../lib';
-import { describe, expect, it } from '@jest/globals';
+import { generateElementBridgeFile, prettify } from '../lib';
 import { readGeneratedElementBridgeFile, readSourceJayFile } from './test-fs-utils';
 
 describe('generate the element sandbox files', () => {
@@ -13,7 +12,7 @@ describe('generate the element sandbox files', () => {
                     './test/',
                 );
                 expect(runtimeFile.validations).toEqual([]);
-                expect(runtimeFile.val).toEqual(
+                expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedElementBridgeFile('basics/empty-element'),
                 );
             });
@@ -26,7 +25,7 @@ describe('generate the element sandbox files', () => {
                     './test/',
                 );
                 expect(runtimeFile.validations).toEqual([]);
-                expect(runtimeFile.val).toEqual(
+                expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedElementBridgeFile('basics/simple-dynamic-text'),
                 );
             });
@@ -35,7 +34,7 @@ describe('generate the element sandbox files', () => {
                 const jayFile = await readSourceJayFile('basics/refs');
                 let runtimeFile = generateElementBridgeFile(jayFile, 'refs.jay.html', './test/');
                 expect(runtimeFile.validations).toEqual([]);
-                expect(runtimeFile.val).toEqual(
+                expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedElementBridgeFile('basics/refs'),
                 );
             });
@@ -46,7 +45,7 @@ describe('generate the element sandbox files', () => {
                 const jayFile = await readSourceJayFile('components/counter');
                 let runtimeFile = generateElementBridgeFile(jayFile, 'counter.jay.html', './test/');
                 expect(runtimeFile.validations).toEqual([]);
-                expect(runtimeFile.val).toEqual(
+                expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedElementBridgeFile('components/counter'),
                 );
             });
@@ -59,7 +58,7 @@ describe('generate the element sandbox files', () => {
                     './test/fixtures/components/component-in-component',
                 );
                 expect(runtimeFile.validations).toEqual([]);
-                expect(runtimeFile.val).toEqual(
+                expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedElementBridgeFile('components/component-in-component'),
                 );
             });
@@ -74,7 +73,7 @@ describe('generate the element sandbox files', () => {
                     './test/fixtures/components/dynamic-component-in-component',
                 );
                 expect(runtimeFile.validations).toEqual([]);
-                expect(runtimeFile.val).toEqual(
+                expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedElementBridgeFile(
                         'components/dynamic-component-in-component',
                     ),
@@ -91,7 +90,7 @@ describe('generate the element sandbox files', () => {
                     './test/fixtures/collections/collection-with-refs',
                 );
                 expect(runtimeFile.validations).toEqual([]);
-                expect(runtimeFile.val).toEqual(
+                expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedElementBridgeFile('collections/collection-with-refs'),
                 );
             });
