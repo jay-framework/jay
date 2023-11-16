@@ -1,5 +1,5 @@
 import { touchRevision } from '../lib/revisioned';
-import { ChangeListener, MutableContract } from 'jay-mutable-contract';
+import { ChangeListener, MutableContract } from '../lib/mutable-contract';
 
 export function mockMutable<T extends object>(original: T): T & MutableContract {
     let mutableListener: ChangeListener = undefined;

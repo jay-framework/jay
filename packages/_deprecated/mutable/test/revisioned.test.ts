@@ -1,4 +1,3 @@
-import { describe, expect, it } from '@jest/globals';
 import { checkModified, touchRevision } from '../lib/revisioned';
 import { mockMutable } from './mock-mutable';
 

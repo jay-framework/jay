@@ -1,2 +1,2 @@
 export { mutableObject } from './mutable';
-export { isMutable, ChangeListener, MutableContract } from './mutable-contract';
+export { isMutable, type ChangeListener, type MutableContract } from './mutable-contract';

@@ -5,7 +5,7 @@
   "scripts": {
     "d": "jay-cli definitions ./lib",
     "jay-secure": "jay-cli runtime ./lib ./lib-secure/main",
-    "rollup": "rollup --config ./rollup.config.js",
+    "rollup": "echo 'rollup --config ./rollup.config.js'",
     "build": "npm run d && npm run mk-secure && npm run rollup",
     "copy": "cp ./lib/main.ts ./lib-secure/sandbox/ && cp ./lib/benchmark.ts ./lib-secure/sandbox/",
     "copy-basic": "mkdir -p ./lib-secure/sandbox/basic/ && cp ./lib/basic/*-refs.d.ts ./lib-secure/main/basic && cp ./lib/basic/basic-data.ts ./lib-secure/sandbox/basic/",

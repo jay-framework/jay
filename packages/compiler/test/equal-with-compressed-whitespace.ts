@@ -1,6 +1,5 @@
 import { matcherHint, printReceived, printExpected } from 'jest-matcher-utils';
 import diff from 'jest-diff';
-import { expect } from '@jest/globals';
 
 const whitespace = /[\t ]+/g;
 
