@@ -1,11 +1,10 @@
-import { describe, expect, it } from '@jest/globals';
 import * as ts from 'typescript';
 import { componentBridgeTransformer } from '../lib/ts-file/component-bridge-transformer';
-import { printTsFile, readExpectedTsFile, readTsSourceFile } from './test-ts-utils.file';
+import { printTsFile, readTsSourceFile } from './test-ts-utils.file';
+import { prettify } from '../lib';
+import { readTestFile } from './test-fs-utils.ts';
 
 describe('generate component bridge', () => {
-    const compilerOptions: ts.CompilerOptions = { target: ts.ScriptTarget.ES2017 };
-
     it('transform counter component', async () => {
         const sourceFile = await readTsSourceFile('components/counter', 'counter.ts');
 
@@ -13,9 +12,9 @@ describe('generate component bridge', () => {
             componentBridgeTransformer(['./generated-element']),
         ]);
 
-        const outputCode = await printTsFile(outputFile);
+        const outputCode = await prettify(await printTsFile(outputFile));
         expect(outputCode).toEqual(
-            await readExpectedTsFile('components/counter', 'generated-component-bridge.ts'),
+            await readTestFile('components/counter', 'generated-component-bridge.ts'),
         );
     });
 });

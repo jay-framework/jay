@@ -1,4 +1,3 @@
-import { describe, expect, it } from '@jest/globals';
 import { setChannel, useMockCommunicationChannel } from '../util/mock-channel';
 import { initializeWorker } from './secure/worker/worker-root';
 import { AppViewState, render } from './secure/main/app.jay.html';
@@ -156,7 +155,7 @@ describe('top level collections and conditions', () => {
 
     it('supports root component events for conditional component', async () => {
         let { appElement, channel, add } = await mkElement(viewState);
-        let fn = jest.fn();
+        let fn = vi.fn();
 
         appElement.refs.comp1.onChange(fn);
         await channel.toBeClean();
@@ -173,7 +172,7 @@ describe('top level collections and conditions', () => {
 
     it('supports root component events for collection component', async () => {
         let { appElement, channel, add } = await mkElement(viewState);
-        let fn = jest.fn();
+        let fn = vi.fn();
 
         // this does not batch messages!!!
         appElement.refs.comp2.onChange(fn);

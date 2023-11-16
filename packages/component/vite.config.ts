@@ -7,13 +7,17 @@ export default defineConfig({
         target: 'es2020',
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
-            name: 'listCompare',
+            name: 'component',
             fileName: 'index',
             formats: ['es'],
+        },
+        rollupOptions: {
+            external: ['jay-json-patch', 'jay-reactive', 'jay-runtime'],
         },
     },
     test: {
         globals: true,
-        setupFiles: 'jay-dev-environment/library/vitest.setup.ts',
+        setupFiles: 'jay-dev-environment/library-dom/vitest.setup.ts',
+        environment: 'jsdom',
     },
 });

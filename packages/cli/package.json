@@ -4,9 +4,14 @@
   "main": "dist/index.js",
   "bin": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:js && npm run build:executable-bin",
+    "build:js": "vite build",
+    "build:check-types": "tsc",
+    "build:executable-bin": "chmod +x dist/index.js",
     "clean": "rm -rf dist",
-    "test": ":"
+    "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
+    "test": ":",
+    "test:watch": ":"
   },
   "dependencies": {
     "chalk": "^4.1.2",
@@ -15,7 +20,8 @@
   },
   "devDependencies": {
     "@types/node": "^20.9.0",
-    "jest": "^26.6.3",
-    "typescript": "^5.2.2"
+    "jay-dev-environment": "workspace:^",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.0"
   }
 }

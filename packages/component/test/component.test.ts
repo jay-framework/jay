@@ -1,4 +1,3 @@
-import { describe, expect, it, jest, beforeEach } from '@jest/globals';
 import {
     ConstructContext,
     JayElement,
@@ -597,7 +596,7 @@ describe('state management', () => {
 
             it('should register events using on-event property and invoke the event', async () => {
                 let instance = counterComponent({});
-                const myMock = jest.fn();
+                const myMock = vi.fn();
                 instance.onChange(myMock);
                 await instance.element.refs.inc.exec$((elem) => elem.click());
                 expect(myMock.mock.calls.length).toBe(1);
@@ -605,7 +604,7 @@ describe('state management', () => {
 
             it('should unregister events', async () => {
                 let instance = counterComponent({});
-                const myMock = jest.fn();
+                const myMock = vi.fn();
                 instance.onChange(myMock);
                 instance.onChange(undefined);
                 await instance.element.refs.inc.exec$((elem) => elem.click());
@@ -613,7 +612,7 @@ describe('state management', () => {
             });
             it('should invoke event with payload', async () => {
                 let instance = counterComponent({});
-                const myMock = jest.fn();
+                const myMock = vi.fn();
                 instance.onChange(myMock);
                 await instance.element.refs.inc.exec$((elem) => elem.click());
                 await instance.element.refs.inc.exec$((elem) => elem.click());
@@ -624,7 +623,7 @@ describe('state management', () => {
 
             it('should register events using addEventListener and invoke the event', async () => {
                 let instance = counterComponent({});
-                const myMock = jest.fn();
+                const myMock = vi.fn();
                 instance.addEventListener('Change', myMock);
                 await instance.element.refs.inc.exec$((elem) => elem.click());
                 expect(myMock.mock.calls.length).toBe(1);
@@ -632,7 +631,7 @@ describe('state management', () => {
 
             it('should register and remove events', async () => {
                 let instance = counterComponent({});
-                const myMock = jest.fn();
+                const myMock = vi.fn();
                 instance.addEventListener('Change', myMock);
                 instance.removeEventListener('Change', myMock);
                 await instance.element.refs.inc.exec$((elem) => elem.click());

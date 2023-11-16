@@ -1,5 +1,4 @@
-import { generateElementDefinitionFile } from '../lib';
-import { describe, expect, it } from '@jest/globals';
+import { generateElementDefinitionFile, prettify } from '../lib';
 import { readGeneratedElementDefinitionFile, readSourceJayFile } from './test-fs-utils';
 
 describe('generate the definition file', () => {
@@ -11,7 +10,7 @@ describe('generate the definition file', () => {
             './test/',
         );
         expect(definitionFile.validations).toEqual([]);
-        expect(definitionFile.val).toEqual(
+        expect(await prettify(definitionFile.val)).toEqual(
             await readGeneratedElementDefinitionFile('basics/data-types'),
         );
     });
@@ -24,7 +23,7 @@ describe('generate the definition file', () => {
             './test/',
         );
         expect(definitionFile.validations).toEqual([]);
-        expect(definitionFile.val).toEqual(
+        expect(await prettify(definitionFile.val)).toEqual(
             await readGeneratedElementDefinitionFile('collections/collections'),
         );
     });
@@ -33,7 +32,7 @@ describe('generate the definition file', () => {
         const jayFile = await readSourceJayFile('components/counter');
         let definitionFile = generateElementDefinitionFile(jayFile, 'counter.jay.html', './test/');
         expect(definitionFile.validations).toEqual([]);
-        expect(definitionFile.val).toEqual(
+        expect(await prettify(definitionFile.val)).toEqual(
             await readGeneratedElementDefinitionFile('components/counter'),
         );
     });
@@ -46,7 +45,7 @@ describe('generate the definition file', () => {
             './test/',
         );
         expect(definitionFile.validations).toEqual([]);
-        expect(definitionFile.val).toEqual(
+        expect(await prettify(definitionFile.val)).toEqual(
             await readGeneratedElementDefinitionFile('conditions/conditions-with-refs'),
         );
     });
@@ -59,7 +58,7 @@ describe('generate the definition file', () => {
             './test/',
         );
         expect(definitionFile.validations).toEqual([]);
-        expect(definitionFile.val).toEqual(
+        expect(await prettify(definitionFile.val)).toEqual(
             await readGeneratedElementDefinitionFile('collections/collection-with-refs'),
         );
     });
@@ -72,7 +71,7 @@ describe('generate the definition file', () => {
             './test/fixtures/components/component-in-component',
         );
         expect(runtimeFile.validations).toEqual([]);
-        expect(runtimeFile.val).toEqual(
+        expect(await prettify(runtimeFile.val)).toEqual(
             await readGeneratedElementDefinitionFile('components/component-in-component'),
         );
     }, 10000);

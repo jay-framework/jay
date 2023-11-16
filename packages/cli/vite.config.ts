@@ -5,11 +5,18 @@ export default defineConfig({
     build: {
         minify: false,
         target: 'es2020',
+        ssr: resolve(__dirname, 'lib/index.ts'),
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
-            name: 'listCompare',
+            name: 'cli',
             fileName: 'index',
-            formats: ['es'],
+            formats: ['cjs'],
+        },
+        rollupOptions: {
+            external: ['jay-compiler'],
+            output: {
+                banner: '#!/usr/bin/env node',
+            },
         },
     },
     test: {

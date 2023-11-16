@@ -1,16 +1,6 @@
 {
+  "extends": "jay-dev-environment/library-dom/tsconfig.json",
   "compilerOptions": {
-    "jsx": "preserve",
-    "module": "es2015",
-    "esModuleInterop": true,
-    "target": "es2019",
-    "moduleResolution": "node",
-    "sourceMap": true,
-    "rootDir": "./lib",
-    "outDir": "dist",
-    "lib": ["es2019", "dom"],
-    "declaration": true
-  },
-  "lib": ["es2019"],
-  "exclude": ["test", "examples", "dist", "build"]
+    "outDir": "dist"
+  }
 }

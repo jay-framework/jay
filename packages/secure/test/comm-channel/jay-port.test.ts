@@ -1,4 +1,3 @@
-import { describe, expect, it } from '@jest/globals';
 import { JayPort, JayPortLogger } from '../../lib';
 import { JayChannel, JPMMessage } from '../../lib';
 import {
@@ -188,7 +187,7 @@ describe('jay-port', () => {
     describe('receive messages', () => {
         it('should support sending messages to a component based on compId', () => {
             let { port, channel } = mkPort();
-            let endpointUpdate = jest.fn();
+            let endpointUpdate = vi.fn();
 
             let endpoint = port.getEndpoint(1, ['comp1']);
             port.flush();
@@ -212,7 +211,7 @@ describe('jay-port', () => {
 
         it('should support sending messages to a component before it is created, and it should receive the messages on endpoint creation', () => {
             let { port, channel } = mkPort();
-            let endpointUpdate = jest.fn();
+            let endpointUpdate = vi.fn();
 
             let compId = Math.random() * 100;
             channel.postMessagesToPort(

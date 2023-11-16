@@ -1,28 +1,30 @@
 {
   "name": "jay-component",
   "version": "1.0.0",
-  "main": "dist/component.js",
+  "type": "module",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "tsc",
-    "build": "tsc",
+    "build": "npm run build:js && npm run build:types",
+    "build:js": "vite build",
+    "build:types": "tsup lib/index.ts --dts-only --format esm",
+    "build:check-types": "tsc",
     "clean": "rm -rf dist",
-    "test": "jest"
+    "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
-  "jest": {},
   "dependencies": {
-    "@babel/core": "^7.23.3",
     "jay-json-patch": "workspace:^",
-    "jay-reactive": "workspace:^"
+    "jay-reactive": "workspace:^",
+    "jay-runtime": "workspace:^"
   },
   "devDependencies": {
-    "@babel/preset-env": "^7.23.3",
-    "@babel/preset-typescript": "^7.23.3",
-    "@types/babel__core": "^7.20.4",
+    "@testing-library/jest-dom": "^6.1.4",
     "@types/node": "^20.9.0",
-    "jay-runtime": "workspace:^",
-    "jest": "^26.6.3",
-    "ts-jest": "^26.5.6",
-    "tslib": "^2.6.2",
-    "typescript": "^5.2.2"
+    "jay-dev-environment": "workspace:^",
+    "tsup": "^7.2.0",
+    "typescript": "^5.2.2",
+    "vite": "^4.5.0",
+    "vitest": "^0.34.6"
   }
 }

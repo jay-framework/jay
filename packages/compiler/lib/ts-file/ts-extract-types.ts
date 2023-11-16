@@ -8,7 +8,7 @@ import {
     Type,
     TypeAliasDeclaration,
 } from 'ts-morph';
-import * as ts from 'typescript';
+import ts from 'typescript';
 import fs from 'fs';
 import path from 'path';
 
@@ -23,7 +23,11 @@ import {
     resolvePrimitiveType,
 } from '../core/jay-file-types';
 
-function resolveTsConfig(options) {
+export interface ResolveTsConfigOptions {
+    relativePath?: string;
+}
+
+function resolveTsConfig(options: ResolveTsConfigOptions) {
     const tsConfigPath = path.resolve(process.cwd(), options.relativePath || 'tsconfig.json');
     if (!ts.sys.fileExists(tsConfigPath)) {
         if (options.relativePath) {
@@ -39,8 +43,8 @@ function resolveTsConfig(options) {
 function getJayType(type: Type, types: JayType[]): JayType {
     let propType = resolvePrimitiveType(type.getText());
     if (propType === JayUnknown)
-        propType = types.find((_) => _.name === type.getSymbol().getName()) ?? JayUnknown;
-    if (propType === JayUnknown && type.getSymbol().getName() === 'Array') {
+        propType = types.find((_) => _.name === getTypeName(type)) ?? JayUnknown;
+    if (propType === JayUnknown && getTypeName(type) === 'Array') {
         propType = new JayArrayType(getJayType(type.getArrayElementType(), types));
     }
     return propType;
@@ -77,7 +81,7 @@ function getComponentType(tsTypeChecker, name: string, componentType: Type): Jay
         if (JayComponentProperties[property.getName()]) {
             // JayComponent property, ignore it
         } else {
-            if (type.getSymbol().getName() === 'EventEmitter')
+            if (getTypeName(type) === 'EventEmitter')
                 componentAPIs.push(new JayComponentApiMember(property.getName(), true));
             else componentAPIs.push(new JayComponentApiMember(property.getName(), false));
         }
@@ -99,12 +103,15 @@ function autoAddExtension(filename: string) {
 }
 
 function isOrSubclassOf(type: Type, ofClass: string): boolean {
-    if (type.getSymbol().getName() === ofClass) return true;
+    if (getTypeName(type) === ofClass) return true;
 
-    for (let baseType of type.getBaseTypes())
-        if (baseType.getSymbol().getName() === ofClass) return true;
+    for (let baseType of type.getBaseTypes()) if (getTypeName(baseType) === ofClass) return true;
 
     return false;
+}
+
+function getTypeName(type: Type): string {
+    return type.getSymbol()?.getName() || type.getAliasSymbol().getName();
 }
 
 const JayComponentProperties = {
@@ -115,7 +122,7 @@ const JayComponentProperties = {
     addEventListener: true,
     removeEventListener: true,
 };
-export function tsExtractTypes(filename: string, options = {}): JayType[] {
+export function tsExtractTypes(filename: string, options: ResolveTsConfigOptions = {}): JayType[] {
     let tsConfigPath = resolveTsConfig(options);
     const project = new Project({
         tsConfigFilePath: tsConfigPath,
@@ -127,22 +134,28 @@ export function tsExtractTypes(filename: string, options = {}): JayType[] {
     let tsTypeChecker = project.getTypeChecker().compilerObject;
 
     const mainFile = project.getSourceFileOrThrow(filename);
-    //
     const types = [];
 
     for (const [name, declarations] of mainFile.getExportedDeclarations()) {
-        // console.log(project.getTypeChecker().getPropertiesOfType(declarations[0].getType()))
+        // console.log(project.getTypeChecker().getPropertiesOfType(declarations[0].getType()));
         if (declarations[0] instanceof InterfaceDeclaration) {
             types.push(getInterfaceJayType(name, declarations[0], types));
         } else if (declarations[0] instanceof FunctionDeclaration) {
-            // console.log(declarations[0].getName(), ' ==> ', project.getTypeChecker().getPropertiesOfType(declarations[0].getReturnType()).map(_ => _.getName()))
+            // console.log(
+            //     declarations[0].getName(),
+            //     ' ==> ',
+            //     project
+            //         .getTypeChecker()
+            //         .getPropertiesOfType(declarations[0].getReturnType())
+            //         .map((_) => _.getName()),
+            // );
             if (isOrSubclassOf(declarations[0].getReturnType(), 'JayElement')) {
                 types.push(getElementType(name, declarations[0]));
             } else if (isOrSubclassOf(declarations[0].getReturnType(), 'JayComponent')) {
                 types.push(getComponentType(tsTypeChecker, name, declarations[0].getReturnType()));
             } else types.push(JayUnknown);
         } else if (declarations[0] instanceof TypeAliasDeclaration) {
-            // @ts-ignore
+            // @ts-expect-error Property typeName does not exist on type TypeNode
             if (declarations[0].compilerNode.type?.typeName?.escapedText === 'JayElement')
                 types.push(new JayElementType(name));
         } else if (Node.isVariableDeclaration(declarations[0])) {

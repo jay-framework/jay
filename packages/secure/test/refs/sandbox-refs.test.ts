@@ -1,4 +1,3 @@
-import { describe, expect, it } from '@jest/globals';
 import {
     compCollectionRef,
     compRef,
@@ -73,7 +72,7 @@ describe('sandbox-refs', () => {
 
         it('should trigger events on JPMDomEvent --> callback', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             (bridgeElement.refs.one as HTMLElementProxy<any, any>).onclick(callback);
             endpoint.invoke(eventInvocationMessage('click', ['one']));
@@ -88,7 +87,7 @@ describe('sandbox-refs', () => {
 
         it('should pass the new viewState on viewState update', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             bridgeElement.update(vs2);
             (bridgeElement.refs.one as HTMLElementProxy<any, any>).onclick(callback);
@@ -104,7 +103,7 @@ describe('sandbox-refs', () => {
 
         it('should add event listener using addEventListener', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             (bridgeElement.refs.one as HTMLElementProxy<any, any>).addEventListener(
                 'click',
@@ -120,7 +119,7 @@ describe('sandbox-refs', () => {
 
         it('should remove event listener using removeEventListener', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             (bridgeElement.refs.one as HTMLElementProxy<any, any>).addEventListener(
                 'click',
@@ -144,7 +143,7 @@ describe('sandbox-refs', () => {
 
         it('after removing, event handler should not be invoked', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             (bridgeElement.refs.one as HTMLElementProxy<any, any>).addEventListener(
                 'click',
@@ -246,7 +245,7 @@ describe('sandbox-refs', () => {
                             'name',
                             () => {
                                 let childElement = e(refOne());
-                                childElementUpdateSpies.push(jest.spyOn(childElement, 'update'));
+                                childElementUpdateSpies.push(vi.spyOn(childElement, 'update'));
                                 return [childElement];
                             },
                         ),
@@ -301,7 +300,7 @@ describe('sandbox-refs', () => {
 
         it('should trigger events on JPMDomEvent --> callback', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(eventInvocationMessage('click', ['B', 'one']));
@@ -316,7 +315,7 @@ describe('sandbox-refs', () => {
 
         it('in case of event with coordinate of non existing element, should not trigger the event', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(eventInvocationMessage('click', ['D', 'one']));
@@ -327,7 +326,7 @@ describe('sandbox-refs', () => {
 
         it('in case of event with coordinate of a removed element, should not trigger the event', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             bridgeElement.update(addAndRemoveItemViewState);
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
@@ -339,7 +338,7 @@ describe('sandbox-refs', () => {
 
         it('should support viewState updates - additional item', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             bridgeElement.update(addItemViewState);
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
@@ -355,7 +354,7 @@ describe('sandbox-refs', () => {
 
         it('should support viewState and child element updates - updated item', () => {
             let { endpoint, bridgeElement, childElementUpdateSpies } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             bridgeElement.update(updateItemViewState);
 
@@ -631,7 +630,7 @@ describe('sandbox-refs', () => {
 
         it('should trigger events on JPMDomEvent --> callback', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(eventInvocationMessage('click', ['B', '3', 'two']));
@@ -646,7 +645,7 @@ describe('sandbox-refs', () => {
 
         it('should support view state updates', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             bridgeElement.update(vs2);
             (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(callback);
@@ -714,7 +713,7 @@ describe('sandbox-refs', () => {
 
         it('should trigger events on JPMDomEvent --> callback', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(eventInvocationMessage('click', ['one']));
@@ -729,7 +728,7 @@ describe('sandbox-refs', () => {
 
         it('should trigger event even if condition === false', () => {
             let { endpoint, bridgeElement } = setup(vs2);
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(eventInvocationMessage('click', ['one']));
@@ -744,7 +743,7 @@ describe('sandbox-refs', () => {
 
         it('should trigger with if condition updated to false', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             bridgeElement.update(vs2);
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
@@ -760,7 +759,7 @@ describe('sandbox-refs', () => {
 
         it('should support nested conditions', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(eventInvocationMessage('click', ['two']));
@@ -834,7 +833,7 @@ describe('sandbox-refs', () => {
 
         it('should trigger events with view state for mounted elements, and with undefined for unmounted elements (parent condition === false)', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(eventInvocationMessage('click', ['A', 'two']));
@@ -857,7 +856,7 @@ describe('sandbox-refs', () => {
 
         it('after update, should trigger events with view state for mounted elements, and with undefined for unmounted elements (parent condition === false)', () => {
             let { endpoint, bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             bridgeElement.update(vs2);
             (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(callback);
@@ -925,7 +924,7 @@ describe('sandbox-refs', () => {
 
         it('should register and invoke events on the component', () => {
             let { childCompRef } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             childCompRef.addEventListener('remove', callback);
             childCompRef._removeClick();
@@ -940,7 +939,7 @@ describe('sandbox-refs', () => {
 
         it('should update the event view state on component update', () => {
             let { bridgeElement, childCompRef } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             childCompRef.addEventListener('remove', callback);
             bridgeElement.update(vs2);
@@ -1102,7 +1101,7 @@ describe('sandbox-refs', () => {
 
         it('should register and invoke events on the components', () => {
             let { bridgeElement } = setup();
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             (
                 bridgeElement.refs.comp1 as ComponentCollectionProxy<
@@ -1128,7 +1127,7 @@ describe('sandbox-refs', () => {
 
         it('should register events on empty collection', () => {
             let { bridgeElement } = setup(empty);
-            let callback = jest.fn();
+            let callback = vi.fn();
 
             (
                 bridgeElement.refs.comp1 as ComponentCollectionProxy<
@@ -1164,7 +1163,7 @@ describe('sandbox-refs', () => {
 
         it('should support find component', () => {
             let { bridgeElement } = setup();
-            let callback = jest.fn((item) => item === B);
+            let callback = vi.fn((item) => item === B);
 
             let foundComp = (
                 bridgeElement.refs.comp1 as ComponentCollectionProxy<

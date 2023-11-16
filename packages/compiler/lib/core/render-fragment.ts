@@ -56,8 +56,8 @@ export class RenderFragment {
             !!fragment1.rendered && !!fragment2.rendered
                 ? `${fragment1.rendered}${combinator}${fragment2.rendered}`
                 : !!fragment1.rendered
-                ? fragment1.rendered
-                : fragment2.rendered;
+                  ? fragment1.rendered
+                  : fragment2.rendered;
         return new RenderFragment(
             rendered,
             Imports.merge(fragment1.imports, fragment2.imports),

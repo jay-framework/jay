@@ -1,5 +1,9 @@
 dist
 dist-secure
 build
-/packages/compiler/lib/expressions/expression-parser.js
-packages/compiler/test/fixtures
+/packages/compiler/lib/expressions/expression-parser.cjs
+/packages/compiler/test/fixtures/**/*.html
+/packages/compiler/test/fixtures/**/*.html
+/examples/**/*.jay.html
+.vscode
+.yarn

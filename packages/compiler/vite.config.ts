@@ -5,14 +5,18 @@ export default defineConfig({
     build: {
         minify: false,
         target: 'es2020',
+        ssr: resolve(__dirname, 'lib/index.ts'),
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
-            name: 'runtime',
+            name: 'component',
             fileName: 'index',
-            formats: ['es'],
+            formats: ['cjs'],
+        },
+        commonjsOptions: {
+            transformMixedEsModules: true,
         },
         rollupOptions: {
-            external: ['jay-list-compare', 'jay-reactive'],
+            external: ['jay-component', 'jay-runtime', 'jay-secure'],
         },
     },
     test: {

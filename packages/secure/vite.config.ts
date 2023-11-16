@@ -7,12 +7,18 @@ export default defineConfig({
         target: 'es2020',
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
-            name: 'runtime',
+            name: 'secure',
             fileName: 'index',
             formats: ['es'],
         },
         rollupOptions: {
-            external: ['jay-list-compare', 'jay-reactive'],
+            external: [
+                'jay-component',
+                'jay-json-patch',
+                'jay-reactive',
+                'jay-runtime',
+                'jay-serialization',
+            ],
         },
     },
     test: {

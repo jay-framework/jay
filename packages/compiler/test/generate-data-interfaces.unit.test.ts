@@ -1,5 +1,4 @@
 import { generateTypes } from '../lib';
-import { describe, expect, it } from '@jest/globals';
 import stripMargin from '@caiogondim/strip-margin';
 
 import {

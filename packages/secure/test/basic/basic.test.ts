@@ -1,4 +1,3 @@
-import { describe, expect, it } from '@jest/globals';
 import { setChannel, useMockCommunicationChannel } from '../util/mock-channel';
 import { initializeWorker } from './secure/worker/worker-root';
 import { render } from './secure/main/app.jay.html';
@@ -7,6 +6,7 @@ import { ADD, REPLACE } from 'jay-json-patch';
 
 const initialData = { firstName: 'Joe', lastName: 'Smith' };
 const updatedData = { firstName: 'John', lastName: 'Green' };
+
 describe('basic secure rendering', () => {
     async function mkElement() {
         let channel = useMockCommunicationChannel(false);

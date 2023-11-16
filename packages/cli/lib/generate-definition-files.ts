@@ -3,7 +3,11 @@ import {
     generateRefsForImportedComponents,
 } from './generate-component-refs-files';
 import { generateFiles } from './generate-files';
-import { generateElementDefinitionFile, generateComponentRefsDefinitionFile } from 'jay-compiler';
+import {
+    generateComponentRefsDefinitionFile,
+    generateElementDefinitionFile,
+    prettify,
+} from 'jay-compiler';
 import path from 'path';
 import { promises as fsp } from 'fs';
 import chalk from 'chalk';
@@ -38,7 +42,7 @@ export async function generateDefinitionFiles(source, dest) {
                     relativeComponentFilePath,
                 )}.ts → ${chalk.yellow(relativeRefsFileName)}`,
             );
-            await fsp.writeFile(refsFileName, refsFileContent.val);
+            await fsp.writeFile(refsFileName, await prettify(refsFileContent.val));
         }
     }
 }
