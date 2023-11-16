@@ -4,6 +4,8 @@ build
 /packages/compiler/lib/expressions/expression-parser.cjs
 /packages/compiler/test/fixtures/**/*.html
 /packages/compiler/test/fixtures/**/*.html
+/packages/secure/test/**/*.html.d.ts
+/packages/secure/test/**/*.html.ts
 /examples/**/*.jay.html
 .vscode
 .yarn

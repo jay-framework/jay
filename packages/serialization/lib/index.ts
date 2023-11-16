@@ -1,2 +1,2 @@
-export { deserialize, Deserialize } from './mutable-deserializer';
-export { serialize, Serialize } from './mutable-serializer';
+export { deserialize, type Deserialize } from './mutable-deserializer';
+export { serialize, type Serialize } from './mutable-serializer';

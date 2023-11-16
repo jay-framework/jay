@@ -1,4 +1,3 @@
-import { describe, expect, it } from '@jest/globals';
 import { deserialize, serialize } from '../lib';
 import { ArrayContexts } from 'jay-json-patch';
 import { ADD, JSONPatch, REPLACE } from 'jay-json-patch';
