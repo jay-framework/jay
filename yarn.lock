@@ -5900,17 +5900,14 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "jay-serialization@workspace:packages/serialization"
   dependencies:
-    "@babel/core": ^7.23.3
-    "@babel/preset-env": ^7.23.3
-    "@babel/preset-typescript": ^7.23.3
-    "@types/babel__core": ^7.20.4
     "@types/node": ^20.9.0
+    jay-dev-environment: "workspace:^"
     jay-json-patch: "workspace:^"
     jay-reactive: "workspace:^"
-    jest: ^26.6.3
-    ts-jest: ^26.5.6
-    tslib: ^2.6.2
+    tsup: ^7.2.0
     typescript: ^5.2.2
+    vite: ^5.0.0
+    vitest: ^0.34.6
   languageName: unknown
   linkType: soft
 
@@ -9616,6 +9613,46 @@ __metadata:
   bin:
     vite: bin/vite.js
   checksum: 06f1a4c858e4dc4c04a10466f4ccacea30c5a9f8574e5ba3deb9d03fa20e80ca6797f02dad97a988da7cdef96238dbc69c3b6a538156585c74722d996223619e
+  languageName: node
+  linkType: hard
+
+"vite@npm:^5.0.0":
+  version: 5.0.0
+  resolution: "vite@npm:5.0.0"
+  dependencies:
+    esbuild: ^0.19.3
+    fsevents: ~2.3.3
+    postcss: ^8.4.31
+    rollup: ^4.2.0
+  peerDependencies:
+    "@types/node": ^18.0.0 || >=20.0.0
+    less: "*"
+    lightningcss: ^1.21.0
+    sass: "*"
+    stylus: "*"
+    sugarss: "*"
+    terser: ^5.4.0
+  dependenciesMeta:
+    fsevents:
+      optional: true
+  peerDependenciesMeta:
+    "@types/node":
+      optional: true
+    less:
+      optional: true
+    lightningcss:
+      optional: true
+    sass:
+      optional: true
+    stylus:
+      optional: true
+    sugarss:
+      optional: true
+    terser:
+      optional: true
+  bin:
+    vite: bin/vite.js
+  checksum: 1f953b062593b072f0e718384e1ff3307b548235ff8c4016fcaa85c09568eb0ba8cd8cfd80e99d940d3bea296b4661b1d0384fe5cb9a996d3e935feb69259755
   languageName: node
   linkType: hard
 
