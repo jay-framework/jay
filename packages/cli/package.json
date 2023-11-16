@@ -1,7 +1,6 @@
 {
   "name": "jay-cli",
   "version": "1.0.0",
-  "type": "module",
   "main": "dist/index.js",
   "bin": "dist/index.js",
   "scripts": {

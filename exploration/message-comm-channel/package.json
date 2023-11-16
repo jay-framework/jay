@@ -5,7 +5,7 @@
     "rollup": "rollup --config ./rollup.config.js",
     "ts": "tsc",
     "copy": "cp lib/index.html dist/index.html",
-    "build": "npm run rollup & npm run copy",
+    "build": "npm run ts && npm run rollup & npm run copy",
     "clean": "rm -rf dist",
     "test": ":"
   },

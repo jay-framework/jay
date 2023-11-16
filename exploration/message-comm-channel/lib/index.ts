@@ -1,4 +1,4 @@
-import { HandshakeMessageJayChannel } from '../../../packages/secure/dist/comm-channel/message-channel';
+import { HandshakeMessageJayChannel } from 'jay-secure';
 
 var myWorker = new Worker('./worker.js');
 

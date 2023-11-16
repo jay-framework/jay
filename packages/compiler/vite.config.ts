@@ -10,7 +10,7 @@ export default defineConfig({
             entry: resolve(__dirname, 'lib/index.ts'),
             name: 'component',
             fileName: 'index',
-            formats: ['es'],
+            formats: ['cjs'],
         },
         commonjsOptions: {
             transformMixedEsModules: true,
