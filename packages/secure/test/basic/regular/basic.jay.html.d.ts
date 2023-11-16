@@ -1,14 +1,11 @@
-import { JayElement, RenderElementOptions } from 'jay-runtime';
+import {JayElement, RenderElementOptions} from "jay-runtime";
 
 export interface BasicViewState {
-    text: string;
+  text: string
 }
 
 export interface BasicElementRefs {}
 
-export type BasicElement = JayElement<BasicViewState, BasicElementRefs>;
+export type BasicElement = JayElement<BasicViewState, BasicElementRefs>
 
-export declare function render(
-    viewState: BasicViewState,
-    options?: RenderElementOptions,
-): BasicElement;
+export declare function render(viewState: BasicViewState, options?: RenderElementOptions): BasicElement
