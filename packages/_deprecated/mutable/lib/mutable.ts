@@ -4,17 +4,7 @@ import { ChangeListener, isMutable, MutableContract } from './mutable-contract';
 
 export const MUTABLE_PROXY_SYMBOL = Symbol.for('proxy');
 
-/* using `structuredClone` in `jest` tests requires add `jest.config.js` with the following config
-const config = {
-  testEnvironment: "node",
-  globals: {
-    structuredClone: structuredClone,
-  },
-};
-module.exports = config;
-
-we introduce the const here to enable minification of the function name
-*/
+// we introduce the const here to enable minification of the function name
 const _structuredClone = structuredClone;
 
 function setProxy(obj: object, proxy: object) {
