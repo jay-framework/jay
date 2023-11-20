@@ -1,5 +1,5 @@
 // rollup.config.js
-import typescript from '@rollup/plugin-typescript';
+import typescript from 'rollup-plugin-typescript2';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 
 export default [
@@ -11,6 +11,6 @@ export default [
             name: 'jay',
             sourcemap: true,
         },
-        plugins: [typescript({ tsconfig: './tsconfig.json' }), nodeResolve()],
+        plugins: [typescript(), nodeResolve()],
     },
 ];

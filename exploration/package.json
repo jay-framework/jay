@@ -1,7 +1,0 @@
-{
-  "name": "jay-exploration",
-  "version": "1.0.0",
-  "devDependencies": {
-    "jay-runtime": "workspace:^"
-  }
-}

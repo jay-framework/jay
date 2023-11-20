@@ -8,7 +8,7 @@ export default defineConfig({
         ssr: resolve(__dirname, 'lib/index.ts'),
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
-            name: 'rollup-plugin',
+            name: 'jayRollupPlugin',
             fileName: 'index',
             formats: ['cjs'],
         },

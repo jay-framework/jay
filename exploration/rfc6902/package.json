@@ -4,7 +4,8 @@
   "scripts": {
     "build": ":",
     "clean": ":",
-    "test": ":"
+    "test": ":",
+    "confirm": ":"
   },
   "dependencies": {
     "rfc6902": "^5.0.1"

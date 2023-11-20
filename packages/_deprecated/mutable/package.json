@@ -1,6 +1,7 @@
 {
   "name": "jay-mutable",
   "version": "1.0.0",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "npm run build:js && npm run build:types",
@@ -19,9 +20,9 @@
     "jay-reactive": "workspace:^"
   },
   "devDependencies": {
-    "@types/node": "^20.9.0",
+    "@types/node": "^20.9.2",
     "jay-dev-environment": "workspace:^",
-    "tsup": "^7.2.0",
+    "tsup": "^8.0.0",
     "typescript": "^5.2.2",
     "vite": "^5.0.0",
     "vitest": "^0.34.6"

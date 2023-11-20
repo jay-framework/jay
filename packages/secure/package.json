@@ -38,13 +38,13 @@
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.1.4",
-    "@types/node": "^20.9.0",
-    "caniuse-lite": "^1.0.30001562",
+    "@types/node": "^20.9.2",
+    "caniuse-lite": "^1.0.30001563",
     "jay-dev-environment": "workspace:^",
     "npm-run-all2": "^6.1.1",
-    "tsup": "^7.2.0",
+    "tsup": "^8.0.0",
     "typescript": "^5.2.2",
-    "vite": "^4.5.0",
+    "vite": "^5.0.0",
     "vitest": "^0.34.6"
   }
 }

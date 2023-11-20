@@ -1,5 +1,5 @@
 import { matcherHint, printReceived, printExpected } from 'jest-matcher-utils';
-import diff from 'jest-diff';
+import { diff } from 'jest-diff';
 
 const whitespace = /[\t ]+/g;
 
