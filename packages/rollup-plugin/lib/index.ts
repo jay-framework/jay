@@ -1,8 +1,9 @@
+// rollup-plugin-jay.js
 import { generateElementFile } from 'jay-compiler';
 import * as ts from 'typescript';
 import path from 'path';
 import * as fs from 'fs';
-// rollup-plugin-my-example.js
+import { TransformResult } from 'rollup';
 
 function readTsConfigFile(tsConfigPath) {
     const { config, error } = ts.readConfigFile(tsConfigPath, (path) =>
@@ -28,32 +29,24 @@ function resolveTsConfig(options) {
 }
 
 export default function jayCompiler(options = {}) {
-    let tsConfigPath = resolveTsConfig(options);
-    let tsConfig = tsConfigPath ? readTsConfigFile(tsConfigPath) : {};
+    const tsConfigPath = resolveTsConfig(options);
+    const tsConfig = tsConfigPath ? readTsConfigFile(tsConfigPath) : {};
     return {
         name: 'jay', // this name will show up in warnings and errors
-        transform(code: string, id: string) {
-            try {
-                if (id.endsWith('.jay.html') && !id.startsWith('.jay.html')) {
-                    let filename = path.basename(id).replace('.jay.html', '');
-                    let dirName = path.dirname(id);
-                    let tsCode = generateElementFile(code, filename, dirName);
-                    if (tsCode.validations.length > 0) {
-                        console.error(
-                            'failed to run Jay Rollup Plugin for file ' +
-                                id +
-                                '\n' +
-                                tsCode.validations.join('\n'),
-                        );
-                    }
-                    let jsCode = ts.transpileModule(tsCode.val, tsConfig);
-                    return jsCode.outputText;
-                } else {
-                    return code;
+        transform(code: string, id: string): TransformResult {
+            if (id.endsWith('.jay.html') && !id.startsWith('.jay.html')) {
+                if (!tsConfigPath) throw new Error('Unable to resolve typescript config path');
+                const filename = path.basename(id).replace('.jay.html', '');
+                const dirName = path.dirname(id);
+                const tsCode = generateElementFile(code, filename, dirName);
+                if (tsCode.validations.length > 0) {
+                    if (code.length === 0) throw new Error('Empty code');
+                    throw new Error(tsCode.validations.join('\n'));
                 }
-            } catch (e) {
-                console.error('failed to run Jay Rollup Plugin for file ' + id + '\n' + e.message);
-                throw e;
+                let jsCode = ts.transpileModule(tsCode.val, tsConfig);
+                return { code: jsCode.outputText, map: null };
+            } else {
+                return { code, map: null };
             }
         },
     };
