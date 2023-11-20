@@ -7,7 +7,7 @@ export default defineConfig({
         target: 'es2020',
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
-            name: 'component',
+            name: 'jayComponent',
             fileName: 'index',
             formats: ['es'],
         },

@@ -1,18 +1,19 @@
 {
   "name": "serialization-exploration",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
+    "build": "npm run rollup && npm run copy",
     "rollup": "rollup --config ./rollup.config.js",
-    "ts": "tsc",
     "copy": "cp lib/index.html dist/index.html",
-    "build": "npm run ts && npm run rollup & npm run copy",
     "clean": "rm -rf dist",
+    "confirm": "npm run clean && npm run build && npm run test",
     "test": ":"
   },
   "devDependencies": {
-    "@rollup/plugin-node-resolve": "^13.3.0",
-    "@rollup/plugin-typescript": "^8.5.0",
-    "rollup": "^2.79.1",
+    "@rollup/plugin-node-resolve": "^15.2.3",
+    "rollup": "^4.5.0",
+    "rollup-plugin-typescript2": "^0.36.0",
     "tslib": "^2.6.2",
     "typescript": "^5.2.2"
   },

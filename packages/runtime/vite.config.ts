@@ -7,7 +7,7 @@ export default defineConfig({
         target: 'es2020',
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
-            name: 'runtime',
+            name: 'jayRuntime',
             fileName: 'index',
             formats: ['es'],
         },

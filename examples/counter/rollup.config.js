@@ -1,5 +1,5 @@
 // rollup.config.js
-import typescript from '@rollup/plugin-typescript';
+import typescript from 'rollup-plugin-typescript2';
 import { terser } from 'rollup-plugin-terser';
 import jay from 'rollup-plugin-jay';
 import copy from 'rollup-plugin-copy';

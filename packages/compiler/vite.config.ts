@@ -8,7 +8,7 @@ export default defineConfig({
         ssr: resolve(__dirname, 'lib/index.ts'),
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
-            name: 'component',
+            name: 'jayCompiler',
             fileName: 'index',
             formats: ['cjs'],
         },
