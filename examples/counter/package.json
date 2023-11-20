@@ -6,7 +6,7 @@
   "scripts": {
     "d": "jay-cli definitions ./lib",
     "jay": "jay-cli runtime ./lib",
-    "rollup": "rollup --config ./rollup.config.js --logLevel debug",
+    "rollup": "rollup --config ./rollup.config.js",
     "build": "npm run d && npm run mk-secure && npm run rollup",
     "clean": "rm -rf dist && rm -rf dist-secure && (rm -rf lib/**/*.d.ts || :) && (rm -rf lib-secure/**/*.d.ts || :)",
     "mk-secure": "npm run jay && mv ./lib/*.jay.html.ts ./lib-secure/main && cp ./lib/*-refs.d.ts ./lib-secure/main && find lib -name '*.ts' '!' -name '*.jay.html.d.ts' '!' -name 'index.ts' | xargs -I{} cp {} ./lib-secure/sandbox",
