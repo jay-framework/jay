@@ -82,3 +82,13 @@ yarn run build # for commands
 npm install -g ynpx
 ynpx tsc
 ```
+
+### Creating a pull request
+
+Before creating a pull request, make sure that all the code compilers and tests pass.
+There is a single command to do it for all the packages.
+Run it from jay project root:
+
+```bash
+yarn confirm
+```
