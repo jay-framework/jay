@@ -1,8 +1,8 @@
 import { render, ShownTodo, TodoViewState } from './todo.jay.html';
 import { uuid } from './uuid';
 
-const ENTER_KEY = 'Enter';
-const ESCAPE_KEY = 'Escape';
+const ENTER_KEY = 13;
+const ESCAPE_KEY = 27;
 
 function Todo() {
     let data = {
@@ -101,9 +101,10 @@ function Todo() {
     });
 
     jayElement.refs.newTodo
-        .onkeydown$(({ event }) => {
-            event.key === ENTER_KEY ? event.preventDefault() : '';
-            return event.key;
+        // @ts-expect-error  Property $onkeydown does not exist on type
+        .$onkeydown(({ event }) => {
+            event.keyCode === ENTER_KEY ? event.preventDefault() : '';
+            return event.keyCode;
         })
         .then(({ event: keyCode }) => {
             if (keyCode !== ENTER_KEY) {
@@ -125,7 +126,8 @@ function Todo() {
         });
 
     jayElement.refs.newTodo
-        .oninput$(({ event }) => (event.target as HTMLInputElement).value)
+        // @ts-expect-error  Property $onkeydown does not exist on type
+        .$oninput(({ event }) => (event.target as HTMLInputElement).value)
         .then(({ event: value }) => {
             data.newTodo = value;
             update();
@@ -160,18 +162,20 @@ function Todo() {
         update();
     });
     jayElement.refs.title
-        .onkeydown$(({ event }) => event.key)
-        .then(({ event: key, viewState: todo }) => {
-            if (key === ESCAPE_KEY) {
+        // @ts-expect-error  Property $onkeydown does not exist on type
+        .$onkeydown(({ event }) => event.which)
+        .then(({ event: which, viewState: todo }) => {
+            if (which === ESCAPE_KEY) {
                 todo.editText = todo.title;
                 todo.isEditing = false;
-            } else if (key === ENTER_KEY) {
+            } else if (which === ENTER_KEY) {
                 handleSubmit(todo);
             }
             update();
         });
     jayElement.refs.toggleAll
-        .onchange$(({ event }) => (event.target as HTMLInputElement).checked)
+        // @ts-expect-error  Property $onkeydown does not exist on type
+        .$onchange(({ event }) => (event.target as HTMLInputElement).checked)
         .then(({ event: completed }) => {
             data.todos = data.todos.map((todo) => ({ ...todo, isCompleted: completed }));
             update();

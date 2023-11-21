@@ -1,5 +1,5 @@
 import { HTMLElementProxy, JayElement } from 'jay-runtime';
-import { Table as TableComp } from './table';
+import { Table } from './table';
 import {
     compRef,
     elementBridge,
@@ -30,7 +30,7 @@ export function render(viewState: TableHostViewState): TableHostElement {
         e(elemRef('updates')),
         e(elemRef('stateManagement')),
         childComp(
-            TableComp,
+            Table,
             (vs) => ({
                 tableSize: vs.size,
                 numCellsToUpdate: vs.updates,

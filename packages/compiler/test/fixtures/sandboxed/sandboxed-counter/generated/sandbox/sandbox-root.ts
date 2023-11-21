@@ -8,10 +8,18 @@ import {
 } from 'jay-secure';
 import { Counter } from './counter';
 
-export interface AppViewState {}
+export interface AppViewState {
+    incrementBy: number;
+}
 
 export function initializeWorker() {
-    sandboxRoot(() => [childComp(Counter, (vs: AppViewState) => ({ initialValue: 12 }), cr('a'))]);
+    sandboxRoot(() => [
+        childComp(
+            Counter,
+            (vs: AppViewState) => ({ initialValue: 12, incrementBy: vs.incrementBy }),
+            cr('a'),
+        ),
+    ]);
 }
 
 setWorkerPort(new JayPort(new HandshakeMessageJayChannel(self)));
