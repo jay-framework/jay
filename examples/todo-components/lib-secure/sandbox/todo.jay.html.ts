@@ -6,7 +6,7 @@ import {
     sandboxForEach as forEach,
     sandboxChildComp as childComp,
 } from 'jay-secure';
-import { ItemRefs } from '../main/item-refs';
+import { ItemRefs } from '../../lib/item-refs';
 import { Item, ItemProps } from './item';
 
 export enum Filter {

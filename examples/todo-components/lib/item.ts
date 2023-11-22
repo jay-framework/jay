@@ -1,7 +1,7 @@
 import { render, ItemElementRefs } from './item.jay.html';
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
 
-export interface ItemProps {
+interface ItemProps {
     title: string;
     isCompleted: boolean;
 }

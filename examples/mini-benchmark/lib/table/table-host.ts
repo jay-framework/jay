@@ -24,6 +24,7 @@ function TableHostConstructor({ cycles }: Props<TableHostProps>, refs: TableHost
         .then(({ event: newStateManagement }) => setStateManagement(newStateManagement));
 
     const run = (progressCallback: (string) => void) => {
+        // @ts-expect-error Property updateData does not exist on type
         benchmark((index) => refs.table.updateData(index), cycles(), progressCallback);
     };
     return {

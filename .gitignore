@@ -5,6 +5,6 @@ build
 *.iml
 /packages/compiler/lib/expressions/expression-parser.js
 examples/**/*.d.ts
-examples/**/*.jay.html.ts
+examples/**/lib/**/*.jay.html.ts
 **/coverage/
 .yarn/install-state.gz

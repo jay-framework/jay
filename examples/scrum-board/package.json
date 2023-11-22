@@ -10,7 +10,6 @@
     "rollup": "rollup --config ./rollup.config.js",
     "build": "echo 'npm run d && npm run rollup'",
     "confirm": "npm run clean && npm run build && npm run test",
-    "mk-secure": "npm run jay && mv ./lib/counter.jay.html.ts ./lib-secure/main && cp .lib/counter.ts ./lib-secure/sandbox",
     "test": ":"
   },
   "dependencies": {

@@ -2,7 +2,7 @@ import { BasicElementRefs, render as BasicRender } from './basic.jay.html';
 import { createState, makeJayComponent, useReactive, Props } from 'jay-component';
 import benchmark from '../benchmark';
 
-interface BasicProps {
+export interface BasicProps {
     cycles: number;
 }
 function BasicConstructor({ cycles }: Props<BasicProps>, refs: BasicElementRefs) {

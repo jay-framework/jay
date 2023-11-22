@@ -1,6 +1,11 @@
 import benchmark from '../benchmark';
 import { createState, makeJayComponent, Props } from 'jay-component';
-import { render as TableHostRender, TableHostElementRefs } from './table-host.jay.html';
+import {
+    render as TableHostRender,
+    TableHostElementRefs,
+    TableHostViewState,
+} from './table-host.jay.html';
+import { handler$ } from 'jay-secure';
 
 interface TableHostProps {
     cycles: number;
@@ -12,15 +17,15 @@ function TableHostConstructor({ cycles }: Props<TableHostProps>, refs: TableHost
     let [stateManagement, setStateManagement] = createState('immutable');
 
     refs.size
-        .oninput$(({ event }) => (event.target as HTMLInputElement).value)
+        .oninput$(handler$<Event, TableHostViewState, any>('2'))
         .then(({ event: size }) => setSize(Number(size)));
 
     refs.updates
-        .oninput$(({ event }) => (event.target as HTMLInputElement).value)
+        .oninput$(handler$<Event, TableHostViewState, any>('2'))
         .then(({ event: updates }) => setUpdates(Number(updates)));
 
     refs.stateManagement
-        .oninput$(({ event }) => (event.target as HTMLSelectElement).value)
+        .oninput$(handler$<Event, TableHostViewState, any>('2'))
         .then(({ event: newStateManagement }) => setStateManagement(newStateManagement));
 
     const run = (progressCallback: (string) => void) => {

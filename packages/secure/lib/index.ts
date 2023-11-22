@@ -1,5 +1,6 @@
 export * from './comm-channel/comm-channel';
 export * from './comm-channel/jay-port';
+export * from './comm-channel/jay-port-logger';
 export * from './comm-channel/message-channel';
 export * from './main/function-repository-types';
 export * from './main/main-bridge';

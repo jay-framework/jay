@@ -163,16 +163,12 @@ export function tsExtractTypes(filename: string, options: ResolveTsConfigOptions
                 declarations[0].getChildren().length === 3 &&
                 declarations[0].getChildren()[2].getText().indexOf('makeJayComponent') === 0
             ) {
-                types.push(
-                    getComponentType(
-                        tsTypeChecker,
-                        name,
-                        (declarations[0].getChildren()[2] as CallExpression)
-                            .getReturnType()
-                            .getCallSignatures()[0]
-                            .getReturnType(),
-                    ),
-                );
+                const parentReturnType = (
+                    declarations[0].getChildren()[2] as CallExpression
+                ).getReturnType();
+                const returnType =
+                    parentReturnType.getCallSignatures()[0]?.getReturnType() || parentReturnType;
+                types.push(getComponentType(tsTypeChecker, name, returnType));
                 // types.push(new JayComponentType(name, componentAPIs));
             }
         } else types.push(JayUnknown);

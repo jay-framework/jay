@@ -6,11 +6,7 @@ import {
     JPMMessage,
 } from './comm-channel';
 import { Coordinate } from 'jay-runtime';
-
-export interface JayPortLogger {
-    logPost(compId: number, message: JPMMessage): void;
-    logInvoke(compId: number, message: JPMMessage, endpointFound: boolean): void;
-}
+import { JayPortLogger } from './jay-port-logger.ts';
 
 export class JayPort implements IJayPort {
     private messages: Array<[number, JPMMessage]> = [];

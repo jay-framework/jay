@@ -4193,6 +4193,7 @@ __metadata:
     jay-runtime: "workspace:^"
     jay-secure: "workspace:^"
     jay-serialization: "workspace:^"
+    npm-run-all2: ^6.1.1
     rollup: ^4.5.0
     rollup-plugin-copy: ^3.5.0
     rollup-plugin-jay: "workspace:^"

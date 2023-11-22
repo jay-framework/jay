@@ -1,8 +1,9 @@
-import { Filter, render, ShownTodo, TodoElementRefs } from './todo.jay.html';
+import { Filter, render, ShownTodo, TodoElementRefs, TodoViewState } from './todo.jay.html';
 import { createMemo, createState, makeJayComponent, Props } from 'jay-component';
 import { uuid } from './uuid';
 import { patch } from 'jay-json-patch';
 import { ADD, REPLACE } from 'jay-json-patch';
+import { handler$ } from 'jay-secure';
 
 const ENTER_KEY = 13;
 
@@ -47,10 +48,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     refs.filterAll.onclick(() => setFilter(Filter.all));
 
     refs.newTodo
-        .onkeydown$(({ event }) => {
-            event.keyCode === ENTER_KEY ? event.preventDefault() : '';
-            return event.keyCode;
-        })
+        .onkeydown$(handler$<KeyboardEvent, TodoViewState, any>('3'))
         .then(({ event: keyCode }) => {
             if (keyCode !== ENTER_KEY) return;
 
@@ -77,11 +75,9 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
             setNewTodo('');
         });
 
-    refs.newTodo
-        .oninput$(({ event }) => (event.target as HTMLInputElement).value)
-        .then(({ event: value }) => {
-            setNewTodo(value);
-        });
+    refs.newTodo.oninput$(handler$<Event, TodoViewState, any>('4')).then(({ event: value }) => {
+        setNewTodo(value);
+    });
 
     refs.clearCompleted.onclick((event) => {
         setTodos(
@@ -122,7 +118,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     });
 
     refs.toggleAll
-        .onchange$(({ event }) => (event.target as HTMLInputElement).checked)
+        .onchange$(handler$<Event, TodoViewState, any>('5'))
         .then(({ event: completed }) => {
             setTodos(todos().map((todo) => ({ ...todo, isCompleted: completed })));
         });
