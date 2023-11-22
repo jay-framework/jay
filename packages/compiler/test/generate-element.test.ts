@@ -4,7 +4,7 @@ import {
     readNamedSourceJayFile,
     readSourceJayFile,
 } from './test-fs-utils';
-import { removeComments } from '../lib/utils/prettify.ts';
+import { removeComments } from '../lib/utils/prettify';
 
 describe('generate the runtime file', () => {
     describe('basics', () => {

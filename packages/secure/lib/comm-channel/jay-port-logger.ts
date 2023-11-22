@@ -1,4 +1,4 @@
-import { JPMMessage } from './comm-channel.ts';
+import { JPMMessage } from './comm-channel';
 
 export interface JayPortLogger {
     logPost(compId: number, message: JPMMessage): void;

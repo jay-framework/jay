@@ -1,6 +1,6 @@
 import { HandshakeMessageJayChannel } from 'jay-secure';
 
-var myWorker = new Worker('./worker.js');
+var myWorker = new Worker('./worker');
 
 setTimeout(() => {
     let channel = new HandshakeMessageJayChannel(myWorker);
