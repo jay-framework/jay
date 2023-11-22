@@ -11,6 +11,11 @@ export default [
             name: 'jay',
             sourcemap: true,
         },
-        plugins: [typescript(), nodeResolve()],
+        plugins: [
+            typescript({
+                tsconfigOverride: { compilerOptions: { allowImportingTsExtensions: false } },
+            }),
+            nodeResolve(),
+        ],
     },
 ];

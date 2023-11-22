@@ -114,7 +114,7 @@ let counterComponent = makeJayComponent(renderCounterElement, CounterComponent);
 > Note: not final API for server component
 
 ```typescript
-import { CounterProps, CounterServerState } from './counter.client.ts';
+import { CounterProps, CounterServerState } from './counter.client';
 import { Props } from 'jay-component';
 
 export async function CounterComponent({ initialValue, step }: Props<CounterProps>) {

@@ -7,7 +7,15 @@
     "sourceMap": true,
     "outDir": "dist",
     "lib": ["es2016", "dom"],
-    "rootDirs": ["lib", "lib-secure"]
+    "rootDirs": ["lib", "lib-secure"],
+    "paths": {
+      "jay-component": ["../../packages/component/lib"],
+      "jay-json-patch": ["../../packages/json-patch/lib"],
+      "jay-reactive": ["../../packages/reactive/lib"],
+      "jay-runtime": ["../../packages/runtime/lib"],
+      "jay-secure": ["../../packages/secure/lib"],
+      "jay-serialization": ["../../packages/serialization/lib"]
+    }
   },
   "lib": ["es2015"],
   "include": ["lib/**/*", "lib-secure/**/*"]

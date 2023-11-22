@@ -7,7 +7,13 @@
     "sourceMap": true,
     "outDir": "dist",
     "lib": ["es2016", "dom"],
-    "rootDirs": ["lib", "lib-secure"]
+    "rootDirs": ["lib", "lib-secure"],
+    "paths": {
+      "jay-component": ["../../packages/component/lib"],
+      "jay-reactive": ["../../packages/reactive/lib"],
+      "jay-runtime": ["../../packages/runtime/lib"],
+      "jay-secure": ["../../packages/secure/lib"]
+    }
   },
   "lib": ["es2015"],
   "include": ["lib/**/*", "lib-secure/**/*"]

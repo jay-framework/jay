@@ -11,7 +11,12 @@ export default [
             name: 'jay',
             sourcemap: true,
         },
-        plugins: [typescript({ tsconfig: './tsconfig.json' }), nodeResolve()],
+        plugins: [
+            typescript({
+                tsconfigOverride: { compilerOptions: { allowImportingTsExtensions: false } },
+            }),
+            nodeResolve(),
+        ],
     },
     {
         input: './lib/worker.ts',
@@ -21,6 +26,11 @@ export default [
             name: 'jay',
             sourcemap: true,
         },
-        plugins: [typescript({ tsconfig: './tsconfig.json' }), nodeResolve()],
+        plugins: [
+            typescript({
+                tsconfigOverride: { compilerOptions: { allowImportingTsExtensions: false } },
+            }),
+            nodeResolve(),
+        ],
     },
 ];

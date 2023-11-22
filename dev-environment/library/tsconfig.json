@@ -13,5 +13,31 @@
     "noEmit": true,
     "types": ["vitest/globals"],
     "outDir": "dist"
-  }
+  },
+  "references": [
+    { "path": "../../packages/serialization" },
+    { "path": "../../packages/secure" },
+    { "path": "../../packages/runtime" },
+    { "path": "../../packages/rollup-plugin" },
+    { "path": "../../packages/reactive" },
+    { "path": "../../packages/list-compare" },
+    { "path": "../../packages/json-patch" },
+    { "path": "../../packages/component" },
+    { "path": "../../packages/compiler" },
+    { "path": "../../packages/cli" },
+    { "path": "../../packages/_deprecated/mutable" },
+    { "path": "../../exploration/serialization" },
+    { "path": "../../exploration/message-comm-channel" },
+    { "path": "../../exploration/deserialization-benchmark" },
+    { "path": "../../exploration/babel-plugin-jay" },
+    { "path": "../../examples/tree" },
+    { "path": "../../examples/todo" },
+    { "path": "../../examples/todo-raw" },
+    { "path": "../../examples/todo-components" },
+    { "path": "../../examples/scrum-board" },
+    { "path": "../../examples/mini-benchmark" },
+    { "path": "../../examples/counter" },
+    { "path": "../../examples/counter-raw" },
+    { "path": "../../examples-other-frameworks/mini-benchmark-react" }
+  ]
 }
