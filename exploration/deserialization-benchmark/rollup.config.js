@@ -11,12 +11,7 @@ const rollupConfig = defineConfig({
         name: 'jay',
         sourcemap: true,
     },
-    plugins: [
-        typescript({
-            tsconfigOverride: { compilerOptions: { allowImportingTsExtensions: false } },
-        }),
-        nodeResolve(),
-    ],
+    plugins: [typescript(), nodeResolve()],
 });
 
 export default rollupConfig;

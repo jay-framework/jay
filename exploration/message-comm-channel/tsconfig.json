@@ -1,7 +1,8 @@
 {
-  "extends": "jay-dev-environment/library-dom/tsconfig.json",
+  "extends": "jay-dev-environment/examples/tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
+    "module": "ES2022",
     "paths": {
       "jay-component": ["../../packages/component/lib"],
       "jay-reactive": ["../../packages/reactive/lib"],

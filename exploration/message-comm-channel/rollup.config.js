@@ -12,12 +12,7 @@ const rollupConfig = defineConfig(
             name: 'jay',
             sourcemap: true,
         },
-        plugins: [
-            typescript({
-                tsconfigOverride: { compilerOptions: { allowImportingTsExtensions: false } },
-            }),
-            nodeResolve(),
-        ],
+        plugins: [typescript(), nodeResolve()],
     },
     {
         input: './lib/worker.ts',
@@ -27,12 +22,7 @@ const rollupConfig = defineConfig(
             name: 'jay',
             sourcemap: true,
         },
-        plugins: [
-            typescript({
-                tsconfigOverride: { compilerOptions: { allowImportingTsExtensions: false } },
-            }),
-            nodeResolve(),
-        ],
+        plugins: [typescript(), nodeResolve()],
     },
 );
 

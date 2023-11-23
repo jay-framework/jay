@@ -2952,6 +2952,7 @@ __metadata:
     "@rollup/plugin-node-resolve": ^15.2.3
     browser-hrtime: ^1.1.8
     immer: ^10.0.3
+    jay-dev-environment: "workspace:^"
     jay-json-patch: "workspace:^"
     jay-mutable: "workspace:^"
     rollup: ^4.5.0
@@ -4142,6 +4143,7 @@ __metadata:
     "@rollup/plugin-node-resolve": ^15.2.3
     jay-cli: "workspace:^"
     jay-component: "workspace:^"
+    jay-dev-environment: "workspace:^"
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
     rollup: ^4.5.0
@@ -4164,6 +4166,7 @@ __metadata:
     "@rollup/plugin-node-resolve": ^15.2.3
     jay-cli: "workspace:^"
     jay-component: "workspace:^"
+    jay-dev-environment: "workspace:^"
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
     jay-secure: "workspace:^"
@@ -4188,6 +4191,7 @@ __metadata:
     immer: ^10.0.3
     jay-cli: "workspace:^"
     jay-component: "workspace:^"
+    jay-dev-environment: "workspace:^"
     jay-json-patch: "workspace:^"
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
@@ -4214,6 +4218,7 @@ __metadata:
     "@rollup/plugin-node-resolve": ^15.2.3
     jay-cli: "workspace:^"
     jay-component: "workspace:^"
+    jay-dev-environment: "workspace:^"
     jay-json-patch: "workspace:^"
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
@@ -4238,6 +4243,7 @@ __metadata:
     "@rollup/plugin-node-resolve": ^15.2.3
     jay-cli: "workspace:^"
     jay-component: "workspace:^"
+    jay-dev-environment: "workspace:^"
     jay-json-patch: "workspace:^"
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
@@ -4263,6 +4269,7 @@ __metadata:
     "@rollup/plugin-node-resolve": ^15.2.3
     jay-cli: "workspace:^"
     jay-component: "workspace:^"
+    jay-dev-environment: "workspace:^"
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
     rollup: ^4.5.0
@@ -4285,6 +4292,7 @@ __metadata:
     "@rollup/plugin-node-resolve": ^15.2.3
     jay-cli: "workspace:^"
     jay-component: "workspace:^"
+    jay-dev-environment: "workspace:^"
     jay-json-patch: "workspace:^"
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
@@ -4309,6 +4317,7 @@ __metadata:
     "@rollup/plugin-node-resolve": ^15.2.3
     jay-cli: "workspace:^"
     jay-component: "workspace:^"
+    jay-dev-environment: "workspace:^"
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
     rollup: ^4.5.0
@@ -4823,6 +4832,7 @@ __metadata:
   dependencies:
     "@rollup/plugin-node-resolve": ^15.2.3
     jay-component: "workspace:^"
+    jay-dev-environment: "workspace:^"
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
     jay-secure: "workspace:^"
@@ -6084,6 +6094,7 @@ __metadata:
   dependencies:
     "@rollup/plugin-node-resolve": ^15.2.3
     immer: ^10.0.3
+    jay-dev-environment: "workspace:^"
     rollup: ^4.5.0
     rollup-plugin-typescript2: ^0.36.0
     tslib: ^2.6.2
