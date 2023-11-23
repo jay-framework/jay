@@ -1,0 +1,9 @@
+{
+  "extends": "../library/tsconfig.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": false,
+    "noEmit": false,
+    "lib": ["ES2022", "DOM"],
+    "types": []
+  }
+}

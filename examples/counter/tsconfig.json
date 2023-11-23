@@ -1,20 +1,13 @@
 {
+  "extends": "jay-dev-environment/examples/tsconfig.json",
   "compilerOptions": {
-    "module": "es2015",
-    "esModuleInterop": true,
-    "target": "es2015",
-    "moduleResolution": "node",
-    "sourceMap": true,
     "outDir": "dist",
-    "lib": ["es2016", "dom"],
-    "rootDirs": ["lib", "lib-secure"],
+    "module": "ES2022",
     "paths": {
       "jay-component": ["../../packages/component/lib"],
       "jay-reactive": ["../../packages/reactive/lib"],
       "jay-runtime": ["../../packages/runtime/lib"],
       "jay-secure": ["../../packages/secure/lib"]
     }
-  },
-  "lib": ["es2015"],
-  "include": ["lib/**/*", "lib-secure/**/*"]
+  }
 }

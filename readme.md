@@ -77,10 +77,6 @@ If you get errors of some dependency not found when running commands from packag
 
 ```bash
 yarn run build # for commands
-
-# for custom scripts, yarn analog for npx
-npm install -g ynpx
-ynpx tsc
 ```
 
 ### Creating a pull request
