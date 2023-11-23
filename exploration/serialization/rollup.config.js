@@ -1,16 +1,17 @@
 // rollup.config.js
+import { defineConfig } from 'rollup';
 import typescript from 'rollup-plugin-typescript2';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 
-export default [
-    {
-        input: './lib/index.ts',
-        output: {
-            file: 'dist/index.js',
-            format: 'iife',
-            name: 'jay',
-            sourcemap: true,
-        },
-        plugins: [typescript({ tsconfig: './tsconfig.json' }), nodeResolve()],
+const rollupConfig = defineConfig({
+    input: './lib/index.ts',
+    output: {
+        file: 'dist/index.js',
+        format: 'iife',
+        name: 'jay',
+        sourcemap: true,
     },
-];
+    plugins: [typescript(), nodeResolve()],
+});
+
+export default rollupConfig;
