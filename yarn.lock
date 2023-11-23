@@ -1951,6 +1951,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/lodash@npm:^4":
+  version: 4.14.202
+  resolution: "@types/lodash@npm:4.14.202"
+  checksum: a91acf3564a568c6f199912f3eb2c76c99c5a0d7e219394294213b3f2d54f672619f0fde4da22b29dc5d4c31457cd799acc2e5cb6bd90f9af04a1578483b6ff7
+  languageName: node
+  linkType: hard
+
 "@types/minimatch@npm:*":
   version: 5.1.2
   resolution: "@types/minimatch@npm:5.1.2"
@@ -4704,7 +4711,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"lodash@npm:^4.17.15, lodash@npm:^4.17.4":
+"lodash@npm:^4.17.15, lodash@npm:^4.17.21, lodash@npm:^4.17.4":
   version: 4.17.21
   resolution: "lodash@npm:4.17.21"
   checksum: eb835a2e51d381e561e508ce932ea50a8e5a68f4ebdd771ea240d3048244a8d13658acbd502cd4829768c56f2e16bdd4340b9ea141297d472517b83868e677f7
@@ -5898,9 +5905,11 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "rollup-plugin-jay@workspace:packages/rollup-plugin"
   dependencies:
+    "@types/lodash": ^4
     "@types/node": ^20.9.2
     jay-compiler: "workspace:^"
     jay-dev-environment: "workspace:^"
+    lodash: ^4.17.21
     tsup: ^8.0.0
     typescript: ^5.2.2
     vite: ^5.0.0

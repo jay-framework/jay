@@ -16,9 +16,11 @@
   },
   "dependencies": {
     "jay-compiler": "workspace:^",
+    "lodash": "^4.17.21",
     "typescript": "^5.2.2"
   },
   "devDependencies": {
+    "@types/lodash": "^4",
     "@types/node": "^20.9.2",
     "jay-dev-environment": "workspace:^",
     "tsup": "^8.0.0",
