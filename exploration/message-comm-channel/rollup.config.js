@@ -1,8 +1,9 @@
 // rollup.config.js
+import { defineConfig } from 'rollup';
 import typescript from 'rollup-plugin-typescript2';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 
-export default [
+const rollupConfig = defineConfig(
     {
         input: './lib/index.ts',
         output: {
@@ -33,4 +34,6 @@ export default [
             nodeResolve(),
         ],
     },
-];
+);
+
+export default rollupConfig;
