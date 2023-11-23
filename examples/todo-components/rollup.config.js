@@ -2,7 +2,7 @@
 import { defineConfig } from 'rollup';
 import typescript from 'rollup-plugin-typescript2';
 import { terser } from 'rollup-plugin-terser';
-import jay from 'rollup-plugin-jay';
+import { jayRuntime } from 'rollup-plugin-jay';
 import copy from 'rollup-plugin-copy';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 
@@ -26,7 +26,7 @@ const rollupConfig = defineConfig([
         ],
         context: 'window',
         plugins: [
-            jay(),
+            jayRuntime(),
             typescript(),
             nodeResolve(),
             copy({

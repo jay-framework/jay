@@ -2,7 +2,6 @@
   "extends": "jay-dev-environment/examples/tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
-    "module": "ES2022",
     "paths": {
       "jay-json-patch": ["../../packages/json-patch/lib"],
       "jay-mutable": ["../../packages/mutable/lib"]
