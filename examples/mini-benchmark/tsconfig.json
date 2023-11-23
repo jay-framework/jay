@@ -2,14 +2,14 @@
   "extends": "jay-dev-environment/examples/tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
-    "module": "ES2022",
     "paths": {
       "jay-component": ["../../packages/component/lib"],
       "jay-json-patch": ["../../packages/json-patch/lib"],
       "jay-reactive": ["../../packages/reactive/lib"],
       "jay-runtime": ["../../packages/runtime/lib"],
       "jay-secure": ["../../packages/secure/lib"],
-      "jay-serialization": ["../../packages/serialization/lib"]
+      "jay-serialization": ["../../packages/serialization/lib"],
+      "rollup-plugin-jay": ["../../packages/rollup-plugin-jay/lib"]
     }
   }
 }
