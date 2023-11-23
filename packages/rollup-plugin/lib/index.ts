@@ -1,9 +1,12 @@
 // rollup-plugin-jay.js
+import { merge } from 'lodash';
 import { generateElementFile } from 'jay-compiler';
 import * as ts from 'typescript';
 import path from 'path';
 import * as fs from 'fs';
 import { TransformResult } from 'rollup';
+
+const JAY_TS_CONFIG_OVERRIDE = { compilerOptions: { noEmit: false } };
 
 function readTsConfigFile(tsConfigPath) {
     const { config, error } = ts.readConfigFile(tsConfigPath, (path) =>
@@ -31,6 +34,7 @@ function resolveTsConfig(options) {
 export default function jayCompiler(options = {}) {
     const tsConfigPath = resolveTsConfig(options);
     const tsConfig = tsConfigPath ? readTsConfigFile(tsConfigPath) : {};
+    const jayTsConfig = merge(tsConfig, JAY_TS_CONFIG_OVERRIDE);
     return {
         name: 'jay', // this name will show up in warnings and errors
         transform(code: string, id: string): TransformResult {
@@ -43,7 +47,7 @@ export default function jayCompiler(options = {}) {
                     if (code.length === 0) throw new Error('Empty code');
                     throw new Error(tsCode.validations.join('\n'));
                 }
-                let jsCode = ts.transpileModule(tsCode.val, tsConfig);
+                let jsCode = ts.transpileModule(tsCode.val, jayTsConfig);
                 return { code: jsCode.outputText, map: null };
             } else {
                 return { code, map: null };
