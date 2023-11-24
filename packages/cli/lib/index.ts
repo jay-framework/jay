@@ -1,8 +1,9 @@
 import { rollup } from 'rollup';
 import { Command } from 'commander';
 import { generateElementFile } from 'jay-compiler';
-import { getJayHtmlFileInputs, jayDefinitions } from 'rollup-plugin-jay';
+import { jayDefinitions } from 'rollup-plugin-jay';
 import { generateFiles } from './generate-files';
+import { getJayHtmlFileInputs } from './inputs.ts';
 
 const program = new Command();
 const noop = () => undefined;

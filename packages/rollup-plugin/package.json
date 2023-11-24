@@ -16,6 +16,7 @@
     "test:watch": ":"
   },
   "dependencies": {
+    "fast-glob": "^3.3.2",
     "jay-compiler": "workspace:^",
     "typescript": "^5.2.2"
   },
