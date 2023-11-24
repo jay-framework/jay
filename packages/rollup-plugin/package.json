@@ -1,6 +1,7 @@
 {
   "name": "rollup-plugin-jay",
   "version": "1.0.0",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "npm run build:js && npm run build:types",

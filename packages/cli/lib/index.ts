@@ -1,7 +1,8 @@
+import { rollup } from 'rollup';
 import { Command } from 'commander';
 import { generateElementFile } from 'jay-compiler';
+import { getJayHtmlFileInputs, jayDefinitions } from 'rollup-plugin-jay';
 import { generateFiles } from './generate-files';
-import { generateDefinitionFiles } from './generate-definition-files';
 
 const program = new Command();
 const noop = () => undefined;
@@ -9,10 +10,12 @@ const noop = () => undefined;
 program
     .command('definitions')
     .argument('<source>', 'source folder to scan for .jay.html files')
-    .argument('[destination]', 'destination folder for generated files')
     .description('generate definition files (.d.ts) for jay files')
-    .action(async (source, dest) => {
-        await generateDefinitionFiles(source, dest);
+    .action(async (source) => {
+        await rollup({
+            input: getJayHtmlFileInputs(source),
+            plugins: [jayDefinitions()],
+        });
     });
 
 program

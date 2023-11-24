@@ -3,7 +3,8 @@
   "compilerOptions": {
     "outDir": "dist",
     "paths": {
-      "jay-compiler": ["../compiler/lib"]
+      "jay-compiler": ["../compiler/lib"],
+      "rollup-plugin-jay": ["../rollup-plugin-jay/lib"]
     }
   }
 }

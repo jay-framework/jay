@@ -4,11 +4,12 @@
   "type": "module",
   "description": "",
   "scripts": {
+    "d2": "(cd ../../packages/cli && yarn run build:executable-bin) && npm run clean && npm run d",
     "d": "jay-cli definitions ./lib",
     "clean": "rm -rf dist && (rm -rf lib/**/*.d.ts || :)",
     "jay": "jay-cli runtime ./lib",
     "rollup": "rollup --config ./rollup.config.js",
-    "build": "echo 'npm run d && npm run rollup'",
+    "build": "npm run d && npm run rollup",
     "confirm": "npm run clean && npm run build && npm run test",
     "test": ":"
   },
