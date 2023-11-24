@@ -4,7 +4,7 @@
   "type": "module",
   "description": "",
   "scripts": {
-    "d2": "(cd ../../packages/cli && yarn run build:executable-bin) && npm run clean && npm run d",
+    "d2": "(cd ../../packages/cli && yarn run build:executable-bin) && npm run clean && npm run d && ls -al lib",
     "d": "jay-cli definitions ./lib",
     "clean": "rm -rf dist && (rm -rf lib/**/*.d.ts || :)",
     "jay": "jay-cli runtime ./lib",

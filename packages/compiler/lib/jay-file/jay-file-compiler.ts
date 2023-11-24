@@ -893,11 +893,8 @@ ${renderDynanicRefs(dynamicRefs)}
 }
 
 export function generateElementDefinitionFile(
-    html: string,
-    filename: string,
-    filePath: string,
+    parsedFile: WithValidations<JayFile>,
 ): WithValidations<string> {
-    let parsedFile = parseJayFile(html, filename, filePath);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
         let {
