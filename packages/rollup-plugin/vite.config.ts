@@ -10,7 +10,7 @@ export default defineConfig({
             entry: resolve(__dirname, 'lib/index.ts'),
             name: 'jayRollupPlugin',
             fileName: 'index',
-            formats: ['es'],
+            formats: ['cjs'],
         },
         rollupOptions: {
             external: ['jay-compiler'],

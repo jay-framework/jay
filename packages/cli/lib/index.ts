@@ -3,7 +3,7 @@ import { Command } from 'commander';
 import { generateElementFile } from 'jay-compiler';
 import { jayDefinitions } from 'rollup-plugin-jay';
 import { generateFiles } from './generate-files';
-import { getJayHtmlFileInputs } from './inputs.ts';
+import { getJayHtmlFileInputs } from './inputs';
 
 const program = new Command();
 const noop = () => undefined;

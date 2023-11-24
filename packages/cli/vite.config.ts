@@ -13,7 +13,7 @@ export default defineConfig({
             formats: ['cjs'],
         },
         rollupOptions: {
-            external: ['jay-compiler'],
+            external: ['jay-compiler', 'rollup-plugin-jay'],
             output: {
                 banner: '#!/usr/bin/env node',
             },

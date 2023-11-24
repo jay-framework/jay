@@ -1,19 +1,24 @@
 import { generateElementDefinitionFile, parseJayFile } from 'jay-compiler';
-import { PluginContext, TransformResult } from 'rollup';
-import { JayRollupConfig } from './types';
+import { InputOption, InputOptions, PluginContext, TransformResult } from 'rollup';
 import {
     checkCodeErrors,
     checkValidationErrors,
     getFileContext,
+    getInputFiles,
     isJayFile,
     writeDefinitionFile,
 } from './helpers';
 import { generateRefsComponents, getRefsFilePaths } from './refs-compiler.ts';
+import path from 'node:path';
 
-export function jayDefinitions(options: JayRollupConfig = {}) {
+export function jayDefinitions() {
     const generatedRefPaths: Set<string> = new Set();
+    let inputFiles: Set<string>;
     return {
         name: 'jayDefinitions', // this name will show up in warnings and errors
+        buildStart(options: InputOptions): void {
+            inputFiles = getInputFiles(options);
+        },
         async transform(code: string, id: string): Promise<TransformResult> {
             if (isJayFile(id)) {
                 const context = this as PluginContext;
@@ -30,8 +35,10 @@ export function jayDefinitions(options: JayRollupConfig = {}) {
                 }
                 checkValidationErrors(tsCode.validations);
                 writeDefinitionFile(dirname, filename, tsCode.val);
+                context.info(`Generated ${filename}.jay.html.d.ts`);
 
                 const newRefsPaths = getRefsFilePaths(
+                    inputFiles,
                     generatedRefPaths,
                     dirname,
                     parsedFile.val.imports,

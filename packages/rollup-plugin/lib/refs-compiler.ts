@@ -4,13 +4,14 @@ import path from 'node:path';
 import { promises as fsp } from 'node:fs';
 
 export function getRefsFilePaths(
+    inputFiles: Set<string>,
     generatedRefPaths: Set<string>,
     dirname: string,
     imports: JayImportLink[],
 ): string[] {
     const refPaths = imports
         .map((link) => path.resolve(dirname, link.module))
-        .filter((componentFilePath) => componentFilePath.endsWith('-refs'));
+        .filter((refPath) => inputFiles.has(`${refPath}.jay.html`));
     return refPaths.filter((path) => !generatedRefPaths.has(path));
 }
 
