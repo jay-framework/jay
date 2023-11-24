@@ -1,13 +1,6 @@
-import { promises as fs } from 'fs';
-import path from 'path';
+import { glob } from 'fast-glob';
+import { JAY_EXTENSION } from './constants.ts';
 
 export async function findAllJayFiles(dir): Promise<string[]> {
-    let files = await fs.readdir(dir);
-    let jayFiles: string[] = [];
-    for (let file of files)
-        if ((await fs.stat(dir + '/' + file)).isDirectory())
-            jayFiles = [...jayFiles, ...(await findAllJayFiles(dir + '/' + file))];
-        else if (file.endsWith('.jay.html') && !file.startsWith('.jay.html'))
-            jayFiles.push(path.join(dir, '/', file));
-    return jayFiles;
+    return await glob(`${dir}/**/*${JAY_EXTENSION}`);
 }
