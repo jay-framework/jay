@@ -1,8 +1,7 @@
 import * as ts from 'typescript';
 import { componentBridgeTransformer } from '../lib/ts-file/component-bridge-transformer';
-import { printTsFile, readTsSourceFile } from './test-ts-utils.file';
+import { printTsFile, readTestFile, readTsSourceFile } from './test-utils/file-utils.ts';
 import { prettify } from '../lib';
-import { readTestFile } from './test-fs-utils';
 
 describe('generate component bridge', () => {
     it('transform counter component', async () => {

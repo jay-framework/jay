@@ -1,77 +1,60 @@
-import { generateElementBridgeFile, prettify } from '../lib';
-import { readGeneratedElementBridgeFile, readSourceJayFile } from './test-fs-utils';
+import { prettify } from '../lib';
+import { readGeneratedElementBridgeFile } from './test-utils/file-utils.ts';
+import { readFileAndGenerateElementBridgeFile } from './test-utils/compiler-utils.ts';
 
 describe('generate the element sandbox files', () => {
     describe('generate element bridges', () => {
         describe('basic', () => {
             it('for an empty element', async () => {
-                const jayFile = await readSourceJayFile('basics/empty-element');
-                let runtimeFile = generateElementBridgeFile(
-                    jayFile,
-                    'empty-element.jay.html',
-                    './test/',
-                );
+                const folder = 'basics/empty-element';
+                const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
-                    await readGeneratedElementBridgeFile('basics/empty-element'),
+                    await readGeneratedElementBridgeFile(folder),
                 );
             });
 
             it('for simple file with dynamic text', async () => {
-                const jayFile = await readSourceJayFile('basics/simple-dynamic-text');
-                let runtimeFile = generateElementBridgeFile(
-                    jayFile,
-                    'simple-dynamic-text.jay.html',
-                    './test/',
-                );
+                const folder = 'basics/empty-element';
+                const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
-                    await readGeneratedElementBridgeFile('basics/simple-dynamic-text'),
+                    await readGeneratedElementBridgeFile(folder),
                 );
             });
 
             it('for simple file refs', async () => {
-                const jayFile = await readSourceJayFile('basics/refs');
-                let runtimeFile = generateElementBridgeFile(jayFile, 'refs.jay.html', './test/');
+                const folder = 'basics/refs';
+                const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
-                    await readGeneratedElementBridgeFile('basics/refs'),
+                    await readGeneratedElementBridgeFile(folder),
                 );
             });
         });
 
         describe('components', () => {
             it('counter component', async () => {
-                const jayFile = await readSourceJayFile('components/counter');
-                let runtimeFile = generateElementBridgeFile(jayFile, 'counter.jay.html', './test/');
+                const folder = 'components/counter';
+                const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
-                    await readGeneratedElementBridgeFile('components/counter'),
+                    await readGeneratedElementBridgeFile(folder),
                 );
             });
 
             it('component in component', async () => {
-                const jayFile = await readSourceJayFile('components/component-in-component');
-                let runtimeFile = generateElementBridgeFile(
-                    jayFile,
-                    'component-in-component.jay.html',
-                    './test/fixtures/components/component-in-component',
-                );
+                const folder = 'components/component-in-component';
+                const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
-                    await readGeneratedElementBridgeFile('components/component-in-component'),
+                    await readGeneratedElementBridgeFile(folder),
                 );
             });
 
             it('dynamic component in component', async () => {
-                const jayFile = await readSourceJayFile(
-                    'components/dynamic-component-in-component',
-                );
-                let runtimeFile = generateElementBridgeFile(
-                    jayFile,
-                    'dynamic-component-in-component.jay.html',
-                    './test/fixtures/components/dynamic-component-in-component',
-                );
+                const folder = 'components/dynamic-component-in-component';
+                const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedElementBridgeFile(
@@ -83,15 +66,11 @@ describe('generate the element sandbox files', () => {
 
         describe('collections', () => {
             it('component in component', async () => {
-                const jayFile = await readSourceJayFile('collections/collection-with-refs');
-                let runtimeFile = generateElementBridgeFile(
-                    jayFile,
-                    'collection-with-refs.jay.html',
-                    './test/fixtures/collections/collection-with-refs',
-                );
+                const folder = 'collections/collection-with-refs';
+                const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
-                    await readGeneratedElementBridgeFile('collections/collection-with-refs'),
+                    await readGeneratedElementBridgeFile(folder),
                 );
             });
         });
