@@ -141,8 +141,9 @@ function parseImports(
 
             return { module, names, sandbox };
         } catch (e) {
-            console.log(e.message, e.stack);
-            validations.push(`failed to parse import names for module ${module} - ${e.message}`);
+            validations.push(
+                `failed to parse import names for module ${module} - ${e.message}${e.stack}`,
+            );
             return { module, names: [] };
         }
     });

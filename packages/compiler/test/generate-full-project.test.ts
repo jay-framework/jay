@@ -6,10 +6,16 @@ import {
     generateSandboxRootFile,
     prettify,
 } from '../lib';
-import { readGeneratedNamedFile, readNamedSourceJayFile, readTestFile } from './test-fs-utils';
-import { printTsFile, readTsSourceFile } from './test-ts-utils.file';
+import {
+    printTsFile,
+    readGeneratedNamedFile,
+    readNamedSourceJayFile,
+    readTestFile,
+    readTsSourceFile,
+} from './test-utils/file-utils.ts';
 import * as ts from 'typescript';
 import { componentBridgeTransformer } from '../lib/ts-file/component-bridge-transformer';
+import { readAndParseJayFile } from './test-utils/compiler-utils.ts';
 
 describe('generate full project', () => {
     const relativePath = './test/fixtures/tsconfig.json';
@@ -57,15 +63,11 @@ describe('generate full project', () => {
 
         describe('source (dev) target', () => {
             it('generates element definition file', async () => {
-                const jayFile = await readNamedSourceJayFile(
+                const parsedFile = await readAndParseJayFile(
                     'sandboxed/sandboxed-counter/source',
                     'counter',
                 );
-                let runtimeFile = generateElementDefinitionFile(
-                    jayFile,
-                    'counter.jay.html',
-                    './sandboxed/sandboxed-counter-source',
-                );
+                let runtimeFile = generateElementDefinitionFile(parsedFile);
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(

@@ -24,8 +24,9 @@ export async function generateFiles(
     outputExtension: string,
     destinationDir?: string,
 ) {
-    console.log(chalk.whiteBright('Jay generating definition files for ', dir));
+    console.log(chalk.whiteBright('Jay generating files for ', dir));
     let jayFiles = await findAllJayFiles(dir);
+    console.log(dir, jayFiles);
     let generationFailed = false;
     for (const jayFile of jayFiles) {
         const content = await fsp.readFile(jayFile, 'utf-8');

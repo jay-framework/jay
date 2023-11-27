@@ -291,9 +291,10 @@ describe('compiler', () => {
                 '',
             );
 
-            expect(jayFile.validations).toEqual([
+            expect(jayFile.validations.length).toEqual(1);
+            expect(jayFile.validations[0]).toMatch(
                 "failed to parse import names for module module - failed to parse expression [undefined]. Cannot read properties of undefined (reading 'charAt')",
-            ]);
+            );
         });
 
         it('should report on import empty names property', () => {
@@ -309,9 +310,10 @@ describe('compiler', () => {
                 '',
             );
 
-            expect(jayFile.validations).toEqual([
+            expect(jayFile.validations.length).toEqual(1);
+            expect(jayFile.validations[0]).toMatch(
                 'failed to parse import names for module module - failed to parse expression []. Expected identifier but end of input found.',
-            ]);
+            );
         });
 
         it('should report on import file not found', () => {

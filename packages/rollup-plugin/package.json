@@ -6,7 +6,7 @@
     "build": "npm run build:js && npm run build:types",
     "build:js": "vite build",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
-    "build:types": "tsup lib/index.ts --dts-only --format esm",
+    "build:types": "tsup lib/index.ts --dts-only --format cjs",
     "build:check-types": "tsc",
     "build:executable-bin": "chmod +x dist/index.js",
     "clean": "rm -rf dist",
@@ -15,6 +15,7 @@
     "test:watch": ":"
   },
   "dependencies": {
+    "fast-glob": "^3.3.2",
     "jay-compiler": "workspace:^",
     "typescript": "^5.2.2"
   },

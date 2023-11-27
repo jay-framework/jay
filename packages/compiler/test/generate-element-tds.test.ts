@@ -1,78 +1,65 @@
 import { generateElementDefinitionFile, prettify } from '../lib';
-import { readGeneratedElementDefinitionFile, readSourceJayFile } from './test-fs-utils';
+import { readGeneratedElementDefinitionFile } from './test-utils/file-utils.ts';
+import { readAndParseJayFile } from './test-utils/compiler-utils.ts';
 
 describe('generate the definition file', () => {
     it('should generate definition file for simple file', async () => {
-        const jayFile = await readSourceJayFile('basics/data-types');
-        let definitionFile = generateElementDefinitionFile(
-            jayFile,
-            'data-types.jay.html',
-            './test/',
-        );
+        const folder = 'basics/data-types';
+        const parsedFile = await readAndParseJayFile(folder);
+        let definitionFile = generateElementDefinitionFile(parsedFile);
         expect(definitionFile.validations).toEqual([]);
         expect(await prettify(definitionFile.val)).toEqual(
-            await readGeneratedElementDefinitionFile('basics/data-types'),
+            await readGeneratedElementDefinitionFile(folder),
         );
     });
 
     it('should generate definition file for collection file', async () => {
-        const jayFile = await readSourceJayFile('collections/collections');
-        let definitionFile = generateElementDefinitionFile(
-            jayFile,
-            'collections.jay.html',
-            './test/',
-        );
+        const folder = 'collections/collections';
+        const parsedFile = await readAndParseJayFile(folder);
+        let definitionFile = generateElementDefinitionFile(parsedFile);
         expect(definitionFile.validations).toEqual([]);
         expect(await prettify(definitionFile.val)).toEqual(
-            await readGeneratedElementDefinitionFile('collections/collections'),
+            await readGeneratedElementDefinitionFile(folder),
         );
     });
 
     it('for simple refs', async () => {
-        const jayFile = await readSourceJayFile('components/counter');
-        let definitionFile = generateElementDefinitionFile(jayFile, 'counter.jay.html', './test/');
+        const folder = 'components/counter';
+        const parsedFile = await readAndParseJayFile(folder);
+        let definitionFile = generateElementDefinitionFile(parsedFile);
         expect(definitionFile.validations).toEqual([]);
         expect(await prettify(definitionFile.val)).toEqual(
-            await readGeneratedElementDefinitionFile('components/counter'),
+            await readGeneratedElementDefinitionFile(folder),
         );
     });
 
     it('for conditional with refs', async () => {
-        const jayFile = await readSourceJayFile('conditions/conditions-with-refs');
-        let definitionFile = generateElementDefinitionFile(
-            jayFile,
-            'conditions-with-refs.jay.html',
-            './test/',
-        );
+        const folder = 'conditions/conditions-with-refs';
+        const parsedFile = await readAndParseJayFile(folder);
+        let definitionFile = generateElementDefinitionFile(parsedFile);
         expect(definitionFile.validations).toEqual([]);
         expect(await prettify(definitionFile.val)).toEqual(
-            await readGeneratedElementDefinitionFile('conditions/conditions-with-refs'),
+            await readGeneratedElementDefinitionFile(folder),
         );
     });
 
     it('for collection refs', async () => {
-        const jayFile = await readSourceJayFile('collections/collection-with-refs');
-        let definitionFile = generateElementDefinitionFile(
-            jayFile,
-            'collection-with-refs.jay.html',
-            './test/',
-        );
+        const folder = 'collections/collection-with-refs';
+        const parsedFile = await readAndParseJayFile(folder);
+        let definitionFile = generateElementDefinitionFile(parsedFile);
         expect(definitionFile.validations).toEqual([]);
         expect(await prettify(definitionFile.val)).toEqual(
-            await readGeneratedElementDefinitionFile('collections/collection-with-refs'),
+            await readGeneratedElementDefinitionFile(folder),
         );
     });
 
     it('for nesting components in other components', async () => {
-        const jayFile = await readSourceJayFile('components/component-in-component');
-        let runtimeFile = generateElementDefinitionFile(
-            jayFile,
-            'component-in-component.jay.html',
-            './test/fixtures/components/component-in-component',
-        );
+        const folder = 'components/component-in-component';
+        const parsedFile = await readAndParseJayFile(folder);
+        let runtimeFile = generateElementDefinitionFile(parsedFile);
         expect(runtimeFile.validations).toEqual([]);
         expect(await prettify(runtimeFile.val)).toEqual(
-            await readGeneratedElementDefinitionFile('components/component-in-component'),
+            await readGeneratedElementDefinitionFile(folder),
         );
     }, 10000);
 });

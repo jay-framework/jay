@@ -1,2 +1,3 @@
 export * from './runtime-compiler';
-export { type JayRollupConfig } from './types';
+export * from './definitions-compiler';
+export * from './types';

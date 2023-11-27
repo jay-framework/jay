@@ -5,10 +5,10 @@
   "description": "",
   "scripts": {
     "d": "jay-cli definitions ./lib",
-    "clean": "rm -rf dist && (rm -rf lib/**/*.d.ts || :)",
+    "clean": "rm -rf dist && (rm -rf 'lib/**/*.d.ts' || :)",
     "jay": "jay-cli runtime ./lib",
     "rollup": "rollup --config ./rollup.config.js",
-    "build": "echo 'npm run d && npm run rollup'",
+    "build": "npm run d && npm run rollup",
     "confirm": "npm run clean && npm run build && npm run test",
     "test": ":"
   },

@@ -3427,7 +3427,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"fast-glob@npm:^3.0.3, fast-glob@npm:^3.2.12, fast-glob@npm:^3.2.9":
+"fast-glob@npm:^3.0.3, fast-glob@npm:^3.2.12, fast-glob@npm:^3.2.9, fast-glob@npm:^3.3.2":
   version: 3.3.2
   resolution: "fast-glob@npm:3.3.2"
   dependencies:
@@ -4155,6 +4155,8 @@ __metadata:
     commander: ^11.1.0
     jay-compiler: "workspace:^"
     jay-dev-environment: "workspace:^"
+    rollup: ^4.5.1
+    rollup-plugin-jay: "workspace:^"
     typescript: ^5.2.2
     vite: ^5.0.0
   bin:
@@ -5983,6 +5985,7 @@ __metadata:
   resolution: "rollup-plugin-jay@workspace:packages/rollup-plugin"
   dependencies:
     "@types/node": ^20.9.2
+    fast-glob: ^3.3.2
     jay-compiler: "workspace:^"
     jay-dev-environment: "workspace:^"
     rollup: ^4.5.1
