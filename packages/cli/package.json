@@ -4,11 +4,11 @@
   "main": "dist/index.js",
   "bin": "dist/index.js",
   "scripts": {
-    "build": "npm run build:js && npm run build:executable-bin",
+    "build": "npm run build:cli-link && npm run build:js",
     "build:js": "vite build",
-    "build:watch": "vite build --watch",
+    "build:watch": "npm run build:cli-link && npm run build:js -- --watch",
     "build:check-types": "tsc",
-    "build:executable-bin": "chmod +x dist/index.js && (cd ../../node_modules/.bin && ln -sf ../../packages/cli/dist/index.js jay-cli)",
+    "build:cli-link": "cd ../../node_modules/.bin && ln -sf ../../packages/cli/dist/index.js jay-cli",
     "clean": "rm -rf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
     "test": ":",
@@ -23,7 +23,9 @@
   },
   "devDependencies": {
     "@types/node": "^20.9.2",
+    "@types/shelljs": "^0",
     "jay-dev-environment": "workspace:^",
+    "shelljs": "^0.8.5",
     "typescript": "^5.2.2",
     "vite": "^5.0.0"
   }
