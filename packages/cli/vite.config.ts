@@ -1,5 +1,6 @@
 import { resolve } from 'path';
 import { defineConfig } from 'vitest/config';
+import { makeCliRunnable } from './scripts/make-cli-runnable.ts';
 
 export default defineConfig({
     build: {
@@ -19,6 +20,12 @@ export default defineConfig({
             },
         },
     },
+    plugins: [
+        {
+            name: 'runnable-cli',
+            closeBundle: () => makeCliRunnable(),
+        },
+    ],
     test: {
         globals: true,
         setupFiles: 'jay-dev-environment/library/vitest.setup.ts',
