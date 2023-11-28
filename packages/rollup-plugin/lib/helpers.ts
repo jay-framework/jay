@@ -1,6 +1,5 @@
 import path from 'node:path';
 import fs from 'node:fs';
-import { InputOptions } from 'rollup';
 
 export function isJayFile(filename: string): boolean {
     return filename.endsWith('.jay.html') && !filename.startsWith('.jay.html');
@@ -26,9 +25,4 @@ export function checkCodeErrors(code: string): void {
 export function writeDefinitionFile(dirname: string, filename: string, source: string): void {
     const name = path.join(dirname, `${filename}.jay.html.d.ts`);
     fs.writeFileSync(name, source, { encoding: 'utf8', flag: 'w' });
-}
-
-export function getInputFiles(options: InputOptions): Set<string> {
-    const dirname = process.cwd();
-    return new Set(Object.values(options.input).map((file) => path.resolve(dirname, file)));
 }
