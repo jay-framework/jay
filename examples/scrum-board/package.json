@@ -5,7 +5,7 @@
   "description": "",
   "scripts": {
     "definitions": "jay-cli definitions ./lib",
-    "clean": "rm -rf dist && (rm -rf 'lib/**/*.d.ts' || :)",
+    "clean": "rimraf dist && rimraf -g 'lib/**/*.d.ts'",
     "jay": "jay-cli runtime ./lib",
     "rollup": "rollup --config ./rollup.config.js",
     "build": "npm run definitions && npm run rollup",
@@ -26,6 +26,7 @@
     "@rollup/plugin-node-resolve": "^15.2.3",
     "jay-cli": "workspace:^",
     "jay-dev-environment": "workspace:^",
+    "rimraf": "^5.0.5",
     "rollup": "^4.5.0",
     "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-jay": "workspace:^",

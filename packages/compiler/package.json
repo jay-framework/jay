@@ -14,7 +14,7 @@
     "build:types": "tsup lib/index.ts --dts-only --format cjs",
     "build:check-types": "tsc",
     "build:watch": "npm run build:js -- --watch",
-    "clean": "rm -rf dist",
+    "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -42,6 +42,7 @@
     "jay-dev-environment": "workspace:^",
     "jest-diff": "^29.7.0",
     "jest-matcher-utils": "^29.7.0",
+    "rimraf": "^5.0.5",
     "tsup": "^8.0.0",
     "vite": "^5.0.0",
     "vitest": "^0.34.6"
