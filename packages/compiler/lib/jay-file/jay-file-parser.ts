@@ -182,3 +182,8 @@ export function parseJayFile(
     }
     return new WithValidations({ types, examples, imports, body, baseElementName }, validations);
 }
+
+export function getJayHtmlImports(html: string): string[] {
+    const root = parse(html);
+    return root.querySelectorAll('link[rel="import"]').map((link) => link.getAttribute('href'));
+}

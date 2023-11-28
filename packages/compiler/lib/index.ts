@@ -1,6 +1,6 @@
 export * from './jay-file/jay-file-compiler';
-export { parseJayFile } from './jay-file/jay-file-parser';
+export { parseJayFile, getJayHtmlImports } from './jay-file/jay-file-parser';
 export { WithValidations } from './core/with-validations';
 export { generateComponentRefsDefinitionFile } from './ts-file/ts-refs-file-generator';
-export { type JayImportLink } from './core/jay-file-types';
+export * from './core/jay-file-types';
 export { prettify } from './utils/prettify';
