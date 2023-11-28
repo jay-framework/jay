@@ -6,13 +6,14 @@
     "build": "npm run rollup && npm run copy",
     "rollup": "rollup --config ./rollup.config.js",
     "copy": "cp lib/index.html dist/index.html",
-    "clean": "rm -rf dist",
+    "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run test",
     "test": ":"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^15.2.3",
     "jay-dev-environment": "workspace:^",
+    "rimraf": "^5.0.5",
     "rollup": "^4.5.0",
     "rollup-plugin-typescript2": "^0.36.0",
     "tslib": "^2.6.2",
