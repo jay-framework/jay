@@ -4,10 +4,10 @@
   "type": "module",
   "description": "",
   "scripts": {
-    "d": "jay-cli definitions ./lib",
+    "definitions": "jay-cli definitions ./lib",
     "runtime": "jay-cli runtime ./lib",
     "rollup": "rollup --config ./rollup.config.js",
-    "build": "npm run d && npm run rollup",
+    "build": "npm run definitions && npm run rollup",
     "confirm": "npm run clean && npm run build && npm run test",
     "clean": "rm -rf dist && (rm -rf lib/**/*.d.ts || :)",
     "test": ":"
