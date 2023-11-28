@@ -5,7 +5,7 @@
     "clean": "wsrun clean",
     "clean:node_modules": "rm -rf node_modules && rm -rf packages/*/node_modules && rm -rf examples/*/node_modules && rm -rf exploration/*/node_modules",
     "clean:node_modules:with-cache": "npm run clean:node_modules && yarn cache clean",
-    "confirm": "wsrun -te --report confirm && npm run prettier",
+    "confirm": "npm run rebuild && npm run test && npm run prettier",
     "deps:upgrade": "yarn upgrade-interactive && yarn && yarn deduplicate",
     "deduplicate": "yarn dedupe --strategy highest",
     "prettier": "prettier . --write",
