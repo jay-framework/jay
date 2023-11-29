@@ -71,9 +71,19 @@ yarn run build
 
 Mark `.yarn` directory as excluded in IntelliJ.
 
+### Development Environment Setup
+
+During development, it's convenient to watch for changes.
+You can run the following command from root to watch for all the packages,
+or run it from the specific package.
+
+```shell
+yarn build:watch
+```
+
 ### Running commands from packages
 
-If you get errors of some dependency not found when running commands from packages, try running then with yarn:
+If you get errors of some dependency not found when running commands from packages, try running them with yarn:
 
 ```bash
 yarn run build # for commands
