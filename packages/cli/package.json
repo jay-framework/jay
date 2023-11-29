@@ -5,8 +5,8 @@
   "bin": "dist/index.js",
   "scripts": {
     "build": "npm run build:cli-link && npm run build:js",
-    "build:js": "vite build",
     "build:watch": "npm run build:cli-link && npm run build:js -- --watch",
+    "build:js": "vite build",
     "build:check-types": "tsc",
     "build:cli-link": "cd ../../node_modules/.bin && ln -sf ../../packages/cli/dist/index.js jay-cli",
     "clean": "rimraf dist",
@@ -18,16 +18,16 @@
     "chalk": "^4.1.2",
     "commander": "^11.1.0",
     "jay-compiler": "workspace:^",
-    "rollup": "^4.5.1",
+    "rollup": "^4.6.0",
     "rollup-plugin-jay": "workspace:^"
   },
   "devDependencies": {
-    "@types/node": "^20.9.2",
-    "@types/shelljs": "^0",
+    "@types/node": "^20.10.0",
+    "@types/shelljs": "^0.8.15",
     "jay-dev-environment": "workspace:^",
     "rimraf": "^5.0.5",
     "shelljs": "^0.8.5",
-    "typescript": "^5.2.2",
-    "vite": "^5.0.0"
+    "typescript": "^5.3.2",
+    "vite": "^5.0.3"
   }
 }

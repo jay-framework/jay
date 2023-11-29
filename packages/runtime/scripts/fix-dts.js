@@ -1,4 +1,5 @@
 import replace from 'replace-in-file';
+import fs from 'node:fs';
 
 // allow using the d.ts externally without manually specifying the type override
 const options = {
@@ -7,4 +8,10 @@ const options = {
     to: "declare module 'jay-runtime'",
 };
 
-replace(options);
+export async function fixDts() {
+    if (fs.existsSync(options.files)) {
+        await replace(options);
+    }
+}
+
+fixDts();

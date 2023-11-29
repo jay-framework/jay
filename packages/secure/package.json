@@ -4,6 +4,17 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
+    "build": "npm run build:js && npm run build:types",
+    "build:watch": "npm run build:cli-link && npm run build:js -- --watch",
+    "build:js": "vite build",
+    "build:types": "tsup lib/index.ts --dts-only --format esm",
+    "build:check-types": "tsc",
+    "clean": "rimraf dist",
+    "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test && npm run definitions && npm run runtime",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "definitions": "run-p --continue-on-error --aggregate-output --print-label 'definitions:*'",
+    "runtime": "run-p --continue-on-error --aggregate-output --print-label 'runtime:*'",
     "definitions:basic": "jay-cli definitions ./test/basic/regular",
     "runtime:basic": "jay-cli runtime ./test/basic/regular",
     "definitions:comp-in-comp": "jay-cli definitions test/comp-in-comp/regular",
@@ -17,18 +28,7 @@
     "definitions:tree": "jay-cli definitions test/tree/regular",
     "runtime:tree": "jay-cli runtime test/tree/regular",
     "definitions:top-level-collection-conditions": "jay-cli definitions test/top-level-collection-conditions/regular",
-    "runtime:top-level-collection-conditions": "jay-cli runtime test/top-level-collection-conditions/regular",
-    "definitions": "run-p --continue-on-error --aggregate-output --print-label 'definitions:*'",
-    "runtime": "run-p --continue-on-error --aggregate-output --print-label 'runtime:*'",
-    "build": "npm run build:js && npm run build:types",
-    "build:js": "vite build",
-    "build:watch": "vite build --watch",
-    "build:types": "tsup lib/index.ts --dts-only --format esm",
-    "build:check-types": "tsc",
-    "clean": "rimraf dist",
-    "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test && npm run definitions && npm run runtime",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "runtime:top-level-collection-conditions": "jay-cli runtime test/top-level-collection-conditions/regular"
   },
   "dependencies": {
     "jay-component": "workspace:^",
@@ -39,14 +39,14 @@
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.1.4",
-    "@types/node": "^20.9.2",
-    "caniuse-lite": "^1.0.30001563",
+    "@types/node": "^20.10.0",
+    "caniuse-lite": "^1.0.30001565",
     "jay-dev-environment": "workspace:^",
     "npm-run-all2": "^6.1.1",
     "rimraf": "^5.0.5",
-    "tsup": "^8.0.0",
-    "typescript": "^5.2.2",
-    "vite": "^5.0.0",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.2",
+    "vite": "^5.0.3",
     "vitest": "^0.34.6"
   }
 }
