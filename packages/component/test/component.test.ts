@@ -3,13 +3,14 @@ import {
     ConstructContext,
     JayElement,
     dynamicText as dt,
+    dynamicElement as de,
     element as e,
     HTMLElementProxy,
     RenderElementOptions,
-    provideContext,
+    provideContext, forEach, dynamicText,
 } from 'jay-runtime';
 import {
-    COMPONENT_CONTEXT,
+    COMPONENT_CONTEXT, createDerivedArray,
     createEffect,
     createEvent,
     createMemo,
@@ -503,6 +504,110 @@ describe('state management', () => {
                 );
             });
         });
+
+        describe('with create derived array', () => {
+
+            interface PhoneBookListing {
+                name: string,
+                number: string
+            }
+            interface PhoneBookViewState {
+                listings: Array<PhoneBookListing>,
+                numberOfCallsToMap: number
+            }
+
+            interface PhoneBookRefs {
+            }
+            interface PhoneBookElement extends JayElement<PhoneBookViewState, PhoneBookRefs> {}
+
+            function renderPhoneBookElement(viewState: PhoneBookViewState): PhoneBookElement {
+                return ConstructContext.withRootContext(viewState, () =>
+                    de('div', {}, [
+                        forEach(_ => _.listings, (listing: PhoneBookListing) =>
+                                e('div', {}, [
+                                    dynamicText((listing: PhoneBookListing) => `${listing.name}: ${listing.number}, `)])
+                            , 'name'),
+                        e('div', {}, [dynamicText(vs => `number of calls to map: ${vs.numberOfCallsToMap}`)])
+                    ])
+                ) as PhoneBookElement;
+            }
+
+            interface Contact {
+                firstName: string,
+                lastName: string
+                number: string
+            }
+            interface Contacts {
+                names: Array<Contact>
+                shouldUseIndex: boolean
+                shouldUseLength: boolean
+            }
+
+            function LabelComponentWithCreateMemo({ names }: Props<Contacts>, refs: PhoneBookRefs) {
+                let [numberOfCallsToMap, setNumberOfCallsToMap] = createState(0);
+
+                let listings = createDerivedArray(names, (contact, index,length) => {
+                    setNumberOfCallsToMap(_ => _+1)
+                    return ({
+                        name: `${contact().firstName} ${contact().lastName}`,
+                        number: contact().number
+                    })
+                })
+
+                return {
+                    render: () => ({
+                        listings, numberOfCallsToMap
+                    })
+                };
+            }
+
+            let contactBookComponent = makeJayComponent(
+                renderPhoneBookElement,
+                LabelComponentWithCreateMemo,
+            );
+
+            const name1 = {"firstName": "Zara", "lastName": "Quill", "number": "555-1234"};
+            const name2 = {"firstName": "Caden", "lastName": "Larkspur", "number": "555-5678"};
+            const name3 = {"firstName": "Elara", "lastName": "Stellanova", "number": "555-9012"};
+            const name4 = {"firstName": "Kairos", "lastName": "Nebulon", "number": "555-3456"};
+            const contact5 = {"firstName": "Lyra", "lastName": "Aetherion", "number": "555-7890"};
+            const names1: Contacts['names'] = [name1, name2, name3, name4]
+            const names2: Contacts['names'] = [name1, name2, name3, contact5]
+            const names3: Contacts['names'] = [name1, name2, name3, name4, contact5]
+            const names4: Contacts['names'] = [name3, name1, name4, name2]
+
+            function formatText(names: Contacts['names'], numberOfCallsToMap: number) {
+                return `${names.map(_ => `${_.firstName} ${_.lastName}: ${_.number}, `).join('')}number of calls to map: ${numberOfCallsToMap}`;
+            }
+            function contacts(names: Contacts['names'], shouldUseIndex: boolean = false, shouldUseLength: boolean = false) {
+                return {names, shouldUseIndex, shouldUseLength}
+            }
+
+            it('should render an array, calling map callback for each item', async () => {
+                let instance =
+                    contactBookComponent(contacts(names1));
+                expect(instance.element.dom.textContent).toBe(formatText(names1, 4))
+            });
+
+            it('should call map callback only for replaced items', async () => {
+                let instance = contactBookComponent(contacts(names1));
+                instance.update(contacts(names2))
+                expect(instance.element.dom.textContent).toBe(formatText(names2, 5))
+            });
+
+            it('should call map callback only for new items', async () => {
+                let instance = contactBookComponent(contacts(names1));
+                instance.update(contacts(names3))
+                expect(instance.element.dom.textContent).toBe(formatText(names3, 5))
+            });
+
+            it('should not call map callback for moved items if the callback is not using the index', async () => {
+                let instance = contactBookComponent(contacts(names1));
+                instance.update(contacts(names4))
+                expect(instance.element.dom.textContent).toBe(formatText(names4, 4))
+            });
+
+        })
 
         describe('with expose component API', () => {
             interface Name {

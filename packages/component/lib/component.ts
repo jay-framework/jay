@@ -107,6 +107,53 @@ export function createMemo<T>(computation: (prev: T) => T, initialValue?: T): Ge
     return value;
 }
 
+interface MappedItemTracking<T extends object, U> {
+    item: Getter<T>,
+    index: Getter<number>,
+    length: Getter<number>,
+    mappedItem: Getter<U>,
+    setMappedItem: Setter<U>
+}
+function makeItemTracking<T extends object, U>(item: T, index: number, length: number): MappedItemTracking<T, U> {
+    let isUsedIndex = false;
+    let isUsedLength = false;
+    let mappedItem: U;
+    return {
+        item: () => item,
+        index: () => {
+            isUsedIndex = true;
+            return index
+        },
+        length: () => {
+            isUsedLength = true;
+            return length
+        },
+        mappedItem: () => mappedItem,
+        setMappedItem: (newMappedItem: U) => mappedItem = newMappedItem
+    };
+}
+export function createDerivedArray<T extends object, U>(arrayGetter: Getter<T[]>,
+                                         mapCallback: (item: Getter<T>, index: Getter<number>, length: Getter<number>) => U): Getter<U[]> {
+    let [mappedArray, setMappedArray] = currentComponentContext().reactive.createState<U[]>([]);
+    let mappedItemsCache = new WeakMap<T, MappedItemTracking<T, U>>()
+
+    currentComponentContext().reactive.createReaction(() => {
+        setMappedArray((oldValue) => {
+            let length = arrayGetter().length;
+            return arrayGetter().map((item, index) => {
+                if (!mappedItemsCache.has(item)) {
+                    const itemTracking = makeItemTracking<T, U>(item, index, length)
+                    itemTracking.setMappedItem(mapCallback(itemTracking.item, itemTracking.index, itemTracking.length))
+                    mappedItemsCache.set(item, itemTracking);
+                }
+                return mappedItemsCache.get(item).mappedItem();
+            })
+        });
+    });
+    return mappedArray;
+}
+
+
 export function createEvent<EventType>(
     eventEffect?: (emitter: EventEmitter<EventType, any>) => void,
 ): EventEmitter<EventType, any> {
