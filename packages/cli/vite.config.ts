@@ -1,6 +1,6 @@
 import { resolve } from 'path';
 import { defineConfig } from 'vitest/config';
-import { makeCliRunnable } from './scripts/make-cli-runnable.ts';
+import { makeCliRunnable } from './scripts/make-cli-runnable';
 
 export default defineConfig({
     build: {

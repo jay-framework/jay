@@ -1,6 +1,6 @@
 import * as ts from 'typescript';
 import { componentBridgeTransformer } from '../lib/ts-file/component-bridge-transformer';
-import { printTsFile, readTestFile, readTsSourceFile } from './test-utils/file-utils.ts';
+import { printTsFile, readTestFile, readTsSourceFile } from './test-utils/file-utils';
 import { prettify } from '../lib';
 
 describe('generate component bridge', () => {

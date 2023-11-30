@@ -1,5 +1,5 @@
 import { generateComponentRefsDefinitionFile, prettify } from '../lib';
-import { readTestFile } from './test-utils/file-utils.ts';
+import { readTestFile } from './test-utils/file-utils';
 
 describe('generate the refs file', () => {
     it('should support events in refs', async () => {

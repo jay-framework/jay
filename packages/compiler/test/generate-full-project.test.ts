@@ -12,10 +12,10 @@ import {
     readNamedSourceJayFile,
     readTestFile,
     readTsSourceFile,
-} from './test-utils/file-utils.ts';
+} from './test-utils/file-utils';
 import * as ts from 'typescript';
 import { componentBridgeTransformer } from '../lib/ts-file/component-bridge-transformer';
-import { readAndParseJayFile } from './test-utils/compiler-utils.ts';
+import { readAndParseJayFile } from './test-utils/compiler-utils';
 
 describe('generate full project', () => {
     const relativePath = './test/fixtures/tsconfig.json';
