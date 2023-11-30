@@ -548,13 +548,15 @@ describe('state management', () => {
 
                 let listings = createDerivedArray(names, (contact, index,length) => {
                     setNumberOfCallsToMap(_ => _+1)
+                    let suffix = '';
                     if (shouldUseIndex())
-                        index();
+                        suffix += ' ' + index() ;
                     if (shouldUseLength())
-                        length();
+                        suffix += ' ' + length();
+
                     return ({
                         name: `${contact().firstName} ${contact().lastName}`,
-                        number: contact().number
+                        number: contact().number + suffix
                     })
                 })
 
@@ -580,8 +582,16 @@ describe('state management', () => {
             const names3: Contacts['names'] = [name1, name2, name3, name4, contact5]
             const names4: Contacts['names'] = [name4, name1, name3, name2]
 
-            function formatText(names: Contacts['names'], numberOfCallsToMap: number) {
-                return `${names.map(_ => `${_.firstName} ${_.lastName}: ${_.number}, `).join('')}number of calls to map: ${numberOfCallsToMap}`;
+            function formatText(names: Contacts['names'], numberOfCallsToMap: number, useIndex: boolean = false, useLength: boolean = false) {
+                const mappedNames = names.map((contact, index) => {
+                    let suffix = '';
+                    if (useIndex)
+                        suffix += ' ' + index;
+                    if (useLength)
+                        suffix += ' ' + names.length;
+                    return `${contact.firstName} ${contact.lastName}: ${contact.number}${suffix}, `
+                });
+                return `${mappedNames.join('')}number of calls to map: ${numberOfCallsToMap}`;
             }
             function contacts(names: Contacts['names'], shouldUseIndex: boolean = false, shouldUseLength: boolean = false) {
                 return {names, shouldUseIndex, shouldUseLength}
@@ -614,9 +624,14 @@ describe('state management', () => {
             it('should call map callback for moved items if the callback is using the index', async () => {
                 let instance = contactBookComponent(contacts(names1, true));
                 instance.update(contacts(names4, true))
-                expect(instance.element.dom.textContent).toBe(formatText(names4, 7))
+                expect(instance.element.dom.textContent).toBe(formatText(names4, 7, true))
             });
 
+            it('should call map callback for moved items if the callback is using the length', async () => {
+                let instance = contactBookComponent(contacts(names1, false, true));
+                instance.update(contacts(names3, false, true))
+                expect(instance.element.dom.textContent).toBe(formatText(names3, 9, false, true))
+            });
         })
 
         describe('with expose component API', () => {

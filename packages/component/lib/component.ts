@@ -107,33 +107,35 @@ export function createMemo<T>(computation: (prev: T) => T, initialValue?: T): Ge
     return value;
 }
 
+interface TrackedValue<T> {
+    get: () => T,
+    update: (t: T) => void,
+    isDirty: (t: T) => boolean
+}
+function trackedValue<T>(t: T): TrackedValue<T> {
+    let isUsed = false;
+    return {
+        get: () => {isUsed = true; return t},
+        update: (n: T) => {t = n},
+        isDirty: (n: T) => (isUsed && n !== t)
+    }
+}
+
 interface MappedItemTracking<T extends object, U> {
-    item: Getter<T>,
-    index: Getter<number>,
-    length: Getter<number>,
-    mappedItem: Getter<U>,
-    setMappedItem: Setter<U>,
-    isIndexDirty: (newIndex: number) => boolean
-    setIndex: Setter<number>
+    item: TrackedValue<T>,
+    index: TrackedValue<number>,
+    length: TrackedValue<number>,
+    mappedItem: TrackedValue<U>,
 }
 function makeItemTracking<T extends object, U>(item: T, index: number, length: number): MappedItemTracking<T, U> {
-    let isUsedIndex = false;
-    let isUsedLength = false;
+    // let isUsedIndex = false;
+    // let isUsedLength = false;
     let mappedItem: U;
     return {
-        item: () => item,
-        index: () => {
-            isUsedIndex = true;
-            return index
-        },
-        length: () => {
-            isUsedLength = true;
-            return length
-        },
-        mappedItem: () => mappedItem,
-        setMappedItem: (newMappedItem: U) => mappedItem = newMappedItem,
-        isIndexDirty: (newIndex: number) => isUsedIndex && index !== newIndex,
-        setIndex: (newIndex: number) => index = newIndex
+        item: trackedValue(item),
+        index: trackedValue(index),
+        length: trackedValue(length),
+        mappedItem: trackedValue(undefined),
     };
 }
 export function createDerivedArray<T extends object, U>(arrayGetter: Getter<T[]>,
@@ -147,15 +149,16 @@ export function createDerivedArray<T extends object, U>(arrayGetter: Getter<T[]>
             return arrayGetter().map((item, index) => {
                 if (!mappedItemsCache.has(item)) {
                     const itemTracking = makeItemTracking<T, U>(item, index, length)
-                    itemTracking.setMappedItem(mapCallback(itemTracking.item, itemTracking.index, itemTracking.length))
+                    itemTracking.mappedItem.update(mapCallback(itemTracking.item.get, itemTracking.index.get, itemTracking.length.get))
                     mappedItemsCache.set(item, itemTracking);
                 }
                 const itemTracking = mappedItemsCache.get(item);
-                if (itemTracking.isIndexDirty(index)) {
-                    itemTracking.setMappedItem(mapCallback(itemTracking.item, itemTracking.index, itemTracking.length))
+                if (itemTracking.index.isDirty(index) || itemTracking.length.isDirty(length)) {
+                    itemTracking.index.update(index);
+                    itemTracking.length.update(length);
+                    itemTracking.mappedItem.update(mapCallback(itemTracking.item.get, itemTracking.index.get, itemTracking.length.get))
                 }
-                itemTracking.setIndex(index);
-                return itemTracking.mappedItem();
+                return itemTracking.mappedItem.get();
             })
         });
     });
