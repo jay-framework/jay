@@ -8,7 +8,7 @@ import {
     isJayFile,
     writeDefinitionFile,
 } from './helpers';
-import { generateRefsComponents, getRefsFilePaths } from './refs-compiler.ts';
+import { generateRefsComponents, getRefsFilePaths } from './refs-compiler';
 import { FilterPattern } from 'vite';
 import path from 'node:path';
 

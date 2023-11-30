@@ -1,0 +1,15 @@
+<html>
+  <head>
+    <link rel="import" href="./counter" names="Counter" sandbox="yes" />
+    <script type="application/yaml-jay">
+      data:
+        incrementBy: number
+    </script>
+  </head>
+  <body>
+    <div>
+      <input type="number" id="interval" name="increment" min="1" max="100" />
+      <Counter initialValue="12" incrementBy="{incrementBy}" ref="a"></Counter>
+    </div>
+  </body>
+</html>

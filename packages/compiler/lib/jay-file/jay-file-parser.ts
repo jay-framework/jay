@@ -114,19 +114,21 @@ function parseImports(
     filePath: string,
 ): JayImportLink[] {
     return importLinks.map<JayImportLink>((importLink) => {
-        let module = importLink.getAttribute('href');
-        let rawNames = importLink.getAttribute('names');
-        let sandbox = !!importLink.getAttribute('sandbox');
+        const module = importLink.getAttribute('href');
+        const rawNames = importLink.getAttribute('names');
+        const sandboxAttribute = importLink.getAttribute('sandbox');
+        const sandbox =
+            sandboxAttribute === '' || (Boolean(sandboxAttribute) && sandboxAttribute !== 'false');
         try {
-            let names = parseImportNames(rawNames);
+            const names = parseImportNames(rawNames);
             if (names.length === 0)
                 validations.push(`import for module ${module} does not specify what to import`);
 
-            let importedFile = path.resolve(filePath, module);
-            let exportedTypes = tsExtractTypes(importedFile);
+            const importedFile = path.resolve(filePath, module);
+            const exportedTypes = tsExtractTypes(importedFile);
 
-            for (let name of names) {
-                let exportedType = exportedTypes.find((_) => _.name === name.name);
+            for (const name of names) {
+                const exportedType = exportedTypes.find((_) => _.name === name.name);
                 if (exportedType && exportedType !== JayUnknown)
                     name.type = new JayImportedType(name.as ? name.as : name.name, exportedType);
                 else if (exportedType === JayUnknown)

@@ -1,6 +1,6 @@
 import { prettify } from '../lib';
-import { readGeneratedElementBridgeFile } from './test-utils/file-utils.ts';
-import { readFileAndGenerateElementBridgeFile } from './test-utils/compiler-utils.ts';
+import { readGeneratedElementBridgeFile } from './test-utils/file-utils';
+import { readFileAndGenerateElementBridgeFile } from './test-utils/compiler-utils';
 
 describe('generate the element sandbox files', () => {
     describe('generate element bridges', () => {

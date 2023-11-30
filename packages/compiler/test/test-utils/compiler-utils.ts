@@ -5,8 +5,8 @@ import {
     parseJayFile,
     WithValidations,
 } from '../../lib';
-import { JayFile } from '../../lib/core/jay-file-types.ts';
-import { getFileFromFolder, readNamedSourceJayFile, readTestFile } from './file-utils.ts';
+import { JayFile } from '../../lib/core/jay-file-types';
+import { getFileFromFolder, readNamedSourceJayFile, readTestFile } from './file-utils';
 
 export async function readAndParseJayFile(
     folder: string,

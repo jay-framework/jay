@@ -1,10 +1,11 @@
 import path from 'node:path';
 import { ModuleKind, ScriptTarget } from 'typescript';
-import { JayRollupConfig } from '../lib';
-import { resolveTsCompilerOptions } from '../lib/resolve-ts-config.ts';
+import { JayRollupConfig } from '../../lib';
+import { resolveTsCompilerOptions } from '../../lib/resolve-ts-config.ts';
 
 describe('resolveTsCompilerOptions', () => {
-    const options: JayRollupConfig = { tsConfigFilePath: 'test/fixtures/tsconfig.json' };
+    const directory = 'test/tsconfig/fixtures';
+    const options: JayRollupConfig = { tsConfigFilePath: `${directory}/tsconfig.json` };
 
     it('returns tsConfig path and json', () => {
         expect(resolveTsCompilerOptions(options)).toEqual({
@@ -17,7 +18,7 @@ describe('resolveTsCompilerOptions', () => {
 
     describe('on config file not found', () => {
         const options: JayRollupConfig = {
-            tsConfigFilePath: 'test/fixtures/not-existing.json',
+            tsConfigFilePath: `${directory}/not-existing.json`,
         };
 
         it('throws', () => {
@@ -27,7 +28,7 @@ describe('resolveTsCompilerOptions', () => {
 
     describe('on invalid config', () => {
         const options: JayRollupConfig = {
-            tsConfigFilePath: 'test/fixtures/tsconfig.invalid.json',
+            tsConfigFilePath: `${directory}/tsconfig.invalid.json`,
         };
 
         it('throws', () => {
@@ -37,7 +38,7 @@ describe('resolveTsCompilerOptions', () => {
 
     describe('on non existing extends', () => {
         const options: JayRollupConfig = {
-            tsConfigFilePath: 'test/fixtures/tsconfig.non-existing-extends.json',
+            tsConfigFilePath: `${directory}/tsconfig.non-existing-extends.json`,
         };
 
         it('throws', () => {

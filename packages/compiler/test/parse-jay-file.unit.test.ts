@@ -166,12 +166,16 @@ describe('compiler', () => {
                         |   n1: number`,
                     '<body></body>',
                     `<link rel="import" href="./fixtures/components/imports/component1.ts" names="comp1"/>
-                      |<link rel="import" href="./fixtures/components/imports/component2.ts" names="comp2 as comp3"/>`,
+                      |<link rel="import" href="./fixtures/components/imports/component2.ts" names="comp2 as comp3"/>
+                      |<link rel="import" href="./fixtures/components/imports/component4.ts" names="comp4" sandbox/>
+                      |<link rel="import" href="./fixtures/components/imports/component5.ts" names="comp5" sandbox="true"/>
+                      |<link rel="import" href="./fixtures/components/imports/component6.ts" names="comp6" sandbox="false"/>`,
                 ),
                 'Base',
                 './test',
             );
 
+            expect(jayFile.validations).toEqual([]);
             expect(jayFile.val.imports).toEqual(
                 expect.arrayContaining([
                     {
@@ -201,6 +205,54 @@ describe('compiler', () => {
                                     type: {
                                         api: [],
                                         name: 'comp2',
+                                    },
+                                },
+                            },
+                        ],
+                        sandbox: false,
+                    },
+                    {
+                        module: './fixtures/components/imports/component4.ts',
+                        names: [
+                            {
+                                name: 'comp4',
+                                type: {
+                                    name: 'comp4',
+                                    type: {
+                                        api: [],
+                                        name: 'comp4',
+                                    },
+                                },
+                            },
+                        ],
+                        sandbox: true,
+                    },
+                    {
+                        module: './fixtures/components/imports/component5.ts',
+                        names: [
+                            {
+                                name: 'comp5',
+                                type: {
+                                    name: 'comp5',
+                                    type: {
+                                        api: [],
+                                        name: 'comp5',
+                                    },
+                                },
+                            },
+                        ],
+                        sandbox: true,
+                    },
+                    {
+                        module: './fixtures/components/imports/component6.ts',
+                        names: [
+                            {
+                                name: 'comp6',
+                                type: {
+                                    name: 'comp6',
+                                    type: {
+                                        api: [],
+                                        name: 'comp6',
                                     },
                                 },
                             },

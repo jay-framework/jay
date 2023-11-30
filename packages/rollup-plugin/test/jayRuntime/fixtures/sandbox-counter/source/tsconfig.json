@@ -1,0 +1,3 @@
+{
+  "extends": "jay-dev-environment/examples/tsconfig.json"
+}

@@ -1,6 +1,6 @@
 import { generateElementDefinitionFile, prettify } from '../lib';
-import { readGeneratedElementDefinitionFile } from './test-utils/file-utils.ts';
-import { readAndParseJayFile } from './test-utils/compiler-utils.ts';
+import { readGeneratedElementDefinitionFile } from './test-utils/file-utils';
+import { readAndParseJayFile } from './test-utils/compiler-utils';
 
 describe('generate the definition file', () => {
     it('should generate definition file for simple file', async () => {
