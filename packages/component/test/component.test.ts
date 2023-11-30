@@ -543,11 +543,15 @@ describe('state management', () => {
                 shouldUseLength: boolean
             }
 
-            function LabelComponentWithCreateMemo({ names }: Props<Contacts>, refs: PhoneBookRefs) {
+            function LabelComponentWithCreateMemo({ names, shouldUseIndex, shouldUseLength }: Props<Contacts>, refs: PhoneBookRefs) {
                 let [numberOfCallsToMap, setNumberOfCallsToMap] = createState(0);
 
                 let listings = createDerivedArray(names, (contact, index,length) => {
                     setNumberOfCallsToMap(_ => _+1)
+                    if (shouldUseIndex())
+                        index();
+                    if (shouldUseLength())
+                        length();
                     return ({
                         name: `${contact().firstName} ${contact().lastName}`,
                         number: contact().number
@@ -574,7 +578,7 @@ describe('state management', () => {
             const names1: Contacts['names'] = [name1, name2, name3, name4]
             const names2: Contacts['names'] = [name1, name2, name3, contact5]
             const names3: Contacts['names'] = [name1, name2, name3, name4, contact5]
-            const names4: Contacts['names'] = [name3, name1, name4, name2]
+            const names4: Contacts['names'] = [name4, name1, name3, name2]
 
             function formatText(names: Contacts['names'], numberOfCallsToMap: number) {
                 return `${names.map(_ => `${_.firstName} ${_.lastName}: ${_.number}, `).join('')}number of calls to map: ${numberOfCallsToMap}`;
@@ -605,6 +609,12 @@ describe('state management', () => {
                 let instance = contactBookComponent(contacts(names1));
                 instance.update(contacts(names4))
                 expect(instance.element.dom.textContent).toBe(formatText(names4, 4))
+            });
+
+            it('should call map callback for moved items if the callback is using the index', async () => {
+                let instance = contactBookComponent(contacts(names1, true));
+                instance.update(contacts(names4, true))
+                expect(instance.element.dom.textContent).toBe(formatText(names4, 7))
             });
 
         })
