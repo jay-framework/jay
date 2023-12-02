@@ -10,7 +10,7 @@ export function getRefsFilePaths(
 ): string[] {
     const refPaths = imports
         .map((link) => path.resolve(dirname, link.module))
-        .filter((refPath) => !refPath.includes('.jay.html'));
+        .filter((refPath) => !refPath.includes('.jay-html'));
     return refPaths.filter((path) => !generatedRefPaths.has(path));
 }
 

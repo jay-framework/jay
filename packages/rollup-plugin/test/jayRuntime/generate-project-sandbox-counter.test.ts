@@ -33,14 +33,14 @@ describe('jayRuntime plugin - sandbox counter', () => {
     });
 
     it('generates application container', async () => {
-        const filename = 'app.jay.html.ts';
+        const filename = 'app.jay-html.ts';
         expect(await getCode(projectRoot, filename)).toEqual(
             await readTestFile(projectRoot, getGeneratedFixturePath(filename)),
         );
     });
 
     it('generates counter main view', async () => {
-        const filename = 'counter.jay.html.ts';
+        const filename = 'counter.jay-html.ts';
         expect(await getCode(projectRoot, filename)).toEqual(
             await readTestFile(projectRoot, getGeneratedFixturePath(filename)),
         );

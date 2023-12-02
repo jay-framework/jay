@@ -1,4 +1,4 @@
-import { render } from './conditions.jay.html';
+import { render } from './conditions.jay-html';
 import { makeJayComponentBridge } from 'jay-secure';
 
 interface ConditionsProps {

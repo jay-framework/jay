@@ -1,4 +1,4 @@
-import { render, ItemElementRefs } from './item.jay.html';
+import { render, ItemElementRefs } from './item.jay-html';
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
 
 interface ItemProps {

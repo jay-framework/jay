@@ -1,4 +1,4 @@
-import { render, CompositeElementRefs } from './composite.jay.html';
+import { render, CompositeElementRefs } from './composite.jay-html';
 import { createState, makeJayComponent, useReactive, Props } from 'jay-component';
 import benchmark from '../benchmark';
 

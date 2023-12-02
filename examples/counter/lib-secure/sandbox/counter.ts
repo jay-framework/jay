@@ -1,4 +1,4 @@
-import { render, CounterElementRefs } from './counter.jay.html';
+import { render, CounterElementRefs } from './counter.jay-html';
 import { createState, makeJayComponent, Props } from 'jay-component';
 
 export interface CounterProps {

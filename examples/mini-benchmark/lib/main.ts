@@ -1,5 +1,5 @@
 import { createState, makeJayComponent, Props } from 'jay-component';
-import { MainElementRefs, render, SelectedExample } from './main.jay.html';
+import { MainElementRefs, render, SelectedExample } from './main.jay-html';
 
 interface MainProps {}
 

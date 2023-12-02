@@ -1,4 +1,4 @@
-import { render } from './table.jay.html';
+import { render } from './table.jay-html';
 import { makeJayComponentBridge } from 'jay-secure';
 
 interface TableProps {

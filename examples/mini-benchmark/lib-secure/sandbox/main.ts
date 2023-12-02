@@ -1,5 +1,5 @@
 import { createState, makeJayComponent, Props } from 'jay-component';
-import { MainElementRefs, MainViewState, render, SelectedExample } from './main.jay.html';
+import { MainElementRefs, MainViewState, render, SelectedExample } from './main.jay-html';
 import { handler$ } from 'jay-secure';
 
 export interface MainProps {}

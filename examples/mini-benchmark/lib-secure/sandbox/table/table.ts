@@ -1,4 +1,4 @@
-import { Line, render, TableElementRefs } from './table.jay.html';
+import { Line, render, TableElementRefs } from './table.jay-html';
 import { createState, makeJayComponent, Props } from 'jay-component';
 import { produce } from 'immer';
 import { JSONPatch, patch, REPLACE } from 'jay-json-patch';

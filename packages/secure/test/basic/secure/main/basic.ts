@@ -1,4 +1,4 @@
-import { render } from './basic.jay.html';
+import { render } from './basic.jay-html';
 import { makeJayComponentBridge } from '../../../../lib';
 
 export interface BasicProps {

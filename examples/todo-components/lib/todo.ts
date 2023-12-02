@@ -1,4 +1,4 @@
-import { Filter, render, ShownTodo, TodoElementRefs } from './todo.jay.html';
+import { Filter, render, ShownTodo, TodoElementRefs } from './todo.jay-html';
 import { createMemo, createState, makeJayComponent, Props } from 'jay-component';
 import { uuid } from './uuid';
 import { patch } from 'jay-json-patch';

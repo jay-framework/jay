@@ -1,4 +1,4 @@
-import { render as TableHostRender } from './table-host.jay.html';
+import { render as TableHostRender } from './table-host.jay-html';
 import { makeJayComponentBridge } from 'jay-secure';
 
 interface TableHostProps {

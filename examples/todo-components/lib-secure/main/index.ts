@@ -1,4 +1,4 @@
-import { render } from './app.jay.html';
+import { render } from './app.jay-html';
 import { JayPort, setMainPort } from 'jay-secure';
 import { HandshakeMessageJayChannel } from 'jay-secure';
 

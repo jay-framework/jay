@@ -1,4 +1,4 @@
-import { render } from './counter.jay.html';
+import { render } from './counter.jay-html';
 
 function Counter(initialValue: number) {
     let jayElement = render({ count: initialValue });

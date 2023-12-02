@@ -1,6 +1,6 @@
 import benchmark from '../benchmark';
 import { createState, makeJayComponent, Props } from 'jay-component';
-import { render as TableHostRender, TableHostElementRefs } from './table-host.jay.html';
+import { render as TableHostRender, TableHostElementRefs } from './table-host.jay-html';
 
 interface TableHostProps {
     cycles: number;

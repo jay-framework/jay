@@ -1,4 +1,4 @@
-import { render } from './app.jay.html';
+import { render } from './app.jay-html';
 
 window.onload = function () {
     let target = document.getElementById('target');

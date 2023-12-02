@@ -29,7 +29,7 @@ describe('generate full project', () => {
                 );
                 let sandboxRootFile = generateSandboxRootFile(
                     jayFile,
-                    'app.jay.html',
+                    'app.jay-html',
                     './test/fixtures/sandboxed/sandboxed-counter/source',
                 );
                 expect(sandboxRootFile.validations).toEqual([]);
@@ -48,14 +48,14 @@ describe('generate full project', () => {
                 );
                 let runtimeFile = generateElementBridgeFile(
                     jayFile,
-                    'counter.jay.html',
+                    'counter.jay-html',
                     './sandboxed/sandboxed-counter-source',
                 );
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
                         'sandboxed/sandboxed-counter/generated/sandbox',
-                        'counter.jay.html',
+                        'counter.jay-html',
                     ),
                 );
             });
@@ -72,7 +72,7 @@ describe('generate full project', () => {
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
                         'sandboxed/sandboxed-counter/source',
-                        'counter.jay.html.d',
+                        'counter.jay-html.d',
                     ),
                 );
             }, 10000);
@@ -86,14 +86,14 @@ describe('generate full project', () => {
                 );
                 let runtimeFile = generateElementFile(
                     jayFile,
-                    'app.jay.html',
+                    'app.jay-html',
                     './test/fixtures/sandboxed/sandboxed-counter/source',
                 );
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
                         'sandboxed/sandboxed-counter/generated/main',
-                        'app.jay.html',
+                        'app.jay-html',
                     ),
                 );
             });
@@ -105,14 +105,14 @@ describe('generate full project', () => {
                 );
                 let runtimeFile = generateElementFile(
                     jayFile,
-                    'counter.jay.html',
+                    'counter.jay-html',
                     './test/fixtures/sandboxed/sandboxed-counter/source',
                 );
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
                         'sandboxed/sandboxed-counter/generated/main',
-                        'counter.jay.html',
+                        'counter.jay-html',
                     ),
                 );
             });
@@ -138,7 +138,7 @@ describe('generate full project', () => {
                 );
 
                 const outputFile = ts.transform(sourceFile, [
-                    componentBridgeTransformer(['./counter.jay.html']),
+                    componentBridgeTransformer(['./counter.jay-html']),
                 ]);
 
                 const outputCode = await printTsFile(outputFile);

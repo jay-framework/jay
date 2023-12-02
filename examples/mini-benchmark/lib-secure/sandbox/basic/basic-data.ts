@@ -1,4 +1,4 @@
-import { BasicElementRefs, render as BasicRender } from './basic.jay.html';
+import { BasicElementRefs, render as BasicRender } from './basic.jay-html';
 import { createState, makeJayComponent, useReactive, Props } from 'jay-component';
 import benchmark from '../benchmark';
 

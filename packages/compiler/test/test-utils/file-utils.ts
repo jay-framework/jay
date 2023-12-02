@@ -31,10 +31,10 @@ export async function readTestFile(folder, filename) {
 }
 
 export async function readSourceJayFile(folder) {
-    return readTestFile(folder, 'source.jay.html');
+    return readTestFile(folder, 'source.jay-html');
 }
 export async function readNamedSourceJayFile(folder, file) {
-    return readTestFile(folder, `${file}.jay.html`);
+    return readTestFile(folder, `${file}.jay-html`);
 }
 
 export async function readGeneratedNamedFile(folder, file) {

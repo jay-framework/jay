@@ -1,4 +1,4 @@
-import { CompElementRefs, render as CompRender } from './comp.jay.html';
+import { CompElementRefs, render as CompRender } from './comp.jay-html';
 import { makeJayComponent, Props, createState } from 'jay-component';
 import { exec$ } from '../../../lib/sandbox/exec';
 

@@ -1,4 +1,4 @@
-import { Filter, render, ShownTodo, TodoElementRefs } from './todo.jay.html';
+import { Filter, render, ShownTodo, TodoElementRefs } from './todo.jay-html';
 import {
     createMemo,
     createPatchableState,
