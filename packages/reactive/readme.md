@@ -15,6 +15,7 @@ When a state is updated, any of the dependent reactions are re-run.
 - [record](#record)
 - [createState](#createState)
 - [createReaction](#createReaction)
+- [MeasureOfChange](#MeasureOfChange)
 - [batchReactions](#batchReactions)
 - [toBeClean](#toBeClean)
 - [flush](#flush)
@@ -48,14 +49,14 @@ reactive.record((reactive) => {
 type Next<T> = (t: T) => T;
 type Setter<T> = (t: T | Next<T>) => T;
 type Getter<T> = () => T;
-declare function createState<T>(value: T | Getter<T>): [get: Getter<T>, set: Setter<T>];
+declare function createState<T>(value: T | Getter<T>, measureOfChange: MeasureOfChange = MeasureOfChange.FULL): [get: Getter<T>, set: Setter<T>];
 ```
 
 Creates a state getter / setter pair such that when setting state, any dependent reaction is rerun.
-The reactions run immediately, or at the end of a batch when using `batchReactions`.
+The reactions run on `setTimeout(...,0)`, or at the end of a batch when using `batchReactions`.
 
-The getter always returns a state value
-The setter accepts a new value or a function to compute the next value
+The getter always returns the state value
+The setter accepts a new value or a function to compute the next value, as well as a `MeasureOfChange`.
 
 ```typescript
 const [state, setState] = reactive.createState(12);
@@ -71,20 +72,26 @@ the first function returned by `createState` is the `state` function which retur
 
 ## setState
 
-The second function returned is `setState` which accepts a new value or function to update the value.
-The function will trigger reactions if the value has changed - changed is defined by `Revisioned` discussed below.
+The second function returned is `setState` which accepts two parameters
+* a new value for the state, or a function to update the state value
+* a `MeasureOfChange` which can be used by reactions how to react to a change
+The function will trigger reactions if the value has changed.
+
+Note that a change is defined by strict equality - using the `===` and `!==` operators.
 
 # <a name="createReaction">createReaction</a>
 
 ```typescript
-declare function createReaction(func: () => void);
+export type Reaction = (measureOfChange: MeasureOfChange) => void;
+declare function createReaction(func: Reaction);
 ```
 
 creates a reaction that re-runs when state it depends on changes.
-It will re-run immediately, or at the end of a batch when using `batchReactions`.
+It will re-run on `setTimeout(..., 0)`, or at the end of a batch when using `batchReactions`.
+The `Reaction` accepts a `MeasureOfChange` parameter which can be used to fine tune how the reaction should behave.
 
-The reaction function is running once as part of the constructor of `Reactive` at which dependencies are
-tracked.
+The `Reaction` function is running once as part of the call to `createReaction` used to figure out what dependencies to 
+track.
 
 ```typescript
 reactive.createReaction(() => {
@@ -105,6 +112,28 @@ reactive.createReaction(() => {
   else c();
 });
 ```
+
+# <a name="MeasureOfChange">MeasureOfChange</a>
+
+Measure of Change is an optional value passed when creating state, which is then used to tune how reactions run.
+The `MeasureOfChange` is defined as an ordered enum, at which case the reaction always gets the max `MeasureOfChange` 
+from states that are updated.
+
+It is defined as 
+```typescript
+export enum MeasureOfChange {
+    NO_CHANGE,
+    PARTIAL,
+    FULL
+}
+```
+
+At which
+* `NO_CHANGE` - allows to update a state without triggering reactions
+* `PARTIAL` - triggers reactions with the `PARTIAL` measure of change, unless other states are updated with a higher measure of change
+* `FULL` - triggers reactions with the `FULL` measure of change
+
+see the `jay-component` library, the `createDerivedArray` function for an example use case. 
 
 # <a name="batchReactions">batchReactions</a>
 
