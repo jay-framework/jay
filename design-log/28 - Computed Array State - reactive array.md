@@ -70,6 +70,23 @@ The above code does not handle two specific cases - what if the `index` or `leng
 what if the `mapCallback` function is dependant on another state?
 With both of those cases, we should reevaluate all the items, basically clearing the `mappedItemsCache`.
 
+# Actual Implementation
+
+The actual implementation is based on the idea that we can track derived array item (`derivedItem`) dependencies on 
+the original `item`, it's position `index`, and the source array `length`. The algorithm uses `Reactive` to create 
+a reaction graph at which `derivedItem` is recomputed if any of those dependencies change. 
+
+We have here a case of nested `Reactive` - the top level component `Reactive` and the `Reactive` of the `derivedItem`.
+
+On update to the top level `Reactive` state that is used as the source of the Array, we 
+1. update a new state for the source array `sourceArray` with the mark `MeasureOfChange.PARTIAL`.
+2. call map on the `sourceArray` to create the `mappedArray` state using a reaction.
+3. The reaction will trigger with `MeasureOfChange.PARTIAL` if the only changed state is `sourceArray`. 
+   If any other state has changed for the component `Reactive` that is used in the map function, reaction will trigger with `MeasureOfChange.FULL`.
+4. The `sourceArray` map function is creating the item `Reactive` with the relevant `index`, `item`, `length`.
+   The map function also remembers the `derivedItems` as a state of the item `Reactive`, updated using a reaction of the item `Reactive`.
+5. On map with `MeasureOfChange.PARTIAL` we use the cache of item `Reactive`s. 
+   On map with `MeasureOfChange.FULL` we do not use the cache.
 
 
 

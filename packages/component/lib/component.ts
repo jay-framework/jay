@@ -132,7 +132,7 @@ function makeItemTracking<T extends object, U>(item: T, index: number, length: n
 export function createDerivedArray<T extends object, U>(arrayGetter: Getter<T[]>,
                                          mapCallback: (item: Getter<T>, index: Getter<number>, length: Getter<number>) => U): Getter<U[]> {
     let [sourceArray] = currentComponentContext().reactive.createState<T[]>(arrayGetter, MeasureOfChange.PARTIAL);
-    let [mappedArray, setMappedArray] = currentComponentContext().reactive.createState<U[]>([]);
+    let [mappedArray, setMappedArray] = createState<U[]>([]);
     let mappedItemsCache = new WeakMap<T, MappedItemTracking<T, U>>()
 
     currentComponentContext().reactive.createReaction((measureOfChange: MeasureOfChange) => {
