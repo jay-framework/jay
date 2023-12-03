@@ -1,5 +1,5 @@
-import { describe, expect, it, jest } from '@jest/globals';
-import { Reactive } from '../lib';
+import {describe, expect, it, jest} from '@jest/globals';
+import {MeasureOfChange, Reactive} from '../lib';
 
 describe('reactive', () => {
     describe('create reactive', () => {
@@ -473,4 +473,65 @@ describe('reactive', () => {
             expect(reaction2.mock.calls[1][0]).toBe(26);
         });
     });
+
+    describe('reactive measure of change', () => {
+        function mkReactive() {
+            const reaction = jest.fn();
+            let state, setState, state2, setState2;
+            let reactive = new Reactive();
+            reactive.record((reactive) => {
+                [state, setState] = reactive.createState(12, MeasureOfChange.FULL);
+                [state2, setState2] = reactive.createState(12, MeasureOfChange.PARTIAL);
+                reactive.createReaction((measureOfChange) => {
+                    let num = state() + state2();
+                    reaction(num, measureOfChange);
+                    return state() + state2();
+                });
+            });
+            return {reactive, reaction, setState, setState2}
+        }
+        it('should run initial reaction with MeasureOfChange.FULL', () => {
+            const {setState, reactive, reaction} = mkReactive();
+
+            expect(reaction.mock.calls.length).toBe(1);
+            expect(reaction.mock.calls[0][1]).toBe(MeasureOfChange.FULL);
+        });
+
+        it('should pass the MeasureOfChange.Full if state with MeasureOfChange.Full is changed', () => {
+            const {setState, reactive, reaction} = mkReactive();
+
+            reactive.batchReactions(() => {
+                setState(22);
+            });
+
+            expect(reaction.mock.calls.length).toBe(2);
+            expect(reaction.mock.calls[1][0]).toBe(34);
+            expect(reaction.mock.calls[1][1]).toBe(MeasureOfChange.FULL);
+        });
+
+        it('should pass the MeasureOfChange.Partial if state with MeasureOfChange.Partial is changed', () => {
+            const {setState2, reactive, reaction} = mkReactive();
+
+            reactive.batchReactions(() => {
+                setState2(22);
+            });
+
+            expect(reaction.mock.calls.length).toBe(2);
+            expect(reaction.mock.calls[1][0]).toBe(34);
+            expect(reaction.mock.calls[1][1]).toBe(MeasureOfChange.PARTIAL);
+        });
+
+        it('should pass the MeasureOfChange.Full if states with both MeasureOfChange.Partial and MeasureOfChange.Full are changed', () => {
+            const {setState, setState2, reactive, reaction} = mkReactive();
+
+            reactive.batchReactions(() => {
+                setState(22);
+                setState2(22);
+            });
+
+            expect(reaction.mock.calls.length).toBe(2);
+            expect(reaction.mock.calls[1][0]).toBe(44);
+            expect(reaction.mock.calls[1][1]).toBe(MeasureOfChange.FULL);
+        });
+    })
 });
