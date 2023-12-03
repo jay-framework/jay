@@ -128,9 +128,6 @@ interface MappedItemTracking<T extends object, U> {
     mappedItem: TrackedValue<U>,
 }
 function makeItemTracking<T extends object, U>(item: T, index: number, length: number): MappedItemTracking<T, U> {
-    // let isUsedIndex = false;
-    // let isUsedLength = false;
-    let mappedItem: U;
     return {
         item: trackedValue(item),
         index: trackedValue(index),
