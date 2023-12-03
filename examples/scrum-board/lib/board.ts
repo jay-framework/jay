@@ -1,5 +1,5 @@
 import { BoardElementRefs, BoardPillar, render } from './board.jay.html';
-import { createMemo, createState, makeJayComponent, Props } from 'jay-component';
+import {createDerivedArray, createMemo, createState, makeJayComponent, Props} from 'jay-component';
 import { ADD, JSONPatch, patch, REMOVE } from 'jay-json-patch';
 import { DEFAULT_PILLARS } from './DEFAULT_PILLARS';
 
@@ -10,20 +10,34 @@ export interface BoardProps {
 function BoardConstructor({ title }: Props<BoardProps>, refs: BoardElementRefs) {
     let [pillars, setPillars] = createState(DEFAULT_PILLARS);
 
-    const boardPillars = createMemo<BoardPillar[]>(() =>
-        pillars().map((pillar, index) => {
-            let { pillarId, title, pillarTasks } = pillar;
+    const boardPillars = createDerivedArray(pillars,
+        (item, index, length) => {
+            let { pillarId, title, pillarTasks } = item();
             return {
                 pillarId,
                 pillarData: {
                     pillarTasks,
                     title,
-                    hasPrev: index > 0,
-                    hasNext: index < pillars().length - 1,
+                    hasPrev: index() > 0,
+                    hasNext: index() < length() - 1,
                 },
             };
-        }),
-    );
+    })
+
+    // const boardPillars = createMemo<BoardPillar[]>(() =>
+    //     pillars().map((pillar, index) => {
+    //         let { pillarId, title, pillarTasks } = pillar;
+    //         return {
+    //             pillarId,
+    //             pillarData: {
+    //                 pillarTasks,
+    //                 title,
+    //                 hasPrev: index > 0,
+    //                 hasNext: index < pillars().length - 1,
+    //             },
+    //         };
+    //     }),
+    // );
 
     function moveTask(pillarId: string, taskId: string, pillarOffset: number, taskOffset: number) {
         let pillarIndex = pillars().findIndex((pillar) => pillar.pillarId === pillarId);
