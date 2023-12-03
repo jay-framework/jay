@@ -107,32 +107,26 @@ export function createMemo<T>(computation: (prev: T) => T, initialValue?: T): Ge
     return value;
 }
 
-interface TrackedValue<T> {
-    get: () => T,
-    update: (t: T) => void,
-    isDirty: (t: T) => boolean
-}
-function trackedValue<T>(t: T): TrackedValue<T> {
-    let isUsed = false;
-    return {
-        get: () => {isUsed = true; return t},
-        update: (n: T) => {t = n},
-        isDirty: (n: T) => (isUsed && n !== t)
-    }
-}
-
 interface MappedItemTracking<T extends object, U> {
-    item: TrackedValue<T>,
-    index: TrackedValue<number>,
-    length: TrackedValue<number>,
-    mappedItem: TrackedValue<U>,
+    reactive: Reactive,
+    setItem: Setter<T>,
+    setIndex: Setter<number>,
+    setLength: Setter<number>,
+    getMappedItem: Getter<U>
 }
-function makeItemTracking<T extends object, U>(item: T, index: number, length: number): MappedItemTracking<T, U> {
+function makeItemTracking<T extends object, U>(item: T, index: number, length: number,
+                                               mapCallback: (item: Getter<T>, index: Getter<number>, length: Getter<number>) => U): MappedItemTracking<T, U> {
+    let reactive = new Reactive();
+    let {setItem, setIndex, setLength, getMappedItem} = reactive.record(() => {
+        let [getItem, setItem] = reactive.createState(item);
+        let [getIndex, setIndex] = reactive.createState(index);
+        let [getLength, setLength] = reactive.createState(length);
+        let [getMappedItem, setMappedItem] = reactive.createState<U>(undefined);
+        reactive.createReaction(() => setMappedItem(mapCallback(getItem, getIndex, getLength)))
+        return {setItem, setIndex, setLength, getMappedItem};
+    })
     return {
-        item: trackedValue(item),
-        index: trackedValue(index),
-        length: trackedValue(length),
-        mappedItem: trackedValue(undefined),
+        setItem, setIndex, setLength, getMappedItem, reactive
     };
 }
 export function createDerivedArray<T extends object, U>(arrayGetter: Getter<T[]>,
@@ -146,21 +140,18 @@ export function createDerivedArray<T extends object, U>(arrayGetter: Getter<T[]>
         setMappedArray((oldValue) => {
             let length = sourceArray().length;
             let newMappedArray = sourceArray().map((item, index) => {
-                if (!mappedItemsCache.has(item) || measureOfChange == MeasureOfChange.FULL) {
-                    const itemTracking = makeItemTracking<T, U>(item, index, length)
-                    itemTracking.mappedItem.update(mapCallback(itemTracking.item.get, itemTracking.index.get, itemTracking.length.get))
-                    newMappedItemsCache.set(item, itemTracking);
+                let itemTracking: MappedItemTracking<T, U>;
+                if (!mappedItemsCache.has(item) || measureOfChange == MeasureOfChange.FULL)
+                    newMappedItemsCache.set(item, itemTracking = makeItemTracking<T, U>(item, index, length, mapCallback));
+                else {
+                    newMappedItemsCache.set(item, itemTracking = mappedItemsCache.get(item))
+                    itemTracking.reactive.batchReactions(() => {
+                        itemTracking.setItem(item);
+                        itemTracking.setLength(length);
+                        itemTracking.setIndex(index);
+                    })
                 }
-                else
-                    newMappedItemsCache.set(item, mappedItemsCache.get(item))
-
-                const itemTracking = newMappedItemsCache.get(item);
-                if (itemTracking.index.isDirty(index) || itemTracking.length.isDirty(length)) {
-                    itemTracking.index.update(index);
-                    itemTracking.length.update(length);
-                    itemTracking.mappedItem.update(mapCallback(itemTracking.item.get, itemTracking.index.get, itemTracking.length.get))
-                }
-                return itemTracking.mappedItem.get();
+                return itemTracking.getMappedItem();
             })
             mappedItemsCache = newMappedItemsCache;
             return newMappedArray;
