@@ -1,16 +1,16 @@
 import {
-    JayElement,
-    JayComponent,
-    MountFunc,
-    EventEmitter,
-    JayEventHandlerWrapper,
-    RenderElement,
     createJayContext,
-    useContext,
+    EventEmitter,
+    JayComponent,
+    JayElement,
+    JayEventHandlerWrapper,
+    MountFunc,
     provideContext,
+    RenderElement,
+    useContext,
 } from 'jay-runtime';
-import { ValueOrGetter, Getter, Reactive, Setter } from 'jay-reactive';
-import { JSONPatch, patch } from 'jay-json-patch';
+import {Getter, MeasureOfChange, Reactive, Setter, ValueOrGetter} from 'jay-reactive';
+import {JSONPatch, patch} from 'jay-json-patch';
 
 export type Patcher<T> = (...patch: JSONPatch) => void;
 export type hasProps<PropsT> = { props: Getter<PropsT> };
@@ -140,19 +140,24 @@ function makeItemTracking<T extends object, U>(item: T, index: number, length: n
 }
 export function createDerivedArray<T extends object, U>(arrayGetter: Getter<T[]>,
                                          mapCallback: (item: Getter<T>, index: Getter<number>, length: Getter<number>) => U): Getter<U[]> {
+    let [sourceArray] = currentComponentContext().reactive.createState<T[]>(arrayGetter, MeasureOfChange.PARTIAL);
     let [mappedArray, setMappedArray] = currentComponentContext().reactive.createState<U[]>([]);
     let mappedItemsCache = new WeakMap<T, MappedItemTracking<T, U>>()
 
-    currentComponentContext().reactive.createReaction(() => {
+    currentComponentContext().reactive.createReaction((measureOfChange: MeasureOfChange) => {
+        let newMappedItemsCache = new WeakMap<T, MappedItemTracking<T, U>>()
         setMappedArray((oldValue) => {
-            let length = arrayGetter().length;
-            return arrayGetter().map((item, index) => {
-                if (!mappedItemsCache.has(item)) {
+            let length = sourceArray().length;
+            let newMappedArray = sourceArray().map((item, index) => {
+                if (!mappedItemsCache.has(item) || measureOfChange == MeasureOfChange.FULL) {
                     const itemTracking = makeItemTracking<T, U>(item, index, length)
                     itemTracking.mappedItem.update(mapCallback(itemTracking.item.get, itemTracking.index.get, itemTracking.length.get))
-                    mappedItemsCache.set(item, itemTracking);
+                    newMappedItemsCache.set(item, itemTracking);
                 }
-                const itemTracking = mappedItemsCache.get(item);
+                else
+                    newMappedItemsCache.set(item, mappedItemsCache.get(item))
+
+                const itemTracking = newMappedItemsCache.get(item);
                 if (itemTracking.index.isDirty(index) || itemTracking.length.isDirty(length)) {
                     itemTracking.index.update(index);
                     itemTracking.length.update(length);
@@ -160,6 +165,8 @@ export function createDerivedArray<T extends object, U>(arrayGetter: Getter<T[]>
                 }
                 return itemTracking.mappedItem.get();
             })
+            mappedItemsCache = newMappedItemsCache;
+            return newMappedArray;
         });
     });
     return mappedArray;
