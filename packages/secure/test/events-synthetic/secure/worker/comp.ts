@@ -1,4 +1,4 @@
-import { CompElementRefs, CompViewState, Item, render as CompRender } from './comp.jay.html';
+import { CompElementRefs, CompViewState, Item, render as CompRender } from './comp.jay-html';
 import { makeJayComponent, Props, createState } from 'jay-component';
 import { handler$ } from '../../../../lib/';
 

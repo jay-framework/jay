@@ -26,7 +26,7 @@ export function jayDefinitions() {
             const tsCode = generateElementDefinitionFile(parsedFile);
             checkValidationErrors(tsCode.validations);
             writeDefinitionFile(dirname, filename, tsCode.val);
-            context.info(`Generated ${filename}.jay.html.d.ts`);
+            context.info(`Generated ${filename}.jay-html.d.ts`);
 
             const newRefsPaths = getRefsFilePaths(
                 generatedRefPaths,
@@ -51,7 +51,7 @@ export function jayHtmlImports(options: { include?: FilterPattern; exclude?: Fil
 
             const context = this as PluginContext;
             const imports = getJayHtmlImports(source).filter((module) =>
-                module.endsWith('jay.html.d'),
+                module.endsWith('jay-html.d'),
             );
             const { dirname } = getFileContext(id);
             // make sure imported files are resolved first

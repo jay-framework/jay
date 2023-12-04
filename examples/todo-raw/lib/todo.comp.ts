@@ -1,4 +1,4 @@
-import { render, ShownTodo, TodoViewState } from './todo.jay.html';
+import { render, ShownTodo, TodoViewState } from './todo.jay-html';
 import { uuid } from './uuid';
 
 const ENTER_KEY = 13;

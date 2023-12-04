@@ -1,4 +1,4 @@
-import { render, CollectionsElementRefs } from './collections.jay.html';
+import { render, CollectionsElementRefs } from './collections.jay-html';
 import { createState, makeJayComponent, useReactive, Props, createMemo } from 'jay-component';
 import benchmark from '../benchmark';
 import { ADD, JSONPatch, MOVE, REMOVE, REPLACE } from 'jay-json-patch';

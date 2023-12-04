@@ -1,4 +1,4 @@
-import { render as BasicRender } from './basic.jay.html';
+import { render as BasicRender } from './basic.jay-html';
 import { makeJayComponentBridge } from 'jay-secure';
 
 interface BasicProps {

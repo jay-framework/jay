@@ -1,4 +1,4 @@
-import { ParentElementRefs, render as ParentRender } from './parent.jay.html';
+import { ParentElementRefs, render as ParentRender } from './parent.jay-html';
 import { makeJayComponent, Props, createState } from 'jay-component';
 import { REPLACE, patch } from 'jay-json-patch';
 

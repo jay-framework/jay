@@ -1,4 +1,4 @@
-import { ChildElementRefs, render as ChildRender } from './child.jay.html';
+import { ChildElementRefs, render as ChildRender } from './child.jay-html';
 import { makeJayComponent, Props, createMemo, createEvent, createState } from 'jay-component';
 
 export interface ChildProps {

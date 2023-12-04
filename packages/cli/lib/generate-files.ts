@@ -32,7 +32,7 @@ export async function generateFiles(
         const content = await fsp.readFile(jayFile, 'utf-8');
         const generatedFile = codeGenerationFunction(
             content,
-            path.basename(jayFile.replace('.jay.html', '')),
+            path.basename(jayFile.replace('.jay-html', '')),
             path.dirname(jayFile),
         );
         const generateFileName = jayFile + outputExtension;
@@ -69,7 +69,7 @@ export async function generateFiles(
         }
         afterGenerationFunction(
             content,
-            path.basename(jayFile.replace('.jay.html', '')),
+            path.basename(jayFile.replace('.jay-html', '')),
             path.dirname(jayFile),
         );
         if (generationFailed) {

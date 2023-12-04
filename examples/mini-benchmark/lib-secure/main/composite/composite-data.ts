@@ -1,4 +1,4 @@
-import { render } from './composite.jay.html';
+import { render } from './composite.jay-html';
 import { makeJayComponentBridge } from 'jay-secure';
 
 interface CompositeProps {

@@ -1,4 +1,4 @@
-import { render } from './collections.jay.html';
+import { render } from './collections.jay-html';
 import { makeJayComponentBridge } from 'jay-secure';
 
 interface CollectionsProps {

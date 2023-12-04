@@ -1,4 +1,4 @@
-import { render } from './tree-node.jay.html';
+import { render } from './tree-node.jay-html';
 import { makeJayComponentBridge } from '../../../../lib/main/main-bridge';
 
 export interface Node {

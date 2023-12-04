@@ -1,6 +1,6 @@
 import { setChannel, useMockCommunicationChannel } from '../util/mock-channel';
 import { initializeWorker } from './secure/worker/worker-root';
-import { render } from './secure/main/app.jay.html';
+import { render } from './secure/main/app.jay-html';
 import { eventually10ms } from '../util/eventually';
 
 const VERBOSE = false;

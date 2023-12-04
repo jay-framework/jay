@@ -1,4 +1,4 @@
-import { render } from './comp.jay.html';
+import { render } from './comp.jay-html';
 import { makeJayComponentBridge } from '../../../../lib/main/main-bridge';
 import { funcRepository } from './native-funcs';
 

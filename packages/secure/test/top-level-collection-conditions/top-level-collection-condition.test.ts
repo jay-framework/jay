@@ -1,6 +1,6 @@
 import { setChannel, useMockCommunicationChannel } from '../util/mock-channel';
 import { initializeWorker } from './secure/worker/worker-root';
-import { AppViewState, render } from './secure/main/app.jay.html';
+import { AppViewState, render } from './secure/main/app.jay-html';
 
 const COUNTER_COND_COORDINATE = ['comp1'];
 const COUNTER_COND = 'cond';

@@ -153,7 +153,7 @@ function parseImports(
 }
 
 function normalizeFilename(filename: string): string {
-    return filename.replace('.jay.html', '');
+    return filename.replace('.jay-html', '');
 }
 
 export function parseJayFile(

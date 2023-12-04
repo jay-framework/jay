@@ -1,4 +1,4 @@
-import { render, ItemElementRefs, ItemViewState } from './item.jay.html';
+import { render, ItemElementRefs, ItemViewState } from './item.jay-html';
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
 import { handler$ } from 'jay-secure';
 

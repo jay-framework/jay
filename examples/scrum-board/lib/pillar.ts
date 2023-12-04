@@ -1,4 +1,4 @@
-import { render, PillarElementRefs, TaskDatum } from './pillar.jay.html';
+import { render, PillarElementRefs, TaskDatum } from './pillar.jay-html';
 import {
     createEvent,
     makeJayComponent,

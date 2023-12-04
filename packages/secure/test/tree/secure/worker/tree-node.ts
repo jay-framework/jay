@@ -1,4 +1,4 @@
-import { render, TreeNodeElementRefs } from './tree-node.jay.html';
+import { render, TreeNodeElementRefs } from './tree-node.jay-html';
 import { createState, createMemo, makeJayComponent, Props } from 'jay-component';
 
 export interface Node {

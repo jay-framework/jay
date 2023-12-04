@@ -1,1 +1,1 @@
-export const JAY_EXTENSION = '.jay.html';
+export const JAY_EXTENSION = '.jay-html';

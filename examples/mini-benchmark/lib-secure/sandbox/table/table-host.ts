@@ -4,7 +4,7 @@ import {
     render as TableHostRender,
     TableHostElementRefs,
     TableHostViewState,
-} from './table-host.jay.html';
+} from './table-host.jay-html';
 import { handler$ } from 'jay-secure';
 
 interface TableHostProps {

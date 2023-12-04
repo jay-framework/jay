@@ -1,4 +1,4 @@
-import { render, ConditionsElementRefs } from './conditions.jay.html';
+import { render, ConditionsElementRefs } from './conditions.jay-html';
 import { createState, makeJayComponent, useReactive, Props } from 'jay-component';
 import benchmark from '../benchmark';
 

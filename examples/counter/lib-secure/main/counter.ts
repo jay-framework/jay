@@ -1,4 +1,4 @@
-import { render } from './counter.jay.html';
+import { render } from './counter.jay-html';
 import { makeJayComponentBridge } from 'jay-secure';
 
 export interface CounterProps {

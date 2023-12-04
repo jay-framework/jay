@@ -1,4 +1,4 @@
-import { render } from './app.jay.html';
+import { render } from './app.jay-html';
 import { HandshakeMessageJayChannel, JayPort, setMainPort } from 'jay-secure';
 
 const jayWorker = new Worker('./immer-workaround.js');

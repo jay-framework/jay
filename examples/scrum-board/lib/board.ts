@@ -1,4 +1,4 @@
-import { BoardElementRefs, BoardPillar, render } from './board.jay.html';
+import { BoardElementRefs, BoardPillar, render } from './board.jay-html';
 import {
     createDerivedArray,
     createMemo,

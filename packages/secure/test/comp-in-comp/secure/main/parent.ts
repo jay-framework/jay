@@ -1,4 +1,4 @@
-import { render } from './parent.jay.html';
+import { render } from './parent.jay-html';
 import { makeJayComponentBridge } from '../../../../lib';
 
 export interface ParentProps {}

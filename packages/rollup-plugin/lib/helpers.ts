@@ -3,12 +3,12 @@ import fs from 'node:fs';
 import { PluginContext } from 'rollup';
 
 export function isJayFile(filename: string): boolean {
-    return filename.endsWith('.jay.html') && !filename.startsWith('.jay.html');
+    return filename.endsWith('.jay-html') && !filename.startsWith('.jay-html');
 }
 
 export function getFileContext(filename: string): { filename: string; dirname: string } {
     return {
-        filename: path.basename(filename).replace('.jay.html', ''),
+        filename: path.basename(filename).replace('.jay-html', ''),
         dirname: path.dirname(filename),
     };
 }
@@ -24,7 +24,7 @@ export function checkCodeErrors(code: string): void {
 }
 
 export function writeDefinitionFile(dirname: string, filename: string, source: string): void {
-    const name = path.join(dirname, `${filename}.jay.html.d.ts`);
+    const name = path.join(dirname, `${filename}.jay-html.d.ts`);
     fs.writeFileSync(name, source, { encoding: 'utf8', flag: 'w' });
 }
 
