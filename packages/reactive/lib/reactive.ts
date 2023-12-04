@@ -1,4 +1,5 @@
 export enum MeasureOfChange {
+    // noinspection JSUnusedGlobalSymbols
     NO_CHANGE,
     PARTIAL,
     FULL,
@@ -11,28 +12,22 @@ export type Reaction = (measureOfChange: MeasureOfChange) => void;
 export type ValueOrGetter<T> = T | Getter<T>;
 export const GetterMark = Symbol.for('getterMark');
 export const SetterMark = Symbol.for('setterMark');
+type ResetStateDependence = (reactionIndex: number) => void;
 
 export class Reactive {
-    private recording = false;
-    private inCreateReaction = false;
+    private runningReactionIndex = undefined;
     private batchedReactionsToRun: MeasureOfChange[] = [];
     private isAutoBatchScheduled = false;
+    private nextStateIndex: number = 0;
+    private resetDependencyOnState: Array<ResetStateDependence> = [];
     private reactionIndex = 0;
     private reactions: Array<Reaction> = [];
+    private reactionDependencies: Array<Set<number>> = [];
     private dirty: Promise<void> = Promise.resolve();
     private dirtyResolve: () => void;
     private timeout: any = undefined;
     private inBatchReactions: boolean;
     private inFlush: boolean;
-
-    record<T>(func: (reactive: Reactive) => T): T {
-        try {
-            this.recording = true;
-            return func(this);
-        } finally {
-            this.recording = false;
-        }
-    }
 
     createState<T>(
         value: ValueOrGetter<T>,
@@ -40,12 +35,12 @@ export class Reactive {
     ): [get: Getter<T>, set: Setter<T>] {
         let current: T;
         let reactionsToRerun: boolean[] = [];
+        let stateIndex = this.nextStateIndex++;
 
         const triggerReactions = () => {
             for (let index = 0; index < reactionsToRerun.length; index++) {
                 if (reactionsToRerun[index]) {
-                    if (this.recording) this.reactions[index](measureOfChange);
-                    else if (!this.inBatchReactions) this.ScheduleAutoBatchRuns();
+                    if (!this.inBatchReactions) this.ScheduleAutoBatchRuns();
                     this.batchedReactionsToRun[index] = Math.max(
                         measureOfChange,
                         this.batchedReactionsToRun[index] || 0,
@@ -63,9 +58,14 @@ export class Reactive {
             return current;
         };
 
+        let resetDependency: ResetStateDependence = (reactionIndex) => {
+            reactionsToRerun[reactionIndex] = false;
+        }
+
         let getter = () => {
-            if (this.recording && this.inCreateReaction) {
-                reactionsToRerun[this.reactionIndex] = true;
+            if (this.runningReactionIndex !== undefined) {
+                reactionsToRerun[this.runningReactionIndex] = true;
+                this.reactionDependencies[this.runningReactionIndex].add(stateIndex);
             }
             return current;
         };
@@ -79,18 +79,15 @@ export class Reactive {
 
         getter[GetterMark] = true;
         setter[SetterMark] = true;
+        this.resetDependencyOnState[stateIndex] = resetDependency;
         return [getter, setter];
     }
 
     createReaction(func: Reaction) {
-        this.reactions[this.reactionIndex] = func;
-        this.inCreateReaction = true;
-        try {
-            func(MeasureOfChange.FULL);
-        } finally {
-            this.reactionIndex += 1;
-            this.inCreateReaction = false;
-        }
+        let reactionIndex = this.reactionIndex++;
+        this.reactions[reactionIndex] = func;
+        this.reactionDependencies[reactionIndex] = new Set();
+        this.runReaction(reactionIndex, MeasureOfChange.FULL)
     }
 
     batchReactions<T>(func: () => T) {
@@ -121,13 +118,25 @@ export class Reactive {
         return this.dirty;
     }
 
+    private runReaction(index: number, measureOfChange: MeasureOfChange) {
+        this.reactionDependencies[index].forEach(stateIndex => this.resetDependencyOnState[stateIndex](index))
+        this.reactionDependencies[index].clear();
+        this.runningReactionIndex = index;
+        try {
+            this.reactions[index](measureOfChange);
+        }
+        finally {
+            this.runningReactionIndex = undefined;
+        }
+    }
+
     flush() {
         if (this.inFlush) return;
         this.inFlush = true;
         try {
             for (let index = 0; index < this.batchedReactionsToRun.length; index++)
                 if (this.batchedReactionsToRun[index])
-                    this.reactions[index](this.batchedReactionsToRun[index]);
+                    this.runReaction(index, this.batchedReactionsToRun[index]);
             if (this.isAutoBatchScheduled) {
                 this.isAutoBatchScheduled = false;
                 if (this.timeout) clearTimeout(this.timeout);

@@ -1,87 +1,46 @@
 import { MeasureOfChange, Reactive } from '../lib';
 
 describe('reactive', () => {
-    describe('create reactive', () => {
-        it('should call the constructor function', () => {
-            const myMock = vi.fn();
-
-            new Reactive().record(() => {
-                myMock();
-            });
-
-            expect(myMock.mock.calls.length).toBe(1);
-        });
-    });
-
     describe('create state', () => {
         it('with a default value', () => {
-            let res;
-            new Reactive().record((reactive) => {
-                let [state] = reactive.createState(12);
-                res = state();
-            });
+            let reactive = new Reactive();
+            let [state] = reactive.createState(12);
 
-            expect(res).toBe(12);
+            expect(state()).toBe(12);
         });
 
         it('with a getter function', () => {
-            let res;
-            new Reactive().record((reactive) => {
-                let [state] = reactive.createState(() => 12);
-                res = state();
-            });
+            let reactive = new Reactive();
+            let [state] = reactive.createState(() => 12);
 
-            expect(res).toBe(12);
+            expect(state()).toBe(12);
         });
 
         it('should support state update with a value', () => {
-            let res;
-            new Reactive().record((reactive) => {
-                let [state, setState] = reactive.createState(12);
-                setState(13);
-                res = state();
-            });
+            let reactive = new Reactive();
+            let [state, setState] = reactive.createState(12);
+            setState(13);
 
-            expect(res).toBe(13);
+            expect(state()).toBe(13);
         });
 
         it('should support state update with a function', () => {
-            let res;
-            new Reactive().record((reactive) => {
-                let [state, setState] = reactive.createState(12);
-                setState((x) => x + 1);
-                res = state();
-            });
+            let reactive = new Reactive();
+            let [state, setState] = reactive.createState(12);
+            setState((x) => x + 1);
 
-            expect(res).toBe(13);
+            expect(state()).toBe(13);
         });
 
         it('should support state update as a reaction to another state change', async () => {
             let reactive = new Reactive();
-            let [setState, state2] = reactive.record((reactive) => {
-                let [state, setState] = reactive.createState(12);
-                let [state2, setState2] = reactive.createState(() => state() + 1);
-                return [setState, state2];
-            });
+            let [state, setState] = reactive.createState(12);
+            let [state2, setState2] = reactive.createState(() => state() + 1);
             setState(20);
 
             await reactive.toBeClean();
 
             let res = state2();
-
-            expect(res).toBe(21);
-        });
-
-        it('should support set state while recording, without adding additional dependencies', () => {
-            let res;
-            let reactive = new Reactive();
-            let [state2] = reactive.record((reactive) => {
-                let [state, setState] = reactive.createState(12);
-                let [state2, setState2] = reactive.createState(() => state() + 1);
-                setState(20);
-                return [state2];
-            });
-            res = state2();
 
             expect(res).toBe(21);
         });
@@ -91,10 +50,9 @@ describe('reactive', () => {
         it('should run the reaction on creation', () => {
             const reaction = vi.fn();
 
-            new Reactive().record((reactive) => {
-                reactive.createReaction(() => {
-                    reaction();
-                });
+            let reactive = new Reactive();
+            reactive.createReaction(() => {
+                reaction();
             });
 
             expect(reaction.mock.calls.length).toBe(1);
@@ -103,7 +61,7 @@ describe('reactive', () => {
         it('should rerun when it depends on state, and state changes', async () => {
             const reaction = vi.fn();
             let reactive = new Reactive();
-            let [setState] = reactive.record((reactive) => {
+            let [setState] = reactive.batchReactions(() => {
                 let [state, setState] = reactive.createState(12);
                 reactive.createReaction(() => {
                     reaction(state());
@@ -121,14 +79,14 @@ describe('reactive', () => {
 
         it('should not rerun when state it does not depends on changes', () => {
             const reaction = vi.fn();
-            let state, setState;
-            let state2, setState2;
-            new Reactive().record((reactive) => {
-                [state, setState] = reactive.createState(12);
-                [state2, setState2] = reactive.createState(100);
+            let reactive = new Reactive();
+            let {setState2} = reactive.batchReactions(() => {
+                let [state, setState] = reactive.createState(12);
+                let [state2, setState2] = reactive.createState(100);
                 reactive.createReaction(() => {
                     reaction(state());
                 });
+                return {setState2}
             });
 
             setState2(101);
@@ -139,12 +97,13 @@ describe('reactive', () => {
 
         it('should not rerun when state it depends on is updated with the same immutable (===) value', () => {
             const reaction = vi.fn();
-            let state, setState;
-            new Reactive().record((reactive) => {
-                [state, setState] = reactive.createState(12);
+            let reactive = new Reactive();
+            let {setState} = reactive.batchReactions(() => {
+                let [state, setState] = reactive.createState(12);
                 reactive.createReaction(() => {
                     reaction(state());
                 });
+                return {setState};
             });
 
             setState(12);
@@ -157,13 +116,10 @@ describe('reactive', () => {
     describe('batch reactions', () => {
         it('should batch re-calculations using the batch operation (single state)', () => {
             const reaction = vi.fn();
-            let state, setState;
             let reactive = new Reactive();
-            reactive.record((reactive) => {
-                [state, setState] = reactive.createState(12);
-                reactive.createReaction(() => {
-                    reaction(state());
-                });
+            let [state, setState] = reactive.createState(12);
+            reactive.createReaction(() => {
+                reaction(state());
             });
 
             expect(reaction.mock.calls.length).toBe(1);
@@ -180,14 +136,11 @@ describe('reactive', () => {
 
         it('should run a reaction once even if multiple states it depends on are updated', () => {
             const reaction = vi.fn();
-            let state, setState, state2, setState2;
             let reactive = new Reactive();
-            reactive.record((reactive) => {
-                [state, setState] = reactive.createState(12);
-                [state2, setState2] = reactive.createState(34);
-                reactive.createReaction(() => {
-                    reaction(state() + state2());
-                });
+            let [state, setState] = reactive.createState(12);
+            let [state2, setState2] = reactive.createState(34);
+            reactive.createReaction(() => {
+                reaction(state() + state2());
             });
 
             expect(reaction.mock.calls.length).toBe(1);
@@ -204,15 +157,12 @@ describe('reactive', () => {
 
         it('should batch re-calculations using the batch operation (multiple states)', () => {
             const reaction = vi.fn();
-            let a, b, c, setA, setB, setC;
             let reactive = new Reactive();
-            reactive.record((reactive) => {
-                [a, setA] = reactive.createState(false);
-                [b, setB] = reactive.createState('abc');
-                [c, setC] = reactive.createState('def');
-                reactive.createReaction(() => {
-                    reaction(a(), b(), c());
-                });
+            let [a, setA] = reactive.createState(false);
+            let [b, setB] = reactive.createState('abc');
+            let [c, setC] = reactive.createState('def');
+            reactive.createReaction(() => {
+                reaction(a(), b(), c());
             });
 
             reactive.batchReactions(() => {
@@ -231,13 +181,10 @@ describe('reactive', () => {
         });
 
         it('should return the value of the callback', () => {
-            let state, setState;
             let reactive = new Reactive();
-            reactive.record((reactive) => {
-                [state, setState] = reactive.createState(12);
-                reactive.createReaction(() => {
-                    state();
-                });
+            let [state, setState] = reactive.createState(12);
+            reactive.createReaction(() => {
+                state();
             });
 
             let res = reactive.batchReactions(() => {
@@ -249,16 +196,13 @@ describe('reactive', () => {
         });
 
         it('should flatten out nested batchReactions', () => {
-            let state, setState;
             let reactive = new Reactive();
-            reactive.record((reactive) => {
-                [state, setState] = reactive.createState(12);
-                reactive.createReaction(() => {
-                    reactive.batchReactions(() => {
-                        setState((_) => _ + 1);
-                    });
-                    state();
+            let [state, setState] = reactive.createState(12);
+            reactive.createReaction(() => {
+                reactive.batchReactions(() => {
+                    setState((_) => _ + 1);
                 });
+                state();
             });
 
             let res = reactive.batchReactions(() => {
@@ -274,16 +218,12 @@ describe('reactive', () => {
         });
 
         it('should not trigger nested flash (first from timeout, second from batch reaction)', async () => {
-            let state1, setState1;
-            let state2, setState2;
             let reactive = new Reactive();
-            reactive.record((reactive) => {
-                [state1, setState1] = reactive.createState(12);
-                [state2, setState2] = reactive.createState(12);
-                reactive.createReaction(() => {
-                    reactive.batchReactions(() => {
-                        setState2(state1() + 10);
-                    });
+            let [state1, setState1] = reactive.createState(12);
+            let [state2, setState2] = reactive.createState(12);
+            reactive.createReaction(() => {
+                reactive.batchReactions(() => {
+                    setState2(state1() + 10);
                 });
             });
 
@@ -297,52 +237,50 @@ describe('reactive', () => {
             function makeReactive123() {
                 let reactive = new Reactive();
 
-                return reactive.record((reactive) => {
-                    let reaction23 = 0,
-                        reaction13 = 0,
-                        reaction12 = 0;
-                    let [state1, setState1] = reactive.createState(12);
-                    let [state2, setState2] = reactive.createState(12);
-                    let [state3, setState3] = reactive.createState(12);
-                    reactive.createReaction(() => {
-                        state2();
-                        state3();
-                        reaction23 += 1;
-                    });
-                    reactive.createReaction(() => {
-                        state1();
-                        state3();
-                        reaction13 += 1;
-                    });
-                    reactive.createReaction(() => {
-                        state1();
-                        state2();
-                        reaction12 += 1;
-                    });
-
-                    return {
-                        update1: () =>
-                            reactive.batchReactions(() => {
-                                setState1(state1() + 1);
-                            }),
-                        update12: () =>
-                            reactive.batchReactions(() => {
-                                setState1(state1() + 1);
-                                setState2(state2() + 1);
-                            }),
-                        update13: () =>
-                            reactive.batchReactions(() => {
-                                setState1(state1() + 1);
-                                setState3(state3() + 1);
-                            }),
-                        update23: () =>
-                            reactive.batchReactions(() => {
-                                setState2(state2() + 1);
-                                setState3(state3() + 1);
-                            }),
-                        data: () => ({ reaction23, reaction13, reaction12 }),
-                    };
+                let reaction23 = 0,
+                    reaction13 = 0,
+                    reaction12 = 0;
+                let [state1, setState1] = reactive.createState(12);
+                let [state2, setState2] = reactive.createState(12);
+                let [state3, setState3] = reactive.createState(12);
+                reactive.createReaction(() => {
+                    state2();
+                    state3();
+                    reaction23 += 1;
                 });
+                reactive.createReaction(() => {
+                    state1();
+                    state3();
+                    reaction13 += 1;
+                });
+                reactive.createReaction(() => {
+                    state1();
+                    state2();
+                    reaction12 += 1;
+                });
+
+                return {
+                    update1: () =>
+                        reactive.batchReactions(() => {
+                            setState1(state1() + 1);
+                        }),
+                    update12: () =>
+                        reactive.batchReactions(() => {
+                            setState1(state1() + 1);
+                            setState2(state2() + 1);
+                        }),
+                    update13: () =>
+                        reactive.batchReactions(() => {
+                            setState1(state1() + 1);
+                            setState3(state3() + 1);
+                        }),
+                    update23: () =>
+                        reactive.batchReactions(() => {
+                            setState2(state2() + 1);
+                            setState3(state3() + 1);
+                        }),
+                    data: () => ({ reaction23, reaction13, reaction12 }),
+                };
             }
 
             it('only run reactions 12, 13, 23 when updating state 12', () => {
@@ -368,13 +306,10 @@ describe('reactive', () => {
             const reaction = vi.fn();
             let reactive = new Reactive();
 
-            let [setState, setState2] = reactive.record((reactive) => {
-                let [state, setState] = reactive.createState(12);
-                let [state2, setState2] = reactive.createState(24);
-                reactive.createReaction(() => {
-                    reaction(state() + state2());
-                });
-                return [setState, setState2];
+            let [state, setState] = reactive.createState(12);
+            let [state2, setState2] = reactive.createState(24);
+            reactive.createReaction(() => {
+                reaction(state() + state2());
             });
             setState(13);
             setState(14);
@@ -391,13 +326,10 @@ describe('reactive', () => {
             const reaction = vi.fn();
             let reactive = new Reactive();
 
-            let [setState, setState2] = reactive.record((reactive) => {
-                let [state, setState] = reactive.createState(12);
-                let [state2, setState2] = reactive.createState(24);
-                reactive.createReaction(() => {
-                    reaction(state() + state2());
-                });
-                return [setState, setState2];
+            let [state, setState] = reactive.createState(12);
+            let [state2, setState2] = reactive.createState(24);
+            reactive.createReaction(() => {
+                reaction(state() + state2());
             });
             setState(13);
             setState(14);
@@ -415,16 +347,13 @@ describe('reactive', () => {
             const reaction2 = vi.fn();
             let reactive = new Reactive();
 
-            let [setState, setState2] = reactive.record((reactive) => {
-                let [state, setState] = reactive.createState(12);
-                let [state2, setState2] = reactive.createState(24);
-                reactive.createReaction(() => {
-                    reaction1(state());
-                });
-                reactive.createReaction(() => {
-                    reaction2(state2());
-                });
-                return [setState, setState2];
+            let [state, setState] = reactive.createState(12);
+            let [state2, setState2] = reactive.createState(24);
+            reactive.createReaction(() => {
+                reaction1(state());
+            });
+            reactive.createReaction(() => {
+                reaction2(state2());
             });
             setState(13);
 
@@ -444,22 +373,19 @@ describe('reactive', () => {
     describe('reaction ordering', () => {
         it('should run reactions in dependency order', () => {
             const reaction2 = vi.fn();
-            let state, setState, state2, setState2, state3, setState3, state4, setState4;
             let reactive = new Reactive();
-            reactive.record((reactive) => {
-                [state, setState] = reactive.createState(1);
-                [state2, setState2] = reactive.createState(2);
-                [state3, setState3] = reactive.createState(3);
-                [state4, setState4] = reactive.createState(10);
-                reactive.createReaction(() => {
-                    setState2(state() + 1);
-                });
-                reactive.createReaction(() => {
-                    setState3(state2() + 1);
-                });
-                reactive.createReaction(() => {
-                    reaction2(state3() + state4());
-                });
+            let [state, setState] = reactive.createState(1);
+            let [state2, setState2] = reactive.createState(2);
+            let [state3, setState3] = reactive.createState(3);
+            let [state4, setState4] = reactive.createState(10);
+            reactive.createReaction(() => {
+                setState2(state() + 1);
+            });
+            reactive.createReaction(() => {
+                setState3(state2() + 1);
+            });
+            reactive.createReaction(() => {
+                reaction2(state3() + state4());
             });
 
             reactive.batchReactions(() => {
@@ -476,16 +402,13 @@ describe('reactive', () => {
     describe('reactive measure of change', () => {
         function mkReactive() {
             const reaction = vi.fn();
-            let state, setState, state2, setState2;
             let reactive = new Reactive();
-            reactive.record((reactive) => {
-                [state, setState] = reactive.createState(12, MeasureOfChange.FULL);
-                [state2, setState2] = reactive.createState(12, MeasureOfChange.PARTIAL);
-                reactive.createReaction((measureOfChange) => {
-                    let num = state() + state2();
-                    reaction(num, measureOfChange);
-                    return state() + state2();
-                });
+            let [state, setState] = reactive.createState(12, MeasureOfChange.FULL);
+            let [state2, setState2] = reactive.createState(12, MeasureOfChange.PARTIAL);
+            reactive.createReaction((measureOfChange) => {
+                let num = state() + state2();
+                reaction(num, measureOfChange);
+                return state() + state2();
             });
             return { reactive, reaction, setState, setState2 };
         }
@@ -533,4 +456,123 @@ describe('reactive', () => {
             expect(reaction.mock.calls[1][1]).toBe(MeasureOfChange.FULL);
         });
     });
+
+    describe('recalculate reaction dependencies on each reaction run', () => {
+        const A = 'A';
+        const B = 'B';
+        function mkReactive() {
+            let reactive = new Reactive();
+            let [ABSwitch, setABSwitch] = reactive.createState('A');
+            let [stateA1, setStateA1] = reactive.createState(10);
+            let [stateA2, setStateA2] = reactive.createState(12);
+            let [stateB1, setStateB1] = reactive.createState(110);
+            let [stateB2, setStateB2] = reactive.createState(112);
+            let [result, setResult] = reactive.createState(0);
+            let [numberOfReactionRuns, setNumberOfReactionRuns] = reactive.createState(0);
+            reactive.createReaction((measureOfChange) => {
+                if (ABSwitch() === 'A')
+                    setResult(stateA1() + stateA2());
+                else
+                    setResult(stateB1() + stateB2());
+                setNumberOfReactionRuns(_ => _ + 1);
+            });
+            return { reactive, result, setABSwitch, setStateA1, setStateA2, setStateB1, setStateB2, numberOfReactionRuns};
+        }
+
+        it('should run the A switch (validate setup)', () => {
+            let {reactive, result, setABSwitch, setStateA1,
+                setStateA2, numberOfReactionRuns} = mkReactive()
+
+            reactive.batchReactions(() => {
+                setABSwitch(A);
+                setStateA1(3);
+                setStateA2(6);
+            })
+
+            expect(result()).toBe(9)
+            expect(numberOfReactionRuns()).toBe(2);
+        })
+
+        it('should rerun the reaction when A state is updated', () => {
+            let {reactive, result, setABSwitch, setStateA1,
+                setStateA2, numberOfReactionRuns} = mkReactive()
+
+            reactive.batchReactions(() => {
+                setABSwitch(A);
+                setStateA1(3);
+                setStateA2(6);
+            })
+
+            reactive.batchReactions(() => {
+                setStateA1(5);
+            })
+
+            expect(result()).toBe(11)
+            expect(numberOfReactionRuns()).toBe(3);
+        })
+
+        it('should not rerun the reaction when B states are updated after running for A switch', () => {
+            let {reactive, result, setABSwitch, setStateA1,
+                setStateA2, setStateB1, setStateB2, numberOfReactionRuns} = mkReactive()
+
+            reactive.batchReactions(() => {
+                setABSwitch(A);
+                setStateA1(3);
+                setStateA2(6);
+            })
+
+            reactive.batchReactions(() => {
+                setStateB1(13);
+                setStateB2(16);
+            })
+
+            expect(result()).toBe(9)
+            expect(numberOfReactionRuns()).toBe(2);
+        })
+
+        it('should rerun the reaction when changing to B switch', () => {
+            let {reactive, result, setABSwitch, setStateA1,
+                setStateA2, setStateB1, setStateB2, numberOfReactionRuns} = mkReactive()
+
+            reactive.batchReactions(() => {
+                setABSwitch(A);
+                setStateA1(3);
+                setStateA2(6);
+            })
+
+            reactive.batchReactions(() => {
+                setABSwitch(B);
+                setStateB1(13);
+                setStateB2(16);
+            })
+
+            expect(result()).toBe(29)
+            expect(numberOfReactionRuns()).toBe(3);
+        })
+
+        it('should not rerun the reaction when changing to B switch and then updating A states', () => {
+            let {reactive, result, setABSwitch, setStateA1,
+                setStateA2, setStateB1, setStateB2, numberOfReactionRuns} = mkReactive()
+
+            reactive.batchReactions(() => {
+                setABSwitch(A);
+                setStateA1(3);
+                setStateA2(6);
+            })
+
+            reactive.batchReactions(() => {
+                setABSwitch(B);
+                setStateB1(13);
+                setStateB2(16);
+            })
+
+            reactive.batchReactions(() => {
+                setStateA1(23);
+                setStateA2(26);
+            })
+
+            expect(result()).toBe(29)
+            expect(numberOfReactionRuns()).toBe(3);
+        })
+    })
 });
