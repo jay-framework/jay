@@ -12,7 +12,11 @@ It is intended to be an internal core implementation for state management and no
 The package one class - the `Reactive` which is a simple reactive core, at which reactions are dependent on state.
 When a state is updated, any of the dependent reactions are re-run.
 
-- [record](#record)
+The reactions auto track which states they depend on. On each run of a reaction,
+it will recalculate dependencies to ensure it only depends on state values that are actually in use.
+A direct impact is that conditions based on state are supported in reactions, and the reaction rerun will take
+into account the conditions.
+
 - [createState](#createState)
 - [createReaction](#createReaction)
 - [MeasureOfChange](#MeasureOfChange)
@@ -20,37 +24,15 @@ When a state is updated, any of the dependent reactions are re-run.
 - [toBeClean](#toBeClean)
 - [flush](#flush)
 
-# <a name="record">Record</a>
-
-```typescript
-declare function record<T>(func: (reactive: Reactive) => T): T;
-```
-
-Used to create the reactive dependency tree.
-Reactive runs any internal calls to `createReaction` and records any reading of `state`, which are recorded
-as dependencies of that specific reaction. When the state changes, the reaction will rerun.
-
-For example, the following will run the reaction every 1000ms when we increase the state
-
-```typescript
-reactive.record((reactive) => {
-  let [state, setState] = reactive.createState(12);
-  reactive.createReaction(() => console.log(state()));
-
-  setInterval(() => {
-    setState((x) => x + 1);
-  }, 1000);
-});
-```
-
 # <a name="createState">createState</a>
 
 ```typescript
 type Next<T> = (t: T) => T;
 type Setter<T> = (t: T | Next<T>) => T;
 type Getter<T> = () => T;
+type ValueOrGetter<T> = T | Getter<T>;
 declare function createState<T>(
-  value: T | Getter<T>,
+  value: ValueOrGetter<T>,
   measureOfChange: MeasureOfChange = MeasureOfChange.FULL,
 ): [get: Getter<T>, set: Setter<T>];
 ```
@@ -67,7 +49,15 @@ const [state, setState] = reactive.createState(12);
 state(); // returns 12
 setState(13);
 setState((x) => x + 1);
+
+const [state2, setState2] = reactive.createState(() => `state is ${state()}`);
 ```
+
+## createState parameters
+
+- `value: ValueOrGetter<T>` - an initial value for the state, or a getter function to track using `createReaction`.
+- `measureOfChange: MeasureOfChange = MeasureOfChange.FULL` - an indicator of how large a change is state is considered
+  within reactions that depend on this state.
 
 ## state
 
@@ -94,8 +84,10 @@ creates a reaction that re-runs when state it depends on changes.
 It will re-run on `setTimeout(..., 0)`, or at the end of a batch when using `batchReactions`.
 The `Reaction` accepts a `MeasureOfChange` parameter which can be used to fine tune how the reaction should behave.
 
-The `Reaction` function is running once as part of the call to `createReaction` used to figure out what dependencies to
-track.
+The `Reaction` function is running once as part of the call to `createReaction` used to figure out what
+initial dependencies to track.
+
+On each run of the `Reaction` function dependencies are recomputed and the function will only rerun with relevant dependencies are updated.
 
 ```typescript
 reactive.createReaction(() => {
@@ -103,7 +95,7 @@ reactive.createReaction(() => {
 });
 ```
 
-Note that only dependencies (state getters) that are actually called during the construction phase are recorded.
+Note that only dependencies (state getters) that are actually in use are set as dependencies.
 In the following case, the reaction will track states `a` and `b`, but will fail to track state `c`
 
 ```typescript
@@ -116,6 +108,10 @@ reactive.createReaction(() => {
   else c();
 });
 ```
+
+Once `a` or `b` update, the reaction will rerun.
+
+If `a` is set to false, the reaction will now depend on `a` and `c`, and will not depend anymore on `b`.
 
 # <a name="MeasureOfChange">MeasureOfChange</a>
 
