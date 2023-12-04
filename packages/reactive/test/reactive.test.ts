@@ -80,13 +80,13 @@ describe('reactive', () => {
         it('should not rerun when state it does not depends on changes', () => {
             const reaction = vi.fn();
             let reactive = new Reactive();
-            let {setState2} = reactive.batchReactions(() => {
+            let { setState2 } = reactive.batchReactions(() => {
                 let [state, setState] = reactive.createState(12);
                 let [state2, setState2] = reactive.createState(100);
                 reactive.createReaction(() => {
                     reaction(state());
                 });
-                return {setState2}
+                return { setState2 };
             });
 
             setState2(101);
@@ -98,12 +98,12 @@ describe('reactive', () => {
         it('should not rerun when state it depends on is updated with the same immutable (===) value', () => {
             const reaction = vi.fn();
             let reactive = new Reactive();
-            let {setState} = reactive.batchReactions(() => {
+            let { setState } = reactive.batchReactions(() => {
                 let [state, setState] = reactive.createState(12);
                 reactive.createReaction(() => {
                     reaction(state());
                 });
-                return {setState};
+                return { setState };
             });
 
             setState(12);
@@ -470,109 +470,140 @@ describe('reactive', () => {
             let [result, setResult] = reactive.createState(0);
             let [numberOfReactionRuns, setNumberOfReactionRuns] = reactive.createState(0);
             reactive.createReaction((measureOfChange) => {
-                if (ABSwitch() === 'A')
-                    setResult(stateA1() + stateA2());
-                else
-                    setResult(stateB1() + stateB2());
-                setNumberOfReactionRuns(_ => _ + 1);
+                if (ABSwitch() === 'A') setResult(stateA1() + stateA2());
+                else setResult(stateB1() + stateB2());
+                setNumberOfReactionRuns((_) => _ + 1);
             });
-            return { reactive, result, setABSwitch, setStateA1, setStateA2, setStateB1, setStateB2, numberOfReactionRuns};
+            return {
+                reactive,
+                result,
+                setABSwitch,
+                setStateA1,
+                setStateA2,
+                setStateB1,
+                setStateB2,
+                numberOfReactionRuns,
+            };
         }
 
         it('should run the A switch (validate setup)', () => {
-            let {reactive, result, setABSwitch, setStateA1,
-                setStateA2, numberOfReactionRuns} = mkReactive()
+            let { reactive, result, setABSwitch, setStateA1, setStateA2, numberOfReactionRuns } =
+                mkReactive();
 
             reactive.batchReactions(() => {
                 setABSwitch(A);
                 setStateA1(3);
                 setStateA2(6);
-            })
+            });
 
-            expect(result()).toBe(9)
+            expect(result()).toBe(9);
             expect(numberOfReactionRuns()).toBe(2);
-        })
+        });
 
         it('should rerun the reaction when A state is updated', () => {
-            let {reactive, result, setABSwitch, setStateA1,
-                setStateA2, numberOfReactionRuns} = mkReactive()
+            let { reactive, result, setABSwitch, setStateA1, setStateA2, numberOfReactionRuns } =
+                mkReactive();
 
             reactive.batchReactions(() => {
                 setABSwitch(A);
                 setStateA1(3);
                 setStateA2(6);
-            })
+            });
 
             reactive.batchReactions(() => {
                 setStateA1(5);
-            })
+            });
 
-            expect(result()).toBe(11)
+            expect(result()).toBe(11);
             expect(numberOfReactionRuns()).toBe(3);
-        })
+        });
 
         it('should not rerun the reaction when B states are updated after running for A switch', () => {
-            let {reactive, result, setABSwitch, setStateA1,
-                setStateA2, setStateB1, setStateB2, numberOfReactionRuns} = mkReactive()
+            let {
+                reactive,
+                result,
+                setABSwitch,
+                setStateA1,
+                setStateA2,
+                setStateB1,
+                setStateB2,
+                numberOfReactionRuns,
+            } = mkReactive();
 
             reactive.batchReactions(() => {
                 setABSwitch(A);
                 setStateA1(3);
                 setStateA2(6);
-            })
+            });
 
             reactive.batchReactions(() => {
                 setStateB1(13);
                 setStateB2(16);
-            })
+            });
 
-            expect(result()).toBe(9)
+            expect(result()).toBe(9);
             expect(numberOfReactionRuns()).toBe(2);
-        })
+        });
 
         it('should rerun the reaction when changing to B switch', () => {
-            let {reactive, result, setABSwitch, setStateA1,
-                setStateA2, setStateB1, setStateB2, numberOfReactionRuns} = mkReactive()
+            let {
+                reactive,
+                result,
+                setABSwitch,
+                setStateA1,
+                setStateA2,
+                setStateB1,
+                setStateB2,
+                numberOfReactionRuns,
+            } = mkReactive();
 
             reactive.batchReactions(() => {
                 setABSwitch(A);
                 setStateA1(3);
                 setStateA2(6);
-            })
+            });
 
             reactive.batchReactions(() => {
                 setABSwitch(B);
                 setStateB1(13);
                 setStateB2(16);
-            })
+            });
 
-            expect(result()).toBe(29)
+            expect(result()).toBe(29);
             expect(numberOfReactionRuns()).toBe(3);
-        })
+        });
 
         it('should not rerun the reaction when changing to B switch and then updating A states', () => {
-            let {reactive, result, setABSwitch, setStateA1,
-                setStateA2, setStateB1, setStateB2, numberOfReactionRuns} = mkReactive()
+            let {
+                reactive,
+                result,
+                setABSwitch,
+                setStateA1,
+                setStateA2,
+                setStateB1,
+                setStateB2,
+                numberOfReactionRuns,
+            } = mkReactive();
 
             reactive.batchReactions(() => {
                 setABSwitch(A);
                 setStateA1(3);
                 setStateA2(6);
-            })
+            });
 
             reactive.batchReactions(() => {
                 setABSwitch(B);
                 setStateB1(13);
                 setStateB2(16);
-            })
+            });
 
             reactive.batchReactions(() => {
                 setStateA1(23);
                 setStateA2(26);
-            })
+            });
 
-            expect(result()).toBe(29)
+            expect(result()).toBe(29);
             expect(numberOfReactionRuns()).toBe(3);
-        })
-    })
+        });
+    });
 });

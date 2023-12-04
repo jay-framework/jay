@@ -60,7 +60,7 @@ export class Reactive {
 
         let resetDependency: ResetStateDependence = (reactionIndex) => {
             reactionsToRerun[reactionIndex] = false;
-        }
+        };
 
         let getter = () => {
             if (this.runningReactionIndex !== undefined) {
@@ -87,7 +87,7 @@ export class Reactive {
         let reactionIndex = this.reactionIndex++;
         this.reactions[reactionIndex] = func;
         this.reactionDependencies[reactionIndex] = new Set();
-        this.runReaction(reactionIndex, MeasureOfChange.FULL)
+        this.runReaction(reactionIndex, MeasureOfChange.FULL);
     }
 
     batchReactions<T>(func: () => T) {
@@ -119,13 +119,14 @@ export class Reactive {
     }
 
     private runReaction(index: number, measureOfChange: MeasureOfChange) {
-        this.reactionDependencies[index].forEach(stateIndex => this.resetDependencyOnState[stateIndex](index))
+        this.reactionDependencies[index].forEach((stateIndex) =>
+            this.resetDependencyOnState[stateIndex](index),
+        );
         this.reactionDependencies[index].clear();
         this.runningReactionIndex = index;
         try {
             this.reactions[index](measureOfChange);
-        }
-        finally {
+        } finally {
             this.runningReactionIndex = undefined;
         }
     }

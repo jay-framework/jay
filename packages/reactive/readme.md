@@ -12,9 +12,9 @@ It is intended to be an internal core implementation for state management and no
 The package one class - the `Reactive` which is a simple reactive core, at which reactions are dependent on state.
 When a state is updated, any of the dependent reactions are re-run.
 
-The reactions auto track which states they depend on. On each run of a reaction, 
-it will recalculate dependencies to ensure it only depends on state values that are actually in use. 
-A direct impact is that conditions based on state are supported in reactions, and the reaction rerun will take 
+The reactions auto track which states they depend on. On each run of a reaction,
+it will recalculate dependencies to ensure it only depends on state values that are actually in use.
+A direct impact is that conditions based on state are supported in reactions, and the reaction rerun will take
 into account the conditions.
 
 - [createState](#createState)
@@ -51,13 +51,13 @@ setState(13);
 setState((x) => x + 1);
 
 const [state2, setState2] = reactive.createState(() => `state is ${state()}`);
-
 ```
 
 ## createState parameters
-* `value: ValueOrGetter<T>` - an initial value for the state, or a getter function to track using `createReaction`.
-* `measureOfChange: MeasureOfChange = MeasureOfChange.FULL` - an indicator of how large a change is state is considered 
-  within reactions that depend on this state. 
+
+- `value: ValueOrGetter<T>` - an initial value for the state, or a getter function to track using `createReaction`.
+- `measureOfChange: MeasureOfChange = MeasureOfChange.FULL` - an indicator of how large a change is state is considered
+  within reactions that depend on this state.
 
 ## state
 
@@ -84,7 +84,7 @@ creates a reaction that re-runs when state it depends on changes.
 It will re-run on `setTimeout(..., 0)`, or at the end of a batch when using `batchReactions`.
 The `Reaction` accepts a `MeasureOfChange` parameter which can be used to fine tune how the reaction should behave.
 
-The `Reaction` function is running once as part of the call to `createReaction` used to figure out what 
+The `Reaction` function is running once as part of the call to `createReaction` used to figure out what
 initial dependencies to track.
 
 On each run of the `Reaction` function dependencies are recomputed and the function will only rerun with relevant dependencies are updated.
@@ -109,7 +109,7 @@ reactive.createReaction(() => {
 });
 ```
 
-Once `a` or `b` update, the reaction will rerun. 
+Once `a` or `b` update, the reaction will rerun.
 
 If `a` is set to false, the reaction will now depend on `a` and `c`, and will not depend anymore on `b`.
 
