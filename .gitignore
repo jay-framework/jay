@@ -8,3 +8,5 @@ examples/**/*.d.ts
 examples/**/lib/**/*.jay-html.ts
 **/coverage/
 .yarn/install-state.gz
+/.idea/prettier.xml
+/.idea/workspace.xml
