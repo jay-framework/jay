@@ -3,6 +3,7 @@ import { createMemo, createState, makeJayComponent, Props } from 'jay-component'
 import { uuid } from './uuid';
 import { patch } from 'jay-json-patch';
 import { ADD, REPLACE } from 'jay-json-patch';
+import './todo.css';
 
 const ENTER_KEY = 13;
 

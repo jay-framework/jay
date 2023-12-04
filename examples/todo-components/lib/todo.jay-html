@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <header>
     <title>Todo element</title>
-    <link rel="stylesheet" type="text/css" href="todo.css">
     <link rel="import" href="./item" names="Item"/>
     <script type="application/yaml-jay">
 data:

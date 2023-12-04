@@ -8,6 +8,7 @@ import {
 } from 'jay-component';
 import { uuid } from './uuid';
 import { ADD, REPLACE } from 'jay-json-patch';
+import './todo.css';
 
 const ENTER_KEY = 13;
 const ESCAPE_KEY = 27;
