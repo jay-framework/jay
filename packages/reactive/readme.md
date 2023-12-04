@@ -49,7 +49,10 @@ reactive.record((reactive) => {
 type Next<T> = (t: T) => T;
 type Setter<T> = (t: T | Next<T>) => T;
 type Getter<T> = () => T;
-declare function createState<T>(value: T | Getter<T>, measureOfChange: MeasureOfChange = MeasureOfChange.FULL): [get: Getter<T>, set: Setter<T>];
+declare function createState<T>(
+  value: T | Getter<T>,
+  measureOfChange: MeasureOfChange = MeasureOfChange.FULL,
+): [get: Getter<T>, set: Setter<T>];
 ```
 
 Creates a state getter / setter pair such that when setting state, any dependent reaction is rerun.
@@ -73,9 +76,10 @@ the first function returned by `createState` is the `state` function which retur
 ## setState
 
 The second function returned is `setState` which accepts two parameters
-* a new value for the state, or a function to update the state value
-* a `MeasureOfChange` which can be used by reactions how to react to a change
-The function will trigger reactions if the value has changed.
+
+- a new value for the state, or a function to update the state value
+- a `MeasureOfChange` which can be used by reactions how to react to a change
+  The function will trigger reactions if the value has changed.
 
 Note that a change is defined by strict equality - using the `===` and `!==` operators.
 
@@ -90,7 +94,7 @@ creates a reaction that re-runs when state it depends on changes.
 It will re-run on `setTimeout(..., 0)`, or at the end of a batch when using `batchReactions`.
 The `Reaction` accepts a `MeasureOfChange` parameter which can be used to fine tune how the reaction should behave.
 
-The `Reaction` function is running once as part of the call to `createReaction` used to figure out what dependencies to 
+The `Reaction` function is running once as part of the call to `createReaction` used to figure out what dependencies to
 track.
 
 ```typescript
@@ -116,24 +120,26 @@ reactive.createReaction(() => {
 # <a name="MeasureOfChange">MeasureOfChange</a>
 
 Measure of Change is an optional value passed when creating state, which is then used to tune how reactions run.
-The `MeasureOfChange` is defined as an ordered enum, at which case the reaction always gets the max `MeasureOfChange` 
+The `MeasureOfChange` is defined as an ordered enum, at which case the reaction always gets the max `MeasureOfChange`
 from states that are updated.
 
-It is defined as 
+It is defined as
+
 ```typescript
 export enum MeasureOfChange {
-    NO_CHANGE,
-    PARTIAL,
-    FULL
+  NO_CHANGE,
+  PARTIAL,
+  FULL,
 }
 ```
 
 At which
-* `NO_CHANGE` - allows to update a state without triggering reactions
-* `PARTIAL` - triggers reactions with the `PARTIAL` measure of change, unless other states are updated with a higher measure of change
-* `FULL` - triggers reactions with the `FULL` measure of change
 
-see the `jay-component` library, the `createDerivedArray` function for an example use case. 
+- `NO_CHANGE` - allows to update a state without triggering reactions
+- `PARTIAL` - triggers reactions with the `PARTIAL` measure of change, unless other states are updated with a higher measure of change
+- `FULL` - triggers reactions with the `FULL` measure of change
+
+see the `jay-component` library, the `createDerivedArray` function for an example use case.
 
 # <a name="batchReactions">batchReactions</a>
 

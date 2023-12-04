@@ -1,7 +1,7 @@
 export enum MeasureOfChange {
     NO_CHANGE,
     PARTIAL,
-    FULL
+    FULL,
 }
 
 export type Next<T> = (t: T) => T;
@@ -34,7 +34,10 @@ export class Reactive {
         }
     }
 
-    createState<T>(value: ValueOrGetter<T>, measureOfChange: MeasureOfChange = MeasureOfChange.FULL): [get: Getter<T>, set: Setter<T>] {
+    createState<T>(
+        value: ValueOrGetter<T>,
+        measureOfChange: MeasureOfChange = MeasureOfChange.FULL,
+    ): [get: Getter<T>, set: Setter<T>] {
         let current: T;
         let reactionsToRerun: boolean[] = [];
 
@@ -43,7 +46,10 @@ export class Reactive {
                 if (reactionsToRerun[index]) {
                     if (this.recording) this.reactions[index](measureOfChange);
                     else if (!this.inBatchReactions) this.ScheduleAutoBatchRuns();
-                    this.batchedReactionsToRun[index] = Math.max(measureOfChange, this.batchedReactionsToRun[index] || 0);
+                    this.batchedReactionsToRun[index] = Math.max(
+                        measureOfChange,
+                        this.batchedReactionsToRun[index] || 0,
+                    );
                 }
             }
         };
@@ -120,7 +126,8 @@ export class Reactive {
         this.inFlush = true;
         try {
             for (let index = 0; index < this.batchedReactionsToRun.length; index++)
-                if (this.batchedReactionsToRun[index]) this.reactions[index](this.batchedReactionsToRun[index]);
+                if (this.batchedReactionsToRun[index])
+                    this.reactions[index](this.batchedReactionsToRun[index]);
             if (this.isAutoBatchScheduled) {
                 this.isAutoBatchScheduled = false;
                 if (this.timeout) clearTimeout(this.timeout);

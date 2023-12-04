@@ -1,4 +1,4 @@
-import {MeasureOfChange, Reactive} from '../lib';
+import { MeasureOfChange, Reactive } from '../lib';
 
 describe('reactive', () => {
     describe('create reactive', () => {
@@ -487,17 +487,17 @@ describe('reactive', () => {
                     return state() + state2();
                 });
             });
-            return {reactive, reaction, setState, setState2}
+            return { reactive, reaction, setState, setState2 };
         }
         it('should run initial reaction with MeasureOfChange.FULL', () => {
-            const {setState, reactive, reaction} = mkReactive();
+            const { setState, reactive, reaction } = mkReactive();
 
             expect(reaction.mock.calls.length).toBe(1);
             expect(reaction.mock.calls[0][1]).toBe(MeasureOfChange.FULL);
         });
 
         it('should pass the MeasureOfChange.Full if state with MeasureOfChange.Full is changed', () => {
-            const {setState, reactive, reaction} = mkReactive();
+            const { setState, reactive, reaction } = mkReactive();
 
             reactive.batchReactions(() => {
                 setState(22);
@@ -509,7 +509,7 @@ describe('reactive', () => {
         });
 
         it('should pass the MeasureOfChange.Partial if state with MeasureOfChange.Partial is changed', () => {
-            const {setState2, reactive, reaction} = mkReactive();
+            const { setState2, reactive, reaction } = mkReactive();
 
             reactive.batchReactions(() => {
                 setState2(22);
@@ -521,7 +521,7 @@ describe('reactive', () => {
         });
 
         it('should pass the MeasureOfChange.Full if states with both MeasureOfChange.Partial and MeasureOfChange.Full are changed', () => {
-            const {setState, setState2, reactive, reaction} = mkReactive();
+            const { setState, setState2, reactive, reaction } = mkReactive();
 
             reactive.batchReactions(() => {
                 setState(22);
@@ -532,5 +532,5 @@ describe('reactive', () => {
             expect(reaction.mock.calls[1][0]).toBe(44);
             expect(reaction.mock.calls[1][1]).toBe(MeasureOfChange.FULL);
         });
-    })
+    });
 });

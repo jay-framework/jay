@@ -1,5 +1,11 @@
 import { render, PillarElementRefs, TaskDatum } from './pillar.jay.html';
-import {createEvent, makeJayComponent, Props, createMemo, createDerivedArray} from 'jay-component';
+import {
+    createEvent,
+    makeJayComponent,
+    Props,
+    createMemo,
+    createDerivedArray,
+} from 'jay-component';
 
 export interface PillarTask {
     id: string;
@@ -39,8 +45,8 @@ function PillarConstructor(
                 isBottom: index() === length() - 1,
                 isTop: index() === 0,
             },
-        }
-    })
+        };
+    });
 
     refs.tasks.onNext(({ viewState }) => onMoveTaskToNext.emit({ taskId: viewState.id }));
     refs.tasks.onPrev(({ viewState }) => onMoveTaskToPrev.emit({ taskId: viewState.id }));
