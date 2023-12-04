@@ -1,4 +1,5 @@
 import { TodoComponent } from './todo';
+import './index.css';
 
 const initialTodos = [
     {

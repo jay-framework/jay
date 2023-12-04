@@ -1,4 +1,5 @@
 import { TreeNode, node } from './tree-node';
+import './index.css';
 
 let root = node('root', [
     node('node 1'),

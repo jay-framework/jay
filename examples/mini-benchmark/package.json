@@ -5,9 +5,9 @@
   "description": "",
   "scripts": {
     "definitions": "jay-cli definitions ./lib",
-    "rollup": "rollup --config ./rollup.config.js",
-    "build": "npm run definitions && npm run copy:refs && npm run rollup",
-    "build:watch": "npm run rollup -- --watch",
+    "build:js": "vite build --base ./",
+    "build:watch": "vite",
+    "build": "npm run definitions && npm run copy:refs && npm run build:js",
     "confirm": "npm run clean && npm run build && npm run test",
     "copy:refs": "run-s 'copy:refs:*'",
     "copy:refs:main": "rsync -r --include='*/' --include='*-refs.d.ts' --exclude='*' lib/* lib-secure/main",
@@ -31,8 +31,8 @@
     "jay-serialization": "workspace:^"
   },
   "devDependencies": {
-    "@babel/core": "^7.23.3",
-    "@babel/preset-env": "^7.23.3",
+    "@babel/core": "^7.23.5",
+    "@babel/preset-env": "^7.23.5",
     "@babel/preset-typescript": "^7.23.3",
     "@rollup/plugin-node-resolve": "^15.2.3",
     "@types/shelljs": "^0.8.15",
@@ -40,12 +40,15 @@
     "jay-dev-environment": "workspace:^",
     "npm-run-all2": "^6.1.1",
     "rimraf": "^5.0.5",
-    "rollup": "^4.6.0",
+    "rollup": "^4.6.1",
     "rollup-plugin-copy": "^3.5.0",
     "rollup-plugin-jay": "workspace:^",
     "rollup-plugin-terser": "^7.0.2",
     "rollup-plugin-typescript2": "^0.36.0",
     "tslib": "^2.6.2",
-    "typescript": "^5.3.2"
+    "typescript": "^5.3.2",
+    "vite": "^5.0.5",
+    "vite-plugin-inspect": "^0.8.1",
+    "vite-plugin-restart": "^0.4.0"
   }
 }

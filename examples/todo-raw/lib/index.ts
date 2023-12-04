@@ -1,4 +1,5 @@
 import run from './todo.comp';
+import './index.css';
 
 const initialTodos = [
     {

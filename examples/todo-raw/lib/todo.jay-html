@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <header>
     <title>Todo element</title>
-    <link rel="stylesheet" type="text/css" href="todo.css">
     <script type="application/yaml-jay">
 data:
     activeTodoCount: number

@@ -1,5 +1,6 @@
 import { render, ShownTodo, TodoViewState } from './todo.jay-html';
 import { uuid } from './uuid';
+import './todo.css';
 
 const ENTER_KEY = 13;
 const ESCAPE_KEY = 27;
@@ -101,7 +102,7 @@ function Todo() {
     });
 
     jayElement.refs.newTodo
-        // @ts-expect-error  Property $onkeydown does not exist on type
+        // @ts-expect-error Property $onkeydown does not exist on type
         .$onkeydown(({ event }) => {
             event.keyCode === ENTER_KEY ? event.preventDefault() : '';
             return event.keyCode;
@@ -126,7 +127,7 @@ function Todo() {
         });
 
     jayElement.refs.newTodo
-        // @ts-expect-error  Property $onkeydown does not exist on type
+        // @ts-expect-error Property $onkeydown does not exist on type
         .$oninput(({ event }) => (event.target as HTMLInputElement).value)
         .then(({ event: value }) => {
             data.newTodo = value;
