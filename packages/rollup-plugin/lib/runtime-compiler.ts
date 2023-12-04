@@ -1,40 +1,72 @@
 import { generateElementFile } from 'jay-compiler';
-import * as ts from 'typescript';
-import { PluginContext, TransformResult } from 'rollup';
-import { resolveTsCompilerOptions } from './resolve-ts-config';
+import { LoadResult, PluginContext, ResolveIdResult } from 'rollup';
 import { JayRollupConfig } from './types';
 import {
     checkCodeErrors,
     checkValidationErrors,
     getFileContext,
     isJayFile,
+    isJayTsFile,
+    readFileWhenExists,
     writeGeneratedFile,
 } from './helpers';
 import path from 'node:path';
+import { JAY_TS_EXTENSION, TS_EXTENSION } from './constants';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'path';
+import { access } from 'fs/promises';
 
-export function jayRuntime(options: JayRollupConfig = {}) {
-    const compilerOptions = resolveTsCompilerOptions(options);
-    const projectRoot = path.dirname(options.tsConfigFilePath ?? process.cwd());
-    const outputDir = options.outputDir && path.join(projectRoot, options.outputDir);
+const TYPESCRIPT_EXTENSION = '.ts';
+
+export function jayRuntime(jayOptions: JayRollupConfig = {}) {
+    const projectRoot = path.dirname(jayOptions.tsConfigFilePath ?? process.cwd());
+    const outputDir = jayOptions.outputDir && path.join(projectRoot, jayOptions.outputDir);
+    // const isWorker = Boolean(jayOptions.isWorker);
 
     return {
-        name: 'jayRuntime', // this name will show up in warnings and errors
-        transform(code: string, id: string): TransformResult {
-            if (isJayFile(id)) {
+        name: 'jay:runtime', // this name will show up in warnings and errors
+        enforce: 'pre',
+        resolveId(
+            source: string,
+            importer: string | undefined,
+            options: {
+                attributes: Record<string, string>;
+                custom?: { [plugin: string]: any };
+                isEntry: boolean;
+            },
+        ): ResolveIdResult {
+            if (isJayFile(source)) {
                 const context = this as PluginContext;
-                checkCodeErrors(code);
-                const { filename, dirname } = getFileContext(id);
-                const tsCode = generateElementFile(code, filename, dirname);
-                checkValidationErrors(tsCode.validations);
-                writeGeneratedFile(context, projectRoot, outputDir, id, tsCode.val);
-                const transpiledModule = ts.transpileModule(tsCode.val, {
-                    compilerOptions: compilerOptions,
-                });
-
-                return { code: transpiledModule.outputText, map: null };
-            } else {
-                return { code, map: null };
+                const sourcePath = path.resolve(path.dirname(importer), source);
+                const id = `${sourcePath}${TYPESCRIPT_EXTENSION}`;
+                context.debug(`[resolveId] resolved ${id}`);
+                return { id };
             }
+            return null;
+        },
+        async load(id: string): Promise<LoadResult> {
+            if (isJayTsFile(id)) {
+                const context = this as PluginContext;
+                context.info(`[load] start ${id}`);
+                const sourcePath = id.slice(0, id.length - TYPESCRIPT_EXTENSION.length);
+                const { filename, dirname } = getFileContext(sourcePath, JAY_TS_EXTENSION);
+                const existingTsFileSource = await readFileWhenExists(
+                    dirname,
+                    `${filename}${TS_EXTENSION}`,
+                );
+                if (existingTsFileSource) {
+                    return { code: existingTsFileSource };
+                }
+
+                const jayCode = (await readFile(sourcePath)).toString();
+                checkCodeErrors(jayCode);
+                const tsCode = generateElementFile(jayCode, filename, dirname);
+                checkValidationErrors(tsCode.validations);
+                await writeGeneratedFile(context, projectRoot, outputDir, id, tsCode.val);
+                context.info(`[load] end ${id}`);
+                return { code: tsCode.val };
+            }
+            return null;
         },
     };
 }

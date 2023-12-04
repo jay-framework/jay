@@ -4,4 +4,5 @@ export interface JayRollupConfig {
     tsConfigFilePath?: string;
     tsCompilerOptionsOverrides?: CompilerOptions;
     outputDir?: string;
+    isWorker?: boolean;
 }

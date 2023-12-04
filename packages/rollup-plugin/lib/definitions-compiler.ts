@@ -15,7 +15,7 @@ import path from 'node:path';
 export function jayDefinitions() {
     const generatedRefPaths: Set<string> = new Set();
     return {
-        name: 'jayDefinitions', // this name will show up in warnings and errors
+        name: 'jay:definitions', // this name will show up in warnings and errors
         async transform(code: string, id: string): Promise<TransformResult> {
             if (!isJayFile(id)) return { code: '', map: null };
 
@@ -25,8 +25,8 @@ export function jayDefinitions() {
             const parsedFile = parseJayFile(code, filename, dirname);
             const tsCode = generateElementDefinitionFile(parsedFile);
             checkValidationErrors(tsCode.validations);
-            writeDefinitionFile(dirname, filename, tsCode.val);
-            context.info(`Generated ${filename}.jay-html.d.ts`);
+            const generatedFilename = writeDefinitionFile(dirname, filename, tsCode.val);
+            context.info(`[transform] generated ${generatedFilename}`);
 
             const newRefsPaths = getRefsFilePaths(
                 generatedRefPaths,

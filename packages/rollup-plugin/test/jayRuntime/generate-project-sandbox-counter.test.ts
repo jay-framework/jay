@@ -12,7 +12,7 @@ async function generateProject(projectRoot: string): Promise<RollupBuild> {
     return await rollup({
         input: `${projectRoot}/source/index.ts`,
         plugins: [
-            jayRuntime({ tsConfigFilePath, outputDir: `../dist/main` }),
+            jayRuntime({ tsConfigFilePath, outputDir: '../dist/main' }),
             typescript({ tsconfig: tsConfigFilePath }),
         ],
     });

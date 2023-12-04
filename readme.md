@@ -73,6 +73,12 @@ Mark `.yarn` directory as excluded in IntelliJ.
 
 ### Development Environment Setup
 
+For IntelliJ IDEA, copy vitest runtime configuration to show console logs in test results:
+
+```shell
+cp -r dev-environment/editor-setup/idea .idea/
+```
+
 During development, it's convenient to watch for changes.
 You can run the following command from root to watch for all the packages,
 or run it from the specific package.
