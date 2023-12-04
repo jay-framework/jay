@@ -121,14 +121,11 @@ function makeItemTracking<T extends object, U>(
     mapCallback: (item: Getter<T>, index: Getter<number>, length: Getter<number>) => U,
 ): MappedItemTracking<T, U> {
     let reactive = new Reactive();
-    let { setItem, setIndex, setLength, getMappedItem } = reactive.record(() => {
-        let [getItem, setItem] = reactive.createState(item);
-        let [getIndex, setIndex] = reactive.createState(index);
-        let [getLength, setLength] = reactive.createState(length);
-        let [getMappedItem, setMappedItem] = reactive.createState<U>(undefined);
-        reactive.createReaction(() => setMappedItem(mapCallback(getItem, getIndex, getLength)));
-        return { setItem, setIndex, setLength, getMappedItem };
-    });
+    let [getItem, setItem] = reactive.createState(item);
+    let [getIndex, setIndex] = reactive.createState(index);
+    let [getLength, setLength] = reactive.createState(length);
+    let [getMappedItem, setMappedItem] = reactive.createState<U>(undefined);
+    reactive.createReaction(() => setMappedItem(mapCallback(getItem, getIndex, getLength)));
     return {
         setItem,
         setIndex,
@@ -223,68 +220,66 @@ export function makeJayComponent<
             getComponentInstance,
         };
         return provideContext(COMPONENT_CONTEXT, componentContext, () => {
-            return reactive.record(() => {
-                let propsProxy = makePropsProxy(reactive, props);
+            let propsProxy = makePropsProxy(reactive, props);
 
-                // @ts-ignore
-                let eventWrapper: JayEventHandlerWrapper<any, any, any> = (orig, event) => {
-                    return reactive.batchReactions(() => orig(event));
-                };
-                let element: JayElementT = render({} as ViewState, { eventWrapper });
+            // @ts-ignore
+            let eventWrapper: JayEventHandlerWrapper<any, any, any> = (orig, event) => {
+                return reactive.batchReactions(() => orig(event));
+            };
+            let element: JayElementT = render({} as ViewState, { eventWrapper });
 
-                let coreComp = comp(propsProxy, element.refs); // wrap event listening with batch reactions
-                let { render: renderViewState, ...api } = coreComp;
+            let coreComp = comp(propsProxy, element.refs); // wrap event listening with batch reactions
+            let { render: renderViewState, ...api } = coreComp;
 
-                reactive.createReaction(() => {
-                    let viewStateValueOrGetters = renderViewState(propsProxy);
-                    let viewState = materializeViewState(viewStateValueOrGetters);
-                    element.update(viewState);
-                });
-                // applyToRefs(refs, element.refs, (func: Function) => (...args) =>
-                //     reactive.batchReactions(() => func(...args))
-                // );
-                let update = (updateProps) => {
-                    propsProxy.update(updateProps);
-                };
-                mounts.push(element.mount);
-                unmounts.push(element.unmount);
-
-                let events = {};
-                let component = {
-                    element,
-                    update,
-                    mount: () => mounts.forEach((_) => _()),
-                    unmount: () => unmounts.forEach((_) => _()),
-                    addEventListener: (eventType: string, handler: Function) =>
-                        events[eventType](handler),
-                    removeEventListener: (eventType: string) => events[eventType](undefined),
-                };
-
-                // todo validate not overriding main JayComponent APIs
-                for (let key in api) {
-                    if (typeof api[key] === 'function') {
-                        if (api[key].emit) {
-                            component[key] = api[key];
-                            if (key.indexOf('on') === 0) {
-                                let [, , ...rest] = key;
-                                events[rest.join('')] = api[key];
-                            }
-                        } else
-                            component[key] = (...args) =>
-                                reactive.batchReactions(() => api[key](...args));
-                    } else {
-                        component[key] = api[key];
-                    }
-                }
-
-                return (componentInstance = component as unknown as ConcreteJayComponent<
-                    PropsT,
-                    ViewState,
-                    Refs,
-                    CompCore,
-                    JayElementT
-                >);
+            reactive.createReaction(() => {
+                let viewStateValueOrGetters = renderViewState(propsProxy);
+                let viewState = materializeViewState(viewStateValueOrGetters);
+                element.update(viewState);
             });
+            // applyToRefs(refs, element.refs, (func: Function) => (...args) =>
+            //     reactive.batchReactions(() => func(...args))
+            // );
+            let update = (updateProps) => {
+                propsProxy.update(updateProps);
+            };
+            mounts.push(element.mount);
+            unmounts.push(element.unmount);
+
+            let events = {};
+            let component = {
+                element,
+                update,
+                mount: () => mounts.forEach((_) => _()),
+                unmount: () => unmounts.forEach((_) => _()),
+                addEventListener: (eventType: string, handler: Function) =>
+                    events[eventType](handler),
+                removeEventListener: (eventType: string) => events[eventType](undefined),
+            };
+
+            // todo validate not overriding main JayComponent APIs
+            for (let key in api) {
+                if (typeof api[key] === 'function') {
+                    if (api[key].emit) {
+                        component[key] = api[key];
+                        if (key.indexOf('on') === 0) {
+                            let [, , ...rest] = key;
+                            events[rest.join('')] = api[key];
+                        }
+                    } else
+                        component[key] = (...args) =>
+                            reactive.batchReactions(() => api[key](...args));
+                } else {
+                    component[key] = api[key];
+                }
+            }
+
+            return (componentInstance = component as unknown as ConcreteJayComponent<
+                PropsT,
+                ViewState,
+                Refs,
+                CompCore,
+                JayElementT
+            >);
         });
     };
 }
