@@ -1,28 +1,32 @@
-import { generateElementDefinitionFile, getJayHtmlImports, parseJayFile } from 'jay-compiler';
-import { LoadResult, PluginContext } from 'rollup';
 import {
-    checkCodeErrors,
-    checkValidationErrors,
-    getFileContext,
-    isJayFile,
-    writeDefinitionFile,
-} from './helpers';
+    generateElementDefinitionFile,
+    getJayHtmlImports,
+    hasExtension,
+    parseJayFile,
+} from 'jay-compiler';
+import { LoadResult, PluginContext, TransformResult } from 'rollup';
+import { getFileContext, readFileAsString, writeDefinitionFile } from './files';
 import { generateRefsComponents, getRefsFilePaths } from './refs-compiler';
 import path from 'node:path';
-import { readFile } from 'node:fs/promises';
-import { resolve } from 'path';
+import { JAY_EXTENSION } from '../../compiler/lib/core/constants.ts';
+import { checkCodeErrors, checkValidationErrors } from './errors.ts';
 
 export function jayDefinitions() {
     const generatedRefPaths: Set<string> = new Set();
     return {
         name: 'jay:definitions', // this name will show up in warnings and errors
         async load(id: string): Promise<LoadResult> {
-            if (!isJayFile(id)) return null;
+            if (!hasExtension(id, JAY_EXTENSION)) return null;
+
+            const code = await readFileAsString(id);
+            checkCodeErrors(code);
+            return { code };
+        },
+        async transform(code: string, id: string): Promise<TransformResult> {
+            if (!hasExtension(id, JAY_EXTENSION)) return null;
 
             const context = this as PluginContext;
-            const code = (await readFile(id)).toString();
             const { filename, dirname } = getFileContext(id);
-
             // make sure imported files are resolved first
             const imports = getJayHtmlImports(code).filter((module) =>
                 module.endsWith('jay-html.d'),
@@ -35,13 +39,11 @@ export function jayDefinitions() {
                     }),
                 ),
             );
-
-            checkCodeErrors(code);
             const parsedFile = parseJayFile(code, filename, dirname);
             const tsCode = generateElementDefinitionFile(parsedFile);
             checkValidationErrors(tsCode.validations);
             const generatedFilename = await writeDefinitionFile(dirname, filename, tsCode.val);
-            context.info(`[load] generated ${generatedFilename}`);
+            context.info(`[transform] generated ${generatedFilename}`);
 
             const newRefsPaths = getRefsFilePaths(
                 generatedRefPaths,

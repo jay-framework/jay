@@ -11,7 +11,7 @@ import {
     RenderElementOptions,
 } from 'jay-runtime';
 import { CounterRef, CounterRefs } from '../counter/counter-refs';
-import { Counter } from '../counter/counter';
+import { Counter } from '../counter/counter?jay-sandboxMain';
 
 export interface NestedCounter {
     counter: number;

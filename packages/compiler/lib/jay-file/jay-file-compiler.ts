@@ -31,6 +31,7 @@ import {
     JayTypeAlias,
     JayUnknown,
 } from '../core/jay-file-types';
+import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode.ts';
 
 class Indent {
     private readonly base: string;
@@ -144,6 +145,7 @@ function renderImports(
     importsFor: ImportsFor,
     componentImports: Array<JayImportLink>,
     refImportsInUse: Set<string>,
+    importerMode: RuntimeMode,
 ): string {
     let runtimeImport = imports.render(importsFor);
 
@@ -173,7 +175,12 @@ function renderImports(
                     `import {${importSymbols.join(', ')}} from "${importStatement.module}-refs";`,
                 );
             });
-        imports.push(`import {${symbols}} from "${importStatement.module}";`);
+        imports.push(
+            `import {${symbols}} from "${importStatement.module}${getModeFileExtension(
+                importStatement.sandbox,
+                importerMode,
+            )}";`,
+        );
         return imports.join('\n');
     });
 
@@ -915,6 +922,7 @@ export function generateElementDefinitionFile(
                 ImportsFor.definition,
                 jayFile.imports,
                 refImportsInUse,
+                RuntimeMode.Trusted,
             ),
             types,
             renderedRefs,
@@ -927,11 +935,9 @@ export function generateElementDefinitionFile(
 }
 
 export function generateElementFile(
-    html: string,
-    filename: string,
-    filePath: string,
+    parsedFile: WithValidations<JayFile>,
+    importerMode: RuntimeMode,
 ): WithValidations<string> {
-    let parsedFile = parseJayFile(html, filename, filePath);
     return parsedFile.flatMap((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
         let { renderedRefs, renderedElement, renderedImplementation, refImportsInUse } =
@@ -947,6 +953,7 @@ export function generateElementFile(
                 ImportsFor.implementation,
                 jayFile.imports,
                 refImportsInUse,
+                importerMode,
             ),
             types,
             renderedRefs,
@@ -963,6 +970,7 @@ export function generateElementBridgeFile(
     html: string,
     filename: string,
     filePath: string,
+    importerMode: RuntimeMode,
 ): WithValidations<string> {
     let parsedFile = parseJayFile(html, filename, filePath);
     return parsedFile.map((jayFile: JayFile) => {
@@ -994,6 +1002,7 @@ export function generateElementBridgeFile(
                 ImportsFor.elementSandbox,
                 jayFile.imports,
                 refImportsInUse,
+                importerMode,
             ),
             types,
             renderedRefs,
@@ -1031,6 +1040,7 @@ export function generateSandboxRootFile(
             ImportsFor.elementSandbox,
             jayFile.imports,
             new Set(),
+            RuntimeMode.SandboxWorker,
         );
 
         let initializeWorker = `export function initializeWorker() {

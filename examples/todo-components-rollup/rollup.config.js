@@ -27,7 +27,8 @@ const rollupConfig = defineConfig([
         context: 'window',
         plugins: [
             jayRuntime(),
-            typescript(),
+            // generating virtual files, static type checker cannot resolve them
+            typescript({ check: false }),
             nodeResolve(),
             copy({
                 targets: [

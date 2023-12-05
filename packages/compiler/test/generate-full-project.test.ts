@@ -4,7 +4,9 @@ import {
     generateElementDefinitionFile,
     generateElementFile,
     generateSandboxRootFile,
+    parseJayFile,
     prettify,
+    RuntimeMode,
 } from '../lib';
 import {
     printTsFile,
@@ -50,6 +52,7 @@ describe('generate full project', () => {
                     jayFile,
                     'counter.jay-html',
                     './sandboxed/sandboxed-counter-source',
+                    RuntimeMode.SandboxMain,
                 );
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
@@ -85,9 +88,12 @@ describe('generate full project', () => {
                     'app',
                 );
                 let runtimeFile = generateElementFile(
-                    jayFile,
-                    'app.jay-html',
-                    './test/fixtures/sandboxed/sandboxed-counter/source',
+                    parseJayFile(
+                        jayFile,
+                        'app.jay-html',
+                        './test/fixtures/sandboxed/sandboxed-counter/source',
+                    ),
+                    RuntimeMode.SandboxMain,
                 );
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
@@ -104,9 +110,12 @@ describe('generate full project', () => {
                     'counter',
                 );
                 let runtimeFile = generateElementFile(
-                    jayFile,
-                    'counter.jay-html',
-                    './test/fixtures/sandboxed/sandboxed-counter/source',
+                    parseJayFile(
+                        jayFile,
+                        'counter.jay-html',
+                        './test/fixtures/sandboxed/sandboxed-counter/source',
+                    ),
+                    RuntimeMode.SandboxMain,
                 );
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
@@ -138,7 +147,7 @@ describe('generate full project', () => {
                 );
 
                 const outputFile = ts.transform(sourceFile, [
-                    componentBridgeTransformer(['./counter.jay-html']),
+                    componentBridgeTransformer(RuntimeMode.SandboxMain),
                 ]);
 
                 const outputCode = await printTsFile(outputFile);

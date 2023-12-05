@@ -61,5 +61,5 @@ describe('generate the definition file', () => {
         expect(await prettify(runtimeFile.val)).toEqual(
             await readGeneratedElementDefinitionFile(folder),
         );
-    }, 10000);
+    });
 });

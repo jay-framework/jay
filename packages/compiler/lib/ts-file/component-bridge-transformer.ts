@@ -1,4 +1,6 @@
 import ts from 'typescript';
+import { getModeFileExtension, hasExtension, RuntimeMode } from '../core/runtime-mode.ts';
+import { JAY_EXTENSION } from '../core/constants.ts';
 
 function transformVariableStatement(node: ts.VariableStatement, factory: ts.NodeFactory) {
     let declarations = node.declarationList.declarations;
@@ -32,10 +34,22 @@ function transformVariableStatement(node: ts.VariableStatement, factory: ts.Node
     else return undefined;
 }
 
+function importsRenderMethod(node: ts.ImportDeclaration): boolean {
+    const namedBindings = node.importClause.namedBindings;
+    switch (namedBindings.kind) {
+        case ts.SyntaxKind.NamedImports:
+            return Boolean(
+                namedBindings.elements.find((binding) => binding.name.text === 'render'),
+            );
+        default:
+            return false;
+    }
+}
+
 function transformImport(
     node: ts.ImportDeclaration,
     factory: ts.NodeFactory,
-    allowedJayElementModules: string[],
+    importerMode: RuntimeMode,
 ) {
     if (ts.isStringLiteral(node.moduleSpecifier)) {
         const originalTarget = node.moduleSpecifier.text;
@@ -54,11 +68,10 @@ function transformImport(
                         ),
                     ]),
                 ),
-                // node.importClause,
                 factory.createStringLiteral('jay-secure'),
-                node.assertClause,
+                node.attributes,
             );
-        else if (allowedJayElementModules.indexOf(originalTarget) > -1) {
+        if (hasExtension(originalTarget, JAY_EXTENSION) || importsRenderMethod(node)) {
             return factory.updateImportDeclaration(
                 node,
                 node.modifiers,
@@ -73,17 +86,19 @@ function transformImport(
                         ),
                     ]),
                 ),
-                // node.importClause,
-                factory.createStringLiteral(originalTarget),
-                node.assertClause,
+                factory.createStringLiteral(
+                    `${originalTarget}${getModeFileExtension(true, importerMode)}`,
+                ),
+                node.attributes,
             );
-        } else return undefined;
+        }
+        return undefined;
     }
     return undefined;
 }
 
 export function componentBridgeTransformer(
-    allowedJayElementModules: string[],
+    importerMode: RuntimeMode,
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
     return (context: ts.TransformationContext) => {
         const { factory } = context;
@@ -95,7 +110,7 @@ export function componentBridgeTransformer(
             if (ts.isFunctionDeclaration(node)) return undefined;
             else if (ts.isInterfaceDeclaration(node)) return node;
             else if (ts.isImportDeclaration(node))
-                return transformImport(node, factory, allowedJayElementModules);
+                return transformImport(node, factory, importerMode);
             else if (ts.isVariableStatement(node)) return transformVariableStatement(node, factory);
             return ts.visitEachChild(node, visitor, context);
         }
