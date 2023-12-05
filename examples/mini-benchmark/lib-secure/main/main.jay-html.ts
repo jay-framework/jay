@@ -62,7 +62,6 @@ export function render(viewState: MainViewState, options?: RenderElementOptions)
         viewState,
         () =>
             e('div', {}, [
-                e('div', { class: 'title' }, ['Jay Benchmarks - the Jay Project']),
                 e('div', { class: 'select-example' }, [
                     e('label', { for: 'choose-example' }, ['Select example to view']),
                     de(

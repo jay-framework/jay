@@ -102,8 +102,7 @@ function Todo() {
     });
 
     jayElement.refs.newTodo
-        // @ts-expect-error Property $onkeydown does not exist on type
-        .$onkeydown(({ event }) => {
+        .onkeydown$(({ event }) => {
             event.keyCode === ENTER_KEY ? event.preventDefault() : '';
             return event.keyCode;
         })
@@ -127,8 +126,7 @@ function Todo() {
         });
 
     jayElement.refs.newTodo
-        // @ts-expect-error Property $onkeydown does not exist on type
-        .$oninput(({ event }) => (event.target as HTMLInputElement).value)
+        .oninput$(({ event }) => (event.target as HTMLInputElement).value)
         .then(({ event: value }) => {
             data.newTodo = value;
             update();
@@ -163,8 +161,7 @@ function Todo() {
         update();
     });
     jayElement.refs.title
-        // @ts-expect-error  Property $onkeydown does not exist on type
-        .$onkeydown(({ event }) => event.which)
+        .onkeydown$(({ event }) => event.which)
         .then(({ event: which, viewState: todo }) => {
             if (which === ESCAPE_KEY) {
                 todo.editText = todo.title;
@@ -175,8 +172,7 @@ function Todo() {
             update();
         });
     jayElement.refs.toggleAll
-        // @ts-expect-error  Property $onkeydown does not exist on type
-        .$onchange(({ event }) => (event.target as HTMLInputElement).checked)
+        .onchange$(({ event }) => (event.target as HTMLInputElement).checked)
         .then(({ event: completed }) => {
             data.todos = data.todos.map((todo) => ({ ...todo, isCompleted: completed }));
             update();

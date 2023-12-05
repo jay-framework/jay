@@ -17,7 +17,6 @@
   </head>
   <body>
     <div>
-      <div class="title">Jay Benchmarks - the Jay Project</div>
       <div class="select-example">
         <label for="choose-example">Select example to view</label>
         <select id="choose-example" ref="choose-example">
