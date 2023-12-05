@@ -13,8 +13,6 @@ import {
 import path from 'node:path';
 import { JAY_TS_EXTENSION, TS_EXTENSION } from './constants';
 import { readFile } from 'node:fs/promises';
-import { resolve } from 'path';
-import { access } from 'fs/promises';
 
 const TYPESCRIPT_EXTENSION = '.ts';
 
@@ -35,38 +33,36 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}) {
                 isEntry: boolean;
             },
         ): ResolveIdResult {
-            if (isJayFile(source)) {
-                const context = this as PluginContext;
-                const sourcePath = path.resolve(path.dirname(importer), source);
-                const id = `${sourcePath}${TYPESCRIPT_EXTENSION}`;
-                context.debug(`[resolveId] resolved ${id}`);
-                return { id };
-            }
-            return null;
+            if (!isJayFile(source)) return null;
+
+            const context = this as PluginContext;
+            const sourcePath = path.resolve(path.dirname(importer), source);
+            const id = `${sourcePath}${TYPESCRIPT_EXTENSION}`;
+            context.debug(`[resolveId] resolved ${id}`);
+            return { id };
         },
         async load(id: string): Promise<LoadResult> {
-            if (isJayTsFile(id)) {
-                const context = this as PluginContext;
-                context.info(`[load] start ${id}`);
-                const sourcePath = id.slice(0, id.length - TYPESCRIPT_EXTENSION.length);
-                const { filename, dirname } = getFileContext(sourcePath, JAY_TS_EXTENSION);
-                const existingTsFileSource = await readFileWhenExists(
-                    dirname,
-                    `${filename}${TS_EXTENSION}`,
-                );
-                if (existingTsFileSource) {
-                    return { code: existingTsFileSource };
-                }
+            if (!isJayTsFile(id)) return null;
 
-                const jayCode = (await readFile(sourcePath)).toString();
-                checkCodeErrors(jayCode);
-                const tsCode = generateElementFile(jayCode, filename, dirname);
-                checkValidationErrors(tsCode.validations);
-                await writeGeneratedFile(context, projectRoot, outputDir, id, tsCode.val);
-                context.info(`[load] end ${id}`);
-                return { code: tsCode.val };
+            const context = this as PluginContext;
+            context.info(`[load] start ${id}`);
+            const sourcePath = id.slice(0, id.length - TYPESCRIPT_EXTENSION.length);
+            const { filename, dirname } = getFileContext(sourcePath, JAY_TS_EXTENSION);
+            const existingTsFileSource = await readFileWhenExists(
+                dirname,
+                `${filename}${TS_EXTENSION}`,
+            );
+            if (existingTsFileSource) {
+                return { code: existingTsFileSource };
             }
-            return null;
+
+            const jayCode = (await readFile(sourcePath)).toString();
+            checkCodeErrors(jayCode);
+            const tsCode = generateElementFile(jayCode, filename, dirname);
+            checkValidationErrors(tsCode.validations);
+            await writeGeneratedFile(context, projectRoot, outputDir, id, tsCode.val);
+            context.info(`[load] end ${id}`);
+            return { code: tsCode.val };
         },
     };
 }
