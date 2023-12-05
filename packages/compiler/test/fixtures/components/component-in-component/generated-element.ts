@@ -7,8 +7,8 @@ import {
     RenderElementOptions,
 } from 'jay-runtime';
 import { CounterRef } from '../counter/counter-refs';
-import { Counter } from '../counter/counter';
-import { CounterViewState as CounterData } from '../counter/generated-element';
+import { Counter } from '../counter/counter?jay-sandboxMain';
+import { CounterViewState as CounterData } from '../counter/generated-element?jay-sandboxMain';
 
 export interface ComponentInComponentViewState {
     count1: number;

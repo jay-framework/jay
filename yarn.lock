@@ -6220,7 +6220,10 @@ __metadata:
     "@types/node": ^20.10.3
     fast-glob: ^3.3.2
     jay-compiler: "workspace:^"
+    jay-component: "workspace:^"
     jay-dev-environment: "workspace:^"
+    jay-runtime: "workspace:^"
+    jay-secure: "workspace:^"
     rimraf: ^5.0.5
     rollup: ^4.6.1
     tsup: ^8.0.1
