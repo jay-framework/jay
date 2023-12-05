@@ -1,6 +1,5 @@
 import { generateElementDefinitionFile, getJayHtmlImports, parseJayFile } from 'jay-compiler';
-import { PluginContext, TransformResult } from 'rollup';
-import { createFilter } from '@rollup/pluginutils';
+import { LoadResult, PluginContext } from 'rollup';
 import {
     checkCodeErrors,
     checkValidationErrors,
@@ -9,24 +8,40 @@ import {
     writeDefinitionFile,
 } from './helpers';
 import { generateRefsComponents, getRefsFilePaths } from './refs-compiler';
-import { FilterPattern } from 'vite';
 import path from 'node:path';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'path';
 
 export function jayDefinitions() {
     const generatedRefPaths: Set<string> = new Set();
     return {
         name: 'jay:definitions', // this name will show up in warnings and errors
-        async transform(code: string, id: string): Promise<TransformResult> {
-            if (!isJayFile(id)) return { code: '', map: null };
+        async load(id: string): Promise<LoadResult> {
+            if (!isJayFile(id)) return null;
 
             const context = this as PluginContext;
-            checkCodeErrors(code);
+            const code = (await readFile(id)).toString();
             const { filename, dirname } = getFileContext(id);
+
+            // make sure imported files are resolved first
+            const imports = getJayHtmlImports(code).filter((module) =>
+                module.endsWith('jay-html.d'),
+            );
+            await Promise.all(
+                imports.map((imported) =>
+                    context.load({
+                        id: path.resolve(dirname, imported.slice(0, -2)),
+                        resolveDependencies: true,
+                    }),
+                ),
+            );
+
+            checkCodeErrors(code);
             const parsedFile = parseJayFile(code, filename, dirname);
             const tsCode = generateElementDefinitionFile(parsedFile);
             checkValidationErrors(tsCode.validations);
-            const generatedFilename = writeDefinitionFile(dirname, filename, tsCode.val);
-            context.info(`[transform] generated ${generatedFilename}`);
+            const generatedFilename = await writeDefinitionFile(dirname, filename, tsCode.val);
+            context.info(`[load] generated ${generatedFilename}`);
 
             const newRefsPaths = getRefsFilePaths(
                 generatedRefPaths,
@@ -37,33 +52,6 @@ export function jayDefinitions() {
             await generateRefsComponents(newRefsPaths);
 
             return { code: '', map: null };
-        },
-    };
-}
-
-export function jayHtmlImports(options: { include?: FilterPattern; exclude?: FilterPattern } = {}) {
-    const filter = createFilter(options.include, options.exclude);
-
-    return {
-        name: 'jayHtmlImports',
-        async transform(source, id): Promise<TransformResult> {
-            if (!filter(id)) return null;
-
-            const context = this as PluginContext;
-            const imports = getJayHtmlImports(source).filter((module) =>
-                module.endsWith('jay-html.d'),
-            );
-            const { dirname } = getFileContext(id);
-            // make sure imported files are resolved first
-            await Promise.all(
-                imports.map((imported) =>
-                    context.load({
-                        id: path.resolve(dirname, imported.slice(0, -2)),
-                        resolveDependencies: true,
-                    }),
-                ),
-            );
-            return null;
         },
     };
 }

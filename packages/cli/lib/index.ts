@@ -1,7 +1,7 @@
 import { rollup } from 'rollup';
 import { Command } from 'commander';
 import { generateElementFile } from 'jay-compiler';
-import { jayDefinitions, jayHtmlImports } from 'rollup-plugin-jay';
+import { jayDefinitions } from 'rollup-plugin-jay';
 import { generateFiles } from './generate-files';
 import { getJayHtmlFileInputs } from './inputs';
 
@@ -15,7 +15,7 @@ program
     .action(async (source) => {
         await rollup({
             input: getJayHtmlFileInputs(source),
-            plugins: [jayHtmlImports(), jayDefinitions()],
+            plugins: [jayDefinitions()],
         });
     });
 

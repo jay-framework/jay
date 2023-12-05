@@ -1,7 +1,6 @@
 import path from 'node:path';
-import fs from 'node:fs';
 import { PluginContext } from 'rollup';
-import { RuntimeMode, JAY_EXTENSION, JAY_TS_EXTENSION, JAY_DTS_EXTENSION } from './constants';
+import { JAY_DTS_EXTENSION, JAY_EXTENSION, JAY_TS_EXTENSION } from './constants';
 import { mkdir, readFile } from 'node:fs/promises';
 import { writeFile } from 'fs/promises';
 
@@ -48,9 +47,13 @@ export async function readFileWhenExists(
     }
 }
 
-export function writeDefinitionFile(dirname: string, filename: string, source: string): string {
-    const name = path.join(dirname, `${filename}${JAY_DTS_EXTENSION}`);
-    fs.writeFileSync(name, source, { encoding: 'utf8', flag: 'w' });
+export async function writeDefinitionFile(
+    dirname: string,
+    filename: string,
+    source: string,
+): Promise<string> {
+    const name = path.resolve(dirname, `${filename}${JAY_DTS_EXTENSION}`);
+    await writeFile(name, source, { encoding: 'utf8', flag: 'w' });
     return name;
 }
 
@@ -60,11 +63,12 @@ export async function writeGeneratedFile(
     outputDir: string,
     id: string,
     code: string,
-): Promise<void> {
+): Promise<string> {
     if (!outputDir) return;
     const relativePath = path.dirname(path.relative(projectRoot, id));
     const filePath = path.resolve(outputDir, relativePath, path.basename(id));
     context.info(['Writing generated file', filePath].join(' '));
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, code, { encoding: 'utf8', flag: 'w' });
+    return filePath;
 }
