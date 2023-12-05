@@ -259,6 +259,7 @@ Project [Nerio](https://github.com/kmacrow/Nerio)
 
 https://github.com/Agoric/realms-shim
 https://github.com/endojs/endo/tree/master/packages%2Fses
+https://github.com/tc39/proposal-shadowrealm
 
 Looking at figma and the work they have done using Realms, the approach looks very interesting
 
