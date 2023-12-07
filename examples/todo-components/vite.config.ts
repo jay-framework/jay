@@ -18,12 +18,9 @@ export default defineConfig(({ mode }) => {
             Inspect(),
             jayRuntime(),
         ],
-        worker: {
-            rollupOptions: {
-                external,
-            },
-        },
+        worker: { rollupOptions: { external } },
         root,
+        optimizeDeps: { entries: [] },
         build: {
             minify: false,
             target: 'es2020',
