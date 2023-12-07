@@ -1,7 +1,8 @@
 import { WithValidations } from '../core/with-validations';
-import { ResolveTsConfigOptions, tsExtractTypes } from './ts-extract-types';
+import { tsExtractTypes } from './ts-extract-types';
 
 import { JayComponentType } from '../core/jay-file-types';
+import {ResolveTsConfigOptions} from "./resolve-ts-config.ts";
 
 export function generateComponentRefsDefinitionFile(
     filepath: string,

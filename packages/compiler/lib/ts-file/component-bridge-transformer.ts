@@ -1,4 +1,5 @@
 import ts from 'typescript';
+import {mkTransformer, Visitor} from "./mk-transformer.ts";
 
 function transformVariableStatement(node: ts.VariableStatement, factory: ts.NodeFactory) {
     let declarations = node.declarationList.declarations;
@@ -82,22 +83,22 @@ function transformImport(
     return undefined;
 }
 
+const mkVisitor = (factory: ts.NodeFactory, context: ts.TransformationContext, allowedJayElementModules: string[]) => {
+    const visitor: Visitor = (node) => {
+        if (ts.isFunctionDeclaration(node)) return undefined;
+        else if (ts.isInterfaceDeclaration(node)) return node;
+        else if (ts.isImportDeclaration(node))
+            return transformImport(node, factory, allowedJayElementModules);
+        else if (ts.isVariableStatement(node)) return transformVariableStatement(node, factory);
+        return ts.visitEachChild(node, visitor, context);
+    }
+    return visitor;
+}
+
+
 export function componentBridgeTransformer(
     allowedJayElementModules: string[],
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
-    return (context: ts.TransformationContext) => {
-        const { factory } = context;
-        return (sourceFile) => {
-            return ts.visitEachChild(sourceFile, visitor, context);
-        };
-
-        function visitor(node: ts.Node): ts.Node | ts.Node[] | undefined {
-            if (ts.isFunctionDeclaration(node)) return undefined;
-            else if (ts.isInterfaceDeclaration(node)) return node;
-            else if (ts.isImportDeclaration(node))
-                return transformImport(node, factory, allowedJayElementModules);
-            else if (ts.isVariableStatement(node)) return transformVariableStatement(node, factory);
-            return ts.visitEachChild(node, visitor, context);
-        }
-    };
+    return mkTransformer(allowedJayElementModules, mkVisitor);
 }
+
