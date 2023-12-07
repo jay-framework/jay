@@ -1,5 +1,5 @@
 import { generateElementFile } from 'jay-compiler';
-import { LoadResult, PluginContext, ResolveIdResult } from 'rollup';
+import { LoadResult, PluginContext, ResolveIdResult, TransformResult } from 'rollup';
 import { JayRollupConfig } from './types';
 import {
     checkCodeErrors,
@@ -24,15 +24,7 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}) {
     return {
         name: 'jay:runtime', // this name will show up in warnings and errors
         enforce: 'pre',
-        resolveId(
-            source: string,
-            importer: string | undefined,
-            options: {
-                attributes: Record<string, string>;
-                custom?: { [plugin: string]: any };
-                isEntry: boolean;
-            },
-        ): ResolveIdResult {
+        resolveId(source: string, importer: string | undefined): ResolveIdResult {
             if (!isJayFile(source)) return null;
 
             const context = this as PluginContext;
@@ -58,10 +50,19 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}) {
 
             const jayCode = (await readFile(sourcePath)).toString();
             checkCodeErrors(jayCode);
-            const tsCode = generateElementFile(jayCode, filename, dirname);
+            context.info(`[load] end ${id}`);
+            return { code: jayCode };
+        },
+        async transform(code: string, id: string): Promise<TransformResult> {
+            if (!isJayTsFile(id)) return null;
+
+            const context = this as PluginContext;
+            context.info(`[transform] start ${id}`);
+            const { filename, dirname } = getFileContext(id, JAY_TS_EXTENSION);
+            const tsCode = generateElementFile(code, filename, dirname);
             checkValidationErrors(tsCode.validations);
             await writeGeneratedFile(context, projectRoot, outputDir, id, tsCode.val);
-            context.info(`[load] end ${id}`);
+            context.info(`[transform] end ${id}`);
             return { code: tsCode.val };
         },
     };
