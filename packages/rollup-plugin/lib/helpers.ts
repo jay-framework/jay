@@ -32,12 +32,9 @@ export function checkCodeErrors(code: string): void {
     if (code.length === 0) throw new Error('Empty code');
 }
 
-export async function readFileWhenExists(
-    dirname: string,
-    filename: string,
-): Promise<string | undefined> {
+export async function readFileWhenExists(filePath: string): Promise<string | undefined> {
     try {
-        return (await readFile(path.resolve(dirname, filename))).toString();
+        return (await readFile(filePath)).toString();
     } catch (error) {
         if (error.code === 'ENOENT') {
             return undefined;
