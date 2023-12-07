@@ -24,6 +24,7 @@ export default defineConfig(({ mode }) => {
             },
         },
         root,
+        optimizeDeps: { entries: [] },
         build: {
             minify: false,
             target: 'es2020',
