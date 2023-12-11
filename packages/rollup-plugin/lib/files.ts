@@ -1,16 +1,9 @@
 import path from 'node:path';
 import { PluginContext } from 'rollup';
-import { JAY_DTS_EXTENSION, JAY_EXTENSION, JAY_TS_EXTENSION } from './constants';
+import { JAY_DTS_EXTENSION, JAY_EXTENSION } from '../../compiler/lib/core/constants.ts';
 import { mkdir, readFile } from 'node:fs/promises';
 import { writeFile } from 'fs/promises';
-
-export function isJayFile(filename: string): boolean {
-    return filename.endsWith(JAY_EXTENSION) && !filename.startsWith(JAY_EXTENSION);
-}
-
-export function isJayTsFile(filename: string): boolean {
-    return filename.endsWith(JAY_TS_EXTENSION) && !filename.startsWith(JAY_TS_EXTENSION);
-}
+import { JayPluginContext } from './jay-plugin-context.ts';
 
 export function getFileContext(
     filename: string,
@@ -22,19 +15,13 @@ export function getFileContext(
     };
 }
 
-export function checkValidationErrors(validations: string[]): void {
-    if (validations.length > 0) {
-        throw new Error(validations.join('\n'));
-    }
-}
-
-export function checkCodeErrors(code: string): void {
-    if (code.length === 0) throw new Error('Empty code');
+export async function readFileAsString(filePath: string): Promise<string> {
+    return (await readFile(filePath)).toString();
 }
 
 export async function readFileWhenExists(filePath: string): Promise<string | undefined> {
     try {
-        return (await readFile(filePath)).toString();
+        return await readFileAsString(filePath);
     } catch (error) {
         if (error.code === 'ENOENT') {
             return undefined;
@@ -55,17 +42,16 @@ export async function writeDefinitionFile(
 }
 
 export async function writeGeneratedFile(
+    jayContext: JayPluginContext,
     context: PluginContext,
-    projectRoot: string,
-    outputDir: string,
     id: string,
     code: string,
 ): Promise<string> {
-    if (!outputDir) return;
-    const relativePath = path.dirname(path.relative(projectRoot, id));
-    const filePath = path.resolve(outputDir, relativePath, path.basename(id));
-    context.info(['Writing generated file', filePath].join(' '));
+    if (!jayContext.outputDir) return;
+    const relativePath = path.dirname(path.relative(jayContext.projectRoot, id));
+    const filePath = path.resolve(jayContext.outputDir, relativePath, path.basename(id));
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, code, { encoding: 'utf8', flag: 'w' });
+    context.info(['[transform] written', filePath].join(' '));
     return filePath;
 }

@@ -8,7 +8,7 @@ import {
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
-import { treeNode, Node } from './tree-node';
+import { treeNode, Node } from './tree-node?jay-sandboxMain';
 
 export interface RecursiveComponents2ViewState {
     headChar: string;

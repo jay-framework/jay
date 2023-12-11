@@ -48,8 +48,11 @@ export async function readGeneratedElementBridgeFile(folder) {
     return readTestFile(folder, 'generated-element-bridge.ts');
 }
 
-export async function readGeneratedElementDefinitionFile(folder) {
-    return readTestFile(folder, 'generated-element.d.ts');
+export async function readGeneratedElementDefinitionFile(
+    folder: string,
+    filename: string = 'generated-element.d.ts',
+) {
+    return readTestFile(folder, filename);
 }
 
 export function getFileFromFolder(folder: string): string {

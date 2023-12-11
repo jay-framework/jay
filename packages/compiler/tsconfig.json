@@ -1,5 +1,6 @@
 {
   "extends": "jay-dev-environment/library-dom/tsconfig.json",
+  "exclude": ["test/fixtures"],
   "compilerOptions": {
     "outDir": "dist",
     "paths": {

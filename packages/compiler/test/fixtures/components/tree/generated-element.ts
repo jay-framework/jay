@@ -12,7 +12,7 @@ import {
     compCollectionRef as ccr,
     RenderElementOptions,
 } from 'jay-runtime';
-import { TreeNode, Node } from './tree-node';
+import { TreeNode, Node } from './tree-node?jay-sandboxMain';
 
 export interface TreeNodeViewState {
     headChar: string;

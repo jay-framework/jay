@@ -12,7 +12,7 @@ import {
 } from 'jay-runtime';
 // @ts-expect-error it's an expected generated file, the import does not exist
 import { TreeNodeRefs } from './tree-node-refs';
-import { TreeNode, Node } from './tree-node';
+import { TreeNode, Node } from './tree-node?jay-sandboxMain';
 
 export interface RecursiveComponentsElementRefs {
     counter1: TreeNodeRefs<Node>;
