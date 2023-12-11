@@ -7,7 +7,7 @@
     "definitions": "jay-cli definitions ./lib",
     "runtime": "jay-cli runtime ./lib",
     "build:js": "vite build --base ./",
-    "build:watch": "vite",
+    "build:watch": "vite --force",
     "build": "npm run definitions && npm run build:js",
     "confirm": "npm run clean && npm run build && npm run test",
     "clean": "rimraf dist && (rimraf -g lib/**/*.d.ts || :)",

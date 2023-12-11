@@ -6,7 +6,7 @@
   "scripts": {
     "definitions": "jay-cli definitions ./lib",
     "build:js": "vite build --base ./",
-    "build:watch": "vite",
+    "build:watch": "vite --force",
     "build": "npm run definitions && npm run build:js",
     "clean": "rimraf dist && (rimraf -g lib/**/*.d.ts || :)",
     "confirm": "npm run clean && npm run build && npm run test",

@@ -38,7 +38,6 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}) {
 
     return {
         name: 'jay:runtime', // this name will show up in warnings and errors
-        enforce: 'pre',
         resolveId(source: string, importer: string | undefined): ResolveIdResult {
             if (hasExtension(source, JAY_EXTENSION) || hasJayModeExtension(source))
                 return resolveIdForJayFile(this, source, importer);

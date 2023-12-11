@@ -1,6 +1,6 @@
 <html>
   <head>
-    <link rel="import" href="./counter" names="Counter" />
+    <link rel="import" href="./counter" names="Counter" sandbox="true" />
     <script type="application/yaml-jay">
       data:
     </script>

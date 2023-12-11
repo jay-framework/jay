@@ -2,9 +2,13 @@ import { resolve } from 'path';
 import Inspect from 'vite-plugin-inspect';
 import ViteRestart from 'vite-plugin-restart';
 import { defineConfig } from 'vitest/config';
-import { jayRuntime } from 'rollup-plugin-jay';
+import { JayRollupConfig, jayRuntime } from 'rollup-plugin-jay';
 
 const root = resolve(__dirname);
+const jayOptions: JayRollupConfig = {
+    tsConfigFilePath: resolve(root, 'tsconfig.json'),
+    outputDir: 'dist/jay-runtime',
+};
 
 export default defineConfig(({ mode }) => {
     const external =
@@ -30,6 +34,7 @@ export default defineConfig(({ mode }) => {
             entries: [],
         },
         build: {
+            emptyOutDir: true,
             minify: false,
             target: 'es2020',
             rollupOptions: {

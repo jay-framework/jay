@@ -35,16 +35,19 @@ function transformVariableStatement(node: ts.VariableStatement, factory: ts.Node
     else return undefined;
 }
 
-function importsRenderMethod(node: ts.ImportDeclaration): boolean {
+function getRenderImportSpecifier(node: ts.ImportDeclaration): ts.ImportSpecifier | undefined {
     const namedBindings = node.importClause.namedBindings;
-    switch (namedBindings.kind) {
-        case ts.SyntaxKind.NamedImports:
-            return Boolean(
-                namedBindings.elements.find((binding) => binding.name.text === 'render'),
-            );
+    switch (namedBindings?.kind) {
+        case ts.SyntaxKind.NamedImports: {
+            return namedBindings.elements.find((binding) => getImportName(binding) === 'render');
+        }
         default:
-            return false;
+            return undefined;
     }
+}
+
+function getImportName(binding: ts.ImportSpecifier): string {
+    return binding.propertyName?.text ?? binding.name.text;
 }
 
 function transformImport(
@@ -72,20 +75,15 @@ function transformImport(
                 factory.createStringLiteral('jay-secure'),
                 node.attributes,
             );
-        if (hasExtension(originalTarget, JAY_EXTENSION) || importsRenderMethod(node)) {
+        const renderImportSpecifier = getRenderImportSpecifier(node);
+        if (Boolean(renderImportSpecifier)) {
             return factory.updateImportDeclaration(
                 node,
                 node.modifiers,
                 factory.createImportClause(
                     node.importClause.isTypeOnly,
                     node.importClause.name,
-                    factory.createNamedImports([
-                        factory.createImportSpecifier(
-                            false,
-                            undefined,
-                            factory.createIdentifier('render'),
-                        ),
-                    ]),
+                    factory.createNamedImports([renderImportSpecifier]),
                 ),
                 factory.createStringLiteral(
                     `${originalTarget}${getModeFileExtension(true, importerMode)}`,
