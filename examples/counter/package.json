@@ -5,11 +5,10 @@
   "description": "",
   "scripts": {
     "build": "npm run definitions && npm run build:js",
-    "definitions": "jay-cli definitions ./lib",
+    "definitions": "jay-cli definitions src",
     "build:js": "vite build --base ./",
-    "build:watch": "vite",
-    "clean": "rimraf dist && rimraf dist-secure && (rimraf -g lib/**/*.jay-html.ts || :) && (rimraf -g lib/**/*.d.ts || :) && (rimraf -g lib-secure/**/*.d.ts || :)",
-    "mk-secure": "npm run jay-secure && mv ./lib/counter.jay-html.ts ./lib-secure/main && cp ./lib/counter.ts ./lib-secure/sandbox && cp ./lib/counter-refs.d.ts ./lib-secure/main",
+    "build:watch": "vite --force",
+    "clean": "rimraf dist && (rimraf -g src/**/*.d.ts || :)",
     "confirm": "npm run clean && npm run build && npm run test",
     "test": ":"
   },
