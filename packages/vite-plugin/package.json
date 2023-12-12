@@ -1,29 +1,25 @@
 {
-  "name": "rollup-plugin-jay",
+  "name": "vite-plugin-jay",
   "version": "1.0.0",
   "main": "dist/index.js",
   "keywords": [
     "jay",
     "secure",
-    "rollup-plugin"
+    "vite-plugin"
   ],
   "scripts": {
     "build": "npm run build:js && npm run build:types",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
-    "build:watch:sandbox-counter": "vite -c ./test/jayRuntime/fixtures/sandbox-counter/source/vite.config.ts",
     "build:js": "vite build",
     "build:types": "tsup lib/index.ts --dts-only --format cjs",
     "build:check-types": "tsc",
-    "build:executable-bin": "chmod +x dist/index.js",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
     "test": ":",
     "test:watch": ":"
   },
   "dependencies": {
-    "fast-glob": "^3.3.2",
-    "jay-compiler": "workspace:^",
-    "typescript": "^5.3.2"
+    "rollup-plugin-jay": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "^20.10.3",
@@ -31,9 +27,6 @@
     "jay-dev-environment": "workspace:^",
     "jay-runtime": "workspace:^",
     "jay-secure": "workspace:^",
-    "rimraf": "^5.0.5",
-    "rollup": "^4.6.1",
-    "rollup-plugin-typescript2": "^0.36.0",
     "tsup": "^8.0.1",
     "vite": "^5.0.5",
     "vitest": "^0.34.6"

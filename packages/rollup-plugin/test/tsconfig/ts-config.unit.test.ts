@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { ModuleKind, ScriptTarget } from 'typescript';
 import { JayRollupConfig } from '../../lib';
-import { resolveTsCompilerOptions } from '../../lib/resolve-ts-config.ts';
+import { resolveTsCompilerOptions } from '../../lib/resolve-ts-config';
 
 describe('resolveTsCompilerOptions', () => {
     const directory = 'test/tsconfig/fixtures';
