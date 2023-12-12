@@ -5,12 +5,12 @@ import {
     getModeFromExtension,
     hasExtension,
     hasJayModeExtension,
-    parseJayFile,
-    RuntimeMode,
     JAY_EXTENSION,
     JAY_TS_EXTENSION,
-    withoutExtension,
+    parseJayFile,
+    RuntimeMode,
     TS_EXTENSION,
+    withoutExtension,
 } from 'jay-compiler';
 import { LoadResult, PluginContext, ResolveIdResult, TransformResult } from 'rollup';
 import { JayRollupConfig } from './types';
@@ -26,12 +26,10 @@ import {
     writeGeneratedFile,
 } from './files.ts';
 import { checkCodeErrors, checkDiagnosticsErrors, checkValidationErrors } from './errors.ts';
+import { appendJayMetadata, JayFormat } from './metadata.ts';
+import { watchChangesFor } from './watch.ts';
 
 const TYPESCRIPT_EXTENSION = '.ts';
-enum JayFormat {
-    Html = 'html',
-    Typescript = 'typescript',
-}
 
 export function jayRuntime(jayOptions: JayRollupConfig = {}) {
     const jayContext = new JayPluginContext(jayOptions);
@@ -78,9 +76,10 @@ function resolveIdForJayFile(
     importer: string,
 ): ResolveIdResult {
     const sourcePath = path.resolve(path.dirname(importer), source);
+    watchChangesFor(context, sourcePath);
     const id = `${sourcePath}${TYPESCRIPT_EXTENSION}`;
     context.debug(`[resolveId] resolved ${id}`);
-    return { id };
+    return { id, meta: appendJayMetadata(context, sourcePath, { originalId: sourcePath }) };
 }
 
 async function loadJayHtmlFile(
@@ -93,7 +92,7 @@ async function loadJayHtmlFile(
     if (existingTsFileSource) {
         return {
             code: existingTsFileSource,
-            meta: { jay: { format: JayFormat.Typescript } },
+            meta: appendJayMetadata(context, id, { format: JayFormat.Typescript, originalId: id }),
         };
     }
 
@@ -101,7 +100,10 @@ async function loadJayHtmlFile(
     const jayCode = (await readFile(sourcePath)).toString();
     checkCodeErrors(jayCode);
     context.debug(`[load] end ${id}`);
-    return { code: jayCode, meta: { jay: { format: JayFormat.Html } } };
+    return {
+        code: jayCode,
+        meta: appendJayMetadata(context, id, { format: JayFormat.Html, originalId: sourcePath }),
+    };
 }
 
 async function loadJayTsFile(
@@ -112,7 +114,10 @@ async function loadJayTsFile(
     context.debug(`[load] start ${id}`);
     const code = await readFileAsString(sourcePath);
     context.debug(`[load] end ${id}`);
-    return { code };
+    return {
+        code,
+        meta: appendJayMetadata(context, id, { format: JayFormat.Html, originalId: sourcePath }),
+    };
 }
 
 async function transformJayHtmlFile(

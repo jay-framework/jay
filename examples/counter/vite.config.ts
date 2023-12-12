@@ -1,8 +1,8 @@
 import { resolve } from 'path';
 import Inspect from 'vite-plugin-inspect';
-import ViteRestart from 'vite-plugin-restart';
 import { defineConfig } from 'vitest/config';
 import { JayRollupConfig, jayRuntime } from 'rollup-plugin-jay';
+import { ModuleNode, ViteDevServer } from 'vite';
 
 const root = resolve(__dirname);
 const jayOptions: JayRollupConfig = {
@@ -16,11 +16,26 @@ export default defineConfig(({ mode }) => {
 
     return {
         plugins: [
-            ViteRestart({
-                restart: ['../../packages/rollup-plugin/dist/index.js'],
-            }),
             Inspect(),
-            { enforce: 'pre', ...jayRuntime(jayOptions) },
+            {
+                enforce: 'pre',
+                ...jayRuntime(jayOptions),
+                handleHotUpdate({
+                    file,
+                    modules,
+                    server,
+                }: {
+                    file: string;
+                    modules: ModuleNode[];
+                    server: ViteDevServer;
+                }): ModuleNode[] {
+                    if (modules.length === 0 && file.endsWith('.jay-html')) {
+                        const tsFile = server.moduleGraph.getModuleById(`${file}.ts`);
+                        return tsFile ? [tsFile] : [];
+                    }
+                    return modules;
+                },
+            },
         ],
         worker: {
             rollupOptions: {
@@ -28,7 +43,6 @@ export default defineConfig(({ mode }) => {
             },
         },
         root,
-
         optimizeDeps: { entries: [] },
         build: {
             emptyOutDir: true,
