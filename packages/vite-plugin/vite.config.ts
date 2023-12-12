@@ -8,16 +8,12 @@ export default defineConfig({
         ssr: resolve(__dirname, 'lib/index.ts'),
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
-            name: 'rollupPluginJay',
+            name: 'vitePluginJay',
             fileName: 'index',
             formats: ['cjs'],
         },
         rollupOptions: {
-            external: ['jay-compiler'],
+            external: ['jay-compiler', 'rollup-plugin-jay'],
         },
-    },
-    test: {
-        globals: true,
-        setupFiles: 'jay-dev-environment/library-dom/vitest.setup.ts',
     },
 });

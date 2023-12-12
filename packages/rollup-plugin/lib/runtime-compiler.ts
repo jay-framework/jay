@@ -18,16 +18,11 @@ import path from 'node:path';
 import { readFile } from 'node:fs/promises';
 import * as ts from 'typescript';
 import { transform } from 'typescript';
-import { JayPluginContext } from './jay-plugin-context.ts';
-import {
-    getFileContext,
-    readFileAsString,
-    readFileWhenExists,
-    writeGeneratedFile,
-} from './files.ts';
-import { checkCodeErrors, checkDiagnosticsErrors, checkValidationErrors } from './errors.ts';
-import { appendJayMetadata, JayFormat } from './metadata.ts';
-import { watchChangesFor } from './watch.ts';
+import { JayPluginContext } from './jay-plugin-context';
+import { getFileContext, readFileAsString, readFileWhenExists, writeGeneratedFile } from './files';
+import { checkCodeErrors, checkDiagnosticsErrors, checkValidationErrors } from './errors';
+import { appendJayMetadata, JayFormat } from './metadata';
+import { watchChangesFor } from './watch';
 
 const TYPESCRIPT_EXTENSION = '.ts';
 

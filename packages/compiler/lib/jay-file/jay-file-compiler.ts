@@ -31,7 +31,7 @@ import {
     JayTypeAlias,
     JayUnknown,
 } from '../core/jay-file-types';
-import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode.ts';
+import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
 
 class Indent {
     private readonly base: string;

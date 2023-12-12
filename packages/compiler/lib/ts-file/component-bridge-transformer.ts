@@ -1,6 +1,6 @@
 import ts from 'typescript';
-import { getModeFileExtension, hasExtension, RuntimeMode } from '../core/runtime-mode.ts';
-import { JAY_EXTENSION } from '../core/constants.ts';
+import { getModeFileExtension, hasExtension, RuntimeMode } from '../core/runtime-mode';
+import { JAY_EXTENSION } from '../core/constants';
 
 function transformVariableStatement(node: ts.VariableStatement, factory: ts.NodeFactory) {
     let declarations = node.declarationList.declarations;
