@@ -5,9 +5,9 @@
   "description": "",
   "scripts": {
     "definitions": "jay-cli definitions ./lib",
-    "build:js": "rollup -c rollup.config.js",
+    "build:js": "rollup -c rollup.config.js --no-watch.clearScreen",
     "build": "npm run definitions && npm run build:js",
-    "build:watch": "npm run rollup -- --watch",
+    "build:watch": "npm run build:js -- --watch",
     "confirm": "npm run clean && npm run build && npm run test",
     "clean": "rimraf dist && rimraf dist-secure && (rimraf -g lib/**/*.jay-html.ts || :) && (rimraf -g lib/**/*.d.ts || :) && (rimraf -g lib-secure/**/*.d.ts || :)",
     "mk-secure": "npm run jay && mv ./lib/item.jay-html.ts ./lib-secure/main && mv ./lib/todo.jay-html.ts ./lib-secure/main && cp ./lib/item.ts ./lib-secure/sandbox && cp ./lib/todo.ts ./lib-secure/sandbox && cp ./lib/uuid.ts ./lib-secure/sandbox",
@@ -37,7 +37,6 @@
     "tslib": "^2.6.2",
     "typescript": "^5.3.2",
     "vite": "^5.0.5",
-    "vite-plugin-inspect": "^0.8.1",
-    "vite-plugin-restart": "^0.4.0"
+    "vite-plugin-inspect": "^0.8.1"
   }
 }

@@ -1,6 +1,5 @@
 import { resolve } from 'path';
 import Inspect from 'vite-plugin-inspect';
-import ViteRestart from 'vite-plugin-restart';
 import { defineConfig } from 'vitest/config';
 import { JayRollupConfig, jayRuntime } from 'rollup-plugin-jay';
 

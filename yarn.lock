@@ -4287,6 +4287,7 @@ __metadata:
     jay-dev-environment: "workspace:^"
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
+    nodemon: ^3.0.2
     rimraf: ^5.0.5
     rollup: ^4.6.1
     rollup-plugin-copy: ^3.5.0
@@ -4297,7 +4298,6 @@ __metadata:
     typescript: ^5.3.2
     vite: ^5.0.5
     vite-plugin-inspect: ^0.8.1
-    vite-plugin-restart: ^0.4.0
   languageName: unknown
   linkType: soft
 
@@ -4314,6 +4314,7 @@ __metadata:
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
     jay-secure: "workspace:^"
+    nodemon: ^3.0.2
     rimraf: ^5.0.5
     rollup: ^4.6.1
     rollup-plugin-copy: ^3.5.0
@@ -4324,7 +4325,6 @@ __metadata:
     typescript: ^5.3.2
     vite: ^5.0.5
     vite-plugin-inspect: ^0.8.1
-    vite-plugin-restart: ^0.4.0
   languageName: unknown
   linkType: soft
 
@@ -4357,7 +4357,6 @@ __metadata:
     typescript: ^5.3.2
     vite: ^5.0.5
     vite-plugin-inspect: ^0.8.1
-    vite-plugin-restart: ^0.4.0
   languageName: unknown
   linkType: soft
 
@@ -4376,6 +4375,7 @@ __metadata:
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
     jay-secure: "workspace:^"
+    nodemon: ^3.0.2
     rimraf: ^5.0.5
     rollup: ^4.6.1
     rollup-plugin-copy: ^3.5.0
@@ -4386,7 +4386,6 @@ __metadata:
     typescript: ^5.3.2
     vite: ^5.0.5
     vite-plugin-inspect: ^0.8.1
-    vite-plugin-restart: ^0.4.0
   languageName: unknown
   linkType: soft
 
@@ -4416,7 +4415,6 @@ __metadata:
     typescript: ^5.3.2
     vite: ^5.0.5
     vite-plugin-inspect: ^0.8.1
-    vite-plugin-restart: ^0.4.0
   languageName: unknown
   linkType: soft
 
@@ -4436,6 +4434,7 @@ __metadata:
     jay-runtime: "workspace:^"
     jay-secure: "workspace:^"
     jay-serialization: "workspace:^"
+    nodemon: ^3.0.2
     rimraf: ^5.0.5
     rollup: ^4.6.1
     rollup-plugin-copy: ^3.5.0
@@ -4446,7 +4445,6 @@ __metadata:
     typescript: ^5.3.2
     vite: ^5.0.5
     vite-plugin-inspect: ^0.8.1
-    vite-plugin-restart: ^0.4.0
   languageName: unknown
   linkType: soft
 
@@ -4463,6 +4461,7 @@ __metadata:
     jay-dev-environment: "workspace:^"
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
+    nodemon: ^3.0.2
     rimraf: ^5.0.5
     rollup: ^4.6.1
     rollup-plugin-copy: ^3.5.0
@@ -4473,7 +4472,6 @@ __metadata:
     typescript: ^5.3.2
     vite: ^5.0.5
     vite-plugin-inspect: ^0.8.1
-    vite-plugin-restart: ^0.4.0
   languageName: unknown
   linkType: soft
 
@@ -4492,6 +4490,7 @@ __metadata:
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
     jay-serialization: "workspace:^"
+    nodemon: ^3.0.2
     rimraf: ^5.0.5
     rollup: ^4.6.1
     rollup-plugin-copy: ^3.5.0
@@ -4502,7 +4501,6 @@ __metadata:
     typescript: ^5.3.2
     vite: ^5.0.5
     vite-plugin-inspect: ^0.8.1
-    vite-plugin-restart: ^0.4.0
   languageName: unknown
   linkType: soft
 
@@ -4519,6 +4517,7 @@ __metadata:
     jay-dev-environment: "workspace:^"
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
+    nodemon: ^3.0.2
     rimraf: ^5.0.5
     rollup: ^4.6.1
     rollup-plugin-copy: ^3.5.0
@@ -4529,7 +4528,6 @@ __metadata:
     typescript: ^5.3.2
     vite: ^5.0.5
     vite-plugin-inspect: ^0.8.1
-    vite-plugin-restart: ^0.4.0
   languageName: unknown
   linkType: soft
 
@@ -5060,7 +5058,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"micromatch@npm:^4.0.4, micromatch@npm:^4.0.5":
+"micromatch@npm:^4.0.4":
   version: 4.0.5
   resolution: "micromatch@npm:4.0.5"
   dependencies:
@@ -7375,17 +7373,6 @@ __metadata:
     "@nuxt/kit":
       optional: true
   checksum: e9f0a5472c27c0524c38e6138aef8b5c39dd0da2e3db94d29a93233fc6789d96718e859e8446c6313c0de5a455c34fcf92c0d99c41a7b2b4f976c4bc45a9be9c
-  languageName: node
-  linkType: hard
-
-"vite-plugin-restart@npm:^0.4.0":
-  version: 0.4.0
-  resolution: "vite-plugin-restart@npm:0.4.0"
-  dependencies:
-    micromatch: ^4.0.5
-  peerDependencies:
-    vite: ^2.9.0 || ^3.0.0 || ^4.0.0 || ^5.0.0
-  checksum: 755d2af123374269b3ecf20f58fece72e28ecbac53ced7d713cc17e9576e48546c42d9eec24423676f8fdda4df79a3db0ae428b68c04f034d71a5e0773f8c9d8
   languageName: node
   linkType: hard
 

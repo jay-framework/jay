@@ -7,7 +7,7 @@
     "build": "npm run definitions && npm run build:js",
     "definitions": "jay-cli definitions src",
     "build:js": "vite build --base ./",
-    "build:watch": "vite --force",
+    "build:watch": "nodemon --watch '../../packages/rollup-plugin/dist/index.js' -x \"DEBUG=vite:hmr,jay:*  vite --open\"",
     "clean": "rimraf dist && (rimraf -g src/**/*.d.ts || :)",
     "confirm": "npm run clean && npm run build && npm run test",
     "test": ":"
@@ -24,6 +24,7 @@
     "@babel/preset-typescript": "^7.23.3",
     "jay-cli": "workspace:^",
     "jay-dev-environment": "workspace:^",
+    "nodemon": "^3.0.2",
     "rimraf": "^5.0.5",
     "rollup": "^4.6.1",
     "rollup-plugin-copy": "^3.5.0",
@@ -33,7 +34,6 @@
     "tslib": "^2.6.2",
     "typescript": "^5.3.2",
     "vite": "^5.0.5",
-    "vite-plugin-inspect": "^0.8.1",
-    "vite-plugin-restart": "^0.4.0"
+    "vite-plugin-inspect": "^0.8.1"
   }
 }
