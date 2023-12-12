@@ -8,7 +8,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { rimraf } from 'rimraf';
 import { resolve } from 'path';
-import { readFileWhenExists } from '../../lib/files.ts';
+import { readFileWhenExists } from '../../lib/files';
 
 async function generateProject(projectRoot: string): Promise<RollupBuild> {
     const tsConfigFilePath = `${projectRoot}/source/tsconfig.json`;

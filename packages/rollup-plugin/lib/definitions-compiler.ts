@@ -8,8 +8,8 @@ import { LoadResult, PluginContext, TransformResult } from 'rollup';
 import { getFileContext, readFileAsString, writeDefinitionFile } from './files';
 import { generateRefsComponents, getRefsFilePaths } from './refs-compiler';
 import path from 'node:path';
-import { JAY_EXTENSION } from '../../compiler/lib/core/constants.ts';
-import { checkCodeErrors, checkValidationErrors } from './errors.ts';
+import { JAY_EXTENSION } from '../../compiler/lib/core/constants';
+import { checkCodeErrors, checkValidationErrors } from './errors';
 
 export function jayDefinitions() {
     const generatedRefPaths: Set<string> = new Set();
