@@ -17,7 +17,10 @@ import {
 } from './test-utils/file-utils';
 import * as ts from 'typescript';
 import { componentBridgeTransformer } from '../lib/ts-file/component-bridge-transformer';
-import { readAndParseJayFile } from './test-utils/compiler-utils';
+import {
+    readAndParseJayFile,
+    readFileAndGenerateElementBridgeFile,
+} from './test-utils/compiler-utils';
 
 describe('generate full project', () => {
     const relativePath = './test/fixtures/tsconfig.json';
@@ -29,11 +32,12 @@ describe('generate full project', () => {
                     'sandboxed/sandboxed-counter/source',
                     'app',
                 );
-                let sandboxRootFile = generateSandboxRootFile(
+                const parsedFile = parseJayFile(
                     jayFile,
                     'app.jay-html',
                     './test/fixtures/sandboxed/sandboxed-counter/source',
                 );
+                let sandboxRootFile = generateSandboxRootFile(parsedFile);
                 expect(sandboxRootFile.validations).toEqual([]);
                 expect(await prettify(sandboxRootFile.val)).toEqual(
                     await readGeneratedNamedFile(
@@ -44,15 +48,9 @@ describe('generate full project', () => {
             });
 
             it('generates counter element', async () => {
-                const jayFile = await readNamedSourceJayFile(
+                const runtimeFile = await readFileAndGenerateElementBridgeFile(
                     'sandboxed/sandboxed-counter/source',
                     'counter',
-                );
-                let runtimeFile = generateElementBridgeFile(
-                    jayFile,
-                    'counter.jay-html',
-                    './sandboxed/sandboxed-counter-source',
-                    RuntimeMode.SandboxMain,
                 );
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(

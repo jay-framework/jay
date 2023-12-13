@@ -6,8 +6,8 @@ const JAY_TS_COMPILER_OPTIONS_OVERRIDE: CompilerOptions = { noEmit: false };
 
 import * as os from 'os';
 import { FormatDiagnosticsHost } from 'typescript';
-import { withOriginalTrace } from './errors';
-import { JayRollupConfig } from './types';
+import { JayRollupConfig } from './common/types';
+import { withOriginalTrace } from 'jay-compiler';
 
 const diagnosticsHost: FormatDiagnosticsHost = {
     getCanonicalFileName: (fileName) => fileName,

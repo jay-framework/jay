@@ -1,4 +1,4 @@
 export * from '../../compiler/lib/core/constants';
-export * from './runtime-compiler';
-export * from './definitions-compiler';
-export * from './types';
+export * from './runtime/runtime-compiler';
+export * from './definitions/definitions-compiler';
+export * from './common/types';

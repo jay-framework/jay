@@ -5,11 +5,11 @@ import {
     parseJayFile,
 } from 'jay-compiler';
 import { LoadResult, PluginContext, TransformResult } from 'rollup';
-import { getFileContext, readFileAsString, writeDefinitionFile } from './files';
+import { getFileContext, readFileAsString, writeDefinitionFile } from '../common/files';
 import { generateRefsComponents, getRefsFilePaths } from './refs-compiler';
 import path from 'node:path';
-import { JAY_EXTENSION } from '../../compiler/lib/core/constants';
-import { checkCodeErrors, checkValidationErrors } from './errors';
+import { JAY_EXTENSION } from '../../../compiler/lib/core/constants';
+import { checkCodeErrors, checkValidationErrors } from '../common/errors';
 
 export function jayDefinitions() {
     const generatedRefPaths: Set<string> = new Set();
