@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import {mkTransformer, Visitor} from "./mk-transformer.ts";
+import {mkTransformer} from "./mk-transformer.ts";
 
 function transformVariableStatement(node: ts.VariableStatement, factory: ts.NodeFactory) {
     let declarations = node.declarationList.declarations;
@@ -84,7 +84,7 @@ function transformImport(
 }
 
 const mkVisitor = (factory: ts.NodeFactory, context: ts.TransformationContext, allowedJayElementModules: string[]) => {
-    const visitor: Visitor = (node) => {
+    const visitor: ts.Visitor = (node) => {
         if (ts.isFunctionDeclaration(node)) return undefined;
         else if (ts.isInterfaceDeclaration(node)) return node;
         else if (ts.isImportDeclaration(node))
@@ -95,10 +95,13 @@ const mkVisitor = (factory: ts.NodeFactory, context: ts.TransformationContext, a
     return visitor;
 }
 
+function mkSourceFileTransformer(factory: ts.NodeFactory, context: ts.TransformationContext, allowedJayElementModules: string[], sourceFile: ts.SourceFile) {
+    return ts.visitEachChild(sourceFile, mkVisitor(factory, context, allowedJayElementModules), context);
+}
 
 export function componentBridgeTransformer(
     allowedJayElementModules: string[],
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
-    return mkTransformer(allowedJayElementModules, mkVisitor);
+    return mkTransformer(allowedJayElementModules, mkSourceFileTransformer);
 }
 
