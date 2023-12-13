@@ -1,6 +1,5 @@
 import { prettify } from '../lib';
 import { readGeneratedElementFile } from './test-utils/file-utils';
-import { removeComments } from '../lib/utils/prettify';
 import { readFileAndGenerateElementFile } from './test-utils/compiler-utils';
 
 describe('generate the runtime file', () => {
@@ -148,27 +147,21 @@ describe('generate the runtime file', () => {
             const folder = 'components/recursive-components';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(
-                removeComments(await readGeneratedElementFile(folder)),
-            );
+            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
         });
 
         it('recursive-components-2', async () => {
             const folder = 'components/recursive-components-2';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(
-                removeComments(await readGeneratedElementFile(folder)),
-            );
+            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
         });
 
         it('tree', async () => {
             const folder = 'components/tree';
             const elementFile = await readFileAndGenerateElementFile(folder, 'tree-node');
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(
-                removeComments(await readGeneratedElementFile(folder)),
-            );
+            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
         });
     });
 });

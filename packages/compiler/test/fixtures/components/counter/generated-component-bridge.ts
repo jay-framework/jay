@@ -1,3 +1,4 @@
+// @ts-expect-error Cannot find module
 import { render } from './generated-element?jay-sandboxMain';
 import { makeJayComponentBridge } from 'jay-secure';
 export interface CounterProps {

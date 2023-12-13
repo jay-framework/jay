@@ -14,19 +14,9 @@ export default defineConfig(({ mode }) => {
         mode === 'production' ? [] : ['jay-component', 'jay-reactive', 'jay-runtime', 'jay-secure'];
 
     return {
-        plugins: [
-            ViteRestart({
-                restart: ['../../../../../dist/index.js'],
-            }),
-            Inspect(),
-            jayRuntime({
-                tsConfigFilePath: resolve(root, 'tsconfig.json'),
-            }),
-        ],
+        plugins: [Inspect(), jayRuntime(jayOptions)],
         worker: {
-            rollupOptions: {
-                external,
-            },
+            rollupOptions: { external },
         },
         root,
         optimizeDeps: {
@@ -36,12 +26,7 @@ export default defineConfig(({ mode }) => {
             emptyOutDir: true,
             minify: false,
             target: 'es2020',
-            rollupOptions: {
-                external,
-                input: {
-                    main: resolve(root, 'index.html'),
-                },
-            },
+            rollupOptions: { external },
         },
     };
 });
