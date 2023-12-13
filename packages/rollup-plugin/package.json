@@ -22,6 +22,7 @@
   "devDependencies": {
     "@types/node": "^20.10.3",
     "jay-dev-environment": "workspace:^",
+    "rollup-plugin-typescript2": "^0.36.0",
     "rimraf": "^5.0.5",
     "rollup": "^4.6.1",
     "tsup": "^8.0.1",
