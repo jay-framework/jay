@@ -8,7 +8,7 @@ import {
 } from 'jay-secure';
 import { CounterRef, CounterRefs } from '../counter/counter-refs';
 // @ts-expect-error Cannot find module
-import { Counter } from '../counter/counter?jay-sandboxWorker';
+import { Counter } from '../counter/counter?jay-workerSandbox';
 
 export interface NestedCounter {
     counter: number;

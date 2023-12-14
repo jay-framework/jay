@@ -45,14 +45,14 @@ export async function readFileAndGenerateElementFile(folder: string, givenFile?:
     const file = givenFile || getFileFromFolder(folder);
     const jayFile = await readNamedSourceJayFile(folder, file);
     const parsedFile = parseJayFile(jayFile, `${file}.jay-html`, dirname);
-    return generateElementFile(parsedFile, RuntimeMode.SandboxMain);
+    return generateElementFile(parsedFile, RuntimeMode.MainSandbox);
 }
 
 export async function readFileAndGenerateComponentBridgeFile(folder: string, givenFile?: string) {
     const file = givenFile ?? `${getFileFromFolder(folder)}.ts`;
     const sourceFile = await readTsSourceFile(folder, file);
     const outputFile = ts.transform(sourceFile, [
-        componentBridgeTransformer(RuntimeMode.SandboxMain),
+        componentBridgeTransformer(RuntimeMode.MainSandbox),
     ]);
     return await prettify(await printTsFile(outputFile));
 }

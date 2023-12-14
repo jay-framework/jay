@@ -7,7 +7,7 @@ import {
 } from 'jay-runtime';
 import { mainRoot as mr, secureChildComp } from 'jay-secure';
 import { CounterRef } from './counter-refs';
-import { Counter } from './counter?jay-sandboxMain';
+import { Counter } from './counter?jay-mainSandbox';
 
 export interface AppViewState {
     incrementBy: number;
@@ -25,11 +25,6 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
         () =>
             mr(viewState, () =>
                 e('div', {}, [
-                    e(
-                        'input',
-                        { type: 'number', id: 'interval', name: 'increment', min: '1', max: '100' },
-                        [],
-                    ),
                     secureChildComp(
                         Counter,
                         (vs: AppViewState) => ({ initialValue: 12, incrementBy: vs.incrementBy }),

@@ -6,7 +6,7 @@ import { JayRollupConfig, jayRuntime } from 'vite-plugin-jay';
 const root = resolve(__dirname);
 const jayOptions: JayRollupConfig = {
     tsConfigFilePath: resolve(root, 'tsconfig.json'),
-    outputDir: 'dist/jay-runtime',
+    outputDir: 'build/jay-runtime',
 };
 
 export default defineConfig(({ mode }) => {
@@ -16,9 +16,7 @@ export default defineConfig(({ mode }) => {
     return {
         plugins: [Inspect(), jayRuntime(jayOptions)],
         worker: {
-            rollupOptions: {
-                external,
-            },
+            plugins: () => [jayRuntime(jayOptions)],
         },
         root,
         optimizeDeps: { entries: [] },

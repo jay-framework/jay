@@ -1,9 +1,8 @@
 import { render } from './app.jay-html';
-import { JayPort, setMainPort } from 'jay-secure';
-import { HandshakeMessageJayChannel } from 'jay-secure';
+import { JayPort, setMainPort, HandshakeMessageJayChannel } from 'jay-secure';
 import './index.css';
 
-const jayWorker = new Worker(new URL('./sandbox/sandbox-root', import.meta.url), {
+const jayWorker = new Worker(new URL('jay-sandbox:./sandbox-root', import.meta.url), {
     type: 'module',
 });
 

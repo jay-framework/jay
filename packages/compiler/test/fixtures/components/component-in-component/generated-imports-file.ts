@@ -1,2 +1,2 @@
-import '../counter/counter';
-import '../counter/generated-element';
+import '../counter/counter?jay-workerTrusted';
+import '../counter/generated-element?jay-workerTrusted';

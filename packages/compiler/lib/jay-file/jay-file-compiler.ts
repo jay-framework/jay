@@ -922,7 +922,7 @@ export function generateElementDefinitionFile(
                 ImportsFor.definition,
                 jayFile.imports,
                 refImportsInUse,
-                RuntimeMode.Trusted,
+                RuntimeMode.MainTrusted,
             ),
             types,
             renderedRefs,
@@ -998,7 +998,7 @@ export function generateElementBridgeFile(
                 ImportsFor.elementSandbox,
                 jayFile.imports,
                 refImportsInUse,
-                RuntimeMode.SandboxWorker,
+                RuntimeMode.WorkerSandbox,
             ),
             types,
             renderedRefs,
@@ -1033,7 +1033,7 @@ export function generateSandboxRootFile(
             ImportsFor.elementSandbox,
             jayFile.imports,
             new Set(),
-            RuntimeMode.SandboxWorker,
+            RuntimeMode.WorkerSandbox,
         );
 
         let initializeWorker = `export function initializeWorker() {

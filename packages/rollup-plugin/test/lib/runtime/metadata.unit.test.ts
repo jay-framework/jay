@@ -1,6 +1,7 @@
 import {
     appendJayMetadata,
     getJayMetadata,
+    isWorkerRoot,
     JayFormat,
     JayMetadata,
 } from '../../../lib/runtime/metadata';
@@ -34,6 +35,22 @@ describe('metadata', () => {
         it('should return metadata', () => {
             const context = getContext();
             expect(getJayMetadata(context, id)).toEqual(originalMeta);
+        });
+    });
+
+    describe('isWorker', () => {
+        it('should return false', () => {
+            const context = getContext();
+            expect(isWorkerRoot(context, id)).toEqual(false);
+        });
+
+        describe('when jay metadata has isWorker = true', () => {
+            const metadata: JayMetadata = { isWorkerRoot: true };
+
+            it('should return true', () => {
+                const context = getContext(metadata);
+                expect(isWorkerRoot(context, id)).toEqual(true);
+            });
         });
     });
 });
