@@ -7,8 +7,8 @@
     "build": "npm run definitions && npm run build:js",
     "definitions": "jay-cli definitions src",
     "build:js": "vite build --base ./",
-    "build:watch": "nodemon --watch '../../packages/rollup-plugin/dist/index.js' -x \"DEBUG=vite:hmr,jay:*  vite --open\"",
-    "clean": "rimraf dist && (rimraf -g src/**/*.d.ts || :)",
+    "build:watch": "nodemon --watch '../../packages/rollup-plugin/dist/index.js' -x \"DEBUG=vite:hmr,jay:* vite --open\"",
+    "clean": "rimraf dist && rimraf build && (rimraf -g src/**/*.d.ts || :)",
     "confirm": "npm run clean && npm run build && npm run test",
     "test": ":"
   },

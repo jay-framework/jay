@@ -1,4 +1,4 @@
-import { render, CounterElementRefs } from './counter.jay-html?jay-sandboxWorker';
+import { render, CounterElementRefs } from './counter.jay-html?jay-workerSandbox';
 import { createState, makeJayComponent, Props } from 'jay-component';
 export interface CounterProps {
     initialValue: number;

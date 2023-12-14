@@ -91,7 +91,7 @@ describe('generate full project', () => {
                         'app.jay-html',
                         './test/fixtures/sandboxed/sandboxed-counter/source',
                     ),
-                    RuntimeMode.SandboxMain,
+                    RuntimeMode.MainSandbox,
                 );
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
@@ -113,7 +113,7 @@ describe('generate full project', () => {
                         'counter.jay-html',
                         './test/fixtures/sandboxed/sandboxed-counter/source',
                     ),
-                    RuntimeMode.SandboxMain,
+                    RuntimeMode.MainSandbox,
                 );
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
@@ -145,7 +145,7 @@ describe('generate full project', () => {
                 );
 
                 const outputFile = ts.transform(sourceFile, [
-                    componentBridgeTransformer(RuntimeMode.SandboxMain),
+                    componentBridgeTransformer(RuntimeMode.MainSandbox),
                 ]);
 
                 const outputCode = await printTsFile(outputFile);

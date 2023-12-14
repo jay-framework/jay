@@ -13,7 +13,7 @@ import {
     RenderElementOptions,
 } from 'jay-runtime';
 // @ts-expect-error Cannot find module
-import { TreeNode, Node } from './tree-node?jay-sandboxMain';
+import { TreeNode, Node } from './tree-node?jay-mainSandbox';
 
 export interface TreeNodeViewState {
     headChar: string;

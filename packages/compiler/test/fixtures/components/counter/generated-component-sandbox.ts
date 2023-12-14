@@ -1,5 +1,5 @@
 // @ts-expect-error Cannot find module
-import { CounterElementRefs, render } from './generated-element?jay-sandboxWorker';
+import { CounterElementRefs, render } from './generated-element?jay-workerSandbox';
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
 export interface CounterProps {
     initialValue: number;

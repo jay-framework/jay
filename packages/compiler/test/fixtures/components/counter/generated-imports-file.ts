@@ -1,1 +1,1 @@
-import './generated-element';
+import './generated-element?jay-workerTrusted';

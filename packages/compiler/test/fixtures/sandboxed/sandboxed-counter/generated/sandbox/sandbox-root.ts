@@ -6,7 +6,7 @@ import {
     JayPort,
     setWorkerPort,
 } from 'jay-secure';
-import { Counter } from './counter?jay-sandboxWorker';
+import { Counter } from './counter?jay-workerSandbox';
 
 export interface AppViewState {
     incrementBy: number;

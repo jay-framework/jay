@@ -14,7 +14,7 @@ export function componentSandboxTransformer(): (
 
         function visitor(node: ts.Node): ts.Node | ts.Node[] | undefined {
             if (ts.isImportDeclaration(node))
-                return transformImport(node, factory, RuntimeMode.SandboxWorker);
+                return transformImport(node, factory, RuntimeMode.WorkerSandbox);
             return ts.visitEachChild(node, visitor, context);
         }
     };

@@ -22,3 +22,7 @@ export function appendJayMetadata(
 export function getJayMetadata(context: PluginContext, id: string): JayMetadata {
     return context.getModuleInfo(id)?.meta?.jay ?? {};
 }
+
+export function isWorkerRoot(context: PluginContext, id: string): boolean {
+    return getJayMetadata(context, id).isWorkerRoot ?? false;
+}

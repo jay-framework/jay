@@ -33,18 +33,20 @@ export function transformTsCode(
 }
 
 export function transformJayHtmlParsedFile(
-    jayContext: JayPluginContext,
     mode: RuntimeMode,
     parsedFile: WithValidations<JayFile>,
 ): string {
-    if (jayContext.isMain) return validatedCode(generateElementFile(parsedFile, mode));
-
-    if (mode === RuntimeMode.SandboxWorker)
-        return validatedCode(generateElementBridgeFile(parsedFile));
-
-    if (hasSandboxImport(parsedFile)) return validatedCode(generateSandboxRootFile(parsedFile));
-
-    return generateImportsFileFromJayFile(parsedFile);
+    switch (mode) {
+        case RuntimeMode.MainTrusted:
+        case RuntimeMode.MainSandbox:
+            return validatedCode(generateElementFile(parsedFile, mode));
+        case RuntimeMode.WorkerSandbox:
+            return validatedCode(generateElementBridgeFile(parsedFile));
+        case RuntimeMode.WorkerTrusted:
+            return hasSandboxImport(parsedFile)
+                ? validatedCode(generateSandboxRootFile(parsedFile))
+                : generateImportsFileFromJayFile(parsedFile);
+    }
 }
 
 function hasSandboxImport(parsedFile: WithValidations<JayFile>): boolean {
@@ -57,16 +59,18 @@ export function transformJayTsCode(
     id: string,
     code: string,
 ): string {
-    if (jayContext.isMain) {
-        if (mode === RuntimeMode.Trusted) return code;
-        if (!code.includes('makeJayComponent')) return code;
-        return transformTsCode(jayContext, [componentBridgeTransformer(mode)], id, code);
+    switch (mode) {
+        case RuntimeMode.MainTrusted:
+            return code;
+        case RuntimeMode.MainSandbox: {
+            if (!code.includes('makeJayComponent')) return code;
+            return transformTsCode(jayContext, [componentBridgeTransformer(mode)], id, code);
+        }
+        case RuntimeMode.WorkerTrusted:
+            return generateImportsFileFromTsSource(id, code);
+        case RuntimeMode.WorkerSandbox:
+            return transformTsCode(jayContext, [componentSandboxTransformer()], id, code);
     }
-
-    if (mode === RuntimeMode.SandboxWorker)
-        return transformTsCode(jayContext, [componentSandboxTransformer()], id, code);
-
-    return generateImportsFileFromTsSource(id, code);
 }
 
 function validatedCode(code: WithValidations<string>): string {

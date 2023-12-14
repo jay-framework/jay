@@ -5,10 +5,10 @@
   "description": "",
   "scripts": {
     "definitions": "jay-cli definitions ./lib",
-    "clean": "rimraf dist && rimraf -g 'lib/**/*.d.ts'",
+    "clean": "rimraf dist && rimraf build && rimraf -g 'lib/**/*.d.ts'",
     "jay": "jay-cli runtime ./lib",
     "build:js": "vite build --base ./",
-    "build:watch": "nodemon --watch '../../packages/rollup-plugin/dist/index.js' -x \"DEBUG=vite:hmr,jay:*  vite --open\"",
+    "build:watch": "nodemon --watch '../../packages/rollup-plugin/dist/index.js' -x \"DEBUG=vite:hmr,jay:* vite --open\"",
     "build": "npm run definitions && npm run build:js",
     "confirm": "npm run clean && npm run build && npm run test",
     "test": ":"

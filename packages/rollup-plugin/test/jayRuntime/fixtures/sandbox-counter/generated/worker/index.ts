@@ -1,1 +1,1 @@
-import './app.jay-html';
+import './app.jay-html?jay-workerTrusted';
