@@ -1,6 +1,5 @@
 import ts from 'typescript';
-import { getModeFileExtension, hasExtension, RuntimeMode } from '../core/runtime-mode';
-import { JAY_EXTENSION } from '../core/constants';
+import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
 
 function transformVariableStatement(node: ts.VariableStatement, factory: ts.NodeFactory) {
     let declarations = node.declarationList.declarations;
@@ -53,7 +52,7 @@ function transformImport(
     node: ts.ImportDeclaration,
     factory: ts.NodeFactory,
     importerMode: RuntimeMode,
-) {
+): ts.ImportDeclaration {
     if (ts.isStringLiteral(node.moduleSpecifier)) {
         const originalTarget = node.moduleSpecifier.text;
         if (originalTarget === 'jay-component')

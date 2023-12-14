@@ -12,6 +12,7 @@ import {
     compCollectionRef as ccr,
     RenderElementOptions,
 } from 'jay-runtime';
+// @ts-expect-error Cannot find module
 import { TreeNode, Node } from './tree-node?jay-sandboxMain';
 
 export interface TreeNodeViewState {

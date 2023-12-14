@@ -4,6 +4,7 @@ import {
     componentBridgeTransformer,
     generateElementBridgeFile,
     generateElementFile,
+    generateImportsFileFromJayFile,
     parseJayFile,
     prettify,
     RuntimeMode,
@@ -17,6 +18,8 @@ import {
     readTestFile,
     readTsSourceFile,
 } from './file-utils';
+import { generateImportsFileFromTsSource } from '../../lib/ts-file/generate-imports-file';
+import { componentSandboxTransformer } from '../../lib/ts-file/component-sandbox-transformer';
 
 export async function readAndParseJayFile(
     folder: string,
@@ -29,11 +32,12 @@ export async function readAndParseJayFile(
     return parseJayFile(code, filename, dirname);
 }
 
-export async function readFileAndGenerateElementBridgeFile(folder: string) {
+export async function readFileAndGenerateElementBridgeFile(folder: string, givenFile?: string) {
     const dirname = path.resolve(__dirname, '../fixtures', folder);
-    const file = getFileFromFolder(folder);
+    const file = givenFile || getFileFromFolder(folder);
     const jayFile = await readNamedSourceJayFile(folder, file);
-    return generateElementBridgeFile(jayFile, `${file}.jay-html`, dirname, RuntimeMode.SandboxMain);
+    const parsedFile = parseJayFile(jayFile, `${file}.jay-html`, dirname);
+    return generateElementBridgeFile(parsedFile);
 }
 
 export async function readFileAndGenerateElementFile(folder: string, givenFile?: string) {
@@ -51,4 +55,33 @@ export async function readFileAndGenerateComponentBridgeFile(folder: string, giv
         componentBridgeTransformer(RuntimeMode.SandboxMain),
     ]);
     return await prettify(await printTsFile(outputFile));
+}
+
+export async function readFileAndGenerateComponentSandboxFile(folder: string, givenFile?: string) {
+    const file = givenFile ?? `${getFileFromFolder(folder)}.ts`;
+    const sourceFile = await readTsSourceFile(folder, file);
+    const outputFile = ts.transform(sourceFile, [componentSandboxTransformer()]);
+    return await prettify(await printTsFile(outputFile));
+}
+
+export async function readFileAndGenerateImportsFileFromTsFile(
+    folder: string,
+    givenFile?: string,
+): Promise<string> {
+    const file = givenFile ?? `${getFileFromFolder(folder)}.ts`;
+    const sourceFile = await readTestFile(folder, file);
+    const output = generateImportsFileFromTsSource(file, sourceFile);
+    return await prettify(output);
+}
+
+export async function readFileAndGenerateImportsFileFromJayFile(
+    folder: string,
+    givenFile?: string,
+): Promise<string> {
+    const dirname = path.resolve(__dirname, '../fixtures', folder);
+    const file = givenFile ?? `${getFileFromFolder(folder)}.jay-html`;
+    const sourceFile = await readTestFile(folder, file);
+    const parsedFile = parseJayFile(sourceFile, file, dirname);
+    const output = generateImportsFileFromJayFile(parsedFile);
+    return await prettify(output);
 }

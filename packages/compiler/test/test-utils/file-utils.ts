@@ -1,6 +1,7 @@
 import { promises } from 'node:fs';
 import path from 'node:path';
 import * as ts from 'typescript';
+import { removeComments } from '../../lib/utils/prettify';
 
 const { readFile } = promises;
 
@@ -25,9 +26,9 @@ export async function printTsFile(
 }
 
 export async function readTestFile(folder, filename) {
-    return (
-        await readFile(path.resolve(__dirname, `../fixtures/${folder}/${filename}`))
-    ).toString();
+    return removeComments(
+        (await readFile(path.resolve(__dirname, `../fixtures/${folder}/${filename}`))).toString(),
+    );
 }
 
 export async function readSourceJayFile(folder) {

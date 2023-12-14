@@ -7,7 +7,8 @@ import {
     sandboxForEach as forEach,
 } from 'jay-secure';
 import { CounterRef, CounterRefs } from '../counter/counter-refs';
-import { Counter } from '../counter/counter?jay-sandboxMain';
+// @ts-expect-error Cannot find module
+import { Counter } from '../counter/counter?jay-sandboxWorker';
 
 export interface NestedCounter {
     counter: number;

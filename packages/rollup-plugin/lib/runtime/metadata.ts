@@ -8,6 +8,7 @@ export enum JayFormat {
 export interface JayMetadata {
     originalId?: string;
     format?: JayFormat;
+    isWorkerRoot?: boolean;
 }
 
 export function appendJayMetadata(
@@ -15,6 +16,9 @@ export function appendJayMetadata(
     id: string,
     metadata: JayMetadata,
 ): { jay: JayMetadata } {
-    const jayMeta = context.getModuleInfo(id)?.meta?.jay ?? {};
-    return { jay: { ...jayMeta, ...metadata } };
+    return { jay: { ...getJayMetadata(context, id), ...metadata } };
+}
+
+export function getJayMetadata(context: PluginContext, id: string): JayMetadata {
+    return context.getModuleInfo(id)?.meta?.jay ?? {};
 }

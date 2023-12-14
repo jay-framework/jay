@@ -967,12 +967,8 @@ export function generateElementFile(
 }
 
 export function generateElementBridgeFile(
-    html: string,
-    filename: string,
-    filePath: string,
-    importerMode: RuntimeMode,
+    parsedFile: WithValidations<JayFile>,
 ): WithValidations<string> {
-    let parsedFile = parseJayFile(html, filename, filePath);
     return parsedFile.map((jayFile: JayFile) => {
         let types = generateTypes(jayFile.types);
         let {
@@ -1002,7 +998,7 @@ export function generateElementBridgeFile(
                 ImportsFor.elementSandbox,
                 jayFile.imports,
                 refImportsInUse,
-                importerMode,
+                RuntimeMode.SandboxWorker,
             ),
             types,
             renderedRefs,
@@ -1018,11 +1014,8 @@ const CALL_INITIALIZE_WORKER = `setWorkerPort(new JayPort(new HandshakeMessageJa
 initializeWorker();`;
 
 export function generateSandboxRootFile(
-    html: string,
-    filename: string,
-    filePath: string,
+    parsedFile: WithValidations<JayFile>,
 ): WithValidations<string> {
-    let parsedFile = parseJayFile(html, filename, filePath);
     return parsedFile.map((jayFile: JayFile) => {
         // let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(
         //     jayFile.imports,

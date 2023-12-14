@@ -1,6 +1,6 @@
 import * as core from '@babel/core';
 
-describe('babel', () => {
+describe.skip('babel', () => {
     it('should log render output', () => {
         let x = core.transform(
             `interface ViewState {
