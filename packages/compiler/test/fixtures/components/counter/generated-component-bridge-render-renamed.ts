@@ -1,4 +1,4 @@
-import { render as BasicRender } from './generated-element?jay-sandboxMain';
+import { render as BasicRender } from './generated-element?jay-mainSandbox';
 import { makeJayComponentBridge } from 'jay-secure';
 export interface CounterProps {
     initialValue: number;

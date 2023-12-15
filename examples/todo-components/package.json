@@ -6,10 +6,10 @@
   "scripts": {
     "definitions": "jay-cli definitions ./lib",
     "build:js": "vite build --base ./",
-    "build:watch": "nodemon --watch '../../packages/rollup-plugin/dist/index.js' -x \"DEBUG=vite:hmr,jay:*  vite --open\"",
+    "build:watch": "nodemon --watch '../../packages/rollup-plugin/dist/index.js' -x \"DEBUG=vite:hmr,jay:* vite --open\"",
     "build": "npm run definitions && npm run build:js",
     "confirm": "npm run clean && npm run build && npm run test",
-    "clean": "rimraf dist && rimraf dist-secure && (rimraf -g lib/**/*.jay-html.ts || :) && (rimraf -g lib/**/*.d.ts || :) && (rimraf -g lib-secure/**/*.d.ts || :)",
+    "clean": "rimraf dist && rimraf build && rimraf dist-secure && (rimraf -g lib/**/*.jay-html.ts || :) && (rimraf -g lib/**/*.d.ts || :) && (rimraf -g lib-secure/**/*.d.ts || :)",
     "mk-secure": "npm run jay && mv ./lib/item.jay-html.ts ./lib-secure/main && mv ./lib/todo.jay-html.ts ./lib-secure/main && cp ./lib/item.ts ./lib-secure/sandbox && cp ./lib/todo.ts ./lib-secure/sandbox && cp ./lib/uuid.ts ./lib-secure/sandbox",
     "test": ":"
   },

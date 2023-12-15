@@ -2,9 +2,9 @@ import { JayElement } from 'jay-runtime';
 import { elementBridge, sandboxChildComp as childComp, compRef as cr } from 'jay-secure';
 import { CounterRef } from '../counter/counter-refs';
 // @ts-expect-error Cannot find module
-import { Counter } from '../counter/counter?jay-sandboxWorker';
+import { Counter } from '../counter/counter?jay-workerSandbox';
 // @ts-expect-error Cannot find module
-import { CounterViewState as CounterData } from '../counter/generated-element?jay-sandboxWorker';
+import { CounterViewState as CounterData } from '../counter/generated-element?jay-workerSandbox';
 
 export interface ComponentInComponentViewState {
     count1: number;

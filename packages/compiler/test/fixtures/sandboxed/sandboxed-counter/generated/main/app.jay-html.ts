@@ -7,7 +7,7 @@ import {
 } from 'jay-runtime';
 import { mainRoot as mr, secureChildComp } from 'jay-secure';
 import { CounterRef } from './counter-refs';
-import { Counter } from './counter?jay-sandboxMain';
+import { Counter } from './counter?jay-mainSandbox';
 
 export interface AppViewState {
     incrementBy: number;

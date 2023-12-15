@@ -1,17 +1,20 @@
 export enum RuntimeMode {
-    Trusted = 'trusted',
-    SandboxMain = 'sandboxMain',
-    SandboxWorker = 'sandboxWorker',
+    MainTrusted = 'mainTrusted',
+    MainSandbox = 'mainSandbox',
+    WorkerTrusted = 'workerTrusted',
+    WorkerSandbox = 'workerSandbox',
 }
 
 export const TS_EXTENSION = '.ts';
 export const JAY_QUERY_PREFIX = '?jay-';
 
-export const JAY_QUERY_SANDBOX_MAIN = `${JAY_QUERY_PREFIX}${RuntimeMode.SandboxMain}`;
-export const JAY_QUERY_SANDBOX_WORKER = `${JAY_QUERY_PREFIX}${RuntimeMode.SandboxWorker}`;
+export const JAY_QUERY_MAIN_SANDBOX = `${JAY_QUERY_PREFIX}${RuntimeMode.MainSandbox}`;
+export const JAY_QUERY_WORKER_TRUSTED = `${JAY_QUERY_PREFIX}${RuntimeMode.WorkerTrusted}`;
+export const JAY_QUERY_WORKER_SANDBOX = `${JAY_QUERY_PREFIX}${RuntimeMode.WorkerSandbox}`;
 
-export const JAY_QUERY_SANDBOX_MAIN_TS = `${JAY_QUERY_PREFIX}${RuntimeMode.SandboxMain}${TS_EXTENSION}`;
-export const JAY_QUERY_SANDBOX_WORKER_TS = `${JAY_QUERY_PREFIX}${RuntimeMode.SandboxWorker}${TS_EXTENSION}`;
+export const JAY_QUERY_MAIN_SANDBOX_TS = `${JAY_QUERY_PREFIX}${RuntimeMode.MainSandbox}${TS_EXTENSION}`;
+export const JAY_QUERY_WORKER_TRUSTED_TS = `${JAY_QUERY_PREFIX}${RuntimeMode.WorkerTrusted}${TS_EXTENSION}`;
+export const JAY_QUERY_WORKER_SANDBOX_TS = `${JAY_QUERY_PREFIX}${RuntimeMode.WorkerSandbox}${TS_EXTENSION}`;
 
 export function hasExtension(
     filename: string,
@@ -27,8 +30,9 @@ export function hasJayModeExtension(
     { withTs = false }: { withTs?: boolean } = {},
 ): boolean {
     return (
-        hasExtension(filename, JAY_QUERY_SANDBOX_MAIN, { withTs }) ||
-        hasExtension(filename, JAY_QUERY_SANDBOX_WORKER, { withTs })
+        hasExtension(filename, JAY_QUERY_MAIN_SANDBOX, { withTs }) ||
+        hasExtension(filename, JAY_QUERY_WORKER_TRUSTED, { withTs }) ||
+        hasExtension(filename, JAY_QUERY_WORKER_SANDBOX, { withTs })
     );
 }
 
@@ -39,13 +43,17 @@ export function getModeFileExtension(
 ): string {
     const tsExtension = withTs ? TS_EXTENSION : '';
     const mode = getMode(isSandbox, importerMode);
-    return mode === RuntimeMode.Trusted ? tsExtension : `${JAY_QUERY_PREFIX}${mode}${tsExtension}`;
+    return mode === RuntimeMode.MainTrusted
+        ? tsExtension
+        : `${JAY_QUERY_PREFIX}${mode}${tsExtension}`;
 }
 
 export function getMode(isSandbox: boolean, importerMode: RuntimeMode): RuntimeMode {
     switch (importerMode) {
-        case RuntimeMode.Trusted:
-            return isSandbox ? RuntimeMode.SandboxMain : RuntimeMode.Trusted;
+        case RuntimeMode.MainTrusted:
+            return isSandbox ? RuntimeMode.MainSandbox : RuntimeMode.MainTrusted;
+        case RuntimeMode.WorkerTrusted:
+            return isSandbox ? RuntimeMode.WorkerSandbox : RuntimeMode.WorkerTrusted;
         default:
             return importerMode;
     }
@@ -55,12 +63,14 @@ export function getModeFromExtension(filename: string): RuntimeMode {
     // extracts mode from *.jay-html?jay-[mode].ts or *.ts?jay-[mode].ts
     const modeString = `?${filename.split('?').pop()}`;
     switch (modeString) {
-        case JAY_QUERY_SANDBOX_MAIN_TS:
-            return RuntimeMode.SandboxMain;
-        case JAY_QUERY_SANDBOX_WORKER_TS:
-            return RuntimeMode.SandboxWorker;
+        case JAY_QUERY_MAIN_SANDBOX_TS:
+            return RuntimeMode.MainSandbox;
+        case JAY_QUERY_WORKER_TRUSTED_TS:
+            return RuntimeMode.WorkerTrusted;
+        case JAY_QUERY_WORKER_SANDBOX_TS:
+            return RuntimeMode.WorkerSandbox;
         default:
-            return RuntimeMode.Trusted;
+            return RuntimeMode.MainTrusted;
     }
 }
 

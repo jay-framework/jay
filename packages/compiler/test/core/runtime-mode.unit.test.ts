@@ -28,19 +28,21 @@ describe('hasExtension', () => {
 describe('hasJayModeExtension', () => {
     it('returns true when the filename ends with jay sandbox main or worker extension', () => {
         expect(hasJayModeExtension('app.jay-html')).toBe(false);
-        expect(hasJayModeExtension('app.jay-html?jay-sandboxMain')).toBe(true);
-        expect(hasJayModeExtension('app.jay-html?jay-sandboxWorker')).toBe(true);
-        expect(hasJayModeExtension('app.jay-html?jay-sandboxMain.ts')).toBe(false);
+        expect(hasJayModeExtension('app.jay-html?jay-mainSandbox')).toBe(true);
+        expect(hasJayModeExtension('app.jay-html?jay-workerTrusted')).toBe(true);
+        expect(hasJayModeExtension('app.jay-html?jay-workerSandbox')).toBe(true);
+        expect(hasJayModeExtension('app.jay-html?jay-mainSandbox.ts')).toBe(false);
     });
 
     describe('withTs: true', () => {
         const withTs = true;
 
         it('returns true when the filename ends with the jay sandbox main or worker extension and .ts', () => {
-            expect(hasJayModeExtension('app.jay-html?jay-sandboxMain', { withTs })).toBe(false);
-            expect(hasJayModeExtension('app.jay-html?jay-sandboxMain.ts', { withTs })).toBe(true);
-            expect(hasJayModeExtension('app.jay-html?jay-sandboxWorker.ts', { withTs })).toBe(true);
-            expect(hasJayModeExtension('app.jay-html?jay-sandboxMain.js', { withTs })).toBe(false);
+            expect(hasJayModeExtension('app.jay-html?jay-mainSandbox', { withTs })).toBe(false);
+            expect(hasJayModeExtension('app.jay-html?jay-mainSandbox.ts', { withTs })).toBe(true);
+            expect(hasJayModeExtension('app.jay-html?jay-workerTrusted.ts', { withTs })).toBe(true);
+            expect(hasJayModeExtension('app.jay-html?jay-workerSandbox.ts', { withTs })).toBe(true);
+            expect(hasJayModeExtension('app.jay-html?jay-mainSandbox.js', { withTs })).toBe(false);
             expect(hasJayModeExtension('app.jay-html', { withTs })).toBe(false);
         });
     });
@@ -48,29 +50,37 @@ describe('hasJayModeExtension', () => {
 
 describe('getModeFromExtension', () => {
     it('returns trusted', () => {
-        expect(getModeFromExtension('counter')).toBe(RuntimeMode.Trusted);
-        expect(getModeFromExtension('counter.ts')).toBe(RuntimeMode.Trusted);
-        expect(getModeFromExtension('app.jay-html')).toBe(RuntimeMode.Trusted);
-        expect(getModeFromExtension('app.jay-html.ts')).toBe(RuntimeMode.Trusted);
+        expect(getModeFromExtension('counter')).toBe(RuntimeMode.MainTrusted);
+        expect(getModeFromExtension('counter.ts')).toBe(RuntimeMode.MainTrusted);
+        expect(getModeFromExtension('app.jay-html')).toBe(RuntimeMode.MainTrusted);
+        expect(getModeFromExtension('app.jay-html.ts')).toBe(RuntimeMode.MainTrusted);
     });
 
     describe('for sandbox main ending', () => {
-        const postfix = '?jay-sandboxMain';
+        const postfix = '?jay-mainSandbox';
 
-        it('returns sandboxMain when file ends with *.jay-html?jay-sandboxMain or *.ts?jay-sandboxMain"', () => {
-            expect(getModeFromExtension(`counter${postfix}`)).toBe(RuntimeMode.Trusted);
-            expect(getModeFromExtension(`counter.ts${postfix}.ts`)).toBe(RuntimeMode.SandboxMain);
-            expect(getModeFromExtension(`app.jay-html${postfix}`)).toBe(RuntimeMode.Trusted);
-            expect(getModeFromExtension(`app.jay-html${postfix}.ts`)).toBe(RuntimeMode.SandboxMain);
-            expect(getModeFromExtension(`app.jay-html.ts${postfix}`)).toBe(RuntimeMode.Trusted);
+        it('returns mainSandbox when file ends with *.jay-html?jay-mainSandbox or *.ts?jay-mainSandbox"', () => {
+            expect(getModeFromExtension(`counter${postfix}`)).toBe(RuntimeMode.MainTrusted);
+            expect(getModeFromExtension(`counter.ts${postfix}.ts`)).toBe(RuntimeMode.MainSandbox);
+            expect(getModeFromExtension(`app.jay-html${postfix}`)).toBe(RuntimeMode.MainTrusted);
+            expect(getModeFromExtension(`app.jay-html${postfix}.ts`)).toBe(RuntimeMode.MainSandbox);
+            expect(getModeFromExtension(`app.jay-html.ts${postfix}`)).toBe(RuntimeMode.MainTrusted);
         });
     });
 
-    describe('for sandbox worker', () => {
-        const postfix = '?jay-sandboxWorker';
+    describe('for worker trusted', () => {
+        const postfix = '?jay-workerTrusted';
 
-        it('returns sandboxMain when file ends with *.jay-html?jay-sandboxMain or *.ts?jay-sandboxMain"', () => {
-            expect(getModeFromExtension(`counter.ts${postfix}.ts`)).toBe(RuntimeMode.SandboxWorker);
+        it('returns workerTrusted', () => {
+            expect(getModeFromExtension(`counter.ts${postfix}.ts`)).toBe(RuntimeMode.WorkerTrusted);
+        });
+    });
+
+    describe('for worker sandbox', () => {
+        const postfix = '?jay-workerSandbox';
+
+        it('returns workerSandbox', () => {
+            expect(getModeFromExtension(`counter.ts${postfix}.ts`)).toBe(RuntimeMode.WorkerSandbox);
         });
     });
 });
@@ -83,9 +93,10 @@ describe('getJayTsFileSourcePath', () => {
         expect(() => getJayTsFileSourcePath('app.jay-html.ts')).toThrow(
             'does not contain jay mode extension',
         );
-        expect(getJayTsFileSourcePath('app.jay-html?jay-sandboxMain')).toBe('app.jay-html.ts');
-        expect(getJayTsFileSourcePath('app.jay-html?jay-sandboxMain.ts')).toBe('app.jay-html.ts');
-        expect(getJayTsFileSourcePath('app.jay-html?jay-sandboxWorker.ts')).toBe('app.jay-html.ts');
+        expect(getJayTsFileSourcePath('app.jay-html?jay-mainSandbox')).toBe('app.jay-html.ts');
+        expect(getJayTsFileSourcePath('app.jay-html?jay-mainSandbox.ts')).toBe('app.jay-html.ts');
+        expect(getJayTsFileSourcePath('app.jay-html?jay-workerTrusted.ts')).toBe('app.jay-html.ts');
+        expect(getJayTsFileSourcePath('app.jay-html?jay-workerSandbox.ts')).toBe('app.jay-html.ts');
     });
 });
 
