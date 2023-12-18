@@ -9,8 +9,10 @@ import {
     prettify,
     RuntimeMode,
     WithValidations,
+    JayFile,
+    generateImportsFileFromTsSource,
+    componentSandboxTransformer
 } from '../../lib';
-import { JayFile } from '../../lib/core/jay-file-types';
 import {
     getFileFromFolder,
     printTsFile,
@@ -18,9 +20,7 @@ import {
     readTestFile,
     readTsSourceFile,
 } from './file-utils';
-import { generateImportsFileFromTsSource } from '../../lib/ts-file/generate-imports-file';
-import { componentSandboxTransformer } from '../../lib/ts-file/component-sandbox-transformer';
-import {TransformerFactory} from "typescript";
+import { TransformerFactory } from "typescript";
 
 export async function readAndParseJayFile(
     folder: string,
@@ -53,7 +53,7 @@ export async function readFileAndTsTransform(folder: string, transformers: Trans
     const file = givenFile ?? `${getFileFromFolder(folder)}.ts`;
     const sourceFile = await readTsSourceFile(folder, file);
     const outputFile = ts.transform(sourceFile, transformers);
-    return await prettify(await printTsFile(outputFile));
+    return await prettify(printTsFile(outputFile));
 }
 
 export async function readFileAndGenerateComponentBridgeFile(folder: string, givenFile?: string) {
