@@ -63,11 +63,11 @@ function transformImport(
     return undefined;
 }
 
-interface Config {
+interface ComponentBridgeTransformerConfig {
     importerMode: RuntimeMode
 }
 
-const mkVisitor = (factory: ts.NodeFactory, context: ts.TransformationContext, config: Config) => {
+const mkVisitor = (factory: ts.NodeFactory, context: ts.TransformationContext, config: ComponentBridgeTransformerConfig) => {
     const visitor: ts.Visitor = (node) => {
         if (ts.isFunctionDeclaration(node)) return undefined;
         else if (ts.isInterfaceDeclaration(node)) return node;
@@ -80,7 +80,7 @@ const mkVisitor = (factory: ts.NodeFactory, context: ts.TransformationContext, c
 }
 
 
-function mkSourceFileTransformer(factory: ts.NodeFactory, context: ts.TransformationContext, config: Config, sourceFile: ts.SourceFile) {
+function mkSourceFileTransformer(factory: ts.NodeFactory, context: ts.TransformationContext, config: ComponentBridgeTransformerConfig, sourceFile: ts.SourceFile) {
     return ts.visitEachChild(sourceFile, mkVisitor(factory, context, config), context);
 }
 
