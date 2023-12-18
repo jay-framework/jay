@@ -20,7 +20,7 @@ import {
     JayUnknown,
     resolvePrimitiveType,
 } from '../core/jay-file-types';
-import {resolveTsConfig, ResolveTsConfigOptions} from "./resolve-ts-config.ts";
+import { resolveTsConfig, ResolveTsConfigOptions } from './resolve-ts-config.ts';
 
 function getJayType(type: Type, types: JayType[]): JayType {
     let propType = resolvePrimitiveType(type.getText());

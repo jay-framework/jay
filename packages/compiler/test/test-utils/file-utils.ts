@@ -2,7 +2,7 @@ import { promises } from 'node:fs';
 import path from 'node:path';
 import * as ts from 'typescript';
 import { removeComments } from '../../lib/utils/prettify';
-import {astToCode} from "../../lib/ts-file/ts-compiler-utils.ts";
+import { astToCode } from '../../lib/ts-file/ts-compiler-utils.ts';
 
 const { readFile } = promises;
 
@@ -11,9 +11,7 @@ export async function readTsSourceFile(filePath: string, fileName: string) {
     return ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
 }
 
-export function printTsFile(
-    outputFile: ts.TransformationResult<ts.SourceFile>,
-): string {
+export function printTsFile(outputFile: ts.TransformationResult<ts.SourceFile>): string {
     return astToCode(outputFile.transformed[0]);
 }
 
