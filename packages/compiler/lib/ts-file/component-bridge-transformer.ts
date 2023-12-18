@@ -63,25 +63,30 @@ function transformImport(
     return undefined;
 }
 
-const mkVisitor = (factory: ts.NodeFactory, context: ts.TransformationContext, allowedJayElementModules: string[]) => {
+interface Config {
+    importerMode: RuntimeMode
+}
+
+const mkVisitor = (factory: ts.NodeFactory, context: ts.TransformationContext, config: Config) => {
     const visitor: ts.Visitor = (node) => {
         if (ts.isFunctionDeclaration(node)) return undefined;
         else if (ts.isInterfaceDeclaration(node)) return node;
         else if (ts.isImportDeclaration(node))
-            return transformImport(node, factory, allowedJayElementModules, context);
+            return transformImport(node, factory, config.importerMode, context);
         else if (ts.isVariableStatement(node)) return transformVariableStatement(node, factory, context);
         return ts.visitEachChild(node, visitor, context);
     }
     return visitor;
 }
 
-function mkSourceFileTransformer(factory: ts.NodeFactory, context: ts.TransformationContext, allowedJayElementModules: string[], sourceFile: ts.SourceFile) {
-    return ts.visitEachChild(sourceFile, mkVisitor(factory, context, allowedJayElementModules), context);
+
+function mkSourceFileTransformer(factory: ts.NodeFactory, context: ts.TransformationContext, config: Config, sourceFile: ts.SourceFile) {
+    return ts.visitEachChild(sourceFile, mkVisitor(factory, context, config), context);
 }
 
 export function componentBridgeTransformer(
-    allowedJayElementModules: string[],
+    importerMode: RuntimeMode,
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
-    return mkTransformer(allowedJayElementModules, mkSourceFileTransformer);
+    return mkTransformer({importerMode}, mkSourceFileTransformer);
 }
 
