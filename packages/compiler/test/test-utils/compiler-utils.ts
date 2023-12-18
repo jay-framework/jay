@@ -20,6 +20,7 @@ import {
 } from './file-utils';
 import { generateImportsFileFromTsSource } from '../../lib/ts-file/generate-imports-file';
 import { componentSandboxTransformer } from '../../lib/ts-file/component-sandbox-transformer';
+import {TransformerFactory} from "typescript";
 
 export async function readAndParseJayFile(
     folder: string,
@@ -48,20 +49,23 @@ export async function readFileAndGenerateElementFile(folder: string, givenFile?:
     return generateElementFile(parsedFile, RuntimeMode.MainSandbox);
 }
 
-export async function readFileAndGenerateComponentBridgeFile(folder: string, givenFile?: string) {
+export async function readFileAndTsTransform(folder: string, transformers: TransformerFactory<ts.SourceFile>[], givenFile?: string) {
     const file = givenFile ?? `${getFileFromFolder(folder)}.ts`;
     const sourceFile = await readTsSourceFile(folder, file);
-    const outputFile = ts.transform(sourceFile, [
-        componentBridgeTransformer(RuntimeMode.MainSandbox),
-    ]);
+    const outputFile = ts.transform(sourceFile, transformers);
     return await prettify(await printTsFile(outputFile));
 }
 
+export async function readFileAndGenerateComponentBridgeFile(folder: string, givenFile?: string) {
+    return readFileAndTsTransform(folder, [
+        componentBridgeTransformer(RuntimeMode.MainSandbox),
+    ], givenFile)
+}
+
 export async function readFileAndGenerateComponentSandboxFile(folder: string, givenFile?: string) {
-    const file = givenFile ?? `${getFileFromFolder(folder)}.ts`;
-    const sourceFile = await readTsSourceFile(folder, file);
-    const outputFile = ts.transform(sourceFile, [componentSandboxTransformer()]);
-    return await prettify(await printTsFile(outputFile));
+    return readFileAndTsTransform(folder, [
+        componentSandboxTransformer(),
+    ], givenFile)
 }
 
 export async function readFileAndGenerateImportsFileFromTsFile(
