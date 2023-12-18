@@ -2,7 +2,7 @@ import { promises } from 'node:fs';
 import path from 'node:path';
 import * as ts from 'typescript';
 import { removeComments } from '../../lib/utils/prettify';
-import {astToCode} from "../../lib/ts-file/ts-compiler-utils.ts";
+import { astToCode } from '../../lib/ts-file/ts-compiler-utils.ts';
 
 const { readFile } = promises;
 

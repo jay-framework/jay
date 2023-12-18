@@ -8,9 +8,7 @@ import {
     Type,
     TypeAliasDeclaration,
 } from 'ts-morph';
-import ts from 'typescript';
 import fs from 'fs';
-import path from 'path';
 
 import {
     JayArrayType,
@@ -22,23 +20,7 @@ import {
     JayUnknown,
     resolvePrimitiveType,
 } from '../core/jay-file-types';
-
-export interface ResolveTsConfigOptions {
-    relativePath?: string;
-}
-
-function resolveTsConfig(options: ResolveTsConfigOptions) {
-    const tsConfigPath = path.resolve(process.cwd(), options.relativePath || 'tsconfig.json');
-    if (!ts.sys.fileExists(tsConfigPath)) {
-        if (options.relativePath) {
-            // If an explicit path was provided but no file was found, throw
-            throw new Error(`Could not find specified tsconfig.json at ${tsConfigPath}`);
-        } else {
-            return null;
-        }
-    }
-    return tsConfigPath;
-}
+import { resolveTsConfig, ResolveTsConfigOptions } from './resolve-ts-config.ts';
 
 function getJayType(type: Type, types: JayType[]): JayType {
     let propType = resolvePrimitiveType(type.getText());
