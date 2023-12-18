@@ -2,27 +2,19 @@ import { promises } from 'node:fs';
 import path from 'node:path';
 import * as ts from 'typescript';
 import { removeComments } from '../../lib/utils/prettify';
+import {astToCode} from "../../lib/ts-file/ts-compiler-utils.ts";
 
 const { readFile } = promises;
-
-const printer = ts.createPrinter({
-    newLine: ts.NewLineKind.LineFeed,
-});
 
 export async function readTsSourceFile(filePath: string, fileName: string) {
     const code = await readTestFile(filePath, fileName);
     return ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
 }
 
-export async function printTsFile(
+export function printTsFile(
     outputFile: ts.TransformationResult<ts.SourceFile>,
-): Promise<string> {
-    const printedFile = await printer.printNode(
-        ts.EmitHint.Unspecified,
-        outputFile.transformed[0],
-        ts.createSourceFile('generated-component-bridge.ts', '', ts.ScriptTarget.Latest),
-    );
-    return printedFile;
+): string {
+    return astToCode(outputFile.transformed[0]);
 }
 
 export async function readTestFile(folder, filename) {
