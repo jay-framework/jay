@@ -5,7 +5,7 @@ import ts, {
     isIdentifier,
 } from "typescript";
 
-export function findComponentConstructors(componentFunctionExpressions: Expression[], {context, sourceFile}: SourceFileTransformerContext) {
+export function findComponentConstructorsBlock(componentFunctionExpressions: Expression[], {context, sourceFile}: SourceFileTransformerContext) {
     const foundConstructors: ts.Node[] = [];
 
     const namedConstructors = new Set(componentFunctionExpressions

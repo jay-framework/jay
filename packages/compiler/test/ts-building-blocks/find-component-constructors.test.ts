@@ -2,7 +2,7 @@ import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import { stripMargin } from '../test-utils/strip-margin';
 import ts, {TransformerFactory} from "typescript";
-import {findComponentConstructors} from "../../lib/ts-file/building-blocks/find-component-constructors.ts";
+import {findComponentConstructorsBlock} from "../../lib/ts-file/building-blocks/find-component-constructors.ts";
 import {
     findComponentConstructorCallsBlock
 } from "../../lib/ts-file/building-blocks/find-component-constructor-calls.ts";
@@ -19,7 +19,7 @@ describe('find component constructor', () => {
                     .map(({comp}) => comp)
 
                 state.foundFunctions =
-                    findComponentConstructors(componentFunctionExpressions, sourceFileTransformerData);
+                    findComponentConstructorsBlock(componentFunctionExpressions, sourceFileTransformerData);
                 return sourceFileTransformerData.sourceFile;
             }),
         };
