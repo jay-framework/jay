@@ -12,14 +12,14 @@ import {
     readGeneratedNamedFile,
     readNamedSourceJayFile,
     readTestFile,
-
 } from './test-utils/file-utils';
 import * as ts from 'typescript';
 import { componentBridgeTransformer } from '../lib/ts-file/component-bridge-transformer';
 import {
     printTsFile,
     readAndParseJayFile,
-    readFileAndGenerateElementBridgeFile, readTsSourceFile,
+    readFileAndGenerateElementBridgeFile,
+    readTsSourceFile,
 } from './test-utils/ts-compiler-test-utils';
 
 describe('generate full project', () => {

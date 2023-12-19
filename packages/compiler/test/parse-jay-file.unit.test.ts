@@ -1,6 +1,13 @@
-import {parseJayFile} from '../lib';
-import {JayArrayType, JayBoolean, JayEnumType, JayNumber, JayObjectType, JayString,} from '../lib/core/jay-file-types';
-import {stripMargin} from "./test-utils/strip-margin";
+import { parseJayFile } from '../lib';
+import {
+    JayArrayType,
+    JayBoolean,
+    JayEnumType,
+    JayNumber,
+    JayObjectType,
+    JayString,
+} from '../lib/core/jay-file-types';
+import { stripMargin } from './test-utils/strip-margin';
 
 describe('compiler', () => {
     function jayFileWith(jayYaml, body, links?) {

@@ -1,6 +1,6 @@
-import {promises} from 'node:fs';
+import { promises } from 'node:fs';
 import path from 'node:path';
-import {removeComments} from '../../lib/utils/prettify';
+import { removeComments } from '../../lib/utils/prettify';
 
 const { readFile } = promises;
 

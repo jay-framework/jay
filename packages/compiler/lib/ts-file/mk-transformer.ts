@@ -1,9 +1,9 @@
 import ts, { TransformerFactory } from 'typescript';
 
 export interface SourceFileTransformerContext {
-    factory: ts.NodeFactory,
-    context: ts.TransformationContext,
-    sourceFile: ts.SourceFile,
+    factory: ts.NodeFactory;
+    context: ts.TransformationContext;
+    sourceFile: ts.SourceFile;
 }
 
 export type SourceFileTransformer<S extends SourceFileTransformerContext> = (
@@ -17,7 +17,7 @@ export function mkTransformer<C extends object>(
     return (context: ts.TransformationContext) => {
         const { factory } = context;
         return (sourceFile) => {
-            return fileTransformer({factory, context, sourceFile, ...(config || {})});
+            return fileTransformer({ factory, context, sourceFile, ...(config || {}) });
         };
     };
 }

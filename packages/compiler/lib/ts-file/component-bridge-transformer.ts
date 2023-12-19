@@ -1,7 +1,7 @@
 import ts from 'typescript';
 import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
 import { codeToAst, astToCode } from './ts-compiler-utils.ts';
-import {mkTransformer, SourceFileTransformerContext} from './mk-transformer.ts';
+import { mkTransformer, SourceFileTransformerContext } from './mk-transformer.ts';
 
 function transformVariableStatement(
     node: ts.VariableStatement,
@@ -90,9 +90,12 @@ const mkVisitor = (
     return visitor;
 };
 
-function mkSourceFileTransformer(
-    {factory, sourceFile, context, importerMode}: SourceFileTransformerContext & ComponentBridgeTransformerConfig
-) {
+function mkSourceFileTransformer({
+    factory,
+    sourceFile,
+    context,
+    importerMode,
+}: SourceFileTransformerContext & ComponentBridgeTransformerConfig) {
     return ts.visitEachChild(sourceFile, mkVisitor(factory, context, importerMode), context);
 }
 
