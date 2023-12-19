@@ -1,17 +1,17 @@
 import ts from 'typescript';
 import {mkTransformer, SourceFileTransformerContext} from './mk-transformer';
 import {findMakeJayComponentImport} from "./building-blocks/find-make-jay-component-import";
-
-function findComponents(makeJayComponentName: void) {}
+import {findComponentConstructors} from "./building-blocks/find-component-constructors.ts";
 
 function mkComponentSecureFunctionsTransformer(
-    sourceFileTransformerData: SourceFileTransformerContext,
+    sourceFileTransformerContext: SourceFileTransformerContext,
 ) {
-    let makeJayComponentName = findMakeJayComponentImport(sourceFileTransformerData);
-    console.log(makeJayComponentName);
-    // let components = findComponents(makeJayComponentName);
+    let makeJayComponentName = findMakeJayComponentImport(sourceFileTransformerContext);
+    if (Boolean(makeJayComponentName)) {
+       let components = findComponentConstructors(makeJayComponentName, sourceFileTransformerContext);
+    }
 
-    return sourceFileTransformerData.sourceFile;
+    return sourceFileTransformerContext.sourceFile;
 }
 
 export function componentSecureFunctionsTransformer(): (
