@@ -1,7 +1,7 @@
 import ts from 'typescript';
 import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
 import { isRelativeImport } from './extract-imports';
-import { mkTransformer, SourceFileTransformerContext } from './mk-transformer.ts';
+import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
 
 export function componentSandboxTransformer(): (
     context: ts.TransformationContext,
