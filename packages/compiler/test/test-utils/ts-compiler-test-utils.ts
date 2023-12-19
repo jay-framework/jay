@@ -55,6 +55,12 @@ export function printTsFile(
     return astToCode(outputFile.transformed[0]);
 }
 
+export async function transformCode(code: string, transformers: TransformerFactory<ts.SourceFile>[]) {
+    const sourceFile = ts.createSourceFile('dummy.ts', code, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
+    const outputFile = ts.transform(sourceFile, transformers);
+    return await prettify(printTsFile(outputFile));
+}
+
 export async function readFileAndTsTransform(folder: string, transformers: TransformerFactory<ts.SourceFile>[], givenFile?: string) {
     const file = givenFile ?? `${getFileFromFolder(folder)}.ts`;
     const sourceFile = await readTsSourceFile(folder, file);

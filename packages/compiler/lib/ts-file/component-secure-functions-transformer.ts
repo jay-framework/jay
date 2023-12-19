@@ -1,4 +1,5 @@
 import ts, {
+    ImportSpecifier,
     isImportDeclaration,
     isNamedImports,
     isStringLiteral,
@@ -6,9 +7,15 @@ import ts, {
 import {mkTransformer, SourceFileTransformerContext} from './mk-transformer.ts';
 import {JAY_COMPONENT, MAKE_JAY_COMPONENT} from "../core/constants.ts";
 
-function findMakeJayComponentImport({context, sourceFile}: SourceFileTransformerContext) {
+export function findMakeJayComponentImport({context, sourceFile}: SourceFileTransformerContext) {
 
     let foundMakeJayComponentProperty = undefined;
+
+    const getImportElementOriginalName = (importSpecifier: ImportSpecifier): string => {
+        return importSpecifier.propertyName?
+            importSpecifier.propertyName.text :
+            importSpecifier.name.text
+    }
 
     const visitor: ts.Visitor = (node) => {
         if (isImportDeclaration(node) &&
@@ -17,11 +24,9 @@ function findMakeJayComponentImport({context, sourceFile}: SourceFileTransformer
             node.importClause.namedBindings &&
             isNamedImports(node.importClause.namedBindings)) {
             let importSpecifier = node.importClause.namedBindings.elements.find(element =>
-                element.name.text === MAKE_JAY_COMPONENT)
+                getImportElementOriginalName(element) === MAKE_JAY_COMPONENT)
             if (importSpecifier) {
-                foundMakeJayComponentProperty = importSpecifier.propertyName?
-                    importSpecifier.propertyName.text :
-                    importSpecifier.name.text
+                foundMakeJayComponentProperty = importSpecifier.name.text
             }
 
         }
