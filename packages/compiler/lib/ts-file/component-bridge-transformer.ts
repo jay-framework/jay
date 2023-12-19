@@ -4,9 +4,9 @@ import { codeToAst, astToCode } from './ts-compiler-utils.ts';
 import { mkTransformer, SourceFileTransformerContext } from './mk-transformer.ts';
 import {
     findMakeJayComponentImport,
-    findMakeJayComponentImportTransformerBlock
-} from "./building-blocks/find-make-jay-component-import-transformer";
-import {findComponentConstructorCalls} from "./building-blocks/find-component-constructor-calls.ts";
+    findMakeJayComponentImportTransformerBlock,
+} from './building-blocks/find-make-jay-component-import-transformer';
+import { findComponentConstructorCalls } from './building-blocks/find-component-constructor-calls.ts';
 
 function transformVariableStatement(
     node: ts.VariableStatement,
@@ -16,9 +16,9 @@ function transformVariableStatement(
 ) {
     let foundConstructors = findComponentConstructorCalls(makeJayComponentName, node);
 
-    let transformedConstructors = foundConstructors.map(({name, comp, render}) => {
-        return `${astToCode(name)} = makeJayComponentBridge(${astToCode(render)})`
-    })
+    let transformedConstructors = foundConstructors.map(({ name, comp, render }) => {
+        return `${astToCode(name)} = makeJayComponentBridge(${astToCode(render)})`;
+    });
 
     if (transformedConstructors.length > 0) {
         let declarationCode = `export const ${transformedConstructors.join(', ')}`;
@@ -52,7 +52,10 @@ function transformImport(
             return codeToAst(`import { makeJayComponentBridge } from 'jay-secure';`, context);
         const renderImportSpecifier = getRenderImportSpecifier(node);
         if (Boolean(renderImportSpecifier)) {
-            const importModule = `${node.moduleSpecifier.text}${getModeFileExtension(true, importerMode)}`;
+            const importModule = `${node.moduleSpecifier.text}${getModeFileExtension(
+                true,
+                importerMode,
+            )}`;
             return codeToAst(
                 `import { ${astToCode(renderImportSpecifier)} } from '${importModule}'`,
                 context,
@@ -71,7 +74,7 @@ const mkVisitor = (
     factory: ts.NodeFactory,
     context: ts.TransformationContext,
     importerMode: RuntimeMode,
-    makeJayComponentName: string
+    makeJayComponentName: string,
 ) => {
     const visitor: ts.Visitor = (node) => {
         if (ts.isFunctionDeclaration(node)) return undefined;
@@ -91,9 +94,17 @@ function mkSourceFileTransformer({
     context,
     importerMode,
 }: SourceFileTransformerContext & ComponentBridgeTransformerConfig) {
-    let makeJayComponentName = findMakeJayComponentImportTransformerBlock({context, sourceFile, factory});
+    let makeJayComponentName = findMakeJayComponentImportTransformerBlock({
+        context,
+        sourceFile,
+        factory,
+    });
 
-    return ts.visitEachChild(sourceFile, mkVisitor(factory, context, importerMode, makeJayComponentName), context);
+    return ts.visitEachChild(
+        sourceFile,
+        mkVisitor(factory, context, importerMode, makeJayComponentName),
+        context,
+    );
 }
 
 export function componentBridgeTransformer(

@@ -1,7 +1,7 @@
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import { stripMargin } from '../test-utils/strip-margin';
-import { findMakeJayComponentImportTransformerBlock } from "../../lib/ts-file/building-blocks/find-make-jay-component-import-transformer";
+import { findMakeJayComponentImportTransformerBlock } from '../../lib/ts-file/building-blocks/find-make-jay-component-import-transformer';
 
 describe('find makeJayComponent import', () => {
     function testTransformer() {
@@ -24,9 +24,7 @@ describe('find makeJayComponent import', () => {
     });
 
     it('find import makeJayComponent with other imports', async () => {
-        const code = stripMargin(
-            `import { makeJayComponent, two, three } from 'jay-component';`,
-        );
+        const code = stripMargin(`import { makeJayComponent, two, three } from 'jay-component';`);
         const transformerState = testTransformer();
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.makeJayComponentName).toEqual('makeJayComponent');
@@ -56,4 +54,3 @@ describe('find makeJayComponent import', () => {
         expect(transformerState.makeJayComponentName).toEqual('makeJayComponent');
     });
 });
-

@@ -1,6 +1,11 @@
-import {SourceFileTransformerContext} from "../mk-transformer";
-import ts, {ImportSpecifier, isImportDeclaration, isNamedImports, isStringLiteral} from "typescript";
-import {JAY_COMPONENT, MAKE_JAY_COMPONENT} from "../../core/constants";
+import { SourceFileTransformerContext } from '../mk-transformer';
+import ts, {
+    ImportSpecifier,
+    isImportDeclaration,
+    isNamedImports,
+    isStringLiteral,
+} from 'typescript';
+import { JAY_COMPONENT, MAKE_JAY_COMPONENT } from '../../core/constants';
 
 const getImportElementOriginalName = (importSpecifier: ImportSpecifier): string => {
     return importSpecifier.propertyName
@@ -26,11 +31,15 @@ export function findMakeJayComponentImport(node: ts.Node): string {
     return undefined;
 }
 
-export function findMakeJayComponentImportTransformerBlock({context, sourceFile}: SourceFileTransformerContext) {
+export function findMakeJayComponentImportTransformerBlock({
+    context,
+    sourceFile,
+}: SourceFileTransformerContext) {
     let foundMakeJayComponentProperty = undefined;
 
     const visitor: ts.Visitor = (node) => {
-        foundMakeJayComponentProperty = foundMakeJayComponentProperty || findMakeJayComponentImport(node);
+        foundMakeJayComponentProperty =
+            foundMakeJayComponentProperty || findMakeJayComponentImport(node);
         return node;
     };
     ts.visitEachChild(sourceFile, visitor, context);
