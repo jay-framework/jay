@@ -2,7 +2,7 @@ import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import { stripMargin } from '../test-utils/strip-margin';
 import {
-    findComponentConstructorCalls,
+    findComponentConstructorCallsBlock,
     MakeJayComponentConstructorCalls
 } from "../../lib/ts-file/building-blocks/find-component-constructor-calls";
 import ts, {Expression, Identifier, isIdentifier, TransformerFactory} from "typescript";
@@ -13,7 +13,7 @@ describe('find component constructor calls', () => {
             foundCalls: undefined,
             transformer: mkTransformer((sourceFileTransformerData) => {
                 state.foundCalls =
-                    findComponentConstructorCalls('makeJayComponent', sourceFileTransformerData);
+                    findComponentConstructorCallsBlock('makeJayComponent', sourceFileTransformerData);
                 return sourceFileTransformerData.sourceFile;
             }),
         };

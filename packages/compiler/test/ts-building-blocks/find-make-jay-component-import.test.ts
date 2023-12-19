@@ -1,7 +1,7 @@
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import { stripMargin } from '../test-utils/strip-margin';
-import { findMakeJayComponentImport } from "../../lib/ts-file/building-blocks/find-make-jay-component-import";
+import { findMakeJayComponentImportTransformerBlock } from "../../lib/ts-file/building-blocks/find-make-jay-component-import-transformer";
 
 describe('find makeJayComponent import', () => {
     function testTransformer() {
@@ -9,7 +9,7 @@ describe('find makeJayComponent import', () => {
             makeJayComponentName: undefined,
             transformer: mkTransformer((sourceFileTransformerData) => {
                 state.makeJayComponentName =
-                    findMakeJayComponentImport(sourceFileTransformerData);
+                    findMakeJayComponentImportTransformerBlock(sourceFileTransformerData);
                 return sourceFileTransformerData.sourceFile;
             }),
         };
@@ -49,7 +49,7 @@ describe('find makeJayComponent import', () => {
     it('should find import makeJayComponent given multiple imports', async () => {
         const code = stripMargin(
             `import { CounterElementRefs, render } from './generated-element';
-                   | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';`,
+               | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';`,
         );
         const transformerState = testTransformer();
         await transformCode(code, [transformerState.transformer]);
