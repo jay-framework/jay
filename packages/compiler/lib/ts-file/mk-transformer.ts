@@ -1,20 +1,23 @@
 import ts, { TransformerFactory } from 'typescript';
 
-export type SourceFileTransformer<Config> = (
-    factory: ts.NodeFactory,
-    context: ts.TransformationContext,
-    config: Config,
-    node: ts.SourceFile,
+export interface SourceFileTransformerContext {
+    factory: ts.NodeFactory;
+    context: ts.TransformationContext;
+    sourceFile: ts.SourceFile;
+}
+
+export type SourceFileTransformer<S extends SourceFileTransformerContext> = (
+    data: SourceFileTransformerContext,
 ) => ts.SourceFile;
 
-export function mkTransformer<Config>(
-    config: Config,
-    fileTransformer: SourceFileTransformer<Config>,
+export function mkTransformer<C extends object>(
+    fileTransformer: SourceFileTransformer<C & SourceFileTransformerContext>,
+    config?: C,
 ): TransformerFactory<ts.SourceFile> {
     return (context: ts.TransformationContext) => {
         const { factory } = context;
         return (sourceFile) => {
-            return fileTransformer(factory, context, config, sourceFile);
+            return fileTransformer({ factory, context, sourceFile, ...(config || {}) });
         };
     };
 }

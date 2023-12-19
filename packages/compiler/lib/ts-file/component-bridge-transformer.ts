@@ -1,32 +1,27 @@
 import ts from 'typescript';
 import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
 import { codeToAst, astToCode } from './ts-compiler-utils.ts';
-import { mkTransformer } from './mk-transformer.ts';
+import { mkTransformer, SourceFileTransformerContext } from './mk-transformer.ts';
+import {
+    findMakeJayComponentImport,
+    findMakeJayComponentImportTransformerBlock,
+} from './building-blocks/find-make-jay-component-import-transformer';
+import { findComponentConstructorCalls } from './building-blocks/find-component-constructor-calls.ts';
 
 function transformVariableStatement(
     node: ts.VariableStatement,
     factory: ts.NodeFactory,
     context: ts.TransformationContext,
+    makeJayComponentName: string,
 ) {
-    let declarations = node.declarationList.declarations;
+    let foundConstructors = findComponentConstructorCalls(makeJayComponentName, node);
 
-    let newDeclarations = declarations
-        .map((declaration) => {
-            if (
-                declaration.initializer &&
-                ts.isCallExpression(declaration.initializer) &&
-                ts.isIdentifier(declaration.initializer.expression) &&
-                declaration.initializer.expression.escapedText === 'makeJayComponent'
-            ) {
-                return `${astToCode(declaration.name)} = makeJayComponentBridge(${astToCode(
-                    declaration.initializer.arguments[0],
-                )})`;
-            } else return undefined;
-        })
-        .filter((_) => !!_);
+    let transformedConstructors = foundConstructors.map(({ name, comp, render }) => {
+        return `${astToCode(name)} = makeJayComponentBridge(${astToCode(render)})`;
+    });
 
-    if (newDeclarations.length > 0) {
-        let declarationCode = `export const ${newDeclarations.join(', ')}`;
+    if (transformedConstructors.length > 0) {
+        let declarationCode = `export const ${transformedConstructors.join(', ')}`;
         return codeToAst(declarationCode, context);
     } else return undefined;
 }
@@ -53,12 +48,14 @@ function transformImport(
     context: ts.TransformationContext,
 ): ts.Node[] {
     if (ts.isStringLiteral(node.moduleSpecifier)) {
-        const originalTarget = node.moduleSpecifier.text;
-        if (originalTarget === 'jay-component')
+        if (findMakeJayComponentImport(node))
             return codeToAst(`import { makeJayComponentBridge } from 'jay-secure';`, context);
         const renderImportSpecifier = getRenderImportSpecifier(node);
         if (Boolean(renderImportSpecifier)) {
-            const importModule = `${originalTarget}${getModeFileExtension(true, importerMode)}`;
+            const importModule = `${node.moduleSpecifier.text}${getModeFileExtension(
+                true,
+                importerMode,
+            )}`;
             return codeToAst(
                 `import { ${astToCode(renderImportSpecifier)} } from '${importModule}'`,
                 context,
@@ -76,31 +73,42 @@ interface ComponentBridgeTransformerConfig {
 const mkVisitor = (
     factory: ts.NodeFactory,
     context: ts.TransformationContext,
-    config: ComponentBridgeTransformerConfig,
+    importerMode: RuntimeMode,
+    makeJayComponentName: string,
 ) => {
     const visitor: ts.Visitor = (node) => {
         if (ts.isFunctionDeclaration(node)) return undefined;
         else if (ts.isInterfaceDeclaration(node)) return node;
         else if (ts.isImportDeclaration(node))
-            return transformImport(node, factory, config.importerMode, context);
+            return transformImport(node, factory, importerMode, context);
         else if (ts.isVariableStatement(node))
-            return transformVariableStatement(node, factory, context);
+            return transformVariableStatement(node, factory, context, makeJayComponentName);
         return ts.visitEachChild(node, visitor, context);
     };
     return visitor;
 };
 
-function mkSourceFileTransformer(
-    factory: ts.NodeFactory,
-    context: ts.TransformationContext,
-    config: ComponentBridgeTransformerConfig,
-    sourceFile: ts.SourceFile,
-) {
-    return ts.visitEachChild(sourceFile, mkVisitor(factory, context, config), context);
+function mkSourceFileTransformer({
+    factory,
+    sourceFile,
+    context,
+    importerMode,
+}: SourceFileTransformerContext & ComponentBridgeTransformerConfig) {
+    let makeJayComponentName = findMakeJayComponentImportTransformerBlock({
+        context,
+        sourceFile,
+        factory,
+    });
+
+    return ts.visitEachChild(
+        sourceFile,
+        mkVisitor(factory, context, importerMode, makeJayComponentName),
+        context,
+    );
 }
 
 export function componentBridgeTransformer(
     importerMode: RuntimeMode,
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
-    return mkTransformer({ importerMode }, mkSourceFileTransformer);
+    return mkTransformer(mkSourceFileTransformer, { importerMode });
 }

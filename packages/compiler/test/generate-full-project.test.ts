@@ -9,18 +9,18 @@ import {
     RuntimeMode,
 } from '../lib';
 import {
-    printTsFile,
     readGeneratedNamedFile,
     readNamedSourceJayFile,
     readTestFile,
-    readTsSourceFile,
 } from './test-utils/file-utils';
 import * as ts from 'typescript';
 import { componentBridgeTransformer } from '../lib/ts-file/component-bridge-transformer';
 import {
+    printTsFile,
     readAndParseJayFile,
     readFileAndGenerateElementBridgeFile,
-} from './test-utils/compiler-utils';
+    readTsSourceFile,
+} from './test-utils/ts-compiler-test-utils';
 
 describe('generate full project', () => {
     const relativePath = './test/fixtures/tsconfig.json';

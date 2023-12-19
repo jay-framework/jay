@@ -7,11 +7,7 @@ import {
     JayObjectType,
     JayString,
 } from '../lib/core/jay-file-types';
-
-function stripMargin(str) {
-    const regexp = new RegExp(`^[ \t]+\\|`, 'gm');
-    return str.replace(regexp, '');
-}
+import { stripMargin } from './test-utils/strip-margin';
 
 describe('compiler', () => {
     function jayFileWith(jayYaml, body, links?) {
