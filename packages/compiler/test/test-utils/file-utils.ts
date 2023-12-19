@@ -1,21 +1,8 @@
-import { promises } from 'node:fs';
+import {promises} from 'node:fs';
 import path from 'node:path';
-import * as ts from 'typescript';
-import { removeComments } from '../../lib/utils/prettify';
-import { astToCode } from '../../lib/ts-file/ts-compiler-utils.ts';
+import {removeComments} from '../../lib/utils/prettify';
 
 const { readFile } = promises;
-
-export async function readTsSourceFile(filePath: string, fileName: string) {
-    const code = await readTestFile(filePath, fileName);
-    return ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
-}
-
-export function printTsFile(
-    outputFile: ts.TransformationResult<ts.SourceFile>,
-): string {
-    return astToCode(outputFile.transformed[0]);
-}
 
 export async function readTestFile(folder, filename) {
     return removeComments(

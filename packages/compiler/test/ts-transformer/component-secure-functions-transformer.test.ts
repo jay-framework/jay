@@ -1,5 +1,5 @@
-import { componentSecureFunctionsTransformer } from '../../lib/ts-file/component-secure-functions-transformer.ts';
-import {readFileAndTsTransform} from "../test-utils/compiler-utils.ts";
+import { componentSecureFunctionsTransformer } from '../../lib/ts-file/component-secure-functions-transformer';
+import {readFileAndTsTransform} from "../test-utils/ts-compiler-test-utils";
 
 describe('find jay component constructor', () => {
     it('transform counter component', async () => {

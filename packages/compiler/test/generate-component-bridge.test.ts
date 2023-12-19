@@ -1,5 +1,5 @@
 import { readTestFile } from './test-utils/file-utils';
-import { readFileAndGenerateComponentBridgeFile } from './test-utils/compiler-utils';
+import { readFileAndGenerateComponentBridgeFile } from './test-utils/ts-compiler-test-utils';
 
 describe('generate component bridge', () => {
     it('transform counter component', async () => {

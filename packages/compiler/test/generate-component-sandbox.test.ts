@@ -1,5 +1,5 @@
 import { readTestFile } from './test-utils/file-utils';
-import { readFileAndGenerateComponentSandboxFile } from './test-utils/compiler-utils';
+import { readFileAndGenerateComponentSandboxFile } from './test-utils/ts-compiler-test-utils';
 
 describe('generateComponentSandbox', () => {
     it('transforms counter component', async () => {

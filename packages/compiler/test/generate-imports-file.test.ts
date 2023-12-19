@@ -1,7 +1,7 @@
 import {
     readFileAndGenerateImportsFileFromJayFile,
     readFileAndGenerateImportsFileFromTsFile,
-} from './test-utils/compiler-utils';
+} from './test-utils/ts-compiler-test-utils';
 import { prettify } from '../lib';
 import { readGeneratedNamedFile } from './test-utils/file-utils';
 
