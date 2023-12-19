@@ -1,18 +1,14 @@
 import ts from 'typescript';
 import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
 import { isRelativeImport } from './extract-imports';
-import { mkTransformer } from './mk-transformer.ts';
+import {mkTransformer, SourceFileTransformerContext} from './mk-transformer.ts';
 
 export function componentSandboxTransformer(): (
     context: ts.TransformationContext,
 ) => ts.Transformer<ts.SourceFile> {
     return mkTransformer(
-        {},
         (
-            factory: ts.NodeFactory,
-            context: ts.TransformationContext,
-            config: any,
-            sourceFile: ts.SourceFile,
+            {factory, context, sourceFile}: SourceFileTransformerContext
         ) => {
             function visitor(node: ts.Node): ts.Node | ts.Node[] | undefined {
                 if (ts.isImportDeclaration(node))

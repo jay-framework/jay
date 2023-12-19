@@ -1,7 +1,7 @@
 import ts from 'typescript';
 import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
 import { codeToAst, astToCode } from './ts-compiler-utils.ts';
-import { mkTransformer } from './mk-transformer.ts';
+import {mkTransformer, SourceFileTransformerContext} from './mk-transformer.ts';
 
 function transformVariableStatement(
     node: ts.VariableStatement,
@@ -76,13 +76,13 @@ interface ComponentBridgeTransformerConfig {
 const mkVisitor = (
     factory: ts.NodeFactory,
     context: ts.TransformationContext,
-    config: ComponentBridgeTransformerConfig,
+    importerMode: RuntimeMode,
 ) => {
     const visitor: ts.Visitor = (node) => {
         if (ts.isFunctionDeclaration(node)) return undefined;
         else if (ts.isInterfaceDeclaration(node)) return node;
         else if (ts.isImportDeclaration(node))
-            return transformImport(node, factory, config.importerMode, context);
+            return transformImport(node, factory, importerMode, context);
         else if (ts.isVariableStatement(node))
             return transformVariableStatement(node, factory, context);
         return ts.visitEachChild(node, visitor, context);
@@ -91,16 +91,13 @@ const mkVisitor = (
 };
 
 function mkSourceFileTransformer(
-    factory: ts.NodeFactory,
-    context: ts.TransformationContext,
-    config: ComponentBridgeTransformerConfig,
-    sourceFile: ts.SourceFile,
+    {factory, sourceFile, context, importerMode}: SourceFileTransformerContext & ComponentBridgeTransformerConfig
 ) {
-    return ts.visitEachChild(sourceFile, mkVisitor(factory, context, config), context);
+    return ts.visitEachChild(sourceFile, mkVisitor(factory, context, importerMode), context);
 }
 
 export function componentBridgeTransformer(
     importerMode: RuntimeMode,
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
-    return mkTransformer({ importerMode }, mkSourceFileTransformer);
+    return mkTransformer(mkSourceFileTransformer, { importerMode });
 }
