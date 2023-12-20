@@ -1,5 +1,4 @@
 import {
-    appendJayMetadata,
     getJayMetadata,
     isWorkerRoot,
     JayFormat,
@@ -9,7 +8,8 @@ import { mock } from 'vitest-mock-extended';
 import { PluginContext } from 'rollup';
 
 describe('metadata', () => {
-    const originalMeta: JayMetadata = { originalId: 'original' };
+    const originId = 'origin/id';
+    const originalMeta: JayMetadata = { originId };
     const id = 'id';
 
     const getContext = (jayMeta: JayMetadata = originalMeta) =>
@@ -17,28 +17,34 @@ describe('metadata', () => {
             getModuleInfo: vi.fn().mockReturnValue({ meta: { jay: jayMeta } }),
         });
 
-    describe('appendJayMetadata', () => {
-        const metadata: JayMetadata = { format: JayFormat.Typescript };
-
-        it('should append metadata', () => {
-            const context = getContext();
-            expect(appendJayMetadata(context, id, metadata)).toEqual({
-                jay: {
-                    originalId: 'original',
-                    format: 'typescript',
-                },
-            });
-        });
-    });
-
     describe('getJayMetadata', () => {
         it('should return metadata', () => {
             const context = getContext();
             expect(getJayMetadata(context, id)).toEqual(originalMeta);
         });
+
+        describe('checkPresent', () => {
+            const checkPresent = true;
+            const format = JayFormat.JayHtml;
+
+            it('throws error when originId or format is not present', () => {
+                expect(
+                    getJayMetadata(getContext({ format, originId }), id, { checkPresent }),
+                ).toEqual({
+                    format,
+                    originId,
+                });
+                expect(() => getJayMetadata(getContext({ format }), id, { checkPresent })).toThrow(
+                    'Unknown Jay originId',
+                );
+                expect(() =>
+                    getJayMetadata(getContext({ originId }), id, { checkPresent }),
+                ).toThrow('Unknown Jay format');
+            });
+        });
     });
 
-    describe('isWorker', () => {
+    describe('isWorkerRoot', () => {
         it('should return false', () => {
             const context = getContext();
             expect(isWorkerRoot(context, id)).toEqual(false);

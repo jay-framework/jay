@@ -5,5 +5,6 @@
     "paths": {
       "jay-compiler": ["../compiler/lib"]
     }
-  }
+  },
+  "exclude": ["**/source/build/**", "**/source/dist/**"]
 }

@@ -1,28 +1,16 @@
 import { SourceFileTransformerContext } from '../mk-transformer';
-import ts, {
-    ImportSpecifier,
-    isImportDeclaration,
-    isNamedImports,
-    isStringLiteral,
-} from 'typescript';
+import ts, { ImportSpecifier, isImportDeclaration, isStringLiteral } from 'typescript';
 import { JAY_COMPONENT, MAKE_JAY_COMPONENT } from '../../core/constants';
-
-const getImportElementOriginalName = (importSpecifier: ImportSpecifier): string => {
-    return importSpecifier.propertyName
-        ? importSpecifier.propertyName.text
-        : importSpecifier.name.text;
-};
+import { getImportName, getImportSpecifiers } from '../extract-imports';
 
 export function findMakeJayComponentImport(node: ts.Node): string {
     if (
         isImportDeclaration(node) &&
         isStringLiteral(node.moduleSpecifier) &&
-        node.moduleSpecifier.text === JAY_COMPONENT &&
-        node.importClause.namedBindings &&
-        isNamedImports(node.importClause.namedBindings)
+        node.moduleSpecifier.text === JAY_COMPONENT
     ) {
-        let importSpecifier = node.importClause.namedBindings.elements.find(
-            (element) => getImportElementOriginalName(element) === MAKE_JAY_COMPONENT,
+        let importSpecifier = getImportSpecifiers(node as ts.ImportDeclaration)?.find(
+            (element) => getImportName(element) === MAKE_JAY_COMPONENT,
         );
         if (importSpecifier) {
             return importSpecifier.name.text;

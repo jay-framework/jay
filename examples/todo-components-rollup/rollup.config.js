@@ -5,6 +5,7 @@ import { terser } from 'rollup-plugin-terser';
 import { jayRuntime } from 'rollup-plugin-jay';
 import copy from 'rollup-plugin-copy';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
+import path from 'node:path';
 
 const rollupConfig = defineConfig([
     {
@@ -14,19 +15,22 @@ const rollupConfig = defineConfig([
                 file: './dist/index.js',
                 format: 'iife',
                 name: 'jay',
-                sourcemap: true,
+                sourcemap: false,
             },
             {
                 file: './dist/index.min.js',
                 format: 'iife',
                 name: 'jay',
                 plugins: [terser()],
-                sourcemap: true,
+                sourcemap: false,
             },
         ],
         context: 'window',
         plugins: [
-            jayRuntime(),
+            jayRuntime({
+                tsConfigFilePath: path.join(process.cwd(), 'tsconfig.json'),
+                outputDir: 'build',
+            }),
             // generating virtual files, static type checker cannot resolve them
             typescript({ check: false }),
             nodeResolve(),

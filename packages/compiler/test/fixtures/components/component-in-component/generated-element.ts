@@ -7,7 +7,9 @@ import {
     RenderElementOptions,
 } from 'jay-runtime';
 import { CounterRef } from '../counter/counter-refs';
+// @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-mainSandbox';
+// @ts-expect-error Cannot find module
 import { CounterViewState as CounterData } from '../counter/generated-element?jay-mainSandbox';
 
 export interface ComponentInComponentViewState {

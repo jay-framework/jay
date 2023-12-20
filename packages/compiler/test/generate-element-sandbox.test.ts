@@ -8,8 +8,7 @@ describe('generate the element sandbox files', () => {
             it('for an empty element', async () => {
                 const folder = 'basics/empty-element';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
-                expect(runtimeFile.validations).toEqual([]);
-                expect(await prettify(runtimeFile.val)).toEqual(
+                expect(await prettify(runtimeFile)).toEqual(
                     await readGeneratedElementBridgeFile(folder),
                 );
             });
@@ -17,8 +16,7 @@ describe('generate the element sandbox files', () => {
             it('for simple file with dynamic text', async () => {
                 const folder = 'basics/empty-element';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
-                expect(runtimeFile.validations).toEqual([]);
-                expect(await prettify(runtimeFile.val)).toEqual(
+                expect(await prettify(runtimeFile)).toEqual(
                     await readGeneratedElementBridgeFile(folder),
                 );
             });
@@ -26,8 +24,7 @@ describe('generate the element sandbox files', () => {
             it('for simple file refs', async () => {
                 const folder = 'basics/refs';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
-                expect(runtimeFile.validations).toEqual([]);
-                expect(await prettify(runtimeFile.val)).toEqual(
+                expect(await prettify(runtimeFile)).toEqual(
                     await readGeneratedElementBridgeFile(folder),
                 );
             });
@@ -37,8 +34,7 @@ describe('generate the element sandbox files', () => {
             it('counter component', async () => {
                 const folder = 'components/counter';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
-                expect(runtimeFile.validations).toEqual([]);
-                expect(await prettify(runtimeFile.val)).toEqual(
+                expect(await prettify(runtimeFile)).toEqual(
                     await readGeneratedElementBridgeFile(folder),
                 );
             });
@@ -46,8 +42,7 @@ describe('generate the element sandbox files', () => {
             it('component in component', async () => {
                 const folder = 'components/component-in-component';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
-                expect(runtimeFile.validations).toEqual([]);
-                expect(await prettify(runtimeFile.val)).toEqual(
+                expect(await prettify(runtimeFile)).toEqual(
                     await readGeneratedElementBridgeFile(folder),
                 );
             });
@@ -55,8 +50,7 @@ describe('generate the element sandbox files', () => {
             it('dynamic component in component', async () => {
                 const folder = 'components/dynamic-component-in-component';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
-                expect(runtimeFile.validations).toEqual([]);
-                expect(await prettify(runtimeFile.val)).toEqual(
+                expect(await prettify(runtimeFile)).toEqual(
                     await readGeneratedElementBridgeFile(
                         'components/dynamic-component-in-component',
                     ),
@@ -68,8 +62,7 @@ describe('generate the element sandbox files', () => {
             it('component in component', async () => {
                 const folder = 'collections/collection-with-refs';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
-                expect(runtimeFile.validations).toEqual([]);
-                expect(await prettify(runtimeFile.val)).toEqual(
+                expect(await prettify(runtimeFile)).toEqual(
                     await readGeneratedElementBridgeFile(folder),
                 );
             });

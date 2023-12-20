@@ -34,6 +34,7 @@ describe('compiler', () => {
                 ),
                 'Base',
                 '',
+                {},
             );
 
             expect(jayFile.val.types).toEqual(
@@ -52,6 +53,7 @@ describe('compiler', () => {
                 ),
                 'BaseElementName',
                 '',
+                {},
             );
 
             expect(jayFile.val.types).toEqual(
@@ -72,6 +74,7 @@ describe('compiler', () => {
                 ),
                 'Base',
                 '',
+                {},
             );
 
             expect(jayFile.val.types).toEqual(
@@ -91,6 +94,7 @@ describe('compiler', () => {
                 ),
                 'Base',
                 '',
+                {},
             );
 
             expect(jayFile.validations).toEqual(['invalid type [bla] found at [data.text]']);
@@ -113,6 +117,7 @@ describe('compiler', () => {
                 ),
                 'Base',
                 '',
+                {},
             );
 
             expect(jayFile.val.types).toEqual(
@@ -144,6 +149,7 @@ describe('compiler', () => {
                 ),
                 'Base',
                 '',
+                {},
             );
 
             expect(jayFile.val.types).toEqual(
@@ -169,6 +175,7 @@ describe('compiler', () => {
                 ),
                 'Base',
                 './test',
+                {},
             );
 
             expect(jayFile.validations).toEqual([]);
@@ -278,6 +285,7 @@ describe('compiler', () => {
                 ),
                 'Base',
                 '',
+                {},
             );
             expect(jayFile.validations).toEqual([
                 'jay file should have exactly one yaml-jay script, found 2',
@@ -295,6 +303,7 @@ describe('compiler', () => {
                 ),
                 'Base',
                 '',
+                {},
             );
             expect(jayFile.validations).toEqual([
                 'jay file should have exactly one yaml-jay script, found none',
@@ -302,7 +311,7 @@ describe('compiler', () => {
         });
 
         it('should report on a non html file', () => {
-            let jayFile = parseJayFile(`rrgargaergargaerg aergaegaraer aer erager`, 'Base', '');
+            let jayFile = parseJayFile(`rrgargaergargaerg aergaegaraer aer erager`, 'Base', '', {});
             expect(jayFile.validations).toEqual([
                 'jay file should have exactly one yaml-jay script, found none',
             ]);
@@ -322,6 +331,7 @@ describe('compiler', () => {
                 ),
                 'Base',
                 '',
+                {},
             );
             expect(jayFile.validations).toEqual(['jay file must have exactly a body tag']);
         });
@@ -337,6 +347,7 @@ describe('compiler', () => {
                 ),
                 'Base',
                 '',
+                {},
             );
 
             expect(jayFile.validations.length).toEqual(1);
@@ -356,6 +367,7 @@ describe('compiler', () => {
                 ),
                 'Base',
                 '',
+                {},
             );
 
             expect(jayFile.validations.length).toEqual(1);
@@ -375,6 +387,7 @@ describe('compiler', () => {
                 ),
                 'Base',
                 '',
+                {},
             );
 
             expect(jayFile.validations[0]).toContain(

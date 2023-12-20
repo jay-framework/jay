@@ -1,12 +1,14 @@
 import { extractImportedModules } from '../../lib/ts-file/extract-imports';
+import { JAY_QUERY_MAIN_SANDBOX } from '../../lib';
+import { createTsSourceFileFromSource } from '../../lib/ts-file/building-blocks/create-ts-source-file-from-source';
 
-describe('extractImportedModules', () => {
+describe('extractImports', () => {
     const filePath = '/root/src/index.ts';
     const importSameDir = './import-same-dir';
-    const importDeeperDir = './utils/import-deeper-dir';
+    const importDeeperDir = `./utils/import-deeper-dir${JAY_QUERY_MAIN_SANDBOX}`;
     const sourceCode = `
       import { foo } from "${importSameDir}";
-      import { bar } from "${importDeeperDir}";
+      import { bar as zed } from "${importDeeperDir}";
       
       const a: string = 'a';
       
@@ -14,11 +16,11 @@ describe('extractImportedModules', () => {
         return a + foo() + bar();
       }
     `;
+    const sourceFile = createTsSourceFileFromSource(filePath, sourceCode);
 
-    it('should return an array of imported modules', () => {
-        expect(extractImportedModules(filePath, sourceCode)).toEqual([
-            importSameDir,
-            importDeeperDir,
-        ]);
+    describe('extractImportedModules', () => {
+        it('returns an array of imported modules', () => {
+            expect(extractImportedModules(sourceFile)).toEqual([importSameDir, importDeeperDir]);
+        });
     });
 });

@@ -1,6 +1,7 @@
 import { PluginContext } from 'rollup';
 
 export function watchChangesFor(context: PluginContext, sourcePath: string) {
+    if (context.getWatchFiles().includes(sourcePath)) return;
     context.addWatchFile(sourcePath);
-    context.debug(`[resolveId:watch] ${sourcePath}`);
+    console.info(`[watch] add ${sourcePath}`);
 }
