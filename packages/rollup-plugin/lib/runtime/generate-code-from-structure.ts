@@ -8,7 +8,6 @@ import {
     generateElementBridgeFile,
     generateElementFile,
     generateImportsFileFromJayFile,
-    generateImportsFileFromTsSource,
     generateSandboxRootFile,
     getModeFromExtension,
     JayFile,
