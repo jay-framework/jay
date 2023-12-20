@@ -1,5 +1,5 @@
 import { rollup, RollupBuild, RollupOptions } from 'rollup';
-import { jayRuntime } from '../../lib';
+import { JayRollupConfig, jayRuntime } from '../../lib';
 import typescript from 'rollup-plugin-typescript2';
 
 export async function generateProject(
@@ -11,16 +11,14 @@ export async function generateProject(
 
 function getRollupConfig(projectRoot: string, isWorker: boolean): RollupOptions {
     const tsConfigFilePath = `${projectRoot}/source/tsconfig.json`;
+    const jayOptions: JayRollupConfig = {
+        tsConfigFilePath,
+        outputDir: `../dist/${isWorker ? 'worker' : 'main'}`,
+        isWorker,
+    };
     return {
-        input: `${projectRoot}/source/index.ts`,
+        input: `${projectRoot}/source/${isWorker ? 'sandbox-root' : 'index'}.ts`,
         logLevel: 'debug',
-        plugins: [
-            jayRuntime({
-                tsConfigFilePath,
-                outputDir: `../dist/${isWorker ? 'worker' : 'main'}`,
-                isWorker,
-            }),
-            typescript({ tsconfig: tsConfigFilePath, check: false }),
-        ],
+        plugins: [jayRuntime(jayOptions), typescript({ tsconfig: tsConfigFilePath, check: false })],
     };
 }

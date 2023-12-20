@@ -1,14 +1,15 @@
-import { WithValidations } from '../core/with-validations';
 import { JayFile } from '../core/jay-file-types';
 import { extractImportedModules, isRelativeImport } from './extract-imports';
-import { JAY_QUERY_WORKER_TRUSTED } from '../core/runtime-mode.ts';
+import { JAY_QUERY_WORKER_TRUSTED } from '../core/runtime-mode';
+import { createTsSourceFileFromSource } from './building-blocks/create-ts-source-file-from-source';
 
 export function generateImportsFileFromTsSource(filename: string, source: string): string {
-    return fromImportModules(extractImportedModules(filename, source));
+    const sourceFile = createTsSourceFileFromSource(filename, source);
+    return fromImportModules(extractImportedModules(sourceFile));
 }
 
-export function generateImportsFileFromJayFile(parsedFile: WithValidations<JayFile>): string {
-    return fromImportModules(parsedFile.val.imports.map((link) => link.module));
+export function generateImportsFileFromJayFile(jayFile: JayFile): string {
+    return fromImportModules(jayFile.imports.map((link) => link.module));
 }
 
 function fromImportModules(modules: string[]): string {

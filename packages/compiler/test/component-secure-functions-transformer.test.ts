@@ -1,6 +1,6 @@
 import { printTsFile } from './test-utils/ts-compiler-test-utils';
 import * as ts from 'typescript';
-import { componentSecureFunctionsTransformer } from '../lib/ts-file/component-secure-functions-transformer.ts';
+import { componentSecureFunctionsTransformer } from '../lib/ts-file/component-secure-functions-transformer';
 import { prettify } from '../lib';
 
 describe('transform event handlers with secure code split', () => {

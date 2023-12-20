@@ -9,9 +9,9 @@ import ts, {
     isPropertyAccessExpression,
     isVariableStatement,
 } from 'typescript';
-import { SourceFileTransformerContext } from '../mk-transformer.ts';
-import { flattenVariable, NameBindingResolver } from './name-binding-resolver.ts';
-import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils.ts';
+import { SourceFileTransformerContext } from '../mk-transformer';
+import { flattenVariable, NameBindingResolver } from './name-binding-resolver';
+import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils';
 
 export interface FoundEventHandler {
     eventHandlerMatchedPatterns: boolean;

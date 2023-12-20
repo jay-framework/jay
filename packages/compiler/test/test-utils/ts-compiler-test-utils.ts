@@ -2,6 +2,7 @@ import path from 'node:path';
 import * as ts from 'typescript';
 import { TransformerFactory } from 'typescript';
 import {
+    checkValidationErrors,
     componentBridgeTransformer,
     generateElementBridgeFile,
     generateElementFile,
@@ -14,7 +15,16 @@ import {
     WithValidations,
 } from '../../lib';
 import { getFileFromFolder, readNamedSourceJayFile, readTestFile } from './file-utils';
-import { astToCode } from '../../lib/ts-file/ts-compiler-utils.ts';
+import { astToCode } from '../../lib/ts-file/ts-compiler-utils';
+
+export async function readFixtureFile(
+    fixturePath: string,
+): Promise<{ dirname: string; filePath: string; code: string }> {
+    const filePath = path.resolve(__dirname, '../fixtures', fixturePath);
+    const dirname = path.dirname(filePath);
+    const code = await readTestFile(path.dirname(fixturePath), path.basename(fixturePath));
+    return { dirname, filePath, code };
+}
 
 export async function readAndParseJayFile(
     folder: string,
@@ -24,14 +34,16 @@ export async function readAndParseJayFile(
     const file = givenFile || getFileFromFolder(folder);
     const filename = `${file}.jay-html`;
     const code = await readTestFile(folder, filename);
-    return parseJayFile(code, filename, dirname);
+    return parseJayFile(code, filename, dirname, {});
 }
 
 export async function readFileAndGenerateElementBridgeFile(folder: string, givenFile?: string) {
     const dirname = path.resolve(__dirname, '../fixtures', folder);
     const file = givenFile || getFileFromFolder(folder);
     const jayFile = await readNamedSourceJayFile(folder, file);
-    const parsedFile = parseJayFile(jayFile, `${file}.jay-html`, dirname);
+    const parsedFile = checkValidationErrors(
+        parseJayFile(jayFile, `${file}.jay-html`, dirname, {}),
+    );
     return generateElementBridgeFile(parsedFile);
 }
 
@@ -39,7 +51,9 @@ export async function readFileAndGenerateElementFile(folder: string, givenFile?:
     const dirname = path.resolve(__dirname, '../fixtures', folder);
     const file = givenFile || getFileFromFolder(folder);
     const jayFile = await readNamedSourceJayFile(folder, file);
-    const parsedFile = parseJayFile(jayFile, `${file}.jay-html`, dirname);
+    const parsedFile = checkValidationErrors(
+        parseJayFile(jayFile, `${file}.jay-html`, dirname, {}),
+    );
     return generateElementFile(parsedFile, RuntimeMode.MainSandbox);
 }
 
@@ -103,7 +117,7 @@ export async function readFileAndGenerateImportsFileFromJayFile(
     const dirname = path.resolve(__dirname, '../fixtures', folder);
     const file = givenFile ?? `${getFileFromFolder(folder)}.jay-html`;
     const sourceFile = await readTestFile(folder, file);
-    const parsedFile = parseJayFile(sourceFile, file, dirname);
+    const parsedFile = checkValidationErrors(parseJayFile(sourceFile, file, dirname, {}));
     const output = generateImportsFileFromJayFile(parsedFile);
     return await prettify(output);
 }

@@ -1,5 +1,9 @@
-import { cleanDistDirectory, getGeneratedCode, readTestFile } from '../test-utils/file-utils';
-import { JAY_QUERY_MAIN_SANDBOX_TS } from 'jay-compiler';
+import { cleanDistDirectory, getExpectedCode, getGeneratedCode } from '../test-utils/file-utils';
+import {
+    JAY_QUERY_MAIN_SANDBOX_TS,
+    JAY_QUERY_WORKER_SANDBOX_TS,
+    JAY_QUERY_WORKER_TRUSTED_TS,
+} from 'jay-compiler';
 import { generateProject } from '../test-utils/rollup';
 
 describe('jayRuntime plugin - sandbox counter', () => {
@@ -11,7 +15,6 @@ describe('jayRuntime plugin - sandbox counter', () => {
 
     describe('main', () => {
         const isWorker = false;
-        const getGeneratedFixturePath = (filename: string) => `generated/main/${filename}`;
 
         beforeAll(async () => {
             await generateProject(projectRoot, { isWorker });
@@ -21,7 +24,7 @@ describe('jayRuntime plugin - sandbox counter', () => {
             it('generates application container', async () => {
                 const filename = 'app.jay-html.ts';
                 expect(await getGeneratedCode(projectRoot, filename, isWorker)).toEqual(
-                    await readTestFile(projectRoot, getGeneratedFixturePath(filename)),
+                    await getExpectedCode(projectRoot, filename, isWorker),
                 );
             });
         });
@@ -29,21 +32,20 @@ describe('jayRuntime plugin - sandbox counter', () => {
         it('generates counter element', async () => {
             const filename = `counter.jay-html${JAY_QUERY_MAIN_SANDBOX_TS}`;
             expect(await getGeneratedCode(projectRoot, filename, isWorker)).toEqual(
-                await readTestFile(projectRoot, getGeneratedFixturePath(filename)),
+                await getExpectedCode(projectRoot, filename, isWorker),
             );
         });
 
         it('generates counter component bridge', async () => {
             const filename = `counter${JAY_QUERY_MAIN_SANDBOX_TS}`;
             expect(await getGeneratedCode(projectRoot, filename, isWorker)).toEqual(
-                await readTestFile(projectRoot, getGeneratedFixturePath(filename)),
+                await getExpectedCode(projectRoot, filename, isWorker),
             );
         });
     });
 
     describe('worker', () => {
         const isWorker = true;
-        const getGeneratedFixturePath = (filename: string) => `generated/worker/${filename}`;
 
         beforeAll(async () => {
             await generateProject(projectRoot, { isWorker });
@@ -51,35 +53,35 @@ describe('jayRuntime plugin - sandbox counter', () => {
 
         describe('for trusted *.ts file', () => {
             it('generates only imports', async () => {
-                const filename = 'index.ts';
+                const filename = `sandbox-root.ts${JAY_QUERY_WORKER_TRUSTED_TS}`;
                 expect(await getGeneratedCode(projectRoot, filename, isWorker)).toEqual(
-                    await readTestFile(projectRoot, getGeneratedFixturePath(filename)),
+                    await getExpectedCode(projectRoot, filename, isWorker),
                 );
             });
 
             describe('for trusted *.jay-html file', () => {
                 it('generates sandbox root', async () => {
-                    const filename = 'app.jay-html?jay-workerTrusted.ts';
+                    const filename = `app.jay-html${JAY_QUERY_WORKER_TRUSTED_TS}`;
                     expect(await getGeneratedCode(projectRoot, filename, isWorker)).toEqual(
-                        await readTestFile(projectRoot, getGeneratedFixturePath(filename)),
+                        await getExpectedCode(projectRoot, filename, isWorker),
                     );
                 });
             });
 
             describe('for sandbox *.jay-html file', () => {
                 it('generates element file', async () => {
-                    const filename = 'counter.jay-html?jay-workerSandbox.ts';
+                    const filename = `counter.jay-html${JAY_QUERY_WORKER_SANDBOX_TS}`;
                     expect(await getGeneratedCode(projectRoot, filename, isWorker)).toEqual(
-                        await readTestFile(projectRoot, getGeneratedFixturePath(filename)),
+                        await getExpectedCode(projectRoot, filename, isWorker),
                     );
                 });
             });
 
             describe('for sandbox *.ts file', () => {
                 it('generates component file', async () => {
-                    const filename = 'counter?jay-workerSandbox.ts';
+                    const filename = `counter${JAY_QUERY_WORKER_SANDBOX_TS}`;
                     expect(await getGeneratedCode(projectRoot, filename, isWorker)).toEqual(
-                        await readTestFile(projectRoot, getGeneratedFixturePath(filename)),
+                        await getExpectedCode(projectRoot, filename, isWorker),
                     );
                 });
             });

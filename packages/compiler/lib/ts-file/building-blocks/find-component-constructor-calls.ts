@@ -1,10 +1,9 @@
-import { SourceFileTransformerContext } from '../mk-transformer.ts';
+import { SourceFileTransformerContext } from '../mk-transformer';
 import ts, {
     BindingName,
     Expression,
     isCallExpression,
     isIdentifier,
-    isStringLiteral,
     isVariableStatement,
 } from 'typescript';
 

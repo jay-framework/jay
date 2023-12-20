@@ -1,19 +1,6 @@
 import * as ts from 'typescript';
-import { withOriginalTrace } from '../utils/errors';
 
-export function createTsSourceFileFromSource(filePath: string, sourceCode: string): ts.SourceFile {
-    try {
-        return ts.createSourceFile(filePath, sourceCode, ts.ScriptTarget.Latest, true);
-    } catch (error) {
-        throw withOriginalTrace(
-            new Error(`Failed to create TypeScript source file for ${filePath}`),
-            error,
-        );
-    }
-}
-
-export function extractImports(filePath: string, sourceCode: string): ts.ImportDeclaration[] {
-    const sourceFile = createTsSourceFileFromSource(filePath, sourceCode);
+export function extractImportDeclarations(sourceFile: ts.SourceFile): ts.ImportDeclaration[] {
     const importDeclarations: ts.ImportDeclaration[] = [];
 
     function visit(node: ts.ImportDeclaration): void {
@@ -27,12 +14,23 @@ export function extractImports(filePath: string, sourceCode: string): ts.ImportD
     return importDeclarations;
 }
 
-export function extractImportedModules(filePath: string, sourceCode: string): string[] {
-    return extractImports(filePath, sourceCode)
+export function extractImportedModules(sourceFile: ts.SourceFile): string[] {
+    return extractImportDeclarations(sourceFile)
         .filter((node) => ts.isStringLiteral(node.moduleSpecifier))
         .map((node) => (node.moduleSpecifier as ts.StringLiteral).text);
 }
 
 export function isRelativeImport(module: string): boolean {
     return module.startsWith('.');
+}
+
+export function getImportSpecifiers(
+    importDeclaration: ts.ImportDeclaration,
+): ts.NodeArray<ts.ImportSpecifier> | undefined {
+    const namedBindings = importDeclaration.importClause?.namedBindings;
+    return namedBindings && ts.isNamedImports(namedBindings) ? namedBindings.elements : undefined;
+}
+
+export function getImportName(importSpecifier: ts.ImportSpecifier): string {
+    return importSpecifier.propertyName?.text ?? importSpecifier.name.text;
 }

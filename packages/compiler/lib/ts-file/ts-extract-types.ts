@@ -20,7 +20,7 @@ import {
     JayUnknown,
     resolvePrimitiveType,
 } from '../core/jay-file-types';
-import { resolveTsConfig, ResolveTsConfigOptions } from './resolve-ts-config.ts';
+import { resolveTsConfig, ResolveTsConfigOptions } from './resolve-ts-config';
 
 function getJayType(type: Type, types: JayType[]): JayType {
     let propType = resolvePrimitiveType(type.getText());
@@ -104,6 +104,7 @@ const JayComponentProperties = {
     addEventListener: true,
     removeEventListener: true,
 };
+
 export function tsExtractTypes(filename: string, options: ResolveTsConfigOptions = {}): JayType[] {
     let tsConfigPath = resolveTsConfig(options);
     const project = new Project({

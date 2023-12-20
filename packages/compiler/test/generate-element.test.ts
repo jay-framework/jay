@@ -1,6 +1,6 @@
 import { prettify } from '../lib';
 import { readGeneratedElementFile } from './test-utils/file-utils';
-import { readFileAndGenerateElementFile } from './test-utils/ts-compiler-test-utils.ts';
+import { readFileAndGenerateElementFile } from './test-utils/ts-compiler-test-utils';
 
 describe('generate the runtime file', () => {
     describe('basics', () => {

@@ -1,6 +1,6 @@
 import {
+    checkValidationErrors,
     generateComponentRefsDefinitionFile,
-    generateElementBridgeFile,
     generateElementDefinitionFile,
     generateElementFile,
     generateSandboxRootFile,
@@ -32,14 +32,16 @@ describe('generate full project', () => {
                     'sandboxed/sandboxed-counter/source',
                     'app',
                 );
-                const parsedFile = parseJayFile(
-                    jayFile,
-                    'app.jay-html',
-                    './test/fixtures/sandboxed/sandboxed-counter/source',
+                const parsedFile = checkValidationErrors(
+                    parseJayFile(
+                        jayFile,
+                        'app.jay-html',
+                        './test/fixtures/sandboxed/sandboxed-counter/source',
+                        {},
+                    ),
                 );
                 let sandboxRootFile = generateSandboxRootFile(parsedFile);
-                expect(sandboxRootFile.validations).toEqual([]);
-                expect(await prettify(sandboxRootFile.val)).toEqual(
+                expect(await prettify(sandboxRootFile)).toEqual(
                     await readGeneratedNamedFile(
                         'sandboxed/sandboxed-counter/generated/sandbox',
                         'sandbox-root',
@@ -52,8 +54,7 @@ describe('generate full project', () => {
                     'sandboxed/sandboxed-counter/source',
                     'counter',
                 );
-                expect(runtimeFile.validations).toEqual([]);
-                expect(await prettify(runtimeFile.val)).toEqual(
+                expect(await prettify(runtimeFile)).toEqual(
                     await readGeneratedNamedFile(
                         'sandboxed/sandboxed-counter/generated/sandbox',
                         'counter.jay-html',
@@ -86,14 +87,16 @@ describe('generate full project', () => {
                     'app',
                 );
                 let runtimeFile = generateElementFile(
-                    parseJayFile(
-                        jayFile,
-                        'app.jay-html',
-                        './test/fixtures/sandboxed/sandboxed-counter/source',
+                    checkValidationErrors(
+                        parseJayFile(
+                            jayFile,
+                            'app.jay-html',
+                            './test/fixtures/sandboxed/sandboxed-counter/source',
+                            {},
+                        ),
                     ),
                     RuntimeMode.MainSandbox,
                 );
-                expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
                         'sandboxed/sandboxed-counter/generated/main',
@@ -108,14 +111,16 @@ describe('generate full project', () => {
                     'counter',
                 );
                 let runtimeFile = generateElementFile(
-                    parseJayFile(
-                        jayFile,
-                        'counter.jay-html',
-                        './test/fixtures/sandboxed/sandboxed-counter/source',
+                    checkValidationErrors(
+                        parseJayFile(
+                            jayFile,
+                            'counter.jay-html',
+                            './test/fixtures/sandboxed/sandboxed-counter/source',
+                            {},
+                        ),
                     ),
                     RuntimeMode.MainSandbox,
                 );
-                expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
                         'sandboxed/sandboxed-counter/generated/main',

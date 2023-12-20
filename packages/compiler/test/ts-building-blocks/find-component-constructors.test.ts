@@ -8,8 +8,8 @@ import ts, {
     isFunctionExpression,
     TransformerFactory,
 } from 'typescript';
-import { findComponentConstructorsBlock } from '../../lib/ts-file/building-blocks/find-component-constructors.ts';
-import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-component-constructor-calls.ts';
+import { findComponentConstructorsBlock } from '../../lib/ts-file/building-blocks/find-component-constructors';
+import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-component-constructor-calls';
 
 describe('find component constructor', () => {
     function testTransformer() {

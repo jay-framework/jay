@@ -100,7 +100,7 @@ export interface JayFile {
     types: JayType;
     examples: Array<JayExample>;
     imports: JayImportLink[];
-    body: HTMLElement;
+    body: HTMLElement | undefined;
     baseElementName: string;
 }
 

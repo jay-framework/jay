@@ -19,18 +19,6 @@ export async function readFileAsString(filePath: string): Promise<string> {
     return (await readFile(filePath)).toString();
 }
 
-export async function readFileWhenExists(filePath: string): Promise<string | undefined> {
-    try {
-        return await readFileAsString(filePath);
-    } catch (error) {
-        if (error.code === 'ENOENT') {
-            return undefined;
-        } else {
-            throw error;
-        }
-    }
-}
-
 export async function writeDefinitionFile(
     dirname: string,
     filename: string,
@@ -52,6 +40,6 @@ export async function writeGeneratedFile(
     const filePath = path.resolve(jayContext.outputDir, relativePath, path.basename(id));
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, code, { encoding: 'utf8', flag: 'w' });
-    context.info(['[transform] written', filePath].join(' '));
+    console.info(['[transform] written', filePath].join(' '));
     return filePath;
 }
