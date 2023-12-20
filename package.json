@@ -26,7 +26,7 @@
     ]
   },
   "devDependencies": {
-    "prettier": "3.1.0",
+    "prettier": "^3.1.1",
     "wsrun": "^5.2.4"
   },
   "engines": {
