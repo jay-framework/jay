@@ -1,10 +1,15 @@
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import { stripMargin } from '../test-utils/strip-margin';
-import ts, {isArrowFunction, isFunctionDeclaration, TransformerFactory} from 'typescript';
+import ts, {
+    isArrowFunction,
+    isFunctionDeclaration,
+    isFunctionExpression,
+    TransformerFactory,
+} from 'typescript';
 import {
     ComponentConstructorDeclaration,
-    findComponentConstructorsBlock
+    findComponentConstructorsBlock,
 } from '../../lib/ts-file/building-blocks/find-component-constructors.ts';
 import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-component-constructor-calls.ts';
 
@@ -69,15 +74,13 @@ describe('find component constructor', () => {
             stripMargin(`import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
         | import { CounterElementRefs, render } from './generated-element';
         |
-        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
-        | }
-        |
         | export const Counter = makeJayComponent(render, 
         |   function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
         |   });`);
         const transformerState = testTransformer();
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(1);
+        expect(isFunctionExpression(transformerState.foundFunctions[0])).toBeTruthy();
     });
 
     it('find inline component constructor', async () => {
@@ -85,15 +88,13 @@ describe('find component constructor', () => {
             stripMargin(`import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
         | import { CounterElementRefs, render } from './generated-element';
         |
-        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
-        | }
-        |
         | export const Counter = makeJayComponent(render, 
         |   function ({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
         |   });`);
         const transformerState = testTransformer();
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(1);
+        expect(isFunctionExpression(transformerState.foundFunctions[0])).toBeTruthy();
     });
 
     it('find inline arrow component constructor', async () => {
@@ -101,14 +102,12 @@ describe('find component constructor', () => {
             stripMargin(`import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
         | import { CounterElementRefs, render } from './generated-element';
         |
-        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
-        | }
-        |
         | export const Counter = makeJayComponent(render, 
         |   ({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) => {
         |   });`);
         const transformerState = testTransformer();
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(1);
+        expect(isArrowFunction(transformerState.foundFunctions[0])).toBeTruthy();
     });
 });
