@@ -29,6 +29,6 @@
     "jay-secure": "workspace:^",
     "tsup": "^8.0.1",
     "vite": "^5.0.10",
-    "vitest": "^1.1.0"
+    "vitest": "^0.34.6"
   }
 }
