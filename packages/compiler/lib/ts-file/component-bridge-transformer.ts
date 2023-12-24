@@ -5,7 +5,7 @@ import { mkTransformer, SourceFileTransformerContext } from './mk-transformer.ts
 import {
     findMakeJayComponentImport,
     findMakeJayComponentImportTransformerBlock,
-} from './building-blocks/find-make-jay-component-import-transformer';
+} from './building-blocks/find-make-jay-component-import';
 import { findComponentConstructorCalls } from './building-blocks/find-component-constructor-calls.ts';
 
 function transformVariableStatement(
@@ -112,3 +112,4 @@ export function componentBridgeTransformer(
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
     return mkTransformer(mkSourceFileTransformer, { importerMode });
 }
+

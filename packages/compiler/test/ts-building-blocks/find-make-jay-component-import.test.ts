@@ -1,7 +1,7 @@
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import { stripMargin } from '../test-utils/strip-margin';
-import { findMakeJayComponentImportTransformerBlock } from '../../lib/ts-file/building-blocks/find-make-jay-component-import-transformer';
+import { findMakeJayComponentImportTransformerBlock } from '../../lib/ts-file/building-blocks/find-make-jay-component-import';
 
 describe('find makeJayComponent import', () => {
     function testTransformer() {

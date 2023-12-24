@@ -1,6 +1,6 @@
 import ts from 'typescript';
 import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
-import { findMakeJayComponentImportTransformerBlock } from './building-blocks/find-make-jay-component-import-transformer';
+import { findMakeJayComponentImportTransformerBlock } from './building-blocks/find-make-jay-component-import';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors.ts';
 import { findComponentConstructorCallsBlock } from './building-blocks/find-component-constructor-calls.ts';
 

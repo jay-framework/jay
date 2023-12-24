@@ -6,6 +6,8 @@ import {
     ScriptTarget,
 } from 'typescript';
 import * as ts from 'typescript';
+import { mkTransformer } from '../../lib/ts-file/mk-transformer.ts';
+import { findJayComponentConstructor } from '../../lib/ts-file/find-jay-component-constructor.ts';
 
 const compilerOptions: CompilerOptions = {
     target: ScriptTarget.ES2022,
