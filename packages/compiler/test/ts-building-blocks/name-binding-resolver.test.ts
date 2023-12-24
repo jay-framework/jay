@@ -3,7 +3,6 @@ import ts, {
     ExpressionStatement,
     isVariableStatement,
     FunctionDeclaration,
-    ParameterDeclaration,
     PropertyAccessExpression,
     VariableStatement, Expression,
 } from 'typescript';
@@ -316,7 +315,7 @@ describe('NameBindingResolver', () => {
             });
         });
 
-        it.skip(`resolve let z = {y: a}`, () => {
+        it(`resolve let z = {y: a}; then resolve z.y to a`, () => {
             let { a, nameResolver } = resolveNamesForVariableStatement(`let z = {y: a}`);
 
             expect(nameResolver.variables.has('z'));
@@ -324,12 +323,40 @@ describe('NameBindingResolver', () => {
             expect(z).toEqual({
                 name: 'z',
                 assignedFrom: {
-                    accessedByProperty: 'y',
-                    accessedFrom: a,
+                    properties: [{
+                        name: 'y',
+                        assignedFrom: a,
+                    }]
                 },
             });
-            expect(flattenVariable(z)).toEqual({
-                path: ['y'],
+            let zy = nameResolver.resolvePropertyAccessChain((getAstNode('z.y') as ExpressionStatement).expression);
+            expect(flattenVariable(zy)).toEqual({
+                path: [],
+                root: ParameterDeclarationPlaceholder,
+            });
+        });
+
+        it(`resolve let z = {y: {x: a}}; then resolve z.y.x to a`, () => {
+            let { a, nameResolver } = resolveNamesForVariableStatement(`let z = {y: {x: a}}`);
+
+            expect(nameResolver.variables.has('z'));
+            let z = nameResolver.variables.get('z');
+            expect(z).toEqual({
+                name: 'z',
+                assignedFrom: {
+                    properties: [{
+                        name: 'y',
+                        properties: [{
+                            name: 'x',
+                            assignedFrom: a,
+                        }]
+
+                    }]
+                },
+            });
+            let zy = nameResolver.resolvePropertyAccessChain((getAstNode('z.y.x') as ExpressionStatement).expression);
+            expect(flattenVariable(zy)).toEqual({
+                path: [],
                 root: ParameterDeclarationPlaceholder,
             });
         });
