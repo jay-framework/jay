@@ -3,6 +3,7 @@ import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
 import { findMakeJayComponentImportTransformerBlock } from './building-blocks/find-make-jay-component-import';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors.ts';
 import { findComponentConstructorCallsBlock } from './building-blocks/find-component-constructor-calls.ts';
+import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions.ts';
 
 function mkComponentSecureFunctionsTransformer(sftContext: SourceFileTransformerContext) {
     let makeJayComponent_ImportName = findMakeJayComponentImportTransformerBlock(sftContext);
@@ -11,6 +12,10 @@ function mkComponentSecureFunctionsTransformer(sftContext: SourceFileTransformer
     let calls = findComponentConstructorCallsBlock(makeJayComponent_ImportName, sftContext);
     let constructorExpressions = calls.map(({ comp }) => comp);
     let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sftContext);
+    let eventHandlers = constructorDefinitions.map((constructorDefinition) =>
+        findEventHandlersBlock(constructorDefinition, sftContext),
+    );
+
     // todo start transforming the component definition functions
 
     return sftContext.sourceFile;

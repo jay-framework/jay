@@ -16,7 +16,7 @@ function transformVariableStatement(
 ) {
     let foundConstructors = findComponentConstructorCalls(makeJayComponentName, node);
 
-    let transformedConstructors = foundConstructors.map(({ name, comp, render }) => {
+    let transformedConstructors = foundConstructors.map(({ name, render }) => {
         return `${astToCode(name)} = makeJayComponentBridge(${astToCode(render)})`;
     });
 
@@ -112,4 +112,3 @@ export function componentBridgeTransformer(
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
     return mkTransformer(mkSourceFileTransformer, { importerMode });
 }
-

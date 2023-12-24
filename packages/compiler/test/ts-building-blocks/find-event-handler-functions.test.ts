@@ -1,15 +1,16 @@
-import {mkTransformer} from "../../lib/ts-file/mk-transformer.ts";
-import {
-    findComponentConstructorCallsBlock
-} from "../../lib/ts-file/building-blocks/find-component-constructor-calls.ts";
-import {findComponentConstructorsBlock} from "../../lib/ts-file/building-blocks/find-component-constructors.ts";
-import ts, {FunctionLikeDeclarationBase, isArrowFunction, isFunctionDeclaration, TransformerFactory} from "typescript";
-import {findEventHandlersBlock} from "../../lib/ts-file/building-blocks/find-event-handler-functions.ts";
-import {stripMargin} from "../test-utils/strip-margin.ts";
-import {transformCode} from "../test-utils/ts-compiler-test-utils.ts";
+import { mkTransformer } from '../../lib/ts-file/mk-transformer.ts';
+import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-component-constructor-calls.ts';
+import { findComponentConstructorsBlock } from '../../lib/ts-file/building-blocks/find-component-constructors.ts';
+import ts, {
+    FunctionLikeDeclarationBase,
+    isArrowFunction,
+    TransformerFactory,
+} from 'typescript';
+import { findEventHandlersBlock } from '../../lib/ts-file/building-blocks/find-event-handler-functions.ts';
+import { stripMargin } from '../test-utils/strip-margin.ts';
+import { transformCode } from '../test-utils/ts-compiler-test-utils.ts';
 
 describe('find component event handlers', () => {
-
     function testTransformer() {
         let state = {
             foundFunctions: undefined,
@@ -27,8 +28,9 @@ describe('find component event handlers', () => {
                     sourceFileTransformerData,
                 );
 
-                state.foundFunctions = foundConstructors.flatMap(constructor =>
-                    findEventHandlersBlock(constructor, sourceFileTransformerData))
+                state.foundFunctions = foundConstructors.flatMap((constructor) =>
+                    findEventHandlersBlock(constructor, sourceFileTransformerData),
+                );
 
                 return sourceFileTransformerData.sourceFile;
             }),
@@ -94,5 +96,4 @@ describe('find component event handlers', () => {
         expect(isArrowFunction(transformerState.foundFunctions[0])).toBeTruthy();
         expect(isArrowFunction(transformerState.foundFunctions[1])).toBeTruthy();
     });
-
 });
