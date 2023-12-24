@@ -315,6 +315,24 @@ describe('NameBindingResolver', () => {
                 root: ParameterDeclarationPlaceholder,
             });
         });
+
+        it.skip(`resolve let z = {y: a}`, () => {
+            let { a, nameResolver } = resolveNamesForVariableStatement(`let z = {y: a}`);
+
+            expect(nameResolver.variables.has('z'));
+            let z = nameResolver.variables.get('z');
+            expect(z).toEqual({
+                name: 'z',
+                assignedFrom: {
+                    accessedByProperty: 'y',
+                    accessedFrom: a,
+                },
+            });
+            expect(flattenVariable(z)).toEqual({
+                path: ['y'],
+                root: ParameterDeclarationPlaceholder,
+            });
+        });
     });
 
     describe('resolve function definition', () => {

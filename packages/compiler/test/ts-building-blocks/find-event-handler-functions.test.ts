@@ -160,4 +160,26 @@ describe('find component event handlers', () => {
         expect(isFunctionExpression(transformerState.foundFunctions[0])).toBeTruthy();
         expect(isFunctionExpression(transformerState.foundFunctions[1])).toBeTruthy();
     })
+
+    it.skip('defined as nested object function', async () => {
+        const code =
+            stripMargin(`import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+        | import { CounterElementRefs, render } from './generated-element';
+        |
+        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+        |   const events = {
+        |     subtract: function() { setCount(count() - 1)},
+        |     add: function() { setCount(count() + 1)}
+        |   }
+        |   refs.subtracter.onclick(events.subtract);
+        |   refs.adderButton.onclick(events.add);
+        | }
+        |
+        | export const Counter = makeJayComponent(render, CounterComponent);`);
+        const transformerState = testTransformer();
+        await transformCode(code, [transformerState.transformer]);
+        expect(transformerState.foundFunctions).toHaveLength(2);
+        expect(isFunctionExpression(transformerState.foundFunctions[0])).toBeTruthy();
+        expect(isFunctionExpression(transformerState.foundFunctions[1])).toBeTruthy();
+    })
 });
