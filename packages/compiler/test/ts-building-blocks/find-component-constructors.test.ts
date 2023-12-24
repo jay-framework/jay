@@ -2,15 +2,13 @@ import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import { stripMargin } from '../test-utils/strip-margin';
 import ts, {
+    FunctionLikeDeclarationBase,
     isArrowFunction,
     isFunctionDeclaration,
     isFunctionExpression,
     TransformerFactory,
 } from 'typescript';
-import {
-    ComponentConstructorDeclaration,
-    findComponentConstructorsBlock,
-} from '../../lib/ts-file/building-blocks/find-component-constructors.ts';
+import { findComponentConstructorsBlock } from '../../lib/ts-file/building-blocks/find-component-constructors.ts';
 import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-component-constructor-calls.ts';
 
 describe('find component constructor', () => {
@@ -34,7 +32,7 @@ describe('find component constructor', () => {
             }),
         };
         return state as {
-            foundFunctions: ComponentConstructorDeclaration[];
+            foundFunctions: FunctionLikeDeclarationBase[];
             transformer: TransformerFactory<ts.SourceFile>;
         };
     }

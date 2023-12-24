@@ -5,7 +5,7 @@ import { mkTransformer, SourceFileTransformerContext } from './mk-transformer.ts
 import {
     findMakeJayComponentImport,
     findMakeJayComponentImportTransformerBlock,
-} from './building-blocks/find-make-jay-component-import-transformer';
+} from './building-blocks/find-make-jay-component-import';
 import { findComponentConstructorCalls } from './building-blocks/find-component-constructor-calls.ts';
 
 function transformVariableStatement(
@@ -16,7 +16,7 @@ function transformVariableStatement(
 ) {
     let foundConstructors = findComponentConstructorCalls(makeJayComponentName, node);
 
-    let transformedConstructors = foundConstructors.map(({ name, comp, render }) => {
+    let transformedConstructors = foundConstructors.map(({ name, render }) => {
         return `${astToCode(name)} = makeJayComponentBridge(${astToCode(render)})`;
     });
 

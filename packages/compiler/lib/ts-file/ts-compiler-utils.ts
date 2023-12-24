@@ -1,4 +1,14 @@
-import ts from 'typescript';
+import ts, {
+    Expression,
+    FunctionLikeDeclarationBase,
+    isArrowFunction,
+    isConstructorDeclaration,
+    isFunctionDeclaration,
+    isFunctionExpression,
+    isGetAccessorDeclaration,
+    isMethodDeclaration,
+    isSetAccessorDeclaration,
+} from 'typescript';
 
 const printer: ts.Printer = ts.createPrinter({
     newLine: ts.NewLineKind.LineFeed,
@@ -16,4 +26,18 @@ export function codeToAst(code: string, context: ts.TransformationContext): ts.N
     }
 
     return ts.visitEachChild(dummySourceFile, visitor, context).statements as any as ts.Node[];
+}
+
+export function isFunctionLikeDeclarationBase(
+    node: ts.Node,
+): node is Expression & FunctionLikeDeclarationBase {
+    return (
+        isFunctionExpression(node) ||
+        isArrowFunction(node) ||
+        isFunctionDeclaration(node) ||
+        isMethodDeclaration(node) ||
+        isConstructorDeclaration(node) ||
+        isGetAccessorDeclaration(node) ||
+        isSetAccessorDeclaration(node)
+    );
 }

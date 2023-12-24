@@ -1,24 +1,19 @@
 import { SourceFileTransformerContext } from '../mk-transformer.ts';
 import ts, {
     Expression,
+    FunctionLikeDeclarationBase,
     isArrowFunction,
     isFunctionDeclaration,
-    isFunctionExpression,
     isIdentifier,
-    isVariableDeclaration,
     isVariableStatement,
 } from 'typescript';
-
-export type ComponentConstructorDeclaration =
-    | ts.FunctionDeclaration
-    | ts.ArrowFunction
-    | ts.FunctionExpression;
+import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils.ts';
 
 export function findComponentConstructorsBlock(
     componentFunctionExpressions: Expression[],
     { context, sourceFile }: SourceFileTransformerContext,
-) {
-    const foundConstructors: ComponentConstructorDeclaration[] = [];
+): FunctionLikeDeclarationBase[] {
+    const foundConstructors: FunctionLikeDeclarationBase[] = [];
 
     const namedConstructors = new Set(
         componentFunctionExpressions
@@ -27,8 +22,8 @@ export function findComponentConstructorsBlock(
     );
 
     const inlineConstructors = componentFunctionExpressions.filter(
-        (expression) => isFunctionExpression(expression) || isArrowFunction(expression),
-    );
+        isFunctionLikeDeclarationBase,
+    ) as FunctionLikeDeclarationBase[];
 
     const findConstructors: ts.Visitor = (node) => {
         if (isFunctionDeclaration(node)) {
