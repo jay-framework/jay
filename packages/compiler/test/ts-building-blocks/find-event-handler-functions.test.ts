@@ -3,7 +3,7 @@ import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-b
 import { findComponentConstructorsBlock } from '../../lib/ts-file/building-blocks/find-component-constructors.ts';
 import ts, {
     FunctionLikeDeclarationBase,
-    isArrowFunction, isFunctionDeclaration,
+    isArrowFunction, isFunctionDeclaration, isFunctionExpression,
     TransformerFactory,
 } from 'typescript';
 import { findEventHandlersBlock } from '../../lib/ts-file/building-blocks/find-event-handler-functions.ts';
@@ -139,5 +139,25 @@ describe('find component event handlers', () => {
         expect(transformerState.foundFunctions).toHaveLength(2);
         expect(isArrowFunction(transformerState.foundFunctions[0])).toBeTruthy();
         expect(isArrowFunction(transformerState.foundFunctions[1])).toBeTruthy();
+    })
+
+    it('defined as const anonymous function', async () => {
+        const code =
+            stripMargin(`import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+        | import { CounterElementRefs, render } from './generated-element';
+        |
+        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+        |   const subtract = function() { setCount(count() - 1)};
+        |   const add = function() { setCount(count() + 1)};
+        |   refs.subtracter.onclick(subtract);
+        |   refs.adderButton.onclick(add);
+        | }
+        |
+        | export const Counter = makeJayComponent(render, CounterComponent);`);
+        const transformerState = testTransformer();
+        await transformCode(code, [transformerState.transformer]);
+        expect(transformerState.foundFunctions).toHaveLength(2);
+        expect(isFunctionExpression(transformerState.foundFunctions[0])).toBeTruthy();
+        expect(isFunctionExpression(transformerState.foundFunctions[1])).toBeTruthy();
     })
 });
