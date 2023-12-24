@@ -2,7 +2,7 @@ import {
     FunctionLikeDeclarationBase,
     isBlock,
     isCallExpression,
-    isExpressionStatement,
+    isExpressionStatement, isFunctionDeclaration,
     isIdentifier,
     isPropertyAccessExpression,
     isVariableStatement,
@@ -21,6 +21,7 @@ export function findEventHandlersBlock(
     if (isBlock(functionDeclaration.body)) {
         functionDeclaration.body.statements.forEach((statement) => {
             if (isVariableStatement(statement)) nameBindingResolver.addVariableStatement(statement);
+            else if (isFunctionDeclaration(statement)) nameBindingResolver.addFunctionDeclaration(statement);
             else if (isExpressionStatement(statement) && isCallExpression(statement.expression)) {
                 let functionVariable;
                 if (isPropertyAccessExpression(statement.expression.expression)) {
@@ -37,8 +38,16 @@ export function findEventHandlersBlock(
                 if (
                     accessChain.path.length === 2 &&
                     accessChain.root === functionDeclaration.parameters[1]
-                )
-                    foundEventHandlers.push(statement.expression.arguments[0]);
+                ) {
+                    let handler = statement.expression.arguments[0];
+                    if (isIdentifier(handler) && nameBindingResolver.variables.has(handler.text)) {
+                        let flattenedHandler = flattenVariable(nameBindingResolver.variables.get(handler.text));
+                        if (flattenedHandler.path.length === 0)
+                            foundEventHandlers.push(flattenedHandler.root)
+                    }
+                    else
+                        foundEventHandlers.push(handler);
+                }
             }
         });
     }

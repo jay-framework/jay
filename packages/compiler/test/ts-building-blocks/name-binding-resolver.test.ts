@@ -2,9 +2,10 @@ import { isFunctionLikeDeclarationBase } from '../../lib/ts-file/ts-compiler-uti
 import ts, {
     ExpressionStatement,
     isVariableStatement,
+    FunctionDeclaration,
     ParameterDeclaration,
     PropertyAccessExpression,
-    VariableStatement,
+    VariableStatement, Expression,
 } from 'typescript';
 import {
     tsBindingNameToVariable,
@@ -22,7 +23,7 @@ function getAstNode(code: string, index: number = 0): ts.Node {
 }
 
 const ASSIGNMENT_RIGHT_SIDE_PLACEHOLDER = { name: 'ASSIGNMENT_RIGHT_SIDE_PLACEHOLDER' };
-const ParameterDeclarationPlaceholder: ParameterDeclaration = {} as ParameterDeclaration;
+const ParameterDeclarationPlaceholder: Expression = {} as Expression;
 
 describe('NameBindingResolver', () => {
     describe('bindingNameToVariable', () => {
@@ -314,6 +315,28 @@ describe('NameBindingResolver', () => {
                 root: ParameterDeclarationPlaceholder,
             });
         });
+    });
+
+    describe('resolve function definition', () => {
+        function resolveNamesForFunctionDeclaration(code: string) {
+            let nameResolver = new NameBindingResolver();
+            let func = getAstNode(code) as FunctionDeclaration;
+            nameResolver.addFunctionDeclaration(func);
+            return { nameResolver, func };
+        }
+
+        it('resolve function declaration', () => {
+            let { func, nameResolver } = resolveNamesForFunctionDeclaration(
+                'function bla() {}');
+
+            expect(nameResolver.variables.has('bla'));
+            let bla = nameResolver.variables.get('bla');
+            expect(bla).toEqual({
+                name: 'bla',
+                root: func,
+            });
+        });
+
     });
 
     describe('resolve property access chain', () => {

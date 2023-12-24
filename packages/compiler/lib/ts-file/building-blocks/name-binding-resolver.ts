@@ -1,7 +1,8 @@
-import {
+import ts, {
     BindingName,
     Expression,
     FunctionLikeDeclarationBase,
+    FunctionDeclaration,
     Identifier,
     isElementAccessExpression,
     isIdentifier,
@@ -14,12 +15,14 @@ import {
     VariableStatement,
 } from 'typescript';
 
+export type VariableRoot = ParameterDeclaration | FunctionDeclaration;
+
 export interface Variable {
     name?: string;
     accessedFrom?: Variable;
     accessedByProperty?: string;
     assignedFrom?: Variable;
-    root?: ParameterDeclaration;
+    root?: ts.Node;
 }
 
 export function mkVariable(members: {
@@ -27,7 +30,7 @@ export function mkVariable(members: {
     accessedFrom?: Variable;
     accessedByProperty?: string;
     assignedFrom?: Variable;
-    root?: ParameterDeclaration;
+    root?: VariableRoot;
 }) {
     return Object.fromEntries(
         Object.entries(members).filter(([, value]) => value !== undefined),
@@ -119,7 +122,7 @@ export class NameBindingResolver {
         } else if (isIdentifier(expression)) {
             return this.variables.has(expression.text) ? this.variables.get(expression.text) : {};
         } else {
-            return {};
+            return {root: expression};
         }
     }
 
@@ -145,11 +148,18 @@ export class NameBindingResolver {
         if (this.variables.has(variableName)) return this.variables.get(variableName);
         else return {};
     }
+
+    addFunctionDeclaration(statement: FunctionDeclaration) {
+        if (statement.name) {
+            let functionVariable = mkVariable({name: statement.name.text, root: statement})
+            this.variables.set(statement.name.text, functionVariable);
+        }
+    }
 }
 
 interface FlattenedAccessChain {
     path: string[];
-    root: ParameterDeclaration;
+    root: ts.Node;
 }
 export function flattenVariable(variable: Variable): FlattenedAccessChain {
     if (variable.assignedFrom) return flattenVariable(variable.assignedFrom);
