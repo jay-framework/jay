@@ -161,7 +161,7 @@ describe('find component event handlers', () => {
         expect(isFunctionExpression(transformerState.foundFunctions[1])).toBeTruthy();
     })
 
-    it.skip('defined as nested object function', async () => {
+    it('defined as nested object function', async () => {
         const code =
             stripMargin(`import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
         | import { CounterElementRefs, render } from './generated-element';

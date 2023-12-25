@@ -9,6 +9,7 @@ import {
 } from 'typescript';
 import { SourceFileTransformerContext } from '../mk-transformer.ts';
 import { flattenVariable, NameBindingResolver } from './name-binding-resolver.ts';
+import {isFunctionLikeDeclarationBase} from "../ts-compiler-utils.ts";
 
 export function findEventHandlersBlock(
     functionDeclaration: FunctionLikeDeclarationBase,
@@ -40,13 +41,14 @@ export function findEventHandlersBlock(
                     accessChain.root === functionDeclaration.parameters[1]
                 ) {
                     let handler = statement.expression.arguments[0];
-                    if (isIdentifier(handler) && nameBindingResolver.variables.has(handler.text)) {
-                        let flattenedHandler = flattenVariable(nameBindingResolver.variables.get(handler.text));
+                    if (isFunctionLikeDeclarationBase(handler))
+                        foundEventHandlers.push(handler);
+                    else {
+                    // else if (isIdentifier(handler) && nameBindingResolver.variables.has(handler.text)) {
+                        let flattenedHandler = flattenVariable(nameBindingResolver.resolvePropertyAccessChain(handler));
                         if (flattenedHandler.path.length === 0)
                             foundEventHandlers.push(flattenedHandler.root)
                     }
-                    else
-                        foundEventHandlers.push(handler);
                 }
             }
         });
