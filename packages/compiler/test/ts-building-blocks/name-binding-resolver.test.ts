@@ -4,7 +4,7 @@ import ts, {
     isVariableStatement,
     FunctionDeclaration,
     PropertyAccessExpression,
-    VariableStatement, Expression,
+    VariableStatement, Expression, ObjectLiteralExpression, PropertyAssignment,
 } from 'typescript';
 import {
     tsBindingNameToVariable,
@@ -243,7 +243,7 @@ describe('NameBindingResolver', () => {
             let node = getAstNode(code) as VariableStatement;
             nameResolver.addVariableStatement(node);
             let a = nameResolver.variables.get('a');
-            return { nameResolver, a };
+            return { nameResolver, a, node };
         }
 
         it('resolve let z = a', () => {
@@ -354,12 +354,33 @@ describe('NameBindingResolver', () => {
                     }]
                 },
             });
+
             let zy = nameResolver.resolvePropertyAccessChain((getAstNode('z.y.x') as ExpressionStatement).expression);
             expect(flattenVariable(zy)).toEqual({
                 path: [],
                 root: ParameterDeclarationPlaceholder,
             });
         });
+
+        it('resolve let z = {a: function() {}}; then resolve z.a to the function', () => {
+            let { node, nameResolver } = resolveNamesForVariableStatement('let z = {a: function() {}}');
+
+            expect(nameResolver.variables.has('z'));
+            let z = nameResolver.variables.get('z');
+            let declaredInlineFunction = ((node.declarationList.declarations[0].initializer as ObjectLiteralExpression).properties[0] as PropertyAssignment).initializer;
+            expect(z).toEqual({
+                name: 'z',
+                assignedFrom: {
+                    properties: [
+                        {name: 'a', root: declaredInlineFunction},
+                    ],
+                }
+            });
+
+            let za = nameResolver.resolvePropertyAccessChain((getAstNode('z.a') as ExpressionStatement).expression);
+            expect(flattenVariable(za)).toEqual({ path: [], root: declaredInlineFunction });
+        });
+
     });
 
     describe('resolve function definition', () => {

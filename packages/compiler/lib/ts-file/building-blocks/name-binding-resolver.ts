@@ -138,6 +138,7 @@ export class NameBindingResolver {
                             nestedProperty.name = property.name.text;
                             return nestedProperty;
                         }
+                        else return {name: property.name.text, root: property.initializer}
                     }
                     else if (isShorthandPropertyAssignment(property))
                         return {name: property.name.text, assignedFrom: this.resolveIdentifier(property.name)}
