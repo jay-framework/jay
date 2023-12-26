@@ -12,7 +12,11 @@ import ts, {
     ParameterDeclaration,
     PropertyAccessExpression,
     PropertyName,
-    VariableStatement, isObjectLiteralExpression, isPropertyAssignment, isShorthandPropertyAssignment,
+    VariableStatement,
+    isObjectLiteralExpression,
+    isPropertyAssignment,
+    isShorthandPropertyAssignment,
+    isArrayBindingPattern, isBindingElement,
 } from 'typescript';
 
 export type VariableRoot = ParameterDeclaration | FunctionDeclaration;
@@ -84,6 +88,24 @@ export function tsBindingNameToVariable(
         return binding.elements.flatMap((element) => {
             return tsBindingNameToVariable(element.name, variable, undefined, element.propertyName);
         });
+    } else if (isArrayBindingPattern(binding)) {
+        let variable: Variable = mkVariable({
+            accessedFrom,
+            accessedByProperty: propertyName
+                ? isIdentifier(propertyName)
+                    ? propertyName.text
+                    : undefined
+                : undefined,
+            assignedFrom,
+            root,
+        });
+        return binding.elements
+            .flatMap((element, index) => {
+                /*this is ugly - to pass the index as an identifier. maybe worth replacing it with usage of TS node factory? */
+                return isBindingElement(element) && tsBindingNameToVariable(element.name, variable, undefined, ({kind: 80, text: ''+index} as Identifier));
+            })
+            .filter(variable => !!variable)
+            ;
     }
 }
 

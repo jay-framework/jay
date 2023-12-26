@@ -4,7 +4,7 @@ import ts, {
     isVariableStatement,
     FunctionDeclaration,
     PropertyAccessExpression,
-    VariableStatement, Expression, ObjectLiteralExpression, PropertyAssignment,
+    VariableStatement, Expression, ObjectLiteralExpression, PropertyAssignment, CallExpression,
 } from 'typescript';
 import {
     tsBindingNameToVariable,
@@ -364,10 +364,10 @@ describe('NameBindingResolver', () => {
 
         it('resolve let z = {a: function() {}}; then resolve z.a to the function', () => {
             let { node, nameResolver } = resolveNamesForVariableStatement('let z = {a: function() {}}');
+            let declaredInlineFunction = ((node.declarationList.declarations[0].initializer as ObjectLiteralExpression).properties[0] as PropertyAssignment).initializer;
 
             expect(nameResolver.variables.has('z'));
             let z = nameResolver.variables.get('z');
-            let declaredInlineFunction = ((node.declarationList.declarations[0].initializer as ObjectLiteralExpression).properties[0] as PropertyAssignment).initializer;
             expect(z).toEqual({
                 name: 'z',
                 assignedFrom: {
@@ -381,6 +381,42 @@ describe('NameBindingResolver', () => {
             expect(flattenVariable(za)).toEqual({ path: [], root: declaredInlineFunction });
         });
 
+        it('resolve let [state, getState] = createState()', () => {
+            let { node, nameResolver } = resolveNamesForVariableStatement('let [state, getState] = createState()');
+            let createStateFunction = (node.declarationList.declarations[0].initializer as CallExpression);
+
+            expect(nameResolver.variables.has('state'));
+            let state = nameResolver.variables.get('state');
+            expect(state).toEqual({
+                name: 'state',
+                accessedByProperty: '0',
+                accessedFrom: {
+                    assignedFrom: {
+                        root: createStateFunction
+                    },
+                },
+            });
+            expect(flattenVariable(state)).toEqual({
+                path: ['0'],
+                root: createStateFunction,
+            });
+
+            expect(nameResolver.variables.has('getState'));
+            let getState = nameResolver.variables.get('getState');
+            expect(getState).toEqual({
+                name: 'getState',
+                accessedByProperty: '1',
+                accessedFrom: {
+                    assignedFrom: {
+                        root: createStateFunction
+                    },
+                },
+            });
+            expect(flattenVariable(getState)).toEqual({
+                path: ['1'],
+                root: createStateFunction,
+            });
+        });
     });
 
     describe('resolve function definition', () => {
