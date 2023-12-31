@@ -1,6 +1,6 @@
 import { render } from './item.jay-html';
-import {FunctionsRepository, makeJayComponentBridge} from 'jay-secure';
-import {JayEvent} from "jay-runtime";
+import { FunctionsRepository, makeJayComponentBridge } from 'jay-secure';
+import { JayEvent } from 'jay-runtime';
 
 export interface ItemProps {
     title: string;
@@ -8,7 +8,7 @@ export interface ItemProps {
 }
 
 export const funcRepository: FunctionsRepository = {
-    '1': ({event}: JayEvent<Event, any>) => (event.target as HTMLInputElement).value,
-    '2': ({event}: JayEvent<KeyboardEvent, any>) => event.which,
-}
+    '1': ({ event }: JayEvent<Event, any>) => (event.target as HTMLInputElement).value,
+    '2': ({ event }: JayEvent<KeyboardEvent, any>) => event.which,
+};
 export const Item = makeJayComponentBridge(render, { funcRepository });

@@ -1,5 +1,5 @@
 import { render } from './main.jay-html';
-import {FunctionsRepository, makeJayComponentBridge} from 'jay-secure';
+import { FunctionsRepository, makeJayComponentBridge } from 'jay-secure';
 
 export interface MainProps {}
 

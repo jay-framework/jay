@@ -1,5 +1,5 @@
 import { render as TableHostRender } from './table-host.jay-html';
-import {FunctionsRepository, makeJayComponentBridge} from 'jay-secure';
+import { FunctionsRepository, makeJayComponentBridge } from 'jay-secure';
 
 interface TableHostProps {
     cycles: number;

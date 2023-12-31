@@ -1,6 +1,6 @@
 import { render } from './todo.jay-html';
-import {FunctionsRepository, makeJayComponentBridge} from 'jay-secure';
-import {JayEvent} from "jay-runtime";
+import { FunctionsRepository, makeJayComponentBridge } from 'jay-secure';
+import { JayEvent } from 'jay-runtime';
 
 export interface TodoItem {
     id: string;

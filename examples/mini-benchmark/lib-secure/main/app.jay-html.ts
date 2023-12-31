@@ -1,6 +1,6 @@
 import { JayElement, ConstructContext, RenderElementOptions, compRef } from 'jay-runtime';
 import { Main, MainProps } from './main';
-import {FunctionsRepository, mainRoot as mr} from 'jay-secure';
+import { FunctionsRepository, mainRoot as mr } from 'jay-secure';
 import { secureChildComp } from 'jay-secure';
 
 export interface AppViewState {}
