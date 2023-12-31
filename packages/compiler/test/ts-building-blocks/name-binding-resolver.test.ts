@@ -2,9 +2,13 @@ import { isFunctionLikeDeclarationBase } from '../../lib/ts-file/ts-compiler-uti
 import ts, {
     ExpressionStatement,
     isVariableStatement,
-    ParameterDeclaration,
+    FunctionDeclaration,
     PropertyAccessExpression,
     VariableStatement,
+    Expression,
+    ObjectLiteralExpression,
+    PropertyAssignment,
+    CallExpression,
 } from 'typescript';
 import {
     tsBindingNameToVariable,
@@ -22,7 +26,7 @@ function getAstNode(code: string, index: number = 0): ts.Node {
 }
 
 const ASSIGNMENT_RIGHT_SIDE_PLACEHOLDER = { name: 'ASSIGNMENT_RIGHT_SIDE_PLACEHOLDER' };
-const ParameterDeclarationPlaceholder: ParameterDeclaration = {} as ParameterDeclaration;
+const ParameterDeclarationPlaceholder: Expression = {} as Expression;
 
 describe('NameBindingResolver', () => {
     describe('bindingNameToVariable', () => {
@@ -243,7 +247,7 @@ describe('NameBindingResolver', () => {
             let node = getAstNode(code) as VariableStatement;
             nameResolver.addVariableStatement(node);
             let a = nameResolver.variables.get('a');
-            return { nameResolver, a };
+            return { nameResolver, a, node };
         }
 
         it('resolve let z = a', () => {
@@ -312,6 +316,146 @@ describe('NameBindingResolver', () => {
             expect(flattenVariable(z)).toEqual({
                 path: ['b'],
                 root: ParameterDeclarationPlaceholder,
+            });
+        });
+
+        it(`resolve let z = {y: a}; then resolve z.y to a`, () => {
+            let { a, nameResolver } = resolveNamesForVariableStatement(`let z = {y: a}`);
+
+            expect(nameResolver.variables.has('z'));
+            let z = nameResolver.variables.get('z');
+            expect(z).toEqual({
+                name: 'z',
+                assignedFrom: {
+                    properties: [
+                        {
+                            name: 'y',
+                            assignedFrom: a,
+                        },
+                    ],
+                },
+            });
+            let zy = nameResolver.resolvePropertyAccessChain(
+                (getAstNode('z.y') as ExpressionStatement).expression,
+            );
+            expect(flattenVariable(zy)).toEqual({
+                path: [],
+                root: ParameterDeclarationPlaceholder,
+            });
+        });
+
+        it(`resolve let z = {y: {x: a}}; then resolve z.y.x to a`, () => {
+            let { a, nameResolver } = resolveNamesForVariableStatement(`let z = {y: {x: a}}`);
+
+            expect(nameResolver.variables.has('z'));
+            let z = nameResolver.variables.get('z');
+            expect(z).toEqual({
+                name: 'z',
+                assignedFrom: {
+                    properties: [
+                        {
+                            name: 'y',
+                            properties: [
+                                {
+                                    name: 'x',
+                                    assignedFrom: a,
+                                },
+                            ],
+                        },
+                    ],
+                },
+            });
+
+            let zy = nameResolver.resolvePropertyAccessChain(
+                (getAstNode('z.y.x') as ExpressionStatement).expression,
+            );
+            expect(flattenVariable(zy)).toEqual({
+                path: [],
+                root: ParameterDeclarationPlaceholder,
+            });
+        });
+
+        it('resolve let z = {a: function() {}}; then resolve z.a to the function', () => {
+            let { node, nameResolver } = resolveNamesForVariableStatement(
+                'let z = {a: function() {}}',
+            );
+            let declaredInlineFunction = (
+                (node.declarationList.declarations[0].initializer as ObjectLiteralExpression)
+                    .properties[0] as PropertyAssignment
+            ).initializer;
+
+            expect(nameResolver.variables.has('z'));
+            let z = nameResolver.variables.get('z');
+            expect(z).toEqual({
+                name: 'z',
+                assignedFrom: {
+                    properties: [{ name: 'a', root: declaredInlineFunction }],
+                },
+            });
+
+            let za = nameResolver.resolvePropertyAccessChain(
+                (getAstNode('z.a') as ExpressionStatement).expression,
+            );
+            expect(flattenVariable(za)).toEqual({ path: [], root: declaredInlineFunction });
+        });
+
+        it('resolve let [state, getState] = createState()', () => {
+            let { node, nameResolver } = resolveNamesForVariableStatement(
+                'let [state, getState] = createState()',
+            );
+            let createStateFunction = node.declarationList.declarations[0]
+                .initializer as CallExpression;
+
+            expect(nameResolver.variables.has('state'));
+            let state = nameResolver.variables.get('state');
+            expect(state).toEqual({
+                name: 'state',
+                accessedByProperty: '0',
+                accessedFrom: {
+                    assignedFrom: {
+                        root: createStateFunction,
+                    },
+                },
+            });
+            expect(flattenVariable(state)).toEqual({
+                path: ['0'],
+                root: createStateFunction,
+            });
+
+            expect(nameResolver.variables.has('getState'));
+            let getState = nameResolver.variables.get('getState');
+            expect(getState).toEqual({
+                name: 'getState',
+                accessedByProperty: '1',
+                accessedFrom: {
+                    assignedFrom: {
+                        root: createStateFunction,
+                    },
+                },
+            });
+            expect(flattenVariable(getState)).toEqual({
+                path: ['1'],
+                root: createStateFunction,
+            });
+        });
+    });
+
+    describe('resolve function definition', () => {
+        function resolveNamesForFunctionDeclaration(code: string) {
+            let nameResolver = new NameBindingResolver();
+            let func = getAstNode(code) as FunctionDeclaration;
+            nameResolver.addFunctionDeclaration(func);
+            return { nameResolver, func };
+        }
+
+        it('resolve function declaration', () => {
+            let { func, nameResolver } = resolveNamesForFunctionDeclaration('function bla() {}');
+
+            expect(nameResolver.variables.has('bla'));
+            let bla = nameResolver.variables.get('bla');
+            expect(bla).toEqual({
+                name: 'bla',
+                root: func,
             });
         });
     });

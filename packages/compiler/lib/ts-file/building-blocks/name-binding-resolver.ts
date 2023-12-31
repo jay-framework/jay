@@ -1,7 +1,8 @@
-import {
+import ts, {
     BindingName,
     Expression,
     FunctionLikeDeclarationBase,
+    FunctionDeclaration,
     Identifier,
     isElementAccessExpression,
     isIdentifier,
@@ -12,14 +13,22 @@ import {
     PropertyAccessExpression,
     PropertyName,
     VariableStatement,
+    isObjectLiteralExpression,
+    isPropertyAssignment,
+    isShorthandPropertyAssignment,
+    isArrayBindingPattern,
+    isBindingElement,
 } from 'typescript';
+
+export type VariableRoot = ParameterDeclaration | FunctionDeclaration;
 
 export interface Variable {
     name?: string;
     accessedFrom?: Variable;
     accessedByProperty?: string;
     assignedFrom?: Variable;
-    root?: ParameterDeclaration;
+    root?: ts.Node;
+    properties?: Variable[];
 }
 
 export function mkVariable(members: {
@@ -27,11 +36,10 @@ export function mkVariable(members: {
     accessedFrom?: Variable;
     accessedByProperty?: string;
     assignedFrom?: Variable;
-    root?: ParameterDeclaration;
+    root?: VariableRoot;
+    properties?: Variable[];
 }) {
-    return Object.fromEntries(
-        Object.entries(members).filter(([, value]) => value !== undefined),
-    );
+    return Object.fromEntries(Object.entries(members).filter(([, value]) => value !== undefined));
 }
 
 const getAccessedByProperty = (
@@ -79,6 +87,29 @@ export function tsBindingNameToVariable(
         return binding.elements.flatMap((element) => {
             return tsBindingNameToVariable(element.name, variable, undefined, element.propertyName);
         });
+    } else if (isArrayBindingPattern(binding)) {
+        let variable: Variable = mkVariable({
+            accessedFrom,
+            accessedByProperty: propertyName
+                ? isIdentifier(propertyName)
+                    ? propertyName.text
+                    : undefined
+                : undefined,
+            assignedFrom,
+            root,
+        });
+        return binding.elements
+            .flatMap((element, index) => {
+                /*this is ugly - to pass the index as an identifier. maybe worth replacing it with usage of TS node factory? */
+                return (
+                    isBindingElement(element) &&
+                    tsBindingNameToVariable(element.name, variable, undefined, {
+                        kind: 80,
+                        text: '' + index,
+                    } as Identifier)
+                );
+            })
+            .filter((variable) => !!variable);
     }
 }
 
@@ -104,6 +135,10 @@ export class NameBindingResolver {
         });
     }
 
+    getVariable(name: string) {
+        return this.variables.get(name) || {};
+    }
+
     resolvePropertyAccessChain(expression: Expression): Variable {
         if (isPropertyAccessExpression(expression)) {
             const name = expression.name.text;
@@ -117,9 +152,35 @@ export class NameBindingResolver {
             const identifiersFromObject = this.resolvePropertyAccessChain(expression.expression);
             return { accessedFrom: identifiersFromObject, accessedByProperty: name };
         } else if (isIdentifier(expression)) {
-            return this.variables.has(expression.text) ? this.variables.get(expression.text) : {};
+            return this.resolveIdentifier(expression);
+        } else if (isObjectLiteralExpression(expression)) {
+            return {
+                properties: expression.properties.map((property) => {
+                    if (
+                        isPropertyAssignment(property) &&
+                        (isStringLiteral(property.name) || isIdentifier(property.name))
+                    ) {
+                        if (isIdentifier(property.initializer))
+                            return {
+                                name: property.name.text,
+                                assignedFrom: this.resolveIdentifier(property.initializer),
+                            };
+                        else if (isObjectLiteralExpression(property.initializer)) {
+                            let nestedProperty = this.resolvePropertyAccessChain(
+                                property.initializer,
+                            );
+                            nestedProperty.name = property.name.text;
+                            return nestedProperty;
+                        } else return { name: property.name.text, root: property.initializer };
+                    } else if (isShorthandPropertyAssignment(property))
+                        return {
+                            name: property.name.text,
+                            assignedFrom: this.resolveIdentifier(property.name),
+                        };
+                }),
+            };
         } else {
-            return {};
+            return { root: expression };
         }
     }
 
@@ -142,23 +203,29 @@ export class NameBindingResolver {
 
     resolveIdentifier(expression: Identifier): Variable {
         let variableName = expression.text;
-        if (this.variables.has(variableName)) return this.variables.get(variableName);
-        else return {};
+        return this.getVariable(variableName);
+    }
+
+    addFunctionDeclaration(statement: FunctionDeclaration) {
+        if (statement.name) {
+            let functionVariable = mkVariable({ name: statement.name.text, root: statement });
+            this.variables.set(statement.name.text, functionVariable);
+        }
     }
 }
 
 interface FlattenedAccessChain {
     path: string[];
-    root: ParameterDeclaration;
+    root: ts.Node;
 }
-export function flattenVariable(variable: Variable): FlattenedAccessChain {
-    if (variable.assignedFrom) return flattenVariable(variable.assignedFrom);
-    if (variable.accessedFrom) {
-        let flattenedAccess = flattenVariable(variable.accessedFrom);
-        return {
-            path: [...flattenedAccess.path, variable.accessedByProperty],
-            root: flattenedAccess.root,
-        };
-    }
-    return { path: [], root: variable.root };
+export function flattenVariable(variable: Variable, path: string[] = []): FlattenedAccessChain {
+    if (variable.assignedFrom) return flattenVariable(variable.assignedFrom, path);
+    else if (variable.accessedFrom) {
+        return flattenVariable(variable.accessedFrom, [variable.accessedByProperty, ...path]);
+    } else if (variable.properties && !!variable.properties.find((_) => _.name === path[0])) {
+        return flattenVariable(
+            variable.properties.find((_) => _.name === path[0]),
+            path.slice(1),
+        );
+    } else return { path, root: variable.root };
 }

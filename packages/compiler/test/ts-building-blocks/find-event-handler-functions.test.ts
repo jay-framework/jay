@@ -4,6 +4,8 @@ import { findComponentConstructorsBlock } from '../../lib/ts-file/building-block
 import ts, {
     FunctionLikeDeclarationBase,
     isArrowFunction,
+    isFunctionDeclaration,
+    isFunctionExpression,
     TransformerFactory,
 } from 'typescript';
 import { findEventHandlersBlock } from '../../lib/ts-file/building-blocks/find-event-handler-functions.ts';
@@ -41,7 +43,7 @@ describe('find component event handlers', () => {
         };
     }
 
-    it('defined as arrow functions based on ref object', async () => {
+    it('defined as inline arrow functions based on ref object', async () => {
         const code =
             stripMargin(`import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
         | import { CounterElementRefs, render } from './generated-element';
@@ -59,7 +61,7 @@ describe('find component event handlers', () => {
         expect(isArrowFunction(transformerState.foundFunctions[1])).toBeTruthy();
     });
 
-    it('defined as arrow functions based on ref object and variable bindings', async () => {
+    it('defined as inline arrow functions based on ref object and variable bindings', async () => {
         const code =
             stripMargin(`import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
         | import { CounterElementRefs, render } from './generated-element';
@@ -79,7 +81,7 @@ describe('find component event handlers', () => {
         expect(isArrowFunction(transformerState.foundFunctions[1])).toBeTruthy();
     });
 
-    it('defined as arrow functions based on refs object property binding', async () => {
+    it('defined as inline arrow functions based on refs object property binding', async () => {
         const code =
             stripMargin(`import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
         | import { CounterElementRefs, render } from './generated-element';
@@ -95,5 +97,91 @@ describe('find component event handlers', () => {
         expect(transformerState.foundFunctions).toHaveLength(2);
         expect(isArrowFunction(transformerState.foundFunctions[0])).toBeTruthy();
         expect(isArrowFunction(transformerState.foundFunctions[1])).toBeTruthy();
+    });
+
+    it('defined as regular function', async () => {
+        const code =
+            stripMargin(`import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+        | import { CounterElementRefs, render } from './generated-element';
+        |
+        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+        |   function subtract() {
+        |     setCount(count() - 1);
+        |   }
+        |   function add() {
+        |     setCount(count() + 1);
+        |   }
+        |   refs.subtracter.onclick(subtract);
+        |   refs.adderButton.onclick(add);
+        | }
+        |
+        | export const Counter = makeJayComponent(render, CounterComponent);`);
+        const transformerState = testTransformer();
+        await transformCode(code, [transformerState.transformer]);
+        expect(transformerState.foundFunctions).toHaveLength(2);
+        expect(isFunctionDeclaration(transformerState.foundFunctions[0])).toBeTruthy();
+        expect(isFunctionDeclaration(transformerState.foundFunctions[1])).toBeTruthy();
+    });
+
+    it('defined as const arrow function', async () => {
+        const code =
+            stripMargin(`import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+        | import { CounterElementRefs, render } from './generated-element';
+        |
+        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+        |   const subtract = () => setCount(count() - 1);
+        |   const add = () => setCount(count() + 1);
+        |   refs.subtracter.onclick(subtract);
+        |   refs.adderButton.onclick(add);
+        | }
+        |
+        | export const Counter = makeJayComponent(render, CounterComponent);`);
+        const transformerState = testTransformer();
+        await transformCode(code, [transformerState.transformer]);
+        expect(transformerState.foundFunctions).toHaveLength(2);
+        expect(isArrowFunction(transformerState.foundFunctions[0])).toBeTruthy();
+        expect(isArrowFunction(transformerState.foundFunctions[1])).toBeTruthy();
+    });
+
+    it('defined as const anonymous function', async () => {
+        const code =
+            stripMargin(`import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+        | import { CounterElementRefs, render } from './generated-element';
+        |
+        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+        |   const subtract = function() { setCount(count() - 1)};
+        |   const add = function() { setCount(count() + 1)};
+        |   refs.subtracter.onclick(subtract);
+        |   refs.adderButton.onclick(add);
+        | }
+        |
+        | export const Counter = makeJayComponent(render, CounterComponent);`);
+        const transformerState = testTransformer();
+        await transformCode(code, [transformerState.transformer]);
+        expect(transformerState.foundFunctions).toHaveLength(2);
+        expect(isFunctionExpression(transformerState.foundFunctions[0])).toBeTruthy();
+        expect(isFunctionExpression(transformerState.foundFunctions[1])).toBeTruthy();
+    });
+
+    it('defined as nested object function', async () => {
+        const code =
+            stripMargin(`import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+        | import { CounterElementRefs, render } from './generated-element';
+        |
+        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+        |   const events = {
+        |     subtract: function() { setCount(count() - 1)},
+        |     add: function() { setCount(count() + 1)}
+        |   }
+        |   refs.subtracter.onclick(events.subtract);
+        |   refs.adderButton.onclick(events.add);
+        | }
+        |
+        | export const Counter = makeJayComponent(render, CounterComponent);`);
+        const transformerState = testTransformer();
+        await transformCode(code, [transformerState.transformer]);
+        expect(transformerState.foundFunctions).toHaveLength(2);
+        expect(isFunctionExpression(transformerState.foundFunctions[0])).toBeTruthy();
+        expect(isFunctionExpression(transformerState.foundFunctions[1])).toBeTruthy();
     });
 });

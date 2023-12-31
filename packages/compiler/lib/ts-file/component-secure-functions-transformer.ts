@@ -5,7 +5,30 @@ import { findComponentConstructorsBlock } from './building-blocks/find-component
 import { findComponentConstructorCallsBlock } from './building-blocks/find-component-constructor-calls.ts';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions.ts';
 
-function mkComponentSecureFunctionsTransformer(sftContext: SourceFileTransformerContext) {
+type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
+    patterns: string[];
+};
+
+function parsePatterns(patterns: string[]) {
+    patterns.forEach((pattern) => {
+        let patternSourceFile = ts.createSourceFile(
+            'dummy.ts',
+            pattern,
+            ts.ScriptTarget.Latest,
+            false,
+            ts.ScriptKind.TS,
+        );
+        // find imports
+        // find functions
+        // for each function statement, consider as a pattern.
+        // only support call statements or return statements
+        // validate only usage of function parameters, single statement functions, no conditions.
+    });
+}
+
+function mkComponentSecureFunctionsTransformer(
+    sftContext: ComponentSecureFunctionsTransformerConfig,
+) {
     let makeJayComponent_ImportName = findMakeJayComponentImportTransformerBlock(sftContext);
     if (!Boolean(makeJayComponent_ImportName)) return sftContext.sourceFile;
 
@@ -21,8 +44,8 @@ function mkComponentSecureFunctionsTransformer(sftContext: SourceFileTransformer
     return sftContext.sourceFile;
 }
 
-export function componentSecureFunctionsTransformer(): (
-    context: ts.TransformationContext,
-) => ts.Transformer<ts.SourceFile> {
-    return mkTransformer(mkComponentSecureFunctionsTransformer);
+export function componentSecureFunctionsTransformer(
+    patterns: string[],
+): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
+    return mkTransformer(mkComponentSecureFunctionsTransformer, { patterns });
 }
