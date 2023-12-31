@@ -3,7 +3,9 @@ import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-b
 import { findComponentConstructorsBlock } from '../../lib/ts-file/building-blocks/find-component-constructors.ts';
 import ts, {
     FunctionLikeDeclarationBase,
-    isArrowFunction, isFunctionDeclaration, isFunctionExpression,
+    isArrowFunction,
+    isFunctionDeclaration,
+    isFunctionExpression,
     TransformerFactory,
 } from 'typescript';
 import { findEventHandlersBlock } from '../../lib/ts-file/building-blocks/find-event-handler-functions.ts';
@@ -119,7 +121,7 @@ describe('find component event handlers', () => {
         expect(transformerState.foundFunctions).toHaveLength(2);
         expect(isFunctionDeclaration(transformerState.foundFunctions[0])).toBeTruthy();
         expect(isFunctionDeclaration(transformerState.foundFunctions[1])).toBeTruthy();
-    })
+    });
 
     it('defined as const arrow function', async () => {
         const code =
@@ -139,7 +141,7 @@ describe('find component event handlers', () => {
         expect(transformerState.foundFunctions).toHaveLength(2);
         expect(isArrowFunction(transformerState.foundFunctions[0])).toBeTruthy();
         expect(isArrowFunction(transformerState.foundFunctions[1])).toBeTruthy();
-    })
+    });
 
     it('defined as const anonymous function', async () => {
         const code =
@@ -159,7 +161,7 @@ describe('find component event handlers', () => {
         expect(transformerState.foundFunctions).toHaveLength(2);
         expect(isFunctionExpression(transformerState.foundFunctions[0])).toBeTruthy();
         expect(isFunctionExpression(transformerState.foundFunctions[1])).toBeTruthy();
-    })
+    });
 
     it('defined as nested object function', async () => {
         const code =
@@ -181,5 +183,5 @@ describe('find component event handlers', () => {
         expect(transformerState.foundFunctions).toHaveLength(2);
         expect(isFunctionExpression(transformerState.foundFunctions[0])).toBeTruthy();
         expect(isFunctionExpression(transformerState.foundFunctions[1])).toBeTruthy();
-    })
+    });
 });

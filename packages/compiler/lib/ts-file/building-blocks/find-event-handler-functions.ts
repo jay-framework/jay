@@ -2,18 +2,19 @@ import {
     FunctionLikeDeclarationBase,
     isBlock,
     isCallExpression,
-    isExpressionStatement, isFunctionDeclaration,
+    isExpressionStatement,
+    isFunctionDeclaration,
     isIdentifier,
     isPropertyAccessExpression,
     isVariableStatement,
 } from 'typescript';
 import { SourceFileTransformerContext } from '../mk-transformer.ts';
 import { flattenVariable, NameBindingResolver } from './name-binding-resolver.ts';
-import {isFunctionLikeDeclarationBase} from "../ts-compiler-utils.ts";
+import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils.ts';
 
 export function findEventHandlersBlock(
     functionDeclaration: FunctionLikeDeclarationBase,
-    { }: SourceFileTransformerContext,
+    {}: SourceFileTransformerContext,
 ): FunctionLikeDeclarationBase[] {
     const nameBindingResolver = new NameBindingResolver();
     nameBindingResolver.addFunctionParams(functionDeclaration);
@@ -22,7 +23,8 @@ export function findEventHandlersBlock(
     if (isBlock(functionDeclaration.body)) {
         functionDeclaration.body.statements.forEach((statement) => {
             if (isVariableStatement(statement)) nameBindingResolver.addVariableStatement(statement);
-            else if (isFunctionDeclaration(statement)) nameBindingResolver.addFunctionDeclaration(statement);
+            else if (isFunctionDeclaration(statement))
+                nameBindingResolver.addFunctionDeclaration(statement);
             else if (isExpressionStatement(statement) && isCallExpression(statement.expression)) {
                 let functionVariable;
                 if (isPropertyAccessExpression(statement.expression.expression)) {
@@ -41,13 +43,14 @@ export function findEventHandlersBlock(
                     accessChain.root === functionDeclaration.parameters[1]
                 ) {
                     let handler = statement.expression.arguments[0];
-                    if (isFunctionLikeDeclarationBase(handler))
-                        foundEventHandlers.push(handler);
+                    if (isFunctionLikeDeclarationBase(handler)) foundEventHandlers.push(handler);
                     else {
-                    // else if (isIdentifier(handler) && nameBindingResolver.variables.has(handler.text)) {
-                        let flattenedHandler = flattenVariable(nameBindingResolver.resolvePropertyAccessChain(handler));
+                        // else if (isIdentifier(handler) && nameBindingResolver.variables.has(handler.text)) {
+                        let flattenedHandler = flattenVariable(
+                            nameBindingResolver.resolvePropertyAccessChain(handler),
+                        );
                         if (flattenedHandler.path.length === 0)
-                            foundEventHandlers.push(flattenedHandler.root)
+                            foundEventHandlers.push(flattenedHandler.root);
                     }
                 }
             }

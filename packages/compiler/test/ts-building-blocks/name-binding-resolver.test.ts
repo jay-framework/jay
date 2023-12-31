@@ -4,7 +4,11 @@ import ts, {
     isVariableStatement,
     FunctionDeclaration,
     PropertyAccessExpression,
-    VariableStatement, Expression, ObjectLiteralExpression, PropertyAssignment, CallExpression,
+    VariableStatement,
+    Expression,
+    ObjectLiteralExpression,
+    PropertyAssignment,
+    CallExpression,
 } from 'typescript';
 import {
     tsBindingNameToVariable,
@@ -323,13 +327,17 @@ describe('NameBindingResolver', () => {
             expect(z).toEqual({
                 name: 'z',
                 assignedFrom: {
-                    properties: [{
-                        name: 'y',
-                        assignedFrom: a,
-                    }]
+                    properties: [
+                        {
+                            name: 'y',
+                            assignedFrom: a,
+                        },
+                    ],
                 },
             });
-            let zy = nameResolver.resolvePropertyAccessChain((getAstNode('z.y') as ExpressionStatement).expression);
+            let zy = nameResolver.resolvePropertyAccessChain(
+                (getAstNode('z.y') as ExpressionStatement).expression,
+            );
             expect(flattenVariable(zy)).toEqual({
                 path: [],
                 root: ParameterDeclarationPlaceholder,
@@ -344,18 +352,23 @@ describe('NameBindingResolver', () => {
             expect(z).toEqual({
                 name: 'z',
                 assignedFrom: {
-                    properties: [{
-                        name: 'y',
-                        properties: [{
-                            name: 'x',
-                            assignedFrom: a,
-                        }]
-
-                    }]
+                    properties: [
+                        {
+                            name: 'y',
+                            properties: [
+                                {
+                                    name: 'x',
+                                    assignedFrom: a,
+                                },
+                            ],
+                        },
+                    ],
                 },
             });
 
-            let zy = nameResolver.resolvePropertyAccessChain((getAstNode('z.y.x') as ExpressionStatement).expression);
+            let zy = nameResolver.resolvePropertyAccessChain(
+                (getAstNode('z.y.x') as ExpressionStatement).expression,
+            );
             expect(flattenVariable(zy)).toEqual({
                 path: [],
                 root: ParameterDeclarationPlaceholder,
@@ -363,27 +376,35 @@ describe('NameBindingResolver', () => {
         });
 
         it('resolve let z = {a: function() {}}; then resolve z.a to the function', () => {
-            let { node, nameResolver } = resolveNamesForVariableStatement('let z = {a: function() {}}');
-            let declaredInlineFunction = ((node.declarationList.declarations[0].initializer as ObjectLiteralExpression).properties[0] as PropertyAssignment).initializer;
+            let { node, nameResolver } = resolveNamesForVariableStatement(
+                'let z = {a: function() {}}',
+            );
+            let declaredInlineFunction = (
+                (node.declarationList.declarations[0].initializer as ObjectLiteralExpression)
+                    .properties[0] as PropertyAssignment
+            ).initializer;
 
             expect(nameResolver.variables.has('z'));
             let z = nameResolver.variables.get('z');
             expect(z).toEqual({
                 name: 'z',
                 assignedFrom: {
-                    properties: [
-                        {name: 'a', root: declaredInlineFunction},
-                    ],
-                }
+                    properties: [{ name: 'a', root: declaredInlineFunction }],
+                },
             });
 
-            let za = nameResolver.resolvePropertyAccessChain((getAstNode('z.a') as ExpressionStatement).expression);
+            let za = nameResolver.resolvePropertyAccessChain(
+                (getAstNode('z.a') as ExpressionStatement).expression,
+            );
             expect(flattenVariable(za)).toEqual({ path: [], root: declaredInlineFunction });
         });
 
         it('resolve let [state, getState] = createState()', () => {
-            let { node, nameResolver } = resolveNamesForVariableStatement('let [state, getState] = createState()');
-            let createStateFunction = (node.declarationList.declarations[0].initializer as CallExpression);
+            let { node, nameResolver } = resolveNamesForVariableStatement(
+                'let [state, getState] = createState()',
+            );
+            let createStateFunction = node.declarationList.declarations[0]
+                .initializer as CallExpression;
 
             expect(nameResolver.variables.has('state'));
             let state = nameResolver.variables.get('state');
@@ -392,7 +413,7 @@ describe('NameBindingResolver', () => {
                 accessedByProperty: '0',
                 accessedFrom: {
                     assignedFrom: {
-                        root: createStateFunction
+                        root: createStateFunction,
                     },
                 },
             });
@@ -408,7 +429,7 @@ describe('NameBindingResolver', () => {
                 accessedByProperty: '1',
                 accessedFrom: {
                     assignedFrom: {
-                        root: createStateFunction
+                        root: createStateFunction,
                     },
                 },
             });
@@ -428,8 +449,7 @@ describe('NameBindingResolver', () => {
         }
 
         it('resolve function declaration', () => {
-            let { func, nameResolver } = resolveNamesForFunctionDeclaration(
-                'function bla() {}');
+            let { func, nameResolver } = resolveNamesForFunctionDeclaration('function bla() {}');
 
             expect(nameResolver.variables.has('bla'));
             let bla = nameResolver.variables.get('bla');
@@ -438,7 +458,6 @@ describe('NameBindingResolver', () => {
                 root: func,
             });
         });
-
     });
 
     describe('resolve property access chain', () => {
