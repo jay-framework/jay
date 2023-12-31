@@ -188,14 +188,14 @@ export function makeJayComponentBridge<
 >(render: RenderElement<ViewState, Refs, JayElementT>, options?: CompBridgeOptions) {
     let component = makeJayComponent(render, makeComponentBridgeConstructor);
     return (props: PropsT) => {
-        let { compId, port, funcRepository } = useContext(SECURE_COMPONENT_MARKER);
+        let { compId, port } = useContext(SECURE_COMPONENT_MARKER);
         let { coordinate } = useContext(SECURE_COORDINATE_MARKER);
         let endpoint = port.getEndpoint(compId, coordinate);
         let newSecureComponentContext = {
             endpoint,
             compId: endpoint.compId,
             port,
-            funcRepository: funcRepository || options?.funcRepository,
+            funcRepository: options?.funcRepository,
         };
         return provideContext(SECURE_COMPONENT_MARKER, newSecureComponentContext, () => {
             let comp = component(props);
