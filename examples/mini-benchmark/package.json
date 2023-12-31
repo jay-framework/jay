@@ -38,6 +38,7 @@
     "@types/shelljs": "^0.8.15",
     "jay-cli": "workspace:^",
     "jay-dev-environment": "workspace:^",
+    "nodemon": "^3.0.2",
     "npm-run-all2": "^6.1.1",
     "rimraf": "^5.0.5",
     "tslib": "^2.6.2",

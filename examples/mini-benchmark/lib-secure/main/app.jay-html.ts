@@ -1,14 +1,17 @@
 import { JayElement, ConstructContext, RenderElementOptions, compRef } from 'jay-runtime';
 import { Main, MainProps } from './main';
-import { mainRoot as mr } from 'jay-secure';
+import {FunctionsRepository, mainRoot as mr} from 'jay-secure';
 import { secureChildComp } from 'jay-secure';
-import { funcRepository } from './native-funcs';
 
 export interface AppViewState {}
 
 export interface AppElementRefs {}
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
+
+export const funcRepository: FunctionsRepository = {
+    '3': () => new Promise((resolve) => requestAnimationFrame(resolve)),
+};
 
 export function render(viewState: AppViewState, options?: RenderElementOptions): AppElement {
     return ConstructContext.withRootContext(
