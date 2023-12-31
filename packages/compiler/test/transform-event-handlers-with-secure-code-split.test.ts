@@ -5,8 +5,8 @@ import { prettify } from '../lib';
 
 describe('transform event handlers with secure code split', () => {
     const input_value_pattern = `
-function inputValuePattern(event: Event) {
-    return event.target.value;
+function inputValuePattern(handler: JayEventHandler<any, any, any>) {
+    return handler.event.target.value;
 }`;
 
     it.skip('replace event.target.value', async () => {

@@ -1,34 +1,20 @@
-import ts from 'typescript';
+import ts, {isFunctionDeclaration} from 'typescript';
 import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
 import { findMakeJayComponentImportTransformerBlock } from './building-blocks/find-make-jay-component-import';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors.ts';
 import { findComponentConstructorCallsBlock } from './building-blocks/find-component-constructor-calls.ts';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions.ts';
+import {NameBindingResolver} from "./building-blocks/name-binding-resolver.ts";
+import {compileFunctionSplitPatternsBlock} from "./building-blocks/compile-function-split-patterns.ts";
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: string[];
 };
 
-function parsePatterns(patterns: string[]) {
-    patterns.forEach((pattern) => {
-        let patternSourceFile = ts.createSourceFile(
-            'dummy.ts',
-            pattern,
-            ts.ScriptTarget.Latest,
-            false,
-            ts.ScriptKind.TS,
-        );
-        // find imports
-        // find functions
-        // for each function statement, consider as a pattern.
-        // only support call statements or return statements
-        // validate only usage of function parameters, single statement functions, no conditions.
-    });
-}
-
 function mkComponentSecureFunctionsTransformer(
     sftContext: ComponentSecureFunctionsTransformerConfig,
 ) {
+    // find the event handlers
     let makeJayComponent_ImportName = findMakeJayComponentImportTransformerBlock(sftContext);
     if (!Boolean(makeJayComponent_ImportName)) return sftContext.sourceFile;
 
@@ -38,6 +24,10 @@ function mkComponentSecureFunctionsTransformer(
     let eventHandlers = constructorDefinitions.map((constructorDefinition) =>
         findEventHandlersBlock(constructorDefinition, sftContext),
     );
+
+    // compile patterns
+    let {patterns, context} = sftContext;
+    let compiledPatterns = compileFunctionSplitPatternsBlock(patterns);
 
     // todo start transforming the component definition functions
 
