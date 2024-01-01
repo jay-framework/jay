@@ -283,6 +283,27 @@ describe('NameBindingResolver', () => {
             });
         });
 
+        it('resolve let z = (a.b as T).c', () => {
+            let { a, nameResolver } = resolveNamesForVariableStatement('let z = (a.b as T).c');
+
+            expect(nameResolver.variables.has('z'));
+            let z = nameResolver.variables.get('z');
+            expect(z).toEqual({
+                name: 'z',
+                assignedFrom: {
+                    accessedByProperty: 'c',
+                    accessedFrom: {
+                        accessedByProperty: 'b',
+                        accessedFrom: a,
+                    },
+                },
+            });
+            expect(flattenVariable(z)).toEqual({
+                path: ['b', 'c'],
+                root: ParameterDeclarationPlaceholder,
+            });
+        });
+
         it('resolve let {z} = a', () => {
             let { a, nameResolver } = resolveNamesForVariableStatement('let {z} = a');
 
