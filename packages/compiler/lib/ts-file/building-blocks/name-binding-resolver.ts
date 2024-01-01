@@ -214,7 +214,7 @@ export class NameBindingResolver {
     }
 }
 
-interface FlattenedAccessChain {
+export interface FlattenedAccessChain {
     path: string[];
     root: ts.Node;
 }

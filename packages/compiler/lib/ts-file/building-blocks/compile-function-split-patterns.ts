@@ -5,17 +5,27 @@ import ts, {
     isPropertyAccessExpression,
     isReturnStatement
 } from "typescript";
-import {NameBindingResolver, Variable} from "./name-binding-resolver.ts";
+import {FlattenedAccessChain, flattenVariable, NameBindingResolver, Variable} from "./name-binding-resolver.ts";
 import {mkTransformer} from "../mk-transformer.ts";
 import {JayValidations, WithValidations} from "../../core/with-validations.ts";
 import {astToCode} from "../ts-compiler-utils.ts";
 
+export enum CompilePatternType {
+    RETURN,
+    CALL
+}
+
+export interface CompiledPattern {
+    accessChain: FlattenedAccessChain,
+    type: CompilePatternType,
+    paramIndex: number
+}
 
 export function compileFunctionSplitPatternsBlock(
     patterns: string[]
-): WithValidations<Variable[]> {
+): WithValidations<CompiledPattern[]> {
     const validations: JayValidations = [];
-    const compiledPatterns: Variable[] = [];
+    const compiledPatterns: CompiledPattern[] = [];
 
     patterns.forEach((pattern) => {
         let patternSourceFile = ts.createSourceFile(
@@ -38,12 +48,22 @@ export function compileFunctionSplitPatternsBlock(
 
                 node.body.statements.forEach((statement, index) => {
                     if (isReturnStatement(statement) && isPropertyAccessExpression(statement.expression)) {
-                        compiledPatterns.push(nameBindingResolver.resolvePropertyAccessChain(statement.expression));
+                        let resolvedVariable = flattenVariable(nameBindingResolver.resolvePropertyAccessChain(statement.expression));
+                        compiledPatterns.push({
+                            accessChain: resolvedVariable,
+                            type: CompilePatternType.RETURN,
+                            paramIndex: node.parameters.findIndex(param => param === resolvedVariable.root)
+                        });
                     }
                     else if (isExpressionStatement(statement) &&
                         isCallExpression(statement.expression) &&
                         isPropertyAccessExpression(statement.expression.expression)) {
-                        compiledPatterns.push(nameBindingResolver.resolvePropertyAccessChain(statement.expression.expression));
+                        let resolvedVariable = flattenVariable(nameBindingResolver.resolvePropertyAccessChain(statement.expression.expression));
+                        compiledPatterns.push({
+                            accessChain: resolvedVariable,
+                            type: CompilePatternType.CALL,
+                            paramIndex: node.parameters.findIndex(param => param === resolvedVariable.root)
+                        });
                     }
                     else
                         validations.push(`unsupported statement, at pattern [${node.name?.text}] statement [${index}]: `, astToCode(statement))
