@@ -1,7 +1,14 @@
-import ts, {Expression, ExpressionStatement, isCallExpression, isPropertyAccessExpression} from "typescript";
+import ts, {
+    Expression,
+    ExpressionStatement,
+    isBlock,
+    isCallExpression,
+    isExpressionStatement,
+    isPropertyAccessExpression
+} from "typescript";
 import {FlattenedAccessChain, flattenVariable, NameBindingResolver} from "./name-binding-resolver.ts";
 import {CompiledPattern} from "./compile-function-split-patterns.ts";
-import {astToCode, codeToAst} from "../ts-compiler-utils.ts";
+import {codeToAst} from "../ts-compiler-utils.ts";
 
 function findPatternInVariable(resolvedParam: FlattenedAccessChain, paramIndex: number, compiledPatterns: CompiledPattern[]) {
     return compiledPatterns.find(pattern =>
@@ -26,6 +33,12 @@ const transformEventHandlerStatement =
                     return argument;
             })
             return factory.createCallExpression(node.expression, undefined, newArguments)
+        }
+        else if (isBlock(node)) {
+            return ts.visitEachChild(node, transformEventHandlerStatement(nameBindingResolver, compiledPatterns, context, factory), context)
+        }
+        else if (isExpressionStatement(node)) {
+            return ts.visitEachChild(node, transformEventHandlerStatement(nameBindingResolver, compiledPatterns, context, factory), context)
         }
         return node;
     }
