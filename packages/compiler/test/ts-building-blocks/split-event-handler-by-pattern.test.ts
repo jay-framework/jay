@@ -5,8 +5,8 @@ import {
 import {mkTransformer} from "../../lib/ts-file/mk-transformer.ts";
 import {splitEventHandlerByPatternBlock} from "../../lib/ts-file/building-blocks/split-event-handler-by-pattern.ts";
 import {transformCode} from "../test-utils/ts-compiler-test-utils.ts";
-import {isExpressionStatement} from "typescript";
-import {isFunctionLikeDeclarationBase} from "../../lib/ts-file/ts-compiler-utils.ts";
+import ts, {isExpressionStatement} from "typescript";
+import {prettify} from "../../lib";
 
 
 const PATTERN_EVENT_TARGET_VALUE = `
@@ -18,11 +18,14 @@ describe('split event handler by pattern', () => {
     const patterns = compileFunctionSplitPatternsBlock([PATTERN_EVENT_TARGET_VALUE])
 
     function testTransformer(compiledPatterns: CompiledPattern[]) {
-        return mkTransformer(({context, sourceFile}) => {
-            if (isExpressionStatement(sourceFile.statements[0]) &&
-                isFunctionLikeDeclarationBase(sourceFile.statements[0].expression))
-            splitEventHandlerByPatternBlock(context, compiledPatterns)(sourceFile.statements[0].expression);
-            return sourceFile;
+        return mkTransformer(({context, sourceFile, factory}) => {
+
+            return ts.visitEachChild(sourceFile, (statement) => {
+                if (isExpressionStatement(statement)) {
+                    return ts.visitEachChild(statement, splitEventHandlerByPatternBlock(context, compiledPatterns, factory), context);
+                }
+                return statement;
+            }, context);
         })
     }
 
@@ -31,6 +34,8 @@ describe('split event handler by pattern', () => {
             `({event}) => setText((event.target as HTMLInputElement).value)`
         const transformerState = testTransformer(patterns.val);
         let transformed = await transformCode(inputEventHandler, [transformerState]);
+
+        expect(transformed).toEqual(await prettify(`({event}) => setText(event.$1)`));
         console.log(transformed);
 
     })
