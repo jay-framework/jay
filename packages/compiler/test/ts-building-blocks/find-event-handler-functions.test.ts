@@ -11,6 +11,7 @@ import ts, {
 import { findEventHandlersBlock } from '../../lib/ts-file/building-blocks/find-event-handler-functions.ts';
 import { stripMargin } from '../test-utils/strip-margin.ts';
 import { transformCode } from '../test-utils/ts-compiler-test-utils.ts';
+import {astToCode} from "../../lib/ts-file/ts-compiler-utils.ts";
 
 describe('find component event handlers', () => {
     function testTransformer() {
@@ -58,7 +59,9 @@ describe('find component event handlers', () => {
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(2);
         expect(isArrowFunction(transformerState.foundFunctions[0])).toBeTruthy();
+        expect(astToCode(transformerState.foundFunctions[0])).toBe('() => setCount(count() - 1)');
         expect(isArrowFunction(transformerState.foundFunctions[1])).toBeTruthy();
+        expect(astToCode(transformerState.foundFunctions[1])).toBe('() => setCount(count() + 1)');
     });
 
     it('defined as inline arrow functions based on ref object and variable bindings', async () => {
@@ -78,7 +81,9 @@ describe('find component event handlers', () => {
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(2);
         expect(isArrowFunction(transformerState.foundFunctions[0])).toBeTruthy();
+        expect(astToCode(transformerState.foundFunctions[0])).toBe('() => setCount(count() - 1)');
         expect(isArrowFunction(transformerState.foundFunctions[1])).toBeTruthy();
+        expect(astToCode(transformerState.foundFunctions[1])).toBe('() => setCount(count() + 1)');
     });
 
     it('defined as inline arrow functions based on refs object property binding', async () => {
@@ -96,7 +101,9 @@ describe('find component event handlers', () => {
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(2);
         expect(isArrowFunction(transformerState.foundFunctions[0])).toBeTruthy();
+        expect(astToCode(transformerState.foundFunctions[0])).toBe('() => setCount(count() - 1)');
         expect(isArrowFunction(transformerState.foundFunctions[1])).toBeTruthy();
+        expect(astToCode(transformerState.foundFunctions[1])).toBe('() => setCount(count() + 1)');
     });
 
     it('defined as regular function', async () => {
@@ -120,7 +127,13 @@ describe('find component event handlers', () => {
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(2);
         expect(isFunctionDeclaration(transformerState.foundFunctions[0])).toBeTruthy();
+        expect(astToCode(transformerState.foundFunctions[0])).toBe(`function subtract() {
+    setCount(count() - 1);
+}`);
         expect(isFunctionDeclaration(transformerState.foundFunctions[1])).toBeTruthy();
+        expect(astToCode(transformerState.foundFunctions[1])).toBe(`function add() {
+    setCount(count() + 1);
+}`);
     });
 
     it('defined as const arrow function', async () => {
@@ -140,7 +153,9 @@ describe('find component event handlers', () => {
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(2);
         expect(isArrowFunction(transformerState.foundFunctions[0])).toBeTruthy();
+        expect(astToCode(transformerState.foundFunctions[0])).toBe('() => setCount(count() - 1)');
         expect(isArrowFunction(transformerState.foundFunctions[1])).toBeTruthy();
+        expect(astToCode(transformerState.foundFunctions[1])).toBe('() => setCount(count() + 1)');
     });
 
     it('defined as const anonymous function', async () => {
@@ -160,7 +175,9 @@ describe('find component event handlers', () => {
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(2);
         expect(isFunctionExpression(transformerState.foundFunctions[0])).toBeTruthy();
+        expect(astToCode(transformerState.foundFunctions[0])).toBe('function () { setCount(count() - 1); }');
         expect(isFunctionExpression(transformerState.foundFunctions[1])).toBeTruthy();
+        expect(astToCode(transformerState.foundFunctions[1])).toBe('function () { setCount(count() + 1); }');
     });
 
     it('defined as nested object function', async () => {
@@ -182,6 +199,8 @@ describe('find component event handlers', () => {
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(2);
         expect(isFunctionExpression(transformerState.foundFunctions[0])).toBeTruthy();
+        expect(astToCode(transformerState.foundFunctions[0])).toBe('function () { setCount(count() - 1); }');
         expect(isFunctionExpression(transformerState.foundFunctions[1])).toBeTruthy();
+        expect(astToCode(transformerState.foundFunctions[1])).toBe('function () { setCount(count() + 1); }');
     });
 });
