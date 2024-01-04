@@ -1,4 +1,5 @@
 import ts, {
+    FunctionLikeDeclarationBase,
     isBlock,
     isCallExpression,
     isExpression,
@@ -32,18 +33,19 @@ function mkComponentSecureFunctionsTransformer(
     );
 
     // compile patterns
-    let {patterns, context} = sftContext;
+    let {patterns, context, factory} = sftContext;
     let compiledPatterns = compileFunctionSplitPatternsBlock(patterns);
     // todo validate we have valid compile patterns
     // todo extract the pattern compilation to a prior stage
 
-    eventHandlers.forEach(eventHandler => {
-        // todo change to ts.visitEachChild structure
-        splitEventHandlerByPatternBlock(context, compiledPatterns.val)(eventHandler)
-    });
-
-
-    return sftContext.sourceFile;
+    let eventHandlerSet = new Set<ts.Node>(eventHandlers);
+    let visitor = (node) => {
+        if (eventHandlerSet.has(node))
+            return splitEventHandlerByPatternBlock(context, compiledPatterns.val, factory)(node as FunctionLikeDeclarationBase)
+        else
+            return ts.visitEachChild(node, visitor, context);
+    }
+    return ts.visitEachChild(sftContext.sourceFile, visitor, context)
 }
 
 export function componentSecureFunctionsTransformer(
