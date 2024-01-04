@@ -21,6 +21,8 @@ type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & 
 function mkComponentSecureFunctionsTransformer(
     sftContext: ComponentSecureFunctionsTransformerConfig,
 ) {
+    let {patterns, context, factory} = sftContext;
+
     // find the event handlers
     let makeJayComponent_ImportName = findMakeJayComponentImportTransformerBlock(sftContext);
     if (!Boolean(makeJayComponent_ImportName)) return sftContext.sourceFile;
@@ -28,19 +30,16 @@ function mkComponentSecureFunctionsTransformer(
     let calls = findComponentConstructorCallsBlock(makeJayComponent_ImportName, sftContext);
     let constructorExpressions = calls.map(({ comp }) => comp);
     let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sftContext);
-    let eventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
-        findEventHandlersBlock(constructorDefinition, sftContext),
+    let foundEventHandlers = new Set<ts.Node>(constructorDefinitions.flatMap((constructorDefinition) =>
+        findEventHandlersBlock(constructorDefinition, sftContext)),
     );
 
     // compile patterns
-    let {patterns, context, factory} = sftContext;
-    let compiledPatterns = compileFunctionSplitPatternsBlock(patterns);
-    // todo validate we have valid compile patterns
     // todo extract the pattern compilation to a prior stage
+    let compiledPatterns = compileFunctionSplitPatternsBlock(patterns);
 
-    let eventHandlerSet = new Set<ts.Node>(eventHandlers);
     let visitor = (node) => {
-        if (eventHandlerSet.has(node))
+        if (foundEventHandlers.has(node))
             return splitEventHandlerByPatternBlock(context, compiledPatterns.val, factory)(node as FunctionLikeDeclarationBase)
         else
             return ts.visitEachChild(node, visitor, context);
