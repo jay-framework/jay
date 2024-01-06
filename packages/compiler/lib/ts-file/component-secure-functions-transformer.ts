@@ -1,10 +1,5 @@
 import ts, {
-    FunctionLikeDeclarationBase,
-    isBlock,
-    isCallExpression,
-    isExpression,
-    isFunctionDeclaration,
-    isPropertyAccessExpression
+    FunctionLikeDeclarationBase
 } from 'typescript';
 import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
 import { findMakeJayComponentImportTransformerBlock } from './building-blocks/find-make-jay-component-import';
@@ -30,8 +25,9 @@ function mkComponentSecureFunctionsTransformer(
     let calls = findComponentConstructorCallsBlock(makeJayComponent_ImportName, sftContext);
     let constructorExpressions = calls.map(({ comp }) => comp);
     let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sftContext);
-    let foundEventHandlers = new Set<ts.Node>(constructorDefinitions.flatMap((constructorDefinition) =>
-        findEventHandlersBlock(constructorDefinition, sftContext)),
+    let foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
+        findEventHandlersBlock(constructorDefinition, sftContext));
+    let handlers = new Set<ts.Node>(foundEventHandlers.map(_ => _.eventHandler),
     );
 
     // compile patterns
@@ -39,7 +35,7 @@ function mkComponentSecureFunctionsTransformer(
     let compiledPatterns = compileFunctionSplitPatternsBlock(patterns);
 
     let visitor = (node) => {
-        if (foundEventHandlers.has(node))
+        if (handlers.has(node))
             return splitEventHandlerByPatternBlock(context, compiledPatterns.val, factory)(node as FunctionLikeDeclarationBase)
         else
             return ts.visitEachChild(node, visitor, context);
