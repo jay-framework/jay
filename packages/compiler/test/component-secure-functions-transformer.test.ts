@@ -5,11 +5,11 @@ import { prettify } from '../lib';
 
 describe('transform event handlers with secure code split', () => {
     const input_value_pattern = `
-function inputValuePattern(event: Event) {
-    return event.target.value;
+function inputValuePattern(handler: JayEventHandler<any, any, any>) {
+    return handler.event.target.value;
 }`;
 
-    it.skip('replace event.target.value', async () => {
+    it('replace event.target.value', async () => {
         const code = `
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
 import { CompElementRefs, render } from './generated-element';
@@ -40,7 +40,7 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
     refs.input
         .onchange$(handler$('1'))
-        .onchange(({event:{value}}) => setText(value));
+        .onchange(({event}) => setText(event.$1));
 }
 export const Comp = makeJayComponent(render, CompComponent);`),
         );
