@@ -8,6 +8,7 @@ import { findComponentConstructorCallsBlock } from './building-blocks/find-compo
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions.ts';
 import {compileFunctionSplitPatternsBlock} from "./building-blocks/compile-function-split-patterns.ts";
 import {splitEventHandlerByPatternBlock} from "./building-blocks/split-event-handler-by-pattern.ts";
+import {addEventHandlerCallBlock} from "./building-blocks/add-event-handler-call$.ts";
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: string[];
@@ -27,14 +28,16 @@ function mkComponentSecureFunctionsTransformer(
     let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sftContext);
     let foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
         findEventHandlersBlock(constructorDefinition, sftContext));
-    let handlers = new Set<ts.Node>(foundEventHandlers.map(_ => _.eventHandler),
-    );
+    let handlers = new Set<ts.Node>(foundEventHandlers.map(_ => _.eventHandler));
+    let eventHandlerCallStatements = new Set<ts.Node>(foundEventHandlers.map(_ => _.eventHandlerCallStatement));
 
     // compile patterns
     // todo extract the pattern compilation to a prior stage
     let compiledPatterns = compileFunctionSplitPatternsBlock(patterns);
 
     let visitor = (node) => {
+        if (eventHandlerCallStatements.has(node))
+            node = ts.visitEachChild(node, addEventHandlerCallBlock(context, factory), context)
         if (handlers.has(node))
             return splitEventHandlerByPatternBlock(context, compiledPatterns.val, factory)(node as FunctionLikeDeclarationBase)
         else

@@ -5,14 +5,24 @@ import ts, {
     NodeFactory,
     TransformationContext
 } from "typescript";
-import {astToCode, codeToAst} from "../ts-compiler-utils.ts";
+import {codeToAst} from "../ts-compiler-utils.ts";
 
 const addEventHandlerCall = (context: TransformationContext, factory: NodeFactory) => (node) => {
     if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
-        let eventHandlerName = node.expression.name.text;
-        let argumentsCode = node.arguments.map(astToCode).join(', ');
-        let code = `${astToCode(node.expression.expression)}.${eventHandlerName}$(handler$('1')).${eventHandlerName}(${argumentsCode})`
-        return (codeToAst(code, context)[0] as ExpressionStatement).expression
+        return factory.createCallExpression(
+            factory.createPropertyAccessExpression(
+                factory.createCallExpression(
+                    factory.createPropertyAccessExpression(
+                        node.expression.expression,
+                        node.expression.name.text + '$'
+                    ),
+                    undefined,
+                    codeToAst(`handler$('1')`, context).map((_:ExpressionStatement) => _.expression) as Expression[]
+                ),
+                node.expression.name),
+            undefined,
+            node.arguments
+        )
     }
     return node;
 }
