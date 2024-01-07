@@ -9,7 +9,7 @@ import ts, {
 } from 'typescript';
 import { codeToAst } from '../ts-compiler-utils.ts';
 
-const addEventHandlerCall = (context: TransformationContext, factory: NodeFactory) => (node) => {
+const addEventHandlerCall = (context: TransformationContext, factory: NodeFactory, handlerIndex: number) => (node) => {
     if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
         return factory.createCallExpression(
             factory.createPropertyAccessExpression(
@@ -19,7 +19,7 @@ const addEventHandlerCall = (context: TransformationContext, factory: NodeFactor
                         node.expression.name.text + '$',
                     ),
                     undefined,
-                    codeToAst(`handler$('1')`, context).map(
+                    codeToAst(`handler$('${handlerIndex}')`, context).map(
                         (_: ExpressionStatement) => _.expression,
                     ) as Expression[],
                 ),
@@ -33,6 +33,6 @@ const addEventHandlerCall = (context: TransformationContext, factory: NodeFactor
 };
 
 export const addEventHandlerCallBlock =
-    (context: TransformationContext, factory: NodeFactory) => (eventHandler: CallExpression) => {
-        return ts.visitNode(eventHandler, addEventHandlerCall(context, factory));
+    (context: TransformationContext, factory: NodeFactory, handlerIndex: number) => (eventHandler: CallExpression) => {
+        return ts.visitNode(eventHandler, addEventHandlerCall(context, factory, handlerIndex));
     };

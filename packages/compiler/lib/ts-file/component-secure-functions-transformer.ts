@@ -1,12 +1,12 @@
 import ts, { FunctionLikeDeclarationBase } from 'typescript';
 import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
 import { findMakeJayComponentImportTransformerBlock } from './building-blocks/find-make-jay-component-import';
-import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors.ts';
-import { findComponentConstructorCallsBlock } from './building-blocks/find-component-constructor-calls.ts';
-import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions.ts';
-import { compileFunctionSplitPatternsBlock } from './building-blocks/compile-function-split-patterns.ts';
-import { splitEventHandlerByPatternBlock } from './building-blocks/split-event-handler-by-pattern.ts';
-import { addEventHandlerCallBlock } from './building-blocks/add-event-handler-call$.ts';
+import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
+import { findComponentConstructorCallsBlock } from './building-blocks/find-component-constructor-calls';
+import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
+import { compileFunctionSplitPatternsBlock } from './building-blocks/compile-function-split-patterns';
+import { splitEventHandlerByPatternBlock } from './building-blocks/split-event-handler-by-pattern';
+import { addEventHandlerCallBlock } from './building-blocks/add-event-handler-call$';
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: string[];
@@ -37,8 +37,12 @@ function mkComponentSecureFunctionsTransformer(
     let compiledPatterns = compileFunctionSplitPatternsBlock(patterns);
 
     let visitor = (node) => {
-        if (eventHandlerCallStatements.has(node))
-            node = ts.visitEachChild(node, addEventHandlerCallBlock(context, factory), context);
+        if (eventHandlerCallStatements.has(node)) {
+            let handlerIndex = foundEventHandlers
+                .find(foundEventHandler => foundEventHandler.eventHandlerCallStatement === node)
+                .handlerIndex
+            node = ts.visitEachChild(node, addEventHandlerCallBlock(context, factory, handlerIndex), context);
+        }
         if (handlers.has(node))
             return splitEventHandlerByPatternBlock(
                 context,

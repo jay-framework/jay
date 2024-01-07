@@ -16,6 +16,7 @@ import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils.ts';
 export interface FoundEventHandler {
     eventHandlerCallStatement: ExpressionStatement;
     eventHandler: FunctionLikeDeclarationBase;
+    handlerIndex: number;
 }
 
 export function findEventHandlersBlock(
@@ -26,6 +27,8 @@ export function findEventHandlersBlock(
     nameBindingResolver.addFunctionParams(functionDeclaration);
 
     const foundEventHandlers: FoundEventHandler[] = [];
+    const foundEventHandlerFunctionsToHandlerIndex = new Map();
+    let nextEventHandlerIndex = 0;
     if (isBlock(functionDeclaration.body)) {
         functionDeclaration.body.statements.forEach((statement) => {
             if (isVariableStatement(statement)) nameBindingResolver.addVariableStatement(statement);
@@ -53,16 +56,20 @@ export function findEventHandlersBlock(
                         foundEventHandlers.push({
                             eventHandler: handler,
                             eventHandlerCallStatement: statement,
+                            handlerIndex: nextEventHandlerIndex++
                         });
                     else {
                         // else if (isIdentifier(handler) && nameBindingResolver.variables.has(handler.text)) {
                         let flattenedHandler = flattenVariable(
                             nameBindingResolver.resolvePropertyAccessChain(handler),
                         );
+
                         if (flattenedHandler.path.length === 0)
                             foundEventHandlers.push({
                                 eventHandler: flattenedHandler.root as FunctionLikeDeclarationBase,
                                 eventHandlerCallStatement: statement,
+                                handlerIndex: foundEventHandlerFunctionsToHandlerIndex.get(flattenedHandler.root)??
+                                    foundEventHandlerFunctionsToHandlerIndex.set(flattenedHandler.root, nextEventHandlerIndex++).get(flattenedHandler.root)
                             });
                     }
                 }
