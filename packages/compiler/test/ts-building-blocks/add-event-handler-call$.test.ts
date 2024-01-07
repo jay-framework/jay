@@ -31,4 +31,14 @@ describe('add event handler call$ to call chain', () => {
 
     })
 
+    it('should support regular event handler', async () => {
+        const eventHandlerCall =
+            `refs.comp.onclick(someHandlerIdentifier)`
+        const transformerState = testTransformer();
+        let transformed = await transformCode(eventHandlerCall, [transformerState]);
+
+        expect(transformed).toEqual(await prettify(`refs.comp.onclick$(handler$('1')).onclick(someHandlerIdentifier)`));
+        console.log(transformed);
+
+    })
 });
