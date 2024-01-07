@@ -9,11 +9,11 @@ import ts, {
 } from 'typescript';
 import {
     findEventHandlersBlock,
-    FoundEventHandler
+    FoundEventHandler,
 } from '../../lib/ts-file/building-blocks/find-event-handler-functions.ts';
 import { stripMargin } from '../test-utils/strip-margin.ts';
 import { transformCode } from '../test-utils/ts-compiler-test-utils.ts';
-import {astToCode} from "../../lib/ts-file/ts-compiler-utils.ts";
+import { astToCode } from '../../lib/ts-file/ts-compiler-utils.ts';
 
 describe('find component event handlers', () => {
     function testTransformer() {
@@ -60,10 +60,18 @@ describe('find component event handlers', () => {
         const transformerState = testTransformer();
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(2);
-        expect(astToCode(transformerState.foundFunctions[0].eventHandler)).toBe('() => setCount(count() - 1)');
-        expect(astToCode(transformerState.foundFunctions[0].eventHandlerCallStatement)).toBe('refs.subtracter.onclick(() => setCount(count() - 1));');
-        expect(astToCode(transformerState.foundFunctions[1].eventHandler)).toBe('() => setCount(count() + 1)');
-        expect(astToCode(transformerState.foundFunctions[1].eventHandlerCallStatement)).toBe('refs.adderButton.onclick(() => setCount(count() + 1));');
+        expect(astToCode(transformerState.foundFunctions[0].eventHandler)).toBe(
+            '() => setCount(count() - 1)',
+        );
+        expect(astToCode(transformerState.foundFunctions[0].eventHandlerCallStatement)).toBe(
+            'refs.subtracter.onclick(() => setCount(count() - 1));',
+        );
+        expect(astToCode(transformerState.foundFunctions[1].eventHandler)).toBe(
+            '() => setCount(count() + 1)',
+        );
+        expect(astToCode(transformerState.foundFunctions[1].eventHandlerCallStatement)).toBe(
+            'refs.adderButton.onclick(() => setCount(count() + 1));',
+        );
     });
 
     it('defined as inline arrow functions based on ref object and variable bindings', async () => {
@@ -82,10 +90,18 @@ describe('find component event handlers', () => {
         const transformerState = testTransformer();
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(2);
-        expect(astToCode(transformerState.foundFunctions[0].eventHandler)).toBe('() => setCount(count() - 1)');
-        expect(astToCode(transformerState.foundFunctions[0].eventHandlerCallStatement)).toBe('subtracter.onclick(() => setCount(count() - 1));');
-        expect(astToCode(transformerState.foundFunctions[1].eventHandler)).toBe('() => setCount(count() + 1)');
-        expect(astToCode(transformerState.foundFunctions[1].eventHandlerCallStatement)).toBe('adderButton.onclick(() => setCount(count() + 1));');
+        expect(astToCode(transformerState.foundFunctions[0].eventHandler)).toBe(
+            '() => setCount(count() - 1)',
+        );
+        expect(astToCode(transformerState.foundFunctions[0].eventHandlerCallStatement)).toBe(
+            'subtracter.onclick(() => setCount(count() - 1));',
+        );
+        expect(astToCode(transformerState.foundFunctions[1].eventHandler)).toBe(
+            '() => setCount(count() + 1)',
+        );
+        expect(astToCode(transformerState.foundFunctions[1].eventHandlerCallStatement)).toBe(
+            'adderButton.onclick(() => setCount(count() + 1));',
+        );
     });
 
     it('defined as inline arrow functions based on refs object property binding', async () => {
@@ -102,10 +118,18 @@ describe('find component event handlers', () => {
         const transformerState = testTransformer();
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(2);
-        expect(astToCode(transformerState.foundFunctions[0].eventHandler)).toBe('() => setCount(count() - 1)');
-        expect(astToCode(transformerState.foundFunctions[0].eventHandlerCallStatement)).toBe('subtracter.onclick(() => setCount(count() - 1));');
-        expect(astToCode(transformerState.foundFunctions[1].eventHandler)).toBe('() => setCount(count() + 1)');
-        expect(astToCode(transformerState.foundFunctions[1].eventHandlerCallStatement)).toBe('adderButton.onclick(() => setCount(count() + 1));');
+        expect(astToCode(transformerState.foundFunctions[0].eventHandler)).toBe(
+            '() => setCount(count() - 1)',
+        );
+        expect(astToCode(transformerState.foundFunctions[0].eventHandlerCallStatement)).toBe(
+            'subtracter.onclick(() => setCount(count() - 1));',
+        );
+        expect(astToCode(transformerState.foundFunctions[1].eventHandler)).toBe(
+            '() => setCount(count() + 1)',
+        );
+        expect(astToCode(transformerState.foundFunctions[1].eventHandlerCallStatement)).toBe(
+            'adderButton.onclick(() => setCount(count() + 1));',
+        );
     });
 
     it('defined as regular function', async () => {
@@ -128,14 +152,19 @@ describe('find component event handlers', () => {
         const transformerState = testTransformer();
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(2);
-        expect(astToCode(transformerState.foundFunctions[0].eventHandler)).toBe(`function subtract() {
+        expect(astToCode(transformerState.foundFunctions[0].eventHandler))
+            .toBe(`function subtract() {
     setCount(count() - 1);
 }`);
-        expect(astToCode(transformerState.foundFunctions[0].eventHandlerCallStatement)).toBe('refs.subtracter.onclick(subtract);');
+        expect(astToCode(transformerState.foundFunctions[0].eventHandlerCallStatement)).toBe(
+            'refs.subtracter.onclick(subtract);',
+        );
         expect(astToCode(transformerState.foundFunctions[1].eventHandler)).toBe(`function add() {
     setCount(count() + 1);
 }`);
-        expect(astToCode(transformerState.foundFunctions[1].eventHandlerCallStatement)).toBe('refs.adderButton.onclick(add);');
+        expect(astToCode(transformerState.foundFunctions[1].eventHandlerCallStatement)).toBe(
+            'refs.adderButton.onclick(add);',
+        );
     });
 
     it('defined as const arrow function', async () => {
@@ -154,10 +183,18 @@ describe('find component event handlers', () => {
         const transformerState = testTransformer();
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(2);
-        expect(astToCode(transformerState.foundFunctions[0].eventHandler)).toBe('() => setCount(count() - 1)');
-        expect(astToCode(transformerState.foundFunctions[0].eventHandlerCallStatement)).toBe('refs.subtracter.onclick(subtract);');
-        expect(astToCode(transformerState.foundFunctions[1].eventHandler)).toBe('() => setCount(count() + 1)');
-        expect(astToCode(transformerState.foundFunctions[1].eventHandlerCallStatement)).toBe('refs.adderButton.onclick(add);');
+        expect(astToCode(transformerState.foundFunctions[0].eventHandler)).toBe(
+            '() => setCount(count() - 1)',
+        );
+        expect(astToCode(transformerState.foundFunctions[0].eventHandlerCallStatement)).toBe(
+            'refs.subtracter.onclick(subtract);',
+        );
+        expect(astToCode(transformerState.foundFunctions[1].eventHandler)).toBe(
+            '() => setCount(count() + 1)',
+        );
+        expect(astToCode(transformerState.foundFunctions[1].eventHandlerCallStatement)).toBe(
+            'refs.adderButton.onclick(add);',
+        );
     });
 
     it('defined as const anonymous function', async () => {
@@ -176,10 +213,18 @@ describe('find component event handlers', () => {
         const transformerState = testTransformer();
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(2);
-        expect(astToCode(transformerState.foundFunctions[0].eventHandler)).toBe('function () { setCount(count() - 1); }');
-        expect(astToCode(transformerState.foundFunctions[0].eventHandlerCallStatement)).toBe('refs.subtracter.onclick(subtract);');
-        expect(astToCode(transformerState.foundFunctions[1].eventHandler)).toBe('function () { setCount(count() + 1); }');
-        expect(astToCode(transformerState.foundFunctions[1].eventHandlerCallStatement)).toBe('refs.adderButton.onclick(add);');
+        expect(astToCode(transformerState.foundFunctions[0].eventHandler)).toBe(
+            'function () { setCount(count() - 1); }',
+        );
+        expect(astToCode(transformerState.foundFunctions[0].eventHandlerCallStatement)).toBe(
+            'refs.subtracter.onclick(subtract);',
+        );
+        expect(astToCode(transformerState.foundFunctions[1].eventHandler)).toBe(
+            'function () { setCount(count() + 1); }',
+        );
+        expect(astToCode(transformerState.foundFunctions[1].eventHandlerCallStatement)).toBe(
+            'refs.adderButton.onclick(add);',
+        );
     });
 
     it('defined as nested object function', async () => {
@@ -200,9 +245,17 @@ describe('find component event handlers', () => {
         const transformerState = testTransformer();
         await transformCode(code, [transformerState.transformer]);
         expect(transformerState.foundFunctions).toHaveLength(2);
-        expect(astToCode(transformerState.foundFunctions[0].eventHandler)).toBe('function () { setCount(count() - 1); }');
-        expect(astToCode(transformerState.foundFunctions[0].eventHandlerCallStatement)).toBe('refs.subtracter.onclick(events.subtract);');
-        expect(astToCode(transformerState.foundFunctions[1].eventHandler)).toBe('function () { setCount(count() + 1); }');
-        expect(astToCode(transformerState.foundFunctions[1].eventHandlerCallStatement)).toBe('refs.adderButton.onclick(events.add);');
+        expect(astToCode(transformerState.foundFunctions[0].eventHandler)).toBe(
+            'function () { setCount(count() - 1); }',
+        );
+        expect(astToCode(transformerState.foundFunctions[0].eventHandlerCallStatement)).toBe(
+            'refs.subtracter.onclick(events.subtract);',
+        );
+        expect(astToCode(transformerState.foundFunctions[1].eventHandler)).toBe(
+            'function () { setCount(count() + 1); }',
+        );
+        expect(astToCode(transformerState.foundFunctions[1].eventHandlerCallStatement)).toBe(
+            'refs.adderButton.onclick(events.add);',
+        );
     });
 });

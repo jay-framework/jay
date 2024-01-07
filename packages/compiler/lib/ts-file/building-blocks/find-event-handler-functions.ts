@@ -14,8 +14,8 @@ import { flattenVariable, NameBindingResolver } from './name-binding-resolver.ts
 import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils.ts';
 
 export interface FoundEventHandler {
-    eventHandlerCallStatement: ExpressionStatement
-    eventHandler: FunctionLikeDeclarationBase
+    eventHandlerCallStatement: ExpressionStatement;
+    eventHandler: FunctionLikeDeclarationBase;
 }
 
 export function findEventHandlersBlock(
@@ -49,10 +49,11 @@ export function findEventHandlersBlock(
                     accessChain.root === functionDeclaration.parameters[1]
                 ) {
                     let handler = statement.expression.arguments[0];
-                    if (isFunctionLikeDeclarationBase(handler)) foundEventHandlers.push({
-                        eventHandler: handler,
-                        eventHandlerCallStatement: statement
-                    });
+                    if (isFunctionLikeDeclarationBase(handler))
+                        foundEventHandlers.push({
+                            eventHandler: handler,
+                            eventHandlerCallStatement: statement,
+                        });
                     else {
                         // else if (isIdentifier(handler) && nameBindingResolver.variables.has(handler.text)) {
                         let flattenedHandler = flattenVariable(
@@ -61,7 +62,7 @@ export function findEventHandlersBlock(
                         if (flattenedHandler.path.length === 0)
                             foundEventHandlers.push({
                                 eventHandler: flattenedHandler.root as FunctionLikeDeclarationBase,
-                                eventHandlerCallStatement: statement
+                                eventHandlerCallStatement: statement,
                             });
                     }
                 }

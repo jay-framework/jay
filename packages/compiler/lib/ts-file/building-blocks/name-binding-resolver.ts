@@ -17,7 +17,9 @@ import ts, {
     isPropertyAssignment,
     isShorthandPropertyAssignment,
     isArrayBindingPattern,
-    isBindingElement, isParenthesizedExpression, isAsExpression,
+    isBindingElement,
+    isParenthesizedExpression,
+    isAsExpression,
 } from 'typescript';
 
 export type VariableRoot = ParameterDeclaration | FunctionDeclaration;
@@ -154,9 +156,9 @@ export class NameBindingResolver {
         } else if (isIdentifier(expression)) {
             return this.resolveIdentifier(expression);
         } else if (isParenthesizedExpression(expression)) {
-            return this.resolvePropertyAccessChain(expression.expression)
+            return this.resolvePropertyAccessChain(expression.expression);
         } else if (isAsExpression(expression)) {
-            return this.resolvePropertyAccessChain(expression.expression)
+            return this.resolvePropertyAccessChain(expression.expression);
         } else if (isObjectLiteralExpression(expression)) {
             return {
                 properties: expression.properties.map((property) => {
