@@ -1,12 +1,13 @@
 import ts from 'typescript';
 import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
-import { codeToAst, astToCode } from './ts-compiler-utils.ts';
-import { mkTransformer, SourceFileTransformerContext } from './mk-transformer.ts';
+import { codeToAst, astToCode } from './ts-compiler-utils';
+import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
 import {
     findMakeJayComponentImport,
     findMakeJayComponentImportTransformerBlock,
 } from './building-blocks/find-make-jay-component-import';
-import { findComponentConstructorCalls } from './building-blocks/find-component-constructor-calls.ts';
+import { findComponentConstructorCalls } from './building-blocks/find-component-constructor-calls';
+import { getImportName } from './extract-imports';
 
 function transformVariableStatement(
     node: ts.VariableStatement,
@@ -35,10 +36,6 @@ function getRenderImportSpecifier(node: ts.ImportDeclaration): ts.ImportSpecifie
         default:
             return undefined;
     }
-}
-
-function getImportName(binding: ts.ImportSpecifier): string {
-    return binding.propertyName?.text ?? binding.name.text;
 }
 
 function transformImport(

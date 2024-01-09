@@ -10,8 +10,9 @@ import {
     compCollectionRef as ccr,
     RenderElementOptions,
 } from 'jay-runtime';
-// @ts-expect-error it's an expected generated file, the import does not exist
+// @ts-expect-error Cannot find module
 import { TreeNodeRefs } from './tree-node-refs';
+// @ts-expect-error Cannot find module
 import { TreeNode, Node } from './tree-node?jay-mainSandbox';
 
 export interface RecursiveComponentsElementRefs {

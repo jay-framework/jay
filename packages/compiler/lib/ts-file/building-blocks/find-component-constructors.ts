@@ -1,4 +1,4 @@
-import { SourceFileTransformerContext } from '../mk-transformer.ts';
+import { SourceFileTransformerContext } from '../mk-transformer';
 import ts, {
     Expression,
     FunctionLikeDeclarationBase,
@@ -7,7 +7,7 @@ import ts, {
     isIdentifier,
     isVariableStatement,
 } from 'typescript';
-import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils.ts';
+import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils';
 
 export function findComponentConstructorsBlock(
     componentFunctionExpressions: Expression[],

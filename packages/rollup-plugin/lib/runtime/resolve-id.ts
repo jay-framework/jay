@@ -1,0 +1,94 @@
+import { CustomPluginOptions, PluginContext, ResolveIdResult } from 'rollup';
+import { watchChangesFor } from './watch';
+import { SANDBOX_ROOT_PREFIX } from './sandbox';
+import { appendJayMetadata, JayFormat, jayMetadataFromModuleMetadata } from './metadata';
+import { hasExtension, JAY_QUERY_WORKER_TRUSTED_TS, TS_EXTENSION } from 'jay-compiler';
+
+export interface ResolveIdOptions {
+    attributes: Record<string, string>;
+    custom?: CustomPluginOptions;
+    isEntry: boolean;
+    skipSelf?: boolean;
+}
+
+export async function addTsExtensionForJayFile(
+    context: PluginContext,
+    source: string,
+    importer: string | undefined,
+    options: ResolveIdOptions,
+): Promise<ResolveIdResult> {
+    const resolved = await context.resolve(source, importer, { ...options, skipSelf: true });
+    if (!resolved || hasExtension(resolved.id, TS_EXTENSION)) return null;
+
+    const resolvedJayMeta = jayMetadataFromModuleMetadata(resolved.id, resolved.meta);
+    if (resolvedJayMeta.originId) {
+        const { format, originId } = resolvedJayMeta;
+        const id = `${originId}${TS_EXTENSION}`;
+        console.info(`[resolveId] resolved ${id} as ${format}`);
+        return { id, meta: appendJayMetadata(context, id, { format, originId }) };
+    } else {
+        watchChangesFor(context, resolved.id);
+        const format = JayFormat.JayHtml;
+        const originId = resolved.id;
+        const id = `${originId}${TS_EXTENSION}`;
+        console.info(`[resolveId] resolved ${id} as ${format}`);
+        return { id, meta: appendJayMetadata(context, id, { format, originId }) };
+    }
+}
+
+export async function resolveJayModeFile(
+    context: PluginContext,
+    source: string,
+    importer: string | undefined,
+    options: ResolveIdOptions,
+): Promise<ResolveIdResult> {
+    const idParts = source.split('?');
+    const idWithoutJayModeExtension = idParts.slice(0, -1).join('?');
+    const mode = idParts.slice(-1)[0];
+    const resolved = await context.resolve(idWithoutJayModeExtension, importer, {
+        ...options,
+        skipSelf: false,
+    });
+    if (!resolved) return null;
+
+    const resolvedJayMeta = jayMetadataFromModuleMetadata(resolved.id, resolved.meta);
+    const format = resolvedJayMeta.format || JayFormat.TypeScript;
+    const originId = resolvedJayMeta.originId || resolved.id;
+    const id = getResolvedId(resolved, mode);
+    console.info(`[resolveId] resolved ${id} as ${format}`);
+    return { id, meta: appendJayMetadata(context, id, { format, originId }, resolvedJayMeta) };
+}
+
+export async function removeSandboxPrefixForWorkerRoot(
+    context: PluginContext,
+    source: string,
+    importer: string,
+    options: ResolveIdOptions,
+): Promise<ResolveIdResult> {
+    const sourceWithoutPrefix = source.replace(SANDBOX_ROOT_PREFIX, '');
+    const resolved = await context.resolve(sourceWithoutPrefix, importer, {
+        ...options,
+        skipSelf: true,
+    });
+    if (!resolved) return null;
+
+    const id = `${resolved.id}${JAY_QUERY_WORKER_TRUSTED_TS}`;
+    const originId = id.split('?')[0];
+    console.info(`[resolveId] resolved sandbox root ${id}`);
+    return {
+        id,
+        meta: appendJayMetadata(context, id, {
+            originId,
+            format: JayFormat.TypeScript,
+            isWorkerRoot: true,
+        }),
+    };
+}
+
+function getResolvedId(resolved, mode: string) {
+    const resolvedParts = resolved.id.split('.');
+    const base = resolvedParts.slice(0, -1).join('.');
+    const extension = resolvedParts.slice(-1)[0];
+    const id = `${base}?${mode}.${extension}`;
+    return id;
+}

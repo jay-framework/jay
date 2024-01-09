@@ -1,11 +1,14 @@
-import { JayRollupConfig, jayRuntime as rollupJayRuntime } from 'rollup-plugin-jay';
-import { handleHotUpdate } from './hot-update';
+import {
+    JayPluginContext,
+    JayRollupConfig,
+    jayRuntime as rollupJayRuntime,
+} from 'rollup-plugin-jay';
 import { Plugin } from 'vite';
 
 export function jayRuntime(jayOptions: JayRollupConfig = {}): Plugin {
+    const jayContext = new JayPluginContext(jayOptions);
     return {
         enforce: 'pre',
-        handleHotUpdate,
-        ...rollupJayRuntime(jayOptions),
+        ...rollupJayRuntime(jayOptions, jayContext),
     };
 }

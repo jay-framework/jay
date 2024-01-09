@@ -8,6 +8,7 @@ import {
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
+// @ts-expect-error Cannot find module
 import { treeNode, Node } from './tree-node?jay-mainSandbox';
 
 export interface RecursiveComponents2ViewState {

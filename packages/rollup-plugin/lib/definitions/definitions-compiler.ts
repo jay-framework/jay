@@ -1,4 +1,6 @@
 import {
+    checkCodeErrors,
+    checkValidationErrors,
     generateElementDefinitionFile,
     getJayHtmlImports,
     hasExtension,
@@ -9,7 +11,6 @@ import { getFileContext, readFileAsString, writeDefinitionFile } from '../common
 import { generateRefsComponents, getRefsFilePaths } from './refs-compiler';
 import path from 'node:path';
 import { JAY_EXTENSION } from '../../../compiler/lib/core/constants';
-import { checkCodeErrors, checkValidationErrors } from '../common/errors';
 
 export function jayDefinitions() {
     const generatedRefPaths: Set<string> = new Set();
@@ -39,10 +40,9 @@ export function jayDefinitions() {
                     }),
                 ),
             );
-            const parsedFile = parseJayFile(code, filename, dirname);
-            const tsCode = generateElementDefinitionFile(parsedFile);
-            checkValidationErrors(tsCode.validations);
-            const generatedFilename = await writeDefinitionFile(dirname, filename, tsCode.val);
+            const parsedFile = parseJayFile(code, filename, dirname, {});
+            const tsCode = checkValidationErrors(generateElementDefinitionFile(parsedFile));
+            const generatedFilename = await writeDefinitionFile(dirname, filename, tsCode);
             context.info(`[transform] generated ${generatedFilename}`);
 
             const newRefsPaths = getRefsFilePaths(

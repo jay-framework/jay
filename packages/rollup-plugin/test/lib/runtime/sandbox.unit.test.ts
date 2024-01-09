@@ -1,4 +1,4 @@
-import { hasPrefix, SANDBOX_ROOT_PREFIX, withoutPrefix } from '../../../lib/runtime/sandbox.ts';
+import { hasPrefix, SANDBOX_ROOT_PREFIX, withoutPrefix } from '../../../lib/runtime/sandbox';
 
 describe('sandbox', () => {
     const module = './app.jay-html';

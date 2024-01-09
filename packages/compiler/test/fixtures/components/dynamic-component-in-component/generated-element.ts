@@ -11,6 +11,7 @@ import {
     RenderElementOptions,
 } from 'jay-runtime';
 import { CounterRef, CounterRefs } from '../counter/counter-refs';
+// @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-mainSandbox';
 
 export interface NestedCounter {

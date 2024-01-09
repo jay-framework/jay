@@ -19,6 +19,7 @@ import {
     JayYamlStructure,
     resolvePrimitiveType,
 } from '../core/jay-file-types';
+import { ResolveTsConfigOptions } from '../ts-file/resolve-ts-config';
 
 export function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj);
@@ -112,6 +113,7 @@ function parseImports(
     importLinks: HTMLElement[],
     validations: JayValidations,
     filePath: string,
+    options: ResolveTsConfigOptions,
 ): JayImportLink[] {
     return importLinks.map<JayImportLink>((importLink) => {
         const module = importLink.getAttribute('href');
@@ -125,7 +127,7 @@ function parseImports(
                 validations.push(`import for module ${module} does not specify what to import`);
 
             const importedFile = path.resolve(filePath, module);
-            const exportedTypes = tsExtractTypes(importedFile);
+            const exportedTypes = tsExtractTypes(importedFile, options);
 
             for (const name of names) {
                 const exportedType = exportedTypes.find((_) => _.name === name.name);
@@ -160,6 +162,7 @@ export function parseJayFile(
     html: string,
     filename: string,
     filePath: string,
+    options: ResolveTsConfigOptions,
 ): WithValidations<JayFile> {
     const normalizedFileName = normalizeFilename(filename);
     const baseElementName = capitalCase(normalizedFileName, { delimiter: '' });
@@ -169,7 +172,12 @@ export function parseJayFile(
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
     let examples = parseExamples(jayYaml, validations);
-    let imports = parseImports(root.querySelectorAll('link[rel="import"]'), validations, filePath);
+    let imports = parseImports(
+        root.querySelectorAll('link[rel="import"]'),
+        validations,
+        filePath,
+        options,
+    );
     let importNames = imports.flatMap((_) => _.names);
     let types = parseTypes(jayYaml, validations, baseElementName, importNames);
 

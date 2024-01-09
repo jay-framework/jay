@@ -1,5 +1,4 @@
 import { WithValidations } from '../core/with-validations';
-import { parseJayFile } from './jay-file-parser';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
 import { Ref, RenderFragment } from '../core/render-fragment';
@@ -935,112 +934,92 @@ export function generateElementDefinitionFile(
 }
 
 export function generateElementFile(
-    parsedFile: WithValidations<JayFile>,
+    jayFile: JayFile,
     importerMode: RuntimeMode,
 ): WithValidations<string> {
-    return parsedFile.flatMap((jayFile: JayFile) => {
-        let types = generateTypes(jayFile.types);
-        let { renderedRefs, renderedElement, renderedImplementation, refImportsInUse } =
-            renderFunctionImplementation(
-                jayFile.types,
-                jayFile.body,
-                jayFile.imports,
-                jayFile.baseElementName,
-            );
-        let renderedFile = [
-            renderImports(
-                renderedImplementation.imports.plus(Import.element).plus(Import.jayElement),
-                ImportsFor.implementation,
-                jayFile.imports,
-                refImportsInUse,
-                importerMode,
-            ),
-            types,
-            renderedRefs,
-            renderedElement,
-            renderedImplementation.rendered,
-        ]
-            .filter((_) => _ !== null && _ !== '')
-            .join('\n\n');
-        return new WithValidations(renderedFile, renderedImplementation.validations);
-    });
-}
-
-export function generateElementBridgeFile(
-    parsedFile: WithValidations<JayFile>,
-): WithValidations<string> {
-    return parsedFile.map((jayFile: JayFile) => {
-        let types = generateTypes(jayFile.types);
-        let {
-            renderedRefs,
-            renderedElement,
-            elementType,
-            renderedImplementation,
-            refImportsInUse,
-        } = renderFunctionImplementation(
+    let types = generateTypes(jayFile.types);
+    let { renderedRefs, renderedElement, renderedImplementation, refImportsInUse } =
+        renderFunctionImplementation(
             jayFile.types,
             jayFile.body,
             jayFile.imports,
             jayFile.baseElementName,
         );
-        let renderedBridge = renderBridge(
+    let renderedFile = [
+        renderImports(
+            renderedImplementation.imports.plus(Import.element).plus(Import.jayElement),
+            ImportsFor.implementation,
+            jayFile.imports,
+            refImportsInUse,
+            importerMode,
+        ),
+        types,
+        renderedRefs,
+        renderedElement,
+        renderedImplementation.rendered,
+    ]
+        .filter((_) => _ !== null && _ !== '')
+        .join('\n\n');
+    return new WithValidations(renderedFile, renderedImplementation.validations);
+}
+
+export function generateElementBridgeFile(jayFile: JayFile): string {
+    let types = generateTypes(jayFile.types);
+    let { renderedRefs, renderedElement, elementType, renderedImplementation, refImportsInUse } =
+        renderFunctionImplementation(
             jayFile.types,
             jayFile.body,
             jayFile.imports,
-            elementType,
+            jayFile.baseElementName,
         );
-        return [
-            renderImports(
-                renderedImplementation.imports
-                    .plus(Import.element)
-                    .plus(Import.jayElement)
-                    .plus(renderedBridge.imports),
-                ImportsFor.elementSandbox,
-                jayFile.imports,
-                refImportsInUse,
-                RuntimeMode.WorkerSandbox,
-            ),
-            types,
-            renderedRefs,
-            renderedElement,
-            renderedBridge.rendered,
-        ]
-            .filter((_) => _ !== null && _ !== '')
-            .join('\n\n');
-    });
+    let renderedBridge = renderBridge(jayFile.types, jayFile.body, jayFile.imports, elementType);
+    return [
+        renderImports(
+            renderedImplementation.imports
+                .plus(Import.element)
+                .plus(Import.jayElement)
+                .plus(renderedBridge.imports),
+            ImportsFor.elementSandbox,
+            jayFile.imports,
+            refImportsInUse,
+            RuntimeMode.WorkerSandbox,
+        ),
+        types,
+        renderedRefs,
+        renderedElement,
+        renderedBridge.rendered,
+    ]
+        .filter((_) => _ !== null && _ !== '')
+        .join('\n\n');
 }
 
 const CALL_INITIALIZE_WORKER = `setWorkerPort(new JayPort(new HandshakeMessageJayChannel(self)));
 initializeWorker();`;
 
-export function generateSandboxRootFile(
-    parsedFile: WithValidations<JayFile>,
-): WithValidations<string> {
-    return parsedFile.map((jayFile: JayFile) => {
-        // let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(
-        //     jayFile.imports,
-        // );
-        let types = generateTypes(jayFile.types);
-        let renderedSandboxRoot = renderSandboxRoot(jayFile.types, jayFile.body, jayFile.imports);
-        let renderedImports = renderImports(
-            Imports.for(
-                Import.sandboxRoot,
-                Import.sandboxChildComp,
-                Import.handshakeMessageJayChannel,
-                Import.jayPort,
-                Import.setWorkerPort,
-            ).plus(renderedSandboxRoot.imports),
-            ImportsFor.elementSandbox,
-            jayFile.imports,
-            new Set(),
-            RuntimeMode.WorkerSandbox,
-        );
+export function generateSandboxRootFile(jayFile: JayFile): string {
+    // let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(
+    //     jayFile.imports,
+    // );
+    let types = generateTypes(jayFile.types);
+    let renderedSandboxRoot = renderSandboxRoot(jayFile.types, jayFile.body, jayFile.imports);
+    let renderedImports = renderImports(
+        Imports.for(
+            Import.sandboxRoot,
+            Import.sandboxChildComp,
+            Import.handshakeMessageJayChannel,
+            Import.jayPort,
+            Import.setWorkerPort,
+        ).plus(renderedSandboxRoot.imports),
+        ImportsFor.elementSandbox,
+        jayFile.imports,
+        new Set(),
+        RuntimeMode.WorkerSandbox,
+    );
 
-        let initializeWorker = `export function initializeWorker() {
+    let initializeWorker = `export function initializeWorker() {
   sandboxRoot(${renderedSandboxRoot.rendered});
 }`;
-        return [renderedImports, types, initializeWorker, CALL_INITIALIZE_WORKER]
-            .filter((_) => _ !== null && _ !== '')
-            .join('\n\n');
-    });
+    return [renderedImports, types, initializeWorker, CALL_INITIALIZE_WORKER]
+        .filter((_) => _ !== null && _ !== '')
+        .join('\n\n');
 }
