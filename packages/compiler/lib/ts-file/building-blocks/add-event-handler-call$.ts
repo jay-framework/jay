@@ -7,7 +7,7 @@ import ts, {
     NodeFactory,
     TransformationContext,
 } from 'typescript';
-import { codeToAst } from '../ts-compiler-utils.ts';
+import { codeToAst } from '../ts-compiler-utils';
 import { FoundEventHandler } from './find-event-handler-functions.ts';
 
 const addEventHandlerCall =

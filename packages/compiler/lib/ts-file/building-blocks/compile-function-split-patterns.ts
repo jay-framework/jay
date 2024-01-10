@@ -10,10 +10,10 @@ import {
     flattenVariable,
     NameBindingResolver,
     Variable,
-} from './name-binding-resolver.ts';
-import { mkTransformer } from '../mk-transformer.ts';
-import { JayValidations, WithValidations } from '../../core/with-validations.ts';
-import { astToCode } from '../ts-compiler-utils.ts';
+} from './name-binding-resolver';
+import { mkTransformer } from '../mk-transformer';
+import { JayValidations, WithValidations } from '../../core/with-validations';
+import { astToCode } from '../ts-compiler-utils';
 
 export enum CompilePatternType {
     RETURN,

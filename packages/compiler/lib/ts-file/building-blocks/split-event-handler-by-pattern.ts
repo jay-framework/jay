@@ -10,10 +10,10 @@ import {
     FlattenedAccessChain,
     flattenVariable,
     NameBindingResolver,
-} from './name-binding-resolver.ts';
-import { CompiledPattern } from './compile-function-split-patterns.ts';
-import { codeToAst } from '../ts-compiler-utils.ts';
-import { FoundEventHandler } from './find-event-handler-functions.ts';
+} from './name-binding-resolver';
+import { CompiledPattern } from './compile-function-split-patterns';
+import { codeToAst } from '../ts-compiler-utils';
+import { FoundEventHandler } from './find-event-handler-functions';
 
 function findPatternInVariable(
     resolvedParam: FlattenedAccessChain,

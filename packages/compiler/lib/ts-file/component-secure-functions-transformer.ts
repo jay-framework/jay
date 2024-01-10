@@ -10,8 +10,8 @@ import {
 import { compileFunctionSplitPatternsBlock } from './building-blocks/compile-function-split-patterns';
 import { splitEventHandlerByPatternBlock } from './building-blocks/split-event-handler-by-pattern';
 import { addEventHandlerCallBlock } from './building-blocks/add-event-handler-call$';
-import { addImportModeFileExtension } from './building-blocks/add-import-mode-file-extension.ts';
-import { RuntimeMode } from '../core/runtime-mode.ts';
+import { addImportModeFileExtension } from './building-blocks/add-import-mode-file-extension';
+import { RuntimeMode } from '../core/runtime-mode';
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: string[];
