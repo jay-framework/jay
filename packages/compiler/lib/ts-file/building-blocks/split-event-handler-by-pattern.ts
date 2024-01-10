@@ -13,6 +13,7 @@ import {
 } from './name-binding-resolver.ts';
 import { CompiledPattern } from './compile-function-split-patterns.ts';
 import { codeToAst } from '../ts-compiler-utils.ts';
+import {FoundEventHandler} from "./find-event-handler-functions.ts";
 
 function findPatternInVariable(
     resolvedParam: FlattenedAccessChain,
@@ -35,6 +36,7 @@ const transformEventHandlerStatement =
         compiledPatterns: CompiledPattern[],
         context: ts.TransformationContext,
         factory: ts.NodeFactory,
+        callingEventHandlers: FoundEventHandler[]
     ) =>
     (node) => {
         if (isCallExpression(node)) {
@@ -51,6 +53,7 @@ const transformEventHandlerStatement =
                         'event.$1',
                         ...flattenedResolvedParam.path.splice(patternMatch.accessChain.path.length),
                     ];
+                    callingEventHandlers.forEach(_ => _.eventHandlerMatchedPatterns = true)
                     return (
                         codeToAst(replacementPattern.join('.'), context)[0] as ExpressionStatement
                     ).expression;
@@ -65,6 +68,7 @@ const transformEventHandlerStatement =
                     compiledPatterns,
                     context,
                     factory,
+                    callingEventHandlers
                 ),
                 context,
             );
@@ -76,6 +80,7 @@ const transformEventHandlerStatement =
                     compiledPatterns,
                     context,
                     factory,
+                    callingEventHandlers
                 ),
                 context,
             );
@@ -88,6 +93,7 @@ export const splitEventHandlerByPatternBlock =
         context: ts.TransformationContext,
         compiledPatterns: CompiledPattern[],
         factory: ts.NodeFactory,
+        callingEventHandlers: FoundEventHandler[]
     ) =>
     (eventHandler: ts.FunctionLikeDeclarationBase) => {
         let eventHandlerNameResolver = new NameBindingResolver();
@@ -100,6 +106,7 @@ export const splitEventHandlerByPatternBlock =
                 compiledPatterns,
                 context,
                 factory,
+                callingEventHandlers
             ),
             context,
         );

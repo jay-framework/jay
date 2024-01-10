@@ -8,8 +8,9 @@ import ts, {
     TransformationContext,
 } from 'typescript';
 import { codeToAst } from '../ts-compiler-utils.ts';
+import {FoundEventHandler} from "./find-event-handler-functions.ts";
 
-const addEventHandlerCall = (context: TransformationContext, factory: NodeFactory, handlerIndex: number) => (node) => {
+const addEventHandlerCall = (context: TransformationContext, factory: NodeFactory, foundEventHandler: FoundEventHandler) => (node) => {
     if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
         return factory.createCallExpression(
             factory.createPropertyAccessExpression(
@@ -19,7 +20,7 @@ const addEventHandlerCall = (context: TransformationContext, factory: NodeFactor
                         node.expression.name.text + '$',
                     ),
                     undefined,
-                    codeToAst(`handler$('${handlerIndex}')`, context).map(
+                    codeToAst(`handler$('${foundEventHandler.handlerIndex}')`, context).map(
                         (_: ExpressionStatement) => _.expression,
                     ) as Expression[],
                 ),
@@ -33,6 +34,6 @@ const addEventHandlerCall = (context: TransformationContext, factory: NodeFactor
 };
 
 export const addEventHandlerCallBlock =
-    (context: TransformationContext, factory: NodeFactory, handlerIndex: number) => (eventHandler: CallExpression) => {
-        return ts.visitNode(eventHandler, addEventHandlerCall(context, factory, handlerIndex));
+    (context: TransformationContext, factory: NodeFactory, foundEventHandler: FoundEventHandler) => (eventHandler: CallExpression) => {
+        return ts.visitNode(eventHandler, addEventHandlerCall(context, factory, foundEventHandler));
     };
