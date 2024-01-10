@@ -1,6 +1,6 @@
 import ts from 'typescript';
-import { getModeFileExtension, RuntimeMode } from '../../core/runtime-mode.ts';
-import { isRelativeImport } from '../extract-imports.ts';
+import { getModeFileExtension, RuntimeMode } from '../../core/runtime-mode';
+import { isRelativeImport } from '../extract-imports';
 
 export function addImportModeFileExtension(
     node: ts.ImportDeclaration,

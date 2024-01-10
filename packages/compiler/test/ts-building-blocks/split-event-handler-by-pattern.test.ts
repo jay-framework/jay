@@ -7,7 +7,7 @@ import { splitEventHandlerByPatternBlock } from '../../lib/ts-file/building-bloc
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import ts, { isExpressionStatement, isFunctionDeclaration } from 'typescript';
 import { prettify } from '../../lib';
-import { FoundEventHandler } from '../../lib/ts-file/building-blocks/find-event-handler-functions.ts';
+import { FoundEventHandler } from '../../lib/ts-file/building-blocks/find-event-handler-functions';
 
 const PATTERN_EVENT_TARGET_VALUE = `
 function inputValuePattern(handler: JayEventHandler<any, any, any>) {
