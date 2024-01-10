@@ -4,17 +4,16 @@ import { transform } from 'typescript';
 import { checkDiagnosticsErrors, checkValidationErrors } from '../common/errors';
 import {
     componentBridgeTransformer,
-    componentSandboxTransformer,
+    componentSecureFunctionsTransformer,
     generateElementBridgeFile,
     generateElementFile,
+    generateImportsFileFromJayFile,
     generateImportsFileFromTsSource,
     generateSandboxRootFile,
     JayFile,
     RuntimeMode,
     WithValidations,
 } from 'jay-compiler';
-import { generateImportsFileFromJayFile } from '../../../compiler/lib/ts-file/generate-imports-file';
-import { componentSecureFunctionsTransformer } from '../../../compiler/lib/ts-file/component-secure-functions-transformer.ts';
 
 export function transformTsCode(
     jayContext: JayPluginContext,

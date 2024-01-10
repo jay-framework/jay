@@ -3,7 +3,6 @@ import * as ts from 'typescript';
 import { TransformerFactory } from 'typescript';
 import {
     componentBridgeTransformer,
-    componentSandboxTransformer,
     generateElementBridgeFile,
     generateElementFile,
     generateImportsFileFromJayFile,
@@ -85,10 +84,6 @@ export async function readFileAndGenerateComponentBridgeFile(folder: string, giv
         [componentBridgeTransformer(RuntimeMode.MainSandbox)],
         givenFile,
     );
-}
-
-export async function readFileAndGenerateComponentSandboxFile(folder: string, givenFile?: string) {
-    return readFileAndTsTransform(folder, [componentSandboxTransformer()], givenFile);
 }
 
 export async function readFileAndGenerateImportsFileFromTsFile(
