@@ -1,10 +1,10 @@
 import {
     CompiledPattern,
     compileFunctionSplitPatternsBlock,
-} from '../../lib/ts-file/building-blocks/compile-function-split-patterns.ts';
-import { mkTransformer } from '../../lib/ts-file/mk-transformer.ts';
-import { splitEventHandlerByPatternBlock } from '../../lib/ts-file/building-blocks/split-event-handler-by-pattern.ts';
-import { transformCode } from '../test-utils/ts-compiler-test-utils.ts';
+} from '../../lib/ts-file/building-blocks/compile-function-split-patterns';
+import { mkTransformer } from '../../lib/ts-file/mk-transformer';
+import { splitEventHandlerByPatternBlock } from '../../lib/ts-file/building-blocks/split-event-handler-by-pattern';
+import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import ts, { isExpressionStatement, isFunctionDeclaration } from 'typescript';
 import { prettify } from '../../lib';
 

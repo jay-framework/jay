@@ -1,8 +1,8 @@
-import { mkTransformer } from '../../lib/ts-file/mk-transformer.ts';
+import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import ts, { isCallExpression, isExpressionStatement, isFunctionDeclaration } from 'typescript';
-import { transformCode } from '../test-utils/ts-compiler-test-utils.ts';
+import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import { prettify } from '../../lib';
-import { addEventHandlerCallBlock } from '../../lib/ts-file/building-blocks/add-event-handler-call$.ts';
+import { addEventHandlerCallBlock } from '../../lib/ts-file/building-blocks/add-event-handler-call$';
 
 describe('add event handler call$ to call chain', () => {
     function testTransformer() {
