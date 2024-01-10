@@ -6,10 +6,12 @@
     "clean": "wsrun clean",
     "clean:node_modules": "rimraf node_modules && rimraf packages/*/node_modules && rimraf examples/*/node_modules && rimraf exploration/*/node_modules",
     "clean:node_modules:with-cache": "npm run clean:node_modules && yarn cache clean",
-    "confirm": "npm run rebuild && npm run test && npm run prettier",
+    "confirm": "npm run rebuild && npm run test && npm run format",
     "deps:upgrade": "yarn upgrade-interactive && yarn && yarn deduplicate",
     "deduplicate": "yarn dedupe --strategy highest",
-    "prettier": "prettier . --write",
+    "format": "npm run format:extensions && npm run format:prettier",
+    "format:extensions": "node ./scripts/fix-imports-ts-extension.js",
+    "format:prettier": "prettier . --write",
     "rebuild": "yarn run clean && yarn run build",
     "reinstall": "npm run clean:node_modules && yarn install && yarn run rebuild",
     "test": "wsrun -te --report test",
@@ -27,6 +29,7 @@
   },
   "devDependencies": {
     "prettier": "^3.1.1",
+    "replace-in-file": "^7.1.0",
     "wsrun": "^5.2.4"
   },
   "engines": {

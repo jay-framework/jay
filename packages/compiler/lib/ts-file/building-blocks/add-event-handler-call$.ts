@@ -7,7 +7,7 @@ import ts, {
     NodeFactory,
     TransformationContext,
 } from 'typescript';
-import { codeToAst } from '../ts-compiler-utils.ts';
+import { codeToAst } from '../ts-compiler-utils';
 
 const addEventHandlerCall = (context: TransformationContext, factory: NodeFactory) => (node) => {
     if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {

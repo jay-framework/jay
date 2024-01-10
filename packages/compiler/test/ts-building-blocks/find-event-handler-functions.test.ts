@@ -1,6 +1,6 @@
-import { mkTransformer } from '../../lib/ts-file/mk-transformer.ts';
-import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-component-constructor-calls.ts';
-import { findComponentConstructorsBlock } from '../../lib/ts-file/building-blocks/find-component-constructors.ts';
+import { mkTransformer } from '../../lib/ts-file/mk-transformer';
+import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-component-constructor-calls';
+import { findComponentConstructorsBlock } from '../../lib/ts-file/building-blocks/find-component-constructors';
 import ts, {
     isArrowFunction,
     isFunctionDeclaration,
@@ -10,10 +10,10 @@ import ts, {
 import {
     findEventHandlersBlock,
     FoundEventHandler,
-} from '../../lib/ts-file/building-blocks/find-event-handler-functions.ts';
-import { stripMargin } from '../test-utils/strip-margin.ts';
-import { transformCode } from '../test-utils/ts-compiler-test-utils.ts';
-import { astToCode } from '../../lib/ts-file/ts-compiler-utils.ts';
+} from '../../lib/ts-file/building-blocks/find-event-handler-functions';
+import { stripMargin } from '../test-utils/strip-margin';
+import { transformCode } from '../test-utils/ts-compiler-test-utils';
+import { astToCode } from '../../lib/ts-file/ts-compiler-utils';
 
 describe('find component event handlers', () => {
     function testTransformer() {

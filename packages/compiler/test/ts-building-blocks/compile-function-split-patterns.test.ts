@@ -1,8 +1,8 @@
 import {
     compileFunctionSplitPatternsBlock,
     CompilePatternType,
-} from '../../lib/ts-file/building-blocks/compile-function-split-patterns.ts';
-import { flattenVariable } from '../../lib/ts-file/building-blocks/name-binding-resolver.ts';
+} from '../../lib/ts-file/building-blocks/compile-function-split-patterns';
+import { flattenVariable } from '../../lib/ts-file/building-blocks/name-binding-resolver';
 import { isParameter } from 'typescript';
 
 describe('compile secure function split patterns', () => {
