@@ -43,7 +43,7 @@ export class FoundEventHandlers {
     }
 
     getFoundEventHandlersByHandler(node: ts.Node): FoundEventHandler[] {
-        return this.foundEventHandlers.filter(_ => _.eventHandler === node);
+        return this.foundEventHandlers.filter((_) => _.eventHandler === node);
     }
 }
 
@@ -85,7 +85,7 @@ export function findEventHandlersBlock(
                             eventHandlerMatchedPatterns: false,
                             eventHandler: handler,
                             eventHandlerCallStatement: statement,
-                            handlerIndex: nextEventHandlerIndex++
+                            handlerIndex: nextEventHandlerIndex++,
                         });
                     else {
                         // else if (isIdentifier(handler) && nameBindingResolver.variables.has(handler.text)) {
@@ -98,8 +98,13 @@ export function findEventHandlersBlock(
                                 eventHandlerMatchedPatterns: false,
                                 eventHandler: flattenedHandler.root as FunctionLikeDeclarationBase,
                                 eventHandlerCallStatement: statement,
-                                handlerIndex: foundEventHandlerFunctionsToHandlerIndex.get(flattenedHandler.root)??
-                                    foundEventHandlerFunctionsToHandlerIndex.set(flattenedHandler.root, nextEventHandlerIndex++).get(flattenedHandler.root)
+                                handlerIndex:
+                                    foundEventHandlerFunctionsToHandlerIndex.get(
+                                        flattenedHandler.root,
+                                    ) ??
+                                    foundEventHandlerFunctionsToHandlerIndex
+                                        .set(flattenedHandler.root, nextEventHandlerIndex++)
+                                        .get(flattenedHandler.root),
                             });
                     }
                 }

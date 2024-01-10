@@ -1,8 +1,8 @@
-import {mkTransformer} from '../../lib/ts-file/mk-transformer.ts';
-import ts, {isImportDeclaration} from 'typescript';
-import {transformCode} from '../test-utils/ts-compiler-test-utils.ts';
-import {prettify, RuntimeMode} from '../../lib';
-import {addImportModeFileExtension} from "../../lib/ts-file/building-blocks/add-import-mode-file-extension.ts";
+import { mkTransformer } from '../../lib/ts-file/mk-transformer.ts';
+import ts, { isImportDeclaration } from 'typescript';
+import { transformCode } from '../test-utils/ts-compiler-test-utils.ts';
+import { prettify, RuntimeMode } from '../../lib';
+import { addImportModeFileExtension } from '../../lib/ts-file/building-blocks/add-import-mode-file-extension.ts';
 
 describe('add event handler call$ to call chain', () => {
     function testTransformer(importerMode: RuntimeMode) {
@@ -10,10 +10,8 @@ describe('add event handler call$ to call chain', () => {
             return ts.visitEachChild(
                 sourceFile,
                 (statement) => {
-                    if (
-                        isImportDeclaration(statement)
-                    ) {
-                        return addImportModeFileExtension(statement, factory, importerMode)
+                    if (isImportDeclaration(statement)) {
+                        return addImportModeFileExtension(statement, factory, importerMode);
                     }
                     return statement;
                 },
@@ -37,9 +35,7 @@ describe('add event handler call$ to call chain', () => {
         const transformerState = testTransformer(RuntimeMode.WorkerSandbox);
         let transformed = await transformCode(eventHandlerCall, [transformerState]);
 
-        expect(transformed).toEqual(
-            await prettify(`import bla from 'some-module'`),
-        );
+        expect(transformed).toEqual(await prettify(`import bla from 'some-module'`));
     });
 
     it('should add runtime mode `WorkerTrusted` to absolute import statement', async () => {

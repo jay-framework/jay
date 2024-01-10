@@ -134,7 +134,6 @@ export const Comp = makeJayComponent(render, CompComponent);`),
         );
     });
 
-
     it('should not transform an event handler that does not match any pattern', async () => {
         const code = `
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';

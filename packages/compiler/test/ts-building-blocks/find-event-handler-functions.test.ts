@@ -1,9 +1,7 @@
 import { mkTransformer } from '../../lib/ts-file/mk-transformer.ts';
 import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-component-constructor-calls.ts';
 import { findComponentConstructorsBlock } from '../../lib/ts-file/building-blocks/find-component-constructors.ts';
-import ts, {
-    TransformerFactory,
-} from 'typescript';
+import ts, { TransformerFactory } from 'typescript';
 import {
     findEventHandlersBlock,
     FoundEventHandler,

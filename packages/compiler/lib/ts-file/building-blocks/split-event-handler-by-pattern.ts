@@ -13,7 +13,7 @@ import {
 } from './name-binding-resolver.ts';
 import { CompiledPattern } from './compile-function-split-patterns.ts';
 import { codeToAst } from '../ts-compiler-utils.ts';
-import {FoundEventHandler} from "./find-event-handler-functions.ts";
+import { FoundEventHandler } from './find-event-handler-functions.ts';
 
 function findPatternInVariable(
     resolvedParam: FlattenedAccessChain,
@@ -25,7 +25,7 @@ function findPatternInVariable(
             paramIndex === pattern.paramIndex &&
             pattern.accessChain.path.length <= resolvedParam.path.length &&
             pattern.accessChain.path.every(
-                (element, index) => (element === resolvedParam.path[index]),
+                (element, index) => element === resolvedParam.path[index],
             ),
     );
 }
@@ -36,7 +36,7 @@ const transformEventHandlerStatement =
         compiledPatterns: CompiledPattern[],
         context: ts.TransformationContext,
         factory: ts.NodeFactory,
-        callingEventHandlers: FoundEventHandler[]
+        callingEventHandlers: FoundEventHandler[],
     ) =>
     (node) => {
         if (isCallExpression(node)) {
@@ -52,11 +52,16 @@ const transformEventHandlerStatement =
                     if (patternMatch) {
                         let replacementPattern = [
                             'event.$1',
-                            ...flattenedResolvedParam.path.splice(patternMatch.accessChain.path.length),
+                            ...flattenedResolvedParam.path.splice(
+                                patternMatch.accessChain.path.length,
+                            ),
                         ];
-                        callingEventHandlers.forEach(_ => _.eventHandlerMatchedPatterns = true)
+                        callingEventHandlers.forEach((_) => (_.eventHandlerMatchedPatterns = true));
                         return (
-                            codeToAst(replacementPattern.join('.'), context)[0] as ExpressionStatement
+                            codeToAst(
+                                replacementPattern.join('.'),
+                                context,
+                            )[0] as ExpressionStatement
                         ).expression;
                     }
                 }
@@ -71,7 +76,7 @@ const transformEventHandlerStatement =
                     compiledPatterns,
                     context,
                     factory,
-                    callingEventHandlers
+                    callingEventHandlers,
                 ),
                 context,
             );
@@ -83,7 +88,7 @@ const transformEventHandlerStatement =
                     compiledPatterns,
                     context,
                     factory,
-                    callingEventHandlers
+                    callingEventHandlers,
                 ),
                 context,
             );
@@ -96,7 +101,7 @@ export const splitEventHandlerByPatternBlock =
         context: ts.TransformationContext,
         compiledPatterns: CompiledPattern[],
         factory: ts.NodeFactory,
-        callingEventHandlers: FoundEventHandler[]
+        callingEventHandlers: FoundEventHandler[],
     ) =>
     (eventHandler: ts.FunctionLikeDeclarationBase) => {
         let eventHandlerNameResolver = new NameBindingResolver();
@@ -109,7 +114,7 @@ export const splitEventHandlerByPatternBlock =
                 compiledPatterns,
                 context,
                 factory,
-                callingEventHandlers
+                callingEventHandlers,
             ),
             context,
         );

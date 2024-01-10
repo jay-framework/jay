@@ -1,14 +1,17 @@
-import ts, {FunctionLikeDeclarationBase, isImportDeclaration} from 'typescript';
-import {mkTransformer, SourceFileTransformerContext} from './mk-transformer';
-import {findMakeJayComponentImportTransformerBlock} from './building-blocks/find-make-jay-component-import';
-import {findComponentConstructorsBlock} from './building-blocks/find-component-constructors';
-import {findComponentConstructorCallsBlock} from './building-blocks/find-component-constructor-calls';
-import {findEventHandlersBlock, FoundEventHandlers} from './building-blocks/find-event-handler-functions';
-import {compileFunctionSplitPatternsBlock} from './building-blocks/compile-function-split-patterns';
-import {splitEventHandlerByPatternBlock} from './building-blocks/split-event-handler-by-pattern';
-import {addEventHandlerCallBlock} from './building-blocks/add-event-handler-call$';
-import {addImportModeFileExtension} from "./building-blocks/add-import-mode-file-extension.ts";
-import {RuntimeMode} from "../core/runtime-mode.ts";
+import ts, { FunctionLikeDeclarationBase, isImportDeclaration } from 'typescript';
+import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
+import { findMakeJayComponentImportTransformerBlock } from './building-blocks/find-make-jay-component-import';
+import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
+import { findComponentConstructorCallsBlock } from './building-blocks/find-component-constructor-calls';
+import {
+    findEventHandlersBlock,
+    FoundEventHandlers,
+} from './building-blocks/find-event-handler-functions';
+import { compileFunctionSplitPatternsBlock } from './building-blocks/compile-function-split-patterns';
+import { splitEventHandlerByPatternBlock } from './building-blocks/split-event-handler-by-pattern';
+import { addEventHandlerCallBlock } from './building-blocks/add-event-handler-call$';
+import { addImportModeFileExtension } from './building-blocks/add-import-mode-file-extension.ts';
+import { RuntimeMode } from '../core/runtime-mode.ts';
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: string[];
@@ -26,9 +29,11 @@ function mkComponentSecureFunctionsTransformer(
     let calls = findComponentConstructorCallsBlock(makeJayComponent_ImportName, sftContext);
     let constructorExpressions = calls.map(({ comp }) => comp);
     let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sftContext);
-    let foundEventHandlers = new FoundEventHandlers(constructorDefinitions.flatMap((constructorDefinition) =>
-        findEventHandlersBlock(constructorDefinition, sftContext),
-    ));
+    let foundEventHandlers = new FoundEventHandlers(
+        constructorDefinitions.flatMap((constructorDefinition) =>
+            findEventHandlersBlock(constructorDefinition, sftContext),
+        ),
+    );
 
     // compile patterns
     // todo extract the pattern compilation to a prior stage
@@ -38,12 +43,16 @@ function mkComponentSecureFunctionsTransformer(
         if (foundEventHandlers.hasEventHandlerCallStatement(node)) {
             // the order of the statements here is important due to the immutable nature of the AST.
             // we first detect if this is an event handler call
-            let foundEventHandler = foundEventHandlers.getFoundEventHandlerByCallStatement(node)
+            let foundEventHandler = foundEventHandlers.getFoundEventHandlerByCallStatement(node);
             // then transform any inline event handler
             node = ts.visitEachChild(node, visitor, context);
             // then, if the inline event handler was transformed, we add the handle$ call.
             if (foundEventHandler.eventHandlerMatchedPatterns)
-                node = ts.visitEachChild(node, addEventHandlerCallBlock(context, factory, foundEventHandler), context);
+                node = ts.visitEachChild(
+                    node,
+                    addEventHandlerCallBlock(context, factory, foundEventHandler),
+                    context,
+                );
             return node;
         }
         if (foundEventHandlers.hasEventHandler(node)) {
@@ -51,7 +60,7 @@ function mkComponentSecureFunctionsTransformer(
                 context,
                 compiledPatterns.val,
                 factory,
-                foundEventHandlers.getFoundEventHandlersByHandler(node)
+                foundEventHandlers.getFoundEventHandlersByHandler(node),
             )(node as FunctionLikeDeclarationBase);
         }
         if (isImportDeclaration(node))

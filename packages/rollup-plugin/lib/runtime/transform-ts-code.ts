@@ -14,9 +14,7 @@ import {
     WithValidations,
 } from 'jay-compiler';
 import { generateImportsFileFromJayFile } from '../../../compiler/lib/ts-file/generate-imports-file';
-import {
-    componentSecureFunctionsTransformer
-} from "../../../compiler/lib/ts-file/component-secure-functions-transformer.ts";
+import { componentSecureFunctionsTransformer } from '../../../compiler/lib/ts-file/component-secure-functions-transformer.ts';
 
 export function transformTsCode(
     jayContext: JayPluginContext,
