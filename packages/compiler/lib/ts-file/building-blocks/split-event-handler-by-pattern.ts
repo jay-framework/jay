@@ -25,7 +25,7 @@ function findPatternInVariable(
             paramIndex === pattern.paramIndex &&
             pattern.accessChain.path.length <= resolvedParam.path.length &&
             pattern.accessChain.path.every(
-                (element, index) => (element = resolvedParam.path[index]),
+                (element, index) => (element === resolvedParam.path[index]),
             ),
     );
 }
@@ -49,15 +49,18 @@ const transformEventHandlerStatement =
                         paramIndex,
                         compiledPatterns,
                     );
-                    let replacementPattern = [
-                        'event.$1',
-                        ...flattenedResolvedParam.path.splice(patternMatch.accessChain.path.length),
-                    ];
-                    callingEventHandlers.forEach(_ => _.eventHandlerMatchedPatterns = true)
-                    return (
-                        codeToAst(replacementPattern.join('.'), context)[0] as ExpressionStatement
-                    ).expression;
-                } else return argument;
+                    if (patternMatch) {
+                        let replacementPattern = [
+                            'event.$1',
+                            ...flattenedResolvedParam.path.splice(patternMatch.accessChain.path.length),
+                        ];
+                        callingEventHandlers.forEach(_ => _.eventHandlerMatchedPatterns = true)
+                        return (
+                            codeToAst(replacementPattern.join('.'), context)[0] as ExpressionStatement
+                        ).expression;
+                    }
+                }
+                return argument;
             });
             return factory.createCallExpression(node.expression, undefined, newArguments);
         } else if (isBlock(node)) {
