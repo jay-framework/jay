@@ -5,7 +5,7 @@ export { generateComponentRefsDefinitionFile } from './ts-file/ts-refs-file-gene
 export * from './core/jay-file-types';
 export { prettify } from './utils/prettify';
 export * from './ts-file/component-bridge-transformer';
-export * from './ts-file/component-sandbox-transformer';
+export * from './ts-file/component-secure-functions-transformer';
 export * from './ts-file/extract-imports';
 export * from './ts-file/generate-imports-file';
 export * from './ts-file/parse-jay-file/parse-type-script-file';

@@ -1,11 +1,14 @@
 import { mkTransformer } from '../../lib/ts-file/mk-transformer';
-import ts, { isCallExpression, isExpressionStatement, isFunctionDeclaration } from 'typescript';
+import ts, { isCallExpression, isExpressionStatement } from 'typescript';
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import { prettify } from '../../lib';
 import { addEventHandlerCallBlock } from '../../lib/ts-file/building-blocks/add-event-handler-call$';
+import { FoundEventHandler } from '../../lib/ts-file/building-blocks/find-event-handler-functions';
 
 describe('add event handler call$ to call chain', () => {
     function testTransformer() {
+        const foundEventHandlerMock: FoundEventHandler = { handlerIndex: 0 } as FoundEventHandler;
+
         return mkTransformer(({ context, sourceFile, factory }) => {
             return ts.visitEachChild(
                 sourceFile,
@@ -16,7 +19,7 @@ describe('add event handler call$ to call chain', () => {
                     ) {
                         return ts.visitNode(
                             statement.expression,
-                            addEventHandlerCallBlock(context, factory),
+                            addEventHandlerCallBlock(context, factory, foundEventHandlerMock),
                         );
                     }
                     return statement;
@@ -32,7 +35,7 @@ describe('add event handler call$ to call chain', () => {
         let transformed = await transformCode(eventHandlerCall, [transformerState]);
 
         expect(transformed).toEqual(
-            await prettify(`refs.comp.onclick$(handler$('1')).onclick(({event}) => {})`),
+            await prettify(`refs.comp.onclick$(handler$('0')).onclick(({event}) => {})`),
         );
         console.log(transformed);
     });
@@ -43,7 +46,7 @@ describe('add event handler call$ to call chain', () => {
         let transformed = await transformCode(eventHandlerCall, [transformerState]);
 
         expect(transformed).toEqual(
-            await prettify(`refs.comp.onclick$(handler$('1')).onclick(someHandlerIdentifier)`),
+            await prettify(`refs.comp.onclick$(handler$('0')).onclick(someHandlerIdentifier)`),
         );
         console.log(transformed);
     });

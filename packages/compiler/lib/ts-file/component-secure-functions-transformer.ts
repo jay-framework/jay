@@ -1,12 +1,17 @@
-import ts, { FunctionLikeDeclarationBase } from 'typescript';
+import ts, { FunctionLikeDeclarationBase, isImportDeclaration } from 'typescript';
 import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
 import { findMakeJayComponentImportTransformerBlock } from './building-blocks/find-make-jay-component-import';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
 import { findComponentConstructorCallsBlock } from './building-blocks/find-component-constructor-calls';
-import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
+import {
+    findEventHandlersBlock,
+    FoundEventHandlers,
+} from './building-blocks/find-event-handler-functions';
 import { compileFunctionSplitPatternsBlock } from './building-blocks/compile-function-split-patterns';
 import { splitEventHandlerByPatternBlock } from './building-blocks/split-event-handler-by-pattern';
 import { addEventHandlerCallBlock } from './building-blocks/add-event-handler-call$';
+import { addImportModeFileExtension } from './building-blocks/add-import-mode-file-extension';
+import { RuntimeMode } from '../core/runtime-mode';
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: string[];
@@ -24,12 +29,10 @@ function mkComponentSecureFunctionsTransformer(
     let calls = findComponentConstructorCallsBlock(makeJayComponent_ImportName, sftContext);
     let constructorExpressions = calls.map(({ comp }) => comp);
     let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sftContext);
-    let foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
-        findEventHandlersBlock(constructorDefinition, sftContext),
-    );
-    let handlers = new Set<ts.Node>(foundEventHandlers.map((_) => _.eventHandler));
-    let eventHandlerCallStatements = new Set<ts.Node>(
-        foundEventHandlers.map((_) => _.eventHandlerCallStatement),
+    let foundEventHandlers = new FoundEventHandlers(
+        constructorDefinitions.flatMap((constructorDefinition) =>
+            findEventHandlersBlock(constructorDefinition, sftContext),
+        ),
     );
 
     // compile patterns
@@ -37,21 +40,38 @@ function mkComponentSecureFunctionsTransformer(
     let compiledPatterns = compileFunctionSplitPatternsBlock(patterns);
 
     let visitor = (node) => {
-        if (eventHandlerCallStatements.has(node))
-            node = ts.visitEachChild(node, addEventHandlerCallBlock(context, factory), context);
-        if (handlers.has(node))
+        if (foundEventHandlers.hasEventHandlerCallStatement(node)) {
+            // the order of the statements here is important due to the immutable nature of the AST.
+            // we first detect if this is an event handler call
+            let foundEventHandler = foundEventHandlers.getFoundEventHandlerByCallStatement(node);
+            // then transform any inline event handler
+            node = ts.visitEachChild(node, visitor, context);
+            // then, if the inline event handler was transformed, we add the handle$ call.
+            if (foundEventHandler.eventHandlerMatchedPatterns)
+                node = ts.visitEachChild(
+                    node,
+                    addEventHandlerCallBlock(context, factory, foundEventHandler),
+                    context,
+                );
+            return node;
+        }
+        if (foundEventHandlers.hasEventHandler(node)) {
             return splitEventHandlerByPatternBlock(
                 context,
                 compiledPatterns.val,
                 factory,
+                foundEventHandlers.getFoundEventHandlersByHandler(node),
             )(node as FunctionLikeDeclarationBase);
-        else return ts.visitEachChild(node, visitor, context);
+        }
+        if (isImportDeclaration(node))
+            return addImportModeFileExtension(node, factory, RuntimeMode.WorkerSandbox);
+        return ts.visitEachChild(node, visitor, context);
     };
     return ts.visitEachChild(sftContext.sourceFile, visitor, context);
 }
 
 export function componentSecureFunctionsTransformer(
-    patterns: string[],
+    patterns: string[] = [],
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
     return mkTransformer(mkComponentSecureFunctionsTransformer, { patterns });
 }

@@ -7,8 +7,8 @@ export interface CounterProps {
 
 function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
     let [count, setCount] = createState(initialValue);
-    refs.adderButton.onclick = () => setCount(count() + 1);
-    refs.subtracter.onclick = () => setCount(count() - 1);
+    refs.adderButton.onclick(() => setCount(count() + 1));
+    refs.subtracter.onclick(() => setCount(count() - 1));
     let onChange = createEvent<number>((emitter) => emitter.emit(count()));
     let reset = () => {
         setCount(0);

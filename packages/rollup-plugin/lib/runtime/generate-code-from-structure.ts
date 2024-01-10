@@ -4,7 +4,7 @@ import {
     checkDiagnosticsErrors,
     checkValidationErrors,
     componentBridgeTransformer,
-    componentSandboxTransformer,
+    componentSecureFunctionsTransformer,
     generateElementBridgeFile,
     generateElementFile,
     generateImportsFileFromJayFile,
@@ -72,7 +72,7 @@ function generateCodeFromTsFile(
         case RuntimeMode.WorkerTrusted:
             return generateImportsFileFromJayFile(jayFile);
         case RuntimeMode.WorkerSandbox:
-            return transformTsCode(jayContext, [componentSandboxTransformer()], id, code);
+            return transformTsCode(jayContext, [componentSecureFunctionsTransformer()], id, code);
     }
 }
 
