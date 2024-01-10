@@ -8,7 +8,7 @@ import ts, {
     TransformationContext,
 } from 'typescript';
 import { codeToAst } from '../ts-compiler-utils';
-import { FoundEventHandler } from './find-event-handler-functions';
+import { FoundEventHandler } from './find-event-handler-functions.ts';
 
 const addEventHandlerCall =
     (context: TransformationContext, factory: NodeFactory, foundEventHandler: FoundEventHandler) =>
