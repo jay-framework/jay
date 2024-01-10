@@ -1,12 +1,14 @@
-import ts, { FunctionLikeDeclarationBase } from 'typescript';
-import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
-import { findMakeJayComponentImportTransformerBlock } from './building-blocks/find-make-jay-component-import';
-import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
-import { findComponentConstructorCallsBlock } from './building-blocks/find-component-constructor-calls';
-import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
-import { compileFunctionSplitPatternsBlock } from './building-blocks/compile-function-split-patterns';
-import { splitEventHandlerByPatternBlock } from './building-blocks/split-event-handler-by-pattern';
-import { addEventHandlerCallBlock } from './building-blocks/add-event-handler-call$';
+import ts, {FunctionLikeDeclarationBase, isImportDeclaration} from 'typescript';
+import {mkTransformer, SourceFileTransformerContext} from './mk-transformer';
+import {findMakeJayComponentImportTransformerBlock} from './building-blocks/find-make-jay-component-import';
+import {findComponentConstructorsBlock} from './building-blocks/find-component-constructors';
+import {findComponentConstructorCallsBlock} from './building-blocks/find-component-constructor-calls';
+import {findEventHandlersBlock} from './building-blocks/find-event-handler-functions';
+import {compileFunctionSplitPatternsBlock} from './building-blocks/compile-function-split-patterns';
+import {splitEventHandlerByPatternBlock} from './building-blocks/split-event-handler-by-pattern';
+import {addEventHandlerCallBlock} from './building-blocks/add-event-handler-call$';
+import {addImportModeFileExtension} from "./building-blocks/add-import-mode-file-extension.ts";
+import {RuntimeMode} from "../core/runtime-mode.ts";
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: string[];
@@ -49,13 +51,15 @@ function mkComponentSecureFunctionsTransformer(
                 compiledPatterns.val,
                 factory,
             )(node as FunctionLikeDeclarationBase);
-        else return ts.visitEachChild(node, visitor, context);
+        if (isImportDeclaration(node))
+            return addImportModeFileExtension(node, factory, RuntimeMode.WorkerSandbox);
+        return ts.visitEachChild(node, visitor, context);
     };
     return ts.visitEachChild(sftContext.sourceFile, visitor, context);
 }
 
 export function componentSecureFunctionsTransformer(
-    patterns: string[],
+    patterns: string[] = [],
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
     return mkTransformer(mkComponentSecureFunctionsTransformer, { patterns });
 }

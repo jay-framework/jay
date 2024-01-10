@@ -14,6 +14,9 @@ import {
     WithValidations,
 } from 'jay-compiler';
 import { generateImportsFileFromJayFile } from '../../../compiler/lib/ts-file/generate-imports-file';
+import {
+    componentSecureFunctionsTransformer
+} from "../../../compiler/lib/ts-file/component-secure-functions-transformer.ts";
 
 export function transformTsCode(
     jayContext: JayPluginContext,
@@ -69,7 +72,7 @@ export function transformJayTsCode(
         case RuntimeMode.WorkerTrusted:
             return generateImportsFileFromTsSource(id, code);
         case RuntimeMode.WorkerSandbox:
-            return transformTsCode(jayContext, [componentSandboxTransformer()], id, code);
+            return transformTsCode(jayContext, [componentSecureFunctionsTransformer()], id, code);
     }
 }
 

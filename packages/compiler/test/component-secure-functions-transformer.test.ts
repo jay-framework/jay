@@ -35,7 +35,7 @@ export const Comp = makeJayComponent(render, CompComponent);`;
         expect(outputCode).toEqual(
             await prettify(`
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
-import { CompElementRefs, render } from './generated-element';
+import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
     refs.input
@@ -73,7 +73,7 @@ export const Comp = makeJayComponent(render, CompComponent);`;
         expect(outputCode).toEqual(
             await prettify(`
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
-import { CompElementRefs, render } from './generated-element';
+import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
     refs.input
@@ -117,7 +117,7 @@ export const Comp = makeJayComponent(render, CompComponent);`;
         expect(outputCode).toEqual(
             await prettify(`
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
-import { CompElementRefs, render } from './generated-element';
+import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
     function updateText({event}) {
@@ -134,4 +134,39 @@ export const Comp = makeJayComponent(render, CompComponent);`),
         );
     });
 
+
+    it('should not transform an event handler that does not match any pattern', async () => {
+        const code = `
+import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+import { CompElementRefs, render } from './generated-element';
+
+function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
+    let [count, setCount] = createState('');
+    refs.input.onchange(() => setCount(count()+1));
+}
+
+export const Comp = makeJayComponent(render, CompComponent);`;
+
+        const sourceFile = ts.createSourceFile(
+            'dummy.ts',
+            code,
+            ts.ScriptTarget.Latest,
+            false,
+            ts.ScriptKind.TS,
+        );
+        const outputFile = ts.transform(sourceFile, [
+            componentSecureFunctionsTransformer([input_value_pattern]),
+        ]);
+        const outputCode = await prettify(printTsFile(outputFile));
+        expect(outputCode).toEqual(
+            await prettify(`
+import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
+function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
+    let [count, setCount] = createState('');
+    refs.input.onchange(() => setCount(count()+1));
+}
+export const Comp = makeJayComponent(render, CompComponent);`),
+        );
+    });
 });

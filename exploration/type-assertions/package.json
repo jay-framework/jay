@@ -1,0 +1,12 @@
+{
+  "name": "jay-type-assertion-exploration",
+  "version": "1.0.0",
+  "dependencies": {
+    "ts-essentials": "^9.4.1"
+  },
+  "scripts": {
+    "clean": "echo \"noop\"",
+    "test": "echo \"noop\"",
+    "build": "echo \"noop\""
+  }
+}

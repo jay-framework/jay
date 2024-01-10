@@ -16,7 +16,7 @@ describe('add event handler call$ to call chain', () => {
                     ) {
                         return ts.visitNode(
                             statement.expression,
-                            addEventHandlerCallBlock(context, factory),
+                            addEventHandlerCallBlock(context, factory, 0),
                         );
                     }
                     return statement;
@@ -32,7 +32,7 @@ describe('add event handler call$ to call chain', () => {
         let transformed = await transformCode(eventHandlerCall, [transformerState]);
 
         expect(transformed).toEqual(
-            await prettify(`refs.comp.onclick$(handler$('1')).onclick(({event}) => {})`),
+            await prettify(`refs.comp.onclick$(handler$('0')).onclick(({event}) => {})`),
         );
         console.log(transformed);
     });
@@ -43,7 +43,7 @@ describe('add event handler call$ to call chain', () => {
         let transformed = await transformCode(eventHandlerCall, [transformerState]);
 
         expect(transformed).toEqual(
-            await prettify(`refs.comp.onclick$(handler$('1')).onclick(someHandlerIdentifier)`),
+            await prettify(`refs.comp.onclick$(handler$('0')).onclick(someHandlerIdentifier)`),
         );
         console.log(transformed);
     });

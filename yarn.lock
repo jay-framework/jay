@@ -4649,6 +4649,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"jay-type-assertion-exploration@workspace:exploration/type-assertions":
+  version: 0.0.0-use.local
+  resolution: "jay-type-assertion-exploration@workspace:exploration/type-assertions"
+  dependencies:
+    ts-essentials: ^9.4.1
+  languageName: unknown
+  linkType: soft
+
 "jay@workspace:.":
   version: 0.0.0-use.local
   resolution: "jay@workspace:."
@@ -7043,7 +7051,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-essentials@npm:^9.3.2":
+"ts-essentials@npm:^9.3.2, ts-essentials@npm:^9.4.1":
   version: 9.4.1
   resolution: "ts-essentials@npm:9.4.1"
   peerDependencies:
