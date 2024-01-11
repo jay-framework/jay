@@ -26,7 +26,10 @@ function mkComponentSecureFunctionsTransformer(
     let makeJayComponent_ImportName = findMakeJayComponentImportTransformerBlock(sftContext);
     if (!Boolean(makeJayComponent_ImportName)) return sftContext.sourceFile;
 
-    let calls = findComponentConstructorCallsBlock(makeJayComponent_ImportName, sftContext);
+    let calls = findComponentConstructorCallsBlock(
+        makeJayComponent_ImportName,
+        sftContext.sourceFile,
+    );
     let constructorExpressions = calls.map(({ comp }) => comp);
     let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sftContext);
     let foundEventHandlers = new FoundEventHandlers(

@@ -1,4 +1,3 @@
-import { SourceFileTransformerContext } from '../mk-transformer';
 import ts, {
     BindingName,
     Expression,
@@ -38,19 +37,15 @@ export function findComponentConstructorCalls(
 
 export function findComponentConstructorCallsBlock(
     makeJayComponentName: string,
-    { context, sourceFile }: SourceFileTransformerContext,
+    sourceFile: ts.SourceFile,
 ): MakeJayComponentConstructorCalls[] {
-    let foundConstructorCalls: MakeJayComponentConstructorCalls[] = [];
+    const foundConstructorCalls: MakeJayComponentConstructorCalls[] = [];
 
-    const findConstructorNames: ts.Visitor = (node) => {
-        foundConstructorCalls = [
-            ...foundConstructorCalls,
-            ...findComponentConstructorCalls(makeJayComponentName, node),
-        ];
-        return node;
-    };
+    function visit(node): void {
+        foundConstructorCalls.push(...findComponentConstructorCalls(makeJayComponentName, node));
+        ts.forEachChild(node, visit);
+    }
 
-    ts.visitEachChild(sourceFile, findConstructorNames, context);
-
+    ts.forEachChild(sourceFile, visit);
     return foundConstructorCalls;
 }

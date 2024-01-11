@@ -11,14 +11,14 @@ import ts, {
 import { findComponentConstructorsBlock } from '../../lib/ts-file/building-blocks/find-component-constructors';
 import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-component-constructor-calls';
 
-describe('find component constructor', () => {
+describe('findComponentConstructorsBlock', () => {
     function testTransformer() {
         let state = {
             foundFunctions: undefined,
             transformer: mkTransformer((sourceFileTransformerData) => {
                 let componentConstructorCalls = findComponentConstructorCallsBlock(
                     'makeJayComponent',
-                    sourceFileTransformerData,
+                    sourceFileTransformerData.sourceFile,
                 );
                 let componentFunctionExpressions = componentConstructorCalls.map(
                     ({ comp }) => comp,
