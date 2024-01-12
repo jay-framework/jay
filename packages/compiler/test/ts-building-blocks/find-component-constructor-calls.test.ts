@@ -1,14 +1,10 @@
-import { stripMargin } from '../test-utils/strip-margin';
-import ts, { Expression, Identifier, isIdentifier } from 'typescript';
-import { createTsSourceFileFromSource } from '../../lib';
+import { Expression, Identifier, isIdentifier } from 'typescript';
 import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-component-constructor-calls';
+import { createTsSourceFile } from '../test-utils/ts-source-utils';
 
 describe('findComponentConstructorCallsBlock', () => {
     const componentName = 'makeJayComponent';
 
-    function createTsSourceFile(code: string): ts.SourceFile {
-        return createTsSourceFileFromSource('dummy.ts', stripMargin(code));
-    }
     function assertIdentifier(expression: Expression, text: string) {
         expect(isIdentifier(expression)).toBeTruthy();
         let render = expression as Identifier;

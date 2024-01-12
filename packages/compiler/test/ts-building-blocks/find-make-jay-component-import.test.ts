@@ -1,13 +1,7 @@
-import { stripMargin } from '../test-utils/strip-margin';
 import { findMakeJayComponentImportTransformerBlock } from '../../lib/ts-file/building-blocks/find-make-jay-component-import';
-import { createTsSourceFileFromSource } from '../../lib';
-import ts from 'typescript';
+import { createTsSourceFile } from '../test-utils/ts-source-utils';
 
 describe('findMakeJayComponentImportTransformerBlock', () => {
-    function createTsSourceFile(code: string): ts.SourceFile {
-        return createTsSourceFileFromSource('dummy.ts', stripMargin(code));
-    }
-
     it('find import makeJayComponent', async () => {
         const sourceFile = createTsSourceFile(`
         | import { makeJayComponent } from 'jay-component';

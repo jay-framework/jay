@@ -2,14 +2,10 @@ import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-b
 import { findComponentConstructorsBlock } from '../../lib/ts-file/building-blocks/find-component-constructors';
 import ts from 'typescript';
 import { findEventHandlersBlock } from '../../lib/ts-file/building-blocks/find-event-handler-functions';
-import { stripMargin } from '../test-utils/strip-margin';
 import { astToCode } from '../../lib/ts-file/ts-compiler-utils';
-import { createTsSourceFileFromSource } from '../../lib';
+import { createTsSourceFile } from '../test-utils/ts-source-utils';
 
 describe('findEventHandlersBlock', () => {
-    function createTsSourceFile(code: string): ts.SourceFile {
-        return createTsSourceFileFromSource('dummy.ts', stripMargin(code));
-    }
     function findEventHandlerFunctions(sourceFile: ts.SourceFile) {
         const componentFunctionExpressions = findComponentConstructorCallsBlock(
             'makeJayComponent',
