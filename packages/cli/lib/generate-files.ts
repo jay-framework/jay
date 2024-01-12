@@ -1,4 +1,10 @@
-import { WithValidations } from 'jay-compiler';
+import {
+    checkValidationErrors,
+    JayFile,
+    parseJayFile,
+    RuntimeMode,
+    WithValidations,
+} from 'jay-compiler';
 import chalk from 'chalk';
 import { findAllJayFiles } from './find-all-jay-files';
 import { promises as fsp } from 'fs';
@@ -16,9 +22,8 @@ function checkFileExists(filepath): Promise<Boolean> {
 export async function generateFiles(
     dir: string,
     codeGenerationFunction: (
-        html: string,
-        filename: string,
-        filePath: string,
+        jayFile: JayFile,
+        importerMode: RuntimeMode,
     ) => WithValidations<string>,
     afterGenerationFunction: (html: string, filename: string, filePath: string) => void,
     outputExtension: string,
@@ -30,11 +35,15 @@ export async function generateFiles(
     let generationFailed = false;
     for (const jayFile of jayFiles) {
         const content = await fsp.readFile(jayFile, 'utf-8');
-        const generatedFile = codeGenerationFunction(
-            content,
-            path.basename(jayFile.replace('.jay-html', '')),
-            path.dirname(jayFile),
+        const parsedFile = checkValidationErrors(
+            parseJayFile(
+                content,
+                path.basename(jayFile.replace('.jay-html', '')),
+                path.dirname(jayFile),
+                {},
+            ),
         );
+        const generatedFile = codeGenerationFunction(parsedFile, RuntimeMode.MainTrusted);
         const generateFileName = jayFile + outputExtension;
         if (generatedFile.validations.length > 0) {
             console.log(

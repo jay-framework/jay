@@ -6,5 +6,5 @@
       "jay-compiler": ["../compiler/lib"]
     }
   },
-  "exclude": ["**/source/build/**", "**/source/dist/**"]
+  "exclude": ["**/source/build/**", "**/source/dist/**", "**/sandbox-counter/dist/**"]
 }
