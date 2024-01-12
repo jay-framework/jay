@@ -1,4 +1,3 @@
-import { SourceFileTransformerContext } from '../mk-transformer';
 import ts, {
     Expression,
     FunctionLikeDeclarationBase,
@@ -11,7 +10,7 @@ import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils';
 
 export function findComponentConstructorsBlock(
     componentFunctionExpressions: Expression[],
-    { context, sourceFile }: SourceFileTransformerContext,
+    sourceFile: ts.SourceFile,
 ): FunctionLikeDeclarationBase[] {
     const foundConstructors: FunctionLikeDeclarationBase[] = [];
 
@@ -25,7 +24,7 @@ export function findComponentConstructorsBlock(
         isFunctionLikeDeclarationBase,
     ) as FunctionLikeDeclarationBase[];
 
-    const findConstructors: ts.Visitor = (node) => {
+    function visit(node: ts.Node) {
         if (isFunctionDeclaration(node)) {
             if (namedConstructors.has(node?.name.text)) foundConstructors.push(node);
         } else if (isVariableStatement(node)) {
@@ -39,10 +38,10 @@ export function findComponentConstructorsBlock(
                     foundConstructors.push(declaration.initializer);
             });
         }
-        return node;
-    };
+        ts.forEachChild(node, visit);
+    }
 
-    ts.visitEachChild(sourceFile, findConstructors, context);
+    ts.forEachChild(sourceFile, visit);
 
     return [...foundConstructors, ...inlineConstructors];
 }
