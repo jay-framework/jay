@@ -22,6 +22,17 @@ export function parseImportLinks(sourceFile: ts.SourceFile): JayImportLink[] {
     return importLinks;
 }
 
+export function getImportByName(
+    importLinks: JayImportLink[],
+    component: string,
+    name: string,
+): JayImportName | undefined {
+    return importLinks
+        .filter((link) => link.module === component)
+        .flatMap((link) => link.names)
+        .find((names) => names.name === name);
+}
+
 function getJayImportNames(importDeclaration: ts.ImportDeclaration): JayImportName[] {
     const importSpecifiers = getImportSpecifiers(importDeclaration);
     return (
