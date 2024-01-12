@@ -11,6 +11,7 @@ import {
 } from 'jay-runtime';
 import { ValueOrGetter, Getter, Reactive, Setter, MeasureOfChange } from 'jay-reactive';
 import { JSONPatch, patch } from 'jay-json-patch';
+import { HTMLElement } from 'node-html-parser';
 
 export type Patcher<T> = (...patch: JSONPatch) => void;
 export type hasProps<PropsT> = { props: Getter<PropsT> };
@@ -282,6 +283,19 @@ export function makeJayComponent<
             >);
         });
     };
+}
+
+export type JsxNode = HTMLElement;
+
+export type JayTsxComponentConstructor<
+    PropsT extends object,
+    CompT extends { render: () => JsxNode },
+> = (props: Props<PropsT>) => CompT;
+
+export function makeJayTsxComponent<PropsT extends object, CompT extends { render: () => JsxNode }>(
+    comp: JayTsxComponentConstructor<PropsT, CompT>,
+): JayComponent<PropsT, any, any> {
+    return {} as JayComponent<PropsT, any, any>;
 }
 
 function makePropsProxy<PropsT extends object>(

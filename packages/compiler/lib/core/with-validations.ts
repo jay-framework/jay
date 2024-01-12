@@ -4,7 +4,7 @@ export class WithValidations<Value> {
     val?: Value;
     validations: JayValidations;
 
-    constructor(val: Value | undefined, validations: JayValidations) {
+    constructor(val: Value | undefined, validations: JayValidations = []) {
         this.val = val;
         this.validations = validations;
     }
