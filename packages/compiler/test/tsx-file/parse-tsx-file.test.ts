@@ -1,5 +1,5 @@
 import { parseTsxFile } from '../../lib/tsx-file/parse-tsx-file';
-import { JayFile, JayUnknown, WithValidations } from '../../lib';
+import { JayFile, JayUnknown, MAKE_JAY_TSX_COMPONENT, WithValidations } from '../../lib';
 
 describe('parseTsxFile', () => {
     const filename = 'dummy.tsx';
@@ -57,6 +57,19 @@ export const Counter = makeJayTsxComponent(CounterConstructor);
         it('returns validation error', () => {
             const { val, validations } = parseTsxFile(filename, code);
             expect(validations[0]).toMatch('Missing');
+            expect(val).toBeUndefined();
+        });
+    });
+
+    describe('on no makeJayTsxComponent import', () => {
+        const code = `
+        | import { Props } from 'jay-component';
+        | function CounterConstructor({ initialValue }: Props<CounterProps>) {}
+        `;
+
+        it('returns validation error', () => {
+            const { val, validations } = parseTsxFile(filename, code);
+            expect(validations[0]).toMatch(`Missing ${MAKE_JAY_TSX_COMPONENT} import`);
             expect(val).toBeUndefined();
         });
     });

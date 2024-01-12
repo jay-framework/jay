@@ -1,15 +1,15 @@
 import ts, { isImportDeclaration, isStringLiteral } from 'typescript';
-import { JAY_COMPONENT, MAKE_JAY_COMPONENT } from '../../core/constants';
+import { JAY_COMPONENT } from '../../core/constants';
 import { getImportName, getImportSpecifiers } from '../extract-imports';
 
-export function findMakeJayComponentImport(node: ts.Node): string {
+export function findMakeJayComponentImport(makeJayComponentName: string, node: ts.Node): string {
     if (
         isImportDeclaration(node) &&
         isStringLiteral(node.moduleSpecifier) &&
         node.moduleSpecifier.text === JAY_COMPONENT
     ) {
         let importSpecifier = getImportSpecifiers(node as ts.ImportDeclaration)?.find(
-            (element) => getImportName(element) === MAKE_JAY_COMPONENT,
+            (element) => getImportName(element) === makeJayComponentName,
         );
         if (importSpecifier) {
             return importSpecifier.name.text;
@@ -18,12 +18,15 @@ export function findMakeJayComponentImport(node: ts.Node): string {
     return undefined;
 }
 
-export function findMakeJayComponentImportTransformerBlock(sourceFile: ts.SourceFile) {
+export function findMakeJayComponentImportTransformerBlock(
+    makeJayComponentName: string,
+    sourceFile: ts.SourceFile,
+) {
     let foundMakeJayComponentProperty = undefined;
 
     function visitor(node: ts.Node) {
         foundMakeJayComponentProperty =
-            foundMakeJayComponentProperty || findMakeJayComponentImport(node);
+            foundMakeJayComponentProperty || findMakeJayComponentImport(makeJayComponentName, node);
         ts.forEachChild(node, visitor);
     }
 
