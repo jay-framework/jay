@@ -5,10 +5,9 @@ import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-b
 
 describe('findComponentConstructorCallsBlock', () => {
     const componentName = 'makeJayComponent';
-    const filePath = 'dummy.ts';
 
     function createTsSourceFile(code: string): ts.SourceFile {
-        return createTsSourceFileFromSource(filePath, stripMargin(code));
+        return createTsSourceFileFromSource('dummy.ts', stripMargin(code));
     }
     function assertIdentifier(expression: Expression, text: string) {
         expect(isIdentifier(expression)).toBeTruthy();

@@ -91,11 +91,7 @@ function mkSourceFileTransformer({
     context,
     importerMode,
 }: SourceFileTransformerContext & ComponentBridgeTransformerConfig) {
-    let makeJayComponentName = findMakeJayComponentImportTransformerBlock({
-        context,
-        sourceFile,
-        factory,
-    });
+    let makeJayComponentName = findMakeJayComponentImportTransformerBlock(sourceFile);
 
     return ts.visitEachChild(
         sourceFile,

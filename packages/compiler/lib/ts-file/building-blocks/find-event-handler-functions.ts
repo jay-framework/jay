@@ -9,7 +9,6 @@ import ts, {
     isPropertyAccessExpression,
     isVariableStatement,
 } from 'typescript';
-import { SourceFileTransformerContext } from '../mk-transformer';
 import { flattenVariable, NameBindingResolver } from './name-binding-resolver';
 import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils';
 
@@ -49,7 +48,6 @@ export class FoundEventHandlers {
 
 export function findEventHandlersBlock(
     functionDeclaration: FunctionLikeDeclarationBase,
-    {}: SourceFileTransformerContext,
 ): FoundEventHandler[] {
     const nameBindingResolver = new NameBindingResolver();
     nameBindingResolver.addFunctionParams(functionDeclaration);

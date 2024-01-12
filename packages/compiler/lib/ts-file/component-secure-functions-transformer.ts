@@ -20,21 +20,18 @@ type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & 
 function mkComponentSecureFunctionsTransformer(
     sftContext: ComponentSecureFunctionsTransformerConfig,
 ) {
-    let { patterns, context, factory } = sftContext;
+    let { patterns, context, factory, sourceFile } = sftContext;
 
     // find the event handlers
-    let makeJayComponent_ImportName = findMakeJayComponentImportTransformerBlock(sftContext);
-    if (!Boolean(makeJayComponent_ImportName)) return sftContext.sourceFile;
+    let makeJayComponent_ImportName = findMakeJayComponentImportTransformerBlock(sourceFile);
+    if (!Boolean(makeJayComponent_ImportName)) return sourceFile;
 
-    let calls = findComponentConstructorCallsBlock(
-        makeJayComponent_ImportName,
-        sftContext.sourceFile,
-    );
+    let calls = findComponentConstructorCallsBlock(makeJayComponent_ImportName, sourceFile);
     let constructorExpressions = calls.map(({ comp }) => comp);
-    let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sftContext);
+    let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sourceFile);
     let foundEventHandlers = new FoundEventHandlers(
         constructorDefinitions.flatMap((constructorDefinition) =>
-            findEventHandlersBlock(constructorDefinition, sftContext),
+            findEventHandlersBlock(constructorDefinition),
         ),
     );
 
