@@ -12,6 +12,7 @@ import { splitEventHandlerByPatternBlock } from './building-blocks/split-event-h
 import { addEventHandlerCallBlock } from './building-blocks/add-event-handler-call$';
 import { addImportModeFileExtension } from './building-blocks/add-import-mode-file-extension';
 import { RuntimeMode } from '../core/runtime-mode';
+import { MAKE_JAY_COMPONENT } from '../core/constants';
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: string[];
@@ -23,7 +24,10 @@ function mkComponentSecureFunctionsTransformer(
     let { patterns, context, factory, sourceFile } = sftContext;
 
     // find the event handlers
-    let makeJayComponent_ImportName = findMakeJayComponentImportTransformerBlock(sourceFile);
+    let makeJayComponent_ImportName = findMakeJayComponentImportTransformerBlock(
+        MAKE_JAY_COMPONENT,
+        sourceFile,
+    );
     if (!Boolean(makeJayComponent_ImportName)) return sourceFile;
 
     let calls = findComponentConstructorCallsBlock(makeJayComponent_ImportName, sourceFile);

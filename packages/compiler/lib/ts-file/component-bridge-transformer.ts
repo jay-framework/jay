@@ -8,6 +8,7 @@ import {
 } from './building-blocks/find-make-jay-component-import';
 import { findComponentConstructorCalls } from './building-blocks/find-component-constructor-calls';
 import { getImportName } from './extract-imports';
+import { MAKE_JAY_COMPONENT } from '../core/constants';
 
 function transformVariableStatement(
     node: ts.VariableStatement,
@@ -45,7 +46,7 @@ function transformImport(
     context: ts.TransformationContext,
 ): ts.Node[] {
     if (ts.isStringLiteral(node.moduleSpecifier)) {
-        if (findMakeJayComponentImport(node))
+        if (findMakeJayComponentImport(MAKE_JAY_COMPONENT, node))
             return codeToAst(`import { makeJayComponentBridge } from 'jay-secure';`, context);
         const renderImportSpecifier = getRenderImportSpecifier(node);
         if (Boolean(renderImportSpecifier)) {
@@ -91,7 +92,10 @@ function mkSourceFileTransformer({
     context,
     importerMode,
 }: SourceFileTransformerContext & ComponentBridgeTransformerConfig) {
-    let makeJayComponentName = findMakeJayComponentImportTransformerBlock(sourceFile);
+    let makeJayComponentName = findMakeJayComponentImportTransformerBlock(
+        MAKE_JAY_COMPONENT,
+        sourceFile,
+    );
 
     return ts.visitEachChild(
         sourceFile,
