@@ -31,23 +31,20 @@ export const Counter = makeJayTsxComponent(CounterConstructor);
 
     it('returns JayFile', () => {
         expect(parseTsxFile(filename, code)).toEqual(
-            new WithValidations(
-                {
-                    imports: [
-                        {
-                            module: 'jay-component',
-                            names: [
-                                { name: 'createState', type: JayUnknown },
-                                { name: 'makeJayTsxComponent', type: JayUnknown },
-                                { name: 'Props', type: JayUnknown },
-                            ],
-                            sandbox: false,
-                        },
-                    ],
-                    baseElementName: 'Counter',
-                } as JayFile,
-                [],
-            ),
+            new WithValidations({
+                imports: [
+                    {
+                        module: 'jay-component',
+                        names: [
+                            { name: 'createState', type: JayUnknown },
+                            { name: 'makeJayTsxComponent', type: JayUnknown },
+                            { name: 'Props', type: JayUnknown },
+                        ],
+                        sandbox: false,
+                    },
+                ],
+                baseElementName: 'Counter',
+            } as JayFile),
         );
     });
 

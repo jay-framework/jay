@@ -24,8 +24,8 @@ program
     .argument('<source>', 'source folder to scan for .jay-html files')
     .argument('[destination]', 'destination folder for generated files')
     .description('generate code files (.ts) for jay files')
-    .action((source, dest) => {
-        generateFiles(source, generateElementFile, noop, '.ts', dest);
+    .action(async (source, dest) => {
+        await generateFiles(source, generateElementFile, noop, '.ts', dest);
     });
 
 program.parse(process.argv);
