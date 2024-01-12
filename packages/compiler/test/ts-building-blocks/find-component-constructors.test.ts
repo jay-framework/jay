@@ -1,13 +1,9 @@
-import { stripMargin } from '../test-utils/strip-margin';
 import ts, { isArrowFunction, isFunctionDeclaration, isFunctionExpression } from 'typescript';
 import { findComponentConstructorsBlock } from '../../lib/ts-file/building-blocks/find-component-constructors';
 import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-component-constructor-calls';
-import { createTsSourceFileFromSource } from '../../lib';
+import { createTsSourceFile } from '../test-utils/ts-source-utils';
 
 describe('findComponentConstructorsBlock', () => {
-    function createTsSourceFile(code: string): ts.SourceFile {
-        return createTsSourceFileFromSource('dummy.ts', stripMargin(code));
-    }
     function findConstructors(sourceFile: ts.SourceFile) {
         const componentFunctionExpressions = findComponentConstructorCallsBlock(
             'makeJayComponent',
