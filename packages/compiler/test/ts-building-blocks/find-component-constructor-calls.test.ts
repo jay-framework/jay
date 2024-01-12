@@ -1,86 +1,67 @@
-import { transformCode } from '../test-utils/ts-compiler-test-utils';
-import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import { stripMargin } from '../test-utils/strip-margin';
-import {
-    findComponentConstructorCallsBlock,
-    MakeJayComponentConstructorCalls,
-} from '../../lib/ts-file/building-blocks/find-component-constructor-calls';
-import ts, { Expression, Identifier, isIdentifier, TransformerFactory } from 'typescript';
+import ts, { Expression, Identifier, isIdentifier } from 'typescript';
+import { createTsSourceFileFromSource } from '../../lib';
+import { findComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-component-constructor-calls';
 
-describe('find component constructor calls', () => {
-    function testTransformer() {
-        let state = {
-            foundCalls: undefined,
-            transformer: mkTransformer((sourceFileTransformerData) => {
-                state.foundCalls = findComponentConstructorCallsBlock(
-                    'makeJayComponent',
-                    sourceFileTransformerData,
-                );
-                return sourceFileTransformerData.sourceFile;
-            }),
-        };
-        return state as {
-            foundCalls: MakeJayComponentConstructorCalls[];
-            transformer: TransformerFactory<ts.SourceFile>;
-        };
+describe('findComponentConstructorCallsBlock', () => {
+    const componentName = 'makeJayComponent';
+    const filePath = 'dummy.ts';
+
+    function createTsSourceFile(code: string): ts.SourceFile {
+        return createTsSourceFileFromSource(filePath, stripMargin(code));
     }
-
     function assertIdentifier(expression: Expression, text: string) {
         expect(isIdentifier(expression)).toBeTruthy();
         let render = expression as Identifier;
         expect(render.text).toBe(text);
     }
 
-    it('should find exported const', async () => {
-        const code = stripMargin(
+    it('finds exported const', async () => {
+        const sourceFile = createTsSourceFile(
             `export const Counter = makeJayComponent(render, CounterComponent);`,
         );
-        const transformerState = testTransformer();
-        await transformCode(code, [transformerState.transformer]);
+        const foundCalls = findComponentConstructorCallsBlock(componentName, sourceFile);
 
-        expect(transformerState.foundCalls).toHaveLength(1);
-        assertIdentifier(transformerState.foundCalls[0].render, 'render');
-        assertIdentifier(transformerState.foundCalls[0].comp, 'CounterComponent');
+        expect(foundCalls).toHaveLength(1);
+        assertIdentifier(foundCalls[0].render, 'render');
+        assertIdentifier(foundCalls[0].comp, 'CounterComponent');
     });
 
-    it('should find exported var', async () => {
-        const code = stripMargin(
+    it('finds exported var', async () => {
+        const sourceFile = createTsSourceFile(
             `export var Counter = makeJayComponent(render, CounterComponent);`,
         );
-        const transformerState = testTransformer();
-        await transformCode(code, [transformerState.transformer]);
+        const foundCalls = findComponentConstructorCallsBlock(componentName, sourceFile);
 
-        expect(transformerState.foundCalls).toHaveLength(1);
-        assertIdentifier(transformerState.foundCalls[0].render, 'render');
-        assertIdentifier(transformerState.foundCalls[0].comp, 'CounterComponent');
+        expect(foundCalls).toHaveLength(1);
+        assertIdentifier(foundCalls[0].render, 'render');
+        assertIdentifier(foundCalls[0].comp, 'CounterComponent');
     });
 
-    it('should find separate define const and export', async () => {
-        const code = stripMargin(`
+    it('finds separate define const and export', async () => {
+        const sourceFile = createTsSourceFile(`
         | const Counter = makeJayComponent(render, CounterComponent);
         | export Counter`);
-        const transformerState = testTransformer();
-        await transformCode(code, [transformerState.transformer]);
+        const foundCalls = findComponentConstructorCallsBlock(componentName, sourceFile);
 
-        expect(transformerState.foundCalls).toHaveLength(1);
-        assertIdentifier(transformerState.foundCalls[0].render, 'render');
-        assertIdentifier(transformerState.foundCalls[0].comp, 'CounterComponent');
+        expect(foundCalls).toHaveLength(1);
+        assertIdentifier(foundCalls[0].render, 'render');
+        assertIdentifier(foundCalls[0].comp, 'CounterComponent');
     });
 
-    it('should find multiple components, with multiple names', async () => {
-        const code = stripMargin(`
+    it('finds multiple components, with multiple names', async () => {
+        const sourceFile = createTsSourceFile(`
         | export const Counter = makeJayComponent(render, CounterComponent);
         | export const Counter2 = makeJayComponent(render2, CounterComponent2);
         | export const Counter3 = makeJayComponent(render3, CounterComponent3);`);
-        const transformerState = testTransformer();
-        await transformCode(code, [transformerState.transformer]);
+        const foundCalls = findComponentConstructorCallsBlock(componentName, sourceFile);
 
-        expect(transformerState.foundCalls).toHaveLength(3);
-        assertIdentifier(transformerState.foundCalls[0].render, 'render');
-        assertIdentifier(transformerState.foundCalls[0].comp, 'CounterComponent');
-        assertIdentifier(transformerState.foundCalls[1].render, 'render2');
-        assertIdentifier(transformerState.foundCalls[1].comp, 'CounterComponent2');
-        assertIdentifier(transformerState.foundCalls[2].render, 'render3');
-        assertIdentifier(transformerState.foundCalls[2].comp, 'CounterComponent3');
+        expect(foundCalls).toHaveLength(3);
+        assertIdentifier(foundCalls[0].render, 'render');
+        assertIdentifier(foundCalls[0].comp, 'CounterComponent');
+        assertIdentifier(foundCalls[1].render, 'render2');
+        assertIdentifier(foundCalls[1].comp, 'CounterComponent2');
+        assertIdentifier(foundCalls[2].render, 'render3');
+        assertIdentifier(foundCalls[2].comp, 'CounterComponent3');
     });
 });

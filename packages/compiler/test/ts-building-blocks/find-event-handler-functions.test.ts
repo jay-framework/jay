@@ -17,7 +17,7 @@ describe('find component event handlers', () => {
             transformer: mkTransformer((sourceFileTransformerData) => {
                 let componentConstructorCalls = findComponentConstructorCallsBlock(
                     'makeJayComponent',
-                    sourceFileTransformerData,
+                    sourceFileTransformerData.sourceFile,
                 );
                 let componentFunctionExpressions = componentConstructorCalls.map(
                     ({ comp }) => comp,
