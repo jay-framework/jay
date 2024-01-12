@@ -2,7 +2,6 @@ import ts, { isImportDeclaration } from 'typescript';
 import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
 import { findMakeJayComponentImportTransformerBlock } from './building-blocks/find-make-jay-component-import';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
-import { findComponentConstructorCallsBlock } from './building-blocks/find-component-constructor-calls';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
 import { CompiledPattern } from './building-blocks/compile-function-split-patterns';
 import { transformImportModeFileExtension } from './building-blocks/transform-import-mode-file-extension';
@@ -14,6 +13,7 @@ import {
 } from './building-blocks/transform-event-handlers';
 import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
 import { codeToAst } from './ts-compiler-utils';
+import { findMakeJayComponentConstructorCallsBlock } from './building-blocks/find-make-jay-component-constructor-calls';
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: CompiledPattern[];
@@ -31,7 +31,7 @@ function mkComponentSecureFunctionsTransformer(
     );
     if (!Boolean(makeJayComponent_ImportName)) return sourceFile;
 
-    let calls = findComponentConstructorCallsBlock(makeJayComponent_ImportName, sourceFile);
+    let calls = findMakeJayComponentConstructorCallsBlock(makeJayComponent_ImportName, sourceFile);
     let constructorExpressions = calls.map(({ comp }) => comp);
     let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sourceFile);
     let foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>

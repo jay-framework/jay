@@ -1,48 +1,41 @@
-import ts, {
-    BindingName,
-    Expression,
-    isCallExpression,
-    isIdentifier,
-    isVariableStatement,
-} from 'typescript';
+import ts, { isCallExpression, isIdentifier, isVariableStatement } from 'typescript';
 
-export interface MakeJayComponentConstructorCalls {
-    render: Expression;
-    comp: Expression;
-    name: BindingName;
-}
+export type MapComponentConstructorCall<T> = (
+    initializer: ts.CallExpression,
+    name: ts.BindingName,
+) => T;
 
-export function findComponentConstructorCalls(
-    makeJayComponentName: string,
+export function findComponentConstructorCalls<T>(
+    initializerName: string,
+    mapCall: MapComponentConstructorCall<T>,
     node: ts.Node,
-): MakeJayComponentConstructorCalls[] {
-    const foundConstructorCalls: MakeJayComponentConstructorCalls[] = [];
+): T[] {
+    const foundConstructorCalls: T[] = [];
     if (isVariableStatement(node)) {
         node.declarationList.declarations.forEach((declaration) => {
             if (
                 declaration.initializer &&
                 isCallExpression(declaration.initializer) &&
                 isIdentifier(declaration.initializer.expression) &&
-                declaration.initializer.expression.escapedText === makeJayComponentName
+                declaration.initializer.expression.escapedText === initializerName
             )
-                foundConstructorCalls.push({
-                    render: declaration.initializer.arguments[0],
-                    comp: declaration.initializer.arguments[1],
-                    name: declaration.name,
-                });
+                foundConstructorCalls.push(mapCall(declaration.initializer, declaration.name));
         });
     }
     return foundConstructorCalls;
 }
 
-export function findComponentConstructorCallsBlock(
-    makeJayComponentName: string,
+export function findComponentConstructorCallsBlock<T>(
+    initializerName: string,
+    mapCall: MapComponentConstructorCall<T>,
     sourceFile: ts.SourceFile,
-): MakeJayComponentConstructorCalls[] {
-    const foundConstructorCalls: MakeJayComponentConstructorCalls[] = [];
+): T[] {
+    const foundConstructorCalls: T[] = [];
 
     function visit(node): void {
-        foundConstructorCalls.push(...findComponentConstructorCalls(makeJayComponentName, node));
+        foundConstructorCalls.push(
+            ...findComponentConstructorCalls(initializerName, mapCall, node),
+        );
         ts.forEachChild(node, visit);
     }
 

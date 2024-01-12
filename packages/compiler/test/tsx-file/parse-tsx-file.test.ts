@@ -18,8 +18,8 @@ function CounterConstructor({ initialValue }: Props<CounterProps>) {
             <div>
                 <button onclick={() => setCount(count() - 1)}>-</button>
                 {count() % 2 === 0 ?
-                     <span style="color: red">{count()}</span> :
-                     <span style="color: blue">{count()}</span>}
+                     <span style="color: red">{'R' + count()}</span> :
+                     <span style="color: blue">{'B' + count()}</span>}
                 <button onclick={() => setCount(count() + 1)}>+</button>
             </div>
         );

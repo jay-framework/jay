@@ -1,10 +1,9 @@
 import ts from 'typescript';
-import { MakeJayComponentConstructorCalls } from './find-component-constructor-calls';
 import { WithValidations } from '../../core/with-validations';
 
-export function getBaseElementName(
+export function getBaseElementName<T extends { name: ts.BindingName }>(
     makeJayComponentName: string,
-    componentConstructors: MakeJayComponentConstructorCalls[],
+    componentConstructors: T[],
 ): WithValidations<string> {
     if (componentConstructors.length === 0) {
         return new WithValidations(undefined, [
