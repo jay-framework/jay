@@ -8,15 +8,16 @@ export interface CounterProps {
 function FormConstructor({ initialValue }: Props<CounterProps>, refs: FormElementRefs) {
     let [firstName, setFirstName] = createState('');
     let [lastName, setLastName] = createState('');
+    let [greeting, setGreeting] = createState('');
 
     refs.firstName.oninput(({ event }) => setFirstName(event.target.value));
     refs.lastName.oninput(({ event }) => setLastName(event.target.value));
     refs.submit.onclick(() => {
-        console.log(firstName(), lastName());
+        setGreeting(`Hello ${firstName()} ${lastName()}, greeting from Jay secure component!!!`);
     });
 
     return {
-        render: () => ({ firstName, lastName }),
+        render: () => ({ firstName, lastName, greeting }),
     };
 }
 

@@ -4,13 +4,21 @@
       data:
         firstName: string
         lastName: string
+        greeting: string
     </script>
   </head>
   <body>
     <div>
-      <input ref="firstName" value={firstName}>
-      <input ref="lastName" value={lastName}>
+      <div>
+        <label>First Name: </label>
+        <input ref="firstName" value={firstName}>
+      </div>
+      <div>
+        <label>Last Name: </label>
+        <input ref="lastName" value={lastName}>
+      </div>
       <button ref="submit">send</button>
+      <h1>{greeting}</h1>
     </div>
   </body>
 </html>
