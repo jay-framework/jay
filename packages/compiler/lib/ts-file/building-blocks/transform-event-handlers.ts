@@ -11,6 +11,12 @@ export interface TransformedEventHandler extends FoundEventHandler {
     wasEventHandlerTransformed: boolean;
     transformedEventHandler: ts.Node;
     transformedEventHandlerCallStatement: ts.Node;
+    functionRepositoryFragment?: string;
+}
+
+export interface FunctionRepositoryFragment {
+    handlerIndex: number;
+    fragment: string;
 }
 
 export class TransformedEventHandlers {
@@ -50,6 +56,17 @@ export class TransformedEventHandlers {
     getTransformedEventHandler(node: ts.Node): TransformedEventHandler[] {
         return this.eventHandlers.get(node);
     }
+
+    getAllFunctionRepositoryFragments(): FunctionRepositoryFragment[] {
+        return Array.from(this.eventHandlers.values()).map((transformEventHandlers) => ({
+            fragment: transformEventHandlers[0].functionRepositoryFragment,
+            handlerIndex: transformEventHandlers[0].handlerIndex,
+        }));
+    }
+
+    includesTransformedEventHandlers() {
+        return this.transformedEventHandlers.length > 0;
+    }
 }
 
 export function transformEventHandlers(
@@ -80,8 +97,11 @@ export function transformEventHandlers(
                     .wasEventHandlerTransformed,
         )
         .map((foundEventHandler) => {
-            const { transformedEventHandler, wasEventHandlerTransformed } =
-                handlerToTransformedHandlers.get(foundEventHandler.eventHandler);
+            const {
+                transformedEventHandler,
+                wasEventHandlerTransformed,
+                functionRepositoryFragment,
+            } = handlerToTransformedHandlers.get(foundEventHandler.eventHandler);
             const transformedEventHandlerCallStatement = transformEventHandlerCallStatement$Block(
                 context,
                 factory,
@@ -91,6 +111,7 @@ export function transformEventHandlers(
                 ...foundEventHandler,
                 transformedEventHandler,
                 wasEventHandlerTransformed,
+                functionRepositoryFragment,
                 transformedEventHandlerCallStatement: transformedEventHandlerCallStatement,
             };
         });

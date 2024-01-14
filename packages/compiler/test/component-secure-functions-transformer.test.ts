@@ -1,13 +1,15 @@
-import { printTsFile } from './test-utils/ts-compiler-test-utils';
-import * as ts from 'typescript';
+import { transformCode } from './test-utils/ts-compiler-test-utils';
 import { componentSecureFunctionsTransformer } from '../lib';
 import { prettify } from '../lib';
+import { compileFunctionSplitPatternsBlock } from '../lib/ts-file/building-blocks/compile-function-split-patterns';
 
 describe('transform event handlers with secure code split', () => {
-    const input_value_pattern = `
-function inputValuePattern(handler: JayEventHandler<any, any, any>) {
-    return handler.event.target.value;
-}`;
+    const input_value_pattern = compileFunctionSplitPatternsBlock([
+        `
+function inputValuePattern({event}: JayEvent<any, any>) {
+    return event.target.value;
+}`,
+    ]).val;
 
     it('replace event.target.value for a single event handler', async () => {
         const code = `
@@ -21,26 +23,20 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 
 export const Comp = makeJayComponent(render, CompComponent);`;
 
-        const sourceFile = ts.createSourceFile(
-            'dummy.ts',
-            code,
-            ts.ScriptTarget.Latest,
-            false,
-            ts.ScriptKind.TS,
-        );
-        const outputFile = ts.transform(sourceFile, [
-            componentSecureFunctionsTransformer([input_value_pattern]),
+        const outputCode = await transformCode(code, [
+            componentSecureFunctionsTransformer(input_value_pattern),
         ]);
-        const outputCode = await prettify(printTsFile(outputFile));
+
         expect(outputCode).toEqual(
             await prettify(`
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
+import { handler$} from 'jay-secure';
 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
     refs.input
         .onchange$(handler$('0'))
-        .onchange(({event}) => setText(event.$1));
+        .then(({event}) => setText(event.$0));
 }
 export const Comp = makeJayComponent(render, CompComponent);`),
         );
@@ -59,29 +55,23 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 
 export const Comp = makeJayComponent(render, CompComponent);`;
 
-        const sourceFile = ts.createSourceFile(
-            'dummy.ts',
-            code,
-            ts.ScriptTarget.Latest,
-            false,
-            ts.ScriptKind.TS,
-        );
-        const outputFile = ts.transform(sourceFile, [
-            componentSecureFunctionsTransformer([input_value_pattern]),
+        const outputCode = await transformCode(code, [
+            componentSecureFunctionsTransformer(input_value_pattern),
         ]);
-        const outputCode = await prettify(printTsFile(outputFile));
+
         expect(outputCode).toEqual(
             await prettify(`
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
+import { handler$} from 'jay-secure';
 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
     refs.input
         .onchange$(handler$('0'))
-        .onchange(({event}) => setText(event.$1));
+        .then(({event}) => setText(event.$0));
     refs.input2
         .onchange$(handler$('1'))
-        .onchange(({event}) => setText(event.$1));
+        .then(({event}) => setText(event.$0));
 }
 export const Comp = makeJayComponent(render, CompComponent);`),
         );
@@ -103,32 +93,26 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 
 export const Comp = makeJayComponent(render, CompComponent);`;
 
-        const sourceFile = ts.createSourceFile(
-            'dummy.ts',
-            code,
-            ts.ScriptTarget.Latest,
-            false,
-            ts.ScriptKind.TS,
-        );
-        const outputFile = ts.transform(sourceFile, [
-            componentSecureFunctionsTransformer([input_value_pattern]),
+        const outputCode = await transformCode(code, [
+            componentSecureFunctionsTransformer(input_value_pattern),
         ]);
-        const outputCode = await prettify(printTsFile(outputFile));
+
         expect(outputCode).toEqual(
             await prettify(`
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
+import { handler$} from 'jay-secure';
 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
     function updateText({event}) {
-        setText(event.$1);
+        setText(event.$0);
     }
     refs.input
         .onchange$(handler$('0'))
-        .onchange(updateText);
+        .then(updateText);
     refs.input2
         .onchange$(handler$('0'))
-        .onchange(updateText);
+        .then(updateText);
 }
 export const Comp = makeJayComponent(render, CompComponent);`),
         );
@@ -146,17 +130,10 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 
 export const Comp = makeJayComponent(render, CompComponent);`;
 
-        const sourceFile = ts.createSourceFile(
-            'dummy.ts',
-            code,
-            ts.ScriptTarget.Latest,
-            false,
-            ts.ScriptKind.TS,
-        );
-        const outputFile = ts.transform(sourceFile, [
-            componentSecureFunctionsTransformer([input_value_pattern]),
+        const outputCode = await transformCode(code, [
+            componentSecureFunctionsTransformer(input_value_pattern),
         ]);
-        const outputCode = await prettify(printTsFile(outputFile));
+
         expect(outputCode).toEqual(
             await prettify(`
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';

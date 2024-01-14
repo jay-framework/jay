@@ -4,7 +4,7 @@ import { findMakeJayComponentImportTransformerBlock } from './building-blocks/fi
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
 import { findComponentConstructorCallsBlock } from './building-blocks/find-component-constructor-calls';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
-import { compileFunctionSplitPatternsBlock } from './building-blocks/compile-function-split-patterns';
+import { CompiledPattern } from './building-blocks/compile-function-split-patterns';
 import { transformImportModeFileExtension } from './building-blocks/transform-import-mode-file-extension';
 import { RuntimeMode } from '../core/runtime-mode';
 import { MAKE_JAY_COMPONENT } from '../core/constants';
@@ -12,9 +12,11 @@ import {
     TransformedEventHandlers,
     transformEventHandlers,
 } from './building-blocks/transform-event-handlers';
+import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
+import { codeToAst } from './ts-compiler-utils';
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
-    patterns: string[];
+    patterns: CompiledPattern[];
 };
 
 function mkComponentSecureFunctionsTransformer(
@@ -36,12 +38,8 @@ function mkComponentSecureFunctionsTransformer(
         findEventHandlersBlock(constructorDefinition),
     );
 
-    // compile patterns
-    // todo extract the pattern compilation to a prior stage
-    let compiledPatterns = compileFunctionSplitPatternsBlock(patterns);
-
     let transformedEventHandlers = new TransformedEventHandlers(
-        transformEventHandlers(context, compiledPatterns.val, factory, foundEventHandlers),
+        transformEventHandlers(context, patterns, factory, foundEventHandlers),
     );
 
     let visitor = (node) => {
@@ -60,11 +58,23 @@ function mkComponentSecureFunctionsTransformer(
             return transformImportModeFileExtension(node, factory, RuntimeMode.WorkerSandbox);
         return ts.visitEachChild(node, visitor, context);
     };
-    return ts.visitEachChild(sftContext.sourceFile, visitor, context);
+    let transformedSourceFile = ts.visitEachChild(sftContext.sourceFile, visitor, context);
+
+    if (transformedEventHandlers.includesTransformedEventHandlers()) {
+        let statements = [...transformedSourceFile.statements];
+        let afterImportStatementIndex = findAfterImportStatementIndex(statements);
+
+        let allStatements = [
+            ...statements.slice(0, afterImportStatementIndex),
+            codeToAst(`import { handler$ } from 'jay-secure';`, context)[0] as ts.Statement,
+            ...statements.slice(afterImportStatementIndex),
+        ];
+        return factory.updateSourceFile(sourceFile, allStatements);
+    } else return transformedSourceFile;
 }
 
 export function componentSecureFunctionsTransformer(
-    patterns: string[] = [],
+    patterns: CompiledPattern[] = [],
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
     return mkTransformer(mkComponentSecureFunctionsTransformer, { patterns });
 }

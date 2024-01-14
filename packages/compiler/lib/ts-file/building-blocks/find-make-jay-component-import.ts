@@ -21,8 +21,8 @@ export function findMakeJayComponentImport(makeJayComponentName: string, node: t
 export function findMakeJayComponentImportTransformerBlock(
     makeJayComponentName: string,
     sourceFile: ts.SourceFile,
-) {
-    let foundMakeJayComponentProperty = undefined;
+): string {
+    let foundMakeJayComponentProperty: string = undefined;
 
     function visitor(node: ts.Node) {
         foundMakeJayComponentProperty =

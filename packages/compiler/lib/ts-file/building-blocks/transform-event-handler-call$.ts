@@ -26,7 +26,7 @@ const transformEventHandlerCall$ =
                             (_: ExpressionStatement) => _.expression,
                         ) as Expression[],
                     ),
-                    node.expression.name,
+                    factory.createIdentifier('then'),
                 ),
                 undefined,
                 node.arguments,

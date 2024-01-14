@@ -5,6 +5,7 @@ import ts, {
     isCallExpression,
     isExpressionStatement,
     isPropertyAccessExpression,
+    TransformationContext,
 } from 'typescript';
 import {
     FlattenedAccessChain,
@@ -14,12 +15,17 @@ import {
 import { CompiledPattern } from './compile-function-split-patterns';
 import { codeToAst } from '../ts-compiler-utils';
 
+interface MatchedPattern {
+    pattern: CompiledPattern;
+    patternKey: number;
+}
+
 function findPatternInVariable(
     resolvedParam: FlattenedAccessChain,
     paramIndex: number,
     compiledPatterns: CompiledPattern[],
-) {
-    return compiledPatterns.find(
+): MatchedPattern {
+    let patternKey = compiledPatterns.findIndex(
         (pattern) =>
             paramIndex === pattern.paramIndex &&
             pattern.accessChain.path.length <= resolvedParam.path.length &&
@@ -27,11 +33,26 @@ function findPatternInVariable(
                 (element, index) => element === resolvedParam.path[index],
             ),
     );
+    let pattern = patternKey === -1 ? undefined : compiledPatterns[patternKey];
+    return { pattern, patternKey };
 }
 
 export interface TransformedEventHandlerByPattern {
     transformedEventHandler: ts.Node;
+    functionRepositoryFragment?: string;
     wasEventHandlerTransformed: boolean;
+}
+
+function generateFunctionRepository(
+    matchedReturnPatterns: MatchedPattern[],
+    context: TransformationContext,
+) {
+    if (matchedReturnPatterns.length > 0) {
+        let returnedObjectProperties = matchedReturnPatterns.map(
+            ({ pattern, patternKey }) => `$${patternKey}: ${pattern.accessChain.path.join('.')}`,
+        );
+        return `({ event }) => ({${returnedObjectProperties.join(',\n')}})`;
+    } else return undefined;
 }
 
 export const transformEventHandlerByPatternBlock = (
@@ -44,6 +65,7 @@ export const transformEventHandlerByPatternBlock = (
     nameBindingResolver.addFunctionParams(eventHandler);
 
     let wasEventHandlerTransformed = false;
+    let matchedReturnPatterns: MatchedPattern[] = [];
 
     const transformEventHandlerStatement = (node) => {
         if (isCallExpression(node)) {
@@ -51,16 +73,17 @@ export const transformEventHandlerByPatternBlock = (
                 if (isPropertyAccessExpression(argument)) {
                     let resolvedParam = nameBindingResolver.resolvePropertyAccessChain(argument);
                     let flattenedResolvedParam = flattenVariable(resolvedParam);
-                    let patternMatch = findPatternInVariable(
+                    let { pattern, patternKey } = findPatternInVariable(
                         flattenedResolvedParam,
                         paramIndex,
                         compiledPatterns,
                     );
-                    if (patternMatch) {
+                    if (pattern) {
+                        matchedReturnPatterns.push({ pattern, patternKey });
                         let replacementPattern = [
-                            'event.$1',
+                            `event.$${patternKey}`,
                             ...flattenedResolvedParam.path.splice(
-                                patternMatch.accessChain.path.length,
+                                pattern.accessChain.path.length + 1,
                             ),
                         ];
                         wasEventHandlerTransformed = true;
@@ -88,5 +111,8 @@ export const transformEventHandlerByPatternBlock = (
         transformEventHandlerStatement,
         context,
     );
-    return { transformedEventHandler, wasEventHandlerTransformed };
+
+    const functionRepositoryFragment = generateFunctionRepository(matchedReturnPatterns, context);
+
+    return { transformedEventHandler, wasEventHandlerTransformed, functionRepositoryFragment };
 };
