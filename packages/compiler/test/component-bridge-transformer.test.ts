@@ -1,6 +1,5 @@
-import { printTsFile } from './test-utils/ts-compiler-test-utils';
-import * as ts from 'typescript';
-import {componentBridgeTransformer, componentSecureFunctionsTransformer, RuntimeMode} from '../lib';
+import {transformCode} from './test-utils/ts-compiler-test-utils';
+import {componentBridgeTransformer, RuntimeMode} from '../lib';
 import { prettify } from '../lib';
 
 describe('transform component bridge', () => {
@@ -8,6 +7,10 @@ describe('transform component bridge', () => {
 function inputValuePattern(handler: JayEventHandler<any, any, any>) {
     return handler.event.target.value;
 }`;
+
+    // describe('generate component bridge', () => {
+    //
+    // })
 
     describe('generate function repository', () => {
 
@@ -23,17 +26,8 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 
 export const Comp = makeJayComponent(render, CompComponent);`;
 
-            const sourceFile = ts.createSourceFile(
-                'dummy.ts',
-                code,
-                ts.ScriptTarget.Latest,
-                false,
-                ts.ScriptKind.TS,
-            );
-            const outputFile = ts.transform(sourceFile, [
-                componentBridgeTransformer(RuntimeMode.MainSandbox, [input_value_pattern]),
-            ]);
-            const outputCode = await prettify(printTsFile(outputFile));
+            const outputCode = await transformCode(code, [componentBridgeTransformer(RuntimeMode.MainSandbox, [input_value_pattern])])
+
             expect(outputCode).toEqual(
                 await prettify(`
 import { makeJayComponentBridge } from 'jay-secure';
@@ -59,17 +53,8 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 
 export const Comp = makeJayComponent(render, CompComponent);`;
 
-            const sourceFile = ts.createSourceFile(
-                'dummy.ts',
-                code,
-                ts.ScriptTarget.Latest,
-                false,
-                ts.ScriptKind.TS,
-            );
-            const outputFile = ts.transform(sourceFile, [
-                componentBridgeTransformer(RuntimeMode.MainSandbox, [input_value_pattern]),
-            ]);
-            const outputCode = await prettify(printTsFile(outputFile));
+            const outputCode = await transformCode(code, [componentBridgeTransformer(RuntimeMode.MainSandbox, [input_value_pattern])])
+
             expect(outputCode).toEqual(
                 await prettify(`
 import { makeJayComponentBridge } from 'jay-secure';
@@ -99,17 +84,8 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 
 export const Comp = makeJayComponent(render, CompComponent);`;
 
-            const sourceFile = ts.createSourceFile(
-                'dummy.ts',
-                code,
-                ts.ScriptTarget.Latest,
-                false,
-                ts.ScriptKind.TS,
-            );
-            const outputFile = ts.transform(sourceFile, [
-                componentBridgeTransformer(RuntimeMode.MainSandbox, [input_value_pattern]),
-            ]);
-            const outputCode = await prettify(printTsFile(outputFile));
+            const outputCode = await transformCode(code, [componentBridgeTransformer(RuntimeMode.MainSandbox, [input_value_pattern])])
+
             expect(outputCode).toEqual(
                 await prettify(`
 import { makeJayComponentBridge } from 'jay-secure';
@@ -133,17 +109,8 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 
 export const Comp = makeJayComponent(render, CompComponent);`;
 
-            const sourceFile = ts.createSourceFile(
-                'dummy.ts',
-                code,
-                ts.ScriptTarget.Latest,
-                false,
-                ts.ScriptKind.TS,
-            );
-            const outputFile = ts.transform(sourceFile, [
-                componentBridgeTransformer(RuntimeMode.MainSandbox, [input_value_pattern]),
-            ]);
-            const outputCode = await prettify(printTsFile(outputFile));
+            const outputCode = await transformCode(code, [componentBridgeTransformer(RuntimeMode.MainSandbox, [input_value_pattern])])
+
             expect(outputCode).toEqual(
                 await prettify(`
 import { makeJayComponentBridge } from 'jay-secure';
