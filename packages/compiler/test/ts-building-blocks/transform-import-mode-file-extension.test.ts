@@ -2,7 +2,7 @@ import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import ts, { isImportDeclaration } from 'typescript';
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import { prettify, RuntimeMode } from '../../lib';
-import { transformImportModeFileExtension } from '../../lib/ts-file/building-blocks/transform-import-mode-file-extension.ts';
+import { transformImportModeFileExtension } from '../../lib/ts-file/building-blocks/transform-import-mode-file-extension';
 
 describe('add event handler call$ to call chain', () => {
     function testTransformer(importerMode: RuntimeMode) {
