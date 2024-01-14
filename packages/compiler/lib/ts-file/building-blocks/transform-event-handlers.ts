@@ -1,8 +1,8 @@
 import ts, {} from "typescript";
-import {FoundEventHandler} from "./find-event-handler-functions.ts";
-import {SplitEventHandler, splitEventHandlerByPatternBlock} from "./split-event-handler-by-pattern.ts";
-import {CompiledPattern} from "./compile-function-split-patterns.ts";
-import {addEventHandlerCallStatementBlock} from "./add-event-handler-call$.ts";
+import {FoundEventHandler} from "./find-event-handler-functions";
+import {TransformedEventHandlerByPattern, transformEventHandlerByPatternBlock} from "./transform-event-handler-by-pattern";
+import {CompiledPattern} from "./compile-function-split-patterns";
+import {transformEventHandlerCallStatement$Block} from "./transform-event-handler-call$";
 
 export interface TransformedEventHandler extends FoundEventHandler {
     wasEventHandlerTransformed: boolean;
@@ -47,19 +47,19 @@ export function transformEventHandlers(context: ts.TransformationContext,
                                        factory: ts.NodeFactory,
                                        foundEventHandlers: FoundEventHandler[]): TransformedEventHandler[] {
 
-    let handlerToTransformedHandlers: Map<ts.Node, SplitEventHandler> = new Map();
+    let handlerToTransformedHandlers: Map<ts.Node, TransformedEventHandlerByPattern> = new Map();
 
     foundEventHandlers.forEach(foundEventHandler => {
         if (!handlerToTransformedHandlers.has(foundEventHandler.eventHandler))
             handlerToTransformedHandlers.set(foundEventHandler.eventHandler,
-                splitEventHandlerByPatternBlock(context, compiledPatterns, factory, foundEventHandler.eventHandler))
+                transformEventHandlerByPatternBlock(context, compiledPatterns, factory, foundEventHandler.eventHandler))
     })
 
     return foundEventHandlers
         .filter(foundEventHandler => handlerToTransformedHandlers.get(foundEventHandler.eventHandler).wasEventHandlerTransformed)
         .map(foundEventHandler => {
             const {transformedEventHandler, wasEventHandlerTransformed} = handlerToTransformedHandlers.get(foundEventHandler.eventHandler)
-            const transformedEventHandlerCallStatement = addEventHandlerCallStatementBlock(context, factory, foundEventHandler)(foundEventHandler.eventHandlerCallStatement)
+            const transformedEventHandlerCallStatement = transformEventHandlerCallStatement$Block(context, factory, foundEventHandler)(foundEventHandler.eventHandlerCallStatement)
             return {
                 ...foundEventHandler,
                 transformedEventHandler,

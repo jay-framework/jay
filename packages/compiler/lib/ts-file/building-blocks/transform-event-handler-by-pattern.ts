@@ -29,18 +29,18 @@ function findPatternInVariable(
     );
 }
 
-export interface SplitEventHandler {
+export interface TransformedEventHandlerByPattern {
     transformedEventHandler: ts.Node,
     wasEventHandlerTransformed: boolean
 }
 
-export const splitEventHandlerByPatternBlock =
+export const transformEventHandlerByPatternBlock =
     (
         context: ts.TransformationContext,
         compiledPatterns: CompiledPattern[],
         factory: ts.NodeFactory,
         eventHandler: ts.FunctionLikeDeclarationBase
-    ): SplitEventHandler => {
+    ): TransformedEventHandlerByPattern => {
         let nameBindingResolver = new NameBindingResolver();
         nameBindingResolver.addFunctionParams(eventHandler);
 

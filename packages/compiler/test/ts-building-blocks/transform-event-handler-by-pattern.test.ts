@@ -4,9 +4,9 @@ import {
 } from '../../lib/ts-file/building-blocks/compile-function-split-patterns';
 import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import {
-    SplitEventHandler,
-    splitEventHandlerByPatternBlock
-} from '../../lib/ts-file/building-blocks/split-event-handler-by-pattern';
+    TransformedEventHandlerByPattern,
+    transformEventHandlerByPatternBlock
+} from '../../lib/ts-file/building-blocks/transform-event-handler-by-pattern';
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import ts, {isArrowFunction, isFunctionDeclaration} from 'typescript';
 import { prettify } from '../../lib';
@@ -20,11 +20,11 @@ describe('split event handler by pattern', () => {
     const patterns = compileFunctionSplitPatternsBlock([PATTERN_EVENT_TARGET_VALUE]);
 
     function testTransformer(compiledPatterns: CompiledPattern[]) {
-        let splitEventHandlers: SplitEventHandler[] = [];
+        let splitEventHandlers: TransformedEventHandlerByPattern[] = [];
         let transformer = mkTransformer(({ context, sourceFile, factory }) => {
             const visitor = (node) => {
                 if (isFunctionDeclaration(node) || isArrowFunction(node)) {
-                    let splitEventHandler = splitEventHandlerByPatternBlock(
+                    let splitEventHandler = transformEventHandlerByPatternBlock(
                         context,
                         compiledPatterns,
                         factory,

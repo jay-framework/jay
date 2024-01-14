@@ -2,7 +2,7 @@ import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import ts, { isCallExpression, isExpressionStatement } from 'typescript';
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import { prettify } from '../../lib';
-import { addEventHandlerCallBlock } from '../../lib/ts-file/building-blocks/add-event-handler-call$';
+import { transformEventHandlerCall$Block } from '../../lib/ts-file/building-blocks/transform-event-handler-call$';
 import { FoundEventHandler } from '../../lib/ts-file/building-blocks/find-event-handler-functions';
 
 describe('add event handler call$ to call chain', () => {
@@ -19,7 +19,7 @@ describe('add event handler call$ to call chain', () => {
                     ) {
                         return ts.visitNode(
                             statement.expression,
-                            addEventHandlerCallBlock(context, factory, foundEventHandlerMock),
+                            transformEventHandlerCall$Block(context, factory, foundEventHandlerMock),
                         );
                     }
                     return statement;
