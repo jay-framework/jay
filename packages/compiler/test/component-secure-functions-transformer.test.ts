@@ -40,7 +40,7 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
     refs.input
         .onchange$(handler$('0'))
-        .onchange(({event}) => setText(event.$1));
+        .onchange(({event}) => setText(event.$0));
 }
 export const Comp = makeJayComponent(render, CompComponent);`),
         );
@@ -78,10 +78,10 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
     refs.input
         .onchange$(handler$('0'))
-        .onchange(({event}) => setText(event.$1));
+        .onchange(({event}) => setText(event.$0));
     refs.input2
         .onchange$(handler$('1'))
-        .onchange(({event}) => setText(event.$1));
+        .onchange(({event}) => setText(event.$0));
 }
 export const Comp = makeJayComponent(render, CompComponent);`),
         );
@@ -121,7 +121,7 @@ import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
     function updateText({event}) {
-        setText(event.$1);
+        setText(event.$0);
     }
     refs.input
         .onchange$(handler$('0'))

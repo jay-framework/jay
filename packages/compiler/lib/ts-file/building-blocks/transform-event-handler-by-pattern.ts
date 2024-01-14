@@ -38,7 +38,7 @@ function findPatternInVariable(
 
 export interface TransformedEventHandlerByPattern {
     transformedEventHandler: ts.Node;
-    functionRepository: ts.Node;
+    functionRepositoryFragment?: string;
     wasEventHandlerTransformed: boolean;
 }
 
@@ -46,7 +46,7 @@ function generateFunctionRepository(matchedReturnPatterns: MatchedPattern[], con
     if (matchedReturnPatterns.length > 0) {
         let returnedObjectProperties = matchedReturnPatterns.map(({pattern, patternKey}) =>
             `$${patternKey}: ${pattern.accessChain.path.join('.')}`)
-        return codeToAst(`({ event }) => ({${returnedObjectProperties.join(',\n')})`, context)[0]
+        return `({ event }) => ({${returnedObjectProperties.join(',\n')}})`
     }
     else
         return undefined;
@@ -109,7 +109,7 @@ export const transformEventHandlerByPatternBlock = (
         context,
     );
 
-    const functionRepository = generateFunctionRepository(matchedReturnPatterns, context);
+    const functionRepositoryFragment = generateFunctionRepository(matchedReturnPatterns, context);
 
-    return { transformedEventHandler, wasEventHandlerTransformed, functionRepository };
+    return { transformedEventHandler, wasEventHandlerTransformed, functionRepositoryFragment };
 };
