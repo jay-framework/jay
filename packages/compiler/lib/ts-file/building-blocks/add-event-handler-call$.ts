@@ -40,3 +40,13 @@ export const addEventHandlerCallBlock =
     (eventHandler: CallExpression) => {
         return ts.visitNode(eventHandler, addEventHandlerCall(context, factory, foundEventHandler));
     };
+
+export const addEventHandlerCallStatementBlock =
+    (context: TransformationContext, factory: NodeFactory, foundEventHandler: FoundEventHandler) =>
+        (node: ExpressionStatement) => {
+            return ts.visitEachChild(
+                node,
+                addEventHandlerCallBlock(context, factory, foundEventHandler),
+                context,
+            )
+        }
