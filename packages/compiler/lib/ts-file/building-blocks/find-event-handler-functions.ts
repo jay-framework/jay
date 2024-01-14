@@ -13,37 +13,9 @@ import { flattenVariable, NameBindingResolver } from './name-binding-resolver';
 import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils';
 
 export interface FoundEventHandler {
-    eventHandlerMatchedPatterns: boolean;
     eventHandlerCallStatement: ExpressionStatement;
     eventHandler: FunctionLikeDeclarationBase;
     handlerIndex: number;
-}
-
-export class FoundEventHandlers {
-    private handlers: Set<ts.Node>;
-    private eventHandlerCallStatements: Map<ts.Node, FoundEventHandler>;
-    constructor(public readonly foundEventHandlers: FoundEventHandler[]) {
-        this.handlers = new Set<ts.Node>(foundEventHandlers.map((_) => _.eventHandler));
-        this.eventHandlerCallStatements = new Map<ts.Node, FoundEventHandler>(
-            foundEventHandlers.map((_) => [_.eventHandlerCallStatement, _]),
-        );
-    }
-
-    hasEventHandler(node: ts.Node): boolean {
-        return this.handlers.has(node);
-    }
-
-    hasEventHandlerCallStatement(node: ts.Node): boolean {
-        return this.eventHandlerCallStatements.has(node);
-    }
-
-    getFoundEventHandlerByCallStatement(node: ts.Node): FoundEventHandler {
-        return this.eventHandlerCallStatements.get(node);
-    }
-
-    getFoundEventHandlersByHandler(node: ts.Node): FoundEventHandler[] {
-        return this.foundEventHandlers.filter((_) => _.eventHandler === node);
-    }
 }
 
 export function findEventHandlersBlock(
@@ -80,7 +52,6 @@ export function findEventHandlersBlock(
                     let handler = statement.expression.arguments[0];
                     if (isFunctionLikeDeclarationBase(handler))
                         foundEventHandlers.push({
-                            eventHandlerMatchedPatterns: false,
                             eventHandler: handler,
                             eventHandlerCallStatement: statement,
                             handlerIndex: nextEventHandlerIndex++,
@@ -93,7 +64,6 @@ export function findEventHandlersBlock(
 
                         if (flattenedHandler.path.length === 0)
                             foundEventHandlers.push({
-                                eventHandlerMatchedPatterns: false,
                                 eventHandler: flattenedHandler.root as FunctionLikeDeclarationBase,
                                 eventHandlerCallStatement: statement,
                                 handlerIndex:

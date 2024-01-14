@@ -1,18 +1,17 @@
-import ts, { FunctionLikeDeclarationBase, isImportDeclaration } from 'typescript';
+import ts, { isImportDeclaration } from 'typescript';
 import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
 import { findMakeJayComponentImportTransformerBlock } from './building-blocks/find-make-jay-component-import';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
 import { findComponentConstructorCallsBlock } from './building-blocks/find-component-constructor-calls';
-import {
-    findEventHandlersBlock,
-    FoundEventHandlers,
-} from './building-blocks/find-event-handler-functions';
+import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
 import { compileFunctionSplitPatternsBlock } from './building-blocks/compile-function-split-patterns';
-import { splitEventHandlerByPatternBlock } from './building-blocks/split-event-handler-by-pattern';
-import { addEventHandlerCallBlock } from './building-blocks/add-event-handler-call$';
-import { addImportModeFileExtension } from './building-blocks/add-import-mode-file-extension';
+import { transformImportModeFileExtension } from './building-blocks/transform-import-mode-file-extension';
 import { RuntimeMode } from '../core/runtime-mode';
 import { MAKE_JAY_COMPONENT } from '../core/constants';
+import {
+    TransformedEventHandlers,
+    transformEventHandlers,
+} from './building-blocks/transform-event-handlers';
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: string[];
@@ -33,42 +32,32 @@ function mkComponentSecureFunctionsTransformer(
     let calls = findComponentConstructorCallsBlock(makeJayComponent_ImportName, sourceFile);
     let constructorExpressions = calls.map(({ comp }) => comp);
     let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sourceFile);
-    let foundEventHandlers = new FoundEventHandlers(
-        constructorDefinitions.flatMap((constructorDefinition) =>
-            findEventHandlersBlock(constructorDefinition),
-        ),
+    let foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
+        findEventHandlersBlock(constructorDefinition),
     );
 
     // compile patterns
     // todo extract the pattern compilation to a prior stage
     let compiledPatterns = compileFunctionSplitPatternsBlock(patterns);
 
+    let transformedEventHandlers = new TransformedEventHandlers(
+        transformEventHandlers(context, compiledPatterns.val, factory, foundEventHandlers),
+    );
+
     let visitor = (node) => {
-        if (foundEventHandlers.hasEventHandlerCallStatement(node)) {
-            // the order of the statements here is important due to the immutable nature of the AST.
-            // we first detect if this is an event handler call
-            let foundEventHandler = foundEventHandlers.getFoundEventHandlerByCallStatement(node);
-            // then transform any inline event handler
-            node = ts.visitEachChild(node, visitor, context);
-            // then, if the inline event handler was transformed, we add the handle$ call.
-            if (foundEventHandler.eventHandlerMatchedPatterns)
-                node = ts.visitEachChild(
-                    node,
-                    addEventHandlerCallBlock(context, factory, foundEventHandler),
-                    context,
-                );
-            return node;
+        if (transformedEventHandlers.hasEventHandlerCallStatement(node)) {
+            let transformedEventHandler =
+                transformedEventHandlers.getTransformedEventHandlerCallStatement(node);
+            node = transformedEventHandler.transformedEventHandlerCallStatement;
+            return ts.visitEachChild(node, visitor, context);
         }
-        if (foundEventHandlers.hasEventHandler(node)) {
-            return splitEventHandlerByPatternBlock(
-                context,
-                compiledPatterns.val,
-                factory,
-                foundEventHandlers.getFoundEventHandlersByHandler(node),
-            )(node as FunctionLikeDeclarationBase);
+        if (transformedEventHandlers.hasEventHandler(node)) {
+            let transformedEventHandler = transformedEventHandlers.getTransformedEventHandler(node);
+            node = transformedEventHandler[0].transformedEventHandler;
+            return ts.visitEachChild(node, visitor, context);
         }
         if (isImportDeclaration(node))
-            return addImportModeFileExtension(node, factory, RuntimeMode.WorkerSandbox);
+            return transformImportModeFileExtension(node, factory, RuntimeMode.WorkerSandbox);
         return ts.visitEachChild(node, visitor, context);
     };
     return ts.visitEachChild(sftContext.sourceFile, visitor, context);

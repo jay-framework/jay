@@ -1,8 +1,8 @@
 import { mkTransformer } from '../../lib/ts-file/mk-transformer';
-import ts, { isCallExpression, isExpressionStatement } from 'typescript';
+import ts from 'typescript';
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import { prettify } from '../../lib';
-import { addEventHandlerCallBlock } from '../../lib/ts-file/building-blocks/add-event-handler-call$';
+import { transformEventHandlerCallStatement$Block } from '../../lib/ts-file/building-blocks/transform-event-handler-call$';
 import { FoundEventHandler } from '../../lib/ts-file/building-blocks/find-event-handler-functions';
 
 describe('add event handler call$ to call chain', () => {
@@ -12,18 +12,7 @@ describe('add event handler call$ to call chain', () => {
         return mkTransformer(({ context, sourceFile, factory }) => {
             return ts.visitEachChild(
                 sourceFile,
-                (statement) => {
-                    if (
-                        isExpressionStatement(statement) &&
-                        isCallExpression(statement.expression)
-                    ) {
-                        return ts.visitNode(
-                            statement.expression,
-                            addEventHandlerCallBlock(context, factory, foundEventHandlerMock),
-                        );
-                    }
-                    return statement;
-                },
+                transformEventHandlerCallStatement$Block(context, factory, foundEventHandlerMock),
                 context,
             );
         });

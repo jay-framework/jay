@@ -10,7 +10,7 @@ import ts, {
 import { codeToAst } from '../ts-compiler-utils';
 import { FoundEventHandler } from './find-event-handler-functions';
 
-const addEventHandlerCall =
+const transformEventHandlerCall$ =
     (context: TransformationContext, factory: NodeFactory, foundEventHandler: FoundEventHandler) =>
     (node) => {
         if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
@@ -35,8 +35,12 @@ const addEventHandlerCall =
         return node;
     };
 
-export const addEventHandlerCallBlock =
+export const transformEventHandlerCallStatement$Block =
     (context: TransformationContext, factory: NodeFactory, foundEventHandler: FoundEventHandler) =>
-    (eventHandler: CallExpression) => {
-        return ts.visitNode(eventHandler, addEventHandlerCall(context, factory, foundEventHandler));
+    (node: ExpressionStatement) => {
+        return ts.visitEachChild(
+            node,
+            transformEventHandlerCall$(context, factory, foundEventHandler),
+            context,
+        );
     };

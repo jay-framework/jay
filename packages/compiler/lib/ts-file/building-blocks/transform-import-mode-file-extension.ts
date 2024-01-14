@@ -2,7 +2,7 @@ import ts from 'typescript';
 import { getModeFileExtension, RuntimeMode } from '../../core/runtime-mode';
 import { isRelativeImport } from '../extract-imports';
 
-export function addImportModeFileExtension(
+export function transformImportModeFileExtension(
     node: ts.ImportDeclaration,
     factory: ts.NodeFactory,
     importerMode: RuntimeMode,
