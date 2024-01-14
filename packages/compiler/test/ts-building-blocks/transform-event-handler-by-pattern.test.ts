@@ -10,6 +10,7 @@ import {
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import ts, { isArrowFunction, isFunctionDeclaration } from 'typescript';
 import { prettify } from '../../lib';
+import {astToCode} from "../../lib/ts-file/ts-compiler-utils.ts";
 
 const PATTERN_EVENT_TARGET_VALUE = `
 function inputValuePattern(handler: JayEventHandler<any, any, any>) {
@@ -46,8 +47,10 @@ describe('split event handler by pattern', () => {
             const { transformer, splitEventHandlers } = testTransformer(patterns.val);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
-            expect(transformed).toEqual(await prettify(`({event}) => setText(event.$1)`));
+            expect(transformed).toEqual(await prettify(`({event}) => setText(event.$0)`));
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
+            expect(await prettify(astToCode(splitEventHandlers[0].functionRepository))).toEqual(
+                await prettify(`({ event }) => ({$0: event.target.value})`));
         });
 
         it('should replace function call parameter for function event handler and mark eventHandlerMatchedPatterns', async () => {
@@ -56,9 +59,11 @@ describe('split event handler by pattern', () => {
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(
-                await prettify(`function bla({event}) { setText(event.$1) }`),
+                await prettify(`function bla({event}) { setText(event.$0) }`),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
+            expect(await prettify(astToCode(splitEventHandlers[0].functionRepository))).toEqual(
+                await prettify(`({ event }) => ({$0: event.target.value})`));
         });
 
         it('should not transform and not mark eventHandlerMatchedPatterns if no pattern is matched 1', async () => {
@@ -72,6 +77,7 @@ describe('split event handler by pattern', () => {
                 ),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeFalsy();
+            expect(splitEventHandlers[0].functionRepository).not.toBeDefined();
         });
 
         it('should not transform and not mark eventHandlerMatchedPatterns if no pattern is matched 2', async () => {
@@ -83,6 +89,7 @@ describe('split event handler by pattern', () => {
                 await prettify(`function bla({event}) { setCount(count() + 1) }`),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeFalsy();
+            expect(splitEventHandlers[0].functionRepository).not.toBeDefined();
         });
     });
 });
