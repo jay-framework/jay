@@ -6,19 +6,23 @@ import {
     findMakeJayComponentImport,
     findMakeJayComponentImportTransformerBlock,
 } from './building-blocks/find-make-jay-component-import';
-import { findComponentConstructorCalls } from './building-blocks/find-component-constructor-calls';
+import {
+    findComponentConstructorCallsBlock, MakeJayComponentConstructorCalls
+} from './building-blocks/find-component-constructor-calls';
 import { getImportName } from './extract-imports';
 import { MAKE_JAY_COMPONENT } from '../core/constants';
+import {findComponentConstructorsBlock} from "./building-blocks/find-component-constructors.ts";
+import {findEventHandlersBlock} from "./building-blocks/find-event-handler-functions.ts";
+import {compileFunctionSplitPatternsBlock} from "./building-blocks/compile-function-split-patterns.ts";
+import {TransformedEventHandlers, transformEventHandlers} from "./building-blocks/transform-event-handlers.ts";
 
 function transformVariableStatement(
     node: ts.VariableStatement,
     factory: ts.NodeFactory,
     context: ts.TransformationContext,
-    makeJayComponentName: string,
+    componentConstructorCalls: MakeJayComponentConstructorCalls[],
 ) {
-    let foundConstructors = findComponentConstructorCalls(makeJayComponentName, node);
-
-    let transformedConstructors = foundConstructors.map(({ name, render }) => {
+    let transformedConstructors = componentConstructorCalls.map(({ name, render }) => {
         return `${astToCode(name)} = makeJayComponentBridge(${astToCode(render)})`;
     });
 
@@ -66,13 +70,14 @@ function transformImport(
 
 interface ComponentBridgeTransformerConfig {
     importerMode: RuntimeMode;
+    patterns: string[]
 }
 
 const mkVisitor = (
     factory: ts.NodeFactory,
     context: ts.TransformationContext,
     importerMode: RuntimeMode,
-    makeJayComponentName: string,
+    componentConstructorCalls: MakeJayComponentConstructorCalls[],
 ) => {
     const visitor: ts.Visitor = (node) => {
         if (ts.isFunctionDeclaration(node)) return undefined;
@@ -80,7 +85,7 @@ const mkVisitor = (
         else if (ts.isImportDeclaration(node))
             return transformImport(node, factory, importerMode, context);
         else if (ts.isVariableStatement(node))
-            return transformVariableStatement(node, factory, context, makeJayComponentName);
+            return transformVariableStatement(node, factory, context, componentConstructorCalls);
         return ts.visitEachChild(node, visitor, context);
     };
     return visitor;
@@ -91,21 +96,40 @@ function mkSourceFileTransformer({
     sourceFile,
     context,
     importerMode,
+    patterns
 }: SourceFileTransformerContext & ComponentBridgeTransformerConfig) {
-    let makeJayComponentName = findMakeJayComponentImportTransformerBlock(
+
+    // find the event handlers
+    let makeJayComponent_ImportName = findMakeJayComponentImportTransformerBlock(
         MAKE_JAY_COMPONENT,
         sourceFile,
     );
 
+    let calls = findComponentConstructorCallsBlock(makeJayComponent_ImportName, sourceFile);
+    let constructorExpressions = calls.map(({ comp }) => comp);
+    let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sourceFile);
+    let foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
+        findEventHandlersBlock(constructorDefinition),
+    );
+
+    // compile patterns
+    // todo extract the pattern compilation to a prior stage
+    let compiledPatterns = compileFunctionSplitPatternsBlock(patterns);
+
+    let transformedEventHandlers = new TransformedEventHandlers(
+        transformEventHandlers(context, compiledPatterns.val, factory, foundEventHandlers),
+    );
+
     return ts.visitEachChild(
         sourceFile,
-        mkVisitor(factory, context, importerMode, makeJayComponentName),
+        mkVisitor(factory, context, importerMode, calls),
         context,
     );
 }
 
 export function componentBridgeTransformer(
     importerMode: RuntimeMode,
+    patterns: string[] = []
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
-    return mkTransformer(mkSourceFileTransformer, { importerMode });
+    return mkTransformer(mkSourceFileTransformer, { importerMode, patterns });
 }
