@@ -12,8 +12,8 @@ import {
     TransformedEventHandlers,
     transformEventHandlers,
 } from './building-blocks/transform-event-handlers';
-import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index.ts';
-import { codeToAst } from './ts-compiler-utils.ts';
+import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
+import { codeToAst } from './ts-compiler-utils';
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: CompiledPattern[];

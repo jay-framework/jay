@@ -3,7 +3,7 @@ import { JayRollupConfig } from '../common/types';
 import path from 'node:path';
 import { JayFile } from 'jay-compiler';
 import { CompiledPattern } from 'jay-compiler';
-import { compileFunctionSplitPatternsBlock } from '../../../compiler/lib/ts-file/building-blocks/compile-function-split-patterns.ts';
+import { compileFunctionSplitPatternsBlock } from '../../../compiler/lib/ts-file/building-blocks/compile-function-split-patterns';
 
 export class JayPluginContext {
     readonly projectRoot: string;

@@ -1,7 +1,7 @@
 import { transformCode } from './test-utils/ts-compiler-test-utils';
 import { componentBridgeTransformer, RuntimeMode } from '../lib';
 import { prettify } from '../lib';
-import { compileFunctionSplitPatternsBlock } from '../lib/ts-file/building-blocks/compile-function-split-patterns.ts';
+import { compileFunctionSplitPatternsBlock } from '../lib/ts-file/building-blocks/compile-function-split-patterns';
 
 describe('transform component bridge', () => {
     const input_value_pattern = compileFunctionSplitPatternsBlock([

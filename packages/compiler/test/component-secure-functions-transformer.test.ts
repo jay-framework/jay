@@ -1,7 +1,7 @@
 import { transformCode } from './test-utils/ts-compiler-test-utils';
 import { componentSecureFunctionsTransformer } from '../lib';
 import { prettify } from '../lib';
-import { compileFunctionSplitPatternsBlock } from '../lib/ts-file/building-blocks/compile-function-split-patterns.ts';
+import { compileFunctionSplitPatternsBlock } from '../lib/ts-file/building-blocks/compile-function-split-patterns';
 
 describe('transform event handlers with secure code split', () => {
     const input_value_pattern = compileFunctionSplitPatternsBlock([
@@ -36,7 +36,7 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
     refs.input
         .onchange$(handler$('0'))
-        .onchange(({event}) => setText(event.$0));
+        .then(({event}) => setText(event.$0));
 }
 export const Comp = makeJayComponent(render, CompComponent);`),
         );
@@ -68,10 +68,10 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
     refs.input
         .onchange$(handler$('0'))
-        .onchange(({event}) => setText(event.$0));
+        .then(({event}) => setText(event.$0));
     refs.input2
         .onchange$(handler$('1'))
-        .onchange(({event}) => setText(event.$0));
+        .then(({event}) => setText(event.$0));
 }
 export const Comp = makeJayComponent(render, CompComponent);`),
         );
@@ -109,10 +109,10 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     }
     refs.input
         .onchange$(handler$('0'))
-        .onchange(updateText);
+        .then(updateText);
     refs.input2
         .onchange$(handler$('0'))
-        .onchange(updateText);
+        .then(updateText);
 }
 export const Comp = makeJayComponent(render, CompComponent);`),
         );

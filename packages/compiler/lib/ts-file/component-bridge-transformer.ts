@@ -19,7 +19,7 @@ import {
     TransformedEventHandlers,
     transformEventHandlers,
 } from './building-blocks/transform-event-handlers';
-import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index.ts';
+import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
 
 function transformVariableStatement(
     node: ts.VariableStatement,

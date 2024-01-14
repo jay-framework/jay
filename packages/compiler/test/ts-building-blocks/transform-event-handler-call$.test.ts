@@ -24,7 +24,7 @@ describe('add event handler call$ to call chain', () => {
         let transformed = await transformCode(eventHandlerCall, [transformerState]);
 
         expect(transformed).toEqual(
-            await prettify(`refs.comp.onclick$(handler$('0')).onclick(({event}) => {})`),
+            await prettify(`refs.comp.onclick$(handler$('0')).then(({event}) => {})`),
         );
     });
 
@@ -34,7 +34,7 @@ describe('add event handler call$ to call chain', () => {
         let transformed = await transformCode(eventHandlerCall, [transformerState]);
 
         expect(transformed).toEqual(
-            await prettify(`refs.comp.onclick$(handler$('0')).onclick(someHandlerIdentifier)`),
+            await prettify(`refs.comp.onclick$(handler$('0')).then(someHandlerIdentifier)`),
         );
     });
 });
