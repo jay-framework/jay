@@ -16,12 +16,9 @@ export class JayPluginContext {
         this.projectRoot = path.dirname(jayOptions.tsConfigFilePath ?? process.cwd());
         this.outputDir = jayOptions.outputDir && path.join(this.projectRoot, jayOptions.outputDir);
         this.tsPrinter = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
-        console.log('**** JayPluginContext', jayOptions.compilerPatternFiles);
         let compilerPatternsParseResult = compileFunctionSplitPatternsBlock(
             jayOptions.compilerPatternFiles,
         );
-        console.log('**** JayPluginContext', compilerPatternsParseResult.validations);
-        console.log('**** JayPluginContext', compilerPatternsParseResult.val);
         if (compilerPatternsParseResult.validations.length > 0)
             throw new Error(
                 'failed to parse or validate compilerPatternFiles. \n' +
