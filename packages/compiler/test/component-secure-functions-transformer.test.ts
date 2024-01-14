@@ -1,5 +1,5 @@
-import {transformCode} from './test-utils/ts-compiler-test-utils';
-import {componentSecureFunctionsTransformer} from '../lib';
+import { transformCode } from './test-utils/ts-compiler-test-utils';
+import { componentSecureFunctionsTransformer } from '../lib';
 import { prettify } from '../lib';
 
 describe('transform event handlers with secure code split', () => {
@@ -20,7 +20,9 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 
 export const Comp = makeJayComponent(render, CompComponent);`;
 
-        const outputCode = await transformCode(code, [componentSecureFunctionsTransformer([input_value_pattern])])
+        const outputCode = await transformCode(code, [
+            componentSecureFunctionsTransformer([input_value_pattern]),
+        ]);
 
         expect(outputCode).toEqual(
             await prettify(`
@@ -49,7 +51,9 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 
 export const Comp = makeJayComponent(render, CompComponent);`;
 
-        const outputCode = await transformCode(code, [componentSecureFunctionsTransformer([input_value_pattern])])
+        const outputCode = await transformCode(code, [
+            componentSecureFunctionsTransformer([input_value_pattern]),
+        ]);
 
         expect(outputCode).toEqual(
             await prettify(`
@@ -84,7 +88,9 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 
 export const Comp = makeJayComponent(render, CompComponent);`;
 
-        const outputCode = await transformCode(code, [componentSecureFunctionsTransformer([input_value_pattern])])
+        const outputCode = await transformCode(code, [
+            componentSecureFunctionsTransformer([input_value_pattern]),
+        ]);
 
         expect(outputCode).toEqual(
             await prettify(`
@@ -118,7 +124,9 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 
 export const Comp = makeJayComponent(render, CompComponent);`;
 
-        const outputCode = await transformCode(code, [componentSecureFunctionsTransformer([input_value_pattern])])
+        const outputCode = await transformCode(code, [
+            componentSecureFunctionsTransformer([input_value_pattern]),
+        ]);
 
         expect(outputCode).toEqual(
             await prettify(`

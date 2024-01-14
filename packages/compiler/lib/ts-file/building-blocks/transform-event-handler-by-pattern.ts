@@ -4,7 +4,8 @@ import ts, {
     isBlock,
     isCallExpression,
     isExpressionStatement,
-    isPropertyAccessExpression, TransformationContext,
+    isPropertyAccessExpression,
+    TransformationContext,
 } from 'typescript';
 import {
     FlattenedAccessChain,
@@ -33,7 +34,7 @@ function findPatternInVariable(
             ),
     );
     let pattern = patternKey === -1 ? undefined : compiledPatterns[patternKey];
-    return {pattern, patternKey}
+    return { pattern, patternKey };
 }
 
 export interface TransformedEventHandlerByPattern {
@@ -42,14 +43,16 @@ export interface TransformedEventHandlerByPattern {
     wasEventHandlerTransformed: boolean;
 }
 
-function generateFunctionRepository(matchedReturnPatterns: MatchedPattern[], context: TransformationContext) {
+function generateFunctionRepository(
+    matchedReturnPatterns: MatchedPattern[],
+    context: TransformationContext,
+) {
     if (matchedReturnPatterns.length > 0) {
-        let returnedObjectProperties = matchedReturnPatterns.map(({pattern, patternKey}) =>
-            `$${patternKey}: ${pattern.accessChain.path.join('.')}`)
-        return `({ event }) => ({${returnedObjectProperties.join(',\n')}})`
-    }
-    else
-        return undefined;
+        let returnedObjectProperties = matchedReturnPatterns.map(
+            ({ pattern, patternKey }) => `$${patternKey}: ${pattern.accessChain.path.join('.')}`,
+        );
+        return `({ event }) => ({${returnedObjectProperties.join(',\n')}})`;
+    } else return undefined;
 }
 
 export const transformEventHandlerByPatternBlock = (
@@ -70,18 +73,16 @@ export const transformEventHandlerByPatternBlock = (
                 if (isPropertyAccessExpression(argument)) {
                     let resolvedParam = nameBindingResolver.resolvePropertyAccessChain(argument);
                     let flattenedResolvedParam = flattenVariable(resolvedParam);
-                    let {pattern, patternKey} = findPatternInVariable(
+                    let { pattern, patternKey } = findPatternInVariable(
                         flattenedResolvedParam,
                         paramIndex,
                         compiledPatterns,
                     );
                     if (pattern) {
-                        matchedReturnPatterns.push({pattern, patternKey});
+                        matchedReturnPatterns.push({ pattern, patternKey });
                         let replacementPattern = [
                             `event.$${patternKey}`,
-                            ...flattenedResolvedParam.path.splice(
-                                pattern.accessChain.path.length,
-                            ),
+                            ...flattenedResolvedParam.path.splice(pattern.accessChain.path.length),
                         ];
                         wasEventHandlerTransformed = true;
                         return (

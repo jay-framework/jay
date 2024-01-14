@@ -15,8 +15,8 @@ export interface TransformedEventHandler extends FoundEventHandler {
 }
 
 export interface FunctionRepositoryFragment {
-    handlerIndex: number,
-    fragment: string
+    handlerIndex: number;
+    fragment: string;
 }
 
 export class TransformedEventHandlers {
@@ -58,11 +58,10 @@ export class TransformedEventHandlers {
     }
 
     getAllFunctionRepositoryFragments(): FunctionRepositoryFragment[] {
-        return Array.from(this.eventHandlers.values()).map(transformEventHandlers =>
-            ({
-                fragment: transformEventHandlers[0].functionRepositoryFragment,
-                handlerIndex: transformEventHandlers[0].handlerIndex
-            }))
+        return Array.from(this.eventHandlers.values()).map((transformEventHandlers) => ({
+            fragment: transformEventHandlers[0].functionRepositoryFragment,
+            handlerIndex: transformEventHandlers[0].handlerIndex,
+        }));
     }
 }
 
@@ -94,8 +93,11 @@ export function transformEventHandlers(
                     .wasEventHandlerTransformed,
         )
         .map((foundEventHandler) => {
-            const { transformedEventHandler, wasEventHandlerTransformed, functionRepositoryFragment } =
-                handlerToTransformedHandlers.get(foundEventHandler.eventHandler);
+            const {
+                transformedEventHandler,
+                wasEventHandlerTransformed,
+                functionRepositoryFragment,
+            } = handlerToTransformedHandlers.get(foundEventHandler.eventHandler);
             const transformedEventHandlerCallStatement = transformEventHandlerCallStatement$Block(
                 context,
                 factory,

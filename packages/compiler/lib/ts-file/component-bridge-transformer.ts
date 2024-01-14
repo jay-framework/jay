@@ -1,4 +1,4 @@
-import ts, {isImportDeclaration, TransformationContext} from 'typescript';
+import ts, { isImportDeclaration, TransformationContext } from 'typescript';
 import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
 import { codeToAst, astToCode } from './ts-compiler-utils';
 import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
@@ -7,23 +7,27 @@ import {
     findMakeJayComponentImportTransformerBlock,
 } from './building-blocks/find-make-jay-component-import';
 import {
-    findComponentConstructorCallsBlock, MakeJayComponentConstructorCalls
+    findComponentConstructorCallsBlock,
+    MakeJayComponentConstructorCalls,
 } from './building-blocks/find-component-constructor-calls';
 import { getImportName } from './extract-imports';
 import { MAKE_JAY_COMPONENT } from '../core/constants';
-import {findComponentConstructorsBlock} from "./building-blocks/find-component-constructors.ts";
-import {findEventHandlersBlock} from "./building-blocks/find-event-handler-functions.ts";
-import {compileFunctionSplitPatternsBlock} from "./building-blocks/compile-function-split-patterns.ts";
-import {TransformedEventHandlers, transformEventHandlers} from "./building-blocks/transform-event-handlers.ts";
+import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors.ts';
+import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions.ts';
+import { compileFunctionSplitPatternsBlock } from './building-blocks/compile-function-split-patterns.ts';
+import {
+    TransformedEventHandlers,
+    transformEventHandlers,
+} from './building-blocks/transform-event-handlers.ts';
 
 function transformVariableStatement(
     node: ts.VariableStatement,
     factory: ts.NodeFactory,
     context: ts.TransformationContext,
     componentConstructorCalls: MakeJayComponentConstructorCalls[],
-    hasFunctionRepository: boolean
+    hasFunctionRepository: boolean,
 ): ts.Statement {
-    let optionsParam = hasFunctionRepository? ', { funcRepository }': '';
+    let optionsParam = hasFunctionRepository ? ', { funcRepository }' : '';
     let transformedConstructors = componentConstructorCalls.map(({ name, render }) => {
         return `${astToCode(name)} = makeJayComponentBridge(${astToCode(render)}${optionsParam})`;
     });
@@ -53,7 +57,10 @@ function transformImport(
 ): ts.Statement {
     if (ts.isStringLiteral(node.moduleSpecifier)) {
         if (findMakeJayComponentImport(MAKE_JAY_COMPONENT, node))
-            return codeToAst(`import { makeJayComponentBridge } from 'jay-secure';`, context)[0] as ts.Statement;
+            return codeToAst(
+                `import { makeJayComponentBridge } from 'jay-secure';`,
+                context,
+            )[0] as ts.Statement;
         const renderImportSpecifier = getRenderImportSpecifier(node);
         if (Boolean(renderImportSpecifier)) {
             const importModule = `${node.moduleSpecifier.text}${getModeFileExtension(
@@ -72,26 +79,30 @@ function transformImport(
 
 interface ComponentBridgeTransformerConfig {
     importerMode: RuntimeMode;
-    patterns: string[]
+    patterns: string[];
 }
 
-function generateFunctionRepository(transformedEventHandlers: TransformedEventHandlers, context: TransformationContext):
-    {hasFunctionRepository: boolean, functionRepository?: ts.Statement} {
+function generateFunctionRepository(
+    transformedEventHandlers: TransformedEventHandlers,
+    context: TransformationContext,
+): { hasFunctionRepository: boolean; functionRepository?: ts.Statement } {
     let functionRepositoryFragments = transformedEventHandlers.getAllFunctionRepositoryFragments();
     if (functionRepositoryFragments.length > 0) {
-        let fragments = functionRepositoryFragments.map(_ => `'${_.handlerIndex}': ${_.fragment}`).join(',\n')
-        let functionRepository = `const funcRepository: FunctionsRepository = {\n${fragments}\n};`
-        return {functionRepository: codeToAst(functionRepository, context)[0] as ts.Statement, hasFunctionRepository: true}
-    }
-    else
-        return {hasFunctionRepository: false};
+        let fragments = functionRepositoryFragments
+            .map((_) => `'${_.handlerIndex}': ${_.fragment}`)
+            .join(',\n');
+        let functionRepository = `const funcRepository: FunctionsRepository = {\n${fragments}\n};`;
+        return {
+            functionRepository: codeToAst(functionRepository, context)[0] as ts.Statement,
+            hasFunctionRepository: true,
+        };
+    } else return { hasFunctionRepository: false };
 }
 
 function findAfterImportStatementIndex(statements: ts.Node[]) {
     let lastIndex = 0;
     // noinspection LoopStatementThatDoesntLoopJS
-    while(isImportDeclaration(statements[lastIndex++]))
-    return lastIndex+1;
+    while (isImportDeclaration(statements[lastIndex++])) return lastIndex + 1;
 }
 
 function transformSourceFile(
@@ -100,21 +111,30 @@ function transformSourceFile(
     context: ts.TransformationContext,
     importerMode: RuntimeMode,
     componentConstructorCalls: MakeJayComponentConstructorCalls[],
-    transformedEventHandlers: TransformedEventHandlers
+    transformedEventHandlers: TransformedEventHandlers,
 ) {
-    let {functionRepository, hasFunctionRepository} = generateFunctionRepository(transformedEventHandlers, context);
+    let { functionRepository, hasFunctionRepository } = generateFunctionRepository(
+        transformedEventHandlers,
+        context,
+    );
 
-    let transformedStatements = sourceFile.statements.map(statement => {
-        if (ts.isFunctionDeclaration(statement)) return undefined;
-        else if (ts.isInterfaceDeclaration(statement)) return statement;
-        else if (ts.isImportDeclaration(statement))
-            return transformImport(statement, factory, importerMode, context);
-        else if (ts.isVariableStatement(statement))
-            return transformVariableStatement(statement, factory, context, componentConstructorCalls, hasFunctionRepository);
-        else
-            return undefined;
-    })
-        .filter(_ => !!_)
+    let transformedStatements = sourceFile.statements
+        .map((statement) => {
+            if (ts.isFunctionDeclaration(statement)) return undefined;
+            else if (ts.isInterfaceDeclaration(statement)) return statement;
+            else if (ts.isImportDeclaration(statement))
+                return transformImport(statement, factory, importerMode, context);
+            else if (ts.isVariableStatement(statement))
+                return transformVariableStatement(
+                    statement,
+                    factory,
+                    context,
+                    componentConstructorCalls,
+                    hasFunctionRepository,
+                );
+            else return undefined;
+        })
+        .filter((_) => !!_);
 
     if (hasFunctionRepository) {
         let afterImportStatementIndex = findAfterImportStatementIndex(transformedStatements);
@@ -123,12 +143,10 @@ function transformSourceFile(
             ...transformedStatements.slice(0, afterImportStatementIndex),
             functionRepository,
             ...transformedStatements.slice(afterImportStatementIndex),
-        ]
+        ];
 
-        return factory.updateSourceFile(sourceFile, allStatements)
-    }
-    else
-        return factory.updateSourceFile(sourceFile, transformedStatements)
+        return factory.updateSourceFile(sourceFile, allStatements);
+    } else return factory.updateSourceFile(sourceFile, transformedStatements);
 }
 
 function mkSourceFileTransformer({
@@ -136,9 +154,8 @@ function mkSourceFileTransformer({
     sourceFile,
     context,
     importerMode,
-    patterns
+    patterns,
 }: SourceFileTransformerContext & ComponentBridgeTransformerConfig) {
-
     // find the event handlers
     let makeJayComponent_ImportName = findMakeJayComponentImportTransformerBlock(
         MAKE_JAY_COMPONENT,
@@ -160,12 +177,19 @@ function mkSourceFileTransformer({
         transformEventHandlers(context, compiledPatterns.val, factory, foundEventHandlers),
     );
 
-    return transformSourceFile(sourceFile, factory, context, importerMode, calls,  transformedEventHandlers)
+    return transformSourceFile(
+        sourceFile,
+        factory,
+        context,
+        importerMode,
+        calls,
+        transformedEventHandlers,
+    );
 }
 
 export function componentBridgeTransformer(
     importerMode: RuntimeMode,
-    patterns: string[] = []
+    patterns: string[] = [],
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
     return mkTransformer(mkSourceFileTransformer, { importerMode, patterns });
 }

@@ -49,7 +49,8 @@ describe('split event handler by pattern', () => {
             expect(transformed).toEqual(await prettify(`({event}) => setText(event.$0)`));
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await prettify(splitEventHandlers[0].functionRepositoryFragment)).toEqual(
-                await prettify(`({ event }) => ({$0: event.target.value})`));
+                await prettify(`({ event }) => ({$0: event.target.value})`),
+            );
         });
 
         it('should replace function call parameter for function event handler and mark eventHandlerMatchedPatterns', async () => {
@@ -62,7 +63,8 @@ describe('split event handler by pattern', () => {
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await prettify(splitEventHandlers[0].functionRepositoryFragment)).toEqual(
-                await prettify(`({ event }) => ({$0: event.target.value})`));
+                await prettify(`({ event }) => ({$0: event.target.value})`),
+            );
         });
 
         it('should not transform and not mark eventHandlerMatchedPatterns if no pattern is matched 1', async () => {
