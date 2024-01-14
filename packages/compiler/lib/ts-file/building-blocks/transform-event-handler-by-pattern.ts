@@ -30,73 +30,63 @@ function findPatternInVariable(
 }
 
 export interface TransformedEventHandlerByPattern {
-    transformedEventHandler: ts.Node,
-    wasEventHandlerTransformed: boolean
+    transformedEventHandler: ts.Node;
+    wasEventHandlerTransformed: boolean;
 }
 
-export const transformEventHandlerByPatternBlock =
-    (
-        context: ts.TransformationContext,
-        compiledPatterns: CompiledPattern[],
-        factory: ts.NodeFactory,
-        eventHandler: ts.FunctionLikeDeclarationBase
-    ): TransformedEventHandlerByPattern => {
-        let nameBindingResolver = new NameBindingResolver();
-        nameBindingResolver.addFunctionParams(eventHandler);
+export const transformEventHandlerByPatternBlock = (
+    context: ts.TransformationContext,
+    compiledPatterns: CompiledPattern[],
+    factory: ts.NodeFactory,
+    eventHandler: ts.FunctionLikeDeclarationBase,
+): TransformedEventHandlerByPattern => {
+    let nameBindingResolver = new NameBindingResolver();
+    nameBindingResolver.addFunctionParams(eventHandler);
 
-        let wasEventHandlerTransformed = false;
+    let wasEventHandlerTransformed = false;
 
-        const transformEventHandlerStatement =
-            (node) => {
-                if (isCallExpression(node)) {
-                    let newArguments: Expression[] = node.arguments.map((argument, paramIndex) => {
-                        if (isPropertyAccessExpression(argument)) {
-                            let resolvedParam = nameBindingResolver.resolvePropertyAccessChain(argument);
-                            let flattenedResolvedParam = flattenVariable(resolvedParam);
-                            let patternMatch = findPatternInVariable(
-                                flattenedResolvedParam,
-                                paramIndex,
-                                compiledPatterns,
-                            );
-                            if (patternMatch) {
-                                let replacementPattern = [
-                                    'event.$1',
-                                    ...flattenedResolvedParam.path.splice(
-                                        patternMatch.accessChain.path.length,
-                                    ),
-                                ];
-                                wasEventHandlerTransformed = true;
-                                return (
-                                    codeToAst(
-                                        replacementPattern.join('.'),
-                                        context,
-                                    )[0] as ExpressionStatement
-                                ).expression;
-                            }
-                        }
-                        return argument;
-                    });
-                    return factory.createCallExpression(node.expression, undefined, newArguments);
-                } else if (isBlock(node)) {
-                    return ts.visitEachChild(
-                        node,
-                        transformEventHandlerStatement,
-                        context,
+    const transformEventHandlerStatement = (node) => {
+        if (isCallExpression(node)) {
+            let newArguments: Expression[] = node.arguments.map((argument, paramIndex) => {
+                if (isPropertyAccessExpression(argument)) {
+                    let resolvedParam = nameBindingResolver.resolvePropertyAccessChain(argument);
+                    let flattenedResolvedParam = flattenVariable(resolvedParam);
+                    let patternMatch = findPatternInVariable(
+                        flattenedResolvedParam,
+                        paramIndex,
+                        compiledPatterns,
                     );
-                } else if (isExpressionStatement(node)) {
-                    return ts.visitEachChild(
-                        node,
-                        transformEventHandlerStatement,
-                        context,
-                    );
+                    if (patternMatch) {
+                        let replacementPattern = [
+                            'event.$1',
+                            ...flattenedResolvedParam.path.splice(
+                                patternMatch.accessChain.path.length,
+                            ),
+                        ];
+                        wasEventHandlerTransformed = true;
+                        return (
+                            codeToAst(
+                                replacementPattern.join('.'),
+                                context,
+                            )[0] as ExpressionStatement
+                        ).expression;
+                    }
                 }
-                return node;
-            };
-
-        const transformedEventHandler = ts.visitEachChild(
-            eventHandler,
-            transformEventHandlerStatement,
-            context,
-        );
-        return {transformedEventHandler, wasEventHandlerTransformed}
+                return argument;
+            });
+            return factory.createCallExpression(node.expression, undefined, newArguments);
+        } else if (isBlock(node)) {
+            return ts.visitEachChild(node, transformEventHandlerStatement, context);
+        } else if (isExpressionStatement(node)) {
+            return ts.visitEachChild(node, transformEventHandlerStatement, context);
+        }
+        return node;
     };
+
+    const transformedEventHandler = ts.visitEachChild(
+        eventHandler,
+        transformEventHandlerStatement,
+        context,
+    );
+    return { transformedEventHandler, wasEventHandlerTransformed };
+};

@@ -37,10 +37,10 @@ const transformEventHandlerCall$ =
 
 export const transformEventHandlerCallStatement$Block =
     (context: TransformationContext, factory: NodeFactory, foundEventHandler: FoundEventHandler) =>
-        (node: ExpressionStatement) => {
-            return ts.visitEachChild(
-                node,
-                transformEventHandlerCall$(context, factory, foundEventHandler),
-                context,
-            )
-        }
+    (node: ExpressionStatement) => {
+        return ts.visitEachChild(
+            node,
+            transformEventHandlerCall$(context, factory, foundEventHandler),
+            context,
+        );
+    };

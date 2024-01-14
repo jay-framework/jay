@@ -2,9 +2,7 @@ import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import ts from 'typescript';
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import { prettify } from '../../lib';
-import {
-    transformEventHandlerCallStatement$Block
-} from '../../lib/ts-file/building-blocks/transform-event-handler-call$';
+import { transformEventHandlerCallStatement$Block } from '../../lib/ts-file/building-blocks/transform-event-handler-call$';
 import { FoundEventHandler } from '../../lib/ts-file/building-blocks/find-event-handler-functions';
 
 describe('add event handler call$ to call chain', () => {

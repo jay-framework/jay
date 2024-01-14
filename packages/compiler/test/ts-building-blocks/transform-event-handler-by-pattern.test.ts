@@ -5,10 +5,10 @@ import {
 import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import {
     TransformedEventHandlerByPattern,
-    transformEventHandlerByPatternBlock
+    transformEventHandlerByPatternBlock,
 } from '../../lib/ts-file/building-blocks/transform-event-handler-by-pattern';
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
-import ts, {isArrowFunction, isFunctionDeclaration} from 'typescript';
+import ts, { isArrowFunction, isFunctionDeclaration } from 'typescript';
 import { prettify } from '../../lib';
 
 const PATTERN_EVENT_TARGET_VALUE = `
@@ -28,9 +28,9 @@ describe('split event handler by pattern', () => {
                         context,
                         compiledPatterns,
                         factory,
-                        node
+                        node,
                     );
-                    splitEventHandlers.push(splitEventHandler)
+                    splitEventHandlers.push(splitEventHandler);
                     return splitEventHandler.transformedEventHandler;
                 }
                 return ts.visitEachChild(node, visitor, context);
