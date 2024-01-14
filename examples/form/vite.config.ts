@@ -3,11 +3,15 @@ import Inspect from 'vite-plugin-inspect';
 import { defineConfig } from 'vitest/config';
 import { JayRollupConfig, jayRuntime } from 'vite-plugin-jay';
 import { rimrafSync } from 'rimraf';
+import * as fs from "fs";
 
 const root = resolve(__dirname);
+const compilerPatternFiles = ['./patterns/events.ts'].map(filename => fs.readFileSync(filename, {encoding: 'utf8'}));
+
 const jayOptions: JayRollupConfig = {
     tsConfigFilePath: resolve(root, 'tsconfig.json'),
     outputDir: 'build/jay-runtime',
+    compilerPatternFiles
 };
 
 export default defineConfig(({ mode }) => {
