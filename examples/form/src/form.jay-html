@@ -1,0 +1,16 @@
+<html>
+  <head>
+    <script type="application/yaml-jay">
+      data:
+        firstName: string
+        lastName: string
+    </script>
+  </head>
+  <body>
+    <div>
+      <input ref="firstName" value={firstName}>
+      <input ref="lastName" value={lastName}>
+      <button ref="submit">send</button>
+    </div>
+  </body>
+</html>
