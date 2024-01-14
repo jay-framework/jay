@@ -67,12 +67,12 @@ function generateCodeFromTsFile(
             return code;
         case RuntimeMode.MainSandbox: {
             if (!code.includes('makeJayComponent')) return code;
-            return transformTsCode(jayContext, [componentBridgeTransformer(mode)], id, code);
+            return transformTsCode(jayContext, [componentBridgeTransformer(mode, jayContext.compilerPatterns)], id, code);
         }
         case RuntimeMode.WorkerTrusted:
             return generateImportsFileFromJayFile(jayFile);
         case RuntimeMode.WorkerSandbox:
-            return transformTsCode(jayContext, [componentSecureFunctionsTransformer()], id, code);
+            return transformTsCode(jayContext, [componentSecureFunctionsTransformer(jayContext.compilerPatterns)], id, code);
     }
 }
 
