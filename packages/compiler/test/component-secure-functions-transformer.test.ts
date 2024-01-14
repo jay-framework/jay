@@ -1,13 +1,15 @@
 import { transformCode } from './test-utils/ts-compiler-test-utils';
 import { componentSecureFunctionsTransformer } from '../lib';
 import { prettify } from '../lib';
-import {compileFunctionSplitPatternsBlock} from "../lib/ts-file/building-blocks/compile-function-split-patterns.ts";
+import { compileFunctionSplitPatternsBlock } from '../lib/ts-file/building-blocks/compile-function-split-patterns.ts';
 
 describe('transform event handlers with secure code split', () => {
-    const input_value_pattern = compileFunctionSplitPatternsBlock([`
+    const input_value_pattern = compileFunctionSplitPatternsBlock([
+        `
 function inputValuePattern({event}: JayEvent<any, any>) {
     return event.target.value;
-}`]).val;
+}`,
+    ]).val;
 
     it('replace event.target.value for a single event handler', async () => {
         const code = `
@@ -39,8 +41,6 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 export const Comp = makeJayComponent(render, CompComponent);`),
         );
     });
-
-
 
     it('replace event.target.value for two event handlers', async () => {
         const code = `
@@ -76,8 +76,6 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 export const Comp = makeJayComponent(render, CompComponent);`),
         );
     });
-
-
 
     it('replace event.target.value for two event handler reusing the handler', async () => {
         const code = `
@@ -119,8 +117,6 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 export const Comp = makeJayComponent(render, CompComponent);`),
         );
     });
-
-
 
     it('should not transform an event handler that does not match any pattern', async () => {
         const code = `

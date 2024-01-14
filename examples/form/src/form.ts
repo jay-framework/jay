@@ -9,11 +9,11 @@ function FormConstructor({ initialValue }: Props<CounterProps>, refs: FormElemen
     let [firstName, setFirstName] = createState('');
     let [lastName, setLastName] = createState('');
 
-    refs.firstName.oninput(({event}) => setFirstName(event.target.value))
-    refs.lastName.oninput(({event}) => setLastName(event.target.value))
+    refs.firstName.oninput(({ event }) => setFirstName(event.target.value));
+    refs.lastName.oninput(({ event }) => setLastName(event.target.value));
     refs.submit.onclick(() => {
         console.log(firstName(), lastName());
-    })
+    });
 
     return {
         render: () => ({ firstName, lastName }),

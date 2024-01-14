@@ -12,8 +12,8 @@ import {
     TransformedEventHandlers,
     transformEventHandlers,
 } from './building-blocks/transform-event-handlers';
-import {findAfterImportStatementIndex} from "./building-blocks/find-after-import-statement-index.ts";
-import {codeToAst} from "./ts-compiler-utils.ts";
+import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index.ts';
+import { codeToAst } from './ts-compiler-utils.ts';
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: CompiledPattern[];
@@ -70,8 +70,7 @@ function mkComponentSecureFunctionsTransformer(
             ...statements.slice(afterImportStatementIndex),
         ];
         return factory.updateSourceFile(sourceFile, allStatements);
-    }
-    else return transformedSourceFile;
+    } else return transformedSourceFile;
 }
 
 export function componentSecureFunctionsTransformer(

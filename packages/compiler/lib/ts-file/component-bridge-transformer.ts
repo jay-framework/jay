@@ -1,7 +1,7 @@
-import ts, {TransformationContext} from 'typescript';
-import {getModeFileExtension, RuntimeMode} from '../core/runtime-mode';
-import {astToCode, codeToAst} from './ts-compiler-utils';
-import {mkTransformer, SourceFileTransformerContext} from './mk-transformer';
+import ts, { TransformationContext } from 'typescript';
+import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
+import { astToCode, codeToAst } from './ts-compiler-utils';
+import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
 import {
     findMakeJayComponentImport,
     findMakeJayComponentImportTransformerBlock,
@@ -10,13 +10,16 @@ import {
     findComponentConstructorCallsBlock,
     MakeJayComponentConstructorCalls,
 } from './building-blocks/find-component-constructor-calls';
-import {getImportName} from './extract-imports';
-import {MAKE_JAY_COMPONENT} from '../core/constants';
-import {findComponentConstructorsBlock} from './building-blocks/find-component-constructors.ts';
-import {findEventHandlersBlock} from './building-blocks/find-event-handler-functions.ts';
-import {CompiledPattern} from './building-blocks/compile-function-split-patterns.ts';
-import {TransformedEventHandlers, transformEventHandlers,} from './building-blocks/transform-event-handlers.ts';
-import {findAfterImportStatementIndex} from "./building-blocks/find-after-import-statement-index.ts";
+import { getImportName } from './extract-imports';
+import { MAKE_JAY_COMPONENT } from '../core/constants';
+import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
+import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
+import { CompiledPattern } from './building-blocks/compile-function-split-patterns';
+import {
+    TransformedEventHandlers,
+    transformEventHandlers,
+} from './building-blocks/transform-event-handlers';
+import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index.ts';
 
 function transformVariableStatement(
     node: ts.VariableStatement,
