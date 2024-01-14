@@ -82,7 +82,7 @@ export const transformEventHandlerByPatternBlock = (
                         matchedReturnPatterns.push({ pattern, patternKey });
                         let replacementPattern = [
                             `event.$${patternKey}`,
-                            ...flattenedResolvedParam.path.splice(pattern.accessChain.path.length),
+                            ...flattenedResolvedParam.path.splice(pattern.accessChain.path.length+1),
                         ];
                         wasEventHandlerTransformed = true;
                         return (

@@ -12,8 +12,8 @@ import ts, { isArrowFunction, isFunctionDeclaration } from 'typescript';
 import { prettify } from '../../lib';
 
 const PATTERN_EVENT_TARGET_VALUE = `
-function inputValuePattern(handler: JayEventHandler<any, any, any>) {
-    return handler.event.target.value;
+function inputValuePattern({event}: JayEvent<any, any>) {
+    return event.target.value;
 }`;
 
 describe('split event handler by pattern', () => {

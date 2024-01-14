@@ -63,6 +63,10 @@ export class TransformedEventHandlers {
             handlerIndex: transformEventHandlers[0].handlerIndex,
         }));
     }
+
+    includesTransformedEventHandlers() {
+        return this.transformedEventHandlers.length > 0;
+    }
 }
 
 export function transformEventHandlers(

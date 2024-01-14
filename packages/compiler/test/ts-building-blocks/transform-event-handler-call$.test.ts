@@ -26,7 +26,6 @@ describe('add event handler call$ to call chain', () => {
         expect(transformed).toEqual(
             await prettify(`refs.comp.onclick$(handler$('0')).onclick(({event}) => {})`),
         );
-        console.log(transformed);
     });
 
     it('should support regular event handler', async () => {
@@ -37,6 +36,5 @@ describe('add event handler call$ to call chain', () => {
         expect(transformed).toEqual(
             await prettify(`refs.comp.onclick$(handler$('0')).onclick(someHandlerIdentifier)`),
         );
-        console.log(transformed);
     });
 });

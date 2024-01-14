@@ -14,3 +14,5 @@ export * from './core/runtime-mode';
 export * from './core/constants';
 export * from './core/errors';
 export * from './utils/errors';
+export type {CompiledPattern} from './ts-file/building-blocks/compile-function-split-patterns'
+export {findAfterImportStatementIndex} from "./ts-file/building-blocks/find-after-import-statement-index.ts";

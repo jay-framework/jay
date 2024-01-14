@@ -9,7 +9,6 @@ import {
     FlattenedAccessChain,
     flattenVariable,
     NameBindingResolver,
-    Variable,
 } from './name-binding-resolver';
 import { mkTransformer } from '../mk-transformer';
 import { JayValidations, WithValidations } from '../../core/with-validations';
@@ -27,7 +26,7 @@ export interface CompiledPattern {
 }
 
 export function compileFunctionSplitPatternsBlock(
-    patterns: string[],
+    patterns: string[] = [],
 ): WithValidations<CompiledPattern[]> {
     const validations: JayValidations = [];
     const compiledPatterns: CompiledPattern[] = [];
@@ -104,6 +103,5 @@ export function compileFunctionSplitPatternsBlock(
         // find functions
         // validate only usage of function parameters, single statement functions, no conditions.
     });
-
     return new WithValidations(compiledPatterns, validations);
 }

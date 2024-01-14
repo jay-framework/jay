@@ -1,12 +1,13 @@
 import { transformCode } from './test-utils/ts-compiler-test-utils';
 import { componentBridgeTransformer, RuntimeMode } from '../lib';
 import { prettify } from '../lib';
+import {compileFunctionSplitPatternsBlock} from "../lib/ts-file/building-blocks/compile-function-split-patterns.ts";
 
 describe('transform component bridge', () => {
-    const input_value_pattern = `
-function inputValuePattern(handler: JayEventHandler<any, any, any>) {
-    return handler.event.target.value;
-}`;
+    const input_value_pattern = compileFunctionSplitPatternsBlock([`
+function inputValuePattern({event}: JayEvent<any, any>) {
+    return event.target.value;
+}`]).val;
 
     // describe('generate component bridge', () => {
     //
@@ -26,7 +27,7 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 export const Comp = makeJayComponent(render, CompComponent);`;
 
             const outputCode = await transformCode(code, [
-                componentBridgeTransformer(RuntimeMode.MainSandbox, [input_value_pattern]),
+                componentBridgeTransformer(RuntimeMode.MainSandbox, input_value_pattern),
             ]);
 
             expect(outputCode).toEqual(
@@ -55,7 +56,7 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 export const Comp = makeJayComponent(render, CompComponent);`;
 
             const outputCode = await transformCode(code, [
-                componentBridgeTransformer(RuntimeMode.MainSandbox, [input_value_pattern]),
+                componentBridgeTransformer(RuntimeMode.MainSandbox, input_value_pattern),
             ]);
 
             expect(outputCode).toEqual(
@@ -88,7 +89,7 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 export const Comp = makeJayComponent(render, CompComponent);`;
 
             const outputCode = await transformCode(code, [
-                componentBridgeTransformer(RuntimeMode.MainSandbox, [input_value_pattern]),
+                componentBridgeTransformer(RuntimeMode.MainSandbox, input_value_pattern),
             ]);
 
             expect(outputCode).toEqual(
@@ -115,7 +116,7 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 export const Comp = makeJayComponent(render, CompComponent);`;
 
             const outputCode = await transformCode(code, [
-                componentBridgeTransformer(RuntimeMode.MainSandbox, [input_value_pattern]),
+                componentBridgeTransformer(RuntimeMode.MainSandbox, input_value_pattern),
             ]);
 
             expect(outputCode).toEqual(

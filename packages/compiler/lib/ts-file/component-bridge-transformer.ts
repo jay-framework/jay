@@ -1,7 +1,7 @@
-import ts, { isImportDeclaration, TransformationContext } from 'typescript';
-import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
-import { codeToAst, astToCode } from './ts-compiler-utils';
-import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
+import ts, {TransformationContext} from 'typescript';
+import {getModeFileExtension, RuntimeMode} from '../core/runtime-mode';
+import {astToCode, codeToAst} from './ts-compiler-utils';
+import {mkTransformer, SourceFileTransformerContext} from './mk-transformer';
 import {
     findMakeJayComponentImport,
     findMakeJayComponentImportTransformerBlock,
@@ -10,15 +10,13 @@ import {
     findComponentConstructorCallsBlock,
     MakeJayComponentConstructorCalls,
 } from './building-blocks/find-component-constructor-calls';
-import { getImportName } from './extract-imports';
-import { MAKE_JAY_COMPONENT } from '../core/constants';
-import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors.ts';
-import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions.ts';
-import { compileFunctionSplitPatternsBlock } from './building-blocks/compile-function-split-patterns.ts';
-import {
-    TransformedEventHandlers,
-    transformEventHandlers,
-} from './building-blocks/transform-event-handlers.ts';
+import {getImportName} from './extract-imports';
+import {MAKE_JAY_COMPONENT} from '../core/constants';
+import {findComponentConstructorsBlock} from './building-blocks/find-component-constructors.ts';
+import {findEventHandlersBlock} from './building-blocks/find-event-handler-functions.ts';
+import {CompiledPattern} from './building-blocks/compile-function-split-patterns.ts';
+import {TransformedEventHandlers, transformEventHandlers,} from './building-blocks/transform-event-handlers.ts';
+import {findAfterImportStatementIndex} from "./building-blocks/find-after-import-statement-index.ts";
 
 function transformVariableStatement(
     node: ts.VariableStatement,
@@ -79,7 +77,7 @@ function transformImport(
 
 interface ComponentBridgeTransformerConfig {
     importerMode: RuntimeMode;
-    patterns: string[];
+    patterns: CompiledPattern[];
 }
 
 function generateFunctionRepository(
@@ -97,12 +95,6 @@ function generateFunctionRepository(
             hasFunctionRepository: true,
         };
     } else return { hasFunctionRepository: false };
-}
-
-function findAfterImportStatementIndex(statements: ts.Node[]) {
-    let lastIndex = 0;
-    // noinspection LoopStatementThatDoesntLoopJS
-    while (isImportDeclaration(statements[lastIndex++])) return lastIndex + 1;
 }
 
 function transformSourceFile(
@@ -169,12 +161,8 @@ function mkSourceFileTransformer({
         findEventHandlersBlock(constructorDefinition),
     );
 
-    // compile patterns
-    // todo extract the pattern compilation to a prior stage
-    let compiledPatterns = compileFunctionSplitPatternsBlock(patterns);
-
     let transformedEventHandlers = new TransformedEventHandlers(
-        transformEventHandlers(context, compiledPatterns.val, factory, foundEventHandlers),
+        transformEventHandlers(context, patterns, factory, foundEventHandlers),
     );
 
     return transformSourceFile(
@@ -189,7 +177,7 @@ function mkSourceFileTransformer({
 
 export function componentBridgeTransformer(
     importerMode: RuntimeMode,
-    patterns: string[] = [],
+    patterns: CompiledPattern[] = [],
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
     return mkTransformer(mkSourceFileTransformer, { importerMode, patterns });
 }
