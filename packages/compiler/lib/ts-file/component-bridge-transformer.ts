@@ -6,10 +6,6 @@ import {
     findMakeJayComponentImport,
     findMakeJayComponentImportTransformerBlock,
 } from './building-blocks/find-make-jay-component-import';
-import {
-    findComponentConstructorCallsBlock,
-    MakeJayComponentConstructorCalls,
-} from './building-blocks/find-component-constructor-calls';
 import { getImportName } from './extract-imports';
 import { MAKE_JAY_COMPONENT } from '../core/constants';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
@@ -20,6 +16,10 @@ import {
     transformEventHandlers,
 } from './building-blocks/transform-event-handlers';
 import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
+import {
+    findMakeJayComponentConstructorCallsBlock,
+    MakeJayComponentConstructorCalls,
+} from './building-blocks/find-make-jay-component-constructor-calls';
 
 function transformVariableStatement(
     node: ts.VariableStatement,
@@ -157,7 +157,7 @@ function mkSourceFileTransformer({
         sourceFile,
     );
 
-    let calls = findComponentConstructorCallsBlock(makeJayComponent_ImportName, sourceFile);
+    let calls = findMakeJayComponentConstructorCallsBlock(makeJayComponent_ImportName, sourceFile);
     let constructorExpressions = calls.map(({ comp }) => comp);
     let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sourceFile);
     let foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
