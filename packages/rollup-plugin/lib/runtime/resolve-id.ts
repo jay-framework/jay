@@ -1,4 +1,4 @@
-import { CustomPluginOptions, PluginContext, ResolveIdResult } from 'rollup';
+import { CustomPluginOptions, PluginContext, ResolveIdResult, ResolvedId } from 'rollup';
 import { watchChangesFor } from './watch';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
 import { appendJayMetadata, JayFormat, jayMetadataFromModuleMetadata } from './metadata';
@@ -54,7 +54,7 @@ export async function resolveJayModeFile(
     const resolvedJayMeta = jayMetadataFromModuleMetadata(resolved.id, resolved.meta);
     const format = resolvedJayMeta.format || JayFormat.TypeScript;
     const originId = resolvedJayMeta.originId || resolved.id;
-    const id = getResolvedId(resolved, mode);
+    const id = getResolvedId(resolved, mode, originId);
     console.info(`[resolveId] resolved ${id} as ${format}`);
     return { id, meta: appendJayMetadata(context, id, { format, originId }, resolvedJayMeta) };
 }
@@ -85,10 +85,8 @@ export async function removeSandboxPrefixForWorkerRoot(
     };
 }
 
-function getResolvedId(resolved, mode: string) {
-    const resolvedParts = resolved.id.split('.');
-    const base = resolvedParts.slice(0, -1).join('.');
-    const extension = resolvedParts.slice(-1)[0];
-    const id = `${base}?${mode}.${extension}`;
+function getResolvedId(resolved: ResolvedId, mode: string, originId: string): string {
+    const extension = resolved.id.split('.').pop();
+    const id = `${originId}?${mode}.${extension}`;
     return id;
 }

@@ -15,6 +15,7 @@ import { readTestFile } from '../../test-utils/file-utils';
 import { JayFormat, JayMetadata } from '../../../lib/runtime/metadata';
 import { transformJayFile } from '../../../lib/runtime/transform';
 import { getJayFileStructure } from '../../../lib/runtime/get-jay-file-structure';
+import { removeComments } from '../../../../compiler/lib/utils/prettify';
 
 describe('transformJayFile', () => {
     const jayContext = new JayPluginContext();
@@ -43,7 +44,9 @@ describe('transformJayFile', () => {
     it('returns generated code', async () => {
         const context = getContext({ jay });
         const result = await transformJayFile(jayContext, context, code, id);
-        expect(await prettified(result)).toEqual(readGeneratedFile(filePath, id, 'main'));
+        expect(await prettified(result)).toEqual(
+            removeComments(readGeneratedFile(filePath, id, 'main')),
+        );
         expect(jayContext.getCachedJayFile(filePath)).toMatchObject({
             baseElementName: 'App',
             types: new JayObjectType('AppViewState', {
@@ -126,7 +129,9 @@ describe('transformJayFile', () => {
             jayContext.cacheJayFile(jay.originId, jayFile);
             const result = await transformJayFile(jayContext, context, 'ignored', id);
 
-            expect(await prettified(result)).toEqual(readGeneratedFile(filePath, id, 'main'));
+            expect(await prettified(result)).toEqual(
+                removeComments(readGeneratedFile(filePath, id, 'main')),
+            );
         });
     });
 

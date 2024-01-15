@@ -2,6 +2,7 @@ import { promises, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { prettify } from 'jay-compiler';
 import { rimraf } from 'rimraf';
+import { removeComments } from '../../../compiler/lib/utils/prettify';
 
 const { readFile } = promises;
 
@@ -29,7 +30,8 @@ export async function getExpectedCode(
     isWorker: boolean,
 ): Promise<string> {
     const filePath = path.resolve(projectRoot, 'generated', isWorker ? 'worker' : 'main', filename);
-    return (await readFile(filePath)).toString();
+    const code = (await readFile(filePath)).toString();
+    return removeComments(code);
 }
 
 export async function cleanDistDirectory(projectRoot: string): Promise<void> {

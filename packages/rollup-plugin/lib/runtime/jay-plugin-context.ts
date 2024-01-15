@@ -10,7 +10,7 @@ export class JayPluginContext {
     readonly outputDir: string;
     readonly tsPrinter: ts.Printer;
     readonly compilerPatterns: CompiledPattern[];
-    jayFileCache = new Map<string, JayFile>();
+    readonly jayFileCache = new Map<string, JayFile>();
 
     constructor(readonly jayOptions: JayRollupConfig = {}) {
         this.projectRoot = path.dirname(jayOptions.tsConfigFilePath ?? process.cwd());
