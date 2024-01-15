@@ -3,6 +3,7 @@ import {
     JAY_QUERY_MAIN_SANDBOX_TS,
     JAY_QUERY_WORKER_SANDBOX_TS,
     JAY_QUERY_WORKER_TRUSTED_TS,
+    TS_EXTENSION,
 } from 'jay-compiler';
 import { generateProject } from '../test-utils/rollup';
 
@@ -37,7 +38,7 @@ describe('jayRuntime plugin - sandbox counter', () => {
         });
 
         it('generates counter component bridge', async () => {
-            const filename = `counter${JAY_QUERY_MAIN_SANDBOX_TS}`;
+            const filename = `counter${TS_EXTENSION}${JAY_QUERY_MAIN_SANDBOX_TS}`;
             expect(await getGeneratedCode(projectRoot, filename, isWorker)).toEqual(
                 await getExpectedCode(projectRoot, filename, isWorker),
             );
@@ -79,7 +80,7 @@ describe('jayRuntime plugin - sandbox counter', () => {
 
             describe('for sandbox *.ts file', () => {
                 it('generates component file', async () => {
-                    const filename = `counter${JAY_QUERY_WORKER_SANDBOX_TS}`;
+                    const filename = `counter${TS_EXTENSION}${JAY_QUERY_WORKER_SANDBOX_TS}`;
                     expect(await getGeneratedCode(projectRoot, filename, isWorker)).toEqual(
                         await getExpectedCode(projectRoot, filename, isWorker),
                     );

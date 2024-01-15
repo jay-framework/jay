@@ -7,6 +7,7 @@ import {
 } from 'jay-runtime';
 import { mainRoot as mr, secureChildComp } from 'jay-secure';
 import { CounterRef } from './counter-refs';
+// @ts-expect-error Cannot find module
 import { Counter } from './counter?jay-mainSandbox';
 
 export interface AppViewState {

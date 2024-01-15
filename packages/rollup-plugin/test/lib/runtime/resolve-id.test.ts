@@ -91,7 +91,7 @@ describe('resolve-id', () => {
 
     describe('resolveJayModeFile', () => {
         const resolveId = 'counter.ts';
-        const source = `./counter${JAY_QUERY_MAIN_SANDBOX}`;
+        const source = `./counter${TS_EXTENSION}${JAY_QUERY_MAIN_SANDBOX}`;
         const importer = '/root/src/app.jay-html.ts';
         const format = JayFormat.JayHtml;
         const meta = { jay: { format } };
