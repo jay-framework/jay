@@ -4,8 +4,7 @@ import ts, {
     isBlock,
     isCallExpression,
     isExpressionStatement,
-    isPropertyAccessExpression,
-    TransformationContext,
+    isPropertyAccessExpression
 } from 'typescript';
 import {
     FlattenedAccessChain,
@@ -44,8 +43,7 @@ export interface TransformedEventHandlerByPattern {
 }
 
 function generateFunctionRepository(
-    matchedReturnPatterns: MatchedPattern[],
-    context: TransformationContext,
+    matchedReturnPatterns: MatchedPattern[]
 ) {
     if (matchedReturnPatterns.length > 0) {
         let returnedObjectProperties = matchedReturnPatterns.map(
@@ -55,19 +53,21 @@ function generateFunctionRepository(
     } else return undefined;
 }
 
-export const transformEventHandlerByPatternBlock = (
-    context: ts.TransformationContext,
-    compiledPatterns: CompiledPattern[],
+const mkTransformEventHandlerStatementVisitor = (
     factory: ts.NodeFactory,
-    eventHandler: ts.FunctionLikeDeclarationBase,
-): TransformedEventHandlerByPattern => {
-    let nameBindingResolver = new NameBindingResolver();
-    nameBindingResolver.addFunctionParams(eventHandler);
+    context: ts.TransformationContext,
+    nameBindingResolver: NameBindingResolver,
+    compiledPatterns: CompiledPattern[]) => {
 
-    let wasEventHandlerTransformed = false;
-    let matchedReturnPatterns: MatchedPattern[] = [];
+    let sideEffects: {
+        matchedReturnPatterns: MatchedPattern[],
+        wasEventHandlerTransformed: boolean
+    } = {
+        matchedReturnPatterns: [],
+        wasEventHandlerTransformed: false
+    }
 
-    const transformEventHandlerStatement = (node) => {
+    const visitor = (node) => {
         if (isCallExpression(node)) {
             let newArguments: Expression[] = node.arguments.map((argument, paramIndex) => {
                 if (isPropertyAccessExpression(argument)) {
@@ -79,14 +79,14 @@ export const transformEventHandlerByPatternBlock = (
                         compiledPatterns,
                     );
                     if (pattern) {
-                        matchedReturnPatterns.push({ pattern, patternKey });
+                        sideEffects.matchedReturnPatterns.push({ pattern, patternKey });
                         let replacementPattern = [
                             `event.$${patternKey}`,
                             ...flattenedResolvedParam.path.splice(
                                 pattern.accessChain.path.length + 1,
                             ),
                         ];
-                        wasEventHandlerTransformed = true;
+                        sideEffects.wasEventHandlerTransformed = true;
                         return (
                             codeToAst(
                                 replacementPattern.join('.'),
@@ -99,20 +99,35 @@ export const transformEventHandlerByPatternBlock = (
             });
             return factory.createCallExpression(node.expression, undefined, newArguments);
         } else if (isBlock(node)) {
-            return ts.visitEachChild(node, transformEventHandlerStatement, context);
+            return ts.visitEachChild(node, visitor, context);
         } else if (isExpressionStatement(node)) {
-            return ts.visitEachChild(node, transformEventHandlerStatement, context);
+            return ts.visitEachChild(node, visitor, context);
         }
         return node;
     };
+    return {visitor, sideEffects};
+}
+
+
+export const transformEventHandlerByPatternBlock = (
+    context: ts.TransformationContext,
+    compiledPatterns: CompiledPattern[],
+    factory: ts.NodeFactory,
+    eventHandler: ts.FunctionLikeDeclarationBase,
+): TransformedEventHandlerByPattern => {
+    let nameBindingResolver = new NameBindingResolver();
+    nameBindingResolver.addFunctionParams(eventHandler);
+
+    const {sideEffects, visitor} =
+        mkTransformEventHandlerStatementVisitor(factory, context, nameBindingResolver, compiledPatterns);
 
     const transformedEventHandler = ts.visitEachChild(
         eventHandler,
-        transformEventHandlerStatement,
+        visitor,
         context,
     );
 
-    const functionRepositoryFragment = generateFunctionRepository(matchedReturnPatterns, context);
+    const functionRepositoryFragment = generateFunctionRepository(sideEffects.matchedReturnPatterns);
 
-    return { transformedEventHandler, wasEventHandlerTransformed, functionRepositoryFragment };
+    return { transformedEventHandler, wasEventHandlerTransformed: sideEffects.wasEventHandlerTransformed, functionRepositoryFragment };
 };
