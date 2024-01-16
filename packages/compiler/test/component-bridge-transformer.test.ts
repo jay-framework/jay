@@ -34,7 +34,7 @@ export const Comp = makeJayComponent(render, CompComponent);`;
 
             expect(outputCode).toEqual(
                 await prettify(`
-import { makeJayComponentBridge } from 'jay-secure';
+import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
 import { render } from './generated-element?jay-mainSandbox';
 const funcRepository: FunctionsRepository = {
     '0': ({ event }) => ({ $0: event.target.value }),
@@ -63,7 +63,7 @@ export const Comp = makeJayComponent(render, CompComponent);`;
 
             expect(outputCode).toEqual(
                 await prettify(`
-import { makeJayComponentBridge } from 'jay-secure';
+import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
 import { render } from './generated-element?jay-mainSandbox';
 const funcRepository: FunctionsRepository = {
     '0': ({ event }) => ({ $0: event.target.value }),
@@ -96,7 +96,7 @@ export const Comp = makeJayComponent(render, CompComponent);`;
 
             expect(outputCode).toEqual(
                 await prettify(`
-import { makeJayComponentBridge } from 'jay-secure';
+import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
 import { render } from './generated-element?jay-mainSandbox';
 const funcRepository: FunctionsRepository = {
     '0': ({ event }) => ({ $0: event.target.value }),
