@@ -55,16 +55,14 @@ function transformImport(
     factory: ts.NodeFactory,
     importerMode: RuntimeMode,
     context: ts.TransformationContext,
-    hasFunctionRepository: boolean): ts.Statement {
+    hasFunctionRepository: boolean,
+): ts.Statement {
     if (ts.isStringLiteral(node.moduleSpecifier)) {
         if (findMakeJayComponentImport(MAKE_JAY_COMPONENT, node)) {
-            const code = hasFunctionRepository?
-                `import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';`:
-                `import { makeJayComponentBridge } from 'jay-secure';`
-            return codeToAst(
-                code,
-                context,
-            )[0] as ts.Statement;
+            const code = hasFunctionRepository
+                ? `import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';`
+                : `import { makeJayComponentBridge } from 'jay-secure';`;
+            return codeToAst(code, context)[0] as ts.Statement;
         }
         const renderImportSpecifier = getRenderImportSpecifier(node);
         if (Boolean(renderImportSpecifier)) {
@@ -122,7 +120,13 @@ function transformSourceFile(
             if (ts.isFunctionDeclaration(statement)) return undefined;
             else if (ts.isInterfaceDeclaration(statement)) return statement;
             else if (ts.isImportDeclaration(statement))
-                return transformImport(statement, factory, importerMode, context, hasFunctionRepository);
+                return transformImport(
+                    statement,
+                    factory,
+                    importerMode,
+                    context,
+                    hasFunctionRepository,
+                );
             else if (ts.isVariableStatement(statement))
                 return transformVariableStatement(
                     statement,
