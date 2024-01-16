@@ -4,14 +4,14 @@ import { prettify } from '../lib';
 import { compileFunctionSplitPatternsBlock } from '../lib/ts-file/building-blocks/compile-function-split-patterns';
 
 describe('transform event handlers with secure code split', () => {
-    const input_value_pattern = compileFunctionSplitPatternsBlock([
-        `
+
+
+    describe('transform return value pattern', () => {
+        const input_value_pattern = compileFunctionSplitPatternsBlock([`
 function inputValuePattern({event}: JayEvent<any, any>) {
     return event.target.value;
 }`,
-    ]).val;
-
-    describe('transform return value pattern', () => {
+        ]).val;
         it('replace event.target.value for a single event handler', async () => {
             const code = `
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
@@ -142,6 +142,51 @@ import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [count, setCount] = createState('');
     refs.input.onchange(() => setCount(count()+1));
+}
+export const Comp = makeJayComponent(render, CompComponent);`),
+            );
+        });
+    })
+
+    describe('transform call pattern', () => {
+        const preventDefaultPattern = compileFunctionSplitPatternsBlock([`
+function inputValuePattern({event}: JayEvent<any, any>) {
+    event.preventDefault();
+}`,
+        ]).val;
+
+        it('extract event.preventDefault()', async () => {
+            const code = `
+import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+import { CompElementRefs, render } from './generated-element';
+
+function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
+    let [text, setText] = createState('');
+    refs.input.onchange(({event}) => {
+        event.preventDefault();
+        setText((event.target as HTMLInputElement).value)
+    });
+}
+
+export const Comp = makeJayComponent(render, CompComponent);`;
+
+            const outputCode = await transformCode(code, [
+                componentSecureFunctionsTransformer(preventDefaultPattern),
+            ]);
+
+            expect(outputCode).toEqual(
+                await prettify(`
+import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
+import { handler$} from 'jay-secure';
+
+function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
+    let [text, setText] = createState('');
+    refs.input
+        .onchange$(handler$('0'))
+        .then(({event}) => {
+        setText((event.target as HTMLInputElement).value)
+    });
 }
 export const Comp = makeJayComponent(render, CompComponent);`),
             );
