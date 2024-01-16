@@ -11,9 +11,33 @@ function inputValuePattern({event}: JayEvent<any, any>) {
 }`,
     ]).val;
 
-    // describe('generate component bridge', () => {
-    //
-    // })
+    describe('generate component bridge', () => {
+        it('replace makeJayComponent with makeJayComponentBridge and remove all unneeded code', async () => {
+            const code = `
+import { makeJayComponent, Props } from 'jay-component';
+import { CompElementRefs, render } from './generated-element';
+
+function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
+    let x = 1;
+    for (let y = 0; y < 100; y++)
+        console.log(y + x); 
+}
+
+export const Comp = makeJayComponent(render, CompComponent);`;
+
+            const outputCode = await transformCode(code, [
+                componentBridgeTransformer(RuntimeMode.MainSandbox, input_value_pattern),
+            ]);
+
+            expect(outputCode).toEqual(
+                await prettify(`
+import { makeJayComponentBridge } from 'jay-secure';
+import { render } from './generated-element?jay-mainSandbox';
+export const Comp = makeJayComponentBridge(render);
+`),
+            );
+        })
+    })
 
     describe('generate function repository', () => {
         it('create event.target.value in function repository', async () => {
