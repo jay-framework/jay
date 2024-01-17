@@ -8,7 +8,7 @@ import ts, {
 } from 'typescript';
 import {
     FlattenedAccessChain,
-    flattenVariable,
+    flattenVariable, isParamVariableRoot,
     NameBindingResolver,
 } from './name-binding-resolver';
 import { CompiledPattern } from './compile-function-split-patterns';
@@ -26,7 +26,8 @@ function findPatternInVariable(
 ): MatchedPattern {
     let patternKey = compiledPatterns.findIndex(
         (pattern) =>
-            paramIndex === pattern.paramIndex &&
+            isParamVariableRoot(pattern.accessChain.root) &&
+            pattern.accessChain.root.paramIndex === pattern.accessChain.root.paramIndex &&
             pattern.accessChain.path.length <= resolvedParam.path.length &&
             pattern.accessChain.path.every(
                 (element, index) => element === resolvedParam.path[index],

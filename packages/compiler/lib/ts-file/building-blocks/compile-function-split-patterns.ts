@@ -21,8 +21,7 @@ export enum CompilePatternType {
 
 export interface CompiledPattern {
     accessChain: FlattenedAccessChain;
-    type: CompilePatternType;
-    paramIndex: number;
+    type: CompilePatternType
 }
 
 export function compileFunctionSplitPatternsBlock(
@@ -61,9 +60,6 @@ export function compileFunctionSplitPatternsBlock(
                         compiledPatterns.push({
                             accessChain: resolvedVariable,
                             type: CompilePatternType.RETURN,
-                            paramIndex: node.parameters.findIndex(
-                                (param) => param === resolvedVariable.root,
-                            ),
                         });
                     } else if (
                         isExpressionStatement(statement) &&
@@ -78,9 +74,6 @@ export function compileFunctionSplitPatternsBlock(
                         compiledPatterns.push({
                             accessChain: resolvedVariable,
                             type: CompilePatternType.CALL,
-                            paramIndex: node.parameters.findIndex(
-                                (param) => param === resolvedVariable.root,
-                            ),
                         });
                     } else
                         validations.push(
