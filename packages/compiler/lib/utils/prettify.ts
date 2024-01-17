@@ -1,6 +1,6 @@
 import * as prettier from 'prettier';
 
-export async function prettify(code: string): Promise<string> {
+export async function prettify(code: string, options: prettier.Options = {}): Promise<string> {
     // same format as global .prettierrc
     try {
         return await prettier.format(code, {
@@ -8,6 +8,7 @@ export async function prettify(code: string): Promise<string> {
             singleQuote: true,
             tabWidth: 4,
             parser: 'typescript',
+            ...options,
         });
         // .split("\n")
         // .filter(line => line.trim())  // Remove empty lines
@@ -18,6 +19,10 @@ original error: ${error.message}
 code:
 ${code}`);
     }
+}
+
+export async function prettifyHtml(html: string): Promise<string> {
+    return await prettify(html, { parser: 'html' });
 }
 
 export function removeComments(code: string): string {
