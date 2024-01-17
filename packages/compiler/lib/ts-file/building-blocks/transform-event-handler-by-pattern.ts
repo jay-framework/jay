@@ -4,7 +4,7 @@ import ts, {
     isBlock,
     isCallExpression,
     isExpressionStatement,
-    isPropertyAccessExpression
+    isPropertyAccessExpression, isVariableStatement
 } from 'typescript';
 import {
     FlattenedAccessChain,
@@ -91,12 +91,9 @@ const mkTransformEventHandlerStatementVisitor = (
                     )[0] as ExpressionStatement
                 ).expression;
             }
-        // } else if (isCallExpression(node)) {
-        //     let newArguments: Expression[] = node.arguments.map((argument) => {
-        //
-        //         return argument;
-        //     });
-        //     return factory.createCallExpression(node.expression, undefined, newArguments);
+        }
+        else if (isVariableStatement(node)) {
+            nameBindingResolver.addVariableStatement(node);
         }
         return ts.visitEachChild(node, visitor, context);;
     };

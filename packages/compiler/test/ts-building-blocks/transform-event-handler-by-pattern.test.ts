@@ -73,6 +73,26 @@ describe('split event handler by pattern', () => {
             );
         });
 
+        it('should support variable', async () => {
+            const inputEventHandler = `function bla({event}) {
+              let target = event.target as HTMLInputElement;  
+              setText(target.value) 
+            }`;
+            const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
+            let transformed = await transformCode(inputEventHandler, [transformer]);
+
+            expect(transformed).toEqual(
+                await prettify(`function bla({event}) {
+                  let target = event.target as HTMLInputElement; 
+                  setText(event.$0) 
+                  }`),
+            );
+            expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
+            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment)).toEqual(
+                await prettify(`({ event }) => ({$0: event.target.value})`),
+            );
+        });
+
         it('should not transform and not mark eventHandlerMatchedPatterns if no pattern is matched 1', async () => {
             const inputEventHandler = `function bla({event}) { setText((event.target as HTMLInputElement).keycode) }`;
             const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
