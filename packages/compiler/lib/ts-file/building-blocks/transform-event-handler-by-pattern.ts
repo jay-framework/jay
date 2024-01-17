@@ -21,7 +21,6 @@ interface MatchedPattern {
 
 function findPatternInVariable(
     resolvedParam: FlattenedAccessChain,
-    paramIndex: number,
     compiledPatterns: CompiledPattern[],
 ): MatchedPattern {
     let patternKey = compiledPatterns.findIndex(
@@ -69,42 +68,37 @@ const mkTransformEventHandlerStatementVisitor = (
     }
 
     const visitor = (node) => {
-        if (isCallExpression(node)) {
-            let newArguments: Expression[] = node.arguments.map((argument, paramIndex) => {
-                if (isPropertyAccessExpression(argument)) {
-                    let resolvedParam = nameBindingResolver.resolvePropertyAccessChain(argument);
-                    let flattenedResolvedParam = flattenVariable(resolvedParam);
-                    let { pattern, patternKey } = findPatternInVariable(
-                        flattenedResolvedParam,
-                        paramIndex,
-                        compiledPatterns,
-                    );
-                    if (pattern) {
-                        sideEffects.matchedReturnPatterns.push({ pattern, patternKey });
-                        let replacementPattern = [
-                            `event.$${patternKey}`,
-                            ...flattenedResolvedParam.path.splice(
-                                pattern.accessChain.path.length + 1,
-                            ),
-                        ];
-                        sideEffects.wasEventHandlerTransformed = true;
-                        return (
-                            codeToAst(
-                                replacementPattern.join('.'),
-                                context,
-                            )[0] as ExpressionStatement
-                        ).expression;
-                    }
-                }
-                return argument;
-            });
-            return factory.createCallExpression(node.expression, undefined, newArguments);
-        } else if (isBlock(node)) {
-            return ts.visitEachChild(node, visitor, context);
-        } else if (isExpressionStatement(node)) {
-            return ts.visitEachChild(node, visitor, context);
+        if (isPropertyAccessExpression(node)) {
+            let resolvedParam = nameBindingResolver.resolvePropertyAccessChain(node);
+            let flattenedResolvedParam = flattenVariable(resolvedParam);
+            let { pattern, patternKey } = findPatternInVariable(
+                flattenedResolvedParam,
+                compiledPatterns,
+            );
+            if (pattern) {
+                sideEffects.matchedReturnPatterns.push({ pattern, patternKey });
+                let replacementPattern = [
+                    `event.$${patternKey}`,
+                    ...flattenedResolvedParam.path.splice(
+                        pattern.accessChain.path.length + 1,
+                    ),
+                ];
+                sideEffects.wasEventHandlerTransformed = true;
+                return (
+                    codeToAst(
+                        replacementPattern.join('.'),
+                        context,
+                    )[0] as ExpressionStatement
+                ).expression;
+            }
+        // } else if (isCallExpression(node)) {
+        //     let newArguments: Expression[] = node.arguments.map((argument) => {
+        //
+        //         return argument;
+        //     });
+        //     return factory.createCallExpression(node.expression, undefined, newArguments);
         }
-        return node;
+        return ts.visitEachChild(node, visitor, context);;
     };
     return {visitor, sideEffects};
 }
