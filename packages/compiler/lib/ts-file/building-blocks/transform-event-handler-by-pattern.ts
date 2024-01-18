@@ -130,18 +130,6 @@ const mkTransformEventHandlerStatementVisitor = (
             sideEffects.safeStatements.push(node);
             return undefined;
         }
-        // else if (isCallExpression(node)) {
-        //     let resolvedParam = nameBindingResolver.resolvePropertyAccessChain(node.expression);
-        //     let flattenedResolvedParam = flattenVariable(resolvedParam);
-        //     let { pattern, patternKey } = findPatternInVariable(
-        //         flattenedResolvedParam,
-        //         compiledPatterns,
-        //         CompilePatternType.CALL
-        //     );
-        //     if (pattern)
-        //         return undefined;
-        //
-        // }
         else if (isVariableStatement(node)) {
             nameBindingResolver.addVariableStatement(node);
         }
