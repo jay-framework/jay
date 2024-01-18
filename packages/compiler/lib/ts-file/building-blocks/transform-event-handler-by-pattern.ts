@@ -1,4 +1,10 @@
-import ts, {ExpressionStatement, isCallExpression, isPropertyAccessExpression, isVariableStatement} from 'typescript';
+import ts, {
+    ExpressionStatement,
+    isCallExpression, isExpressionStatement,
+    isPropertyAccessExpression,
+    isStatement,
+    isVariableStatement, Statement
+} from 'typescript';
 import {
     FlattenedAccessChain,
     flattenVariable,
@@ -6,7 +12,7 @@ import {
     NameBindingResolver,
 } from './name-binding-resolver';
 import {CompiledPattern, CompilePatternType} from './compile-function-split-patterns';
-import {codeToAst} from '../ts-compiler-utils';
+import {astToCode, codeToAst} from '../ts-compiler-utils';
 
 interface MatchedPattern {
     pattern: CompiledPattern;
@@ -32,38 +38,6 @@ function findPatternInVariable(
         )
     let pattern = patternKey === -1 ? undefined : compiledPatterns[patternKey];
     return { pattern, patternKey };
-
-    // if (patternTypeToFind === CompilePatternType.RETURN) {
-    //     let patternKey = compiledPatterns
-    //         .filter(pattern => pattern.type === CompilePatternType.RETURN)
-    //         .findIndex(pattern =>
-    //             isParamVariableRoot(pattern.accessChain.root) &&
-    //             resolvedParam.root &&
-    //             isParamVariableRoot(resolvedParam.root) &&
-    //             pattern.accessChain.root.paramIndex === resolvedParam.root.paramIndex &&
-    //             pattern.accessChain.path.length <= resolvedParam.path.length &&
-    //             pattern.accessChain.path.every(
-    //                 (element, index) => element === resolvedParam.path[index],
-    //             ),
-    //         )
-    //     let pattern = patternKey === -1 ? undefined : compiledPatterns[patternKey];
-    //     return { pattern, patternKey };
-    // }
-    // else {// if (patternTypeToFind === CompilePatternType.CALL) {
-    //     let patternKey = compiledPatterns.findIndex(
-    //         (pattern) =>
-    //             isParamVariableRoot(pattern.accessChain.root) &&
-    //             resolvedParam.root &&
-    //             isParamVariableRoot(resolvedParam.root) &&
-    //             pattern.accessChain.root.paramIndex === resolvedParam.root.paramIndex &&
-    //             pattern.accessChain.path.length <= resolvedParam.path.length &&
-    //             pattern.accessChain.path.every(
-    //                 (element, index) => element === resolvedParam.path[index],
-    //             ),
-    //     );
-    //     let pattern = patternKey === -1 ? undefined : compiledPatterns[patternKey];
-    //     return { pattern, patternKey };
-    // }
 }
 
 export interface TransformedEventHandlerByPattern {
@@ -74,13 +48,36 @@ export interface TransformedEventHandlerByPattern {
 
 function generateFunctionRepository(
     matchedReturnPatterns: MatchedPattern[]
-) {
+    , safeStatements: ts.Statement[]) {
+
+    let returnedObjectProperties = matchedReturnPatterns.map(
+        ({ pattern, patternKey }) => `$${patternKey}: ${pattern.accessChain.path.join('.')}`,
+    ).join(',\n');
+    if (safeStatements.length > 0) {
+        return `({ event }) => {
+    ${safeStatements.map(statement => astToCode(statement)).join('\n\t')}
+${(returnedObjectProperties.length > 0)?`\treturn ({${returnedObjectProperties}})\n`:''}
+}`
+    }
     if (matchedReturnPatterns.length > 0) {
-        let returnedObjectProperties = matchedReturnPatterns.map(
-            ({ pattern, patternKey }) => `$${patternKey}: ${pattern.accessChain.path.join('.')}`,
+        return `({ event }) => ({${returnedObjectProperties}})`;
+    } else return '';
+}
+
+function isSafeStatement(node: Statement, nameBindingResolver: NameBindingResolver, compiledPatterns: CompiledPattern[]) {
+    if (isExpressionStatement(node) &&
+        isCallExpression(node.expression)) {
+        let resolvedParam = nameBindingResolver.resolvePropertyAccessChain(node.expression.expression);
+        let flattenedResolvedParam = flattenVariable(resolvedParam);
+        let { pattern, patternKey } = findPatternInVariable(
+            flattenedResolvedParam,
+            compiledPatterns,
+            CompilePatternType.CALL
         );
-        return `({ event }) => ({${returnedObjectProperties.join(',\n')}})`;
-    } else return undefined;
+        if (pattern)
+            return true;
+    }
+    return false;
 }
 
 const mkTransformEventHandlerStatementVisitor = (
@@ -90,9 +87,11 @@ const mkTransformEventHandlerStatementVisitor = (
     compiledPatterns: CompiledPattern[]) => {
 
     let sideEffects: {
+        safeStatements: Statement[];
         matchedReturnPatterns: MatchedPattern[],
         wasEventHandlerTransformed: boolean
     } = {
+        safeStatements: [],
         matchedReturnPatterns: [],
         wasEventHandlerTransformed: false
     }
@@ -123,18 +122,23 @@ const mkTransformEventHandlerStatementVisitor = (
                 ).expression;
             }
         }
-        else if (isCallExpression(node)) {
-            let resolvedParam = nameBindingResolver.resolvePropertyAccessChain(node.expression);
-            let flattenedResolvedParam = flattenVariable(resolvedParam);
-            let { pattern, patternKey } = findPatternInVariable(
-                flattenedResolvedParam,
-                compiledPatterns,
-                CompilePatternType.CALL
-            );
-            if (pattern)
-                return undefined;
-
+        else if (isStatement(node) && isSafeStatement(node, nameBindingResolver, compiledPatterns)) {
+            sideEffects.wasEventHandlerTransformed = true;
+            sideEffects.safeStatements.push(node);
+            return undefined;
         }
+        // else if (isCallExpression(node)) {
+        //     let resolvedParam = nameBindingResolver.resolvePropertyAccessChain(node.expression);
+        //     let flattenedResolvedParam = flattenVariable(resolvedParam);
+        //     let { pattern, patternKey } = findPatternInVariable(
+        //         flattenedResolvedParam,
+        //         compiledPatterns,
+        //         CompilePatternType.CALL
+        //     );
+        //     if (pattern)
+        //         return undefined;
+        //
+        // }
         else if (isVariableStatement(node)) {
             nameBindingResolver.addVariableStatement(node);
         }
@@ -162,7 +166,7 @@ export const transformEventHandlerByPatternBlock = (
         context,
     );
 
-    const functionRepositoryFragment = generateFunctionRepository(sideEffects.matchedReturnPatterns);
+    const functionRepositoryFragment = generateFunctionRepository(sideEffects.matchedReturnPatterns, sideEffects.safeStatements);
 
     return { transformedEventHandler, wasEventHandlerTransformed: sideEffects.wasEventHandlerTransformed, functionRepositoryFragment };
 };
