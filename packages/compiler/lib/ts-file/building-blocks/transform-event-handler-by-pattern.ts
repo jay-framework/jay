@@ -18,37 +18,52 @@ function findPatternInVariable(
     compiledPatterns: CompiledPattern[],
     patternTypeToFind: CompilePatternType
 ): MatchedPattern {
-    if (patternTypeToFind === CompilePatternType.RETURN) {
-        let patternKey = compiledPatterns
-            .filter(pattern => pattern.type === CompilePatternType.RETURN)
-            .findIndex(pattern =>
-                isParamVariableRoot(pattern.accessChain.root) &&
-                resolvedParam.root &&
-                isParamVariableRoot(resolvedParam.root) &&
-                pattern.accessChain.root.paramIndex === resolvedParam.root.paramIndex &&
-                pattern.accessChain.path.length <= resolvedParam.path.length &&
-                pattern.accessChain.path.every(
-                    (element, index) => element === resolvedParam.path[index],
-                ),
-            )
-        let pattern = patternKey === -1 ? undefined : compiledPatterns[patternKey];
-        return { pattern, patternKey };
-    }
-    else {// if (patternTypeToFind === CompilePatternType.CALL) {
-        let patternKey = compiledPatterns.findIndex(
-            (pattern) =>
-                isParamVariableRoot(pattern.accessChain.root) &&
-                resolvedParam.root &&
-                isParamVariableRoot(resolvedParam.root) &&
-                pattern.accessChain.root.paramIndex === resolvedParam.root.paramIndex &&
-                pattern.accessChain.path.length <= resolvedParam.path.length &&
-                pattern.accessChain.path.every(
-                    (element, index) => element === resolvedParam.path[index],
-                ),
-        );
-        let pattern = patternKey === -1 ? undefined : compiledPatterns[patternKey];
-        return { pattern, patternKey };
-    }
+    let patternKey = compiledPatterns
+        .filter(pattern => pattern.type === patternTypeToFind)
+        .findIndex(pattern =>
+            isParamVariableRoot(pattern.accessChain.root) &&
+            resolvedParam.root &&
+            isParamVariableRoot(resolvedParam.root) &&
+            pattern.accessChain.root.paramIndex === resolvedParam.root.paramIndex &&
+            pattern.accessChain.path.length <= resolvedParam.path.length &&
+            pattern.accessChain.path.every(
+                (element, index) => element === resolvedParam.path[index],
+            ),
+        )
+    let pattern = patternKey === -1 ? undefined : compiledPatterns[patternKey];
+    return { pattern, patternKey };
+
+    // if (patternTypeToFind === CompilePatternType.RETURN) {
+    //     let patternKey = compiledPatterns
+    //         .filter(pattern => pattern.type === CompilePatternType.RETURN)
+    //         .findIndex(pattern =>
+    //             isParamVariableRoot(pattern.accessChain.root) &&
+    //             resolvedParam.root &&
+    //             isParamVariableRoot(resolvedParam.root) &&
+    //             pattern.accessChain.root.paramIndex === resolvedParam.root.paramIndex &&
+    //             pattern.accessChain.path.length <= resolvedParam.path.length &&
+    //             pattern.accessChain.path.every(
+    //                 (element, index) => element === resolvedParam.path[index],
+    //             ),
+    //         )
+    //     let pattern = patternKey === -1 ? undefined : compiledPatterns[patternKey];
+    //     return { pattern, patternKey };
+    // }
+    // else {// if (patternTypeToFind === CompilePatternType.CALL) {
+    //     let patternKey = compiledPatterns.findIndex(
+    //         (pattern) =>
+    //             isParamVariableRoot(pattern.accessChain.root) &&
+    //             resolvedParam.root &&
+    //             isParamVariableRoot(resolvedParam.root) &&
+    //             pattern.accessChain.root.paramIndex === resolvedParam.root.paramIndex &&
+    //             pattern.accessChain.path.length <= resolvedParam.path.length &&
+    //             pattern.accessChain.path.every(
+    //                 (element, index) => element === resolvedParam.path[index],
+    //             ),
+    //     );
+    //     let pattern = patternKey === -1 ? undefined : compiledPatterns[patternKey];
+    //     return { pattern, patternKey };
+    // }
 }
 
 export interface TransformedEventHandlerByPattern {
