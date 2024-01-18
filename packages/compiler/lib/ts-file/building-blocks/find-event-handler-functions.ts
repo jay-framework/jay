@@ -1,4 +1,4 @@
-import ts, {
+import {
     ExpressionStatement,
     FunctionLikeDeclarationBase,
     isBlock,
@@ -13,7 +13,7 @@ import {
     flattenVariable,
     isFunctionVariableRoot,
     isParamVariableRoot,
-    NameBindingResolver
+    NameBindingResolver,
 } from './name-binding-resolver';
 import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils';
 
@@ -68,7 +68,10 @@ export function findEventHandlersBlock(
                             nameBindingResolver.resolvePropertyAccessChain(handler),
                         );
 
-                        if (flattenedHandler.path.length === 0 && isFunctionVariableRoot(flattenedHandler.root))
+                        if (
+                            flattenedHandler.path.length === 0 &&
+                            isFunctionVariableRoot(flattenedHandler.root)
+                        )
                             foundEventHandlers.push({
                                 eventHandler: flattenedHandler.root.func,
                                 eventHandlerCallStatement: statement,

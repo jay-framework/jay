@@ -7,13 +7,17 @@ import ts, {
     VariableStatement,
     ObjectLiteralExpression,
     PropertyAssignment,
-    CallExpression, ParameterDeclaration, FunctionExpression,
+    CallExpression,
+    ParameterDeclaration,
+    FunctionExpression,
 } from 'typescript';
 import {
     tsBindingNameToVariable,
     NameBindingResolver,
     flattenVariable,
-    mkParameterVariableRoot, mkLiteralVariableRoot, mkOtherVariableRoot, mkFunctionVariableRoot
+    mkParameterVariableRoot,
+    mkOtherVariableRoot,
+    mkFunctionVariableRoot,
 } from '../../lib/ts-file/building-blocks/name-binding-resolver';
 
 function toSourceFile(code: string) {
@@ -410,14 +414,19 @@ describe('NameBindingResolver', () => {
             expect(z).toEqual({
                 name: 'z',
                 assignedFrom: {
-                    properties: [{ name: 'a', root: mkFunctionVariableRoot(declaredInlineFunction) }],
+                    properties: [
+                        { name: 'a', root: mkFunctionVariableRoot(declaredInlineFunction) },
+                    ],
                 },
             });
 
             let za = nameResolver.resolvePropertyAccessChain(
                 (getAstNode('z.a') as ExpressionStatement).expression,
             );
-            expect(flattenVariable(za)).toEqual({ path: [], root: mkFunctionVariableRoot(declaredInlineFunction) });
+            expect(flattenVariable(za)).toEqual({
+                path: [],
+                root: mkFunctionVariableRoot(declaredInlineFunction),
+            });
         });
 
         it('resolve let [state, getState] = createState()', () => {

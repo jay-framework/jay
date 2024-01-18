@@ -4,7 +4,6 @@ import { prettify } from '../lib';
 import { compileFunctionSplitPatternsBlock } from '../lib/ts-file/building-blocks/compile-function-split-patterns';
 
 describe('transform component bridge', () => {
-
     describe('generate component bridge', () => {
         it('replace makeJayComponent with makeJayComponentBridge and remove all unneeded code', async () => {
             const code = `
@@ -30,8 +29,8 @@ import { render } from './generated-element?jay-mainSandbox';
 export const Comp = makeJayComponentBridge(render);
 `),
             );
-        })
-    })
+        });
+    });
 
     describe('generate function repository', () => {
         const input_value_pattern = compileFunctionSplitPatternsBlock([
@@ -153,17 +152,17 @@ import { render } from './generated-element?jay-mainSandbox';
 export const Comp = makeJayComponentBridge(render);`),
                 );
             });
-        })
+        });
 
         describe('for call patterns', () => {
-            const preventDefaultPattern = compileFunctionSplitPatternsBlock([`
+            const preventDefaultPattern = compileFunctionSplitPatternsBlock([
+                `
 function inputValuePattern({event}: JayEvent<any, any>) {
     event.preventDefault();
-}`
+}`,
             ]).val;
 
-
-                it('extract event.preventDefault()', async () => {
+            it('extract event.preventDefault()', async () => {
                 const code = `
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
 import { CompElementRefs, render } from './generated-element';
@@ -195,6 +194,6 @@ export const Comp = makeJayComponentBridge(render, { funcRepository });
 `),
                 );
             });
-        })
+        });
     });
 });

@@ -21,7 +21,7 @@ export enum CompilePatternType {
 
 export interface CompiledPattern {
     accessChain: FlattenedAccessChain;
-    type: CompilePatternType
+    type: CompilePatternType;
 }
 
 export function compileFunctionSplitPatternsBlock(

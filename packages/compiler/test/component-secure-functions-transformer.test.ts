@@ -4,10 +4,9 @@ import { prettify } from '../lib';
 import { compileFunctionSplitPatternsBlock } from '../lib/ts-file/building-blocks/compile-function-split-patterns';
 
 describe('transform event handlers with secure code split', () => {
-
-
     describe('transform return value pattern', () => {
-        const input_value_pattern = compileFunctionSplitPatternsBlock([`
+        const input_value_pattern = compileFunctionSplitPatternsBlock([
+            `
 function inputValuePattern({event}: JayEvent<any, any>) {
     return event.target.value;
 }`,
@@ -146,10 +145,11 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 export const Comp = makeJayComponent(render, CompComponent);`),
             );
         });
-    })
+    });
 
     describe('transform call pattern', () => {
-        const preventDefaultPattern = compileFunctionSplitPatternsBlock([`
+        const preventDefaultPattern = compileFunctionSplitPatternsBlock([
+            `
 function inputValuePattern({event}: JayEvent<any, any>) {
     event.preventDefault();
 }`,
@@ -190,5 +190,5 @@ function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
 export const Comp = makeJayComponent(render, CompComponent);`),
             );
         });
-    })
+    });
 });

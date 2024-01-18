@@ -19,14 +19,16 @@ import ts, {
     isArrayBindingPattern,
     isBindingElement,
     isParenthesizedExpression,
-    isAsExpression, isArrowFunction, isFunctionDeclaration, isFunctionExpression,
+    isAsExpression,
+    isArrowFunction,
+    isFunctionExpression,
 } from 'typescript';
 
 export enum VariableRootType {
     Parameter,
     Function,
     Literal,
-    Other
+    Other,
 }
 
 export interface VariableRoot {
@@ -34,46 +36,49 @@ export interface VariableRoot {
 }
 
 export interface ParamVariableRoot extends VariableRoot {
-    kind: VariableRootType.Parameter
-    paramIndex: number,
-    param: ParameterDeclaration
+    kind: VariableRootType.Parameter;
+    paramIndex: number;
+    param: ParameterDeclaration;
 }
-export function mkParameterVariableRoot(param: ts.ParameterDeclaration, paramIndex: number): ParamVariableRoot {
-    return {kind: VariableRootType.Parameter, param, paramIndex};
+export function mkParameterVariableRoot(
+    param: ts.ParameterDeclaration,
+    paramIndex: number,
+): ParamVariableRoot {
+    return { kind: VariableRootType.Parameter, param, paramIndex };
 }
 
 export interface FunctionVariableRoot extends VariableRoot {
-    kind: VariableRootType.Function
-    func: FunctionLikeDeclarationBase
+    kind: VariableRootType.Function;
+    func: FunctionLikeDeclarationBase;
 }
 
 export function mkFunctionVariableRoot(func: ts.FunctionLikeDeclarationBase): FunctionVariableRoot {
-    return {kind: VariableRootType.Function, func};
+    return { kind: VariableRootType.Function, func };
 }
 
 export interface LiteralVariableRoot extends VariableRoot {
-    kind: VariableRootType.Literal
-    literal: Expression
+    kind: VariableRootType.Literal;
+    literal: Expression;
 }
 
 export function mkLiteralVariableRoot(literal: Expression): LiteralVariableRoot {
-    return {kind: VariableRootType.Literal, literal};
+    return { kind: VariableRootType.Literal, literal };
 }
 
 export interface OtherVariableRoot extends VariableRoot {
-    kind: VariableRootType.Other
-    node: ts.Node
+    kind: VariableRootType.Other;
+    node: ts.Node;
 }
 
 export function mkOtherVariableRoot(node: ts.Node): OtherVariableRoot {
-    return {kind: VariableRootType.Other, node};
+    return { kind: VariableRootType.Other, node };
 }
 
 export function isParamVariableRoot(vr: VariableRoot): vr is ParamVariableRoot {
-    return vr.kind === VariableRootType.Parameter
+    return vr.kind === VariableRootType.Parameter;
 }
 export function isFunctionVariableRoot(vr: VariableRoot): vr is FunctionVariableRoot {
-    return vr.kind === VariableRootType.Function
+    return vr.kind === VariableRootType.Function;
 }
 
 export function isLiteralVariableRoot(vr: VariableRoot): vr is LiteralVariableRoot {
@@ -188,7 +193,7 @@ export class NameBindingResolver {
                 undefined,
                 undefined,
                 undefined,
-                mkParameterVariableRoot(param, paramIndex)
+                mkParameterVariableRoot(param, paramIndex),
             );
             paramVariables.forEach((variable) => {
                 if (variable.name) this.variables.set(variable.name, variable);
@@ -236,9 +241,19 @@ export class NameBindingResolver {
                             );
                             nestedProperty.name = property.name.text;
                             return nestedProperty;
-                        } else if (isArrowFunction(property.initializer) || isFunctionExpression(property.initializer)) {
-                            return { name: property.name.text, root: mkFunctionVariableRoot(property.initializer)};
-                        } else return { name: property.name.text, root: mkLiteralVariableRoot(property.initializer)};
+                        } else if (
+                            isArrowFunction(property.initializer) ||
+                            isFunctionExpression(property.initializer)
+                        ) {
+                            return {
+                                name: property.name.text,
+                                root: mkFunctionVariableRoot(property.initializer),
+                            };
+                        } else
+                            return {
+                                name: property.name.text,
+                                root: mkLiteralVariableRoot(property.initializer),
+                            };
                     } else if (isShorthandPropertyAssignment(property))
                         return {
                             name: property.name.text,
@@ -247,9 +262,9 @@ export class NameBindingResolver {
                 }),
             };
         } else if (isArrowFunction(expression) || isFunctionExpression(expression)) {
-            return { root: mkFunctionVariableRoot(expression)};
+            return { root: mkFunctionVariableRoot(expression) };
         } else {
-            return { root: mkOtherVariableRoot(expression)};
+            return { root: mkOtherVariableRoot(expression) };
         }
     }
 
@@ -277,7 +292,10 @@ export class NameBindingResolver {
 
     addFunctionDeclaration(statement: FunctionDeclaration) {
         if (statement.name) {
-            let functionVariable = mkVariable({ name: statement.name.text, root: mkFunctionVariableRoot(statement) });
+            let functionVariable = mkVariable({
+                name: statement.name.text,
+                root: mkFunctionVariableRoot(statement),
+            });
             this.variables.set(statement.name.text, functionVariable);
         }
     }
