@@ -4,7 +4,7 @@
     "outDir": "dist",
     "paths": {
       "jay-json-patch": ["../../packages/json-patch/lib"],
-      "jay-mutable": ["../../packages/mutable/lib"]
-    }
-  }
+      "jay-mutable": ["../../packages/mutable/lib"],
+    },
+  },
 }

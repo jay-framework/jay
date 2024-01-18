@@ -8,8 +8,8 @@
     "outDir": "dist",
     "declaration": true,
     "jsx": "react",
-    "jsxFactory": "h"
+    "jsxFactory": "h",
   },
   "lib": ["es2015"],
-  "exclude": ["examples", "test", "dist"]
+  "exclude": ["examples", "test", "dist"],
 }

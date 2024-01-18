@@ -8,8 +8,8 @@
     "outDir": "dist",
     "lib": ["es2016", "dom"],
     "rootDir": "src",
-    "jsx": "react"
+    "jsx": "react",
   },
   "lib": ["es2015"],
-  "include": ["src/**/*"]
+  "include": ["src/**/*"],
 }

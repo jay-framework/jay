@@ -4,7 +4,7 @@
     "outDir": "dist",
     "paths": {
       "jay-list-compare": ["../list-compare/lib"],
-      "jay-reactive": ["../reactive/lib"]
-    }
-  }
+      "jay-reactive": ["../reactive/lib"],
+    },
+  },
 }

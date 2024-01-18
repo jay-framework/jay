@@ -4,7 +4,7 @@
     "outDir": "dist",
     "paths": {
       "jay-json-patch": ["../json-patch/lib"],
-      "jay-reactive": ["../reactive/lib"]
-    }
-  }
+      "jay-reactive": ["../reactive/lib"],
+    },
+  },
 }

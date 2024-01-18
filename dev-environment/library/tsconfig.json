@@ -11,7 +11,7 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals"],
   },
   "references": [
     { "path": "../../packages/serialization" },
@@ -37,6 +37,6 @@
     { "path": "../../examples/mini-benchmark" },
     { "path": "../../examples/counter" },
     { "path": "../../examples/counter-raw" },
-    { "path": "../../examples-other-frameworks/mini-benchmark-react" }
-  ]
+    { "path": "../../examples-other-frameworks/mini-benchmark-react" },
+  ],
 }
