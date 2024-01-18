@@ -19,7 +19,7 @@ import ts, {
     isArrayBindingPattern,
     isBindingElement,
     isParenthesizedExpression,
-    isAsExpression,
+    isAsExpression, isArrowFunction, isFunctionDeclaration, isFunctionExpression,
 } from 'typescript';
 
 export enum VariableRootType {
@@ -44,10 +44,10 @@ export function mkParameterVariableRoot(param: ts.ParameterDeclaration, paramInd
 
 export interface FunctionVariableRoot extends VariableRoot {
     kind: VariableRootType.Function
-    func: FunctionDeclaration
+    func: FunctionLikeDeclarationBase
 }
 
-export function mkFunctionVariableRoot(func: ts.FunctionDeclaration): FunctionVariableRoot {
+export function mkFunctionVariableRoot(func: ts.FunctionLikeDeclarationBase): FunctionVariableRoot {
     return {kind: VariableRootType.Function, func};
 }
 
@@ -236,6 +236,8 @@ export class NameBindingResolver {
                             );
                             nestedProperty.name = property.name.text;
                             return nestedProperty;
+                        } else if (isArrowFunction(property.initializer) || isFunctionExpression(property.initializer)) {
+                            return { name: property.name.text, root: mkFunctionVariableRoot(property.initializer)};
                         } else return { name: property.name.text, root: mkLiteralVariableRoot(property.initializer)};
                     } else if (isShorthandPropertyAssignment(property))
                         return {
@@ -244,6 +246,8 @@ export class NameBindingResolver {
                         };
                 }),
             };
+        } else if (isArrowFunction(expression) || isFunctionExpression(expression)) {
+            return { root: mkFunctionVariableRoot(expression)};
         } else {
             return { root: mkOtherVariableRoot(expression)};
         }

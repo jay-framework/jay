@@ -7,7 +7,7 @@ import ts, {
     VariableStatement,
     ObjectLiteralExpression,
     PropertyAssignment,
-    CallExpression, ParameterDeclaration,
+    CallExpression, ParameterDeclaration, FunctionExpression,
 } from 'typescript';
 import {
     tsBindingNameToVariable,
@@ -403,21 +403,21 @@ describe('NameBindingResolver', () => {
             let declaredInlineFunction = (
                 (node.declarationList.declarations[0].initializer as ObjectLiteralExpression)
                     .properties[0] as PropertyAssignment
-            ).initializer;
+            ).initializer as FunctionExpression;
 
             expect(nameResolver.variables.has('z'));
             let z = nameResolver.variables.get('z');
             expect(z).toEqual({
                 name: 'z',
                 assignedFrom: {
-                    properties: [{ name: 'a', root: mkLiteralVariableRoot(declaredInlineFunction) }],
+                    properties: [{ name: 'a', root: mkFunctionVariableRoot(declaredInlineFunction) }],
                 },
             });
 
             let za = nameResolver.resolvePropertyAccessChain(
                 (getAstNode('z.a') as ExpressionStatement).expression,
             );
-            expect(flattenVariable(za)).toEqual({ path: [], root: mkLiteralVariableRoot(declaredInlineFunction) });
+            expect(flattenVariable(za)).toEqual({ path: [], root: mkFunctionVariableRoot(declaredInlineFunction) });
         });
 
         it('resolve let [state, getState] = createState()', () => {

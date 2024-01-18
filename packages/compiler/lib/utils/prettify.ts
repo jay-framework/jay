@@ -3,12 +3,15 @@ import * as prettier from 'prettier';
 export async function prettify(code: string): Promise<string> {
     // same format as global .prettierrc
     try {
-        return await prettier.format(code, {
+        return (await prettier.format(code, {
             printWidth: 100,
             singleQuote: true,
             tabWidth: 4,
             parser: 'typescript',
-        });
+        }))
+            // .split("\n")
+            // .filter(line => line.trim())  // Remove empty lines
+            // .join("\n");
     }
     catch (error) {
         throw new Error(`failed to prettify code

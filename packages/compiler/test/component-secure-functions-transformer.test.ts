@@ -179,7 +179,6 @@ export const Comp = makeJayComponent(render, CompComponent);`;
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
 import { handler$} from 'jay-secure';
-
 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
     refs.input
