@@ -5,7 +5,7 @@
     "paths": {
       "jay-json-patch": ["../json-patch/lib"],
       "jay-reactive": ["../reactive/lib"],
-      "jay-runtime": ["../runtime/lib"]
-    }
-  }
+      "jay-runtime": ["../runtime/lib"],
+    },
+  },
 }

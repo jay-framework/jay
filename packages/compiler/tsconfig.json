@@ -5,7 +5,7 @@
     "paths": {
       "jay-component": ["../component/lib"],
       "jay-runtime": ["../runtime/lib"],
-      "jay-secure": ["../secure/lib"]
-    }
-  }
+      "jay-secure": ["../secure/lib"],
+    },
+  },
 }

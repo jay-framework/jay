@@ -79,6 +79,8 @@ For IntelliJ IDEA, copy vitest runtime configuration to show console logs in tes
 cp -r dev-environment/editor-setup/idea .idea/
 ```
 
+Afterward, delete all the Vitest configurations (Run -> Edit Configurations) and restart IntelliJ.
+
 During development, it's convenient to watch for changes.
 You can run the following command from root to watch for all the packages,
 or run it from the specific package.

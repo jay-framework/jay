@@ -3,8 +3,8 @@
   "compilerOptions": {
     "outDir": "dist",
     "paths": {
-      "jay-compiler": ["../compiler/lib"]
-    }
+      "jay-compiler": ["../compiler/lib"],
+    },
   },
-  "exclude": ["**/source/build/**", "**/source/dist/**", "**/sandbox-counter/dist/**"]
+  "exclude": ["**/source/build/**", "**/source/dist/**", "**/sandbox-counter/dist/**"],
 }
