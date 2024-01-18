@@ -143,20 +143,20 @@ describe('split event handler by pattern', () => {
     describe('extract call pattern', () => {
         it('should extract event.preventDefault()', async () => {
             const inputEventHandler = `({event}) => {
-    event.preventDefault();
-    console.log('mark');
-}`;
+                event.preventDefault();
+                console.log('mark');
+            }`;
             const { transformer, splitEventHandlers } = testTransformer(CALL_PATTERNS_1);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(await prettify(`({event}) => {
-    console.log('mark');
-}`));
+                console.log('mark');
+            }`));
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await prettify(splitEventHandlers[0].functionRepositoryFragment)).toEqual(
                 await prettify(`({event}) => {
-    event.preventDefault();
-}`),
+                    event.preventDefault();
+                }`),
             );
         });
     })

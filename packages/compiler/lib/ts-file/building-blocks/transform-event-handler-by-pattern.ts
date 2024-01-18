@@ -61,7 +61,7 @@ ${(returnedObjectProperties.length > 0)?`\treturn ({${returnedObjectProperties}}
     }
     if (matchedReturnPatterns.length > 0) {
         return `({ event }) => ({${returnedObjectProperties}})`;
-    } else return '';
+    } else return undefined;
 }
 
 function isSafeStatement(node: Statement, nameBindingResolver: NameBindingResolver, compiledPatterns: CompiledPattern[]) {
