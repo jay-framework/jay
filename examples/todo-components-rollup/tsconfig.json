@@ -9,8 +9,8 @@
       "jay-runtime": ["../../packages/runtime/lib"],
       "jay-secure": ["../../packages/secure/lib"],
       "jay-serialization": ["../../packages/serialization/lib"],
-      "rollup-plugin-jay": ["../../packages/rollup-plugin-jay/lib"]
-    }
+      "rollup-plugin-jay": ["../../packages/rollup-plugin-jay/lib"],
+    },
   },
-  "exclude": ["node_modules", "dist", "dist-secure", "build"]
+  "exclude": ["node_modules", "dist", "dist-secure", "build"],
 }

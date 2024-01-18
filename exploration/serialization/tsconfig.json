@@ -2,6 +2,6 @@
   "extends": "jay-dev-environment/examples/tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
-    "module": "ES2022"
-  }
+    "module": "ES2022",
+  },
 }

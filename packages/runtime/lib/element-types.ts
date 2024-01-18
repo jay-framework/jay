@@ -39,9 +39,8 @@ export interface JayComponent<Props, ViewState, jayElement extends BaseJayElemen
 }
 
 export type PropsFrom<Type> = Type extends JayComponent<infer Props, any, any> ? Props : null;
-export type ViewStateFrom<Type> = Type extends JayComponent<any, infer ViewState, any>
-    ? ViewState
-    : null;
+export type ViewStateFrom<Type> =
+    Type extends JayComponent<any, infer ViewState, any> ? ViewState : null;
 export type ElementFrom<Type> = Type extends JayComponent<any, any, infer Element> ? Element : null;
 
 export type JayComponentConstructor<Props> = (props: Props) => JayComponent<Props, any, any>;
