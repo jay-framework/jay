@@ -1,18 +1,12 @@
-import ts, {
-    Expression,
-    ExpressionStatement,
-    isBlock,
-    isCallExpression,
-    isExpressionStatement,
-    isPropertyAccessExpression, isVariableStatement
-} from 'typescript';
+import ts, {ExpressionStatement, isCallExpression, isPropertyAccessExpression, isVariableStatement} from 'typescript';
 import {
     FlattenedAccessChain,
-    flattenVariable, isParamVariableRoot,
+    flattenVariable,
+    isParamVariableRoot,
     NameBindingResolver,
 } from './name-binding-resolver';
-import { CompiledPattern } from './compile-function-split-patterns';
-import { codeToAst } from '../ts-compiler-utils';
+import {CompiledPattern, CompilePatternType} from './compile-function-split-patterns';
+import {codeToAst} from '../ts-compiler-utils';
 
 interface MatchedPattern {
     pattern: CompiledPattern;
@@ -22,18 +16,39 @@ interface MatchedPattern {
 function findPatternInVariable(
     resolvedParam: FlattenedAccessChain,
     compiledPatterns: CompiledPattern[],
+    patternTypeToFind: CompilePatternType
 ): MatchedPattern {
-    let patternKey = compiledPatterns.findIndex(
-        (pattern) =>
-            isParamVariableRoot(pattern.accessChain.root) &&
-            pattern.accessChain.root.paramIndex === pattern.accessChain.root.paramIndex &&
-            pattern.accessChain.path.length <= resolvedParam.path.length &&
-            pattern.accessChain.path.every(
-                (element, index) => element === resolvedParam.path[index],
-            ),
-    );
-    let pattern = patternKey === -1 ? undefined : compiledPatterns[patternKey];
-    return { pattern, patternKey };
+    if (patternTypeToFind === CompilePatternType.RETURN) {
+        let patternKey = compiledPatterns
+            .filter(pattern => pattern.type === CompilePatternType.RETURN)
+            .findIndex(pattern =>
+                isParamVariableRoot(pattern.accessChain.root) &&
+                resolvedParam.root &&
+                isParamVariableRoot(resolvedParam.root) &&
+                pattern.accessChain.root.paramIndex === resolvedParam.root.paramIndex &&
+                pattern.accessChain.path.length <= resolvedParam.path.length &&
+                pattern.accessChain.path.every(
+                    (element, index) => element === resolvedParam.path[index],
+                ),
+            )
+        let pattern = patternKey === -1 ? undefined : compiledPatterns[patternKey];
+        return { pattern, patternKey };
+    }
+    else {// if (patternTypeToFind === CompilePatternType.CALL) {
+        let patternKey = compiledPatterns.findIndex(
+            (pattern) =>
+                isParamVariableRoot(pattern.accessChain.root) &&
+                resolvedParam.root &&
+                isParamVariableRoot(resolvedParam.root) &&
+                pattern.accessChain.root.paramIndex === resolvedParam.root.paramIndex &&
+                pattern.accessChain.path.length <= resolvedParam.path.length &&
+                pattern.accessChain.path.every(
+                    (element, index) => element === resolvedParam.path[index],
+                ),
+        );
+        let pattern = patternKey === -1 ? undefined : compiledPatterns[patternKey];
+        return { pattern, patternKey };
+    }
 }
 
 export interface TransformedEventHandlerByPattern {
@@ -74,6 +89,7 @@ const mkTransformEventHandlerStatementVisitor = (
             let { pattern, patternKey } = findPatternInVariable(
                 flattenedResolvedParam,
                 compiledPatterns,
+                CompilePatternType.RETURN
             );
             if (pattern) {
                 sideEffects.matchedReturnPatterns.push({ pattern, patternKey });
@@ -91,6 +107,18 @@ const mkTransformEventHandlerStatementVisitor = (
                     )[0] as ExpressionStatement
                 ).expression;
             }
+        }
+        else if (isCallExpression(node)) {
+            let resolvedParam = nameBindingResolver.resolvePropertyAccessChain(node.expression);
+            let flattenedResolvedParam = flattenVariable(resolvedParam);
+            let { pattern, patternKey } = findPatternInVariable(
+                flattenedResolvedParam,
+                compiledPatterns,
+                CompilePatternType.CALL
+            );
+            if (pattern)
+                return undefined;
+
         }
         else if (isVariableStatement(node)) {
             nameBindingResolver.addVariableStatement(node);
