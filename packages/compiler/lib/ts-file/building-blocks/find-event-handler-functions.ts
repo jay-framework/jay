@@ -1,4 +1,4 @@
-import ts, {
+import {
     ExpressionStatement,
     FunctionLikeDeclarationBase,
     isBlock,
@@ -9,7 +9,12 @@ import ts, {
     isPropertyAccessExpression,
     isVariableStatement,
 } from 'typescript';
-import { flattenVariable, NameBindingResolver } from './name-binding-resolver';
+import {
+    flattenVariable,
+    isFunctionVariableRoot,
+    isParamVariableRoot,
+    NameBindingResolver,
+} from './name-binding-resolver';
 import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils';
 
 export interface FoundEventHandler {
@@ -47,7 +52,8 @@ export function findEventHandlersBlock(
                 let accessChain = flattenVariable(functionVariable);
                 if (
                     accessChain.path.length === 2 &&
-                    accessChain.root === functionDeclaration.parameters[1]
+                    isParamVariableRoot(accessChain.root) &&
+                    accessChain.root.param === functionDeclaration.parameters[1]
                 ) {
                     let handler = statement.expression.arguments[0];
                     if (isFunctionLikeDeclarationBase(handler))
@@ -62,9 +68,12 @@ export function findEventHandlersBlock(
                             nameBindingResolver.resolvePropertyAccessChain(handler),
                         );
 
-                        if (flattenedHandler.path.length === 0)
+                        if (
+                            flattenedHandler.path.length === 0 &&
+                            isFunctionVariableRoot(flattenedHandler.root)
+                        )
                             foundEventHandlers.push({
-                                eventHandler: flattenedHandler.root as FunctionLikeDeclarationBase,
+                                eventHandler: flattenedHandler.root.func,
                                 eventHandlerCallStatement: statement,
                                 handlerIndex:
                                     foundEventHandlerFunctionsToHandlerIndex.get(

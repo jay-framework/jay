@@ -16,8 +16,14 @@ function inputValuePattern({event}: JayEvent<any, any>) {
     return event.target.value;
 }`;
 
+const PATTERN_EVENT_PREVENT_DEFAULT = `
+function inputValuePattern({event}: JayEvent<any, any>) {
+    event.preventDefault();
+}`;
+
 describe('split event handler by pattern', () => {
-    const patterns = compileFunctionSplitPatternsBlock([PATTERN_EVENT_TARGET_VALUE]);
+    const RETURN_PATTERNS_1 = compileFunctionSplitPatternsBlock([PATTERN_EVENT_TARGET_VALUE]).val;
+    const CALL_PATTERNS_1 = compileFunctionSplitPatternsBlock([PATTERN_EVENT_PREVENT_DEFAULT]).val;
 
     function testTransformer(compiledPatterns: CompiledPattern[]) {
         let splitEventHandlers: TransformedEventHandlerByPattern[] = [];
@@ -41,9 +47,9 @@ describe('split event handler by pattern', () => {
     }
 
     describe('replace return pattern with identifier', () => {
-        it('should replace function call parameter for arrow event handler and mark eventHandlerMatchedPatterns', async () => {
+        it('should replace function call parameter for arrow event handler', async () => {
             const inputEventHandler = `({event}) => setText((event.target as HTMLInputElement).value)`;
-            const { transformer, splitEventHandlers } = testTransformer(patterns.val);
+            const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(await prettify(`({event}) => setText(event.$0)`));
@@ -53,9 +59,9 @@ describe('split event handler by pattern', () => {
             );
         });
 
-        it('should replace function call parameter for function event handler and mark eventHandlerMatchedPatterns', async () => {
+        it('should replace function call parameter for function event handler', async () => {
             const inputEventHandler = `function bla({event}) { setText((event.target as HTMLInputElement).value) }`;
-            const { transformer, splitEventHandlers } = testTransformer(patterns.val);
+            const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(
@@ -67,9 +73,49 @@ describe('split event handler by pattern', () => {
             );
         });
 
+        it('should support variable', async () => {
+            const inputEventHandler = `function bla({event}) {
+              let target = event.target as HTMLInputElement;  
+              setText(target.value) 
+            }`;
+            const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
+            let transformed = await transformCode(inputEventHandler, [transformer]);
+
+            expect(transformed).toEqual(
+                await prettify(`function bla({event}) {
+                  let target = event.target as HTMLInputElement; 
+                  setText(event.$0) 
+                  }`),
+            );
+            expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
+            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment)).toEqual(
+                await prettify(`({ event }) => ({$0: event.target.value})`),
+            );
+        });
+
+        it('should support variable 2', async () => {
+            const inputEventHandler = `function bla({event}) {
+              let value = (event.target as HTMLInputElement).value;  
+              setText(value) 
+            }`;
+            const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
+            let transformed = await transformCode(inputEventHandler, [transformer]);
+
+            expect(transformed).toEqual(
+                await prettify(`function bla({event}) {
+                    let value = event.$0;
+                    setText(value);
+                }`),
+            );
+            expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
+            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment)).toEqual(
+                await prettify(`({ event }) => ({$0: event.target.value})`),
+            );
+        });
+
         it('should not transform and not mark eventHandlerMatchedPatterns if no pattern is matched 1', async () => {
             const inputEventHandler = `function bla({event}) { setText((event.target as HTMLInputElement).keycode) }`;
-            const { transformer, splitEventHandlers } = testTransformer(patterns.val);
+            const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(
@@ -83,7 +129,7 @@ describe('split event handler by pattern', () => {
 
         it('should not transform and not mark eventHandlerMatchedPatterns if no pattern is matched 2', async () => {
             const inputEventHandler = `function bla({event}) { setCount(count() + 1) }`;
-            const { transformer, splitEventHandlers } = testTransformer(patterns.val);
+            const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(
@@ -91,6 +137,29 @@ describe('split event handler by pattern', () => {
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeFalsy();
             expect(splitEventHandlers[0].functionRepositoryFragment).not.toBeDefined();
+        });
+    });
+
+    describe('extract call pattern', () => {
+        it('should extract event.preventDefault()', async () => {
+            const inputEventHandler = `({event}) => {
+                event.preventDefault();
+                console.log('mark');
+            }`;
+            const { transformer, splitEventHandlers } = testTransformer(CALL_PATTERNS_1);
+            let transformed = await transformCode(inputEventHandler, [transformer]);
+
+            expect(transformed).toEqual(
+                await prettify(`({event}) => {
+                console.log('mark');
+            }`),
+            );
+            expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
+            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment)).toEqual(
+                await prettify(`({event}) => {
+                    event.preventDefault();
+                }`),
+            );
         });
     });
 });
