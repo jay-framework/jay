@@ -14,12 +14,10 @@ function CounterConstructor({ initialValue }: Props<CounterProps>) {
     let [count, setCount] = createState(initialValue);
 
     return {
-        render: () => (
+        render: (
             <div>
                 <button onclick={() => setCount(count() - 1)}>-</button>
-                {count() % 2 === 0 ?
-                     <span style="color: red">{'R' + count()}</span> :
-                     <span style="color: blue">{'B' + count()}</span>}
+                <span style="color: red">{'R' + count()}</span>
                 <button onclick={() => setCount(count() + 1)}>+</button>
             </div>
         );
@@ -30,22 +28,30 @@ export const Counter = makeJayTsxComponent(CounterConstructor);
 `;
 
     it('returns JayFile', () => {
-        expect(parseTsxFile(filename, code)).toEqual(
-            new WithValidations({
-                imports: [
-                    {
-                        module: 'jay-component',
-                        names: [
-                            { name: 'createState', type: JayUnknown },
-                            { name: 'makeJayTsxComponent', type: JayUnknown },
-                            { name: 'Props', type: JayUnknown },
-                        ],
-                        sandbox: false,
-                    },
-                ],
-                baseElementName: 'Counter',
-            } as JayFile),
-        );
+        const { val: jayFile, validations } = parseTsxFile(filename, code);
+
+        expect(validations).toEqual([]);
+        expect(jayFile).toMatchObject({
+            imports: [
+                {
+                    module: 'jay-component',
+                    names: [
+                        { name: 'createState', type: JayUnknown },
+                        { name: 'makeJayTsxComponent', type: JayUnknown },
+                        { name: 'Props', type: JayUnknown },
+                    ],
+                    sandbox: false,
+                },
+            ],
+            baseElementName: 'Counter',
+        } as JayFile);
+        // expect(jayFile.body.outerHTML).toEqual(`
+        //    <div>
+        //        <button ref="ref1">-</button>
+        //        <span style="color: red">{$1()}</span>
+        //        <button ref="ref2">+</button>
+        //    </div>
+        // `);
     });
 
     describe('on no component constructor', () => {

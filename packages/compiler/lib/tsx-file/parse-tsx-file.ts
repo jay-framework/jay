@@ -1,3 +1,4 @@
+import { parse as parseHtml } from 'node-html-parser';
 import { JayFile } from '../core/jay-file-types';
 import { WithValidations } from '../core/with-validations';
 import { getImportByName, parseImportLinks } from '../ts-file/parse-jay-file/parse-import-links';
@@ -9,9 +10,10 @@ import { findFunctionExpressionReturnStatements } from '../ts-file/building-bloc
 import { findMakeJayTsxComponentConstructorCallsBlock } from '../ts-file/building-blocks/find-make-jay-tsx-component-constructor-calls';
 import ts from 'typescript';
 import { getObjectPropertiesMap } from '../ts-file/building-blocks/get-object-properties-map';
+import { parseJsx } from './parse-jsx';
 
 export function parseTsxFile(filename: string, source: string): WithValidations<JayFile> {
-    const sourceFile = createTsSourceFileFromSource(filename, source);
+    const sourceFile = createTsSourceFileFromSource(filename, source, ts.ScriptKind.TSX);
 
     const imports = parseImportLinks(sourceFile);
     const makeJayTsxComponentImport = getImportByName(
@@ -71,8 +73,14 @@ export function parseTsxFile(filename: string, source: string): WithValidations<
 
     const renderExpressions = returnStatementsProperties.map((statement) => statement.render);
 
+    const renderedJsxes = renderExpressions.map((renderExpression) => parseJsx(renderExpression));
+    renderedJsxes.forEach(({ validations }) => {
+        if (validations.length > 0) return new WithValidations<JayFile>(undefined, validations);
+    });
+
     return new WithValidations<JayFile>({
         imports,
         baseElementName,
+        body: parseHtml(renderedJsxes[0].getHtml()), // TODO support multiple bodies
     } as JayFile);
 }
