@@ -1,26 +1,26 @@
 import ts from 'typescript';
-import { createTsSourceFile } from '../test-utils/ts-source-utils';
+import { createTsxSourceFile } from '../test-utils/ts-source-utils';
 import { parseJsx } from '../../lib/tsx-file/parse-jsx';
 import { prettifyHtml } from '../../lib/utils/prettify';
 
-describe.skip('parseJsx', () => {
+describe('parseJsx', () => {
     function parse(sourceFile: ts.SourceFile) {
-        return parseJsx(sourceFile.statements[0] as unknown as ts.Expression);
+        return parseJsx(sourceFile.statements[0] as unknown as ts.Expression, { debug: false });
     }
 
-    const sourceFile = createTsSourceFile(`
+    const sourceFile = createTsxSourceFile(`(
         <div>
             <button onclick={() => setCount(count() - 1)}>-</button>
             <span style="color: red">{'R' + count()}</span>
             <button onclick={() => setCount(count() + 1)}>+</button>
+            <div style="visibility: hidden"/>
         </div>
     `);
 
-    it('returns parsed body with refs', async () => {
-        const jsxBlock = await parse(sourceFile).prettified();
-
+    it('returns parsed body with refs', () => {
+        const jsxBlock = parse(sourceFile).prettified();
         expect(jsxBlock).toEqual({
-            html: await prettifyHtml(`
+            html: prettifyHtml(`
                 <div>
                     <button ref="_ref_0">-</button>
                     <span style="color: red">{_memo_0()}</span>
@@ -29,13 +29,13 @@ describe.skip('parseJsx', () => {
                 </div>
             `),
             refs: ['() => setCount(count() - 1)', '() => setCount(count() + 1)'],
-            memos: ["'R' + count()"],
+            memos: ['"R" + count()'],
             validations: [],
         });
     });
 
     describe('on unsupported JSX node', () => {
-        const sourceFile = createTsSourceFile(`
+        const sourceFile = createTsxSourceFile(`
         <div onclick={handler}/>
     `);
 

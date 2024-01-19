@@ -87,15 +87,15 @@ export class JsxBlock {
         };
     }
 
-    async prettified(): Promise<{
+    prettified(): {
         html: string;
         refs: string[];
         memos: string[];
         validations: string[];
-    }> {
+    } {
         const html = this.getHtml();
         return {
-            html: valid(html) ? await prettifyHtml(html) : html,
+            html: prettifyHtml(html),
             refs: this.refs.map((ref) => astToCode(ref)),
             memos: this.memos.map((memo) => astToCode(memo)),
             validations: this.validations,

@@ -20,21 +20,44 @@ const SUPPORTED_JSX_NODES = new Set([
     ts.SyntaxKind.JsxNamespacedName,
 ]);
 
-export function parseJsx(expression: ts.Expression): JsxBlock {
+export function parseJsx(
+    expression: ts.Expression,
+    { debug = false }: { debug?: boolean } = {},
+): JsxBlock {
     const jsxBlock = new JsxBlock();
 
-    function visit(node: ts.Node) {
+    function visit(node: ts.Node): void {
         if (!jsxBlock.isValid()) return;
+
         if (!SUPPORTED_JSX_NODES.has(node.kind)) {
-            jsxBlock.validations.push(`Unsupported JSX node: ${node.getText()}`);
+            jsxBlock.validations.push(
+                `Unsupported JSX node (kind ${node.kind}): ${node.getText()}`,
+            );
             return;
         }
 
-        if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node))
-            jsxBlock.appendBlock(parseOpeningElement(node));
+        if (debug) console.log(node.kind, node.getText(), jsxBlock.data());
 
-        if (ts.isJsxClosingElement(node))
-            jsxBlock.append({ htmlFragments: [node.tagName.getText()] });
+        if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+            parseOpeningElement(node, jsxBlock);
+            return;
+        }
+
+        if (ts.isJsxClosingElement(node)) {
+            jsxBlock.addHtml(node.getText());
+            return;
+        }
+
+        if (ts.isJsxText(node)) {
+            const trimmedText = node.getText().trim();
+            trimmedText && jsxBlock.addHtml(trimmedText);
+            return;
+        }
+
+        if (ts.isJsxExpression(node)) {
+            jsxBlock.addHtml(`{_memo_${jsxBlock.addMemo(node.expression)}()}`);
+            return;
+        }
 
         ts.forEachChild(node, visit);
     }
