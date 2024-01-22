@@ -1,8 +1,8 @@
 import { CustomPluginOptions, PluginContext, ResolveIdResult, ResolvedId } from 'rollup';
 import { watchChangesFor } from './watch';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
-import { appendJayMetadata, JayFormat, jayMetadataFromModuleMetadata } from './metadata';
-import { hasExtension, JAY_QUERY_WORKER_TRUSTED_TS, TS_EXTENSION } from 'jay-compiler';
+import { appendJayMetadata, jayMetadataFromModuleMetadata } from './metadata';
+import { hasExtension, JAY_QUERY_WORKER_TRUSTED_TS, JayFormat, TS_EXTENSION } from 'jay-compiler';
 
 export interface ResolveIdOptions {
     attributes: Record<string, string>;

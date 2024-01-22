@@ -9,7 +9,7 @@ import path from 'path';
 import {
     JayArrayType,
     JayEnumType,
-    JayFile,
+    JayHtmlFile,
     JayImportedType,
     JayImportLink,
     JayImportName,
@@ -20,6 +20,7 @@ import {
     resolvePrimitiveType,
 } from '../core/jay-file-types';
 import { ResolveTsConfigOptions } from '../ts-file/resolve-ts-config';
+import { JayFormat } from '../core/jay-format';
 
 export function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj);
@@ -163,7 +164,7 @@ export function parseJayFile(
     filename: string,
     filePath: string,
     options: ResolveTsConfigOptions,
-): WithValidations<JayFile> {
+): WithValidations<JayHtmlFile> {
     const normalizedFileName = normalizeFilename(filename);
     const baseElementName = capitalCase(normalizedFileName, { delimiter: '' });
     let root = parse(html);
@@ -190,7 +191,10 @@ export function parseJayFile(
         validations.push(`jay file must have exactly a body tag`);
         return new WithValidations(undefined, validations);
     }
-    return new WithValidations({ types, examples, imports, body, baseElementName }, validations);
+    return new WithValidations(
+        { format: JayFormat.JayHtml, types, examples, imports, body, baseElementName },
+        validations,
+    );
 }
 
 export function getJayHtmlImports(html: string): string[] {

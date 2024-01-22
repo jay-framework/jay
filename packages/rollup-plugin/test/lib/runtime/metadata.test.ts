@@ -1,11 +1,7 @@
-import {
-    getJayMetadata,
-    isWorkerRoot,
-    JayFormat,
-    JayMetadata,
-} from '../../../lib/runtime/metadata';
+import { getJayMetadata, isWorkerRoot, JayMetadata } from '../../../lib/runtime/metadata';
 import { mock } from 'vitest-mock-extended';
 import { PluginContext } from 'rollup';
+import { JayFormat } from 'jay-compiler';
 
 describe('metadata', () => {
     const originId = 'origin/id';
