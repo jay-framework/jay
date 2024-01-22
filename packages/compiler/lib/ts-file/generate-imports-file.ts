@@ -1,7 +1,7 @@
-import { JayFile } from '../core/jay-file-types';
 import { extractImportedModules, isRelativeImport } from './extract-imports';
 import { JAY_QUERY_WORKER_TRUSTED } from '../core/runtime-mode';
 import { createTsSourceFileFromSource } from './building-blocks/create-ts-source-file-from-source';
+import { JayFile } from '../core/jay-file';
 
 export function generateImportsFileFromTsSource(filename: string, source: string): string {
     const sourceFile = createTsSourceFileFromSource(filename, source);

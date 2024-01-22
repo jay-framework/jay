@@ -1,5 +1,4 @@
 import { WithValidations } from '../../core/with-validations';
-import { JayTypeScriptFile } from '../../core/jay-file-types';
 import { capitalCase } from 'change-case';
 import { hasExtension, withoutExtension } from '../../core/runtime-mode';
 import { JAY_EXTENSION, JAY_TS_EXTENSION } from '../../core/constants';
@@ -7,6 +6,7 @@ import { parseImportLinks } from './parse-import-links';
 import path from 'node:path';
 import { createTsSourceFileFromSource } from '../building-blocks/create-ts-source-file-from-source';
 import { JayFormat } from '../../core/jay-format';
+import { JayTypeScriptFile } from '../../core/jay-file';
 
 export function parseTypeScriptFile(
     filePath: string,

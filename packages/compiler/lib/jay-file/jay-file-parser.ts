@@ -9,18 +9,17 @@ import path from 'path';
 import {
     JayArrayType,
     JayEnumType,
-    JayHtmlFile,
     JayImportedType,
-    JayImportLink,
-    JayImportName,
     JayObjectType,
     JayType,
     JayUnknown,
-    JayYamlStructure,
     resolvePrimitiveType,
-} from '../core/jay-file-types';
+} from '../core/jay-type';
 import { ResolveTsConfigOptions } from '../ts-file/resolve-ts-config';
 import { JayFormat } from '../core/jay-format';
+import { JayImportLink, JayImportName } from '../core/jay-imports';
+import { JayYamlStructure } from '../core/jay-yaml-structure';
+import { JayHtmlFile } from '../core/jay-file';
 
 export function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj);
@@ -192,7 +191,14 @@ export function parseJayFile(
         return new WithValidations(undefined, validations);
     }
     return new WithValidations(
-        { format: JayFormat.JayHtml, types, examples, imports, body, baseElementName },
+        {
+            format: JayFormat.JayHtml,
+            types,
+            examples,
+            imports,
+            body,
+            baseElementName,
+        } as JayHtmlFile,
         validations,
     );
 }

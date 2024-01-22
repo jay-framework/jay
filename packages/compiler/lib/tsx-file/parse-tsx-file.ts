@@ -1,4 +1,4 @@
-import { JayTsxFile } from '../core/jay-file-types';
+import { JayTsxFile } from '../core/jay-file';
 import { WithValidations } from '../core/with-validations';
 import { getImportByName, parseImportLinks } from '../ts-file/parse-jay-file/parse-import-links';
 import { createTsSourceFileFromSource } from '../ts-file/building-blocks/create-ts-source-file-from-source';

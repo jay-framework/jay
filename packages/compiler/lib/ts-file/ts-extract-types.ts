@@ -10,6 +10,7 @@ import {
 } from 'ts-morph';
 import fs from 'fs';
 
+import { resolveTsConfig, ResolveTsConfigOptions } from './resolve-ts-config';
 import {
     JayArrayType,
     JayComponentApiMember,
@@ -19,8 +20,7 @@ import {
     JayType,
     JayUnknown,
     resolvePrimitiveType,
-} from '../core/jay-file-types';
-import { resolveTsConfig, ResolveTsConfigOptions } from './resolve-ts-config';
+} from '../core/jay-type';
 
 function getJayType(type: Type, types: JayType[]): JayType {
     let propType = resolvePrimitiveType(type.getText());
@@ -70,11 +70,6 @@ function getComponentType(tsTypeChecker, name: string, componentType: Type): Jay
     }
 
     return new JayComponentType(name, componentAPIs);
-}
-
-export interface ExportedType {
-    name: string;
-    type: JayType;
 }
 
 function autoAddExtension(filename: string) {
