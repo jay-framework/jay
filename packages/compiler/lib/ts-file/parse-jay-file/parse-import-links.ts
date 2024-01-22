@@ -4,8 +4,9 @@ import {
     JAY_QUERY_MAIN_SANDBOX,
     JAY_QUERY_WORKER_SANDBOX,
 } from '../../core/runtime-mode';
-import { JayImportLink, JayImportName, JayUnknown } from '../../core/jay-file-types';
+import { JayImportLink, JayImportName } from '../../core/jay-imports';
 import { extractImportDeclarations, getImportName, getImportSpecifiers } from '../extract-imports';
+import { JayUnknown } from '../../core/jay-type';
 
 export function parseImportLinks(sourceFile: ts.SourceFile): JayImportLink[] {
     const importDeclarations = extractImportDeclarations(sourceFile).filter((importDeclaration) =>

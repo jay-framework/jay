@@ -23,7 +23,7 @@ import {
     JayObjectType,
     JayString,
     JayUnknown,
-} from '../lib/core/jay-file-types';
+} from '../lib/core/jay-type';
 
 describe('expression-compiler', () => {
     describe('variables', () => {
