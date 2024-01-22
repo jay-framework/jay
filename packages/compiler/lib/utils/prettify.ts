@@ -1,4 +1,5 @@
 import * as prettier from 'prettier';
+import { html as htmlBeautify } from 'js-beautify';
 
 export async function prettify(code: string, options: prettier.Options = {}): Promise<string> {
     // same format as global .prettierrc
@@ -21,8 +22,17 @@ ${code}`);
     }
 }
 
-export async function prettifyHtml(html: string): Promise<string> {
-    return await prettify(html, { parser: 'html' });
+export function prettifyHtml(html: string): string {
+    return htmlBeautify(
+        html
+            .split('\n')
+            .map((line) => line.trim())
+            .join(''),
+        {
+            indent_size: 2,
+            wrap_line_length: 100,
+        },
+    );
 }
 
 export function removeComments(code: string): string {

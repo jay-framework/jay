@@ -15,8 +15,8 @@ describe('parseOpeningElementText', () => {
         <button style="color: red" about={1 + 1} onclick={() => setCount(count() - 1)}>-</button>
     `);
 
-    it('returns jsx block with recorded body, refs and memos', async () => {
-        const jsxBlock = await parseText(sourceFile).prettified();
+    it('returns jsx block with recorded body, refs and memos', () => {
+        const jsxBlock = parseText(sourceFile).prettified();
 
         expect(jsxBlock).toEqual({
             html: '<button style="color: red" about={_memo_0()} ref="_ref_0">',
@@ -26,12 +26,29 @@ describe('parseOpeningElementText', () => {
         });
     });
 
+    describe('on empty JSX node', () => {
+        const sourceFile = createTsxSourceFile(` 
+        <button>-</button>
+    `);
+
+        it('returns jsx block', () => {
+            const jsxBlock = parseText(sourceFile).prettified();
+
+            expect(jsxBlock).toEqual({
+                html: '<button>',
+                refs: [],
+                memos: [],
+                validations: [],
+            });
+        });
+    });
+
     describe('on unsupported JSX node', () => {
         const sourceFile = createTsxSourceFile(`
             <div onclick={handler}/>
         `);
 
-        it('contains validation error', async () => {
+        it('contains validation error', () => {
             const jsxBlock = parseText(sourceFile);
 
             expect(jsxBlock.validations.length).toEqual(1);

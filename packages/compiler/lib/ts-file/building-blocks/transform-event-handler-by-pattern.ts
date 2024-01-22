@@ -77,7 +77,7 @@ function isSafeStatement(
             node.expression.expression,
         );
         let flattenedResolvedParam = flattenVariable(resolvedParam);
-        let { pattern} = findPatternInVariable(
+        let { pattern } = findPatternInVariable(
             flattenedResolvedParam,
             compiledPatterns,
             CompilePatternType.CALL,

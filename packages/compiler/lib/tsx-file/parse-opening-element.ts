@@ -3,8 +3,8 @@ import { JsxBlock } from './jsx-block';
 
 export function parseOpeningElement(
     node: ts.JsxOpeningElement | ts.JsxSelfClosingElement,
+    jsxBlock: JsxBlock = new JsxBlock(),
 ): JsxBlock {
-    const jsxBlock = new JsxBlock();
     const tagName = node.tagName.getText();
     const attributeTexts = node.attributes.properties.map((attribute) =>
         parseAttribute(attribute, jsxBlock),
@@ -14,8 +14,8 @@ export function parseOpeningElement(
     const elementText = [
         '<',
         tagName,
-        ' ',
-        ...attributeTexts.join(' '),
+        attributeTexts.length > 0 ? ' ' : '',
+        attributeTexts.join(' '),
         ts.isJsxSelfClosingElement(node) ? '/' : '',
         '>',
     ].join('');

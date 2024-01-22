@@ -3,7 +3,7 @@ import {
     CompilePatternType,
 } from '../../lib/ts-file/building-blocks/compile-function-split-patterns';
 import { isParameter } from 'typescript';
-import { isParamVariableRoot } from '../../lib/ts-file/building-blocks/name-binding-resolver.ts';
+import { isParamVariableRoot } from '../../lib/ts-file/building-blocks/name-binding-resolver';
 import { fail } from 'assert';
 
 describe('compile secure function split patterns', () => {
