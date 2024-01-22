@@ -8,7 +8,7 @@ import {
     generateElementFile,
     generateImportsFileFromJayFile,
     generateImportsFileFromTsSource,
-    JayFile,
+    JayHtmlFile,
     parseJayFile,
     prettify,
     RuntimeMode,
@@ -29,7 +29,7 @@ export async function readFixtureFile(
 export async function readAndParseJayFile(
     folder: string,
     givenFile?: string,
-): Promise<WithValidations<JayFile>> {
+): Promise<WithValidations<JayHtmlFile>> {
     const dirname = path.resolve(__dirname, '../fixtures', folder);
     const file = givenFile || getFileFromFolder(folder);
     const filename = `${file}.jay-html`;

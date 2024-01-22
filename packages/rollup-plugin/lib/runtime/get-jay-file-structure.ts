@@ -1,13 +1,14 @@
 import {
     checkValidationErrors,
     JayFile,
+    JayFormat,
     parseJayFile,
     parseTypeScriptFile,
     WithValidations,
 } from 'jay-compiler';
 import { PluginContext } from 'rollup';
 import { JayPluginContext } from './jay-plugin-context';
-import { getSourceJayMetadata, JayFormat, JayMetadata } from './metadata';
+import { getSourceJayMetadata, JayMetadata } from './metadata';
 import { getFileContext } from '../common/files';
 
 export async function getJayFileStructure(

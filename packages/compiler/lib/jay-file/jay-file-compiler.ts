@@ -21,7 +21,7 @@ import {
     JayAtomicType,
     JayComponentType,
     JayEnumType,
-    JayFile,
+    JayHtmlFile,
     JayHTMLType,
     JayImportedType,
     JayImportLink,
@@ -899,9 +899,9 @@ ${renderDynanicRefs(dynamicRefs)}
 }
 
 export function generateElementDefinitionFile(
-    parsedFile: WithValidations<JayFile>,
+    parsedFile: WithValidations<JayHtmlFile>,
 ): WithValidations<string> {
-    return parsedFile.map((jayFile: JayFile) => {
+    return parsedFile.map((jayFile) => {
         let types = generateTypes(jayFile.types);
         let {
             renderedRefs,
@@ -934,7 +934,7 @@ export function generateElementDefinitionFile(
 }
 
 export function generateElementFile(
-    jayFile: JayFile,
+    jayFile: JayHtmlFile,
     importerMode: RuntimeMode,
 ): WithValidations<string> {
     let types = generateTypes(jayFile.types);
@@ -963,7 +963,7 @@ export function generateElementFile(
     return new WithValidations(renderedFile, renderedImplementation.validations);
 }
 
-export function generateElementBridgeFile(jayFile: JayFile): string {
+export function generateElementBridgeFile(jayFile: JayHtmlFile): string {
     let types = generateTypes(jayFile.types);
     let { renderedRefs, renderedElement, elementType, renderedImplementation, refImportsInUse } =
         renderFunctionImplementation(
@@ -996,7 +996,7 @@ export function generateElementBridgeFile(jayFile: JayFile): string {
 const CALL_INITIALIZE_WORKER = `setWorkerPort(new JayPort(new HandshakeMessageJayChannel(self)));
 initializeWorker();`;
 
-export function generateSandboxRootFile(jayFile: JayFile): string {
+export function generateSandboxRootFile(jayFile: JayHtmlFile): string {
     // let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(
     //     jayFile.imports,
     // );

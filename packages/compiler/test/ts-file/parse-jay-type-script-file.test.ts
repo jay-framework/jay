@@ -1,4 +1,4 @@
-import { JayUnknown, parseTypeScriptFile, WithValidations } from '../../lib';
+import { JayFormat, JayUnknown, parseTypeScriptFile, WithValidations } from '../../lib';
 
 describe('parseJayTypeScriptFile', () => {
     const filePath = '/root/source/app.jay-html.ts';
@@ -50,8 +50,7 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
         expect(parseTypeScriptFile(filePath, code)).toEqual(
             new WithValidations(
                 {
-                    types: JayUnknown,
-                    examples: [],
+                    format: JayFormat.TypeScript,
                     imports: [
                         {
                             module: 'jay-runtime',
@@ -83,7 +82,6 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
                             sandbox: true,
                         },
                     ],
-                    body: undefined,
                     baseElementName: 'App',
                 },
                 [],

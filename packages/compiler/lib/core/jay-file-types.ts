@@ -1,4 +1,6 @@
 import { HTMLElement } from 'node-html-parser';
+import { JsxBlock } from '../tsx-file/jsx-block';
+import { JayFormat } from './jay-format';
 
 export interface JayType {
     name: string;
@@ -96,13 +98,29 @@ export interface JayImportLink {
     sandbox?: boolean;
 }
 
-export interface JayFile {
+export interface JayHtmlFile {
+    format: JayFormat.JayHtml;
+    imports: JayImportLink[];
+    baseElementName: string;
     types: JayType;
     examples: Array<JayExample>;
+    body: HTMLElement;
+}
+
+export interface JayTsxFile {
+    format: JayFormat.JayTsx;
     imports: JayImportLink[];
-    body: HTMLElement | undefined;
+    baseElementName: string;
+    jsxBlock: JsxBlock;
+}
+
+export interface JayTypeScriptFile {
+    format: JayFormat.TypeScript;
+    imports: JayImportLink[];
     baseElementName: string;
 }
+
+export type JayFile = JayHtmlFile | JayTsxFile | JayTypeScriptFile;
 
 export interface JayYamlStructure {
     data: any;

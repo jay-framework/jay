@@ -5,6 +5,7 @@ import {
     JAY_EXTENSION,
     JAY_QUERY_MAIN_SANDBOX,
     JAY_QUERY_WORKER_TRUSTED_TS,
+    JayFormat,
     TS_EXTENSION,
 } from 'jay-compiler';
 import {
@@ -13,7 +14,7 @@ import {
     ResolveIdOptions,
     resolveJayModeFile,
 } from '../../../lib/runtime/resolve-id';
-import { JayFormat, JayMetadata } from '../../../lib/runtime/metadata';
+import { JayMetadata } from '../../../lib/runtime/metadata';
 import { SANDBOX_ROOT_PREFIX } from '../../../lib/runtime/sandbox';
 
 describe('resolve-id', () => {
