@@ -1,5 +1,4 @@
 import ts from 'typescript';
-import { valid } from 'node-html-parser';
 import { prettifyHtml } from '../utils/prettify';
 import { astToCode } from '../ts-file/ts-compiler-utils';
 

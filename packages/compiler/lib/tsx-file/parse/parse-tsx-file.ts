@@ -1,14 +1,14 @@
-import { JayTsxFile } from '../core/jay-file';
-import { WithValidations } from '../core/with-validations';
-import { getImportByName, parseImportLinks } from '../ts-file/parse-jay-file/parse-import-links';
-import { createTsSourceFileFromSource } from '../ts-file/building-blocks/create-ts-source-file-from-source';
-import { getBaseElementName } from '../ts-file/building-blocks/get-base-element-name';
-import { JAY_COMPONENT, MAKE_JAY_TSX_COMPONENT } from '../core/constants';
-import { findComponentConstructorsBlock } from '../ts-file/building-blocks/find-component-constructors';
-import { findFunctionExpressionReturnStatements } from '../ts-file/building-blocks/find-function-expression-return-statements';
-import { findMakeJayTsxComponentConstructorCallsBlock } from '../ts-file/building-blocks/find-make-jay-tsx-component-constructor-calls';
+import { JayTsxFile } from '../../core/jay-file';
+import { WithValidations } from '../../core/with-validations';
+import { getImportByName, parseImportLinks } from '../../ts-file/parse-jay-file/parse-import-links';
+import { createTsSourceFileFromSource } from '../../ts-file/building-blocks/create-ts-source-file-from-source';
+import { getBaseElementName } from '../../ts-file/building-blocks/get-base-element-name';
+import { JAY_COMPONENT, MAKE_JAY_TSX_COMPONENT } from '../../core/constants';
+import { findComponentConstructorsBlock } from '../../ts-file/building-blocks/find-component-constructors';
+import { findFunctionExpressionReturnStatements } from '../../ts-file/building-blocks/find-function-expression-return-statements';
+import { findMakeJayTsxComponentConstructorCallsBlock } from '../../ts-file/building-blocks/find-make-jay-tsx-component-constructor-calls';
 import ts from 'typescript';
-import { getObjectPropertiesMap } from '../ts-file/building-blocks/get-object-properties-map';
+import { getObjectPropertiesMap } from '../../ts-file/building-blocks/get-object-properties-map';
 import { parseJsx } from './parse-jsx';
 
 export function parseTsxFile(filename: string, source: string): WithValidations<JayTsxFile> {

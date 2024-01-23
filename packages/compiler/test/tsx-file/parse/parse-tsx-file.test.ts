@@ -1,6 +1,6 @@
-import { parseTsxFile } from '../../lib/tsx-file/parse-tsx-file';
-import { JayFile, JayUnknown, MAKE_JAY_TSX_COMPONENT, WithValidations } from '../../lib';
-import { prettifyHtml } from '../../lib/utils/prettify';
+import { parseTsxFile } from '../../../lib/tsx-file/parse/parse-tsx-file';
+import { JayFile, JayUnknown, MAKE_JAY_TSX_COMPONENT, WithValidations } from '../../../lib';
+import { prettifyHtml } from '../../../lib/utils/prettify';
 
 describe('parseTsxFile', () => {
     const filename = 'dummy.tsx';

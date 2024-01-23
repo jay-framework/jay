@@ -1,6 +1,6 @@
 import * as ts from 'typescript';
 import { parseOpeningElement } from './parse-opening-element';
-import { JsxBlock } from './jsx-block';
+import { JsxBlock } from '../jsx-block';
 
 const SUPPORTED_JSX_NODES = new Set([
     ts.SyntaxKind.ParenthesizedExpression,
