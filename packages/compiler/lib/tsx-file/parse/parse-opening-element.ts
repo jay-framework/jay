@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { JsxBlock } from './jsx-block';
+import { JsxBlock } from '../jsx-block';
 
 export function parseOpeningElement(
     node: ts.JsxOpeningElement | ts.JsxSelfClosingElement,

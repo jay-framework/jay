@@ -1,6 +1,6 @@
 import ts from 'typescript';
-import { createTsxSourceFile } from '../test-utils/ts-source-utils';
-import { parseOpeningElement } from '../../lib/tsx-file/parse-opening-element';
+import { createTsxSourceFile } from '../../test-utils/ts-source-utils';
+import { parseOpeningElement } from '../../../lib/tsx-file/parse/parse-opening-element';
 
 describe('parseOpeningElementText', () => {
     function parseText(sourceFile: ts.SourceFile) {
