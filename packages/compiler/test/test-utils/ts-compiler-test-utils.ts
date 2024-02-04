@@ -121,3 +121,7 @@ export async function readFileAndGenerateImportsFileFromJayFile(
     const output = generateImportsFileFromJayFile(parsedFile);
     return await prettify(output);
 }
+
+export async function astToFormattedCode(node: ts.Node) {
+    return prettify(astToCode(node));
+}
