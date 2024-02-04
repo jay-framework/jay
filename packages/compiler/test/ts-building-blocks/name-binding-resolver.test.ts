@@ -521,6 +521,7 @@ describe('NameBindingResolver', () => {
             expect(bla).toEqual({
                 name: 'bla',
                 root: mkFunctionVariableRoot(func),
+                definingStatement: func
             });
         });
     });

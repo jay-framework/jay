@@ -218,6 +218,7 @@ export class NameBindingResolver {
             let functionVariable = mkVariable({
                 name: statement.name.text,
                 root: mkFunctionVariableRoot(statement),
+                definingStatement: statement
             });
             this.variables.set(statement.name.text, functionVariable);
         }
