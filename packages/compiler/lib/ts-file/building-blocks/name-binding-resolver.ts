@@ -21,7 +21,7 @@ import ts, {
     isParenthesizedExpression,
     isAsExpression,
     isArrowFunction,
-    isFunctionExpression,
+    isFunctionExpression, Statement, isStatement,
 } from 'typescript';
 
 export enum VariableRootType {
@@ -90,6 +90,7 @@ export function isOtherVariableRoot(vr: VariableRoot): vr is OtherVariableRoot {
 
 export interface Variable {
     name?: string;
+    definingStatement?: Statement;
     accessedFrom?: Variable;
     accessedByProperty?: string;
     assignedFrom?: Variable;
@@ -99,6 +100,7 @@ export interface Variable {
 
 export function mkVariable(members: {
     name?: string;
+    definingStatement?: Statement;
     accessedFrom?: Variable;
     accessedByProperty?: string;
     assignedFrom?: Variable;
@@ -122,6 +124,13 @@ const getAccessedByProperty = (
         : undefined;
 };
 
+function findDeclaringStatement(node: ts.Node): Statement {
+    if (isStatement(node))
+        return node
+    else
+        return findDeclaringStatement(node.parent);
+}
+
 export function tsBindingNameToVariable(
     binding: BindingName,
     accessedFrom?: Variable,
@@ -137,6 +146,7 @@ export function tsBindingNameToVariable(
                 accessedByProperty: getAccessedByProperty(binding, accessedFrom, propertyName),
                 assignedFrom,
                 root,
+                definingStatement: findDeclaringStatement(binding)
             }),
         ];
     } else if (isObjectBindingPattern(binding)) {
@@ -149,6 +159,7 @@ export function tsBindingNameToVariable(
                 : undefined,
             assignedFrom,
             root,
+            definingStatement: findDeclaringStatement(binding)
         });
         return binding.elements.flatMap((element) => {
             return tsBindingNameToVariable(element.name, variable, undefined, element.propertyName);
@@ -163,6 +174,7 @@ export function tsBindingNameToVariable(
                 : undefined,
             assignedFrom,
             root,
+            definingStatement: findDeclaringStatement(binding)
         });
         return binding.elements
             .flatMap((element, index) => {
@@ -198,6 +210,29 @@ export class NameBindingResolver {
             paramVariables.forEach((variable) => {
                 if (variable.name) this.variables.set(variable.name, variable);
             });
+        });
+    }
+
+    addFunctionDeclaration(statement: FunctionDeclaration) {
+        if (statement.name) {
+            let functionVariable = mkVariable({
+                name: statement.name.text,
+                root: mkFunctionVariableRoot(statement),
+            });
+            this.variables.set(statement.name.text, functionVariable);
+        }
+    }
+
+    addVariableStatement(variableStatement: VariableStatement) {
+        variableStatement.declarationList.declarations.forEach((declaration) => {
+            let rightSide = this.resolvePropertyAccessChain(declaration.initializer);
+            let declaredVariable = tsBindingNameToVariable(
+                declaration.name,
+                undefined,
+                rightSide,
+                undefined,
+            );
+            declaredVariable.forEach((variable) => this.variables.set(variable.name, variable));
         });
     }
 
@@ -268,19 +303,6 @@ export class NameBindingResolver {
         }
     }
 
-    addVariableStatement(variableStatement: VariableStatement) {
-        variableStatement.declarationList.declarations.forEach((declaration) => {
-            let rightSide = this.resolvePropertyAccessChain(declaration.initializer);
-            let declaredVariable = tsBindingNameToVariable(
-                declaration.name,
-                undefined,
-                rightSide,
-                undefined,
-            );
-            declaredVariable.forEach((variable) => this.variables.set(variable.name, variable));
-        });
-    }
-
     resolvePropertyAccess(expression: PropertyAccessExpression): Variable {
         return this.resolvePropertyAccessChain(expression);
     }
@@ -290,15 +312,6 @@ export class NameBindingResolver {
         return this.getVariable(variableName);
     }
 
-    addFunctionDeclaration(statement: FunctionDeclaration) {
-        if (statement.name) {
-            let functionVariable = mkVariable({
-                name: statement.name.text,
-                root: mkFunctionVariableRoot(statement),
-            });
-            this.variables.set(statement.name.text, functionVariable);
-        }
-    }
 }
 
 export interface FlattenedAccessChain {
