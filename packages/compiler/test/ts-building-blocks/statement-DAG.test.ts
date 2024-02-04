@@ -19,7 +19,6 @@ async function print(dag: DAG): Promise<any> {
 
 describe('statement-DAG', () => {
 
-
     it('should create DAG for line by line dependencies', async () => {
         const sourceFile = createTsSourceFile(`
             let x = 10;
@@ -31,6 +30,22 @@ describe('statement-DAG', () => {
             {statement: 'let x = 10;', dependencies: 'this <- 1'},
             {statement: 'let y = x + 1;', dependencies: 'this -> 0, this <- 2'},
             {statement: 'console.log(y);', dependencies: 'this -> 1'}
+        ])
+    })
+
+    it('should create DAG for line by line dependencies', async () => {
+        const sourceFile = createTsSourceFile(`
+            let x = 10;
+            let z = 20;
+            let y = x + z;
+            console.log(x, y)`);
+        let dag = createDAG(sourceFile);
+
+        expect(await print(dag)).toEqual([
+            {statement: 'let x = 10;', dependencies: 'this <- 2, this <- 3'},
+            {statement: 'let z = 20;', dependencies: 'this <- 2'},
+            {statement: 'let y = x + z;', dependencies: 'this -> 0, this -> 1, this <- 3'},
+            {statement: 'console.log(x, y);', dependencies: 'this -> 0, this -> 2'}
         ])
     })
 });
