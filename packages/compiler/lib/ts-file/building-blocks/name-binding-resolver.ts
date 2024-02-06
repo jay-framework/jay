@@ -21,13 +21,14 @@ import ts, {
     isParenthesizedExpression,
     isAsExpression,
     isArrowFunction,
-    isFunctionExpression, Statement, isStatement,
+    isFunctionExpression, Statement, isStatement, isNamespaceImport, NamedImports, isNamedImports,
 } from 'typescript';
 
 export enum VariableRootType {
     Parameter,
     Function,
     Literal,
+    ImportModule,
     Other,
 }
 
@@ -63,6 +64,21 @@ export interface LiteralVariableRoot extends VariableRoot {
 
 export function mkLiteralVariableRoot(literal: Expression): LiteralVariableRoot {
     return { kind: VariableRootType.Literal, literal };
+}
+
+export enum ImportType {
+    defaultImport,
+    namedImport
+}
+
+export interface ImportModuleVariableRoot extends VariableRoot {
+    kind: VariableRootType.ImportModule;
+    module: Expression;
+    importType: ImportType;
+}
+
+export function mkImportModuleVariableRoot(module: Expression, importType): ImportModuleVariableRoot {
+    return { kind: VariableRootType.ImportModule, module, importType };
 }
 
 export interface OtherVariableRoot extends VariableRoot {
@@ -109,6 +125,8 @@ export function mkVariable(members: {
 }) {
     return Object.fromEntries(Object.entries(members).filter(([, value]) => value !== undefined));
 }
+
+export const UNKNOWN_VARIABLE: Variable = {}
 
 const getAccessedByProperty = (
     binding: Identifier,
@@ -192,6 +210,9 @@ export function tsBindingNameToVariable(
 }
 
 export class NameBindingResolver {
+
+    constructor(readonly parentNameResolver?: NameBindingResolver) {}
+
     variables: Map<string, Variable> = new Map();
 
     addVariable(name: string, variable: Variable) {
@@ -238,7 +259,7 @@ export class NameBindingResolver {
     }
 
     getVariable(name: string) {
-        return this.variables.get(name) || {};
+        return this.variables.get(name) || UNKNOWN_VARIABLE;
     }
 
     resolvePropertyAccessChain(expression: Expression): Variable {
@@ -310,9 +331,53 @@ export class NameBindingResolver {
 
     resolveIdentifier(expression: Identifier): Variable {
         let variableName = expression.text;
-        return this.getVariable(variableName);
+        let nameResolver: NameBindingResolver = this;
+        let resolved: Variable;
+        while ((resolved = nameResolver.getVariable(variableName)) === UNKNOWN_VARIABLE && nameResolver.parentNameResolver)
+            nameResolver = nameResolver.parentNameResolver
+        return resolved;
     }
 
+    addImportDeclaration(node: ts.ImportDeclaration) {
+        // let root = mkImportModuleVariableRoot(node.moduleSpecifier);
+        if (node.importClause.name) {
+            let root = mkImportModuleVariableRoot(node.moduleSpecifier, ImportType.defaultImport);
+            let variable = mkVariable({
+                name: node.importClause.name.text,
+                definingStatement: node,
+                root
+            })
+            this.variables.set(node.importClause.name.text, variable);
+        }
+        if (node.importClause.namedBindings) {
+            let root = mkImportModuleVariableRoot(node.moduleSpecifier, ImportType.namedImport);
+            let namedBindings = node.importClause.namedBindings;
+            if(isNamespaceImport(namedBindings)) {
+                let variable = mkVariable({
+                    name: namedBindings.name.text,
+                    definingStatement: node,
+                    root
+                })
+                this.variables.set(namedBindings.name.text, variable);
+            }
+            else if (isNamedImports(namedBindings)) {
+                namedBindings.elements.forEach(importSpecifier => {
+                    if (!importSpecifier.isTypeOnly) {
+                        let variable = mkVariable({
+                            name: importSpecifier.name.text,
+                            accessedByProperty: (importSpecifier.propertyName || importSpecifier.name).text,
+                            accessedFrom: {
+                                definingStatement: node,
+                                root
+                            },
+                            definingStatement: node,
+                        })
+                        this.variables.set(importSpecifier.name.text, variable);
+                    }
+                })
+            }
+        }
+    }
 }
 
 export interface FlattenedAccessChain {

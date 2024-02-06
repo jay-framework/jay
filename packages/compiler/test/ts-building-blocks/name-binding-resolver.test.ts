@@ -9,7 +9,7 @@ import ts, {
     PropertyAssignment,
     CallExpression,
     ParameterDeclaration,
-    FunctionExpression,
+    FunctionExpression, ImportDeclaration,
 } from 'typescript';
 import {
     tsBindingNameToVariable,
@@ -17,7 +17,7 @@ import {
     flattenVariable,
     mkParameterVariableRoot,
     mkOtherVariableRoot,
-    mkFunctionVariableRoot,
+    mkFunctionVariableRoot, mkImportModuleVariableRoot, ImportType,
 } from '../../lib/ts-file/building-blocks/name-binding-resolver';
 
 function toSourceFile(code: string) {
@@ -552,4 +552,99 @@ describe('NameBindingResolver', () => {
             });
         });
     });
+
+    describe('resolve import variables', () => {
+        function resolveNamesForVariableStatement(code: string) {
+            let nameResolver = new NameBindingResolver();
+            let importDeclaration = getAstNode(code) as ImportDeclaration;
+            let moduleSpecifier = importDeclaration.moduleSpecifier;
+            nameResolver.addImportDeclaration(importDeclaration);
+            return { nameResolver, importDeclaration, moduleSpecifier };
+        }
+
+        it(`resolve import a from 'b (default import)'`, () => {
+            let { nameResolver, importDeclaration, moduleSpecifier } = resolveNamesForVariableStatement('import a from \'b\'');
+
+            expect(nameResolver.variables.has('a'));
+            let a = nameResolver.variables.get('a');
+            expect(a).toEqual({
+                name: 'a',
+                definingStatement: importDeclaration,
+                root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.defaultImport)
+            });
+            expect(flattenVariable(a)).toEqual({ path: [], root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.defaultImport) });
+        });
+
+        it(`resolve import * as a from 'b' (namespace import)`, () => {
+            let { nameResolver, importDeclaration, moduleSpecifier } = resolveNamesForVariableStatement('import * as a from \'b\'');
+
+            expect(nameResolver.variables.has('a'));
+            let a = nameResolver.variables.get('a');
+            expect(a).toEqual({
+                name: 'a',
+                definingStatement: importDeclaration,
+                root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.namedImport)
+            });
+            expect(flattenVariable(a)).toEqual({ path: [], root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.namedImport) });
+        });
+
+        it(`resolve import {a} from 'b'`, () => {
+            let { nameResolver, importDeclaration, moduleSpecifier } = resolveNamesForVariableStatement('import {a} from \'b\'');
+
+            expect(nameResolver.variables.has('a'));
+            let a = nameResolver.variables.get('a');
+            expect(a).toEqual({
+                name: 'a',
+                accessedByProperty: 'a',
+                accessedFrom: {
+                    definingStatement: importDeclaration,
+                    root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.namedImport)
+                },
+                definingStatement: importDeclaration,
+            });
+            expect(flattenVariable(a)).toEqual({ path: ['a'], root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.namedImport) });
+        });
+
+        it(`resolve import {a as c} from 'b'`, () => {
+            let { nameResolver, importDeclaration, moduleSpecifier } = resolveNamesForVariableStatement('import {a as c} from \'b\'');
+
+            expect(nameResolver.variables.has('c'));
+            let c = nameResolver.variables.get('c');
+            expect(c).toEqual({
+                name: 'c',
+                accessedByProperty: 'a',
+                accessedFrom: {
+                    definingStatement: importDeclaration,
+                    root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.namedImport)
+                },
+                definingStatement: importDeclaration,
+            });
+            expect(flattenVariable(c)).toEqual({ path: ['a'], root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.namedImport) });
+        });
+    })
+
+    describe('support resolve identifier from parent scope', () => {
+        function resolveNamesForVariableStatement(code: string) {
+            let parentNameResolver = new NameBindingResolver();
+            parentNameResolver.addVariable('a', { name: 'a', root: PARAM_ROOT });
+            let childNameResolver = new NameBindingResolver(parentNameResolver);
+            let node = getAstNode(code) as VariableStatement;
+            childNameResolver.addVariableStatement(node);
+            let a = parentNameResolver.variables.get('a');
+            return { parentNameResolver, childNameResolver, a, node };
+        }
+
+        it('resolve let z = a', () => {
+            let { a, parentNameResolver, childNameResolver, node } = resolveNamesForVariableStatement('let z = a');
+
+            expect(childNameResolver.variables.has('z'));
+            let z = childNameResolver.variables.get('z');
+            expect(z).toEqual({
+                name: 'z',
+                assignedFrom: a,
+                definingStatement: node
+            });
+            expect(flattenVariable(z)).toEqual({ path: [], root: PARAM_ROOT });
+        });
+    })
 });
