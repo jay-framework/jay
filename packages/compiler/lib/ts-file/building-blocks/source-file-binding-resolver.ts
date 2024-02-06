@@ -1,9 +1,17 @@
 import ts, {
-    Identifier, isForStatement, isFunctionDeclaration, isImportDeclaration, isVariableDeclarationList,
+    Identifier,
+    isForInStatement,
+    isForOfStatement,
+    isForStatement,
+    isFunctionDeclaration, isIdentifier,
+    isImportDeclaration,
+    isVariableDeclarationList,
     isVariableStatement,
-    SourceFile,
+    SourceFile, VariableDeclarationList,
 } from "typescript";
 import {
+    mkOtherVariableRoot,
+    mkVariable,
     NameBindingResolver,
 } from "./name-binding-resolver.ts";
 import {isFunctionLikeDeclarationBase} from "../ts-compiler-utils.ts";
@@ -14,6 +22,17 @@ export class SourceFileBindingResolver {
     constructor(sourceFile: SourceFile) {
         this.nameBindingResolvers.set(sourceFile, new NameBindingResolver())
         const nbResolversQueue: Array<NameBindingResolver> = [this.nameBindingResolvers.get(sourceFile)]
+
+        const doWithChildBindingResolver = (node: ts.Node, callback: () => void) => {
+            nbResolversQueue.unshift(new NameBindingResolver(nbResolversQueue[0]));
+            this.nameBindingResolvers.set(node, nbResolversQueue[0])
+            callback();
+            node.getChildren().forEach(child =>
+                ts.visitNode(child, visitor))
+            nbResolversQueue.shift();
+            return node;
+        }
+
         const visitor = (node: ts.Node): ts.Node =>  {
             if (isVariableStatement(node))
                 nbResolversQueue[0].addVariableStatement(node)
@@ -22,22 +41,27 @@ export class SourceFileBindingResolver {
             if (isFunctionDeclaration(node))
                 nbResolversQueue[0].addFunctionDeclaration(node)
             if (isFunctionLikeDeclarationBase(node)) {
-                nbResolversQueue.unshift(new NameBindingResolver(nbResolversQueue[0]));
-                this.nameBindingResolvers.set(node, nbResolversQueue[0])
-                nbResolversQueue[0].addFunctionParams(node)
-                node.getChildren().forEach(child =>
-                    ts.visitNode(child, visitor))
-                nbResolversQueue.shift();
-                return node;
+                return doWithChildBindingResolver(node,
+                    () => nbResolversQueue[0].addFunctionParams(node))
             }
             if (isForStatement(node) && isVariableDeclarationList(node.initializer)) {
-                nbResolversQueue.unshift(new NameBindingResolver(nbResolversQueue[0]));
-                this.nameBindingResolvers.set(node, nbResolversQueue[0])
-                nbResolversQueue[0].addVariableDeclarationList(node.initializer)
-                node.getChildren().forEach(child =>
-                    ts.visitNode(child, visitor))
-                nbResolversQueue.shift();
-                return node;
+                return doWithChildBindingResolver(node,
+                    () => nbResolversQueue[0].addVariableDeclarationList(node.initializer as VariableDeclarationList))
+            }
+            if ((isForInStatement(node) || isForOfStatement(node)) &&
+                isVariableDeclarationList(node.initializer) &&
+                node.initializer.declarations.length === 1 &&
+                isIdentifier(node.initializer.declarations[0].name)
+            ) {
+                return doWithChildBindingResolver(node,
+                    () => {
+                        let name = ((node.initializer as VariableDeclarationList).declarations[0].name as Identifier).text;
+                        nbResolversQueue[0].addVariable(name, mkVariable({
+                            name,
+                            root: mkOtherVariableRoot(node),
+                            definingStatement: node
+                        }))
+                    })
             }
             node.getChildren().forEach(child =>
                 ts.visitNode(child, visitor))
@@ -54,6 +78,6 @@ export class SourceFileBindingResolver {
     }
 
     explain(identifier: Identifier) {
-        return this.findBindingResolver(identifier).getVariable(identifier.text);
+        return this.findBindingResolver(identifier).resolveIdentifier(identifier);
     }
 }

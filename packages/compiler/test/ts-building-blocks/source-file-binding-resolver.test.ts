@@ -160,6 +160,25 @@ describe('SourceFileBindingResolver', () => {
                     .body
                     .statements[0]
             });
+
+        expect(sourceFileBindingResolver.explain(
+            ((sourceFile.statements[1] as FunctionDeclaration)
+                .body
+                .statements[0] as VariableStatement)
+                .declarationList.declarations[0]
+                .initializer as Identifier))
+            .toEqual(rootBindingResolver.getVariable('z'));
+
+        expect(sourceFileBindingResolver.explain(
+            (((((sourceFile.statements[1] as FunctionDeclaration)
+                .body
+                .statements[1] as ExpressionStatement)
+                .expression as CallExpression)
+                .arguments[0] as BinaryExpression)
+                .left as BinaryExpression)
+                .left as Identifier))
+            .toEqual(functionBindingResolver.getVariable('y'));
+
     })
 
     describe('iterations', () => {
@@ -208,6 +227,122 @@ describe('SourceFileBindingResolver', () => {
                     },
                     definingStatement: sourceFile.statements[1]
                 });
+            expect(forBindingResolver.getVariable('y'))
+                .toEqual({
+                    name: 'y',
+                    assignedFrom: {
+                        root: mkOtherVariableRoot((((sourceFile
+                            .statements[1] as ForStatement)
+                            .statement as Block)
+                            .statements[0] as VariableStatement)
+                            .declarationList.declarations[0].initializer
+                        )
+                    },
+                    definingStatement: ((sourceFile
+                        .statements[1] as ForStatement)
+                        .statement as Block)
+                        .statements[0]
+                });
+        })
+
+        it('for in iteration', () => {
+            const sourceFile = createTsSourceFile(`
+        let z = [];
+        for (let i in z) {
+            let y = z + i;
+            console.log(y);
+        }`)
+
+            let sourceFileBindingResolver = new SourceFileBindingResolver(sourceFile);
+            let rootBindingResolver = sourceFileBindingResolver
+                .findBindingResolver(sourceFile);
+            let forBindingResolver = sourceFileBindingResolver
+                .findBindingResolver(sourceFile.statements[1]);
+
+            expect(rootBindingResolver.getVariable('x'))
+                .toBe(UNKNOWN_VARIABLE);
+
+            expect(rootBindingResolver.getVariable('y'))
+                .toBe(UNKNOWN_VARIABLE);
+
+            expect(rootBindingResolver.getVariable('z'))
+                .toEqual({
+                    name: 'z',
+                    assignedFrom: {
+                        root: mkOtherVariableRoot((sourceFile
+                            .statements[0] as VariableStatement)
+                            .declarationList.declarations[0].initializer
+                        )
+                    },
+                    definingStatement: sourceFile.statements[0],
+                });
+
+
+            expect(forBindingResolver.getVariable('i'))
+                .toEqual({
+                    name: 'i',
+                    definingStatement: sourceFile.statements[1],
+                    root: mkOtherVariableRoot(sourceFile.statements[1]),
+                });
+
+            expect(forBindingResolver.getVariable('y'))
+                .toEqual({
+                    name: 'y',
+                    assignedFrom: {
+                        root: mkOtherVariableRoot((((sourceFile
+                            .statements[1] as ForStatement)
+                            .statement as Block)
+                            .statements[0] as VariableStatement)
+                            .declarationList.declarations[0].initializer
+                        )
+                    },
+                    definingStatement: ((sourceFile
+                        .statements[1] as ForStatement)
+                        .statement as Block)
+                        .statements[0]
+                });
+        })
+
+        it('for of iteration', () => {
+            const sourceFile = createTsSourceFile(`
+        let z = [];
+        for (let i of z) {
+            let y = z + i;
+            console.log(y);
+        }`)
+
+            let sourceFileBindingResolver = new SourceFileBindingResolver(sourceFile);
+            let rootBindingResolver = sourceFileBindingResolver
+                .findBindingResolver(sourceFile);
+            let forBindingResolver = sourceFileBindingResolver
+                .findBindingResolver(sourceFile.statements[1]);
+
+            expect(rootBindingResolver.getVariable('x'))
+                .toBe(UNKNOWN_VARIABLE);
+
+            expect(rootBindingResolver.getVariable('y'))
+                .toBe(UNKNOWN_VARIABLE);
+
+            expect(rootBindingResolver.getVariable('z'))
+                .toEqual({
+                    name: 'z',
+                    assignedFrom: {
+                        root: mkOtherVariableRoot((sourceFile
+                            .statements[0] as VariableStatement)
+                            .declarationList.declarations[0].initializer
+                        )
+                    },
+                    definingStatement: sourceFile.statements[0],
+                });
+
+
+            expect(forBindingResolver.getVariable('i'))
+                .toEqual({
+                    name: 'i',
+                    definingStatement: sourceFile.statements[1],
+                    root: mkOtherVariableRoot(sourceFile.statements[1]),
+                });
+
             expect(forBindingResolver.getVariable('y'))
                 .toEqual({
                     name: 'y',
