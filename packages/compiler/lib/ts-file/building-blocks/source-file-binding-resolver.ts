@@ -1,5 +1,5 @@
 import ts, {
-    Identifier, isFunctionDeclaration, isImportDeclaration,
+    Identifier, isForStatement, isFunctionDeclaration, isImportDeclaration, isVariableDeclarationList,
     isVariableStatement,
     SourceFile,
 } from "typescript";
@@ -25,6 +25,15 @@ export class SourceFileBindingResolver {
                 nbResolversQueue.unshift(new NameBindingResolver(nbResolversQueue[0]));
                 this.nameBindingResolvers.set(node, nbResolversQueue[0])
                 nbResolversQueue[0].addFunctionParams(node)
+                node.getChildren().forEach(child =>
+                    ts.visitNode(child, visitor))
+                nbResolversQueue.shift();
+                return node;
+            }
+            if (isForStatement(node) && isVariableDeclarationList(node.initializer)) {
+                nbResolversQueue.unshift(new NameBindingResolver(nbResolversQueue[0]));
+                this.nameBindingResolvers.set(node, nbResolversQueue[0])
+                nbResolversQueue[0].addVariableDeclarationList(node.initializer)
                 node.getChildren().forEach(child =>
                     ts.visitNode(child, visitor))
                 nbResolversQueue.shift();

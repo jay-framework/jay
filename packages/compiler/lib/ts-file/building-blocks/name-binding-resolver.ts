@@ -245,8 +245,8 @@ export class NameBindingResolver {
         }
     }
 
-    addVariableStatement(variableStatement: VariableStatement) {
-        variableStatement.declarationList.declarations.forEach((declaration) => {
+    addVariableDeclarationList(declarationList: ts.VariableDeclarationList) {
+        declarationList.declarations.forEach((declaration) => {
             let rightSide = this.resolvePropertyAccessChain(declaration.initializer);
             let declaredVariable = tsBindingNameToVariable(
                 declaration.name,
@@ -255,7 +255,11 @@ export class NameBindingResolver {
                 undefined,
             );
             declaredVariable.forEach((variable) => this.variables.set(variable.name, variable));
-        });
+        })
+    }
+
+    addVariableStatement(variableStatement: VariableStatement) {
+        this.addVariableDeclarationList(variableStatement.declarationList)
     }
 
     getVariable(name: string) {
@@ -378,6 +382,7 @@ export class NameBindingResolver {
             }
         }
     }
+
 }
 
 export interface FlattenedAccessChain {

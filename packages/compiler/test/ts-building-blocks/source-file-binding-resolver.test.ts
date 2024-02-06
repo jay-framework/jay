@@ -1,8 +1,8 @@
 import {createTsSourceFile} from "../test-utils/ts-source-utils.ts";
 import {
-    BinaryExpression,
-    CallExpression, ExpressionStatement, FunctionDeclaration,
-    Identifier,
+    BinaryExpression, Block,
+    CallExpression, ExpressionStatement, ForStatement, FunctionDeclaration,
+    Identifier, VariableDeclarationList,
     VariableStatement
 } from "typescript";
 import {
@@ -161,4 +161,70 @@ describe('SourceFileBindingResolver', () => {
                     .statements[0]
             });
     })
+
+    describe('iterations', () => {
+        it('for iteration', () => {
+            const sourceFile = createTsSourceFile(`
+        let z = 0;
+        for (let i = 0; i < 10; i++) {
+            let y = z + i;
+            console.log(y);
+        }
+        `)
+
+            let sourceFileBindingResolver = new SourceFileBindingResolver(sourceFile);
+            let rootBindingResolver = sourceFileBindingResolver
+                .findBindingResolver(sourceFile);
+            let forBindingResolver = sourceFileBindingResolver
+                .findBindingResolver(sourceFile.statements[1]);
+
+            expect(rootBindingResolver.getVariable('x'))
+                .toBe(UNKNOWN_VARIABLE);
+
+            expect(rootBindingResolver.getVariable('y'))
+                .toBe(UNKNOWN_VARIABLE);
+
+            expect(rootBindingResolver.getVariable('z'))
+                .toEqual({
+                    name: 'z',
+                    assignedFrom: {
+                        root: mkOtherVariableRoot((sourceFile
+                            .statements[0] as VariableStatement)
+                            .declarationList.declarations[0].initializer
+                        )
+                    },
+                    definingStatement: sourceFile.statements[0],
+                });
+
+
+            expect(forBindingResolver.getVariable('i'))
+                .toEqual({
+                    name: 'i',
+                    assignedFrom: {
+                        root: mkOtherVariableRoot(((sourceFile
+                            .statements[1] as ForStatement)
+                            .initializer as VariableDeclarationList)
+                            .declarations[0].initializer),
+                    },
+                    definingStatement: sourceFile.statements[1]
+                });
+            expect(forBindingResolver.getVariable('y'))
+                .toEqual({
+                    name: 'y',
+                    assignedFrom: {
+                        root: mkOtherVariableRoot((((sourceFile
+                            .statements[1] as ForStatement)
+                            .statement as Block)
+                            .statements[0] as VariableStatement)
+                            .declarationList.declarations[0].initializer
+                        )
+                    },
+                    definingStatement: ((sourceFile
+                        .statements[1] as ForStatement)
+                        .statement as Block)
+                        .statements[0]
+                });
+        })
+    })
+
 })
