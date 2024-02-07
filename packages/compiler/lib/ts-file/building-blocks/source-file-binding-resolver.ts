@@ -1,5 +1,5 @@
 import ts, {
-    Identifier,
+    Identifier, isBlock,
     isForInStatement,
     isForOfStatement,
     isForStatement,
@@ -34,21 +34,25 @@ export class SourceFileBindingResolver {
         }
 
         const visitor = (node: ts.Node): ts.Node =>  {
-            if (isVariableStatement(node))
-                nbResolversQueue[0].addVariableStatement(node)
-            if (isImportDeclaration(node))
-                nbResolversQueue[0].addImportDeclaration(node)
             if (isFunctionDeclaration(node))
                 nbResolversQueue[0].addFunctionDeclaration(node)
-            if (isFunctionLikeDeclarationBase(node)) {
+
+            if (isVariableStatement(node))
+                nbResolversQueue[0].addVariableStatement(node)
+            else if (isImportDeclaration(node))
+                nbResolversQueue[0].addImportDeclaration(node)
+            else if (isBlock(node))
+                return doWithChildBindingResolver(node,
+                    () => {})
+            else if (isFunctionLikeDeclarationBase(node)) {
                 return doWithChildBindingResolver(node,
                     () => nbResolversQueue[0].addFunctionParams(node))
             }
-            if (isForStatement(node) && isVariableDeclarationList(node.initializer)) {
+            else if (isForStatement(node) && isVariableDeclarationList(node.initializer)) {
                 return doWithChildBindingResolver(node,
                     () => nbResolversQueue[0].addVariableDeclarationList(node.initializer as VariableDeclarationList))
             }
-            if ((isForInStatement(node) || isForOfStatement(node)) &&
+            else if ((isForInStatement(node) || isForOfStatement(node)) &&
                 isVariableDeclarationList(node.initializer) &&
                 node.initializer.declarations.length === 1 &&
                 isIdentifier(node.initializer.declarations[0].name)
@@ -72,7 +76,7 @@ export class SourceFileBindingResolver {
 
     findBindingResolver(node: ts.Node): NameBindingResolver {
         let found: NameBindingResolver;
-        while (!(found = this.nameBindingResolvers.get(node)))
+        while (!(found = this.nameBindingResolvers.get(node)) && node.parent)
             node = node.parent;
         return found;
     }
