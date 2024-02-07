@@ -1,8 +1,9 @@
 import {createTsSourceFile} from "../test-utils/ts-source-utils.ts";
 import {
+    ArrowFunction,
     BinaryExpression, Block,
     CallExpression, ExpressionStatement, ForStatement, FunctionDeclaration,
-    Identifier, VariableDeclarationList,
+    Identifier, PropertyAccessExpression, VariableDeclarationList,
     VariableStatement, WhileStatement
 } from "typescript";
 import {
@@ -189,6 +190,96 @@ describe('SourceFileBindingResolver', () => {
                     .left as Identifier))
                 .toEqual(functionBodyBindingResolver.getVariable('y'));
 
+        })
+
+        it('inline event handler', () => {
+            const sourceFile = createTsSourceFile(`
+            refs.input.onClick(({ event }) => {
+                const inputValue = event.target.value;
+                const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
+                event.target.value = validValue;
+            })`)
+
+            let sourceFileBindingResolver = new SourceFileBindingResolver(sourceFile);
+
+            expect(sourceFileBindingResolver
+                .findBindingResolver(sourceFile).getVariable('inputValue'))
+                .toBe(UNKNOWN_VARIABLE);
+
+            expect(sourceFileBindingResolver
+                .findBindingResolver(sourceFile).getVariable('validValue'))
+                .toBe(UNKNOWN_VARIABLE);
+
+            let functionBindingResolver = sourceFileBindingResolver
+                .findBindingResolver(((sourceFile
+                    .statements[0] as ExpressionStatement)
+                    .expression as CallExpression)
+                    .arguments[0]);
+            let functionBodyBindingResolver = sourceFileBindingResolver
+                .findBindingResolver((((sourceFile
+                    .statements[0] as ExpressionStatement)
+                    .expression as CallExpression)
+                    .arguments[0] as ArrowFunction)
+                    .body);
+
+            expect(functionBindingResolver
+                .getVariable('event'))
+                .toEqual({
+                    name: 'event',
+                    accessedFrom: {
+                        definingStatement: sourceFile.statements[0],
+                        root: mkParameterVariableRoot((((sourceFile
+                                .statements[0] as ExpressionStatement)
+                                .expression as CallExpression)
+                                .arguments[0] as ArrowFunction)
+                                .parameters[0]
+                            , 0)
+                    },
+                    accessedByProperty: 'event',
+                    definingStatement: sourceFile.statements[0],
+                })
+
+            let arrowFunctionBody = (((sourceFile
+                .statements[0] as ExpressionStatement)
+                .expression as CallExpression)
+                .arguments[0] as ArrowFunction)
+                .body as Block;
+
+            expect(sourceFileBindingResolver.explain(
+                (((arrowFunctionBody
+                    .statements[0] as VariableStatement)
+                    .declarationList
+                    .declarations[0]
+                    .initializer as PropertyAccessExpression)
+                    .expression as PropertyAccessExpression)
+                    .expression as Identifier))
+                .toEqual(functionBindingResolver.getVariable('event'));
+
+            expect(sourceFileBindingResolver.explain(
+                (((arrowFunctionBody
+                    .statements[1] as VariableStatement)
+                    .declarationList
+                    .declarations[0]
+                    .initializer as CallExpression)
+                    .expression as PropertyAccessExpression)
+                    .expression as Identifier))
+                .toEqual(functionBodyBindingResolver.getVariable('inputValue'));
+
+            expect(sourceFileBindingResolver.explain(
+                ((arrowFunctionBody
+                    .statements[2] as ExpressionStatement)
+                    .expression as BinaryExpression)
+                    .right as Identifier))
+                .toEqual(functionBodyBindingResolver.getVariable('validValue'));
+
+            expect(sourceFileBindingResolver.explain(
+                ((((arrowFunctionBody
+                    .statements[2] as ExpressionStatement)
+                    .expression as BinaryExpression)
+                    .left as PropertyAccessExpression)
+                    .expression as PropertyAccessExpression)
+                    .expression as Identifier))
+                .toEqual(functionBindingResolver.getVariable('event'));
         })
     })
 
