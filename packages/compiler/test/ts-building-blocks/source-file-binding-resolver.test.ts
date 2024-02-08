@@ -15,7 +15,7 @@ import {SourceFileBindingResolver} from "../../lib/ts-file/building-blocks/sourc
 
 describe('SourceFileBindingResolver', () => {
 
-    it('should resolve variables', () => {
+    describe('resolve variables', () => {
         const sourceFile = createTsSourceFile(`
             let x = 10;
             let y = x + 1;
@@ -23,27 +23,35 @@ describe('SourceFileBindingResolver', () => {
 
         let sourceFileBindingResolver = new SourceFileBindingResolver(sourceFile);
 
-        expect(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('x').definingStatement)
-            .toEqual(sourceFile.statements[0])
+        it('should resolve variable x defining statement', () => {
+            expect(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('x').definingStatement)
+                .toEqual(sourceFile.statements[0])
+        })
 
-        expect(sourceFileBindingResolver.explain(
-            ((sourceFile.statements[1] as VariableStatement)
-                .declarationList.declarations[0]
-                .initializer as BinaryExpression)
-                .left as Identifier))
-            .toEqual(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('x'));
+        it('should explain the identifier x on the 2nd line', () => {
+            expect(sourceFileBindingResolver.explain(
+                ((sourceFile.statements[1] as VariableStatement)
+                    .declarationList.declarations[0]
+                    .initializer as BinaryExpression)
+                    .left as Identifier))
+                .toEqual(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('x'));
+        })
 
-        expect(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('y').definingStatement)
-            .toEqual(sourceFile.statements[1])
+        it('should resolve variable y defining statement', () => {
+            expect(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('y').definingStatement)
+                .toEqual(sourceFile.statements[1])
+        })
 
-        expect(sourceFileBindingResolver.explain(
-            ((sourceFile.statements[2] as ExpressionStatement)
-                .expression as CallExpression)
-                .arguments[0] as Identifier))
-            .toEqual(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('y'));
+        it('should explain the identifier y on the 3rd line', () => {
+            expect(sourceFileBindingResolver.explain(
+                ((sourceFile.statements[2] as ExpressionStatement)
+                    .expression as CallExpression)
+                    .arguments[0] as Identifier))
+                .toEqual(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('y'));
+        })
     })
 
-    it('should resolve imported variables', () => {
+    describe('resolve imported variables', () => {
         const sourceFile = createTsSourceFile(`
             import x from 'bla';
             let y = x + 1;
@@ -51,28 +59,36 @@ describe('SourceFileBindingResolver', () => {
 
         let sourceFileBindingResolver = new SourceFileBindingResolver(sourceFile);
 
-        expect(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('x').definingStatement)
-            .toEqual(sourceFile.statements[0])
+        it('should resolve imported variable x defining statement', () => {
+            expect(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('x').definingStatement)
+                .toEqual(sourceFile.statements[0])
+        })
 
-        expect(sourceFileBindingResolver.explain(
-            ((sourceFile.statements[1] as VariableStatement)
-                .declarationList.declarations[0]
-                .initializer as BinaryExpression)
-                .left as Identifier))
-            .toEqual(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('x'));
+        it('should explain the identifier x on the 2rd line', () => {
+            expect(sourceFileBindingResolver.explain(
+                ((sourceFile.statements[1] as VariableStatement)
+                    .declarationList.declarations[0]
+                    .initializer as BinaryExpression)
+                    .left as Identifier))
+                .toEqual(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('x'));
+        })
 
-        expect(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('y').definingStatement)
-            .toEqual(sourceFile.statements[1])
+        it('should resolve imported variable y defining statement', () => {
+            expect(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('y').definingStatement)
+                .toEqual(sourceFile.statements[1])
+        })
 
-        expect(sourceFileBindingResolver.explain(
-            ((sourceFile.statements[2] as ExpressionStatement)
-                .expression as CallExpression)
-                .arguments[0] as Identifier))
-            .toEqual(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('y'));
+        it('should explain the identifier y on the 3rd line', () => {
+            expect(sourceFileBindingResolver.explain(
+                ((sourceFile.statements[2] as ExpressionStatement)
+                    .expression as CallExpression)
+                    .arguments[0] as Identifier))
+                .toEqual(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('y'));
+        })
     })
 
     describe('functions', () => {
-        it('should resolve variables to function params', () => {
+        describe('resolve variables to function params', () => {
             const sourceFile = createTsSourceFile(`
         function func(x: string) {
             let y = x + 1;
@@ -82,14 +98,6 @@ describe('SourceFileBindingResolver', () => {
 
             let sourceFileBindingResolver = new SourceFileBindingResolver(sourceFile);
 
-            expect(sourceFileBindingResolver
-                .findBindingResolver(sourceFile).getVariable('x'))
-                .toBe(UNKNOWN_VARIABLE);
-
-            expect(sourceFileBindingResolver
-                .findBindingResolver(sourceFile).getVariable('y'))
-                .toBe(UNKNOWN_VARIABLE);
-
             let functionBindingResolver = sourceFileBindingResolver
                 .findBindingResolver(sourceFile
                     .statements[0]);
@@ -98,33 +106,49 @@ describe('SourceFileBindingResolver', () => {
                     .statements[0] as FunctionDeclaration)
                     .body);
 
-            expect(functionBindingResolver
-                .getVariable('x'))
-                .toEqual({
-                    name: 'x',
-                    definingStatement: sourceFile.statements[0],
-                    root: mkParameterVariableRoot(((sourceFile.statements[0] as FunctionDeclaration)
-                        .parameters[0]), 0)
-                })
+            it('should not resolve function variables in the global scope', () => {
+                expect(sourceFileBindingResolver
+                    .findBindingResolver(sourceFile).getVariable('x'))
+                    .toBe(UNKNOWN_VARIABLE);
 
-            expect(sourceFileBindingResolver.explain(
-                (((sourceFile.statements[0] as FunctionDeclaration)
-                    .body.statements[0] as VariableStatement)
-                    .declarationList
-                    .declarations[0]
-                    .initializer as BinaryExpression)
-                    .left as Identifier))
-                .toEqual(functionBindingResolver.getVariable('x'));
+                expect(sourceFileBindingResolver
+                    .findBindingResolver(sourceFile).getVariable('y'))
+                    .toBe(UNKNOWN_VARIABLE);
+            })
 
-            expect(sourceFileBindingResolver.explain(
-                (((sourceFile.statements[0] as FunctionDeclaration)
-                    .body.statements[1] as ExpressionStatement)
-                    .expression as CallExpression)
-                    .arguments[0] as Identifier))
-                .toEqual(functionBodyBindingResolver.getVariable('y'));
+            it('should resolve function param x on the function scope', () => {
+                expect(functionBindingResolver
+                    .getVariable('x'))
+                    .toEqual({
+                        name: 'x',
+                        definingStatement: sourceFile.statements[0],
+                        root: mkParameterVariableRoot(((sourceFile.statements[0] as FunctionDeclaration)
+                            .parameters[0]), 0)
+                    })
+            })
+
+            it('should explain the identifier x on the 2nd line to the x in the function scope', () => {
+                expect(sourceFileBindingResolver.explain(
+                    (((sourceFile.statements[0] as FunctionDeclaration)
+                        .body.statements[0] as VariableStatement)
+                        .declarationList
+                        .declarations[0]
+                        .initializer as BinaryExpression)
+                        .left as Identifier))
+                    .toEqual(functionBindingResolver.getVariable('x'));
+            })
+
+            it('should explain the identifier y on the 3rd line to the y in the function body scope', () => {
+                expect(sourceFileBindingResolver.explain(
+                    (((sourceFile.statements[0] as FunctionDeclaration)
+                        .body.statements[1] as ExpressionStatement)
+                        .expression as CallExpression)
+                        .arguments[0] as Identifier))
+                    .toEqual(functionBodyBindingResolver.getVariable('y'));
+            })
         })
 
-        it('should resolve captured variables into a function', () => {
+        describe('captured variables into a function', () => {
             const sourceFile = createTsSourceFile(`
         let z = 0;
         function func(x: string) {
@@ -143,56 +167,65 @@ describe('SourceFileBindingResolver', () => {
                     .statements[1] as FunctionDeclaration)
                     .body);
 
-            expect(rootBindingResolver.getVariable('x'))
-                .toBe(UNKNOWN_VARIABLE);
+            it('should not resolve function variables in the global scope', () => {
+                expect(rootBindingResolver.getVariable('x'))
+                    .toBe(UNKNOWN_VARIABLE);
 
-            expect(rootBindingResolver.getVariable('y'))
-                .toBe(UNKNOWN_VARIABLE);
+                expect(rootBindingResolver.getVariable('y'))
+                    .toBe(UNKNOWN_VARIABLE);
+            })
 
-            expect(rootBindingResolver.getVariable('z'))
-                .toEqual({
-                    name: 'z',
-                    assignedFrom: {
-                        root: mkOtherVariableRoot((sourceFile
-                            .statements[0] as VariableStatement)
-                            .declarationList.declarations[0].initializer
-                        )
-                    },
-                    definingStatement: sourceFile.statements[0],
-                });
+            it('should resolve variable z on the root scope', () => {
+                expect(rootBindingResolver.getVariable('z'))
+                    .toEqual({
+                        name: 'z',
+                        assignedFrom: {
+                            root: mkOtherVariableRoot((sourceFile
+                                .statements[0] as VariableStatement)
+                                .declarationList.declarations[0].initializer
+                            )
+                        },
+                        definingStatement: sourceFile.statements[0],
+                    });
+            })
 
+            it('should resolve variable y on the function body scope', () => {
+                expect(functionBodyBindingResolver.getVariable('y'))
+                    .toEqual({
+                        name: 'y',
+                        assignedFrom: rootBindingResolver.getVariable('z'),
+                        definingStatement: (sourceFile
+                            .statements[1] as FunctionDeclaration)
+                            .body
+                            .statements[0]
+                    });
+            })
 
-            expect(functionBodyBindingResolver.getVariable('y'))
-                .toEqual({
-                    name: 'y',
-                    assignedFrom: rootBindingResolver.getVariable('z'),
-                    definingStatement: (sourceFile
-                        .statements[1] as FunctionDeclaration)
+            it('should explain identifier z on the function 1st line to the global scope z variable', () => {
+                expect(sourceFileBindingResolver.explain(
+                    ((sourceFile.statements[1] as FunctionDeclaration)
                         .body
-                        .statements[0]
-                });
+                        .statements[0] as VariableStatement)
+                        .declarationList.declarations[0]
+                        .initializer as Identifier))
+                    .toEqual(rootBindingResolver.getVariable('z'));
+            })
 
-            expect(sourceFileBindingResolver.explain(
-                ((sourceFile.statements[1] as FunctionDeclaration)
-                    .body
-                    .statements[0] as VariableStatement)
-                    .declarationList.declarations[0]
-                    .initializer as Identifier))
-                .toEqual(rootBindingResolver.getVariable('z'));
-
-            expect(sourceFileBindingResolver.explain(
-                (((((sourceFile.statements[1] as FunctionDeclaration)
-                    .body
-                    .statements[1] as ExpressionStatement)
-                    .expression as CallExpression)
-                    .arguments[0] as BinaryExpression)
-                    .left as BinaryExpression)
-                    .left as Identifier))
-                .toEqual(functionBodyBindingResolver.getVariable('y'));
+            it('should explain identifier y on the function 2nd line to the function body scoped y variable', () => {
+                expect(sourceFileBindingResolver.explain(
+                    (((((sourceFile.statements[1] as FunctionDeclaration)
+                        .body
+                        .statements[1] as ExpressionStatement)
+                        .expression as CallExpression)
+                        .arguments[0] as BinaryExpression)
+                        .left as BinaryExpression)
+                        .left as Identifier))
+                    .toEqual(functionBodyBindingResolver.getVariable('y'));
+            })
 
         })
 
-        it('inline event handler', () => {
+        describe('inline event handler', () => {
             const sourceFile = createTsSourceFile(`
             refs.input.onClick(({ event }) => {
                 const inputValue = event.target.value;
@@ -202,19 +235,12 @@ describe('SourceFileBindingResolver', () => {
 
             let sourceFileBindingResolver = new SourceFileBindingResolver(sourceFile);
 
-            expect(sourceFileBindingResolver
-                .findBindingResolver(sourceFile).getVariable('inputValue'))
-                .toBe(UNKNOWN_VARIABLE);
-
-            expect(sourceFileBindingResolver
-                .findBindingResolver(sourceFile).getVariable('validValue'))
-                .toBe(UNKNOWN_VARIABLE);
-
             let functionBindingResolver = sourceFileBindingResolver
                 .findBindingResolver(((sourceFile
                     .statements[0] as ExpressionStatement)
                     .expression as CallExpression)
                     .arguments[0]);
+
             let functionBodyBindingResolver = sourceFileBindingResolver
                 .findBindingResolver((((sourceFile
                     .statements[0] as ExpressionStatement)
@@ -222,22 +248,34 @@ describe('SourceFileBindingResolver', () => {
                     .arguments[0] as ArrowFunction)
                     .body);
 
-            expect(functionBindingResolver
-                .getVariable('event'))
-                .toEqual({
-                    name: 'event',
-                    accessedFrom: {
+            it('should not resolve function variables in the global scope', () => {
+                expect(sourceFileBindingResolver
+                    .findBindingResolver(sourceFile).getVariable('inputValue'))
+                    .toBe(UNKNOWN_VARIABLE);
+
+                expect(sourceFileBindingResolver
+                    .findBindingResolver(sourceFile).getVariable('validValue'))
+                    .toBe(UNKNOWN_VARIABLE);
+            })
+
+            it('should resolve the event variable on the function scope', () => {
+                expect(functionBindingResolver
+                    .getVariable('event'))
+                    .toEqual({
+                        name: 'event',
+                        accessedFrom: {
+                            definingStatement: sourceFile.statements[0],
+                            root: mkParameterVariableRoot((((sourceFile
+                                    .statements[0] as ExpressionStatement)
+                                    .expression as CallExpression)
+                                    .arguments[0] as ArrowFunction)
+                                    .parameters[0]
+                                , 0)
+                        },
+                        accessedByProperty: 'event',
                         definingStatement: sourceFile.statements[0],
-                        root: mkParameterVariableRoot((((sourceFile
-                                .statements[0] as ExpressionStatement)
-                                .expression as CallExpression)
-                                .arguments[0] as ArrowFunction)
-                                .parameters[0]
-                            , 0)
-                    },
-                    accessedByProperty: 'event',
-                    definingStatement: sourceFile.statements[0],
-                })
+                    })
+            })
 
             let arrowFunctionBody = (((sourceFile
                 .statements[0] as ExpressionStatement)
@@ -245,46 +283,54 @@ describe('SourceFileBindingResolver', () => {
                 .arguments[0] as ArrowFunction)
                 .body as Block;
 
-            expect(sourceFileBindingResolver.explain(
-                (((arrowFunctionBody
-                    .statements[0] as VariableStatement)
-                    .declarationList
-                    .declarations[0]
-                    .initializer as PropertyAccessExpression)
-                    .expression as PropertyAccessExpression)
-                    .expression as Identifier))
-                .toEqual(functionBindingResolver.getVariable('event'));
+            it('should explain the event identifier in the 1st function statement to the event variable', () =>{
+                expect(sourceFileBindingResolver.explain(
+                    (((arrowFunctionBody
+                        .statements[0] as VariableStatement)
+                        .declarationList
+                        .declarations[0]
+                        .initializer as PropertyAccessExpression)
+                        .expression as PropertyAccessExpression)
+                        .expression as Identifier))
+                    .toEqual(functionBindingResolver.getVariable('event'));
+            })
 
-            expect(sourceFileBindingResolver.explain(
-                (((arrowFunctionBody
-                    .statements[1] as VariableStatement)
-                    .declarationList
-                    .declarations[0]
-                    .initializer as CallExpression)
-                    .expression as PropertyAccessExpression)
-                    .expression as Identifier))
-                .toEqual(functionBodyBindingResolver.getVariable('inputValue'));
+            it('should explain the inputValue identifier in the 2ns function statement to the inputValue variable', () => {
+                expect(sourceFileBindingResolver.explain(
+                    (((arrowFunctionBody
+                        .statements[1] as VariableStatement)
+                        .declarationList
+                        .declarations[0]
+                        .initializer as CallExpression)
+                        .expression as PropertyAccessExpression)
+                        .expression as Identifier))
+                    .toEqual(functionBodyBindingResolver.getVariable('inputValue'));
+            })
 
-            expect(sourceFileBindingResolver.explain(
-                ((arrowFunctionBody
-                    .statements[2] as ExpressionStatement)
-                    .expression as BinaryExpression)
-                    .right as Identifier))
-                .toEqual(functionBodyBindingResolver.getVariable('validValue'));
+            it('should explain the inputValue identifier in the 3rd function statement to the inputValue variable', () => {
+                expect(sourceFileBindingResolver.explain(
+                    ((arrowFunctionBody
+                        .statements[2] as ExpressionStatement)
+                        .expression as BinaryExpression)
+                        .right as Identifier))
+                    .toEqual(functionBodyBindingResolver.getVariable('validValue'));
+            })
 
-            expect(sourceFileBindingResolver.explain(
-                ((((arrowFunctionBody
-                    .statements[2] as ExpressionStatement)
-                    .expression as BinaryExpression)
-                    .left as PropertyAccessExpression)
-                    .expression as PropertyAccessExpression)
-                    .expression as Identifier))
-                .toEqual(functionBindingResolver.getVariable('event'));
+            it('should explain the event identifier in the 3rd function statement to the event variable', () => {
+                expect(sourceFileBindingResolver.explain(
+                    ((((arrowFunctionBody
+                        .statements[2] as ExpressionStatement)
+                        .expression as BinaryExpression)
+                        .left as PropertyAccessExpression)
+                        .expression as PropertyAccessExpression)
+                        .expression as Identifier))
+                    .toEqual(functionBindingResolver.getVariable('event'));
+            })
         })
     })
 
     describe('iterations', () => {
-        it('for iteration', () => {
+        describe('for iteration', () => {
             const sourceFile = createTsSourceFile(`
         let z = 0;
         for (let i = 0; i < 10; i++) {
@@ -303,81 +349,95 @@ describe('SourceFileBindingResolver', () => {
                     .statement
                 );
 
-            expect(rootBindingResolver.getVariable('x'))
-                .toBe(UNKNOWN_VARIABLE);
+            it('should not resolve for variables in the global scope', () => {
+                expect(rootBindingResolver.getVariable('x'))
+                    .toBe(UNKNOWN_VARIABLE);
 
-            expect(rootBindingResolver.getVariable('y'))
-                .toBe(UNKNOWN_VARIABLE);
+                expect(rootBindingResolver.getVariable('y'))
+                    .toBe(UNKNOWN_VARIABLE);
+            })
 
-            expect(rootBindingResolver.getVariable('z'))
-                .toEqual({
-                    name: 'z',
-                    assignedFrom: {
-                        root: mkOtherVariableRoot((sourceFile
-                            .statements[0] as VariableStatement)
-                            .declarationList.declarations[0].initializer
-                        )
-                    },
-                    definingStatement: sourceFile.statements[0],
-                });
+            it('should resolve the z variable on the root scope', () => {
+                expect(rootBindingResolver.getVariable('z'))
+                    .toEqual({
+                        name: 'z',
+                        assignedFrom: {
+                            root: mkOtherVariableRoot((sourceFile
+                                .statements[0] as VariableStatement)
+                                .declarationList.declarations[0].initializer
+                            )
+                        },
+                        definingStatement: sourceFile.statements[0],
+                    });
+            })
 
+            it('should resolve the i variable on the for scope', () => {
+                expect(forBindingResolver.getVariable('i'))
+                    .toEqual({
+                        name: 'i',
+                        assignedFrom: {
+                            root: mkOtherVariableRoot(((sourceFile
+                                .statements[1] as ForStatement)
+                                .initializer as VariableDeclarationList)
+                                .declarations[0].initializer),
+                        },
+                        definingStatement: sourceFile.statements[1]
+                    });
+            })
 
-            expect(forBindingResolver.getVariable('i'))
-                .toEqual({
-                    name: 'i',
-                    assignedFrom: {
-                        root: mkOtherVariableRoot(((sourceFile
-                            .statements[1] as ForStatement)
-                            .initializer as VariableDeclarationList)
-                            .declarations[0].initializer),
-                    },
-                    definingStatement: sourceFile.statements[1]
-                });
-            expect(forBodyBindingResolver.getVariable('y'))
-                .toEqual({
-                    name: 'y',
-                    assignedFrom: {
-                        root: mkOtherVariableRoot((((sourceFile
+            it('should resolve the y variable on the for body scope', () => {
+                expect(forBodyBindingResolver.getVariable('y'))
+                    .toEqual({
+                        name: 'y',
+                        assignedFrom: {
+                            root: mkOtherVariableRoot((((sourceFile
+                                    .statements[1] as ForStatement)
+                                    .statement as Block)
+                                    .statements[0] as VariableStatement)
+                                    .declarationList.declarations[0].initializer
+                            )
+                        },
+                        definingStatement: ((sourceFile
                             .statements[1] as ForStatement)
                             .statement as Block)
-                            .statements[0] as VariableStatement)
-                            .declarationList.declarations[0].initializer
-                        )
-                    },
-                    definingStatement: ((sourceFile
-                        .statements[1] as ForStatement)
+                            .statements[0]
+                    });
+            })
+
+            it('should explain the z identifier in the 1st for block statement to the root z variable', () => {
+                expect(sourceFileBindingResolver.explain(
+                    ((((sourceFile.statements[1] as ForStatement)
                         .statement as Block)
-                        .statements[0]
-                });
+                        .statements[0] as VariableStatement)
+                        .declarationList.declarations[0]
+                        .initializer as BinaryExpression)
+                        .left as Identifier))
+                    .toEqual(rootBindingResolver.getVariable('z'));
+            })
 
-            expect(sourceFileBindingResolver.explain(
-                ((((sourceFile.statements[1] as ForStatement)
-                    .statement as Block)
-                    .statements[0] as VariableStatement)
-                    .declarationList.declarations[0]
-                    .initializer as BinaryExpression)
-                    .left as Identifier))
-                .toEqual(rootBindingResolver.getVariable('z'));
+            it('should explain the i identifier in the 1sr for block statement to the for i variable', () => {
+                expect(sourceFileBindingResolver.explain(
+                    ((((sourceFile.statements[1] as ForStatement)
+                        .statement as Block)
+                        .statements[0] as VariableStatement)
+                        .declarationList.declarations[0]
+                        .initializer as BinaryExpression)
+                        .right as Identifier))
+                    .toEqual(forBindingResolver.getVariable('i'));
+            })
 
-            expect(sourceFileBindingResolver.explain(
-                ((((sourceFile.statements[1] as ForStatement)
-                    .statement as Block)
-                    .statements[0] as VariableStatement)
-                    .declarationList.declarations[0]
-                    .initializer as BinaryExpression)
-                    .right as Identifier))
-                .toEqual(forBindingResolver.getVariable('i'));
-
-            expect(sourceFileBindingResolver.explain(
-                ((((sourceFile.statements[1] as ForStatement)
-                    .statement as Block)
-                    .statements[1] as ExpressionStatement)
-                    .expression as CallExpression)
-                    .arguments[0] as Identifier))
-                .toEqual(forBodyBindingResolver.getVariable('y'));
+            it('should explain the y identifier in the 2nd for block statement to the for block y variable', () => {
+                expect(sourceFileBindingResolver.explain(
+                    ((((sourceFile.statements[1] as ForStatement)
+                        .statement as Block)
+                        .statements[1] as ExpressionStatement)
+                        .expression as CallExpression)
+                        .arguments[0] as Identifier))
+                    .toEqual(forBodyBindingResolver.getVariable('y'));
+            })
         })
 
-        it('for in iteration', () => {
+        describe('for in iteration', () => {
             const sourceFile = createTsSourceFile(`
         let z = [];
         for (let i in z) {
@@ -395,54 +455,63 @@ describe('SourceFileBindingResolver', () => {
                     .statement
                 );
 
-            expect(rootBindingResolver.getVariable('x'))
-                .toBe(UNKNOWN_VARIABLE);
+            it('should not resolve for variables in the global scope', () => {
+                expect(rootBindingResolver.getVariable('x'))
+                    .toBe(UNKNOWN_VARIABLE);
 
-            expect(rootBindingResolver.getVariable('y'))
-                .toBe(UNKNOWN_VARIABLE);
+                expect(rootBindingResolver.getVariable('y'))
+                    .toBe(UNKNOWN_VARIABLE);
+            })
 
-            expect(rootBindingResolver.getVariable('z'))
-                .toEqual({
-                    name: 'z',
-                    assignedFrom: {
-                        root: mkOtherVariableRoot((sourceFile
-                            .statements[0] as VariableStatement)
-                            .declarationList.declarations[0].initializer
-                        )
-                    },
-                    definingStatement: sourceFile.statements[0],
-                });
+            it('should resolve the z variable on the root scope', () => {
+                expect(rootBindingResolver.getVariable('z'))
+                    .toEqual({
+                        name: 'z',
+                        assignedFrom: {
+                            root: mkOtherVariableRoot((sourceFile
+                                .statements[0] as VariableStatement)
+                                .declarationList.declarations[0].initializer
+                            )
+                        },
+                        definingStatement: sourceFile.statements[0],
+                    });
+            })
 
+            it('should resolve the i variable on the for scope', () => {
+                expect(forBindingResolver.getVariable('i'))
+                    .toEqual({
+                        name: 'i',
+                        definingStatement: sourceFile.statements[1],
+                        root: mkOtherVariableRoot(sourceFile.statements[1]),
+                    });
+            })
 
-            expect(forBindingResolver.getVariable('i'))
-                .toEqual({
-                    name: 'i',
-                    definingStatement: sourceFile.statements[1],
-                    root: mkOtherVariableRoot(sourceFile.statements[1]),
-                });
+            it('should not resolve y variable in the for scope', () => {
+                expect(forBindingResolver.getVariable('y'))
+                    .toBe(UNKNOWN_VARIABLE);
+            })
 
-            expect(forBindingResolver.getVariable('y'))
-                .toBe(UNKNOWN_VARIABLE);
-
-            expect(forBodyBindingResolver.getVariable('y'))
-                .toEqual({
-                    name: 'y',
-                    assignedFrom: {
-                        root: mkOtherVariableRoot((((sourceFile
+            it('should resolve the y variable on the for body scope', () => {
+                expect(forBodyBindingResolver.getVariable('y'))
+                    .toEqual({
+                        name: 'y',
+                        assignedFrom: {
+                            root: mkOtherVariableRoot((((sourceFile
+                                .statements[1] as ForStatement)
+                                .statement as Block)
+                                .statements[0] as VariableStatement)
+                                .declarationList.declarations[0].initializer
+                            )
+                        },
+                        definingStatement: ((sourceFile
                             .statements[1] as ForStatement)
                             .statement as Block)
-                            .statements[0] as VariableStatement)
-                            .declarationList.declarations[0].initializer
-                        )
-                    },
-                    definingStatement: ((sourceFile
-                        .statements[1] as ForStatement)
-                        .statement as Block)
-                        .statements[0]
-                });
+                            .statements[0]
+                    });
+            })
         })
 
-        it('for of iteration', () => {
+        describe('for of iteration', () => {
             const sourceFile = createTsSourceFile(`
         let z = [];
         for (let i of z) {
@@ -460,51 +529,58 @@ describe('SourceFileBindingResolver', () => {
                     .statement
                 );
 
-            expect(rootBindingResolver.getVariable('x'))
-                .toBe(UNKNOWN_VARIABLE);
+            it('should not resolve for variables in the global scope', () => {
+                expect(rootBindingResolver.getVariable('x'))
+                    .toBe(UNKNOWN_VARIABLE);
 
-            expect(rootBindingResolver.getVariable('y'))
-                .toBe(UNKNOWN_VARIABLE);
+                expect(rootBindingResolver.getVariable('y'))
+                    .toBe(UNKNOWN_VARIABLE);
+            })
 
-            expect(rootBindingResolver.getVariable('z'))
-                .toEqual({
-                    name: 'z',
-                    assignedFrom: {
-                        root: mkOtherVariableRoot((sourceFile
-                            .statements[0] as VariableStatement)
-                            .declarationList.declarations[0].initializer
-                        )
-                    },
-                    definingStatement: sourceFile.statements[0],
-                });
+            it('should resolve the z variable on the root scope', () => {
+                expect(rootBindingResolver.getVariable('z'))
+                    .toEqual({
+                        name: 'z',
+                        assignedFrom: {
+                            root: mkOtherVariableRoot((sourceFile
+                                .statements[0] as VariableStatement)
+                                .declarationList.declarations[0].initializer
+                            )
+                        },
+                        definingStatement: sourceFile.statements[0],
+                    });
+            })
 
+            it('should resolve the i variable on the for scope', () => {
+                expect(forBindingResolver.getVariable('i'))
+                    .toEqual({
+                        name: 'i',
+                        definingStatement: sourceFile.statements[1],
+                        root: mkOtherVariableRoot(sourceFile.statements[1]),
+                    });
+            })
 
-            expect(forBindingResolver.getVariable('i'))
-                .toEqual({
-                    name: 'i',
-                    definingStatement: sourceFile.statements[1],
-                    root: mkOtherVariableRoot(sourceFile.statements[1]),
-                });
-
-            expect(forBodyBindingResolver.getVariable('y'))
-                .toEqual({
-                    name: 'y',
-                    assignedFrom: {
-                        root: mkOtherVariableRoot((((sourceFile
+            it('should resolve the y variable on the for body scope', () => {
+                expect(forBodyBindingResolver.getVariable('y'))
+                    .toEqual({
+                        name: 'y',
+                        assignedFrom: {
+                            root: mkOtherVariableRoot((((sourceFile
+                                .statements[1] as ForStatement)
+                                .statement as Block)
+                                .statements[0] as VariableStatement)
+                                .declarationList.declarations[0].initializer
+                            )
+                        },
+                        definingStatement: ((sourceFile
                             .statements[1] as ForStatement)
                             .statement as Block)
-                            .statements[0] as VariableStatement)
-                            .declarationList.declarations[0].initializer
-                        )
-                    },
-                    definingStatement: ((sourceFile
-                        .statements[1] as ForStatement)
-                        .statement as Block)
-                        .statements[0]
-                });
+                            .statements[0]
+                    });
+            })
         })
 
-        it('while iteration', () => {
+        describe('while iteration', () => {
             const sourceFile = createTsSourceFile(`
         let z = 0;
         while(z < 10) {
@@ -522,54 +598,139 @@ describe('SourceFileBindingResolver', () => {
                     .statements[1] as WhileStatement)
                     .statement);
 
-            expect(rootBindingResolver.getVariable('y'))
-                .toBe(UNKNOWN_VARIABLE);
+            it('should not resolve while block variables in the global scope', () => {
+                expect(rootBindingResolver.getVariable('y'))
+                    .toBe(UNKNOWN_VARIABLE);
+            })
 
-            expect(rootBindingResolver.getVariable('z'))
-                .toEqual({
-                    name: 'z',
-                    assignedFrom: {
-                        root: mkOtherVariableRoot((sourceFile
-                            .statements[0] as VariableStatement)
-                            .declarationList.declarations[0].initializer
-                        )
-                    },
-                    definingStatement: sourceFile.statements[0],
-                });
+            it('should resolve the z variable on the root scope', () => {
+                expect(rootBindingResolver.getVariable('z'))
+                    .toEqual({
+                        name: 'z',
+                        assignedFrom: {
+                            root: mkOtherVariableRoot((sourceFile
+                                .statements[0] as VariableStatement)
+                                .declarationList.declarations[0].initializer
+                            )
+                        },
+                        definingStatement: sourceFile.statements[0],
+                    });
+            })
 
-            expect(whileBlockBindingResolver.getVariable('y'))
-                .toEqual({
-                    name: 'y',
-                    assignedFrom: rootBindingResolver.getVariable('z'),
-                    definingStatement: ((sourceFile
-                        .statements[1] as WhileStatement)
+            it('should resolve the y variable on the while body scope', () => {
+                expect(whileBlockBindingResolver.getVariable('y'))
+                    .toEqual({
+                        name: 'y',
+                        assignedFrom: rootBindingResolver.getVariable('z'),
+                        definingStatement: ((sourceFile
+                            .statements[1] as WhileStatement)
+                            .statement as Block)
+                            .statements[0]
+                    });
+            })
+
+            it('should explain the z identifier in the while condition expression to the global scope z', () => {
+                expect(sourceFileBindingResolver.explain(
+                    ((sourceFile.statements[1] as WhileStatement)
+                        .expression as BinaryExpression)
+                        .left as Identifier))
+                    .toEqual(rootBindingResolver.getVariable('z'));
+            })
+
+            it('should explain the z identifier in the while body 1st statement to the global scope z', () => {
+                expect(sourceFileBindingResolver.explain(
+                    (((sourceFile.statements[1] as WhileStatement)
                         .statement as Block)
-                        .statements[0]
-                });
+                        .statements[0] as VariableStatement)
+                        .declarationList
+                        .declarations[0]
+                        .initializer as Identifier))
+                    .toEqual(rootBindingResolver.getVariable('z'));
+            })
 
-            expect(sourceFileBindingResolver.explain(
-                ((sourceFile.statements[1] as WhileStatement)
-                    .expression as BinaryExpression)
-                    .left as Identifier))
-                .toEqual(rootBindingResolver.getVariable('z'));
-
-            expect(sourceFileBindingResolver.explain(
-                (((sourceFile.statements[1] as WhileStatement)
-                    .statement as Block)
-                    .statements[0] as VariableStatement)
-                    .declarationList
-                    .declarations[0]
-                    .initializer as Identifier))
-                .toEqual(rootBindingResolver.getVariable('z'));
-
-            expect(sourceFileBindingResolver.explain(
-                ((((sourceFile.statements[1] as WhileStatement)
-                    .statement as Block)
-                    .statements[1] as ExpressionStatement)
-                    .expression as CallExpression)
-                    .arguments[0] as Identifier))
-                .toEqual(whileBlockBindingResolver.getVariable('y'));
+            it('should explain the y identifier in the while body 2st statement to the while body scope y', () => {
+                expect(sourceFileBindingResolver.explain(
+                    ((((sourceFile.statements[1] as WhileStatement)
+                        .statement as Block)
+                        .statements[1] as ExpressionStatement)
+                        .expression as CallExpression)
+                        .arguments[0] as Identifier))
+                    .toEqual(whileBlockBindingResolver.getVariable('y'));
+            })
         })
     })
 
+    describe('variable shadowing', () => {
+        const sourceFile = createTsSourceFile(`
+            let x = 10;
+            let y = 'hello';
+            {
+                let x = 20;
+                console.log(y, x);
+            }
+            console.log(y, x);
+            `);
+
+        let sourceFileBindingResolver = new SourceFileBindingResolver(sourceFile);
+        let rootBindingResolver =
+            sourceFileBindingResolver.findBindingResolver(sourceFile);
+        let blockBindingResolver =
+            sourceFileBindingResolver.findBindingResolver(sourceFile.statements[2]);
+
+        it('should resolve variable x in root scope', () => {
+            expect(rootBindingResolver.getVariable('x').definingStatement)
+                .toEqual(sourceFile.statements[0])
+        })
+
+        it('should resolve variable x in block scope', () => {
+            expect(blockBindingResolver.getVariable('x').definingStatement)
+                .toEqual((sourceFile
+                    .statements[2] as Block)
+                    .statements[0])
+        })
+
+        it('should resolve variable y in root scope', () => {
+            expect(rootBindingResolver.getVariable('y').definingStatement)
+                .toEqual(sourceFile.statements[1])
+        })
+
+        it('should not resolve variable y in block scope', () => {
+            expect(blockBindingResolver.getVariable('y'))
+                .toEqual(UNKNOWN_VARIABLE)
+        })
+
+        it('should explain the y identifier in the block console.log(y, x) to the root scope y', () => {
+            expect(sourceFileBindingResolver.explain(
+                (((sourceFile.statements[2] as Block)
+                    .statements[1] as ExpressionStatement)
+                    .expression as CallExpression)
+                    .arguments[0] as Identifier))
+                .toEqual(rootBindingResolver.getVariable('y'));
+        })
+
+        it('should explain the x identifier in the block console.log(y, x) to the block scope x', () => {
+            expect(sourceFileBindingResolver.explain(
+                (((sourceFile.statements[2] as Block)
+                    .statements[1] as ExpressionStatement)
+                    .expression as CallExpression)
+                    .arguments[1] as Identifier))
+                .toEqual(blockBindingResolver.getVariable('x'));
+        })
+
+        it('should explain the y identifier in the root console.log(y, x) to the root scope y', () => {
+            expect(sourceFileBindingResolver.explain(
+                ((sourceFile.statements[3] as ExpressionStatement)
+                    .expression as CallExpression)
+                    .arguments[0] as Identifier))
+                .toEqual(rootBindingResolver.getVariable('y'));
+        })
+
+        it('should explain the x identifier in the root console.log(y, x) to the root scope x', () => {
+            expect(sourceFileBindingResolver.explain(
+                ((sourceFile.statements[3] as ExpressionStatement)
+                    .expression as CallExpression)
+                    .arguments[1] as Identifier))
+                .toEqual(rootBindingResolver.getVariable('x'));
+        })
+    })
 })
