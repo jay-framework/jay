@@ -332,7 +332,7 @@ describe('NameBindingResolver', () => {
             });
         });
 
-        it('resolve let z = a.b.c().d.e', () => {
+        describe('resolve let z = a.b.c().d.e', () => {
             let { a, nameResolver, node } = resolveNamesForVariableStatement('let z = a.b.c().d.e');
             let functionCallAsRoot = {
                 kind: VariableRootType.Other,
@@ -342,33 +342,37 @@ describe('NameBindingResolver', () => {
                     .expression as CallExpression
             }
 
-            expect(nameResolver.variables.has('z'));
-            let z = nameResolver.variables.get('z');
-            expect(z).toEqual({
-                name: 'z',
-                assignedFrom: {
-                    accessedByProperty: 'e',
-                    accessedFrom: {
-                        accessedByProperty: 'd',
+            it('should resolve the z variable', () => {
+                expect(nameResolver.variables.has('z'));
+                let z = nameResolver.variables.get('z');
+                expect(z).toEqual({
+                    name: 'z',
+                    assignedFrom: {
+                        accessedByProperty: 'e',
                         accessedFrom: {
-                            root: functionCallAsRoot
+                            accessedByProperty: 'd',
+                            accessedFrom: {
+                                root: functionCallAsRoot
+                            },
                         },
                     },
-                },
-                definingStatement: node
-            });
-            expect(flattenVariable(z)).toEqual({
-                path: ['d', 'e'],
-                root: functionCallAsRoot,
-            });
-            let functionExpression = functionCallAsRoot.node.expression
-            let resolvedFunction = nameResolver.resolvePropertyAccessChain(functionExpression)
-            expect(resolvedFunction).toEqual({
-                accessedByProperty: 'c',
-                accessedFrom: {
-                    accessedByProperty: 'b',
-                    accessedFrom: a,
-                },
+                    definingStatement: node
+                });
+                expect(flattenVariable(z)).toEqual({
+                    path: ['d', 'e'],
+                    root: functionCallAsRoot,
+                });
+            })
+            it('should resolve the function reference expression', () => {
+                let functionExpression = functionCallAsRoot.node.expression
+                let resolvedFunction = nameResolver.resolvePropertyAccessChain(functionExpression)
+                expect(resolvedFunction).toEqual({
+                    accessedByProperty: 'c',
+                    accessedFrom: {
+                        accessedByProperty: 'b',
+                        accessedFrom: a,
+                    },
+                })
             })
         });
 
