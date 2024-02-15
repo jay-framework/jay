@@ -339,7 +339,7 @@ describe('NameBindingResolver', () => {
                 node: ((node.declarationList.declarations[0]
                     .initializer as PropertyAccessExpression)
                     .expression as PropertyAccessExpression)
-                    .expression
+                    .expression as CallExpression
             }
 
             expect(nameResolver.variables.has('z'));
@@ -361,6 +361,15 @@ describe('NameBindingResolver', () => {
                 path: ['d', 'e'],
                 root: functionCallAsRoot,
             });
+            let functionExpression = functionCallAsRoot.node.expression
+            let resolvedFunction = nameResolver.resolvePropertyAccessChain(functionExpression)
+            expect(resolvedFunction).toEqual({
+                accessedByProperty: 'c',
+                accessedFrom: {
+                    accessedByProperty: 'b',
+                    accessedFrom: a,
+                },
+            })
         });
 
         it('resolve let z = (a.b as T).c', () => {
