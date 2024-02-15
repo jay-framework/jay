@@ -17,7 +17,7 @@ import {
     flattenVariable,
     mkParameterVariableRoot,
     mkOtherVariableRoot,
-    mkFunctionVariableRoot, mkImportModuleVariableRoot, ImportType,
+    mkFunctionVariableRoot, mkImportModuleVariableRoot, ImportType, VariableRootType,
 } from '../../lib/ts-file/building-blocks/name-binding-resolver';
 
 function toSourceFile(code: string) {
@@ -308,6 +308,58 @@ describe('NameBindingResolver', () => {
             expect(flattenVariable(z)).toEqual({
                 path: ['b', 'c'],
                 root: PARAM_ROOT,
+            });
+        });
+
+        it('resolve let z = a.b.c()', () => {
+            let { a, nameResolver, node } = resolveNamesForVariableStatement('let z = a.b.c()');
+            let functionCallAsRoot = {
+                kind: VariableRootType.Other,
+                node: node.declarationList.declarations[0].initializer
+            }
+
+            expect(nameResolver.variables.has('z'));
+            let z = nameResolver.variables.get('z');
+            expect(z).toEqual({
+                name: 'z',
+                assignedFrom: {
+                    root: functionCallAsRoot                },
+                definingStatement: node
+            });
+            expect(flattenVariable(z)).toEqual({
+                path: [],
+                root: functionCallAsRoot,
+            });
+        });
+
+        it('resolve let z = a.b.c().d.e', () => {
+            let { a, nameResolver, node } = resolveNamesForVariableStatement('let z = a.b.c().d.e');
+            let functionCallAsRoot = {
+                kind: VariableRootType.Other,
+                node: ((node.declarationList.declarations[0]
+                    .initializer as PropertyAccessExpression)
+                    .expression as PropertyAccessExpression)
+                    .expression
+            }
+
+            expect(nameResolver.variables.has('z'));
+            let z = nameResolver.variables.get('z');
+            expect(z).toEqual({
+                name: 'z',
+                assignedFrom: {
+                    accessedByProperty: 'e',
+                    accessedFrom: {
+                        accessedByProperty: 'd',
+                        accessedFrom: {
+                            root: functionCallAsRoot
+                        },
+                    },
+                },
+                definingStatement: node
+            });
+            expect(flattenVariable(z)).toEqual({
+                path: ['d', 'e'],
+                root: functionCallAsRoot,
             });
         });
 
