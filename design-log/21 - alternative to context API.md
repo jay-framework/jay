@@ -127,61 +127,37 @@ As we can see, all three are far from ideal.
 What if we can create a different context API, one such that prevents property drilling while
 explicitly defines the dependencies of 'i'?
 
-## Alternative Context API
+# Alternative Context API - prop cascading
 
-```typescript
-class WithContext<T, C extends object> {
-  constructor(public func: (context: C) => T) {}
+The idea of property cascading is that given a component, the component inputs should only be using properties.
 
-  exec(context: C) {
-    return this.func(context);
-  }
-}
+**When using the component, it is not required to provide all the properties. 
+Any unprovided properties of the component become properties of the parent component automatically, by the compiler**
 
-class VElement {}
-interface ContextA {
-  aa: string;
+```typescript jsx
+function f(firstName, lastName) {
+    return (<provideProps component={i} props = {{firstName, lastName}}>
+        <g/>
+    </provideProps>)
 }
-function A<C extends ContextA>(
-  a: string,
-  b: number,
-  children: Array<WithContext<VElement, C>>,
-): WithContext<VElement, C> {
-  return new WithContext((c) => {
-    children.forEach((_) => _.exec(c));
-    return new VElement();
-  });
+function g(/** implicit firstName, lastName **/) {
+    return (<><h/></>)
 }
-
-interface ContextB {
-  bb: string;
+function h(/** implicit firstName, lastName **/) {
+    return (<><i/></>)
 }
-function B<C extends ContextB>(
-  a: string,
-  b: number,
-  children: Array<WithContext<VElement, C>>,
-): WithContext<VElement, C> {
-  return new WithContext((c) => {
-    children.forEach((_) => _.exec(c));
-    return new VElement();
-  });
+function i({firstName, lastName}) {
+    return (<span>{firstName} {lastName}</span>)
 }
-function C<C extends ContextA>(
-  a: string,
-  children: Array<WithContext<VElement, C & ContextB>>,
-): WithContext<VElement, C> {
-  return new WithContext((c) => {
-    children.forEach((_) => {
-      let context = { ...c, bb: 'a' };
-      _.exec(context);
-    });
-    return new VElement();
-  });
-}
-
-let x = A<ContextA & ContextB>('a', 7, [A('g', 6, [B('b', 6, [])]), B('c', 8, [])]);
-
-let y = A('a', 7, [C('t', [B('d', 4, [])])]);
-x.exec({ aa: 'aaa', bb: 'earag' });
-y.exec({ aa: 'aaa' });
 ```
+
+With the example above, 
+* `i` requires `firstName` and `lastName` properties
+* `h` and `g` implicitly gain the `firstName` and `lastName` properties because of their children.
+  To use `h` or `g` directly, one is required to provide the `firstName` and `lastName` properties, 
+  or gain the same implicit properties
+* `f` provides the properties
+
+The end result of this proposal is that `g` and `h` are unaware of the implicit properties, and do not change if a 
+3rd property is added to `i`. `i` itself just defines properties, there is a single API for component inputs.
+
