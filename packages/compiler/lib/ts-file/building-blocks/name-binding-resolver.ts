@@ -25,8 +25,8 @@ import ts, {
 } from 'typescript';
 
 export enum VariableRootType {
-    Parameter,
-    Function,
+    FunctionParameter,
+    FunctionDefinition,
     Literal,
     ImportModule,
     Other,
@@ -37,7 +37,7 @@ export interface VariableRoot {
 }
 
 export interface ParamVariableRoot extends VariableRoot {
-    kind: VariableRootType.Parameter;
+    kind: VariableRootType.FunctionParameter;
     paramIndex: number;
     param: ParameterDeclaration;
 }
@@ -45,16 +45,16 @@ export function mkParameterVariableRoot(
     param: ts.ParameterDeclaration,
     paramIndex: number,
 ): ParamVariableRoot {
-    return { kind: VariableRootType.Parameter, param, paramIndex };
+    return { kind: VariableRootType.FunctionParameter, param, paramIndex };
 }
 
 export interface FunctionVariableRoot extends VariableRoot {
-    kind: VariableRootType.Function;
+    kind: VariableRootType.FunctionDefinition;
     func: FunctionLikeDeclarationBase;
 }
 
 export function mkFunctionVariableRoot(func: ts.FunctionLikeDeclarationBase): FunctionVariableRoot {
-    return { kind: VariableRootType.Function, func };
+    return { kind: VariableRootType.FunctionDefinition, func };
 }
 
 export interface LiteralVariableRoot extends VariableRoot {
@@ -77,7 +77,7 @@ export interface ImportModuleVariableRoot extends VariableRoot {
     importType: ImportType;
 }
 
-export function mkImportModuleVariableRoot(module: Expression, importType): ImportModuleVariableRoot {
+export function mkImportModuleVariableRoot(module: Expression, importType: ImportType): ImportModuleVariableRoot {
     return { kind: VariableRootType.ImportModule, module, importType };
 }
 
@@ -91,10 +91,10 @@ export function mkOtherVariableRoot(node: ts.Node): OtherVariableRoot {
 }
 
 export function isParamVariableRoot(vr: VariableRoot): vr is ParamVariableRoot {
-    return vr.kind === VariableRootType.Parameter;
+    return vr.kind === VariableRootType.FunctionParameter;
 }
 export function isFunctionVariableRoot(vr: VariableRoot): vr is FunctionVariableRoot {
-    return vr.kind === VariableRootType.Function;
+    return vr.kind === VariableRootType.FunctionDefinition;
 }
 
 export function isLiteralVariableRoot(vr: VariableRoot): vr is LiteralVariableRoot {
