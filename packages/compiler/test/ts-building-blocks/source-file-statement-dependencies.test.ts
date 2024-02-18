@@ -28,7 +28,7 @@ async function format(code) {
 describe('statement-DAG', () => {
 
     describe('support flat statement dependencies', () => {
-        it('should create DAG for line by line dependencies', async () => {
+        it('resolve dependencies of variable assignments', async () => {
             const sourceFile = createTsSourceFile(`
             let x = 10;
             let y = x + 1;
@@ -43,7 +43,7 @@ describe('statement-DAG', () => {
             ]))
         })
 
-        it('should create DAG for line by line dependencies', async () => {
+        it('resolve dependencies of multiple variable assignments', async () => {
             const sourceFile = createTsSourceFile(`
             let x = 10;
             let z = 20;
@@ -57,6 +57,34 @@ describe('statement-DAG', () => {
                 {id: 1, statement: 'let z = 20;', dependencies: 'this <- 2'},
                 {id: 2, statement: 'let y = x + z;', dependencies: 'this -> 0, this -> 1, this <- 3'},
                 {id: 3, statement: 'console.log(x, y);', dependencies: 'this -> 0, this -> 2'}
+            ]))
+        })
+
+        it('resolve dependencies between code blocks', async () => {
+            const sourceFile = createTsSourceFile(`
+            let x = 10;
+            {
+              let z = 20;
+              let y = x + z;
+              console.log(x, y)
+            }`);
+            let bindingResolver = new SourceFileBindingResolver(sourceFile);
+            let statementDependencies = new SourceFileStatementDependencies(sourceFile, bindingResolver);
+
+            expect(await print(statementDependencies)).toEqual(new Set([
+                {id: 0, statement: 'let x = 10;', dependencies: 'this <- 3, this <- 4'},
+                {
+                    id: 1,
+                    statement: await format(`{
+                        let z = 20;
+                        let y = x + z;
+                        console.log(x, y);
+                    }`),
+                    dependencies: "",
+                },
+                {id: 2, statement: 'let z = 20;', dependencies: 'this <- 3'},
+                {id: 3, statement: 'let y = x + z;', dependencies: 'this -> 0, this -> 2, this <- 4'},
+                {id: 4, statement: 'console.log(x, y);', dependencies: 'this -> 0, this -> 3'}
             ]))
         })
 
