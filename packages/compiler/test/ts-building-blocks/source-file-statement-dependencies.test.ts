@@ -25,7 +25,29 @@ async function format(code) {
     return (await prettify(code)).trim();
 }
 
-describe('statement-DAG', () => {
+describe('source-file-statement-dependencies', () => {
+
+    describe('SourceFileStatementDependencies API', () => {
+        it('should provide statement dependencies', () => {
+            const sourceFile = createTsSourceFile(`
+            let x = 10;
+            let y = x + 1;
+            console.log(y)`);
+            let bindingResolver = new SourceFileBindingResolver(sourceFile);
+            let statementDependencies = new SourceFileStatementDependencies(sourceFile, bindingResolver);
+
+            expect(statementDependencies.getDependsOn(sourceFile.statements[1]))
+                .toEqual(new Set([
+                    {
+                        id: 0,
+                        parent: undefined,
+                        statement: sourceFile.statements[0],
+                        dependsOn: new Set(),
+                        isDependencyFor: new Set([statementDependencies.getStatementDependencies(sourceFile.statements[1])])
+                    }
+                ]))
+        })
+    })
 
     describe('support flat statement dependencies', () => {
         it('resolve dependencies of variable assignments', async () => {

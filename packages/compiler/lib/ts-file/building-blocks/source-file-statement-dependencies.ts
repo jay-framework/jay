@@ -147,4 +147,8 @@ export class SourceFileStatementDependencies {
     getAllStatements() {
         return this.statementDependencies.values();
     }
+
+    getStatementDependencies(statement: Statement) {
+        return this.statementDependencies.get(statement);
+    }
 }
