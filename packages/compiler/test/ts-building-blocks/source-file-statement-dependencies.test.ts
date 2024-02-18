@@ -47,6 +47,26 @@ describe('source-file-statement-dependencies', () => {
                     }
                 ]))
         })
+
+        it('should provide what other statements depend on a statement', () => {
+            const sourceFile = createTsSourceFile(`
+            let x = 10;
+            let y = x + 1;
+            console.log(y)`);
+            let bindingResolver = new SourceFileBindingResolver(sourceFile);
+            let statementDependencies = new SourceFileStatementDependencies(sourceFile, bindingResolver);
+
+            expect(statementDependencies.getIsDependencyFor(sourceFile.statements[1]))
+                .toEqual(new Set([
+                    {
+                        id: 2,
+                        parent: undefined,
+                        statement: sourceFile.statements[2],
+                        dependsOn: new Set([statementDependencies.getStatementDependencies(sourceFile.statements[1])]),
+                        isDependencyFor: new Set()
+                    }
+                ]))
+        })
     })
 
     describe('support flat statement dependencies', () => {
