@@ -133,5 +133,20 @@ describe('statement-DAG', () => {
             ]))
         })
 
+        it('should resolve function arguments', async () => {
+            const sourceFile = createTsSourceFile(`
+            let x = 10;
+            let a = {};
+            let z = a.b.c.f(x)`);
+            let bindingResolver = new SourceFileBindingResolver(sourceFile);
+            let statementDependencies = new SourceFileStatementDependencies(sourceFile, bindingResolver);
+
+            expect(await print(statementDependencies)).toEqual(new Set([
+                {id: 0, statement: 'let x = 10;', dependencies: 'this <- 2'},
+                {id: 1, statement: 'let a = {};', dependencies: 'this <- 2'},
+                {id: 2, statement: 'let z = a.b.c.f(x);', dependencies: 'this -> 0, this -> 1'}
+            ]))
+        })
+
     })
 });
