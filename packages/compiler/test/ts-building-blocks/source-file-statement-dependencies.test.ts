@@ -91,7 +91,22 @@ describe('statement-DAG', () => {
     })
 
     describe('support import dependencies', () => {
+        it('should resolve function arguments', async () => {
+            const sourceFile = createTsSourceFile(`
+            import {x} from 'module';
+            let z = 20;
+            let y = x + z;
+            console.log(x, y)`);
+            let bindingResolver = new SourceFileBindingResolver(sourceFile);
+            let statementDependencies = new SourceFileStatementDependencies(sourceFile, bindingResolver);
 
+            expect(await print(statementDependencies)).toEqual(new Set([
+                {id: 0, statement: 'import { x } from \'module\';', dependencies: 'this <- 2, this <- 3'},
+                {id: 1, statement: 'let z = 20;', dependencies: 'this <- 2'},
+                {id: 2, statement: 'let y = x + z;', dependencies: 'this -> 0, this -> 1, this <- 3'},
+                {id: 3, statement: 'console.log(x, y);', dependencies: 'this -> 0, this -> 2'}
+            ]))
+        })
     });
 
     describe("support function statement dependencies (params to body and in-body dependencies)", () => {
