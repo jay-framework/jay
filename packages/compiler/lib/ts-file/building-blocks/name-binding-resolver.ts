@@ -143,7 +143,9 @@ const getAccessedByProperty = (
 };
 
 function findDeclaringStatement(node: ts.Node): Statement {
-    if (isStatement(node))
+    if (!node)
+        return undefined;
+    else if (isStatement(node))
         return node
     else
         return findDeclaringStatement(node.parent);
