@@ -164,8 +164,74 @@ export interface StatementDependencies {
 
 ## 3. Compute `isSafe` for statements
 
+The first part to compute `isSafe` is to understand it is relevant to coding patterns.
+Given code patterns, we can determine if an expression is safe.
+
+### coding patterns
+
+We define 4 types of coding patterns - 
+
+1. `CompilePatternType.RETURN`:
+
+   A pattern that returns a value. It can be replaced with a variable resolved in the main environment.
+
+   ```typescript
+   import {JayEvent} from 'jay-runtime';
+   
+   function inputValuePattern(jayEvent: JayEvent<any, any>) {
+       return jayEvent.event.target.value;
+   }
+   ```
+
+2. `CompilePatternType.CALL`
+   
+   A pattern that is a function call. With a match, the statement has to be fully moved 
+   to the main context.
+
+   ```typescript
+   import {JayEvent} from 'jay-runtime';
+   
+   function eventPreventDefault(jayEvent: JayEvent<any, any>) {
+       jayEvent.event.preventDefault();
+   }
+   ```
+
+3. `CompilePatternType.CHAINABLE_CALL`
+
+   Similar to a call pattern, but also returns a value, which can be used for chaining
+
+   ```typescript
+   function stringReplace(value: string, regex: RegExp, replacement: string): string {
+       return value.replace(regex, replacement)
+   }
+   ```
+
+4. `CompilePatternType.ASSIGNMENT`
+
+   Pattern identifying an assignment to a value in the main context.
+
+   ```typescript
+   import {JayEvent} from 'jay-runtime';
+   
+   function setInputValue(jayEvent: JayEvent<any, any>, value: string): string {
+       jayEvent.event.target.value = value;
+   }
+   ```
+   
+From the patterns above we extract 
+1. the pattern type - return, call, call & return or assignment
+2. the pattern statement access chain - the left side in the function above.
+3. the pattern input types
+4. the pattern output type
+
+types are supported with patterns by tracking the type name and import path. 
+We stringify a type designator such that we can easily compare types.
+
+In the above, `JayEvent` which imported from `jay-runtime` is stringify 
+into `jay-runtime.JayEvent`. native types are represented as is - `string`, `number`, etc.
 
 
+### pattern matching
 
 
 

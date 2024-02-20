@@ -1,20 +1,33 @@
 import ts, {
-    Identifier, isBlock,
+    Identifier,
+    isBlock,
     isForInStatement,
     isForOfStatement,
     isForStatement,
-    isFunctionDeclaration, isIdentifier,
+    isFunctionDeclaration,
+    isIdentifier,
     isImportDeclaration,
+    isStringLiteral,
+    isTypeReferenceNode,
     isVariableDeclarationList,
     isVariableStatement,
-    SourceFile, VariableDeclarationList,
+    SourceFile,
+    SyntaxKind,
+    VariableDeclarationList,
 } from "typescript";
 import {
+    flattenVariable,
+    isImportModuleVariableRoot,
     mkOtherVariableRoot,
     mkVariable,
     NameBindingResolver,
 } from "./name-binding-resolver.ts";
 import {isFunctionLikeDeclarationBase} from "../ts-compiler-utils.ts";
+
+const BUILT_IN_TYPES = ['RegExp'];
+function builtInType(text: string) {
+    return BUILT_IN_TYPES.findIndex(_ => _ === text) > -1;
+}
 
 export class SourceFileBindingResolver {
     private nameBindingResolvers = new Map<ts.Node, NameBindingResolver>();
@@ -83,5 +96,28 @@ export class SourceFileBindingResolver {
 
     explain(identifier: Identifier) {
         return this.findBindingResolver(identifier).resolveIdentifier(identifier);
+    }
+
+    explainType(type: ts.TypeNode): string {
+        if (type) {
+            if (isTypeReferenceNode(type)) {
+                let typeName = type.typeName;
+                if (isIdentifier(typeName)) {
+                    let resolved = this.findBindingResolver(typeName).resolveIdentifier(typeName)
+                    let flattened = flattenVariable(resolved);
+                    if (!!flattened.root) {
+                        if (isImportModuleVariableRoot(flattened.root) && isStringLiteral(flattened.root.module)) {
+                            return `${flattened.root.module.text}.${flattened.path.join('.')}`;
+                        }
+                    }
+                    else if (builtInType(typeName.text))
+                        return typeName.text
+                }
+            }
+            else if (type.kind === SyntaxKind.StringKeyword)
+                return 'string'
+        }
+
+        return undefined;
     }
 }

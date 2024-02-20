@@ -97,6 +97,9 @@ export function isFunctionVariableRoot(vr: VariableRoot): vr is FunctionVariable
     return vr.kind === VariableRootType.FunctionDefinition;
 }
 
+export function isImportModuleVariableRoot(vr: VariableRoot): vr is ImportModuleVariableRoot {
+    return vr.kind === VariableRootType.ImportModule;
+}
 export function isLiteralVariableRoot(vr: VariableRoot): vr is LiteralVariableRoot {
     return vr.kind === VariableRootType.Literal;
 }

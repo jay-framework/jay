@@ -1,18 +1,18 @@
 import ts, {
+    Expression,
+    isBinaryExpression,
     isCallExpression,
     isExpressionStatement,
-    isFunctionDeclaration,
+    isFunctionDeclaration, isIdentifier,
     isPropertyAccessExpression,
-    isReturnStatement, ParameterDeclaration, SourceFile,
+    isReturnStatement,
+    SourceFile,
+    SyntaxKind,
 } from 'typescript';
-import {
-    FlattenedAccessChain,
-    flattenVariable,
-    NameBindingResolver,
-} from './name-binding-resolver';
-import { mkTransformer } from '../mk-transformer';
-import { JayValidations, WithValidations } from '../../core/with-validations';
-import { astToCode } from '../ts-compiler-utils';
+import {flattenVariable,} from './name-binding-resolver';
+import {mkTransformer} from '../mk-transformer';
+import {JayValidations, WithValidations} from '../../core/with-validations';
+import {astToCode} from '../ts-compiler-utils';
 import {SourceFileBindingResolver} from "./source-file-binding-resolver.ts";
 
 export enum CompilePatternType {
@@ -22,10 +22,14 @@ export enum CompilePatternType {
     ASSIGNMENT
 }
 
+export type CompilePatternVarType = string;
+
 export interface CompiledPattern {
-    accessChain: FlattenedAccessChain;
-    type: CompilePatternType;
-    arguments: FlattenedAccessChain[]
+    patternType: CompilePatternType;
+    leftSidePath: string[];
+    leftSideType: CompilePatternVarType,
+    callArgumentTypes?: CompilePatternVarType[]
+    returnType?: CompilePatternVarType,
 }
 
 export function compileFunctionSplitPatternsBlock(
@@ -39,66 +43,54 @@ export function compileFunctionSplitPatternsBlock(
         const sourceFileBinding = new SourceFileBindingResolver(patternsFile);
         const findPatternFunctions: ts.Visitor = (node) => {
             if (isFunctionDeclaration(node)) {
-                // if (node.parameters.length !== 1) {
-                //     validations.push('Event handler patterns must have a single handler parameter');
-                //     return node;
-                // }
-
-                // let nameBindingResolver = new NameBindingResolver();
-                // nameBindingResolver.addFunctionParams(node);
 
                 node.body.statements.forEach((statement, index) => {
+
+                    let patternType: CompilePatternType;
+                    let leftHandSide: Expression;
                     if (
                         isReturnStatement(statement) &&
                         isPropertyAccessExpression(statement.expression)
                     ) {
-
-                        let resolvedVariable = flattenVariable(
-                            sourceFileBinding.findBindingResolver(statement)
-                                .resolvePropertyAccessChain(statement.expression),
-                        );
-                        compiledPatterns.push({
-                            accessChain: resolvedVariable,
-                            type: CompilePatternType.RETURN,
-                            arguments: []
-                        });
-                    } else if (
-                        isReturnStatement(statement) &&
+                        patternType = CompilePatternType.RETURN;
+                        leftHandSide = statement.expression
+                    } else if (isReturnStatement(statement) &&
                         isCallExpression(statement.expression) &&
                         isPropertyAccessExpression(statement.expression.expression) &&
-                        node.type
-                    ) {
-                        let resolvedVariable = flattenVariable(
-                            sourceFileBinding.findBindingResolver(statement)
-                                .resolvePropertyAccessChain(
-                                    statement.expression.expression,
-                            ),
-                        );
-                        compiledPatterns.push({
-                            accessChain: resolvedVariable,
-                            type: CompilePatternType.CHAINABLE_CALL,
-                            arguments: statement.expression.arguments.map(expression => flattenVariable(
-                                sourceFileBinding.findBindingResolver(statement)
-                                    .resolvePropertyAccessChain(
-                                        expression,
-                                ),
-                            ))
-                        });
-                    } else if (
-                        isExpressionStatement(statement) &&
+                        node.type) {
+                        patternType = CompilePatternType.CHAINABLE_CALL;
+                        leftHandSide = statement.expression.expression
+                    } else if (isExpressionStatement(statement) &&
                         isCallExpression(statement.expression) &&
-                        isPropertyAccessExpression(statement.expression.expression)
-                    ) {
-                        let resolvedVariable = flattenVariable(
-                            sourceFileBinding.findBindingResolver(statement).resolvePropertyAccessChain(
-                                statement.expression.expression,
-                            ),
+                        isPropertyAccessExpression(statement.expression.expression)) {
+                        patternType = CompilePatternType.CALL;
+                        leftHandSide = statement.expression.expression
+                    } else if (isExpressionStatement(statement) &&
+                        isBinaryExpression(statement.expression) &&
+                        isPropertyAccessExpression(statement.expression.left) &&
+                        (statement.expression.operatorToken.kind === SyntaxKind.EqualsToken) &&
+                        isIdentifier(statement.expression.right)) {
+                        patternType = CompilePatternType.ASSIGNMENT;
+                        leftHandSide = statement.expression.left;
+                    }
+
+                    if (patternType !== undefined) {
+                        let resolvedLeftHandSide = flattenVariable(
+                            sourceFileBinding.findBindingResolver(statement)
+                                .resolvePropertyAccessChain(leftHandSide),
                         );
+
+                        // validate resolvedLeftHandSide is the first parameter
+
                         compiledPatterns.push({
-                            accessChain: resolvedVariable,
-                            type: CompilePatternType.CALL,
-                            arguments: []
+                            patternType: patternType,
+                            leftSidePath: resolvedLeftHandSide.path,
+                            leftSideType: sourceFileBinding.explainType(node.parameters[0].type),
+                            returnType: sourceFileBinding.explainType(node.type),
+                            callArgumentTypes: node.parameters.slice(1).map(param =>
+                                sourceFileBinding.explainType(param.type))
                         });
+
                     } else
                         validations.push(
                             `unsupported statement, at pattern [${node.name?.text}] statement [${index}]: `,
@@ -115,10 +107,6 @@ export function compileFunctionSplitPatternsBlock(
                 return sourceFile;
             }),
         ]);
-
-        // find imports
-        // find functions
-        // validate only usage of function parameters, single statement functions, no conditions.
     });
     return new WithValidations(compiledPatterns, validations);
 }
