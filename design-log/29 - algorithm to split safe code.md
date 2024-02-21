@@ -222,7 +222,10 @@ From the patterns above we extract
 1. the pattern type - return, call, call & return or assignment
 2. the pattern statement access chain - the left side in the function above.
 3. the pattern input types
+   1. The first is the left hand side root type
+   2. The second an on are function call parameters
 4. the pattern output type
+5. target environment - `main`, or `any`
 
 types are supported with patterns by tracking the type name and import path. 
 We stringify a type designator such that we can easily compare types.
@@ -231,7 +234,57 @@ In the above, `JayEvent` which imported from `jay-runtime` is stringify
 into `jay-runtime.JayEvent`. native types are represented as is - `string`, `number`, etc.
 
 
-### pattern matching
+### Analyzing statements - `anayzeStatement(statement)`
+
+When looking at a statement considering if it is safe, we need to consider the expressions 
+that build the statement, and we can get a few results
+
+1. the statement expressions are all matching patterns, and can be moved to the main context - safe statement
+2. the statement is using patterns that mandate the statement has to run in the main context
+3. the statement is using an expression that does not match a pattern, and has to run in the sandbox
+4. the statement is using an expression that matches a pattern, and this expression has to run in the main context, 
+   while the rest of the statement remains in the sandbox
+
+Modeling all the statuses above, we have 
+* Statement that has to run in main
+* Statement that has can run in both contexts
+* Statement that has to run in Sandbox
+* Statement that has to run in Sandbox, but has sub-expressions who can run in main
+
+### Analysing expressions - `isSafeExpression(expression)`
+
+We consider an expression as safe using `isSafeExpression` if is matching one or more patterns 
+organized as a chain. We also restrict expression to only include property access, 
+function calls and trinary expressions.
+
+For each statement, we derive the target environment as one of 
+`JayTargetEnv.main`, `JayTargetEnv.any` or `JayTargetEnv.sandbox`.
+
+1. pattern matching can only include
+   * property access - `a.b.c`
+   * property array access using constant - `a['b'].c`
+   * type casting - `(a.b as B).c`
+   * function calls - `a()`, in which case the function params are also checked using `isSafeExpression`
+   * trinary expressions - `a?b:c`, in which case both branches are also checked using `isSafeExpression`
+
+2. We **do not support** expressions including anything else (by design), including
+   * inline function definitions - `(function () {}).a`
+   * property array access using expression - `a[b].c`
+   * async expressions - `(async a.b()).c`
+   * callback expressions - `a.map(_ => f(_)).b`
+
+3. we support chaining expressions based on expression return type. 
+   
+   Given two expressions `a.b, returning string` and `b.c, b expected to be string`,
+   we will match `a.b.c` to the chaining of the two expressions.
+
+4. for each expression matching, we extract the target environment. 
+   we have two options - requires `JayTargetEnv.main`, or supports both main and sandbox `JayTargetEnv.any`. 
+   we, by design, assume that anything that does not match a pattern requires sandbox.
+   
+   in the case of pattern chaining, if one pattern is `JayTargetEnv.main` and another `JayTargetEnv.any`
+   the whole expression is considered `JayTargetEnv.main`
+
 
 
 
