@@ -1,7 +1,7 @@
 import ts, {
     Expression,
     isBinaryExpression,
-    isCallExpression,
+    isCallExpression, isDecorator,
     isExpressionStatement,
     isFunctionDeclaration, isIdentifier,
     isPropertyAccessExpression,
@@ -24,12 +24,30 @@ export enum CompilePatternType {
 
 export type CompilePatternVarType = string;
 
+export enum JayTargetEnv {
+    main,
+    any
+}
+
+/**
+ * decorator to define running environment for compiler patterns.
+ * Only used by the compiler below
+ * @param env
+ * @constructor
+ */
+export function JayPattern(env: JayTargetEnv) {
+    return function (target) {
+        return target
+    }
+}
+
 export interface CompiledPattern {
     patternType: CompilePatternType;
     leftSidePath: string[];
     leftSideType: CompilePatternVarType,
     callArgumentTypes?: CompilePatternVarType[]
     returnType?: CompilePatternVarType,
+    targetEnv: JayTargetEnv
 }
 
 export function compileFunctionSplitPatternsBlock(
@@ -43,6 +61,19 @@ export function compileFunctionSplitPatternsBlock(
         const sourceFileBinding = new SourceFileBindingResolver(patternsFile);
         const findPatternFunctions: ts.Visitor = (node) => {
             if (isFunctionDeclaration(node)) {
+                let targetEnv = JayTargetEnv.main;
+                node.modifiers && node.modifiers.forEach(modifier => {
+                    if (isDecorator(modifier) &&
+                        isCallExpression(modifier.expression) &&
+                        isIdentifier(modifier.expression.expression) &&
+                        (modifier.expression.expression.text === 'JayPattern') &&
+                        (modifier.expression.arguments.length === 1) &&
+                        isPropertyAccessExpression(modifier.expression.arguments[0]) &&
+                        isIdentifier(modifier.expression.arguments[0].expression) &&
+                        modifier.expression.arguments[0].expression.text === 'JayTargetEnv' &&
+                        modifier.expression.arguments[0].name.text === 'any')
+                        targetEnv = JayTargetEnv.any;
+                })
 
                 node.body.statements.forEach((statement, index) => {
 
@@ -88,7 +119,8 @@ export function compileFunctionSplitPatternsBlock(
                             leftSideType: sourceFileBinding.explainType(node.parameters[0].type),
                             returnType: sourceFileBinding.explainType(node.type),
                             callArgumentTypes: node.parameters.slice(1).map(param =>
-                                sourceFileBinding.explainType(param.type))
+                                sourceFileBinding.explainType(param.type)),
+                            targetEnv
                         });
 
                     } else

@@ -1,6 +1,6 @@
 import {
     compileFunctionSplitPatternsBlock,
-    CompilePatternType,
+    CompilePatternType, JayTargetEnv,
 } from '../../lib/ts-file/building-blocks/compile-function-split-patterns';
 import {createTsSourceFile} from "../test-utils/ts-source-utils.ts";
 
@@ -8,6 +8,7 @@ describe('compile secure function split patterns', () => {
     it('should compile a return pattern', () => {
         const patternFile = createTsSourceFile(`
         import {JayEvent} from 'jay-runtime';
+
         function inputValuePattern(handler: JayEvent<any, any>) {
             return handler.event.target.value;
         }`);
@@ -23,13 +24,16 @@ describe('compile secure function split patterns', () => {
             leftSidePath: ['event', 'target', 'value'],
             leftSideType: "jay-runtime.JayEvent",
             returnType: undefined,
-            callArgumentTypes: []
+            callArgumentTypes: [],
+            targetEnv: JayTargetEnv.main,
         })
     });
 
     it('should compile a return pattern with a return type', () => {
         const patternFile = createTsSourceFile(`
         import {JayEvent} from 'jay-runtime';
+
+        @JayPattern(JayTargetEnv.main)
         function inputValuePattern(handler: JayEvent<any, any>): string {
             return handler.event.target.value;
         }`);
@@ -45,13 +49,16 @@ describe('compile secure function split patterns', () => {
             leftSidePath: ['event', 'target', 'value'],
             leftSideType: "jay-runtime.JayEvent",
             returnType: 'string',
-            callArgumentTypes: []
+            callArgumentTypes: [],
+            targetEnv: JayTargetEnv.main,
         })
     });
 
     it('should compile a call expression pattern', () => {
         const patternFile = createTsSourceFile(`
         import {JayEvent} from 'jay-runtime';
+
+        @JayPattern(JayTargetEnv.main)
         function eventPreventDefault(handler: JayEvent<any, any>) {
             handler.event.preventDefault();
         }`);
@@ -67,12 +74,14 @@ describe('compile secure function split patterns', () => {
             leftSidePath: ['event', 'preventDefault'],
             leftSideType: "jay-runtime.JayEvent",
             returnType: undefined,
-            callArgumentTypes: []
+            callArgumentTypes: [],
+            targetEnv: JayTargetEnv.main,
         })
     });
 
     it('should compile a chainable call expression pattern', () => {
         const patternFile = createTsSourceFile(`
+        @JayPattern(JayTargetEnv.any)
         function stringReplace(value: string, regex: RegExp, replacement: string): string {
             return value.replace(regex, replacement)
         }`);
@@ -88,13 +97,16 @@ describe('compile secure function split patterns', () => {
             leftSidePath: ['replace'],
             leftSideType: "string",
             returnType: "string",
-            callArgumentTypes: ["RegExp", "string"]
+            callArgumentTypes: ["RegExp", "string"],
+            targetEnv: JayTargetEnv.any,
         })
     });
 
     it('should compile an assignment pattern', () => {
         const patternFile = createTsSourceFile(`
         import {JayEvent} from 'jay-runtime';
+
+        @JayPattern(JayTargetEnv.main)
         function setInputValue(handler: JayEvent<any, any>, value: string) {
             handler.event.target.value = value;
         }`);
@@ -110,7 +122,8 @@ describe('compile secure function split patterns', () => {
             leftSidePath: ['event', 'target', 'value'],
             leftSideType: "jay-runtime.JayEvent",
             returnType: undefined,
-            callArgumentTypes: ['string']
+            callArgumentTypes: ['string'],
+            targetEnv: JayTargetEnv.main,
         })
     })
 });
