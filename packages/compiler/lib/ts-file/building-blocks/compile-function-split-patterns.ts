@@ -26,7 +26,8 @@ export type CompilePatternVarType = string;
 
 export enum JayTargetEnv {
     main,
-    any
+    any,
+    sandbox
 }
 
 /**
