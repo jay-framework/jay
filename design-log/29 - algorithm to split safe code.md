@@ -285,7 +285,34 @@ For each statement, we derive the target environment as one of
    in the case of pattern chaining, if one pattern is `JayTargetEnv.main` and another `JayTargetEnv.any`
    the whole expression is considered `JayTargetEnv.main`
 
+### the `AnalysisResult` for `Statement`s and `Expression`s
 
+The `SourceFileStatementAnalyzer` performs the above analysis, and given 
+a `Statement` or `Expression` can give the analysis result.
+
+```typescript
+interface MatchedReadPattern {
+   pattern: CompiledPattern;
+   expression: Expression;
+}
+
+interface AnalysisResult {
+   targetEnv: JayTargetEnv,
+   matchingReadPatterns: MatchedReadPattern[]
+}
+```
+
+* `targetEnv` - what is the target environment for this expression or statement
+* `matchingReadPatterns` - even if the target environment is `JayTargetEnv.sandbox`, 
+  the statement / expression may have sub read expressions which can be replaced with
+  variables resolved in the `JayTargetEnv.main`. 
+   * `expression` - which expression was matched
+   * `pattern` - the matching was for which pattern
+
+Notes:
+1. do we need support for chaining with read patterns? probably.
+2. the statement analysis is based on nested expression analysis, 
+   not including nested statement analysis
 
 
 

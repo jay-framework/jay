@@ -10,7 +10,7 @@ import ts, {
     isStringLiteral,
     isTypeReferenceNode,
     isVariableDeclarationList,
-    isVariableStatement,
+    isVariableStatement, PropertyAccessExpression,
     SourceFile,
     SyntaxKind,
     VariableDeclarationList,
@@ -94,8 +94,8 @@ export class SourceFileBindingResolver {
         return found;
     }
 
-    explain(identifier: Identifier) {
-        return this.findBindingResolver(identifier).resolveIdentifier(identifier);
+    explain(identifier: Identifier | PropertyAccessExpression) {
+        return this.findBindingResolver(identifier).resolvePropertyAccessChain(identifier);
     }
 
     explainType(type: ts.TypeNode): string {

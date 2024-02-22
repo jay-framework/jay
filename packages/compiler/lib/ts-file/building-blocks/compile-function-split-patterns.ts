@@ -30,6 +30,17 @@ export enum JayTargetEnv {
     sandbox
 }
 
+export function intersectJayTargetEnv(a: JayTargetEnv, b: JayTargetEnv) {
+    if (a === b && a === JayTargetEnv.any)
+        return JayTargetEnv.any
+    if (a === JayTargetEnv.main && b === JayTargetEnv.main ||
+        a === JayTargetEnv.main && b === JayTargetEnv.any ||
+        a === JayTargetEnv.any && b === JayTargetEnv.main)
+        return JayTargetEnv.main;
+    else
+        return JayTargetEnv.sandbox;
+}
+
 /**
  * decorator to define running environment for compiler patterns.
  * Only used by the compiler below
