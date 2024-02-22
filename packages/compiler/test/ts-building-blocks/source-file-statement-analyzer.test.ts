@@ -5,7 +5,7 @@ import {
 } from "../../lib/ts-file/building-blocks/compile-function-split-patterns.ts";
 import {SourceFileStatementAnalyzer} from "../../lib/ts-file/building-blocks/source-file-statement-analyzer.ts";
 import {SourceFileBindingResolver} from "../../lib/ts-file/building-blocks/source-file-binding-resolver.ts";
-import {ArrowFunction, CallExpression, ExpressionStatement} from "typescript";
+import {ArrowFunction, Block, CallExpression, ExpressionStatement} from "typescript";
 
 
 function readEventTargetValuePattern() {
@@ -30,24 +30,25 @@ function eventPreventDefaultPattern() {
 
 describe('SourceFileStatementAnalyzer', () => {
 
-    describe('analyze inline event handler with read pattern', () => {
-        it('should', () => {
+    describe('analyze read patterns', () => {
+        it('should analyze inline (arrow) event handler with access to event.target.value', () => {
             const sourceFile = createTsSourceFile(`
             import {JayEvent} from 'jay-runtime';
             ({event}: JayEvent) => setText((event.target as HTMLInputElement).value)`);
             const patterns = readEventTargetValuePattern();
             const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
             const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
 
             const eventHandlerBody = ((sourceFile
                 .statements[1] as ExpressionStatement)
                 .expression as ArrowFunction)
                 .body as CallExpression;
-            const eventTargetValue = eventHandlerBody.arguments[0];
+            const eventTargetValueExpression = eventHandlerBody.arguments[0];
 
-            expect(analyzedFile.getExpressionStatus(eventTargetValue))
+            expect(analyzedFile.getExpressionStatus(eventTargetValueExpression))
                 .toEqual({
-                    expression: eventTargetValue,
+                    expression: eventTargetValueExpression,
                     pattern: patterns[0]
                 })
 
@@ -56,7 +57,45 @@ describe('SourceFileStatementAnalyzer', () => {
                     targetEnv: JayTargetEnv.sandbox,
                     matchingReadPatterns: [
                         {
-                            expression: eventTargetValue,
+                            expression: eventTargetValueExpression,
+                            pattern: patterns[0]
+                        }
+                    ]
+                })
+        })
+
+        it('should analyze block event handler with access to event.target.value', () => {
+            const sourceFile = createTsSourceFile(`
+            import {JayEvent} from 'jay-runtime';
+            ({event}: JayEvent) => {
+                setText((event.target as HTMLInputElement).value)
+            }`);
+            const patterns = readEventTargetValuePattern();
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            const eventHandlerBody = ((sourceFile
+                .statements[1] as ExpressionStatement)
+                .expression as ArrowFunction)
+                .body as Block;
+            const eventTargetValueExpression = ((eventHandlerBody
+                .statements[0] as ExpressionStatement)
+                .expression as CallExpression)
+                .arguments[0];
+
+            expect(analyzedFile.getExpressionStatus(eventTargetValueExpression))
+                .toEqual({
+                    expression: eventTargetValueExpression,
+                    pattern: patterns[0]
+                })
+
+            expect(analyzedFile.getStatementStatus(eventHandlerBody.statements[0]))
+                .toEqual({
+                    targetEnv: JayTargetEnv.sandbox,
+                    matchingReadPatterns: [
+                        {
+                            expression: eventTargetValueExpression,
                             pattern: patterns[0]
                         }
                     ]
