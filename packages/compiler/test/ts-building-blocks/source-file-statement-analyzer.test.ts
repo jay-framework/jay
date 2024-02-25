@@ -41,17 +41,17 @@ describe('SourceFileStatementAnalyzer', () => {
                 expect(analyzedFile.getExpressionStatus(eventTargetValueExpression))
                     .toEqual({
                         expression: eventTargetValueExpression,
-                        pattern: patterns[0],
+                        patterns: [patterns[0]],
                         testId: 0
                     })
 
                 expect(analyzedFile.getStatementStatus(sourceFile.statements[1]))
                     .toEqual({
                         targetEnv: JayTargetEnv.sandbox,
-                        matchingReadPatterns: [
+                        matchedPatterns: [
                             {
                                 expression: eventTargetValueExpression,
-                                pattern: patterns[0],
+                                patterns: [patterns[0]],
                                 testId: 0
                             }
                         ]
@@ -88,22 +88,73 @@ describe('SourceFileStatementAnalyzer', () => {
                 expect(analyzedFile.getExpressionStatus(eventTargetValueExpression))
                     .toEqual({
                         expression: eventTargetValueExpression,
-                        pattern: patterns[0],
+                        patterns: [patterns[0]],
                         testId: 0
                     })
 
                 expect(analyzedFile.getStatementStatus(eventHandlerBody.statements[0]))
                     .toEqual({
                         targetEnv: JayTargetEnv.sandbox,
-                        matchingReadPatterns: [
+                        matchedPatterns: [
                             {
                                 expression: eventTargetValueExpression,
-                                pattern: patterns[0],
+                                patterns: [patterns[0]],
                                 testId: 0
                             }
                         ]
                     })
             })
+        })
+
+        it('basic read pattern', async () => {
+            const sourceFile = createTsSourceFile(`
+                    import {JayEvent} from 'jay-runtime';
+                    ({event}: JayEvent) => setText((event.target as HTMLInputElement).value)`);
+            const patterns = readEventTargetValuePattern();
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                `({ event }: JayEvent) => setText((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [0]`
+            ]))
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                '0: (event.target as HTMLInputElement).value; matches inputValuePattern'
+            ]))
+        })
+
+        it('chaining multiple read patterns', async () => {
+            const sourceFile = createTsSourceFile(`
+                    import {JayEvent} from 'jay-runtime';
+                    ({event}: JayEvent) => setText((event.target as HTMLInputElement).value.length)`);
+            const patterns = [...readEventTargetValuePattern(), ...stringLengthPattern()];
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                `({ event }: JayEvent) => setText((event.target as HTMLInputElement).value.length); --> sandbox, patterns matched: [0]`
+            ]))
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                '0: (event.target as HTMLInputElement).value.length; matches inputValuePattern, stringLength'
+            ]))
+        })
+
+        it('match pattern as sub-expression of chaining', async () => {
+            const sourceFile = createTsSourceFile(`
+                    import {JayEvent} from 'jay-runtime';
+                    ({event}: JayEvent) => setText((event.target as HTMLInputElement).value.length)`);
+            const patterns = readEventTargetValuePattern();
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                `({ event }: JayEvent) => setText((event.target as HTMLInputElement).value.length); --> sandbox, patterns matched: [0]`
+            ]))
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                '0: (event.target as HTMLInputElement).value; matches inputValuePattern'
+            ]))
         })
 
         it('not find match if the code does not match', async () => {
@@ -265,7 +316,7 @@ describe('SourceFileStatementAnalyzer', () => {
 
 async function printMatchedExpression(matchedExpression: MatchedPattern) {
     let printedExpression = (await astToFormattedCode(matchedExpression.expression)).trim();
-    return `${matchedExpression.testId}: ${printedExpression} matches ${matchedExpression.pattern.name}`
+    return `${matchedExpression.testId}: ${printedExpression} matches ${matchedExpression.patterns.map(_ => _.name).join(', ')}`
 }
 
 async function printAnalyzedExpressions(analyzer: SourceFileStatementAnalyzer) {
@@ -282,7 +333,7 @@ async function printAnalyzedStatements(analyzer: SourceFileStatementAnalyzer) {
     for await (let statement of analyzer.getAnalyzedStatements()) {
         let analysisResult = analyzer.getStatementStatus(statement)
         let printedStatement = (await printStatementWithoutChildStatements(statement)).trim();
-        let patternsMatched = analysisResult.matchingReadPatterns.map(_ => _.testId).sort().join(', ')
+        let patternsMatched = analysisResult.matchedPatterns.map(_ => _.testId).sort().join(', ')
         printed.add(`${printedStatement} --> ${jayTargetEnvName(analysisResult.targetEnv)}, patterns matched: [${patternsMatched}]`)
     }
     return printed;
@@ -293,6 +344,13 @@ function readEventTargetValuePattern() {
     import {JayEvent} from 'jay-runtime';
     function inputValuePattern({event}: JayEvent<any, any>): string {
         return event.target.value;
+    }`)]).val;
+}
+
+function stringLengthPattern() {
+    return compileFunctionSplitPatternsBlock([createTsSourceFile(`
+    function stringLength(value: string): string {
+        return value.length;
     }`)]).val;
 }
 

@@ -9,7 +9,8 @@ import ts, {
     isForOfStatement,
     isForStatement,
     isIdentifier,
-    isIfStatement, isLiteralExpression,
+    isIfStatement,
+    isLiteralExpression,
     isPropertyAccessExpression,
     isStatement,
     isVariableStatement,
@@ -27,14 +28,14 @@ import {
 import {FlattenedAccessChain, flattenVariable, isParamVariableRoot} from "./name-binding-resolver.ts";
 
 export interface MatchedPattern {
-    pattern: CompiledPattern;
+    patterns: CompiledPattern[];
     expression: Expression;
     testId: number
 }
 
 export interface AnalysisResult {
     targetEnv: JayTargetEnv,
-    matchingReadPatterns: MatchedPattern[]
+    matchedPatterns: MatchedPattern[]
 }
 
 type ContextualVisitor<Context> = (node: ts.Node, context: Context, visitChild: (node: ts.Node, childContext?: Context) => void) => ts.Node;
@@ -58,26 +59,32 @@ export class SourceFileStatementAnalyzer {
     private analyzedStatements = new Map<Statement, AnalysisResult>();
     private analyzedExpressions = new Map<Expression, MatchedPattern>();
     private nextId: number = 0
+    private returnPatterns: CompiledPattern[];
+    private assignPatterns: CompiledPattern[];
 
 
     constructor(
         private sourceFile: SourceFile,
         private bindingResolver: SourceFileBindingResolver,
         private compiledPatterns: CompiledPattern[]) {
-
+        this.returnPatterns = compiledPatterns.filter(_ => _.patternType === CompilePatternType.RETURN);
+        this.assignPatterns = compiledPatterns.filter(_ => _.patternType === CompilePatternType.ASSIGNMENT);
         this.analyze();
     }
 
     private addPatternToStatement(statement: Statement, matchedPattern: MatchedPattern) {
         if (!this.analyzedStatements.get(statement)) {
             this.analyzedStatements.set(statement, {
-                targetEnv: matchedPattern.pattern.targetEnv,
-                matchingReadPatterns: [matchedPattern]
+                targetEnv: matchedPattern.patterns.reduce((prev, curr) =>
+                    intersectJayTargetEnv(prev, curr.targetEnv), JayTargetEnv.any),
+                matchedPatterns: [matchedPattern]
             })
         } else {
             let analysisResult = this.analyzedStatements.get(statement);
-            analysisResult.matchingReadPatterns.push(matchedPattern);
-            analysisResult.targetEnv = intersectJayTargetEnv(analysisResult.targetEnv, matchedPattern.pattern.targetEnv)
+            analysisResult.matchedPatterns.push(matchedPattern);
+            analysisResult.targetEnv = intersectJayTargetEnv(analysisResult.targetEnv,
+                matchedPattern.patterns.reduce((prev, curr) =>
+                    intersectJayTargetEnv(prev, curr.targetEnv), JayTargetEnv.any))
         }
     }
 
@@ -85,7 +92,7 @@ export class SourceFileStatementAnalyzer {
         if (!this.analyzedStatements.get(statement)) {
             this.analyzedStatements.set(statement, {
                 targetEnv: JayTargetEnv.sandbox,
-                matchingReadPatterns: []
+                matchedPatterns: []
             })
         }
         else this.analyzedStatements.get(statement).targetEnv = JayTargetEnv.sandbox;
@@ -112,16 +119,21 @@ export class SourceFileStatementAnalyzer {
                     if (isIdentifier(node) || isPropertyAccessExpression(node)) {
                         let variable = this.bindingResolver.explain(node);
                         let flattened = flattenVariable(variable);
-                        let foundPattern = this.findPatternInVariable(flattened,
-                            roleInParent === RoleInParent.read ?
-                                CompilePatternType.RETURN :
-                                CompilePatternType.ASSIGNMENT);
-                        if (foundPattern) {
-                            let matchedPattern = {pattern: foundPattern, expression: node, testId: this.nextId++};
+                        let foundPattern: CompiledPattern[];
+                        if (roleInParent === RoleInParent.assign) {
+                            foundPattern = this.matchAssignPattern(flattened)
+                        }
+                        else {
+                            foundPattern = this.matchReturnPattern(flattened)
+                        }
+                        if (foundPattern.length > 0) {
+                            let matchedPattern = {patterns: foundPattern, expression: node, testId: this.nextId++};
                             this.analyzedExpressions.set(node, matchedPattern);
                             this.addPatternToStatement(statement, matchedPattern);
                         }
                         else {
+                            if (isPropertyAccessExpression(node))
+                                visitChild(node.expression, {statement, roleInParent: RoleInParent.read})
                             this.markStatementSandbox(statement);
                         }
                     }
@@ -168,25 +180,63 @@ export class SourceFileStatementAnalyzer {
 
     }
 
-    findPatternInVariable(
+    matchAssignPattern(
         resolvedParam: FlattenedAccessChain,
-        patternTypeToFind: CompilePatternType,
-    ): CompiledPattern {
-        return this.compiledPatterns
-            .filter((pattern) => pattern.patternType === patternTypeToFind)
+    ): CompiledPattern[] {
+        let foundPattern= this.assignPatterns
             .find(
                 (pattern) => {
                     if (resolvedParam.root && isParamVariableRoot(resolvedParam.root)) {
                         let variableType = this.bindingResolver.explainType(resolvedParam.root.param.type)
 
-                        let match = variableType === pattern.leftSideType &&
-                            pattern.leftSidePath.length <= resolvedParam.path.length &&
+                        return variableType === pattern.leftSideType &&
+                            pattern.leftSidePath.length === resolvedParam.path.length &&
                             pattern.leftSidePath.every(
                                 (element, index) => element === resolvedParam.path[index],
-                            )
-                        return match;
+                            );
                     }
                 });
+        if (foundPattern)
+            return [foundPattern]
+        else
+            return [];
+    }
+
+
+    matchReturnPattern(
+        resolvedParam: FlattenedAccessChain,
+    ): CompiledPattern[] {
+        let matchedPatterns = []
+        if (resolvedParam.root && isParamVariableRoot(resolvedParam.root)) {
+            let currentVariableType = this.bindingResolver.explainType(resolvedParam.root.param.type)
+            let currentPosition = 0;
+
+            while (currentPosition < resolvedParam.path.length) {
+                let currentMatch = this.returnPatterns
+                    .find(
+                        (pattern) => {
+                            return currentVariableType === pattern.leftSideType &&
+                                pattern.leftSidePath.length <= currentPosition + resolvedParam.path.length &&
+                                pattern.leftSidePath.every(
+                                    (element, index) => element === resolvedParam.path[index + currentPosition],
+                                );
+                        });
+                if (currentMatch) {
+                    matchedPatterns.push(currentMatch);
+                    if (currentMatch.leftSidePath.length < resolvedParam.path.length) {
+                        currentVariableType = currentMatch.returnType;
+                        currentPosition += currentMatch.leftSidePath.length;
+
+                    }
+                    else
+                        return matchedPatterns
+
+                }
+                else
+                    return [];
+            }
+        }
+        return matchedPatterns;
     }
 
     getExpressionStatus(expression: Expression): MatchedPattern {
