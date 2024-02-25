@@ -14,53 +14,119 @@ import {astToFormattedCode} from "../test-utils/ts-compiler-test-utils.ts";
 describe('SourceFileStatementAnalyzer', () => {
 
     describe('analyze read patterns', () => {
-        it('should analyze inline (arrow) event handler with access to event.target.value', async () => {
-            const sourceFile = createTsSourceFile(`
+
+        describe('test also the getExpressionStatus and getStatementStatus APIs', () => {
+            it('should analyze inline (arrow) event handler with access to event.target.value', async () => {
+                const sourceFile = createTsSourceFile(`
             import {JayEvent} from 'jay-runtime';
             ({event}: JayEvent) => setText((event.target as HTMLInputElement).value)`);
+                const patterns = readEventTargetValuePattern();
+                const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+                const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+                expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                    `({ event }: JayEvent) => setText((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [0]`
+                ]))
+                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                    '0: (event.target as HTMLInputElement).value; matches inputValuePattern'
+                ]))
+
+                const eventHandlerBody = ((sourceFile
+                    .statements[1] as ExpressionStatement)
+                    .expression as ArrowFunction)
+                    .body as CallExpression;
+                const eventTargetValueExpression = eventHandlerBody.arguments[0];
+
+                expect(analyzedFile.getExpressionStatus(eventTargetValueExpression))
+                    .toEqual({
+                        expression: eventTargetValueExpression,
+                        pattern: patterns[0],
+                        testId: 0
+                    })
+
+                expect(analyzedFile.getStatementStatus(sourceFile.statements[1]))
+                    .toEqual({
+                        targetEnv: JayTargetEnv.sandbox,
+                        matchingReadPatterns: [
+                            {
+                                expression: eventTargetValueExpression,
+                                pattern: patterns[0],
+                                testId: 0
+                            }
+                        ]
+                    })
+            })
+
+            it('should analyze block event handler with access to event.target.value', async () => {
+                const sourceFile = createTsSourceFile(`
+            import {JayEvent} from 'jay-runtime';
+            ({event}: JayEvent) => {
+                setText((event.target as HTMLInputElement).value)
+            }`);
+                const patterns = readEventTargetValuePattern();
+                const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+                const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+                expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                    `setText((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [0]`
+                ]))
+                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                    '0: (event.target as HTMLInputElement).value; matches inputValuePattern'
+                ]))
+
+                const eventHandlerBody = ((sourceFile
+                    .statements[1] as ExpressionStatement)
+                    .expression as ArrowFunction)
+                    .body as Block;
+                const eventTargetValueExpression = ((eventHandlerBody
+                    .statements[0] as ExpressionStatement)
+                    .expression as CallExpression)
+                    .arguments[0];
+
+                expect(analyzedFile.getExpressionStatus(eventTargetValueExpression))
+                    .toEqual({
+                        expression: eventTargetValueExpression,
+                        pattern: patterns[0],
+                        testId: 0
+                    })
+
+                expect(analyzedFile.getStatementStatus(eventHandlerBody.statements[0]))
+                    .toEqual({
+                        targetEnv: JayTargetEnv.sandbox,
+                        matchingReadPatterns: [
+                            {
+                                expression: eventTargetValueExpression,
+                                pattern: patterns[0],
+                                testId: 0
+                            }
+                        ]
+                    })
+            })
+        })
+
+        it('not find match if the code does not match', async () => {
+            const sourceFile = createTsSourceFile(`
+            import {JayEvent} from 'jay-runtime';
+            ({event}: JayEvent) => setText((event.target as HTMLInputElement).width)`);
             const patterns = readEventTargetValuePattern();
             const bindingResolver = new SourceFileBindingResolver(sourceFile)
 
             const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
-                `({ event }: JayEvent) => setText((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [0]`
+                `({ event }: JayEvent) => setText((event.target as HTMLInputElement).width); --> sandbox, patterns matched: []`
             ]))
-            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                '0: (event.target as HTMLInputElement).value; matches inputValuePattern'
-            ]))
-
-            const eventHandlerBody = ((sourceFile
-                .statements[1] as ExpressionStatement)
-                .expression as ArrowFunction)
-                .body as CallExpression;
-            const eventTargetValueExpression = eventHandlerBody.arguments[0];
-
-            expect(analyzedFile.getExpressionStatus(eventTargetValueExpression))
-                .toEqual({
-                    expression: eventTargetValueExpression,
-                    pattern: patterns[0],
-                    testId: 0
-                })
-
-            expect(analyzedFile.getStatementStatus(sourceFile.statements[1]))
-                .toEqual({
-                    targetEnv: JayTargetEnv.sandbox,
-                    matchingReadPatterns: [
-                        {
-                            expression: eventTargetValueExpression,
-                            pattern: patterns[0],
-                            testId: 0
-                        }
-                    ]
-                })
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([]))
         })
 
-        it('should analyze block event handler with access to event.target.value', async () => {
+        it('should support if statement', async () => {
             const sourceFile = createTsSourceFile(`
             import {JayEvent} from 'jay-runtime';
             ({event}: JayEvent) => {
-                setText((event.target as HTMLInputElement).value)
+                if ((event.target as HTMLInputElement).value)
+                    setText((event.target as HTMLInputElement).value)
             }`);
             const patterns = readEventTargetValuePattern();
             const bindingResolver = new SourceFileBindingResolver(sourceFile)
@@ -68,40 +134,15 @@ describe('SourceFileStatementAnalyzer', () => {
             const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
-                `setText((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [0]`
+                `if ((event.target as HTMLInputElement).value) setText((event.target as HTMLInputElement).value); --> main, patterns matched: [0]`,
+                `setText((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [1]`
             ]))
             expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                '0: (event.target as HTMLInputElement).value; matches inputValuePattern'
+                "0: (event.target as HTMLInputElement).value; matches inputValuePattern",
+                "1: (event.target as HTMLInputElement).value; matches inputValuePattern",
             ]))
-
-            const eventHandlerBody = ((sourceFile
-                .statements[1] as ExpressionStatement)
-                .expression as ArrowFunction)
-                .body as Block;
-            const eventTargetValueExpression = ((eventHandlerBody
-                .statements[0] as ExpressionStatement)
-                .expression as CallExpression)
-                .arguments[0];
-
-            expect(analyzedFile.getExpressionStatus(eventTargetValueExpression))
-                .toEqual({
-                    expression: eventTargetValueExpression,
-                    pattern: patterns[0],
-                    testId: 0
-                })
-
-            expect(analyzedFile.getStatementStatus(eventHandlerBody.statements[0]))
-                .toEqual({
-                    targetEnv: JayTargetEnv.sandbox,
-                    matchingReadPatterns: [
-                        {
-                            expression: eventTargetValueExpression,
-                            pattern: patterns[0],
-                            testId: 0
-                        }
-                    ]
-                })
         })
+
     })
 })
 

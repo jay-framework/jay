@@ -3,7 +3,7 @@ import ts, {
     isArrowFunction,
     isBlock,
     isCallExpression,
-    isIdentifier,
+    isIdentifier, isIfStatement,
     isPropertyAccessExpression,
     isStatement,
     isVariableStatement,
@@ -126,6 +126,11 @@ export class SourceFileStatementAnalyzer {
                         visitChild(declaration.initializer, {statement, roleInParent: RoleInParent.read}));
                 } else if (isArrowFunction(node) && !isBlock(node.body)) {
                     visitChild(node.body, {statement, roleInParent: RoleInParent.read});
+                } else if (isIfStatement(node)) {
+                    visitChild(node.expression, {statement, roleInParent: RoleInParent.read})
+                    visitChild(node.thenStatement, {statement, roleInParent: RoleInParent.none})
+                    if (node.elseStatement)
+                        visitChild(node.elseStatement, {statement, roleInParent: RoleInParent.none})
                 } else {
                     node.getChildren().forEach(child =>
                         visitChild(child, {statement, roleInParent: RoleInParent.none}));
