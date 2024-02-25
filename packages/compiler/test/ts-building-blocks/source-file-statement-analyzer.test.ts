@@ -18,8 +18,8 @@ describe('SourceFileStatementAnalyzer', () => {
         describe('test also the getExpressionStatus and getStatementStatus APIs', () => {
             it('should analyze inline (arrow) event handler with access to event.target.value', async () => {
                 const sourceFile = createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
-            ({event}: JayEvent) => setText((event.target as HTMLInputElement).value)`);
+                    import {JayEvent} from 'jay-runtime';
+                    ({event}: JayEvent) => setText((event.target as HTMLInputElement).value)`);
                 const patterns = readEventTargetValuePattern();
                 const bindingResolver = new SourceFileBindingResolver(sourceFile)
 
@@ -60,10 +60,10 @@ describe('SourceFileStatementAnalyzer', () => {
 
             it('should analyze block event handler with access to event.target.value', async () => {
                 const sourceFile = createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
-            ({event}: JayEvent) => {
-                setText((event.target as HTMLInputElement).value)
-            }`);
+                    import {JayEvent} from 'jay-runtime';
+                    ({event}: JayEvent) => {
+                        setText((event.target as HTMLInputElement).value)
+                    }`);
                 const patterns = readEventTargetValuePattern();
                 const bindingResolver = new SourceFileBindingResolver(sourceFile)
 
@@ -108,8 +108,8 @@ describe('SourceFileStatementAnalyzer', () => {
 
         it('not find match if the code does not match', async () => {
             const sourceFile = createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
-            ({event}: JayEvent) => setText((event.target as HTMLInputElement).width)`);
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => setText((event.target as HTMLInputElement).width)`);
             const patterns = readEventTargetValuePattern();
             const bindingResolver = new SourceFileBindingResolver(sourceFile)
 
@@ -123,11 +123,11 @@ describe('SourceFileStatementAnalyzer', () => {
 
         it('should support if statement', async () => {
             const sourceFile = createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
-            ({event}: JayEvent) => {
-                if ((event.target as HTMLInputElement).value)
-                    setText((event.target as HTMLInputElement).value)
-            }`);
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    if ((event.target as HTMLInputElement).value)
+                        setText((event.target as HTMLInputElement).value)
+                }`);
             const patterns = readEventTargetValuePattern();
             const bindingResolver = new SourceFileBindingResolver(sourceFile)
 
@@ -143,6 +143,101 @@ describe('SourceFileStatementAnalyzer', () => {
             ]))
         })
 
+    })
+    describe('statements that require code running in sandbox', () => {
+
+        it('mandate for statement in sandbox', async () => {
+            const sourceFile = createTsSourceFile(`
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    for (let i=0; i < (event.target as HTMLInputElement).value.length; i++)
+                        console.log(i);
+                }`);
+            const patterns = readEventTargetValuePattern();
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                `for (let i = 0; i < (event.target as HTMLInputElement).value.length; i++) /*...*/ --> sandbox, patterns matched: []`,
+            ]))
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([]))
+        })
+
+        it('mandate for in statement in sandbox', async () => {
+            const sourceFile = createTsSourceFile(`
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    for (let i in (event.target as HTMLInputElement).value)
+                        console.log(i);
+                }`);
+            const patterns = readEventTargetValuePattern();
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                `for (let i in (event.target as HTMLInputElement).value) /*...*/ --> sandbox, patterns matched: []`,
+            ]))
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([]))
+        })
+
+        it('mandate for of statement in sandbox', async () => {
+            const sourceFile = createTsSourceFile(`
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    for (let i of (event.target as HTMLInputElement).value)
+                        console.log(i);
+                }`);
+            const patterns = readEventTargetValuePattern();
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                `for (let i of (event.target as HTMLInputElement).value) /*...*/ --> sandbox, patterns matched: []`,
+            ]))
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([]))
+        })
+
+        it('mandate do while statement in sandbox', async () => {
+            const sourceFile = createTsSourceFile(`
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    do {
+                        console.log((event.target as HTMLInputElement).value);
+                    } while((event.target as HTMLInputElement).value != 'ok')
+                }`);
+            const patterns = readEventTargetValuePattern();
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                `do /*...*/ while ((event.target as HTMLInputElement).value != 'ok'); --> sandbox, patterns matched: []`,
+            ]))
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([]))
+        })
+
+        it('mandate while statement in sandbox', async () => {
+            const sourceFile = createTsSourceFile(`
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    while((event.target as HTMLInputElement).value != 'ok') {
+                        console.log((event.target as HTMLInputElement).value);
+                    } 
+                }`);
+            const patterns = readEventTargetValuePattern();
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                `while ((event.target as HTMLInputElement).value != 'ok') /*...*/ --> sandbox, patterns matched: []`,
+            ]))
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([]))
+
+        })
     })
 })
 

@@ -1,12 +1,12 @@
 import ts, {
     Expression,
-    isArrowFunction,
+    isArrowFunction, isBinaryExpression,
     isBlock,
-    isCallExpression,
+    isCallExpression, isDoStatement, isForInStatement, isForOfStatement, isForStatement,
     isIdentifier, isIfStatement,
     isPropertyAccessExpression,
-    isStatement,
-    isVariableStatement,
+    isStatement, isVariableDeclarationList,
+    isVariableStatement, isWhileStatement,
     SourceFile,
     Statement
 } from "typescript";
@@ -131,6 +131,20 @@ export class SourceFileStatementAnalyzer {
                     visitChild(node.thenStatement, {statement, roleInParent: RoleInParent.none})
                     if (node.elseStatement)
                         visitChild(node.elseStatement, {statement, roleInParent: RoleInParent.none})
+                } else if (isForStatement(node) || isForOfStatement(node) || isForInStatement(node) || isWhileStatement(node) || isDoStatement(node)) {
+                    this.markStatementSandbox(statement)
+                    // if (isVariableDeclarationList(node.initializer))
+                    //     node.initializer.declarations.forEach(child =>
+                    //         visitChild(child.initializer, {statement, roleInParent: RoleInParent.read}))
+                    // else
+                    //     visitChild(node.initializer, {statement, roleInParent: RoleInParent.read})
+                    // visitChild(node.condition, {statement, roleInParent: RoleInParent.none})
+                    // visitChild(node.incrementor, {statement, roleInParent: RoleInParent.none})
+                    // visitChild(node.statement, {statement, roleInParent: RoleInParent.none})
+                } else if (isBinaryExpression(node)) {
+                    visitChild(node.right, {statement, roleInParent: RoleInParent.read})
+                    if (node.operatorToken.kind != ts.SyntaxKind.EqualsToken)
+                        visitChild(node.left, {statement, roleInParent: RoleInParent.read})
                 } else {
                     node.getChildren().forEach(child =>
                         visitChild(child, {statement, roleInParent: RoleInParent.none}));
