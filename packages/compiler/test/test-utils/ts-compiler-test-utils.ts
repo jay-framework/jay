@@ -1,6 +1,6 @@
 import path from 'node:path';
 import * as ts from 'typescript';
-import { TransformerFactory } from 'typescript';
+import {isStatement, Statement, TransformerFactory} from 'typescript';
 import {
     checkValidationErrors,
     componentBridgeTransformer,
@@ -124,4 +124,27 @@ export async function readFileAndGenerateImportsFileFromJayFile(
 
 export async function astToFormattedCode(node: ts.Node) {
     return prettify(astToCode(node));
+}
+
+export async function printStatementWithoutChildStatements(statement: Statement) {
+    let printedStatement = (await astToFormattedCode(statement)).trim();
+
+    let childStatements = [];
+    const visit = (node: ts.Node) => {
+        if (isStatement(node))
+            childStatements.push(node)
+        else
+            node.getChildren().forEach(child => visit(child))
+    }
+    statement.getChildren().forEach(child => visit(child))
+
+    let printedChildStatements = [];
+    for await (let childStatement of childStatements) {
+        printedChildStatements.push((await astToFormattedCode(childStatement)).trim());
+    }
+
+    printedChildStatements.forEach(printedChildStatement =>
+        printedStatement = printedStatement.replace(printedChildStatement, `/*...*/`))
+
+    return printedStatement;
 }

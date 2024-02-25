@@ -1,5 +1,5 @@
 import {createTsSourceFile} from "../test-utils/ts-source-utils.ts";
-import {astToFormattedCode} from "../test-utils/ts-compiler-test-utils.ts";
+import {astToFormattedCode, printStatementWithoutChildStatements} from "../test-utils/ts-compiler-test-utils.ts";
 import {SourceFileStatementDependencies} from "../../lib/ts-file/building-blocks/source-file-statement-dependencies.ts";
 import {SourceFileBindingResolver} from "../../lib/ts-file/building-blocks/source-file-binding-resolver.ts";
 import {prettify} from "../../lib";
@@ -15,7 +15,7 @@ async function print(dag: SourceFileStatementDependencies): Promise<Set<PrintedS
         let dependsOn = [...statementDependencies.dependsOn].map(dependsOn => `this -> ${dependsOn.id}`)
         let dependencyFor = [...statementDependencies.isDependencyFor].map(dependencyFor => `this <- ${dependencyFor.id}`)
         let dependencies = [...dependsOn, ...dependencyFor].sort().join(', ')
-        let statement = (await astToFormattedCode(statementDependencies.statement)).trim();
+        let statement = (await printStatementWithoutChildStatements(statementDependencies.statement));
         printedStatements.add({id: statementDependencies.id, statement, dependencies})
     }
     return printedStatements;
@@ -117,11 +117,7 @@ describe('source-file-statement-dependencies', () => {
                 {id: 0, statement: 'let x = 10;', dependencies: 'this <- 3, this <- 4'},
                 {
                     id: 1,
-                    statement: await format(`{
-                        let z = 20;
-                        let y = x + z;
-                        console.log(x, y);
-                    }`),
+                    statement: await format(`{/*...*/;/*...*/;/*...*/;}`),
                     dependencies: "",
                 },
                 {id: 2, statement: 'let z = 20;', dependencies: 'this <- 3'},
@@ -167,9 +163,9 @@ describe('source-file-statement-dependencies', () => {
                     id: 0,
                     dependencies: "this <- 1, this <- 3",
                     statement: await format(`function bla({ event }) {
-                        const inputValue = event.target.value;
-                        const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
-                        event.target.value = validValue;
+                        /*...*/;
+                        /*...*/;
+                        /*...*/;
                     }`),
                 },
                 {

@@ -9,7 +9,7 @@ import {
 } from "../../lib/ts-file/building-blocks/source-file-statement-analyzer.ts";
 import {SourceFileBindingResolver} from "../../lib/ts-file/building-blocks/source-file-binding-resolver.ts";
 import {ArrowFunction, Block, CallExpression, ExpressionStatement} from "typescript";
-import {astToFormattedCode} from "../test-utils/ts-compiler-test-utils.ts";
+import {astToFormattedCode, printStatementWithoutChildStatements} from "../test-utils/ts-compiler-test-utils.ts";
 
 describe('SourceFileStatementAnalyzer', () => {
 
@@ -134,7 +134,7 @@ describe('SourceFileStatementAnalyzer', () => {
             const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
-                `if ((event.target as HTMLInputElement).value) setText((event.target as HTMLInputElement).value); --> main, patterns matched: [0]`,
+                `if ((event.target as HTMLInputElement).value) /*...*/ --> main, patterns matched: [0]`,
                 `setText((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [1]`
             ]))
             expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
@@ -164,7 +164,7 @@ async function printAnalyzedStatements(analyzer: SourceFileStatementAnalyzer) {
     let printed = new Set<string>();
     for await (let statement of analyzer.getAnalyzedStatements()) {
         let analysisResult = analyzer.getStatementStatus(statement)
-        let printedStatement = (await astToFormattedCode(statement)).trim();
+        let printedStatement = (await printStatementWithoutChildStatements(statement)).trim();
         let patternsMatched = analysisResult.matchingReadPatterns.map(_ => _.testId).sort().join(', ')
         printed.add(`${printedStatement} --> ${jayTargetEnvName(analysisResult.targetEnv)}, patterns matched: [${patternsMatched}]`)
     }
