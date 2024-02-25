@@ -168,6 +168,7 @@ export class SourceFileStatementAnalyzer {
                                 targetEnv = JayTargetEnv.sandbox;
                         })
                     }
+                    // @ts-ignore - for some reason TS thinks targetEnv cannot be JayTargetEnv.main.
                     if ((targetEnv === JayTargetEnv.any) || (targetEnv === JayTargetEnv.main)) {
                         let matchedPattern = {patterns: foundPattern, expression: node, testId: this.nextId++};
                         this.analyzedExpressions.set(node, matchedPattern);
