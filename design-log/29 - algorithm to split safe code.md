@@ -318,50 +318,9 @@ Notes:
 
 
 
-
-# Stage 2 - isSafeStatement
-We define a **safe** `Statement` as a statement that all of it's expressions are safe. 
-
-A safe expression is one that only access variables and functions that are matching a **safe pattern**.
-
-Safe patterns are explained in [25 - building the compiler](25%20-%20building%20the%20compiler.md).
-
-We assume here a utility function `isSafeStatement` that given an `Expression`, patterns and `NameBindingResolver` can 
-determine if the expression is considered safe.
-
-We note here a few types of **safe** - 
-* **Safe** - Statement which has only **safe** expressions.
-* **safe dependencies** - Statement which is **safe** and all of the statements it depends on are also **safe**.
-* **compound safe** - statement which is by itself safe dependencies, yet have child statements (like `if`, `for`, `switch`) which may be safe or not.
-
-The function `isSafeStatement` only determines that a statement is **Safe**. 
-
-# Stage 3 - The Statements DAG
-
-The DAG is used to capture statement dependencies, which are used to calculate which statements are safe and 
-can be moved to run in the main context instead of the sandbox context.
-
-Given the ability to check if a statement is *safe* `isSafeStatement` based on Jay compiler patterns, the DAG calculates
-1. what are the statements our statement depends on
-2. are all of those statements *safe* as well?
-3. are any of those statements are dependent by other *unsafe* statements?
-4. what statements to move to the main context, such that
-   1. A statement is copied to the main context if it and all of it's dependencies are *safe*.  
-   2. A statement is deleted from the sandbox context if it is *safe* and there are no dependant *unsafe* statements that depend on it. 
-
-There are two types of statement dependencies - *temporal* or *identifier* based.
-
-*Temporal* dependencies are such that assume statement `A` is executed before statement `B` - normally when they create 
-dependent side effects. Examples are `console.log`, dependent database operations, dependent IO operations, etc. 
-We note that in most cases, statements that depend temporally are either *safe* or *unsafe*. 
-
-*Identifier* dependencies are such that statement `A` defines an identifier which is used by statement `B`. 
-
-**the DAG algorithm is using *Identifier* dependencies.**  
-
 ### unsupported JS features 
 
-The DAG will not support `while` statement as it is deprecated and will consider any usage of `while` as *unsafe* code.
+The DAG will not support `with` statement as it is deprecated and will consider any usage of `while` as *unsafe* code.
 
 ### DAG creation
 
