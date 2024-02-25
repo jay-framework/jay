@@ -144,6 +144,7 @@ describe('SourceFileStatementAnalyzer', () => {
         })
 
     })
+
     describe('statements that require code running in sandbox', () => {
 
         it('mandate for statement in sandbox', async () => {
@@ -239,6 +240,27 @@ describe('SourceFileStatementAnalyzer', () => {
 
         })
     })
+
+    describe('analyze assignment patterns', () => {
+        it('should support setting event.target.value to a constant', async () => {
+            const sourceFile = createTsSourceFile(`
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    (event.target as HTMLInputElement).value = '12';
+                }`);
+            const patterns = setEventTargetValuePattern();
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                `(event.target as HTMLInputElement).value = '12'; --> main, patterns matched: [0]`,
+            ]))
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                "0: (event.target as HTMLInputElement).value; matches setEventTargetValue",
+            ]))
+        })
+    })
 })
 
 async function printMatchedExpression(matchedExpression: MatchedPattern) {
@@ -267,21 +289,25 @@ async function printAnalyzedStatements(analyzer: SourceFileStatementAnalyzer) {
 }
 
 function readEventTargetValuePattern() {
-    const PATTERN_EVENT_TARGET_VALUE = createTsSourceFile(`
+    return compileFunctionSplitPatternsBlock([createTsSourceFile(`
     import {JayEvent} from 'jay-runtime';
     function inputValuePattern({event}: JayEvent<any, any>): string {
         return event.target.value;
-    }`);
-
-    return compileFunctionSplitPatternsBlock([PATTERN_EVENT_TARGET_VALUE]).val;
+    }`)]).val;
 }
 
 function eventPreventDefaultPattern() {
-    const PATTERN_EVENT_PREVENT_DEFAULT = createTsSourceFile(`
+    return compileFunctionSplitPatternsBlock([createTsSourceFile(`
     import {JayEvent} from 'jay-runtime';
     function inputValuePattern({event}: JayEvent<any, any>) {
         event.preventDefault();
-    }`);
+    }`)]).val;
+}
 
-    return compileFunctionSplitPatternsBlock([PATTERN_EVENT_PREVENT_DEFAULT]).val;
+function setEventTargetValuePattern() {
+    return compileFunctionSplitPatternsBlock([createTsSourceFile(`
+    import {JayEvent} from 'jay-runtime';
+    function setEventTargetValue({event}: JayEvent<any, any>, value: string) {
+        event.target.value = value
+    }`)]).val;
 }

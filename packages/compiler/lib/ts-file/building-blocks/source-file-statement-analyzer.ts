@@ -1,12 +1,19 @@
 import ts, {
     Expression,
-    isArrowFunction, isBinaryExpression,
+    isArrowFunction,
+    isBinaryExpression,
     isBlock,
-    isCallExpression, isDoStatement, isForInStatement, isForOfStatement, isForStatement,
-    isIdentifier, isIfStatement,
+    isCallExpression,
+    isDoStatement,
+    isForInStatement,
+    isForOfStatement,
+    isForStatement,
+    isIdentifier,
+    isIfStatement, isLiteralExpression,
     isPropertyAccessExpression,
-    isStatement, isVariableDeclarationList,
-    isVariableStatement, isWhileStatement,
+    isStatement,
+    isVariableStatement,
+    isWhileStatement,
     SourceFile,
     Statement
 } from "typescript";
@@ -87,7 +94,8 @@ export class SourceFileStatementAnalyzer {
     private analyze() {
         enum RoleInParent {
             none,
-            read
+            read,
+            assign
         }
 
         interface AnalyzeContext {
@@ -100,11 +108,14 @@ export class SourceFileStatementAnalyzer {
                 if (isStatement(node))
                     statement = node;
 
-                if (roleInParent === RoleInParent.read) {
+                if (roleInParent === RoleInParent.read || roleInParent === RoleInParent.assign) {
                     if (isIdentifier(node) || isPropertyAccessExpression(node)) {
                         let variable = this.bindingResolver.explain(node);
                         let flattened = flattenVariable(variable);
-                        let foundPattern = this.findPatternInVariable(flattened, CompilePatternType.RETURN);
+                        let foundPattern = this.findPatternInVariable(flattened,
+                            roleInParent === RoleInParent.read ?
+                                CompilePatternType.RETURN :
+                                CompilePatternType.ASSIGNMENT);
                         if (foundPattern) {
                             let matchedPattern = {pattern: foundPattern, expression: node, testId: this.nextId++};
                             this.analyzedExpressions.set(node, matchedPattern);
@@ -114,7 +125,8 @@ export class SourceFileStatementAnalyzer {
                             this.markStatementSandbox(statement);
                         }
                     }
-
+                    else if (!isLiteralExpression(node))
+                        this.markStatementSandbox(statement);
                 }
 
                 if (isCallExpression(node)) {
@@ -143,8 +155,9 @@ export class SourceFileStatementAnalyzer {
                     // visitChild(node.statement, {statement, roleInParent: RoleInParent.none})
                 } else if (isBinaryExpression(node)) {
                     visitChild(node.right, {statement, roleInParent: RoleInParent.read})
-                    if (node.operatorToken.kind != ts.SyntaxKind.EqualsToken)
-                        visitChild(node.left, {statement, roleInParent: RoleInParent.read})
+                    visitChild(node.left, {statement, roleInParent:
+                            (node.operatorToken.kind === ts.SyntaxKind.EqualsToken)?RoleInParent.assign: RoleInParent.read})
+
                 } else {
                     node.getChildren().forEach(child =>
                         visitChild(child, {statement, roleInParent: RoleInParent.none}));
