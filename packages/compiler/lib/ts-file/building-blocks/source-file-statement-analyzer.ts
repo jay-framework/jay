@@ -19,12 +19,13 @@ import {
 } from "./compile-function-split-patterns.ts";
 import {FlattenedAccessChain, flattenVariable, isParamVariableRoot} from "./name-binding-resolver.ts";
 
-interface MatchedPattern {
+export interface MatchedPattern {
     pattern: CompiledPattern;
     expression: Expression;
+    testId: number
 }
 
-interface AnalysisResult {
+export interface AnalysisResult {
     targetEnv: JayTargetEnv,
     matchingReadPatterns: MatchedPattern[]
 }
@@ -47,8 +48,9 @@ function visitWithContext<Context>(node: ts.Node, initialContext: Context, conte
 }
 
 export class SourceFileStatementAnalyzer {
-    private analyzedStatements = new Map<ts.Node, AnalysisResult>();
-    private analyzedExpressions = new Map<ts.Node, MatchedPattern>();
+    private analyzedStatements = new Map<Statement, AnalysisResult>();
+    private analyzedExpressions = new Map<Expression, MatchedPattern>();
+    private nextId: number = 0
 
 
     constructor(
@@ -104,7 +106,7 @@ export class SourceFileStatementAnalyzer {
                         let flattened = flattenVariable(variable);
                         let foundPattern = this.findPatternInVariable(flattened, CompilePatternType.RETURN);
                         if (foundPattern) {
-                            let matchedPattern = {pattern: foundPattern, expression: node};
+                            let matchedPattern = {pattern: foundPattern, expression: node, testId: this.nextId++};
                             this.analyzedExpressions.set(node, matchedPattern);
                             this.addPatternToStatement(statement, matchedPattern);
                         }
@@ -160,6 +162,14 @@ export class SourceFileStatementAnalyzer {
     }
     getStatementStatus(statement: Statement): AnalysisResult {
         return this.analyzedStatements.get(statement);
+    }
+
+    getMatchedExpressions() {
+        return this.analyzedExpressions.keys()
+    }
+
+    getAnalyzedStatements() {
+        return this.analyzedStatements.keys()
     }
 
 }

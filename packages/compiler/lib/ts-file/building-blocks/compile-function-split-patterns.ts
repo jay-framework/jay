@@ -30,6 +30,12 @@ export enum JayTargetEnv {
     sandbox
 }
 
+export function jayTargetEnvName(jayTargetEnv: JayTargetEnv) {
+    let names = Object.values(JayTargetEnv).filter(_ => typeof _ === 'string');
+    let values = Object.values(JayTargetEnv).filter(_ => typeof _ === 'number');
+    return names[values.indexOf(jayTargetEnv)]
+}
+
 export function intersectJayTargetEnv(a: JayTargetEnv, b: JayTargetEnv) {
     if (a === b && a === JayTargetEnv.any)
         return JayTargetEnv.any
@@ -59,7 +65,8 @@ export interface CompiledPattern {
     leftSideType: CompilePatternVarType,
     callArgumentTypes?: CompilePatternVarType[]
     returnType?: CompilePatternVarType,
-    targetEnv: JayTargetEnv
+    targetEnv: JayTargetEnv,
+    name: string
 }
 
 export function compileFunctionSplitPatternsBlock(
@@ -86,6 +93,8 @@ export function compileFunctionSplitPatternsBlock(
                         modifier.expression.arguments[0].name.text === 'any')
                         targetEnv = JayTargetEnv.any;
                 })
+
+                let name = node.name.text;
 
                 node.body.statements.forEach((statement, index) => {
 
@@ -132,7 +141,8 @@ export function compileFunctionSplitPatternsBlock(
                             returnType: sourceFileBinding.explainType(node.type),
                             callArgumentTypes: node.parameters.slice(1).map(param =>
                                 sourceFileBinding.explainType(param.type)),
-                            targetEnv
+                            targetEnv,
+                            name
                         });
 
                     } else

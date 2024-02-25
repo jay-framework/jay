@@ -26,6 +26,7 @@ describe('compile secure function split patterns', () => {
             returnType: undefined,
             callArgumentTypes: [],
             targetEnv: JayTargetEnv.main,
+            name: "inputValuePattern",
         })
     });
 
@@ -51,6 +52,7 @@ describe('compile secure function split patterns', () => {
             returnType: 'string',
             callArgumentTypes: [],
             targetEnv: JayTargetEnv.main,
+            name: "inputValuePattern",
         })
     });
 
@@ -76,6 +78,7 @@ describe('compile secure function split patterns', () => {
             returnType: undefined,
             callArgumentTypes: [],
             targetEnv: JayTargetEnv.main,
+            name: "eventPreventDefault",
         })
     });
 
@@ -99,6 +102,7 @@ describe('compile secure function split patterns', () => {
             returnType: "string",
             callArgumentTypes: ["RegExp", "string"],
             targetEnv: JayTargetEnv.any,
+            name: "stringReplace",
         })
     });
 
@@ -124,6 +128,7 @@ describe('compile secure function split patterns', () => {
             returnType: undefined,
             callArgumentTypes: ['string'],
             targetEnv: JayTargetEnv.main,
+            name: "setInputValue",
         })
     })
 });
