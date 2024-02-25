@@ -311,6 +311,54 @@ describe('SourceFileStatementAnalyzer', () => {
                 "0: (event.target as HTMLInputElement).value; matches setEventTargetValue",
             ]))
         })
+
+    })
+
+    describe('analyze function calls', () => {
+        it('should support call patterns', async () => {
+            const sourceFile = createTsSourceFile(`
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    event.preventDefault();
+                }`);
+            const patterns = eventPreventDefaultPattern();
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                "event.preventDefault(); --> main, patterns matched: [0]",
+            ]))
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                "0: event.preventDefault(); matches eventPreventDefault",
+            ]))
+        })
+
+
+        it('should support value replace on input', async () => {
+            const sourceFile = createTsSourceFile(`
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    const inputValue = event.target.value;
+                    const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
+                    event.target.value = validValue;
+                }`);
+            const patterns = [...setEventTargetValuePattern(), ...readEventTargetValuePattern(), ...stringReplacePattern()];
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                "const inputValue = event.target.value; --> main, patterns matched: [0]",
+                "const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, ''); --> main, patterns matched: [1]",
+                "event.target.value = validValue; --> main, patterns matched: [2]",
+            ]))
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                "0: const inputValue = event.target.value; matches readEventTargetValue",
+                "1: const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, ''); matches stringReplace",
+                "2: event.target.value = validValue; matches setEventTargetValue",
+            ]))
+        })
     })
 })
 
@@ -349,15 +397,24 @@ function readEventTargetValuePattern() {
 
 function stringLengthPattern() {
     return compileFunctionSplitPatternsBlock([createTsSourceFile(`
+    @JayPattern(JayTargetEnv.any)
     function stringLength(value: string): string {
         return value.length;
+    }`)]).val;
+}
+
+function stringReplacePattern() {
+    return compileFunctionSplitPatternsBlock([createTsSourceFile(`
+    @JayPattern(JayTargetEnv.any)
+    function stringReplace(value: string, regex: RegExp): string {
+        return value.replace(regex);
     }`)]).val;
 }
 
 function eventPreventDefaultPattern() {
     return compileFunctionSplitPatternsBlock([createTsSourceFile(`
     import {JayEvent} from 'jay-runtime';
-    function inputValuePattern({event}: JayEvent<any, any>) {
+    function eventPreventDefault({event}: JayEvent<any, any>) {
         event.preventDefault();
     }`)]).val;
 }

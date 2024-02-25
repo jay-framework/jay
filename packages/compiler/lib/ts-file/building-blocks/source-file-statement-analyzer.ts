@@ -61,14 +61,18 @@ export class SourceFileStatementAnalyzer {
     private nextId: number = 0
     private returnPatterns: CompiledPattern[];
     private assignPatterns: CompiledPattern[];
+    private callPatterns: CompiledPattern[];
+    private chanableCallPatterns: CompiledPattern[];
 
 
     constructor(
         private sourceFile: SourceFile,
         private bindingResolver: SourceFileBindingResolver,
-        private compiledPatterns: CompiledPattern[]) {
+        compiledPatterns: CompiledPattern[]) {
         this.returnPatterns = compiledPatterns.filter(_ => _.patternType === CompilePatternType.RETURN);
         this.assignPatterns = compiledPatterns.filter(_ => _.patternType === CompilePatternType.ASSIGNMENT);
+        this.callPatterns = compiledPatterns.filter(_ => _.patternType === CompilePatternType.CALL);
+        this.chanableCallPatterns = compiledPatterns.filter(_ => _.patternType === CompilePatternType.CHAINABLE_CALL);
         this.analyze();
     }
 
@@ -109,6 +113,7 @@ export class SourceFileStatementAnalyzer {
             statement?: Statement,
             roleInParent: RoleInParent
         }
+
         visitWithContext<AnalyzeContext>(this.sourceFile, {roleInParent: RoleInParent.none},
             (node, {statement, roleInParent}, visitChild) => {
 
@@ -141,10 +146,38 @@ export class SourceFileStatementAnalyzer {
                         this.markStatementSandbox(statement);
                 }
 
-                if (isCallExpression(node)) {
-                    visitChild(node.expression, {statement, roleInParent: RoleInParent.read})
+                if (isCallExpression(node) && (isIdentifier(node.expression) || isPropertyAccessExpression(node.expression))) {
+                    // analyze the function call arguments
                     node.arguments.forEach(argument =>
                         visitChild(argument, {statement, roleInParent: RoleInParent.read}))
+                    // match call expression
+                    let variable = this.bindingResolver.explain(node.expression);
+                    let flattened = flattenVariable(variable);
+                    let foundPattern = this.matchCallPattern(flattened)
+                    let targetEnv: JayTargetEnv = foundPattern.length > 0 ? JayTargetEnv.any : JayTargetEnv.sandbox;
+                    // verify parameters
+                    if (targetEnv === JayTargetEnv.any) {
+                        // check also arguments types are matching the pattern
+                        node.arguments.forEach((argument, index) => {
+                            let argumentMatchedPattern = this.getExpressionStatus(argument);
+                            if (argumentMatchedPattern.patterns.length > 0 &&
+                                argumentMatchedPattern.patterns[0].returnType === foundPattern[0].callArgumentTypes[index]) {
+                                targetEnv = intersectJayTargetEnv(targetEnv, argumentMatchedPattern.patterns[0].targetEnv)
+                            }
+                            else
+                                targetEnv = JayTargetEnv.sandbox;
+                        })
+                    }
+                    if ((targetEnv === JayTargetEnv.any) || (targetEnv === JayTargetEnv.main)) {
+                        let matchedPattern = {patterns: foundPattern, expression: node, testId: this.nextId++};
+                        this.analyzedExpressions.set(node, matchedPattern);
+                        this.addPatternToStatement(statement, matchedPattern);
+                    }
+                    else {
+                        if (isPropertyAccessExpression(node.expression))
+                            visitChild(node.expression.expression, {statement, roleInParent: RoleInParent.read})
+                        this.markStatementSandbox(statement);
+                    }
                 } else if (isVariableStatement(node)) {
                     node.declarationList.declarations.forEach(declaration =>
                         visitChild(declaration.initializer, {statement, roleInParent: RoleInParent.read}));
@@ -167,9 +200,10 @@ export class SourceFileStatementAnalyzer {
                     // visitChild(node.statement, {statement, roleInParent: RoleInParent.none})
                 } else if (isBinaryExpression(node)) {
                     visitChild(node.right, {statement, roleInParent: RoleInParent.read})
-                    visitChild(node.left, {statement, roleInParent:
-                            (node.operatorToken.kind === ts.SyntaxKind.EqualsToken)?RoleInParent.assign: RoleInParent.read})
-
+                    visitChild(node.left, {
+                        statement, roleInParent:
+                            (node.operatorToken.kind === ts.SyntaxKind.EqualsToken) ? RoleInParent.assign : RoleInParent.read
+                    })
                 } else {
                     node.getChildren().forEach(child =>
                         visitChild(child, {statement, roleInParent: RoleInParent.none}));
@@ -180,7 +214,27 @@ export class SourceFileStatementAnalyzer {
 
     }
 
-    matchAssignPattern(
+    private matchCallPattern(resolvedParam: FlattenedAccessChain): CompiledPattern[] {
+        let foundPattern= this.callPatterns
+            .find(
+                (pattern) => {
+                    if (resolvedParam.root && isParamVariableRoot(resolvedParam.root)) {
+                        let variableType = this.bindingResolver.explainType(resolvedParam.root.param.type)
+
+                        return variableType === pattern.leftSideType &&
+                            pattern.leftSidePath.length === resolvedParam.path.length &&
+                            pattern.leftSidePath.every(
+                                (element, index) => element === resolvedParam.path[index],
+                            );
+                    }
+                });
+        if (foundPattern)
+            return [foundPattern]
+        else
+            return [];
+    }
+
+    private matchAssignPattern(
         resolvedParam: FlattenedAccessChain,
     ): CompiledPattern[] {
         let foundPattern= this.assignPatterns
@@ -203,7 +257,7 @@ export class SourceFileStatementAnalyzer {
     }
 
 
-    matchReturnPattern(
+    private matchReturnPattern(
         resolvedParam: FlattenedAccessChain,
     ): CompiledPattern[] {
         let matchedPatterns = []
@@ -253,5 +307,4 @@ export class SourceFileStatementAnalyzer {
     getAnalyzedStatements() {
         return this.analyzedStatements.keys()
     }
-
 }
