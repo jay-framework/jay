@@ -232,7 +232,7 @@ export class SourceFileStatementAnalyzer {
                         });
                 if (currentMatch) {
                     matchedPatterns.push(currentMatch);
-                    if (currentMatch.leftSidePath.length < resolvedParam.path.length) {
+                    if (currentPosition + currentMatch.leftSidePath.length < resolvedParam.path.length) {
                         currentVariableType = currentMatch.returnType;
                         currentPosition += currentMatch.leftSidePath.length;
 
@@ -245,7 +245,7 @@ export class SourceFileStatementAnalyzer {
                     return [];
             }
         }
-        return matchedPatterns;
+        return [];
     }
 
     getExpressionStatus(expression: Expression): MatchedPattern {
