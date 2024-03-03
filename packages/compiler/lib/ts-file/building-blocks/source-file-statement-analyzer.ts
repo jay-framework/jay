@@ -153,8 +153,11 @@ export class SourceFileStatementAnalyzer {
                     // check also arguments types are matching the pattern
                     node.arguments.forEach((argument, index) => {
                         let argumentMatchedPattern = this.getExpressionStatus(argument);
-                        if (argumentMatchedPattern.patterns.length > 0 &&
-                            argumentMatchedPattern.patterns[0].returnType !== matchedPatterns[0].callArgumentTypes[index])
+                        let patternTypeMatchArgumentType = !!argumentMatchedPattern &&
+                            argumentMatchedPattern.patterns.length > 0 &&
+                            argumentMatchedPattern.patterns[0].returnType === matchedPatterns[0].callArgumentTypes[index];
+                        let isLiteral = isLiteralExpression(argument);
+                        if (!patternTypeMatchArgumentType && !isLiteral)
                             this.markStatementSandbox(statement);
                     })
                     let matchedPattern = {patterns: matchedPatterns, expression: isCallExpression(node)?node:expression, testId: this.nextId++};

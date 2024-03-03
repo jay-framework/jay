@@ -334,7 +334,7 @@ describe('SourceFileStatementAnalyzer', () => {
             ]))
         })
 
-        it.skip('should support value replace on input', async () => {
+        it('should support value replace on input', async () => {
             const sourceFile = createTsSourceFile(`
                 import {JayEvent} from 'jay-runtime';
                 ({event}: JayEvent) => {
@@ -346,12 +346,11 @@ describe('SourceFileStatementAnalyzer', () => {
             const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
-                "event.target.value = event.target.value.replace(/[^A-Za-z0-9]+/g, ''); --> main, patterns matched: [0, 1, 2]",
+                "event.target.value = event.target.value.replace(/[^A-Za-z0-9]+/g, ''); --> main, patterns matched: [0, 1]",
             ]))
             expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                "0: event.target.value; matches readEventTargetValue",
-                "1: const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, ''); matches stringReplace",
-                "2: event.target.value = validValue; matches setEventTargetValue",
+                "0: event.target.value.replace(/[^A-Za-z0-9]+/g, ''); matches inputValuePattern, stringReplace",
+                "1: event.target.value; matches setEventTargetValue",
             ]))
         })
 
