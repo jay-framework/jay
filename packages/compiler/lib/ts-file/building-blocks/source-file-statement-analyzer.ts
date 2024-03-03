@@ -228,7 +228,7 @@ export class SourceFileStatementAnalyzer {
         let resolvedParam = flattenVariable(variable);
         let matchedPatterns = []
 
-        let currentVariableType;
+        let currentVariableType: string;
         if (resolvedParam.root && (isParamVariableRoot(resolvedParam.root) || isFunctionCallVariableRoot(resolvedParam.root))) {
             if (isParamVariableRoot(resolvedParam.root))
                 currentVariableType = this.bindingResolver.explainType(resolvedParam.root.param.type)

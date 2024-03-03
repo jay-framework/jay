@@ -16,7 +16,6 @@ import {
     NameBindingResolver,
     flattenVariable,
     mkParameterVariableRoot,
-    mkOtherVariableRoot,
     mkFunctionVariableRoot, mkImportModuleVariableRoot, ImportType, VariableRootType, mkFunctionCallVariableRoot,
 } from '../../lib/ts-file/building-blocks/name-binding-resolver';
 
@@ -312,7 +311,7 @@ describe('NameBindingResolver', () => {
         });
 
         it('resolve let z = a.b.c()', () => {
-            let { a, nameResolver, node } = resolveNamesForVariableStatement('let z = a.b.c()');
+            let { nameResolver, node } = resolveNamesForVariableStatement('let z = a.b.c()');
             let functionCallAsRoot = {
                 kind: VariableRootType.FunctionCall,
                 node: node.declarationList.declarations[0].initializer
@@ -700,7 +699,7 @@ describe('NameBindingResolver', () => {
         }
 
         it('resolve let z = a', () => {
-            let { a, parentNameResolver, childNameResolver, node } = resolveNamesForVariableStatement('let z = a');
+            let { a, childNameResolver, node } = resolveNamesForVariableStatement('let z = a');
 
             expect(childNameResolver.variables.has('z'));
             let z = childNameResolver.variables.get('z');

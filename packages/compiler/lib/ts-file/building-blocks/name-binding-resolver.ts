@@ -25,7 +25,6 @@ import ts, {
     Statement,
     isStatement,
     isNamespaceImport,
-    NamedImports,
     isNamedImports,
     CallExpression,
     isCallExpression,
