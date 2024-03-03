@@ -1,5 +1,6 @@
 import ts, {
-    Expression,
+    CallExpression,
+    Expression, Identifier,
     isArrowFunction,
     isBinaryExpression,
     isBlock,
@@ -14,7 +15,7 @@ import ts, {
     isPropertyAccessExpression,
     isStatement,
     isVariableStatement,
-    isWhileStatement,
+    isWhileStatement, PropertyAccessExpression,
     SourceFile,
     Statement
 } from "typescript";
@@ -54,6 +55,11 @@ function visitWithContext<Context>(node: ts.Node, initialContext: Context, conte
     }
     ts.visitNode(node, visitor);
 }
+
+enum PatternMatchType {
+    FULL, PARTIAL, NONE
+}
+
 
 export class SourceFileStatementAnalyzer {
     private analyzedStatements = new Map<Statement, AnalysisResult>();
@@ -114,17 +120,11 @@ export class SourceFileStatementAnalyzer {
 
                 if (roleInParent === RoleInParent.read || roleInParent === RoleInParent.assign) {
                     if (isIdentifier(node) || isPropertyAccessExpression(node)) {
-                        let variable = this.bindingResolver.explain(node);
-                        let flattened = flattenVariable(variable);
-                        let foundPattern: CompiledPattern[];
-                        if (roleInParent === RoleInParent.assign) {
-                            foundPattern = this.matchPattern(flattened, CompilePatternType.ASSIGNMENT)
-                        }
-                        else {
-                            foundPattern = this.matchPattern(flattened, CompilePatternType.RETURN)
-                        }
-                        if (foundPattern.length > 0) {
-                            let matchedPattern = {patterns: foundPattern, expression: node, testId: this.nextId++};
+                        let {matchedPatterns, matchType} = this.matchPattern(node, (roleInParent === RoleInParent.assign)?
+                            CompilePatternType.ASSIGNMENT:
+                            CompilePatternType.RETURN)
+                        if (matchType === PatternMatchType.FULL) {
+                            let matchedPattern = {patterns: matchedPatterns, expression: node, testId: this.nextId++};
                             this.analyzedExpressions.set(node, matchedPattern);
                             this.addPatternToStatement(statement, matchedPattern);
                         }
@@ -143,26 +143,20 @@ export class SourceFileStatementAnalyzer {
                     node.arguments.forEach(argument =>
                         visitChild(argument, {statement, roleInParent: RoleInParent.read}))
                     // match call expression
-                    let variable = this.bindingResolver.explain(node.expression);
-                    let flattened = flattenVariable(variable);
-                    let foundPattern = this.matchPattern(flattened, CompilePatternType.CALL)
-                    let targetEnv: JayTargetEnv = foundPattern.length > 0 ? JayTargetEnv.any : JayTargetEnv.sandbox;
+                    let {matchedPatterns, matchType} = this.matchPattern(node.expression, CompilePatternType.CALL)
+
                     // verify parameters
-                    if (targetEnv === JayTargetEnv.any) {
+                    if (matchType === PatternMatchType.FULL) {
                         // check also arguments types are matching the pattern
                         node.arguments.forEach((argument, index) => {
                             let argumentMatchedPattern = this.getExpressionStatus(argument);
                             if (argumentMatchedPattern.patterns.length > 0 &&
-                                argumentMatchedPattern.patterns[0].returnType === foundPattern[0].callArgumentTypes[index]) {
-                                targetEnv = intersectJayTargetEnv(targetEnv, argumentMatchedPattern.patterns[0].targetEnv)
-                            }
-                            else
-                                targetEnv = JayTargetEnv.sandbox;
+                                argumentMatchedPattern.patterns[0].returnType !== matchedPatterns[0].callArgumentTypes[index])
+                                this.markStatementSandbox(statement);
                         })
                     }
-                    // @ts-ignore - for some reason TS thinks targetEnv cannot be JayTargetEnv.main.
-                    if ((targetEnv === JayTargetEnv.any) || (targetEnv === JayTargetEnv.main)) {
-                        let matchedPattern = {patterns: foundPattern, expression: node, testId: this.nextId++};
+                    if (matchType === PatternMatchType.FULL) {
+                        let matchedPattern = {patterns: matchedPatterns, expression: node, testId: this.nextId++};
                         this.analyzedExpressions.set(node, matchedPattern);
                         this.addPatternToStatement(statement, matchedPattern);
                     }
@@ -208,9 +202,11 @@ export class SourceFileStatementAnalyzer {
     }
 
     private matchPattern(
-        resolvedParam: FlattenedAccessChain,
+        patternTarget: Identifier | PropertyAccessExpression,
         expectedPatternType: CompilePatternType
-    ): CompiledPattern[] {
+    ): {matchedPatterns: CompiledPattern[], matchType: PatternMatchType} {
+        let variable = this.bindingResolver.explain(patternTarget);
+        let resolvedParam = flattenVariable(variable);
         let matchedPatterns = []
         if (resolvedParam.root && isParamVariableRoot(resolvedParam.root)) {
             let currentVariableType = this.bindingResolver.explainType(resolvedParam.root.param.type)
@@ -238,14 +234,16 @@ export class SourceFileStatementAnalyzer {
 
                     }
                     else
-                        return matchedPatterns
+                        return {matchedPatterns: matchedPatterns, matchType: PatternMatchType.FULL}
 
                 }
                 else
-                    return [];
+                    return {matchedPatterns: matchedPatterns, matchType: matchedPatterns.length > 0?
+                            PatternMatchType.PARTIAL:
+                            PatternMatchType.NONE};
             }
         }
-        return [];
+        return {matchedPatterns: [], matchType: PatternMatchType.NONE};
     }
 
     getExpressionStatus(expression: Expression): MatchedPattern {
