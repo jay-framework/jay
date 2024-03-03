@@ -21,7 +21,14 @@ import ts, {
     isParenthesizedExpression,
     isAsExpression,
     isArrowFunction,
-    isFunctionExpression, Statement, isStatement, isNamespaceImport, NamedImports, isNamedImports,
+    isFunctionExpression,
+    Statement,
+    isStatement,
+    isNamespaceImport,
+    NamedImports,
+    isNamedImports,
+    CallExpression,
+    isCallExpression,
 } from 'typescript';
 
 export enum VariableRootType {
@@ -29,6 +36,7 @@ export enum VariableRootType {
     FunctionDefinition,
     Literal,
     ImportModule,
+    FunctionCall,
     Other,
 }
 
@@ -81,11 +89,19 @@ export function mkImportModuleVariableRoot(module: Expression, importType: Impor
     return { kind: VariableRootType.ImportModule, module, importType };
 }
 
+export interface FunctionCallVariableRoot extends VariableRoot {
+    kind: VariableRootType.FunctionCall;
+    node: CallExpression;
+}
+
+export function mkFunctionCallVariableRoot(node: CallExpression): FunctionCallVariableRoot {
+    return { kind: VariableRootType.FunctionCall, node };
+}
+
 export interface OtherVariableRoot extends VariableRoot {
     kind: VariableRootType.Other;
     node: ts.Node;
 }
-
 export function mkOtherVariableRoot(node: ts.Node): OtherVariableRoot {
     return { kind: VariableRootType.Other, node };
 }
@@ -102,6 +118,9 @@ export function isImportModuleVariableRoot(vr: VariableRoot): vr is ImportModule
 }
 export function isLiteralVariableRoot(vr: VariableRoot): vr is LiteralVariableRoot {
     return vr.kind === VariableRootType.Literal;
+}
+export function isFunctionCallVariableRoot(vr: VariableRoot): vr is FunctionCallVariableRoot {
+    return vr.kind === VariableRootType.FunctionCall;
 }
 export function isOtherVariableRoot(vr: VariableRoot): vr is OtherVariableRoot {
     return vr.kind === VariableRootType.Other;
@@ -329,6 +348,8 @@ export class NameBindingResolver {
             };
         } else if (isArrowFunction(expression) || isFunctionExpression(expression)) {
             return { root: mkFunctionVariableRoot(expression) };
+        } else if (isCallExpression(expression)){
+            return { root: mkFunctionCallVariableRoot(expression) };
         } else {
             return { root: mkOtherVariableRoot(expression) };
         }

@@ -19,10 +19,13 @@ export enum CompilePatternType {
     RETURN,
     CALL,
     CHAINABLE_CALL,
-    ASSIGNMENT
+    ASSIGNMENT_LEFT_SIDE,
+    KNOWN_VARIABLE_READ
 }
 
 export type CompilePatternVarType = string;
+
+export const KNOWN_VARIABLE_READ_NAME = 'knownVariableReadPattern'
 
 export enum JayTargetEnv {
     main,
@@ -122,7 +125,7 @@ export function compileFunctionSplitPatternsBlock(
                         isPropertyAccessExpression(statement.expression.left) &&
                         (statement.expression.operatorToken.kind === SyntaxKind.EqualsToken) &&
                         isIdentifier(statement.expression.right)) {
-                        patternType = CompilePatternType.ASSIGNMENT;
+                        patternType = CompilePatternType.ASSIGNMENT_LEFT_SIDE;
                         leftHandSide = statement.expression.left;
                     }
 

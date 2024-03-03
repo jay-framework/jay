@@ -1,6 +1,7 @@
 import ts, {
     CallExpression,
-    Expression, Identifier,
+    Expression,
+    Identifier,
     isArrowFunction,
     isBinaryExpression,
     isBlock,
@@ -15,18 +16,20 @@ import ts, {
     isPropertyAccessExpression,
     isStatement,
     isVariableStatement,
-    isWhileStatement, PropertyAccessExpression,
+    isWhileStatement,
+    PropertyAccessExpression,
     SourceFile,
     Statement
 } from "typescript";
 import {SourceFileBindingResolver} from "./source-file-binding-resolver.ts";
 import {
+    KNOWN_VARIABLE_READ_NAME,
     CompiledPattern,
     CompilePatternType,
     intersectJayTargetEnv,
     JayTargetEnv
 } from "./compile-function-split-patterns.ts";
-import {flattenVariable, isParamVariableRoot} from "./name-binding-resolver.ts";
+import {flattenVariable, isFunctionCallVariableRoot, isParamVariableRoot} from "./name-binding-resolver.ts";
 
 export interface MatchedPattern {
     patterns: CompiledPattern[];
@@ -119,7 +122,7 @@ export class SourceFileStatementAnalyzer {
                                    statement: ts.Statement, roleInParent: RoleInParent) => {
 
             let expectedPatternType = (roleInParent === RoleInParent.assign) ?
-                CompilePatternType.ASSIGNMENT :
+                CompilePatternType.ASSIGNMENT_LEFT_SIDE :
                 CompilePatternType.RETURN;
             let {matchedPatterns, matchType} = this.matchPattern(expression, expectedPatternType)
 
@@ -224,9 +227,32 @@ export class SourceFileStatementAnalyzer {
         let variable = this.bindingResolver.explain(patternTarget);
         let resolvedParam = flattenVariable(variable);
         let matchedPatterns = []
-        if (resolvedParam.root && isParamVariableRoot(resolvedParam.root)) {
-            let currentVariableType = this.bindingResolver.explainType(resolvedParam.root.param.type)
+
+        let currentVariableType;
+        if (resolvedParam.root && (isParamVariableRoot(resolvedParam.root) || isFunctionCallVariableRoot(resolvedParam.root))) {
+            if (isParamVariableRoot(resolvedParam.root))
+                currentVariableType = this.bindingResolver.explainType(resolvedParam.root.param.type)
+            else {
+                let matchedPattern = this.getExpressionStatus(resolvedParam.root.node.expression)
+                if (matchedPattern) {
+                    currentVariableType = matchedPattern.patterns.at(-1).returnType;
+                }
+            }
+        }
+        if (currentVariableType) {
             let currentPosition = 0;
+            if (resolvedParam.path.length === 0) {
+                return {matchedPatterns: [{
+                        patternType: CompilePatternType.KNOWN_VARIABLE_READ,
+                        returnType: currentVariableType,
+                        callArgumentTypes: [],
+                        targetEnv: JayTargetEnv.any,
+                        name: KNOWN_VARIABLE_READ_NAME,
+                        leftSidePath: [],
+                        leftSideType: currentVariableType
+                    }],
+                    matchType: PatternMatchType.FULL}
+            }
 
             while (currentPosition < resolvedParam.path.length) {
                 let currentMatch = this.compiledPatterns

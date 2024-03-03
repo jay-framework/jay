@@ -15,7 +15,7 @@ describe('SourceFileStatementAnalyzer', () => {
 
     describe('analyze read patterns', () => {
 
-        describe('test also the getExpressionStatus and getStatementStatus APIs', () => {
+        describe('test the getExpressionStatus and getStatementStatus APIs', () => {
             it('should analyze inline (arrow) event handler with access to event.target.value', async () => {
                 const sourceFile = createTsSourceFile(`
                     import {JayEvent} from 'jay-runtime';
@@ -24,13 +24,6 @@ describe('SourceFileStatementAnalyzer', () => {
                 const bindingResolver = new SourceFileBindingResolver(sourceFile)
 
                 const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
-
-                expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
-                    `({ event }: JayEvent) => setText((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [0]`
-                ]))
-                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                    '0: (event.target as HTMLInputElement).value; matches inputValuePattern'
-                ]))
 
                 const eventHandlerBody = ((sourceFile
                     .statements[1] as ExpressionStatement)
@@ -69,13 +62,6 @@ describe('SourceFileStatementAnalyzer', () => {
 
                 const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
 
-                expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
-                    `setText((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [0]`
-                ]))
-                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                    '0: (event.target as HTMLInputElement).value; matches inputValuePattern'
-                ]))
-
                 const eventHandlerBody = ((sourceFile
                     .statements[1] as ExpressionStatement)
                     .expression as ArrowFunction)
@@ -108,8 +94,8 @@ describe('SourceFileStatementAnalyzer', () => {
 
         it('basic read pattern', async () => {
             const sourceFile = createTsSourceFile(`
-                    import {JayEvent} from 'jay-runtime';
-                    ({event}: JayEvent) => setText((event.target as HTMLInputElement).value)`);
+            import {JayEvent} from 'jay-runtime';
+            ({event}: JayEvent) => setText((event.target as HTMLInputElement).value)`);
             const patterns = readEventTargetValuePattern();
             const bindingResolver = new SourceFileBindingResolver(sourceFile)
 
@@ -120,6 +106,47 @@ describe('SourceFileStatementAnalyzer', () => {
             ]))
             expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
                 '0: (event.target as HTMLInputElement).value; matches inputValuePattern'
+            ]))
+        })
+
+        it('basic read block pattern', async () => {
+            const sourceFile = createTsSourceFile(`
+            import {JayEvent} from 'jay-runtime';
+            ({event}: JayEvent) => {
+                setText((event.target as HTMLInputElement).value)
+            }`);
+            const patterns = readEventTargetValuePattern();
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                "setText((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [0]"
+            ]))
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                '0: (event.target as HTMLInputElement).value; matches inputValuePattern'
+            ]))
+        })
+
+        it('read pattern with variable assignment', async () => {
+            const sourceFile = createTsSourceFile(`
+            import {JayEvent} from 'jay-runtime';
+            (jayEvent: JayEvent) => {
+                let renamedEvent = jayEvent;
+                setText((renamedEvent.event.target as HTMLInputElement).value)
+            }`);
+            const patterns = readEventTargetValuePattern();
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                "let renamedEvent = jayEvent; --> any, patterns matched: [0]",
+                "setText((renamedEvent.event.target as HTMLInputElement).value); --> sandbox, patterns matched: [1]",
+            ]))
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                "0: jayEvent; matches knownVariableReadPattern",
+                "1: (renamedEvent.event.target as HTMLInputElement).value; matches inputValuePattern",
             ]))
         })
 
@@ -354,7 +381,7 @@ describe('SourceFileStatementAnalyzer', () => {
             ]))
         })
 
-        it.skip('should support value replace on input with intermidiate variables', async () => {
+        it('should support value replace on input with intermidiate variables', async () => {
             const sourceFile = createTsSourceFile(`
                 import {JayEvent} from 'jay-runtime';
                 ({event}: JayEvent) => {
@@ -370,12 +397,13 @@ describe('SourceFileStatementAnalyzer', () => {
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
                 "const inputValue = event.target.value; --> main, patterns matched: [0]",
                 "const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, ''); --> main, patterns matched: [1]",
-                "event.target.value = validValue; --> main, patterns matched: [2]",
+                "event.target.value = validValue; --> main, patterns matched: [2, 3]",
             ]))
             expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                "0: const inputValue = event.target.value; matches readEventTargetValue",
-                "1: const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, ''); matches stringReplace",
-                "2: event.target.value = validValue; matches setEventTargetValue",
+                "0: event.target.value; matches inputValuePattern",
+                "1: inputValue.replace(/[^A-Za-z0-9]+/g, ''); matches inputValuePattern, stringReplace",
+                "2: validValue; matches knownVariableReadPattern",
+                "3: event.target.value; matches setEventTargetValue",
             ]))
         })
     })

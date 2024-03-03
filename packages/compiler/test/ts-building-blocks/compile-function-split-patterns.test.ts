@@ -122,7 +122,7 @@ describe('compile secure function split patterns', () => {
         let compiledPattern = compiled.val[0];
 
         expect(compiledPattern).toEqual({
-            patternType: CompilePatternType.ASSIGNMENT,
+            patternType: CompilePatternType.ASSIGNMENT_LEFT_SIDE,
             leftSidePath: ['event', 'target', 'value'],
             leftSideType: "jay-runtime.JayEvent",
             returnType: undefined,

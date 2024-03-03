@@ -17,7 +17,7 @@ import {
     flattenVariable,
     mkParameterVariableRoot,
     mkOtherVariableRoot,
-    mkFunctionVariableRoot, mkImportModuleVariableRoot, ImportType, VariableRootType,
+    mkFunctionVariableRoot, mkImportModuleVariableRoot, ImportType, VariableRootType, mkFunctionCallVariableRoot,
 } from '../../lib/ts-file/building-blocks/name-binding-resolver';
 
 function toSourceFile(code: string) {
@@ -314,7 +314,7 @@ describe('NameBindingResolver', () => {
         it('resolve let z = a.b.c()', () => {
             let { a, nameResolver, node } = resolveNamesForVariableStatement('let z = a.b.c()');
             let functionCallAsRoot = {
-                kind: VariableRootType.Other,
+                kind: VariableRootType.FunctionCall,
                 node: node.declarationList.declarations[0].initializer
             }
 
@@ -335,7 +335,7 @@ describe('NameBindingResolver', () => {
         describe('resolve let z = a.b.c().d.e', () => {
             let { a, nameResolver, node } = resolveNamesForVariableStatement('let z = a.b.c().d.e');
             let functionCallAsRoot = {
-                kind: VariableRootType.Other,
+                kind: VariableRootType.FunctionCall,
                 node: ((node.declarationList.declarations[0]
                     .initializer as PropertyAccessExpression)
                     .expression as PropertyAccessExpression)
@@ -539,7 +539,7 @@ describe('NameBindingResolver', () => {
                 accessedByProperty: '0',
                 accessedFrom: {
                     assignedFrom: {
-                        root: mkOtherVariableRoot(createStateFunction),
+                        root: mkFunctionCallVariableRoot(createStateFunction),
                     },
                     definingStatement: node
                 },
@@ -547,7 +547,7 @@ describe('NameBindingResolver', () => {
             });
             expect(flattenVariable(state)).toEqual({
                 path: ['0'],
-                root: mkOtherVariableRoot(createStateFunction),
+                root: mkFunctionCallVariableRoot(createStateFunction),
             });
 
             expect(nameResolver.variables.has('getState'));
@@ -557,7 +557,7 @@ describe('NameBindingResolver', () => {
                 accessedByProperty: '1',
                 accessedFrom: {
                     assignedFrom: {
-                        root: mkOtherVariableRoot(createStateFunction),
+                        root: mkFunctionCallVariableRoot(createStateFunction),
                     },
                     definingStatement: node
                 },
@@ -565,7 +565,7 @@ describe('NameBindingResolver', () => {
             });
             expect(flattenVariable(getState)).toEqual({
                 path: ['1'],
-                root: mkOtherVariableRoot(createStateFunction),
+                root: mkFunctionCallVariableRoot(createStateFunction),
             });
         });
     });
