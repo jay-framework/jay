@@ -62,75 +62,98 @@ describe('split event handler by pattern', () => {
             );
         });
 
-        it.skip('should replace function call parameter for function event handler', async () => {
-            const inputEventHandler = `function bla({event}) { setText((event.target as HTMLInputElement).value) }`;
+        it('should replace function call parameter for function event handler', async () => {
+            const inputEventHandler = `
+                import {JayEvent} from 'jay-runtime';
+                function bla({event}: JayEvent) { 
+                    setText((event.target as HTMLInputElement).value) 
+                }`;
             const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(
-                await prettify(`function bla({event}) { setText(event.$0) }`),
+                await prettify(`
+                import { JayEvent } from 'jay-runtime';
+                function bla({ event }: JayEvent) {
+                    setText(event.$0) 
+                }`),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await prettify(splitEventHandlers[0].functionRepositoryFragment)).toEqual(
-                await prettify(`({ event }) => ({$0: event.target.value})`),
+                await prettify(`({ event }: JayEvent) => ({$0: event.target.value})`),
             );
         });
 
         it.skip('should support variable', async () => {
-            const inputEventHandler = `function bla({event}) {
-              let target = event.target as HTMLInputElement;  
-              setText(target.value) 
-            }`;
+            const inputEventHandler = `
+                import {JayEvent} from 'jay-runtime';
+                function bla({event}: JayEvent) {
+                    let target = event.target as HTMLInputElement;  
+                    setText(target.value) 
+                }`;
             const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(
-                await prettify(`function bla({event}) {
-                  let target = event.target as HTMLInputElement; 
-                  setText(event.$0) 
-                  }`),
+                await prettify(`
+                import {JayEvent} from 'jay-runtime';
+                function bla({event}: JayEvent) {
+                    let target = event.target as HTMLInputElement; ??? 
+                    setText(event.$0) 
+                }`),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await prettify(splitEventHandlers[0].functionRepositoryFragment)).toEqual(
-                await prettify(`({ event }) => ({$0: event.target.value})`),
+                await prettify(`({ event }: JayEvent) => ({$0: event.target.value})`),
             );
         });
 
         it.skip('should support variable 2', async () => {
-            const inputEventHandler = `function bla({event}) {
-              let value = (event.target as HTMLInputElement).value;  
-              setText(value) 
-            }`;
+            const inputEventHandler = `
+                import {JayEvent} from 'jay-runtime';
+                function bla({event}: JayEvent) {
+                    let value = (event.target as HTMLInputElement).value;  
+                    setText(value) 
+                }`;
             const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(
-                await prettify(`function bla({event}) {
+                await prettify(`
+                import {JayEvent} from 'jay-runtime';
+                function bla({event}: JayEvent) {
                     let value = event.$0;
                     setText(value);
                 }`),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await prettify(splitEventHandlers[0].functionRepositoryFragment)).toEqual(
-                await prettify(`({ event }) => ({$0: event.target.value})`),
+                await prettify(`({ event }: JayEvent) => ({$0: event.target.value})`),
             );
         });
 
-        it.skip('should not transform and not mark eventHandlerMatchedPatterns if no pattern is matched 1', async () => {
-            const inputEventHandler = `function bla({event}) { setText((event.target as HTMLInputElement).keycode) }`;
+        it('should not transform and not mark eventHandlerMatchedPatterns if no pattern is matched 1', async () => {
+            const inputEventHandler = `
+                import {JayEvent} from 'jay-runtime';
+                function bla({event}: JayEvent) { 
+                    setText((event.target as HTMLInputElement).keycode) 
+                }`;
             const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(
                 await prettify(
-                    `function bla({event}) { setText((event.target as HTMLInputElement).keycode) }`,
+                    `import {JayEvent} from 'jay-runtime';
+                    function bla({event}: JayEvent) { 
+                        setText((event.target as HTMLInputElement).keycode) 
+                    }`,
                 ),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeFalsy();
             expect(splitEventHandlers[0].functionRepositoryFragment).not.toBeDefined();
         });
 
-        it.skip('should not transform and not mark eventHandlerMatchedPatterns if no pattern is matched 2', async () => {
+        it('should not transform and not mark eventHandlerMatchedPatterns if no pattern is matched 2', async () => {
             const inputEventHandler = `function bla({event}) { setCount(count() + 1) }`;
             const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
             let transformed = await transformCode(inputEventHandler, [transformer]);
