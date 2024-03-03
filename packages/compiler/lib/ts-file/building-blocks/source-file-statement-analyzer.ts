@@ -39,7 +39,8 @@ export interface AnalysisResult {
     matchedPatterns: MatchedPattern[]
 }
 
-type ContextualVisitor<Context> = (node: ts.Node, context: Context, visitChild: (node: ts.Node, childContext?: Context) => void) => ts.Node;
+type ContextualVisitChild<Context> = (node: ts.Node, childContext?: Context) => void;
+type ContextualVisitor<Context> = (node: ts.Node, context: Context, visitChild: ContextualVisitChild<Context>) => ts.Node;
 function visitWithContext<Context>(node: ts.Node, initialContext: Context, contextualVisitor: ContextualVisitor<Context>) {
 
     let contexts: Context[] = [initialContext];
@@ -113,49 +114,58 @@ export class SourceFileStatementAnalyzer {
             roleInParent: RoleInParent
         }
 
-        const analyzeExpression = (node: ts.Node,
-                                   visitChild: (node: ts.Node, childContext?: AnalyzeContext) => void,
+        const analyzePropertyExpression = (expression: Identifier | PropertyAccessExpression,
+                                   visitChild: ContextualVisitChild<AnalyzeContext>,
                                    statement: ts.Statement, roleInParent: RoleInParent) => {
-            if (isIdentifier(node) || isPropertyAccessExpression(node) ||
-                (isCallExpression(node) && (isIdentifier(node.expression) || isPropertyAccessExpression(node.expression)))) {
 
-                let expression: Identifier | PropertyAccessExpression;
-                if (isCallExpression(node) && (isIdentifier(node.expression) || isPropertyAccessExpression(node.expression))) {
-                    expression = node.expression;
-                    // analyze the function call arguments
-                    node.arguments.forEach(argument =>
-                        visitChild(argument, {statement, roleInParent: RoleInParent.read}))
-                } else
-                    expression = node as Identifier | PropertyAccessExpression;
+            let expectedPatternType = (roleInParent === RoleInParent.assign) ?
+                CompilePatternType.ASSIGNMENT :
+                CompilePatternType.RETURN;
+            let {matchedPatterns, matchType} = this.matchPattern(expression, expectedPatternType)
 
-                let expectedPatternType = isCallExpression(node) ?
-                    (roleInParent === RoleInParent.call ?
+            if (matchType === PatternMatchType.FULL) {
+                let matchedPattern = {patterns: matchedPatterns, expression, testId: this.nextId++};
+                this.analyzedExpressions.set(expression, matchedPattern);
+                this.addPatternToStatement(statement, matchedPattern);
+            } else {
+                if (isPropertyAccessExpression(expression))
+                    visitChild(expression.expression, {statement, roleInParent: RoleInParent.read})
+                this.markStatementSandbox(statement);
+            }
+        }
+
+        const analyzeCallExpression = (node: CallExpression,
+                                   visitChild: ContextualVisitChild<AnalyzeContext>,
+                                   statement: ts.Statement, roleInParent: RoleInParent) => {
+            if (isIdentifier(node.expression) || isPropertyAccessExpression(node.expression)) {
+
+                let expression = node.expression;
+                // analyze the function call arguments
+                node.arguments.forEach(argument =>
+                    visitChild(argument, {statement, roleInParent: RoleInParent.read}))
+
+                let expectedPatternType = (roleInParent === RoleInParent.call ?
                         CompilePatternType.CALL :
-                        CompilePatternType.CHAINABLE_CALL) :
-                    (roleInParent === RoleInParent.assign) ?
-                        CompilePatternType.ASSIGNMENT :
-                        CompilePatternType.RETURN;
+                        CompilePatternType.CHAINABLE_CALL)
                 let {matchedPatterns, matchType} = this.matchPattern(expression, expectedPatternType)
 
                 if (matchType === PatternMatchType.FULL) {
-                    if (isCallExpression(node)) {
-                        // check also arguments types are matching the pattern
-                        node.arguments.forEach((argument, index) => {
-                            let argumentMatchedPattern = this.getExpressionStatus(argument);
-                            if (argumentMatchedPattern.patterns.length > 0 &&
-                                argumentMatchedPattern.patterns[0].returnType !== matchedPatterns[0].callArgumentTypes[index])
-                                this.markStatementSandbox(statement);
-                        })
-                    }
+                    // check also arguments types are matching the pattern
+                    node.arguments.forEach((argument, index) => {
+                        let argumentMatchedPattern = this.getExpressionStatus(argument);
+                        if (argumentMatchedPattern.patterns.length > 0 &&
+                            argumentMatchedPattern.patterns[0].returnType !== matchedPatterns[0].callArgumentTypes[index])
+                            this.markStatementSandbox(statement);
+                    })
                     let matchedPattern = {patterns: matchedPatterns, expression: isCallExpression(node)?node:expression, testId: this.nextId++};
                     this.analyzedExpressions.set(expression, matchedPattern);
                     this.addPatternToStatement(statement, matchedPattern);
                 } else {
-                    if (isPropertyAccessExpression(node))
-                        visitChild(node.expression, {statement, roleInParent: RoleInParent.read})
+                    if (isPropertyAccessExpression(node.expression))
+                        visitChild(node.expression.expression, {statement, roleInParent: RoleInParent.read})
                     this.markStatementSandbox(statement);
                 }
-            } else if (!isLiteralExpression(node))
+            } else
                 this.markStatementSandbox(statement);
         }
 
@@ -166,37 +176,16 @@ export class SourceFileStatementAnalyzer {
                     statement = node;
 
                 if (roleInParent === RoleInParent.read || roleInParent === RoleInParent.assign) {
-                    analyzeExpression(node, visitChild, statement, roleInParent);
+                    if (isIdentifier(node) || isPropertyAccessExpression(node))
+                        analyzePropertyExpression(node, visitChild, statement, roleInParent);
+                    else if (isCallExpression(node))
+                        analyzeCallExpression(node, visitChild, statement, roleInParent);
+                    else if (!isLiteralExpression(node))
+                        this.markStatementSandbox(statement);
                 }
 
                 if (isCallExpression(node) && (isIdentifier(node.expression) || isPropertyAccessExpression(node.expression)) && roleInParent === RoleInParent.none) {
-                    analyzeExpression(node, visitChild, statement, RoleInParent.call);
-                    // // analyze the function call arguments
-                    // node.arguments.forEach(argument =>
-                    //     visitChild(argument, {statement, roleInParent: RoleInParent.read}))
-                    // // match call expression
-                    // let {matchedPatterns, matchType} = this.matchPattern(node.expression, CompilePatternType.CALL)
-                    //
-                    // // verify parameters
-                    // if (matchType === PatternMatchType.FULL) {
-                    //     // check also arguments types are matching the pattern
-                    //     node.arguments.forEach((argument, index) => {
-                    //         let argumentMatchedPattern = this.getExpressionStatus(argument);
-                    //         if (argumentMatchedPattern.patterns.length > 0 &&
-                    //             argumentMatchedPattern.patterns[0].returnType !== matchedPatterns[0].callArgumentTypes[index])
-                    //             this.markStatementSandbox(statement);
-                    //     })
-                    // }
-                    // if (matchType === PatternMatchType.FULL) {
-                    //     let matchedPattern = {patterns: matchedPatterns, expression: node, testId: this.nextId++};
-                    //     this.analyzedExpressions.set(node, matchedPattern);
-                    //     this.addPatternToStatement(statement, matchedPattern);
-                    // }
-                    // else {
-                    //     if (isPropertyAccessExpression(node.expression))
-                    //         visitChild(node.expression.expression, {statement, roleInParent: RoleInParent.read})
-                    //     this.markStatementSandbox(statement);
-                    // }
+                    analyzeCallExpression(node, visitChild, statement, RoleInParent.call);
                 } else if (isVariableStatement(node)) {
                     node.declarationList.declarations.forEach(declaration =>
                         visitChild(declaration.initializer, {statement, roleInParent: RoleInParent.read}));
@@ -209,14 +198,6 @@ export class SourceFileStatementAnalyzer {
                         visitChild(node.elseStatement, {statement, roleInParent: RoleInParent.none})
                 } else if (isForStatement(node) || isForOfStatement(node) || isForInStatement(node) || isWhileStatement(node) || isDoStatement(node)) {
                     this.markStatementSandbox(statement)
-                    // if (isVariableDeclarationList(node.initializer))
-                    //     node.initializer.declarations.forEach(child =>
-                    //         visitChild(child.initializer, {statement, roleInParent: RoleInParent.read}))
-                    // else
-                    //     visitChild(node.initializer, {statement, roleInParent: RoleInParent.read})
-                    // visitChild(node.condition, {statement, roleInParent: RoleInParent.none})
-                    // visitChild(node.incrementor, {statement, roleInParent: RoleInParent.none})
-                    // visitChild(node.statement, {statement, roleInParent: RoleInParent.none})
                 } else if (isBinaryExpression(node)) {
                     visitChild(node.right, {statement, roleInParent: RoleInParent.read})
                     visitChild(node.left, {
