@@ -59,20 +59,12 @@ export class SourceFileStatementAnalyzer {
     private analyzedStatements = new Map<Statement, AnalysisResult>();
     private analyzedExpressions = new Map<Expression, MatchedPattern>();
     private nextId: number = 0
-    private returnPatterns: CompiledPattern[];
-    private assignPatterns: CompiledPattern[];
-    private callPatterns: CompiledPattern[];
-    private chanableCallPatterns: CompiledPattern[];
 
 
     constructor(
         private sourceFile: SourceFile,
         private bindingResolver: SourceFileBindingResolver,
-        compiledPatterns: CompiledPattern[]) {
-        this.returnPatterns = compiledPatterns.filter(_ => _.patternType === CompilePatternType.RETURN);
-        this.assignPatterns = compiledPatterns.filter(_ => _.patternType === CompilePatternType.ASSIGNMENT);
-        this.callPatterns = compiledPatterns.filter(_ => _.patternType === CompilePatternType.CALL);
-        this.chanableCallPatterns = compiledPatterns.filter(_ => _.patternType === CompilePatternType.CHAINABLE_CALL);
+        private compiledPatterns: CompiledPattern[]) {
         this.analyze();
     }
 
@@ -126,10 +118,10 @@ export class SourceFileStatementAnalyzer {
                         let flattened = flattenVariable(variable);
                         let foundPattern: CompiledPattern[];
                         if (roleInParent === RoleInParent.assign) {
-                            foundPattern = this.matchAssignPattern(flattened)
+                            foundPattern = this.matchPattern(flattened, CompilePatternType.ASSIGNMENT)
                         }
                         else {
-                            foundPattern = this.matchReturnPattern(flattened)
+                            foundPattern = this.matchPattern(flattened, CompilePatternType.RETURN)
                         }
                         if (foundPattern.length > 0) {
                             let matchedPattern = {patterns: foundPattern, expression: node, testId: this.nextId++};
@@ -153,7 +145,7 @@ export class SourceFileStatementAnalyzer {
                     // match call expression
                     let variable = this.bindingResolver.explain(node.expression);
                     let flattened = flattenVariable(variable);
-                    let foundPattern = this.matchCallPattern(flattened)
+                    let foundPattern = this.matchPattern(flattened, CompilePatternType.CALL)
                     let targetEnv: JayTargetEnv = foundPattern.length > 0 ? JayTargetEnv.any : JayTargetEnv.sandbox;
                     // verify parameters
                     if (targetEnv === JayTargetEnv.any) {
@@ -215,51 +207,9 @@ export class SourceFileStatementAnalyzer {
 
     }
 
-    private matchCallPattern(resolvedParam: FlattenedAccessChain): CompiledPattern[] {
-        let foundPattern= this.callPatterns
-            .find(
-                (pattern) => {
-                    if (resolvedParam.root && isParamVariableRoot(resolvedParam.root)) {
-                        let variableType = this.bindingResolver.explainType(resolvedParam.root.param.type)
-
-                        return variableType === pattern.leftSideType &&
-                            pattern.leftSidePath.length === resolvedParam.path.length &&
-                            pattern.leftSidePath.every(
-                                (element, index) => element === resolvedParam.path[index],
-                            );
-                    }
-                });
-        if (foundPattern)
-            return [foundPattern]
-        else
-            return [];
-    }
-
-    private matchAssignPattern(
+    private matchPattern(
         resolvedParam: FlattenedAccessChain,
-    ): CompiledPattern[] {
-        let foundPattern= this.assignPatterns
-            .find(
-                (pattern) => {
-                    if (resolvedParam.root && isParamVariableRoot(resolvedParam.root)) {
-                        let variableType = this.bindingResolver.explainType(resolvedParam.root.param.type)
-
-                        return variableType === pattern.leftSideType &&
-                            pattern.leftSidePath.length === resolvedParam.path.length &&
-                            pattern.leftSidePath.every(
-                                (element, index) => element === resolvedParam.path[index],
-                            );
-                    }
-                });
-        if (foundPattern)
-            return [foundPattern]
-        else
-            return [];
-    }
-
-
-    private matchReturnPattern(
-        resolvedParam: FlattenedAccessChain,
+        expectedPatternType: CompilePatternType
     ): CompiledPattern[] {
         let matchedPatterns = []
         if (resolvedParam.root && isParamVariableRoot(resolvedParam.root)) {
@@ -267,14 +217,18 @@ export class SourceFileStatementAnalyzer {
             let currentPosition = 0;
 
             while (currentPosition < resolvedParam.path.length) {
-                let currentMatch = this.returnPatterns
+                let currentMatch = this.compiledPatterns
                     .find(
                         (pattern) => {
-                            return currentVariableType === pattern.leftSideType &&
-                                pattern.leftSidePath.length <= currentPosition + resolvedParam.path.length &&
+                            let leftTypeMatch = currentVariableType === pattern.leftSideType;
+                            let pathMatch = currentPosition + pattern.leftSidePath.length <= resolvedParam.path.length &&
                                 pattern.leftSidePath.every(
                                     (element, index) => element === resolvedParam.path[index + currentPosition],
                                 );
+                            let expectedTypeMatch = (currentPosition + pattern.leftSidePath.length === resolvedParam.path.length)?
+                                pattern.patternType === expectedPatternType :
+                                pattern.patternType === CompilePatternType.RETURN;
+                            return leftTypeMatch && pathMatch && expectedTypeMatch;
                         });
                 if (currentMatch) {
                     matchedPatterns.push(currentMatch);

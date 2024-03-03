@@ -334,8 +334,28 @@ describe('SourceFileStatementAnalyzer', () => {
             ]))
         })
 
+        it.skip('should support value replace on input', async () => {
+            const sourceFile = createTsSourceFile(`
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    event.target.value = event.target.value.replace(/[^A-Za-z0-9]+/g, '');
+                }`);
+            const patterns = [...setEventTargetValuePattern(), ...readEventTargetValuePattern(), ...stringReplacePattern()];
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
 
-        it('should support value replace on input', async () => {
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                "event.target.value = event.target.value.replace(/[^A-Za-z0-9]+/g, ''); --> main, patterns matched: [0, 1, 2]",
+            ]))
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                "0: event.target.value; matches readEventTargetValue",
+                "1: const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, ''); matches stringReplace",
+                "2: event.target.value = validValue; matches setEventTargetValue",
+            ]))
+        })
+
+        it.skip('should support value replace on input with intermidiate variables', async () => {
             const sourceFile = createTsSourceFile(`
                 import {JayEvent} from 'jay-runtime';
                 ({event}: JayEvent) => {
