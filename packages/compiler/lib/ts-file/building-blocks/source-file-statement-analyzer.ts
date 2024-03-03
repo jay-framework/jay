@@ -26,7 +26,7 @@ import {
     intersectJayTargetEnv,
     JayTargetEnv
 } from "./compile-function-split-patterns.ts";
-import {FlattenedAccessChain, flattenVariable, isParamVariableRoot} from "./name-binding-resolver.ts";
+import {flattenVariable, isParamVariableRoot} from "./name-binding-resolver.ts";
 
 export interface MatchedPattern {
     patterns: CompiledPattern[];
@@ -104,12 +104,59 @@ export class SourceFileStatementAnalyzer {
         enum RoleInParent {
             none,
             read,
-            assign
+            assign,
+            call
         }
 
         interface AnalyzeContext {
             statement?: Statement,
             roleInParent: RoleInParent
+        }
+
+        const analyzeExpression = (node: ts.Node,
+                                   visitChild: (node: ts.Node, childContext?: AnalyzeContext) => void,
+                                   statement: ts.Statement, roleInParent: RoleInParent) => {
+            if (isIdentifier(node) || isPropertyAccessExpression(node) ||
+                (isCallExpression(node) && (isIdentifier(node.expression) || isPropertyAccessExpression(node.expression)))) {
+
+                let expression: Identifier | PropertyAccessExpression;
+                if (isCallExpression(node) && (isIdentifier(node.expression) || isPropertyAccessExpression(node.expression))) {
+                    expression = node.expression;
+                    // analyze the function call arguments
+                    node.arguments.forEach(argument =>
+                        visitChild(argument, {statement, roleInParent: RoleInParent.read}))
+                } else
+                    expression = node as Identifier | PropertyAccessExpression;
+
+                let expectedPatternType = isCallExpression(node) ?
+                    (roleInParent === RoleInParent.call ?
+                        CompilePatternType.CALL :
+                        CompilePatternType.CHAINABLE_CALL) :
+                    (roleInParent === RoleInParent.assign) ?
+                        CompilePatternType.ASSIGNMENT :
+                        CompilePatternType.RETURN;
+                let {matchedPatterns, matchType} = this.matchPattern(expression, expectedPatternType)
+
+                if (matchType === PatternMatchType.FULL) {
+                    if (isCallExpression(node)) {
+                        // check also arguments types are matching the pattern
+                        node.arguments.forEach((argument, index) => {
+                            let argumentMatchedPattern = this.getExpressionStatus(argument);
+                            if (argumentMatchedPattern.patterns.length > 0 &&
+                                argumentMatchedPattern.patterns[0].returnType !== matchedPatterns[0].callArgumentTypes[index])
+                                this.markStatementSandbox(statement);
+                        })
+                    }
+                    let matchedPattern = {patterns: matchedPatterns, expression: isCallExpression(node)?node:expression, testId: this.nextId++};
+                    this.analyzedExpressions.set(expression, matchedPattern);
+                    this.addPatternToStatement(statement, matchedPattern);
+                } else {
+                    if (isPropertyAccessExpression(node))
+                        visitChild(node.expression, {statement, roleInParent: RoleInParent.read})
+                    this.markStatementSandbox(statement);
+                }
+            } else if (!isLiteralExpression(node))
+                this.markStatementSandbox(statement);
         }
 
         visitWithContext<AnalyzeContext>(this.sourceFile, {roleInParent: RoleInParent.none},
@@ -119,52 +166,37 @@ export class SourceFileStatementAnalyzer {
                     statement = node;
 
                 if (roleInParent === RoleInParent.read || roleInParent === RoleInParent.assign) {
-                    if (isIdentifier(node) || isPropertyAccessExpression(node)) {
-                        let {matchedPatterns, matchType} = this.matchPattern(node, (roleInParent === RoleInParent.assign)?
-                            CompilePatternType.ASSIGNMENT:
-                            CompilePatternType.RETURN)
-                        if (matchType === PatternMatchType.FULL) {
-                            let matchedPattern = {patterns: matchedPatterns, expression: node, testId: this.nextId++};
-                            this.analyzedExpressions.set(node, matchedPattern);
-                            this.addPatternToStatement(statement, matchedPattern);
-                        }
-                        else {
-                            if (isPropertyAccessExpression(node))
-                                visitChild(node.expression, {statement, roleInParent: RoleInParent.read})
-                            this.markStatementSandbox(statement);
-                        }
-                    }
-                    else if (!isLiteralExpression(node))
-                        this.markStatementSandbox(statement);
+                    analyzeExpression(node, visitChild, statement, roleInParent);
                 }
 
-                if (isCallExpression(node) && (isIdentifier(node.expression) || isPropertyAccessExpression(node.expression))) {
-                    // analyze the function call arguments
-                    node.arguments.forEach(argument =>
-                        visitChild(argument, {statement, roleInParent: RoleInParent.read}))
-                    // match call expression
-                    let {matchedPatterns, matchType} = this.matchPattern(node.expression, CompilePatternType.CALL)
-
-                    // verify parameters
-                    if (matchType === PatternMatchType.FULL) {
-                        // check also arguments types are matching the pattern
-                        node.arguments.forEach((argument, index) => {
-                            let argumentMatchedPattern = this.getExpressionStatus(argument);
-                            if (argumentMatchedPattern.patterns.length > 0 &&
-                                argumentMatchedPattern.patterns[0].returnType !== matchedPatterns[0].callArgumentTypes[index])
-                                this.markStatementSandbox(statement);
-                        })
-                    }
-                    if (matchType === PatternMatchType.FULL) {
-                        let matchedPattern = {patterns: matchedPatterns, expression: node, testId: this.nextId++};
-                        this.analyzedExpressions.set(node, matchedPattern);
-                        this.addPatternToStatement(statement, matchedPattern);
-                    }
-                    else {
-                        if (isPropertyAccessExpression(node.expression))
-                            visitChild(node.expression.expression, {statement, roleInParent: RoleInParent.read})
-                        this.markStatementSandbox(statement);
-                    }
+                if (isCallExpression(node) && (isIdentifier(node.expression) || isPropertyAccessExpression(node.expression)) && roleInParent === RoleInParent.none) {
+                    analyzeExpression(node, visitChild, statement, RoleInParent.call);
+                    // // analyze the function call arguments
+                    // node.arguments.forEach(argument =>
+                    //     visitChild(argument, {statement, roleInParent: RoleInParent.read}))
+                    // // match call expression
+                    // let {matchedPatterns, matchType} = this.matchPattern(node.expression, CompilePatternType.CALL)
+                    //
+                    // // verify parameters
+                    // if (matchType === PatternMatchType.FULL) {
+                    //     // check also arguments types are matching the pattern
+                    //     node.arguments.forEach((argument, index) => {
+                    //         let argumentMatchedPattern = this.getExpressionStatus(argument);
+                    //         if (argumentMatchedPattern.patterns.length > 0 &&
+                    //             argumentMatchedPattern.patterns[0].returnType !== matchedPatterns[0].callArgumentTypes[index])
+                    //             this.markStatementSandbox(statement);
+                    //     })
+                    // }
+                    // if (matchType === PatternMatchType.FULL) {
+                    //     let matchedPattern = {patterns: matchedPatterns, expression: node, testId: this.nextId++};
+                    //     this.analyzedExpressions.set(node, matchedPattern);
+                    //     this.addPatternToStatement(statement, matchedPattern);
+                    // }
+                    // else {
+                    //     if (isPropertyAccessExpression(node.expression))
+                    //         visitChild(node.expression.expression, {statement, roleInParent: RoleInParent.read})
+                    //     this.markStatementSandbox(statement);
+                    // }
                 } else if (isVariableStatement(node)) {
                     node.declarationList.declarations.forEach(declaration =>
                         visitChild(declaration.initializer, {statement, roleInParent: RoleInParent.read}));
