@@ -118,8 +118,9 @@ export class SourceFileStatementAnalyzer {
         }
 
         const analyzePropertyExpression = (expression: Identifier | PropertyAccessExpression,
-                                   visitChild: ContextualVisitChild<AnalyzeContext>,
-                                   statement: ts.Statement, roleInParent: RoleInParent) => {
+                                           visitChild: ContextualVisitChild<AnalyzeContext>,
+                                           statement: ts.Statement,
+                                           roleInParent: RoleInParent) => {
 
             let expectedPatternType = (roleInParent === RoleInParent.assign) ?
                 CompilePatternType.ASSIGNMENT_LEFT_SIDE :

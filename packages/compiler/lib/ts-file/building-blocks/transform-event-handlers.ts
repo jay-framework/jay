@@ -6,6 +6,9 @@ import {
 } from './transform-event-handler-by-pattern';
 import { CompiledPattern } from './compile-function-split-patterns';
 import { transformEventHandlerCallStatement$Block } from './transform-event-handler-call$';
+import {SourceFileBindingResolver} from "./source-file-binding-resolver.ts";
+import {SourceFileStatementDependencies} from "./source-file-statement-dependencies.ts";
+import {SourceFileStatementAnalyzer} from "./source-file-statement-analyzer.ts";
 
 export interface TransformedEventHandler extends FoundEventHandler {
     wasEventHandlerTransformed: boolean;
@@ -71,10 +74,11 @@ export class TransformedEventHandlers {
 
 export function transformEventHandlers(
     context: ts.TransformationContext,
-    compiledPatterns: CompiledPattern[],
+    bindingResolver: SourceFileBindingResolver,
+    dependencies: SourceFileStatementDependencies,
+    analyzer: SourceFileStatementAnalyzer,
     factory: ts.NodeFactory,
-    foundEventHandlers: FoundEventHandler[],
-): TransformedEventHandler[] {
+    foundEventHandlers: FoundEventHandler[]): TransformedEventHandler[] {
     let handlerToTransformedHandlers: Map<ts.Node, TransformedEventHandlerByPattern> = new Map();
 
     foundEventHandlers.forEach((foundEventHandler) => {
@@ -83,7 +87,9 @@ export function transformEventHandlers(
                 foundEventHandler.eventHandler,
                 transformEventHandlerByPatternBlock(
                     context,
-                    compiledPatterns,
+                    bindingResolver,
+                    dependencies,
+                    analyzer,
                     factory,
                     foundEventHandler.eventHandler,
                 ),

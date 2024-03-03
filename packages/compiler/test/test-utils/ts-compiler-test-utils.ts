@@ -74,7 +74,7 @@ export async function transformCode(
         'dummy.ts',
         code,
         ts.ScriptTarget.Latest,
-        false,
+        true,
         ts.ScriptKind.TS,
     );
     const outputFile = ts.transform(sourceFile, transformers);

@@ -14,6 +14,9 @@ import {
 import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
 import { codeToAst } from './ts-compiler-utils';
 import { findMakeJayComponentConstructorCallsBlock } from './building-blocks/find-make-jay-component-constructor-calls';
+import {SourceFileBindingResolver} from "./building-blocks/source-file-binding-resolver.ts";
+import {SourceFileStatementDependencies} from "./building-blocks/source-file-statement-dependencies.ts";
+import {SourceFileStatementAnalyzer} from "./building-blocks/source-file-statement-analyzer.ts";
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: CompiledPattern[];
@@ -38,8 +41,12 @@ function mkComponentSecureFunctionsTransformer(
         findEventHandlersBlock(constructorDefinition),
     );
 
+    let bindingResolver = new SourceFileBindingResolver(sourceFile);
+    let dependencies = new SourceFileStatementDependencies(sourceFile, bindingResolver);
+    let analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
+
     let transformedEventHandlers = new TransformedEventHandlers(
-        transformEventHandlers(context, patterns, factory, foundEventHandlers),
+        transformEventHandlers(context, bindingResolver, dependencies, analyzer, factory, foundEventHandlers),
     );
 
     let visitor = (node) => {

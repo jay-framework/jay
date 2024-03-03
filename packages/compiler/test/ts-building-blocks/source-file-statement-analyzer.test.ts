@@ -1,8 +1,5 @@
 import {createTsSourceFile} from "../test-utils/ts-source-utils.ts";
-import {
-    compileFunctionSplitPatternsBlock,
-    JayTargetEnv, jayTargetEnvName
-} from "../../lib/ts-file/building-blocks/compile-function-split-patterns.ts";
+import {JayTargetEnv, jayTargetEnvName} from "../../lib/ts-file/building-blocks/compile-function-split-patterns.ts";
 import {
     MatchedPattern,
     SourceFileStatementAnalyzer
@@ -10,6 +7,13 @@ import {
 import {SourceFileBindingResolver} from "../../lib/ts-file/building-blocks/source-file-binding-resolver.ts";
 import {ArrowFunction, Block, CallExpression, ExpressionStatement} from "typescript";
 import {astToFormattedCode, printStatementWithoutChildStatements} from "../test-utils/ts-compiler-test-utils.ts";
+import {
+    eventPreventDefaultPattern,
+    readEventTargetValuePattern,
+    setEventTargetValuePattern,
+    stringLengthPattern,
+    stringReplacePattern
+} from "./compiler-patterns-for-testing.ts";
 
 describe('SourceFileStatementAnalyzer', () => {
 
@@ -434,42 +438,3 @@ async function printAnalyzedStatements(analyzer: SourceFileStatementAnalyzer) {
     return printed;
 }
 
-function readEventTargetValuePattern() {
-    return compileFunctionSplitPatternsBlock([createTsSourceFile(`
-    import {JayEvent} from 'jay-runtime';
-    function inputValuePattern({event}: JayEvent<any, any>): string {
-        return event.target.value;
-    }`)]).val;
-}
-
-function stringLengthPattern() {
-    return compileFunctionSplitPatternsBlock([createTsSourceFile(`
-    @JayPattern(JayTargetEnv.any)
-    function stringLength(value: string): string {
-        return value.length;
-    }`)]).val;
-}
-
-function stringReplacePattern() {
-    return compileFunctionSplitPatternsBlock([createTsSourceFile(`
-    @JayPattern(JayTargetEnv.any)
-    function stringReplace(value: string, regex: RegExp): string {
-        return value.replace(regex);
-    }`)]).val;
-}
-
-function eventPreventDefaultPattern() {
-    return compileFunctionSplitPatternsBlock([createTsSourceFile(`
-    import {JayEvent} from 'jay-runtime';
-    function eventPreventDefault({event}: JayEvent<any, any>) {
-        event.preventDefault();
-    }`)]).val;
-}
-
-function setEventTargetValuePattern() {
-    return compileFunctionSplitPatternsBlock([createTsSourceFile(`
-    import {JayEvent} from 'jay-runtime';
-    function setEventTargetValue({event}: JayEvent<any, any>, value: string) {
-        event.target.value = value
-    }`)]).val;
-}
