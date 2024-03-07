@@ -1,5 +1,5 @@
-import ts, {ExpressionStatement, isBlock, isExpression, Statement,} from 'typescript';
-import {CompiledPattern, JayTargetEnv} from './compile-function-split-patterns';
+import ts, {ExpressionStatement, Identifier, isBlock, isExpression, isIdentifier, Statement,} from 'typescript';
+import {CompiledPattern, CompilePatternType, JayTargetEnv} from './compile-function-split-patterns';
 import {astToCode, codeToAst} from '../ts-compiler-utils';
 import {SourceFileBindingResolver} from "./source-file-binding-resolver.ts";
 import {SourceFileStatementDependencies} from "./source-file-statement-dependencies.ts";
@@ -8,6 +8,11 @@ import {SourceFileStatementAnalyzer} from "./source-file-statement-analyzer.ts";
 interface MatchedPattern {
     pattern: CompiledPattern;
     patternKey: number;
+}
+
+interface MatchedVariable {
+    variable: Identifier,
+    patternKey: number
 }
 
 export interface TransformedEventHandlerByPattern {
@@ -19,10 +24,14 @@ export interface TransformedEventHandlerByPattern {
 
 function generateFunctionRepository(
     matchedReturnPatterns: MatchedPattern[],
+    matchedVariableReads: MatchedVariable[],
     safeStatements: ts.Statement[],
 ) {
-    let returnedObjectProperties = matchedReturnPatterns
+    let readPatternsReturnProperties = matchedReturnPatterns
         .map(({ pattern, patternKey }) => `$${patternKey}: ${pattern.leftSidePath.join('.')}`)
+    let variableReadsReturnProperties = matchedVariableReads
+        .map(({ variable, patternKey}) => `$${patternKey}: ${variable.text}`)
+    let returnedObjectProperties = [...readPatternsReturnProperties, ...variableReadsReturnProperties]
         .join(',\n');
     if (safeStatements.length > 0) {
         return `({ event }: JayEvent) => {
@@ -36,6 +45,7 @@ ${returnedObjectProperties.length > 0 ? `\treturn ({${returnedObjectProperties}}
 }
 
 interface TransformEventHandlerStatementVisitorSideEffects {
+    matchedVariableReads: MatchedVariable[];
     safeStatements: Statement[];
     matchedReturnPatterns: MatchedPattern[];
     wasEventHandlerTransformed: boolean;
@@ -49,6 +59,7 @@ const mkTransformEventHandlerStatementVisitor = (
     analyzer: SourceFileStatementAnalyzer,
 ): {sideEffects: TransformEventHandlerStatementVisitorSideEffects, visitor: (node: ts.Node) => ts.Node} => {
     let sideEffects: TransformEventHandlerStatementVisitorSideEffects = {
+        matchedVariableReads: [],
         safeStatements: [],
         matchedReturnPatterns: [],
         wasEventHandlerTransformed: false,
@@ -89,7 +100,10 @@ const mkTransformEventHandlerStatementVisitor = (
             if (expressionAnalysis) {
                 let pattern = expressionAnalysis.patterns[0];
                 let patternKey = getPatternIndex(pattern);
-                sideEffects.matchedReturnPatterns.push({ pattern, patternKey });
+                if (pattern.patternType === CompilePatternType.RETURN)
+                    sideEffects.matchedReturnPatterns.push({ pattern, patternKey });
+                else if (pattern.patternType === CompilePatternType.KNOWN_VARIABLE_READ && isIdentifier(node))
+                    sideEffects.matchedVariableReads.push({variable: node, patternKey});
                 let replacementPattern =
                     `event.$${patternKey}`
                 sideEffects.wasEventHandlerTransformed = true;
@@ -123,6 +137,7 @@ export const transformEventHandlerByPatternBlock = (
 
     const functionRepositoryFragment = generateFunctionRepository(
         sideEffects.matchedReturnPatterns,
+        sideEffects.matchedVariableReads,
         sideEffects.safeStatements,
     );
 

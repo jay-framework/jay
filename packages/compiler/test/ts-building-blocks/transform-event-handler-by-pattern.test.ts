@@ -203,7 +203,30 @@ describe('split event handler by pattern', () => {
 
     describe('extract assign pattern', () => {
 
-        it('should support input validations using regex', async () => {
+        it('should support input validations using regex, single line', async () => {
+            const inputEventHandler = `
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    event.target.value = event.target.value.replace(/[^A-Za-z0-9]+/g, '');
+                }`;
+            const { transformer, splitEventHandlers } =
+                testTransformer([...READ_EVENT_TARGET_VALUE, ...stringReplacePattern(), ...setEventTargetValuePattern()]);
+            let transformed = await transformCode(inputEventHandler, [transformer]);
+
+            expect(transformed).toEqual(await prettify(`
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {}
+                `));
+            expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
+            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment)).toEqual(
+                await prettify(`
+                ({ event }: JayEvent) => {
+                    event.target.value = event.target.value.replace(/[^A-Za-z0-9]+/g, '');
+                }`),
+            );
+        });
+
+        it('should support input validations using regex with variable declaration', async () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
                 ({event}: JayEvent) => {
@@ -226,6 +249,39 @@ describe('split event handler by pattern', () => {
                     const inputValue = event.target.value;
                     const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
                     event.target.value = validValue;
+                }`),
+            );
+        });
+    })
+
+    describe('combination of patterns', () => {
+        it('should support both assign pattern and a read expression (pattern for set state)', async () => {
+            const inputEventHandler = `
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    const inputValue = event.target.value;
+                    const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
+                    event.target.value = validValue;
+                    setState(validValue);
+                }`;
+            const { transformer, splitEventHandlers } =
+                testTransformer([...READ_EVENT_TARGET_VALUE, ...stringReplacePattern(), ...setEventTargetValuePattern()]);
+            let transformed = await transformCode(inputEventHandler, [transformer]);
+
+            expect(transformed).toEqual(await prettify(`
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    setState(event.$0)
+                }
+                `));
+            expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
+            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment)).toEqual(
+                await prettify(`
+                ({ event }: JayEvent) => {
+                    const inputValue = event.target.value;
+                    const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
+                    event.target.value = validValue;
+                    return {$0: validValue}
                 }`),
             );
         });

@@ -226,15 +226,15 @@ export class SourceFileStatementAnalyzer {
         expectedPatternType: CompilePatternType
     ): {matchedPatterns: CompiledPattern[], matchType: PatternMatchType} {
         let variable = this.bindingResolver.explain(patternTarget);
-        let resolvedParam = flattenVariable(variable);
+        let resolvedVariable = flattenVariable(variable);
         let matchedPatterns = []
 
         let currentVariableType: string;
-        if (resolvedParam.root && (isParamVariableRoot(resolvedParam.root) || isFunctionCallVariableRoot(resolvedParam.root))) {
-            if (isParamVariableRoot(resolvedParam.root))
-                currentVariableType = this.bindingResolver.explainType(resolvedParam.root.param.type)
+        if (resolvedVariable.root && (isParamVariableRoot(resolvedVariable.root) || isFunctionCallVariableRoot(resolvedVariable.root))) {
+            if (isParamVariableRoot(resolvedVariable.root))
+                currentVariableType = this.bindingResolver.explainType(resolvedVariable.root.param.type)
             else {
-                let matchedPattern = this.getExpressionStatus(resolvedParam.root.node.expression)
+                let matchedPattern = this.getExpressionStatus(resolvedVariable.root.node.expression)
                 if (matchedPattern) {
                     currentVariableType = matchedPattern.patterns.at(-1).returnType;
                 }
@@ -242,7 +242,7 @@ export class SourceFileStatementAnalyzer {
         }
         if (currentVariableType) {
             let currentPosition = 0;
-            if (resolvedParam.path.length === 0) {
+            if (resolvedVariable.path.length === 0) {
                 return {matchedPatterns: [{
                         patternType: CompilePatternType.KNOWN_VARIABLE_READ,
                         returnType: currentVariableType,
@@ -255,23 +255,23 @@ export class SourceFileStatementAnalyzer {
                     matchType: PatternMatchType.FULL}
             }
 
-            while (currentPosition < resolvedParam.path.length) {
+            while (currentPosition < resolvedVariable.path.length) {
                 let currentMatch = this.compiledPatterns
                     .find(
                         (pattern) => {
                             let leftTypeMatch = currentVariableType === pattern.leftSideType;
-                            let pathMatch = currentPosition + pattern.leftSidePath.length <= resolvedParam.path.length &&
+                            let pathMatch = currentPosition + pattern.leftSidePath.length <= resolvedVariable.path.length &&
                                 pattern.leftSidePath.every(
-                                    (element, index) => element === resolvedParam.path[index + currentPosition],
+                                    (element, index) => element === resolvedVariable.path[index + currentPosition],
                                 );
-                            let expectedTypeMatch = (currentPosition + pattern.leftSidePath.length === resolvedParam.path.length)?
+                            let expectedTypeMatch = (currentPosition + pattern.leftSidePath.length === resolvedVariable.path.length)?
                                 pattern.patternType === expectedPatternType :
                                 pattern.patternType === CompilePatternType.RETURN;
                             return leftTypeMatch && pathMatch && expectedTypeMatch;
                         });
                 if (currentMatch) {
                     matchedPatterns.push(currentMatch);
-                    if (currentPosition + currentMatch.leftSidePath.length < resolvedParam.path.length) {
+                    if (currentPosition + currentMatch.leftSidePath.length < resolvedVariable.path.length) {
                         currentVariableType = currentMatch.returnType;
                         currentPosition += currentMatch.leftSidePath.length;
 
