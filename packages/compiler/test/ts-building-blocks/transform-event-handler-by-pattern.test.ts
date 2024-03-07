@@ -112,7 +112,7 @@ describe('split event handler by pattern', () => {
             );
         });
 
-        it.skip('should support variable 2', async () => {
+        it('should support variable 2', async () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
                 function bla({event}: JayEvent) {
@@ -126,13 +126,17 @@ describe('split event handler by pattern', () => {
                 await prettify(`
                 import {JayEvent} from 'jay-runtime';
                 function bla({event}: JayEvent) {
-                    let value = event.$0;
-                    setText(value);
+                    setText(event.$0);
                 }`),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
+
+            // todo we can optimize out the variable declaration here.
             expect(await prettify(splitEventHandlers[0].functionRepositoryFragment)).toEqual(
-                await prettify(`({ event }: JayEvent) => ({$0: event.target.value})`),
+                await prettify(`({ event }: JayEvent) => {
+                    let value = (event.target as HTMLInputElement).value;
+                    return { $0: event.target.value };
+                };`),
             );
         });
 

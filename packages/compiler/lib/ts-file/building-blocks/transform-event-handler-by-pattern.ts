@@ -54,6 +54,14 @@ const mkTransformEventHandlerStatementVisitor = (
         wasEventHandlerTransformed: false,
     };
 
+    let patternIndexes = new Map<CompiledPattern, number>();
+    const getPatternIndex = (pattern: CompiledPattern) => {
+        if (!patternIndexes.has(pattern)) {
+            patternIndexes.set(pattern, patternIndexes.size)
+        }
+        return patternIndexes.get(pattern)
+    }
+
     const visitor = (node) => {
         if (isBlock(node)) {
             let sandboxStatements = [], mainStatements = [];
@@ -66,16 +74,21 @@ const mkTransformEventHandlerStatementVisitor = (
                 }
             });
             sideEffects.safeStatements = [...sideEffects.safeStatements, ...mainStatements]
-            if (sandboxStatements.length < node.statements.length) {
+
+            if (sandboxStatements.length < node.statements.length)
                 sideEffects.wasEventHandlerTransformed = true;
-                node = factory.updateBlock(node, sandboxStatements);
-            }
+
+            sandboxStatements = sandboxStatements.map(statement =>
+                ts.visitNode(statement, visitor))
+
+            node = factory.updateBlock(node, sandboxStatements);
+            return node;
         }
         else if (isExpression(node)) {
             let expressionAnalysis = analyzer.getExpressionStatus(node);
             if (expressionAnalysis) {
                 let pattern = expressionAnalysis.patterns[0];
-                let patternKey = expressionAnalysis.testId;
+                let patternKey = getPatternIndex(pattern);
                 sideEffects.matchedReturnPatterns.push({ pattern, patternKey });
                 let replacementPattern =
                     `event.$${patternKey}`
