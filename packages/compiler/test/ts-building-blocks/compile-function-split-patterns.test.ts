@@ -25,7 +25,7 @@ describe('compile secure function split patterns', () => {
             leftSideType: "jay-runtime.JayEvent",
             returnType: undefined,
             callArgumentTypes: [],
-            targetEnv: JayTargetEnv.main,
+            targetEnv: JayTargetEnv.any,
             name: "inputValuePattern",
         })
     });
@@ -51,7 +51,7 @@ describe('compile secure function split patterns', () => {
             leftSideType: "jay-runtime.JayEvent",
             returnType: 'string',
             callArgumentTypes: [],
-            targetEnv: JayTargetEnv.main,
+            targetEnv: JayTargetEnv.any,
             name: "inputValuePattern",
         })
     });

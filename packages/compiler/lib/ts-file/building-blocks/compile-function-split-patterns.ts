@@ -83,7 +83,7 @@ export function compileFunctionSplitPatternsBlock(
         const sourceFileBinding = new SourceFileBindingResolver(patternsFile);
         const findPatternFunctions: ts.Visitor = (node) => {
             if (isFunctionDeclaration(node)) {
-                let targetEnv = JayTargetEnv.main;
+                let declaredTargetEnv = JayTargetEnv.main;
                 node.modifiers && node.modifiers.forEach(modifier => {
                     if (isDecorator(modifier) &&
                         isCallExpression(modifier.expression) &&
@@ -94,13 +94,14 @@ export function compileFunctionSplitPatternsBlock(
                         isIdentifier(modifier.expression.arguments[0].expression) &&
                         modifier.expression.arguments[0].expression.text === 'JayTargetEnv' &&
                         modifier.expression.arguments[0].name.text === 'any')
-                        targetEnv = JayTargetEnv.any;
+                        declaredTargetEnv = JayTargetEnv.any;
                 })
 
                 let name = node.name.text;
 
                 node.body.statements.forEach((statement, index) => {
 
+                    let patternTargetEnv = declaredTargetEnv;
                     let patternType: CompilePatternType;
                     let leftHandSide: Expression;
                     if (
@@ -109,6 +110,7 @@ export function compileFunctionSplitPatternsBlock(
                     ) {
                         patternType = CompilePatternType.RETURN;
                         leftHandSide = statement.expression
+                        patternTargetEnv = JayTargetEnv.any;
                     } else if (isReturnStatement(statement) &&
                         isCallExpression(statement.expression) &&
                         isPropertyAccessExpression(statement.expression.expression) &&
@@ -144,7 +146,7 @@ export function compileFunctionSplitPatternsBlock(
                             returnType: sourceFileBinding.explainType(node.type),
                             callArgumentTypes: node.parameters.slice(1).map(param =>
                                 sourceFileBinding.explainType(param.type)),
-                            targetEnv,
+                            targetEnv: patternTargetEnv,
                             name
                         });
 
