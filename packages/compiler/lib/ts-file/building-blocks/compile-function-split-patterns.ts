@@ -68,7 +68,7 @@ export interface CompiledPattern {
     leftSideType: CompilePatternVarType,
     callArgumentTypes?: CompilePatternVarType[]
     returnType?: CompilePatternVarType,
-    targetEnv: JayTargetEnv,
+    targetEnvForStatement: JayTargetEnv,
     name: string
 }
 
@@ -146,7 +146,7 @@ export function compileFunctionSplitPatternsBlock(
                             returnType: sourceFileBinding.explainType(node.type),
                             callArgumentTypes: node.parameters.slice(1).map(param =>
                                 sourceFileBinding.explainType(param.type)),
-                            targetEnv: patternTargetEnv,
+                            targetEnvForStatement: patternTargetEnv,
                             name
                         });
 

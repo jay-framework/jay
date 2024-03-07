@@ -82,7 +82,7 @@ export class SourceFileStatementAnalyzer {
         if (!this.analyzedStatements.get(statement)) {
             this.analyzedStatements.set(statement, {
                 targetEnv: matchedPattern.patterns.reduce((prev, curr) =>
-                    intersectJayTargetEnv(prev, curr.targetEnv), JayTargetEnv.any),
+                    intersectJayTargetEnv(prev, curr.targetEnvForStatement), JayTargetEnv.any),
                 matchedPatterns: [matchedPattern]
             })
         } else {
@@ -90,7 +90,7 @@ export class SourceFileStatementAnalyzer {
             analysisResult.matchedPatterns.push(matchedPattern);
             analysisResult.targetEnv = intersectJayTargetEnv(analysisResult.targetEnv,
                 matchedPattern.patterns.reduce((prev, curr) =>
-                    intersectJayTargetEnv(prev, curr.targetEnv), JayTargetEnv.any))
+                    intersectJayTargetEnv(prev, curr.targetEnvForStatement), JayTargetEnv.any))
         }
     }
 
@@ -249,7 +249,7 @@ export class SourceFileStatementAnalyzer {
                         patternType: CompilePatternType.KNOWN_VARIABLE_READ,
                         returnType: currentVariableType,
                         callArgumentTypes: [],
-                        targetEnv: JayTargetEnv.any,
+                        targetEnvForStatement: JayTargetEnv.any,
                         name: KNOWN_VARIABLE_READ_NAME,
                         leftSidePath: [],
                         leftSideType: currentVariableType
