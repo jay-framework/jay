@@ -187,7 +187,9 @@ export class SourceFileStatementAnalyzer {
                         analyzePropertyExpression(node, visitChild, statement, roleInParent);
                     else if (isCallExpression(node))
                         analyzeCallExpression(node, visitChild, statement, roleInParent);
-                    else if (!isLiteralExpression(node))
+                    else if (isBinaryExpression(node) && (node.operatorToken.kind === ts.SyntaxKind.EqualsToken))
+                        this.markStatementSandbox(statement);
+                    else if (!isLiteralExpression(node) && !isBinaryExpression(node))
                         this.markStatementSandbox(statement);
                 }
 

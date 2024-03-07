@@ -8,7 +8,7 @@ import {SourceFileBindingResolver} from "../../lib/ts-file/building-blocks/sourc
 import {ArrowFunction, Block, CallExpression, ExpressionStatement} from "typescript";
 import {astToFormattedCode, printStatementWithoutChildStatements} from "../test-utils/ts-compiler-test-utils.ts";
 import {
-    eventPreventDefaultPattern,
+    eventPreventDefaultPattern, readEventKeyCodePattern,
     readEventTargetValuePattern,
     setEventTargetValuePattern,
     stringLengthPattern,
@@ -225,6 +225,27 @@ describe('SourceFileStatementAnalyzer', () => {
             ]))
         })
 
+        it('should support if statement with binary expression', async () => {
+            const sourceFile = createTsSourceFile(`
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    if (event.keyCode === 20)
+                        event.preventDefault();
+                }`);
+            const patterns = [...readEventKeyCodePattern(), ...eventPreventDefaultPattern()];
+            const bindingResolver = new SourceFileBindingResolver(sourceFile)
+
+            const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
+                `if (event.keyCode === 20) /*...*/ --> any, patterns matched: [0]`,
+                `event.preventDefault(); --> main, patterns matched: [1]`
+            ]))
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                "0: event.keyCode; matches inputValuePattern",
+                "1: event.preventDefault(); matches eventPreventDefault",
+            ]))
+        })
     })
 
     describe('statements that require code running in sandbox', () => {
