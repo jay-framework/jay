@@ -10,14 +10,18 @@ import {
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import ts, { isArrowFunction, isFunctionDeclaration } from 'typescript';
 import { prettify } from '../../lib';
-import {eventPreventDefaultPattern, readEventTargetValuePattern} from "./compiler-patterns-for-testing.ts";
+import {
+    eventPreventDefaultPattern,
+    readEventTargetValuePattern, setEventTargetValuePattern,
+    stringReplacePattern
+} from "./compiler-patterns-for-testing.ts";
 import {SourceFileBindingResolver} from "../../lib/ts-file/building-blocks/source-file-binding-resolver.ts";
 import {SourceFileStatementDependencies} from "../../lib/ts-file/building-blocks/source-file-statement-dependencies.ts";
 import {SourceFileStatementAnalyzer} from "../../lib/ts-file/building-blocks/source-file-statement-analyzer.ts";
 
 describe('split event handler by pattern', () => {
-    const RETURN_PATTERNS_1 = readEventTargetValuePattern();
-    const CALL_PATTERNS_1 = eventPreventDefaultPattern();
+    const READ_EVENT_TARGET_VALUE = readEventTargetValuePattern();
+    const EVENT_PREVENT_DEFAULT = eventPreventDefaultPattern();
 
     function testTransformer(compiledPatterns: CompiledPattern[]) {
         let splitEventHandlers: TransformedEventHandlerByPattern[] = [];
@@ -50,7 +54,7 @@ describe('split event handler by pattern', () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
                 ({event}: JayEvent) => setText((event.target as HTMLInputElement).value)`;
-            const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
+            const { transformer, splitEventHandlers } = testTransformer(READ_EVENT_TARGET_VALUE);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(await prettify(`
@@ -68,7 +72,7 @@ describe('split event handler by pattern', () => {
                 function bla({event}: JayEvent) { 
                     setText((event.target as HTMLInputElement).value) 
                 }`;
-            const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
+            const { transformer, splitEventHandlers } = testTransformer(READ_EVENT_TARGET_VALUE);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(
@@ -91,7 +95,7 @@ describe('split event handler by pattern', () => {
                     let target = event.target as HTMLInputElement;  
                     setText(target.value) 
                 }`;
-            const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
+            const { transformer, splitEventHandlers } = testTransformer(READ_EVENT_TARGET_VALUE);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(
@@ -115,7 +119,7 @@ describe('split event handler by pattern', () => {
                     let value = (event.target as HTMLInputElement).value;  
                     setText(value) 
                 }`;
-            const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
+            const { transformer, splitEventHandlers } = testTransformer(READ_EVENT_TARGET_VALUE);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(
@@ -138,7 +142,7 @@ describe('split event handler by pattern', () => {
                 function bla({event}: JayEvent) { 
                     setText((event.target as HTMLInputElement).keycode) 
                 }`;
-            const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
+            const { transformer, splitEventHandlers } = testTransformer(READ_EVENT_TARGET_VALUE);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(
@@ -155,7 +159,7 @@ describe('split event handler by pattern', () => {
 
         it('should not transform and not mark eventHandlerMatchedPatterns if no pattern is matched 2', async () => {
             const inputEventHandler = `function bla({event}) { setCount(count() + 1) }`;
-            const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
+            const { transformer, splitEventHandlers } = testTransformer(READ_EVENT_TARGET_VALUE);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(
@@ -166,48 +170,59 @@ describe('split event handler by pattern', () => {
         });
     });
 
-    describe.skip('extract call pattern', () => {
+    describe('extract call pattern', () => {
         it('should extract event.preventDefault()', async () => {
-            const inputEventHandler = `({event}) => {
-                event.preventDefault();
-                console.log('mark');
-            }`;
-            const { transformer, splitEventHandlers } = testTransformer(CALL_PATTERNS_1);
+            const inputEventHandler = `
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    event.preventDefault();
+                    console.log('mark');
+                }`;
+            const { transformer, splitEventHandlers } = testTransformer(EVENT_PREVENT_DEFAULT);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(
-                await prettify(`({event}) => {
-                console.log('mark');
-            }`),
+                await prettify(`
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    console.log('mark');
+                }`),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await prettify(splitEventHandlers[0].functionRepositoryFragment)).toEqual(
-                await prettify(`({event}) => {
+                await prettify(`({event}: JayEvent) => {
                     event.preventDefault();
                 }`),
             );
         });
     });
 
-    describe.skip('extract assign pattern', () => {
+    describe('extract assign pattern', () => {
 
         it('should support input validations using regex', async () => {
-            const inputEventHandler = `({event}) => {
-                const inputValue = event.target.value;
-                const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
-                event.target.value = validValue;
-            }`;
-            const { transformer, splitEventHandlers } = testTransformer(RETURN_PATTERNS_1);
+            const inputEventHandler = `
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    const inputValue = event.target.value;
+                    const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
+                    event.target.value = validValue;
+                }`;
+            const { transformer, splitEventHandlers } =
+                testTransformer([...READ_EVENT_TARGET_VALUE, ...stringReplacePattern(), ...setEventTargetValuePattern()]);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
-            expect(transformed).toEqual(await prettify(`({event}) => {}`));
+            expect(transformed).toEqual(await prettify(`
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {}
+                `));
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await prettify(splitEventHandlers[0].functionRepositoryFragment)).toEqual(
-                await prettify(`({ event }) => {
-                const inputValue = event.target.value;
-                const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
-                event.target.value = validValue;
-            }`),
+                await prettify(`
+                ({ event }: JayEvent) => {
+                    const inputValue = event.target.value;
+                    const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
+                    event.target.value = validValue;
+                }`),
             );
         });
     })

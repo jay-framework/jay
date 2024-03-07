@@ -1,20 +1,6 @@
-import ts, {
-    ExpressionStatement, isBlock,
-    isCallExpression, isExpression,
-    isExpressionStatement,
-    isPropertyAccessExpression,
-    isStatement,
-    isVariableStatement,
-    Statement,
-} from 'typescript';
-import {
-    FlattenedAccessChain,
-    flattenVariable,
-    isParamVariableRoot,
-    NameBindingResolver,
-} from './name-binding-resolver';
-import { CompiledPattern, CompilePatternType } from './compile-function-split-patterns';
-import { astToCode, codeToAst } from '../ts-compiler-utils';
+import ts, {ExpressionStatement, isBlock, isExpression, Statement,} from 'typescript';
+import {CompiledPattern, JayTargetEnv} from './compile-function-split-patterns';
+import {astToCode, codeToAst} from '../ts-compiler-utils';
 import {SourceFileBindingResolver} from "./source-file-binding-resolver.ts";
 import {SourceFileStatementDependencies} from "./source-file-statement-dependencies.ts";
 import {SourceFileStatementAnalyzer} from "./source-file-statement-analyzer.ts";
@@ -70,7 +56,20 @@ const mkTransformEventHandlerStatementVisitor = (
 
     const visitor = (node) => {
         if (isBlock(node)) {
-
+            let sandboxStatements = [], mainStatements = [];
+            node.statements.forEach(statement => {
+                let statementAnalysis = analyzer.getStatementStatus(statement);
+                switch (statementAnalysis.targetEnv) {
+                    case JayTargetEnv.any: sandboxStatements.push(statement); mainStatements.push(statement); break;
+                    case JayTargetEnv.main: mainStatements.push(statement); break;
+                    case JayTargetEnv.sandbox: sandboxStatements.push(statement); break;
+                }
+            });
+            sideEffects.safeStatements = [...sideEffects.safeStatements, ...mainStatements]
+            if (sandboxStatements.length < node.statements.length) {
+                sideEffects.wasEventHandlerTransformed = true;
+                node = factory.updateBlock(node, sandboxStatements);
+            }
         }
         else if (isExpression(node)) {
             let expressionAnalysis = analyzer.getExpressionStatus(node);

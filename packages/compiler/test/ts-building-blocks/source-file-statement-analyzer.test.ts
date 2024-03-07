@@ -98,8 +98,8 @@ describe('SourceFileStatementAnalyzer', () => {
 
         it('basic read pattern', async () => {
             const sourceFile = createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
-            ({event}: JayEvent) => setText((event.target as HTMLInputElement).value)`);
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => setText((event.target as HTMLInputElement).value)`);
             const patterns = readEventTargetValuePattern();
             const bindingResolver = new SourceFileBindingResolver(sourceFile)
 
@@ -115,10 +115,10 @@ describe('SourceFileStatementAnalyzer', () => {
 
         it('basic read block pattern', async () => {
             const sourceFile = createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
-            ({event}: JayEvent) => {
-                setText((event.target as HTMLInputElement).value)
-            }`);
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    setText((event.target as HTMLInputElement).value)
+                }`);
             const patterns = readEventTargetValuePattern();
             const bindingResolver = new SourceFileBindingResolver(sourceFile)
 
@@ -134,11 +134,11 @@ describe('SourceFileStatementAnalyzer', () => {
 
         it('read pattern with variable assignment', async () => {
             const sourceFile = createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
-            (jayEvent: JayEvent) => {
-                let renamedEvent = jayEvent;
-                setText((renamedEvent.event.target as HTMLInputElement).value)
-            }`);
+                import {JayEvent} from 'jay-runtime';
+                (jayEvent: JayEvent) => {
+                    let renamedEvent = jayEvent;
+                    setText((renamedEvent.event.target as HTMLInputElement).value)
+                }`);
             const patterns = readEventTargetValuePattern();
             const bindingResolver = new SourceFileBindingResolver(sourceFile)
 
@@ -156,8 +156,8 @@ describe('SourceFileStatementAnalyzer', () => {
 
         it('chaining multiple read patterns', async () => {
             const sourceFile = createTsSourceFile(`
-                    import {JayEvent} from 'jay-runtime';
-                    ({event}: JayEvent) => setText((event.target as HTMLInputElement).value.length)`);
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => setText((event.target as HTMLInputElement).value.length)`);
             const patterns = [...readEventTargetValuePattern(), ...stringLengthPattern()];
             const bindingResolver = new SourceFileBindingResolver(sourceFile)
 
@@ -173,8 +173,8 @@ describe('SourceFileStatementAnalyzer', () => {
 
         it('match pattern as sub-expression of chaining', async () => {
             const sourceFile = createTsSourceFile(`
-                    import {JayEvent} from 'jay-runtime';
-                    ({event}: JayEvent) => setText((event.target as HTMLInputElement).value.length)`);
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => setText((event.target as HTMLInputElement).value.length)`);
             const patterns = readEventTargetValuePattern();
             const bindingResolver = new SourceFileBindingResolver(sourceFile)
 
@@ -385,7 +385,7 @@ describe('SourceFileStatementAnalyzer', () => {
             ]))
         })
 
-        it('should support value replace on input with intermidiate variables', async () => {
+        it('should support value replace on input with intermediate variables', async () => {
             const sourceFile = createTsSourceFile(`
                 import {JayEvent} from 'jay-runtime';
                 ({event}: JayEvent) => {
