@@ -23,11 +23,11 @@ import ts, {
 } from "typescript";
 import {SourceFileBindingResolver} from "./source-file-binding-resolver.ts";
 import {
-    KNOWN_VARIABLE_READ_NAME,
     CompiledPattern,
     CompilePatternType,
     intersectJayTargetEnv,
-    JayTargetEnv
+    JayTargetEnv,
+    KNOWN_VARIABLE_READ_NAME
 } from "./compile-function-split-patterns.ts";
 import {flattenVariable, isFunctionCallVariableRoot, isParamVariableRoot} from "./name-binding-resolver.ts";
 
@@ -198,6 +198,8 @@ export class SourceFileStatementAnalyzer {
                 } else if (isVariableStatement(node)) {
                     node.declarationList.declarations.forEach(declaration =>
                         visitChild(declaration.initializer, {statement, roleInParent: RoleInParent.read}));
+                    if (this.getStatementStatus(node).targetEnv === JayTargetEnv.any)
+                        this.getStatementStatus(node).targetEnv = JayTargetEnv.main;
                 } else if (isArrowFunction(node) && !isBlock(node.body)) {
                     visitChild(node.body, {statement, roleInParent: RoleInParent.read});
                 } else if (isIfStatement(node)) {

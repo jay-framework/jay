@@ -1,4 +1,12 @@
-import ts, {ExpressionStatement, Identifier, isBlock, isExpression, isIdentifier, Statement,} from 'typescript';
+import ts, {
+    Block,
+    ExpressionStatement,
+    Identifier,
+    isBlock,
+    isExpression,
+    isIdentifier,
+    Visitor,
+} from 'typescript';
 import {CompiledPattern, CompilePatternType, JayTargetEnv} from './compile-function-split-patterns';
 import {astToCode, codeToAst} from '../ts-compiler-utils';
 import {SourceFileBindingResolver} from "./source-file-binding-resolver.ts";
@@ -46,7 +54,8 @@ ${returnedObjectProperties.length > 0 ? `\treturn ({${returnedObjectProperties}}
 
 interface TransformEventHandlerStatementVisitorSideEffects {
     matchedVariableReads: MatchedVariable[];
-    safeStatements: Statement[];
+    mainContextBlocks: Map<Block, Block>;
+    // safeStatements: Statement[];
     matchedReturnPatterns: MatchedPattern[];
     wasEventHandlerTransformed: boolean;
 }
@@ -60,7 +69,8 @@ const mkTransformEventHandlerStatementVisitor = (
 ): {sideEffects: TransformEventHandlerStatementVisitorSideEffects, visitor: (node: ts.Node) => ts.Node} => {
     let sideEffects: TransformEventHandlerStatementVisitorSideEffects = {
         matchedVariableReads: [],
-        safeStatements: [],
+        // safeStatements: [],
+        mainContextBlocks: new Map(),
         matchedReturnPatterns: [],
         wasEventHandlerTransformed: false,
     };
@@ -84,7 +94,8 @@ const mkTransformEventHandlerStatementVisitor = (
                     case JayTargetEnv.sandbox: sandboxStatements.push(statement); break;
                 }
             });
-            sideEffects.safeStatements = [...sideEffects.safeStatements, ...mainStatements]
+            sideEffects.mainContextBlocks.set(node, factory.createBlock(mainStatements))
+            // sideEffects.safeStatements = [...sideEffects.safeStatements, ...mainStatements]
 
             if (sandboxStatements.length < node.statements.length)
                 sideEffects.wasEventHandlerTransformed = true;
@@ -135,10 +146,21 @@ export const transformEventHandlerByPatternBlock = (
 
     const transformedEventHandler = ts.visitNode(eventHandler, visitor);
 
+    let bodyForFunctionRepository: Block = undefined;
+    if (isBlock(eventHandler.body) && sideEffects.mainContextBlocks.has(eventHandler.body)) {
+        let body = sideEffects.mainContextBlocks.get(eventHandler.body);
+        const replaceBodiesVisitor: Visitor = (node: ts.Node) => {
+            let mainNode = (isBlock(node) && sideEffects.mainContextBlocks.has(node))?
+                sideEffects.mainContextBlocks.get(node) : node;
+            return ts.visitEachChild(mainNode, replaceBodiesVisitor, context);
+        }
+        bodyForFunctionRepository = ts.visitNode(body, replaceBodiesVisitor) as Block;
+    }
+
     const functionRepositoryFragment = generateFunctionRepository(
         sideEffects.matchedReturnPatterns,
         sideEffects.matchedVariableReads,
-        sideEffects.safeStatements,
+        bodyForFunctionRepository? [...bodyForFunctionRepository.statements] : [],
     );
 
     return {

@@ -145,7 +145,7 @@ describe('SourceFileStatementAnalyzer', () => {
             const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
-                "let renamedEvent = jayEvent; --> any, patterns matched: [0]",
+                "let renamedEvent = jayEvent; --> main, patterns matched: [0]",
                 "setText((renamedEvent.event.target as HTMLInputElement).value); --> sandbox, patterns matched: [1]",
             ]))
             expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
@@ -216,7 +216,7 @@ describe('SourceFileStatementAnalyzer', () => {
             const analyzedFile = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns)
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(new Set([
-                `if ((event.target as HTMLInputElement).value) /*...*/ --> main, patterns matched: [0]`,
+                `if ((event.target as HTMLInputElement).value) /*...*/ --> any, patterns matched: [0]`,
                 `setText((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [1]`
             ]))
             expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
