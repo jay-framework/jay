@@ -59,7 +59,7 @@ export async function readFileAndGenerateElementFile(folder: string, givenFile?:
 
 export async function readTsSourceFile(filePath: string, fileName: string) {
     const code = await readTestFile(filePath, fileName);
-    return ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
+    return ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 }
 
 export function printTsFile(outputFile: ts.TransformationResult<ts.SourceFile>): string {
