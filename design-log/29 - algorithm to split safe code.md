@@ -285,6 +285,9 @@ For each statement, we derive the target environment as one of
    in the case of pattern chaining, if one pattern is `JayTargetEnv.main` and another `JayTargetEnv.any`
    the whole expression is considered `JayTargetEnv.main`
 
+5. If the statement is an assignment statement and the analysis so far marked it as `JayTargetEnv.any`, 
+   the statement is considered `JayTargetEnv.main`.
+
 ### the `AnalysisResult` for `Statement`s and `Expression`s
 
 The `SourceFileStatementAnalyzer` performs the above analysis, and given 
@@ -292,71 +295,39 @@ a `Statement` or `Expression` can give the analysis result.
 
 ```typescript
 interface MatchedReadPattern {
-   pattern: CompiledPattern;
+   patterns: CompiledPattern[];
    expression: Expression;
+   testId: number
 }
 
 interface AnalysisResult {
    targetEnv: JayTargetEnv,
-   matchingReadPatterns: MatchedReadPattern[]
+   matchedPatterns: MatchedReadPattern[]
 }
 ```
 
 * `targetEnv` - what is the target environment for this expression or statement
-* `matchingReadPatterns` - even if the target environment is `JayTargetEnv.sandbox`, 
-  the statement / expression may have sub read expressions which can be replaced with
-  variables resolved in the `JayTargetEnv.main`. 
-   * `expression` - which expression was matched
-   * `pattern` - the matching was for which pattern
+* `matchedPatterns` - the patterns matched for expressions of the statement. 
+   even if the statement target environment is `JayTargetEnv.sandbox`, 
+   the statement may have sub `RETURN` expressions which can be replaced with
+   variables resolved in the `JayTargetEnv.main`. 
+   * `expression` - which expression that was matched. 
+   * `pattern` - the one or more patterns the expression matched.
+     Potentially, we may have a chain of pattern matched.
 
 Notes:
 1. do we need support for chaining with read patterns? probably.
 2. the statement analysis is based on nested expression analysis, 
    not including nested statement analysis
 
-
-
-
-
 ### unsupported JS features 
 
-The DAG will not support `with` statement as it is deprecated and will consider any usage of `while` as *unsafe* code.
-
-### DAG creation
-
-The DAG is created for `Block` statements, such that given an event handler (`FunctionDeclaration`, `FunctionExpression` 
-or `ArrowFunction`) it is created for the `body` element (except for the case of expression `ArrowFunction` in which case 
-the DAG is not needed).
-
-mapping of Statement Types and their child statements
-
-```typescript
-SourceFile
-  statements: Statement[]
-ExpressionStatement
-Block --> Statement
-  statements: Statement[] 
-FunctionDeclaration
-  body: Block
-ArrowFunction
-  body: Block | Expression
-FunctionExpression
-  body: Block 
-ifStatement
-  expression: Expression
-  thenStatement: Statement
-  elseStatement?: Statement
-IterationStatement
-  statement: Statement
-ForStatement --> IterationStatement
-ForInStatement --> IterationStatement
-ForOfStatement --> IterationStatement
-DoStatement --> IterationStatement
-WhileStatement --> IterationStatement
-ImportDeclaration
-```
-
-Note that `Block extends Statement` which means we can have a block at any location we have a statement
-
-This means that a source file is a graph of statements
+The following Statement types are not supported and code using them will be considered `JayTargetEnv.sandbox`:
+* `with`
+* `for`
+* `for in`
+* `for of`
+* `while`
+* class declaration
+* function declaration 
 
