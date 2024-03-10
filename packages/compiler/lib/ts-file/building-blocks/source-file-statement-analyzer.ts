@@ -198,7 +198,7 @@ export class SourceFileStatementAnalyzer {
                 } else if (isVariableStatement(node)) {
                     node.declarationList.declarations.forEach(declaration =>
                         visitChild(declaration.initializer, {statement, roleInParent: RoleInParent.read}));
-                    if (this.getStatementStatus(node).targetEnv === JayTargetEnv.any)
+                    if (this.getStatementStatus(node)?.targetEnv === JayTargetEnv.any)
                         this.getStatementStatus(node).targetEnv = JayTargetEnv.main;
                 } else if (isArrowFunction(node) && !isBlock(node.body)) {
                     visitChild(node.body, {statement, roleInParent: RoleInParent.read});

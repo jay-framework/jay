@@ -78,6 +78,8 @@ function transformImport(
                 context,
             )[0] as ts.Statement;
         }
+        if (node.moduleSpecifier.text === 'jay-runtime')
+            return node;
         return undefined;
     }
     return undefined;

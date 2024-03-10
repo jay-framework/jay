@@ -25,7 +25,7 @@ describe('compile secure function split patterns', () => {
             leftSideType: "jay-runtime.JayEvent",
             returnType: undefined,
             callArgumentTypes: [],
-            targetEnv: JayTargetEnv.any,
+            targetEnvForStatement: JayTargetEnv.any,
             name: "inputValuePattern",
         })
     });
@@ -51,7 +51,7 @@ describe('compile secure function split patterns', () => {
             leftSideType: "jay-runtime.JayEvent",
             returnType: 'string',
             callArgumentTypes: [],
-            targetEnv: JayTargetEnv.any,
+            targetEnvForStatement: JayTargetEnv.any,
             name: "inputValuePattern",
         })
     });
@@ -77,7 +77,7 @@ describe('compile secure function split patterns', () => {
             leftSideType: "jay-runtime.JayEvent",
             returnType: undefined,
             callArgumentTypes: [],
-            targetEnv: JayTargetEnv.main,
+            targetEnvForStatement: JayTargetEnv.main,
             name: "eventPreventDefault",
         })
     });
@@ -101,7 +101,7 @@ describe('compile secure function split patterns', () => {
             leftSideType: "string",
             returnType: "string",
             callArgumentTypes: ["RegExp", "string"],
-            targetEnv: JayTargetEnv.any,
+            targetEnvForStatement: JayTargetEnv.any,
             name: "stringReplace",
         })
     });
@@ -127,7 +127,7 @@ describe('compile secure function split patterns', () => {
             leftSideType: "jay-runtime.JayEvent",
             returnType: undefined,
             callArgumentTypes: ['string'],
-            targetEnv: JayTargetEnv.main,
+            targetEnvForStatement: JayTargetEnv.main,
             name: "setInputValue",
         })
     })

@@ -1,7 +1,10 @@
 import { transformCode } from './test-utils/ts-compiler-test-utils';
 import { componentBridgeTransformer, RuntimeMode } from '../lib';
 import { prettify } from '../lib';
-import { compileFunctionSplitPatternsBlock } from '../lib/ts-file/building-blocks/compile-function-split-patterns';
+import {
+    eventPreventDefaultPattern,
+    readEventTargetValuePattern
+} from "./ts-building-blocks/compiler-patterns-for-testing.ts";
 
 describe('transform component bridge', () => {
     describe('generate component bridge', () => {
@@ -33,21 +36,17 @@ export const Comp = makeJayComponentBridge(render);
     });
 
     describe('generate function repository', () => {
-        const input_value_pattern = compileFunctionSplitPatternsBlock([
-            `
-function inputValuePattern({event}: JayEvent<any, any>) {
-    return event.target.value;
-}`,
-        ]).val;
+        const input_value_pattern = readEventTargetValuePattern();
         describe('for return patterns', () => {
             it('create event.target.value in function repository', async () => {
                 const code = `
+import {JayEvent} from 'jay-runtime';
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
 import { CompElementRefs, render } from './generated-element';
 
 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
-    refs.input.onchange(({event}) => setText((event.target as HTMLInputElement).value));
+    refs.input.onchange(({event}: JayEvent) => setText((event.target as HTMLInputElement).value));
 }
 
 export const Comp = makeJayComponent(render, CompComponent);`;
@@ -58,10 +57,11 @@ export const Comp = makeJayComponent(render, CompComponent);`;
 
                 expect(outputCode).toEqual(
                     await prettify(`
+import {JayEvent} from 'jay-runtime';
 import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
 import { render } from './generated-element?jay-mainSandbox';
 const funcRepository: FunctionsRepository = {
-    '0': ({ event }) => ({ $0: event.target.value }),
+    '0': ({ event }: JayEvent) => ({ $0: event.target.value }),
 };
 export const Comp = makeJayComponentBridge(render, { funcRepository });
 `),
@@ -70,13 +70,14 @@ export const Comp = makeJayComponentBridge(render, { funcRepository });
 
             it('replace event.target.value for two event handlers', async () => {
                 const code = `
+import {JayEvent} from 'jay-runtime';
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
 import { CompElementRefs, render } from './generated-element';
 
 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
-    refs.input.onchange(({event}) => setText((event.target as HTMLInputElement).value));
-    refs.input2.onchange(({event}) => setText((event.target as HTMLInputElement).value));
+    refs.input.onchange(({event}: JayEvent) => setText((event.target as HTMLInputElement).value));
+    refs.input2.onchange(({event}: JayEvent) => setText((event.target as HTMLInputElement).value));
 }
 
 export const Comp = makeJayComponent(render, CompComponent);`;
@@ -87,11 +88,12 @@ export const Comp = makeJayComponent(render, CompComponent);`;
 
                 expect(outputCode).toEqual(
                     await prettify(`
+import {JayEvent} from 'jay-runtime';
 import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
 import { render } from './generated-element?jay-mainSandbox';
 const funcRepository: FunctionsRepository = {
-    '0': ({ event }) => ({ $0: event.target.value }),
-    '1': ({ event }) => ({ $0: event.target.value })
+    '0': ({ event }: JayEvent) => ({ $0: event.target.value }),
+    '1': ({ event }: JayEvent) => ({ $0: event.target.value })
 };
 export const Comp = makeJayComponentBridge(render, { funcRepository });
 `),
@@ -100,12 +102,13 @@ export const Comp = makeJayComponentBridge(render, { funcRepository });
 
             it('replace event.target.value for two event handler reusing the handler', async () => {
                 const code = `
+import {JayEvent} from 'jay-runtime';
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
 import { CompElementRefs, render } from './generated-element';
 
 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
-    function updateText({event}) {
+    function updateText({event}: JayEvent) {
         setText((event.target as HTMLInputElement).value);
     }
     refs.input.onchange(updateText);
@@ -120,10 +123,11 @@ export const Comp = makeJayComponent(render, CompComponent);`;
 
                 expect(outputCode).toEqual(
                     await prettify(`
+import {JayEvent} from 'jay-runtime';
 import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
 import { render } from './generated-element?jay-mainSandbox';
 const funcRepository: FunctionsRepository = {
-    '0': ({ event }) => ({ $0: event.target.value }),
+    '0': ({ event }: JayEvent) => ({ $0: event.target.value }),
 };
 export const Comp = makeJayComponentBridge(render, { funcRepository });`),
                 );
@@ -155,21 +159,17 @@ export const Comp = makeJayComponentBridge(render);`),
         });
 
         describe('for call patterns', () => {
-            const preventDefaultPattern = compileFunctionSplitPatternsBlock([
-                `
-function inputValuePattern({event}: JayEvent<any, any>) {
-    event.preventDefault();
-}`,
-            ]).val;
+            const preventDefaultPattern = eventPreventDefaultPattern();
 
             it('extract event.preventDefault()', async () => {
                 const code = `
+import {JayEvent} from 'jay-runtime';
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
 import { CompElementRefs, render } from './generated-element';
 
 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
     let [text, setText] = createState('');
-    refs.input.onchange(({event}) => {
+    refs.input.onchange(({event}: JayEvent) => {
         event.preventDefault();
         setText((event.target as HTMLInputElement).value)
     });
@@ -183,10 +183,11 @@ export const Comp = makeJayComponent(render, CompComponent);`;
 
                 expect(outputCode).toEqual(
                     await prettify(`
+import {JayEvent} from 'jay-runtime';
 import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
 import { render } from './generated-element?jay-mainSandbox';
 const funcRepository: FunctionsRepository = {
-    '0': ({ event }) => {
+    '0': ({ event }: JayEvent) => {
         event.preventDefault();
     },
 };
