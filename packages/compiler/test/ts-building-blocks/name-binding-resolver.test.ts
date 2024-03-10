@@ -16,7 +16,12 @@ import {
     NameBindingResolver,
     flattenVariable,
     mkParameterVariableRoot,
-    mkFunctionVariableRoot, mkImportModuleVariableRoot, ImportType, VariableRootType, mkFunctionCallVariableRoot,
+    mkFunctionVariableRoot,
+    mkImportModuleVariableRoot,
+    ImportType,
+    VariableRootType,
+    mkFunctionCallVariableRoot,
+    mkLiteralVariableRoot,
 } from '../../lib/ts-file/building-blocks/name-binding-resolver';
 
 function toSourceFile(code: string) {
@@ -567,6 +572,56 @@ describe('NameBindingResolver', () => {
                 root: mkFunctionCallVariableRoot(createStateFunction),
             });
         });
+
+        describe('literals', () => {
+            it(`resolve let z = 'a'`, () => {
+                let { nameResolver, node } = resolveNamesForVariableStatement(`let z = 'a'`);
+
+                expect(nameResolver.variables.has('z'));
+                let z = nameResolver.variables.get('z');
+                let root = mkLiteralVariableRoot(node.declarationList.declarations[0].initializer);
+                expect(z).toEqual({
+                    name: 'z',
+                    assignedFrom: {
+                        root
+                    },
+                    definingStatement: node
+                });
+                expect(flattenVariable(z)).toEqual({ path: [], root });
+            });
+
+            it(`resolve let z = 6`, () => {
+                let { nameResolver, node } = resolveNamesForVariableStatement(`let z = 6`);
+
+                expect(nameResolver.variables.has('z'));
+                let z = nameResolver.variables.get('z');
+                let root = mkLiteralVariableRoot(node.declarationList.declarations[0].initializer);
+                expect(z).toEqual({
+                    name: 'z',
+                    assignedFrom: {
+                        root
+                    },
+                    definingStatement: node
+                });
+                expect(flattenVariable(z)).toEqual({ path: [], root });
+            });
+
+            it(`resolve let z = true`, () => {
+                let { nameResolver, node } = resolveNamesForVariableStatement(`let z = true`);
+
+                expect(nameResolver.variables.has('z'));
+                let z = nameResolver.variables.get('z');
+                let root = mkLiteralVariableRoot(node.declarationList.declarations[0].initializer);
+                expect(z).toEqual({
+                    name: 'z',
+                    assignedFrom: {
+                        root
+                    },
+                    definingStatement: node
+                });
+                expect(flattenVariable(z)).toEqual({ path: [], root });
+            });
+        })
     });
 
     describe('resolve function definition', () => {

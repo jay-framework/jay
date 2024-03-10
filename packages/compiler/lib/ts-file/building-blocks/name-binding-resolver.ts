@@ -27,7 +27,7 @@ import ts, {
     isNamespaceImport,
     isNamedImports,
     CallExpression,
-    isCallExpression,
+    isCallExpression, isNumericLiteral, isLiteralExpression, isToken, SyntaxKind,
 } from 'typescript';
 
 export enum VariableRootType {
@@ -349,6 +349,10 @@ export class NameBindingResolver {
             return { root: mkFunctionVariableRoot(expression) };
         } else if (isCallExpression(expression)){
             return { root: mkFunctionCallVariableRoot(expression) };
+        } else if (isStringLiteral(expression) || isNumericLiteral(expression) ||
+            (isToken(expression) && expression.kind === SyntaxKind.TrueKeyword) ||
+            (isToken(expression) && expression.kind === SyntaxKind.FalseKeyword)){
+            return { root: mkLiteralVariableRoot(expression) };
         } else {
             return { root: mkOtherVariableRoot(expression) };
         }
