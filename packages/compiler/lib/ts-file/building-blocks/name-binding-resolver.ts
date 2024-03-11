@@ -27,7 +27,7 @@ import ts, {
     isNamespaceImport,
     isNamedImports,
     CallExpression,
-    isCallExpression, isNumericLiteral, isLiteralExpression, isToken, SyntaxKind, NodeFlags,
+    isCallExpression, isNumericLiteral, isToken, SyntaxKind, NodeFlags,
 } from 'typescript';
 
 export enum VariableRootType {

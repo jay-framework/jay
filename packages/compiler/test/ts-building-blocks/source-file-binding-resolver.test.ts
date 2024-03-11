@@ -162,8 +162,6 @@ describe('SourceFileBindingResolver', () => {
             let sourceFileBindingResolver = new SourceFileBindingResolver(sourceFile);
             let rootBindingResolver = sourceFileBindingResolver
                 .findBindingResolver(sourceFile);
-            let functionBindingResolver = sourceFileBindingResolver
-                .findBindingResolver(sourceFile.statements[1]);
             let functionBodyBindingResolver = sourceFileBindingResolver
                 .findBindingResolver((sourceFile
                     .statements[1] as FunctionDeclaration)

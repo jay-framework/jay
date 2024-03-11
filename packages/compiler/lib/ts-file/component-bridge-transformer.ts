@@ -15,7 +15,6 @@ import {
     TransformedEventHandlers,
     transformEventHandlers,
 } from './building-blocks/transform-event-handlers';
-import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
 import {
     findMakeJayComponentConstructorCallsBlock,
     MakeJayComponentConstructorCalls,

@@ -1,7 +1,6 @@
 import {
     CompiledPattern,
-    compileFunctionSplitPatternsBlock,
-} from '../../lib/ts-file/building-blocks/compile-function-split-patterns';
+} from '../../lib';
 import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import {
     TransformedEventHandlerByPattern,
