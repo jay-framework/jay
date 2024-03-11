@@ -25,11 +25,19 @@ import {SourceFileBindingResolver} from "./source-file-binding-resolver.ts";
 import {
     CompiledPattern,
     CompilePatternType,
+    CONST_READ_NAME,
     intersectJayTargetEnv,
     JayTargetEnv,
     KNOWN_VARIABLE_READ_NAME
 } from "./compile-function-split-patterns.ts";
-import {flattenVariable, isFunctionCallVariableRoot, isParamVariableRoot} from "./name-binding-resolver.ts";
+import {
+    flattenVariable,
+    isFunctionCallVariableRoot,
+    isLiteralVariableRoot,
+    isParamVariableRoot,
+    LetOrConst
+} from "./name-binding-resolver.ts";
+import {ContextualVisitChild, visitWithContext} from "../visitor-with-context.ts";
 
 export interface MatchedPattern {
     patterns: CompiledPattern[];
@@ -40,24 +48,6 @@ export interface MatchedPattern {
 export interface AnalysisResult {
     targetEnv: JayTargetEnv,
     matchedPatterns: MatchedPattern[]
-}
-
-type ContextualVisitChild<Context> = (node: ts.Node, childContext?: Context) => void;
-type ContextualVisitor<Context> = (node: ts.Node, context: Context, visitChild: ContextualVisitChild<Context>) => ts.Node;
-function visitWithContext<Context>(node: ts.Node, initialContext: Context, contextualVisitor: ContextualVisitor<Context>) {
-
-    let contexts: Context[] = [initialContext];
-    const visitChild = (node: ts.Node, childContext?: Context) => {
-        if (childContext)
-            contexts.push(childContext);
-        ts.visitNode(node, visitor);
-        if (childContext)
-            contexts.pop();
-    }
-    const visitor = (node: ts.Node): ts.Node => {
-        return contextualVisitor(node, contexts.at(-1), visitChild)
-    }
-    ts.visitNode(node, visitor);
 }
 
 enum PatternMatchType {
@@ -244,8 +234,29 @@ export class SourceFileStatementAnalyzer {
                 }
             }
         }
+
+        // const assigned a literal
+        if (resolvedVariable.path.length === 0 &&
+            resolvedVariable.root &&
+            isLiteralVariableRoot(resolvedVariable.root)) {
+            if (variable.letOrConst === LetOrConst.CONST)
+                return {matchedPatterns: [{
+                        patternType: CompilePatternType.CONST_READ,
+                        returnType: currentVariableType,
+                        callArgumentTypes: [],
+                        targetEnvForStatement: JayTargetEnv.any,
+                        name: CONST_READ_NAME,
+                        leftSidePath: [],
+                        leftSideType: currentVariableType
+                    }],
+                    matchType: PatternMatchType.FULL}
+            else
+                return {matchedPatterns: [], matchType: PatternMatchType.NONE};
+        }
+
         if (currentVariableType) {
             let currentPosition = 0;
+            // variable assigned return value of a pattern
             if (resolvedVariable.path.length === 0) {
                 return {matchedPatterns: [{
                         patternType: CompilePatternType.KNOWN_VARIABLE_READ,

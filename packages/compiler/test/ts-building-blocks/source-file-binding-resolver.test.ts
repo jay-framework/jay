@@ -7,6 +7,8 @@ import {
     VariableStatement, WhileStatement
 } from "typescript";
 import {
+    LetOrConst,
+    mkLiteralVariableRoot,
     mkOtherVariableRoot,
     mkParameterVariableRoot,
     UNKNOWN_VARIABLE,
@@ -179,8 +181,9 @@ describe('SourceFileBindingResolver', () => {
                 expect(rootBindingResolver.getVariable('z'))
                     .toEqual({
                         name: 'z',
+                        letOrConst: LetOrConst.LET,
                         assignedFrom: {
-                            root: mkOtherVariableRoot((sourceFile
+                            root: mkLiteralVariableRoot((sourceFile
                                 .statements[0] as VariableStatement)
                                 .declarationList.declarations[0].initializer
                             )
@@ -193,6 +196,7 @@ describe('SourceFileBindingResolver', () => {
                 expect(functionBodyBindingResolver.getVariable('y'))
                     .toEqual({
                         name: 'y',
+                        letOrConst: LetOrConst.LET,
                         assignedFrom: rootBindingResolver.getVariable('z'),
                         definingStatement: (sourceFile
                             .statements[1] as FunctionDeclaration)
@@ -361,8 +365,9 @@ describe('SourceFileBindingResolver', () => {
                 expect(rootBindingResolver.getVariable('z'))
                     .toEqual({
                         name: 'z',
+                        letOrConst: LetOrConst.LET,
                         assignedFrom: {
-                            root: mkOtherVariableRoot((sourceFile
+                            root: mkLiteralVariableRoot((sourceFile
                                 .statements[0] as VariableStatement)
                                 .declarationList.declarations[0].initializer
                             )
@@ -375,8 +380,9 @@ describe('SourceFileBindingResolver', () => {
                 expect(forBindingResolver.getVariable('i'))
                     .toEqual({
                         name: 'i',
+                        letOrConst: LetOrConst.LET,
                         assignedFrom: {
-                            root: mkOtherVariableRoot(((sourceFile
+                            root: mkLiteralVariableRoot(((sourceFile
                                 .statements[1] as ForStatement)
                                 .initializer as VariableDeclarationList)
                                 .declarations[0].initializer),
@@ -389,6 +395,7 @@ describe('SourceFileBindingResolver', () => {
                 expect(forBodyBindingResolver.getVariable('y'))
                     .toEqual({
                         name: 'y',
+                        letOrConst: LetOrConst.LET,
                         assignedFrom: {
                             root: mkOtherVariableRoot((((sourceFile
                                     .statements[1] as ForStatement)
@@ -467,6 +474,7 @@ describe('SourceFileBindingResolver', () => {
                 expect(rootBindingResolver.getVariable('z'))
                     .toEqual({
                         name: 'z',
+                        letOrConst: LetOrConst.LET,
                         assignedFrom: {
                             root: mkOtherVariableRoot((sourceFile
                                 .statements[0] as VariableStatement)
@@ -495,6 +503,7 @@ describe('SourceFileBindingResolver', () => {
                 expect(forBodyBindingResolver.getVariable('y'))
                     .toEqual({
                         name: 'y',
+                        letOrConst: LetOrConst.LET,
                         assignedFrom: {
                             root: mkOtherVariableRoot((((sourceFile
                                 .statements[1] as ForStatement)
@@ -541,6 +550,7 @@ describe('SourceFileBindingResolver', () => {
                 expect(rootBindingResolver.getVariable('z'))
                     .toEqual({
                         name: 'z',
+                        letOrConst: LetOrConst.LET,
                         assignedFrom: {
                             root: mkOtherVariableRoot((sourceFile
                                 .statements[0] as VariableStatement)
@@ -564,6 +574,7 @@ describe('SourceFileBindingResolver', () => {
                 expect(forBodyBindingResolver.getVariable('y'))
                     .toEqual({
                         name: 'y',
+                        letOrConst: LetOrConst.LET,
                         assignedFrom: {
                             root: mkOtherVariableRoot((((sourceFile
                                 .statements[1] as ForStatement)
@@ -607,8 +618,9 @@ describe('SourceFileBindingResolver', () => {
                 expect(rootBindingResolver.getVariable('z'))
                     .toEqual({
                         name: 'z',
+                        letOrConst: LetOrConst.LET,
                         assignedFrom: {
-                            root: mkOtherVariableRoot((sourceFile
+                            root: mkLiteralVariableRoot((sourceFile
                                 .statements[0] as VariableStatement)
                                 .declarationList.declarations[0].initializer
                             )
@@ -621,6 +633,7 @@ describe('SourceFileBindingResolver', () => {
                 expect(whileBlockBindingResolver.getVariable('y'))
                     .toEqual({
                         name: 'y',
+                        letOrConst: LetOrConst.LET,
                         assignedFrom: rootBindingResolver.getVariable('z'),
                         definingStatement: ((sourceFile
                             .statements[1] as WhileStatement)

@@ -4,14 +4,22 @@ import ts, {
     Identifier,
     isBlock,
     isExpression,
-    isIdentifier,
+    isIdentifier, isLiteralExpression,
+    isStatement,
     Visitor,
 } from 'typescript';
-import {CompiledPattern, CompilePatternType, JayTargetEnv} from './compile-function-split-patterns';
+import {
+    CompiledPattern,
+    CompilePatternType,
+    intersectJayTargetEnv,
+    JayTargetEnv
+} from './compile-function-split-patterns';
 import {astToCode, codeToAst} from '../ts-compiler-utils';
 import {SourceFileBindingResolver} from "./source-file-binding-resolver.ts";
 import {SourceFileStatementDependencies} from "./source-file-statement-dependencies.ts";
 import {SourceFileStatementAnalyzer} from "./source-file-statement-analyzer.ts";
+import {ContextualVisitor2, visitWithContext2} from "../visitor-with-context.ts";
+import {flattenVariable, LiteralVariableRoot} from "./name-binding-resolver.ts";
 
 interface MatchedPattern {
     pattern: CompiledPattern;
@@ -23,9 +31,14 @@ interface MatchedVariable {
     patternKey: number
 }
 
+export interface FunctionRepositoryCodeFragment {
+    handlerCode: string,
+    constCode: string
+}
+
 export interface TransformedEventHandlerByPattern {
     transformedEventHandler: ts.Node;
-    functionRepositoryFragment?: string;
+    functionRepositoryFragment?: FunctionRepositoryCodeFragment;
     wasEventHandlerTransformed: boolean;
 }
 
@@ -33,8 +46,12 @@ export interface TransformedEventHandlerByPattern {
 function generateFunctionRepository(
     matchedReturnPatterns: MatchedPattern[],
     matchedVariableReads: MatchedVariable[],
+    matchedConstants: string[],
     safeStatements: ts.Statement[],
-) {
+): FunctionRepositoryCodeFragment {
+
+    let constCode = [...new Set(matchedConstants)].join('\n');
+
     let readPatternsReturnProperties = matchedReturnPatterns
         .map(({ pattern, patternKey }) => `$${patternKey}: ${pattern.leftSidePath.join('.')}`)
     let variableReadsReturnProperties = matchedVariableReads
@@ -42,22 +59,29 @@ function generateFunctionRepository(
     let returnedObjectProperties = [...readPatternsReturnProperties, ...variableReadsReturnProperties]
         .join(',\n');
     if (safeStatements.length > 0) {
-        return `({ event }: JayEvent) => {
+        let handlerCode = `({ event }: JayEvent) => {
     ${safeStatements.map((statement) => astToCode(statement)).join('\n\t')}
 ${returnedObjectProperties.length > 0 ? `\treturn ({${returnedObjectProperties}})\n` : ''}
-}`;
+}`
+        return {handlerCode, constCode };
     }
     if (matchedReturnPatterns.length > 0) {
-        return `({ event }: JayEvent) => ({${returnedObjectProperties}})`;
+        let handlerCode = `({ event }: JayEvent) => ({${returnedObjectProperties}})`;
+        return {handlerCode, constCode };
     } else return undefined;
 }
 
 interface TransformEventHandlerStatementVisitorSideEffects {
+    matchedConstants: string[];
     matchedVariableReads: MatchedVariable[];
     mainContextBlocks: Map<Block, Block>;
     // safeStatements: Statement[];
     matchedReturnPatterns: MatchedPattern[];
     wasEventHandlerTransformed: boolean;
+}
+
+interface VisitorContext {
+    parentStatementTargetEnv: JayTargetEnv
 }
 
 const mkTransformEventHandlerStatementVisitor = (
@@ -66,10 +90,10 @@ const mkTransformEventHandlerStatementVisitor = (
     bindingResolver: SourceFileBindingResolver,
     dependencies: SourceFileStatementDependencies,
     analyzer: SourceFileStatementAnalyzer,
-): {sideEffects: TransformEventHandlerStatementVisitorSideEffects, visitor: (node: ts.Node) => ts.Node} => {
+): {sideEffects: TransformEventHandlerStatementVisitorSideEffects, visitor: ContextualVisitor2<VisitorContext>} => {
     let sideEffects: TransformEventHandlerStatementVisitorSideEffects = {
         matchedVariableReads: [],
-        // safeStatements: [],
+        matchedConstants: [],
         mainContextBlocks: new Map(),
         matchedReturnPatterns: [],
         wasEventHandlerTransformed: false,
@@ -83,8 +107,17 @@ const mkTransformEventHandlerStatementVisitor = (
         return patternIndexes.get(pattern)
     }
 
-    const visitor = (node) => {
-        if (isBlock(node)) {
+    const visitor: ContextualVisitor2<VisitorContext> = (node, {parentStatementTargetEnv},
+                                                        visitChild,
+                                                        visitEachChild) => {
+
+        if (isStatement(node)) {
+            let statementAnalysis = analyzer.getStatementStatus(node);
+            if (statementAnalysis)
+                parentStatementTargetEnv = intersectJayTargetEnv(parentStatementTargetEnv, statementAnalysis.targetEnv);
+        }
+
+        if (isBlock(node) && parentStatementTargetEnv !== JayTargetEnv.sandbox) {
             let sandboxStatements = [], mainStatements = [];
             node.statements.forEach(statement => {
                 let statementAnalysis = analyzer.getStatementStatus(statement);
@@ -95,13 +128,13 @@ const mkTransformEventHandlerStatementVisitor = (
                 }
             });
             sideEffects.mainContextBlocks.set(node, factory.createBlock(mainStatements))
-            // sideEffects.safeStatements = [...sideEffects.safeStatements, ...mainStatements]
 
             if (sandboxStatements.length < node.statements.length)
                 sideEffects.wasEventHandlerTransformed = true;
 
+            // switch to contextual visitor, pass the parent statement env.
             sandboxStatements = sandboxStatements.map(statement =>
-                ts.visitNode(statement, visitor))
+                visitChild(statement, {parentStatementTargetEnv}))
 
             node = factory.updateBlock(node, sandboxStatements);
             return node;
@@ -115,14 +148,24 @@ const mkTransformEventHandlerStatementVisitor = (
                     sideEffects.matchedReturnPatterns.push({ pattern, patternKey });
                 else if (pattern.patternType === CompilePatternType.KNOWN_VARIABLE_READ && isIdentifier(node))
                     sideEffects.matchedVariableReads.push({variable: node, patternKey});
-                let replacementPattern =
-                    `event.$${patternKey}`
+                else if (pattern.patternType === CompilePatternType.CONST_READ && isIdentifier(node)) {
+                    let constant = bindingResolver.explain(node);
+                    let flattenedConstant = flattenVariable(constant);
+                    let literal = (flattenedConstant.root as LiteralVariableRoot).literal;
+                    if (isLiteralExpression(literal)) {
+                        let constantValue = literal.text;
+                        sideEffects.matchedConstants.push(`const ${node.text} = ${constantValue}`)
+                    }
+                    return node;
+                }
+                else return node;
+                let replacementPattern = `event.$${patternKey}`
                 sideEffects.wasEventHandlerTransformed = true;
                 return (codeToAst(replacementPattern, context)[0] as ExpressionStatement)
                     .expression;
             }
         }
-        return ts.visitEachChild(node, visitor, context);
+        return visitEachChild(node, {parentStatementTargetEnv});
     };
     return { visitor, sideEffects };
 };
@@ -144,7 +187,8 @@ export const transformEventHandlerByPatternBlock = (
         analyzer
     );
 
-    const transformedEventHandler = ts.visitNode(eventHandler, visitor);
+    const transformedEventHandler = visitWithContext2(eventHandler,
+        {parentStatementTargetEnv: JayTargetEnv.any}, context, visitor);
 
     let bodyForFunctionRepository: Block = undefined;
     if (isBlock(eventHandler.body) && sideEffects.mainContextBlocks.has(eventHandler.body)) {
@@ -160,6 +204,7 @@ export const transformEventHandlerByPatternBlock = (
     const functionRepositoryFragment = generateFunctionRepository(
         sideEffects.matchedReturnPatterns,
         sideEffects.matchedVariableReads,
+        sideEffects.matchedConstants,
         bodyForFunctionRepository? [...bodyForFunctionRepository.statements] : [],
     );
 

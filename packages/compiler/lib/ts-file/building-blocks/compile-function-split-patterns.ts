@@ -20,12 +20,14 @@ export enum CompilePatternType {
     CALL,
     CHAINABLE_CALL,
     ASSIGNMENT_LEFT_SIDE,
-    KNOWN_VARIABLE_READ
+    KNOWN_VARIABLE_READ,
+    CONST_READ
 }
 
 export type CompilePatternVarType = string;
 
 export const KNOWN_VARIABLE_READ_NAME = 'knownVariableReadPattern'
+export const CONST_READ_NAME = 'knownVariableReadPattern'
 
 export enum JayTargetEnv {
     main,

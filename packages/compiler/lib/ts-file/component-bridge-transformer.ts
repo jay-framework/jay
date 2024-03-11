@@ -1,4 +1,4 @@
-import ts, { TransformationContext } from 'typescript';
+import ts, {Statement, TransformationContext} from 'typescript';
 import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
 import { astToCode, codeToAst } from './ts-compiler-utils';
 import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
@@ -24,9 +24,7 @@ import {SourceFileBindingResolver} from "./building-blocks/source-file-binding-r
 import {SourceFileStatementDependencies} from "./building-blocks/source-file-statement-dependencies.ts";
 import {SourceFileStatementAnalyzer} from "./building-blocks/source-file-statement-analyzer.ts";
 
-function transformVariableStatement(
-    node: ts.VariableStatement,
-    factory: ts.NodeFactory,
+function generateComponentConstructorCalls(
     context: ts.TransformationContext,
     componentConstructorCalls: MakeJayComponentConstructorCalls[],
     hasFunctionRepository: boolean,
@@ -93,18 +91,24 @@ interface ComponentBridgeTransformerConfig {
 function generateFunctionRepository(
     transformedEventHandlers: TransformedEventHandlers,
     context: TransformationContext,
-): { hasFunctionRepository: boolean; functionRepository?: ts.Statement } {
+): { hasFunctionRepository: boolean; functionRepository: Statement[] } {
     let functionRepositoryFragments = transformedEventHandlers.getAllFunctionRepositoryFragments();
     if (functionRepositoryFragments.length > 0) {
         let fragments = functionRepositoryFragments
-            .map((_) => `'${_.handlerIndex}': ${_.fragment}`)
+            .map((_) => `'${_.handlerIndex}': ${_.fragment.handlerCode}`)
             .join(',\n');
-        let functionRepository = `const funcRepository: FunctionsRepository = {\n${fragments}\n};`;
+
+        let constants = functionRepositoryFragments.map(_ => _.fragment.constCode);
+        let uniqueConstants = [...new Set(constants)];
+        let constantsCodeFragment = (uniqueConstants.length > 0)? uniqueConstants.join('\n') + '\n\n' : '';
+
+        let functionRepository = `${constantsCodeFragment}const funcRepository: FunctionsRepository = {\n${fragments}\n};`;
+
         return {
-            functionRepository: codeToAst(functionRepository, context)[0] as ts.Statement,
+            functionRepository: codeToAst(functionRepository, context) as Statement[],
             hasFunctionRepository: true,
         };
-    } else return { hasFunctionRepository: false };
+    } else return { hasFunctionRepository: false, functionRepository: [] };
 }
 
 function transformSourceFile(
@@ -120,10 +124,15 @@ function transformSourceFile(
         context,
     );
 
+    let generatedComponentConstructorCalls = generateComponentConstructorCalls(
+        context,
+        componentConstructorCalls,
+        hasFunctionRepository,
+    );
+
     let transformedStatements = sourceFile.statements
         .map((statement) => {
-            if (ts.isFunctionDeclaration(statement)) return undefined;
-            else if (ts.isInterfaceDeclaration(statement)) return statement;
+            if (ts.isInterfaceDeclaration(statement)) return statement;
             else if (ts.isImportDeclaration(statement))
                 return transformImport(
                     statement,
@@ -132,29 +141,17 @@ function transformSourceFile(
                     context,
                     hasFunctionRepository,
                 );
-            else if (ts.isVariableStatement(statement))
-                return transformVariableStatement(
-                    statement,
-                    factory,
-                    context,
-                    componentConstructorCalls,
-                    hasFunctionRepository,
-                );
             else return undefined;
         })
         .filter((_) => !!_);
 
-    if (hasFunctionRepository) {
-        let afterImportStatementIndex = findAfterImportStatementIndex(transformedStatements);
+    let allStatements = [
+        ...transformedStatements,
+        ...functionRepository,
+        generatedComponentConstructorCalls,
+    ].filter(_ => !!_);
 
-        let allStatements = [
-            ...transformedStatements.slice(0, afterImportStatementIndex),
-            functionRepository,
-            ...transformedStatements.slice(afterImportStatementIndex),
-        ];
-
-        return factory.updateSourceFile(sourceFile, allStatements);
-    } else return factory.updateSourceFile(sourceFile, transformedStatements);
+    return factory.updateSourceFile(sourceFile, allStatements);
 }
 
 function mkSourceFileTransformer({

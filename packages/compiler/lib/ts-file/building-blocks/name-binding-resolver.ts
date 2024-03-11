@@ -27,7 +27,7 @@ import ts, {
     isNamespaceImport,
     isNamedImports,
     CallExpression,
-    isCallExpression, isNumericLiteral, isLiteralExpression, isToken, SyntaxKind,
+    isCallExpression, isNumericLiteral, isLiteralExpression, isToken, SyntaxKind, NodeFlags,
 } from 'typescript';
 
 export enum VariableRootType {
@@ -125,8 +125,14 @@ export function isOtherVariableRoot(vr: VariableRoot): vr is OtherVariableRoot {
     return vr.kind === VariableRootType.Other;
 }
 
+export enum LetOrConst {
+    LET,
+    CONST
+}
+
 export interface Variable {
     name?: string;
+    letOrConst?: LetOrConst;
     definingStatement?: Statement;
     accessedFrom?: Variable;
     accessedByProperty?: string;
@@ -137,6 +143,7 @@ export interface Variable {
 
 export function mkVariable(members: {
     name?: string;
+    letOrConst?: LetOrConst;
     definingStatement?: Statement;
     accessedFrom?: Variable;
     accessedByProperty?: string;
@@ -269,6 +276,7 @@ export class NameBindingResolver {
     }
 
     addVariableDeclarationList(declarationList: ts.VariableDeclarationList) {
+        const letOrConst = (declarationList.flags === NodeFlags.Const)? LetOrConst.CONST : LetOrConst.LET;
         declarationList.declarations.forEach((declaration) => {
             let rightSide = this.resolvePropertyAccessChain(declaration.initializer);
             let declaredVariable = tsBindingNameToVariable(
@@ -277,7 +285,8 @@ export class NameBindingResolver {
                 rightSide,
                 undefined,
             );
-            declaredVariable.forEach((variable) => this.variables.set(variable.name, variable));
+            declaredVariable.forEach((variable) => this.variables.set(variable.name,
+                {...variable, letOrConst}));
         })
     }
 

@@ -2,7 +2,7 @@ import { transformCode } from './test-utils/ts-compiler-test-utils';
 import { componentBridgeTransformer, RuntimeMode } from '../lib';
 import { prettify } from '../lib';
 import {
-    eventPreventDefaultPattern,
+    eventPreventDefaultPattern, readEventKeyCodePattern,
     readEventTargetValuePattern
 } from "./ts-building-blocks/compiler-patterns-for-testing.ts";
 
@@ -190,5 +190,51 @@ describe('transform component bridge', () => {
                 );
             });
         });
+
+        describe('for constants', () => {
+            const patterns = [...eventPreventDefaultPattern(),...readEventKeyCodePattern()];
+
+            it('create constant in functions repository', async () => {
+                const code = `
+                    import {JayEvent} from 'jay-runtime';
+                    import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+                    import { CompElementRefs, render } from './generated-element';
+                    
+                    const KEY_CODE = 13;
+                    
+                    function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
+                        let [text, setText] = createState('');
+                        refs.input.onchange(({event}: JayEvent) => {
+                            if (event.keyCode === KEY_CODE) {
+                                event.preventDefault();
+                                setText((event.target as HTMLInputElement).value)
+                            }
+                        });
+                    }
+                    
+                    export const Comp = makeJayComponent(render, CompComponent);`;
+
+                const outputCode = await transformCode(code, [
+                    componentBridgeTransformer(RuntimeMode.MainSandbox, patterns),
+                ]);
+
+                expect(outputCode).toEqual(await prettify(`
+                    import {JayEvent} from 'jay-runtime';
+                    import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
+                    import { render } from './generated-element?jay-mainSandbox';
+                    const KEY_CODE = 13;
+                    const funcRepository: FunctionsRepository = {
+                        '0': ({ event }: JayEvent) => {
+                            if (event.keyCode === KEY_CODE) {
+                                event.preventDefault();
+                            }
+                            return { $0: event.keyCode };
+                        },
+                    };
+                    export const Comp = makeJayComponentBridge(render, { funcRepository });
+                    `),
+                );
+            });
+        })
     });
 });
