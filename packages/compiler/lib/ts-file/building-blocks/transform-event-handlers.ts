@@ -7,7 +7,6 @@ import {
 } from './transform-event-handler-by-pattern';
 import { transformEventHandlerCallStatement$Block } from './transform-event-handler-call$';
 import {SourceFileBindingResolver} from "./source-file-binding-resolver.ts";
-import {SourceFileStatementDependencies} from "./source-file-statement-dependencies.ts";
 import {SourceFileStatementAnalyzer} from "./source-file-statement-analyzer.ts";
 
 export interface TransformedEventHandler extends FoundEventHandler {
@@ -75,7 +74,6 @@ export class TransformedEventHandlers {
 export function transformEventHandlers(
     context: ts.TransformationContext,
     bindingResolver: SourceFileBindingResolver,
-    dependencies: SourceFileStatementDependencies,
     analyzer: SourceFileStatementAnalyzer,
     factory: ts.NodeFactory,
     foundEventHandlers: FoundEventHandler[]): TransformedEventHandler[] {
@@ -88,7 +86,6 @@ export function transformEventHandlers(
                 transformEventHandlerByPatternBlock(
                     context,
                     bindingResolver,
-                    dependencies,
                     analyzer,
                     factory,
                     foundEventHandler.eventHandler,

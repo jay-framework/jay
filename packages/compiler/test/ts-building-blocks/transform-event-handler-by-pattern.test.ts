@@ -15,7 +15,6 @@ import {
     stringReplacePattern
 } from "./compiler-patterns-for-testing.ts";
 import {SourceFileBindingResolver} from "../../lib/ts-file/building-blocks/source-file-binding-resolver.ts";
-import {SourceFileStatementDependencies} from "../../lib/ts-file/building-blocks/source-file-statement-dependencies.ts";
 import {SourceFileStatementAnalyzer} from "../../lib/ts-file/building-blocks/source-file-statement-analyzer.ts";
 
 describe('split event handler by pattern', () => {
@@ -26,14 +25,12 @@ describe('split event handler by pattern', () => {
         let splitEventHandlers: TransformedEventHandlerByPattern[] = [];
         let transformer = mkTransformer(({ context, sourceFile, factory }) => {
             let bindingResolver = new SourceFileBindingResolver(sourceFile);
-            let dependencies = new SourceFileStatementDependencies(sourceFile, bindingResolver);
             let analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, compiledPatterns);
             const visitor = (node) => {
                 if (isFunctionDeclaration(node) || isArrowFunction(node)) {
                     let splitEventHandler = transformEventHandlerByPatternBlock(
                         context,
                         bindingResolver,
-                        dependencies,
                         analyzer,
                         factory,
                         node,

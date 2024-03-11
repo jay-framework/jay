@@ -20,7 +20,6 @@ import {
     MakeJayComponentConstructorCalls,
 } from './building-blocks/find-make-jay-component-constructor-calls';
 import {SourceFileBindingResolver} from "./building-blocks/source-file-binding-resolver.ts";
-import {SourceFileStatementDependencies} from "./building-blocks/source-file-statement-dependencies.ts";
 import {SourceFileStatementAnalyzer} from "./building-blocks/source-file-statement-analyzer.ts";
 
 function generateComponentConstructorCalls(
@@ -174,11 +173,10 @@ function mkSourceFileTransformer({
     );
 
     let bindingResolver = new SourceFileBindingResolver(sourceFile);
-    let dependencies = new SourceFileStatementDependencies(sourceFile, bindingResolver);
     let analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
 
     let transformedEventHandlers = new TransformedEventHandlers(
-        transformEventHandlers(context, bindingResolver, dependencies, analyzer, factory, foundEventHandlers),
+        transformEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers),
     );
 
     return transformSourceFile(
