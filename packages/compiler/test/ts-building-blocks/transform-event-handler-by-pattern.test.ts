@@ -1,6 +1,4 @@
-import {
-    CompiledPattern,
-} from '../../lib';
+import { CompiledPattern } from '../../lib';
 import { mkTransformer } from '../../lib/ts-file/mk-transformer';
 import {
     TransformedEventHandlerByPattern,
@@ -10,12 +8,14 @@ import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import ts, { isArrowFunction, isFunctionDeclaration } from 'typescript';
 import { prettify } from '../../lib';
 import {
-    eventPreventDefaultPattern, readEventKeyCodePattern,
-    readEventTargetValuePattern, setEventTargetValuePattern,
-    stringReplacePattern
-} from "./compiler-patterns-for-testing.ts";
-import {SourceFileBindingResolver} from "../../lib/ts-file/building-blocks/source-file-binding-resolver.ts";
-import {SourceFileStatementAnalyzer} from "../../lib/ts-file/building-blocks/source-file-statement-analyzer.ts";
+    eventPreventDefaultPattern,
+    readEventKeyCodePattern,
+    readEventTargetValuePattern,
+    setEventTargetValuePattern,
+    stringReplacePattern,
+} from './compiler-patterns-for-testing.ts';
+import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver.ts';
+import { SourceFileStatementAnalyzer } from '../../lib/ts-file/building-blocks/source-file-statement-analyzer.ts';
 
 describe('split event handler by pattern', () => {
     const READ_EVENT_TARGET_VALUE = readEventTargetValuePattern();
@@ -25,7 +25,11 @@ describe('split event handler by pattern', () => {
         let splitEventHandlers: TransformedEventHandlerByPattern[] = [];
         let transformer = mkTransformer(({ context, sourceFile, factory }) => {
             let bindingResolver = new SourceFileBindingResolver(sourceFile);
-            let analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, compiledPatterns);
+            let analyzer = new SourceFileStatementAnalyzer(
+                sourceFile,
+                bindingResolver,
+                compiledPatterns,
+            );
             const visitor = (node) => {
                 if (isFunctionDeclaration(node) || isArrowFunction(node)) {
                     let splitEventHandler = transformEventHandlerByPatternBlock(
@@ -53,13 +57,15 @@ describe('split event handler by pattern', () => {
             const { transformer, splitEventHandlers } = testTransformer(READ_EVENT_TARGET_VALUE);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
-            expect(transformed).toEqual(await prettify(`
+            expect(transformed).toEqual(
+                await prettify(`
                 import {JayEvent} from 'jay-runtime';
-                ({event}: JayEvent) => setText(event.$0)`));
-            expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
-            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode)).toEqual(
-                await prettify(`({ event }: JayEvent) => ({$0: event.target.value})`),
+                ({event}: JayEvent) => setText(event.$0)`),
             );
+            expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
+            expect(
+                await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode),
+            ).toEqual(await prettify(`({ event }: JayEvent) => ({$0: event.target.value})`));
         });
 
         it('should replace function call parameter for function event handler', async () => {
@@ -79,9 +85,9 @@ describe('split event handler by pattern', () => {
                 }`),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
-            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode)).toEqual(
-                await prettify(`({ event }: JayEvent) => ({$0: event.target.value})`),
-            );
+            expect(
+                await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode),
+            ).toEqual(await prettify(`({ event }: JayEvent) => ({$0: event.target.value})`));
         });
 
         it.skip('should support variable', async () => {
@@ -103,9 +109,9 @@ describe('split event handler by pattern', () => {
                 }`),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
-            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode)).toEqual(
-                await prettify(`({ event }: JayEvent) => ({$0: event.target.value})`),
-            );
+            expect(
+                await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode),
+            ).toEqual(await prettify(`({ event }: JayEvent) => ({$0: event.target.value})`));
         });
 
         it('should support variable 2', async () => {
@@ -128,7 +134,9 @@ describe('split event handler by pattern', () => {
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
 
             // todo we can optimize out the variable declaration here.
-            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode)).toEqual(
+            expect(
+                await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode),
+            ).toEqual(
                 await prettify(`({ event }: JayEvent) => {
                     let value = (event.target as HTMLInputElement).value;
                     return { $0: event.target.value };
@@ -189,7 +197,9 @@ describe('split event handler by pattern', () => {
                 }`),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
-            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode)).toEqual(
+            expect(
+                await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode),
+            ).toEqual(
                 await prettify(`({event}: JayEvent) => {
                     event.preventDefault();
                 }`),
@@ -198,23 +208,29 @@ describe('split event handler by pattern', () => {
     });
 
     describe('extract assign pattern', () => {
-
         it('should support input validations using regex, single line', async () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
                 ({event}: JayEvent) => {
                     event.target.value = event.target.value.replace(/[^A-Za-z0-9]+/g, '');
                 }`;
-            const { transformer, splitEventHandlers } =
-                testTransformer([...READ_EVENT_TARGET_VALUE, ...stringReplacePattern(), ...setEventTargetValuePattern()]);
+            const { transformer, splitEventHandlers } = testTransformer([
+                ...READ_EVENT_TARGET_VALUE,
+                ...stringReplacePattern(),
+                ...setEventTargetValuePattern(),
+            ]);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
-            expect(transformed).toEqual(await prettify(`
+            expect(transformed).toEqual(
+                await prettify(`
                 import {JayEvent} from 'jay-runtime';
                 ({event}: JayEvent) => {}
-                `));
+                `),
+            );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
-            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode)).toEqual(
+            expect(
+                await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode),
+            ).toEqual(
                 await prettify(`
                 ({ event }: JayEvent) => {
                     event.target.value = event.target.value.replace(/[^A-Za-z0-9]+/g, '');
@@ -230,16 +246,23 @@ describe('split event handler by pattern', () => {
                     const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
                     event.target.value = validValue;
                 }`;
-            const { transformer, splitEventHandlers } =
-                testTransformer([...READ_EVENT_TARGET_VALUE, ...stringReplacePattern(), ...setEventTargetValuePattern()]);
+            const { transformer, splitEventHandlers } = testTransformer([
+                ...READ_EVENT_TARGET_VALUE,
+                ...stringReplacePattern(),
+                ...setEventTargetValuePattern(),
+            ]);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
-            expect(transformed).toEqual(await prettify(`
+            expect(transformed).toEqual(
+                await prettify(`
                 import {JayEvent} from 'jay-runtime';
                 ({event}: JayEvent) => {}
-                `));
+                `),
+            );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
-            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode)).toEqual(
+            expect(
+                await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode),
+            ).toEqual(
                 await prettify(`
                 ({ event }: JayEvent) => {
                     const inputValue = event.target.value;
@@ -248,7 +271,7 @@ describe('split event handler by pattern', () => {
                 }`),
             );
         });
-    })
+    });
 
     describe('compound event handlers', () => {
         it('should support both assign pattern and a read expression (pattern for set state)', async () => {
@@ -260,18 +283,25 @@ describe('split event handler by pattern', () => {
                     event.target.value = validValue;
                     setState(validValue);
                 }`;
-            const { transformer, splitEventHandlers } =
-                testTransformer([...READ_EVENT_TARGET_VALUE, ...stringReplacePattern(), ...setEventTargetValuePattern()]);
+            const { transformer, splitEventHandlers } = testTransformer([
+                ...READ_EVENT_TARGET_VALUE,
+                ...stringReplacePattern(),
+                ...setEventTargetValuePattern(),
+            ]);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
-            expect(transformed).toEqual(await prettify(`
+            expect(transformed).toEqual(
+                await prettify(`
                 import {JayEvent} from 'jay-runtime';
                 ({event}: JayEvent) => {
                     setState(event.$0)
                 }
-                `));
+                `),
+            );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
-            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode)).toEqual(
+            expect(
+                await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode),
+            ).toEqual(
                 await prettify(`
                 ({ event }: JayEvent) => {
                     const inputValue = event.target.value;
@@ -293,11 +323,14 @@ describe('split event handler by pattern', () => {
                         setNewTodo('');
                     }
                 }`;
-            const { transformer, splitEventHandlers } =
-                testTransformer([...readEventKeyCodePattern(), ...eventPreventDefaultPattern()]);
+            const { transformer, splitEventHandlers } = testTransformer([
+                ...readEventKeyCodePattern(),
+                ...eventPreventDefaultPattern(),
+            ]);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
-            expect(transformed).toEqual(await prettify(`
+            expect(transformed).toEqual(
+                await prettify(`
                 import {JayEvent} from 'jay-runtime';
                 ({event}: JayEvent) => {
                     if (event.$0 === 20) {
@@ -306,9 +339,12 @@ describe('split event handler by pattern', () => {
                         setNewTodo('');
                     }
                 }
-                `));
+                `),
+            );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
-            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode)).toEqual(
+            expect(
+                await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode),
+            ).toEqual(
                 await prettify(`
                 ({ event }: JayEvent) => {
                     if (event.keyCode === 20) {
@@ -331,11 +367,14 @@ describe('split event handler by pattern', () => {
                         setNewTodo('');
                     }
                 }`;
-            const { transformer, splitEventHandlers } =
-                testTransformer([...readEventKeyCodePattern(), ...eventPreventDefaultPattern()]);
+            const { transformer, splitEventHandlers } = testTransformer([
+                ...readEventKeyCodePattern(),
+                ...eventPreventDefaultPattern(),
+            ]);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
-            expect(transformed).toEqual(await prettify(`
+            expect(transformed).toEqual(
+                await prettify(`
                 import {JayEvent} from 'jay-runtime';
                 const ENTER_KEY = 13;
                 ({event}: JayEvent) => {
@@ -345,9 +384,12 @@ describe('split event handler by pattern', () => {
                         setNewTodo('');
                     }
                 }
-                `));
+                `),
+            );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
-            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode)).toEqual(
+            expect(
+                await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode),
+            ).toEqual(
                 await prettify(`
                 ({ event }: JayEvent) => {
                     if (event.keyCode === ENTER_KEY) {
@@ -356,7 +398,9 @@ describe('split event handler by pattern', () => {
                     return { $0: event.keyCode };  
                 }`),
             );
-            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment.constCode)).toEqual(
+            expect(
+                await prettify(splitEventHandlers[0].functionRepositoryFragment.constCode),
+            ).toEqual(
                 await prettify(`
                 const ENTER_KEY = 13;`),
             );
@@ -374,11 +418,14 @@ describe('split event handler by pattern', () => {
                         setNewTodo('');
                     }
                 }`;
-            const { transformer, splitEventHandlers } =
-                testTransformer([...readEventKeyCodePattern(), ...eventPreventDefaultPattern()]);
+            const { transformer, splitEventHandlers } = testTransformer([
+                ...readEventKeyCodePattern(),
+                ...eventPreventDefaultPattern(),
+            ]);
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
-            expect(transformed).toEqual(await prettify(`
+            expect(transformed).toEqual(
+                await prettify(`
                 import {JayEvent} from 'jay-runtime';
                 let ENTER_KEY = 13;
                 ({event}: JayEvent) => {
@@ -389,12 +436,15 @@ describe('split event handler by pattern', () => {
                         setNewTodo('');
                     }
                 }
-                `));
+                `),
+            );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
-            expect(await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode)).toEqual(
+            expect(
+                await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode),
+            ).toEqual(
                 await prettify(`
                 ({ event }: JayEvent) => ({ $0: event.keyCode });`),
             );
         });
-    })
+    });
 });

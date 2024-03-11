@@ -27,7 +27,11 @@ import ts, {
     isNamespaceImport,
     isNamedImports,
     CallExpression,
-    isCallExpression, isNumericLiteral, isToken, SyntaxKind, NodeFlags,
+    isCallExpression,
+    isNumericLiteral,
+    isToken,
+    SyntaxKind,
+    NodeFlags,
 } from 'typescript';
 
 export enum VariableRootType {
@@ -75,7 +79,7 @@ export function mkLiteralVariableRoot(literal: Expression): LiteralVariableRoot 
 
 export enum ImportType {
     defaultImport,
-    namedImport
+    namedImport,
 }
 
 export interface ImportModuleVariableRoot extends VariableRoot {
@@ -84,7 +88,10 @@ export interface ImportModuleVariableRoot extends VariableRoot {
     importType: ImportType;
 }
 
-export function mkImportModuleVariableRoot(module: Expression, importType: ImportType): ImportModuleVariableRoot {
+export function mkImportModuleVariableRoot(
+    module: Expression,
+    importType: ImportType,
+): ImportModuleVariableRoot {
     return { kind: VariableRootType.ImportModule, module, importType };
 }
 
@@ -127,7 +134,7 @@ export function isOtherVariableRoot(vr: VariableRoot): vr is OtherVariableRoot {
 
 export enum LetOrConst {
     LET,
-    CONST
+    CONST,
 }
 
 export interface Variable {
@@ -154,7 +161,7 @@ export function mkVariable(members: {
     return Object.fromEntries(Object.entries(members).filter(([, value]) => value !== undefined));
 }
 
-export const UNKNOWN_VARIABLE: Variable = {}
+export const UNKNOWN_VARIABLE: Variable = {};
 
 const getAccessedByProperty = (
     binding: Identifier,
@@ -171,12 +178,9 @@ const getAccessedByProperty = (
 };
 
 function findDeclaringStatement(node: ts.Node): Statement {
-    if (!node)
-        return undefined;
-    else if (isStatement(node))
-        return node
-    else
-        return findDeclaringStatement(node.parent);
+    if (!node) return undefined;
+    else if (isStatement(node)) return node;
+    else return findDeclaringStatement(node.parent);
 }
 
 export function tsBindingNameToVariable(
@@ -194,7 +198,7 @@ export function tsBindingNameToVariable(
                 accessedByProperty: getAccessedByProperty(binding, accessedFrom, propertyName),
                 assignedFrom,
                 root,
-                definingStatement: findDeclaringStatement(binding)
+                definingStatement: findDeclaringStatement(binding),
             }),
         ];
     } else if (isObjectBindingPattern(binding)) {
@@ -207,7 +211,7 @@ export function tsBindingNameToVariable(
                 : undefined,
             assignedFrom,
             root,
-            definingStatement: findDeclaringStatement(binding)
+            definingStatement: findDeclaringStatement(binding),
         });
         return binding.elements.flatMap((element) => {
             return tsBindingNameToVariable(element.name, variable, undefined, element.propertyName);
@@ -222,7 +226,7 @@ export function tsBindingNameToVariable(
                 : undefined,
             assignedFrom,
             root,
-            definingStatement: findDeclaringStatement(binding)
+            definingStatement: findDeclaringStatement(binding),
         });
         return binding.elements
             .flatMap((element, index) => {
@@ -240,7 +244,6 @@ export function tsBindingNameToVariable(
 }
 
 export class NameBindingResolver {
-
     constructor(readonly parentNameResolver?: NameBindingResolver) {}
 
     variables: Map<string, Variable> = new Map();
@@ -269,14 +272,15 @@ export class NameBindingResolver {
             let functionVariable = mkVariable({
                 name: statement.name.text,
                 root: mkFunctionVariableRoot(statement),
-                definingStatement: statement
+                definingStatement: statement,
             });
             this.variables.set(statement.name.text, functionVariable);
         }
     }
 
     addVariableDeclarationList(declarationList: ts.VariableDeclarationList) {
-        const letOrConst = (declarationList.flags === NodeFlags.Const)? LetOrConst.CONST : LetOrConst.LET;
+        const letOrConst =
+            declarationList.flags === NodeFlags.Const ? LetOrConst.CONST : LetOrConst.LET;
         declarationList.declarations.forEach((declaration) => {
             let rightSide = this.resolvePropertyAccessChain(declaration.initializer);
             let declaredVariable = tsBindingNameToVariable(
@@ -285,13 +289,14 @@ export class NameBindingResolver {
                 rightSide,
                 undefined,
             );
-            declaredVariable.forEach((variable) => this.variables.set(variable.name,
-                {...variable, letOrConst}));
-        })
+            declaredVariable.forEach((variable) =>
+                this.variables.set(variable.name, { ...variable, letOrConst }),
+            );
+        });
     }
 
     addVariableStatement(variableStatement: VariableStatement) {
-        this.addVariableDeclarationList(variableStatement.declarationList)
+        this.addVariableDeclarationList(variableStatement.declarationList);
     }
 
     getVariable(name: string) {
@@ -356,11 +361,14 @@ export class NameBindingResolver {
             };
         } else if (isArrowFunction(expression) || isFunctionExpression(expression)) {
             return { root: mkFunctionVariableRoot(expression) };
-        } else if (isCallExpression(expression)){
+        } else if (isCallExpression(expression)) {
             return { root: mkFunctionCallVariableRoot(expression) };
-        } else if (isStringLiteral(expression) || isNumericLiteral(expression) ||
+        } else if (
+            isStringLiteral(expression) ||
+            isNumericLiteral(expression) ||
             (isToken(expression) && expression.kind === SyntaxKind.TrueKeyword) ||
-            (isToken(expression) && expression.kind === SyntaxKind.FalseKeyword)){
+            (isToken(expression) && expression.kind === SyntaxKind.FalseKeyword)
+        ) {
             return { root: mkLiteralVariableRoot(expression) };
         } else {
             return { root: mkOtherVariableRoot(expression) };
@@ -375,8 +383,11 @@ export class NameBindingResolver {
         let variableName = expression.text;
         let nameResolver: NameBindingResolver = this;
         let resolved: Variable;
-        while ((resolved = nameResolver.getVariable(variableName)) === UNKNOWN_VARIABLE && nameResolver.parentNameResolver)
-            nameResolver = nameResolver.parentNameResolver
+        while (
+            (resolved = nameResolver.getVariable(variableName)) === UNKNOWN_VARIABLE &&
+            nameResolver.parentNameResolver
+        )
+            nameResolver = nameResolver.parentNameResolver;
         return resolved;
     }
 
@@ -387,40 +398,40 @@ export class NameBindingResolver {
             let variable = mkVariable({
                 name: node.importClause.name.text,
                 definingStatement: node,
-                root
-            })
+                root,
+            });
             this.variables.set(node.importClause.name.text, variable);
         }
         if (node.importClause.namedBindings) {
             let root = mkImportModuleVariableRoot(node.moduleSpecifier, ImportType.namedImport);
             let namedBindings = node.importClause.namedBindings;
-            if(isNamespaceImport(namedBindings)) {
+            if (isNamespaceImport(namedBindings)) {
                 let variable = mkVariable({
                     name: namedBindings.name.text,
                     definingStatement: node,
-                    root
-                })
+                    root,
+                });
                 this.variables.set(namedBindings.name.text, variable);
-            }
-            else if (isNamedImports(namedBindings)) {
-                namedBindings.elements.forEach(importSpecifier => {
+            } else if (isNamedImports(namedBindings)) {
+                namedBindings.elements.forEach((importSpecifier) => {
                     if (!importSpecifier.isTypeOnly) {
                         let variable = mkVariable({
                             name: importSpecifier.name.text,
-                            accessedByProperty: (importSpecifier.propertyName || importSpecifier.name).text,
+                            accessedByProperty: (
+                                importSpecifier.propertyName || importSpecifier.name
+                            ).text,
                             accessedFrom: {
                                 definingStatement: node,
-                                root
+                                root,
                             },
                             definingStatement: node,
-                        })
+                        });
                         this.variables.set(importSpecifier.name.text, variable);
                     }
-                })
+                });
             }
         }
     }
-
 }
 
 export interface FlattenedAccessChain {

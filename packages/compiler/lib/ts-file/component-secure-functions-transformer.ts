@@ -14,8 +14,8 @@ import {
 import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
 import { codeToAst } from './ts-compiler-utils';
 import { findMakeJayComponentConstructorCallsBlock } from './building-blocks/find-make-jay-component-constructor-calls';
-import {SourceFileBindingResolver} from "./building-blocks/source-file-binding-resolver.ts";
-import {SourceFileStatementAnalyzer} from "./building-blocks/source-file-statement-analyzer.ts";
+import { SourceFileBindingResolver } from './building-blocks/source-file-binding-resolver.ts';
+import { SourceFileStatementAnalyzer } from './building-blocks/source-file-statement-analyzer.ts';
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: CompiledPattern[];

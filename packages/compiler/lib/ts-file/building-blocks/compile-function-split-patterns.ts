@@ -1,19 +1,21 @@
 import ts, {
     Expression,
     isBinaryExpression,
-    isCallExpression, isDecorator,
+    isCallExpression,
+    isDecorator,
     isExpressionStatement,
-    isFunctionDeclaration, isIdentifier,
+    isFunctionDeclaration,
+    isIdentifier,
     isPropertyAccessExpression,
     isReturnStatement,
     SourceFile,
     SyntaxKind,
 } from 'typescript';
-import {flattenVariable,} from './name-binding-resolver';
-import {mkTransformer} from '../mk-transformer';
-import {JayValidations, WithValidations} from '../../core/with-validations';
-import {astToCode} from '../ts-compiler-utils';
-import {SourceFileBindingResolver} from "./source-file-binding-resolver.ts";
+import { flattenVariable } from './name-binding-resolver';
+import { mkTransformer } from '../mk-transformer';
+import { JayValidations, WithValidations } from '../../core/with-validations';
+import { astToCode } from '../ts-compiler-utils';
+import { SourceFileBindingResolver } from './source-file-binding-resolver.ts';
 
 export enum CompilePatternType {
     RETURN,
@@ -21,35 +23,35 @@ export enum CompilePatternType {
     CHAINABLE_CALL,
     ASSIGNMENT_LEFT_SIDE,
     KNOWN_VARIABLE_READ,
-    CONST_READ
+    CONST_READ,
 }
 
 export type CompilePatternVarType = string;
 
-export const KNOWN_VARIABLE_READ_NAME = 'knownVariableReadPattern'
-export const CONST_READ_NAME = 'knownVariableReadPattern'
+export const KNOWN_VARIABLE_READ_NAME = 'knownVariableReadPattern';
+export const CONST_READ_NAME = 'knownVariableReadPattern';
 
 export enum JayTargetEnv {
     main,
     any,
-    sandbox
+    sandbox,
 }
 
 export function jayTargetEnvName(jayTargetEnv: JayTargetEnv) {
-    let names = Object.values(JayTargetEnv).filter(_ => typeof _ === 'string');
-    let values = Object.values(JayTargetEnv).filter(_ => typeof _ === 'number');
-    return names[values.indexOf(jayTargetEnv)]
+    let names = Object.values(JayTargetEnv).filter((_) => typeof _ === 'string');
+    let values = Object.values(JayTargetEnv).filter((_) => typeof _ === 'number');
+    return names[values.indexOf(jayTargetEnv)];
 }
 
 export function intersectJayTargetEnv(a: JayTargetEnv, b: JayTargetEnv) {
-    if (a === b && a === JayTargetEnv.any)
-        return JayTargetEnv.any
-    if (a === JayTargetEnv.main && b === JayTargetEnv.main ||
-        a === JayTargetEnv.main && b === JayTargetEnv.any ||
-        a === JayTargetEnv.any && b === JayTargetEnv.main)
+    if (a === b && a === JayTargetEnv.any) return JayTargetEnv.any;
+    if (
+        (a === JayTargetEnv.main && b === JayTargetEnv.main) ||
+        (a === JayTargetEnv.main && b === JayTargetEnv.any) ||
+        (a === JayTargetEnv.any && b === JayTargetEnv.main)
+    )
         return JayTargetEnv.main;
-    else
-        return JayTargetEnv.sandbox;
+    else return JayTargetEnv.sandbox;
 }
 
 /**
@@ -60,18 +62,18 @@ export function intersectJayTargetEnv(a: JayTargetEnv, b: JayTargetEnv) {
  */
 export function JayPattern(env: JayTargetEnv) {
     return function (target) {
-        return target
-    }
+        return target;
+    };
 }
 
 export interface CompiledPattern {
     patternType: CompilePatternType;
     leftSidePath: string[];
-    leftSideType: CompilePatternVarType,
-    callArgumentTypes?: CompilePatternVarType[]
-    returnType?: CompilePatternVarType,
-    targetEnvForStatement: JayTargetEnv,
-    name: string
+    leftSideType: CompilePatternVarType;
+    callArgumentTypes?: CompilePatternVarType[];
+    returnType?: CompilePatternVarType;
+    targetEnvForStatement: JayTargetEnv;
+    name: string;
 }
 
 export function compileFunctionSplitPatternsBlock(
@@ -81,28 +83,29 @@ export function compileFunctionSplitPatternsBlock(
     const compiledPatterns: CompiledPattern[] = [];
 
     patternFiles.forEach((patternsFile) => {
-
         const sourceFileBinding = new SourceFileBindingResolver(patternsFile);
         const findPatternFunctions: ts.Visitor = (node) => {
             if (isFunctionDeclaration(node)) {
                 let declaredTargetEnv = JayTargetEnv.main;
-                node.modifiers && node.modifiers.forEach(modifier => {
-                    if (isDecorator(modifier) &&
-                        isCallExpression(modifier.expression) &&
-                        isIdentifier(modifier.expression.expression) &&
-                        (modifier.expression.expression.text === 'JayPattern') &&
-                        (modifier.expression.arguments.length === 1) &&
-                        isPropertyAccessExpression(modifier.expression.arguments[0]) &&
-                        isIdentifier(modifier.expression.arguments[0].expression) &&
-                        modifier.expression.arguments[0].expression.text === 'JayTargetEnv' &&
-                        modifier.expression.arguments[0].name.text === 'any')
-                        declaredTargetEnv = JayTargetEnv.any;
-                })
+                node.modifiers &&
+                    node.modifiers.forEach((modifier) => {
+                        if (
+                            isDecorator(modifier) &&
+                            isCallExpression(modifier.expression) &&
+                            isIdentifier(modifier.expression.expression) &&
+                            modifier.expression.expression.text === 'JayPattern' &&
+                            modifier.expression.arguments.length === 1 &&
+                            isPropertyAccessExpression(modifier.expression.arguments[0]) &&
+                            isIdentifier(modifier.expression.arguments[0].expression) &&
+                            modifier.expression.arguments[0].expression.text === 'JayTargetEnv' &&
+                            modifier.expression.arguments[0].name.text === 'any'
+                        )
+                            declaredTargetEnv = JayTargetEnv.any;
+                    });
 
                 let name = node.name.text;
 
                 node.body.statements.forEach((statement, index) => {
-
                     let patternTargetEnv = declaredTargetEnv;
                     let patternType: CompilePatternType;
                     let leftHandSide: Expression;
@@ -111,31 +114,38 @@ export function compileFunctionSplitPatternsBlock(
                         isPropertyAccessExpression(statement.expression)
                     ) {
                         patternType = CompilePatternType.RETURN;
-                        leftHandSide = statement.expression
+                        leftHandSide = statement.expression;
                         patternTargetEnv = JayTargetEnv.any;
-                    } else if (isReturnStatement(statement) &&
+                    } else if (
+                        isReturnStatement(statement) &&
                         isCallExpression(statement.expression) &&
                         isPropertyAccessExpression(statement.expression.expression) &&
-                        node.type) {
+                        node.type
+                    ) {
                         patternType = CompilePatternType.CHAINABLE_CALL;
-                        leftHandSide = statement.expression.expression
-                    } else if (isExpressionStatement(statement) &&
+                        leftHandSide = statement.expression.expression;
+                    } else if (
+                        isExpressionStatement(statement) &&
                         isCallExpression(statement.expression) &&
-                        isPropertyAccessExpression(statement.expression.expression)) {
+                        isPropertyAccessExpression(statement.expression.expression)
+                    ) {
                         patternType = CompilePatternType.CALL;
-                        leftHandSide = statement.expression.expression
-                    } else if (isExpressionStatement(statement) &&
+                        leftHandSide = statement.expression.expression;
+                    } else if (
+                        isExpressionStatement(statement) &&
                         isBinaryExpression(statement.expression) &&
                         isPropertyAccessExpression(statement.expression.left) &&
-                        (statement.expression.operatorToken.kind === SyntaxKind.EqualsToken) &&
-                        isIdentifier(statement.expression.right)) {
+                        statement.expression.operatorToken.kind === SyntaxKind.EqualsToken &&
+                        isIdentifier(statement.expression.right)
+                    ) {
                         patternType = CompilePatternType.ASSIGNMENT_LEFT_SIDE;
                         leftHandSide = statement.expression.left;
                     }
 
                     if (patternType !== undefined) {
                         let resolvedLeftHandSide = flattenVariable(
-                            sourceFileBinding.findBindingResolver(statement)
+                            sourceFileBinding
+                                .findBindingResolver(statement)
                                 .resolvePropertyAccessChain(leftHandSide),
                         );
 
@@ -146,12 +156,12 @@ export function compileFunctionSplitPatternsBlock(
                             leftSidePath: resolvedLeftHandSide.path,
                             leftSideType: sourceFileBinding.explainType(node.parameters[0].type),
                             returnType: sourceFileBinding.explainType(node.type),
-                            callArgumentTypes: node.parameters.slice(1).map(param =>
-                                sourceFileBinding.explainType(param.type)),
+                            callArgumentTypes: node.parameters
+                                .slice(1)
+                                .map((param) => sourceFileBinding.explainType(param.type)),
                             targetEnvForStatement: patternTargetEnv,
-                            name
+                            name,
                         });
-
                     } else
                         validations.push(
                             `unsupported statement, at pattern [${node.name?.text}] statement [${index}]: `,

@@ -1,8 +1,9 @@
 import {
     compileFunctionSplitPatternsBlock,
-    CompilePatternType, JayTargetEnv,
+    CompilePatternType,
+    JayTargetEnv,
 } from '../../lib/ts-file/building-blocks/compile-function-split-patterns';
-import {createTsSourceFile} from "../test-utils/ts-source-utils.ts";
+import { createTsSourceFile } from '../test-utils/ts-source-utils.ts';
 
 describe('compile secure function split patterns', () => {
     it('should compile a return pattern', () => {
@@ -22,12 +23,12 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.RETURN,
             leftSidePath: ['event', 'target', 'value'],
-            leftSideType: "jay-runtime.JayEvent",
+            leftSideType: 'jay-runtime.JayEvent',
             returnType: undefined,
             callArgumentTypes: [],
             targetEnvForStatement: JayTargetEnv.any,
-            name: "inputValuePattern",
-        })
+            name: 'inputValuePattern',
+        });
     });
 
     it('should compile a return pattern with a return type', () => {
@@ -48,12 +49,12 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.RETURN,
             leftSidePath: ['event', 'target', 'value'],
-            leftSideType: "jay-runtime.JayEvent",
+            leftSideType: 'jay-runtime.JayEvent',
             returnType: 'string',
             callArgumentTypes: [],
             targetEnvForStatement: JayTargetEnv.any,
-            name: "inputValuePattern",
-        })
+            name: 'inputValuePattern',
+        });
     });
 
     it('should compile a call expression pattern', () => {
@@ -74,12 +75,12 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.CALL,
             leftSidePath: ['event', 'preventDefault'],
-            leftSideType: "jay-runtime.JayEvent",
+            leftSideType: 'jay-runtime.JayEvent',
             returnType: undefined,
             callArgumentTypes: [],
             targetEnvForStatement: JayTargetEnv.main,
-            name: "eventPreventDefault",
-        })
+            name: 'eventPreventDefault',
+        });
     });
 
     it('should compile a chainable call expression pattern', () => {
@@ -98,12 +99,12 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.CHAINABLE_CALL,
             leftSidePath: ['replace'],
-            leftSideType: "string",
-            returnType: "string",
-            callArgumentTypes: ["RegExp", "string"],
+            leftSideType: 'string',
+            returnType: 'string',
+            callArgumentTypes: ['RegExp', 'string'],
             targetEnvForStatement: JayTargetEnv.any,
-            name: "stringReplace",
-        })
+            name: 'stringReplace',
+        });
     });
 
     it('should compile an assignment pattern', () => {
@@ -124,11 +125,11 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.ASSIGNMENT_LEFT_SIDE,
             leftSidePath: ['event', 'target', 'value'],
-            leftSideType: "jay-runtime.JayEvent",
+            leftSideType: 'jay-runtime.JayEvent',
             returnType: undefined,
             callArgumentTypes: ['string'],
             targetEnvForStatement: JayTargetEnv.main,
-            name: "setInputValue",
-        })
-    })
+            name: 'setInputValue',
+        });
+    });
 });

@@ -16,3 +16,5 @@ export * from './core/errors';
 export * from './utils/errors';
 export type { CompiledPattern } from './ts-file/building-blocks/compile-function-split-patterns';
 export { findAfterImportStatementIndex } from './ts-file/building-blocks/find-after-import-statement-index';
+export { compileFunctionSplitPatternsBlock } from './ts-file/building-blocks/compile-function-split-patterns';
+export { createTsSourceFileFromSource } from './ts-file/building-blocks/create-ts-source-file-from-source';

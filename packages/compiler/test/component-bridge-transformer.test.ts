@@ -2,9 +2,10 @@ import { transformCode } from './test-utils/ts-compiler-test-utils';
 import { componentBridgeTransformer, RuntimeMode } from '../lib';
 import { prettify } from '../lib';
 import {
-    eventPreventDefaultPattern, readEventKeyCodePattern,
-    readEventTargetValuePattern
-} from "./ts-building-blocks/compiler-patterns-for-testing.ts";
+    eventPreventDefaultPattern,
+    readEventKeyCodePattern,
+    readEventTargetValuePattern,
+} from './ts-building-blocks/compiler-patterns-for-testing.ts';
 
 describe('transform component bridge', () => {
     describe('generate component bridge', () => {
@@ -25,7 +26,8 @@ describe('transform component bridge', () => {
                 componentBridgeTransformer(RuntimeMode.MainSandbox, []),
             ]);
 
-            expect(outputCode).toEqual(await prettify(`
+            expect(outputCode).toEqual(
+                await prettify(`
                 import { makeJayComponentBridge } from 'jay-secure';
                 import { render } from './generated-element?jay-mainSandbox';
                 export const Comp = makeJayComponentBridge(render);
@@ -54,7 +56,8 @@ describe('transform component bridge', () => {
                     componentBridgeTransformer(RuntimeMode.MainSandbox, input_value_pattern),
                 ]);
 
-                expect(outputCode).toEqual(await prettify(`
+                expect(outputCode).toEqual(
+                    await prettify(`
                     import {JayEvent} from 'jay-runtime';
                     import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
                     import { render } from './generated-element?jay-mainSandbox';
@@ -84,7 +87,8 @@ describe('transform component bridge', () => {
                     componentBridgeTransformer(RuntimeMode.MainSandbox, input_value_pattern),
                 ]);
 
-                expect(outputCode).toEqual(await prettify(`
+                expect(outputCode).toEqual(
+                    await prettify(`
                     import {JayEvent} from 'jay-runtime';
                     import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
                     import { render } from './generated-element?jay-mainSandbox';
@@ -118,7 +122,8 @@ describe('transform component bridge', () => {
                     componentBridgeTransformer(RuntimeMode.MainSandbox, input_value_pattern),
                 ]);
 
-                expect(outputCode).toEqual(await prettify(`
+                expect(outputCode).toEqual(
+                    await prettify(`
                     import {JayEvent} from 'jay-runtime';
                     import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
                     import { render } from './generated-element?jay-mainSandbox';
@@ -145,7 +150,8 @@ describe('transform component bridge', () => {
                     componentBridgeTransformer(RuntimeMode.MainSandbox, input_value_pattern),
                 ]);
 
-                expect(outputCode).toEqual(await prettify(`
+                expect(outputCode).toEqual(
+                    await prettify(`
                     import { makeJayComponentBridge } from 'jay-secure';
                     import { render } from './generated-element?jay-mainSandbox';
                     export const Comp = makeJayComponentBridge(render);`),
@@ -176,7 +182,8 @@ describe('transform component bridge', () => {
                     componentBridgeTransformer(RuntimeMode.MainSandbox, preventDefaultPattern),
                 ]);
 
-                expect(outputCode).toEqual(await prettify(`
+                expect(outputCode).toEqual(
+                    await prettify(`
                     import {JayEvent} from 'jay-runtime';
                     import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
                     import { render } from './generated-element?jay-mainSandbox';
@@ -192,7 +199,7 @@ describe('transform component bridge', () => {
         });
 
         describe('for constants', () => {
-            const patterns = [...eventPreventDefaultPattern(),...readEventKeyCodePattern()];
+            const patterns = [...eventPreventDefaultPattern(), ...readEventKeyCodePattern()];
 
             it('create constant in functions repository', async () => {
                 const code = `
@@ -218,7 +225,8 @@ describe('transform component bridge', () => {
                     componentBridgeTransformer(RuntimeMode.MainSandbox, patterns),
                 ]);
 
-                expect(outputCode).toEqual(await prettify(`
+                expect(outputCode).toEqual(
+                    await prettify(`
                     import {JayEvent} from 'jay-runtime';
                     import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
                     import { render } from './generated-element?jay-mainSandbox';
@@ -235,6 +243,6 @@ describe('transform component bridge', () => {
                     `),
                 );
             });
-        })
+        });
     });
 });

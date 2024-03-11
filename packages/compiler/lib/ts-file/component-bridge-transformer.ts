@@ -1,4 +1,4 @@
-import ts, {Statement, TransformationContext} from 'typescript';
+import ts, { Statement, TransformationContext } from 'typescript';
 import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
 import { astToCode, codeToAst } from './ts-compiler-utils';
 import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
@@ -19,8 +19,8 @@ import {
     findMakeJayComponentConstructorCallsBlock,
     MakeJayComponentConstructorCalls,
 } from './building-blocks/find-make-jay-component-constructor-calls';
-import {SourceFileBindingResolver} from "./building-blocks/source-file-binding-resolver.ts";
-import {SourceFileStatementAnalyzer} from "./building-blocks/source-file-statement-analyzer.ts";
+import { SourceFileBindingResolver } from './building-blocks/source-file-binding-resolver.ts';
+import { SourceFileStatementAnalyzer } from './building-blocks/source-file-statement-analyzer.ts';
 
 function generateComponentConstructorCalls(
     context: ts.TransformationContext,
@@ -74,8 +74,7 @@ function transformImport(
                 context,
             )[0] as ts.Statement;
         }
-        if (node.moduleSpecifier.text === 'jay-runtime')
-            return node;
+        if (node.moduleSpecifier.text === 'jay-runtime') return node;
         return undefined;
     }
     return undefined;
@@ -96,9 +95,10 @@ function generateFunctionRepository(
             .map((_) => `'${_.handlerIndex}': ${_.fragment.handlerCode}`)
             .join(',\n');
 
-        let constants = functionRepositoryFragments.map(_ => _.fragment.constCode);
+        let constants = functionRepositoryFragments.map((_) => _.fragment.constCode);
         let uniqueConstants = [...new Set(constants)];
-        let constantsCodeFragment = (uniqueConstants.length > 0)? uniqueConstants.join('\n') + '\n\n' : '';
+        let constantsCodeFragment =
+            uniqueConstants.length > 0 ? uniqueConstants.join('\n') + '\n\n' : '';
 
         let functionRepository = `${constantsCodeFragment}const funcRepository: FunctionsRepository = {\n${fragments}\n};`;
 
@@ -147,7 +147,7 @@ function transformSourceFile(
         ...transformedStatements,
         ...functionRepository,
         generatedComponentConstructorCalls,
-    ].filter(_ => !!_);
+    ].filter((_) => !!_);
 
     return factory.updateSourceFile(sourceFile, allStatements);
 }

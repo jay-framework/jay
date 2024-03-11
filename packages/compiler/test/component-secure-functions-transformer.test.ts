@@ -3,8 +3,8 @@ import { componentSecureFunctionsTransformer } from '../lib';
 import { prettify } from '../lib';
 import {
     eventPreventDefaultPattern,
-    readEventTargetValuePattern
-} from "./ts-building-blocks/compiler-patterns-for-testing.ts";
+    readEventTargetValuePattern,
+} from './ts-building-blocks/compiler-patterns-for-testing.ts';
 
 describe('transform event handlers with secure code split', () => {
     describe('transform return value pattern', () => {
@@ -26,7 +26,8 @@ describe('transform event handlers with secure code split', () => {
                 componentSecureFunctionsTransformer(input_value_pattern),
             ]);
 
-            expect(outputCode).toEqual(await prettify(`
+            expect(outputCode).toEqual(
+                await prettify(`
                 import {JayEvent} from 'jay-runtime';
                 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
                 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
@@ -59,7 +60,8 @@ describe('transform event handlers with secure code split', () => {
                 componentSecureFunctionsTransformer(input_value_pattern),
             ]);
 
-            expect(outputCode).toEqual(await prettify(`
+            expect(outputCode).toEqual(
+                await prettify(`
                 import {JayEvent} from 'jay-runtime';
                 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
                 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
@@ -98,7 +100,8 @@ describe('transform event handlers with secure code split', () => {
                 componentSecureFunctionsTransformer(input_value_pattern),
             ]);
 
-            expect(outputCode).toEqual(await prettify(`
+            expect(outputCode).toEqual(
+                await prettify(`
                 import {JayEvent} from 'jay-runtime';
                 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
                 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
@@ -135,7 +138,8 @@ describe('transform event handlers with secure code split', () => {
                 componentSecureFunctionsTransformer(input_value_pattern),
             ]);
 
-            expect(outputCode).toEqual(await prettify(`
+            expect(outputCode).toEqual(
+                await prettify(`
                 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
                 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
@@ -170,7 +174,8 @@ describe('transform event handlers with secure code split', () => {
                 componentSecureFunctionsTransformer(preventDefaultPattern),
             ]);
 
-            expect(outputCode).toEqual(await prettify(`
+            expect(outputCode).toEqual(
+                await prettify(`
                 import {JayEvent} from 'jay-runtime';
                 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
                 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';

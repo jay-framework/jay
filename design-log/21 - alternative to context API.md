@@ -131,7 +131,7 @@ explicitly defines the dependencies of 'i'?
 
 The idea of property cascading is that given a component, the component inputs should only be using properties.
 
-**When using the component, it is not required to provide all the properties. 
+**When using the component, it is not required to provide all the properties.
 Any unprovided properties of the component become properties of the parent component automatically, by the compiler**
 
 ```typescript jsx
@@ -151,13 +151,13 @@ function i({firstName, lastName}) {
 }
 ```
 
-With the example above, 
-* `i` requires `firstName` and `lastName` properties
-* `h` and `g` implicitly gain the `firstName` and `lastName` properties because of their children.
-  To use `h` or `g` directly, one is required to provide the `firstName` and `lastName` properties, 
+With the example above,
+
+- `i` requires `firstName` and `lastName` properties
+- `h` and `g` implicitly gain the `firstName` and `lastName` properties because of their children.
+  To use `h` or `g` directly, one is required to provide the `firstName` and `lastName` properties,
   or gain the same implicit properties
-* `f` provides the properties
+- `f` provides the properties
 
-The end result of this proposal is that `g` and `h` are unaware of the implicit properties, and do not change if a 
+The end result of this proposal is that `g` and `h` are unaware of the implicit properties, and do not change if a
 3rd property is added to `i`. `i` itself just defines properties, there is a single API for component inputs.
-

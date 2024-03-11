@@ -30,6 +30,6 @@ const fn = await import$(async (name: string) => {
 ```
 
 ## React + Redux + Comlink = Off-main-thread
+
 https://dassur.ma/things/react-redux-comlink/
 https://www.youtube.com/watch?v=7Rrv9qFMWNM
-

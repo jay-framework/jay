@@ -1,6 +1,6 @@
 import path from 'node:path';
 import * as ts from 'typescript';
-import {isStatement, Statement, TransformerFactory} from 'typescript';
+import { isStatement, Statement, TransformerFactory } from 'typescript';
 import {
     checkValidationErrors,
     componentBridgeTransformer,
@@ -131,20 +131,20 @@ export async function printStatementWithoutChildStatements(statement: Statement)
 
     let childStatements = [];
     const visit = (node: ts.Node) => {
-        if (isStatement(node))
-            childStatements.push(node)
-        else
-            node.getChildren().forEach(child => visit(child))
-    }
-    statement.getChildren().forEach(child => visit(child))
+        if (isStatement(node)) childStatements.push(node);
+        else node.getChildren().forEach((child) => visit(child));
+    };
+    statement.getChildren().forEach((child) => visit(child));
 
     let printedChildStatements = [];
     for await (let childStatement of childStatements) {
         printedChildStatements.push((await astToFormattedCode(childStatement)).trim());
     }
 
-    printedChildStatements.forEach(printedChildStatement =>
-        printedStatement = printedStatement.replace(printedChildStatement, `/*...*/`))
+    printedChildStatements.forEach(
+        (printedChildStatement) =>
+            (printedStatement = printedStatement.replace(printedChildStatement, `/*...*/`)),
+    );
 
     return printedStatement;
 }
