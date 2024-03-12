@@ -21,6 +21,10 @@ type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & 
     patterns: CompiledPattern[];
 };
 
+function isCssImport(node) {
+    return ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text.endsWith('.css');
+}
+
 function mkComponentSecureFunctionsTransformer(
     sftContext: ComponentSecureFunctionsTransformerConfig,
 ) {
@@ -59,8 +63,12 @@ function mkComponentSecureFunctionsTransformer(
             node = transformedEventHandler[0].transformedEventHandler;
             return ts.visitEachChild(node, visitor, context);
         }
-        if (isImportDeclaration(node))
-            return transformImportModeFileExtension(node, factory, RuntimeMode.WorkerSandbox);
+        if (isImportDeclaration(node)) {
+            if (isCssImport(node))
+                return undefined;
+            else
+                return transformImportModeFileExtension(node, factory, RuntimeMode.WorkerSandbox);
+        }
         return ts.visitEachChild(node, visitor, context);
     };
     let transformedSourceFile = ts.visitEachChild(sftContext.sourceFile, visitor, context);

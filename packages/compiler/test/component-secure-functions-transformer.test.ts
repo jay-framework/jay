@@ -7,6 +7,39 @@ import {
 } from './ts-building-blocks/compiler-patterns-for-testing.ts';
 
 describe('transform event handlers with secure code split', () => {
+    describe('remove main scope imports', () => {
+        it('remove css import', async () => {
+            const code = `
+                import {JayEvent} from 'jay-runtime';
+                import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+                import { CompElementRefs, render } from './generated-element';
+                import 'bla.css';
+                
+                function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
+                    let [text, setText] = createState('');
+                    refs.input.onchange(({event}: JayEvent) => setText('hi'));
+                }
+                
+                export const Comp = makeJayComponent(render, CompComponent);`;
+
+            const outputCode = await transformCode(code, [
+                componentSecureFunctionsTransformer([]),
+            ]);
+
+            expect(outputCode).toEqual(
+                await prettify(`
+                import {JayEvent} from 'jay-runtime';
+                import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+                import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
+                function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
+                    let [text, setText] = createState('');
+                    refs.input.onchange(({event}: JayEvent) => setText('hi'));
+                }
+                export const Comp = makeJayComponent(render, CompComponent);`),
+            );
+        });
+    })
+
     describe('transform return value pattern', () => {
         const input_value_pattern = readEventTargetValuePattern();
         it('replace event.target.value for a single event handler', async () => {
