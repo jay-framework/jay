@@ -783,6 +783,10 @@ describe('NameBindingResolver', () => {
             });
         });
 
+        it(`resolve import 'b'`, () => {
+            resolveNamesForVariableStatement("import 'b'");
+        });
+
         it(`resolve import {a as c} from 'b'`, () => {
             let { nameResolver, importDeclaration, moduleSpecifier } =
                 resolveNamesForVariableStatement("import {a as c} from 'b'");

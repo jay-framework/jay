@@ -393,7 +393,7 @@ export class NameBindingResolver {
 
     addImportDeclaration(node: ts.ImportDeclaration) {
         // let root = mkImportModuleVariableRoot(node.moduleSpecifier);
-        if (node.importClause.name) {
+        if (node.importClause?.name) {
             let root = mkImportModuleVariableRoot(node.moduleSpecifier, ImportType.defaultImport);
             let variable = mkVariable({
                 name: node.importClause.name.text,
@@ -402,7 +402,7 @@ export class NameBindingResolver {
             });
             this.variables.set(node.importClause.name.text, variable);
         }
-        if (node.importClause.namedBindings) {
+        if (node.importClause?.namedBindings) {
             let root = mkImportModuleVariableRoot(node.moduleSpecifier, ImportType.namedImport);
             let namedBindings = node.importClause.namedBindings;
             if (isNamespaceImport(namedBindings)) {
