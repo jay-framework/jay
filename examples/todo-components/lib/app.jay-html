@@ -1,6 +1,6 @@
 <html>
   <head>
-    <link rel="import" href="./todo" names="TodoComponent, TodoProps"/>
+    <link rel="import" href="./todo" names="TodoComponent, TodoProps" sandbox="true" />
     <script type="application/yaml-jay">
 data:
     todoProps: TodoProps
