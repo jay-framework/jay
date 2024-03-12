@@ -1,4 +1,4 @@
-import { TodoComponent } from './todo';
+import { render } from './app.jay-html';
 import './index.css';
 
 const initialTodos = [
@@ -22,7 +22,7 @@ const initialTodos = [
 window.onload = function () {
     let target = document.getElementById('target');
 
-    let instance = TodoComponent({ initialTodos });
+    let instance = render({ todoProps: {initialTodos} });
     target.innerHTML = '';
-    target.appendChild(instance.element.dom);
+    target.appendChild(instance.dom);
 };
