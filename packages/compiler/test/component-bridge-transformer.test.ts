@@ -34,6 +34,34 @@ describe('transform component bridge', () => {
                 `),
             );
         });
+
+        it('preserve css imports', async () => {
+            const code = `
+                import { makeJayComponent, Props } from 'jay-component';
+                import { CompElementRefs, render } from './generated-element';
+                import 'bla.css';
+                
+                function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
+                    let x = 1;
+                    for (let y = 0; y < 100; y++)
+                        console.log(y + x); 
+                }
+                
+                export const Comp = makeJayComponent(render, CompComponent);`;
+
+            const outputCode = await transformCode(code, [
+                componentBridgeTransformer(RuntimeMode.MainSandbox, []),
+            ]);
+
+            expect(outputCode).toEqual(
+                await prettify(`
+                import { makeJayComponentBridge } from 'jay-secure';
+                import { render } from './generated-element?jay-mainSandbox';
+                import 'bla.css';
+                export const Comp = makeJayComponentBridge(render);
+                `),
+            );
+        });
     });
 
     describe('generate function repository', () => {

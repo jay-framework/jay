@@ -39,7 +39,7 @@ function generateComponentConstructorCalls(
 }
 
 function getRenderImportSpecifier(node: ts.ImportDeclaration): ts.ImportSpecifier | undefined {
-    const namedBindings = node.importClause.namedBindings;
+    const namedBindings = node.importClause?.namedBindings;
     switch (namedBindings?.kind) {
         case ts.SyntaxKind.NamedImports: {
             return namedBindings.elements.find((binding) => getImportName(binding) === 'render');
@@ -75,6 +75,7 @@ function transformImport(
             )[0] as ts.Statement;
         }
         if (node.moduleSpecifier.text === 'jay-runtime') return node;
+        if (node.moduleSpecifier.text.endsWith('.css') && !node.importClause) return node;
         return undefined;
     }
     return undefined;
