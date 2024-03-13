@@ -47,14 +47,14 @@ export async function readFileAndGenerateElementBridgeFile(folder: string, given
     return generateElementBridgeFile(parsedFile);
 }
 
-export async function readFileAndGenerateElementFile(folder: string, givenFile?: string) {
+export async function readFileAndGenerateElementFile(folder: string, importerMode: RuntimeMode = RuntimeMode.MainTrusted,givenFile?: string) {
     const dirname = path.resolve(__dirname, '../fixtures', folder);
     const file = givenFile || getFileFromFolder(folder);
     const jayFile = await readNamedSourceJayFile(folder, file);
     const parsedFile = checkValidationErrors(
         parseJayFile(jayFile, `${file}.jay-html`, dirname, {}),
     );
-    return generateElementFile(parsedFile, RuntimeMode.MainSandbox);
+    return generateElementFile(parsedFile, importerMode);
 }
 
 export async function readTsSourceFile(filePath: string, fileName: string) {

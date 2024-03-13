@@ -5,11 +5,11 @@ import {
     dynamicElement as de,
     forEach,
     ConstructContext,
-    childComp,
     compRef as cr,
     compCollectionRef as ccr,
     RenderElementOptions,
 } from 'jay-runtime';
+import { secureChildComp } from 'jay-secure';
 // @ts-expect-error Cannot find module
 import { TreeNodeRefs } from './tree-node-refs';
 // @ts-expect-error Cannot find module
@@ -33,13 +33,13 @@ export function render(
             const refCounterTwo = ccr('counterTwo');
             return e('div', {}, [
                 e('div', {}, [dt((vs) => vs.name)]),
-                childComp(TreeNode, (vs: Node) => vs.firstChild, cr('aR1')),
+                secureChildComp(TreeNode, (vs: Node) => vs.firstChild, cr('aR1')),
                 de('ul', {}, [
                     forEach(
                         (vs) => vs.children,
                         (vs1: Node) => {
                             return e('li', {}, [
-                                childComp(
+                                secureChildComp(
                                     TreeNode,
                                     (vs: Node) => ({
                                         name: vs.name,
@@ -56,7 +56,7 @@ export function render(
                         (vs) => vs.children,
                         (vs1: Node) => {
                             return e('li', {}, [
-                                childComp(TreeNode, (vs: Node) => vs, refCounterTwo()),
+                                secureChildComp(TreeNode, (vs: Node) => vs, refCounterTwo()),
                             ]);
                         },
                         'id',

@@ -1,9 +1,10 @@
-import { Filter, render, ShownTodo, TodoElementRefs } from './todo.jay-html';
+import { Filter, render, ShownTodo, TodoElementRefs, TodoViewState } from './todo.jay-html';
 import { createMemo, createState, makeJayComponent, Props } from 'jay-component';
 import { uuid } from './uuid';
 import { patch } from 'jay-json-patch';
 import { ADD, REPLACE } from 'jay-json-patch';
 import './todo.css';
+import {JayEvent} from "jay-runtime";
 
 const ENTER_KEY = 13;
 
@@ -47,42 +48,35 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     refs.filterCompleted.onclick(() => setFilter(Filter.completed));
     refs.filterAll.onclick(() => setFilter(Filter.all));
 
-    refs.newTodo
-        .onkeydown$(({ event }) => {
-            event.keyCode === ENTER_KEY ? event.preventDefault() : '';
-            return event.keyCode;
-        })
-        .then(({ event: keyCode }) => {
-            if (keyCode !== ENTER_KEY) return;
+    refs.newTodo.onkeydown(({ event }: JayEvent<KeyboardEvent, TodoViewState>) => {
+            if (event.keyCode === ENTER_KEY) {
+                event.preventDefault()
+                let newValue = newTodo();
+                let val = newValue.trim();
 
-            let newValue = newTodo();
-            let val = newValue.trim();
-
-            if (val) {
-                setTodos(
-                    patch(todos(), [
-                        {
-                            op: ADD,
-                            path: [todos().length],
-                            value: {
-                                id: uuid(),
-                                title: val,
-                                isEditing: false,
-                                editText: '',
-                                isCompleted: false,
+                if (val) {
+                    setTodos(
+                        patch(todos(), [
+                            {
+                                op: ADD,
+                                path: [todos().length],
+                                value: {
+                                    id: uuid(),
+                                    title: val,
+                                    isEditing: false,
+                                    editText: '',
+                                    isCompleted: false,
+                                },
                             },
-                        },
-                    ]),
-                );
+                        ]),
+                    );
+                }
+                setNewTodo('');
             }
-            setNewTodo('');
         });
 
-    refs.newTodo
-        .oninput$(({ event }) => (event.target as HTMLInputElement).value)
-        .then(({ event: value }) => {
-            setNewTodo(value);
-        });
+    refs.newTodo.oninput(({ event }: JayEvent<Event, TodoViewState>) =>
+        setNewTodo((event.target as HTMLInputElement).value));
 
     refs.clearCompleted.onclick((event) => {
         setTodos(
@@ -122,11 +116,9 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
         setTodos(todos().filter((_) => _ !== item));
     });
 
-    refs.toggleAll
-        .onchange$(({ event }) => (event.target as HTMLInputElement).checked)
-        .then(({ event: completed }) => {
-            setTodos(todos().map((todo) => ({ ...todo, isCompleted: completed })));
-        });
+    refs.toggleAll.onchange(({ event }: JayEvent<Event, TodoViewState>) =>
+            setTodos(todos().map((todo) =>
+                ({ ...todo, isCompleted: (event.target as HTMLInputElement).checked }))));
 
     return {
         render: () => ({

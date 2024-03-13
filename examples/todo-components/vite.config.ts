@@ -4,9 +4,11 @@ import { defineConfig } from 'vitest/config';
 import { JayRollupConfig, jayRuntime } from 'vite-plugin-jay';
 
 const root = resolve(__dirname);
+const compilerPatternFiles = ['./patterns/events.ts'];
 const jayOptions: JayRollupConfig = {
     tsConfigFilePath: resolve(root, 'tsconfig.json'),
     outputDir: 'build/jay-runtime',
+    compilerPatternFiles
 };
 
 export default defineConfig(({ mode }) => {

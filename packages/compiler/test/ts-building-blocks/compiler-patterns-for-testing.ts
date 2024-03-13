@@ -15,7 +15,7 @@ export function readEventKeyCodePattern() {
     return compileFunctionSplitPatternsBlock([
         createTsSourceFile(`
     import {JayEvent} from 'jay-runtime';
-    function inputValuePattern({event}: JayEvent<any, any>): number {
+    function eventKeyCode({event}: JayEvent<any, any>): number {
         return event.keyCode;
     }`),
     ]).val;
