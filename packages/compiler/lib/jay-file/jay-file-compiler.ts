@@ -27,7 +27,7 @@ import {
     JayType,
     JayTypeAlias,
     JayUnknown,
-} from '../core/jay-file-types';
+} from '../core/jay-type';
 import { getModeFileExtension, MainRuntimeModes, RuntimeMode } from '../core/runtime-mode';
 import { JayImportLink } from '../core/jay-imports';
 import { JayHtmlFile } from '../core/jay-file';
