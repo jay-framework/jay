@@ -90,7 +90,7 @@ describe('split event handler by pattern', () => {
             ).toEqual(await prettify(`({ event }: JayEvent) => ({$0: event.target.value})`));
         });
 
-        it.skip('should support variable', async () => {
+        it('should not support partial pattern matching assignment, which creates invalid code', async () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
                 function bla({event}: JayEvent) {
@@ -104,7 +104,7 @@ describe('split event handler by pattern', () => {
                 await prettify(`
                 import {JayEvent} from 'jay-runtime';
                 function bla({event}: JayEvent) {
-                    let target = event.target as HTMLInputElement; ??? 
+                    let target = event.target as HTMLInputElement; 
                     setText(event.$0) 
                 }`),
             );
