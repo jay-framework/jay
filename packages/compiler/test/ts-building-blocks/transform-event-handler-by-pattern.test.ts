@@ -312,6 +312,38 @@ describe('split event handler by pattern', () => {
             );
         });
 
+        it('should support reading the same value multiple times, with one function repository variable', async () => {
+            const inputEventHandler = `
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    setState1(event.target.value);
+                    setState2(event.target.value);
+                }`;
+            const { transformer, splitEventHandlers } = testTransformer([
+                ...READ_EVENT_TARGET_VALUE,
+                ...stringReplacePattern(),
+                ...setEventTargetValuePattern(),
+            ]);
+            let transformed = await transformCode(inputEventHandler, [transformer]);
+
+            expect(transformed).toEqual(
+                await prettify(`
+                import {JayEvent} from 'jay-runtime';
+                ({event}: JayEvent) => {
+                    setState1(event.$0);
+                    setState2(event.$0);
+                }
+                `),
+            );
+            expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
+            expect(
+                await prettify(splitEventHandlers[0].functionRepositoryFragment.handlerCode),
+            ).toEqual(
+                await prettify(`
+                ({ event }: JayEvent) => ({ $0: event.target.value });`),
+            );
+        });
+
         it('support if statement', async () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
