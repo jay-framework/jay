@@ -1,7 +1,7 @@
 import { JayElement, RenderElementOptions } from 'jay-runtime';
 import { CounterRef } from '../counter/counter-refs';
 import { Counter } from '../counter/counter';
-import { CounterViewState as CounterData } from '../counter/generated-element';
+import { CounterViewState as CounterData } from '../counter/generated-element-main-trusted';
 
 export interface ComponentInComponentViewState {
     count1: number;

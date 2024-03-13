@@ -304,7 +304,7 @@ describe('SourceFileStatementAnalyzer', () => {
             );
             expect(await printAnalyzedExpressions(analyzedFile)).toEqual(
                 new Set([
-                    '0: event.keyCode; matches inputValuePattern',
+                    '0: event.keyCode; matches eventKeyCode',
                     '1: event.preventDefault(); matches eventPreventDefault',
                 ]),
             );
