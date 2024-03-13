@@ -1,6 +1,7 @@
 import * as prettier from 'prettier';
+import { html as htmlBeautify } from 'js-beautify';
 
-export async function prettify(code: string): Promise<string> {
+export async function prettify(code: string, options: prettier.Options = {}): Promise<string> {
     // same format as global .prettierrc
     try {
         return await prettier.format(code, {
@@ -8,6 +9,7 @@ export async function prettify(code: string): Promise<string> {
             singleQuote: true,
             tabWidth: 4,
             parser: 'typescript',
+            ...options,
         });
         // .split("\n")
         // .filter(line => line.trim())  // Remove empty lines
@@ -18,6 +20,19 @@ original error: ${error.message}
 code:
 ${code}`);
     }
+}
+
+export function prettifyHtml(html: string): string {
+    return htmlBeautify(
+        html
+            .split('\n')
+            .map((line) => line.trim())
+            .join(''),
+        {
+            indent_size: 2,
+            wrap_line_length: 100,
+        },
+    );
 }
 
 export function removeComments(code: string): string {

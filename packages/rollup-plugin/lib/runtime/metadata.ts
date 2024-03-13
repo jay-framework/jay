@@ -1,9 +1,5 @@
 import { CustomPluginOptions, PluginContext } from 'rollup';
-
-export enum JayFormat {
-    JayHtml = 'jay-html',
-    TypeScript = 'typeScript',
-}
+import { JayFormat } from 'jay-compiler';
 
 export interface JayMetadata {
     originId?: string;

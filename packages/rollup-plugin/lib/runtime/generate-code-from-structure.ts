@@ -11,11 +11,13 @@ import {
     generateSandboxRootFile,
     getModeFromExtension,
     JayFile,
+    JayFormat,
+    JayHtmlFile,
     RuntimeMode,
 } from 'jay-compiler';
 import { PluginContext } from 'rollup';
 import { JayPluginContext } from './jay-plugin-context';
-import { JayFormat, JayMetadata } from './metadata';
+import { JayMetadata } from './metadata';
 import { writeGeneratedFile } from '../common/files';
 
 export async function generateCodeFromStructure(
@@ -30,14 +32,14 @@ export async function generateCodeFromStructure(
     const mode = getModeFromExtension(id);
     const tsCode =
         format === JayFormat.JayHtml
-            ? generateCodeFromJayHtmlFile(mode, jayFile)
+            ? generateCodeFromJayHtmlFile(mode, jayFile as JayHtmlFile)
             : generateCodeFromTsFile(jayContext, mode, jayFile, id, code);
     await writeGeneratedFile(jayContext, context, id, tsCode);
 
     return tsCode;
 }
 
-export function generateCodeFromJayHtmlFile(mode: RuntimeMode, jayFile: JayFile): string {
+export function generateCodeFromJayHtmlFile(mode: RuntimeMode, jayFile: JayHtmlFile): string {
     switch (mode) {
         case RuntimeMode.MainTrusted:
         case RuntimeMode.MainSandbox:

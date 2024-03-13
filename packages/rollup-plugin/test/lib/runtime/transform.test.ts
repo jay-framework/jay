@@ -5,6 +5,7 @@ import {
     JAY_QUERY_MAIN_SANDBOX,
     JAY_QUERY_WORKER_TRUSTED_TS,
     JayAtomicType,
+    JayFormat,
     JayObjectType,
     JayUnknown,
     prettify,
@@ -12,7 +13,7 @@ import {
 } from 'jay-compiler';
 import { JayPluginContext } from '../../../lib';
 import { readTestFile } from '../../test-utils/file-utils';
-import { JayFormat, JayMetadata } from '../../../lib/runtime/metadata';
+import { JayMetadata } from '../../../lib/runtime/metadata';
 import { transformJayFile } from '../../../lib/runtime/transform';
 import { getJayFileStructure } from '../../../lib/runtime/get-jay-file-structure';
 import { removeComments } from '../../../../compiler/lib/utils/prettify';
@@ -80,10 +81,8 @@ describe('transformJayFile', () => {
 
             expect(await prettified(result)).toEqual(code);
             expect(jayContext.getCachedJayFile(id)).toEqual({
+                format: JayFormat.TypeScript,
                 baseElementName: 'Counter',
-                types: JayUnknown,
-                examples: [],
-                body: undefined,
                 imports: [
                     {
                         module: './counter.jay-html',

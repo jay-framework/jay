@@ -1,6 +1,6 @@
 import { JayValidations } from './with-validations';
 import { Imports } from './imports';
-import { JayType } from './jay-file-types';
+import { JayType } from './jay-type';
 
 export interface Ref {
     ref: string;
