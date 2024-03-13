@@ -4,7 +4,7 @@ import { uuid } from './uuid';
 import { patch } from 'jay-json-patch';
 import { ADD, REPLACE } from 'jay-json-patch';
 import './todo.css';
-import {JayEvent} from "jay-runtime";
+import { JayEvent } from 'jay-runtime';
 
 const ENTER_KEY = 13;
 
@@ -49,34 +49,35 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     refs.filterAll.onclick(() => setFilter(Filter.all));
 
     refs.newTodo.onkeydown(({ event }: JayEvent<KeyboardEvent, TodoViewState>) => {
-            if (event.keyCode === ENTER_KEY) {
-                event.preventDefault()
-                let newValue = newTodo();
-                let val = newValue.trim();
+        if (event.keyCode === ENTER_KEY) {
+            event.preventDefault();
+            let newValue = newTodo();
+            let val = newValue.trim();
 
-                if (val) {
-                    setTodos(
-                        patch(todos(), [
-                            {
-                                op: ADD,
-                                path: [todos().length],
-                                value: {
-                                    id: uuid(),
-                                    title: val,
-                                    isEditing: false,
-                                    editText: '',
-                                    isCompleted: false,
-                                },
+            if (val) {
+                setTodos(
+                    patch(todos(), [
+                        {
+                            op: ADD,
+                            path: [todos().length],
+                            value: {
+                                id: uuid(),
+                                title: val,
+                                isEditing: false,
+                                editText: '',
+                                isCompleted: false,
                             },
-                        ]),
-                    );
-                }
-                setNewTodo('');
+                        },
+                    ]),
+                );
             }
-        });
+            setNewTodo('');
+        }
+    });
 
     refs.newTodo.oninput(({ event }: JayEvent<Event, TodoViewState>) =>
-        setNewTodo((event.target as HTMLInputElement).value));
+        setNewTodo((event.target as HTMLInputElement).value),
+    );
 
     refs.clearCompleted.onclick((event) => {
         setTodos(
@@ -117,8 +118,13 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     });
 
     refs.toggleAll.onchange(({ event }: JayEvent<Event, TodoViewState>) =>
-            setTodos(todos().map((todo) =>
-                ({ ...todo, isCompleted: (event.target as HTMLInputElement).checked }))));
+        setTodos(
+            todos().map((todo) => ({
+                ...todo,
+                isCompleted: (event.target as HTMLInputElement).checked,
+            })),
+        ),
+    );
 
     return {
         render: () => ({

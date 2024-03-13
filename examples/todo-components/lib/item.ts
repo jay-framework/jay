@@ -1,6 +1,6 @@
 import { render, ItemElementRefs, ItemViewState } from './item.jay-html';
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
-import {JayEvent} from "jay-runtime";
+import { JayEvent } from 'jay-runtime';
 
 interface ItemProps {
     title: string;
@@ -36,15 +36,16 @@ function ItemConstructor({ title, isCompleted }: Props<ItemProps>, refs: ItemEle
     refs.button.onclick(() => onRemove.emit(null));
     refs.title.onblur(() => handleSubmit());
     refs.title.onchange(({ event }: JayEvent<Event, ItemViewState>) =>
-        setEditText((event.target as HTMLInputElement).value));
+        setEditText((event.target as HTMLInputElement).value),
+    );
     refs.title.onkeydown(({ event, viewState: todo }: JayEvent<KeyboardEvent, ItemViewState>) => {
-            if (event.which === ESCAPE_KEY) {
-                todo.editText = todo.title;
-                todo.isEditing = false;
-            } else if (event.which === ENTER_KEY) {
-                handleSubmit();
-            }
-        });
+        if (event.which === ESCAPE_KEY) {
+            todo.editText = todo.title;
+            todo.isEditing = false;
+        } else if (event.which === ENTER_KEY) {
+            handleSubmit();
+        }
+    });
 
     return {
         render: () => ({ title, isCompleted, isEditing, editText }),

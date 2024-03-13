@@ -3,7 +3,7 @@ import {
     CompilePatternType,
     JayTargetEnv,
 } from '../../lib/ts-file/building-blocks/compile-function-split-patterns';
-import { createTsSourceFile } from '../test-utils/ts-source-utils.ts';
+import { createTsSourceFile } from '../test-utils/ts-source-utils';
 
 describe('compile secure function split patterns', () => {
     it('should compile a return pattern', () => {

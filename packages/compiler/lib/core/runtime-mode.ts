@@ -1,4 +1,4 @@
-import {Runtime} from "node:inspector";
+import { Runtime } from 'node:inspector';
 
 export enum RuntimeMode {
     MainTrusted = 'mainTrusted',
@@ -7,7 +7,7 @@ export enum RuntimeMode {
     WorkerSandbox = 'workerSandbox',
 }
 
-export type MainRuntimeModes = RuntimeMode.MainSandbox | RuntimeMode.MainTrusted
+export type MainRuntimeModes = RuntimeMode.MainSandbox | RuntimeMode.MainTrusted;
 
 export const TS_EXTENSION = '.ts';
 export const JAY_QUERY_PREFIX = '?jay-';

@@ -14,8 +14,8 @@ import {
 import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
 import { codeToAst } from './ts-compiler-utils';
 import { findMakeJayComponentConstructorCallsBlock } from './building-blocks/find-make-jay-component-constructor-calls';
-import { SourceFileBindingResolver } from './building-blocks/source-file-binding-resolver.ts';
-import { SourceFileStatementAnalyzer } from './building-blocks/source-file-statement-analyzer.ts';
+import { SourceFileBindingResolver } from './building-blocks/source-file-binding-resolver';
+import { SourceFileStatementAnalyzer } from './building-blocks/source-file-statement-analyzer';
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: CompiledPattern[];
@@ -64,10 +64,8 @@ function mkComponentSecureFunctionsTransformer(
             return ts.visitEachChild(node, visitor, context);
         }
         if (isImportDeclaration(node)) {
-            if (isCssImport(node))
-                return undefined;
-            else
-                return transformImportModeFileExtension(node, factory, RuntimeMode.WorkerSandbox);
+            if (isCssImport(node)) return undefined;
+            else return transformImportModeFileExtension(node, factory, RuntimeMode.WorkerSandbox);
         }
         return ts.visitEachChild(node, visitor, context);
     };

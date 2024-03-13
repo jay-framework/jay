@@ -4,7 +4,7 @@ import { prettify } from '../lib';
 import {
     eventPreventDefaultPattern,
     readEventTargetValuePattern,
-} from './ts-building-blocks/compiler-patterns-for-testing.ts';
+} from './ts-building-blocks/compiler-patterns-for-testing';
 
 describe('transform event handlers with secure code split', () => {
     describe('remove main scope imports', () => {
@@ -22,9 +22,7 @@ describe('transform event handlers with secure code split', () => {
                 
                 export const Comp = makeJayComponent(render, CompComponent);`;
 
-            const outputCode = await transformCode(code, [
-                componentSecureFunctionsTransformer([]),
-            ]);
+            const outputCode = await transformCode(code, [componentSecureFunctionsTransformer([])]);
 
             expect(outputCode).toEqual(
                 await prettify(`
@@ -38,7 +36,7 @@ describe('transform event handlers with secure code split', () => {
                 export const Comp = makeJayComponent(render, CompComponent);`),
             );
         });
-    })
+    });
 
     describe('transform return value pattern', () => {
         const input_value_pattern = readEventTargetValuePattern();

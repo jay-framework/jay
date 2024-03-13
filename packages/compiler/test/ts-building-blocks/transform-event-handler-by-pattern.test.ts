@@ -13,9 +13,9 @@ import {
     readEventTargetValuePattern,
     setEventTargetValuePattern,
     stringReplacePattern,
-} from './compiler-patterns-for-testing.ts';
-import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver.ts';
-import { SourceFileStatementAnalyzer } from '../../lib/ts-file/building-blocks/source-file-statement-analyzer.ts';
+} from './compiler-patterns-for-testing';
+import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver';
+import { SourceFileStatementAnalyzer } from '../../lib/ts-file/building-blocks/source-file-statement-analyzer';
 
 describe('split event handler by pattern', () => {
     const READ_EVENT_TARGET_VALUE = readEventTargetValuePattern();

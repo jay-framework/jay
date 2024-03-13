@@ -1,5 +1,5 @@
 import ts, { isIdentifier, isStatement, SourceFile, Statement } from 'typescript';
-import { SourceFileBindingResolver } from './source-file-binding-resolver.ts';
+import { SourceFileBindingResolver } from './source-file-binding-resolver';
 
 export interface StatementDependencies {
     id: number;

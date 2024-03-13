@@ -21,7 +21,7 @@ import ts, {
     SourceFile,
     Statement,
 } from 'typescript';
-import { SourceFileBindingResolver } from './source-file-binding-resolver.ts';
+import { SourceFileBindingResolver } from './source-file-binding-resolver';
 import {
     CompiledPattern,
     CompilePatternType,
@@ -29,15 +29,15 @@ import {
     intersectJayTargetEnv,
     JayTargetEnv,
     KNOWN_VARIABLE_READ_NAME,
-} from './compile-function-split-patterns.ts';
+} from './compile-function-split-patterns';
 import {
     flattenVariable,
     isFunctionCallVariableRoot,
     isLiteralVariableRoot,
     isParamVariableRoot,
     LetOrConst,
-} from './name-binding-resolver.ts';
-import { ContextualVisitChild, visitWithContext } from '../visitor-with-context.ts';
+} from './name-binding-resolver';
+import { ContextualVisitChild, visitWithContext } from '../visitor-with-context';
 
 export interface MatchedPattern {
     patterns: CompiledPattern[];

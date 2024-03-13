@@ -1,4 +1,4 @@
-import { createTsSourceFile } from '../test-utils/ts-source-utils.ts';
+import { createTsSourceFile } from '../test-utils/ts-source-utils';
 import {
     ArrowFunction,
     BinaryExpression,
@@ -19,8 +19,8 @@ import {
     mkOtherVariableRoot,
     mkParameterVariableRoot,
     UNKNOWN_VARIABLE,
-} from '../../lib/ts-file/building-blocks/name-binding-resolver.ts';
-import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver.ts';
+} from '../../lib/ts-file/building-blocks/name-binding-resolver';
+import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver';
 
 describe('SourceFileBindingResolver', () => {
     describe('resolve variables', () => {

@@ -1,18 +1,18 @@
-import { createTsSourceFile } from '../test-utils/ts-source-utils.ts';
+import { createTsSourceFile } from '../test-utils/ts-source-utils';
 import {
     JayTargetEnv,
     jayTargetEnvName,
-} from '../../lib/ts-file/building-blocks/compile-function-split-patterns.ts';
+} from '../../lib/ts-file/building-blocks/compile-function-split-patterns';
 import {
     MatchedPattern,
     SourceFileStatementAnalyzer,
-} from '../../lib/ts-file/building-blocks/source-file-statement-analyzer.ts';
-import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver.ts';
+} from '../../lib/ts-file/building-blocks/source-file-statement-analyzer';
+import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver';
 import { ArrowFunction, Block, CallExpression, ExpressionStatement } from 'typescript';
 import {
     astToFormattedCode,
     printStatementWithoutChildStatements,
-} from '../test-utils/ts-compiler-test-utils.ts';
+} from '../test-utils/ts-compiler-test-utils';
 import {
     eventPreventDefaultPattern,
     readEventKeyCodePattern,
@@ -20,7 +20,7 @@ import {
     setEventTargetValuePattern,
     stringLengthPattern,
     stringReplacePattern,
-} from './compiler-patterns-for-testing.ts';
+} from './compiler-patterns-for-testing';
 
 describe('SourceFileStatementAnalyzer', () => {
     describe('analyze read patterns', () => {

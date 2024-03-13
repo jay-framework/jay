@@ -1,4 +1,4 @@
-import { CounterElementRefs, render as BasicRender } from './generated-element';
+import { CounterElementRefs, render as BasicRender } from './generated-element-main-trusted';
 import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
 
 export interface CounterProps {

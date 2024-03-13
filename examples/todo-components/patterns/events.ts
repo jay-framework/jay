@@ -8,14 +8,14 @@ function inputCheckedPattern({ event }: JayEvent<any, any>) {
     return event.target.checked;
 }
 
-function eventKeyCode({event}: JayEvent<any, any>): number {
+function eventKeyCode({ event }: JayEvent<any, any>): number {
     return event.keyCode;
 }
 
-function eventWhich({event}: JayEvent<any, any>): number {
+function eventWhich({ event }: JayEvent<any, any>): number {
     return event.which;
 }
 
-function eventPreventDefault({event}: JayEvent<any, any>) {
+function eventPreventDefault({ event }: JayEvent<any, any>) {
     event.preventDefault();
 }

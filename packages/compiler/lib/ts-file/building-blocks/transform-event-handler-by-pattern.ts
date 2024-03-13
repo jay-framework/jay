@@ -16,10 +16,10 @@ import {
     JayTargetEnv,
 } from './compile-function-split-patterns';
 import { astToCode, codeToAst } from '../ts-compiler-utils';
-import { SourceFileBindingResolver } from './source-file-binding-resolver.ts';
-import { SourceFileStatementAnalyzer } from './source-file-statement-analyzer.ts';
-import { ContextualVisitor2, visitWithContext2 } from '../visitor-with-context.ts';
-import { flattenVariable, LiteralVariableRoot } from './name-binding-resolver.ts';
+import { SourceFileBindingResolver } from './source-file-binding-resolver';
+import { SourceFileStatementAnalyzer } from './source-file-statement-analyzer';
+import { ContextualVisitor2, visitWithContext2 } from '../visitor-with-context';
+import { flattenVariable, LiteralVariableRoot } from './name-binding-resolver';
 
 interface MatchedPattern {
     pattern: CompiledPattern;

@@ -1,7 +1,7 @@
-import {WithValidations} from '../core/with-validations';
-import {HTMLElement, NodeType} from 'node-html-parser';
+import { WithValidations } from '../core/with-validations';
+import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
-import {Ref, RenderFragment} from '../core/render-fragment';
+import { Ref, RenderFragment } from '../core/render-fragment';
 import {
     parseAccessor,
     parseAttributeExpression,
@@ -13,9 +13,9 @@ import {
     parseTextExpression,
     Variables,
 } from '../expressions/expression-compiler';
-import {htmlElementTagNameMap} from './html-element-tag-name-map';
-import {camelCase} from 'camel-case';
-import {Import, Imports, ImportsFor} from '../core/imports';
+import { htmlElementTagNameMap } from './html-element-tag-name-map';
+import { camelCase } from 'camel-case';
+import { Import, Imports, ImportsFor } from '../core/imports';
 import {
     JayArrayType,
     JayAtomicType,
@@ -30,7 +30,7 @@ import {
     JayTypeAlias,
     JayUnknown,
 } from '../core/jay-file-types';
-import {getModeFileExtension, MainRuntimeModes, RuntimeMode} from '../core/runtime-mode';
+import { getModeFileExtension, MainRuntimeModes, RuntimeMode } from '../core/runtime-mode';
 
 class Indent {
     private readonly base: string;
@@ -89,7 +89,7 @@ interface RenderContext {
     dynamicRef: boolean;
     importedSandboxedSymbols: Set<string>;
     nextAutoRefName: () => string;
-    importerMode: RuntimeMode
+    importerMode: RuntimeMode;
 }
 
 function renderInterface(aType: JayType): string {
@@ -374,7 +374,8 @@ function renderChildCompRef(
 }
 
 function renderNode(node: Node, context: RenderContext): RenderFragment {
-    let { variables, importedSymbols, importedSandboxedSymbols, indent, dynamicRef, importerMode } = context;
+    let { variables, importedSymbols, importedSandboxedSymbols, indent, dynamicRef, importerMode } =
+        context;
 
     function de(
         tagName: string,
@@ -493,7 +494,10 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
         });
         if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
         let getProps = `(vs: ${newVariables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
-        if (importedSandboxedSymbols.has(htmlElement.rawTagName) || importerMode === RuntimeMode.MainSandbox)
+        if (
+            importedSandboxedSymbols.has(htmlElement.rawTagName) ||
+            importerMode === RuntimeMode.MainSandbox
+        )
             return new RenderFragment(
                 `${currIndent.firstLine}secureChildComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
                 Imports.for(Import.secureChildComp)
@@ -625,12 +629,13 @@ function renderFunctionImplementation(
     rootBodyElement: HTMLElement,
     importStatements: JayImportLink[],
     baseElementName: string,
-    importerMode: RuntimeMode): {
+    importerMode: RuntimeMode,
+): {
     renderedRefs: string;
     renderedElement: string;
     elementType: string;
     renderedImplementation: RenderFragment;
-    refImportsInUse: Set<string>
+    refImportsInUse: Set<string>;
 } {
     let variables = new Variables(types);
     let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(importStatements);
@@ -823,7 +828,7 @@ function renderBridge(
         dynamicRef: false,
         importedSandboxedSymbols,
         nextAutoRefName: newAutoRefNameGenerator(),
-        importerMode: RuntimeMode.WorkerSandbox
+        importerMode: RuntimeMode.WorkerSandbox,
     });
     let refsPart =
         renderedBridge.rendered.length > 0
@@ -871,7 +876,7 @@ function renderSandboxRoot(
         dynamicRef: false,
         importedSandboxedSymbols,
         nextAutoRefName: newAutoRefNameGenerator(),
-        importerMode: RuntimeMode.WorkerSandbox
+        importerMode: RuntimeMode.WorkerSandbox,
     });
     let refsPart =
         renderedBridge.rendered.length > 0
@@ -913,7 +918,13 @@ export function generateElementDefinitionFile(
             elementType,
             renderedImplementation,
             refImportsInUse,
-        } = renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, jayFile.baseElementName, RuntimeMode.WorkerTrusted);
+        } = renderFunctionImplementation(
+            jayFile.types,
+            jayFile.body,
+            jayFile.imports,
+            jayFile.baseElementName,
+            RuntimeMode.WorkerTrusted,
+        );
         return [
             renderImports(
                 renderedImplementation.imports.plus(Import.jayElement),
@@ -943,7 +954,7 @@ export function generateElementFile(
             jayFile.body,
             jayFile.imports,
             jayFile.baseElementName,
-            importerMode
+            importerMode,
         );
     let renderedFile = [
         renderImports(
@@ -966,7 +977,13 @@ export function generateElementFile(
 export function generateElementBridgeFile(jayFile: JayFile): string {
     let types = generateTypes(jayFile.types);
     let { renderedRefs, renderedElement, elementType, renderedImplementation, refImportsInUse } =
-        renderFunctionImplementation(jayFile.types, jayFile.body, jayFile.imports, jayFile.baseElementName, RuntimeMode.WorkerSandbox);
+        renderFunctionImplementation(
+            jayFile.types,
+            jayFile.body,
+            jayFile.imports,
+            jayFile.baseElementName,
+            RuntimeMode.WorkerSandbox,
+        );
     let renderedBridge = renderBridge(jayFile.types, jayFile.body, jayFile.imports, elementType);
     return [
         renderImports(

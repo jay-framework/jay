@@ -1,10 +1,10 @@
-import { createTsSourceFile } from '../test-utils/ts-source-utils.ts';
+import { createTsSourceFile } from '../test-utils/ts-source-utils';
 import {
     astToFormattedCode,
     printStatementWithoutChildStatements,
-} from '../test-utils/ts-compiler-test-utils.ts';
-import { SourceFileStatementDependencies } from '../../lib/ts-file/building-blocks/source-file-statement-dependencies.ts';
-import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver.ts';
+} from '../test-utils/ts-compiler-test-utils';
+import { SourceFileStatementDependencies } from '../../lib/ts-file/building-blocks/source-file-statement-dependencies';
+import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver';
 import { prettify } from '../../lib';
 
 interface PrintedStatement {

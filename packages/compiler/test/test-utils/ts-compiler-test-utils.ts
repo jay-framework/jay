@@ -9,6 +9,7 @@ import {
     generateImportsFileFromJayFile,
     generateImportsFileFromTsSource,
     JayFile,
+    MainRuntimeModes,
     parseJayFile,
     prettify,
     RuntimeMode,
@@ -47,7 +48,11 @@ export async function readFileAndGenerateElementBridgeFile(folder: string, given
     return generateElementBridgeFile(parsedFile);
 }
 
-export async function readFileAndGenerateElementFile(folder: string, importerMode: RuntimeMode = RuntimeMode.MainTrusted,givenFile?: string) {
+export async function readFileAndGenerateElementFile(
+    folder: string,
+    importerMode: MainRuntimeModes = RuntimeMode.MainTrusted,
+    givenFile?: string,
+) {
     const dirname = path.resolve(__dirname, '../fixtures', folder);
     const file = givenFile || getFileFromFolder(folder);
     const jayFile = await readNamedSourceJayFile(folder, file);

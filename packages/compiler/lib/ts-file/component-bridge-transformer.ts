@@ -19,8 +19,8 @@ import {
     findMakeJayComponentConstructorCallsBlock,
     MakeJayComponentConstructorCalls,
 } from './building-blocks/find-make-jay-component-constructor-calls';
-import { SourceFileBindingResolver } from './building-blocks/source-file-binding-resolver.ts';
-import { SourceFileStatementAnalyzer } from './building-blocks/source-file-statement-analyzer.ts';
+import { SourceFileBindingResolver } from './building-blocks/source-file-binding-resolver';
+import { SourceFileStatementAnalyzer } from './building-blocks/source-file-statement-analyzer';
 
 function generateComponentConstructorCalls(
     context: ts.TransformationContext,

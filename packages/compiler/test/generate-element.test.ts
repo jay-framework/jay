@@ -1,6 +1,6 @@
-import {prettify, RuntimeMode} from '../lib';
-import {readGeneratedElementFile, readGeneratedNamedFile} from './test-utils/file-utils';
-import {readFileAndGenerateElementFile} from './test-utils/ts-compiler-test-utils';
+import { prettify, RuntimeMode } from '../lib';
+import { readGeneratedElementFile, readGeneratedNamedFile } from './test-utils/file-utils';
+import { readFileAndGenerateElementFile } from './test-utils/ts-compiler-test-utils';
 
 describe('generate the runtime file', () => {
     describe('basics', () => {
@@ -122,51 +122,66 @@ describe('generate the runtime file', () => {
     });
 
     describe('components', () => {
-
         describe('for main trusted environment (running in main window, component is not sandboxed)', () => {
             const importerMode: RuntimeMode = RuntimeMode.MainTrusted;
             it('for simple refs', async () => {
                 const folder = 'components/counter';
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(await readGeneratedNamedFile(folder, 'generated-element-main-trusted'));
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readGeneratedNamedFile(folder, 'generated-element-main-trusted'),
+                );
             });
 
             it('nesting components in other components', async () => {
                 const folder = 'components/component-in-component';
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(await readGeneratedNamedFile(folder, 'generated-element-main-trusted'));
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readGeneratedNamedFile(folder, 'generated-element-main-trusted'),
+                );
             });
 
             it('dynamic nesting components in other components', async () => {
                 const folder = 'components/dynamic-component-in-component';
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(await readGeneratedNamedFile(folder, 'generated-element-main-trusted'));
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readGeneratedNamedFile(folder, 'generated-element-main-trusted'),
+                );
             });
 
             it('recursive-components', async () => {
                 const folder = 'components/recursive-components';
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(await readGeneratedNamedFile(folder, 'generated-element-main-trusted'));
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readGeneratedNamedFile(folder, 'generated-element-main-trusted'),
+                );
             });
 
             it('recursive-components-2', async () => {
                 const folder = 'components/recursive-components-2';
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(await readGeneratedNamedFile(folder, 'generated-element-main-trusted'));
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readGeneratedNamedFile(folder, 'generated-element-main-trusted'),
+                );
             });
 
             it('tree', async () => {
                 const folder = 'components/tree';
-                const elementFile = await readFileAndGenerateElementFile(folder, importerMode,'tree-node');
+                const elementFile = await readFileAndGenerateElementFile(
+                    folder,
+                    importerMode,
+                    'tree-node',
+                );
                 expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(await readGeneratedNamedFile(folder, 'generated-element-main-trusted'));
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readGeneratedNamedFile(folder, 'generated-element-main-trusted'),
+                );
             });
-        })
+        });
 
         describe('for main sandboxed environment (running in main window, component is sandboxed)', () => {
             const importerMode: RuntimeMode = RuntimeMode.MainSandbox;
@@ -174,43 +189,59 @@ describe('generate the runtime file', () => {
                 const folder = 'components/counter';
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'));
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'),
+                );
             });
 
             it('nesting components in other components', async () => {
                 const folder = 'components/component-in-component';
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'));
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'),
+                );
             });
 
             it('dynamic nesting components in other components', async () => {
                 const folder = 'components/dynamic-component-in-component';
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'));
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'),
+                );
             });
 
             it('recursive-components', async () => {
                 const folder = 'components/recursive-components';
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'));
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'),
+                );
             });
 
             it('recursive-components-2', async () => {
                 const folder = 'components/recursive-components-2';
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'));
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'),
+                );
             });
 
             it('tree', async () => {
                 const folder = 'components/tree';
-                const elementFile = await readFileAndGenerateElementFile(folder, importerMode,'tree-node');
+                const elementFile = await readFileAndGenerateElementFile(
+                    folder,
+                    importerMode,
+                    'tree-node',
+                );
                 expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'));
+                expect(await prettify(elementFile.val)).toEqual(
+                    await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'),
+                );
             });
-        })
+        });
     });
 });
