@@ -1,4 +1,4 @@
-import { render, TreeNodeElementRefs } from './generated-element';
+import { render, TreeNodeElementRefs } from './generated-element-main-trusted';
 import { createState, createMemo, makeJayComponent, Props } from 'jay-component';
 
 export interface Node {

@@ -5,11 +5,11 @@ import {
     dynamicElement as de,
     forEach,
     ConstructContext,
-    childComp,
     compRef as cr,
     compCollectionRef as ccr,
     RenderElementOptions,
 } from 'jay-runtime';
+import { secureChildComp } from 'jay-secure';
 import { CounterRef, CounterRefs } from '../counter/counter-refs';
 // @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-mainSandbox';
@@ -47,7 +47,7 @@ export function render(
                 forEach(
                     (vs) => vs.nestedCounters,
                     (vs1: NestedCounter) => {
-                        return childComp(
+                        return secureChildComp(
                             Counter,
                             (vs: NestedCounter) => ({ initialValue: vs.counter }),
                             refCounter1(),
@@ -57,7 +57,7 @@ export function render(
                 ),
                 c(
                     (vs) => vs.condition,
-                    childComp(
+                    secureChildComp(
                         Counter,
                         (vs: DynamicComponentInComponentViewState) => ({ initialValue: vs.count1 }),
                         cr('counter2'),

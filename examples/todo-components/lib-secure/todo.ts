@@ -3,7 +3,8 @@ import { createMemo, createState, makeJayComponent, Props } from 'jay-component'
 import { uuid } from './uuid';
 import { patch } from 'jay-json-patch';
 import { ADD, REPLACE } from 'jay-json-patch';
-import { handler$ } from 'jay-secure';
+import './todo.css';
+import { JayEvent } from 'jay-runtime';
 
 const ENTER_KEY = 13;
 
@@ -47,11 +48,9 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     refs.filterCompleted.onclick(() => setFilter(Filter.completed));
     refs.filterAll.onclick(() => setFilter(Filter.all));
 
-    refs.newTodo
-        .onkeydown$(handler$<KeyboardEvent, TodoViewState, any>('3'))
-        .then(({ event: keyCode }) => {
-            if (keyCode !== ENTER_KEY) return;
-
+    refs.newTodo.onkeydown(({ event }: JayEvent<KeyboardEvent, TodoViewState>) => {
+        if (event.keyCode === ENTER_KEY) {
+            event.preventDefault();
             let newValue = newTodo();
             let val = newValue.trim();
 
@@ -73,11 +72,12 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
                 );
             }
             setNewTodo('');
-        });
-
-    refs.newTodo.oninput$(handler$<Event, TodoViewState, any>('4')).then(({ event: value }) => {
-        setNewTodo(value);
+        }
     });
+
+    refs.newTodo.oninput(({ event }: JayEvent<Event, TodoViewState>) =>
+        setNewTodo((event.target as HTMLInputElement).value),
+    );
 
     refs.clearCompleted.onclick((event) => {
         setTodos(
@@ -117,11 +117,14 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
         setTodos(todos().filter((_) => _ !== item));
     });
 
-    refs.toggleAll
-        .onchange$(handler$<Event, TodoViewState, any>('5'))
-        .then(({ event: completed }) => {
-            setTodos(todos().map((todo) => ({ ...todo, isCompleted: completed })));
-        });
+    refs.toggleAll.onchange(({ event }: JayEvent<Event, TodoViewState>) =>
+        setTodos(
+            todos().map((todo) => ({
+                ...todo,
+                isCompleted: (event.target as HTMLInputElement).checked,
+            })),
+        ),
+    );
 
     return {
         render: () => ({

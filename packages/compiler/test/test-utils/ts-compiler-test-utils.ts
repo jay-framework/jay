@@ -1,6 +1,6 @@
 import path from 'node:path';
 import * as ts from 'typescript';
-import { TransformerFactory } from 'typescript';
+import { isStatement, Statement, TransformerFactory } from 'typescript';
 import {
     checkValidationErrors,
     componentBridgeTransformer,
@@ -8,6 +8,8 @@ import {
     generateElementFile,
     generateImportsFileFromJayFile,
     generateImportsFileFromTsSource,
+    JayFile,
+    MainRuntimeModes,
     parseJayFile,
     prettify,
     RuntimeMode,
@@ -47,19 +49,23 @@ export async function readFileAndGenerateElementBridgeFile(folder: string, given
     return generateElementBridgeFile(parsedFile);
 }
 
-export async function readFileAndGenerateElementFile(folder: string, givenFile?: string) {
+export async function readFileAndGenerateElementFile(
+    folder: string,
+    importerMode: MainRuntimeModes = RuntimeMode.MainTrusted,
+    givenFile?: string,
+) {
     const dirname = path.resolve(__dirname, '../fixtures', folder);
     const file = givenFile || getFileFromFolder(folder);
     const jayFile = await readNamedSourceJayFile(folder, file);
     const parsedFile = checkValidationErrors(
         parseJayFile(jayFile, `${file}.jay-html`, dirname, {}),
     );
-    return generateElementFile(parsedFile, RuntimeMode.MainSandbox);
+    return generateElementFile(parsedFile, importerMode);
 }
 
 export async function readTsSourceFile(filePath: string, fileName: string) {
     const code = await readTestFile(filePath, fileName);
-    return ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
+    return ts.createSourceFile(fileName, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 }
 
 export function printTsFile(outputFile: ts.TransformationResult<ts.SourceFile>): string {
@@ -74,7 +80,7 @@ export async function transformCode(
         'dummy.ts',
         code,
         ts.ScriptTarget.Latest,
-        false,
+        true,
         ts.ScriptKind.TS,
     );
     const outputFile = ts.transform(sourceFile, transformers);
@@ -120,4 +126,31 @@ export async function readFileAndGenerateImportsFileFromJayFile(
     const parsedFile = checkValidationErrors(parseJayFile(sourceFile, file, dirname, {}));
     const output = generateImportsFileFromJayFile(parsedFile);
     return await prettify(output);
+}
+
+export async function astToFormattedCode(node: ts.Node) {
+    return prettify(astToCode(node));
+}
+
+export async function printStatementWithoutChildStatements(statement: Statement) {
+    let printedStatement = (await astToFormattedCode(statement)).trim();
+
+    let childStatements = [];
+    const visit = (node: ts.Node) => {
+        if (isStatement(node)) childStatements.push(node);
+        else node.getChildren().forEach((child) => visit(child));
+    };
+    statement.getChildren().forEach((child) => visit(child));
+
+    let printedChildStatements = [];
+    for await (let childStatement of childStatements) {
+        printedChildStatements.push((await astToFormattedCode(childStatement)).trim());
+    }
+
+    printedChildStatements.forEach(
+        (printedChildStatement) =>
+            (printedStatement = printedStatement.replace(printedChildStatement, `/*...*/`)),
+    );
+
+    return printedStatement;
 }

@@ -4,7 +4,7 @@ import { CounterRef } from '../counter/counter-refs';
 // @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-workerSandbox';
 // @ts-expect-error Cannot find module
-import { CounterViewState as CounterData } from '../counter/generated-element?jay-workerSandbox';
+import { CounterViewState as CounterData } from '../counter/generated-element-main-trusted?jay-workerSandbox';
 
 export interface ComponentInComponentViewState {
     count1: number;

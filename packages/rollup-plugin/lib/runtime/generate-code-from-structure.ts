@@ -94,7 +94,7 @@ function transformTsCode(
     id: string,
     code: string,
 ): string {
-    const tsSource = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, false, ts.ScriptKind.TS);
+    const tsSource = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
     const tsCode = transform(tsSource, transformers);
     checkDiagnosticsErrors(tsCode);
     const outputCode = jayContext.tsPrinter.printNode(

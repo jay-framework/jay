@@ -1,9 +1,10 @@
 import * as ts from 'typescript';
 import { JayRollupConfig } from '../common/types';
 import path from 'node:path';
-import { JayFile } from 'jay-compiler';
+import { createTsSourceFileFromSource, JayFile } from 'jay-compiler';
 import { CompiledPattern } from 'jay-compiler';
-import { compileFunctionSplitPatternsBlock } from '../../../compiler/lib/ts-file/building-blocks/compile-function-split-patterns';
+import { compileFunctionSplitPatternsBlock } from 'jay-compiler';
+import fs from 'fs';
 
 export class JayPluginContext {
     readonly projectRoot: string;
@@ -17,7 +18,10 @@ export class JayPluginContext {
         this.outputDir = jayOptions.outputDir && path.join(this.projectRoot, jayOptions.outputDir);
         this.tsPrinter = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
         let compilerPatternsParseResult = compileFunctionSplitPatternsBlock(
-            jayOptions.compilerPatternFiles,
+            (jayOptions.compilerPatternFiles || []).map((fileName) => {
+                let fileContent = fs.readFileSync(fileName, { encoding: 'utf8' });
+                return createTsSourceFileFromSource(fileName, fileContent);
+            }),
         );
         if (compilerPatternsParseResult.validations.length > 0)
             throw new Error(

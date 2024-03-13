@@ -29,7 +29,7 @@ describe('generate the definition file', () => {
         let definitionFile = generateElementDefinitionFile(parsedFile);
         expect(definitionFile.validations).toEqual([]);
         expect(await prettify(definitionFile.val)).toEqual(
-            await readGeneratedElementDefinitionFile(folder),
+            await readGeneratedElementDefinitionFile(folder, 'generated-element-main-trusted.d.ts'),
         );
     });
 
@@ -59,7 +59,7 @@ describe('generate the definition file', () => {
         let runtimeFile = generateElementDefinitionFile(parsedFile);
         expect(runtimeFile.validations).toEqual([]);
         expect(await prettify(runtimeFile.val)).toEqual(
-            await readGeneratedElementDefinitionFile(folder),
+            await readGeneratedElementDefinitionFile(folder, 'generated-element-main-trusted.d.ts'),
         );
     });
 });

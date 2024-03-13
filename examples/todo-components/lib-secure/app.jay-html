@@ -1,0 +1,14 @@
+<html>
+  <head>
+    <link rel="import" href="./todo" names="TodoComponent, TodoProps" sandbox="true" />
+    <script type="application/yaml-jay">
+data:
+    todoProps: TodoProps
+    </script>
+  </head>
+  <body>
+    <div>
+      <TodoComponent props={todoProps}></TodoComponent>
+    </div>
+  </body>
+</html>

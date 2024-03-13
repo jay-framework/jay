@@ -27,8 +27,8 @@ import {
     JayType,
     JayTypeAlias,
     JayUnknown,
-} from '../core/jay-type';
-import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
+} from '../core/jay-file-types';
+import { getModeFileExtension, MainRuntimeModes, RuntimeMode } from '../core/runtime-mode';
 import { JayImportLink } from '../core/jay-imports';
 import { JayHtmlFile } from '../core/jay-file';
 
@@ -89,6 +89,7 @@ interface RenderContext {
     dynamicRef: boolean;
     importedSandboxedSymbols: Set<string>;
     nextAutoRefName: () => string;
+    importerMode: RuntimeMode;
 }
 
 function renderInterface(aType: JayType): string {
@@ -373,7 +374,8 @@ function renderChildCompRef(
 }
 
 function renderNode(node: Node, context: RenderContext): RenderFragment {
-    let { variables, importedSymbols, importedSandboxedSymbols, indent, dynamicRef } = context;
+    let { variables, importedSymbols, importedSandboxedSymbols, indent, dynamicRef, importerMode } =
+        context;
 
     function de(
         tagName: string,
@@ -492,7 +494,10 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
         });
         if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
         let getProps = `(vs: ${newVariables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
-        if (importedSandboxedSymbols.has(htmlElement.rawTagName))
+        if (
+            importedSandboxedSymbols.has(htmlElement.rawTagName) ||
+            importerMode === RuntimeMode.MainSandbox
+        )
             return new RenderFragment(
                 `${currIndent.firstLine}secureChildComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
                 Imports.for(Import.secureChildComp)
@@ -624,6 +629,7 @@ function renderFunctionImplementation(
     rootBodyElement: HTMLElement,
     importStatements: JayImportLink[],
     baseElementName: string,
+    importerMode: RuntimeMode,
 ): {
     renderedRefs: string;
     renderedElement: string;
@@ -640,6 +646,7 @@ function renderFunctionImplementation(
         dynamicRef: false,
         importedSandboxedSymbols,
         nextAutoRefName: newAutoRefNameGenerator(),
+        importerMode,
     });
     let elementType = baseElementName + 'Element';
     let refsType = baseElementName + 'ElementRefs';
@@ -821,6 +828,7 @@ function renderBridge(
         dynamicRef: false,
         importedSandboxedSymbols,
         nextAutoRefName: newAutoRefNameGenerator(),
+        importerMode: RuntimeMode.WorkerSandbox,
     });
     let refsPart =
         renderedBridge.rendered.length > 0
@@ -868,6 +876,7 @@ function renderSandboxRoot(
         dynamicRef: false,
         importedSandboxedSymbols,
         nextAutoRefName: newAutoRefNameGenerator(),
+        importerMode: RuntimeMode.WorkerSandbox,
     });
     let refsPart =
         renderedBridge.rendered.length > 0
@@ -914,6 +923,7 @@ export function generateElementDefinitionFile(
             jayFile.body,
             jayFile.imports,
             jayFile.baseElementName,
+            RuntimeMode.WorkerTrusted,
         );
         return [
             renderImports(
@@ -935,7 +945,7 @@ export function generateElementDefinitionFile(
 
 export function generateElementFile(
     jayFile: JayHtmlFile,
-    importerMode: RuntimeMode,
+    importerMode: MainRuntimeModes,
 ): WithValidations<string> {
     let types = generateTypes(jayFile.types);
     let { renderedRefs, renderedElement, renderedImplementation, refImportsInUse } =
@@ -944,6 +954,7 @@ export function generateElementFile(
             jayFile.body,
             jayFile.imports,
             jayFile.baseElementName,
+            importerMode,
         );
     let renderedFile = [
         renderImports(
@@ -971,6 +982,7 @@ export function generateElementBridgeFile(jayFile: JayHtmlFile): string {
             jayFile.body,
             jayFile.imports,
             jayFile.baseElementName,
+            RuntimeMode.WorkerSandbox,
         );
     let renderedBridge = renderBridge(jayFile.types, jayFile.body, jayFile.imports, elementType);
     return [

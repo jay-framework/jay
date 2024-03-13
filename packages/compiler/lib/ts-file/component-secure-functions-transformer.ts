@@ -14,10 +14,16 @@ import {
 import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
 import { codeToAst } from './ts-compiler-utils';
 import { findMakeJayComponentConstructorCallsBlock } from './building-blocks/find-make-jay-component-constructor-calls';
+import { SourceFileBindingResolver } from './building-blocks/source-file-binding-resolver';
+import { SourceFileStatementAnalyzer } from './building-blocks/source-file-statement-analyzer';
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: CompiledPattern[];
 };
+
+function isCssImport(node) {
+    return ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text.endsWith('.css');
+}
 
 function mkComponentSecureFunctionsTransformer(
     sftContext: ComponentSecureFunctionsTransformerConfig,
@@ -38,8 +44,11 @@ function mkComponentSecureFunctionsTransformer(
         findEventHandlersBlock(constructorDefinition),
     );
 
+    let bindingResolver = new SourceFileBindingResolver(sourceFile);
+    let analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
+
     let transformedEventHandlers = new TransformedEventHandlers(
-        transformEventHandlers(context, patterns, factory, foundEventHandlers),
+        transformEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers),
     );
 
     let visitor = (node) => {
@@ -54,8 +63,10 @@ function mkComponentSecureFunctionsTransformer(
             node = transformedEventHandler[0].transformedEventHandler;
             return ts.visitEachChild(node, visitor, context);
         }
-        if (isImportDeclaration(node))
-            return transformImportModeFileExtension(node, factory, RuntimeMode.WorkerSandbox);
+        if (isImportDeclaration(node)) {
+            if (isCssImport(node)) return undefined;
+            else return transformImportModeFileExtension(node, factory, RuntimeMode.WorkerSandbox);
+        }
         return ts.visitEachChild(node, visitor, context);
     };
     let transformedSourceFile = ts.visitEachChild(sftContext.sourceFile, visitor, context);

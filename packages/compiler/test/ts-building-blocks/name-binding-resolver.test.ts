@@ -10,14 +10,20 @@ import ts, {
     CallExpression,
     ParameterDeclaration,
     FunctionExpression,
+    ImportDeclaration,
 } from 'typescript';
 import {
     tsBindingNameToVariable,
     NameBindingResolver,
     flattenVariable,
     mkParameterVariableRoot,
-    mkOtherVariableRoot,
     mkFunctionVariableRoot,
+    mkImportModuleVariableRoot,
+    ImportType,
+    VariableRootType,
+    mkFunctionCallVariableRoot,
+    mkLiteralVariableRoot,
+    LetOrConst,
 } from '../../lib/ts-file/building-blocks/name-binding-resolver';
 
 function toSourceFile(code: string) {
@@ -49,6 +55,7 @@ describe('NameBindingResolver', () => {
             expect(variables[0]).toEqual({
                 name: 'identifier',
                 assignedFrom: ASSIGNMENT_RIGHT_SIDE_PLACEHOLDER,
+                definingStatement: node,
             });
         });
 
@@ -69,7 +76,9 @@ describe('NameBindingResolver', () => {
                 accessedByProperty: 'a',
                 accessedFrom: {
                     assignedFrom: ASSIGNMENT_RIGHT_SIDE_PLACEHOLDER,
+                    definingStatement: statement,
                 },
+                definingStatement: statement,
             });
             expect(variables[0].name).toBe('a');
             expect(variables[0].accessedByProperty).toBe('a');
@@ -92,6 +101,7 @@ describe('NameBindingResolver', () => {
             expect(nameResolver.variables.get('a')).toEqual({
                 name: 'a',
                 root: mkParameterVariableRoot(functionStatement.parameters[0], 0),
+                definingStatement: node,
             });
             expect(flattenVariable(nameResolver.variables.get('a'))).toEqual({
                 path: [],
@@ -102,6 +112,7 @@ describe('NameBindingResolver', () => {
             expect(nameResolver.variables.get('b')).toEqual({
                 name: 'b',
                 root: mkParameterVariableRoot(functionStatement.parameters[1], 1),
+                definingStatement: node,
             });
             expect(flattenVariable(nameResolver.variables.get('b'))).toEqual({
                 path: [],
@@ -123,7 +134,9 @@ describe('NameBindingResolver', () => {
                 accessedByProperty: 'a',
                 accessedFrom: {
                     root: mkParameterVariableRoot(functionStatement.parameters[0], 0),
+                    definingStatement: node,
                 },
+                definingStatement: node,
             });
             expect(flattenVariable(a)).toEqual({
                 path: ['a'],
@@ -136,7 +149,9 @@ describe('NameBindingResolver', () => {
                 accessedByProperty: 'b',
                 accessedFrom: {
                     root: mkParameterVariableRoot(functionStatement.parameters[0], 0),
+                    definingStatement: node,
                 },
+                definingStatement: node,
             });
             expect(flattenVariable(b)).toEqual({
                 path: ['b'],
@@ -158,7 +173,9 @@ describe('NameBindingResolver', () => {
                 accessedByProperty: 'a',
                 accessedFrom: {
                     root: mkParameterVariableRoot(functionStatement.parameters[0], 0),
+                    definingStatement: node,
                 },
+                definingStatement: node,
             });
             expect(flattenVariable(z)).toEqual({
                 path: ['a'],
@@ -181,8 +198,11 @@ describe('NameBindingResolver', () => {
                     accessedByProperty: 'a',
                     accessedFrom: {
                         root: mkParameterVariableRoot(functionStatement.parameters[0], 0),
+                        definingStatement: node,
                     },
+                    definingStatement: node,
                 },
+                definingStatement: node,
             });
             expect(flattenVariable(c)).toEqual({
                 path: ['a', 'c'],
@@ -205,8 +225,11 @@ describe('NameBindingResolver', () => {
                     accessedByProperty: 'a',
                     accessedFrom: {
                         root: mkParameterVariableRoot(functionStatement.parameters[0], 0),
+                        definingStatement: node,
                     },
+                    definingStatement: node,
                 },
+                definingStatement: node,
             });
             expect(flattenVariable(c)).toEqual({
                 path: ['a', 'c'],
@@ -221,8 +244,11 @@ describe('NameBindingResolver', () => {
                     accessedByProperty: 'a',
                     accessedFrom: {
                         root: mkParameterVariableRoot(functionStatement.parameters[0], 0),
+                        definingStatement: node,
                     },
+                    definingStatement: node,
                 },
+                definingStatement: node,
             });
             expect(flattenVariable(d)).toEqual({
                 path: ['a', 'd'],
@@ -235,7 +261,9 @@ describe('NameBindingResolver', () => {
                 accessedByProperty: 'e',
                 accessedFrom: {
                     root: mkParameterVariableRoot(functionStatement.parameters[0], 0),
+                    definingStatement: node,
                 },
+                definingStatement: node,
             });
             expect(flattenVariable(e)).toEqual({
                 path: ['e'],
@@ -255,24 +283,55 @@ describe('NameBindingResolver', () => {
         }
 
         it('resolve let z = a', () => {
-            let { a, nameResolver } = resolveNamesForVariableStatement('let z = a');
+            let { a, nameResolver, node } = resolveNamesForVariableStatement('let z = a');
 
             expect(nameResolver.variables.has('z'));
             let z = nameResolver.variables.get('z');
             expect(z).toEqual({
                 name: 'z',
+                letOrConst: LetOrConst.LET,
                 assignedFrom: a,
+                definingStatement: node,
+            });
+            expect(flattenVariable(z)).toEqual({ path: [], root: PARAM_ROOT });
+        });
+
+        it('resolve const z = a', () => {
+            let { a, nameResolver, node } = resolveNamesForVariableStatement('const z = a');
+
+            expect(nameResolver.variables.has('z'));
+            let z = nameResolver.variables.get('z');
+            expect(z).toEqual({
+                name: 'z',
+                letOrConst: LetOrConst.CONST,
+                assignedFrom: a,
+                definingStatement: node,
+            });
+            expect(flattenVariable(z)).toEqual({ path: [], root: PARAM_ROOT });
+        });
+
+        it('resolve var z = a', () => {
+            let { a, nameResolver, node } = resolveNamesForVariableStatement('var z = a');
+
+            expect(nameResolver.variables.has('z'));
+            let z = nameResolver.variables.get('z');
+            expect(z).toEqual({
+                name: 'z',
+                letOrConst: LetOrConst.LET,
+                assignedFrom: a,
+                definingStatement: node,
             });
             expect(flattenVariable(z)).toEqual({ path: [], root: PARAM_ROOT });
         });
 
         it('resolve let z = a.b.c', () => {
-            let { a, nameResolver } = resolveNamesForVariableStatement('let z = a.b.c');
+            let { a, nameResolver, node } = resolveNamesForVariableStatement('let z = a.b.c');
 
             expect(nameResolver.variables.has('z'));
             let z = nameResolver.variables.get('z');
             expect(z).toEqual({
                 name: 'z',
+                letOrConst: LetOrConst.LET,
                 assignedFrom: {
                     accessedByProperty: 'c',
                     accessedFrom: {
@@ -280,6 +339,7 @@ describe('NameBindingResolver', () => {
                         accessedFrom: a,
                     },
                 },
+                definingStatement: node,
             });
             expect(flattenVariable(z)).toEqual({
                 path: ['b', 'c'],
@@ -287,13 +347,83 @@ describe('NameBindingResolver', () => {
             });
         });
 
-        it('resolve let z = (a.b as T).c', () => {
-            let { a, nameResolver } = resolveNamesForVariableStatement('let z = (a.b as T).c');
+        it('resolve let z = a.b.c()', () => {
+            let { nameResolver, node } = resolveNamesForVariableStatement('let z = a.b.c()');
+            let functionCallAsRoot = {
+                kind: VariableRootType.FunctionCall,
+                node: node.declarationList.declarations[0].initializer,
+            };
 
             expect(nameResolver.variables.has('z'));
             let z = nameResolver.variables.get('z');
             expect(z).toEqual({
                 name: 'z',
+                letOrConst: LetOrConst.LET,
+                assignedFrom: {
+                    root: functionCallAsRoot,
+                },
+                definingStatement: node,
+            });
+            expect(flattenVariable(z)).toEqual({
+                path: [],
+                root: functionCallAsRoot,
+            });
+        });
+
+        describe('resolve let z = a.b.c().d.e', () => {
+            let { a, nameResolver, node } = resolveNamesForVariableStatement('let z = a.b.c().d.e');
+            let functionCallAsRoot = {
+                kind: VariableRootType.FunctionCall,
+                node: (
+                    (node.declarationList.declarations[0].initializer as PropertyAccessExpression)
+                        .expression as PropertyAccessExpression
+                ).expression as CallExpression,
+            };
+
+            it('should resolve the z variable', () => {
+                expect(nameResolver.variables.has('z'));
+                let z = nameResolver.variables.get('z');
+                expect(z).toEqual({
+                    name: 'z',
+                    letOrConst: LetOrConst.LET,
+                    assignedFrom: {
+                        accessedByProperty: 'e',
+                        accessedFrom: {
+                            accessedByProperty: 'd',
+                            accessedFrom: {
+                                root: functionCallAsRoot,
+                            },
+                        },
+                    },
+                    definingStatement: node,
+                });
+                expect(flattenVariable(z)).toEqual({
+                    path: ['d', 'e'],
+                    root: functionCallAsRoot,
+                });
+            });
+            it('should resolve the function reference expression', () => {
+                let functionExpression = functionCallAsRoot.node.expression;
+                let resolvedFunction = nameResolver.resolvePropertyAccessChain(functionExpression);
+                expect(resolvedFunction).toEqual({
+                    accessedByProperty: 'c',
+                    accessedFrom: {
+                        accessedByProperty: 'b',
+                        accessedFrom: a,
+                    },
+                });
+            });
+        });
+
+        it('resolve let z = (a.b as T).c', () => {
+            let { a, nameResolver, node } =
+                resolveNamesForVariableStatement('let z = (a.b as T).c');
+
+            expect(nameResolver.variables.has('z'));
+            let z = nameResolver.variables.get('z');
+            expect(z).toEqual({
+                name: 'z',
+                letOrConst: LetOrConst.LET,
                 assignedFrom: {
                     accessedByProperty: 'c',
                     accessedFrom: {
@@ -301,6 +431,7 @@ describe('NameBindingResolver', () => {
                         accessedFrom: a,
                     },
                 },
+                definingStatement: node,
             });
             expect(flattenVariable(z)).toEqual({
                 path: ['b', 'c'],
@@ -309,16 +440,19 @@ describe('NameBindingResolver', () => {
         });
 
         it('resolve let {z} = a', () => {
-            let { a, nameResolver } = resolveNamesForVariableStatement('let {z} = a');
+            let { a, nameResolver, node } = resolveNamesForVariableStatement('let {z} = a');
 
             expect(nameResolver.variables.has('z'));
             let z = nameResolver.variables.get('z');
             expect(z).toEqual({
                 name: 'z',
+                letOrConst: LetOrConst.LET,
                 accessedByProperty: 'z',
                 accessedFrom: {
                     assignedFrom: a,
+                    definingStatement: node,
                 },
+                definingStatement: node,
             });
             expect(flattenVariable(z)).toEqual({
                 path: ['z'],
@@ -327,16 +461,18 @@ describe('NameBindingResolver', () => {
         });
 
         it(`resolve let z = a['b']`, () => {
-            let { a, nameResolver } = resolveNamesForVariableStatement(`let z = a['b']`);
+            let { a, nameResolver, node } = resolveNamesForVariableStatement(`let z = a['b']`);
 
             expect(nameResolver.variables.has('z'));
             let z = nameResolver.variables.get('z');
             expect(z).toEqual({
                 name: 'z',
+                letOrConst: LetOrConst.LET,
                 assignedFrom: {
                     accessedByProperty: 'b',
                     accessedFrom: a,
                 },
+                definingStatement: node,
             });
             expect(flattenVariable(z)).toEqual({
                 path: ['b'],
@@ -345,12 +481,13 @@ describe('NameBindingResolver', () => {
         });
 
         it(`resolve let z = {y: a}; then resolve z.y to a`, () => {
-            let { a, nameResolver } = resolveNamesForVariableStatement(`let z = {y: a}`);
+            let { a, nameResolver, node } = resolveNamesForVariableStatement(`let z = {y: a}`);
 
             expect(nameResolver.variables.has('z'));
             let z = nameResolver.variables.get('z');
             expect(z).toEqual({
                 name: 'z',
+                letOrConst: LetOrConst.LET,
                 assignedFrom: {
                     properties: [
                         {
@@ -359,6 +496,7 @@ describe('NameBindingResolver', () => {
                         },
                     ],
                 },
+                definingStatement: node,
             });
             let zy = nameResolver.resolvePropertyAccessChain(
                 (getAstNode('z.y') as ExpressionStatement).expression,
@@ -370,12 +508,13 @@ describe('NameBindingResolver', () => {
         });
 
         it(`resolve let z = {y: {x: a}}; then resolve z.y.x to a`, () => {
-            let { a, nameResolver } = resolveNamesForVariableStatement(`let z = {y: {x: a}}`);
+            let { a, nameResolver, node } = resolveNamesForVariableStatement(`let z = {y: {x: a}}`);
 
             expect(nameResolver.variables.has('z'));
             let z = nameResolver.variables.get('z');
             expect(z).toEqual({
                 name: 'z',
+                letOrConst: LetOrConst.LET,
                 assignedFrom: {
                     properties: [
                         {
@@ -389,6 +528,7 @@ describe('NameBindingResolver', () => {
                         },
                     ],
                 },
+                definingStatement: node,
             });
 
             let zy = nameResolver.resolvePropertyAccessChain(
@@ -413,11 +553,13 @@ describe('NameBindingResolver', () => {
             let z = nameResolver.variables.get('z');
             expect(z).toEqual({
                 name: 'z',
+                letOrConst: LetOrConst.LET,
                 assignedFrom: {
                     properties: [
                         { name: 'a', root: mkFunctionVariableRoot(declaredInlineFunction) },
                     ],
                 },
+                definingStatement: node,
             });
 
             let za = nameResolver.resolvePropertyAccessChain(
@@ -440,32 +582,91 @@ describe('NameBindingResolver', () => {
             let state = nameResolver.variables.get('state');
             expect(state).toEqual({
                 name: 'state',
+                letOrConst: LetOrConst.LET,
                 accessedByProperty: '0',
                 accessedFrom: {
                     assignedFrom: {
-                        root: mkOtherVariableRoot(createStateFunction),
+                        root: mkFunctionCallVariableRoot(createStateFunction),
                     },
+                    definingStatement: node,
                 },
+                definingStatement: node,
             });
             expect(flattenVariable(state)).toEqual({
                 path: ['0'],
-                root: mkOtherVariableRoot(createStateFunction),
+                root: mkFunctionCallVariableRoot(createStateFunction),
             });
 
             expect(nameResolver.variables.has('getState'));
             let getState = nameResolver.variables.get('getState');
             expect(getState).toEqual({
                 name: 'getState',
+                letOrConst: LetOrConst.LET,
                 accessedByProperty: '1',
                 accessedFrom: {
                     assignedFrom: {
-                        root: mkOtherVariableRoot(createStateFunction),
+                        root: mkFunctionCallVariableRoot(createStateFunction),
                     },
+                    definingStatement: node,
                 },
+                definingStatement: node,
             });
             expect(flattenVariable(getState)).toEqual({
                 path: ['1'],
-                root: mkOtherVariableRoot(createStateFunction),
+                root: mkFunctionCallVariableRoot(createStateFunction),
+            });
+        });
+
+        describe('literals', () => {
+            it(`resolve let z = 'a'`, () => {
+                let { nameResolver, node } = resolveNamesForVariableStatement(`let z = 'a'`);
+
+                expect(nameResolver.variables.has('z'));
+                let z = nameResolver.variables.get('z');
+                let root = mkLiteralVariableRoot(node.declarationList.declarations[0].initializer);
+                expect(z).toEqual({
+                    name: 'z',
+                    letOrConst: LetOrConst.LET,
+                    assignedFrom: {
+                        root,
+                    },
+                    definingStatement: node,
+                });
+                expect(flattenVariable(z)).toEqual({ path: [], root });
+            });
+
+            it(`resolve let z = 6`, () => {
+                let { nameResolver, node } = resolveNamesForVariableStatement(`let z = 6`);
+
+                expect(nameResolver.variables.has('z'));
+                let z = nameResolver.variables.get('z');
+                let root = mkLiteralVariableRoot(node.declarationList.declarations[0].initializer);
+                expect(z).toEqual({
+                    name: 'z',
+                    letOrConst: LetOrConst.LET,
+                    assignedFrom: {
+                        root,
+                    },
+                    definingStatement: node,
+                });
+                expect(flattenVariable(z)).toEqual({ path: [], root });
+            });
+
+            it(`resolve let z = true`, () => {
+                let { nameResolver, node } = resolveNamesForVariableStatement(`let z = true`);
+
+                expect(nameResolver.variables.has('z'));
+                let z = nameResolver.variables.get('z');
+                let root = mkLiteralVariableRoot(node.declarationList.declarations[0].initializer);
+                expect(z).toEqual({
+                    name: 'z',
+                    letOrConst: LetOrConst.LET,
+                    assignedFrom: {
+                        root,
+                    },
+                    definingStatement: node,
+                });
+                expect(flattenVariable(z)).toEqual({ path: [], root });
             });
         });
     });
@@ -486,6 +687,7 @@ describe('NameBindingResolver', () => {
             expect(bla).toEqual({
                 name: 'bla',
                 root: mkFunctionVariableRoot(func),
+                definingStatement: func,
             });
         });
     });
@@ -514,6 +716,122 @@ describe('NameBindingResolver', () => {
                 path: ['b', 'c'],
                 root: PARAM_ROOT,
             });
+        });
+    });
+
+    describe('resolve import variables', () => {
+        function resolveNamesForVariableStatement(code: string) {
+            let nameResolver = new NameBindingResolver();
+            let importDeclaration = getAstNode(code) as ImportDeclaration;
+            let moduleSpecifier = importDeclaration.moduleSpecifier;
+            nameResolver.addImportDeclaration(importDeclaration);
+            return { nameResolver, importDeclaration, moduleSpecifier };
+        }
+
+        it(`resolve import a from 'b (default import)'`, () => {
+            let { nameResolver, importDeclaration, moduleSpecifier } =
+                resolveNamesForVariableStatement("import a from 'b'");
+
+            expect(nameResolver.variables.has('a'));
+            let a = nameResolver.variables.get('a');
+            expect(a).toEqual({
+                name: 'a',
+                definingStatement: importDeclaration,
+                root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.defaultImport),
+            });
+            expect(flattenVariable(a)).toEqual({
+                path: [],
+                root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.defaultImport),
+            });
+        });
+
+        it(`resolve import * as a from 'b' (namespace import)`, () => {
+            let { nameResolver, importDeclaration, moduleSpecifier } =
+                resolveNamesForVariableStatement("import * as a from 'b'");
+
+            expect(nameResolver.variables.has('a'));
+            let a = nameResolver.variables.get('a');
+            expect(a).toEqual({
+                name: 'a',
+                definingStatement: importDeclaration,
+                root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.namedImport),
+            });
+            expect(flattenVariable(a)).toEqual({
+                path: [],
+                root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.namedImport),
+            });
+        });
+
+        it(`resolve import {a} from 'b'`, () => {
+            let { nameResolver, importDeclaration, moduleSpecifier } =
+                resolveNamesForVariableStatement("import {a} from 'b'");
+
+            expect(nameResolver.variables.has('a'));
+            let a = nameResolver.variables.get('a');
+            expect(a).toEqual({
+                name: 'a',
+                accessedByProperty: 'a',
+                accessedFrom: {
+                    definingStatement: importDeclaration,
+                    root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.namedImport),
+                },
+                definingStatement: importDeclaration,
+            });
+            expect(flattenVariable(a)).toEqual({
+                path: ['a'],
+                root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.namedImport),
+            });
+        });
+
+        it(`resolve import 'b'`, () => {
+            resolveNamesForVariableStatement("import 'b'");
+        });
+
+        it(`resolve import {a as c} from 'b'`, () => {
+            let { nameResolver, importDeclaration, moduleSpecifier } =
+                resolveNamesForVariableStatement("import {a as c} from 'b'");
+
+            expect(nameResolver.variables.has('c'));
+            let c = nameResolver.variables.get('c');
+            expect(c).toEqual({
+                name: 'c',
+                accessedByProperty: 'a',
+                accessedFrom: {
+                    definingStatement: importDeclaration,
+                    root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.namedImport),
+                },
+                definingStatement: importDeclaration,
+            });
+            expect(flattenVariable(c)).toEqual({
+                path: ['a'],
+                root: mkImportModuleVariableRoot(moduleSpecifier, ImportType.namedImport),
+            });
+        });
+    });
+
+    describe('support resolve identifier from parent scope', () => {
+        function resolveNamesForVariableStatement(code: string) {
+            let parentNameResolver = new NameBindingResolver();
+            parentNameResolver.addVariable('a', { name: 'a', root: PARAM_ROOT });
+            let childNameResolver = new NameBindingResolver(parentNameResolver);
+            let node = getAstNode(code) as VariableStatement;
+            childNameResolver.addVariableStatement(node);
+            let a = parentNameResolver.variables.get('a');
+            return { parentNameResolver, childNameResolver, a, node };
+        }
+
+        it('resolve let z = a', () => {
+            let { a, childNameResolver, node } = resolveNamesForVariableStatement('let z = a');
+
+            expect(childNameResolver.variables.has('z'));
+            let z = childNameResolver.variables.get('z');
+            expect(z).toEqual({
+                name: 'z',
+                letOrConst: LetOrConst.LET,
+                assignedFrom: a,
+                definingStatement: node,
+            });
+            expect(flattenVariable(z)).toEqual({ path: [], root: PARAM_ROOT });
         });
     });
 });

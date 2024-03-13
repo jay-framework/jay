@@ -11,7 +11,7 @@ import {
     prettify,
     TS_EXTENSION,
 } from 'jay-compiler';
-import { JayPluginContext } from '../../../lib/runtime/jay-plugin-context';
+import { JayPluginContext } from '../../../lib';
 import { readTestFile } from '../../test-utils/file-utils';
 import { JayMetadata } from '../../../lib/runtime/metadata';
 import { transformJayFile } from '../../../lib/runtime/transform';
