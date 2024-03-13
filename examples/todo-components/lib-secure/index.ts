@@ -1,5 +1,6 @@
-import { TodoComponent } from './todo';
+import { render } from './app.jay-html';
 import './index.css';
+import {HandshakeMessageJayChannel, JayPort, setMainPort} from "jay-secure";
 
 const initialTodos = [
     {
@@ -19,10 +20,15 @@ const initialTodos = [
     },
 ];
 
+const jayWorker = new Worker(new URL('jay-sandbox:./sandbox-root', import.meta.url), {
+    type: 'module',
+});
+
 window.onload = function () {
+    setMainPort(new JayPort(new HandshakeMessageJayChannel(jayWorker)));
     let target = document.getElementById('target');
 
-    let instance = TodoComponent({ initialTodos });
+    let instance = render({ todoProps: {initialTodos} });
     target.innerHTML = '';
-    target.appendChild(instance.element.dom);
+    target.appendChild(instance.dom);
 };
