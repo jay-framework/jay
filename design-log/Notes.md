@@ -19,8 +19,8 @@
 - [x] Basics - elements, strings
 - [x] Conditional
 - [x] Collections
-- [\ֿֿ] error reporting (partial implemented)
-- [ ] Remove Drivers for secure running
+- [x] error reporting (partial implemented)
+- [x] Remove Drivers for secure running
 - [ ] server side rendering
 
 ## Testing

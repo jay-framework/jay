@@ -1,21 +1,22 @@
 import ts, { isImportDeclaration } from 'typescript';
 import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
-import { findMakeJayComponentImportTransformerBlock } from './building-blocks/find-make-jay-component-import';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
 import { CompiledPattern } from './building-blocks/compile-function-split-patterns';
 import { transformImportModeFileExtension } from './building-blocks/transform-import-mode-file-extension';
 import { RuntimeMode } from '../core/runtime-mode';
-import { MAKE_JAY_COMPONENT } from '../core/constants';
 import {
     TransformedEventHandlers,
     transformEventHandlers,
 } from './building-blocks/transform-event-handlers';
 import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
 import { codeToAst } from './ts-compiler-utils';
-import { findMakeJayComponentConstructorCallsBlock } from './building-blocks/find-make-jay-component-constructor-calls';
 import { SourceFileBindingResolver } from './building-blocks/source-file-binding-resolver';
 import { SourceFileStatementAnalyzer } from './building-blocks/source-file-statement-analyzer';
+import {
+    findComponentConstructorCallsBlock,
+    FindComponentConstructorType,
+} from './building-blocks/find-component-constructor-calls.ts';
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: CompiledPattern[];
@@ -31,20 +32,19 @@ function mkComponentSecureFunctionsTransformer(
     let { patterns, context, factory, sourceFile } = sftContext;
 
     // find the event handlers
-    let makeJayComponent_ImportName = findMakeJayComponentImportTransformerBlock(
-        MAKE_JAY_COMPONENT,
+    let bindingResolver = new SourceFileBindingResolver(sourceFile);
+
+    let calls = findComponentConstructorCallsBlock(
+        FindComponentConstructorType.makeJayComponent,
+        bindingResolver,
         sourceFile,
     );
-    if (!Boolean(makeJayComponent_ImportName)) return sourceFile;
-
-    let calls = findMakeJayComponentConstructorCallsBlock(makeJayComponent_ImportName, sourceFile);
     let constructorExpressions = calls.map(({ comp }) => comp);
     let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sourceFile);
     let foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
         findEventHandlersBlock(constructorDefinition),
     );
 
-    let bindingResolver = new SourceFileBindingResolver(sourceFile);
     let analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
 
     let transformedEventHandlers = new TransformedEventHandlers(

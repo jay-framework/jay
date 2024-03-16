@@ -1,12 +1,12 @@
 import { Expression, Identifier, isIdentifier } from 'typescript';
 import { createTsSourceFile } from '../test-utils/ts-source-utils';
-import { findMakeJayComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-make-jay-component-constructor-calls';
-import { MAKE_JAY_COMPONENT, MAKE_JAY_TSX_COMPONENT } from '../../lib';
-import { findMakeJayTsxComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-make-jay-tsx-component-constructor-calls';
+import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver.ts';
+import {
+    findComponentConstructorCallsBlock,
+    FindComponentConstructorType,
+} from '../../lib/ts-file/building-blocks/find-component-constructor-calls.ts';
 
 describe('findComponentConstructorCallsBlock', () => {
-    const initializerName = MAKE_JAY_COMPONENT;
-
     function assertIdentifier(expression: Expression, text: string) {
         expect(isIdentifier(expression)).toBeTruthy();
         let render = expression as Identifier;
@@ -14,10 +14,15 @@ describe('findComponentConstructorCallsBlock', () => {
     }
 
     it('finds exported const', async () => {
-        const sourceFile = createTsSourceFile(
-            `export const Counter = makeJayComponent(render, CounterComponent);`,
+        const sourceFile = createTsSourceFile(`
+            import {makeJayComponent} from 'jay-component';
+            export const Counter = makeJayComponent(render, CounterComponent);`);
+        const bindingResolver = new SourceFileBindingResolver(sourceFile);
+        const foundCalls = findComponentConstructorCallsBlock(
+            FindComponentConstructorType.makeJayComponent,
+            bindingResolver,
+            sourceFile,
         );
-        const foundCalls = findMakeJayComponentConstructorCallsBlock(initializerName, sourceFile);
 
         expect(foundCalls).toHaveLength(1);
         assertIdentifier(foundCalls[0].render, 'render');
@@ -26,10 +31,15 @@ describe('findComponentConstructorCallsBlock', () => {
     });
 
     it('finds exported var', async () => {
-        const sourceFile = createTsSourceFile(
-            `export var Counter = makeJayComponent(render, CounterComponent);`,
+        const sourceFile = createTsSourceFile(`
+            import {makeJayComponent} from 'jay-component';
+            export var Counter = makeJayComponent(render, CounterComponent);`);
+        const bindingResolver = new SourceFileBindingResolver(sourceFile);
+        const foundCalls = findComponentConstructorCallsBlock(
+            FindComponentConstructorType.makeJayComponent,
+            bindingResolver,
+            sourceFile,
         );
-        const foundCalls = findMakeJayComponentConstructorCallsBlock(initializerName, sourceFile);
 
         expect(foundCalls).toHaveLength(1);
         assertIdentifier(foundCalls[0].render, 'render');
@@ -38,9 +48,15 @@ describe('findComponentConstructorCallsBlock', () => {
 
     it('finds separate define const and export', async () => {
         const sourceFile = createTsSourceFile(`
-        | const Counter = makeJayComponent(render, CounterComponent);
-        | export Counter`);
-        const foundCalls = findMakeJayComponentConstructorCallsBlock(initializerName, sourceFile);
+            import {makeJayComponent} from 'jay-component';
+            const Counter = makeJayComponent(render, CounterComponent);
+            export Counter`);
+        const bindingResolver = new SourceFileBindingResolver(sourceFile);
+        const foundCalls = findComponentConstructorCallsBlock(
+            FindComponentConstructorType.makeJayComponent,
+            bindingResolver,
+            sourceFile,
+        );
 
         expect(foundCalls).toHaveLength(1);
         assertIdentifier(foundCalls[0].render, 'render');
@@ -49,10 +65,16 @@ describe('findComponentConstructorCallsBlock', () => {
 
     it('finds multiple components, with multiple names', async () => {
         const sourceFile = createTsSourceFile(`
-        | export const Counter = makeJayComponent(render, CounterComponent);
-        | export const Counter2 = makeJayComponent(render2, CounterComponent2);
-        | export const Counter3 = makeJayComponent(render3, CounterComponent3);`);
-        const foundCalls = findMakeJayComponentConstructorCallsBlock(initializerName, sourceFile);
+            import {makeJayComponent} from 'jay-component';
+            export const Counter = makeJayComponent(render, CounterComponent);
+            export const Counter2 = makeJayComponent(render2, CounterComponent2);
+            export const Counter3 = makeJayComponent(render3, CounterComponent3);`);
+        const bindingResolver = new SourceFileBindingResolver(sourceFile);
+        const foundCalls = findComponentConstructorCallsBlock(
+            FindComponentConstructorType.makeJayComponent,
+            bindingResolver,
+            sourceFile,
+        );
 
         expect(foundCalls).toHaveLength(3);
         assertIdentifier(foundCalls[0].render, 'render');
@@ -64,14 +86,14 @@ describe('findComponentConstructorCallsBlock', () => {
     });
 
     describe('for makeJayTsxComponent', () => {
-        const initializerName = MAKE_JAY_TSX_COMPONENT;
-
         it('finds exported const', async () => {
-            const sourceFile = createTsSourceFile(
-                `export const Counter = makeJayTsxComponent(CounterComponent);`,
-            );
-            const foundCalls = findMakeJayTsxComponentConstructorCallsBlock(
-                initializerName,
+            const sourceFile = createTsSourceFile(`
+                import {makeJayTsxComponent} from 'jay-component';
+                export const Counter = makeJayTsxComponent(CounterComponent);`);
+            const bindingResolver = new SourceFileBindingResolver(sourceFile);
+            const foundCalls = findComponentConstructorCallsBlock(
+                FindComponentConstructorType.makeJayTsxComponent,
+                bindingResolver,
                 sourceFile,
             );
 

@@ -3,13 +3,18 @@ import ts from 'typescript';
 import { findEventHandlersBlock } from '../../lib/ts-file/building-blocks/find-event-handler-functions';
 import { astToCode } from '../../lib/ts-file/ts-compiler-utils';
 import { createTsSourceFile } from '../test-utils/ts-source-utils';
-import { findMakeJayComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-make-jay-component-constructor-calls';
-import { MAKE_JAY_COMPONENT } from '../../lib';
+import {
+    findComponentConstructorCallsBlock,
+    FindComponentConstructorType,
+} from '../../lib/ts-file/building-blocks/find-component-constructor-calls.ts';
+import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver.ts';
 
 describe('findEventHandlersBlock', () => {
     function findEventHandlerFunctions(sourceFile: ts.SourceFile) {
-        const componentFunctionExpressions = findMakeJayComponentConstructorCallsBlock(
-            MAKE_JAY_COMPONENT,
+        const bindingResolver = new SourceFileBindingResolver(sourceFile);
+        const componentFunctionExpressions = findComponentConstructorCallsBlock(
+            FindComponentConstructorType.makeJayComponent,
+            bindingResolver,
             sourceFile,
         ).map(({ comp }) => comp);
         const foundConstructors = findComponentConstructorsBlock(

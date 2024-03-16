@@ -53,7 +53,7 @@ function generateFunctionRepository(
     let readPatternsReturnProperties = matchedReturnPatterns.map(
         ({ pattern, patternKey }) => `$${patternKey}: ${pattern.leftSidePath.join('.')}`,
     );
-    readPatternsReturnProperties = [... new Set(readPatternsReturnProperties)];
+    readPatternsReturnProperties = [...new Set(readPatternsReturnProperties)];
     let variableReadsReturnProperties = matchedVariableReads.map(
         ({ variable, patternKey }) => `$${patternKey}: ${variable.text}`,
     );
