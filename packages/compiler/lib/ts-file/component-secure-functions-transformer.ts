@@ -16,7 +16,7 @@ import { SourceFileStatementAnalyzer } from './building-blocks/source-file-state
 import {
     findComponentConstructorCallsBlock,
     FindComponentConstructorType,
-} from './building-blocks/find-component-constructor-calls.ts';
+} from './building-blocks/find-component-constructor-calls';
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: CompiledPattern[];

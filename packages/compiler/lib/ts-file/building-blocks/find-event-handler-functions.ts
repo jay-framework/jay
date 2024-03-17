@@ -13,7 +13,7 @@ import {
     isParamVariableRoot,
 } from './name-binding-resolver';
 import { isFunctionLikeDeclarationBase } from '../ts-utils/ts-compiler-utils';
-import {SourceFileBindingResolver} from "./source-file-binding-resolver.ts";
+import { SourceFileBindingResolver } from './source-file-binding-resolver.ts';
 
 export interface FoundEventHandler {
     eventHandlerCallStatement: ExpressionStatement;
@@ -23,7 +23,7 @@ export interface FoundEventHandler {
 
 export function findEventHandlersBlock(
     functionDeclaration: FunctionLikeDeclarationBase,
-    bindingResolver: SourceFileBindingResolver
+    bindingResolver: SourceFileBindingResolver,
 ): FoundEventHandler[] {
     // const nameBindingResolver = new NameBindingResolver();
     // nameBindingResolver.addFunctionParams(functionDeclaration);
@@ -38,7 +38,10 @@ export function findEventHandlersBlock(
             //     nameBindingResolver.addFunctionDeclaration(statement);
             // else
             if (isExpressionStatement(statement) && isCallExpression(statement.expression)) {
-                if (isPropertyAccessExpression(statement.expression.expression) || isIdentifier(statement.expression.expression)) {
+                if (
+                    isPropertyAccessExpression(statement.expression.expression) ||
+                    isIdentifier(statement.expression.expression)
+                ) {
                     let functionVariable = bindingResolver.explain(statement.expression.expression);
 
                     let accessChain = flattenVariable(functionVariable);
@@ -55,7 +58,9 @@ export function findEventHandlersBlock(
                                 handlerIndex: nextEventHandlerIndex++,
                             });
                         else if (isIdentifier(handler) || isPropertyAccessExpression(handler)) {
-                            let flattenedHandler = flattenVariable(bindingResolver.explain(handler));
+                            let flattenedHandler = flattenVariable(
+                                bindingResolver.explain(handler),
+                            );
 
                             if (
                                 flattenedHandler.path.length === 0 &&

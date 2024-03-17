@@ -5,8 +5,8 @@ import ts, {
     isStringLiteral,
     isVariableStatement,
 } from 'typescript';
-import { SourceFileBindingResolver } from './source-file-binding-resolver.ts';
-import { flattenVariable, isImportModuleVariableRoot } from './name-binding-resolver.ts';
+import { SourceFileBindingResolver } from './source-file-binding-resolver';
+import { flattenVariable, isImportModuleVariableRoot } from './name-binding-resolver';
 
 export enum FindComponentConstructorType {
     makeJayComponent = 'makeJayComponent',

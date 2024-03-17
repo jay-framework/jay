@@ -6,8 +6,8 @@ import { createTsSourceFile } from '../test-utils/ts-source-utils';
 import {
     findComponentConstructorCallsBlock,
     FindComponentConstructorType,
-} from '../../lib/ts-file/building-blocks/find-component-constructor-calls.ts';
-import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver.ts';
+} from '../../lib/ts-file/building-blocks/find-component-constructor-calls';
+import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver';
 
 describe('findEventHandlersBlock', () => {
     function findEventHandlerFunctions(sourceFile: ts.SourceFile) {
@@ -21,7 +21,9 @@ describe('findEventHandlersBlock', () => {
             componentFunctionExpressions,
             sourceFile,
         );
-        return foundConstructors.flatMap((constructor) => findEventHandlersBlock(constructor, bindingResolver));
+        return foundConstructors.flatMap((constructor) =>
+            findEventHandlersBlock(constructor, bindingResolver),
+        );
     }
 
     it('defined as inline arrow functions based on ref object', async () => {

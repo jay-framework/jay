@@ -11,7 +11,7 @@ export * from './core/jay-format';
 export { prettify } from './utils/prettify';
 export * from './ts-file/component-bridge-transformer';
 export * from './ts-file/component-secure-functions-transformer';
-export * from './ts-file/ts-utils/extract-imports.ts';
+export * from './ts-file/ts-utils/extract-imports';
 export * from './ts-file/generate-imports-file';
 export * from './ts-file/parse-jay-file/parse-type-script-file';
 export * from './ts-file/building-blocks/create-ts-source-file-from-source';

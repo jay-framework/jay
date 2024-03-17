@@ -5,8 +5,8 @@ import { MAKE_JAY_TSX_COMPONENT } from '../../lib';
 import {
     findComponentConstructorCallsBlock,
     FindComponentConstructorType,
-} from '../../lib/ts-file/building-blocks/find-component-constructor-calls.ts';
-import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver.ts';
+} from '../../lib/ts-file/building-blocks/find-component-constructor-calls';
+import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver';
 
 describe('getBaseElementName', () => {
     const makeJayTsxComponentName = MAKE_JAY_TSX_COMPONENT;

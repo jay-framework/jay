@@ -3,7 +3,7 @@ import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
 import { astToCode, codeToAst } from './ts-utils/ts-compiler-utils';
 import { mkTransformer, SourceFileTransformerContext } from './ts-utils/mk-transformer';
 import { findMakeJayComponentImport } from './building-blocks/find-make-jay-component-import';
-import { getImportName } from './ts-utils/extract-imports.ts';
+import { getImportName } from './ts-utils/extract-imports';
 import { MAKE_JAY_COMPONENT } from '../core/constants';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
@@ -18,7 +18,7 @@ import {
     findComponentConstructorCallsBlock,
     FindComponentConstructorType,
     FoundJayComponentConstructorCall,
-} from './building-blocks/find-component-constructor-calls.ts';
+} from './building-blocks/find-component-constructor-calls';
 
 function generateComponentConstructorCalls(
     context: ts.TransformationContext,
