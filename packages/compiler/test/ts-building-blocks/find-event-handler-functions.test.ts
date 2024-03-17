@@ -21,20 +21,19 @@ describe('findEventHandlersBlock', () => {
             componentFunctionExpressions,
             sourceFile,
         );
-        return foundConstructors.flatMap((constructor) => findEventHandlersBlock(constructor));
+        return foundConstructors.flatMap((constructor) => findEventHandlersBlock(constructor, bindingResolver));
     }
 
     it('defined as inline arrow functions based on ref object', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
-        | import { CounterElementRefs, render } from './generated-element';
-        |
-        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
-        |   refs.subtracter.onclick(() => setCount(count() - 1));
-        |   refs.adderButton.onclick(() => setCount(count() + 1));
-        | }
-        |
-        | export const Counter = makeJayComponent(render, CounterComponent);`);
+            import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+            import { CounterElementRefs, render } from './generated-element';
+            
+            function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+              refs.subtracter.onclick(() => setCount(count() - 1));
+              refs.adderButton.onclick(() => setCount(count() + 1));
+            }
+            export const Counter = makeJayComponent(render, CounterComponent);`);
         const foundFunctions = findEventHandlerFunctions(sourceFile);
         expect(foundFunctions).toHaveLength(2);
         expect(astToCode(foundFunctions[0].eventHandler)).toBe('() => setCount(count() - 1)');
@@ -51,17 +50,17 @@ describe('findEventHandlersBlock', () => {
 
     it('defined as inline arrow functions based on ref object and variable bindings', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
-        | import { CounterElementRefs, render } from './generated-element';
-        |
-        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
-        |   let subtracter = refs.subtracter;
-        |   let adderButton = refs.adderButton; 
-        |   subtracter.onclick(() => setCount(count() - 1));
-        |   adderButton.onclick(() => setCount(count() + 1));
-        | }
-        |
-        | export const Counter = makeJayComponent(render, CounterComponent);`);
+            import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+            import { CounterElementRefs, render } from './generated-element';
+           
+            function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+              let subtracter = refs.subtracter;
+              let adderButton = refs.adderButton; 
+              subtracter.onclick(() => setCount(count() - 1));
+              adderButton.onclick(() => setCount(count() + 1));
+            }
+           
+            export const Counter = makeJayComponent(render, CounterComponent);`);
         const foundFunctions = findEventHandlerFunctions(sourceFile);
         expect(foundFunctions).toHaveLength(2);
         expect(astToCode(foundFunctions[0].eventHandler)).toBe('() => setCount(count() - 1)');
@@ -78,15 +77,15 @@ describe('findEventHandlersBlock', () => {
 
     it('defined as inline arrow functions based on refs object property binding', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
-        | import { CounterElementRefs, render } from './generated-element';
-        |
-        | function CounterComponent({ initialValue }: Props<CounterProps>, {subtracter, adderButton}: CounterElementRefs) {
-        |   subtracter.onclick(() => setCount(count() - 1));
-        |   adderButton.onclick(() => setCount(count() + 1));
-        | }
-        |
-        | export const Counter = makeJayComponent(render, CounterComponent);`);
+            import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+            import { CounterElementRefs, render } from './generated-element';
+           
+            function CounterComponent({ initialValue }: Props<CounterProps>, {subtracter, adderButton}: CounterElementRefs) {
+              subtracter.onclick(() => setCount(count() - 1));
+              adderButton.onclick(() => setCount(count() + 1));
+            }
+           
+            export const Counter = makeJayComponent(render, CounterComponent);`);
         const foundFunctions = findEventHandlerFunctions(sourceFile);
         expect(foundFunctions).toHaveLength(2);
         expect(astToCode(foundFunctions[0].eventHandler)).toBe('() => setCount(count() - 1)');
@@ -103,21 +102,21 @@ describe('findEventHandlersBlock', () => {
 
     it('defined as regular function', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
-        | import { CounterElementRefs, render } from './generated-element';
-        |
-        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
-        |   function subtract() {
-        |     setCount(count() - 1);
-        |   }
-        |   function add() {
-        |     setCount(count() + 1);
-        |   }
-        |   refs.subtracter.onclick(subtract);
-        |   refs.adderButton.onclick(add);
-        | }
-        |
-        | export const Counter = makeJayComponent(render, CounterComponent);`);
+            import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+            import { CounterElementRefs, render } from './generated-element';
+           
+            function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+              function subtract() {
+                setCount(count() - 1);
+              }
+              function add() {
+                setCount(count() + 1);
+              }
+              refs.subtracter.onclick(subtract);
+              refs.adderButton.onclick(add);
+            }
+           
+            export const Counter = makeJayComponent(render, CounterComponent);`);
         const foundFunctions = findEventHandlerFunctions(sourceFile);
         expect(foundFunctions).toHaveLength(2);
         expect(astToCode(foundFunctions[0].eventHandler)).toBe(`function subtract() {
@@ -138,17 +137,17 @@ describe('findEventHandlersBlock', () => {
 
     it('defined as const arrow function', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
-        | import { CounterElementRefs, render } from './generated-element';
-        |
-        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
-        |   const subtract = () => setCount(count() - 1);
-        |   const add = () => setCount(count() + 1);
-        |   refs.subtracter.onclick(subtract);
-        |   refs.adderButton.onclick(add);
-        | }
-        |
-        | export const Counter = makeJayComponent(render, CounterComponent);`);
+            import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+            import { CounterElementRefs, render } from './generated-element';
+           
+            function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+              const subtract = () => setCount(count() - 1);
+              const add = () => setCount(count() + 1);
+              refs.subtracter.onclick(subtract);
+              refs.adderButton.onclick(add);
+            }
+           
+            export const Counter = makeJayComponent(render, CounterComponent);`);
         const foundFunctions = findEventHandlerFunctions(sourceFile);
         expect(foundFunctions).toHaveLength(2);
         expect(astToCode(foundFunctions[0].eventHandler)).toBe('() => setCount(count() - 1)');
@@ -165,17 +164,17 @@ describe('findEventHandlersBlock', () => {
 
     it('defined as const anonymous function', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
-        | import { CounterElementRefs, render } from './generated-element';
-        |
-        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
-        |   const subtract = function() { setCount(count() - 1)};
-        |   const add = function() { setCount(count() + 1)};
-        |   refs.subtracter.onclick(subtract);
-        |   refs.adderButton.onclick(add);
-        | }
-        |
-        | export const Counter = makeJayComponent(render, CounterComponent);`);
+            import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+            import { CounterElementRefs, render } from './generated-element';
+           
+            function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+              const subtract = function() { setCount(count() - 1)};
+              const add = function() { setCount(count() + 1)};
+              refs.subtracter.onclick(subtract);
+              refs.adderButton.onclick(add);
+            }
+           
+            export const Counter = makeJayComponent(render, CounterComponent);`);
         const foundFunctions = findEventHandlerFunctions(sourceFile);
         expect(foundFunctions).toHaveLength(2);
         expect(astToCode(foundFunctions[0].eventHandler)).toBe(
@@ -194,16 +193,16 @@ describe('findEventHandlersBlock', () => {
 
     it('both events are using the same function (a bug in the component logic, valid in other cases)', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
-        | import { CounterElementRefs, render } from './generated-element';
-        |
-        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
-        |   const add = function() { setCount(count() + 1)};
-        |   refs.subtracter.onclick(add);
-        |   refs.adderButton.onclick(add);
-        | }
-        |
-        | export const Counter = makeJayComponent(render, CounterComponent);`);
+            import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+            import { CounterElementRefs, render } from './generated-element';
+           
+            function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+              const add = function() { setCount(count() + 1)};
+              refs.subtracter.onclick(add);
+              refs.adderButton.onclick(add);
+            }
+           
+            export const Counter = makeJayComponent(render, CounterComponent);`);
         const foundFunctions = findEventHandlerFunctions(sourceFile);
         expect(foundFunctions).toHaveLength(2);
         expect(astToCode(foundFunctions[0].eventHandler)).toBe(
@@ -224,19 +223,19 @@ describe('findEventHandlersBlock', () => {
 
     it('defined as nested object function', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
-        | import { CounterElementRefs, render } from './generated-element';
-        |
-        | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
-        |   const events = {
-        |     subtract: function() { setCount(count() - 1)},
-        |     add: function() { setCount(count() + 1)}
-        |   }
-        |   refs.subtracter.onclick(events.subtract);
-        |   refs.adderButton.onclick(events.add);
-        | }
-        |
-        | export const Counter = makeJayComponent(render, CounterComponent);`);
+            import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+            import { CounterElementRefs, render } from './generated-element';
+           
+            function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+              const events = {
+                subtract: function() { setCount(count() - 1)},
+                add: function() { setCount(count() + 1)}
+              }
+              refs.subtracter.onclick(events.subtract);
+              refs.adderButton.onclick(events.add);
+            }
+           
+            export const Counter = makeJayComponent(render, CounterComponent);`);
         const foundFunctions = findEventHandlerFunctions(sourceFile);
         expect(foundFunctions).toHaveLength(2);
         expect(astToCode(foundFunctions[0].eventHandler)).toBe(

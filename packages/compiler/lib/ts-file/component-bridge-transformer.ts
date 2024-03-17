@@ -169,7 +169,7 @@ function mkSourceFileTransformer({
     let constructorExpressions = calls.map(({ comp }) => comp);
     let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sourceFile);
     let foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
-        findEventHandlersBlock(constructorDefinition),
+        findEventHandlersBlock(constructorDefinition, bindingResolver),
     );
 
     let analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
