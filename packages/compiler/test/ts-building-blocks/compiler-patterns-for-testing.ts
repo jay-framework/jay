@@ -1,4 +1,4 @@
-import { compileFunctionSplitPatternsBlock } from '../../lib/ts-file/building-blocks/compile-function-split-patterns';
+import { compileFunctionSplitPatternsBlock } from '../../lib';
 import { createTsSourceFile } from '../test-utils/ts-source-utils';
 
 export function readEventTargetValuePattern() {

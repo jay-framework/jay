@@ -10,7 +10,7 @@ import {
 } from 'ts-morph';
 import fs from 'fs';
 
-import { resolveTsConfig, ResolveTsConfigOptions } from './resolve-ts-config';
+import { resolveTsConfig, ResolveTsConfigOptions } from './ts-utils/resolve-ts-config';
 import {
     JayArrayType,
     JayComponentApiMember,

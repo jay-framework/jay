@@ -1,5 +1,5 @@
 import { CompiledPattern } from '../../lib';
-import { mkTransformer } from '../../lib/ts-file/mk-transformer';
+import { mkTransformer } from '../../lib/ts-file/ts-utils/mk-transformer';
 import {
     TransformedEventHandlerByPattern,
     transformEventHandlerByPatternBlock,

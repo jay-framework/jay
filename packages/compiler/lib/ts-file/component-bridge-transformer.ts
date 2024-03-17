@@ -1,9 +1,9 @@
 import ts, { Statement, TransformationContext } from 'typescript';
 import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
-import { astToCode, codeToAst } from './ts-compiler-utils';
-import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
+import { astToCode, codeToAst } from './ts-utils/ts-compiler-utils';
+import { mkTransformer, SourceFileTransformerContext } from './ts-utils/mk-transformer';
 import { findMakeJayComponentImport } from './building-blocks/find-make-jay-component-import';
-import { getImportName } from './extract-imports';
+import { getImportName } from './ts-utils/extract-imports.ts';
 import { MAKE_JAY_COMPONENT } from '../core/constants';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';

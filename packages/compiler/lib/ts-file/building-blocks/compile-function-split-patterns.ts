@@ -12,9 +12,9 @@ import ts, {
     SyntaxKind,
 } from 'typescript';
 import { flattenVariable } from './name-binding-resolver';
-import { mkTransformer } from '../mk-transformer';
+import { mkTransformer } from '../ts-utils/mk-transformer';
 import { JayValidations, WithValidations } from '../../core/with-validations';
-import { astToCode } from '../ts-compiler-utils';
+import { astToCode } from '../ts-utils/ts-compiler-utils';
 import { SourceFileBindingResolver } from './source-file-binding-resolver';
 
 export enum CompilePatternType {

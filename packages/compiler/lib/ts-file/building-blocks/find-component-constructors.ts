@@ -6,7 +6,7 @@ import ts, {
     isIdentifier,
     isVariableStatement,
 } from 'typescript';
-import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils';
+import { isFunctionLikeDeclarationBase } from '../ts-utils/ts-compiler-utils';
 
 export function findComponentConstructorsBlock(
     componentFunctionExpressions: Expression[],

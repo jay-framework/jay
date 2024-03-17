@@ -1,7 +1,7 @@
 import { findComponentConstructorsBlock } from '../../lib/ts-file/building-blocks/find-component-constructors';
 import ts from 'typescript';
 import { findEventHandlersBlock } from '../../lib/ts-file/building-blocks/find-event-handler-functions';
-import { astToCode } from '../../lib/ts-file/ts-compiler-utils';
+import { astToCode } from '../../lib/ts-file/ts-utils/ts-compiler-utils';
 import { createTsSourceFile } from '../test-utils/ts-source-utils';
 import {
     findComponentConstructorCallsBlock,

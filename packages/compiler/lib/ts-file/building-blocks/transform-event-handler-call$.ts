@@ -1,5 +1,4 @@
 import ts, {
-    CallExpression,
     Expression,
     ExpressionStatement,
     isCallExpression,
@@ -7,7 +6,7 @@ import ts, {
     NodeFactory,
     TransformationContext,
 } from 'typescript';
-import { codeToAst } from '../ts-compiler-utils';
+import { codeToAst } from '../ts-utils/ts-compiler-utils';
 import { FoundEventHandler } from './find-event-handler-functions';
 
 const transformEventHandlerCall$ =

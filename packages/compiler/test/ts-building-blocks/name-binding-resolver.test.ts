@@ -1,4 +1,4 @@
-import { isFunctionLikeDeclarationBase } from '../../lib/ts-file/ts-compiler-utils';
+import { isFunctionLikeDeclarationBase } from '../../lib/ts-file/ts-utils/ts-compiler-utils';
 import ts, {
     ExpressionStatement,
     isVariableStatement,

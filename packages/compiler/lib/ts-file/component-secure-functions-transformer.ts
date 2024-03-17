@@ -1,5 +1,5 @@
 import ts, { isImportDeclaration } from 'typescript';
-import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
+import { mkTransformer, SourceFileTransformerContext } from './ts-utils/mk-transformer';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
 import { CompiledPattern } from './building-blocks/compile-function-split-patterns';
@@ -10,7 +10,7 @@ import {
     transformEventHandlers,
 } from './building-blocks/transform-event-handlers';
 import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
-import { codeToAst } from './ts-compiler-utils';
+import { codeToAst } from './ts-utils/ts-compiler-utils';
 import { SourceFileBindingResolver } from './building-blocks/source-file-binding-resolver';
 import { SourceFileStatementAnalyzer } from './building-blocks/source-file-statement-analyzer';
 import {

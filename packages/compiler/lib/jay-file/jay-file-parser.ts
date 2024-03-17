@@ -15,7 +15,7 @@ import {
     JayUnknown,
     resolvePrimitiveType,
 } from '../core/jay-type';
-import { ResolveTsConfigOptions } from '../ts-file/resolve-ts-config';
+import { ResolveTsConfigOptions } from '../ts-file/ts-utils/resolve-ts-config';
 import { JayFormat } from '../core/jay-format';
 import { JayImportLink, JayImportName } from '../core/jay-imports';
 import { JayYamlStructure } from '../core/jay-yaml-structure';

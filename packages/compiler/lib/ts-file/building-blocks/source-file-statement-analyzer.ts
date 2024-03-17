@@ -37,7 +37,7 @@ import {
     isParamVariableRoot,
     LetOrConst,
 } from './name-binding-resolver';
-import { ContextualVisitChild, visitWithContext } from '../visitor-with-context';
+import { ContextualVisitChild, visitWithContext } from '../ts-utils/visitor-with-context';
 
 export interface MatchedPattern {
     patterns: CompiledPattern[];

@@ -4,18 +4,15 @@ import {
     isBlock,
     isCallExpression,
     isExpressionStatement,
-    isFunctionDeclaration,
     isIdentifier,
     isPropertyAccessExpression,
-    isVariableStatement,
 } from 'typescript';
 import {
     flattenVariable,
     isFunctionVariableRoot,
     isParamVariableRoot,
-    NameBindingResolver,
 } from './name-binding-resolver';
-import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils';
+import { isFunctionLikeDeclarationBase } from '../ts-utils/ts-compiler-utils';
 import {SourceFileBindingResolver} from "./source-file-binding-resolver.ts";
 
 export interface FoundEventHandler {

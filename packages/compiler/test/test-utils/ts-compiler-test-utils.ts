@@ -8,7 +8,6 @@ import {
     generateElementFile,
     generateImportsFileFromJayFile,
     generateImportsFileFromTsSource,
-    JayFile,
     MainRuntimeModes,
     parseJayFile,
     prettify,
@@ -16,8 +15,8 @@ import {
     WithValidations,
 } from '../../lib';
 import { getFileFromFolder, readNamedSourceJayFile, readTestFile } from './file-utils';
-import { astToCode } from '../../lib/ts-file/ts-compiler-utils';
-import { JayHtmlFile } from '../../lib/core/jay-file';
+import { astToCode } from '../../lib/ts-file/ts-utils/ts-compiler-utils';
+import { JayHtmlFile } from '../../lib';
 
 export async function readFixtureFile(
     fixturePath: string,

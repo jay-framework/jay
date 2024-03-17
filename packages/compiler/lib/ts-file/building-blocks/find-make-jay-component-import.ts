@@ -1,7 +1,6 @@
 import ts, { isImportDeclaration, isStringLiteral } from 'typescript';
 import { JAY_COMPONENT } from '../../core/constants';
-import { getImportName, getImportSpecifiers } from '../extract-imports';
-import { deprecate } from 'node:util';
+import { getImportName, getImportSpecifiers } from '../ts-utils/extract-imports';
 
 export function findMakeJayComponentImport(makeJayComponentName: string, node: ts.Node): string {
     if (
@@ -19,7 +18,6 @@ export function findMakeJayComponentImport(makeJayComponentName: string, node: t
     return undefined;
 }
 
-// todo deprecated
 export function findMakeJayComponentImportTransformerBlock(
     makeJayComponentName: string,
     sourceFile: ts.SourceFile,

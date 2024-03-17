@@ -20,11 +20,6 @@ export interface FoundJayComponentConstructorCall {
     name: ts.BindingName;
 }
 
-export type MapComponentConstructorCall<T> = (
-    initializer: ts.CallExpression,
-    name: ts.BindingName,
-) => T;
-
 export function findComponentConstructorCalls(
     findType: FindComponentConstructorType,
     bindingResolver: SourceFileBindingResolver,
