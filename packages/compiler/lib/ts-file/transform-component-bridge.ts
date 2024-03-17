@@ -151,7 +151,7 @@ function transformSourceFile(
     return factory.updateSourceFile(sourceFile, allStatements);
 }
 
-function mkSourceFileTransformer({
+function mkComponentBridgeTransformer({
     factory,
     sourceFile,
     context,
@@ -188,9 +188,9 @@ function mkSourceFileTransformer({
     );
 }
 
-export function componentBridgeTransformer(
+export function transformComponentBridge(
     importerMode: RuntimeMode,
     patterns: CompiledPattern[] = [],
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
-    return mkTransformer(mkSourceFileTransformer, { importerMode, patterns });
+    return mkTransformer(mkComponentBridgeTransformer, { importerMode, patterns });
 }

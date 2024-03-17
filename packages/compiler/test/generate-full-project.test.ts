@@ -14,7 +14,7 @@ import {
     readTestFile,
 } from './test-utils/file-utils';
 import * as ts from 'typescript';
-import { componentBridgeTransformer } from '../lib/ts-file/component-bridge-transformer';
+import { transformComponentBridge } from '../lib/ts-file/transform-component-bridge';
 import {
     printTsFile,
     readAndParseJayFile,
@@ -150,7 +150,7 @@ describe('generate full project', () => {
                 );
 
                 const outputFile = ts.transform(sourceFile, [
-                    componentBridgeTransformer(RuntimeMode.MainSandbox),
+                    transformComponentBridge(RuntimeMode.MainSandbox),
                 ]);
 
                 const outputCode = await printTsFile(outputFile);

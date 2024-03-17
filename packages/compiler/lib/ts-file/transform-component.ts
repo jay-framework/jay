@@ -26,9 +26,7 @@ function isCssImport(node) {
     return ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text.endsWith('.css');
 }
 
-function mkComponentSecureFunctionsTransformer(
-    sftContext: ComponentSecureFunctionsTransformerConfig,
-) {
+function mkComponentTransformer(sftContext: ComponentSecureFunctionsTransformerConfig) {
     let { patterns, context, factory, sourceFile } = sftContext;
 
     // find the event handlers
@@ -84,8 +82,8 @@ function mkComponentSecureFunctionsTransformer(
     } else return transformedSourceFile;
 }
 
-export function componentSecureFunctionsTransformer(
+export function transformComponent(
     patterns: CompiledPattern[] = [],
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
-    return mkTransformer(mkComponentSecureFunctionsTransformer, { patterns });
+    return mkTransformer(mkComponentTransformer, { patterns });
 }

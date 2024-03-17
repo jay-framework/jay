@@ -13,7 +13,7 @@ import {
     isParamVariableRoot,
 } from './name-binding-resolver';
 import { isFunctionLikeDeclarationBase } from '../ts-utils/ts-compiler-utils';
-import { SourceFileBindingResolver } from './source-file-binding-resolver.ts';
+import { SourceFileBindingResolver } from './source-file-binding-resolver';
 
 export interface FoundEventHandler {
     eventHandlerCallStatement: ExpressionStatement;

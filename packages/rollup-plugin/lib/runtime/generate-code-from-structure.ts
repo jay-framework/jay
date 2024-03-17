@@ -3,8 +3,8 @@ import { transform } from 'typescript';
 import {
     checkDiagnosticsErrors,
     checkValidationErrors,
-    componentBridgeTransformer,
-    componentSecureFunctionsTransformer,
+    transformComponentBridge,
+    transformComponent,
     generateElementBridgeFile,
     generateElementFile,
     generateImportsFileFromJayFile,
@@ -71,7 +71,7 @@ function generateCodeFromTsFile(
             if (!code.includes('makeJayComponent')) return code;
             return transformTsCode(
                 jayContext,
-                [componentBridgeTransformer(mode, jayContext.compilerPatterns)],
+                [transformComponentBridge(mode, jayContext.compilerPatterns)],
                 id,
                 code,
             );
@@ -81,7 +81,7 @@ function generateCodeFromTsFile(
         case RuntimeMode.WorkerSandbox:
             return transformTsCode(
                 jayContext,
-                [componentSecureFunctionsTransformer(jayContext.compilerPatterns)],
+                [transformComponent(jayContext.compilerPatterns)],
                 id,
                 code,
             );

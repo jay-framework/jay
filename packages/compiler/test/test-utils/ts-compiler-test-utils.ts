@@ -3,7 +3,7 @@ import * as ts from 'typescript';
 import { isStatement, Statement, TransformerFactory } from 'typescript';
 import {
     checkValidationErrors,
-    componentBridgeTransformer,
+    transformComponentBridge,
     generateElementBridgeFile,
     generateElementFile,
     generateImportsFileFromJayFile,
@@ -100,7 +100,7 @@ export async function readFileAndTsTransform(
 export async function readFileAndGenerateComponentBridgeFile(folder: string, givenFile?: string) {
     return readFileAndTsTransform(
         folder,
-        [componentBridgeTransformer(RuntimeMode.MainSandbox)],
+        [transformComponentBridge(RuntimeMode.MainSandbox)],
         givenFile,
     );
 }
