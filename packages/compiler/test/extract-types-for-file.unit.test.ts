@@ -9,7 +9,7 @@ import {
     JayObjectType,
     JayString,
     JayUnknown,
-} from '../lib/core/jay-type';
+} from '../lib';
 
 describe('typescript-compiler', () => {
     const O1 = new JayObjectType('O1', {
