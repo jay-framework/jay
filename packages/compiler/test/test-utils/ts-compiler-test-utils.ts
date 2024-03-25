@@ -3,12 +3,11 @@ import * as ts from 'typescript';
 import { isStatement, Statement, TransformerFactory } from 'typescript';
 import {
     checkValidationErrors,
-    componentBridgeTransformer,
+    transformComponentBridge,
     generateElementBridgeFile,
     generateElementFile,
     generateImportsFileFromJayFile,
     generateImportsFileFromTsSource,
-    JayFile,
     MainRuntimeModes,
     parseJayFile,
     prettify,
@@ -16,8 +15,8 @@ import {
     WithValidations,
 } from '../../lib';
 import { getFileFromFolder, readNamedSourceJayFile, readTestFile } from './file-utils';
-import { astToCode } from '../../lib/ts-file/ts-compiler-utils';
-import { JayHtmlFile } from '../../lib/core/jay-file';
+import { astToCode } from '../../lib/ts-file/ts-utils/ts-compiler-utils';
+import { JayHtmlFile } from '../../lib';
 
 export async function readFixtureFile(
     fixturePath: string,
@@ -101,7 +100,7 @@ export async function readFileAndTsTransform(
 export async function readFileAndGenerateComponentBridgeFile(folder: string, givenFile?: string) {
     return readFileAndTsTransform(
         folder,
-        [componentBridgeTransformer(RuntimeMode.MainSandbox)],
+        [transformComponentBridge(RuntimeMode.MainSandbox)],
         givenFile,
     );
 }

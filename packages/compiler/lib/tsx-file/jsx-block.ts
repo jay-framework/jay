@@ -1,6 +1,6 @@
 import ts from 'typescript';
 import { prettifyHtml } from '../utils/prettify';
-import { astToCode } from '../ts-file/ts-compiler-utils';
+import { astToCode } from '../ts-file/ts-utils/ts-compiler-utils';
 
 export interface JsxBlockData {
     htmlFragments: string[];

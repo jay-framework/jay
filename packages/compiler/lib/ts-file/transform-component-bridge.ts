@@ -1,12 +1,9 @@
 import ts, { Statement, TransformationContext } from 'typescript';
 import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
-import { astToCode, codeToAst } from './ts-compiler-utils';
-import { mkTransformer, SourceFileTransformerContext } from './mk-transformer';
-import {
-    findMakeJayComponentImport,
-    findMakeJayComponentImportTransformerBlock,
-} from './building-blocks/find-make-jay-component-import';
-import { getImportName } from './extract-imports';
+import { astToCode, codeToAst } from './ts-utils/ts-compiler-utils';
+import { mkTransformer, SourceFileTransformerContext } from './ts-utils/mk-transformer';
+import { findMakeJayComponentImport } from './building-blocks/find-make-jay-component-import';
+import { getImportName } from './ts-utils/extract-imports';
 import { MAKE_JAY_COMPONENT } from '../core/constants';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
@@ -15,16 +12,17 @@ import {
     TransformedEventHandlers,
     transformEventHandlers,
 } from './building-blocks/transform-event-handlers';
-import {
-    findMakeJayComponentConstructorCallsBlock,
-    MakeJayComponentConstructorCalls,
-} from './building-blocks/find-make-jay-component-constructor-calls';
 import { SourceFileBindingResolver } from './building-blocks/source-file-binding-resolver';
 import { SourceFileStatementAnalyzer } from './building-blocks/source-file-statement-analyzer';
+import {
+    findComponentConstructorCallsBlock,
+    FindComponentConstructorType,
+    FoundJayComponentConstructorCall,
+} from './building-blocks/find-component-constructor-calls';
 
 function generateComponentConstructorCalls(
     context: ts.TransformationContext,
-    componentConstructorCalls: MakeJayComponentConstructorCalls[],
+    componentConstructorCalls: FoundJayComponentConstructorCall[],
     hasFunctionRepository: boolean,
 ): ts.Statement {
     let optionsParam = hasFunctionRepository ? ', { funcRepository }' : '';
@@ -115,7 +113,7 @@ function transformSourceFile(
     factory: ts.NodeFactory,
     context: ts.TransformationContext,
     importerMode: RuntimeMode,
-    componentConstructorCalls: MakeJayComponentConstructorCalls[],
+    componentConstructorCalls: FoundJayComponentConstructorCall[],
     transformedEventHandlers: TransformedEventHandlers,
 ) {
     let { functionRepository, hasFunctionRepository } = generateFunctionRepository(
@@ -153,27 +151,27 @@ function transformSourceFile(
     return factory.updateSourceFile(sourceFile, allStatements);
 }
 
-function mkSourceFileTransformer({
+function mkComponentBridgeTransformer({
     factory,
     sourceFile,
     context,
     importerMode,
     patterns,
 }: SourceFileTransformerContext & ComponentBridgeTransformerConfig) {
+    let bindingResolver = new SourceFileBindingResolver(sourceFile);
+
     // find the event handlers
-    let makeJayComponent_ImportName = findMakeJayComponentImportTransformerBlock(
-        MAKE_JAY_COMPONENT,
+    let calls = findComponentConstructorCallsBlock(
+        FindComponentConstructorType.makeJayComponent,
+        bindingResolver,
         sourceFile,
     );
-
-    let calls = findMakeJayComponentConstructorCallsBlock(makeJayComponent_ImportName, sourceFile);
     let constructorExpressions = calls.map(({ comp }) => comp);
     let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sourceFile);
     let foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
-        findEventHandlersBlock(constructorDefinition),
+        findEventHandlersBlock(constructorDefinition, bindingResolver),
     );
 
-    let bindingResolver = new SourceFileBindingResolver(sourceFile);
     let analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
 
     let transformedEventHandlers = new TransformedEventHandlers(
@@ -190,9 +188,9 @@ function mkSourceFileTransformer({
     );
 }
 
-export function componentBridgeTransformer(
+export function transformComponentBridge(
     importerMode: RuntimeMode,
     patterns: CompiledPattern[] = [],
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
-    return mkTransformer(mkSourceFileTransformer, { importerMode, patterns });
+    return mkTransformer(mkComponentBridgeTransformer, { importerMode, patterns });
 }

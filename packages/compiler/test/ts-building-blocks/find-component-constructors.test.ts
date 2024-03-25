@@ -1,13 +1,18 @@
 import ts, { isArrowFunction, isFunctionDeclaration, isFunctionExpression } from 'typescript';
 import { findComponentConstructorsBlock } from '../../lib/ts-file/building-blocks/find-component-constructors';
 import { createTsSourceFile } from '../test-utils/ts-source-utils';
-import { findMakeJayComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-make-jay-component-constructor-calls';
-import { MAKE_JAY_COMPONENT } from '../../lib';
+import {
+    findComponentConstructorCallsBlock,
+    FindComponentConstructorType,
+} from '../../lib/ts-file/building-blocks/find-component-constructor-calls';
+import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver';
 
 describe('findComponentConstructorsBlock', () => {
     function findConstructors(sourceFile: ts.SourceFile) {
-        const componentFunctionExpressions = findMakeJayComponentConstructorCallsBlock(
-            MAKE_JAY_COMPONENT,
+        const bindingResolver = new SourceFileBindingResolver(sourceFile);
+        const componentFunctionExpressions = findComponentConstructorCallsBlock(
+            FindComponentConstructorType.makeJayComponent,
+            bindingResolver,
             sourceFile,
         ).map(({ comp }) => comp);
         return findComponentConstructorsBlock(componentFunctionExpressions, sourceFile);

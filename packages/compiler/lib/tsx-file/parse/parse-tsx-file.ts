@@ -6,10 +6,14 @@ import { getBaseElementName } from '../../ts-file/building-blocks/get-base-eleme
 import { JAY_COMPONENT, MAKE_JAY_TSX_COMPONENT } from '../../core/constants';
 import { findComponentConstructorsBlock } from '../../ts-file/building-blocks/find-component-constructors';
 import { findFunctionExpressionReturnStatements } from '../../ts-file/building-blocks/find-function-expression-return-statements';
-import { findMakeJayTsxComponentConstructorCallsBlock } from '../../ts-file/building-blocks/find-make-jay-tsx-component-constructor-calls';
 import ts from 'typescript';
 import { getObjectPropertiesMap } from '../../ts-file/building-blocks/get-object-properties-map';
 import { parseJsx } from './parse-jsx';
+import {
+    findComponentConstructorCallsBlock,
+    FindComponentConstructorType,
+} from '../../ts-file/building-blocks/find-component-constructor-calls';
+import { SourceFileBindingResolver } from '../../ts-file/building-blocks/source-file-binding-resolver';
 
 export function parseTsxFile(filename: string, source: string): WithValidations<JayTsxFile> {
     const sourceFile = createTsSourceFileFromSource(filename, source, ts.ScriptKind.TSX);
@@ -26,8 +30,10 @@ export function parseTsxFile(filename: string, source: string): WithValidations<
 
     const makeJayTsxComponent_ImportName =
         makeJayTsxComponentImport.as || makeJayTsxComponentImport.name;
-    const componentConstructors = findMakeJayTsxComponentConstructorCallsBlock(
-        makeJayTsxComponent_ImportName,
+    const bindingResolver = new SourceFileBindingResolver(sourceFile);
+    const componentConstructors = findComponentConstructorCallsBlock(
+        FindComponentConstructorType.makeJayTsxComponent,
+        bindingResolver,
         sourceFile,
     );
 

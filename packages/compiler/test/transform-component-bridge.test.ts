@@ -1,5 +1,5 @@
 import { transformCode } from './test-utils/ts-compiler-test-utils';
-import { componentBridgeTransformer, RuntimeMode } from '../lib';
+import { transformComponentBridge, RuntimeMode } from '../lib';
 import { prettify } from '../lib';
 import {
     eventPreventDefaultPattern,
@@ -23,7 +23,7 @@ describe('transform component bridge', () => {
                 export const Comp = makeJayComponent(render, CompComponent);`;
 
             const outputCode = await transformCode(code, [
-                componentBridgeTransformer(RuntimeMode.MainSandbox, []),
+                transformComponentBridge(RuntimeMode.MainSandbox, []),
             ]);
 
             expect(outputCode).toEqual(
@@ -50,7 +50,7 @@ describe('transform component bridge', () => {
                 export const Comp = makeJayComponent(render, CompComponent);`;
 
             const outputCode = await transformCode(code, [
-                componentBridgeTransformer(RuntimeMode.MainSandbox, []),
+                transformComponentBridge(RuntimeMode.MainSandbox, []),
             ]);
 
             expect(outputCode).toEqual(
@@ -81,7 +81,7 @@ describe('transform component bridge', () => {
                     export const Comp = makeJayComponent(render, CompComponent);`;
 
                 const outputCode = await transformCode(code, [
-                    componentBridgeTransformer(RuntimeMode.MainSandbox, input_value_pattern),
+                    transformComponentBridge(RuntimeMode.MainSandbox, input_value_pattern),
                 ]);
 
                 expect(outputCode).toEqual(
@@ -112,7 +112,7 @@ describe('transform component bridge', () => {
                     export const Comp = makeJayComponent(render, CompComponent);`;
 
                 const outputCode = await transformCode(code, [
-                    componentBridgeTransformer(RuntimeMode.MainSandbox, input_value_pattern),
+                    transformComponentBridge(RuntimeMode.MainSandbox, input_value_pattern),
                 ]);
 
                 expect(outputCode).toEqual(
@@ -147,7 +147,7 @@ describe('transform component bridge', () => {
                     export const Comp = makeJayComponent(render, CompComponent);`;
 
                 const outputCode = await transformCode(code, [
-                    componentBridgeTransformer(RuntimeMode.MainSandbox, input_value_pattern),
+                    transformComponentBridge(RuntimeMode.MainSandbox, input_value_pattern),
                 ]);
 
                 expect(outputCode).toEqual(
@@ -175,7 +175,7 @@ describe('transform component bridge', () => {
                     export const Comp = makeJayComponent(render, CompComponent);`;
 
                 const outputCode = await transformCode(code, [
-                    componentBridgeTransformer(RuntimeMode.MainSandbox, input_value_pattern),
+                    transformComponentBridge(RuntimeMode.MainSandbox, input_value_pattern),
                 ]);
 
                 expect(outputCode).toEqual(
@@ -207,7 +207,7 @@ describe('transform component bridge', () => {
                     export const Comp = makeJayComponent(render, CompComponent);`;
 
                 const outputCode = await transformCode(code, [
-                    componentBridgeTransformer(RuntimeMode.MainSandbox, preventDefaultPattern),
+                    transformComponentBridge(RuntimeMode.MainSandbox, preventDefaultPattern),
                 ]);
 
                 expect(outputCode).toEqual(
@@ -250,7 +250,7 @@ describe('transform component bridge', () => {
                     export const Comp = makeJayComponent(render, CompComponent);`;
 
                 const outputCode = await transformCode(code, [
-                    componentBridgeTransformer(RuntimeMode.MainSandbox, patterns),
+                    transformComponentBridge(RuntimeMode.MainSandbox, patterns),
                 ]);
 
                 expect(outputCode).toEqual(

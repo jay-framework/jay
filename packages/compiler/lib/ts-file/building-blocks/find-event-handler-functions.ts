@@ -4,18 +4,16 @@ import {
     isBlock,
     isCallExpression,
     isExpressionStatement,
-    isFunctionDeclaration,
     isIdentifier,
     isPropertyAccessExpression,
-    isVariableStatement,
 } from 'typescript';
 import {
     flattenVariable,
     isFunctionVariableRoot,
     isParamVariableRoot,
-    NameBindingResolver,
 } from './name-binding-resolver';
-import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils';
+import { isFunctionLikeDeclarationBase } from '../ts-utils/ts-compiler-utils';
+import { SourceFileBindingResolver } from './source-file-binding-resolver';
 
 export interface FoundEventHandler {
     eventHandlerCallStatement: ExpressionStatement;
@@ -25,64 +23,61 @@ export interface FoundEventHandler {
 
 export function findEventHandlersBlock(
     functionDeclaration: FunctionLikeDeclarationBase,
+    bindingResolver: SourceFileBindingResolver,
 ): FoundEventHandler[] {
-    const nameBindingResolver = new NameBindingResolver();
-    nameBindingResolver.addFunctionParams(functionDeclaration);
+    // const nameBindingResolver = new NameBindingResolver();
+    // nameBindingResolver.addFunctionParams(functionDeclaration);
 
     const foundEventHandlers: FoundEventHandler[] = [];
     const foundEventHandlerFunctionsToHandlerIndex = new Map();
     let nextEventHandlerIndex = 0;
     if (isBlock(functionDeclaration.body)) {
         functionDeclaration.body.statements.forEach((statement) => {
-            if (isVariableStatement(statement)) nameBindingResolver.addVariableStatement(statement);
-            else if (isFunctionDeclaration(statement))
-                nameBindingResolver.addFunctionDeclaration(statement);
-            else if (isExpressionStatement(statement) && isCallExpression(statement.expression)) {
-                let functionVariable;
-                if (isPropertyAccessExpression(statement.expression.expression)) {
-                    functionVariable = nameBindingResolver.resolvePropertyAccess(
-                        statement.expression.expression,
-                    );
-                } else if (isIdentifier(statement.expression.expression)) {
-                    functionVariable = nameBindingResolver.resolveIdentifier(
-                        statement.expression.expression,
-                    );
-                }
-
-                let accessChain = flattenVariable(functionVariable);
+            // if (isVariableStatement(statement)) nameBindingResolver.addVariableStatement(statement);
+            // else if (isFunctionDeclaration(statement))
+            //     nameBindingResolver.addFunctionDeclaration(statement);
+            // else
+            if (isExpressionStatement(statement) && isCallExpression(statement.expression)) {
                 if (
-                    accessChain.path.length === 2 &&
-                    isParamVariableRoot(accessChain.root) &&
-                    accessChain.root.param === functionDeclaration.parameters[1]
+                    isPropertyAccessExpression(statement.expression.expression) ||
+                    isIdentifier(statement.expression.expression)
                 ) {
-                    let handler = statement.expression.arguments[0];
-                    if (isFunctionLikeDeclarationBase(handler))
-                        foundEventHandlers.push({
-                            eventHandler: handler,
-                            eventHandlerCallStatement: statement,
-                            handlerIndex: nextEventHandlerIndex++,
-                        });
-                    else {
-                        // else if (isIdentifier(handler) && nameBindingResolver.variables.has(handler.text)) {
-                        let flattenedHandler = flattenVariable(
-                            nameBindingResolver.resolvePropertyAccessChain(handler),
-                        );
+                    let functionVariable = bindingResolver.explain(statement.expression.expression);
 
-                        if (
-                            flattenedHandler.path.length === 0 &&
-                            isFunctionVariableRoot(flattenedHandler.root)
-                        )
+                    let accessChain = flattenVariable(functionVariable);
+                    if (
+                        accessChain.path.length === 2 &&
+                        isParamVariableRoot(accessChain.root) &&
+                        accessChain.root.param === functionDeclaration.parameters[1]
+                    ) {
+                        let handler = statement.expression.arguments[0];
+                        if (isFunctionLikeDeclarationBase(handler))
                             foundEventHandlers.push({
-                                eventHandler: flattenedHandler.root.func,
+                                eventHandler: handler,
                                 eventHandlerCallStatement: statement,
-                                handlerIndex:
-                                    foundEventHandlerFunctionsToHandlerIndex.get(
-                                        flattenedHandler.root,
-                                    ) ??
-                                    foundEventHandlerFunctionsToHandlerIndex
-                                        .set(flattenedHandler.root, nextEventHandlerIndex++)
-                                        .get(flattenedHandler.root),
+                                handlerIndex: nextEventHandlerIndex++,
                             });
+                        else if (isIdentifier(handler) || isPropertyAccessExpression(handler)) {
+                            let flattenedHandler = flattenVariable(
+                                bindingResolver.explain(handler),
+                            );
+
+                            if (
+                                flattenedHandler.path.length === 0 &&
+                                isFunctionVariableRoot(flattenedHandler.root)
+                            )
+                                foundEventHandlers.push({
+                                    eventHandler: flattenedHandler.root.func,
+                                    eventHandlerCallStatement: statement,
+                                    handlerIndex:
+                                        foundEventHandlerFunctionsToHandlerIndex.get(
+                                            flattenedHandler.root,
+                                        ) ??
+                                        foundEventHandlerFunctionsToHandlerIndex
+                                            .set(flattenedHandler.root, nextEventHandlerIndex++)
+                                            .get(flattenedHandler.root),
+                                });
+                        }
                     }
                 }
             }

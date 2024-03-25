@@ -30,7 +30,7 @@ list of sandboxed child components.
 
 From this point - the element that indicates inporting sandboxed components, we need to track the import linage as
 we create the bundle. Each component that it's linage has one of the sandboxed components as to be bundled as a component bridge
-created using the [`componentBridgeTransformer`](../packages/compiler/lib/ts-file/component-bridge-transformer.ts) typescript transformer.
+created using the [`componentBridgeTransformer`](../packages/compiler/lib/ts-file/transform-component-bridge.ts) typescript transformer.
 
 For the transformer to work, it need to have a list of which components to transform (a list from the previous step) and
 a list of which imports are safe (element imports, again a list from the previous step). Maybe the list of elements should be

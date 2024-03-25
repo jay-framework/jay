@@ -1,4 +1,4 @@
-import { mkTransformer } from '../../lib/ts-file/mk-transformer';
+import { mkTransformer } from '../../lib/ts-file/ts-utils/mk-transformer';
 import ts from 'typescript';
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import { prettify } from '../../lib';

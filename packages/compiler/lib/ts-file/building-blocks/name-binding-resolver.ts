@@ -282,7 +282,9 @@ export class NameBindingResolver {
         const letOrConst =
             declarationList.flags === NodeFlags.Const ? LetOrConst.CONST : LetOrConst.LET;
         declarationList.declarations.forEach((declaration) => {
-            let rightSide = this.resolvePropertyAccessChain(declaration.initializer);
+            let rightSide = declaration.initializer
+                ? this.resolvePropertyAccessChain(declaration.initializer)
+                : undefined;
             let declaredVariable = tsBindingNameToVariable(
                 declaration.name,
                 undefined,

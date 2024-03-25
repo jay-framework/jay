@@ -15,10 +15,10 @@ import {
     intersectJayTargetEnv,
     JayTargetEnv,
 } from './compile-function-split-patterns';
-import { astToCode, codeToAst } from '../ts-compiler-utils';
+import { astToCode, codeToAst } from '../ts-utils/ts-compiler-utils';
 import { SourceFileBindingResolver } from './source-file-binding-resolver';
 import { SourceFileStatementAnalyzer } from './source-file-statement-analyzer';
-import { ContextualVisitor2, visitWithContext2 } from '../visitor-with-context';
+import { ContextualVisitor2, visitWithContext2 } from '../ts-utils/visitor-with-context';
 import { flattenVariable, LiteralVariableRoot } from './name-binding-resolver';
 
 interface MatchedPattern {
@@ -53,6 +53,7 @@ function generateFunctionRepository(
     let readPatternsReturnProperties = matchedReturnPatterns.map(
         ({ pattern, patternKey }) => `$${patternKey}: ${pattern.leftSidePath.join('.')}`,
     );
+    readPatternsReturnProperties = [...new Set(readPatternsReturnProperties)];
     let variableReadsReturnProperties = matchedVariableReads.map(
         ({ variable, patternKey }) => `$${patternKey}: ${variable.text}`,
     );

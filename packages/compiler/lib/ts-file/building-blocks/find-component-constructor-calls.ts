@@ -1,40 +1,83 @@
-import ts, { isCallExpression, isIdentifier, isVariableStatement } from 'typescript';
+import ts, {
+    isCallExpression,
+    isIdentifier,
+    isPropertyAccessExpression,
+    isStringLiteral,
+    isVariableStatement,
+} from 'typescript';
+import { SourceFileBindingResolver } from './source-file-binding-resolver';
+import { flattenVariable, isImportModuleVariableRoot } from './name-binding-resolver';
 
-export type MapComponentConstructorCall<T> = (
-    initializer: ts.CallExpression,
-    name: ts.BindingName,
-) => T;
+export enum FindComponentConstructorType {
+    makeJayComponent = 'makeJayComponent',
+    makeJayTsxComponent = 'makeJayTsxComponent',
+}
 
-export function findComponentConstructorCalls<T>(
-    initializerName: string,
-    mapCall: MapComponentConstructorCall<T>,
+export interface FoundJayComponentConstructorCall {
+    type: FindComponentConstructorType;
+    render?: ts.Expression;
+    comp: ts.Expression;
+    name: ts.BindingName;
+}
+
+export function findComponentConstructorCalls(
+    findType: FindComponentConstructorType,
+    bindingResolver: SourceFileBindingResolver,
     node: ts.Node,
-): T[] {
-    const foundConstructorCalls: T[] = [];
+): FoundJayComponentConstructorCall[] {
+    const foundConstructorCalls: FoundJayComponentConstructorCall[] = [];
     if (isVariableStatement(node)) {
         node.declarationList.declarations.forEach((declaration) => {
             if (
                 declaration.initializer &&
                 isCallExpression(declaration.initializer) &&
-                isIdentifier(declaration.initializer.expression) &&
-                declaration.initializer.expression.escapedText === initializerName
-            )
-                foundConstructorCalls.push(mapCall(declaration.initializer, declaration.name));
+                (isIdentifier(declaration.initializer.expression) ||
+                    isPropertyAccessExpression(declaration.initializer.expression))
+            ) {
+                const explainedInitializer = bindingResolver.explain(
+                    declaration.initializer.expression,
+                );
+                const flattened = flattenVariable(explainedInitializer);
+                if (
+                    flattened.path.length === 1 &&
+                    flattened.path[0] === findType &&
+                    flattened.root &&
+                    isImportModuleVariableRoot(flattened.root) &&
+                    isStringLiteral(flattened.root.module) &&
+                    flattened.root.module.text === 'jay-component'
+                ) {
+                    let render =
+                        findType === FindComponentConstructorType.makeJayComponent
+                            ? declaration.initializer.arguments[0]
+                            : undefined;
+                    let comp =
+                        findType === FindComponentConstructorType.makeJayComponent
+                            ? declaration.initializer.arguments[1]
+                            : declaration.initializer.arguments[0];
+                    let foundConstructor: FoundJayComponentConstructorCall = {
+                        type: findType,
+                        name: declaration.name,
+                        render,
+                        comp,
+                    };
+                    foundConstructorCalls.push(foundConstructor);
+                }
+            }
         });
     }
     return foundConstructorCalls;
 }
 
-export function findComponentConstructorCallsBlock<T>(
-    initializerName: string,
-    mapCall: MapComponentConstructorCall<T>,
+export function findComponentConstructorCallsBlock(
+    findType: FindComponentConstructorType,
+    bindingResolver: SourceFileBindingResolver,
     sourceFile: ts.SourceFile,
-): T[] {
-    const foundConstructorCalls: T[] = [];
+): FoundJayComponentConstructorCall[] {
+    const foundConstructorCalls: FoundJayComponentConstructorCall[] = [];
 
     function visit(node): void {
         foundConstructorCalls.push(
-            ...findComponentConstructorCalls(initializerName, mapCall, node),
+            ...findComponentConstructorCalls(findType, bindingResolver, node),
         );
         ts.forEachChild(node, visit);
     }

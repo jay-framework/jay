@@ -23,7 +23,7 @@ import {
     mkVariable,
     NameBindingResolver,
 } from './name-binding-resolver';
-import { isFunctionLikeDeclarationBase } from '../ts-compiler-utils';
+import { isFunctionLikeDeclarationBase } from '../ts-utils/ts-compiler-utils';
 
 const BUILT_IN_TYPES = ['RegExp'];
 function builtInType(text: string) {

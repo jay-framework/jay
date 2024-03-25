@@ -1,7 +1,7 @@
 import { readTestFile } from './test-utils/file-utils';
 import { readFileAndGenerateComponentBridgeFile } from './test-utils/ts-compiler-test-utils';
 
-describe('generate component bridge', () => {
+describe('transform component bridge with fixtures', () => {
     it('transform counter component', async () => {
         const folder = 'components/counter';
         expect(await readFileAndGenerateComponentBridgeFile(folder)).toEqual(

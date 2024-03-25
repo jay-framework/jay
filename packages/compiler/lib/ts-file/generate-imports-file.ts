@@ -1,4 +1,4 @@
-import { extractImportedModules, isRelativeImport } from './extract-imports';
+import { extractImportedModules, isRelativeImport } from './ts-utils/extract-imports';
 import { JAY_QUERY_WORKER_TRUSTED } from '../core/runtime-mode';
 import { createTsSourceFileFromSource } from './building-blocks/create-ts-source-file-from-source';
 import { JayFile } from '../core/jay-file';

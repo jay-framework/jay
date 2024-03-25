@@ -1,4 +1,4 @@
-import { isFunctionLikeDeclarationBase } from '../../lib/ts-file/ts-compiler-utils';
+import { isFunctionLikeDeclarationBase } from '../../lib/ts-file/ts-utils/ts-compiler-utils';
 import ts, {
     ExpressionStatement,
     isVariableStatement,
@@ -294,6 +294,19 @@ describe('NameBindingResolver', () => {
                 definingStatement: node,
             });
             expect(flattenVariable(z)).toEqual({ path: [], root: PARAM_ROOT });
+        });
+
+        it('resolve let z', () => {
+            let { a, nameResolver, node } = resolveNamesForVariableStatement('let z');
+
+            expect(nameResolver.variables.has('z'));
+            let z = nameResolver.variables.get('z');
+            expect(z).toEqual({
+                name: 'z',
+                letOrConst: LetOrConst.LET,
+                definingStatement: node,
+            });
+            expect(flattenVariable(z)).toEqual({ path: [], root: undefined });
         });
 
         it('resolve const z = a', () => {

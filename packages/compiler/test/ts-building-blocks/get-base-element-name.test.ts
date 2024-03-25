@@ -2,13 +2,19 @@ import ts from 'typescript';
 import { createTsSourceFile } from '../test-utils/ts-source-utils';
 import { getBaseElementName } from '../../lib/ts-file/building-blocks/get-base-element-name';
 import { MAKE_JAY_TSX_COMPONENT } from '../../lib';
-import { findMakeJayTsxComponentConstructorCallsBlock } from '../../lib/ts-file/building-blocks/find-make-jay-tsx-component-constructor-calls';
+import {
+    findComponentConstructorCallsBlock,
+    FindComponentConstructorType,
+} from '../../lib/ts-file/building-blocks/find-component-constructor-calls';
+import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver';
 
 describe('getBaseElementName', () => {
     const makeJayTsxComponentName = MAKE_JAY_TSX_COMPONENT;
     function getName(sourceFile: ts.SourceFile) {
-        const componentConstructorCalls = findMakeJayTsxComponentConstructorCallsBlock(
-            makeJayTsxComponentName,
+        const bindingResolver = new SourceFileBindingResolver(sourceFile);
+        const componentConstructorCalls = findComponentConstructorCallsBlock(
+            FindComponentConstructorType.makeJayTsxComponent,
+            bindingResolver,
             sourceFile,
         );
         return getBaseElementName(makeJayTsxComponentName, componentConstructorCalls);
