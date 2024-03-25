@@ -31,7 +31,6 @@
     "node-html-parser": "^6.1.12",
     "pegjs": "^0.10.0",
     "pluralize": "^8.0.0",
-    "ts-morph": "^21.0.1",
     "typescript": "^5.3.3"
   },
   "devDependencies": {

@@ -1885,18 +1885,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@ts-morph/common@npm:~0.22.0":
-  version: 0.22.0
-  resolution: "@ts-morph/common@npm:0.22.0"
-  dependencies:
-    fast-glob: ^3.3.2
-    minimatch: ^9.0.3
-    mkdirp: ^3.0.1
-    path-browserify: ^1.0.1
-  checksum: e549facfff2a68eeef4e3e2c4183e7216a02b57e62cdfe60ca15d5fdee24770bd3b5b6d1a0388cfce7b4dfaeb0ebe31ffa40585e36b9fb7948aea8081fa73769
-  languageName: node
-  linkType: hard
-
 "@types/estree@npm:1.0.5, @types/estree@npm:^1.0.0":
   version: 1.0.5
   resolution: "@types/estree@npm:1.0.5"
@@ -1987,13 +1975,6 @@ __metadata:
   dependencies:
     undici-types: ~5.26.4
   checksum: a542727de1334ae20a3ca034b0ecf4b464a57ca01efc4f9cf43bd9ab93896125ab3c2de060ecd8f6ae23b86c6bf3463f681b643e69c032c6a662d376c98a6092
-  languageName: node
-  linkType: hard
-
-"@types/node@npm:^14.11.10":
-  version: 14.18.63
-  resolution: "@types/node@npm:14.18.63"
-  checksum: be909061a54931778c71c49dc562586c32f909c4b6197e3d71e6dac726d8bd9fccb9f599c0df99f52742b68153712b5097c0f00cac4e279fa894b0ea6719a8fd
   languageName: node
   linkType: hard
 
@@ -2711,13 +2692,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"code-block-writer@npm:^12.0.0":
-  version: 12.0.0
-  resolution: "code-block-writer@npm:12.0.0"
-  checksum: 9f6505a4d668c9131c6f3f686359079439e66d5f50c236614d52fcfa53aeb0bc615b2c6c64ef05b5511e3b0433ccfd9f7756ad40eb3b9298af6a7d791ab1981d
-  languageName: node
-  linkType: hard
-
 "color-convert@npm:^1.9.0":
   version: 1.9.3
   resolution: "color-convert@npm:1.9.3"
@@ -2800,16 +2774,6 @@ __metadata:
   checksum: 59715f2fc456a73f68826285718503340b9f0dd89bfffc42749906c5cf3d4277ef11ef1cca0350d0e79204f00f1f6d83851ececc9095dc88512a697ac0b9bdcb
   languageName: node
   linkType: hard
-
-"compiler-jsx@workspace:exploration/compiler-jsx":
-  version: 0.0.0-use.local
-  resolution: "compiler-jsx@workspace:exploration/compiler-jsx"
-  dependencies:
-    "@types/node": ^14.11.10
-    tslib: ^2.0.3
-    typescript: ^4.2.4
-  languageName: unknown
-  linkType: soft
 
 "concat-map@npm:0.0.1":
   version: 0.0.1
@@ -4370,7 +4334,6 @@ __metadata:
     pegjs: ^0.10.0
     pluralize: ^8.0.0
     rimraf: ^5.0.5
-    ts-morph: ^21.0.1
     tsup: ^8.0.1
     typescript: ^5.3.3
     vite: ^5.0.11
@@ -5300,7 +5263,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minimatch@npm:^9.0.0, minimatch@npm:^9.0.1, minimatch@npm:^9.0.3":
+"minimatch@npm:^9.0.0, minimatch@npm:^9.0.1":
   version: 9.0.3
   resolution: "minimatch@npm:9.0.3"
   dependencies:
@@ -5399,15 +5362,6 @@ __metadata:
   bin:
     mkdirp: bin/cmd.js
   checksum: a96865108c6c3b1b8e1d5e9f11843de1e077e57737602de1b82030815f311be11f96f09cce59bd5b903d0b29834733e5313f9301e3ed6d6f6fba2eae0df4298f
-  languageName: node
-  linkType: hard
-
-"mkdirp@npm:^3.0.1":
-  version: 3.0.1
-  resolution: "mkdirp@npm:3.0.1"
-  bin:
-    mkdirp: dist/cjs/src/bin.js
-  checksum: 972deb188e8fb55547f1e58d66bd6b4a3623bf0c7137802582602d73e6480c1c2268dcbafbfb1be466e00cc7e56ac514d7fd9334b7cf33e3e2ab547c16f83a8d
   languageName: node
   linkType: hard
 
@@ -5816,13 +5770,6 @@ __metadata:
     no-case: ^3.0.4
     tslib: ^2.0.3
   checksum: ba98bfd595fc91ef3d30f4243b1aee2f6ec41c53b4546bfa3039487c367abaa182471dcfc830a1f9e1a0df00c14a370514fa2b3a1aacc68b15a460c31116873e
-  languageName: node
-  linkType: hard
-
-"path-browserify@npm:^1.0.1":
-  version: 1.0.1
-  resolution: "path-browserify@npm:1.0.1"
-  checksum: c6d7fa376423fe35b95b2d67990060c3ee304fc815ff0a2dc1c6c3cfaff2bd0d572ee67e18f19d0ea3bbe32e8add2a05021132ac40509416459fffee35200699
   languageName: node
   linkType: hard
 
@@ -7245,16 +7192,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-morph@npm:^21.0.1":
-  version: 21.0.1
-  resolution: "ts-morph@npm:21.0.1"
-  dependencies:
-    "@ts-morph/common": ~0.22.0
-    code-block-writer: ^12.0.0
-  checksum: f8e6acd4cdb2842af47ccf4e8900dc3f230f20c3b0d28e1e8b58c395b0a16d7b3e03ef56f29da3fdb861c50e22eb52524e0fc4bfca0fde8448f81b8f4f6aa157
-  languageName: node
-  linkType: hard
-
 "tslib@npm:^2.0.3, tslib@npm:^2.6.2":
   version: 2.6.2
   resolution: "tslib@npm:2.6.2"
@@ -7332,16 +7269,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^4.2.4":
-  version: 4.9.5
-  resolution: "typescript@npm:4.9.5"
-  bin:
-    tsc: bin/tsc
-    tsserver: bin/tsserver
-  checksum: ee000bc26848147ad423b581bd250075662a354d84f0e06eb76d3b892328d8d4440b7487b5a83e851b12b255f55d71835b008a66cbf8f255a11e4400159237db
-  languageName: node
-  linkType: hard
-
 "typescript@npm:^5.3.3":
   version: 5.3.3
   resolution: "typescript@npm:5.3.3"
@@ -7349,16 +7276,6 @@ __metadata:
     tsc: bin/tsc
     tsserver: bin/tsserver
   checksum: 2007ccb6e51bbbf6fde0a78099efe04dc1c3dfbdff04ca3b6a8bc717991862b39fd6126c0c3ebf2d2d98ac5e960bcaa873826bb2bb241f14277034148f41f6a2
-  languageName: node
-  linkType: hard
-
-"typescript@patch:typescript@^4.2.4#~builtin<compat/typescript>":
-  version: 4.9.5
-  resolution: "typescript@patch:typescript@npm%3A4.9.5#~builtin<compat/typescript>::version=4.9.5&hash=289587"
-  bin:
-    tsc: bin/tsc
-    tsserver: bin/tsserver
-  checksum: 1f8f3b6aaea19f0f67cba79057674ba580438a7db55057eb89cc06950483c5d632115c14077f6663ea76fd09fce3c190e6414bb98582ec80aa5a4eaf345d5b68
   languageName: node
   linkType: hard
 

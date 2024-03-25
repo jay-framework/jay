@@ -8,6 +8,12 @@ export interface Node {
     firstChild?: Node;
     children: Array<Node>;
 }
+
+let id_counter = 0;
+export function node(name: string, children: Node[] = []) {
+    return { name, id: '' + id_counter++, children };
+}
+
 function TreeNodeConstructor({ name, id, children }: Props<Node>, refs: RecursiveComponentsRefs) {
     return {
         render: () => ({ id: 'a', name: 'b', firstChild: undefined, children: [] }),
