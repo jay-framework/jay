@@ -47,6 +47,23 @@ describe('findComponentConstructorCallsBlock', () => {
         expect(foundCalls[0].name.getText()).toBe('Counter');
     });
 
+    it('finds makeJayComponent when importing jayComponent itself', async () => {
+        const sourceFile = createTsSourceFile(`
+            import jayComponent from 'jay-component';
+            export const Counter = jayComponent.makeJayComponent(render, CounterComponent);`);
+        const bindingResolver = new SourceFileBindingResolver(sourceFile);
+        const foundCalls = findComponentConstructorCallsBlock(
+            FindComponentConstructorType.makeJayComponent,
+            bindingResolver,
+            sourceFile,
+        );
+
+        expect(foundCalls).toHaveLength(1);
+        assertIdentifier(foundCalls[0].render, 'render');
+        assertIdentifier(foundCalls[0].comp, 'CounterComponent');
+        expect(foundCalls[0].name.getText()).toBe('Counter');
+    });
+
     it('finds exported var', async () => {
         const sourceFile = createTsSourceFile(`
             import {makeJayComponent} from 'jay-component';
