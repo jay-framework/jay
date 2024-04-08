@@ -1,4 +1,4 @@
-import { setChannel, useMockCommunicationChannel } from '../util/mock-channel';
+import { setChannel, useMockCommunicationChannel } from '../../lib/test-utils';
 import { initializeWorker } from './secure/worker/worker-root';
 import { render } from './secure/main/app.jay-html';
 import { JayPortMessageType } from '../../lib/comm-channel/messages';

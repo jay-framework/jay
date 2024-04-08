@@ -1,6 +1,6 @@
-import { IJayPort, JPMMessage, setMainPort, setWorkerPort } from '../../lib';
-import { JayPortMessageType } from '../../lib/comm-channel/messages';
-import { JayPort, JayPortLogger } from '../../lib';
+import { IJayPort, JPMMessage, setMainPort, setWorkerPort } from '../';
+import { JayPortMessageType } from '../';
+import { JayPort, JayPortLogger } from '../';
 
 export function useMockCommunicationChannel(verbose: boolean = false): JayMockChannel2 {
     return new JayMockChannel2(verbose);

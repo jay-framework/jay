@@ -5,7 +5,7 @@ import {
     eventInvocationMessage,
     renderMessage,
 } from '../../lib/comm-channel/messages';
-import { eventually10ms } from '../util/eventually';
+import { eventually10ms } from '../../lib/test-utils';
 import { REPLACE } from 'jay-json-patch';
 
 const MESSAGE_RENDER_1 = renderMessage([{ op: REPLACE, path: ['a'], value: { foo: 'bar' } }]);

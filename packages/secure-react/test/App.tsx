@@ -1,6 +1,7 @@
 import * as React from "react";
+import {Counter} from "./fixtures/counter/main/counter.tsx";
 
 
 export default function App() {
-    return (<div>hello</div>)
+    return (<Counter initialCount={12}/>)
 }

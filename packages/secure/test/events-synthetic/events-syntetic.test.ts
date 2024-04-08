@@ -1,7 +1,7 @@
-import { setChannel, useMockCommunicationChannel } from '../util/mock-channel';
+import { setChannel, useMockCommunicationChannel } from '../../lib/test-utils';
 import { initializeWorker } from './secure/worker/worker-root';
 import { render } from './secure/main/app.jay-html';
-import { dispatchEvent } from '../util/dispatch-event';
+import { dispatchEvent } from '../../lib/test-utils';
 
 const VERBOSE = false;
 describe('events synthetic tests', () => {
