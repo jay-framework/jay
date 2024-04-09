@@ -1,6 +1,6 @@
 import { setChannel, useMockCommunicationChannel } from 'jay-secure/dist/test-utils';
 import {act, fireEvent, render, screen} from '@testing-library/react'
-import App from './App'
+import App from './fixtures/counter/main/App'
 import {initializeWorker} from "./fixtures/counter/worker/worker-root.ts";
 
 const VERBOSE = false;
