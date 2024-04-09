@@ -8,7 +8,7 @@ import {
 } from '../comm-channel/messages';
 import { serialize } from 'jay-serialization';
 import { FunctionsRepository, JayGlobalNativeFunction } from './function-repository-types';
-import { JSONPatch } from '../../../json-patch';
+import { JSONPatch } from 'jay-json-patch';
 
 export function mainRoot<ViewState>(
     viewState: ViewState,
