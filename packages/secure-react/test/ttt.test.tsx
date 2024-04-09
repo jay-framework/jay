@@ -1,5 +1,5 @@
 import { setChannel, useMockCommunicationChannel } from 'jay-secure/dist/test-utils';
-import { render, screen } from '@testing-library/react'
+import {act, fireEvent, render, screen} from '@testing-library/react'
 import App from './App'
 import {initializeWorker} from "./fixtures/counter/worker/worker-root.ts";
 
@@ -14,10 +14,10 @@ describe('App', () => {
         render(<App />)
     }
 
-
-    it('renders the App component', () => {
+    it('renders the App component', async () => {
         mkElement();
 
-        screen.debug(); // prints out the jsx in the App component unto the command line
+        fireEvent.click(screen.getByRole('sub'))
+        expect(screen.getByRole('value')).toHaveTextContent('11')
     })
 })

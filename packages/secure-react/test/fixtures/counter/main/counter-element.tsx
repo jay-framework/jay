@@ -8,9 +8,9 @@ export interface CounterProps {
 
 export function CounterElement({count, subtracter, adder}: CounterProps) {
     return (<div>
-            <button onClick={subtracter}>-</button>
-            <span style={{margin: "0 16px"}}>{count}</span>
-            <button onClick={adder}>+</button>
+            <button role="sub" onClick={subtracter}>-</button>
+            <span role="value" style={{margin: "0 16px"}}>{count}</span>
+            <button role="add" onClick={adder}>+</button>
         </div>
     )
 }
