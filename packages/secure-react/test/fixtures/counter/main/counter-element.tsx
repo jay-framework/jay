@@ -1,6 +1,6 @@
 import * as React from "react";
-import {JayEventHandler} from "jay-runtime";
 import {JayReactElementEvents, JayReactEvents} from '../../../../lib/main-bridge';
+import {createElementFromJay as el} from '../../../../lib/main-element-events';
 
 export interface CounterElementViewState {
     count: number
@@ -16,20 +16,12 @@ export interface CounterElementProps {
     events: CounterElementEvents;
 }
 
-function jayEventHandlerToReact(viewState: any, coordinate, handler: JayEventHandler<any, any, any>): 
-    React.EventHandler<React.SyntheticEvent<any, any>> {
-        return handler? 
-        (event) => handler({coordinate, event: 'click', viewState})
-            :
-            undefined;
-    }
-
 export function CounterElement({viewState, events: {subtracter, adder}}: CounterElementProps) {
     const {count} = viewState;
     return (<div>
-            <button role="sub" onClick={jayEventHandlerToReact(viewState, ['subtracter'], subtracter?.click)}>-</button>
+            {el('button', viewState, ['subtracter'], {role: 'sub'}, subtracter, ['-'])}
             <span role="value" style={{margin: "0 16px"}}>{count}</span>
-            <button role="add" onClick={jayEventHandlerToReact(viewState, ['adder'], adder?.click)}>+</button>
+            {el('button', viewState, ['adder'], {role: 'add'}, adder, ['-'])}
         </div>
     )
 }

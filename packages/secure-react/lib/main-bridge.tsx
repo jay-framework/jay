@@ -70,7 +70,8 @@ export function ComponentBridge<ViewState extends object, Props extends object, 
         });
         // implement main-bridge
         return port.batch(() => {
-            return <WrappedComponent viewState={viewState} events={events}/>;
+            const elementProps: ElementProps = {viewState, events} as ElementProps;
+            return <WrappedComponent {...elementProps}/>;
         })
     };
 }
