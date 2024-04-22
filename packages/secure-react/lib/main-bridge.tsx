@@ -19,8 +19,8 @@ export interface JayReactComponentBridgeProps {
     events: JayReactEvents
 }
 
-export function ComponentBridge<ViewState extends object, Props extends object>(
-    WrappedComponent: React.ComponentType<JayReactComponentBridgeProps>
+export function ComponentBridge<ViewState extends object, Props extends object, ElementProps extends JayReactComponentBridgeProps>(
+    WrappedComponent: React.ComponentType<ElementProps>
 ): React.FC<Props & ComponentBridgeProps> {
     return ({coordinate, ...props}: ComponentBridgeProps & Props) => {
         const [viewState, setViewState] = useState<ViewState>({} as ViewState);

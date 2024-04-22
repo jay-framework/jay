@@ -1,12 +1,12 @@
 import * as React from "react";
 import {JayEventHandler} from "jay-runtime";
-import {JayReactElementEvents} from '../../../../lib/main-bridge';
+import {JayReactElementEvents, JayReactEvents} from '../../../../lib/main-bridge';
 
 export interface CounterElementViewState {
     count: number
 }
 
-export interface CounterElementEvents {
+export interface CounterElementEvents extends JayReactEvents {
     subtracter: JayReactElementEvents;
     adder: JayReactElementEvents
 }
