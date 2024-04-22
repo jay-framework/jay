@@ -12,17 +12,16 @@ describe('Simple react component', () => {
         setChannel(channel);
         initializeWorker();
         render(<App />)
-        screen.debug();
-        await channel.toBeClean();
-        // await new Promise((resolve, reject) => {
-        //     setTimeout(resolve, 1000);
-        // })
+        // screen.debug();
+        await act(() => {
+            return channel.toBeClean();
+        });
     }
 
     it('renders the App component', async () => {
         await mkElement();
 
-        screen.debug();
+        // screen.debug();
         // fireEvent.click(screen.getByRole('sub'))
         expect(screen.getByRole('value')).toHaveTextContent('12')
     })
