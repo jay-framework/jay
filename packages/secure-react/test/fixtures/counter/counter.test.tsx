@@ -16,13 +16,51 @@ describe('Simple react component', () => {
         await act(() => {
             return channel.toBeClean();
         });
+        return {channel}
     }
 
-    it('renders the App component', async () => {
+    it('render a counter', async () => {
         await mkElement();
 
         // screen.debug();
         // fireEvent.click(screen.getByRole('sub'))
         expect(screen.getByRole('value')).toHaveTextContent('12')
+    })
+
+    it('counter with button click - subtract', async () => {
+        let {channel} = await mkElement();
+
+        // screen.debug();
+        fireEvent.click(screen.getByRole('sub'))
+        await act(() => {
+            return channel.toBeClean();
+        });
+        expect(screen.getByRole('value')).toHaveTextContent('11')
+    })
+
+    it('counter with multiple button clicks - subtract, subtract, subtract, adder', async () => {
+        let {channel} = await mkElement();
+
+        // screen.debug();
+        fireEvent.click(screen.getByRole('sub'))
+        await act(() => {
+            return channel.toBeClean();
+        });
+
+        fireEvent.click(screen.getByRole('sub'))
+        await act(() => {
+            return channel.toBeClean();
+        });
+
+        fireEvent.click(screen.getByRole('sub'))
+        await act(() => {
+            return channel.toBeClean();
+        });
+
+        fireEvent.click(screen.getByRole('add'))
+        await act(() => {
+            return channel.toBeClean();
+        });
+        expect(screen.getByRole('value')).toHaveTextContent('10')
     })
 })

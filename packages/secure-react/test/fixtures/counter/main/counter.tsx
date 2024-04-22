@@ -1,5 +1,5 @@
 import * as React from "react";
-import {CounterElement, CounterViewState} from "./counter-element.tsx";
+import {CounterElement, CounterElementViewState} from "./counter-element.tsx";
 import {useState} from "react";
 import {ComponentBridge} from "../../../../lib/main-bridge.tsx";
 
@@ -14,8 +14,8 @@ export function Counter({initialCount}: CounterProps) {
     const subtracter = () => setCount(count-1)
     const adder = () => setCount(count+1)
 
-    return (<CounterElement count={count} subtracter={subtracter} adder={adder}/>)
+    return (<CounterElement viewState={{count}} events={{subtracter, adder}}/>)
 }
 
 export const CounterBridge =
-    ComponentBridge<CounterViewState, CounterProps>(CounterElement);
+    ComponentBridge<CounterElementViewState, CounterProps>(CounterElement);
