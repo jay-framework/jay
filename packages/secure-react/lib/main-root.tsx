@@ -1,5 +1,5 @@
 // import { BaseJayElement, provideContext } from 'jay-runtime';
-import { useMainPort } from 'jay-secure';
+import {IJayEndpoint, IJayPort, useMainPort} from 'jay-secure';
 // import { SECURE_COMPONENT_MARKER } from './main-contexts';
 import {
     JayPortMessageType,
@@ -17,7 +17,14 @@ export interface MainRootProps<ViewState> {
     funcRepository?: FunctionsRepository
 }
 
-const SECURE_COMPONENT_CONTEXT = createContext(null);
+export interface SecureComponentContext {
+    compId: number,
+    endpoint: IJayEndpoint,
+    port: IJayPort,
+    funcRepository: FunctionsRepository
+}
+
+const SECURE_COMPONENT_CONTEXT = createContext<SecureComponentContext>(null);
 
 export const useSecureComponentContext = () => {
     return useContext(SECURE_COMPONENT_CONTEXT);
@@ -26,9 +33,11 @@ export function JayReactMainRoot<ViewState>({children, viewState, funcRepository
 
     let port = useMainPort();
     let endpoint = port.getRootEndpoint();
-    let context = { compId: endpoint.compId, endpoint, port, funcRepository };
+    let context: SecureComponentContext = { compId: endpoint.compId, endpoint, port, funcRepository };
 
-    const [currentSerialize, setCurrentSerialize] = useState(undefined);
+    let currentSerialize = undefined;
+    // const [currentSerialize, setCurrentSerialize] = useState(undefined);
+
     useEffect(() => {
         let patch: JSONPatch, nextSerialize: Serialize;
         if (!currentSerialize) {
@@ -37,8 +46,11 @@ export function JayReactMainRoot<ViewState>({children, viewState, funcRepository
         else {
             [patch, nextSerialize] = currentSerialize(viewState);
         }
-        setCurrentSerialize(nextSerialize);
-        endpoint.post(rootComponentViewState(patch));
+        currentSerialize = nextSerialize;
+        // setCurrentSerialize(nextSerialize);
+        port.batch(() => {
+            endpoint.post(rootComponentViewState(patch));
+        });
     }, [viewState]);
 
     endpoint.onUpdate(async (message) => {
@@ -60,9 +72,15 @@ export function JayReactMainRoot<ViewState>({children, viewState, funcRepository
         }
     });
 
-    return (
-        <SECURE_COMPONENT_CONTEXT.Provider value={context}>
-            {children}
-        </SECURE_COMPONENT_CONTEXT.Provider>
-    );
+    return port.batch(() => {
+
+        return (
+            <SECURE_COMPONENT_CONTEXT.Provider value={context}>
+                {children}
+            </SECURE_COMPONENT_CONTEXT.Provider>
+        );
+
+    })
+
+
 }

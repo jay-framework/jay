@@ -1,12 +1,12 @@
 import * as React from "react";
-import {Counter} from "./counter.tsx";
+import {Counter, CounterBridge} from "./counter.tsx";
 import {JayReactMainRoot} from "../../../../lib/main-root.tsx";
 
 
 export default function App() {
     return (
-        <JayReactMainRoot viewState={{}}>
-            <Counter initialCount={12}/>
+        <JayReactMainRoot viewState={{initialCount: 12}}>
+            <CounterBridge initialCount={12} coordinate={["comp1"]}/>
         </JayReactMainRoot>
     )
 }
