@@ -1,5 +1,5 @@
 import * as React from "react";
-import {Counter, CounterBridge} from "./counter.tsx";
+import {CounterBridge} from "./counter.tsx";
 import {JayReactMainRoot} from "../../../../lib/main-root.tsx";
 
 

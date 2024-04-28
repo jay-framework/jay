@@ -6,16 +6,15 @@ const eventJayToReactMap = {
     click: 'onClick'
 }
 
-export function jayEventHandlerToReact(viewState: any, coordinate, eventType: string, handler: JayEventHandler<any, any, any>): 
+export function jayEventHandlerToReact(viewState: any, coordinate, eventType: string, handler: JayEventHandler<any, any, any>):
     React.EventHandler<React.SyntheticEvent<any, any>> {
-        return handler? 
+    return handler ?
+        React.useCallback(
             (event) => {
                 return handler({coordinate, event: eventType, viewState});
-            }: undefined
-    }
+            }, [viewState, ...coordinate, eventType]) : undefined
+}
 
-
-//  TODO - extract to be generic
 export function createElementFromJay(elType: string, viewState: any, coordinate: Coordinate, props: Record<string, any>, events: JayReactElementEvents, ...children: React.ReactNode[]): React.ReactNode {
     const allProps = {
         ...props,
