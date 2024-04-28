@@ -10,8 +10,8 @@ export function jayEventHandlerToReact(viewState: any, coordinate, eventType: st
     React.EventHandler<React.SyntheticEvent<any, any>> {
     return handler ?
         React.useCallback(
-            (event) => {
-                return handler({coordinate, event: eventType, viewState});
+            (event: React.SyntheticEvent) => {
+                return handler({coordinate, event: event.nativeEvent, viewState});
             }, [viewState, ...coordinate, eventType]) : undefined
 }
 
