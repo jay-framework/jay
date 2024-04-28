@@ -1,6 +1,6 @@
 import * as React from "react";
-import {JayReactElementEvents, JayReactEvents} from '../../../../lib/main-bridge';
-import {createElementFromJay as el} from '../../../../lib/main-element-events';
+import {JayReactElementEvents, JayReactEvents} from '../../../lib/main-bridge';
+import {createElementFromJay as el} from '../../../lib/main-element-events';
 
 export interface CounterElementViewState {
     count: number

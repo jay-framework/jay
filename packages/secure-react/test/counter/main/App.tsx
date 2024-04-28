@@ -1,6 +1,6 @@
 import * as React from "react";
 import {CounterBridge} from "./counter.tsx";
-import {JayReactMainRoot} from "../../../../lib/main-root.tsx";
+import {JayReactMainRoot} from "../../../lib/main-root.tsx";
 
 
 export default function App() {
