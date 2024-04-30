@@ -8,11 +8,7 @@ export function initializeWorker() {
         return [
             sandboxChildComp(
                 Cart,
-                (vs) => ({
-                    lineItems: [],
-                    total: 30,
-                    minimumOrder: 20
-                }),
+                (vs) => vs,
                 compRef('comp1'),
             ),
         ];

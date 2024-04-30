@@ -2,16 +2,26 @@ import { setChannel, useMockCommunicationChannel } from 'jay-secure/dist/test-ut
 import {act, fireEvent, render, screen} from '@testing-library/react'
 import App from './main/App'
 import {initializeWorker} from "./worker/worker-root.ts";
+import {CartProps} from "./main/cart.tsx";
 
 const VERBOSE = true;
 
 describe('cart testing conditions and collections', () => {
 
-    async function mkElement() {
+    const DEFAULT_PROPS: CartProps = {
+        lineItems: [
+            {name: 'item 1', price: 10, quantity: 1, id: 'a'},
+            {name: 'item 2', price: 10, quantity: 2, id: 'b'}
+        ],
+        total: 30,
+        minimumOrder: 20
+    }
+
+    async function mkElement(cartProps: CartProps = DEFAULT_PROPS) {
         let channel = useMockCommunicationChannel(VERBOSE);
         setChannel(channel);
         initializeWorker();
-        render(<App />)
+        render(<App {...cartProps}/>)
         // screen.debug();
         await act(() => {
             return channel.toBeClean();
