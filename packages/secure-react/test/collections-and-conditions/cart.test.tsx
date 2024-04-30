@@ -35,6 +35,8 @@ describe('cart testing conditions and collections', () => {
         screen.debug();
         // fireEvent.click(screen.getByRole('sub'))
         expect(screen.getByRole('condition')).toHaveTextContent('minimum order price reached')
+        expect(screen.getByRole('lineItem-a')).toHaveTextContent('item 1, quantity:1, price:10, x')
+        expect(screen.getByRole('lineItem-b')).toHaveTextContent('item 2, quantity:2, price:10, x')
     })
 
     // it('counter with button click - subtract', async () => {

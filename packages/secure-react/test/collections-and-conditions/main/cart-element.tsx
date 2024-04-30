@@ -31,9 +31,11 @@ export function CartElement({viewState, events: {checkout, removeItem, continueS
     return (<div>
             <h2>Shopping Cart</h2>
             {lineItems.map(lineItem => (
-                <div key={lineItem.id}>{lineItem.name}
-                    <span>{lineItem.quantity}</span>
-                    <span>{lineItem.price}</span>
+                <div key={lineItem.id} role={'lineItem-'+lineItem.id}>{lineItem.name},
+                    quantity:
+                    <span>{lineItem.quantity}, </span>
+                    price:
+                    <span>{lineItem.price}, </span>
                     {el('button', viewState, ['removeItem', lineItem.id], {role: 'removeItem'}, removeItem, ['x'])}
                 </div>
             ))}
