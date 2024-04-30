@@ -23,7 +23,7 @@ export function ComponentBridge<ViewState extends object, Props extends object, 
     WrappedComponent: React.ComponentType<ElementProps>
 ): React.FC<Props & ComponentBridgeProps> {
     return ({coordinate, ...props}: ComponentBridgeProps & Props) => {
-        const [viewState, setViewState] = useState<ViewState>({} as ViewState);
+        const [viewState, setViewState] = useState<ViewState>(undefined);
         const {port, funcRepository, compId } = useSecureComponentContext();
         const [events, setEvents] = useState<JayReactEvents>({});
         let endpoint = port.getEndpoint(compId, coordinate);
@@ -70,6 +70,8 @@ export function ComponentBridge<ViewState extends object, Props extends object, 
         });
         // implement main-bridge
         return port.batch(() => {
+            if (viewState === undefined)
+                return null;
             const elementProps: ElementProps = {viewState, events} as ElementProps;
             return <WrappedComponent {...elementProps}/>;
         })
