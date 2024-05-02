@@ -26,15 +26,14 @@ export function ComponentBridge<ViewState extends object, Props extends object, 
         const [viewState, setViewState] = useState<ViewState>(undefined);
         const {port, funcRepository, compId } = useSecureComponentContext();
         const [events, setEvents] = useState<JayReactEvents>({});
-        let endpoint = port.getEndpoint(compId, coordinate);
-
-        let deserializedViewState: ViewState,
-            nextDeserialize: Deserialize<ViewState> = deserialize;
+        const endpoint = port.getEndpoint(compId, coordinate);
+        const [currentDeserialize, setCurrentDeserialize] = useState<Deserialize<ViewState>>(() => deserialize);
 
         endpoint.onUpdate((message: JPMMessage) => {
             switch (message.type) {
                 case JayPortMessageType.render:
-                    [deserializedViewState, nextDeserialize] = nextDeserialize(message.patch);
+                    const [deserializedViewState, nextDeserialize] = currentDeserialize(message.patch);
+                    setCurrentDeserialize(() => nextDeserialize);
                     flushSync(() => {
                         setViewState(deserializedViewState);
                     })
