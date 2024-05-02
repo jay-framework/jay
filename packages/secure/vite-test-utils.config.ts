@@ -1,7 +1,6 @@
 import { resolve } from 'path';
 import { defineConfig } from 'vitest/config';
 
-
 export default defineConfig({
     build: {
         minify: false,
@@ -20,10 +19,10 @@ export default defineConfig({
                 'jay-reactive',
                 'jay-runtime',
                 'jay-serialization',
-                '../'
+                '../',
             ],
             output: {
-                entryFileNames: 'test-utils.js'
+                entryFileNames: 'test-utils.js',
             },
         },
     },

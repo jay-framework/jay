@@ -1,27 +1,23 @@
 // import { BaseJayElement, provideContext } from 'jay-runtime';
-import {IJayEndpoint, IJayPort, useMainPort} from 'jay-secure';
+import { IJayEndpoint, IJayPort, useMainPort } from 'jay-secure';
 // import { SECURE_COMPONENT_MARKER } from './main-contexts';
-import {
-    JayPortMessageType,
-    nativeExecResult,
-    rootComponentViewState,
-} from 'jay-secure';
-import {Serialize, serialize} from 'jay-serialization';
+import { JayPortMessageType, nativeExecResult, rootComponentViewState } from 'jay-secure';
+import { Serialize, serialize } from 'jay-serialization';
 import { FunctionsRepository, JayGlobalNativeFunction } from 'jay-secure';
 import { JSONPatch } from 'jay-json-patch';
-import {createContext, useContext, useEffect, useState} from "react";
+import { createContext, useContext, useEffect, useState } from 'react';
 
 export interface MainRootProps<ViewState> {
-    children,
-    viewState: ViewState,
-    funcRepository?: FunctionsRepository
+    children;
+    viewState: ViewState;
+    funcRepository?: FunctionsRepository;
 }
 
 export interface SecureComponentContext {
-    compId: number,
-    endpoint: IJayEndpoint,
-    port: IJayPort,
-    funcRepository: FunctionsRepository
+    compId: number;
+    endpoint: IJayEndpoint;
+    port: IJayPort;
+    funcRepository: FunctionsRepository;
 }
 
 const SECURE_COMPONENT_CONTEXT = createContext<SecureComponentContext>(null);
@@ -29,11 +25,19 @@ const SECURE_COMPONENT_CONTEXT = createContext<SecureComponentContext>(null);
 export const useSecureComponentContext = () => {
     return useContext(SECURE_COMPONENT_CONTEXT);
 };
-export function JayReactMainRoot<ViewState>({children, viewState, funcRepository}: MainRootProps<ViewState>) {
-
+export function JayReactMainRoot<ViewState>({
+    children,
+    viewState,
+    funcRepository,
+}: MainRootProps<ViewState>) {
     let port = useMainPort();
     let endpoint = port.getRootEndpoint();
-    let context: SecureComponentContext = { compId: endpoint.compId, endpoint, port, funcRepository };
+    let context: SecureComponentContext = {
+        compId: endpoint.compId,
+        endpoint,
+        port,
+        funcRepository,
+    };
 
     let currentSerialize = undefined;
     // const [currentSerialize, setCurrentSerialize] = useState(undefined);
@@ -42,8 +46,7 @@ export function JayReactMainRoot<ViewState>({children, viewState, funcRepository
         let patch: JSONPatch, nextSerialize: Serialize;
         if (!currentSerialize) {
             [patch, nextSerialize] = serialize(viewState);
-        }
-        else {
+        } else {
             [patch, nextSerialize] = currentSerialize(viewState);
         }
         currentSerialize = nextSerialize;
@@ -73,14 +76,10 @@ export function JayReactMainRoot<ViewState>({children, viewState, funcRepository
     });
 
     return port.batch(() => {
-
         return (
             <SECURE_COMPONENT_CONTEXT.Provider value={context}>
                 {children}
             </SECURE_COMPONENT_CONTEXT.Provider>
         );
-
-    })
-
-
+    });
 }

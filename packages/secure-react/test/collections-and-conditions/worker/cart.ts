@@ -1,14 +1,14 @@
-import {CartElementRefs, CartLineItem, render} from './cart.jay-html';
-import {makeJayComponent, Props, createState, createEvent, createMemo} from 'jay-component';
+import { CartElementRefs, CartLineItem, render } from './cart.jay-html';
+import { makeJayComponent, Props, createState, createEvent, createMemo } from 'jay-component';
 
 export interface CartProps {
-    lineItems: CartLineItem[],
-    total: number,
-    minimumOrder: number
+    lineItems: CartLineItem[];
+    total: number;
+    minimumOrder: number;
 }
 
 function CartConstructor(
-    {lineItems, total, minimumOrder}: Props<CartProps>,
+    { lineItems, total, minimumOrder }: Props<CartProps>,
     refs: CartElementRefs,
 ) {
     let minimumOrderReached = createMemo(() => total() > minimumOrder());
@@ -17,7 +17,7 @@ function CartConstructor(
     refs.checkout.onclick(() => {});
     refs.continueShopping.onclick(() => {});
     return {
-        render: () => ({ lineItems, total, minimumOrderReached})
+        render: () => ({ lineItems, total, minimumOrderReached }),
     };
 }
 

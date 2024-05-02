@@ -1,5 +1,5 @@
 import { HTMLElementProxy, JayElement } from 'jay-runtime';
-import { elementBridge } from 'jay-secure'
+import { elementBridge } from 'jay-secure';
 import { sandboxElement as e } from 'jay-secure';
 import { elemRef } from 'jay-secure';
 
