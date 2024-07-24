@@ -18,11 +18,9 @@ export class Reactive {
     private runningReactionIndex = undefined;
     private batchedReactionsToRun: MeasureOfChange[] = [];
     private isAutoBatchScheduled = false;
-    private nextStateIndex: number = 0;
-    private resetDependencyOnState: Array<ResetStateDependence> = [];
     private reactionIndex = 0;
     private reactions: Array<Reaction> = [];
-    private reactionDependencies: Array<Set<number>> = [];
+    private reactionDependencies: Array<Set<ResetStateDependence>> = [];
     private dirty: Promise<void> = Promise.resolve();
     private dirtyResolve: () => void;
     private timeout: any = undefined;
@@ -35,7 +33,6 @@ export class Reactive {
     ): [get: Getter<T>, set: Setter<T>] {
         let current: T;
         let reactionsToRerun: boolean[] = [];
-        let stateIndex = this.nextStateIndex++;
 
         const triggerReactions = () => {
             for (let index = 0; index < reactionsToRerun.length; index++) {
@@ -65,7 +62,7 @@ export class Reactive {
         let getter = () => {
             if (this.runningReactionIndex !== undefined) {
                 reactionsToRerun[this.runningReactionIndex] = true;
-                this.reactionDependencies[this.runningReactionIndex].add(stateIndex);
+                this.reactionDependencies[this.runningReactionIndex].add(resetDependency);
             }
             return current;
         };
@@ -79,7 +76,6 @@ export class Reactive {
 
         getter[GetterMark] = true;
         setter[SetterMark] = true;
-        this.resetDependencyOnState[stateIndex] = resetDependency;
         return [getter, setter];
     }
 
@@ -118,14 +114,14 @@ export class Reactive {
         return this.dirty;
     }
 
-    private runReaction(index: number, measureOfChange: MeasureOfChange) {
-        this.reactionDependencies[index].forEach((stateIndex) =>
-            this.resetDependencyOnState[stateIndex](index),
+    private runReaction(reactionIndex: number, measureOfChange: MeasureOfChange) {
+        this.reactionDependencies[reactionIndex].forEach((resetDependency) =>
+            resetDependency(reactionIndex),
         );
-        this.reactionDependencies[index].clear();
-        this.runningReactionIndex = index;
+        this.reactionDependencies[reactionIndex].clear();
+        this.runningReactionIndex = reactionIndex;
         try {
-            this.reactions[index](measureOfChange);
+            this.reactions[reactionIndex](measureOfChange);
         } finally {
             this.runningReactionIndex = undefined;
         }
