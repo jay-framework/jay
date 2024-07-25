@@ -17,12 +17,15 @@ it will recalculate dependencies to ensure it only depends on state values that 
 A direct impact is that conditions based on state are supported in reactions, and the reaction rerun will take
 into account the conditions.
 
+Reactive can also Pair, creating dependencies between multiple Reactive instances. See the section below on Reactive Pairing
+
 - [createState](#createState)
 - [createReaction](#createReaction)
 - [MeasureOfChange](#MeasureOfChange)
 - [batchReactions](#batchReactions)
 - [toBeClean](#toBeClean)
 - [flush](#flush)
+- [Reactive Pairing](#paring)
 
 # <a name="createState">createState</a>
 
@@ -195,3 +198,18 @@ reactive.setStateB('Joe');
 // forces reactions to run
 reactive.flush();
 ```
+
+# <a name="paring">Reactive Pairing</a>
+
+Reactive Pairing is useful when an application has multiple reactive instances who need to sync flush between them.
+For instance, with Jay, a context is one reactive and component is another instance of a reactive.
+
+Pairing is done by setting a second `B` reactive state from one reactive `A`. 
+When paired, once reactive `A` flushes, it will also flush reactive `B` immediately after completing the reaction 
+who updated state on `B`, continuing to run `A` reactions only after.
+
+Reactive Pairing has one limitation - it does not allow two different reaction on `A` to update states on `B` as 
+it will trigger double running of `B`. Instead, use a single reaction on `A` to update both states on `B`.
+In some cases, we are forced to use two different reactions in `A`, at which we can just create a 3rd reaction to 
+update `B` (semantically, it can be two `createMemo` and one `createEffect` in Jay component semantics).
+

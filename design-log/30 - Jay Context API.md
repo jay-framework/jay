@@ -122,8 +122,7 @@ However, there are still gaps to handle
 1. Context injection into Properties
 2. Component Reactive to listen to changes in Context Reactive, and flush both reactives in Sync
 
-Context Injection into Component Properties
-=====
+## Context Injection into Component Properties
 
 We define that once a component property is a `Symbol`, `Jay Component` checks if the symbol is of a context.
 If it is, it is injected into the component properties using `useContext(CONTEXT_SYMBOL)`.
@@ -164,7 +163,7 @@ interface MyProps {
 }
 ```
 
-# Component Reactive to listen to changes in Context Reactive
+## Component Reactive to listen to changes in Context Reactive
 
 With Jay, both the Context Consuming Component, the Context Providing Component and the Context Itself all have
 different reactives, which require sync of flush and prevention of circular dependencies.
@@ -179,7 +178,7 @@ The interaction between context and component is such that
 5. Both the Context provider component and the Context Consumer component can listen to events on the context
 6. The context cannot hold hard references to the consuming components, as it has no control over their lifetime.
 
-# Reactive pairing
+## Reactive pairing
 
 As both the context and the components are reactive, we need to pair the reactive's flush.
 
@@ -304,7 +303,7 @@ as long as we do not repeat a state.
 
 We can expand the rule to also not run a reaction twice during one update-flush cycle.
 
-### formal definition - preventing cycles
+### formal definition - preventing cycles (not needed, see below)
 
 1. We define **update-flush** cycle of reactive is one instance of updates to `state`s and one instance of `flush` that runs reactions.
 2. We restrict `state` updates to accept only one new value during one `update-flush` cycle.
@@ -426,7 +425,8 @@ setB1([1, 2, 3, 4]);
 ```
 
 Right after running reaction `ii`, we identify that we have set a state for another reactive, `reactiveA`.
-We now start running flush for `reactiveA` and run reaction `i`. Reaction `i` sets the state `a2` of `reactiveA`.
+We now start running flush for `reactiveA` and run reaction `i`, before we continue to run the reactions of `reactiveB`. 
+Reaction `i` sets the state `a2` of `reactiveA`.
 Then, `reactiveB` continues and runs reaction `iii` which reads `a2` state. All fine.
 
 If we change the order of reactions `ii` and `iii`,
@@ -454,3 +454,29 @@ The decision we need to make:
 1. One option is that once we learn that `a2` was updated, that we need to rerun reaction `iii`.
 2. Another option is to not rerun reaction `iii` and tell the user we do not back-rerun.
    Order the reactions in each reactive in an order that makes sense.
+
+**We tend to go with the second option**
+
+The rule we get from it, is that when a component updates a context, only the reactions after (in code order) the
+update to the context will see the updated context.
+
+## Reactive Pairing rules: 
+1. when a reactive detects setting a state on another reactive, it triggers a flush on the other reactive 
+   right after the reaction ends, and before running more reactions.
+2. when a reactive is in flush state, it ignores calls for flush (as today, to prevent flush cycles)
+3. no need to prevent updating state twice, as this algorithm ensures no cycles.
+
+### Formally, the reactive pairing algorithm
+
+Given Reactive `A` and Reactive `B`
+
+Without Pairing, each is independent
+`A` runs it's reactions in order `R[1]` to `R[N]`
+`B` runs it's reactions in order `S[1]` to `S[M]`
+
+With pairing caused by Reaction `R[X]` of `A` updating a state on `B` we get
+
+When `A` runs, it will run `R[1]` to `R[X]` and detect, in `R[X]` that a state of `B` was updated.
+At this point, `A` will trigger flush on `B` (If `B` is in a flush state nothing happens).
+`B` will run reactions `S[1]` to `S[M]`.
+Then, `A` will continue and run reactions `R[X+1]` to `R[N]`.

@@ -14,6 +14,43 @@ export const GetterMark = Symbol.for('getterMark');
 export const SetterMark = Symbol.for('setterMark');
 type ResetStateDependence = (reactionIndex: number) => void;
 
+class ReactivePairing {
+    flushOrigin?: Reactive
+    paired = new Set<Reactive>()
+    flushed = new Set<Reactive>()
+
+    setOrigin(reactive: Reactive) {
+        if (!this.flushOrigin)
+            this.flushOrigin = reactive;
+    }
+
+    clearOrigin(reactive: Reactive) {
+        if (this.flushOrigin === reactive) {
+            this.flushOrigin = undefined;
+            this.paired.clear();
+            this.flushed.clear();
+        }
+    }
+
+    flushPaired() {
+        this.paired.forEach(reactive => {
+            reactive.flush();
+            this.flushed.add(reactive);
+        })
+        this.paired.clear();
+    }
+
+    addPaired(paired: Reactive) {
+        if (this.flushOrigin) {
+            if (this.flushed.has(paired))
+                throw new Error('double reactive flushing')
+            if (this.flushOrigin !== paired)
+                this.paired.add(paired);
+        }
+    }
+}
+const REACTIVE_PAIRING = new ReactivePairing();
+
 export class Reactive {
     private runningReactionIndex = undefined;
     private batchedReactionsToRun: MeasureOfChange[] = [];
@@ -47,6 +84,7 @@ export class Reactive {
         };
 
         let setter = (value: T | Next<T>) => {
+            REACTIVE_PAIRING.addPaired(this);
             let materializedValue =
                 typeof value === 'function' ? (value as Next<T>)(current) : value;
             let isModified = materializedValue !== current;
@@ -124,12 +162,14 @@ export class Reactive {
             this.reactions[reactionIndex](measureOfChange);
         } finally {
             this.runningReactionIndex = undefined;
+            REACTIVE_PAIRING.flushPaired();
         }
     }
 
     flush() {
         if (this.inFlush) return;
         this.inFlush = true;
+        REACTIVE_PAIRING.setOrigin(this);
         try {
             for (let index = 0; index < this.batchedReactionsToRun.length; index++)
                 if (this.batchedReactionsToRun[index])
@@ -140,9 +180,10 @@ export class Reactive {
                 this.timeout = undefined;
             }
             this.batchedReactionsToRun = [];
-            this.dirtyResolve();
+            this.dirtyResolve && this.dirtyResolve();
         } finally {
             this.inFlush = false;
+            REACTIVE_PAIRING.clearOrigin(this);
         }
     }
 }

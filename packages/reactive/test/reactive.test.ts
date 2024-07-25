@@ -606,4 +606,105 @@ describe('reactive', () => {
             expect(numberOfReactionRuns()).toBe(3);
         });
     });
+
+    describe('reactive pairing', () => {
+        it('should run reactive B as a result of reactive A updating a state of B', async () => {
+            const B = new Reactive();
+            const [b2, setB2] = B.createState(1);
+            const [b3, setB3] = B.createState('the length is 1');
+            B.createReaction(() => {
+                setB3(`the length is ${b2()}`);
+            });
+
+            const A = new Reactive();
+            const [a1, setA1] = A.createState([1, 2, 3]);
+            const [a4, setA4] = A.createState('');
+            A.createReaction(() => {
+                setB2(a1().length);
+            });
+            A.createReaction(() => {
+                setA4(`${JSON.stringify(a1())} - ${b3()}`);
+            });
+            await A.toBeClean();
+            await B.toBeClean();
+
+            A.batchReactions(() => {
+                setA1([1, 2, 3, 4]);
+            })
+
+            expect(a4()).toBe('[1,2,3,4] - the length is 4')
+        })
+
+        it(`should not flush reactive B twice sync as a result of two different states set by two different reactions of A.
+B should flush sync once, and should fail the second time update`, async () => {
+
+            const B = new Reactive();
+            const [b2, setB2] = B.createState(1);
+            const [b3, setB3] = B.createState('the length is 1');
+            const [b4, setB4] = B.createState([1,2,3]);
+            const [b5, setB5] = B.createState('the sum is 1');
+            B.createReaction(() => {
+                setB3(`the length is ${b2()}`);
+            });
+            B.createReaction(() => {
+                setB5(`the sum is ${b4().reduce((a,b) => a+b, 0)}`);
+            });
+
+            const A = new Reactive();
+            const [a1, setA1] = A.createState([1, 2, 3]);
+            const [a4, setA4] = A.createState('');
+            A.createReaction(() => {
+                setB2(a1().length);
+            });
+            A.createReaction(() => {
+                setA4(`${JSON.stringify(a1())} - ${b3()}`);
+            });
+            A.createReaction(() => {
+                setB4(a1()); // this should fail and propagate to the batchReactions below
+            });
+
+            await A.toBeClean();
+            await B.toBeClean();
+
+            expect(() => A.batchReactions(() => {
+                setA1([1, 2, 3, 4]);
+            })).toThrowError('')
+        })
+
+        it('should not rerun reactions in A if, after running them, A updates B which a previous reaction in A depends on', async () => {
+            const B = new Reactive();
+            const [b2, setB2] = B.createState(1);
+            const [b3, setB3] = B.createState('the length is 1');
+            B.createReaction(() => {
+                setB3(`the length is ${b2()}`);
+            });
+
+            const A = new Reactive();
+            const [a1, setA1] = A.createState([1, 2, 3]);
+            const [a4, setA4] = A.createState('');
+            const [aLogB2, setALogB2] = A.createState(0);
+            A.createReaction(() => {
+                setALogB2(b2());
+            });
+            A.createReaction(() => {
+                setB2(a1().length);
+            });
+            A.createReaction(() => {
+                setA4(`${JSON.stringify(a1())} - ${b3()}`);
+            });
+
+            await A.toBeClean();
+            await B.toBeClean();
+
+            A.batchReactions(() => {
+                setA1([1, 2, 3, 4]);
+            })
+
+            expect(aLogB2()).toBe(1) // not updated
+            expect(b2()).toBe(4) // updated
+            expect(a4()).toBe('[1,2,3,4] - the length is 4')
+
+
+        })
+    })
 });
