@@ -14,9 +14,9 @@ export {
 } from './node-reference';
 export {
     createJayContext,
-    provideContext,
+    withContext,
     useContext,
-    useOptionalContext,
+    findContext,
     ConstructContext,
     currentConstructionContext,
 } from './context';

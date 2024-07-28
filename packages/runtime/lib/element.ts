@@ -14,7 +14,7 @@ import './element-test-types';
 import {
     CONSTRUCTION_CONTEXT_MARKER,
     currentConstructionContext,
-    provideContext,
+    withContext,
     restoreContext,
     saveContext,
     wrapWithModifiedCheck,
@@ -241,7 +241,7 @@ export function mkUpdateCollection<ViewState, Item>(
                 (item, id) => {
                     let childContext = parentContext.forItem(item);
                     return restoreContext(savedContext, () =>
-                        provideContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () =>
+                        withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () =>
                             wrapWithModifiedCheck(
                                 currentConstructionContext().currData,
                                 child.elemCreator(item, id),

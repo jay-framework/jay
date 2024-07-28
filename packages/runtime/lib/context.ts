@@ -27,7 +27,7 @@ export function createJayContext<ContextType = unknown>(): ContextMarker<Context
     return Symbol();
 }
 
-export function provideContext<ContextType, Returns>(
+export function withContext<ContextType, Returns>(
     marker: ContextMarker<ContextType>,
     context: ContextType,
     callback: () => Returns,
@@ -42,17 +42,17 @@ export function provideContext<ContextType, Returns>(
 }
 
 export function useContext<ContextType>(marker: ContextMarker<ContextType>): ContextType {
-    let context = useOptionalContext(marker);
+    let context = findContext(_ => _ === marker);
     if (!context) throw new Error();
     return context as ContextType;
 }
 
-export function useOptionalContext<ContextType>(
-    marker: ContextMarker<ContextType>,
+export function findContext<ContextType>(
+    predicate: (marker: ContextMarker<ContextType>) => boolean,
 ): ContextType | undefined {
     let aContext = currentContext;
     while (aContext) {
-        if (marker === aContext.marker) return aContext.context;
+        if (predicate(aContext.marker)) return aContext.context;
         aContext = aContext.parent;
     }
     return undefined;
@@ -145,7 +145,7 @@ export class ConstructContext<A extends Array<any>> {
         options?: RenderElementOptions,
     ): JayElement<ViewState, Refs> {
         let context = new ConstructContext([viewState], options?.eventWrapper);
-        let element = provideContext(CONSTRUCTION_CONTEXT_MARKER, context, () =>
+        let element = withContext(CONSTRUCTION_CONTEXT_MARKER, context, () =>
             wrapWithModifiedCheck(currentConstructionContext().currData, elementConstructor()),
         );
         element.mount();
