@@ -128,9 +128,12 @@ export class Reactive {
         if (this.inBatchReactions || this.inFlush) return func();
         this.inBatchReactions = true;
         [this.dirty, this.dirtyResolve] = mkResolvablePromise();
+        REACTIVE_PAIRING.setOrigin(this);
         try {
             return func();
         } finally {
+            REACTIVE_PAIRING.flushPaired();
+            REACTIVE_PAIRING.clearOrigin(this);
             this.flush();
             this.inBatchReactions = false;
             this.dirtyResolve();

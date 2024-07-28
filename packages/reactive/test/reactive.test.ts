@@ -608,7 +608,8 @@ describe('reactive', () => {
     });
 
     describe('reactive pairing', () => {
-        it('should run reactive B as a result of reactive A updating a state of B', async () => {
+        it(`should run reactive B as a result of reactive A reaction updating a state of B.
+            expecting to flush B right after the reaction of A which updates B state.`, async () => {
             const B = new Reactive();
             const [b2, setB2] = B.createState(1);
             const [b3, setB3] = B.createState('the length is 1');
@@ -630,6 +631,60 @@ describe('reactive', () => {
 
             A.batchReactions(() => {
                 setA1([1, 2, 3, 4]);
+            })
+
+            expect(a4()).toBe('[1,2,3,4] - the length is 4')
+        })
+
+        it(`should run reactive B as a result of reactive A updating a state of B directly.
+            expecting to flush B before flushing A`, async () => {
+            const B = new Reactive();
+            const [b2, setB2] = B.createState(1);
+            const [b3, setB3] = B.createState('the length is 1');
+            B.createReaction(() => {
+                setB3(`the length is ${b2()}`);
+            });
+
+            const A = new Reactive();
+            const [a1, setA1] = A.createState([1, 2, 3]);
+            const [a4, setA4] = A.createState('');
+            A.createReaction(() => {
+                setA4(`${JSON.stringify(a1())} - ${b3()}`);
+            });
+            await A.toBeClean();
+            await B.toBeClean();
+
+            A.batchReactions(() => {
+                setA1([1, 2, 3, 4]);
+                setB2(a1().length);
+            })
+
+            expect(a4()).toBe('[1,2,3,4] - the length is 4')
+        })
+
+        it(`should run reactive B as a result of reactive A updating a state of B using reactive B batch.
+            expecting to flush B before flushing A`, async () => {
+            const B = new Reactive();
+            const [b2, setB2] = B.createState(1);
+            const [b3, setB3] = B.createState('the length is 1');
+            B.createReaction(() => {
+                setB3(`the length is ${b2()}`);
+            });
+
+            const A = new Reactive();
+            const [a1, setA1] = A.createState([1, 2, 3]);
+            const [a4, setA4] = A.createState('');
+            A.createReaction(() => {
+                setA4(`${JSON.stringify(a1())} - ${b3()}`);
+            });
+            await A.toBeClean();
+            await B.toBeClean();
+
+            A.batchReactions(() => {
+                setA1([1, 2, 3, 4]);
+                B.batchReactions(() => {
+                    setB2(a1().length);
+                })
             })
 
             expect(a4()).toBe('[1,2,3,4] - the length is 4')
