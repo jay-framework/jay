@@ -1,4 +1,4 @@
-import { provideContext } from 'jay-runtime';
+import { withContext } from 'jay-runtime';
 import { IJayPort, useWorkerPort } from '../comm-channel/comm-channel';
 import { SANDBOX_CREATION_CONTEXT, SandboxCreationContext } from './sandbox-context';
 import { SandboxElement } from './sandbox-element';
@@ -32,7 +32,7 @@ export function sandboxRoot<ViewState extends object>(
                         isDynamic: false,
                         dataIds: [],
                     };
-                    elements = provideContext(SANDBOX_CREATION_CONTEXT, context, () => {
+                    elements = withContext(SANDBOX_CREATION_CONTEXT, context, () => {
                         return sandboxElements();
                     });
                 } else {

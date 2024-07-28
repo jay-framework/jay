@@ -3,7 +3,7 @@ import {
     JayComponent,
     JayComponentConstructor,
     MountFunc,
-    provideContext,
+    withContext,
     updateFunc,
     useContext,
 } from 'jay-runtime';
@@ -37,7 +37,7 @@ export function sandboxChildComp<
     let { viewState, endpoint } = useContext(SANDBOX_CREATION_CONTEXT);
     let coordinate = ref.coordinate;
     let context = { compId: endpoint.compId, coordinate, port: endpoint.port };
-    let childComp = provideContext(SANDBOX_BRIDGE_CONTEXT, context, () => {
+    let childComp = withContext(SANDBOX_BRIDGE_CONTEXT, context, () => {
         return compCreator(getProps(viewState));
     });
     ref.set(childComp);
@@ -140,7 +140,7 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
                 matchBy,
             );
             addedItems.forEach((item) => {
-                let childElements = provideContext(
+                let childElements = withContext(
                     SANDBOX_CREATION_CONTEXT,
                     {
                         endpoint,

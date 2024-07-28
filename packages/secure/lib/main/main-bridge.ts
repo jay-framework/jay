@@ -4,7 +4,7 @@ import {
     JayEvent,
     JayEventHandler,
     JayNativeFunction,
-    provideContext,
+    withContext,
     RenderElement,
     useContext,
 } from 'jay-runtime';
@@ -197,7 +197,7 @@ export function makeJayComponentBridge<
             port,
             funcRepository: options?.funcRepository,
         };
-        return provideContext(SECURE_COMPONENT_MARKER, newSecureComponentContext, () => {
+        return withContext(SECURE_COMPONENT_MARKER, newSecureComponentContext, () => {
             let comp = component(props);
             defineCompPublicAPI(comp as unknown as MainComponentBridge, endpoint, options);
             return comp;

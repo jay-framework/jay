@@ -1,4 +1,4 @@
-import { BaseJayElement, provideContext } from 'jay-runtime';
+import { BaseJayElement, withContext } from 'jay-runtime';
 import { useMainPort } from '../comm-channel/comm-channel';
 import { SECURE_COMPONENT_MARKER } from './main-contexts';
 import {
@@ -8,7 +8,7 @@ import {
 } from '../comm-channel/messages';
 import { serialize } from 'jay-serialization';
 import { FunctionsRepository, JayGlobalNativeFunction } from './function-repository-types';
-import { JSONPatch } from '../../../json-patch';
+import { JSONPatch } from 'jay-json-patch';
 
 export function mainRoot<ViewState>(
     viewState: ViewState,
@@ -38,7 +38,7 @@ export function mainRoot<ViewState>(
         }
     });
 
-    return provideContext(SECURE_COMPONENT_MARKER, context, () => {
+    return withContext(SECURE_COMPONENT_MARKER, context, () => {
         let patch: JSONPatch, nextSerialize;
         let element = port.batch(() => {
             [patch, nextSerialize] = serialize(viewState);

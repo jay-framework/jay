@@ -12,7 +12,7 @@ import {
     JayNativeFunction,
     MountFunc,
     normalizeUpdates,
-    provideContext,
+    withContext,
     updateFunc,
     useContext,
 } from 'jay-runtime';
@@ -327,7 +327,7 @@ export function mkBridgeElement<ViewState>(
     });
     let events = {};
     let port = endpoint.port;
-    return provideContext(
+    return withContext(
         SANDBOX_CREATION_CONTEXT,
         {
             endpoint,
