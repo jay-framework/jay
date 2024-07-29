@@ -100,6 +100,15 @@ describe('context api', () => {
                 await comp.element.refs.button.exec$((elem) => elem.click());
                 expect(comp.element.dom.textContent).toBe('the count is 13')
             })
+
+            it('random context update should trigger component update', async () => {
+                const context = mkContext();
+                const comp = withContext(COUNT_CONTEXT, context, () => {
+                    return LabelAndButtonComp({});
+                })
+                context.inc();
+                expect(comp.element.dom.textContent).toBe('the count is 13')
+            })
         })
     })
 })
