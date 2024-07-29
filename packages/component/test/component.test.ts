@@ -7,7 +7,7 @@ import {
     forEach,
     HTMLElementProxy,
     RenderElementOptions,
-    provideContext,
+    withContext,
 } from 'jay-runtime';
 import {
     COMPONENT_CONTEXT,
@@ -21,7 +21,7 @@ import {
     makeJayComponent,
     Props,
     useReactive,
-} from '../lib/component';
+} from '../lib/';
 import { MeasureOfChange, Reactive } from 'jay-reactive';
 import { REPLACE } from 'jay-json-patch';
 import { elemRef } from 'jay-runtime';
@@ -29,14 +29,14 @@ const { makePropsProxy } = forTesting;
 
 describe('state management', () => {
     describe('Props', () => {
-        const contextTestDefaults = { mounts: [], unmounts: [], getComponentInstance: () => null };
+        const contextTestDefaults = { mounts: [], unmounts: [], provideContexts: [], getComponentInstance: () => null };
         it('should transform an object into a getters object', () => {
             let reactive = new Reactive();
             const props = {
                 name: 'abc',
                 age: 12,
             };
-            let propsGetters = provideContext(
+            let propsGetters = withContext(
                 COMPONENT_CONTEXT,
                 { reactive, ...contextTestDefaults },
                 () => makePropsProxy(reactive, props),
@@ -52,7 +52,7 @@ describe('state management', () => {
                 name: 'abc',
                 age: 12,
             };
-            let updatableProps = provideContext(
+            let updatableProps = withContext(
                 COMPONENT_CONTEXT,
                 { reactive, ...contextTestDefaults },
                 () => makePropsProxy(reactive, props),
@@ -74,7 +74,7 @@ describe('state management', () => {
                 name: 'abc',
                 age: 12,
             };
-            let propsGetters = provideContext(
+            let propsGetters = withContext(
                 COMPONENT_CONTEXT,
                 { reactive, ...contextTestDefaults },
                 () => makePropsProxy(reactive, props),
@@ -89,7 +89,7 @@ describe('state management', () => {
                 name: 'abc',
                 age: 12,
             };
-            let propsGetters = provideContext(
+            let propsGetters = withContext(
                 COMPONENT_CONTEXT,
                 { reactive, ...contextTestDefaults },
                 () => makePropsProxy(reactive, props),
