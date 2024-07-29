@@ -15,19 +15,19 @@ export const SetterMark = Symbol.for('setterMark');
 type ResetStateDependence = (reactive: Reactive, reactionIndex: number) => void;
 
 class ReactivePairing {
-    flushOrigin?: Reactive
+    origin?: Reactive
     paired = new Set<Reactive>()
     flushed = new Set<Reactive>()
     runningReactions: [Reactive, number][] = [];
 
     setOrigin(reactive: Reactive) {
-        if (!this.flushOrigin)
-            this.flushOrigin = reactive;
+        if (!this.origin)
+            this.origin = reactive;
     }
 
     clearOrigin(reactive: Reactive) {
-        if (this.flushOrigin === reactive) {
-            this.flushOrigin = undefined;
+        if (this.origin === reactive) {
+            this.origin = undefined;
             this.paired.clear();
             this.flushed.clear();
         }
@@ -42,10 +42,10 @@ class ReactivePairing {
     }
 
     addPaired(paired: Reactive) {
-        if (this.flushOrigin) {
+        if (this.origin) {
             if (this.flushed.has(paired))
                 throw new Error('double reactive flushing')
-            if (this.flushOrigin !== paired)
+            if (this.origin !== paired)
                 this.paired.add(paired);
         }
     }
@@ -146,7 +146,7 @@ export class Reactive {
     }
 
     private triggerReaction(index: number, measureOfChange: MeasureOfChange) {
-        if (REACTIVE_PAIRING.flushOrigin)
+        if (REACTIVE_PAIRING.origin)
             REACTIVE_PAIRING.addPaired(this);
         else if (!this.inBatchReactions) this.ScheduleAutoBatchRuns();
         this.batchedReactionsToRun[index] = Math.max(
