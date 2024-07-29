@@ -146,7 +146,9 @@ export class Reactive {
     }
 
     private triggerReaction(index: number, measureOfChange: MeasureOfChange) {
-        if (!this.inBatchReactions) this.ScheduleAutoBatchRuns();
+        if (REACTIVE_PAIRING.flushOrigin)
+            REACTIVE_PAIRING.addPaired(this);
+        else if (!this.inBatchReactions) this.ScheduleAutoBatchRuns();
         this.batchedReactionsToRun[index] = Math.max(
             measureOfChange,
             this.batchedReactionsToRun[index] || 0,

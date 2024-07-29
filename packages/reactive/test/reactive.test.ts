@@ -803,15 +803,49 @@ describe('reactive', () => {
             ])
         })
 
+        it(`should flush reactive A as a result of reactive B updating a state that A reaction reads.`, async () => {
+            const runOrder = new RunOrder();
+            const B = new Reactive();
+            const [b1, setB1] = B.createState(1);
+
+            const A = new Reactive();
+            const [a2, setA2] = A.createState('');
+            A.createReaction(() => {
+                runOrder.logReaction('A', 'i', ['b1'], ['a2'])
+                setA2(`The B reactive Value is - ${b1()}`);
+            });
+            await A.toBeClean();
+            await B.toBeClean();
+            runOrder.logReady()
+
+            expect(a2()).toBe('The B reactive Value is - 1')
+
+            B.batchReactions(() => {
+                runOrder.logStartBatch('B')
+                setB1(4);
+                runOrder.logEndBatch('B')
+            })
+
+            expect(a2()).toBe('The B reactive Value is - 4')
+            expect(runOrder.log).toEqual([
+                "A - i: (b1) -> (a2)",
+                "-- setup complete --",
+                "B - start batch ",
+                "B - end batch ",
+                "A - i: (b1) -> (a2)",
+            ])
+        })
+
         it(`should not flush reactive B twice sync as a result of two different states set by two different reactions of A.
             reaction A - iii fails because it updates B after it was flushed by A - i`, async () => {
 
+            const originalArray = [1,2,3]
             const runOrder = new RunOrder();
             const B = new Reactive();
-            const [b2, setB2] = B.createState(1);
-            const [b3, setB3] = B.createState('the length is 1');
-            const [b4, setB4] = B.createState([1,2,3]);
-            const [b5, setB5] = B.createState('the sum is 1');
+            const [b2, setB2] = B.createState(3);
+            const [b3, setB3] = B.createState('the length is 3');
+            const [b4, setB4] = B.createState(originalArray);
+            const [b5, setB5] = B.createState('the sum is 6');
             B.createReaction(() => {
                 runOrder.logReaction('B', 'i', ['b2'], ['b3'])
                 setB3(`the length is ${b2()}`);
@@ -822,7 +856,7 @@ describe('reactive', () => {
             });
 
             const A = new Reactive();
-            const [a1, setA1] = A.createState([1, 2, 3]);
+            const [a1, setA1] = A.createState(originalArray);
             const [a4, setA4] = A.createState('');
             A.createReaction(() => {
                 runOrder.logReaction('A', 'i', ['a1'], ['b2'])
@@ -850,8 +884,6 @@ describe('reactive', () => {
                 "A - i: (a1) -> (b2)",
                 "A - ii: (a1,b3) -> (a4)",
                 "A - iii: (a1) -> (b4)",
-                "B - i: (b2) -> (b3)",
-                "B - ii: (b4) -> (b5)",
                 "-- setup complete --",
                 "A - i: (a1) -> (b2)",
                 "B - i: (b2) -> (b3)",
