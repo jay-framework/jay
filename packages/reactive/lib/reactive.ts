@@ -81,7 +81,9 @@ export class Reactive {
         measureOfChange: MeasureOfChange = MeasureOfChange.FULL,
     ): [get: Getter<T>, set: Setter<T>] {
         let current: T;
-        // Todo we can consolidate both ToRerun patterns
+        // we can consolidate both ToRerun patterns.
+        // however, the first is x100 times faster, and x100 times more in use
+        // the second is more generic, yet slower
         const reactionsToRerun: boolean[] = [];
         let pairedReactionsToRun: [Reactive, number][] = [];
 
