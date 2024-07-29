@@ -12,12 +12,13 @@ export type Reaction = (measureOfChange: MeasureOfChange) => void;
 export type ValueOrGetter<T> = T | Getter<T>;
 export const GetterMark = Symbol.for('getterMark');
 export const SetterMark = Symbol.for('setterMark');
-type ResetStateDependence = (reactionIndex: number) => void;
+type ResetStateDependence = (reactive: Reactive, reactionIndex: number) => void;
 
 class ReactivePairing {
     flushOrigin?: Reactive
     paired = new Set<Reactive>()
     flushed = new Set<Reactive>()
+    runningReactions: [Reactive, number][] = [];
 
     setOrigin(reactive: Reactive) {
         if (!this.flushOrigin)
@@ -48,11 +49,22 @@ class ReactivePairing {
                 this.paired.add(paired);
         }
     }
+
+    pushRunningReaction(reactive: Reactive, reactionIndex: number) {
+        this.runningReactions.push([reactive, reactionIndex])
+    }
+
+    popRunningReaction() {
+        this.runningReactions.pop();
+    }
+
+    runningReaction() {
+        return this.runningReactions.at(-1);
+    }
 }
 const REACTIVE_PAIRING = new ReactivePairing();
 
 export class Reactive {
-    private runningReactionIndex = undefined;
     private batchedReactionsToRun: MeasureOfChange[] = [];
     private isAutoBatchScheduled = false;
     private reactionIndex = 0;
@@ -69,38 +81,52 @@ export class Reactive {
         measureOfChange: MeasureOfChange = MeasureOfChange.FULL,
     ): [get: Getter<T>, set: Setter<T>] {
         let current: T;
-        let reactionsToRerun: boolean[] = [];
+        // Todo we can consolidate both ToRerun patterns
+        const reactionsToRerun: boolean[] = [];
+        let pairedReactionsToRun: [Reactive, number][] = [];
 
         const triggerReactions = () => {
             for (let index = 0; index < reactionsToRerun.length; index++) {
                 if (reactionsToRerun[index]) {
-                    if (!this.inBatchReactions) this.ScheduleAutoBatchRuns();
-                    this.batchedReactionsToRun[index] = Math.max(
-                        measureOfChange,
-                        this.batchedReactionsToRun[index] || 0,
-                    );
+                    this.triggerReaction(index, measureOfChange);
                 }
             }
+            pairedReactionsToRun.forEach(([reactive, index]) =>
+                reactive.triggerReaction(index, measureOfChange))
         };
 
-        let setter = (value: T | Next<T>) => {
-            REACTIVE_PAIRING.addPaired(this);
+        const setter = (value: T | Next<T>) => {
             let materializedValue =
                 typeof value === 'function' ? (value as Next<T>)(current) : value;
             let isModified = materializedValue !== current;
             current = materializedValue;
-            if (isModified) triggerReactions();
+            if (isModified) {
+                REACTIVE_PAIRING.addPaired(this);
+                triggerReactions();
+            }
             return current;
         };
 
-        let resetDependency: ResetStateDependence = (reactionIndex) => {
+        const resetDependency: ResetStateDependence = (reactive, reactionIndex) => {
             reactionsToRerun[reactionIndex] = false;
         };
+        const resetPairedDependency: ResetStateDependence = (reactive, reactionIndex) => {
+            pairedReactionsToRun = pairedReactionsToRun.filter(_ =>
+                !(_[0] === reactive && _[1] === reactionIndex))
+        }
 
-        let getter = () => {
-            if (this.runningReactionIndex !== undefined) {
-                reactionsToRerun[this.runningReactionIndex] = true;
-                this.reactionDependencies[this.runningReactionIndex].add(resetDependency);
+        const getter = () => {
+            const runningReaction = REACTIVE_PAIRING.runningReaction();
+            if (runningReaction) {
+                const [reactive, reactionIndex] = runningReaction;
+                if (reactive === this) {
+                    reactionsToRerun[reactionIndex] = true;
+                    this.reactionDependencies[reactionIndex].add(resetDependency);
+                }
+                else {
+                    pairedReactionsToRun.push(runningReaction);
+                    reactive.reactionDependencies[reactionIndex].add(resetPairedDependency)
+                }
             }
             return current;
         };
@@ -115,6 +141,14 @@ export class Reactive {
         getter[GetterMark] = true;
         setter[SetterMark] = true;
         return [getter, setter];
+    }
+
+    private triggerReaction(index: number, measureOfChange: MeasureOfChange) {
+        if (!this.inBatchReactions) this.ScheduleAutoBatchRuns();
+        this.batchedReactionsToRun[index] = Math.max(
+            measureOfChange,
+            this.batchedReactionsToRun[index] || 0,
+        );
     }
 
     createReaction(func: Reaction) {
@@ -157,14 +191,14 @@ export class Reactive {
 
     private runReaction(reactionIndex: number, measureOfChange: MeasureOfChange) {
         this.reactionDependencies[reactionIndex].forEach((resetDependency) =>
-            resetDependency(reactionIndex),
+            resetDependency(this, reactionIndex),
         );
         this.reactionDependencies[reactionIndex].clear();
-        this.runningReactionIndex = reactionIndex;
+        REACTIVE_PAIRING.pushRunningReaction(this, reactionIndex);
         try {
             this.reactions[reactionIndex](measureOfChange);
         } finally {
-            this.runningReactionIndex = undefined;
+            REACTIVE_PAIRING.popRunningReaction();
             REACTIVE_PAIRING.flushPaired();
         }
     }
