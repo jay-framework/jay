@@ -12,13 +12,14 @@ export type Reaction = (measureOfChange: MeasureOfChange) => void;
 export type ValueOrGetter<T> = T | Getter<T>;
 export const GetterMark = Symbol.for('getterMark');
 export const SetterMark = Symbol.for('setterMark');
-type ResetStateDependence = (reactive: Reactive, reactionIndex: number) => void;
+type ResetStateDependence = (reactionGlobalKey: ReactiveGlobalKey) => void;
+type ReactiveGlobalKey = [Reactive, number];
 
 class ReactivePairing {
     origin?: Reactive
     paired = new Set<Reactive>()
     flushed = new Set<Reactive>()
-    runningReactions: [Reactive, number][] = [];
+    runningReactions: ReactiveGlobalKey[] = [];
 
     setOrigin(reactive: Reactive) {
         if (!this.origin)
@@ -50,15 +51,15 @@ class ReactivePairing {
         }
     }
 
-    pushRunningReaction(reactive: Reactive, reactionIndex: number) {
-        this.runningReactions.push([reactive, reactionIndex])
+    pushRunningReaction(reactiveGlobalKey: ReactiveGlobalKey) {
+        this.runningReactions.push(reactiveGlobalKey)
     }
 
     popRunningReaction() {
         this.runningReactions.pop();
     }
 
-    runningReaction() {
+    runningReaction(): ReactiveGlobalKey {
         return this.runningReactions.at(-1);
     }
 }
@@ -75,6 +76,7 @@ export class Reactive {
     private timeout: any = undefined;
     private inBatchReactions: boolean;
     private inFlush: boolean;
+    private reactionGlobalKey: [Reactive, number][] = [];
 
     createState<T>(
         value: ValueOrGetter<T>,
@@ -85,7 +87,7 @@ export class Reactive {
         // however, the first is x100 times faster, and x100 times more in use
         // the second is more generic, yet slower
         const reactionsToRerun: boolean[] = [];
-        let pairedReactionsToRun: [Reactive, number][] = [];
+        let pairedReactionsToRun = new Set<ReactiveGlobalKey>();
 
         const triggerReactions = () => {
             for (let index = 0; index < reactionsToRerun.length; index++) {
@@ -109,12 +111,11 @@ export class Reactive {
             return current;
         };
 
-        const resetDependency: ResetStateDependence = (reactive, reactionIndex) => {
-            reactionsToRerun[reactionIndex] = false;
+        const resetDependency: ResetStateDependence = (reactionGlobalKey) => {
+            reactionsToRerun[reactionGlobalKey[1]] = false;
         };
-        const resetPairedDependency: ResetStateDependence = (reactive, reactionIndex) => {
-            pairedReactionsToRun = pairedReactionsToRun.filter(_ =>
-                !(_[0] === reactive && _[1] === reactionIndex))
+        const resetPairedDependency: ResetStateDependence = (reactionGlobalKey) => {
+            pairedReactionsToRun.delete(reactionGlobalKey)
         }
 
         const getter = () => {
@@ -126,7 +127,7 @@ export class Reactive {
                     this.reactionDependencies[reactionIndex].add(resetDependency);
                 }
                 else {
-                    pairedReactionsToRun.push(runningReaction);
+                    pairedReactionsToRun.add(runningReaction);
                     reactive.reactionDependencies[reactionIndex].add(resetPairedDependency)
                 }
             }
@@ -158,6 +159,7 @@ export class Reactive {
     createReaction(func: Reaction) {
         let reactionIndex = this.reactionIndex++;
         this.reactions[reactionIndex] = func;
+        this.reactionGlobalKey[reactionIndex] = [this, reactionIndex];
         this.reactionDependencies[reactionIndex] = new Set();
         this.runReaction(reactionIndex, MeasureOfChange.FULL);
     }
@@ -195,10 +197,10 @@ export class Reactive {
 
     private runReaction(reactionIndex: number, measureOfChange: MeasureOfChange) {
         this.reactionDependencies[reactionIndex].forEach((resetDependency) =>
-            resetDependency(this, reactionIndex),
+            resetDependency(this.reactionGlobalKey[reactionIndex]),
         );
         this.reactionDependencies[reactionIndex].clear();
-        REACTIVE_PAIRING.pushRunningReaction(this, reactionIndex);
+        REACTIVE_PAIRING.pushRunningReaction(this.reactionGlobalKey[reactionIndex]);
         try {
             this.reactions[reactionIndex](measureOfChange);
         } finally {
