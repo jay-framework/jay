@@ -16,40 +16,36 @@ type ResetStateDependence = (reactionGlobalKey: ReactiveGlobalKey) => void;
 type ReactiveGlobalKey = [Reactive, number];
 
 class ReactivePairing {
-    origin?: Reactive
-    paired = new Set<Reactive>()
-    flushed = new Set<Reactive>()
+    // origin?: Reactive
+    // paired = new Set<Reactive>()
+    // flushed = new Set<Reactive>()
     runningReactions: ReactiveGlobalKey[] = [];
 
-    setOrigin(reactive: Reactive) {
-        if (!this.origin)
-            this.origin = reactive;
-    }
-
-    clearOrigin(reactive: Reactive) {
-        if (this.origin === reactive) {
-            this.origin = undefined;
-            this.paired.clear();
-            this.flushed.clear();
-        }
-    }
-
-    flushPaired() {
-        this.paired.forEach(reactive => {
-            reactive.flush();
-            this.flushed.add(reactive);
-        })
-        this.paired.clear();
-    }
-
-    addPaired(paired: Reactive) {
-        if (this.origin) {
-            if (this.flushed.has(paired))
-                throw new Error('double reactive flushing')
-            if (this.origin !== paired)
-                this.paired.add(paired);
-        }
-    }
+    // setOrigin(reactive: Reactive) {
+    //     if (!this.origin)
+    //         this.origin = reactive;
+    // }
+    //
+    // clearOriginAndFlushPaired(reactive: Reactive) {
+    //     if (this.origin === reactive) {
+    //         this.paired.forEach(reactive => {
+    //             reactive.flush();
+    //             this.flushed.add(reactive);
+    //         })
+    //         this.origin = undefined;
+    //         this.paired.clear();
+    //         this.flushed.clear();
+    //     }
+    // }
+    //
+    // addPaired(paired: Reactive) {
+    //     if (this.origin) {
+    //         if (this.flushed.has(paired))
+    //             throw new Error('double reactive flushing')
+    //         if (this.origin !== paired)
+    //             this.paired.add(paired);
+    //     }
+    // }
 
     pushRunningReaction(reactiveGlobalKey: ReactiveGlobalKey) {
         this.runningReactions.push(reactiveGlobalKey)
@@ -77,6 +73,7 @@ export class Reactive {
     private inBatchReactions: boolean;
     private inFlush: boolean;
     private reactionGlobalKey: [Reactive, number][] = [];
+    private reactivesToFlush: Set<Reactive> = new Set()
 
     createState<T>(
         value: ValueOrGetter<T>,
@@ -95,8 +92,10 @@ export class Reactive {
                     this.triggerReaction(index, measureOfChange);
                 }
             }
-            pairedReactionsToRun.forEach(([reactive, index]) =>
-                reactive.triggerReaction(index, measureOfChange))
+            pairedReactionsToRun.forEach(([reactive, index]) => {
+                reactive.triggerReaction(index, measureOfChange)
+                this.reactivesToFlush.add(reactive)
+            })
         };
 
         const setter = (value: T | Next<T>) => {
@@ -105,7 +104,6 @@ export class Reactive {
             let isModified = materializedValue !== current;
             current = materializedValue;
             if (isModified) {
-                REACTIVE_PAIRING.addPaired(this);
                 triggerReactions();
             }
             return current;
@@ -147,9 +145,7 @@ export class Reactive {
     }
 
     private triggerReaction(index: number, measureOfChange: MeasureOfChange) {
-        if (REACTIVE_PAIRING.origin)
-            REACTIVE_PAIRING.addPaired(this);
-        else if (!this.inBatchReactions) this.ScheduleAutoBatchRuns();
+        if (!this.inBatchReactions) this.ScheduleAutoBatchRuns();
         this.batchedReactionsToRun[index] = Math.max(
             measureOfChange,
             this.batchedReactionsToRun[index] || 0,
@@ -168,12 +164,9 @@ export class Reactive {
         if (this.inBatchReactions || this.inFlush) return func();
         this.inBatchReactions = true;
         [this.dirty, this.dirtyResolve] = mkResolvablePromise();
-        REACTIVE_PAIRING.setOrigin(this);
         try {
             return func();
         } finally {
-            REACTIVE_PAIRING.flushPaired();
-            REACTIVE_PAIRING.clearOrigin(this);
             this.flush();
             this.inBatchReactions = false;
             this.dirtyResolve();
@@ -205,14 +198,12 @@ export class Reactive {
             this.reactions[reactionIndex](measureOfChange);
         } finally {
             REACTIVE_PAIRING.popRunningReaction();
-            REACTIVE_PAIRING.flushPaired();
         }
     }
 
     flush() {
         if (this.inFlush) return;
         this.inFlush = true;
-        REACTIVE_PAIRING.setOrigin(this);
         try {
             for (let index = 0; index < this.batchedReactionsToRun.length; index++)
                 if (this.batchedReactionsToRun[index])
@@ -226,7 +217,10 @@ export class Reactive {
             this.dirtyResolve && this.dirtyResolve();
         } finally {
             this.inFlush = false;
-            REACTIVE_PAIRING.clearOrigin(this);
+            this.reactivesToFlush.forEach(reactive => {
+                if (!reactive.inBatchReactions) reactive.flush()
+            })
+            this.reactivesToFlush.clear();
         }
     }
 }

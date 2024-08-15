@@ -681,3 +681,100 @@ export function makeRender() {
       }]
 }
 ```
+
+## Reactive Pairing - one more refinement
+
+When two Reactives interact, there are two types of interactions - pull or push.
+
+Push interaction is when `Reactive A sets a state on reactive B in a reaction or batch`.
+Pull interaction is when `Reactive D reads a state from reactive C in one of D reactions`.
+
+We derive very simpler rules for pairing - 
+1. on Push interaction, it is the responsibility of the pushing reactive `A` to use `batchReactions` on the target
+   reactive `B` to trigger sync processing. If `batchReaction` is not used, `B` will flush async.
+2. on Pull interactions, it is expected that the pulling reactive `D` will flush after the origin reactive `C`.
+3. In the case of push pull interactions, push `A --> B`. pull `X, Y, Z <-- B`, it is expected that `B` will flush first,
+   then `A` and only last `X, Y, Z`. `X, Y, Z` will auto flush last if they did not already flush as part of the `A` flush 
+   (as in child components)
+
+Lets see the rules above using examples
+
+### Component updating Context
+
+This is a pull case, at which a component may update a context using direct updating states, or by calling a context
+api function. After updating the context, it is expected that the context states and derived states are up to date.
+
+Given the rules above, specifically no 1, we need to extend `createReactiveContext` to ensure a reactive context
+has a `batchReactions` function.
+
+```typescript
+createEffect(() => {
+   context.batchReactions(() => {
+      setContextState1('some new value')
+   }) 
+   // or
+   callContextAPI('some new value')
+})
+const memo = createMemo(() => someContextState())
+```
+
+### context updating components
+This is a pull case, at which a component is reading values from a context and needs to be updated after the context
+is flushed.
+
+the component code may look like
+```typescript
+function ShowCountComponent({}: Props<CompProps>, refs: CompRefs, {count}: CountContext) {
+   return {
+      render: () => ({
+         label: () => `the count is ${count()}`,
+      }),
+   };
+}
+```
+
+### component updating context which updates components
+
+Assume we have the component tree
+```
+  Root
+  - A - provides context and updates the context
+    - B
+      - X - uses the context
+    - C
+      - Y - uses the context 
+```
+
+If `A` updates the context, the context has to flush first, by rule 1.
+At the end of flushing `A`, the last reaction is calling `render` on `A` which starts to propagate `viewState` down the 
+component tree - which triggers `props` update for `X` and `Y`, who triggers flush for `X` and `Y`. 
+
+Given we have a mechanism for flushing `X` and `Y`, we want to prevent double flushing, hence rule no 3.
+
+### `createDerivedArray` hook
+
+The `createDerivedArray` hook is updating mapped array items in a reactive way - using a reactive mapping function. 
+The mapping function is only called if one of the dependencies of the function is changed - which are 
+the `item` being mapped, the `index` in the parent array, the `length` of the parent array, or any other `state` from
+the component. 
+
+The implementation of this hook is using a `Reactive` per item approach, at which the item reactive manages the states
+`item`, `index` and `length`, while the component `Reactive` is managing the component state. 
+
+This is a pull-push case, at which the mapping function can pull on component `Reactive` states, while the component `Reactive`
+pushes the new `item`, `index` and `length` into the item `Reactive`.
+
+an example such hook may look like
+```typescript
+let [discount, setDiscount] = createState(0.1);
+let totalLineItems = createDerivedArray(lineItems, (sku, unitPrice, title, quantity) => {
+   return {
+      sku, title,
+      total: quantity * unitPrice * (1-discount())
+   };
+});
+```
+
+Using the rules above, because `createDerivedArray` explicitly pushes `item`, `index`, `length` to the item `Reactive`,
+the item `Reactive` flushes as part of the computation of the `createDerivedArray` reaction, after any resolution of 
+states it may depend on.

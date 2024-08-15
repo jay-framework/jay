@@ -1,4 +1,5 @@
-import { MeasureOfChange, Reactive } from '../lib';
+import {MeasureOfChange, Reactive, } from '../lib';
+import {ReactiveWithTracking, RunOrder} from './reactive-with-tracking';
 
 describe('reactive', () => {
     describe('create state', () => {
@@ -609,338 +610,328 @@ describe('reactive', () => {
 
     describe('reactive pairing', () => {
 
-        class RunOrder {
-            log: string[] = []
-
-            logReaction(reactive: string, reaction: string, readingStates: string[], settingStates: string[]) {
-                this.log.push(`${reactive} - ${reaction}: (${readingStates.join(',')}) -> (${settingStates.join(',')})`)
-            }
-
-            logReady() {
-                this.log.push('-- setup complete --')
-            }
-
-            logStartBatch(reactive: string) {
-                this.log.push(`${reactive} - start batch `)
-            }
-
-            logEndBatch(reactive: string) {
-                this.log.push(`${reactive} - end batch `)
-            }
-        }
-
-        it(`should run reactive B as a result of reactive A reaction updating a state of B.
-            expecting to flush B right after the reaction of A which updates B state.`, async () => {
+        it(`A pulls from B. B batch sets B state. expecting to run A reactions`, async () => {
             const runOrder = new RunOrder();
-            const B = new Reactive();
-            const [b2, setB2] = B.createState(3);
-            const [b3, setB3] = B.createState('the length is 3');
-            B.createReaction(() => {
-                runOrder.logReaction('B', 'i', ['b2'], ['b3'])
-                setB3(`the length is ${b2()}`);
-            });
-
-            const A = new Reactive();
-            const [a1, setA1] = A.createState([1, 2, 3]);
-            const [a4, setA4] = A.createState('');
-            A.createReaction(() => {
-                runOrder.logReaction('A', 'i', ['a1'], ['b2'])
-                setB2(a1().length);
-            });
-            A.createReaction(() => {
-                runOrder.logReaction('A', 'ii', ['a1', 'b3'], ['a1'])
-                setA4(`${JSON.stringify(a1())} - ${b3()}`);
-            });
-            await A.toBeClean();
-            await B.toBeClean();
-            runOrder.logReady();
-
-            A.batchReactions(() => {
-                runOrder.logStartBatch('A')
-                setA1([1, 2, 3, 4]);
-                runOrder.logEndBatch('A')
-            })
-
-            expect(a4()).toBe('[1,2,3,4] - the length is 4')
-            expect(runOrder.log).toEqual([
-                "B - i: (b2) -> (b3)",
-                "A - i: (a1) -> (b2)",
-                "A - ii: (a1,b3) -> (a1)",
-                "-- setup complete --",
-                "A - start batch ",
-                "A - end batch ",
-                "A - i: (a1) -> (b2)",
-                "B - i: (b2) -> (b3)",
-                "A - ii: (a1,b3) -> (a1)",
-            ])
-        })
-
-        it(`should run reactive B as a result of reactive A updating a state of B directly.
-            expecting to flush B before flushing A`, async () => {
-            const runOrder = new RunOrder();
-            const B = new Reactive();
-            const [b2, setB2] = B.createState(3);
-            const [b3, setB3] = B.createState('the length is 3');
-            B.createReaction(() => {
-                runOrder.logReaction('B', 'i', ['b2'], ['b3'])
-                setB3(`the length is ${b2()}`);
-            });
-
-            const A = new Reactive();
-            const [a1, setA1] = A.createState([1, 2, 3]);
-            const [a4, setA4] = A.createState('');
-            A.createReaction(() => {
-                runOrder.logReaction('A', 'i', ['a1', 'b3'], ['a4'])
-                setA4(`${JSON.stringify(a1())} - ${b3()}`);
-            });
-            await A.toBeClean();
-            await B.toBeClean();
-            runOrder.logReady()
-
-            A.batchReactions(() => {
-                runOrder.logStartBatch('A')
-                setA1([1, 2, 3, 4]);
-                setB2(a1().length);
-                runOrder.logEndBatch('A')
-            })
-
-            expect(a4()).toBe('[1,2,3,4] - the length is 4')
-            expect(runOrder.log).toEqual([
-                "B - i: (b2) -> (b3)",
-                "A - i: (a1,b3) -> (a4)",
-                "-- setup complete --",
-                "A - start batch ",
-                "A - end batch ",
-                "B - i: (b2) -> (b3)",
-                "A - i: (a1,b3) -> (a4)",
-            ])
-        })
-
-        it(`should run reactive B as a result of reactive A updating a state of B using reactive B batch and state in A.
-            expecting to flush B before flushing A`, async () => {
-            const runOrder = new RunOrder();
-            const B = new Reactive();
-            const [b2, setB2] = B.createState(1);
-            const [b3, setB3] = B.createState('the length is 1');
-            B.createReaction(() => {
-                runOrder.logReaction('B', 'i', ['b2'], ['b3'])
-                setB3(`the length is ${b2()}`);
-            });
-
-            const A = new Reactive();
-            const [a1, setA1] = A.createState([1, 2, 3]);
-            const [a4, setA4] = A.createState('');
-            A.createReaction(() => {
-                runOrder.logReaction('A', 'i', ['a1', 'b3'], ['a4'])
-                setA4(`${JSON.stringify(a1())} - ${b3()}`);
-            });
-            await A.toBeClean();
-            await B.toBeClean();
-            runOrder.logReady()
-
-            A.batchReactions(() => {
-                runOrder.logStartBatch('A')
-                setA1([1, 2, 3, 4]);
-                B.batchReactions(() => {
-                    runOrder.logStartBatch('B')
-                    setB2(a1().length);
-                    runOrder.logEndBatch('B')
-                })
-                runOrder.logEndBatch('A')
-            })
-
-            expect(a4()).toBe('[1,2,3,4] - the length is 4')
-            expect(runOrder.log).toEqual([
-                "B - i: (b2) -> (b3)",
-                "A - i: (a1,b3) -> (a4)",
-                "-- setup complete --",
-                "A - start batch ",
-                "B - start batch ",
-                "B - end batch ",
-                "B - i: (b2) -> (b3)",
-                "A - end batch ",
-                "A - i: (a1,b3) -> (a4)",
-            ])
-        })
-
-        it(`should flush reactive B as a result of reactive A updating a state of B in reactive B batch.
-            expecting to flush B before flushing A and trigger A reaction`, async () => {
-            const runOrder = new RunOrder();
-            const B = new Reactive();
+            const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createState(1);
 
-            const A = new Reactive();
-            const [a2, setA2] = A.createState('');
+            const A = new ReactiveWithTracking('A', runOrder);
+            const [a1, setA1] = A.createState('');
             A.createReaction(() => {
-                runOrder.logReaction('A', 'i', ['b1'], ['a2'])
-                setA2(`The B reactive Value is - ${b1()}`);
+                setA1(`The B reactive Value is - ${b1()}`);
             });
             await A.toBeClean();
             await B.toBeClean();
-            runOrder.logReady()
 
-            expect(a2()).toBe('The B reactive Value is - 1')
-
-            A.batchReactions(() => {
-                runOrder.logStartBatch('A')
-                B.batchReactions(() => {
-                    runOrder.logStartBatch('B')
-                    setB1(4);
-                    runOrder.logEndBatch('B')
-                })
-                runOrder.logEndBatch('A')
-            })
-
-            expect(a2()).toBe('The B reactive Value is - 4')
-            expect(runOrder.log).toEqual([
-                "A - i: (b1) -> (a2)",
-                "-- setup complete --",
-                "A - start batch ",
-                "B - start batch ",
-                "B - end batch ",
-                "A - end batch ",
-                "A - i: (b1) -> (a2)",
-            ])
-        })
-
-        it(`should flush reactive A as a result of reactive B updating a state that A reaction reads.`, async () => {
-            const runOrder = new RunOrder();
-            const B = new Reactive();
-            const [b1, setB1] = B.createState(1);
-
-            const A = new Reactive();
-            const [a2, setA2] = A.createState('');
-            A.createReaction(() => {
-                runOrder.logReaction('A', 'i', ['b1'], ['a2'])
-                setA2(`The B reactive Value is - ${b1()}`);
-            });
-            await A.toBeClean();
-            await B.toBeClean();
-            runOrder.logReady()
-
-            expect(a2()).toBe('The B reactive Value is - 1')
+            expect(a1()).toBe('The B reactive Value is - 1')
 
             B.batchReactions(() => {
-                runOrder.logStartBatch('B')
                 setB1(4);
-                runOrder.logEndBatch('B')
             })
 
-            expect(a2()).toBe('The B reactive Value is - 4')
+            expect(a1()).toBe('The B reactive Value is - 4')
             expect(runOrder.log).toEqual([
-                "A - i: (b1) -> (a2)",
-                "-- setup complete --",
-                "B - start batch ",
-                "B - end batch ",
-                "A - i: (b1) -> (a2)",
+                "B - createState B1",
+                "A - createState A1",
+                "A - i   : (B1) -> (A1)",
+                "A - await toBeClean!!!",
+                "B - await toBeClean!!!",
+                "B - batch: setState B1",
+                "B - flush!!!",
+                "A - flush!!!",
+                "A - i   : (B1) -> (A1)",
             ])
         })
 
-        it(`should not flush reactive B twice sync as a result of two different states set by two different reactions of A.
-            reaction A - iii fails because it updates B after it was flushed by A - i`, async () => {
-
-            const originalArray = [1,2,3]
+        it(`A uses B. A batch, B batch sets B state. expecting to flush B on B batch end`, async () => {
             const runOrder = new RunOrder();
-            const B = new Reactive();
-            const [b2, setB2] = B.createState(3);
-            const [b3, setB3] = B.createState('the length is 3');
-            const [b4, setB4] = B.createState(originalArray);
-            const [b5, setB5] = B.createState('the sum is 6');
+            const B = new ReactiveWithTracking('B', runOrder);
+            const [b1, setB1] = B.createState(1);
+            const [b2, setB2] = B.createState('the length is 1');
             B.createReaction(() => {
-                runOrder.logReaction('B', 'i', ['b2'], ['b3'])
-                setB3(`the length is ${b2()}`);
-            });
-            B.createReaction(() => {
-                runOrder.logReaction('B', 'ii', ['b4'], ['b5'])
-                setB5(`the sum is ${b4().reduce((a,b) => a+b, 0)}`);
+                setB2(`the length is ${b1()}`);
             });
 
-            const A = new Reactive();
-            const [a1, setA1] = A.createState(originalArray);
-            const [a4, setA4] = A.createState('');
-            A.createReaction(() => {
-                runOrder.logReaction('A', 'i', ['a1'], ['b2'])
-                setB2(a1().length);
-            });
-            A.createReaction(() => {
-                runOrder.logReaction('A', 'ii', ['a1', 'b3'], ['a4'])
-                setA4(`${JSON.stringify(a1())} - ${b3()}`);
-            });
-            A.createReaction(() => {
-                runOrder.logReaction('A', 'iii', ['a1'], ['b4'])
-                setB4(a1()); // this should fail and propagate to the batchReactions below
-            });
-
-            await A.toBeClean();
-            await B.toBeClean();
-            runOrder.logReady();
-
-            expect(() => A.batchReactions(() => {
-                setA1([1, 2, 3, 4]);
-            })).toThrowError('')
-            expect(runOrder.log).toEqual([
-                "B - i: (b2) -> (b3)",
-                "B - ii: (b4) -> (b5)",
-                "A - i: (a1) -> (b2)",
-                "A - ii: (a1,b3) -> (a4)",
-                "A - iii: (a1) -> (b4)",
-                "-- setup complete --",
-                "A - i: (a1) -> (b2)",
-                "B - i: (b2) -> (b3)",
-                "A - ii: (a1,b3) -> (a4)",
-                "A - iii: (a1) -> (b4)", // causes the error, as it will require to flush B again
-            ])
-
-        })
-
-        it(`should not rerun reactions in A if, after running them, A updates B which a previous reaction in A depends on.
-        Does not rerun reaction A - i, as it is before A - ii which triggers the flush of B.`, async () => {
-            const runOrder = new RunOrder();
-            const B = new Reactive();
-            const [b2, setB2] = B.createState(3);
-            const [b3, setB3] = B.createState('the length is 3');
-            B.createReaction(() => {
-                runOrder.logReaction('B', 'i', ['b2'], ['b3'])
-                setB3(`the length is ${b2()}`);
-            });
-
-            const A = new Reactive();
+            const A = new ReactiveWithTracking('A', runOrder);
             const [a1, setA1] = A.createState([1, 2, 3]);
-            const [a4, setA4] = A.createState('');
-            const [aLogB2, setALogB2] = A.createState(0);
+            const [a2, setA2] = A.createState('');
             A.createReaction(() => {
-                runOrder.logReaction('A', 'i', ['b2'], ['aLogB2'])
-                setALogB2(b2());
+                setA2(`${JSON.stringify(a1())} - ${b2()}`);
             });
-            A.createReaction(() => {
-                runOrder.logReaction('A', 'ii', ['a1'], ['b2'])
-                setB2(a1().length);
-            });
-            A.createReaction(() => {
-                runOrder.logReaction('A', 'iii', ['a1', 'b3'], ['a4'])
-                setA4(`${JSON.stringify(a1())} - ${b3()}`);
-            });
-
             await A.toBeClean();
             await B.toBeClean();
-            runOrder.logReady();
+
+            A.batchReactions(() => {
+                setA1([1, 2, 3, 4]);
+                B.batchReactions(() => {
+                    setB1(a1().length);
+                })
+            })
+
+            expect(a2()).toBe('[1,2,3,4] - the length is 4')
+            expect(runOrder.log).toEqual([
+                "B - createState B1",
+                "B - createState B2",
+                "B - i   : (B1) -> (B2)",
+                "A - createState A1",
+                "A - createState A2",
+                "A - i   : (A1,B2) -> (A2)",
+                "A - await toBeClean!!!",
+                "B - await toBeClean!!!",
+                "A - batch: setState A1",
+                "A, B - batch: setState B1",
+                "B - flush!!!",
+                "B - i   : (B1) -> (B2)",
+                "A - flush!!!",
+                "A - i   : (A1,B2) -> (A2)",
+            ])
+        })
+
+        it(`A uses B. A reaction sets B state without B Batch. expecting B to flush async then flush A again`, async () => {
+            const runOrder = new RunOrder();
+            const B = new ReactiveWithTracking('B', runOrder);
+            const [b1, setB1] = B.createState(3);
+            const [b2, setB2] = B.createState('the length is 3');
+            B.createReaction(() => {
+                setB2(`the length is ${b1()}`);
+            });
+
+            const A = new ReactiveWithTracking('A', runOrder);
+            const [a1, setA1] = A.createState([1, 2, 3]);
+            const [a2, setA2] = A.createState('');
+            A.createReaction(() => {
+                setB1(a1().length);
+            });
+            A.createReaction(() => {
+                setA2(`${JSON.stringify(a1())} - ${b2()}`);
+            });
+            await A.toBeClean();
+            await B.toBeClean();
 
             A.batchReactions(() => {
                 setA1([1, 2, 3, 4]);
             })
 
-            expect(aLogB2()).toBe(3) // not updated
-            expect(b2()).toBe(4) // updated
-            expect(a4()).toBe('[1,2,3,4] - the length is 4')
+            // `B` was not flushed yet, so the length is 3 and not 4
+            expect(b2()).toBe('the length is 3')
+            expect(a2()).toBe('[1,2,3,4] - the length is 3')
+            await B.toBeClean();
+            expect(b2()).toBe('the length is 4')
+            expect(a2()).toBe('[1,2,3,4] - the length is 4')
+
             expect(runOrder.log).toEqual([
-                "B - i: (b2) -> (b3)",
-                "A - i: (b2) -> (aLogB2)",
-                "A - ii: (a1) -> (b2)",
-                "A - iii: (a1,b3) -> (a4)",
-                "-- setup complete --",
-                "A - ii: (a1) -> (b2)",
-                "B - i: (b2) -> (b3)",
-                "A - iii: (a1,b3) -> (a4)",
+                "B - createState B1",
+                "B - createState B2",
+                "B - i   : (B1) -> (B2)",
+                "A - createState A1",
+                "A - createState A2",
+                "A - i   : (A1) -> (B1)",
+                "A - ii  : (A1,B2) -> (A2)",
+                "A - await toBeClean!!!",
+                "B - await toBeClean!!!",
+                "A - batch: setState A1",
+                "A - flush!!!",
+                "A - i   : (A1) -> (B1)",
+                "A - ii  : (A1,B2) -> (A2)",
+                "B - await toBeClean!!!",
+                "B - flush!!!",
+                "B - i   : (B1) -> (B2)",
+                "A - flush!!!",
+                "A - ii  : (A1,B2) -> (A2)",
+            ])
+        })
+
+        it(`A pulls from B. A batch, B batch sets B state. expecting to run A reactions`, async () => {
+            const runOrder = new RunOrder();
+            const B = new ReactiveWithTracking('B', runOrder);
+            const [b1, setB1] = B.createState(1);
+
+            const A = new ReactiveWithTracking('A', runOrder);
+            const [a1, setA1] = A.createState('');
+            A.createReaction(() => {
+                setA1(`The B reactive Value is - ${b1()}`);
+            });
+            await A.toBeClean();
+            await B.toBeClean();
+
+            expect(a1()).toBe('The B reactive Value is - 1')
+
+            A.batchReactions(() => {
+                B.batchReactions(() => {
+                    setB1(4);
+                })
+            })
+
+            expect(a1()).toBe('The B reactive Value is - 4')
+            expect(runOrder.log).toEqual([
+                "B - createState B1",
+                "A - createState A1",
+                "A - i   : (B1) -> (A1)",
+                "A - await toBeClean!!!",
+                "B - await toBeClean!!!",
+                "A, B - batch: setState B1",
+                "B - flush!!!",
+                "A - flush!!!",
+                "A - i   : (B1) -> (A1)",
+            ])
+        })
+
+        it(`A pull from B. B batch sets B state. expecting to run A reactions`, async () => {
+            const runOrder = new RunOrder();
+            const B = new ReactiveWithTracking('B', runOrder);
+            const [b1, setB1] = B.createState(1);
+
+            const A = new ReactiveWithTracking('A', runOrder);
+            const [a1, setA1] = A.createState('');
+            A.createReaction(() => {
+                setA1(`The B reactive Value is - ${b1()}`);
+            });
+            await A.toBeClean();
+            await B.toBeClean();
+
+            expect(a1()).toBe('The B reactive Value is - 1')
+
+            B.batchReactions(() => {
+                setB1(4);
+            })
+
+            expect(a1()).toBe('The B reactive Value is - 4')
+            expect(runOrder.log).toEqual([
+                "B - createState B1",
+                "A - createState A1",
+                "A - i   : (B1) -> (A1)",
+                "A - await toBeClean!!!",
+                "B - await toBeClean!!!",
+                "B - batch: setState B1",
+                "B - flush!!!",
+                "A - flush!!!",
+                "A - i   : (B1) -> (A1)",
+            ])
+        })
+
+        it(`A uses B. A updates B twice with batching. B flushes twice as a result`, async () => {
+
+            const runOrder = new RunOrder();
+            const B = new ReactiveWithTracking('B', runOrder);
+            const [b1, setB1] = B.createState(3);
+            const [b2, setB2] = B.createState(b1()+1);
+            const [b3, setB3] = B.createState(5);
+            const [b4, setB4] = B.createState(b3()+1);
+            B.createReaction(() => {
+                setB2(b1()+1);
+            });
+            B.createReaction(() => {
+                setB4(b3()+1);
+            });
+
+            const A = new ReactiveWithTracking('A', runOrder);
+            const [a1, setA1] = A.createState(1);
+            const [a2, setA2] = A.createState(b2()+1);
+            A.createReaction(() => {
+                B.batchReactions(() => {
+                    setB1(a1()+1);
+                })
+            });
+            A.createReaction(() => {
+                setA2(b2()+1);
+            });
+            A.createReaction(() => {
+                B.batchReactions(() => {
+                    setB3(a2()+1); // this should fail and propagate to the batchReactions below
+                })
+            });
+
+            await A.toBeClean();
+            await B.toBeClean();
+
+            A.batchReactions(() => {
+                setA1(10);
+            })
+            expect(b4()).toEqual(15)
+            expect(runOrder.log).toEqual([
+                "B - createState B1",
+                "B - createState B2",
+                "B - createState B3",
+                "B - createState B4",
+                "B - i   : (B1) -> (B2)",
+                "B - ii  : (B3) -> (B4)",
+                "A - createState A1",
+                "A - createState A2",
+                "A - i   : (A1) -> (B1)",
+                "B - flush!!!",
+                "B - i   : (B1) -> (B2)",
+                "A - ii  : (B2) -> (A2)",
+                "A - iii : (A2) -> (B3)",
+                "B - flush!!!",
+                "A - await toBeClean!!!",
+                "B - await toBeClean!!!",
+                "A - batch: setState A1",
+                "A - flush!!!",
+                "A - i   : (A1) -> (B1)",
+                "B - flush!!!",
+                "B - i   : (B1) -> (B2)",
+                "A - ii  : (B2) -> (A2)",
+                "A - iii : (A2) -> (B3)",
+                "B - flush!!!",
+                "B - ii  : (B3) -> (B4)",
+            ])
+
+        })
+
+        it(`A uses B. A updates B using B batch, and expects on next reactions to have B flushed`, async () => {
+            const runOrder = new RunOrder();
+            const B = new ReactiveWithTracking('B', runOrder);
+            const [b1, setB1] = B.createState(3);
+            const [b2, setB2] = B.createState('the length is 3');
+            B.createReaction(() => {
+                setB2(`the length is ${b1()}`);
+            });
+
+            const A = new ReactiveWithTracking('A', runOrder);
+            const [a1, setA1] = A.createState([1, 2, 3]);
+            const [a2, setA2] = A.createState('');
+            const [a3, setA3] = A.createState(0);
+            A.createReaction(() => {
+                setA3(b1());
+            });
+            A.createReaction(() => {
+                B.batchReactions(() => {
+                    setB1(a1().length);
+                })
+            });
+            A.createReaction(() => {
+                setA2(`${JSON.stringify(a1())} - ${b2()}`);
+            });
+
+            await A.toBeClean();
+            await B.toBeClean();
+
+            A.batchReactions(() => {
+                setA1([1, 2, 3, 4]);
+            })
+
+            expect(a3()).toBe(3) // not updated
+            expect(b1()).toBe(4) // updated
+            expect(a2()).toBe('[1,2,3,4] - the length is 4')
+            expect(runOrder.log).toEqual([
+                "B - createState B1",
+                "B - createState B2",
+                "B - i   : (B1) -> (B2)",
+                "A - createState A1",
+                "A - createState A2",
+                "A - createState A3",
+                "A - i   : (B1) -> (A3)",
+                "A - ii  : (A1) -> (B1)",
+                "B - flush!!!",
+                "A - iii : (A1,B2) -> (A2)",
+                "A - await toBeClean!!!",
+                "B - await toBeClean!!!",
+                "A - batch: setState A1",
+                "A - flush!!!",
+                "A - ii  : (A1) -> (B1)",
+                "B - flush!!!",
+                "B - i   : (B1) -> (B2)",
+                "A - iii : (A1,B2) -> (A2)",
             ])
         })
     })
