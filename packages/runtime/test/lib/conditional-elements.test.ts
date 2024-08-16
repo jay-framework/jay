@@ -92,16 +92,18 @@ describe('conditional-element', () => {
         interface ConditionalElement extends JayElement<ViewState, ConditionalRefs> {}
 
         function makeElement(data: ViewState): ConditionalElement {
-            return ConstructContext.withRootContext(data, () =>
+            return ConstructContext.withRootContext(data, () => {
                 // noinspection DuplicatedCode
-                de('div', {}, [
+                const text1 = elemRef<ViewState, any>('text1');
+                const text2 = elemRef<ViewState, any>('text2');
+                return de('div', {}, [
                     conditional(
                         (newViewState) => newViewState.condition,
                         e(
                             'div',
                             { style: { cssText: 'color:red' } },
                             [dt((data) => data.text1)],
-                            elemRef('text1'),
+                            text1(),
                         ),
                     ),
                     conditional(
@@ -110,10 +112,10 @@ describe('conditional-element', () => {
                             'div',
                             { style: { cssText: 'color:green' } },
                             [dt((data) => data.text2)],
-                            elemRef('text2'),
+                            text2(),
                         ),
                     ),
-                ]),
+                ])},
             ) as ConditionalElement;
         }
 

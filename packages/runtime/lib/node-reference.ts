@@ -39,12 +39,12 @@ export interface PrivateRef<ViewState, PublicRefAPI> {
         type: string,
         handler: JayEventHandler<E, ViewState, any>,
         options?: boolean | AddEventListenerOptions,
-    );
+    ): void;
     removeEventListener<E extends Event>(
         type: string,
         handler: JayEventHandler<E, ViewState, any>,
         options?: EventListenerOptions | boolean,
-    );
+    ): void;
 }
 
 export function elemCollectionRef<ViewState, ElementType extends HTMLElement>(
@@ -66,12 +66,21 @@ export function elemCollectionRef<ViewState, ElementType extends HTMLElement>(
     };
 }
 
-export function elemRef(refName: string): PrivateRef<any, any> {
+export function elemRef<ViewState, ElementType extends HTMLElement>(refName: string):() => PrivateRef<ViewState, any> {
     let { currData, coordinate, refManager } = currentConstructionContext();
-    return refManager.add(
-        refName,
-        new HTMLElementRefImpl(currData, coordinate(refName), refManager.eventWrapper),
-    );
+    let refs = new HTMLElementRefsImpl<ViewState, ElementType>();
+    refManager.add(refName, refs);
+    return () => {
+        let { currData, coordinate, refManager } = currentConstructionContext();
+        let ref = new HTMLElementRefImpl<ViewState, ElementType>(
+            currData,
+            coordinate(refName),
+            refManager.eventWrapper,
+            refs,
+        );
+        refs.addRef(ref);
+        return ref;
+    }
 }
 
 export function compCollectionRef<
@@ -94,22 +103,31 @@ export function compCollectionRef<
     };
 }
 
-export function compRef(refName: string): PrivateRef<any, any> {
+export function compRef<
+    ViewState,
+    ComponentType extends JayComponent<any, ViewState, any>,
+>(refName: string): () => PrivateRef<any, any> {
     let { currData, coordinate, refManager } = currentConstructionContext();
-    return refManager.add(
-        refName,
-        new ComponentRefImpl(currData, coordinate(refName), refManager.eventWrapper),
-    );
+    let refs = new ComponentRefsImpl<ViewState, ComponentType>();
+    refManager.add(refName, refs)
+    return () => {
+        let { currData, coordinate, refManager } = currentConstructionContext();
+        let ref = new ComponentRefImpl<ViewState, ComponentType>(
+            currData,
+            coordinate(refName),
+            refManager.eventWrapper,
+            refs,
+        );
+        refs.addRef(ref);
+        return ref;
+    }
 }
 
-abstract class CollectionRefImpl<
+abstract class PrivateRefs<
     ViewState,
-    ElementType extends ReferenceTarget<ViewState>,
     PublicRefAPI,
-    PublicCollectionRefAPI,
-    RefType extends PrivateRef<ViewState, PublicRefAPI>,
-> implements ManagedCollectionRef<ViewState, PublicRefAPI, PublicCollectionRefAPI>
-{
+    RefType extends PrivateRef<ViewState, PublicRefAPI>> {
+
     protected elements: Set<RefType> = new Set();
     private listeners = [];
 
@@ -149,6 +167,16 @@ abstract class CollectionRefImpl<
         this.elements.forEach((ref) => ref.removeEventListener(type, listener, options));
     }
 
+}
+
+abstract class PrivateCollectionRefs<
+    ViewState,
+    PublicRefAPI,
+    PublicCollectionRefAPI,
+    RefType extends PrivateRef<ViewState, PublicRefAPI>,
+> extends PrivateRefs<ViewState, PublicRefAPI, RefType>
+    implements ManagedCollectionRef<ViewState, PublicRefAPI, PublicCollectionRefAPI>
+{
     map<ResultType>(
         handler: (
             referenced: PublicRefAPI,
@@ -172,9 +200,8 @@ abstract class CollectionRefImpl<
 class HTMLElementCollectionRefImpl<
     ViewState,
     ElementType extends HTMLElement,
-> extends CollectionRefImpl<
+> extends PrivateCollectionRefs<
     ViewState,
-    ElementType,
     HTMLElementProxy<ViewState, ElementType>,
     HTMLElementCollectionProxy<ViewState, ElementType>,
     HTMLElementRefImpl<ViewState, ElementType>
@@ -187,12 +214,41 @@ class HTMLElementCollectionRefImpl<
     }
 }
 
+class HTMLElementRefsImpl<
+    ViewState,
+    ElementType extends HTMLElement,
+> extends PrivateRefs<
+    ViewState,
+    HTMLElementProxy<ViewState, ElementType>,
+    HTMLElementRefImpl<ViewState, ElementType>
+> implements HTMLElementProxyTarget<ViewState, ElementType> {
+    getPublicAPI(): HTMLElementProxy<ViewState, ElementType> {
+        return [...this.elements][0].getPublicAPI();
+    }
+
+    exec$<T>(handler: (elem: ElementType, viewState: ViewState) => T): Promise<T> {
+        return [...this.elements][0].exec$(handler)
+    }
+}
+
+class ComponentRefsImpl<
+    ViewState,
+    ComponentType extends JayComponent<any, ViewState, any>,
+> extends PrivateRefs<
+    ViewState,
+    ComponentType,
+    ComponentRefImpl<ViewState, ComponentType>
+>{
+    getPublicAPI(): ComponentType {
+        return [...this.elements][0].getPublicAPI();
+    }
+}
+
 export class ComponentCollectionRefImpl<
     ViewState,
     ComponentType extends JayComponent<any, ViewState, any>,
-> extends CollectionRefImpl<
+> extends PrivateCollectionRefs<
     ViewState,
-    ComponentType,
     ComponentType,
     ComponentCollectionProxy<ViewState, ComponentType>,
     ComponentRefImpl<ViewState, ComponentType>
@@ -206,7 +262,6 @@ export abstract class RefImpl<
     ViewState,
     ElementType extends ReferenceTarget<ViewState>,
     PublicRefAPI,
-    PublicCollectionRefAPI,
     RefType extends PrivateRef<ViewState, PublicRefAPI>,
 > implements PrivateRef<ViewState, PublicRefAPI>
 {
@@ -217,11 +272,9 @@ export abstract class RefImpl<
         public viewState: ViewState,
         public coordinate: Coordinate,
         private eventWrapper: JayEventHandlerWrapper<any, ViewState, any>,
-        private parentCollection?: CollectionRefImpl<
+        private parentCollection?: PrivateRefs<
             ViewState,
-            ElementType,
             PublicRefAPI,
-            PublicCollectionRefAPI,
             RefType
         >,
     ) {
@@ -283,7 +336,6 @@ export class HTMLElementRefImpl<ViewState, ElementType extends HTMLElement>
         ViewState,
         ElementType,
         HTMLElementProxy<ViewState, ElementType>,
-        HTMLElementCollectionProxy<ViewState, ElementType>,
         HTMLElementRefImpl<ViewState, ElementType>
     >
     implements HTMLElementProxyTarget<ViewState, any>
@@ -317,7 +369,6 @@ export class ComponentRefImpl<
     ViewState,
     ComponentType,
     ComponentType,
-    ComponentCollectionProxy<ViewState, ComponentType>,
     ComponentRefImpl<ViewState, ComponentType>
 > {
     getFromComponent(prop) {

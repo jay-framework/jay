@@ -25,14 +25,15 @@ describe('nested components', () => {
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
 
         function renderComposite(viewState: ViewState): TestElement {
-            return ConstructContext.withRootContext(viewState, () =>
-                e('div', {}, [
+            return ConstructContext.withRootContext(viewState, () => {
+                const staticComponent = compRef('staticComponent');
+                return e('div', {}, [
                     childComp(
                         (props: ItemProps) => Item(props),
                         (vs) => ({ text: vs.staticItem, dataId: 'AAA' }),
-                        compRef('staticComponent'),
+                        staticComponent(),
                     ),
-                ]),
+                ])},
             ) as TestElement;
         }
 
@@ -93,17 +94,18 @@ describe('nested components', () => {
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
 
         function renderComposite(viewState: ViewState): TestElement {
-            return ConstructContext.withRootContext(viewState, () =>
-                de('div', {}, [
+            return ConstructContext.withRootContext(viewState, () => {
+                const condRef = compRef("conditional")
+                return de('div', {}, [
                     conditional(
                         (vs) => vs.condition,
                         childComp(
                             (props: ItemProps) => Item(props),
                             (vs) => ({ text: vs.staticItem, dataId: 'condition' }),
-                            compRef('conditional'),
+                            condRef(),
                         ),
                     ),
-                ]),
+                ])},
             ) as TestElement;
         }
 

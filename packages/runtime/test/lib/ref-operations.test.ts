@@ -38,7 +38,11 @@ describe('ReferencesManager operations', () => {
             let jayElement1;
             let jayRootElement = ConstructContext.withRootContext<string, RootElementRefs>(
                 DATA_CONTEXT,
-                () => e('div', {}, [(jayElement1 = e('div', {}, [SOME_VALUE], elemRef(refName1)))]),
+                () => {
+                    const ref = elemRef(refName1);
+                    return e('div', {}, [
+                        (jayElement1 = e('div', {}, [SOME_VALUE], ref()))])
+                },
             );
             let mockCallback = vi.fn(() => undefined);
             return { jayRootElement, jayElement1, mockCallback };
@@ -173,14 +177,16 @@ describe('ReferencesManager operations', () => {
             jayRootElement: JayElement<RootElementViewState, RootElementRefs>,
             mockCallback;
         beforeEach(() => {
-            jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, () =>
-                e('div', {}, [
+            jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, () => {
+                const ref = compRef(refName1)
+                return e('div', {}, [
                     childComp(
                         (props: ItemProps) => (jayComponent = Item(props)),
                         (vs) => ({ text: 'hello', dataId: 'AAA' }),
-                        compRef(refName1),
+                        ref(),
                     ),
-                ]),
+                ])
+                }
             ) as JayElement<RootElementViewState, RootElementRefs>;
 
             mockCallback = vi.fn(() => undefined);

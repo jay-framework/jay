@@ -46,7 +46,8 @@ describe('ReferencesManager events', () => {
             let jayRootElement = ConstructContext.withRootContext<string, RootElementRefs>(
                 VIEW_STATE,
                 () => {
-                    jayElement1 = e('div', {}, [SOME_VALUE], elemRef(refName1));
+                    const ref = elemRef(refName1);
+                    jayElement1 = e('div', {}, [SOME_VALUE], ref());
                     jayElement2 = e('div', {}, [SOME_VALUE]);
                     return e('div', {}, [jayElement1, jayElement2]) as JayElement<
                         RootElementViewState,
@@ -361,14 +362,15 @@ describe('ReferencesManager events', () => {
             let jayRootElement: JayElement<RootElementViewState, RootElementRefs> =
                 ConstructContext.withRootContext(
                     VIEW_STATE,
-                    () =>
-                        e('div', {}, [
+                    () => {
+                        const comp = compRef(refName1);
+                        return e('div', {}, [
                             childComp(
                                 (props) => (jayComponent = Item(props as ItemProps)),
                                 (vs) => ITEM_PROPS,
-                                compRef(refName1),
+                                comp(),
                             ),
-                        ]),
+                        ])},
                     { eventWrapper },
                 ) as JayElement<RootElementViewState, RootElementRefs>;
             let mockCallback = vi.fn(() => undefined);

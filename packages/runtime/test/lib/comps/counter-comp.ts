@@ -18,12 +18,15 @@ interface CounterRefs {
 export interface CounterElement extends JayElement<ViewState, CounterRefs> {}
 
 function renderCounter(viewState: ViewState): CounterElement {
-    return ConstructContext.withRootContext(viewState, () =>
-        e('div', {}, [
-            e('div', {}, ['-'], elemRef('dec')),
-            e('div', {}, [dt((vs) => vs.count)], elemRef('count')),
-            e('div', {}, ['+'], elemRef('inc')),
-        ]),
+    return ConstructContext.withRootContext(viewState, () => {
+        const dec = elemRef("dec");
+        const inc = elemRef("inc");
+        const countRef = elemRef('count');
+        return e('div', {}, [
+            e('div', {}, ['-'], dec()),
+            e('div', {}, [dt((vs) => vs.count)], countRef()),
+            e('div', {}, ['+'], inc()),
+        ])},
     ) as CounterElement;
 }
 

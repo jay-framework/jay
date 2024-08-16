@@ -18,12 +18,15 @@ export interface ItemRefs {
 export interface ItemElement extends JayElement<ItemVS, ItemRefs> {}
 
 function renderItem(viewState: ItemVS): ItemElement {
-    return ConstructContext.withRootContext(viewState, () =>
-        e('div', { 'data-id': viewState.dataId }, [
+    return ConstructContext.withRootContext(viewState, () => {
+        const done = elemRef('done');
+        const remove = elemRef('remove')
+        return e('div', {'data-id': viewState.dataId}, [
             e('span', {}, [dt((vs) => `${vs.text} - ${vs.done ? 'done' : 'tbd'}`)]),
-            e('button', { 'data-id': 'done' }, ['done'], elemRef('done')),
-            e('button', { 'data-id': 'remove' }, ['remove'], elemRef('remove')),
-        ]),
+            e('button', {'data-id': 'done'}, ['done'], done()),
+            e('button', {'data-id': 'remove'}, ['remove'], remove()),
+        ])
+        }
     ) as ItemElement;
 }
 
