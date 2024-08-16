@@ -1,5 +1,5 @@
 import {GetterMark, Reactive, SetterMark} from "jay-reactive";
-import {ContextMarker, withContext} from "jay-runtime";
+import {withContext} from "jay-runtime";
 import {CONTEXT_CREATION_CONTEXT} from "./component-contexts";
 
 function newContextProxy<T extends object>(reactive: Reactive, context: T): T {

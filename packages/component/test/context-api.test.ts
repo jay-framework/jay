@@ -9,7 +9,7 @@ import {
     JayElement, RenderElementOptions, withContext
 } from "jay-runtime";
 import {ComponentContext, createReactiveContext, createState, makeJayComponent, Props} from "../lib";
-import {Getter} from "jay-reactive";
+import {Getter, Setter} from "jay-reactive";
 
 
 describe('context api', () => {
@@ -27,17 +27,19 @@ describe('context api', () => {
         interface LabelAndButtonElement extends JayElement<LabelAndButtonViewState, LabelAndButtonRefs> {}
 
         function renderLabelElement(viewState: LabelAndButtonViewState, options?: RenderElementOptions): LabelAndButtonElement {
-            return ConstructContext.withRootContext(viewState, () =>
-                e('div', {}, [
+            return ConstructContext.withRootContext(viewState, () => {
+                const button = elemRef('button');
+                return e('div', {}, [
                     dt((vs) => vs.label),
-                    e('button', {}, [], elemRef('button') )
-                ]), options,
+                    e('button', {}, [], button() )
+                ])}, options,
             ) as LabelAndButtonElement;
         }
 
         // ---------- Number Context ----------
         interface CountContext {
             count: Getter<number>
+            setCount: Setter<number>
             inc: () => void
         }
         const COUNT_CONTEXT = createJayContext<CountContext>();
@@ -46,8 +48,8 @@ describe('context api', () => {
             const inc = () => {
                 setCount(_ => _ + 1)
             }
-            return {count, inc}
-        }) as CountContext;
+            return {count, inc, setCount}
+        });
 
         // ---------- Consuming component ----------
         interface CompProps {}
@@ -69,10 +71,11 @@ describe('context api', () => {
         interface AppElement extends JayElement<AppViewState, AppRefs> {}
 
         function AppElement(viewState: AppViewState, options?: RenderElementOptions): AppElement {
-            return ConstructContext.withRootContext(viewState, () =>
-                e('div', {}, [
-                    childComp(LabelAndButtonComp, (vs) => ({}), compRef('labelAndButton'))
-                ]), options
+            return ConstructContext.withRootContext(viewState, () => {
+                const labelAndButton = compRef('labelAndButton');
+                return e('div', {}, [
+                    childComp(LabelAndButtonComp, (vs) => ({}), labelAndButton())
+                ])}, options
             ) as AppElement;
         }
 
@@ -101,7 +104,7 @@ describe('context api', () => {
                 expect(comp.element.dom.textContent).toBe('the count is 13')
             })
 
-            it('random context update should trigger component update', async () => {
+            it('random context update using context api should trigger component update', async () => {
                 const context = mkContext();
                 const comp = withContext(COUNT_CONTEXT, context, () => {
                     return LabelAndButtonComp({});
