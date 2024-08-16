@@ -934,5 +934,58 @@ describe('reactive', () => {
                 "A - iii : (A1,B2) -> (A2)",
             ])
         })
+
+        it('should track getter of parent A reactive when read from child B reactive (createDerivedArray case)', async () => {
+            const runOrder = new RunOrder();
+
+            const A = new ReactiveWithTracking('A', runOrder);
+            const [a1, setA1] = A.createState(1);
+            const [a2, setA2] = A.createState(1);
+
+            let B: Reactive;
+            let b1, setB1
+            A.createReaction(() => {
+                if (!B) {
+                    B = new ReactiveWithTracking('B', runOrder);
+                    [b1, setB1] = B.createState(1);
+                    B.createReaction(() => {
+                        setB1(a1()+1)
+                    })
+                }
+                else
+                    B.flush();
+            })
+            A.createReaction(() => {
+                setA2(b1()+1);
+            })
+
+            await A.toBeClean();
+            await B.toBeClean();
+
+            A.batchReactions(() => {
+                setA1(10);
+            })
+
+            expect(b1()).toBe(11)
+            expect(a2()).toBe(12)
+
+            expect(runOrder.log).toEqual([
+                "A - createState A1",
+                "A - createState A2",
+                "A - i   : () -> ()",
+                "B - createState B1",
+                "B - i   : (A1) -> (B1)",
+                "A - ii  : (B1) -> (A2)",
+                "A - await toBeClean!!!",
+                "B - await toBeClean!!!",
+                "A - batch: setState A1",
+                "A - flush!!!",
+                "A - i   : () -> ()",
+                "B - flush!!!",
+                "B - i   : (A1) -> (B1)",
+                "A - ii  : (B1) -> (A2)",
+                "B - flush!!!",
+            ])
+        })
     })
 });

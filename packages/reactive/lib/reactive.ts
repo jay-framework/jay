@@ -58,6 +58,10 @@ class ReactivePairing {
     runningReaction(): ReactiveGlobalKey {
         return this.runningReactions.at(-1);
     }
+
+    nestedRunningReaction(): ReactiveGlobalKey {
+        return this.runningReactions.at(-2);
+    }
 }
 const REACTIVE_PAIRING = new ReactivePairing();
 
@@ -117,18 +121,34 @@ export class Reactive {
         }
 
         const getter = () => {
-            const runningReaction = REACTIVE_PAIRING.runningReaction();
-            if (runningReaction) {
-                const [reactive, reactionIndex] = runningReaction;
+            // const runningReaction = REACTIVE_PAIRING.runningReaction();
+            // const nestedRunningReaction = REACTIVE_PAIRING.nestedRunningReaction();
+
+            const runningReactionsLength = REACTIVE_PAIRING.runningReactions.length;
+            for (let index = runningReactionsLength-1; index > -1; index--) {
+                const [reactive, reactionIndex] = REACTIVE_PAIRING.runningReactions[index];
                 if (reactive === this) {
                     reactionsToRerun[reactionIndex] = true;
                     this.reactionDependencies[reactionIndex].add(resetDependency);
+                    break;
                 }
                 else {
-                    pairedReactionsToRun.add(runningReaction);
+                    pairedReactionsToRun.add(REACTIVE_PAIRING.runningReactions[index]);
                     reactive.reactionDependencies[reactionIndex].add(resetPairedDependency)
                 }
             }
+
+            // if (runningReaction) {
+            //     const [reactive, reactionIndex] = runningReaction;
+            //     if (reactive === this) {
+            //         reactionsToRerun[reactionIndex] = true;
+            //         this.reactionDependencies[reactionIndex].add(resetDependency);
+            //     }
+            //     else {
+            //         pairedReactionsToRun.add(runningReaction);
+            //         reactive.reactionDependencies[reactionIndex].add(resetPairedDependency)
+            //     }
+            // }
             return current;
         };
 
