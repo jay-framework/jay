@@ -27,7 +27,10 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
         () =>
             mr(
                 viewState,
-                () => e('div', {}, [secureChildComp(Comp, (vs) => ({}), cr('comp1'))]),
+                () => {
+                    const comp1 = cr('comp1');
+                    return e('div', {}, [secureChildComp(Comp, (vs) => ({}), comp1())])
+                },
                 funcRepository,
             ),
         options,

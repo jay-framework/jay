@@ -6,7 +6,9 @@ import { TreeNode, Node } from './tree-node';
 export function render(viewState: Node, options?: RenderElementOptions) {
     return ConstructContext.withRootContext(
         viewState,
-        () => mr(viewState, () => secureChildComp(TreeNode, (vs) => vs, cr('comp1'))),
-        options,
+        () => {
+            const comp1 = cr('comp1');
+            return mr(viewState, () => secureChildComp(TreeNode, (vs) => vs, comp1()))
+        }, options
     );
 }

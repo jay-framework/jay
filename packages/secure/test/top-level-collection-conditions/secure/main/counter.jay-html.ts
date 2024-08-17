@@ -28,11 +28,13 @@ export function render(
 ): CounterElement {
     return ConstructContext.withRootContext(
         viewState,
-        () =>
-            e('div', {}, [
+        () => {
+            const subtracter = er('subtracter');
+            const adder = er('adder');
+            return e('div', {}, [
                 e('div', { 'data-id': da((vs) => `${vs.id}-title`) }, [dt((vs) => vs.title)]),
                 e('div', {}, [
-                    e('button', { 'data-id': da((vs) => `${vs.id}-sub`) }, ['-'], er('subtracter')),
+                    e('button', { 'data-id': da((vs) => `${vs.id}-sub`) }, ['-'], subtracter()),
                     e(
                         'span',
                         {
@@ -41,9 +43,9 @@ export function render(
                         },
                         [dt((vs) => vs.count)],
                     ),
-                    e('button', { 'data-id': da((vs) => `${vs.id}-add`) }, ['+'], er('adder')),
+                    e('button', { 'data-id': da((vs) => `${vs.id}-add`) }, ['+'], adder()),
                 ]),
-            ]),
+            ])},
         options,
     );
 }

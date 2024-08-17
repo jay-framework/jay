@@ -43,6 +43,9 @@ export function render(viewState: ParentViewState, options?: RenderElementOption
         viewState,
         () => {
             const refDynamicChildren = ccr('dynamicChildren');
+            const parentChangesChildPropButton = er('parentChangesChildPropButton');
+            const parentCallsChildApiButton = er('parentCallsChildApiButton');
+            const staticChild = cr('staticChild');
             return de('div', {}, [
                 e('div', { id: 'text-from-child-event' }, [dt((vs) => vs.textFromChildEvent)]),
                 e('div', { id: 'view-state-from-child-event' }, [
@@ -55,18 +58,18 @@ export function render(viewState: ParentViewState, options?: RenderElementOption
                     'button',
                     { id: 'parent-changes-child-prop-button' },
                     ['parent changes child prop'],
-                    er('parentChangesChildPropButton'),
+                    parentChangesChildPropButton(),
                 ),
                 e(
                     'button',
                     { id: 'parent-calls-child-api-button' },
                     ['parent calls child api'],
-                    er('parentCallsChildApiButton'),
+                    parentCallsChildApiButton(),
                 ),
                 secureChildComp(
                     Child,
                     (vs) => ({ textFromParent: vs.childText, id: 'static' }),
-                    cr('staticChild'),
+                    staticChild(),
                 ),
                 forEach(
                     (vs: ParentViewState) => vs.dynamicChildren,

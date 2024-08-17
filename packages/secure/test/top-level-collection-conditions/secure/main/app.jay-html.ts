@@ -36,6 +36,7 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
     return ConstructContext.withRootContext(
         viewState,
         () => {
+            const comp1 = cr('comp1');
             const refComp2 = ccr('comp2');
             return mr(viewState, () =>
                 de('div', {}, [
@@ -48,7 +49,7 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
                                 initialCount: vs.initialCount,
                                 id: 'cond',
                             }),
-                            cr('comp1'),
+                            comp1(),
                         ),
                     ),
                     forEach(

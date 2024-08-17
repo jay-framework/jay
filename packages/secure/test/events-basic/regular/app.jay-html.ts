@@ -20,14 +20,15 @@ export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export function render(viewState: AppViewState, options?: RenderElementOptions): AppElement {
     return ConstructContext.withRootContext(
         viewState,
-        () =>
-            e('div', {}, [
+        () => {
+            const a = cr('a')
+            return e('div', {}, [
                 childComp(
                     Counter,
                     (vs: AppViewState) => ({ title: 'first counter', initialCount: 12 }),
-                    cr('a'),
+                    a(),
                 ),
-            ]),
+            ])},
         options,
     );
 }

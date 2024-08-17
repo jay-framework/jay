@@ -37,6 +37,7 @@ export function render(
         viewState,
         () => {
             const refChild = ccr('child');
+            const head = er('head');
             return de('div', {}, [
                 e(
                     'div',
@@ -45,7 +46,7 @@ export function render(
                         e('span', { class: 'tree-arrow' }, [dt((vs) => vs.headChar)]),
                         e('span', { class: 'name' }, [dt((vs) => vs.node?.name)]),
                     ],
-                    er('head'),
+                    head(),
                 ),
                 c(
                     (vs) => vs.open,

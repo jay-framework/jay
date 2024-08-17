@@ -12,7 +12,7 @@ import {
     HTMLElementProxy,
     RenderElementOptions,
     useContext,
-    provideContext,
+    withContext,
 } from 'jay-runtime';
 import { secureChildComp as childComp } from '../../../../lib/';
 import { TreeNodeRefs } from './tree-node-refs';
@@ -41,6 +41,7 @@ export function render(
         viewState,
         () => {
             const refChild = ccr('child');
+            const head = er('head');
             return de('div', {}, [
                 e(
                     'div',
@@ -49,7 +50,7 @@ export function render(
                         e('span', { class: 'tree-arrow' }, [dt((vs) => vs.headChar)]),
                         e('span', { class: 'name' }, [dt((vs) => vs.node?.name)]),
                     ],
-                    er('head'),
+                    head(),
                 ),
                 c(
                     (vs) => vs.open,
@@ -57,7 +58,7 @@ export function render(
                         forEach(
                             (vs) => vs.node?.children,
                             (vs1: Node) => {
-                                return provideContext(SECURE_COMPONENT_MARKER, context, () => {
+                                return withContext(SECURE_COMPONENT_MARKER, context, () => {
                                     return e('li', {}, [
                                         childComp(TreeNode, (vs) => vs, refChild()),
                                     ]);

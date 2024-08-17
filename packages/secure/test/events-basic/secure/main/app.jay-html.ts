@@ -2,7 +2,6 @@ import {
     JayElement,
     element as e,
     ConstructContext,
-    childComp,
     compRef as cr,
     RenderElementOptions,
 } from 'jay-runtime';
@@ -19,16 +18,17 @@ export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export function render(viewState: AppViewState, options?: RenderElementOptions): AppElement {
     return ConstructContext.withRootContext(
         viewState,
-        () =>
-            mr(viewState, () =>
+        () => {
+            const a = cr('a');
+            return mr(viewState, () =>
                 e('div', {}, [
                     secureChildComp(
                         Counter,
                         (vs) => ({ title: 'first counter', initialCount: 12 }),
-                        cr('a'),
+                        a(),
                     ),
                 ]),
-            ),
+            )},
         options,
     );
 }

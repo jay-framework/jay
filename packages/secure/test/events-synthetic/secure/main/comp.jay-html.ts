@@ -40,16 +40,20 @@ export function render(viewState: CompViewState, options?: RenderElementOptions)
         () => {
             const refItemButton = ecr('itemButton');
             const refItemInput = ecr('itemInput');
+            const result = er('result')
+            const button = er('button')
+            const buttonExec = er('buttonExec')
+            const input = er('input');
             return de('div', {}, [
-                e('div', { 'data-id': 'result' }, [dt((vs) => vs.text)], er('result')),
-                e('button', { 'data-id': 'button' }, ['button'], er('button')),
+                e('div', { 'data-id': 'result' }, [dt((vs) => vs.text)], result()),
+                e('button', { 'data-id': 'button' }, ['button'], button()),
                 e(
                     'button',
                     { 'data-id': 'button-exec$' },
                     ['button exec native'],
-                    er('buttonExec'),
+                    buttonExec(),
                 ),
-                e('input', { 'data-id': 'input' }, [], er('input')),
+                e('input', { 'data-id': 'input' }, [], input()),
                 forEach(
                     (vs) => vs.items,
                     (vs1: Item) => {

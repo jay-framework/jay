@@ -26,8 +26,11 @@ export type ChildElement = JayElement<ChildViewState, ChildElementRefs>;
 export function render(viewState: ChildViewState, options?: RenderElementOptions): ChildElement {
     return ConstructContext.withRootContext(
         viewState,
-        () =>
-            e('div', {}, [
+        () => {
+            const eventToParent = er('eventToParent');
+            const eventToParentToChildProp = er('eventToParentToChildProp');
+            const eventToParentToChildApi = er('eventToParentToChildApi');
+            return e('div', {}, [
                 e('div', { id: da((vs) => `child-text-from-prop-${vs.id}`) }, [
                     dt((vs) => vs.textFromProp),
                 ]),
@@ -38,21 +41,21 @@ export function render(viewState: ChildViewState, options?: RenderElementOptions
                     'button',
                     { id: da((vs) => `event-to-parent-button-${vs.id}`) },
                     ['event to parent'],
-                    er('eventToParent'),
+                    eventToParent(),
                 ),
                 e(
                     'button',
                     { id: da((vs) => `event-to-parent-to-child-prop-button-${vs.id}`) },
                     ['event to parent, parent update child prop'],
-                    er('eventToParentToChildProp'),
+                    eventToParentToChildProp(),
                 ),
                 e(
                     'button',
                     { id: da((vs) => `event-to-parent-to-child-api-button-${vs.id}`) },
                     ['event to parent, parent calls child api'],
-                    er('eventToParentToChildApi'),
+                    eventToParentToChildApi(),
                 ),
-            ]),
+            ])},
         options,
     );
 }

@@ -20,14 +20,16 @@ export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export function render(viewState: AppViewState, options?: RenderElementOptions): AppElement {
     return ConstructContext.withRootContext(
         viewState,
-        () =>
-            e('div', {}, [
+        () => {
+            const comp1 = cr('comp1');
+            return e('div', {}, [
                 childComp(
                     Basic,
                     (vs: AppViewState) => ({ safe: '', firstName: 'John', lastName: 'Smith' }),
-                    cr('comp1'),
+                    comp1(),
                 ),
-            ]),
+            ])
+        },
         options,
     );
 }

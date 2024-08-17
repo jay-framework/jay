@@ -37,19 +37,22 @@ export function render(viewState: CompViewState, options?: RenderElementOptions)
         viewState,
         () => {
             const refItemButtonExecElement = ecr('itemButtonExecElement');
+            const result = er('result');
+            const buttonExecGlobal = er('buttonExecGlobal');
+            const buttonExecElement = er('buttonExecElement')
             return de('div', {}, [
-                e('div', { 'data-id': 'result' }, [dt((vs) => vs.text)], er('result')),
+                e('div', { 'data-id': 'result' }, [dt((vs) => vs.text)], result()),
                 e(
                     'button',
                     { 'data-id': 'button-exec-global' },
                     ['button exec global'],
-                    er('buttonExecGlobal'),
+                    buttonExecGlobal(),
                 ),
                 e(
                     'button',
                     { 'data-id': 'button-exec-element' },
                     ['button exec element'],
-                    er('buttonExecElement'),
+                    buttonExecElement(),
                 ),
                 forEach(
                     (vs) => vs.items,

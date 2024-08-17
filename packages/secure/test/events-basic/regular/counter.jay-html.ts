@@ -26,17 +26,19 @@ export function render(
 ): CounterElement {
     return ConstructContext.withRootContext(
         viewState,
-        () =>
-            e('div', {}, [
+        () => {
+            const subtracter = er('subtracter');
+            const adder = er('adder');
+            return e('div', {}, [
                 e('div', { 'data-id': 'title' }, [dt((vs) => vs.title)]),
                 e('div', {}, [
-                    e('button', { 'data-id': 'sub' }, ['-'], er('subtracter')),
+                    e('button', { 'data-id': 'sub' }, ['-'], subtracter()),
                     e('span', { 'data-id': 'count', style: { cssText: 'margin: 0 16px' } }, [
                         dt((vs) => vs.count),
                     ]),
-                    e('button', { 'data-id': 'add' }, ['+'], er('adder')),
+                    e('button', { 'data-id': 'add' }, ['+'], adder()),
                 ]),
-            ]),
+            ])},
         options,
     );
 }

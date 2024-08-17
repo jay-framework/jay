@@ -21,8 +21,9 @@ export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export function render(viewState: AppViewState, options?: RenderElementOptions): AppElement {
     return ConstructContext.withRootContext(
         viewState,
-        () =>
-            mr(viewState, () =>
+        () => {
+            const comp1 = cr('comp1');
+            return mr(viewState, () =>
                 e('div', {}, [
                     secureChildComp(
                         Basic,
@@ -31,10 +32,11 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
                             firstName: vs.firstName,
                             lastName: vs.lastName,
                         }),
-                        cr('comp1'),
+                        comp1(),
                     ),
                 ]),
-            ),
+            )
+        },
         options,
     );
 }
