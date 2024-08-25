@@ -60,7 +60,7 @@ describe('nested components', () => {
                 staticItem: 'hello world',
             });
             // validate we actually have a reference to the nested component by finding the data id on the nested component dom
-            expect(composite.refs.staticComponent.element.dom.attributes['data-id'].value).toBe(
+            expect(composite.refs.staticComponent.comp.element.dom.attributes['data-id'].value).toBe(
                 'AAA',
             );
         });
@@ -114,7 +114,18 @@ describe('nested components', () => {
                 condition: true,
             });
             // validate we actually have a reference to the nested component by finding the data id on the nested component dom
-            expect(composite.refs.conditional.element.dom.attributes['data-id'].value).toBe(
+            expect(composite.refs.conditional.comp.element.dom.attributes['data-id'].value).toBe(
+                'condition',
+            );
+        });
+
+        it('have a reference to a nested conditional component 2', () => {
+            let composite = renderComposite({
+                staticItem: 'hello world',
+                condition: false,
+            });
+            // validate we actually have a reference to the nested component by finding the data id on the nested component dom
+            expect(composite.refs.conditional.comp.element.dom.attributes['data-id'].value).toBe(
                 'condition',
             );
         });

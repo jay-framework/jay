@@ -1,5 +1,5 @@
 import { dynamicText as dt, element as e } from '../../../lib/element';
-import {JayElement, ReferencesManager} from '../../../lib';
+import {EventEmitter, JayComponent, JayElement, ReferencesManager} from '../../../lib';
 import { HTMLElementProxy } from '../../../lib';
 import { JayEventHandler } from '../../../lib';
 import { mkComponentEventHandler } from './make-component-event-handler';
@@ -33,7 +33,12 @@ export interface ItemProps {
     dataId: string;
 }
 
-export function Item<ParentVS>(props: ItemProps) {
+export interface ItemComponent<ParentVS> extends JayComponent<ItemProps, ItemVS, ItemElement> {
+    onremove: EventEmitter<string, ParentVS>;
+    getItemSummary: () => string,
+}
+
+export function Item<ParentVS>(props: ItemProps): ItemComponent<ParentVS> {
     let done = false;
     let text = props.text;
     let jayElement = renderItem({ text, done, dataId: props.dataId });

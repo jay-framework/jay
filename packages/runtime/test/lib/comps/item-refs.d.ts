@@ -1,12 +1,12 @@
-import { ComponentCollectionProxy, EventEmitter, JayComponent } from '../../../lib';
-import { ItemElement, ItemProps, ItemVS } from './item';
+import {ComponentCollectionProxy, ComponentProxy, EventEmitter} from '../../../lib';
+import {Item} from "./item.ts";
 
-export interface ItemRef<ParentVS> extends JayComponent<ItemProps, ItemVS, ItemElement> {
+export type ItemComponentType<ParentVS> = ReturnType<typeof Item<ParentVS>>;
+export interface ItemRef<ParentVS> extends ComponentProxy<ParentVS, ItemComponentType<ParentVS>> {
     onremove: EventEmitter<string, ParentVS>;
-
-    getItemSummary(): string;
+    comp: ItemComponentType<ParentVS> | undefined
 }
 
-export interface ItemRefs<ParentVS> extends ComponentCollectionProxy<ParentVS, ItemRef<ParentVS>> {
+export interface ItemRefs<ParentVS> extends ComponentCollectionProxy<ParentVS, ItemComponentType<ParentVS>> {
     onremove: EventEmitter<string, ParentVS>;
 }

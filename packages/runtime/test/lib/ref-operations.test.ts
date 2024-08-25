@@ -11,7 +11,7 @@ import { JayElement } from '../../lib';
 import { ComponentCollectionProxy, HTMLElementCollectionProxy, HTMLElementProxy } from '../../lib';
 import { Item, ItemProps } from './comps/item';
 import '../../lib/element-test-types';
-import { ItemRef } from './comps/item-refs';
+import {ItemComponentType, ItemRef} from './comps/item-refs';
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -171,7 +171,7 @@ describe('ReferencesManager operations', () => {
             refName1: ItemRef<RootElementViewState>;
         }
 
-        let jayComponent: ItemRef<RootElementViewState>,
+        let jayComponent: ItemComponentType<RootElementViewState>,
             jayRootElement: JayElement<RootElementViewState, RootElementRefs>,
             mockCallback;
         beforeEach(() => {
@@ -191,7 +191,7 @@ describe('ReferencesManager operations', () => {
         });
 
         it('should allow using component APIs', () => {
-            let summary = jayRootElement.refs.refName1.getItemSummary();
+            let summary = jayRootElement.refs.refName1.comp.getItemSummary();
             expect(summary).toBe('item hello - false');
         });
     });
@@ -216,7 +216,7 @@ describe('ReferencesManager operations', () => {
         interface RootElementRefs {
             refName1: ComponentCollectionProxy<
                 (typeof viewState.items)[0],
-                ItemRef<RootElementViewState>
+                ItemComponentType<(typeof viewState.items)[0]>
             >;
         }
 

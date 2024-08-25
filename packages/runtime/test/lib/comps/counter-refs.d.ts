@@ -9,6 +9,6 @@ export interface CounterRef<ParentVS> extends JayComponent<CounterData, ViewStat
 }
 
 export interface CounterRefs<ParentVS>
-    extends ComponentCollectionProxy<ViewState, CounterRef<ParentVS>> {
+    extends ComponentCollectionProxy<ViewState, CounterComponentType> {
     onChange: EventEmitter<extractEventType<CounterComponentType['onChange']>, ParentVS>;
 }

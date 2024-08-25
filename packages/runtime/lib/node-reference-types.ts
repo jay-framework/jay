@@ -445,7 +445,25 @@ export interface EventEmitter<EventType, ViewState> {
 
 export type EventTypeFrom<Type> = Type extends EventEmitter<infer X, any> ? X : null;
 
-export interface ComponentCollectionProxyOperations<
+export interface ComponentProxy<
+    ViewState,
+    ComponentType extends JayComponent<any, ViewState, any>,
+> {
+    addEventListener(
+        type: string,
+        handler: JayEventHandler<any, ViewState, void>,
+        options?: boolean | AddEventListenerOptions,
+    ): void;
+    removeEventListener(
+        type: string,
+        handler: JayEventHandler<any, ViewState, void>,
+        options?: EventListenerOptions | boolean,
+    ): void;
+
+    get comp(): ComponentType | undefined
+}
+
+export interface ComponentCollectionProxy<
     ViewState,
     ComponentType extends JayComponent<any, any, any>,
 > {
@@ -465,8 +483,3 @@ export interface ComponentCollectionProxyOperations<
     ): Array<ResultType>;
     find(predicate: (t: ViewState) => boolean): ComponentType | undefined;
 }
-
-export type ComponentCollectionProxy<
-    ViewState,
-    ComponentType extends JayComponent<any, any, any>,
-> = ComponentCollectionProxyOperations<ViewState, ComponentType>;

@@ -71,7 +71,7 @@ describe('ref creation ordering with reference targets', () => {
             const refName1 = 'refName1';
             const VIEW_STATE = 'DataContext';
             const ITEM_PROPS = { text: 'hello', dataId: 'A' };
-            let jayComponent: ItemRef<RootElementViewState>;
+            let jayComponent: ReturnType<typeof Item>;
             let [refManager, [comp]] = ReferencesManager.for({ eventWrapper }, [], [], [refName1], []);
             const renderJayElement = (): JayElement<RootElementViewState, RootElementRefs> =>
                 ConstructContext.withRootContext(
@@ -94,5 +94,17 @@ describe('ref creation ordering with reference targets', () => {
             expect(refs.refName1).toBeDefined();
         })
 
+        it('before creating the element, the component should not be available ', () => {
+            const {refs, renderJayElement} = preRenderJayElement()
+            expect(refs.refName1.comp).not.toBeDefined()
+        })
+
+        it('after creating the element, the component should be available ', () => {
+            const {refs, renderJayElement} = preRenderJayElement()
+
+            renderJayElement()
+            expect(refs.refName1.comp).toBeDefined()
+            expect(refs.refName1.comp.getItemSummary()).toBe('item hello - false')
+        })
     })
 })
