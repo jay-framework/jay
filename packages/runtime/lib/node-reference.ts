@@ -145,7 +145,10 @@ export class HTMLElementRefsImpl<
         return new HTMLElementRefImpl<ViewState, ElementType>(currData, coordinate, eventWrapper, this)
     }
     getPublicAPI(): HTMLElementProxy<ViewState, ElementType> {
-        return [...this.elements][0].getPublicAPI();
+        return newHTMLElementPublicApiProxy<
+            ViewState,
+            HTMLElementProxyTarget<ViewState, ElementType>
+        >(this);
     }
 
     exec$<T>(handler: (elem: ElementType, viewState: ViewState) => T): Promise<T> {
@@ -165,6 +168,7 @@ export class ComponentRefsImpl<
         return new ComponentRefImpl<ViewState, ComponentType>(currData, coordinate, eventWrapper, this);
     }
     getPublicAPI(): ComponentType {
+        // return newComponentPublicApiProxy<ViewState, ComponentType>(this) as any as ComponentType;
         return [...this.elements][0].getPublicAPI();
     }
 }

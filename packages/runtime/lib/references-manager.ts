@@ -1,12 +1,15 @@
 import {
-    BaseJayElement, Coordinate,
+    BaseJayElement,
+    Coordinate,
     JayElement,
     JayEvent,
     JayEventHandler,
-    JayEventHandlerWrapper, RenderElementOptions,
+    JayEventHandlerWrapper,
+    RenderElementOptions,
 } from './element-types';
 import {
-    ComponentCollectionRefImpl, ComponentRefsImpl,
+    ComponentCollectionRefImpl,
+    ComponentRefsImpl,
     HTMLElementCollectionRefImpl,
     HTMLElementRefsImpl,
     PrivateRef
@@ -37,6 +40,7 @@ type PrivateRefConstructor<ViewState> = () => PrivateRef<ViewState, any>;
 
 export class ReferencesManager {
     private refs: Record<string, ManagedRefs> = {};
+    private refsPublicAPI: object
 
     constructor(
         public readonly eventWrapper: JayEventHandlerWrapper<any, any, any> = defaultEventWrapper,
@@ -59,13 +63,21 @@ export class ReferencesManager {
         return mkPrivateRefs;
     }
 
+    private mkRefsPublicAPI() {
+            this.refsPublicAPI = Object.keys(this.refs).reduce((publicRefAPIs, key) => {
+                publicRefAPIs[key] = this.refs[key].getPublicAPI();
+                return publicRefAPIs;
+            }, {});
+    }
+
+    getPublicAPI() {
+        if (!this.refsPublicAPI)
+            this.mkRefsPublicAPI();
+        return this.refsPublicAPI;
+    }
+
     applyToElement<T, Refs>(element: BaseJayElement<T>): JayElement<T, Refs> {
-        let enrichedDynamicRefs = Object.keys(this.refs).reduce((publicRefAPIs, key) => {
-            publicRefAPIs[key] = this.refs[key].getPublicAPI();
-            return publicRefAPIs;
-        }, {});
-        let refs = enrichedDynamicRefs as Refs;
-        return { ...element, refs };
+        return { ...element, refs: this.getPublicAPI() as Refs };
     }
 
     static for(options: RenderElementOptions,
