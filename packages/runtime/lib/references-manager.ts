@@ -1,13 +1,23 @@
 import {
-    BaseJayElement,
+    BaseJayElement, Coordinate,
     JayElement,
     JayEvent,
     JayEventHandler,
-    JayEventHandlerWrapper,
+    JayEventHandlerWrapper, RenderElementOptions,
 } from './element-types';
+import {
+    ComponentCollectionRefImpl, ComponentRefsImpl,
+    HTMLElementCollectionRefImpl,
+    HTMLElementRefsImpl,
+    PrivateRef
+} from "./node-reference.ts";
+import {currentConstructionContext} from "./context.ts";
 
-export interface ManagedRef<PublicRefAPI> {
-    getPublicAPI(): PublicRefAPI;
+export interface ManagedRefs{
+    getPublicAPI(): any;
+
+    mkManagedRef(currData: any, strings: Coordinate, eventWrapper: JayEventHandlerWrapper<any, any, any>):
+        any;
 }
 
 function defaultEventWrapper<EventType, ViewState, Returns>(
@@ -17,20 +27,54 @@ function defaultEventWrapper<EventType, ViewState, Returns>(
     return orig(event);
 }
 
+type ManagedRefConstructor = () => ManagedRefs
+const ManagedRefsConstructors: ManagedRefConstructor[] = [
+    () => new HTMLElementRefsImpl(),
+    () => new HTMLElementCollectionRefImpl(),
+    () => new ComponentRefsImpl(),
+    () => new ComponentCollectionRefImpl()];
+type PrivateRefConstructor<ViewState> = () => PrivateRef<ViewState, any>;
+
 export class ReferencesManager {
-    private refs: Record<string, ManagedRef<any>> = {};
+    private refs: Record<string, ManagedRefs> = {};
 
     constructor(
         public readonly eventWrapper: JayEventHandlerWrapper<any, any, any> = defaultEventWrapper,
     ) {}
 
-    add<Ref extends ManagedRef<any>>(refName: string, ref: Ref): Ref {
-        return (this.refs[refName] = ref);
+    mkRefs<ViewState>(elem: string[], elemCollection: string[], comp: string[], compCollection: string[]):
+        PrivateRefConstructor<ViewState>[] {
+        const mkPrivateRefs: PrivateRefConstructor<ViewState>[] = []
+        const names: string[][] = [elem, elemCollection, comp, compCollection];
+        for (const index in names) {
+            for (const refName of names[index]) {
+                const managedRef = ManagedRefsConstructors[index]()
+                this.refs[refName] = managedRef;
+                // this.add(refName, managedRef)
+                mkPrivateRefs.push(() => {
+                    let { currData, coordinate} = currentConstructionContext();
+                    return managedRef.mkManagedRef(currData, coordinate(refName), this.eventWrapper)
+                    // let ref = new HTMLElementRefImpl<ViewState, ElementType>(
+                    //     currData,
+                    //     coordinate(refName),
+                    //     this.eventWrapper,
+                    //     managedRef,
+                    // );
+                    // managedRef.addRef(ref);
+                    // return ref;
+                })
+            }
+        }
+        return mkPrivateRefs;
     }
 
-    get(refName: string): ManagedRef<any> {
-        return this.refs[refName];
-    }
+    // add(refName: string, ref: ManagedRefs) {
+    //     this.refs[refName] = ref;
+    // }
+
+    // get(refName: string): ManagedRef<any> {
+    //     return this.refs[refName];
+    // }
 
     applyToElement<T, Refs>(element: BaseJayElement<T>): JayElement<T, Refs> {
         let enrichedDynamicRefs = Object.keys(this.refs).reduce((publicRefAPIs, key) => {
@@ -39,5 +83,14 @@ export class ReferencesManager {
         }, {});
         let refs = enrichedDynamicRefs as Refs;
         return { ...element, refs };
+    }
+
+    static for(options: RenderElementOptions,
+               elem: string[],
+               elemCollection: string[],
+               comp: string[],
+               compCollection: string[]): [ReferencesManager, PrivateRefConstructor<any>[]] {
+        const refManager = new ReferencesManager(options.eventWrapper)
+        return [refManager, refManager.mkRefs(elem, elemCollection, comp, compCollection)]
     }
 }

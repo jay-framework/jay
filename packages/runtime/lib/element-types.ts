@@ -45,6 +45,12 @@ export type ElementFrom<Type> = Type extends JayComponent<any, any, infer Elemen
 
 export type JayComponentConstructor<Props> = (props: Props) => JayComponent<Props, any, any>;
 
+export type PreRenderElement<
+    ViewState extends object,
+    Refs extends object,
+    JayElementT extends JayElement<ViewState, Refs>,
+> = () => [Refs, RenderElement<ViewState, Refs, JayElementT>]
+
 export type RenderElement<
     ViewState extends object,
     Refs extends object,

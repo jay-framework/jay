@@ -97,18 +97,14 @@ export function wrapWithModifiedCheck<T extends object>(
 }
 
 export class ConstructContext<A extends Array<any>> {
-    refManager: ReferencesManager;
     data: A;
     forStaticElements: boolean;
 
     constructor(
         data: A,
-        eventWrapper?: JayEventHandlerWrapper<any, any, any>,
-        dm?: ReferencesManager,
         forStaticElements: boolean = true,
     ) {
         this.data = data;
-        this.refManager = dm ? dm : new ReferencesManager(eventWrapper);
         this.forStaticElements = forStaticElements;
     }
 
@@ -133,22 +129,20 @@ export class ConstructContext<A extends Array<any>> {
     forItem<T>(t: T) {
         return new ConstructContext(
             ConstructContext.acc(this.data, t),
-            undefined,
-            this.refManager,
             false,
         );
     }
 
     static withRootContext<ViewState, Refs>(
         viewState: ViewState,
-        elementConstructor: () => BaseJayElement<ViewState>,
-        options?: RenderElementOptions,
+        refManager: ReferencesManager,
+        elementConstructor: () => BaseJayElement<ViewState>
     ): JayElement<ViewState, Refs> {
-        let context = new ConstructContext([viewState], options?.eventWrapper);
+        let context = new ConstructContext([viewState]);
         let element = withContext(CONSTRUCTION_CONTEXT_MARKER, context, () =>
             wrapWithModifiedCheck(currentConstructionContext().currData, elementConstructor()),
         );
         element.mount();
-        return context.refManager.applyToElement(element);
+        return refManager.applyToElement(element);
     }
 }

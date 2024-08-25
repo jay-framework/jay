@@ -5,9 +5,8 @@ import {
     dynamicText as dt,
 } from '../../lib/element';
 import { JSDOM } from 'jsdom';
-import { JayElement, HTMLElementProxy } from '../../lib';
-import { ConstructContext } from '../../lib/context';
-import { elemRef } from '../../lib/node-reference';
+import {JayElement, HTMLElementProxy, ReferencesManager} from '../../lib';
+import { ConstructContext } from '../../lib';
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -22,7 +21,8 @@ describe('conditional-element', () => {
 
     describe('rendering', () => {
         function makeElement(data: ViewState): JayElement<ViewState, any> {
-            return ConstructContext.withRootContext(data, () =>
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+            return ConstructContext.withRootContext(data, refManager, () =>
                 // noinspection DuplicatedCode
                 de('div', {}, [
                     conditional(
@@ -92,10 +92,9 @@ describe('conditional-element', () => {
         interface ConditionalElement extends JayElement<ViewState, ConditionalRefs> {}
 
         function makeElement(data: ViewState): ConditionalElement {
-            return ConstructContext.withRootContext(data, () => {
+            let [refManager, [text1, text2]] = ReferencesManager.for({}, ['text1', 'text2'], [], [], []);
+            return ConstructContext.withRootContext(data, refManager,() => {
                 // noinspection DuplicatedCode
-                const text1 = elemRef<ViewState, any>('text1');
-                const text2 = elemRef<ViewState, any>('text2');
                 return de('div', {}, [
                     conditional(
                         (newViewState) => newViewState.condition,
@@ -161,7 +160,8 @@ describe('conditional-element', () => {
 
             blurCount = 0;
             focusCount = 0;
-            let element = ConstructContext.withRootContext(data, () =>
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+            let element = ConstructContext.withRootContext(data, refManager, () =>
                 // noinspection DuplicatedCode
                 de('div', {}, [
                     conditional(

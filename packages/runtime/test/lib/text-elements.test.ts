@@ -1,5 +1,6 @@
 import { element as e, dynamicText as dt } from '../../lib/element';
 import { ConstructContext } from '../../lib/context';
+import {ReferencesManager} from "../../lib";
 
 describe('text-element', () => {
     interface ViewState {
@@ -19,14 +20,18 @@ describe('text-element', () => {
     const updatedNameAndGraduate: ViewState = { ...updatedName, graduated: true };
 
     it('should render string as text', () => {
-        let jayElement = ConstructContext.withRootContext(initial, () =>
+        let [refManager, []] =
+            ReferencesManager.for({}, [], [], [], []);
+        let jayElement = ConstructContext.withRootContext(initial, refManager, () =>
             e('div', { className: 'item' }, [dt((vs) => vs.firstName)]),
         );
         expect(jayElement.dom).toHaveTextContent(initial.firstName);
     });
 
     it('should update string as text', () => {
-        let jayElement = ConstructContext.withRootContext(initial, () =>
+        let [refManager, []] =
+            ReferencesManager.for({}, [], [], [], []);
+        let jayElement = ConstructContext.withRootContext(initial, refManager, () =>
             e('div', { className: 'item' }, [dt((vs) => vs.firstName)]),
         );
         jayElement.update(updatedName);
@@ -34,7 +39,9 @@ describe('text-element', () => {
     });
 
     it('should render complex string as text', () => {
-        let jayElement = ConstructContext.withRootContext(initial, () =>
+        let [refManager, []] =
+            ReferencesManager.for({}, [], [], [], []);
+        let jayElement = ConstructContext.withRootContext(initial, refManager,() =>
             e('div', { className: 'item' }, [
                 dt(
                     (vs) =>
@@ -48,7 +55,9 @@ describe('text-element', () => {
     });
 
     it('should render complex string as text', () => {
-        let jayElement = ConstructContext.withRootContext(initial, () =>
+        let [refManager, []] =
+            ReferencesManager.for({}, [], [], [], []);
+        let jayElement = ConstructContext.withRootContext(initial, refManager,() =>
             e('div', { className: 'item' }, [
                 dt(
                     (vs) =>

@@ -1,7 +1,6 @@
 import { forEach, dynamicElement as de, element as e, dynamicText as dt } from '../../lib/element';
-import { JayElement, HTMLElementCollectionProxy } from '../../lib';
+import {JayElement, HTMLElementCollectionProxy, ReferencesManager} from '../../lib';
 import { ConstructContext } from '../../lib';
-import { elemCollectionRef } from '../../lib/';
 
 const item1 = { name: 'name 1', id: 'id-1' };
 const item2 = { name: 'name 2', id: 'id-2' };
@@ -22,7 +21,8 @@ describe('collection-element', () => {
 
     describe('rendering', () => {
         function makeElement(data: ViewState): JayElement<ViewState, any> {
-            return ConstructContext.withRootContext(data, () =>
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+            return ConstructContext.withRootContext(data, refManager, () =>
                 // noinspection DuplicatedCode
                 de('div', {}, [
                     forEach(
@@ -117,8 +117,9 @@ describe('collection-element', () => {
                 renderedItemNames.add(item.name);
                 return item.name;
             };
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
             return [
-                ConstructContext.withRootContext(data, () =>
+                ConstructContext.withRootContext(data, refManager, () =>
                     // noinspection DuplicatedCode
                     de('div', {}, [
                         forEach(
@@ -170,9 +171,9 @@ describe('collection-element', () => {
         interface TodoListElement extends JayElement<ViewState, TodoListRefs> {}
 
         function makeElement(data: ViewState): TodoListElement {
-            return ConstructContext.withRootContext(data, () => {
+            let [refManager, [ref]] = ReferencesManager.for({}, [], ['done'], [], []);
+            return ConstructContext.withRootContext(data, refManager, () => {
                 // noinspection DuplicatedCode
-                const ref = elemCollectionRef('done');
                 return de('div', {}, [
                     forEach(
                         (newViewState) => newViewState.items,
@@ -253,7 +254,8 @@ describe('collection-element', () => {
         }
 
         function makeElement(data: CinCViewState): JayElement<CinCViewState, any> {
-            return ConstructContext.withRootContext(data, () =>
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+            return ConstructContext.withRootContext(data, refManager,() =>
                 // noinspection DuplicatedCode
                 de('table', {}, [
                     forEach(

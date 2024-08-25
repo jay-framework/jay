@@ -2,10 +2,6 @@ export * from './element';
 export * from './element-types';
 export * from './node-reference-types';
 export {
-    elemCollectionRef,
-    compCollectionRef,
-    elemRef,
-    compRef,
     EVENT_TRAP,
     GetTrapProxy,
     ComponentCollectionRefImpl,
@@ -20,4 +16,4 @@ export {
     ConstructContext,
     currentConstructionContext,
 } from './context';
-export { type ManagedRef, ReferencesManager } from './references-manager';
+export { type ManagedRefs, ReferencesManager } from './references-manager';

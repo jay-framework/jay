@@ -1,4 +1,3 @@
-import { compCollectionRef, compRef, elemCollectionRef, elemRef } from '../../lib';
 import {
     childComp,
     ConstructContext,
@@ -6,7 +5,7 @@ import {
     element as e,
     forEach,
     HTMLElementCollectionProxy,
-    JayEventHandlerWrapper,
+    JayEventHandlerWrapper, ReferencesManager,
     RenderElementOptions,
 } from '../../lib/';
 import { JayElement, HTMLElementProxy } from '../../lib';
@@ -43,18 +42,18 @@ describe('ReferencesManager events', () => {
         function mkJayElement(eventWrapper: JayEventHandlerWrapper<any, any, any> = undefined) {
             let jayElement1, jayElement2, mockCallback, mockCallback2;
             let options: RenderElementOptions = { eventWrapper };
+            let [refManager, [ref]] = ReferencesManager.for(options, [refName1], [], [], []);
             let jayRootElement = ConstructContext.withRootContext<string, RootElementRefs>(
-                VIEW_STATE,
+                VIEW_STATE, refManager,
                 () => {
-                    const ref = elemRef(refName1);
+                    // const ref = elemRef(refName1);
                     jayElement1 = e('div', {}, [SOME_VALUE], ref());
                     jayElement2 = e('div', {}, [SOME_VALUE]);
                     return e('div', {}, [jayElement1, jayElement2]) as JayElement<
                         RootElementViewState,
                         RootElementRefs
                     >;
-                },
-                options,
+                }
             );
             mockCallback = vi.fn(() => undefined);
             mockCallback2 = vi.fn(() => undefined);
@@ -174,12 +173,11 @@ describe('ReferencesManager events', () => {
                 jayElements2 = [],
                 mockCallback,
                 mockCallback2;
+            let [refManager, [ref_1, ref_2]] = ReferencesManager.for({}, [], [refName1, refName2], [], []);
             let jayRootElement = ConstructContext.withRootContext<
                 RootElementViewState,
                 RootElementRefs
-            >(viewState, () => {
-                const ref_1 = elemCollectionRef(refName1);
-                const ref_2 = elemCollectionRef(refName2);
+            >(viewState, refManager, () => {
                 return de('div', {}, [
                     forEach(
                         (vs) => vs.items,
@@ -359,11 +357,11 @@ describe('ReferencesManager events', () => {
 
         function mkElement(eventWrapper: JayEventHandlerWrapper<any, any, any> = undefined) {
             let jayComponent: ItemRef<RootElementViewState>;
+            let [refManager, [comp]] = ReferencesManager.for({ eventWrapper }, [], [], [refName1], []);
             let jayRootElement: JayElement<RootElementViewState, RootElementRefs> =
                 ConstructContext.withRootContext(
-                    VIEW_STATE,
+                    VIEW_STATE, refManager,
                     () => {
-                        const comp = compRef(refName1);
                         return e('div', {}, [
                             childComp(
                                 (props) => (jayComponent = Item(props as ItemProps)),
@@ -371,7 +369,6 @@ describe('ReferencesManager events', () => {
                                 comp(),
                             ),
                         ])},
-                    { eventWrapper },
                 ) as JayElement<RootElementViewState, RootElementRefs>;
             let mockCallback = vi.fn(() => undefined);
             return { jayRootElement, mockCallback, jayComponent };
@@ -488,8 +485,8 @@ describe('ReferencesManager events', () => {
         };
 
         function constructElement(viewState: ViewState) {
-            return ConstructContext.withRootContext(viewState, () => {
-                const ref_1 = compCollectionRef(refName1);
+            let [refManager, [ref_1]] = ReferencesManager.for({}, [], [], [], [refName1]);
+            return ConstructContext.withRootContext(viewState, refManager, () => {
                 return de('div', {}, [
                     forEach(
                         (vs: typeof viewState) => vs.items,

@@ -5,12 +5,11 @@ import {
     JayElement,
     childComp,
     forEach,
-    conditional,
+    conditional, ReferencesManager,
 } from '../../lib/index';
 import '../../lib/element-test-types';
 import { Item, ItemProps } from './comps/item';
 import { ItemRef, ItemRefs } from './comps/item-refs';
-import { compCollectionRef, compRef } from '../../lib/node-reference';
 
 describe('nested components', () => {
     describe('single nested component', () => {
@@ -25,8 +24,8 @@ describe('nested components', () => {
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
 
         function renderComposite(viewState: ViewState): TestElement {
-            return ConstructContext.withRootContext(viewState, () => {
-                const staticComponent = compRef('staticComponent');
+            let [refManager, [staticComponent]] = ReferencesManager.for({}, [], [], ['staticComponent'], []);
+            return ConstructContext.withRootContext(viewState, refManager, () => {
                 return e('div', {}, [
                     childComp(
                         (props: ItemProps) => Item(props),
@@ -94,8 +93,8 @@ describe('nested components', () => {
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
 
         function renderComposite(viewState: ViewState): TestElement {
-            return ConstructContext.withRootContext(viewState, () => {
-                const condRef = compRef("conditional")
+            let [refManager, [condRef]] = ReferencesManager.for({}, [], [], ['conditional'], []);
+            return ConstructContext.withRootContext(viewState, refManager,() => {
                 return de('div', {}, [
                     conditional(
                         (vs) => vs.condition,
@@ -137,8 +136,8 @@ describe('nested components', () => {
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
 
         function renderComposite(viewState: ViewState): TestElement {
-            return ConstructContext.withRootContext(viewState, () => {
-                const ref = compCollectionRef('forEachOfComponents');
+            let [refManager, [ref]] = ReferencesManager.for({}, [], [], [], ['forEachOfComponents']);
+            return ConstructContext.withRootContext(viewState, refManager,() => {
                 return de('div', {}, [
                     forEach(
                         (vs: ViewState) => vs.items,
