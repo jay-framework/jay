@@ -50,31 +50,14 @@ export class ReferencesManager {
             for (const refName of names[index]) {
                 const managedRef = ManagedRefsConstructors[index]()
                 this.refs[refName] = managedRef;
-                // this.add(refName, managedRef)
                 mkPrivateRefs.push(() => {
                     let { currData, coordinate} = currentConstructionContext();
                     return managedRef.mkManagedRef(currData, coordinate(refName), this.eventWrapper)
-                    // let ref = new HTMLElementRefImpl<ViewState, ElementType>(
-                    //     currData,
-                    //     coordinate(refName),
-                    //     this.eventWrapper,
-                    //     managedRef,
-                    // );
-                    // managedRef.addRef(ref);
-                    // return ref;
                 })
             }
         }
         return mkPrivateRefs;
     }
-
-    // add(refName: string, ref: ManagedRefs) {
-    //     this.refs[refName] = ref;
-    // }
-
-    // get(refName: string): ManagedRef<any> {
-    //     return this.refs[refName];
-    // }
 
     applyToElement<T, Refs>(element: BaseJayElement<T>): JayElement<T, Refs> {
         let enrichedDynamicRefs = Object.keys(this.refs).reduce((publicRefAPIs, key) => {
