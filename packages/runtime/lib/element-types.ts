@@ -49,13 +49,13 @@ export type PreRenderElement<
     ViewState extends object,
     Refs extends object,
     JayElementT extends JayElement<ViewState, Refs>,
-> = () => [Refs, RenderElement<ViewState, Refs, JayElementT>]
+> = (options?: RenderElementOptions) => [Refs, RenderElement<ViewState, Refs, JayElementT>]
 
 export type RenderElement<
     ViewState extends object,
     Refs extends object,
     JayElementT extends JayElement<ViewState, Refs>,
-> = (vs: ViewState, options?: RenderElementOptions) => JayElementT;
+> = (vs: ViewState) => JayElementT;
 
 export interface RenderElementOptions {
     eventWrapper?: JayEventHandlerWrapper<any, any, any>;

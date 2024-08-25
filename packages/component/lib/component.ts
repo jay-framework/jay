@@ -3,7 +3,7 @@ import {
     JayComponent,
     JayEventHandlerWrapper,
     RenderElement,
-    withContext, ContextMarker, useContext,
+    withContext, ContextMarker, useContext, PreRenderElement,
 } from 'jay-runtime';
 import { Getter, Reactive } from 'jay-reactive';
 import { JSONPatch } from 'jay-json-patch';
@@ -78,7 +78,7 @@ export function makeJayComponent<
     Contexts extends Array<any>,
     CompCore extends JayComponentCore<PropsT, ViewState>,
 >(
-    render: RenderElement<ViewState, Refs, JayElementT>,
+    preRender: PreRenderElement<ViewState, Refs, JayElementT>,
     comp: ComponentConstructor<PropsT, Refs, ViewState, Contexts, CompCore>,
     ...contextMarkers: ContextMarkers<Contexts>
 ): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT> {
@@ -97,16 +97,16 @@ export function makeJayComponent<
         return withContext(COMPONENT_CONTEXT, componentContext, () => {
             let propsProxy = makePropsProxy(componentContext.reactive, props);
 
-            // @ts-ignore
             let eventWrapper: JayEventHandlerWrapper<any, any, any> = (orig, event) => {
                 return componentContext.reactive.batchReactions(() => orig(event));
             };
-            let element: JayElementT = render({} as ViewState, { eventWrapper });
+            let [refs, render] = preRender({ eventWrapper })
 
             let contexts: Contexts = contextMarkers.map(marker => useContext(marker)) as Contexts
-            let coreComp = comp(propsProxy, element.refs, ...contexts); // wrap event listening with batch reactions
+            let coreComp = comp(propsProxy, refs, ...contexts); // wrap event listening with batch reactions
             let { render: renderViewState, ...api } = coreComp;
-
+            // todo provide contexts
+            let element: JayElementT = render({} as ViewState);
             componentContext.reactive.createReaction(() => {
                 let viewStateValueOrGetters = renderViewState(propsProxy);
                 let viewState = materializeViewState(viewStateValueOrGetters);

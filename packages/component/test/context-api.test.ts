@@ -1,14 +1,13 @@
 import {
-    childComp, compRef,
+    childComp,
     ConstructContext,
     createJayContext,
     dynamicText as dt,
     element as e,
-    elemRef,
     HTMLElementProxy,
-    JayElement, RenderElementOptions, withContext
+    JayElement, ReferencesManager, RenderElement, RenderElementOptions, withContext
 } from "jay-runtime";
-import {ComponentContext, createReactiveContext, createState, makeJayComponent, Props} from "../lib";
+import {createReactiveContext, createState, makeJayComponent, Props} from "../lib";
 import {Getter, Setter} from "jay-reactive";
 
 
@@ -25,15 +24,20 @@ describe('context api', () => {
             button: HTMLElementProxy<LabelAndButtonViewState, HTMLButtonElement>;
         }
         interface LabelAndButtonElement extends JayElement<LabelAndButtonViewState, LabelAndButtonRefs> {}
+        type LabelAndButtonElementRender = RenderElement<LabelAndButtonViewState, LabelAndButtonRefs, LabelAndButtonElement>
+        type LabelAndButtonElementPreRender = [refs: LabelAndButtonRefs, LabelAndButtonElementRender]
 
-        function renderLabelElement(viewState: LabelAndButtonViewState, options?: RenderElementOptions): LabelAndButtonElement {
-            return ConstructContext.withRootContext(viewState, () => {
-                const button = elemRef('button');
+        function renderLabelElement(options?: RenderElementOptions): LabelAndButtonElementPreRender {
+            const [refManager, [button]] =
+                ReferencesManager.for(options, ['button'], [], [], []);
+            const render = (viewState: LabelAndButtonViewState) =>  ConstructContext.withRootContext(viewState, refManager,
+                () => {
                 return e('div', {}, [
                     dt((vs) => vs.label),
                     e('button', {}, [], button() )
-                ])}, options,
+                ])},
             ) as LabelAndButtonElement;
+            return [refManager.getPublicAPI() as LabelAndButtonRefs, render]
         }
 
         // ---------- Number Context ----------
@@ -69,14 +73,18 @@ describe('context api', () => {
             labelAndButton: ReturnType<typeof LabelAndButtonComp>
         }
         interface AppElement extends JayElement<AppViewState, AppRefs> {}
+        type AppElementRender = RenderElement<AppViewState, AppRefs, AppElement>
+        type AppElementPreRender = [refs: AppRefs, AppElementRender]
 
-        function AppElement(viewState: AppViewState, options?: RenderElementOptions): AppElement {
-            return ConstructContext.withRootContext(viewState, () => {
-                const labelAndButton = compRef('labelAndButton');
+        function AppElement(options?: RenderElementOptions): AppElementPreRender {
+            const [refManager, [labelAndButton]] =
+                ReferencesManager.for(options, ['labelAndButton'], [], [], []);
+            const render = (viewState: AppViewState) => ConstructContext.withRootContext(viewState, refManager,() => {
                 return e('div', {}, [
                     childComp(LabelAndButtonComp, (vs) => ({}), labelAndButton())
-                ])}, options
+                ])},
             ) as AppElement;
+            return [refManager.getPublicAPI() as AppRefs, render]
         }
 
         interface AppProps {}
