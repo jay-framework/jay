@@ -23,7 +23,7 @@ export interface ManagedRefs{
         any;
 }
 
-function defaultEventWrapper<EventType, ViewState, Returns>(
+export function defaultEventWrapper<EventType, ViewState, Returns>(
     orig: JayEventHandler<EventType, ViewState, Returns>,
     event: JayEvent<EventType, ViewState>,
 ): Returns {
@@ -117,7 +117,7 @@ export class ReferencesManager extends BaseReferencesManager {
                elemCollection: string[],
                comp: string[],
                compCollection: string[]): [ReferencesManager, PrivateRefConstructor<any>[]] {
-        const refManager = new ReferencesManager(options.eventWrapper)
+        const refManager = new ReferencesManager(options?.eventWrapper)
         return [refManager, refManager.mkRefs(elem, elemCollection, comp, compCollection)]
     }
 }

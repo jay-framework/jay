@@ -9,7 +9,6 @@ import {
 } from '../comm-channel/messages';
 import { deserialize, Deserialize } from 'jay-serialization';
 import { completeCorrelatedPromise } from '../$func';
-import { ReferencesManager } from 'jay-runtime';
 
 export function sandboxRoot<ViewState extends object>(
     sandboxElements: () => Array<SandboxElement<ViewState>>,
@@ -19,7 +18,6 @@ export function sandboxRoot<ViewState extends object>(
     let elements: Array<SandboxElement<ViewState>>;
     let viewState: ViewState,
         nextDeserialize: Deserialize<ViewState> = deserialize;
-
     endpoint.onUpdate((inMessage: JPMRootComponentViewState | JPMNativeExecResult) => {
         switch (inMessage.type) {
             case JayPortMessageType.root: {
@@ -28,7 +26,6 @@ export function sandboxRoot<ViewState extends object>(
                     let context: SandboxCreationContext<ViewState> = {
                         viewState,
                         endpoint,
-                        refManager: new ReferencesManager(),
                         isDynamic: false,
                         dataIds: [],
                     };

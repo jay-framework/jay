@@ -2,9 +2,7 @@ import {
     BaseJayElement,
     ContextMarker,
     Coordinate,
-    JayElement,
-    JayEventHandlerWrapper,
-    RenderElementOptions,
+    JayElement
 } from './element-types';
 
 import { ReferencesManager } from './references-manager';

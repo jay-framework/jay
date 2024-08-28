@@ -18,4 +18,4 @@ export {
     ConstructContext,
     currentConstructionContext,
 } from './context';
-export { type ManagedRefs, ReferencesManager, BaseReferencesManager, type ManagedRefConstructor, ManagedRefType, type PrivateRefConstructor } from './references-manager';
+export { type ManagedRefs, ReferencesManager, BaseReferencesManager, type ManagedRefConstructor, ManagedRefType, type PrivateRefConstructor, defaultEventWrapper } from './references-manager';

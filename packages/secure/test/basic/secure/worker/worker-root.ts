@@ -1,14 +1,17 @@
 import { Basic, BasicProps } from './basic';
-import { sandboxRoot } from '../../../../lib/';
+import {sandboxRoot, SecureReferencesManager} from '../../../../lib/';
 import { sandboxChildComp } from '../../../../lib/';
-import { compRef } from '../../../../lib';
 
 export function initializeWorker() {
-    sandboxRoot(() => [
-        sandboxChildComp<any, BasicProps, any, any, any>(
-            Basic,
-            (vs) => ({ safe: '', firstName: vs.firstName, lastName: vs.lastName }),
-            compRef('comp1'),
-        ),
-    ]);
+    sandboxRoot(() => {
+        const [, [comp1]] =
+            SecureReferencesManager.forSandboxRoot([], [], ['comp1'], [])
+        return [
+            sandboxChildComp<any, BasicProps, any, any, any>(
+                Basic,
+                (vs) => ({ safe: '', firstName: vs.firstName, lastName: vs.lastName }),
+                comp1(),
+            ),
+        ]
+    });
 }

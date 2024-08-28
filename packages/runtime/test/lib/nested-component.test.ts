@@ -182,7 +182,7 @@ describe('nested components', () => {
             ).toBe('A');
         });
 
-        it('should update nested components', () => {
+        it('should render nested components', () => {
             let viewState = {
                 items: [
                     { id: 'A', value: 'eleven' },
@@ -218,6 +218,34 @@ describe('nested components', () => {
                     .find((item) => item.id === 'A')
                     .element.dom.querySelector('[data-id="A"] span').textContent,
             ).toBe('eleven - done');
+        });
+
+        it('should update adding nested components', () => {
+            let viewState = {
+                items: [
+                    { id: 'A', value: 'eleven' },
+                    { id: 'B', value: 'twelves' },
+                ],
+            };
+            let viewState_2 = {
+                items: [
+                    { id: 'A', value: 'eleven' },
+                    { id: 'B', value: 'twelves' },
+                    { id: 'C', value: '13' },
+                ],
+            };
+            let composite = renderComposite(viewState);
+            composite.update(viewState_2)
+            let doneButton = composite.refs.forEachOfComponents
+                .find((item) => item.id === 'C')
+                .element.dom.querySelector('button[data-id="done"]') as HTMLButtonElement;
+            doneButton.click();
+
+            expect(
+                composite.refs.forEachOfComponents
+                    .find((item) => item.id === 'C')
+                    .element.dom.querySelector('[data-id="C"] span').textContent,
+            ).toBe('13 - done');
         });
 
         it('should process nested component external events', () => {

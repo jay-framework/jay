@@ -6,7 +6,7 @@ import {
     JayNativeFunction,
     withContext,
     RenderElement,
-    useContext,
+    useContext, PreRenderElement,
 } from 'jay-runtime';
 import { createState, JayComponentCore, makeJayComponent, Props, useReactive } from 'jay-component';
 import { IJayEndpoint, JPMMessage } from '../comm-channel/comm-channel';
@@ -185,7 +185,7 @@ export function makeJayComponentBridge<
     ViewState extends object,
     Refs extends object,
     JayElementT extends JayElement<ViewState, Refs>,
->(render: RenderElement<ViewState, Refs, JayElementT>, options?: CompBridgeOptions) {
+>(render: PreRenderElement<ViewState, Refs, JayElementT>, options?: CompBridgeOptions) {
     let component = makeJayComponent(render, makeComponentBridgeConstructor);
     return (props: PropsT) => {
         let { compId, port } = useContext(SECURE_COMPONENT_MARKER);

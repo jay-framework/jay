@@ -4,8 +4,7 @@ import {
     dynamicText as dt,
     ConstructContext,
     HTMLElementProxy,
-    elemRef as er,
-    RenderElementOptions,
+    RenderElementOptions, RenderElement, ReferencesManager,
 } from 'jay-runtime';
 
 export interface CounterViewState {
@@ -19,16 +18,17 @@ export interface CounterElementRefs {
 }
 
 export type CounterElement = JayElement<CounterViewState, CounterElementRefs>;
+export type CounterElementRender = RenderElement<CounterViewState, CounterElementRefs, CounterElement>
+export type CounterPreRender = [refs: CounterElementRefs, CounterElementRender]
 
 export function render(
-    viewState: CounterViewState,
     options?: RenderElementOptions,
-): CounterElement {
-    return ConstructContext.withRootContext(
-        viewState,
+): CounterPreRender {
+    const [refManager, [subtracter, adder ]] =
+        ReferencesManager.for(options, ['subtracter', 'adder'], [], [], []);
+    const render = (viewState: CounterViewState) =>  ConstructContext.withRootContext(
+        viewState, refManager,
         () => {
-            const subtracter = er('subtracter');
-            const adder = er('adder');
             return e('div', {}, [
                 e('div', { 'data-id': 'title' }, [dt((vs) => vs.title)]),
                 e('div', {}, [
@@ -38,7 +38,7 @@ export function render(
                     ]),
                     e('button', { 'data-id': 'add' }, ['+'], adder()),
                 ]),
-            ])},
-        options,
-    );
+            ])}
+    ) as CounterElement
+    return [refManager.getPublicAPI() as CounterElementRefs, render]
 }

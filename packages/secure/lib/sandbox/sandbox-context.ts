@@ -8,7 +8,7 @@ import {
 } from 'jay-runtime';
 import { IJayEndpoint, IJayPort } from '../comm-channel/comm-channel';
 import { Reactive } from 'jay-reactive';
-import { ReferencesManager } from 'jay-runtime';
+// import { ReferencesManager } from 'jay-runtime';
 
 export interface SandboxContext {
     port: IJayPort;
@@ -27,7 +27,7 @@ export type Refs = Record<
 export interface SandboxCreationContext<ViewState> {
     viewState: ViewState;
     endpoint: IJayEndpoint;
-    refManager?: ReferencesManager;
+    // refManager?: ReferencesManager;
     dataIds: string[];
     isDynamic: boolean;
     parentComponentReactive?: Reactive;

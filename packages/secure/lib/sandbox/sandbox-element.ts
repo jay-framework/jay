@@ -41,6 +41,7 @@ export function sandboxChildComp<
         return compCreator(getProps(viewState));
     });
     ref.set(childComp);
+    ref.mount();
 
     return {
         update: (newViewState) => {
@@ -126,7 +127,7 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
     matchBy: string,
     children: () => SandboxElement<ItemViewState>[],
 ): SandboxElement<ParentViewState> {
-    const { viewState, endpoint, refManager, dataIds, parentComponentReactive } =
+    const { viewState, endpoint, dataIds, parentComponentReactive } =
         useContext(SANDBOX_CREATION_CONTEXT);
     let lastItems: ItemViewState[] = [];
     let childElementsMap: Map<string, SandboxElement<ItemViewState>[]> = new Map();
@@ -145,13 +146,13 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
                     {
                         endpoint,
                         viewState: item,
-                        refManager,
                         dataIds: [...dataIds, item[matchBy]],
                         isDynamic: true,
                         parentComponentReactive,
                     },
                     children,
                 );
+                childElements.forEach((childElement) => childElement.mount());
                 childElementsMap.set(item[matchBy], childElements);
             });
             removedItems.forEach((item) => {
