@@ -11,7 +11,7 @@ import {
 import { JayElement, HTMLElementProxy } from '../../lib';
 import { Item, ItemProps } from './comps/item';
 import '../../lib/element-test-types';
-import { ItemRef, ItemRefs } from './comps/item-refs';
+import {ItemComponentType, ItemRefs} from './comps/item-refs';
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -352,11 +352,11 @@ describe('ReferencesManager events', () => {
     describe('single referenced component', () => {
         interface RootElementViewState {}
         interface RootElementRefs {
-            refName1: ItemRef<RootElementViewState>;
+            refName1: ItemComponentType<RootElementViewState>;
         }
 
         function mkElement(eventWrapper: JayEventHandlerWrapper<any, any, any> = undefined) {
-            let jayComponent: ItemRef<RootElementViewState>;
+            let jayComponent: ItemComponentType<RootElementViewState>;
             let [refManager, [comp]] = ReferencesManager.for({ eventWrapper }, [], [], [refName1], []);
             let jayRootElement: JayElement<RootElementViewState, RootElementRefs> =
                 ConstructContext.withRootContext(
@@ -470,7 +470,7 @@ describe('ReferencesManager events', () => {
             refName1: ItemRefs<ItemViewState>;
         }
 
-        let jayComponents: ItemRef<ViewState>[],
+        let jayComponents: ItemComponentType<ViewState>[],
             jayRootElement: JayElement<ViewState, RootElementRefs>,
             mockCallback;
         const viewState: ViewState = {

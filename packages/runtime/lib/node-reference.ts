@@ -355,12 +355,17 @@ const EVENT$_TRAP = (target, prop) => {
     return false;
 };
 
-const GET_COMP_INSTANCE_TRAP = (target: ComponentRefsImpl<any, any>, prop) => {
-    return (prop === 'comp') && target.getInstance();
+// const GET_COMP_INSTANCE_TRAP = (target: ComponentRefsImpl<any, any>, prop) => {
+//     return (prop === 'comp') && target.getInstance();
+// };
+
+const DELEGATE_REF_TO_COMP_TRAP = (target: ComponentRefImpl<any, any>, prop) => {
+    return target.getFromComponent(prop);
 };
 
-const DELEGATE_TO_COMP_TRAP = (target: ComponentRefImpl<any, any>, prop) => {
-    return target.getFromComponent(prop);
+const DELEGATE_REFS_TO_COMP_TRAP = (target: ComponentRefsImpl<any, any>, prop) => {
+    const instance = target.getInstance();
+    return instance?instance[prop]:undefined;
 };
 
 export const GetTrapProxy = (
@@ -384,7 +389,7 @@ export function newHTMLElementPublicApiProxy<ViewState, T>(ref: T): T & GlobalJa
     return new Proxy(ref, HTMLElementRefProxy);
 }
 
-const ComponentRefProxy = GetTrapProxy([EVENT_TRAP, GET_COMP_INSTANCE_TRAP])
+const ComponentRefProxy = GetTrapProxy([EVENT_TRAP, DELEGATE_REFS_TO_COMP_TRAP])
 
 export function newComponentPublicApiProxy<ViewState, C extends JayComponent<any, ViewState, any>>(
     ref: ComponentRefsImpl<ViewState, C>,
@@ -392,7 +397,7 @@ export function newComponentPublicApiProxy<ViewState, C extends JayComponent<any
     return new Proxy(ref, ComponentRefProxy);
 }
 
-const ComponentInCollectionRefProxy = GetTrapProxy([EVENT_TRAP, DELEGATE_TO_COMP_TRAP]);
+const ComponentInCollectionRefProxy = GetTrapProxy([EVENT_TRAP, DELEGATE_REF_TO_COMP_TRAP]);
 
 export function newComponentInCollectionPublicApiProxy<ViewState, C extends JayComponent<any, ViewState, any>>(
     ref: ComponentRefImpl<ViewState, C>,

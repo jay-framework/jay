@@ -30,15 +30,17 @@ function defaultEventWrapper<EventType, ViewState, Returns>(
     return orig(event);
 }
 
-type ManagedRefConstructor = () => ManagedRefs
-const ManagedRefsConstructors: ManagedRefConstructor[] = [
-    () => new HTMLElementRefsImpl(),
-    () => new HTMLElementCollectionRefImpl(),
-    () => new ComponentRefsImpl(),
-    () => new ComponentCollectionRefImpl()];
-type PrivateRefConstructor<ViewState> = () => PrivateRef<ViewState, any>;
+export type ManagedRefConstructor = () => ManagedRefs
+export type PrivateRefConstructor<ViewState> = () => PrivateRef<ViewState, any>;
 
-export class ReferencesManager {
+export enum ManagedRefType {
+    element = 0,
+    elementCollection = 1,
+    component = 2,
+    componentCollection = 3
+}
+
+export abstract class BaseReferencesManager {
     private refs: Record<string, ManagedRefs> = {};
     private refsPublicAPI: object
 
@@ -46,21 +48,29 @@ export class ReferencesManager {
         public readonly eventWrapper: JayEventHandlerWrapper<any, any, any> = defaultEventWrapper,
     ) {}
 
+    abstract mkManagedRef(refType: ManagedRefType, refName: string): ManagedRefs;
+    abstract currentContext(): {currData: any, coordinate: (refName: string) => Coordinate}
+
+    private mkRefsOfType<ViewState>(refType: ManagedRefType, refNames: string[]): PrivateRefConstructor<ViewState>[] {
+        return refNames.map(refName => {
+            const managedRef = this.mkManagedRef(refType, refName)
+            this.refs[refName] = managedRef;
+            return () => {
+                let { currData, coordinate} = this.currentContext();
+                return managedRef.mkManagedRef(currData, coordinate(refName), this.eventWrapper)
+            }
+        })
+    }
+
     mkRefs<ViewState>(elem: string[], elemCollection: string[], comp: string[], compCollection: string[]):
         PrivateRefConstructor<ViewState>[] {
-        const mkPrivateRefs: PrivateRefConstructor<ViewState>[] = []
-        const names: string[][] = [elem, elemCollection, comp, compCollection];
-        for (const index in names) {
-            for (const refName of names[index]) {
-                const managedRef = ManagedRefsConstructors[index]()
-                this.refs[refName] = managedRef;
-                mkPrivateRefs.push(() => {
-                    let { currData, coordinate} = currentConstructionContext();
-                    return managedRef.mkManagedRef(currData, coordinate(refName), this.eventWrapper)
-                })
-            }
-        }
-        return mkPrivateRefs;
+
+        return [
+            ...this.mkRefsOfType<ViewState>(ManagedRefType.element, elem),
+            ...this.mkRefsOfType<ViewState>(ManagedRefType.elementCollection, elemCollection),
+            ...this.mkRefsOfType<ViewState>(ManagedRefType.component, comp),
+            ...this.mkRefsOfType<ViewState>(ManagedRefType.componentCollection, compCollection),
+        ]
     }
 
     private mkRefsPublicAPI() {
@@ -68,6 +78,10 @@ export class ReferencesManager {
                 publicRefAPIs[key] = this.refs[key].getPublicAPI();
                 return publicRefAPIs;
             }, {});
+    }
+
+    get(refName: string) {
+        return this.refs[refName]
     }
 
     getPublicAPI() {
@@ -78,6 +92,24 @@ export class ReferencesManager {
 
     applyToElement<T, Refs>(element: BaseJayElement<T>): JayElement<T, Refs> {
         return { ...element, refs: this.getPublicAPI() as Refs };
+    }
+
+}
+
+export class ReferencesManager extends BaseReferencesManager {
+
+    mkManagedRef(refType: ManagedRefType): ManagedRefs {
+        switch (refType) {
+            case ManagedRefType.element: return new HTMLElementRefsImpl();
+            case ManagedRefType.elementCollection: return new HTMLElementCollectionRefImpl();
+            case ManagedRefType.component: return new ComponentRefsImpl();
+            case ManagedRefType.componentCollection: return new ComponentCollectionRefImpl();
+        }
+    }
+
+    currentContext(): {currData: any, coordinate: (refName: string) => Coordinate} {
+        const { currData, coordinate} = currentConstructionContext()
+        return { currData, coordinate};
     }
 
     static for(options: RenderElementOptions,

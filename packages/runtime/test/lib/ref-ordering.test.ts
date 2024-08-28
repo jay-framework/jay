@@ -6,8 +6,8 @@ import {
     ReferencesManager,
     RenderElementOptions
 } from "../../lib";
-import {ItemRef} from "./comps/item-refs";
 import {Item, ItemProps} from "./comps/item.ts";
+import {ItemComponentType} from "./comps/item-refs";
 
 
 describe('ref creation ordering with reference targets', () => {
@@ -64,7 +64,7 @@ describe('ref creation ordering with reference targets', () => {
     describe('for single component', () => {
         interface RootElementViewState {}
         interface RootElementRefs {
-            refName1: ItemRef<RootElementViewState>;
+            refName1: ItemComponentType<RootElementViewState>;
         }
 
         function preRenderJayElement(eventWrapper: JayEventHandlerWrapper<any, any, any> = undefined) {
@@ -96,15 +96,15 @@ describe('ref creation ordering with reference targets', () => {
 
         it('before creating the element, the component should not be available ', () => {
             const {refs, renderJayElement} = preRenderJayElement()
-            expect(refs.refName1.comp).not.toBeDefined()
+            expect(refs.refName1.getItemSummary).not.toBeDefined()
         })
 
         it('after creating the element, the component should be available ', () => {
             const {refs, renderJayElement} = preRenderJayElement()
 
             renderJayElement()
-            expect(refs.refName1.comp).toBeDefined()
-            expect(refs.refName1.comp.getItemSummary()).toBe('item hello - false')
+            expect(refs.refName1).toBeDefined()
+            expect(refs.refName1.getItemSummary()).toBe('item hello - false')
         })
     })
 })

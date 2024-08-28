@@ -460,7 +460,7 @@ export interface ComponentProxy<
         options?: EventListenerOptions | boolean,
     ): void;
 
-    get comp(): ComponentType | undefined
+    // get comp(): ComponentType | undefined
 }
 
 export interface ComponentCollectionProxy<

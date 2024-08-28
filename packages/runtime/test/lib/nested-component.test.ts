@@ -9,7 +9,7 @@ import {
 } from '../../lib/index';
 import '../../lib/element-test-types';
 import { Item, ItemProps } from './comps/item';
-import { ItemRef, ItemRefs } from './comps/item-refs';
+import {ItemComponentType, ItemRefs} from './comps/item-refs';
 
 describe('nested components', () => {
     describe('single nested component', () => {
@@ -18,7 +18,7 @@ describe('nested components', () => {
         }
 
         interface TestRefs {
-            staticComponent: ItemRef<ViewState>;
+            staticComponent: ItemComponentType<ViewState>;
         }
 
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
@@ -60,7 +60,7 @@ describe('nested components', () => {
                 staticItem: 'hello world',
             });
             // validate we actually have a reference to the nested component by finding the data id on the nested component dom
-            expect(composite.refs.staticComponent.comp.element.dom.attributes['data-id'].value).toBe(
+            expect(composite.refs.staticComponent.element.dom.attributes['data-id'].value).toBe(
                 'AAA',
             );
         });
@@ -87,7 +87,7 @@ describe('nested components', () => {
         }
 
         interface TestRefs {
-            conditional: ItemRef<ViewState>;
+            conditional: ItemComponentType<ViewState>;
         }
 
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
@@ -114,7 +114,7 @@ describe('nested components', () => {
                 condition: true,
             });
             // validate we actually have a reference to the nested component by finding the data id on the nested component dom
-            expect(composite.refs.conditional.comp.element.dom.attributes['data-id'].value).toBe(
+            expect(composite.refs.conditional.element.dom.attributes['data-id'].value).toBe(
                 'condition',
             );
         });
@@ -125,7 +125,7 @@ describe('nested components', () => {
                 condition: false,
             });
             // validate we actually have a reference to the nested component by finding the data id on the nested component dom
-            expect(composite.refs.conditional.comp.element.dom.attributes['data-id'].value).toBe(
+            expect(composite.refs.conditional.element.dom.attributes['data-id'].value).toBe(
                 'condition',
             );
         });
