@@ -1,5 +1,5 @@
-import { JayElement, RenderElementOptions } from 'jay-runtime';
-import { CounterRef, CounterRefs } from './counter-refs';
+import {JayElement, RenderElement, RenderElementOptions} from 'jay-runtime';
+import {CounterComponentType, CounterRefs} from './counter-refs';
 import { Counter } from './counter';
 
 export interface Counter {
@@ -14,10 +14,12 @@ export interface AppViewState {
 }
 
 export interface AppElementRefs {
-    comp1: CounterRef<AppViewState>;
+    comp1: CounterComponentType<AppViewState>;
     comp2: CounterRefs<Counter>;
 }
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
+export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>
+export type AppElementPreRender = [refs: AppElementRefs, AppElementRender]
 
-export declare function render(viewState: AppViewState, options?: RenderElementOptions): AppElement;
+export declare function render(options?: RenderElementOptions): AppElementPreRender;
