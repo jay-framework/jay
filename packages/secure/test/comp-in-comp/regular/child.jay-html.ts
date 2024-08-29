@@ -5,8 +5,7 @@ import {
     dynamicAttribute as da,
     ConstructContext,
     HTMLElementProxy,
-    elemRef as er,
-    RenderElementOptions,
+    RenderElementOptions, RenderElement, ReferencesManager,
 } from 'jay-runtime';
 
 export interface ChildViewState {
@@ -22,14 +21,15 @@ export interface ChildElementRefs {
 }
 
 export type ChildElement = JayElement<ChildViewState, ChildElementRefs>;
+export type ChildElementRender = RenderElement<ChildViewState, ChildElementRefs, ChildElement>
+export type ChildElementPreRender = [refs: ChildElementRefs, ChildElementRender]
 
-export function render(viewState: ChildViewState, options?: RenderElementOptions): ChildElement {
-    return ConstructContext.withRootContext(
-        viewState,
+export function render(options?: RenderElementOptions): ChildElementPreRender {
+    const [refManager, [eventToParent, eventToParentToChildProp, eventToParentToChildApi]] =
+        ReferencesManager.for(options, ['eventToParent', 'eventToParentToChildProp', 'eventToParentToChildApi'], [], [], []);
+    const render = (viewState: ChildViewState) => ConstructContext.withRootContext(
+        viewState, refManager,
         () => {
-            const eventToParent = er('eventToParent');
-            const eventToParentToChildProp = er('eventToParentToChildProp')
-            const eventToParentToChildApi = er('eventToParentToChildApi')
             return e('div', {}, [
                 e('div', { id: da((vs) => `child-text-from-prop-${vs.id}`) }, [
                     dt((vs) => vs.textFromProp),
@@ -56,6 +56,6 @@ export function render(viewState: ChildViewState, options?: RenderElementOptions
                     eventToParentToChildApi(),
                 ),
             ])},
-        options,
-    );
+    ) as ChildElement;
+    return [refManager.getPublicAPI() as ChildElementRefs, render]
 }

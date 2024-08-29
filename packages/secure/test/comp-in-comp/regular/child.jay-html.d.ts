@@ -1,4 +1,4 @@
-import { JayElement, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+import {JayElement, HTMLElementProxy, RenderElementOptions, RenderElement} from 'jay-runtime';
 
 export interface ChildViewState {
     textFromProp: string;
@@ -13,8 +13,9 @@ export interface ChildElementRefs {
 }
 
 export type ChildElement = JayElement<ChildViewState, ChildElementRefs>;
+export type ChildElementRender = RenderElement<ChildViewState, ChildElementRefs, ChildElement>
+export type ChildElementPreRender = [refs: ChildElementRefs, ChildElementRender]
 
 export declare function render(
-    viewState: ChildViewState,
     options?: RenderElementOptions,
-): ChildElement;
+): ChildElementPreRender;

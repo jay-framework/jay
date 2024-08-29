@@ -1,7 +1,11 @@
 import { Parent, ParentProps } from './parent';
-import { compRef, sandboxRoot } from '../../../../lib';
+import { sandboxRoot, SecureReferencesManager} from '../../../../lib';
 import { sandboxChildComp } from '../../../../lib';
 
 export function initializeWorker() {
-    sandboxRoot(() => [sandboxChildComp(Parent, (vs) => ({}), compRef('comp1'))]);
+    sandboxRoot(() => {
+        const [, [comp1]] =
+            SecureReferencesManager.forSandboxRoot([], [], ['comp1'], [])
+        return [sandboxChildComp(Parent, (vs) => ({}), comp1())]
+    });
 }

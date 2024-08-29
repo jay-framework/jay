@@ -3,27 +3,29 @@ import {
     element as e,
     ConstructContext,
     childComp,
-    compRef as cr,
-    RenderElementOptions,
+    RenderElementOptions, RenderElement, ReferencesManager,
 } from 'jay-runtime';
-import { ParentRef } from './parent-refs';
 import { Parent } from './parent';
+import {ParentComponentType} from "./parent-refs";
 
 export interface AppViewState {}
 
 export interface AppElementRefs {
-    comp1: ParentRef<AppViewState>;
+    comp1: ParentComponentType<AppViewState>;
 }
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
+export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>
+export type AppElementPreRender = [refs: AppElementRefs, AppElementRender]
 
-export function render(viewState: AppViewState, options?: RenderElementOptions): AppElement {
-    return ConstructContext.withRootContext(
-        viewState,
+export function render(options?: RenderElementOptions): AppElementPreRender {
+    const [refManager, [comp1]] =
+        ReferencesManager.for(options, [], [], ['comp1'], []);
+    const render = (viewState: AppViewState) => ConstructContext.withRootContext(
+        viewState, refManager,
         () => {
-            const comp1 = cr('comp1');
             return e('div', {}, [childComp(Parent, (vs: AppViewState) => ({ safe: '' }), comp1())])
         },
-        options,
-    );
+    ) as AppElement;
+    return [refManager.getPublicAPI() as AppElementRefs, render]
 }

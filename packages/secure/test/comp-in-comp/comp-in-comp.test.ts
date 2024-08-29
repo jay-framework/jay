@@ -1,6 +1,6 @@
 import { setChannel, useMockCommunicationChannel } from '../util/mock-channel';
 import { initializeWorker } from './secure/worker/worker-root';
-import { render } from './secure/main/app.jay-html';
+import { renderAppElement } from './secure/main/app.jay-html';
 
 const STATIC_ID = 'static';
 const DYNAMIC_ID = 'A';
@@ -10,7 +10,8 @@ describe('comp in comp - parent child communication', () => {
         let channel = useMockCommunicationChannel(VERBOSE);
         setChannel(channel);
         initializeWorker();
-        let appElement = render({});
+        const [refs, render] = renderAppElement();
+        const appElement = render({});
         let eventToParentButton = (id) =>
             appElement.dom.querySelector(`#event-to-parent-button-${id}`) as HTMLButtonElement;
         let eventToParentToChildPropButton = (id) =>

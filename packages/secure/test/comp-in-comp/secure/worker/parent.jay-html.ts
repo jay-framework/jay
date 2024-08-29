@@ -1,13 +1,12 @@
-import { JayElement, HTMLElementProxy } from 'jay-runtime';
-import { compCollectionRef, compRef, elementBridge, elemRef } from '../../../../lib';
+import {JayElement, HTMLElementProxy, RenderElement, RenderElementOptions, ReferencesManager} from 'jay-runtime';
+import {elementBridge, SecureReferencesManager} from '../../../../lib';
 import {
     sandboxElement as e,
     sandboxChildComp as childComp,
     sandboxForEach as forEach,
 } from '../../../../lib/';
-import { ChildRef } from '../../regular/child-refs';
-import { Child, ChildProps } from './child';
-import { ChildRefs } from '../main/child-refs';
+import { Child } from './child';
+import {ChildComponentType, ChildRefs} from '../main/child-refs';
 
 export interface DynamicChild {
     id: string;
@@ -25,22 +24,25 @@ export interface ParentViewState {
 export interface ParentElementRefs {
     parentChangesChildPropButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>;
     parentCallsChildApiButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>;
-    staticChild: ChildRef<ParentViewState>;
+    staticChild: ChildComponentType<ParentViewState>;
     dynamicChildren: ChildRefs<DynamicChild>;
 }
 
 export type ParentElement = JayElement<ParentViewState, ParentElementRefs>;
+export type ParentElementRender = RenderElement<ParentViewState, ParentElementRefs, ParentElement>
+export type ParentElementPreRender = [refs: ParentElementRefs, ParentElementRender]
 
-export function render(viewState: ParentViewState): ParentElement {
-    return elementBridge(viewState, () => {
-        const refDynamicChildren = compCollectionRef('dynamicChildren');
+export function render(): ParentElementPreRender {
+    const [refManager, [parentChangesChildPropButton, parentCallsChildApiButton, staticChild, dynamicChildren]] =
+        SecureReferencesManager.forElement( ['parentChangesChildPropButton', 'parentCallsChildApiButton'], [], ['staticChild'], ['dynamicChildren']);
+    const render = (viewState: ParentViewState) => elementBridge(viewState, refManager, () => {
         return [
-            e(elemRef('parentChangesChildPropButton')),
-            e(elemRef('parentCallsChildApiButton')),
+            e(parentChangesChildPropButton()),
+            e(parentCallsChildApiButton()),
             childComp(
                 Child,
-                (vs) => ({ textFromParent: vs.childText, id: 'static' }),
-                compRef('staticChild'),
+                (vs) => ({textFromParent: vs.childText, id: 'static'}),
+                staticChild(),
             ),
             forEach(
                 (vs) => vs.dynamicChildren,
@@ -48,11 +50,12 @@ export function render(viewState: ParentViewState): ParentElement {
                 () => [
                     childComp(
                         Child,
-                        (vs: DynamicChild) => ({ textFromParent: vs.childText, id: vs.id }),
-                        refDynamicChildren(),
+                        (vs: DynamicChild) => ({textFromParent: vs.childText, id: vs.id}),
+                        dynamicChildren(),
                     ),
                 ],
             ),
         ];
-    });
+    }) as ParentElement;
+    return [refManager.getPublicAPI() as ParentElementRefs, render]
 }

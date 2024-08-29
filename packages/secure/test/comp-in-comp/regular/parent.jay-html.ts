@@ -7,12 +7,9 @@ import {
     ConstructContext,
     HTMLElementProxy,
     childComp,
-    elemRef as er,
-    compRef as cr,
-    compCollectionRef as ccr,
-    RenderElementOptions,
+    RenderElementOptions, RenderElement, ReferencesManager,
 } from 'jay-runtime';
-import { ChildRef, ChildRefs } from './child-refs';
+import {ChildComponentType, ChildRefs} from './child-refs';
 import { Child, ChildProps } from './child';
 
 export interface DynamicChild {
@@ -31,20 +28,20 @@ export interface ParentViewState {
 export interface ParentElementRefs {
     parentChangesChildPropButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>;
     parentCallsChildApiButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>;
-    staticChild: ChildRef<ParentViewState>;
+    staticChild: ChildComponentType<ParentViewState>;
     dynamicChildren: ChildRefs<DynamicChild>;
 }
 
 export type ParentElement = JayElement<ParentViewState, ParentElementRefs>;
+export type ParentElementRender = RenderElement<ParentViewState, ParentElementRefs, ParentElement>
+export type ParentElementPreRender = [refs: ParentElementRefs, ParentElementRender]
 
-export function render(viewState: ParentViewState, options?: RenderElementOptions): ParentElement {
-    return ConstructContext.withRootContext(
-        viewState,
+export function render(options?: RenderElementOptions): ParentElementPreRender {
+    const [refManager, [parentChangesChildPropButton, parentCallsChildApiButton, staticChild, dynamicChildren]] =
+        ReferencesManager.for(options, ['parentChangesChildPropButton', 'parentCallsChildApiButton'], [], ['staticChild'], ['dynamicChildren']);
+    const render = (viewState: ParentViewState) => ConstructContext.withRootContext(
+        viewState, refManager,
         () => {
-            const refDynamicChildren = ccr('dynamicChildren');
-            const parentChangesChildPropButton = er('parentChangesChildPropButton')
-            const parentCallsChildApiButton = er('parentCallsChildApiButton')
-            const staticChild = cr('staticChild');
             return de('div', {}, [
                 e('div', { id: 'text-from-child-event' }, [dt((vs) => vs.textFromChildEvent)]),
                 e('div', { id: 'view-state-from-child-event' }, [
@@ -77,7 +74,7 @@ export function render(viewState: ParentViewState, options?: RenderElementOption
                             childComp(
                                 Child,
                                 (vs: DynamicChild) => ({ textFromParent: vs.childText, id: vs.id }),
-                                refDynamicChildren(),
+                                dynamicChildren(),
                             ),
                         ]);
                     },
@@ -85,6 +82,6 @@ export function render(viewState: ParentViewState, options?: RenderElementOption
                 ),
             ]);
         },
-        options,
-    );
+    ) as ParentElement;
+    return [refManager.getPublicAPI() as ParentElementRefs, render]
 }
