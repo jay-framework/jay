@@ -8,9 +8,7 @@ import {
     ConstructContext,
     HTMLElementCollectionProxy,
     HTMLElementProxy,
-    elemRef as er,
-    elemCollectionRef as ecr,
-    RenderElementOptions,
+    RenderElementOptions, RenderElement, ReferencesManager,
 } from 'jay-runtime';
 
 export interface Item {
@@ -33,17 +31,16 @@ export interface CompElementRefs {
 }
 
 export type CompElement = JayElement<CompViewState, CompElementRefs>;
+export type CompElementRender = RenderElement<CompViewState, CompElementRefs, CompElement>
+export type CompElementPreRender = [refs: CompElementRefs, CompElementRender]
 
-export function render(viewState: CompViewState, options?: RenderElementOptions): CompElement {
-    return ConstructContext.withRootContext(
-        viewState,
+export function render(options?: RenderElementOptions): CompElementPreRender {
+    const [refManager, [result, button, buttonExec, input, itemButton, itemInput]] =
+        ReferencesManager.for(options, ['result', 'button', 'buttonExec', 'input'],
+            ['itemButton', 'itemInput'], [], []);
+    const render = (viewState: CompViewState) => ConstructContext.withRootContext(
+        viewState, refManager,
         () => {
-            const refItemButton = ecr('itemButton');
-            const refItemInput = ecr('itemInput');
-            const result = er('result')
-            const button = er('button')
-            const buttonExec = er('buttonExec')
-            const input = er('input');
             return de('div', {}, [
                 e('div', { 'data-id': 'result' }, [dt((vs) => vs.text)], result()),
                 e('button', { 'data-id': 'button' }, ['button'], button()),
@@ -62,13 +59,13 @@ export function render(viewState: CompViewState, options?: RenderElementOptions)
                                 'button',
                                 { 'data-id': da((vs) => `${vs.id}-itemButton`) },
                                 [dt((vs) => vs.text)],
-                                refItemButton(),
+                                itemButton(),
                             ),
                             e(
                                 'input',
                                 { 'data-id': da((vs) => `${vs.id}-itemInput`) },
                                 [],
-                                refItemInput(),
+                                itemInput(),
                             ),
                         ]);
                     },
@@ -76,6 +73,6 @@ export function render(viewState: CompViewState, options?: RenderElementOptions)
                 ),
             ]);
         },
-        options,
-    );
+    ) as CompElement;
+    return [refManager.getPublicAPI() as CompElementRefs, render]
 }
