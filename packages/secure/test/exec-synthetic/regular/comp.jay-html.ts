@@ -8,9 +8,7 @@ import {
     ConstructContext,
     HTMLElementCollectionProxy,
     HTMLElementProxy,
-    elemRef as er,
-    elemCollectionRef as ecr,
-    RenderElementOptions,
+    RenderElementOptions, RenderElement, ReferencesManager,
 } from 'jay-runtime';
 
 export interface Item {
@@ -31,15 +29,15 @@ export interface CompElementRefs {
 }
 
 export type CompElement = JayElement<CompViewState, CompElementRefs>;
+export type CompElementRender = RenderElement<CompViewState, CompElementRefs, CompElement>
+export type CompElementPreRender = [refs: CompElementRefs, CompElementRender]
 
-export function render(viewState: CompViewState, options?: RenderElementOptions): CompElement {
-    return ConstructContext.withRootContext(
-        viewState,
+export function render(options?: RenderElementOptions): CompElementPreRender {
+    const [refManager, [result, buttonExecGlobal, buttonExecElement, itemButtonExecElement  ]] =
+        ReferencesManager.for(options, ['result', 'buttonExecGlobal', 'buttonExecElement'], ['itemButtonExecElement'], [], []);
+    const render = (viewState: CompViewState) => ConstructContext.withRootContext(
+        viewState, refManager,
         () => {
-            const refItemButtonExecElement = ecr('itemButtonExecElement');
-            const result = er('result');
-            const buttonExecGlobal = er('buttonExecGlobal');
-            const buttonExecElement = er('buttonExecElement')
             return de('div', {}, [
                 e('div', { 'data-id': 'result' }, [dt((vs) => vs.text)], result()),
                 e(
@@ -62,7 +60,7 @@ export function render(viewState: CompViewState, options?: RenderElementOptions)
                                 'button',
                                 { 'data-id': da((vs) => `item-${vs.id}-button-exec-element`) },
                                 [dt((vs) => ` item ${vs.text} exec element `)],
-                                refItemButtonExecElement(),
+                                itemButtonExecElement(),
                             ),
                         ]);
                     },
@@ -70,6 +68,6 @@ export function render(viewState: CompViewState, options?: RenderElementOptions)
                 ),
             ]);
         },
-        options,
-    );
+    ) as CompElement;
+    return [refManager.getPublicAPI() as CompElementRefs, render]
 }
