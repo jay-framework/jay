@@ -9,9 +9,7 @@ import {
     ConstructContext,
     HTMLElementProxy,
     childComp,
-    elemRef as er,
-    compCollectionRef as ccr,
-    RenderElementOptions,
+    RenderElementOptions, RenderElement, ReferencesManager,
 } from 'jay-runtime';
 import { TreeNodeRefs } from './tree-node-refs';
 import { TreeNode, Node } from './tree-node';
@@ -28,16 +26,17 @@ export interface TreeNodeElementRefs {
 }
 
 export type TreeNodeElement = JayElement<TreeNodeViewState, TreeNodeElementRefs>;
+export type TreeNodeElementRender = RenderElement<TreeNodeViewState, TreeNodeElementRefs, TreeNodeElement>
+export type TreeNodeElementPreRender = [refs: TreeNodeElementRefs, TreeNodeElementRender]
 
 export function render(
-    viewState: TreeNodeViewState,
     options?: RenderElementOptions,
-): TreeNodeElement {
-    return ConstructContext.withRootContext(
-        viewState,
+): TreeNodeElementPreRender {
+    const [refManager, [head, child]] =
+        ReferencesManager.for(options, ['head'], [], [], ['child']);
+    const render = (viewState: TreeNodeViewState) => ConstructContext.withRootContext(
+        viewState, refManager,
         () => {
-            const refChild = ccr('child');
-            const head = er('head');
             return de('div', {}, [
                 e(
                     'div',
@@ -55,7 +54,7 @@ export function render(
                             (vs) => vs.node?.children,
                             (vs1: Node) => {
                                 return e('li', {}, [
-                                    childComp(TreeNode, (vs: Node) => vs, refChild()),
+                                    childComp(TreeNode, (vs: Node) => vs, child()),
                                 ]);
                             },
                             'id',
@@ -64,6 +63,6 @@ export function render(
                 ),
             ]);
         },
-        options,
-    );
+    ) as TreeNodeElement;
+    return [refManager.getPublicAPI() as TreeNodeElementRefs, render]
 }

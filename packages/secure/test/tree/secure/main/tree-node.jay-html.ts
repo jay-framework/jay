@@ -6,13 +6,11 @@ import {
     conditional as c,
     dynamicElement as de,
     forEach,
-    elemRef as er,
-    compCollectionRef as ccr,
     ConstructContext,
     HTMLElementProxy,
     RenderElementOptions,
     useContext,
-    withContext,
+    withContext, RenderElement, ReferencesManager,
 } from 'jay-runtime';
 import { secureChildComp as childComp } from '../../../../lib/';
 import { TreeNodeRefs } from './tree-node-refs';
@@ -31,17 +29,18 @@ export interface TreeNodeElementRefs {
 }
 
 export type TreeNodeElement = JayElement<TreeNodeViewState, TreeNodeElementRefs>;
+export type TreeNodeElementRender = RenderElement<TreeNodeViewState, TreeNodeElementRefs, TreeNodeElement>
+export type TreeNodeElementPreRender = [refs: TreeNodeElementRefs, TreeNodeElementRender]
 
 export function render(
-    viewState: TreeNodeViewState,
     options?: RenderElementOptions,
-): TreeNodeElement {
+): TreeNodeElementPreRender {
     let context = useContext(SECURE_COMPONENT_MARKER);
-    return ConstructContext.withRootContext(
-        viewState,
+    const [refManager, [head, child]] =
+        ReferencesManager.for(options, ['head'], [], [], ['child']);
+    const render = (viewState: TreeNodeViewState) => ConstructContext.withRootContext(
+        viewState, refManager,
         () => {
-            const refChild = ccr('child');
-            const head = er('head');
             return de('div', {}, [
                 e(
                     'div',
@@ -60,7 +59,7 @@ export function render(
                             (vs1: Node) => {
                                 return withContext(SECURE_COMPONENT_MARKER, context, () => {
                                     return e('li', {}, [
-                                        childComp(TreeNode, (vs) => vs, refChild()),
+                                        childComp(TreeNode, (vs) => vs, child()),
                                     ]);
                                 });
                             },
@@ -70,6 +69,6 @@ export function render(
                 ),
             ]);
         },
-        options,
-    );
+    ) as TreeNodeElement;
+    return [refManager.getPublicAPI() as TreeNodeElementRefs, render]
 }
