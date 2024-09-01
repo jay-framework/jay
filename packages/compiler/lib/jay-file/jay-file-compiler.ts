@@ -597,17 +597,6 @@ function processImportedComponents(importStatements: JayImportLink[]) {
     );
 }
 
-function renderDynanicRefs(dynamicRefs: Ref[]) {
-    return dynamicRefs
-        .map(
-            (ref) =>
-                `    const ${ref.constName} = ${isComponentRef(ref) ? 'ccr' : 'ecr'}('${
-                    ref.ref
-                }');`,
-        )
-        .join('\n');
-}
-
 function renderRefsForReferenceManager(refs: Ref[]) {
     const elemRefs = refs.filter(_ => !isComponentRef(_) && !isCollectionRef(_))
     const elemCollectionRefs = refs.filter(_ => !isComponentRef(_) && isCollectionRef(_))
@@ -889,26 +878,19 @@ ${renderedBridge.rendered}
   `
             : '';
 
-    let dynamicRefs = renderedBridge.refs.filter(
-        (ref) => isCollectionRef(ref) || isComponentCollectionRef(ref),
-    );
-    if (dynamicRefs.length > 0) {
-        return new RenderFragment(
-            `() => {
-${renderDynanicRefs(dynamicRefs)}
-    return [${Indent.forceIndent(refsPart)}]})
-}`,
-            renderedBridge.imports,
-            renderedBridge.validations,
-            renderedBridge.refs,
-        );
-    } else
-        return new RenderFragment(
-            `() => [${refsPart}]`,
-            renderedBridge.imports,
-            renderedBridge.validations,
-            renderedBridge.refs,
-        );
+    const {elemRefsDeclarations, elemCollectionRefsDeclarations, compRefsDeclarations, compCollectionRefsDeclarations,
+        refVariables} = renderRefsForReferenceManager(renderedBridge.refs)
+
+    return new RenderFragment(`() => {
+        const [, [${refVariables}]] =
+            SecureReferencesManager.forSandboxRoot([${elemRefsDeclarations}], [${elemCollectionRefsDeclarations}], [${compRefsDeclarations}], [${compCollectionRefsDeclarations}])
+        return [${refsPart}]
+    }`,
+        renderedBridge.imports.plus(Import.SecureReferencesManager),
+        renderedBridge.validations,
+        renderedBridge.refs,
+    )
+
 }
 
 export function generateElementDefinitionFile(

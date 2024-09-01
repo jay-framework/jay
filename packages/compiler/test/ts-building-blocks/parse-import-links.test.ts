@@ -25,12 +25,15 @@ describe('parseImportLinks', () => {
                         type: JayUnknown,
                     },
                     {
-                        name: 'ConstructContext',
+                        name: 'RenderElement',
                         type: JayUnknown,
                     },
                     {
-                        as: 'cr',
-                        name: 'compRef',
+                        name: 'ReferencesManager',
+                        type: JayUnknown,
+                    },
+                    {
+                        name: 'ConstructContext',
                         type: JayUnknown,
                     },
                     {
@@ -59,7 +62,7 @@ describe('parseImportLinks', () => {
                 module: './counter-refs',
                 names: [
                     {
-                        name: 'CounterRef',
+                        name: 'CounterComponentType',
                         type: JayUnknown,
                     },
                 ],

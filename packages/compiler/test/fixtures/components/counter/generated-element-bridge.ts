@@ -20,7 +20,7 @@ export type CounterElementPreRender = [refs: CounterElementRefs, CounterElementR
 
 export function render(): CounterElementPreRender {
     const [refManager, [refSubtracter, refAdderButton]] = SecureReferencesManager.forElement(
-        ['refSubtracter', 'refAdderButton'],
+        ['subtracter', 'adderButton'],
         [],
         [],
         [],

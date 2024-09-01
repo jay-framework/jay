@@ -1,12 +1,13 @@
 import {
     JayElement,
     element as e,
+    RenderElement,
+    ReferencesManager,
     ConstructContext,
-    compRef as cr,
     RenderElementOptions,
 } from 'jay-runtime';
 import { mainRoot as mr, secureChildComp } from 'jay-secure';
-import { CounterRef } from './counter-refs';
+import { CounterComponentType } from './counter-refs';
 // @ts-expect-error Cannot find module
 import { Counter } from './counter?jay-mainSandbox';
 
@@ -15,14 +16,18 @@ export interface AppViewState {
 }
 
 export interface AppElementRefs {
-    a: CounterRef<AppViewState>;
+    a: CounterComponentType<AppViewState>;
 }
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
+export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>
+export type AppElementPreRender = [refs: AppElementRefs, AppElementRender]
 
-export function render(viewState: AppViewState, options?: RenderElementOptions): AppElement {
-    return ConstructContext.withRootContext(
-        viewState,
+export function render(options?: RenderElementOptions): AppElementPreRender {
+    const [refManager, [refA]] =
+        ReferencesManager.for(options, [], [], ['a'], []);
+    const render = (viewState: AppViewState) =>  ConstructContext.withRootContext(
+        viewState, refManager,
         () =>
             mr(viewState, () =>
                 e('div', {}, [
@@ -34,10 +39,10 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
                     secureChildComp(
                         Counter,
                         (vs: AppViewState) => ({ initialValue: 12, incrementBy: vs.incrementBy }),
-                        cr('a'),
+                        refA(),
                     ),
                 ]),
             ),
-        options,
-    );
+    ) as AppElement;
+    return [refManager.getPublicAPI() as AppElementRefs, render]
 }

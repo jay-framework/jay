@@ -5,7 +5,7 @@ import {
     sandboxChildComp as childComp,
     sandboxForEach as forEach,
 } from 'jay-secure';
-import { CounterRef, CounterRefs } from '../counter/counter-refs';
+import { CounterComponentType, CounterRefs } from '../counter/counter-refs';
 // @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-workerSandbox';
 
@@ -22,7 +22,7 @@ export interface DynamicComponentInComponentViewState {
 
 export interface DynamicComponentInComponentElementRefs {
     counter1: CounterRefs<NestedCounter>;
-    counter2: CounterRef<DynamicComponentInComponentViewState>;
+    counter2: CounterComponentType<DynamicComponentInComponentViewState>;
 }
 
 export type DynamicComponentInComponentElement = JayElement<
@@ -43,8 +43,8 @@ export function render(): DynamicComponentInComponentElementPreRender {
     const [refManager, [refCounter2, refCounter1]] = SecureReferencesManager.forElement(
         [],
         [],
-        ['refCounter2'],
-        ['refCounter1'],
+        ['counter2'],
+        ['counter1'],
     );
     const render = (viewState: DynamicComponentInComponentViewState) =>
         elementBridge(viewState, refManager, () => [

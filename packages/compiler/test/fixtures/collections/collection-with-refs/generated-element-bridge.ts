@@ -44,7 +44,7 @@ export function render(): CollectionWithRefsElementPreRender {
     const [refManager, [refName, refCompleted, refCost, refDone]] =
         SecureReferencesManager.forElement(
             [],
-            ['refName', 'refCompleted', 'refCost', 'refDone'],
+            ['name', 'completed', 'cost', 'done'],
             [],
             [],
         );
