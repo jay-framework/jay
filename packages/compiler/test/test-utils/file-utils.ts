@@ -19,7 +19,7 @@ export async function readNamedSourceJayFile(folder, file) {
 }
 
 export async function readGeneratedNamedFile(folder, file) {
-    return readTestFile(folder, `${file}.ts`);
+    return prettify(await readTestFile(folder, `${file}.ts`));
 }
 export async function readGeneratedElementFile(folder) {
     return prettify(await readTestFile(folder, 'generated-element.ts'));

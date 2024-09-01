@@ -5,7 +5,7 @@ import {
     ConstructContext,
     HTMLElementProxy,
     elemRef as er,
-    RenderElementOptions,
+    RenderElementOptions, RenderElement,
 } from 'jay-runtime';
 
 export interface CounterViewState {
@@ -18,6 +18,12 @@ export interface CounterElementRefs {
 }
 
 export type CounterElement = JayElement<CounterViewState, CounterElementRefs>;
+export type CounterElementRender = RenderElement<
+    CounterViewState,
+    CounterElementRefs,
+    CounterElement
+>;
+export type CounterElementPreRender = [refs: CounterElementRefs, CounterElementRender];
 
 export function render(
     viewState: CounterViewState,

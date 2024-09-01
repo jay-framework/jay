@@ -39,7 +39,7 @@ export type ConditionsWithRefsElementPreRender = [
 export function render(options?: RenderElementOptions): ConditionsWithRefsElementPreRender {
     const [refManager, [refText1, refText2]] = ReferencesManager.for(
         options,
-        ['refText1', 'refText2'],
+        ['text1', 'text2'],
         [],
         [],
         [],

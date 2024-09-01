@@ -35,10 +35,10 @@ export type TreeNodeElementPreRender = [refs: TreeNodeElementRefs, TreeNodeEleme
 export function render(options?: RenderElementOptions): TreeNodeElementPreRender {
     const [refManager, [refHead, refAR1]] = ReferencesManager.for(
         options,
-        ['refHead'],
+        ['head'],
         [],
         [],
-        ['refAR1'],
+        ['aR1'],
     );
     const render = (viewState: TreeNodeViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>

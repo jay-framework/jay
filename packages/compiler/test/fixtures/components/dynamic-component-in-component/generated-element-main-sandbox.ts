@@ -10,7 +10,7 @@ import {
     RenderElementOptions,
 } from 'jay-runtime';
 import { secureChildComp } from 'jay-secure';
-import { CounterRef, CounterRefs } from '../counter/counter-refs';
+import { CounterComponentType, CounterRefs } from '../counter/counter-refs';
 // @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-mainSandbox';
 
@@ -27,7 +27,7 @@ export interface DynamicComponentInComponentViewState {
 
 export interface DynamicComponentInComponentElementRefs {
     counter1: CounterRefs<NestedCounter>;
-    counter2: CounterRef<DynamicComponentInComponentViewState>;
+    counter2: CounterComponentType<DynamicComponentInComponentViewState>;
 }
 
 export type DynamicComponentInComponentElement = JayElement<
@@ -51,8 +51,8 @@ export function render(
         options,
         [],
         [],
-        ['refCounter2'],
-        ['refCounter1'],
+        ['counter2'],
+        ['counter1'],
     );
     const render = (viewState: DynamicComponentInComponentViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>

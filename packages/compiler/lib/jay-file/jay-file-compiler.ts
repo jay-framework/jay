@@ -165,11 +165,11 @@ function renderImports(
             .map((symbol) => ((symbol.type as JayImportedType).type as JayComponentType).name)
             .filter(
                 (compType) =>
-                    refImportsInUse.has(compType + 'Ref') || refImportsInUse.has(compType + 'Refs'),
+                    refImportsInUse.has(compType + 'ComponentType') || refImportsInUse.has(compType + 'Refs'),
             )
             .map((compType) => {
                 let importSymbols = [];
-                if (refImportsInUse.has(compType + 'Ref')) importSymbols.push(compType + 'Ref');
+                if (refImportsInUse.has(compType + 'ComponentType')) importSymbols.push(compType + 'ComponentType');
                 if (refImportsInUse.has(compType + 'Refs')) importSymbols.push(compType + 'Refs');
                 imports.push(
                     `import {${importSymbols.join(', ')}} from "${importStatement.module}-refs";`,
@@ -567,8 +567,8 @@ function renderRefsType(refs: Ref[], refsType: string) {
                     referenceType = `HTMLElementCollectionProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
                     imports = imports.plus(Import.HTMLElementCollectionProxy);
                 } else if (isComponentRef(ref)) {
-                    referenceType = `${ref.elementType.name}Ref<${ref.viewStateType.name}>`;
-                    refImportsInUse.add(`${ref.elementType.name}Ref`);
+                    referenceType = `${ref.elementType.name}ComponentType<${ref.viewStateType.name}>`;
+                    refImportsInUse.add(`${ref.elementType.name}ComponentType`);
                 } else {
                     referenceType = `HTMLElementProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
                     imports = imports.plus(Import.HTMLElementProxy);
@@ -614,10 +614,10 @@ function renderRefsForReferenceManager(refs: Ref[]) {
     const compRefs = refs.filter(_ => isComponentRef(_) && !isCollectionRef(_))
     const compCollectionRefs = refs.filter(_ => isComponentRef(_) && isCollectionRef(_))
 
-    const elemRefsDeclarations = elemRefs.map(ref => `'${ref.constName}'`).join(', ');
-    const elemCollectionRefsDeclarations = elemCollectionRefs.map(ref => `'${ref.constName}'`).join(', ');
-    const compRefsDeclarations = compRefs.map(ref => `'${ref.constName}'`).join(', ');
-    const compCollectionRefsDeclarations = compCollectionRefs.map(ref => `'${ref.constName}'`).join(', ');
+    const elemRefsDeclarations = elemRefs.map(ref => `'${ref.ref}'`).join(', ');
+    const elemCollectionRefsDeclarations = elemCollectionRefs.map(ref => `'${ref.ref}'`).join(', ');
+    const compRefsDeclarations = compRefs.map(ref => `'${ref.ref}'`).join(', ');
+    const compCollectionRefsDeclarations = compCollectionRefs.map(ref => `'${ref.ref}'`).join(', ');
     const refVariables = [
         ...elemRefs.map(ref => ref.constName),
         ...elemCollectionRefs.map(ref => ref.constName),

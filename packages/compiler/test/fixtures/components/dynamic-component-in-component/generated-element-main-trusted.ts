@@ -10,7 +10,7 @@ import {
     childComp,
     RenderElementOptions,
 } from 'jay-runtime';
-import { CounterRef, CounterRefs } from '../counter/counter-refs';
+import { CounterComponentType, CounterRefs } from '../counter/counter-refs';
 import { Counter } from '../counter/counter';
 
 export interface NestedCounter {
@@ -26,7 +26,7 @@ export interface DynamicComponentInComponentViewState {
 
 export interface DynamicComponentInComponentElementRefs {
     counter1: CounterRefs<NestedCounter>;
-    counter2: CounterRef<DynamicComponentInComponentViewState>;
+    counter2: CounterComponentType<DynamicComponentInComponentViewState>;
 }
 
 export type DynamicComponentInComponentElement = JayElement<
@@ -50,8 +50,8 @@ export function render(
         options,
         [],
         [],
-        ['refCounter2'],
-        ['refCounter1'],
+        ['counter2'],
+        ['counter1'],
     );
     const render = (viewState: DynamicComponentInComponentViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>

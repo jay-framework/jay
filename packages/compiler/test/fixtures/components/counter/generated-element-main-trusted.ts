@@ -29,7 +29,7 @@ export type CounterElementPreRender = [refs: CounterElementRefs, CounterElementR
 export function render(options?: RenderElementOptions): CounterElementPreRender {
     const [refManager, [refSubtracter, refAdderButton]] = ReferencesManager.for(
         options,
-        ['refSubtracter', 'refAdderButton'],
+        ['subtracter', 'adderButton'],
         [],
         [],
         [],

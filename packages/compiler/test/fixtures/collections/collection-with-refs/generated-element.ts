@@ -48,7 +48,7 @@ export function render(options?: RenderElementOptions): CollectionWithRefsElemen
     const [refManager, [refName, refCompleted, refCost, refDone]] = ReferencesManager.for(
         options,
         [],
-        ['refName', 'refCompleted', 'refCost', 'refDone'],
+        ['name', 'completed', 'cost', 'done'],
         [],
         [],
     );

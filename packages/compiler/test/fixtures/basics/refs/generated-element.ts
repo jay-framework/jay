@@ -25,7 +25,7 @@ export type RefsElementPreRender = [refs: RefsElementRefs, RefsElementRender];
 
 export function render(options?: RenderElementOptions): RefsElementPreRender {
     const [refManager, [refRef1, refRef, refRef3]] =
-        ReferencesManager.for(options, ['refRef1', 'refRef', 'refRef3'], [], [], []);
+        ReferencesManager.for(options, ['ref1', 'ref', 'ref3'], [], [], []);
     const render = (viewState: RefsViewState) => ConstructContext.withRootContext(
         viewState, refManager,
         () =>

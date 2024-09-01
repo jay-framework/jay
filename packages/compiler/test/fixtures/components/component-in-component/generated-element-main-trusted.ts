@@ -7,7 +7,7 @@ import {
     childComp,
     RenderElementOptions,
 } from 'jay-runtime';
-import { CounterRef } from '../counter/counter-refs';
+import { CounterComponentType } from '../counter/counter-refs';
 import { Counter } from '../counter/counter';
 import { CounterViewState as CounterData } from '../counter/generated-element-main-trusted';
 
@@ -19,8 +19,8 @@ export interface ComponentInComponentViewState {
 }
 
 export interface ComponentInComponentElementRefs {
-    counter1: CounterRef<ComponentInComponentViewState>;
-    counterTwo: CounterRef<ComponentInComponentViewState>;
+    counter1: CounterComponentType<ComponentInComponentViewState>;
+    counterTwo: CounterComponentType<ComponentInComponentViewState>;
 }
 
 export type ComponentInComponentElement = JayElement<
@@ -43,7 +43,7 @@ export function render(options?: RenderElementOptions): ComponentInComponentElem
             options,
             [],
             [],
-            ['refCounter1', 'refCounterTwo', 'refAR1', 'refAR2', 'refAR3'],
+            ['counter1', 'counterTwo', 'aR1', 'aR2', 'aR3'],
             [],
         );
     const render = (viewState: ComponentInComponentViewState) =>

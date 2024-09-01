@@ -36,8 +36,8 @@ export function render(options?: RenderElementOptions): RecursiveComponentsEleme
         options,
         [],
         [],
-        ['refAR1'],
-        ['refCounter1', 'refCounterTwo'],
+        ['aR1'],
+        ['counter1', 'counterTwo'],
     );
     const render = (viewState: Node) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
