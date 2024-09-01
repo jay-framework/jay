@@ -1,8 +1,8 @@
-import { JayElement, HTMLElementCollectionProxy } from 'jay-runtime';
+import { JayElement, RenderElement, HTMLElementCollectionProxy } from 'jay-runtime';
 import {
+    SecureReferencesManager,
     elementBridge,
     sandboxElement as e,
-    elemCollectionRef as ecr,
     sandboxForEach as forEach,
 } from 'jay-secure';
 
@@ -29,19 +29,32 @@ export type CollectionWithRefsElement = JayElement<
     CollectionWithRefsViewState,
     CollectionWithRefsElementRefs
 >;
+export type CollectionWithRefsElementRender = RenderElement<
+    CollectionWithRefsViewState,
+    CollectionWithRefsElementRefs,
+    CollectionWithRefsElement
+>;
+export type CollectionWithRefsElementPreRender = [
+    refs: CollectionWithRefsElementRefs,
+    CollectionWithRefsElementRender,
+];
 
-export function render(viewState: CollectionWithRefsViewState): CollectionWithRefsElement {
-    return elementBridge(viewState, () => {
-        const refName = ecr('name');
-        const refCompleted = ecr('completed');
-        const refCost = ecr('cost');
-        const refDone = ecr('done');
-        return [
+
+export function render(): CollectionWithRefsElementPreRender {
+    const [refManager, [refName, refCompleted, refCost, refDone]] =
+        SecureReferencesManager.forElement(
+            [],
+            ['refName', 'refCompleted', 'refCost', 'refDone'],
+            [],
+            [],
+        );
+    const render = (viewState: CollectionWithRefsViewState) =>
+        elementBridge(viewState, refManager, () => [
             forEach(
                 (vs) => vs.items,
                 'id',
                 () => [e(refName()), e(refCompleted()), e(refCost()), e(refDone())],
             ),
-        ];
-    });
+        ]) as CollectionWithRefsElement;
+    return [refManager.getPublicAPI() as CollectionWithRefsElementRefs, render];
 }

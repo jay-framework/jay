@@ -26,14 +26,14 @@ export async function readGeneratedElementFile(folder) {
 }
 
 export async function readGeneratedElementBridgeFile(folder) {
-    return readTestFile(folder, 'generated-element-bridge.ts');
+    return prettify(await readTestFile(folder, 'generated-element-bridge.ts'));
 }
 
 export async function readGeneratedElementDefinitionFile(
     folder: string,
     filename: string = 'generated-element.d.ts',
 ) {
-    return readTestFile(folder, filename);
+    return prettify(await readTestFile(folder, filename));
 }
 
 export function getFileFromFolder(folder: string): string {

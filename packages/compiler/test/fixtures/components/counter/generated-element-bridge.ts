@@ -1,5 +1,5 @@
-import { JayElement, HTMLElementProxy } from 'jay-runtime';
-import { elementBridge, sandboxElement as e, elemRef as er } from 'jay-secure';
+import { JayElement, RenderElement, HTMLElementProxy } from 'jay-runtime';
+import { SecureReferencesManager, elementBridge, sandboxElement as e } from 'jay-secure';
 
 export interface CounterViewState {
     count: number;
@@ -11,7 +11,24 @@ export interface CounterElementRefs {
 }
 
 export type CounterElement = JayElement<CounterViewState, CounterElementRefs>;
+export type CounterElementRender = RenderElement<
+    CounterViewState,
+    CounterElementRefs,
+    CounterElement
+>;
+export type CounterElementPreRender = [refs: CounterElementRefs, CounterElementRender];
 
-export function render(viewState: CounterViewState): CounterElement {
-    return elementBridge(viewState, () => [e(er('subtracter')), e(er('adderButton'))]);
+export function render(): CounterElementPreRender {
+    const [refManager, [refSubtracter, refAdderButton]] = SecureReferencesManager.forElement(
+        ['refSubtracter', 'refAdderButton'],
+        [],
+        [],
+        [],
+    );
+    const render = (viewState: CounterViewState) =>
+        elementBridge(viewState, refManager, () => [
+            e(refSubtracter()),
+            e(refAdderButton()),
+        ]) as CounterElement;
+    return [refManager.getPublicAPI() as CounterElementRefs, render];
 }

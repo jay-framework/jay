@@ -50,11 +50,17 @@ export const Import = {
         'RenderElement',
         ImportsFor.implementation,
         ImportsFor.definition,
+        ImportsFor.elementSandbox
     ),
     ReferencesManager: importStatementFragment(
         'jay-runtime',
         'ReferencesManager',
         ImportsFor.implementation,
+    ),
+    SecureReferencesManager: importStatementFragment(
+        'jay-secure',
+        'SecureReferencesManager',
+        ImportsFor.elementSandbox,
     ),
     conditional: importStatementFragment(
         'jay-runtime',
