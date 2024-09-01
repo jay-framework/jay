@@ -9,7 +9,7 @@ describe('generate the refs file', () => {
         );
         expect(refsFile.validations).toEqual([]);
         expect(await prettify(refsFile.val)).toEqual(
-            await readTestFile('./components/counter', 'counter-refs.d.ts'),
+            await prettify(await readTestFile('./components/counter', 'counter-refs.d.ts')),
         );
     });
 });
