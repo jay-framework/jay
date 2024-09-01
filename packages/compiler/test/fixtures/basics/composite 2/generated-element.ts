@@ -2,6 +2,8 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
+    RenderElement,
+    ReferencesManager,
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
@@ -15,14 +17,17 @@ export interface Composite2ViewState {
 export interface Composite2ElementRefs {}
 
 export type Composite2Element = JayElement<Composite2ViewState, Composite2ElementRefs>;
+export type Composite2ElementRender = RenderElement<
+    Composite2ViewState,
+    Composite2ElementRefs,
+    Composite2Element
+>;
+export type Composite2ElementPreRender = [refs: Composite2ElementRefs, Composite2ElementRender];
 
-export function render(
-    viewState: Composite2ViewState,
-    options?: RenderElementOptions,
-): Composite2Element {
-    return ConstructContext.withRootContext(
-        viewState,
-        () =>
+export function render(options?: RenderElementOptions): Composite2ElementPreRender {
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const render = (viewState: Composite2ViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('h1', {}, [dt((vs) => vs.title)]),
                 e('section', {}, [
@@ -30,6 +35,6 @@ export function render(
                     e('div', {}, [dt((vs) => vs.article)]),
                 ]),
             ]),
-        options,
-    );
+        ) as Composite2Element;
+    return [refManager.getPublicAPI() as Composite2ElementRefs, render];
 }

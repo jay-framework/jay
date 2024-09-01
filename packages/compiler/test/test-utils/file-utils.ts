@@ -1,6 +1,7 @@
 import { promises } from 'node:fs';
 import path from 'node:path';
 import { removeComments } from '../../lib/utils/prettify';
+import { prettify } from '../../lib';
 
 const { readFile } = promises;
 
@@ -21,7 +22,7 @@ export async function readGeneratedNamedFile(folder, file) {
     return readTestFile(folder, `${file}.ts`);
 }
 export async function readGeneratedElementFile(folder) {
-    return readTestFile(folder, 'generated-element.ts');
+    return prettify(await readTestFile(folder, 'generated-element.ts'));
 }
 
 export async function readGeneratedElementBridgeFile(folder) {

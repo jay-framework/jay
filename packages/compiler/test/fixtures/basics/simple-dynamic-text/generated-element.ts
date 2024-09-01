@@ -2,6 +2,8 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
+    RenderElement,
+    ReferencesManager,
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
@@ -16,14 +18,23 @@ export type SimpleDynamicTextElement = JayElement<
     SimpleDynamicTextViewState,
     SimpleDynamicTextElementRefs
 >;
+export type SimpleDynamicTextElementRender = RenderElement<
+    SimpleDynamicTextViewState,
+    SimpleDynamicTextElementRefs,
+    SimpleDynamicTextElement
+>;
+export type SimpleDynamicTextElementPreRender = [
+    refs: SimpleDynamicTextElementRefs,
+    SimpleDynamicTextElementRender,
+];
 
 export function render(
-    viewState: SimpleDynamicTextViewState,
     options?: RenderElementOptions,
-): SimpleDynamicTextElement {
-    return ConstructContext.withRootContext(
-        viewState,
+): SimpleDynamicTextElementPreRender {
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const render = (viewState: SimpleDynamicTextViewState) => ConstructContext.withRootContext(
+        viewState, refManager,
         () => e('div', {}, [dt((vs) => vs.s1)]),
-        options,
-    );
+    ) as SimpleDynamicTextElement;
+    return [refManager.getPublicAPI() as SimpleDynamicTextElementRefs, render];
 }

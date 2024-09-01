@@ -280,20 +280,12 @@ function renderElementRef(
                 viewStateType: variables.currentType,
             },
         ];
-        if (dynamicRef) {
-            return new RenderFragment(
-                `${constName}()`,
-                Imports.for(Import.elemCollectionRef, Import.sandboxElemCollectionRef),
-                [],
-                refs,
-            );
-        } else
-            return new RenderFragment(
-                `er('${refName}')`,
-                Imports.for(Import.elemRef, Import.sandboxElemRef),
-                [],
-                refs,
-            );
+        return new RenderFragment(
+            `${constName}()`,
+            Imports.none(),
+            [],
+            refs,
+        );
     } else return RenderFragment.empty();
 }
 
@@ -624,6 +616,26 @@ function renderDynanicRefs(dynamicRefs: Ref[]) {
         .join('\n');
 }
 
+function renderRefsForReferenceManager(refs: Ref[]) {
+    const elemRefs = refs.filter(_ => !isComponentRef(_) && !isCollectionRef(_))
+    const elemCollectionRefs = refs.filter(_ => !isComponentRef(_) && isCollectionRef(_))
+    const compRefs = refs.filter(_ => isComponentRef(_) && !isCollectionRef(_))
+    const compCollectionRefs = refs.filter(_ => isComponentRef(_) && isCollectionRef(_))
+
+    const elemRefsDeclarations = elemRefs.map(ref => `'${ref.constName}'`).join(', ');
+    const elemCollectionRefsDeclarations = elemCollectionRefs.map(ref => `'${ref.constName}'`).join(', ');
+    const compRefsDeclarations = compRefs.map(ref => `'${ref.constName}'`).join(', ');
+    const compCollectionRefsDeclarations = compCollectionRefs.map(ref => `'${ref.constName}'`).join(', ');
+    const refVariables = [
+        ...elemRefs.map(ref => ref.constName),
+        ...elemCollectionRefs.map(ref => ref.constName),
+        ...compRefs.map(ref => ref.constName),
+        ...compCollectionRefs.map(ref => ref.constName)
+    ].join(', ')
+    return {elemRefsDeclarations, elemCollectionRefsDeclarations, compRefsDeclarations, compCollectionRefsDeclarations,
+        refVariables} ;
+}
+
 function renderFunctionImplementation(
     types: JayType,
     rootBodyElement: HTMLElement,
@@ -648,11 +660,16 @@ function renderFunctionImplementation(
         nextAutoRefName: newAutoRefNameGenerator(),
         importerMode,
     });
-    let elementType = baseElementName + 'Element';
-    let refsType = baseElementName + 'ElementRefs';
+    const elementType = baseElementName + 'Element';
+    const refsType = baseElementName + 'ElementRefs';
+    const viewStateType = types.name;
+    const renderType = `${elementType}Render`;
+    const preRenderType = `${elementType}PreRender`;
     let imports = renderedRoot.imports
         .plus(Import.ConstructContext)
-        .plus(Import.RenderElementOptions);
+        .plus(Import.RenderElementOptions)
+        .plus(Import.RenderElement)
+        .plus(Import.ReferencesManager);
     const {
         imports: refImports,
         renderedRefs,
@@ -660,12 +677,15 @@ function renderFunctionImplementation(
     } = renderRefsType(renderedRoot.refs, refsType);
     imports = imports.plus(refImports);
 
-    let renderedElement = `export type ${elementType} = JayElement<${types.name}, ${refsType}>`;
+    let renderedElement = `export type ${elementType} = JayElement<${viewStateType}, ${refsType}>
+export type ${renderType} = RenderElement<${viewStateType}, ${refsType}, ${elementType}>
+export type ${preRenderType} = [refs: ${refsType}, ${renderType}]
+`;
 
     let body;
-    let dynamicRefs = renderedRoot.refs.filter(
-        (ref) => isCollectionRef(ref) || isComponentCollectionRef(ref),
-    );
+    // let dynamicRefs = renderedRoot.refs.filter(
+    //     (ref) => isCollectionRef(ref) || isComponentCollectionRef(ref),
+    // );
     if (importedSandboxedSymbols.size > 0) {
         imports = imports.plus(Import.secureMainRoot);
         renderedRoot = renderedRoot.map(
@@ -674,19 +694,33 @@ function renderFunctionImplementation(
 ${Indent.forceIndent(code, 4)})`,
         );
     }
-    if (dynamicRefs.length > 0) {
-        body = `export function render(viewState: ${
-            types.name
-        }, options?: RenderElementOptions): ${elementType} {
-  return ConstructContext.withRootContext(viewState, () => {
-${renderDynanicRefs(dynamicRefs)}
-    return ${renderedRoot.rendered.trim()}}, options);
-}`;
-    } else
-        body = `export function render(viewState: ${types.name}, options?: RenderElementOptions): ${elementType} {
-  return ConstructContext.withRootContext(viewState, () =>
-${renderedRoot.rendered}, options);
-}`;
+
+    const {elemRefsDeclarations, elemCollectionRefsDeclarations, compRefsDeclarations, compCollectionRefsDeclarations,
+        refVariables} = renderRefsForReferenceManager(renderedRoot.refs)
+
+    body = `export function render(options?: RenderElementOptions): ${preRenderType} {
+    const [refManager, [${refVariables}]] =
+        ReferencesManager.for(options, [${elemRefsDeclarations}], [${elemCollectionRefsDeclarations}], [${compRefsDeclarations}], [${compCollectionRefsDeclarations}]);
+    const render = (viewState: ${viewStateType}) => ConstructContext.withRootContext(
+        viewState, refManager,
+        () => ${renderedRoot.rendered.trim()}
+    ) as ${elementType};
+    return [refManager.getPublicAPI() as ${refsType}, render];
+}`
+
+//     if (dynamicRefs.length > 0) {
+//         body = `export function render(viewState: ${
+//             viewStateType
+//         }, options?: RenderElementOptions): ${elementType} {
+//   return ConstructContext.withRootContext(viewState, () => {
+// ${renderDynanicRefs(dynamicRefs)}
+//     return ${renderedRoot.rendered.trim()}}, options);
+// }`;
+//     } else
+//         body = `export function render(viewState: ${viewStateType}, options?: RenderElementOptions): ${elementType} {
+//   return ConstructContext.withRootContext(viewState, () =>
+// ${renderedRoot.rendered}, options);
+// }`;
     return {
         renderedRefs,
         renderedElement,

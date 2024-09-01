@@ -5,6 +5,8 @@ import {
     dynamicAttribute as da,
     booleanAttribute as ba,
     dynamicProperty as dp,
+    RenderElement,
+    ReferencesManager,
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
@@ -20,14 +22,17 @@ export interface AttributesViewState {
 export interface AttributesElementRefs {}
 
 export type AttributesElement = JayElement<AttributesViewState, AttributesElementRefs>;
+export type AttributesElementRender = RenderElement<
+    AttributesViewState,
+    AttributesElementRefs,
+    AttributesElement
+>;
+export type AttributesElementPreRender = [refs: AttributesElementRefs, AttributesElementRender];
 
-export function render(
-    viewState: AttributesViewState,
-    options?: RenderElementOptions,
-): AttributesElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () =>
+export function render(options?: RenderElementOptions): AttributesElementPreRender {
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const render = (viewState: AttributesViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('div', { style: { cssText: 'background: red;' } }, [dt((vs) => vs.text)]),
                 e('div', { 'data-attribute': 'a value' }, ['static']),
@@ -58,6 +63,6 @@ export function render(
                 e('button', { disabled: ba((vs) => !vs.bool1) }, []),
                 e('button', { disabled: '' }, []),
             ]),
-        options,
-    );
+        ) as AttributesElement;
+    return [refManager.getPublicAPI() as AttributesElementRefs, render];
 }
