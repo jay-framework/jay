@@ -9,9 +9,7 @@ import {
     forEach,
     ConstructContext,
     HTMLElementProxy,
-    elemRef as er,
-    compCollectionRef as ccr,
-    RenderElementOptions,
+    RenderElementOptions, RenderElement, ReferencesManager,
 } from 'jay-runtime';
 import { secureChildComp as childComp } from 'jay-secure';
 import { ItemRefs } from '../../lib/item-refs';
@@ -51,12 +49,19 @@ export interface TodoElementRefs {
 }
 
 export type TodoElement = JayElement<TodoViewState, TodoElementRefs>;
+export type TodoElementRender = RenderElement<
+    TodoViewState,
+    TodoElementRefs,
+    TodoElement
+>;
+export type TodoElementPreRender = [refs: TodoElementRefs, TodoElementRender];
 
-export function render(viewState: TodoViewState, options?: RenderElementOptions): TodoElement {
-    return ConstructContext.withRootContext(
-        viewState,
+export function render(options?: RenderElementOptions): TodoElementPreRender {
+    const [refManager, [refNwTodo, refToggleAll, refFilterAll, refFilterActive, refFilterCompleted, refClearCompleted, refItems]] =
+        ReferencesManager.for(options, ['newTodo', 'toggleAll', 'filterAll', 'filterActive', 'filterCompleted', 'clearCompleted'], [], [], ['items']);
+    const render = (viewState: TodoViewState) => ConstructContext.withRootContext(
+        viewState, refManager,
         () => {
-            const refItems = ccr('items');
             return e('div', {}, [
                 e('section', { class: 'todoapp' }, [
                     de('div', {}, [
@@ -71,7 +76,7 @@ export function render(viewState: TodoViewState, options?: RenderElementOptions)
                                     autofocus: '',
                                 },
                                 [],
-                                er('newTodo'),
+                                refNwTodo(),
                             ),
                         ]),
                         c(
@@ -86,7 +91,7 @@ export function render(viewState: TodoViewState, options?: RenderElementOptions)
                                         checked: dp((vs) => vs.noActiveItems),
                                     },
                                     [],
-                                    er('toggleAll'),
+                                    refToggleAll(),
                                 ),
                                 e('label', { for: 'toggle-all' }, []),
                                 de('ul', { class: 'todo-list' }, [
@@ -131,7 +136,7 @@ export function render(viewState: TodoViewState, options?: RenderElementOptions)
                                                 ),
                                             },
                                             ['All'],
-                                            er('filterAll'),
+                                            refFilterAll(),
                                         ),
                                     ]),
                                     e('span', {}, [' ']),
@@ -149,7 +154,7 @@ export function render(viewState: TodoViewState, options?: RenderElementOptions)
                                                 ),
                                             },
                                             ['Active'],
-                                            er('filterActive'),
+                                            refFilterActive(),
                                         ),
                                     ]),
                                     e('span', {}, [' ']),
@@ -167,7 +172,7 @@ export function render(viewState: TodoViewState, options?: RenderElementOptions)
                                                 ),
                                             },
                                             ['Completed'],
-                                            er('filterCompleted'),
+                                            refFilterCompleted(),
                                         ),
                                     ]),
                                 ]),
@@ -177,7 +182,7 @@ export function render(viewState: TodoViewState, options?: RenderElementOptions)
                                         'button',
                                         { class: 'clear-completed' },
                                         [' Clear completed '],
-                                        er('clearCompleted'),
+                                        refClearCompleted(),
                                     ),
                                 ),
                             ]),
@@ -194,6 +199,6 @@ export function render(viewState: TodoViewState, options?: RenderElementOptions)
                 ]),
             ]);
         },
-        options,
-    );
+    ) as TodoElement;
+    return [refManager.getPublicAPI() as TodoElementRefs, render];
 }

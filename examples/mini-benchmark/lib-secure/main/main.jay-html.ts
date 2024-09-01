@@ -8,19 +8,17 @@ import {
     forEach,
     ConstructContext,
     HTMLElementProxy,
-    elemRef as er,
-    compRef as cr,
-    RenderElementOptions,
+    RenderElementOptions, ReferencesManager, RenderElement,
 } from 'jay-runtime';
-import { BasicRef } from './basic/basic-data-refs';
+import { BasicComponentType } from './basic/basic-data-refs';
 import { Basic } from './basic/basic-data';
-import { CollectionsRef } from './collections/collections-data-refs';
+import { CollectionsComponentType } from './collections/collections-data-refs';
 import { Collections } from './collections/collections-data';
-import { CompositeRef } from './composite/composite-data-refs';
+import { CompositeComponentType } from './composite/composite-data-refs';
 import { Composite } from './composite/composite-data';
-import { ConditionsRef } from './conditions/conditions-data-refs';
+import { ConditionsComponentType } from './conditions/conditions-data-refs';
 import { Conditions } from './conditions/conditions-data';
-import { TableHostRef } from './table/table-host-refs';
+import { TableHostComponentType } from './table/table-host-refs';
 import { TableHost } from './table/table-host';
 import { secureChildComp as childComp } from 'jay-secure';
 
@@ -48,18 +46,22 @@ export interface MainElementRefs {
     chooseExample: HTMLElementProxy<MainViewState, HTMLSelectElement>;
     cycles: HTMLElementProxy<MainViewState, HTMLInputElement>;
     run: HTMLElementProxy<MainViewState, HTMLButtonElement>;
-    basic: BasicRef<MainViewState>;
-    collections: CollectionsRef<MainViewState>;
-    composite: CompositeRef<MainViewState>;
-    conditions: ConditionsRef<MainViewState>;
-    table: TableHostRef<MainViewState>;
+    basic: BasicComponentType<MainViewState>;
+    collections: CollectionsComponentType<MainViewState>;
+    composite: CompositeComponentType<MainViewState>;
+    conditions: ConditionsComponentType<MainViewState>;
+    table: TableHostComponentType<MainViewState>;
 }
 
 export type MainElement = JayElement<MainViewState, MainElementRefs>;
+export type MainElementRender = RenderElement<MainViewState, MainElementRefs, MainElement>
+export type MainElementPreRender = [refs: MainElementRefs, MainElementRender]
 
-export function render(viewState: MainViewState, options?: RenderElementOptions): MainElement {
-    return ConstructContext.withRootContext(
-        viewState,
+export function render(options?: RenderElementOptions): MainElementPreRender {
+    const [refManager, [refChooseExample, refCycles, refRun, refBasic, refCollections, refComposite, refConditions, refTable]] =
+        ReferencesManager.for(options, ['chooseExample', 'cycles', 'run'], [], ['basic', 'collections', 'composite', 'conditions', 'table'], []);
+    const render = (viewState: MainViewState) =>  ConstructContext.withRootContext(
+        viewState, refManager,
         () =>
             e('div', {}, [
                 e('div', { class: 'select-example' }, [
@@ -76,22 +78,22 @@ export function render(viewState: MainViewState, options?: RenderElementOptions)
                                 'value',
                             ),
                         ],
-                        er('chooseExample'),
+                        refChooseExample(),
                     ),
                 ]),
                 e('div', { class: 'cycles' }, [
                     e('label', { for: 'cycles' }, ['Select number of cycles']),
-                    e('input', { id: 'cycles', value: dp((vs) => vs.cycles) }, [], er('cycles')),
+                    e('input', { id: 'cycles', value: dp((vs) => vs.cycles) }, [], refCycles()),
                 ]),
                 e('div', { class: 'progress' }, [dt((vs) => vs.progress)]),
-                e('button', {}, ['run'], er('run')),
+                e('button', {}, ['run'], refRun()),
                 de('div', { class: 'stage' }, [
                     c(
                         (vs) => vs.selectedExample === SelectedExample.basic,
                         childComp(
                             Basic,
                             (vs: MainViewState) => ({ cycles: vs.cycles }),
-                            cr('basic'),
+                            refBasic(),
                         ),
                     ),
                     c(
@@ -99,7 +101,7 @@ export function render(viewState: MainViewState, options?: RenderElementOptions)
                         childComp(
                             Collections,
                             (vs: MainViewState) => ({ cycles: vs.cycles }),
-                            cr('collections'),
+                            refCollections(),
                         ),
                     ),
                     c(
@@ -107,7 +109,7 @@ export function render(viewState: MainViewState, options?: RenderElementOptions)
                         childComp(
                             Composite,
                             (vs: MainViewState) => ({ cycles: vs.cycles }),
-                            cr('composite'),
+                            refComposite(),
                         ),
                     ),
                     c(
@@ -115,7 +117,7 @@ export function render(viewState: MainViewState, options?: RenderElementOptions)
                         childComp(
                             Conditions,
                             (vs: MainViewState) => ({ cycles: vs.cycles }),
-                            cr('conditions'),
+                            refConditions(),
                         ),
                     ),
                     c(
@@ -123,11 +125,11 @@ export function render(viewState: MainViewState, options?: RenderElementOptions)
                         childComp(
                             TableHost,
                             (vs: MainViewState) => ({ cycles: vs.cycles }),
-                            cr('table'),
+                            refTable(),
                         ),
                     ),
                 ]),
             ]),
-        options,
-    );
+    ) as MainElement;
+    return [refManager.getPublicAPI() as MainElementRefs, render]
 }

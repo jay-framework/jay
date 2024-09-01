@@ -13,8 +13,8 @@ import {
     HTMLElementCollectionRefImpl,
     HTMLElementRefsImpl,
     PrivateRef
-} from "./node-reference.ts";
-import {currentConstructionContext} from "./context.ts";
+} from "./node-reference";
+import {currentConstructionContext} from "./context";
 
 export interface ManagedRefs{
     getPublicAPI(): any;

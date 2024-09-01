@@ -1,5 +1,5 @@
-import { HTMLElementProxy, JayElement } from 'jay-runtime';
-import { elementBridge, elemRef } from 'jay-secure';
+import {HTMLElementProxy, JayElement, ReferencesManager, RenderElement} from 'jay-runtime';
+import {elementBridge, SecureReferencesManager} from 'jay-secure';
 import { sandboxElement as e } from 'jay-secure';
 
 export interface ItemViewState {
@@ -17,12 +17,21 @@ export interface ItemElementRefs {
 }
 
 export type ItemElement = JayElement<ItemViewState, ItemElementRefs>;
+export type ItemElementRender = RenderElement<
+    ItemViewState,
+    ItemElementRefs,
+    ItemElement
+>;
+export type ItemElementPreRender = [refs: ItemElementRefs, ItemElementRender];
 
-export function render(viewState: ItemViewState): ItemElement {
-    return elementBridge(viewState, () => [
-        e(elemRef('completed')),
-        e(elemRef('label')),
-        e(elemRef('button')),
-        e(elemRef('title')),
+export function render(): ItemElementPreRender {
+    const [refManager, [refCompleted, refLabel, refButton, refTitle]] =
+        SecureReferencesManager.forElement(['completed', 'label', 'button', 'title'], [], [], []);
+    const render = (viewState: ItemViewState) => elementBridge(viewState, refManager, () => [
+        e(refCompleted()),
+        e(refLabel()),
+        e(refButton()),
+        e(refTitle()),
     ]) as unknown as ItemElement;
+    return [refManager.getPublicAPI() as ItemElementRefs, render]
 }

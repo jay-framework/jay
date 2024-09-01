@@ -3,7 +3,7 @@ import {
     element as e,
     dynamicText as dt,
     ConstructContext,
-    RenderElementOptions,
+    RenderElementOptions, ReferencesManager, RenderElement,
 } from 'jay-runtime';
 
 export interface CompositeViewState {
@@ -14,19 +14,22 @@ export interface CompositeViewState {
 export interface CompositeElementRefs {}
 
 export type CompositeElement = JayElement<CompositeViewState, CompositeElementRefs>;
+export type CompositeElementRender = RenderElement<CompositeViewState, CompositeElementRefs, CompositeElement>
+export type CompositeElementPreRender = [refs: CompositeElementRefs, CompositeElementRender]
 
 export function render(
-    viewState: CompositeViewState,
     options?: RenderElementOptions,
-): CompositeElement {
-    return ConstructContext.withRootContext(
-        viewState,
+): CompositeElementPreRender {
+    const [refManager, []] =
+        ReferencesManager.for(options, [], [], [], []);
+    const render = (viewState: CompositeViewState) => ConstructContext.withRootContext(
+        viewState, refManager,
         () =>
             e('div', {}, [
                 e('div', {}, [dt((vs) => vs.text)]),
                 e('div', {}, ['static']),
                 e('div', {}, [dt((vs) => vs.text2)]),
             ]),
-        options,
-    );
+    ) as CompositeElement;
+    return [refManager.getPublicAPI() as CompositeElementRefs, render]
 }

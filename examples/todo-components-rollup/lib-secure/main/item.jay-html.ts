@@ -6,8 +6,7 @@ import {
     dynamicProperty as dp,
     ConstructContext,
     HTMLElementProxy,
-    elemRef as er,
-    RenderElementOptions,
+    RenderElementOptions, RenderElement, ReferencesManager,
 } from 'jay-runtime';
 
 export interface ItemViewState {
@@ -25,10 +24,18 @@ export interface ItemElementRefs {
 }
 
 export type ItemElement = JayElement<ItemViewState, ItemElementRefs>;
+export type ItemElementRender = RenderElement<
+    ItemViewState,
+    ItemElementRefs,
+    ItemElement
+>;
+export type ItemElementPreRender = [refs: ItemElementRefs, ItemElementRender];
 
-export function render(viewState: ItemViewState, options?: RenderElementOptions): ItemElement {
-    return ConstructContext.withRootContext(
-        viewState,
+export function render(options?: RenderElementOptions): ItemElementPreRender {
+    const [refManager, [refCompleted, refLabel, refButton, refTitle]] =
+        ReferencesManager.for(options, ['completed', 'label', 'button', 'title'], [], [], []);
+    const render = (viewState: ItemViewState) => ConstructContext.withRootContext(
+        viewState, refManager,
         () =>
             e(
                 'li',
@@ -48,14 +55,14 @@ export function render(viewState: ItemViewState, options?: RenderElementOptions)
                                 checked: dp((vs) => vs.isCompleted),
                             },
                             [],
-                            er('completed'),
+                            refCompleted(),
                         ),
-                        e('label', {}, [dt((vs) => vs.title)], er('label')),
-                        e('button', { class: 'destroy' }, [], er('button')),
+                        e('label', {}, [dt((vs) => vs.title)], refLabel()),
+                        e('button', { class: 'destroy' }, [], refButton()),
                     ]),
-                    e('input', { class: 'edit', value: dp((vs) => vs.editText) }, [], er('title')),
+                    e('input', { class: 'edit', value: dp((vs) => vs.editText) }, [], refTitle()),
                 ],
             ),
-        options,
-    );
+    ) as ItemElement;
+    return [refManager.getPublicAPI() as ItemElementRefs, render];
 }

@@ -1,5 +1,5 @@
-import { HTMLElementProxy, JayElement } from 'jay-runtime';
-import { compCollectionRef, elementBridge, elemRef } from 'jay-secure';
+import {HTMLElementProxy, JayElement, RenderElement} from 'jay-runtime';
+import {elementBridge, SecureReferencesManager} from 'jay-secure';
 import {
     sandboxElement as e,
     sandboxCondition as c,
@@ -43,16 +43,23 @@ export interface TodoElementRefs {
 }
 
 export type TodoElement = JayElement<TodoViewState, TodoElementRefs>;
+export type TodoElementRender = RenderElement<
+    TodoViewState,
+    TodoElementRefs,
+    TodoElement
+>;
+export type TodoElementPreRender = [refs: TodoElementRefs, TodoElementRender];
 
-export function render(viewState: TodoViewState): TodoElement {
-    return elementBridge(viewState, () => {
-        const refItems = compCollectionRef('items');
+export function render(): TodoElementPreRender {
+    const [refManager, [refNwTodo, refToggleAll, refFilterAll, refFilterActive, refFilterCompleted, refClearCompleted, refItems]] =
+        SecureReferencesManager.forElement(['newTodo', 'toggleAll', 'filterAll', 'filterActive', 'filterCompleted', 'clearCompleted'], [], [], ['items']);
+    const render = (viewState: TodoViewState) => elementBridge(viewState, refManager,() => {
         return [
-            e(elemRef('newTodo')),
+            e(refNwTodo()),
             c(
                 (vs) => vs.hasItems,
                 [
-                    e(elemRef('toggleAll')),
+                    e(refToggleAll()),
                     forEach(
                         (vs) => vs.shownTodos,
                         'id',
@@ -72,12 +79,13 @@ export function render(viewState: TodoViewState): TodoElement {
             c(
                 (vs) => vs.hasItems,
                 [
-                    e(elemRef('filterAll')),
-                    e(elemRef('filterActive')),
-                    e(elemRef('filterCompleted')),
-                    e(elemRef('clearCompleted')),
+                    e(refFilterAll()),
+                    e(refFilterActive()),
+                    e(refFilterCompleted()),
+                    e(refClearCompleted()),
                 ],
             ),
         ];
     }) as unknown as TodoElement;
+    return [refManager.getPublicAPI() as TodoElementRefs, render]
 }

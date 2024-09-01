@@ -9,7 +9,8 @@ const jayWorker = new Worker(new URL('../sandbox/immer-workaround', import.meta.
 window.onload = function () {
     setMainPort(new JayPort(new HandshakeMessageJayChannel(jayWorker)));
     let target = document.getElementById('target');
-    let main = render({});
+    let [refs, doRender] = render();
+    let main = doRender({});
     target.innerHTML = '';
     target.appendChild(main.dom);
 };

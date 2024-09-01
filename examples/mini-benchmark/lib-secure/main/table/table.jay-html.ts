@@ -5,7 +5,7 @@ import {
     dynamicElement as de,
     forEach,
     ConstructContext,
-    RenderElementOptions,
+    RenderElementOptions, ReferencesManager, RenderElement,
 } from 'jay-runtime';
 
 export interface Cell {
@@ -25,10 +25,14 @@ export interface TableViewState {
 export interface TableElementRefs {}
 
 export type TableElement = JayElement<TableViewState, TableElementRefs>;
+export type TableElementRender = RenderElement<TableViewState, TableElementRefs, TableElement>
+export type TableElementPreRender = [refs: TableElementRefs, TableElementRender]
 
-export function render(viewState: TableViewState, options?: RenderElementOptions): TableElement {
-    return ConstructContext.withRootContext(
-        viewState,
+export function render(options?: RenderElementOptions): TableElementPreRender {
+    const [refManager, []] =
+        ReferencesManager.for(options, [], [], [], []);
+    const render = (viewState: TableViewState) => ConstructContext.withRootContext(
+        viewState, refManager,
         () =>
             e('div', {}, [
                 e('table', {}, [
@@ -51,6 +55,6 @@ export function render(viewState: TableViewState, options?: RenderElementOptions
                     ]),
                 ]),
             ]),
-        options,
-    );
+    ) as TableElement;
+    return [refManager.getPublicAPI() as TableElementRefs, render]
 }

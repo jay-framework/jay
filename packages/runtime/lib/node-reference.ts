@@ -15,7 +15,7 @@ import {
     HTMLElementProxy,
     HTMLElementProxyTarget,
 } from './node-reference-types';
-import {ManagedRefs} from "./references-manager.ts";
+import {ManagedRefs} from "./references-manager";
 
 export type ReferenceTarget<ViewState> = HTMLElement | JayComponent<any, ViewState, any>;
 
