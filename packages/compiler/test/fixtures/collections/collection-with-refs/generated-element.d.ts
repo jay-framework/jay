@@ -1,4 +1,9 @@
-import {JayElement, HTMLElementCollectionProxy, RenderElementOptions, RenderElement} from 'jay-runtime';
+import {
+    JayElement,
+    RenderElement,
+    HTMLElementCollectionProxy,
+    RenderElementOptions,
+} from 'jay-runtime';
 
 export interface Item {
     name: string;
@@ -33,6 +38,4 @@ export type CollectionWithRefsElementPreRender = [
     CollectionWithRefsElementRender,
 ];
 
-export declare function render(
-    options?: RenderElementOptions,
-): CollectionWithRefsElementPreRender;
+export declare function render(options?: RenderElementOptions): CollectionWithRefsElementPreRender;

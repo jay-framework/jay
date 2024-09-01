@@ -28,7 +28,4 @@ export type DataTypesElementRender = RenderElement<
 >;
 export type DataTypesElementPreRender = [refs: DataTypesElementRefs, DataTypesElementRender];
 
-export declare function render(
-    viewState: DataTypesViewState,
-    options?: RenderElementOptions,
-): DataTypesElement;
+export declare function render(options?: RenderElementOptions): DataTypesElementPreRender;

@@ -1,4 +1,4 @@
-import { JayElement, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+import { JayElement, RenderElement, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
 
 export interface CounterViewState {
     count: number;
@@ -10,8 +10,11 @@ export interface CounterElementRefs {
 }
 
 export type CounterElement = JayElement<CounterViewState, CounterElementRefs>;
+export type CounterElementRender = RenderElement<
+    CounterViewState,
+    CounterElementRefs,
+    CounterElement
+>;
+export type CounterElementPreRender = [refs: CounterElementRefs, CounterElementRender];
 
-export declare function render(
-    viewState: CounterViewState,
-    options?: RenderElementOptions,
-): CounterElement;
+export declare function render(options?: RenderElementOptions): CounterElementPreRender;

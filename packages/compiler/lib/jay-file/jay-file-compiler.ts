@@ -187,8 +187,8 @@ function renderImports(
     return [runtimeImport, ...renderedComponentImports].join('\n');
 }
 
-function renderFunctionDeclaration(typeName: string, elementName: string): string {
-    return `export declare function render(viewState: ${typeName}, options?: RenderElementOptions): ${elementName}`;
+function renderFunctionDeclaration(preRenderType: string): string {
+    return `export declare function render(options?: RenderElementOptions): ${preRenderType}`;
 }
 
 function renderTextNode(variables: Variables, text: string, indent: Indent): RenderFragment {
@@ -920,6 +920,7 @@ export function generateElementDefinitionFile(
             renderedRefs,
             renderedElement,
             elementType,
+            preRenderType,
             renderedImplementation,
             refImportsInUse,
         } = renderFunctionImplementation(
@@ -940,7 +941,7 @@ export function generateElementDefinitionFile(
             types,
             renderedRefs,
             renderedElement,
-            renderFunctionDeclaration(jayFile.types.name, elementType),
+            renderFunctionDeclaration(preRenderType),
         ]
             .filter((_) => _ !== null && _ !== '')
             .join('\n\n');
