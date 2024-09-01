@@ -2,6 +2,8 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
+    RenderElement,
+    ReferencesManager,
     conditional as c,
     dynamicElement as de,
     ConstructContext,
@@ -27,14 +29,20 @@ export type ConditionsWithEnumElement = JayElement<
     ConditionsWithEnumViewState,
     ConditionsWithEnumElementRefs
 >;
+export type ConditionsWithEnumElementRender = RenderElement<
+    ConditionsWithEnumViewState,
+    ConditionsWithEnumElementRefs,
+    ConditionsWithEnumElement
+>;
+export type ConditionsWithEnumElementPreRender = [
+    refs: ConditionsWithEnumElementRefs,
+    ConditionsWithEnumElementRender,
+];
 
-export function render(
-    viewState: ConditionsWithEnumViewState,
-    options?: RenderElementOptions,
-): ConditionsWithEnumElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () =>
+export function render(options?: RenderElementOptions): ConditionsWithEnumElementPreRender {
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const render = (viewState: ConditionsWithEnumViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             de('div', {}, [
                 c(
                     (vs) => vs.cond === Cond.one,
@@ -49,6 +57,6 @@ export function render(
                     e('div', { style: { cssText: 'color:green' } }, [dt((vs) => vs.text3)]),
                 ),
             ]),
-        options,
-    );
+        ) as ConditionsWithEnumElement;
+    return [refManager.getPublicAPI() as ConditionsWithEnumElementRefs, render];
 }

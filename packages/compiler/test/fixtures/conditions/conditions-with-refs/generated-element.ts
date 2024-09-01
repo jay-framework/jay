@@ -2,11 +2,12 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
+    RenderElement,
+    ReferencesManager,
     conditional as c,
     dynamicElement as de,
     ConstructContext,
     HTMLElementProxy,
-    elemRef as er,
     RenderElementOptions,
 } from 'jay-runtime';
 
@@ -25,14 +26,26 @@ export type ConditionsWithRefsElement = JayElement<
     ConditionsWithRefsViewState,
     ConditionsWithRefsElementRefs
 >;
+export type ConditionsWithRefsElementRender = RenderElement<
+    ConditionsWithRefsViewState,
+    ConditionsWithRefsElementRefs,
+    ConditionsWithRefsElement
+>;
+export type ConditionsWithRefsElementPreRender = [
+    refs: ConditionsWithRefsElementRefs,
+    ConditionsWithRefsElementRender,
+];
 
-export function render(
-    viewState: ConditionsWithRefsViewState,
-    options?: RenderElementOptions,
-): ConditionsWithRefsElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () =>
+export function render(options?: RenderElementOptions): ConditionsWithRefsElementPreRender {
+    const [refManager, [refText1, refText2]] = ReferencesManager.for(
+        options,
+        ['refText1', 'refText2'],
+        [],
+        [],
+        [],
+    );
+    const render = (viewState: ConditionsWithRefsViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             de('div', {}, [
                 c(
                     (vs) => vs.cond,
@@ -40,16 +53,16 @@ export function render(
                         'div',
                         { style: { cssText: 'color:red' } },
                         [dt((vs) => vs.text1)],
-                        er('text1'),
+                        refText1(),
                     ),
                 ),
                 c(
                     (vs) => !vs.cond,
                     e('div', { style: { cssText: 'color:green' } }, [
-                        e('span', {}, [dt((vs) => vs.text2)], er('text2')),
+                        e('span', {}, [dt((vs) => vs.text2)], refText2()),
                     ]),
                 ),
             ]),
-        options,
-    );
+        ) as ConditionsWithRefsElement;
+    return [refManager.getPublicAPI() as ConditionsWithRefsElementRefs, render];
 }

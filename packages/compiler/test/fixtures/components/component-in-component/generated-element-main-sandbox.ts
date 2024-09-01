@@ -1,8 +1,9 @@
 import {
     JayElement,
     element as e,
+    RenderElement,
+    ReferencesManager,
     ConstructContext,
-    compRef as cr,
     RenderElementOptions,
 } from 'jay-runtime';
 import { secureChildComp } from 'jay-secure';
@@ -28,41 +29,54 @@ export type ComponentInComponentElement = JayElement<
     ComponentInComponentViewState,
     ComponentInComponentElementRefs
 >;
+export type ComponentInComponentElementRender = RenderElement<
+    ComponentInComponentViewState,
+    ComponentInComponentElementRefs,
+    ComponentInComponentElement
+>;
+export type ComponentInComponentElementPreRender = [
+    refs: ComponentInComponentElementRefs,
+    ComponentInComponentElementRender,
+];
 
-export function render(
-    viewState: ComponentInComponentViewState,
-    options?: RenderElementOptions,
-): ComponentInComponentElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () =>
+export function render(options?: RenderElementOptions): ComponentInComponentElementPreRender {
+    const [refManager, [refCounter1, refCounterTwo, refAR1, refAR2, refAR3]] =
+        ReferencesManager.for(
+            options,
+            [],
+            [],
+            ['refCounter1', 'refCounterTwo', 'refAR1', 'refAR2', 'refAR3'],
+            [],
+        );
+    const render = (viewState: ComponentInComponentViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 secureChildComp(
                     Counter,
                     (vs: ComponentInComponentViewState) => ({ initialValue: vs.count1 }),
-                    cr('counter1'),
+                    refCounter1(),
                 ),
                 secureChildComp(
                     Counter,
                     (vs: ComponentInComponentViewState) => ({ initialValue: vs.count2 }),
-                    cr('counterTwo'),
+                    refCounterTwo(),
                 ),
                 secureChildComp(
                     Counter,
                     (vs: ComponentInComponentViewState) => ({ initialValue: vs.count3 }),
-                    cr('aR1'),
+                    refAR1(),
                 ),
                 secureChildComp(
                     Counter,
                     (vs: ComponentInComponentViewState) => ({ initialValue: vs.count4?.count }),
-                    cr('aR2'),
+                    refAR2(),
                 ),
                 secureChildComp(
                     Counter,
                     (vs: ComponentInComponentViewState) => ({ initialValue: 25 }),
-                    cr('aR3'),
+                    refAR3(),
                 ),
             ]),
-        options,
-    );
+        ) as ComponentInComponentElement;
+    return [refManager.getPublicAPI() as ComponentInComponentElementRefs, render];
 }

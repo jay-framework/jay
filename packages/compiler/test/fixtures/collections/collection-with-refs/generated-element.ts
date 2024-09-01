@@ -2,11 +2,12 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
+    RenderElement,
+    ReferencesManager,
     dynamicElement as de,
     forEach,
     ConstructContext,
     HTMLElementCollectionProxy,
-    elemCollectionRef as ecr,
     RenderElementOptions,
 } from 'jay-runtime';
 
@@ -33,19 +34,27 @@ export type CollectionWithRefsElement = JayElement<
     CollectionWithRefsViewState,
     CollectionWithRefsElementRefs
 >;
+export type CollectionWithRefsElementRender = RenderElement<
+    CollectionWithRefsViewState,
+    CollectionWithRefsElementRefs,
+    CollectionWithRefsElement
+>;
+export type CollectionWithRefsElementPreRender = [
+    refs: CollectionWithRefsElementRefs,
+    CollectionWithRefsElementRender,
+];
 
-export function render(
-    viewState: CollectionWithRefsViewState,
-    options?: RenderElementOptions,
-): CollectionWithRefsElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () => {
-            const refName = ecr('name');
-            const refCompleted = ecr('completed');
-            const refCost = ecr('cost');
-            const refDone = ecr('done');
-            return e('div', {}, [
+export function render(options?: RenderElementOptions): CollectionWithRefsElementPreRender {
+    const [refManager, [refName, refCompleted, refCost, refDone]] = ReferencesManager.for(
+        options,
+        [],
+        ['refName', 'refCompleted', 'refCost', 'refDone'],
+        [],
+        [],
+    );
+    const render = (viewState: CollectionWithRefsViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
+            e('div', {}, [
                 e('h1', {}, [dt((vs) => vs.title)]),
                 de('div', {}, [
                     forEach(
@@ -101,8 +110,7 @@ export function render(
                         'id',
                     ),
                 ]),
-            ]);
-        },
-        options,
-    );
+            ]),
+        ) as CollectionWithRefsElement;
+    return [refManager.getPublicAPI() as CollectionWithRefsElementRefs, render];
 }

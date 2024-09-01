@@ -1,13 +1,13 @@
 import {
     JayElement,
     element as e,
+    RenderElement,
+    ReferencesManager,
     conditional as c,
     dynamicElement as de,
     forEach,
     ConstructContext,
     childComp,
-    compRef as cr,
-    compCollectionRef as ccr,
     RenderElementOptions,
 } from 'jay-runtime';
 import { CounterRef, CounterRefs } from '../counter/counter-refs';
@@ -33,16 +33,29 @@ export type DynamicComponentInComponentElement = JayElement<
     DynamicComponentInComponentViewState,
     DynamicComponentInComponentElementRefs
 >;
+export type DynamicComponentInComponentElementRender = RenderElement<
+    DynamicComponentInComponentViewState,
+    DynamicComponentInComponentElementRefs,
+    DynamicComponentInComponentElement
+>;
+export type DynamicComponentInComponentElementPreRender = [
+    refs: DynamicComponentInComponentElementRefs,
+    DynamicComponentInComponentElementRender,
+];
 
 export function render(
-    viewState: DynamicComponentInComponentViewState,
     options?: RenderElementOptions,
-): DynamicComponentInComponentElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () => {
-            const refCounter1 = ccr('counter1');
-            return de('div', {}, [
+): DynamicComponentInComponentElementPreRender {
+    const [refManager, [refCounter2, refCounter1]] = ReferencesManager.for(
+        options,
+        [],
+        [],
+        ['refCounter2'],
+        ['refCounter1'],
+    );
+    const render = (viewState: DynamicComponentInComponentViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
+            de('div', {}, [
                 forEach(
                     (vs) => vs.nestedCounters,
                     (vs1: NestedCounter) => {
@@ -59,11 +72,10 @@ export function render(
                     childComp(
                         Counter,
                         (vs: DynamicComponentInComponentViewState) => ({ initialValue: vs.count1 }),
-                        cr('counter2'),
+                        refCounter2(),
                     ),
                 ),
-            ]);
-        },
-        options,
-    );
+            ]),
+        ) as DynamicComponentInComponentElement;
+    return [refManager.getPublicAPI() as DynamicComponentInComponentElementRefs, render];
 }
