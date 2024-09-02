@@ -1,9 +1,7 @@
-import {
-    withContext,
-} from 'jay-runtime';
-import {COUNT_CONTEXT, mkContext} from "./context-tests-components/number-context.ts";
-import {LabelAndButtonComp} from "./context-tests-components/label-and-button-component.ts";
-import {App} from "./context-tests-components/app-component.ts";
+import { withContext } from 'jay-runtime';
+import { COUNT_CONTEXT, mkContext } from './context-tests-components/number-context.ts';
+import { LabelAndButtonComp } from './context-tests-components/label-and-button-component.ts';
+import { App } from './context-tests-components/app-component.ts';
 
 describe('context api', () => {
     describe('classic case - component updates context on click, when then renders content from context', () => {
@@ -35,17 +33,17 @@ describe('context api', () => {
             });
         });
 
-        describe("providing context", () => {
-            it("provides and consumes context", () => {
+        describe('providing context', () => {
+            it('provides and consumes context', () => {
                 const app = App({});
                 expect(app.element.dom.querySelector('#text').textContent).toBe('the count is 12');
-            })
+            });
 
-            it("inc context value from parent", () => {
+            it('inc context value from parent', () => {
                 const app = App({});
                 app.element.refs.button.exec$((elem) => elem.click());
                 expect(app.element.dom.querySelector('#text').textContent).toBe('the count is 13');
-            })
-        })
+            });
+        });
     });
 });

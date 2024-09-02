@@ -1,6 +1,6 @@
-import {Getter, Setter} from "jay-reactive";
-import {createJayContext} from "jay-runtime";
-import {createReactiveContext, createState} from "../../lib";
+import { Getter, Setter } from 'jay-reactive';
+import { createJayContext } from 'jay-runtime';
+import { createReactiveContext, createState } from '../../lib';
 
 export interface CountContext {
     count: Getter<number>;

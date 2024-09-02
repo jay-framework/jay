@@ -1,11 +1,13 @@
 import {
-    ConstructContext, dynamicText as dt, element as e,
+    ConstructContext,
+    dynamicText as dt,
+    element as e,
     HTMLElementProxy,
     JayElement,
     ReferencesManager,
     RenderElement,
-    RenderElementOptions
-} from "jay-runtime";
+    RenderElementOptions,
+} from 'jay-runtime';
 
 export interface LabelAndButtonViewState {
     label: string;
@@ -26,17 +28,14 @@ export type LabelAndButtonElementPreRender = [
     LabelAndButtonElementRender,
 ];
 
-export function renderLabelElement(
-    options?: RenderElementOptions,
-): LabelAndButtonElementPreRender {
+export function renderLabelElement(options?: RenderElementOptions): LabelAndButtonElementPreRender {
     const [refManager, [button]] = ReferencesManager.for(options, ['button'], [], [], []);
     const render = (viewState: LabelAndButtonViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () => {
             return e('div', {}, [
-                e('span', {id: 'text'}, [
-                    dt((vs) => vs.label),
-                ]),
-                e('button', {id: 'component-button'}, ['inc'], button())]);
+                e('span', { id: 'text' }, [dt((vs) => vs.label)]),
+                e('button', { id: 'component-button' }, ['inc'], button()),
+            ]);
         }) as LabelAndButtonElement;
     return [refManager.getPublicAPI() as LabelAndButtonRefs, render];
 }

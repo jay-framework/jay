@@ -1,13 +1,14 @@
-import {LabelAndButtonComp} from "./label-and-button-component.ts";
+import { LabelAndButtonComp } from './label-and-button-component.ts';
 import {
     childComp,
     ConstructContext,
-    element as e, HTMLElementProxy,
+    element as e,
+    HTMLElementProxy,
     JayElement,
     ReferencesManager,
     RenderElement,
-    RenderElementOptions
-} from "jay-runtime";
+    RenderElementOptions,
+} from 'jay-runtime';
 
 export interface AppViewState {}
 export interface AppRefs {
@@ -30,7 +31,7 @@ export function AppElement(options?: RenderElementOptions): AppElementPreRender 
         ConstructContext.withRootContext(viewState, refManager, () => {
             return e('div', {}, [
                 childComp(LabelAndButtonComp, (vs) => ({}), labelAndButton()),
-                e('button', {id: 'parent-button'}, ['inc'], button())
+                e('button', { id: 'parent-button' }, ['inc'], button()),
             ]);
         }) as AppElement;
     return [refManager.getPublicAPI() as AppRefs, render];

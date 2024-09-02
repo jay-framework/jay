@@ -5,7 +5,8 @@ import {
     withContext,
     ContextMarker,
     useContext,
-    PreRenderElement, RenderElement,
+    PreRenderElement,
+    RenderElement,
 } from 'jay-runtime';
 import { Getter, Reactive } from 'jay-reactive';
 import { JSONPatch } from 'jay-json-patch';
@@ -71,18 +72,21 @@ type ContextMarkers<T extends any[]> = {
     [K in keyof T]: ContextMarker<T[K]>;
 };
 
-function renderWithContexts<ViewState extends object,
+function renderWithContexts<
+    ViewState extends object,
     Refs extends object,
     JayElementT extends JayElement<ViewState, Refs>,
 >(
     provideContexts: [ContextMarker<any>, any][],
     render: RenderElement<ViewState, Refs, JayElementT>,
     viewState: ViewState,
-    index: number = 0): JayElementT {
+    index: number = 0,
+): JayElementT {
     if (provideContexts.length > index) {
         let [marker, context] = provideContexts[0];
-        return withContext(marker, context,
-            () => renderWithContexts(provideContexts, render, viewState, index+1))
+        return withContext(marker, context, () =>
+            renderWithContexts(provideContexts, render, viewState, index + 1),
+        );
     }
     return render(viewState);
 }
@@ -127,9 +131,12 @@ export function makeJayComponent<
                 let viewStateValueOrGetters = renderViewState(propsProxy);
                 let viewState = materializeViewState(viewStateValueOrGetters);
                 if (!element)
-                    element = renderWithContexts(componentContext.provideContexts, render, viewState)
-                else
-                    element.update(viewState);
+                    element = renderWithContexts(
+                        componentContext.provideContexts,
+                        render,
+                        viewState,
+                    );
+                else element.update(viewState);
             });
             let update = (updateProps) => {
                 propsProxy.update(updateProps);

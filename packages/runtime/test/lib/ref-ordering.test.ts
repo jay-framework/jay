@@ -8,7 +8,7 @@ import {
     ReferencesManager,
     RenderElementOptions,
 } from '../../lib';
-import { Item, ItemProps } from './comps/item.ts';
+import { Item, ItemProps } from './comps/item';
 import { ItemComponentType } from './comps/item-refs';
 
 describe('ref creation ordering with reference targets', () => {
