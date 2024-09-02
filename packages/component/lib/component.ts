@@ -2,11 +2,10 @@ import {
     JayElement,
     JayComponent,
     JayEventHandlerWrapper,
-    RenderElement,
     withContext,
     ContextMarker,
     useContext,
-    PreRenderElement,
+    PreRenderElement, RenderElement,
 } from 'jay-runtime';
 import { Getter, Reactive } from 'jay-reactive';
 import { JSONPatch } from 'jay-json-patch';
@@ -72,6 +71,16 @@ type ContextMarkers<T extends any[]> = {
     [K in keyof T]: ContextMarker<T[K]>;
 };
 
+function renderWithContexts<ViewState extends object,
+    Refs extends object,
+    JayElementT extends JayElement<ViewState, Refs>,
+>(
+    provideContexts: [ContextMarker<any>, any][],
+    render: RenderElement<ViewState, Refs, JayElementT>,
+    viewState: ViewState): JayElementT {
+    return render(viewState);
+}
+
 export function makeJayComponent<
     PropsT extends object,
     ViewState extends object,
@@ -108,11 +117,14 @@ export function makeJayComponent<
             let coreComp = comp(propsProxy, refs, ...contexts); // wrap event listening with batch reactions
             let { render: renderViewState, ...api } = coreComp;
             // todo provide contexts
-            let element: JayElementT = render({} as ViewState);
+            let element: JayElementT;
             componentContext.reactive.createReaction(() => {
                 let viewStateValueOrGetters = renderViewState(propsProxy);
                 let viewState = materializeViewState(viewStateValueOrGetters);
-                element.update(viewState);
+                if (!element)
+                    element = renderWithContexts(componentContext.provideContexts, render, viewState)
+                else
+                    element.update(viewState);
             });
             let update = (updateProps) => {
                 propsProxy.update(updateProps);

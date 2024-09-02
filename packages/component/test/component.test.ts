@@ -985,9 +985,9 @@ describe('state management', () => {
             }
 
             const Test3 = makeJayComponent(renderTwoLabelElement, TestComponent3);
-            const initialRenderCycles = 2;
+            const initialRenderCycles = 1;
 
-            it('should render twice static elements on first render (before any update)', async () => {
+            it('should render once static elements on first render', async () => {
                 const instance = Test1({ one: 'one', two: 'two' });
                 await instance.element.refs.label.exec$((elem) =>
                     expect(elem.textContent).toBe('one two'),
