@@ -1,7 +1,8 @@
 import { render } from './counter.jay-html';
 
 function Counter(initialValue: number) {
-    let jayElement = render({ count: initialValue });
+    const [refs, render2] = render();
+    let jayElement = render2({ count: initialValue });
     let count = initialValue;
 
     jayElement.refs.adder.onclick(() => {
