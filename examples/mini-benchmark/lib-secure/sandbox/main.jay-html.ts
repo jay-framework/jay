@@ -1,8 +1,9 @@
-import {HTMLElementProxy, JayElement, RenderElement} from 'jay-runtime';
+import { HTMLElementProxy, JayElement, RenderElement } from 'jay-runtime';
 import {
     sandboxElement as e,
     sandboxCondition as c,
-    sandboxChildComp as childComp, SecureReferencesManager,
+    sandboxChildComp as childComp,
+    SecureReferencesManager,
 } from 'jay-secure';
 import { BasicComponentType } from '../main/basic/basic-data-refs';
 import { Basic } from './basic/basic-data';
@@ -48,36 +49,53 @@ export interface MainElementRefs {
 }
 
 export type MainElement = JayElement<MainViewState, MainElementRefs>;
-export type MainElementRender = RenderElement<MainViewState, MainElementRefs, MainElement>
-export type MainElementPreRender = [refs: MainElementRefs, MainElementRender]
+export type MainElementRender = RenderElement<MainViewState, MainElementRefs, MainElement>;
+export type MainElementPreRender = [refs: MainElementRefs, MainElementRender];
 
 export function render(): MainElementPreRender {
-    const [refManager, [refChooseExample, refCycles, refRun, refBasic, refCollections, refComposite, refConditions, refTable]] =
-        SecureReferencesManager.forElement(['chooseExample', 'cycles', 'run'], [], ['basic', 'collections', 'composite', 'conditions', 'table'], []);
-    const render = (viewState: MainViewState) =>  elementBridge(viewState, refManager, () => [
-        e(refChooseExample()),
-        e(refCycles()),
-        e(refRun()),
-        c(
-            (vs) => vs.selectedExample === SelectedExample.basic,
-            [childComp(Basic, (vs) => ({ cycles: vs.cycles }), refBasic())],
-        ),
-        c(
-            (vs) => vs.selectedExample === SelectedExample.collections,
-            [childComp(Collections, (vs) => ({ cycles: vs.cycles }), refCollections())],
-        ),
-        c(
-            (vs) => vs.selectedExample === SelectedExample.composite,
-            [childComp(Composite, (vs) => ({ cycles: vs.cycles }), refComposite())],
-        ),
-        c(
-            (vs) => vs.selectedExample === SelectedExample.conditions,
-            [childComp(Conditions, (vs) => ({ cycles: vs.cycles }), refConditions())],
-        ),
-        c(
-            (vs) => vs.selectedExample === SelectedExample.table,
-            [childComp(TableHost, (vs) => ({ cycles: vs.cycles }), refTable())],
-        ),
-    ]) as MainElement;
-    return [refManager.getPublicAPI() as MainElementRefs, render]
+    const [
+        refManager,
+        [
+            refChooseExample,
+            refCycles,
+            refRun,
+            refBasic,
+            refCollections,
+            refComposite,
+            refConditions,
+            refTable,
+        ],
+    ] = SecureReferencesManager.forElement(
+        ['chooseExample', 'cycles', 'run'],
+        [],
+        ['basic', 'collections', 'composite', 'conditions', 'table'],
+        [],
+    );
+    const render = (viewState: MainViewState) =>
+        elementBridge(viewState, refManager, () => [
+            e(refChooseExample()),
+            e(refCycles()),
+            e(refRun()),
+            c(
+                (vs) => vs.selectedExample === SelectedExample.basic,
+                [childComp(Basic, (vs) => ({ cycles: vs.cycles }), refBasic())],
+            ),
+            c(
+                (vs) => vs.selectedExample === SelectedExample.collections,
+                [childComp(Collections, (vs) => ({ cycles: vs.cycles }), refCollections())],
+            ),
+            c(
+                (vs) => vs.selectedExample === SelectedExample.composite,
+                [childComp(Composite, (vs) => ({ cycles: vs.cycles }), refComposite())],
+            ),
+            c(
+                (vs) => vs.selectedExample === SelectedExample.conditions,
+                [childComp(Conditions, (vs) => ({ cycles: vs.cycles }), refConditions())],
+            ),
+            c(
+                (vs) => vs.selectedExample === SelectedExample.table,
+                [childComp(TableHost, (vs) => ({ cycles: vs.cycles }), refTable())],
+            ),
+        ]) as MainElement;
+    return [refManager.getPublicAPI() as MainElementRefs, render];
 }

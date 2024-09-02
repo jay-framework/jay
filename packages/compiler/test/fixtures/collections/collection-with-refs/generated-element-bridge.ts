@@ -39,15 +39,9 @@ export type CollectionWithRefsElementPreRender = [
     CollectionWithRefsElementRender,
 ];
 
-
 export function render(): CollectionWithRefsElementPreRender {
     const [refManager, [refName, refCompleted, refCost, refDone]] =
-        SecureReferencesManager.forElement(
-            [],
-            ['name', 'completed', 'cost', 'done'],
-            [],
-            [],
-        );
+        SecureReferencesManager.forElement([], ['name', 'completed', 'cost', 'done'], [], []);
     const render = (viewState: CollectionWithRefsViewState) =>
         elementBridge(viewState, refManager, () => [
             forEach(

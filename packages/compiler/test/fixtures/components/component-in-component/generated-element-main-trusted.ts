@@ -39,13 +39,7 @@ export type ComponentInComponentElementPreRender = [
 
 export function render(options?: RenderElementOptions): ComponentInComponentElementPreRender {
     const [refManager, [refCounter1, refCounterTwo, refAR1, refAR2, refAR3]] =
-        ReferencesManager.for(
-            options,
-            [],
-            [],
-            ['counter1', 'counterTwo', 'aR1', 'aR2', 'aR3'],
-            [],
-        );
+        ReferencesManager.for(options, [], [], ['counter1', 'counterTwo', 'aR1', 'aR2', 'aR3'], []);
     const render = (viewState: ComponentInComponentViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [

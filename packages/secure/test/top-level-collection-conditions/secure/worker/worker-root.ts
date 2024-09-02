@@ -1,11 +1,15 @@
 import { Counter } from './counter';
-import { sandboxRoot, SecureReferencesManager} from '../../../../lib/';
+import { sandboxRoot, SecureReferencesManager } from '../../../../lib/';
 import { sandboxChildComp, sandboxCondition, sandboxForEach } from '../../../../lib/';
 
 export function initializeWorker() {
     sandboxRoot(() => {
-        const [, [comp1, comp2]] =
-            SecureReferencesManager.forSandboxRoot([], [], ['comp1'], ['comp2'])
+        const [, [comp1, comp2]] = SecureReferencesManager.forSandboxRoot(
+            [],
+            [],
+            ['comp1'],
+            ['comp2'],
+        );
         return [
             sandboxCondition(
                 (vs) => vs.cond,

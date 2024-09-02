@@ -1,6 +1,6 @@
 import { element as e, dynamicText as dt } from '../../lib/element';
 import { ConstructContext } from '../../lib/context';
-import {ReferencesManager} from "../../lib";
+import { ReferencesManager } from '../../lib';
 
 describe('text-element', () => {
     interface ViewState {
@@ -20,8 +20,7 @@ describe('text-element', () => {
     const updatedNameAndGraduate: ViewState = { ...updatedName, graduated: true };
 
     it('should render string as text', () => {
-        let [refManager, []] =
-            ReferencesManager.for({}, [], [], [], []);
+        let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
         let jayElement = ConstructContext.withRootContext(initial, refManager, () =>
             e('div', { className: 'item' }, [dt((vs) => vs.firstName)]),
         );
@@ -29,8 +28,7 @@ describe('text-element', () => {
     });
 
     it('should update string as text', () => {
-        let [refManager, []] =
-            ReferencesManager.for({}, [], [], [], []);
+        let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
         let jayElement = ConstructContext.withRootContext(initial, refManager, () =>
             e('div', { className: 'item' }, [dt((vs) => vs.firstName)]),
         );
@@ -39,9 +37,8 @@ describe('text-element', () => {
     });
 
     it('should render complex string as text', () => {
-        let [refManager, []] =
-            ReferencesManager.for({}, [], [], [], []);
-        let jayElement = ConstructContext.withRootContext(initial, refManager,() =>
+        let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+        let jayElement = ConstructContext.withRootContext(initial, refManager, () =>
             e('div', { className: 'item' }, [
                 dt(
                     (vs) =>
@@ -55,9 +52,8 @@ describe('text-element', () => {
     });
 
     it('should render complex string as text', () => {
-        let [refManager, []] =
-            ReferencesManager.for({}, [], [], [], []);
-        let jayElement = ConstructContext.withRootContext(initial, refManager,() =>
+        let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+        let jayElement = ConstructContext.withRootContext(initial, refManager, () =>
             e('div', { className: 'item' }, [
                 dt(
                     (vs) =>

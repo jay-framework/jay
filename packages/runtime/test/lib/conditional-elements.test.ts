@@ -5,7 +5,7 @@ import {
     dynamicText as dt,
 } from '../../lib/element';
 import { JSDOM } from 'jsdom';
-import {JayElement, HTMLElementProxy, ReferencesManager} from '../../lib';
+import { JayElement, HTMLElementProxy, ReferencesManager } from '../../lib';
 import { ConstructContext } from '../../lib';
 
 const SOME_VALUE = 'some text in the element';
@@ -92,8 +92,14 @@ describe('conditional-element', () => {
         interface ConditionalElement extends JayElement<ViewState, ConditionalRefs> {}
 
         function makeElement(data: ViewState): ConditionalElement {
-            let [refManager, [text1, text2]] = ReferencesManager.for({}, ['text1', 'text2'], [], [], []);
-            return ConstructContext.withRootContext(data, refManager,() => {
+            let [refManager, [text1, text2]] = ReferencesManager.for(
+                {},
+                ['text1', 'text2'],
+                [],
+                [],
+                [],
+            );
+            return ConstructContext.withRootContext(data, refManager, () => {
                 // noinspection DuplicatedCode
                 return de('div', {}, [
                     conditional(
@@ -114,8 +120,8 @@ describe('conditional-element', () => {
                             text2(),
                         ),
                     ),
-                ])},
-            ) as ConditionalElement;
+                ]);
+            }) as ConditionalElement;
         }
 
         it('should have references to elements under conditional', () => {

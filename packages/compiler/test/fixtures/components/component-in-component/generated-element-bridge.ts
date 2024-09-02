@@ -1,9 +1,5 @@
 import { JayElement, RenderElement } from 'jay-runtime';
-import {
-    SecureReferencesManager,
-    elementBridge,
-    sandboxChildComp as childComp,
-} from 'jay-secure';
+import { SecureReferencesManager, elementBridge, sandboxChildComp as childComp } from 'jay-secure';
 import { CounterComponentType } from '../counter/counter-refs';
 // @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-workerSandbox';
@@ -46,31 +42,31 @@ export function render(): ComponentInComponentElementPreRender {
         );
     const render = (viewState: ComponentInComponentViewState) =>
         elementBridge(viewState, refManager, () => [
-        childComp(
-            Counter,
-            (vs: ComponentInComponentViewState) => ({ initialValue: vs.count1 }),
-            refCounter1(),
-        ),
-        childComp(
-            Counter,
-            (vs: ComponentInComponentViewState) => ({ initialValue: vs.count2 }),
-            refCounterTwo(),
-        ),
-        childComp(
-            Counter,
-            (vs: ComponentInComponentViewState) => ({ initialValue: vs.count3 }),
-            refAR1(),
-        ),
-        childComp(
-            Counter,
-            (vs: ComponentInComponentViewState) => ({ initialValue: vs.count4?.count }),
-            refAR2(),
-        ),
-        childComp(
-            Counter,
-            (vs: ComponentInComponentViewState) => ({ initialValue: 25 }),
-            refAR3(),
-        ),
+            childComp(
+                Counter,
+                (vs: ComponentInComponentViewState) => ({ initialValue: vs.count1 }),
+                refCounter1(),
+            ),
+            childComp(
+                Counter,
+                (vs: ComponentInComponentViewState) => ({ initialValue: vs.count2 }),
+                refCounterTwo(),
+            ),
+            childComp(
+                Counter,
+                (vs: ComponentInComponentViewState) => ({ initialValue: vs.count3 }),
+                refAR1(),
+            ),
+            childComp(
+                Counter,
+                (vs: ComponentInComponentViewState) => ({ initialValue: vs.count4?.count }),
+                refAR2(),
+            ),
+            childComp(
+                Counter,
+                (vs: ComponentInComponentViewState) => ({ initialValue: 25 }),
+                refAR3(),
+            ),
         ]) as ComponentInComponentElement;
     return [refManager.getPublicAPI() as ComponentInComponentElementRefs, render];
 }

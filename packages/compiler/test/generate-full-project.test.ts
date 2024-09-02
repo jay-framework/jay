@@ -136,10 +136,12 @@ describe('generate full project', () => {
                 );
                 expect(refsFile.validations).toEqual([]);
                 expect(await prettify(refsFile.val)).toEqual(
-                    await prettify(await readTestFile(
-                        './sandboxed/sandboxed-counter/generated/main',
-                        'counter-refs.d.ts',
-                    )),
+                    await prettify(
+                        await readTestFile(
+                            './sandboxed/sandboxed-counter/generated/main',
+                            'counter-refs.d.ts',
+                        ),
+                    ),
                 );
             });
 

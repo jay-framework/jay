@@ -36,13 +36,10 @@ export type DataTypesElementRender = RenderElement<
 >;
 export type DataTypesElementPreRender = [refs: DataTypesElementRefs, DataTypesElementRender];
 
-export function render(
-    options?: RenderElementOptions,
-): DataTypesElementPreRender {
+export function render(options?: RenderElementOptions): DataTypesElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
-    const render = (viewState: DataTypesViewState) => ConstructContext.withRootContext(
-        viewState, refManager,
-        () =>
+    const render = (viewState: DataTypesViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('span', {}, [dt((vs) => vs.s1)]),
                 e('span', {}, [dt((vs) => vs.n1)]),
@@ -50,6 +47,6 @@ export function render(
                 e('span', {}, [dt((vs) => vs.o1?.s2)]),
                 e('span', {}, [dt((vs) => vs.o1?.n2)]),
             ]),
-    ) as DataTypesElement;
+        ) as DataTypesElement;
     return [refManager.getPublicAPI() as DataTypesElementRefs, render];
 }

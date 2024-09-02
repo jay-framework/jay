@@ -165,11 +165,13 @@ function renderImports(
             .map((symbol) => ((symbol.type as JayImportedType).type as JayComponentType).name)
             .filter(
                 (compType) =>
-                    refImportsInUse.has(compType + 'ComponentType') || refImportsInUse.has(compType + 'Refs'),
+                    refImportsInUse.has(compType + 'ComponentType') ||
+                    refImportsInUse.has(compType + 'Refs'),
             )
             .map((compType) => {
                 let importSymbols = [];
-                if (refImportsInUse.has(compType + 'ComponentType')) importSymbols.push(compType + 'ComponentType');
+                if (refImportsInUse.has(compType + 'ComponentType'))
+                    importSymbols.push(compType + 'ComponentType');
                 if (refImportsInUse.has(compType + 'Refs')) importSymbols.push(compType + 'Refs');
                 imports.push(
                     `import {${importSymbols.join(', ')}} from "${importStatement.module}-refs";`,
@@ -280,12 +282,7 @@ function renderElementRef(
                 viewStateType: variables.currentType,
             },
         ];
-        return new RenderFragment(
-            `${constName}()`,
-            Imports.none(),
-            [],
-            refs,
-        );
+        return new RenderFragment(`${constName}()`, Imports.none(), [], refs);
     } else return RenderFragment.empty();
 }
 
@@ -349,12 +346,7 @@ function renderChildCompRef(
             viewStateType: variables.currentType,
         },
     ];
-    return new RenderFragment(
-        `${constName}()`,
-        Imports.for(),
-        [],
-        refs,
-    );
+    return new RenderFragment(`${constName}()`, Imports.for(), [], refs);
 }
 
 function renderNode(node: Node, context: RenderContext): RenderFragment {
@@ -598,23 +590,32 @@ function processImportedComponents(importStatements: JayImportLink[]) {
 }
 
 function renderRefsForReferenceManager(refs: Ref[]) {
-    const elemRefs = refs.filter(_ => !isComponentRef(_) && !isCollectionRef(_))
-    const elemCollectionRefs = refs.filter(_ => !isComponentRef(_) && isCollectionRef(_))
-    const compRefs = refs.filter(_ => isComponentRef(_) && !isCollectionRef(_))
-    const compCollectionRefs = refs.filter(_ => isComponentRef(_) && isCollectionRef(_))
+    const elemRefs = refs.filter((_) => !isComponentRef(_) && !isCollectionRef(_));
+    const elemCollectionRefs = refs.filter((_) => !isComponentRef(_) && isCollectionRef(_));
+    const compRefs = refs.filter((_) => isComponentRef(_) && !isCollectionRef(_));
+    const compCollectionRefs = refs.filter((_) => isComponentRef(_) && isCollectionRef(_));
 
-    const elemRefsDeclarations = elemRefs.map(ref => `'${ref.ref}'`).join(', ');
-    const elemCollectionRefsDeclarations = elemCollectionRefs.map(ref => `'${ref.ref}'`).join(', ');
-    const compRefsDeclarations = compRefs.map(ref => `'${ref.ref}'`).join(', ');
-    const compCollectionRefsDeclarations = compCollectionRefs.map(ref => `'${ref.ref}'`).join(', ');
+    const elemRefsDeclarations = elemRefs.map((ref) => `'${ref.ref}'`).join(', ');
+    const elemCollectionRefsDeclarations = elemCollectionRefs
+        .map((ref) => `'${ref.ref}'`)
+        .join(', ');
+    const compRefsDeclarations = compRefs.map((ref) => `'${ref.ref}'`).join(', ');
+    const compCollectionRefsDeclarations = compCollectionRefs
+        .map((ref) => `'${ref.ref}'`)
+        .join(', ');
     const refVariables = [
-        ...elemRefs.map(ref => ref.constName),
-        ...elemCollectionRefs.map(ref => ref.constName),
-        ...compRefs.map(ref => ref.constName),
-        ...compCollectionRefs.map(ref => ref.constName)
-    ].join(', ')
-    return {elemRefsDeclarations, elemCollectionRefsDeclarations, compRefsDeclarations, compCollectionRefsDeclarations,
-        refVariables} ;
+        ...elemRefs.map((ref) => ref.constName),
+        ...elemCollectionRefs.map((ref) => ref.constName),
+        ...compRefs.map((ref) => ref.constName),
+        ...compCollectionRefs.map((ref) => ref.constName),
+    ].join(', ');
+    return {
+        elemRefsDeclarations,
+        elemCollectionRefsDeclarations,
+        compRefsDeclarations,
+        compCollectionRefsDeclarations,
+        refVariables,
+    };
 }
 
 function renderFunctionImplementation(
@@ -674,8 +675,13 @@ ${Indent.forceIndent(code, 4)})`,
         );
     }
 
-    const {elemRefsDeclarations, elemCollectionRefsDeclarations, compRefsDeclarations, compCollectionRefsDeclarations,
-        refVariables} = renderRefsForReferenceManager(renderedRoot.refs)
+    const {
+        elemRefsDeclarations,
+        elemCollectionRefsDeclarations,
+        compRefsDeclarations,
+        compCollectionRefsDeclarations,
+        refVariables,
+    } = renderRefsForReferenceManager(renderedRoot.refs);
 
     const body = `export function render(options?: RenderElementOptions): ${preRenderType} {
     const [refManager, [${refVariables}]] =
@@ -685,7 +691,7 @@ ${Indent.forceIndent(code, 4)})`,
         () => ${renderedRoot.rendered.trim()}
     ) as ${elementType};
     return [refManager.getPublicAPI() as ${refsType}, render];
-}`
+}`;
 
     return {
         renderedRefs,
@@ -821,7 +827,8 @@ function renderBridge(
     importStatements: JayImportLink[],
     elementType: string,
     preRenderType: string,
-    refsType: string) {
+    refsType: string,
+) {
     let variables = new Variables(types);
     let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(importStatements);
     let renderedBridge = renderElementBridgeNode(rootBodyElement, {
@@ -834,8 +841,13 @@ function renderBridge(
         importerMode: RuntimeMode.WorkerSandbox,
     });
 
-    const {elemRefsDeclarations, elemCollectionRefsDeclarations, compRefsDeclarations, compCollectionRefsDeclarations,
-        refVariables} = renderRefsForReferenceManager(renderedBridge.refs)
+    const {
+        elemRefsDeclarations,
+        elemCollectionRefsDeclarations,
+        compRefsDeclarations,
+        compCollectionRefsDeclarations,
+        refVariables,
+    } = renderRefsForReferenceManager(renderedBridge.refs);
 
     return new RenderFragment(
         `export function render(): ${preRenderType} {
@@ -852,7 +864,7 @@ function renderBridge(
             .plus(Import.SecureReferencesManager),
         renderedBridge.validations,
         renderedBridge.refs,
-    )
+    );
 }
 
 function renderSandboxRoot(
@@ -878,10 +890,16 @@ ${renderedBridge.rendered}
   `
             : '';
 
-    const {elemRefsDeclarations, elemCollectionRefsDeclarations, compRefsDeclarations, compCollectionRefsDeclarations,
-        refVariables} = renderRefsForReferenceManager(renderedBridge.refs)
+    const {
+        elemRefsDeclarations,
+        elemCollectionRefsDeclarations,
+        compRefsDeclarations,
+        compCollectionRefsDeclarations,
+        refVariables,
+    } = renderRefsForReferenceManager(renderedBridge.refs);
 
-    return new RenderFragment(`() => {
+    return new RenderFragment(
+        `() => {
         const [, [${refVariables}]] =
             SecureReferencesManager.forSandboxRoot([${elemRefsDeclarations}], [${elemCollectionRefsDeclarations}], [${compRefsDeclarations}], [${compCollectionRefsDeclarations}])
         return [${refsPart}]
@@ -889,8 +907,7 @@ ${renderedBridge.rendered}
         renderedBridge.imports.plus(Import.SecureReferencesManager),
         renderedBridge.validations,
         renderedBridge.refs,
-    )
-
+    );
 }
 
 export function generateElementDefinitionFile(
@@ -963,15 +980,29 @@ export function generateElementFile(
 
 export function generateElementBridgeFile(jayFile: JayHtmlFile): string {
     let types = generateTypes(jayFile.types);
-    let { renderedRefs, renderedElement, elementType, preRenderType, refsType, renderedImplementation, refImportsInUse } =
-        renderFunctionImplementation(
-            jayFile.types,
-            jayFile.body,
-            jayFile.imports,
-            jayFile.baseElementName,
-            RuntimeMode.WorkerSandbox,
-        );
-    let renderedBridge = renderBridge(jayFile.types, jayFile.body, jayFile.imports, elementType, preRenderType, refsType);
+    let {
+        renderedRefs,
+        renderedElement,
+        elementType,
+        preRenderType,
+        refsType,
+        renderedImplementation,
+        refImportsInUse,
+    } = renderFunctionImplementation(
+        jayFile.types,
+        jayFile.body,
+        jayFile.imports,
+        jayFile.baseElementName,
+        RuntimeMode.WorkerSandbox,
+    );
+    let renderedBridge = renderBridge(
+        jayFile.types,
+        jayFile.body,
+        jayFile.imports,
+        elementType,
+        preRenderType,
+        refsType,
+    );
     return [
         renderImports(
             renderedImplementation.imports

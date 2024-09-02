@@ -20,15 +20,13 @@ export interface AppElementRefs {
 }
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
-export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>
-export type AppElementPreRender = [refs: AppElementRefs, AppElementRender]
+export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
+export type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
 
 export function render(options?: RenderElementOptions): AppElementPreRender {
-    const [refManager, [refA]] =
-        ReferencesManager.for(options, [], [], ['a'], []);
-    const render = (viewState: AppViewState) =>  ConstructContext.withRootContext(
-        viewState, refManager,
-        () =>
+    const [refManager, [refA]] = ReferencesManager.for(options, [], [], ['a'], []);
+    const render = (viewState: AppViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             mr(viewState, () =>
                 e('div', {}, [
                     e(
@@ -43,6 +41,6 @@ export function render(options?: RenderElementOptions): AppElementPreRender {
                     ),
                 ]),
             ),
-    ) as AppElement;
-    return [refManager.getPublicAPI() as AppElementRefs, render]
+        ) as AppElement;
+    return [refManager.getPublicAPI() as AppElementRefs, render];
 }

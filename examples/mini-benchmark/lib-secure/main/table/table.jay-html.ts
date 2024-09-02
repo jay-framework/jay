@@ -5,7 +5,9 @@ import {
     dynamicElement as de,
     forEach,
     ConstructContext,
-    RenderElementOptions, ReferencesManager, RenderElement,
+    RenderElementOptions,
+    ReferencesManager,
+    RenderElement,
 } from 'jay-runtime';
 
 export interface Cell {
@@ -25,15 +27,13 @@ export interface TableViewState {
 export interface TableElementRefs {}
 
 export type TableElement = JayElement<TableViewState, TableElementRefs>;
-export type TableElementRender = RenderElement<TableViewState, TableElementRefs, TableElement>
-export type TableElementPreRender = [refs: TableElementRefs, TableElementRender]
+export type TableElementRender = RenderElement<TableViewState, TableElementRefs, TableElement>;
+export type TableElementPreRender = [refs: TableElementRefs, TableElementRender];
 
 export function render(options?: RenderElementOptions): TableElementPreRender {
-    const [refManager, []] =
-        ReferencesManager.for(options, [], [], [], []);
-    const render = (viewState: TableViewState) => ConstructContext.withRootContext(
-        viewState, refManager,
-        () =>
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const render = (viewState: TableViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('table', {}, [
                     de('tbody', {}, [
@@ -55,6 +55,6 @@ export function render(options?: RenderElementOptions): TableElementPreRender {
                     ]),
                 ]),
             ]),
-    ) as TableElement;
-    return [refManager.getPublicAPI() as TableElementRefs, render]
+        ) as TableElement;
+    return [refManager.getPublicAPI() as TableElementRefs, render];
 }

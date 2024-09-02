@@ -6,7 +6,8 @@ import {
     dynamicElement as de,
     conditional as c,
     forEach,
-    RenderElement, ReferencesManager,
+    RenderElement,
+    ReferencesManager,
 } from 'jay-runtime';
 import { Counter } from './counter';
 import { mainRoot as mr } from '../../../../lib/';
@@ -30,15 +31,19 @@ export interface AppElementRefs {
 }
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
-export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>
-export type AppElementPreRender = [refs: AppElementRefs, AppElementRender]
+export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
+export type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
 
 export function renderAppElement(options?: RenderElementOptions): AppElementPreRender {
-    const [refManager, [comp1, comp2]] =
-        ReferencesManager.for(options, [], [], ['comp1'], ['comp2']);
-    const render = (viewState: AppViewState) =>  ConstructContext.withRootContext(
-        viewState, refManager,
-        () => {
+    const [refManager, [comp1, comp2]] = ReferencesManager.for(
+        options,
+        [],
+        [],
+        ['comp1'],
+        ['comp2'],
+    );
+    const render = (viewState: AppViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () => {
             return mr(viewState, () =>
                 de('div', {}, [
                     c(
@@ -70,7 +75,6 @@ export function renderAppElement(options?: RenderElementOptions): AppElementPreR
                     ),
                 ]),
             );
-        },
-    ) as AppElement;
-    return [refManager.getPublicAPI() as AppElementRefs, render]
+        }) as AppElement;
+    return [refManager.getPublicAPI() as AppElementRefs, render];
 }

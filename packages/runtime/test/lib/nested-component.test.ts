@@ -5,11 +5,12 @@ import {
     JayElement,
     childComp,
     forEach,
-    conditional, ReferencesManager,
+    conditional,
+    ReferencesManager,
 } from '../../lib/index';
 import '../../lib/element-test-types';
 import { Item, ItemProps } from './comps/item';
-import {ItemComponentType, ItemRefs} from './comps/item-refs';
+import { ItemComponentType, ItemRefs } from './comps/item-refs';
 
 describe('nested components', () => {
     describe('single nested component', () => {
@@ -24,7 +25,13 @@ describe('nested components', () => {
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
 
         function renderComposite(viewState: ViewState): TestElement {
-            let [refManager, [staticComponent]] = ReferencesManager.for({}, [], [], ['staticComponent'], []);
+            let [refManager, [staticComponent]] = ReferencesManager.for(
+                {},
+                [],
+                [],
+                ['staticComponent'],
+                [],
+            );
             return ConstructContext.withRootContext(viewState, refManager, () => {
                 return e('div', {}, [
                     childComp(
@@ -32,8 +39,8 @@ describe('nested components', () => {
                         (vs) => ({ text: vs.staticItem, dataId: 'AAA' }),
                         staticComponent(),
                     ),
-                ])},
-            ) as TestElement;
+                ]);
+            }) as TestElement;
         }
 
         it('create an item nested component with hello world', () => {
@@ -94,7 +101,7 @@ describe('nested components', () => {
 
         function renderComposite(viewState: ViewState): TestElement {
             let [refManager, [condRef]] = ReferencesManager.for({}, [], [], ['conditional'], []);
-            return ConstructContext.withRootContext(viewState, refManager,() => {
+            return ConstructContext.withRootContext(viewState, refManager, () => {
                 return de('div', {}, [
                     conditional(
                         (vs) => vs.condition,
@@ -104,8 +111,8 @@ describe('nested components', () => {
                             condRef(),
                         ),
                     ),
-                ])},
-            ) as TestElement;
+                ]);
+            }) as TestElement;
         }
 
         it('have a reference to a nested conditional component', () => {
@@ -147,8 +154,14 @@ describe('nested components', () => {
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
 
         function renderComposite(viewState: ViewState): TestElement {
-            let [refManager, [ref]] = ReferencesManager.for({}, [], [], [], ['forEachOfComponents']);
-            return ConstructContext.withRootContext(viewState, refManager,() => {
+            let [refManager, [ref]] = ReferencesManager.for(
+                {},
+                [],
+                [],
+                [],
+                ['forEachOfComponents'],
+            );
+            return ConstructContext.withRootContext(viewState, refManager, () => {
                 return de('div', {}, [
                     forEach(
                         (vs: ViewState) => vs.items,
@@ -235,7 +248,7 @@ describe('nested components', () => {
                 ],
             };
             let composite = renderComposite(viewState);
-            composite.update(viewState_2)
+            composite.update(viewState_2);
             let doneButton = composite.refs.forEachOfComponents
                 .find((item) => item.id === 'C')
                 .element.dom.querySelector('button[data-id="done"]') as HTMLButtonElement;

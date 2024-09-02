@@ -15,15 +15,14 @@ export interface AppViewState {
 
 export function initializeWorker() {
     sandboxRoot(() => {
-        const [, [refA]] =
-            SecureReferencesManager.forSandboxRoot([], [], ['a'], [])
+        const [, [refA]] = SecureReferencesManager.forSandboxRoot([], [], ['a'], []);
         return [
             childComp(
                 Counter,
                 (vs: AppViewState) => ({ initialValue: 12, incrementBy: vs.incrementBy }),
                 refA(),
             ),
-        ]
+        ];
     });
 }
 

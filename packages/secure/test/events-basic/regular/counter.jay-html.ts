@@ -4,7 +4,9 @@ import {
     dynamicText as dt,
     ConstructContext,
     HTMLElementProxy,
-    RenderElementOptions, RenderElement, ReferencesManager,
+    RenderElementOptions,
+    RenderElement,
+    ReferencesManager,
 } from 'jay-runtime';
 
 export interface CounterViewState {
@@ -18,17 +20,23 @@ export interface CounterElementRefs {
 }
 
 export type CounterElement = JayElement<CounterViewState, CounterElementRefs>;
-export type CounterElementRender = RenderElement<CounterViewState, CounterElementRefs, CounterElement>
-export type CounterPreRender = [refs: CounterElementRefs, CounterElementRender]
+export type CounterElementRender = RenderElement<
+    CounterViewState,
+    CounterElementRefs,
+    CounterElement
+>;
+export type CounterPreRender = [refs: CounterElementRefs, CounterElementRender];
 
-export function render(
-    options?: RenderElementOptions,
-): CounterPreRender {
-    const [refManager, [subtracter, adder ]] =
-        ReferencesManager.for(options, ['subtracter', 'adder'], [], [], []);
-    const render = (viewState: CounterViewState) =>  ConstructContext.withRootContext(
-        viewState, refManager,
-        () => {
+export function render(options?: RenderElementOptions): CounterPreRender {
+    const [refManager, [subtracter, adder]] = ReferencesManager.for(
+        options,
+        ['subtracter', 'adder'],
+        [],
+        [],
+        [],
+    );
+    const render = (viewState: CounterViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () => {
             return e('div', {}, [
                 e('div', { 'data-id': 'title' }, [dt((vs) => vs.title)]),
                 e('div', {}, [
@@ -38,7 +46,7 @@ export function render(
                     ]),
                     e('button', { 'data-id': 'add' }, ['+'], adder()),
                 ]),
-            ])}
-    ) as CounterElement
-    return [refManager.getPublicAPI() as CounterElementRefs, render]
+            ]);
+        }) as CounterElement;
+    return [refManager.getPublicAPI() as CounterElementRefs, render];
 }

@@ -1,4 +1,4 @@
-import {JayElement, RenderElement, RenderElementOptions} from 'jay-runtime';
+import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
 
 export interface O1 {
     s2: string;

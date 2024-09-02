@@ -1,42 +1,46 @@
-import {Getter, MeasureOfChange, Next, Reaction, Reactive, Setter, ValueOrGetter} from "../lib";
+import { Getter, MeasureOfChange, Next, Reaction, Reactive, Setter, ValueOrGetter } from '../lib';
 
 export class RunOrder {
-    log: string[] = []
-    private getStates: string[][] = []
-    private setStates: string[][] = []
+    log: string[] = [];
+    private getStates: string[][] = [];
+    private setStates: string[][] = [];
     private inReaction: number = -1;
     private batches: string[] = [];
     private reactionLogPosition: number[] = [];
 
-    logReaction(reactive: string, reaction: string, readingStates: string[], settingStates: string[]) {
-        this.log.push(`${reactive} - ${reaction}: (${readingStates.join(',')}) -> (${settingStates.join(',')})`)
+    logReaction(
+        reactive: string,
+        reaction: string,
+        readingStates: string[],
+        settingStates: string[],
+    ) {
+        this.log.push(
+            `${reactive} - ${reaction}: (${readingStates.join(',')}) -> (${settingStates.join(',')})`,
+        );
     }
 
     logReady() {
-        this.log.push('-- setup complete --')
+        this.log.push('-- setup complete --');
     }
 
     logStartBatch(reactive: string) {
-        this.log.push(`${reactive} - start batch `)
+        this.log.push(`${reactive} - start batch `);
     }
 
     logExternalSetState(reactive: string, state: string) {
-        this.log.push(`${reactive} -   external set state ${state} `)
+        this.log.push(`${reactive} -   external set state ${state} `);
     }
 
     logEndBatch(reactive: string) {
-        this.log.push(`${reactive} - end batch `)
+        this.log.push(`${reactive} - end batch `);
     }
 
     logGetState(name: string) {
-        if (this.inReaction > -1)
-            this.getStates[this.inReaction].push(name);
+        if (this.inReaction > -1) this.getStates[this.inReaction].push(name);
     }
     logSetState(name: string) {
-        if (this.inReaction > -1)
-            this.setStates[this.inReaction].push(name);
-        else
-            this.log.push(`${this.batches.join(', ')} - batch: setState ${name}`)
+        if (this.inReaction > -1) this.setStates[this.inReaction].push(name);
+        else this.log.push(`${this.batches.join(', ')} - batch: setState ${name}`);
     }
     beforeReaction() {
         this.inReaction++;
@@ -71,41 +75,56 @@ export class RunOrder {
 
 function romanNumbers(num: number) {
     switch (num) {
-        case 1: return 'i   ';
-        case 2: return 'ii  ';
-        case 3: return 'iii ';
-        case 4: return 'iv  ';
-        case 5: return 'v   ';
-        case 6: return 'vi  ';
-        case 7: return 'vii ';
-        case 8: return 'viii';
-        case 9: return 'ix  ';
-        case 10: return 'x   ';
+        case 1:
+            return 'i   ';
+        case 2:
+            return 'ii  ';
+        case 3:
+            return 'iii ';
+        case 4:
+            return 'iv  ';
+        case 5:
+            return 'v   ';
+        case 6:
+            return 'vi  ';
+        case 7:
+            return 'vii ';
+        case 8:
+            return 'viii';
+        case 9:
+            return 'ix  ';
+        case 10:
+            return 'x   ';
     }
-    return ''+num;
+    return '' + num;
 }
-
 
 export class ReactiveWithTracking extends Reactive {
     stateIndex: number = 1;
     reactionNameIndex: number = 1;
-    constructor(public readonly name: string, private runOrder: RunOrder) {
+    constructor(
+        public readonly name: string,
+        private runOrder: RunOrder,
+    ) {
         super();
     }
 
-    createState<T>(value: ValueOrGetter<T>, measureOfChange: MeasureOfChange = MeasureOfChange.FULL): [get: Getter<T>, set: Setter<T>] {
+    createState<T>(
+        value: ValueOrGetter<T>,
+        measureOfChange: MeasureOfChange = MeasureOfChange.FULL,
+    ): [get: Getter<T>, set: Setter<T>] {
         const stateName = this.name + this.stateIndex++;
-        this.runOrder.log.push(`${this.name} - createState ${stateName}`)
-        const [getter, setter]  = super.createState(value, measureOfChange);
+        this.runOrder.log.push(`${this.name} - createState ${stateName}`);
+        const [getter, setter] = super.createState(value, measureOfChange);
         const loggedSetter: Setter<T> = (value: T | Next<T>) => {
             this.runOrder.logSetState(stateName);
             return setter(value);
-        }
+        };
         const loggedGetter: Getter<T> = () => {
             this.runOrder.logGetState(stateName);
             return getter();
-        }
-        return [loggedGetter, loggedSetter]
+        };
+        return [loggedGetter, loggedSetter];
     }
 
     createReaction(func: Reaction) {
@@ -114,8 +133,7 @@ export class ReactiveWithTracking extends Reactive {
             this.runOrder.beforeReaction();
             try {
                 func(measureOfChange);
-            }
-            finally {
+            } finally {
                 this.runOrder.completeReaction(this.name, reactionName);
             }
         });
@@ -125,8 +143,7 @@ export class ReactiveWithTracking extends Reactive {
         this.runOrder.beforeBatch(this.name);
         try {
             return super.batchReactions(func);
-        }
-        finally {
+        } finally {
             this.runOrder.completeBatch();
         }
     }
@@ -138,6 +155,6 @@ export class ReactiveWithTracking extends Reactive {
 
     toBeClean(): Promise<void> {
         this.runOrder.logToBeClean(this.name);
-        return super.toBeClean()
+        return super.toBeClean();
     }
 }

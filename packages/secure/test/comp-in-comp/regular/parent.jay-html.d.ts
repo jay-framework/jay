@@ -1,4 +1,4 @@
-import {JayElement, HTMLElementProxy, RenderElementOptions, RenderElement} from 'jay-runtime';
+import { JayElement, HTMLElementProxy, RenderElementOptions, RenderElement } from 'jay-runtime';
 import { ChildRef, ChildRefs } from './child-refs';
 import { Child, ChildProps } from './child';
 
@@ -23,9 +23,7 @@ export interface ParentElementRefs {
 }
 
 export type ParentElement = JayElement<ParentViewState, ParentElementRefs>;
-export type ParentElementRender = RenderElement<ParentViewState, ParentElementRefs, ParentElement>
-export type ParentElementPreRender = [refs: ParentElementRefs, ParentElementRender]
+export type ParentElementRender = RenderElement<ParentViewState, ParentElementRefs, ParentElement>;
+export type ParentElementPreRender = [refs: ParentElementRefs, ParentElementRender];
 
-export declare function render(
-    options?: RenderElementOptions,
-): ParentElementPreRender;
+export declare function render(options?: RenderElementOptions): ParentElementPreRender;

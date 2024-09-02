@@ -4,7 +4,9 @@ import {
     dynamicProperty as dp,
     ConstructContext,
     HTMLElementProxy,
-    RenderElementOptions, ReferencesManager, RenderElement,
+    RenderElementOptions,
+    ReferencesManager,
+    RenderElement,
 } from 'jay-runtime';
 import { Table as TableComp } from './table';
 import { TableComponentType } from './table-refs';
@@ -24,17 +26,23 @@ export interface TableHostElementRefs {
 }
 
 export type TableHostElement = JayElement<TableHostViewState, TableHostElementRefs>;
-export type TableHostElementRender = RenderElement<TableHostViewState, TableHostElementRefs, TableHostElement>
-export type TableHostElementPreRender = [refs: TableHostElementRefs, TableHostElementRender]
+export type TableHostElementRender = RenderElement<
+    TableHostViewState,
+    TableHostElementRefs,
+    TableHostElement
+>;
+export type TableHostElementPreRender = [refs: TableHostElementRefs, TableHostElementRender];
 
-export function render(
-    options?: RenderElementOptions,
-): TableHostElementPreRender {
-    const [refManager, [refSize, refUpdates, refStateManagement, refTable]] =
-        ReferencesManager.for(options, ['size', 'updates', 'stateManagement'], [], ['table'], []);
-    const render = (viewState: TableHostViewState) => ConstructContext.withRootContext(
-        viewState, refManager,
-        () =>
+export function render(options?: RenderElementOptions): TableHostElementPreRender {
+    const [refManager, [refSize, refUpdates, refStateManagement, refTable]] = ReferencesManager.for(
+        options,
+        ['size', 'updates', 'stateManagement'],
+        [],
+        ['table'],
+        [],
+    );
+    const render = (viewState: TableHostViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('div', {}, [
                     e('label', { for: 'size' }, ['Size of the table to generate: ']),
@@ -67,6 +75,6 @@ export function render(
                     refTable(),
                 ),
             ]),
-    ) as TableHostElement;
-    return [refManager.getPublicAPI() as TableHostElementRefs, render]
+        ) as TableHostElement;
+    return [refManager.getPublicAPI() as TableHostElementRefs, render];
 }

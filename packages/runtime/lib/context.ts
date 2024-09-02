@@ -1,9 +1,4 @@
-import {
-    BaseJayElement,
-    ContextMarker,
-    Coordinate,
-    JayElement
-} from './element-types';
+import { BaseJayElement, ContextMarker, Coordinate, JayElement } from './element-types';
 
 import { ReferencesManager } from './references-manager';
 
@@ -40,7 +35,7 @@ export function withContext<ContextType, Returns>(
 }
 
 export function useContext<ContextType>(marker: ContextMarker<ContextType>): ContextType {
-    let context = findContext(_ => _ === marker);
+    let context = findContext((_) => _ === marker);
     if (!context) throw new Error();
     return context as ContextType;
 }
@@ -98,10 +93,7 @@ export class ConstructContext<A extends Array<any>> {
     data: A;
     forStaticElements: boolean;
 
-    constructor(
-        data: A,
-        forStaticElements: boolean = true,
-    ) {
+    constructor(data: A, forStaticElements: boolean = true) {
         this.data = data;
         this.forStaticElements = forStaticElements;
     }
@@ -125,16 +117,13 @@ export class ConstructContext<A extends Array<any>> {
     }
 
     forItem<T>(t: T) {
-        return new ConstructContext(
-            ConstructContext.acc(this.data, t),
-            false,
-        );
+        return new ConstructContext(ConstructContext.acc(this.data, t), false);
     }
 
     static withRootContext<ViewState, Refs>(
         viewState: ViewState,
         refManager: ReferencesManager,
-        elementConstructor: () => BaseJayElement<ViewState>
+        elementConstructor: () => BaseJayElement<ViewState>,
     ): JayElement<ViewState, Refs> {
         let context = new ConstructContext([viewState]);
         let element = withContext(CONSTRUCTION_CONTEXT_MARKER, context, () =>

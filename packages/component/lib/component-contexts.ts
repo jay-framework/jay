@@ -1,5 +1,5 @@
-import {Reactive} from "jay-reactive";
-import {ContextMarker, createJayContext, JayComponent, MountFunc} from "jay-runtime";
+import { Reactive } from 'jay-reactive';
+import { ContextMarker, createJayContext, JayComponent, MountFunc } from 'jay-runtime';
 
 export interface HookContext {
     reactive: Reactive;

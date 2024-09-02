@@ -50,7 +50,7 @@ export const Import = {
         'RenderElement',
         ImportsFor.implementation,
         ImportsFor.definition,
-        ImportsFor.elementSandbox
+        ImportsFor.elementSandbox,
     ),
     ReferencesManager: importStatementFragment(
         'jay-runtime',

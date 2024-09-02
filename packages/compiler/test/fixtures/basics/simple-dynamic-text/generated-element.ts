@@ -28,13 +28,11 @@ export type SimpleDynamicTextElementPreRender = [
     SimpleDynamicTextElementRender,
 ];
 
-export function render(
-    options?: RenderElementOptions,
-): SimpleDynamicTextElementPreRender {
+export function render(options?: RenderElementOptions): SimpleDynamicTextElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
-    const render = (viewState: SimpleDynamicTextViewState) => ConstructContext.withRootContext(
-        viewState, refManager,
-        () => e('div', {}, [dt((vs) => vs.s1)]),
-    ) as SimpleDynamicTextElement;
+    const render = (viewState: SimpleDynamicTextViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
+            e('div', {}, [dt((vs) => vs.s1)]),
+        ) as SimpleDynamicTextElement;
     return [refManager.getPublicAPI() as SimpleDynamicTextElementRefs, render];
 }

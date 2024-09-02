@@ -1,12 +1,11 @@
-import {
-    mkBridgeElement, SecureReferencesManager,
-} from '../../lib/';
+import { mkBridgeElement, SecureReferencesManager } from '../../lib/';
 import { IJayEndpoint, IJayPort, JayPortInMessageHandler } from '../../lib';
 import { Reactive } from 'jay-reactive';
 import { func$, handler$ } from '../../lib';
 import {
     ComponentCollectionProxy,
-    Coordinate, defaultEventWrapper,
+    Coordinate,
+    defaultEventWrapper,
     HTMLElementCollectionProxy,
     HTMLElementProxy,
 } from 'jay-runtime';
@@ -43,8 +42,14 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let [refManager, [one, two]] =
-                SecureReferencesManager.for(endpoint, undefined, ['one', 'two'], [], [], []);
+            let [refManager, [one, two]] = SecureReferencesManager.for(
+                endpoint,
+                undefined,
+                ['one', 'two'],
+                [],
+                [],
+                [],
+            );
             let bridgeElement = mkBridgeElement(
                 vs,
                 () => [e(one()), e(two())],
@@ -234,8 +239,14 @@ describe('sandbox-refs', () => {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
             let childElementUpdateSpies = [];
-            let [refManager, [one]] =
-                SecureReferencesManager.for(endpoint, undefined, [], ['one'], [], []);
+            let [refManager, [one]] = SecureReferencesManager.for(
+                endpoint,
+                undefined,
+                [],
+                ['one'],
+                [],
+                [],
+            );
             let bridgeElement = mkBridgeElement(
                 vs,
                 () => [
@@ -582,8 +593,14 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let [refManager, [one, two]] =
-                SecureReferencesManager.for(endpoint, undefined, [], ['one', 'two'], [], []);
+            let [refManager, [one, two]] = SecureReferencesManager.for(
+                endpoint,
+                undefined,
+                [],
+                ['one', 'two'],
+                [],
+                [],
+            );
             let bridgeElement = mkBridgeElement(
                 vs,
                 () => {
@@ -683,16 +700,17 @@ describe('sandbox-refs', () => {
         function setup(creationViewState = vs) {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let [refManager, [one, two]] =
-                SecureReferencesManager.for(endpoint, undefined, ['one', 'two'], [], [], []);
+            let [refManager, [one, two]] = SecureReferencesManager.for(
+                endpoint,
+                undefined,
+                ['one', 'two'],
+                [],
+                [],
+                [],
+            );
             let bridgeElement = mkBridgeElement(
                 creationViewState,
-                () => [
-                    c(
-                        (vs) => vs.condition,
-                        [e(one()), c((vs) => vs.condition2, [e(two())])],
-                    ),
-                ],
+                () => [c((vs) => vs.condition, [e(one()), c((vs) => vs.condition2, [e(two())])])],
                 endpoint,
                 reactive,
                 refManager,
@@ -813,8 +831,14 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let [refManager, [one, two]] =
-                SecureReferencesManager.for(endpoint, undefined, [], ['one', 'two'], [], []);
+            let [refManager, [one, two]] = SecureReferencesManager.for(
+                endpoint,
+                undefined,
+                [],
+                ['one', 'two'],
+                [],
+                [],
+            );
             let bridgeElement = mkBridgeElement(
                 vs,
                 () => {
@@ -896,8 +920,14 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let [refManager, [comp1]] =
-                SecureReferencesManager.for(endpoint, defaultEventWrapper, [], [], ['comp1'], []);
+            let [refManager, [comp1]] = SecureReferencesManager.for(
+                endpoint,
+                defaultEventWrapper,
+                [],
+                [],
+                ['comp1'],
+                [],
+            );
             let bridgeElement = mkBridgeElement(
                 vs,
                 () => [childComp(Item, (vs) => vs, comp1())],
@@ -983,20 +1013,20 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let [refManager, [comp1]] =
-                SecureReferencesManager.for(endpoint, undefined, [], [], ['comp1'], []);
+            let [refManager, [comp1]] = SecureReferencesManager.for(
+                endpoint,
+                undefined,
+                [],
+                [],
+                ['comp1'],
+                [],
+            );
             let bridgeElement = mkBridgeElement(
                 vs,
                 () => [
                     c(
                         (vs) => vs.shown,
-                        [
-                            childComp(
-                                Item,
-                                (vs) => ({ text: vs.text, dataId: 'a' }),
-                                comp1(),
-                            ),
-                        ],
+                        [childComp(Item, (vs) => ({ text: vs.text, dataId: 'a' }), comp1())],
                     ),
                 ],
                 endpoint,
@@ -1057,8 +1087,14 @@ describe('sandbox-refs', () => {
         function setup(viewState = vs) {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
-            let [refManager, [comp1]] =
-                SecureReferencesManager.for(endpoint, defaultEventWrapper, [], [], [], ['comp1']);
+            let [refManager, [comp1]] = SecureReferencesManager.for(
+                endpoint,
+                defaultEventWrapper,
+                [],
+                [],
+                [],
+                ['comp1'],
+            );
             let bridgeElement = mkBridgeElement(
                 viewState,
                 () => {

@@ -24,16 +24,20 @@ export type RefsElementRender = RenderElement<RefsViewState, RefsElementRefs, Re
 export type RefsElementPreRender = [refs: RefsElementRefs, RefsElementRender];
 
 export function render(options?: RenderElementOptions): RefsElementPreRender {
-    const [refManager, [refRef1, refRef, refRef3]] =
-        ReferencesManager.for(options, ['ref1', 'ref', 'ref3'], [], [], []);
-    const render = (viewState: RefsViewState) => ConstructContext.withRootContext(
-        viewState, refManager,
-        () =>
+    const [refManager, [refRef1, refRef, refRef3]] = ReferencesManager.for(
+        options,
+        ['ref1', 'ref', 'ref3'],
+        [],
+        [],
+        [],
+    );
+    const render = (viewState: RefsViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('div', {}, [dt((vs) => vs.text)], refRef1()),
                 e('div', {}, [dt((vs) => vs.text)], refRef()),
                 e('div', {}, [e('div', {}, [dt((vs) => vs.text)], refRef3())]),
             ]),
-    ) as RefsElement;
-    return [refManager.getPublicAPI() as RefsElementRefs, render]
+        ) as RefsElement;
+    return [refManager.getPublicAPI() as RefsElementRefs, render];
 }

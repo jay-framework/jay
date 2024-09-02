@@ -5,7 +5,7 @@ import {
     dynamicText as dt,
     conditional,
 } from '../../lib/element';
-import {JayElement, ReferencesManager} from '../../lib';
+import { JayElement, ReferencesManager } from '../../lib';
 import { ConstructContext } from '../../lib';
 
 describe('dynamic-element with mixed content', () => {
@@ -23,8 +23,7 @@ describe('dynamic-element with mixed content', () => {
     interface Refs {}
 
     function makeElement(data: ViewState): JayElement<ViewState, Refs> {
-        let [refManager, []] =
-            ReferencesManager.for({}, [], [], [], []);
+        let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
         return ConstructContext.withRootContext(data, refManager, () =>
             // noinspection DuplicatedCode
             de('div', {}, [

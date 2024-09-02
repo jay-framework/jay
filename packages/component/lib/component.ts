@@ -3,18 +3,21 @@ import {
     JayComponent,
     JayEventHandlerWrapper,
     RenderElement,
-    withContext, ContextMarker, useContext, PreRenderElement,
+    withContext,
+    ContextMarker,
+    useContext,
+    PreRenderElement,
 } from 'jay-runtime';
 import { Getter, Reactive } from 'jay-reactive';
 import { JSONPatch } from 'jay-json-patch';
 import { HTMLElement } from 'node-html-parser';
-import {createState} from "./hooks";
-import {COMPONENT_CONTEXT, ComponentContext} from "./component-contexts";
+import { createState } from './hooks';
+import { COMPONENT_CONTEXT, ComponentContext } from './component-contexts';
 
 export type Patcher<T> = (...patch: JSONPatch) => void;
 export type hasProps<PropsT> = { props: Getter<PropsT> };
 export type Props<PropsT> = hasProps<PropsT> & {
-    [K in keyof PropsT]: K extends string? Getter<PropsT[K]>: PropsT[K];
+    [K in keyof PropsT]: K extends string ? Getter<PropsT[K]> : PropsT[K];
 };
 
 export type ViewStateGetters<ViewState> = {
@@ -45,7 +48,6 @@ type ConcreteJayComponent<
     JayElementT extends JayElement<ViewState, Refs>,
 > = ConcreteJayComponent1<PropsT, ViewState, Refs, CompCore, JayElementT>;
 
-
 function materializeViewState<ViewState extends object>(
     vsValueOrGetter: ViewStateGetters<ViewState>,
 ): ViewState {
@@ -63,8 +65,8 @@ export type ComponentConstructor<
     Refs extends object,
     ViewState extends object,
     Contexts extends Array<any>,
-    CompCore extends JayComponentCore<PropsT, ViewState>> =
-    (props: Props<PropsT>, refs: Refs, ...contexts: Contexts) => CompCore
+    CompCore extends JayComponentCore<PropsT, ViewState>,
+> = (props: Props<PropsT>, refs: Refs, ...contexts: Contexts) => CompCore;
 
 type ContextMarkers<T extends any[]> = {
     [K in keyof T]: ContextMarker<T[K]>;
@@ -88,7 +90,7 @@ export function makeJayComponent<
             return componentInstance;
         };
         let componentContext: ComponentContext = {
-            reactive: new Reactive,
+            reactive: new Reactive(),
             mounts: [],
             unmounts: [],
             provideContexts: [],
@@ -100,9 +102,9 @@ export function makeJayComponent<
             let eventWrapper: JayEventHandlerWrapper<any, any, any> = (orig, event) => {
                 return componentContext.reactive.batchReactions(() => orig(event));
             };
-            let [refs, render] = preRender({ eventWrapper })
+            let [refs, render] = preRender({ eventWrapper });
 
-            let contexts: Contexts = contextMarkers.map(marker => useContext(marker)) as Contexts
+            let contexts: Contexts = contextMarkers.map((marker) => useContext(marker)) as Contexts;
             let coreComp = comp(propsProxy, refs, ...contexts); // wrap event listening with batch reactions
             let { render: renderViewState, ...api } = coreComp;
             // todo provide contexts

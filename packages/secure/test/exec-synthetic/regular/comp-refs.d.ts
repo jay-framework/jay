@@ -1,6 +1,4 @@
-import {
-    ComponentCollectionProxy,
-} from 'jay-runtime';
+import { ComponentCollectionProxy } from 'jay-runtime';
 import { Comp } from './comp';
 
 export type CompComponentType<ParentVS> = ReturnType<typeof Comp<ParentVS>>;

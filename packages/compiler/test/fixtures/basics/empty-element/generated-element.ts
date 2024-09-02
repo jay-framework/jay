@@ -1,7 +1,11 @@
-import { JayElement, element as e,
+import {
+    JayElement,
+    element as e,
     RenderElement,
     ReferencesManager,
-    ConstructContext, RenderElementOptions } from 'jay-runtime';
+    ConstructContext,
+    RenderElementOptions,
+} from 'jay-runtime';
 
 export interface EmptyElementViewState {}
 

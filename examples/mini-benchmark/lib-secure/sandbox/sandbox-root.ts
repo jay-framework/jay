@@ -2,16 +2,16 @@ import { Main } from './main';
 import {
     HandshakeMessageJayChannel,
     JayPort,
-    sandboxRoot, SecureReferencesManager,
+    sandboxRoot,
+    SecureReferencesManager,
     setWorkerPort,
 } from 'jay-secure';
 import { sandboxChildComp } from 'jay-secure';
 
 export function initializeWorker() {
     sandboxRoot(() => {
-        const [, [refA]] =
-            SecureReferencesManager.forSandboxRoot([], [], ['a'], [])
-        return [sandboxChildComp(Main, (vs) => ({}), refA())]
+        const [, [refA]] = SecureReferencesManager.forSandboxRoot([], [], ['a'], []);
+        return [sandboxChildComp(Main, (vs) => ({}), refA())];
     });
 }
 

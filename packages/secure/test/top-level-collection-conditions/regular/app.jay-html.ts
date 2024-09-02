@@ -6,9 +6,11 @@ import {
     forEach,
     ConstructContext,
     childComp,
-    RenderElementOptions, RenderElement, ReferencesManager,
+    RenderElementOptions,
+    RenderElement,
+    ReferencesManager,
 } from 'jay-runtime';
-import {CounterComponentType, CounterRefs} from './counter-refs';
+import { CounterComponentType, CounterRefs } from './counter-refs';
 import { Counter } from './counter';
 
 export interface Counter {
@@ -28,15 +30,19 @@ export interface AppElementRefs {
 }
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
-export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>
-export type AppElementPreRender = [refs: AppElementRefs, AppElementRender]
+export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
+export type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
 
 export function render(options?: RenderElementOptions): AppElementPreRender {
-    const [refManager, [comp1, comp2]] =
-        ReferencesManager.for(options, [], [], ['comp1'], ['comp2']);
-    const render = (viewState: AppViewState) => ConstructContext.withRootContext(
-        viewState, refManager,
-        () => {
+    const [refManager, [comp1, comp2]] = ReferencesManager.for(
+        options,
+        [],
+        [],
+        ['comp1'],
+        ['comp2'],
+    );
+    const render = (viewState: AppViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () => {
             return de('div', {}, [
                 c(
                     (vs) => vs.cond,
@@ -66,7 +72,6 @@ export function render(options?: RenderElementOptions): AppElementPreRender {
                     'id',
                 ),
             ]);
-        },
-    ) as AppElement;
-    return [refManager.getPublicAPI() as AppElementRefs, render]
+        }) as AppElement;
+    return [refManager.getPublicAPI() as AppElementRefs, render];
 }

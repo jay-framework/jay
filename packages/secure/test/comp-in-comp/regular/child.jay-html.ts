@@ -5,7 +5,9 @@ import {
     dynamicAttribute as da,
     ConstructContext,
     HTMLElementProxy,
-    RenderElementOptions, RenderElement, ReferencesManager,
+    RenderElementOptions,
+    RenderElement,
+    ReferencesManager,
 } from 'jay-runtime';
 
 export interface ChildViewState {
@@ -21,15 +23,20 @@ export interface ChildElementRefs {
 }
 
 export type ChildElement = JayElement<ChildViewState, ChildElementRefs>;
-export type ChildElementRender = RenderElement<ChildViewState, ChildElementRefs, ChildElement>
-export type ChildElementPreRender = [refs: ChildElementRefs, ChildElementRender]
+export type ChildElementRender = RenderElement<ChildViewState, ChildElementRefs, ChildElement>;
+export type ChildElementPreRender = [refs: ChildElementRefs, ChildElementRender];
 
 export function render(options?: RenderElementOptions): ChildElementPreRender {
     const [refManager, [eventToParent, eventToParentToChildProp, eventToParentToChildApi]] =
-        ReferencesManager.for(options, ['eventToParent', 'eventToParentToChildProp', 'eventToParentToChildApi'], [], [], []);
-    const render = (viewState: ChildViewState) => ConstructContext.withRootContext(
-        viewState, refManager,
-        () => {
+        ReferencesManager.for(
+            options,
+            ['eventToParent', 'eventToParentToChildProp', 'eventToParentToChildApi'],
+            [],
+            [],
+            [],
+        );
+    const render = (viewState: ChildViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () => {
             return e('div', {}, [
                 e('div', { id: da((vs) => `child-text-from-prop-${vs.id}`) }, [
                     dt((vs) => vs.textFromProp),
@@ -55,7 +62,7 @@ export function render(options?: RenderElementOptions): ChildElementPreRender {
                     [' event to parent, parent calls child api '],
                     eventToParentToChildApi(),
                 ),
-            ])},
-    ) as ChildElement;
-    return [refManager.getPublicAPI() as ChildElementRefs, render]
+            ]);
+        }) as ChildElement;
+    return [refManager.getPublicAPI() as ChildElementRefs, render];
 }

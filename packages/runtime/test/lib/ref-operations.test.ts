@@ -5,13 +5,14 @@ import {
     dynamicElement as de,
     element as e,
     forEach,
-    HTMLNativeExec, ReferencesManager,
+    HTMLNativeExec,
+    ReferencesManager,
 } from '../../lib/';
 import { JayElement } from '../../lib';
 import { ComponentCollectionProxy, HTMLElementCollectionProxy, HTMLElementProxy } from '../../lib';
 import { Item, ItemProps } from './comps/item';
 import '../../lib/element-test-types';
-import {ItemComponentType} from './comps/item-refs';
+import { ItemComponentType } from './comps/item-refs';
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -37,10 +38,10 @@ describe('ReferencesManager operations', () => {
             let jayElement1;
             let [refManager, [ref]] = ReferencesManager.for({}, [refName1], [], [], []);
             let jayRootElement = ConstructContext.withRootContext<string, RootElementRefs>(
-                DATA_CONTEXT, refManager,
+                DATA_CONTEXT,
+                refManager,
                 () => {
-                    return e('div', {}, [
-                        (jayElement1 = e('div', {}, [SOME_VALUE], ref()))])
+                    return e('div', {}, [(jayElement1 = e('div', {}, [SOME_VALUE], ref()))]);
                 },
             );
             let mockCallback = vi.fn(() => undefined);
@@ -81,7 +82,13 @@ describe('ReferencesManager operations', () => {
                 jayElements2 = [],
                 mockCallback,
                 mockCallback2;
-            let [refManager, [ref_1, ref_2]] = ReferencesManager.for({}, [], [refName1, refName2], [], []);
+            let [refManager, [ref_1, ref_2]] = ReferencesManager.for(
+                {},
+                [],
+                [refName1, refName2],
+                [],
+                [],
+            );
             let jayRootElement = ConstructContext.withRootContext<
                 RootElementViewState,
                 RootElementRefs
@@ -183,9 +190,8 @@ describe('ReferencesManager operations', () => {
                         (vs) => ({ text: 'hello', dataId: 'AAA' }),
                         ref(),
                     ),
-                ])
-                }
-            ) as JayElement<RootElementViewState, RootElementRefs>;
+                ]);
+            }) as JayElement<RootElementViewState, RootElementRefs>;
 
             mockCallback = vi.fn(() => undefined);
         });

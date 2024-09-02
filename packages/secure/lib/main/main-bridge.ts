@@ -6,7 +6,8 @@ import {
     JayNativeFunction,
     withContext,
     RenderElement,
-    useContext, PreRenderElement,
+    useContext,
+    PreRenderElement,
 } from 'jay-runtime';
 import { createState, JayComponentCore, makeJayComponent, Props, useReactive } from 'jay-component';
 import { IJayEndpoint, JPMMessage } from '../comm-channel/comm-channel';

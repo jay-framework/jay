@@ -8,7 +8,9 @@ import {
     ConstructContext,
     HTMLElementCollectionProxy,
     HTMLElementProxy,
-    RenderElementOptions, RenderElement, ReferencesManager,
+    RenderElementOptions,
+    RenderElement,
+    ReferencesManager,
 } from 'jay-runtime';
 
 export interface Item {
@@ -29,15 +31,20 @@ export interface CompElementRefs {
 }
 
 export type CompElement = JayElement<CompViewState, CompElementRefs>;
-export type CompElementRender = RenderElement<CompViewState, CompElementRefs, CompElement>
-export type CompElementPreRender = [refs: CompElementRefs, CompElementRender]
+export type CompElementRender = RenderElement<CompViewState, CompElementRefs, CompElement>;
+export type CompElementPreRender = [refs: CompElementRefs, CompElementRender];
 
 export function render(options?: RenderElementOptions): CompElementPreRender {
-    const [refManager, [result, buttonExecGlobal, buttonExecElement, itemButtonExecElement  ]] =
-        ReferencesManager.for(options, ['result', 'buttonExecGlobal', 'buttonExecElement'], ['itemButtonExecElement'], [], []);
-    const render = (viewState: CompViewState) => ConstructContext.withRootContext(
-        viewState, refManager,
-        () => {
+    const [refManager, [result, buttonExecGlobal, buttonExecElement, itemButtonExecElement]] =
+        ReferencesManager.for(
+            options,
+            ['result', 'buttonExecGlobal', 'buttonExecElement'],
+            ['itemButtonExecElement'],
+            [],
+            [],
+        );
+    const render = (viewState: CompViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () => {
             return de('div', {}, [
                 e('div', { 'data-id': 'result' }, [dt((vs) => vs.text)], result()),
                 e(
@@ -67,7 +74,6 @@ export function render(options?: RenderElementOptions): CompElementPreRender {
                     'id',
                 ),
             ]);
-        },
-    ) as CompElement;
-    return [refManager.getPublicAPI() as CompElementRefs, render]
+        }) as CompElement;
+    return [refManager.getPublicAPI() as CompElementRefs, render];
 }

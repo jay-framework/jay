@@ -48,7 +48,7 @@ class ReactivePairing {
     // }
 
     pushRunningReaction(reactiveGlobalKey: ReactiveGlobalKey) {
-        this.runningReactions.push(reactiveGlobalKey)
+        this.runningReactions.push(reactiveGlobalKey);
     }
 
     popRunningReaction() {
@@ -77,7 +77,7 @@ export class Reactive {
     private inBatchReactions: boolean;
     private inFlush: boolean;
     private reactionGlobalKey: [Reactive, number][] = [];
-    private reactivesToFlush: Set<Reactive> = new Set()
+    private reactivesToFlush: Set<Reactive> = new Set();
 
     createState<T>(
         value: ValueOrGetter<T>,
@@ -97,9 +97,9 @@ export class Reactive {
                 }
             }
             pairedReactionsToRun.forEach(([reactive, index]) => {
-                reactive.triggerReaction(index, measureOfChange)
-                this.reactivesToFlush.add(reactive)
-            })
+                reactive.triggerReaction(index, measureOfChange);
+                this.reactivesToFlush.add(reactive);
+            });
         };
 
         const setter = (value: T | Next<T>) => {
@@ -117,24 +117,23 @@ export class Reactive {
             reactionsToRerun[reactionGlobalKey[1]] = false;
         };
         const resetPairedDependency: ResetStateDependence = (reactionGlobalKey) => {
-            pairedReactionsToRun.delete(reactionGlobalKey)
-        }
+            pairedReactionsToRun.delete(reactionGlobalKey);
+        };
 
         const getter = () => {
             // const runningReaction = REACTIVE_PAIRING.runningReaction();
             // const nestedRunningReaction = REACTIVE_PAIRING.nestedRunningReaction();
 
             const runningReactionsLength = REACTIVE_PAIRING.runningReactions.length;
-            for (let index = runningReactionsLength-1; index > -1; index--) {
+            for (let index = runningReactionsLength - 1; index > -1; index--) {
                 const [reactive, reactionIndex] = REACTIVE_PAIRING.runningReactions[index];
                 if (reactive === this) {
                     reactionsToRerun[reactionIndex] = true;
                     this.reactionDependencies[reactionIndex].add(resetDependency);
                     break;
-                }
-                else {
+                } else {
                     pairedReactionsToRun.add(REACTIVE_PAIRING.runningReactions[index]);
-                    reactive.reactionDependencies[reactionIndex].add(resetPairedDependency)
+                    reactive.reactionDependencies[reactionIndex].add(resetPairedDependency);
                 }
             }
 
@@ -237,9 +236,9 @@ export class Reactive {
             this.dirtyResolve && this.dirtyResolve();
         } finally {
             this.inFlush = false;
-            this.reactivesToFlush.forEach(reactive => {
-                if (!reactive.inBatchReactions) reactive.flush()
-            })
+            this.reactivesToFlush.forEach((reactive) => {
+                if (!reactive.inBatchReactions) reactive.flush();
+            });
             this.reactivesToFlush.clear();
         }
     }

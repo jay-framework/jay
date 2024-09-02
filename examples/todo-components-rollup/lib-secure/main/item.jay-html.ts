@@ -6,7 +6,9 @@ import {
     dynamicProperty as dp,
     ConstructContext,
     HTMLElementProxy,
-    RenderElementOptions, RenderElement, ReferencesManager,
+    RenderElementOptions,
+    RenderElement,
+    ReferencesManager,
 } from 'jay-runtime';
 
 export interface ItemViewState {
@@ -24,19 +26,19 @@ export interface ItemElementRefs {
 }
 
 export type ItemElement = JayElement<ItemViewState, ItemElementRefs>;
-export type ItemElementRender = RenderElement<
-    ItemViewState,
-    ItemElementRefs,
-    ItemElement
->;
+export type ItemElementRender = RenderElement<ItemViewState, ItemElementRefs, ItemElement>;
 export type ItemElementPreRender = [refs: ItemElementRefs, ItemElementRender];
 
 export function render(options?: RenderElementOptions): ItemElementPreRender {
-    const [refManager, [refCompleted, refLabel, refButton, refTitle]] =
-        ReferencesManager.for(options, ['completed', 'label', 'button', 'title'], [], [], []);
-    const render = (viewState: ItemViewState) => ConstructContext.withRootContext(
-        viewState, refManager,
-        () =>
+    const [refManager, [refCompleted, refLabel, refButton, refTitle]] = ReferencesManager.for(
+        options,
+        ['completed', 'label', 'button', 'title'],
+        [],
+        [],
+        [],
+    );
+    const render = (viewState: ItemViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e(
                 'li',
                 {
@@ -63,6 +65,6 @@ export function render(options?: RenderElementOptions): ItemElementPreRender {
                     e('input', { class: 'edit', value: dp((vs) => vs.editText) }, [], refTitle()),
                 ],
             ),
-    ) as ItemElement;
+        ) as ItemElement;
     return [refManager.getPublicAPI() as ItemElementRefs, render];
 }

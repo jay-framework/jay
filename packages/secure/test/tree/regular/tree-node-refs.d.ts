@@ -1,6 +1,4 @@
-import {
-    ComponentCollectionProxy,
-} from 'jay-runtime';
+import { ComponentCollectionProxy } from 'jay-runtime';
 import { TreeNode } from './tree-node';
 
 export type TreeNodeComponentType<ParentVS> = ReturnType<typeof TreeNode<ParentVS>>;

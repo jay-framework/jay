@@ -7,9 +7,11 @@ import {
     ConstructContext,
     HTMLElementProxy,
     childComp,
-    RenderElementOptions, RenderElement, ReferencesManager,
+    RenderElementOptions,
+    RenderElement,
+    ReferencesManager,
 } from 'jay-runtime';
-import {ChildComponentType, ChildRefs} from './child-refs';
+import { ChildComponentType, ChildRefs } from './child-refs';
 import { Child, ChildProps } from './child';
 
 export interface DynamicChild {
@@ -33,15 +35,22 @@ export interface ParentElementRefs {
 }
 
 export type ParentElement = JayElement<ParentViewState, ParentElementRefs>;
-export type ParentElementRender = RenderElement<ParentViewState, ParentElementRefs, ParentElement>
-export type ParentElementPreRender = [refs: ParentElementRefs, ParentElementRender]
+export type ParentElementRender = RenderElement<ParentViewState, ParentElementRefs, ParentElement>;
+export type ParentElementPreRender = [refs: ParentElementRefs, ParentElementRender];
 
 export function render(options?: RenderElementOptions): ParentElementPreRender {
-    const [refManager, [parentChangesChildPropButton, parentCallsChildApiButton, staticChild, dynamicChildren]] =
-        ReferencesManager.for(options, ['parentChangesChildPropButton', 'parentCallsChildApiButton'], [], ['staticChild'], ['dynamicChildren']);
-    const render = (viewState: ParentViewState) => ConstructContext.withRootContext(
-        viewState, refManager,
-        () => {
+    const [
+        refManager,
+        [parentChangesChildPropButton, parentCallsChildApiButton, staticChild, dynamicChildren],
+    ] = ReferencesManager.for(
+        options,
+        ['parentChangesChildPropButton', 'parentCallsChildApiButton'],
+        [],
+        ['staticChild'],
+        ['dynamicChildren'],
+    );
+    const render = (viewState: ParentViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () => {
             return de('div', {}, [
                 e('div', { id: 'text-from-child-event' }, [dt((vs) => vs.textFromChildEvent)]),
                 e('div', { id: 'view-state-from-child-event' }, [
@@ -81,7 +90,6 @@ export function render(options?: RenderElementOptions): ParentElementPreRender {
                     'id',
                 ),
             ]);
-        },
-    ) as ParentElement;
-    return [refManager.getPublicAPI() as ParentElementRefs, render]
+        }) as ParentElement;
+    return [refManager.getPublicAPI() as ParentElementRefs, render];
 }

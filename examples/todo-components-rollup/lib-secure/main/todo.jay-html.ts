@@ -9,7 +9,9 @@ import {
     forEach,
     ConstructContext,
     HTMLElementProxy,
-    RenderElementOptions, RenderElement, ReferencesManager,
+    RenderElementOptions,
+    RenderElement,
+    ReferencesManager,
 } from 'jay-runtime';
 import { secureChildComp as childComp } from 'jay-secure';
 import { ItemRefs } from '../../lib/item-refs';
@@ -49,19 +51,30 @@ export interface TodoElementRefs {
 }
 
 export type TodoElement = JayElement<TodoViewState, TodoElementRefs>;
-export type TodoElementRender = RenderElement<
-    TodoViewState,
-    TodoElementRefs,
-    TodoElement
->;
+export type TodoElementRender = RenderElement<TodoViewState, TodoElementRefs, TodoElement>;
 export type TodoElementPreRender = [refs: TodoElementRefs, TodoElementRender];
 
 export function render(options?: RenderElementOptions): TodoElementPreRender {
-    const [refManager, [refNwTodo, refToggleAll, refFilterAll, refFilterActive, refFilterCompleted, refClearCompleted, refItems]] =
-        ReferencesManager.for(options, ['newTodo', 'toggleAll', 'filterAll', 'filterActive', 'filterCompleted', 'clearCompleted'], [], [], ['items']);
-    const render = (viewState: TodoViewState) => ConstructContext.withRootContext(
-        viewState, refManager,
-        () => {
+    const [
+        refManager,
+        [
+            refNwTodo,
+            refToggleAll,
+            refFilterAll,
+            refFilterActive,
+            refFilterCompleted,
+            refClearCompleted,
+            refItems,
+        ],
+    ] = ReferencesManager.for(
+        options,
+        ['newTodo', 'toggleAll', 'filterAll', 'filterActive', 'filterCompleted', 'clearCompleted'],
+        [],
+        [],
+        ['items'],
+    );
+    const render = (viewState: TodoViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () => {
             return e('div', {}, [
                 e('section', { class: 'todoapp' }, [
                     de('div', {}, [
@@ -198,7 +211,6 @@ export function render(options?: RenderElementOptions): TodoElementPreRender {
                     e('p', {}, ['Part of ', e('a', { href: 'http://todomvc.com' }, ['TodoMVC'])]),
                 ]),
             ]);
-        },
-    ) as TodoElement;
+        }) as TodoElement;
     return [refManager.getPublicAPI() as TodoElementRefs, render];
 }

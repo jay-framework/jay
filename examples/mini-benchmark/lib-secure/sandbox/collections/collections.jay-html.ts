@@ -1,5 +1,5 @@
-import {JayElement, RenderElement} from 'jay-runtime';
-import {elementBridge, SecureReferencesManager} from 'jay-secure';
+import { JayElement, RenderElement } from 'jay-runtime';
+import { elementBridge, SecureReferencesManager } from 'jay-secure';
 
 export interface Item {
     name: string;
@@ -17,12 +17,16 @@ export interface CollectionsViewState {
 export interface CollectionsElementRefs {}
 
 export type CollectionsElement = JayElement<CollectionsViewState, CollectionsElementRefs>;
-export type CollectionsElementRender = RenderElement<CollectionsViewState, CollectionsElementRefs, CollectionsElement>
-export type CollectionsElementPreRender = [refs: CollectionsElementRefs, CollectionsElementRender]
+export type CollectionsElementRender = RenderElement<
+    CollectionsViewState,
+    CollectionsElementRefs,
+    CollectionsElement
+>;
+export type CollectionsElementPreRender = [refs: CollectionsElementRefs, CollectionsElementRender];
 
 export function render(): CollectionsElementPreRender {
-    const [refManager, []] =
-        SecureReferencesManager.forElement([], [], [], []);
-    const render = (viewState: CollectionsViewState) => elementBridge(viewState, refManager, () => []);
-    return [refManager.getPublicAPI() as CollectionsElementRefs, render]
+    const [refManager, []] = SecureReferencesManager.forElement([], [], [], []);
+    const render = (viewState: CollectionsViewState) =>
+        elementBridge(viewState, refManager, () => []);
+    return [refManager.getPublicAPI() as CollectionsElementRefs, render];
 }

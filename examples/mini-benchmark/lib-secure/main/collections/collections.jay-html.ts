@@ -5,7 +5,9 @@ import {
     dynamicElement as de,
     forEach,
     ConstructContext,
-    RenderElementOptions, ReferencesManager, RenderElement,
+    RenderElementOptions,
+    ReferencesManager,
+    RenderElement,
 } from 'jay-runtime';
 
 export interface Item {
@@ -24,17 +26,17 @@ export interface CollectionsViewState {
 export interface CollectionsElementRefs {}
 
 export type CollectionsElement = JayElement<CollectionsViewState, CollectionsElementRefs>;
-export type CollectionsElementRender = RenderElement<CollectionsViewState, CollectionsElementRefs, CollectionsElement>
-export type CollectionsElementPreRender = [refs: CollectionsElementRefs, CollectionsElementRender]
+export type CollectionsElementRender = RenderElement<
+    CollectionsViewState,
+    CollectionsElementRefs,
+    CollectionsElement
+>;
+export type CollectionsElementPreRender = [refs: CollectionsElementRefs, CollectionsElementRender];
 
-export function render(
-    options?: RenderElementOptions,
-): CollectionsElementPreRender {
-    const [refManager, []] =
-        ReferencesManager.for(options, [], [], [], []);
-    const render = (viewState: CollectionsViewState) => ConstructContext.withRootContext(
-        viewState, refManager, 
-        () =>
+export function render(options?: RenderElementOptions): CollectionsElementPreRender {
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const render = (viewState: CollectionsViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('h1', {}, [dt((vs) => vs.title)]),
                 e('p', {}, [dt((vs) => `Number of items: ${vs.numberOfItems}`)]),
@@ -79,6 +81,6 @@ export function render(
                     ),
                 ]),
             ]),
-    ) as CollectionsElement;
-    return [refManager.getPublicAPI() as CollectionsElementRefs, render]
+        ) as CollectionsElement;
+    return [refManager.getPublicAPI() as CollectionsElementRefs, render];
 }

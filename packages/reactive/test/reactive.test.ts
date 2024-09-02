@@ -1,5 +1,5 @@
-import {MeasureOfChange, Reactive, } from '../lib';
-import {ReactiveWithTracking, RunOrder} from './reactive-with-tracking';
+import { MeasureOfChange, Reactive } from '../lib';
+import { ReactiveWithTracking, RunOrder } from './reactive-with-tracking';
 
 describe('reactive', () => {
     describe('create state', () => {
@@ -609,7 +609,6 @@ describe('reactive', () => {
     });
 
     describe('reactive pairing', () => {
-
         it(`A pulls from B. B batch sets B state. expecting to run A reactions`, async () => {
             const runOrder = new RunOrder();
             const B = new ReactiveWithTracking('B', runOrder);
@@ -623,25 +622,25 @@ describe('reactive', () => {
             await A.toBeClean();
             await B.toBeClean();
 
-            expect(a1()).toBe('The B reactive Value is - 1')
+            expect(a1()).toBe('The B reactive Value is - 1');
 
             B.batchReactions(() => {
                 setB1(4);
-            })
+            });
 
-            expect(a1()).toBe('The B reactive Value is - 4')
+            expect(a1()).toBe('The B reactive Value is - 4');
             expect(runOrder.log).toEqual([
-                "B - createState B1",
-                "A - createState A1",
-                "A - i   : (B1) -> (A1)",
-                "A - await toBeClean!!!",
-                "B - await toBeClean!!!",
-                "B - batch: setState B1",
-                "B - flush!!!",
-                "A - flush!!!",
-                "A - i   : (B1) -> (A1)",
-            ])
-        })
+                'B - createState B1',
+                'A - createState A1',
+                'A - i   : (B1) -> (A1)',
+                'A - await toBeClean!!!',
+                'B - await toBeClean!!!',
+                'B - batch: setState B1',
+                'B - flush!!!',
+                'A - flush!!!',
+                'A - i   : (B1) -> (A1)',
+            ]);
+        });
 
         it(`A uses B. A batch, B batch sets B state. expecting to flush B on B batch end`, async () => {
             const runOrder = new RunOrder();
@@ -665,27 +664,27 @@ describe('reactive', () => {
                 setA1([1, 2, 3, 4]);
                 B.batchReactions(() => {
                     setB1(a1().length);
-                })
-            })
+                });
+            });
 
-            expect(a2()).toBe('[1,2,3,4] - the length is 4')
+            expect(a2()).toBe('[1,2,3,4] - the length is 4');
             expect(runOrder.log).toEqual([
-                "B - createState B1",
-                "B - createState B2",
-                "B - i   : (B1) -> (B2)",
-                "A - createState A1",
-                "A - createState A2",
-                "A - i   : (A1,B2) -> (A2)",
-                "A - await toBeClean!!!",
-                "B - await toBeClean!!!",
-                "A - batch: setState A1",
-                "A, B - batch: setState B1",
-                "B - flush!!!",
-                "B - i   : (B1) -> (B2)",
-                "A - flush!!!",
-                "A - i   : (A1,B2) -> (A2)",
-            ])
-        })
+                'B - createState B1',
+                'B - createState B2',
+                'B - i   : (B1) -> (B2)',
+                'A - createState A1',
+                'A - createState A2',
+                'A - i   : (A1,B2) -> (A2)',
+                'A - await toBeClean!!!',
+                'B - await toBeClean!!!',
+                'A - batch: setState A1',
+                'A, B - batch: setState B1',
+                'B - flush!!!',
+                'B - i   : (B1) -> (B2)',
+                'A - flush!!!',
+                'A - i   : (A1,B2) -> (A2)',
+            ]);
+        });
 
         it(`A uses B. A reaction sets B state without B Batch. expecting B to flush async then flush A again`, async () => {
             const runOrder = new RunOrder();
@@ -710,36 +709,36 @@ describe('reactive', () => {
 
             A.batchReactions(() => {
                 setA1([1, 2, 3, 4]);
-            })
+            });
 
             // `B` was not flushed yet, so the length is 3 and not 4
-            expect(b2()).toBe('the length is 3')
-            expect(a2()).toBe('[1,2,3,4] - the length is 3')
+            expect(b2()).toBe('the length is 3');
+            expect(a2()).toBe('[1,2,3,4] - the length is 3');
             await B.toBeClean();
-            expect(b2()).toBe('the length is 4')
-            expect(a2()).toBe('[1,2,3,4] - the length is 4')
+            expect(b2()).toBe('the length is 4');
+            expect(a2()).toBe('[1,2,3,4] - the length is 4');
 
             expect(runOrder.log).toEqual([
-                "B - createState B1",
-                "B - createState B2",
-                "B - i   : (B1) -> (B2)",
-                "A - createState A1",
-                "A - createState A2",
-                "A - i   : (A1) -> (B1)",
-                "A - ii  : (A1,B2) -> (A2)",
-                "A - await toBeClean!!!",
-                "B - await toBeClean!!!",
-                "A - batch: setState A1",
-                "A - flush!!!",
-                "A - i   : (A1) -> (B1)",
-                "A - ii  : (A1,B2) -> (A2)",
-                "B - await toBeClean!!!",
-                "B - flush!!!",
-                "B - i   : (B1) -> (B2)",
-                "A - flush!!!",
-                "A - ii  : (A1,B2) -> (A2)",
-            ])
-        })
+                'B - createState B1',
+                'B - createState B2',
+                'B - i   : (B1) -> (B2)',
+                'A - createState A1',
+                'A - createState A2',
+                'A - i   : (A1) -> (B1)',
+                'A - ii  : (A1,B2) -> (A2)',
+                'A - await toBeClean!!!',
+                'B - await toBeClean!!!',
+                'A - batch: setState A1',
+                'A - flush!!!',
+                'A - i   : (A1) -> (B1)',
+                'A - ii  : (A1,B2) -> (A2)',
+                'B - await toBeClean!!!',
+                'B - flush!!!',
+                'B - i   : (B1) -> (B2)',
+                'A - flush!!!',
+                'A - ii  : (A1,B2) -> (A2)',
+            ]);
+        });
 
         it(`A pulls from B. A batch, B batch sets B state. expecting to run A reactions`, async () => {
             const runOrder = new RunOrder();
@@ -754,27 +753,27 @@ describe('reactive', () => {
             await A.toBeClean();
             await B.toBeClean();
 
-            expect(a1()).toBe('The B reactive Value is - 1')
+            expect(a1()).toBe('The B reactive Value is - 1');
 
             A.batchReactions(() => {
                 B.batchReactions(() => {
                     setB1(4);
-                })
-            })
+                });
+            });
 
-            expect(a1()).toBe('The B reactive Value is - 4')
+            expect(a1()).toBe('The B reactive Value is - 4');
             expect(runOrder.log).toEqual([
-                "B - createState B1",
-                "A - createState A1",
-                "A - i   : (B1) -> (A1)",
-                "A - await toBeClean!!!",
-                "B - await toBeClean!!!",
-                "A, B - batch: setState B1",
-                "B - flush!!!",
-                "A - flush!!!",
-                "A - i   : (B1) -> (A1)",
-            ])
-        })
+                'B - createState B1',
+                'A - createState A1',
+                'A - i   : (B1) -> (A1)',
+                'A - await toBeClean!!!',
+                'B - await toBeClean!!!',
+                'A, B - batch: setState B1',
+                'B - flush!!!',
+                'A - flush!!!',
+                'A - i   : (B1) -> (A1)',
+            ]);
+        });
 
         it(`A pull from B. B batch sets B state. expecting to run A reactions`, async () => {
             const runOrder = new RunOrder();
@@ -789,56 +788,55 @@ describe('reactive', () => {
             await A.toBeClean();
             await B.toBeClean();
 
-            expect(a1()).toBe('The B reactive Value is - 1')
+            expect(a1()).toBe('The B reactive Value is - 1');
 
             B.batchReactions(() => {
                 setB1(4);
-            })
+            });
 
-            expect(a1()).toBe('The B reactive Value is - 4')
+            expect(a1()).toBe('The B reactive Value is - 4');
             expect(runOrder.log).toEqual([
-                "B - createState B1",
-                "A - createState A1",
-                "A - i   : (B1) -> (A1)",
-                "A - await toBeClean!!!",
-                "B - await toBeClean!!!",
-                "B - batch: setState B1",
-                "B - flush!!!",
-                "A - flush!!!",
-                "A - i   : (B1) -> (A1)",
-            ])
-        })
+                'B - createState B1',
+                'A - createState A1',
+                'A - i   : (B1) -> (A1)',
+                'A - await toBeClean!!!',
+                'B - await toBeClean!!!',
+                'B - batch: setState B1',
+                'B - flush!!!',
+                'A - flush!!!',
+                'A - i   : (B1) -> (A1)',
+            ]);
+        });
 
         it(`A uses B. A updates B twice with batching. B flushes twice as a result`, async () => {
-
             const runOrder = new RunOrder();
             const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createState(3);
-            const [b2, setB2] = B.createState(b1()+1);
+            const [b2, setB2] = B.createState(b1() + 1);
             const [b3, setB3] = B.createState(5);
-            const [b4, setB4] = B.createState(b3()+1);
+            const [b4, setB4] = B.createState(b3() + 1);
             B.createReaction(() => {
-                setB2(b1()+1);
+                setB2(b1() + 1);
             });
             B.createReaction(() => {
-                setB4(b3()+1);
+                setB4(b3() + 1);
             });
 
             const A = new ReactiveWithTracking('A', runOrder);
             const [a1, setA1] = A.createState(1);
-            const [a2, setA2] = A.createState(b2()+1);
+            const [a2, setA2] = A.createState(b2() + 1);
             A.createReaction(() => {
                 B.batchReactions(() => {
-                    setB1(a1()+1);
-                })
+                    setB1(a1() + 1);
+                });
             });
             A.createReaction(() => {
-                setA2(b2()+1);
+                setA2(b2() + 1);
             });
             A.createReaction(() => {
                 B.batchReactions(() => {
-                    setB3(a2()+1); // this should fail and propagate to the batchReactions below
-                })
+                    setB3(a2() + 1); // this should fail and propagate to the batchReactions below
+                });
             });
 
             await A.toBeClean();
@@ -846,37 +844,36 @@ describe('reactive', () => {
 
             A.batchReactions(() => {
                 setA1(10);
-            })
-            expect(b4()).toEqual(15)
+            });
+            expect(b4()).toEqual(15);
             expect(runOrder.log).toEqual([
-                "B - createState B1",
-                "B - createState B2",
-                "B - createState B3",
-                "B - createState B4",
-                "B - i   : (B1) -> (B2)",
-                "B - ii  : (B3) -> (B4)",
-                "A - createState A1",
-                "A - createState A2",
-                "A - i   : (A1) -> (B1)",
-                "B - flush!!!",
-                "B - i   : (B1) -> (B2)",
-                "A - ii  : (B2) -> (A2)",
-                "A - iii : (A2) -> (B3)",
-                "B - flush!!!",
-                "A - await toBeClean!!!",
-                "B - await toBeClean!!!",
-                "A - batch: setState A1",
-                "A - flush!!!",
-                "A - i   : (A1) -> (B1)",
-                "B - flush!!!",
-                "B - i   : (B1) -> (B2)",
-                "A - ii  : (B2) -> (A2)",
-                "A - iii : (A2) -> (B3)",
-                "B - flush!!!",
-                "B - ii  : (B3) -> (B4)",
-            ])
-
-        })
+                'B - createState B1',
+                'B - createState B2',
+                'B - createState B3',
+                'B - createState B4',
+                'B - i   : (B1) -> (B2)',
+                'B - ii  : (B3) -> (B4)',
+                'A - createState A1',
+                'A - createState A2',
+                'A - i   : (A1) -> (B1)',
+                'B - flush!!!',
+                'B - i   : (B1) -> (B2)',
+                'A - ii  : (B2) -> (A2)',
+                'A - iii : (A2) -> (B3)',
+                'B - flush!!!',
+                'A - await toBeClean!!!',
+                'B - await toBeClean!!!',
+                'A - batch: setState A1',
+                'A - flush!!!',
+                'A - i   : (A1) -> (B1)',
+                'B - flush!!!',
+                'B - i   : (B1) -> (B2)',
+                'A - ii  : (B2) -> (A2)',
+                'A - iii : (A2) -> (B3)',
+                'B - flush!!!',
+                'B - ii  : (B3) -> (B4)',
+            ]);
+        });
 
         it(`A uses B. A updates B using B batch, and expects on next reactions to have B flushed`, async () => {
             const runOrder = new RunOrder();
@@ -897,7 +894,7 @@ describe('reactive', () => {
             A.createReaction(() => {
                 B.batchReactions(() => {
                     setB1(a1().length);
-                })
+                });
             });
             A.createReaction(() => {
                 setA2(`${JSON.stringify(a1())} - ${b2()}`);
@@ -908,32 +905,32 @@ describe('reactive', () => {
 
             A.batchReactions(() => {
                 setA1([1, 2, 3, 4]);
-            })
+            });
 
-            expect(a3()).toBe(3) // not updated
-            expect(b1()).toBe(4) // updated
-            expect(a2()).toBe('[1,2,3,4] - the length is 4')
+            expect(a3()).toBe(3); // not updated
+            expect(b1()).toBe(4); // updated
+            expect(a2()).toBe('[1,2,3,4] - the length is 4');
             expect(runOrder.log).toEqual([
-                "B - createState B1",
-                "B - createState B2",
-                "B - i   : (B1) -> (B2)",
-                "A - createState A1",
-                "A - createState A2",
-                "A - createState A3",
-                "A - i   : (B1) -> (A3)",
-                "A - ii  : (A1) -> (B1)",
-                "B - flush!!!",
-                "A - iii : (A1,B2) -> (A2)",
-                "A - await toBeClean!!!",
-                "B - await toBeClean!!!",
-                "A - batch: setState A1",
-                "A - flush!!!",
-                "A - ii  : (A1) -> (B1)",
-                "B - flush!!!",
-                "B - i   : (B1) -> (B2)",
-                "A - iii : (A1,B2) -> (A2)",
-            ])
-        })
+                'B - createState B1',
+                'B - createState B2',
+                'B - i   : (B1) -> (B2)',
+                'A - createState A1',
+                'A - createState A2',
+                'A - createState A3',
+                'A - i   : (B1) -> (A3)',
+                'A - ii  : (A1) -> (B1)',
+                'B - flush!!!',
+                'A - iii : (A1,B2) -> (A2)',
+                'A - await toBeClean!!!',
+                'B - await toBeClean!!!',
+                'A - batch: setState A1',
+                'A - flush!!!',
+                'A - ii  : (A1) -> (B1)',
+                'B - flush!!!',
+                'B - i   : (B1) -> (B2)',
+                'A - iii : (A1,B2) -> (A2)',
+            ]);
+        });
 
         it('should track getter of parent A reactive when read from child B reactive (createDerivedArray case)', async () => {
             const runOrder = new RunOrder();
@@ -943,49 +940,47 @@ describe('reactive', () => {
             const [a2, setA2] = A.createState(1);
 
             let B: Reactive;
-            let b1, setB1
+            let b1, setB1;
             A.createReaction(() => {
                 if (!B) {
                     B = new ReactiveWithTracking('B', runOrder);
                     [b1, setB1] = B.createState(1);
                     B.createReaction(() => {
-                        setB1(a1()+1)
-                    })
-                }
-                else
-                    B.flush();
-            })
+                        setB1(a1() + 1);
+                    });
+                } else B.flush();
+            });
             A.createReaction(() => {
-                setA2(b1()+1);
-            })
+                setA2(b1() + 1);
+            });
 
             await A.toBeClean();
             await B.toBeClean();
 
             A.batchReactions(() => {
                 setA1(10);
-            })
+            });
 
-            expect(b1()).toBe(11)
-            expect(a2()).toBe(12)
+            expect(b1()).toBe(11);
+            expect(a2()).toBe(12);
 
             expect(runOrder.log).toEqual([
-                "A - createState A1",
-                "A - createState A2",
-                "A - i   : () -> ()",
-                "B - createState B1",
-                "B - i   : (A1) -> (B1)",
-                "A - ii  : (B1) -> (A2)",
-                "A - await toBeClean!!!",
-                "B - await toBeClean!!!",
-                "A - batch: setState A1",
-                "A - flush!!!",
-                "A - i   : () -> ()",
-                "B - flush!!!",
-                "B - i   : (A1) -> (B1)",
-                "A - ii  : (B1) -> (A2)",
-                "B - flush!!!",
-            ])
-        })
-    })
+                'A - createState A1',
+                'A - createState A2',
+                'A - i   : () -> ()',
+                'B - createState B1',
+                'B - i   : (A1) -> (B1)',
+                'A - ii  : (B1) -> (A2)',
+                'A - await toBeClean!!!',
+                'B - await toBeClean!!!',
+                'A - batch: setState A1',
+                'A - flush!!!',
+                'A - i   : () -> ()',
+                'B - flush!!!',
+                'B - i   : (A1) -> (B1)',
+                'A - ii  : (B1) -> (A2)',
+                'B - flush!!!',
+            ]);
+        });
+    });
 });

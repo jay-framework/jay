@@ -1,6 +1,4 @@
-import {
-    EventEmitter, ComponentCollectionProxy, EventTypeFrom,
-} from 'jay-runtime';
+import { EventEmitter, ComponentCollectionProxy, EventTypeFrom } from 'jay-runtime';
 import { Counter } from './counter';
 
 export type CounterComponentType<ParentVS> = ReturnType<typeof Counter<ParentVS>>;

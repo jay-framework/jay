@@ -39,14 +39,14 @@ describe('context', () => {
     });
 
     it('findContext - should return undefined when no context is available', () => {
-        let test = findContext(_ => _ === TEST_CONTEXT);
+        let test = findContext((_) => _ === TEST_CONTEXT);
         expect(test).not.toBeDefined();
     });
 
     it('findContext - should return undefined when no context matches the predicate', () => {
         let foundContext;
         withContext(TEST_CONTEXT, CONTEXT_VALUE, () => {
-            foundContext = findContext(_ => _ === TEST_CONTEXT_2);
+            foundContext = findContext((_) => _ === TEST_CONTEXT_2);
         });
         expect(foundContext).not.toBeDefined();
     });

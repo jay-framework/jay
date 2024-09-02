@@ -1,8 +1,4 @@
-import {
-    EventEmitter,
-    ComponentCollectionProxy,
-    EventTypeFrom,
-} from 'jay-runtime';
+import { EventEmitter, ComponentCollectionProxy, EventTypeFrom } from 'jay-runtime';
 import { Child } from './child';
 
 export type ChildComponentType<ParentVS> = ReturnType<typeof Child<ParentVS>>;

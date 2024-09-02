@@ -5,7 +5,7 @@ import {
     dynamicText as dt,
     dynamicProperty as dp,
 } from '../../lib/element';
-import {BaseJayElement, JayElement, noopUpdate, ReferencesManager} from '../../lib';
+import { BaseJayElement, JayElement, noopUpdate, ReferencesManager } from '../../lib';
 import { ConstructContext } from '../../lib';
 
 const SOME_VALUE = 'some text in the element';
@@ -156,7 +156,7 @@ describe('element', () => {
         beforeEach(() => {
             data = { isOne: true, isTwo: false };
             let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
-            jayElement = ConstructContext.withRootContext(data, refManager,() =>
+            jayElement = ConstructContext.withRootContext(data, refManager, () =>
                 e(
                     'div',
                     {

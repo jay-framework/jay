@@ -8,7 +8,9 @@ import {
     forEach,
     ConstructContext,
     HTMLElementProxy,
-    RenderElementOptions, ReferencesManager, RenderElement,
+    RenderElementOptions,
+    ReferencesManager,
+    RenderElement,
 } from 'jay-runtime';
 import { BasicComponentType } from './basic/basic-data-refs';
 import { Basic } from './basic/basic-data';
@@ -54,15 +56,31 @@ export interface MainElementRefs {
 }
 
 export type MainElement = JayElement<MainViewState, MainElementRefs>;
-export type MainElementRender = RenderElement<MainViewState, MainElementRefs, MainElement>
-export type MainElementPreRender = [refs: MainElementRefs, MainElementRender]
+export type MainElementRender = RenderElement<MainViewState, MainElementRefs, MainElement>;
+export type MainElementPreRender = [refs: MainElementRefs, MainElementRender];
 
 export function render(options?: RenderElementOptions): MainElementPreRender {
-    const [refManager, [refChooseExample, refCycles, refRun, refBasic, refCollections, refComposite, refConditions, refTable]] =
-        ReferencesManager.for(options, ['chooseExample', 'cycles', 'run'], [], ['basic', 'collections', 'composite', 'conditions', 'table'], []);
-    const render = (viewState: MainViewState) =>  ConstructContext.withRootContext(
-        viewState, refManager,
-        () =>
+    const [
+        refManager,
+        [
+            refChooseExample,
+            refCycles,
+            refRun,
+            refBasic,
+            refCollections,
+            refComposite,
+            refConditions,
+            refTable,
+        ],
+    ] = ReferencesManager.for(
+        options,
+        ['chooseExample', 'cycles', 'run'],
+        [],
+        ['basic', 'collections', 'composite', 'conditions', 'table'],
+        [],
+    );
+    const render = (viewState: MainViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('div', { class: 'select-example' }, [
                     e('label', { for: 'choose-example' }, ['Select example to view']),
@@ -130,6 +148,6 @@ export function render(options?: RenderElementOptions): MainElementPreRender {
                     ),
                 ]),
             ]),
-    ) as MainElement;
-    return [refManager.getPublicAPI() as MainElementRefs, render]
+        ) as MainElement;
+    return [refManager.getPublicAPI() as MainElementRefs, render];
 }

@@ -49,70 +49,70 @@ and use it as the ContextItself.
 ### The proposed high level Context API:
 
 ```typescript
-import {TodoComponent} from "./todo";
+import { TodoComponent } from './todo';
 
 interface TodoContext {
-   todos: Getter<Array<TodoItem>>;
+  todos: Getter<Array<TodoItem>>;
 
-   updateTodo(newItem: TodoItem);
+  updateTodo(newItem: TodoItem);
 
-   removeTodo(item: TodoItem);
+  removeTodo(item: TodoItem);
 
-   newTodo(newItem: TodoItem);
+  newTodo(newItem: TodoItem);
 }
 
 const TODO_CONTEXT = createContext<TodoContext>();
 
 // provide context
 const todoContext = reactive(() => {
-   const [todos, setTodos] = createState(/* initial value*/);
-   const updateTodo = (newItem: TodoItem) => {
-      /*...*/
-      setTodos(/*...*/);
-   };
-   const removeTodo = (item: TodoItem) => {
-      /*...*/
-      setTodos(/*...*/);
-   };
-   const newTodo = (newItem: TodoItem) => {
-      /*...*/
-      setTodos(/*...*/);
-   };
-   return {todos, updateTodo, removeTodo, newTodo};
+  const [todos, setTodos] = createState(/* initial value*/);
+  const updateTodo = (newItem: TodoItem) => {
+    /*...*/
+    setTodos(/*...*/);
+  };
+  const removeTodo = (item: TodoItem) => {
+    /*...*/
+    setTodos(/*...*/);
+  };
+  const newTodo = (newItem: TodoItem) => {
+    /*...*/
+    setTodos(/*...*/);
+  };
+  return { todos, updateTodo, removeTodo, newTodo };
 });
 
 // in the parent component
 provideContext(TODO_CONTEXT, todoContext, () => {
-   // jay creation of child components
+  // jay creation of child components
 });
 
 // in some child decendent component
 function TodoConstructor(
-        {}: Props<TodoProps>,
-        refs: TodoElementRefs,
-        {todos, updateTodo, removeTodo, newTodo}: TodoContext
+  {}: Props<TodoProps>,
+  refs: TodoElementRefs,
+  { todos, updateTodo, removeTodo, newTodo }: TodoContext,
 ) {
-   // do something with todos
-   const activeTodoCount = createMemo(() =>
-           todos().reduce(function (accum: number, todo: ShownTodo) {
-              return todo.isCompleted ? accum : accum + 1;
-           }, 0),
-   );
+  // do something with todos
+  const activeTodoCount = createMemo(() =>
+    todos().reduce(function (accum: number, todo: ShownTodo) {
+      return todo.isCompleted ? accum : accum + 1;
+    }, 0),
+  );
 
-   refs.newTodo.onkeydown(({event}: JayEvent<KeyboardEvent, TodoViewState>) => {
-      if (event.keyCode === ENTER_KEY) {
-         event.preventDefault();
-         let newValue = newTodo();
-         let val = newValue.trim();
+  refs.newTodo.onkeydown(({ event }: JayEvent<KeyboardEvent, TodoViewState>) => {
+    if (event.keyCode === ENTER_KEY) {
+      event.preventDefault();
+      let newValue = newTodo();
+      let val = newValue.trim();
 
-         if (val) {
-            newTodo({
-               /*... todo members ... */
-            });
-         }
-         setNewTodo('');
+      if (val) {
+        newTodo({
+          /*... todo members ... */
+        });
       }
-   });
+      setNewTodo('');
+    }
+  });
 }
 
 const Todo = makeJayComponent(TodoConstructor, TodoElement, TODO_CONTEXT);
@@ -186,61 +186,63 @@ We can try a different approach - instead of adding context as a prop, we can ad
 
 ```typescript
 function Todo(
-        { }: Props<TodoProps>,
-        refs: TodoElementRefs,
-        { todos, updateTodo, removeTodo, newTodo }: TodoContext
+  {}: Props<TodoProps>,
+  refs: TodoElementRefs,
+  { todos, updateTodo, removeTodo, newTodo }: TodoContext,
 ) {}
 ```
 
 The above method works and meets the requirements such that
+
 1. the component interface includes the context
 2. the context is typed and supports deconstruction
 
 However, how to we perform the actual injection?
 
 We note that we are changing the component constructor function, adding a 3rd varargs context parameter
+
 ```typescript
 export type ComponentConstructor<
-        PropsT extends object,
-        Refs extends object,
-        ViewState extends object,
-        Contexts extends Array<any>,
-        CompCore extends JayComponentCore<PropsT, ViewState>> =
-        (props: Props<PropsT>, refs: Refs, ...contexts: Contexts) => CompCore
+  PropsT extends object,
+  Refs extends object,
+  ViewState extends object,
+  Contexts extends Array<any>,
+  CompCore extends JayComponentCore<PropsT, ViewState>,
+> = (props: Props<PropsT>, refs: Refs, ...contexts: Contexts) => CompCore;
 ```
 
-For the actual injection we can use the same Generic `Contexts` type to ensure `mkJayComponent` also accepts 
-the context markers such that it can inject contexts. 
+For the actual injection we can use the same Generic `Contexts` type to ensure `mkJayComponent` also accepts
+the context markers such that it can inject contexts.
 
 ```typescript
 type ContextMarkers<T extends any[]> = {
-   [K in keyof T]: ContextMarker<T[K]>;
+  [K in keyof T]: ContextMarker<T[K]>;
 };
 
 declare function makeJayComponent<
-        PropsT extends object,
-        ViewState extends object,
-        Refs extends object,
-        JayElementT extends JayElement<ViewState, Refs>,
-        Contexts extends Array<any>,
-        CompCore extends JayComponentCore<PropsT, ViewState>,
+  PropsT extends object,
+  ViewState extends object,
+  Refs extends object,
+  JayElementT extends JayElement<ViewState, Refs>,
+  Contexts extends Array<any>,
+  CompCore extends JayComponentCore<PropsT, ViewState>,
 >(
-        render: RenderElement<ViewState, Refs, JayElementT>,
-        comp: ComponentConstructor<PropsT, Refs, ViewState, Contexts, CompCore>,
-        ...contexts: ContextMarkers<Contexts> 
-): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>
+  render: RenderElement<ViewState, Refs, JayElementT>,
+  comp: ComponentConstructor<PropsT, Refs, ViewState, Contexts, CompCore>,
+  ...contexts: ContextMarkers<Contexts>
+): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>;
 ```
 
 While this option works, it has two disadvantages
-1. it requires defining the context twice - once as a parameter of the component constructor using the context type, 
+
+1. it requires defining the context twice - once as a parameter of the component constructor using the context type,
    the second time in the makeJayComponent call.
 2. it does not validate the marker type matching the context type
 
 It has the advantages that
+
 1. context is declared as part of the component inputs
 2. it requires adding the markers on the makeJayComponent function call, as many as requested contexts
-
-
 
 ## 2. Component Reactive to listen to changes in Context Reactive
 
@@ -504,7 +506,7 @@ setB1([1, 2, 3, 4]);
 ```
 
 Right after running reaction `ii`, we identify that we have set a state for another reactive, `reactiveA`.
-We now start running flush for `reactiveA` and run reaction `i`, before we continue to run the reactions of `reactiveB`. 
+We now start running flush for `reactiveA` and run reaction `i`, before we continue to run the reactions of `reactiveB`.
 Reaction `i` sets the state `a2` of `reactiveA`.
 Then, `reactiveB` continues and runs reaction `iii` which reads `a2` state. All fine.
 
@@ -539,8 +541,9 @@ The decision we need to make:
 The rule we get from it, is that when a component updates a context, only the reactions after (in code order) the
 update to the context will see the updated context.
 
-## Reactive Pairing rules: 
-1. when a reactive detects setting a state on another reactive, it triggers a flush on the other reactive 
+## Reactive Pairing rules:
+
+1. when a reactive detects setting a state on another reactive, it triggers a flush on the other reactive
    right after the reaction ends, and before running more reactions.
 2. when a reactive is in flush state, it ignores calls for flush (as today, to prevent flush cycles)
 3. no need to prevent updating state twice, as this algorithm ensures no cycles.
@@ -562,7 +565,8 @@ Then, `A` will continue and run reactions `R[X+1]` to `R[N]`.
 
 ## 3. Context Providing
 
-In react, a Context is provided as 
+In react, a Context is provided as
+
 ```typescript jsx
 function App() {
    const [text, setText] = useState("");
@@ -580,42 +584,48 @@ export default App;
 ```
 
 In Jay Runtime, Context is provided as
+
 ```typescript
 // in the parent component
 provideContext(TODO_CONTEXT, todoContext, () => {
-   // jay creation of child components
+  // jay creation of child components
 });
 ```
 
 However, when we review the Jay component model, we see that the above does not fit.
 
 A simple Jay Component who may provide context
+
 ```typescript
 function SomeComponentConstructor({}: Props<SomeProps>, refs: SomeRefs) {
-   return {
-      render: () => ({})
-   }
+  return {
+    render: () => ({}),
+  };
 }
 ```
 
-### provideContext hook 
+### provideContext hook
 
 The component is not wrapping the creation of child components as in React or Jay runtime context assumption.
-The reality is that the component creation itself does wrap the child components creation, however this is handled 
+The reality is that the component creation itself does wrap the child components creation, however this is handled
 internally by `makeJayComponent`.
 
 So what is the best API for a component as the above to provide a context?
 
-We can opt to use 
+We can opt to use
+
 ```typescript
 function SomeComponentConstructor({}: Props<SomeProps>, refs: SomeRefs) {
-   provideContext(TODO_CONTEXT, {/*... some context ...*/})    
-   return {
-      render: () => ({})
-   }
+  provideContext(TODO_CONTEXT, {
+    /*... some context ...*/
+  });
+  return {
+    render: () => ({}),
+  };
 }
 ```
-This API looks great, but it causes us another problem - it has the same name as the jay runtime `provideContext` 
+
+This API looks great, but it causes us another problem - it has the same name as the jay runtime `provideContext`
 but a different structure.
 
 A simple mitigation is to rename `provideContext` to `withContext` for the version with a callback,
@@ -624,18 +634,20 @@ and call the component API hook as `provideContext` (without a callback).
 ### component creation problem
 
 We identify another problem in providing context - it is that an element `render` function runs before the component
-constructor runs, in order to get the `refs` as an input to the component constructor. However, it also means that 
-child components are created before the parent component, making it impossible for the parent component to provide 
+constructor runs, in order to get the `refs` as an input to the component constructor. However, it also means that
+child components are created before the parent component, making it impossible for the parent component to provide
 context from it's creation to the child component at the time of the child component creation.
 
 One option is to fix a long outstanding problem of cycling creation at which
-component needs the element `refs`, while the `element` needs the component generated `view state`. 
-The current solution is to 
+component needs the element `refs`, while the `element` needs the component generated `view state`.
+The current solution is to
+
 1. we render the element with an empty `view state`
 2. we use the `refs` from the element to create the component and generate `view state`
 3. we update the element with the `view state`.
 
-We suggest another option here. To split the `refs` and `element` creation into two steps, so that 
+We suggest another option here. To split the `refs` and `element` creation into two steps, so that
+
 1. create the `refs`
 2. create the component with `refs`, generating `view state`
 3. render the element with the `view state`
@@ -643,42 +655,67 @@ We suggest another option here. To split the `refs` and `element` creation into 
 This means a change in the generated element model (a big change). Lets explore that change for a sec
 
 The good news is that we have all the infra in place for that. `PrivateRef<ViewState, BaseJayElement<ViewState>>`
-in runtime already decouples the actual element reference from the `ref` itself, using the 
+in runtime already decouples the actual element reference from the `ref` itself, using the
 `set(referenced: ReferenceTarget<ViewState>): void;` member.
 
 we can transform from today's
+
 ```typescript
 export function render(viewState: TodoViewState, options?: RenderElementOptions): TodoElement {
-    return ConstructContext.withRootContext(viewState, () => {
-        const refItems = ccr('items');
-        return e('div', {}, [
-           e('button', {}, [], er('clearCompleted')),
-           forEach(vs => vs.items, (vs1: Item) => {
-              return childComp(Item, (vs: Item) => ({/* some props */}), refItems())}, 'id')
-            /*... more child elements...*/
-        ])
-    })
+  return ConstructContext.withRootContext(viewState, () => {
+    const refItems = ccr('items');
+    return e('div', {}, [
+      e('button', {}, [], er('clearCompleted')),
+      forEach(
+        (vs) => vs.items,
+        (vs1: Item) => {
+          return childComp(
+            Item,
+            (vs: Item) => ({
+              /* some props */
+            }),
+            refItems(),
+          );
+        },
+        'id',
+      ),
+      /*... more child elements...*/
+    ]);
+  });
 }
 ```
 
-to declaring all refs in advance and returning both the refs and the render function 
+to declaring all refs in advance and returning both the refs and the render function
+
 ```typescript
 export function makeRender() {
-   const refManager = new ReferencesManager() 
-   const refItems = refManager.ccr('items');
-   const clearCompleted = refManager.er('clearCompleted');
-   return [refManager.refs,
-      function render(viewState: TodoViewState, options?: RenderElementOptions): TodoElement {
-         return ConstructContext.withRootContext(viewState, () => {
-            return e('div', {}, [
-               e('button', {}, [], clearCompleted()),
-               forEach(vs => vs.items, (vs1: Item) => {
-                  return childComp(Item, (vs: Item) => ({/* some props */}), refItems())
-               }, 'id')
-               /*... more child elements...*/
-            ])
-         })
-      }]
+  const refManager = new ReferencesManager();
+  const refItems = refManager.ccr('items');
+  const clearCompleted = refManager.er('clearCompleted');
+  return [
+    refManager.refs,
+    function render(viewState: TodoViewState, options?: RenderElementOptions): TodoElement {
+      return ConstructContext.withRootContext(viewState, () => {
+        return e('div', {}, [
+          e('button', {}, [], clearCompleted()),
+          forEach(
+            (vs) => vs.items,
+            (vs1: Item) => {
+              return childComp(
+                Item,
+                (vs: Item) => ({
+                  /* some props */
+                }),
+                refItems(),
+              );
+            },
+            'id',
+          ),
+          /*... more child elements...*/
+        ]);
+      });
+    },
+  ];
 }
 ```
 
@@ -689,12 +726,13 @@ When two Reactives interact, there are two types of interactions - pull or push.
 Push interaction is when `Reactive A sets a state on reactive B in a reaction or batch`.
 Pull interaction is when `Reactive D reads a state from reactive C in one of D reactions`.
 
-We derive very simpler rules for pairing - 
+We derive very simpler rules for pairing -
+
 1. on Push interaction, it is the responsibility of the pushing reactive `A` to use `batchReactions` on the target
    reactive `B` to trigger sync processing. If `batchReaction` is not used, `B` will flush async.
 2. on Pull interactions, it is expected that the pulling reactive `D` will flush after the origin reactive `C`.
 3. In the case of push pull interactions, push `A --> B`. pull `X, Y, Z <-- B`, it is expected that `B` will flush first,
-   then `A` and only last `X, Y, Z`. `X, Y, Z` will auto flush last if they did not already flush as part of the `A` flush 
+   then `A` and only last `X, Y, Z`. `X, Y, Z` will auto flush last if they did not already flush as part of the `A` flush
    (as in child components)
 
 Lets see the rules above using examples
@@ -709,72 +747,77 @@ has a `batchReactions` function.
 
 ```typescript
 createEffect(() => {
-   context.batchReactions(() => {
-      setContextState1('some new value')
-   }) 
-   // or
-   callContextAPI('some new value')
-})
-const memo = createMemo(() => someContextState())
+  context.batchReactions(() => {
+    setContextState1('some new value');
+  });
+  // or
+  callContextAPI('some new value');
+});
+const memo = createMemo(() => someContextState());
 ```
 
 ### context updating components
+
 This is a pull case, at which a component is reading values from a context and needs to be updated after the context
 is flushed.
 
 the component code may look like
+
 ```typescript
-function ShowCountComponent({}: Props<CompProps>, refs: CompRefs, {count}: CountContext) {
-   return {
-      render: () => ({
-         label: () => `the count is ${count()}`,
-      }),
-   };
+function ShowCountComponent({}: Props<CompProps>, refs: CompRefs, { count }: CountContext) {
+  return {
+    render: () => ({
+      label: () => `the count is ${count()}`,
+    }),
+  };
 }
 ```
 
 ### component updating context which updates components
 
 Assume we have the component tree
+
 ```
   Root
   - A - provides context and updates the context
     - B
       - X - uses the context
     - C
-      - Y - uses the context 
+      - Y - uses the context
 ```
 
 If `A` updates the context, the context has to flush first, by rule 1.
-At the end of flushing `A`, the last reaction is calling `render` on `A` which starts to propagate `viewState` down the 
-component tree - which triggers `props` update for `X` and `Y`, who triggers flush for `X` and `Y`. 
+At the end of flushing `A`, the last reaction is calling `render` on `A` which starts to propagate `viewState` down the
+component tree - which triggers `props` update for `X` and `Y`, who triggers flush for `X` and `Y`.
 
 Given we have a mechanism for flushing `X` and `Y`, we want to prevent double flushing, hence rule no 3.
 
 ### `createDerivedArray` hook
 
-The `createDerivedArray` hook is updating mapped array items in a reactive way - using a reactive mapping function. 
-The mapping function is only called if one of the dependencies of the function is changed - which are 
+The `createDerivedArray` hook is updating mapped array items in a reactive way - using a reactive mapping function.
+The mapping function is only called if one of the dependencies of the function is changed - which are
 the `item` being mapped, the `index` in the parent array, the `length` of the parent array, or any other `state` from
-the component. 
+the component.
 
 The implementation of this hook is using a `Reactive` per item approach, at which the item reactive manages the states
-`item`, `index` and `length`, while the component `Reactive` is managing the component state. 
+`item`, `index` and `length`, while the component `Reactive` is managing the component state.
 
 This is a pull-push case, at which the mapping function can pull on component `Reactive` states, while the component `Reactive`
 pushes the new `item`, `index` and `length` into the item `Reactive`.
 
 an example such hook may look like
+
 ```typescript
 let [discount, setDiscount] = createState(0.1);
 let totalLineItems = createDerivedArray(lineItems, (sku, unitPrice, title, quantity) => {
-   return {
-      sku, title,
-      total: quantity * unitPrice * (1-discount())
-   };
+  return {
+    sku,
+    title,
+    total: quantity * unitPrice * (1 - discount()),
+  };
 });
 ```
 
 Using the rules above, because `createDerivedArray` explicitly pushes `item`, `index`, `length` to the item `Reactive`,
-the item `Reactive` flushes as part of the computation of the `createDerivedArray` reaction, after any resolution of 
+the item `Reactive` flushes as part of the computation of the `createDerivedArray` reaction, after any resolution of
 states it may depend on.

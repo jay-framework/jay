@@ -2,7 +2,8 @@ import {
     JayElement,
     HTMLElementCollectionProxy,
     HTMLElementProxy,
-    RenderElementOptions, RenderElement,
+    RenderElementOptions,
+    RenderElement,
 } from 'jay-runtime';
 
 export interface Item {
@@ -25,9 +26,7 @@ export interface CompElementRefs {
 }
 
 export type CompElement = JayElement<CompViewState, CompElementRefs>;
-export type CompElementRender = RenderElement<CompViewState, CompElementRefs, CompElement>
-export type CompElementPreRender = [refs: CompElementRefs, CompElementRender]
+export type CompElementRender = RenderElement<CompViewState, CompElementRefs, CompElement>;
+export type CompElementPreRender = [refs: CompElementRefs, CompElementRender];
 
-export declare function render(
-    options?: RenderElementOptions,
-): CompElementPreRender;
+export declare function render(options?: RenderElementOptions): CompElementPreRender;

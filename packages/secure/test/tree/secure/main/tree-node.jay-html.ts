@@ -10,7 +10,9 @@ import {
     HTMLElementProxy,
     RenderElementOptions,
     useContext,
-    withContext, RenderElement, ReferencesManager,
+    withContext,
+    RenderElement,
+    ReferencesManager,
 } from 'jay-runtime';
 import { secureChildComp as childComp } from '../../../../lib/';
 import { TreeNodeRefs } from './tree-node-refs';
@@ -29,18 +31,18 @@ export interface TreeNodeElementRefs {
 }
 
 export type TreeNodeElement = JayElement<TreeNodeViewState, TreeNodeElementRefs>;
-export type TreeNodeElementRender = RenderElement<TreeNodeViewState, TreeNodeElementRefs, TreeNodeElement>
-export type TreeNodeElementPreRender = [refs: TreeNodeElementRefs, TreeNodeElementRender]
+export type TreeNodeElementRender = RenderElement<
+    TreeNodeViewState,
+    TreeNodeElementRefs,
+    TreeNodeElement
+>;
+export type TreeNodeElementPreRender = [refs: TreeNodeElementRefs, TreeNodeElementRender];
 
-export function render(
-    options?: RenderElementOptions,
-): TreeNodeElementPreRender {
+export function render(options?: RenderElementOptions): TreeNodeElementPreRender {
     let context = useContext(SECURE_COMPONENT_MARKER);
-    const [refManager, [head, child]] =
-        ReferencesManager.for(options, ['head'], [], [], ['child']);
-    const render = (viewState: TreeNodeViewState) => ConstructContext.withRootContext(
-        viewState, refManager,
-        () => {
+    const [refManager, [head, child]] = ReferencesManager.for(options, ['head'], [], [], ['child']);
+    const render = (viewState: TreeNodeViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () => {
             return de('div', {}, [
                 e(
                     'div',
@@ -58,9 +60,7 @@ export function render(
                             (vs) => vs.node?.children,
                             (vs1: Node) => {
                                 return withContext(SECURE_COMPONENT_MARKER, context, () => {
-                                    return e('li', {}, [
-                                        childComp(TreeNode, (vs) => vs, child()),
-                                    ]);
+                                    return e('li', {}, [childComp(TreeNode, (vs) => vs, child())]);
                                 });
                             },
                             'id',
@@ -68,7 +68,6 @@ export function render(
                     ]),
                 ),
             ]);
-        },
-    ) as TreeNodeElement;
-    return [refManager.getPublicAPI() as TreeNodeElementRefs, render]
+        }) as TreeNodeElement;
+    return [refManager.getPublicAPI() as TreeNodeElementRefs, render];
 }

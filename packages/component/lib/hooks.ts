@@ -1,12 +1,11 @@
-import {Getter, MeasureOfChange, Reactive, Setter, ValueOrGetter} from "jay-reactive";
-import {JSONPatch, patch} from "jay-json-patch";
-import {ContextMarker, EventEmitter, findContext} from "jay-runtime";
-import {Patcher} from "./component";
-import {COMPONENT_CONTEXT, CONTEXT_CREATION_CONTEXT, HookContext} from "./component-contexts";
+import { Getter, MeasureOfChange, Reactive, Setter, ValueOrGetter } from 'jay-reactive';
+import { JSONPatch, patch } from 'jay-json-patch';
+import { ContextMarker, EventEmitter, findContext } from 'jay-runtime';
+import { Patcher } from './component';
+import { COMPONENT_CONTEXT, CONTEXT_CREATION_CONTEXT, HookContext } from './component-contexts';
 
 function currentHookContext(): HookContext {
-    return findContext(_ => _ === COMPONENT_CONTEXT ||
-    _ === CONTEXT_CREATION_CONTEXT)
+    return findContext((_) => _ === COMPONENT_CONTEXT || _ === CONTEXT_CREATION_CONTEXT);
 }
 
 type EffectCleanup = () => void;
@@ -137,5 +136,5 @@ export function provideContext<ContextType>(
     marker: ContextMarker<ContextType>,
     context: ContextType,
 ) {
-    currentHookContext().provideContexts.push([marker, context])
+    currentHookContext().provideContexts.push([marker, context]);
 }

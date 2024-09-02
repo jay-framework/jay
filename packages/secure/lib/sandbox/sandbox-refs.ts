@@ -18,12 +18,14 @@ import {
     BaseReferencesManager,
     ComponentRefsImpl,
     ManagedRefs,
-    JayEventHandlerWrapper, ManagedRefType, PrivateRefConstructor,
+    JayEventHandlerWrapper,
+    ManagedRefType,
+    PrivateRefConstructor,
 } from 'jay-runtime';
 import { IJayEndpoint, JPMMessage } from '../comm-channel/comm-channel';
 import { JayNativeFunction$ } from '../main/function-repository-types';
 import { completeCorrelatedPromise, correlatedPromise, NativeIdMarker } from '../$func';
-import {Refs, SANDBOX_BRIDGE_CONTEXT, SANDBOX_CREATION_CONTEXT} from './sandbox-context';
+import { Refs, SANDBOX_BRIDGE_CONTEXT, SANDBOX_CREATION_CONTEXT } from './sandbox-context';
 import { SandboxElement } from './sandbox-element';
 import { Reactive } from 'jay-reactive';
 import { serialize } from 'jay-serialization';
@@ -39,7 +41,7 @@ import {
 } from '../comm-channel/messages';
 import { JSONPatch, ArrayContexts } from 'jay-json-patch';
 import { EVENT_TRAP, GetTrapProxy } from 'jay-runtime';
-import {COMPONENT_CONTEXT} from "jay-component";
+import { COMPONENT_CONTEXT } from 'jay-component';
 
 export interface SandboxBridgeElement<ViewState> {
     update: updateFunc<ViewState>;
@@ -70,40 +72,49 @@ export interface SecureElementRef<ViewState, PublicRefAPI> {
 }
 
 export class SecureReferencesManager extends BaseReferencesManager {
-
-    constructor(private ep: IJayEndpoint,
-                public readonly eventWrapper: JayEventHandlerWrapper<any, any, any>) {
+    constructor(
+        private ep: IJayEndpoint,
+        public readonly eventWrapper: JayEventHandlerWrapper<any, any, any>,
+    ) {
         super(eventWrapper);
     }
 
     mkManagedRef(refType: ManagedRefType, refName: string): ManagedRefs {
         switch (refType) {
-            case ManagedRefType.element: return new SecureHTMLElementRefsImpl(refName, this.ep);
-            case ManagedRefType.elementCollection: return new SecureHTMLElementCollectionRefsImpl(refName, this.ep);
-            case ManagedRefType.component: return new ComponentRefsImpl();
-            case ManagedRefType.componentCollection: return new ComponentCollectionRefImpl();
+            case ManagedRefType.element:
+                return new SecureHTMLElementRefsImpl(refName, this.ep);
+            case ManagedRefType.elementCollection:
+                return new SecureHTMLElementCollectionRefsImpl(refName, this.ep);
+            case ManagedRefType.component:
+                return new ComponentRefsImpl();
+            case ManagedRefType.componentCollection:
+                return new ComponentCollectionRefImpl();
         }
     }
 
-    currentContext(): {currData: any, coordinate: (refName: string) => Coordinate} {
-        let { viewState, dataIds} = useContext(SANDBOX_CREATION_CONTEXT);
-        return {currData: viewState, coordinate: (refName: string) => [...dataIds, refName]}
+    currentContext(): { currData: any; coordinate: (refName: string) => Coordinate } {
+        let { viewState, dataIds } = useContext(SANDBOX_CREATION_CONTEXT);
+        return { currData: viewState, coordinate: (refName: string) => [...dataIds, refName] };
     }
 
-    static for(endpoint: IJayEndpoint, eventWrapper: JayEventHandlerWrapper<any, any, any>,
-               elem: string[],
-               elemCollection: string[],
-               comp: string[],
-               compCollection: string[]): [SecureReferencesManager, PrivateRefConstructor<any>[]] {
-        const refManager = new SecureReferencesManager(endpoint, eventWrapper)
-        return [refManager, refManager.mkRefs(elem, elemCollection, comp, compCollection)]
+    static for(
+        endpoint: IJayEndpoint,
+        eventWrapper: JayEventHandlerWrapper<any, any, any>,
+        elem: string[],
+        elemCollection: string[],
+        comp: string[],
+        compCollection: string[],
+    ): [SecureReferencesManager, PrivateRefConstructor<any>[]] {
+        const refManager = new SecureReferencesManager(endpoint, eventWrapper);
+        return [refManager, refManager.mkRefs(elem, elemCollection, comp, compCollection)];
     }
 
     static forElement(
         elem: string[],
         elemCollection: string[],
         comp: string[],
-        compCollection: string[]) {
+        compCollection: string[],
+    ) {
         const parentComponentContext = useContext(SANDBOX_BRIDGE_CONTEXT);
         const { reactive, getComponentInstance } = useContext(COMPONENT_CONTEXT);
         const thisComponentEndpoint = parentComponentContext.port.getEndpoint(
@@ -115,29 +126,33 @@ export class SecureReferencesManager extends BaseReferencesManager {
             (orig, event) => {
                 return reactive.batchReactions(() => orig(event));
             },
-            elem, elemCollection, comp, compCollection
-        )
+            elem,
+            elemCollection,
+            comp,
+            compCollection,
+        );
     }
 
     static forSandboxRoot(
         elem: string[],
         elemCollection: string[],
         comp: string[],
-        compCollection: string[]) {
-        const {endpoint} = useContext(SANDBOX_CREATION_CONTEXT);
+        compCollection: string[],
+    ) {
+        const { endpoint } = useContext(SANDBOX_CREATION_CONTEXT);
         return SecureReferencesManager.for(
-            endpoint, undefined,
-            elem, elemCollection, comp, compCollection
-        )
+            endpoint,
+            undefined,
+            elem,
+            elemCollection,
+            comp,
+            compCollection,
+        );
     }
-
 }
 
-export abstract class SecurePrivateRefs<
-    ViewState,
-    ElementType extends HTMLElement>
-    implements
-        RefImplementation<ViewState>
+export abstract class SecurePrivateRefs<ViewState, ElementType extends HTMLElement>
+    implements RefImplementation<ViewState>
 {
     listeners = new Map<string, JayEventHandler<any, any, any>>();
     items = new Map<string, SecureHTMLElementRefImpl<ViewState, ElementType>>();
@@ -189,7 +204,6 @@ export abstract class SecurePrivateRefs<
         this.items.delete(ref.coordinate.toString());
     }
 }
-
 
 export class SecureHTMLElementRefImpl<ViewState, ElementType extends HTMLElement>
     implements
@@ -272,10 +286,12 @@ class SecureHTMLElementRefsImpl<ViewState, ElementType extends HTMLElement>
         RefImplementation<ViewState>,
         ManagedRefs
 {
-
-    mkManagedRef(currData: any, coordinate: Coordinate, eventWrapper: JayEventHandlerWrapper<any, any, any>):
-        SecureHTMLElementRefImpl<ViewState, ElementType> {
-        return new SecureHTMLElementRefImpl(this.ref, this.ep, currData, coordinate, this)
+    mkManagedRef(
+        currData: any,
+        coordinate: Coordinate,
+        eventWrapper: JayEventHandlerWrapper<any, any, any>,
+    ): SecureHTMLElementRefImpl<ViewState, ElementType> {
+        return new SecureHTMLElementRefImpl(this.ref, this.ep, currData, coordinate, this);
     }
 
     getPublicAPI(): HTMLElementProxy<ViewState, ElementType> {
@@ -283,7 +299,7 @@ class SecureHTMLElementRefsImpl<ViewState, ElementType extends HTMLElement>
     }
 
     exec$<T>(handler: (elem: ElementType, viewState: ViewState) => T): Promise<T> {
-        return [...this.items][0][1].exec$(handler)
+        return [...this.items][0][1].exec$(handler);
     }
 }
 
@@ -294,10 +310,12 @@ export class SecureHTMLElementCollectionRefsImpl<ViewState, ElementType extends 
         RefImplementation<ViewState>,
         ManagedRefs
 {
-
-    mkManagedRef(currData: any, coordinate: Coordinate, eventWrapper: JayEventHandlerWrapper<any, any, any>):
-        SecureHTMLElementRefImpl<ViewState, ElementType> {
-        return new SecureHTMLElementRefImpl(this.ref, this.ep, currData, coordinate, this)
+    mkManagedRef(
+        currData: any,
+        coordinate: Coordinate,
+        eventWrapper: JayEventHandlerWrapper<any, any, any>,
+    ): SecureHTMLElementRefImpl<ViewState, ElementType> {
+        return new SecureHTMLElementRefImpl(this.ref, this.ep, currData, coordinate, this);
     }
 
     getPublicAPI(): HTMLElementCollectionProxy<ViewState, ElementType> {
@@ -328,7 +346,6 @@ export class SecureHTMLElementCollectionRefsImpl<ViewState, ElementType extends 
     }
 }
 
-
 const SECURE_EVENT$_TRAP = (target, prop) => {
     if (typeof prop === 'string') {
         if (prop.indexOf('on') === 0 && prop.at(-1) === '$') {
@@ -355,13 +372,13 @@ const SecureHTMLElementRefProxy = GetTrapProxy([SECURE_EVENT$_TRAP, EVENT_TRAP])
 export function newSecureHTMLElementPublicApiProxy<
     ViewState,
     ElementType extends HTMLElement,
-    Target extends SecureHTMLElementRefImpl<ViewState, ElementType>
+    Target extends
+        | SecureHTMLElementRefImpl<ViewState, ElementType>
         | SecureHTMLElementRefsImpl<ViewState, ElementType>
         | SecureHTMLElementCollectionRefsImpl<ViewState, ElementType>,
 >(ref: Target): Target & GlobalJayEvents<ViewState> {
     return new Proxy(ref, SecureHTMLElementRefProxy) as Target & GlobalJayEvents<ViewState>;
 }
-
 
 export function mkBridgeElement<ViewState>(
     viewState: ViewState,
@@ -398,7 +415,6 @@ export function mkBridgeElement<ViewState>(
                     case JayPortMessageType.eventInvocation: {
                         reactive.batchReactions(() => {
                             (
-
                                 refManager.get(
                                     inMessage.coordinate.slice(-1)[0],
                                 ) as any as RefImplementation<ViewState>
@@ -451,15 +467,15 @@ export function mkBridgeElement<ViewState>(
                 }
             });
 
-            const mount = () => elements.forEach(_ => _.mount());
-            const unmount = () => elements.forEach(_ => _.unmount());
+            const mount = () => elements.forEach((_) => _.mount());
+            const unmount = () => elements.forEach((_) => _.unmount());
 
             mount();
             return refManager.applyToElement({
                 dom: undefined,
                 update,
                 mount,
-                unmount
+                unmount,
             });
         },
     );

@@ -49,7 +49,7 @@ export type PreRenderElement<
     ViewState extends object,
     Refs extends object,
     JayElementT extends JayElement<ViewState, Refs>,
-> = (options?: RenderElementOptions) => [Refs, RenderElement<ViewState, Refs, JayElementT>]
+> = (options?: RenderElementOptions) => [Refs, RenderElement<ViewState, Refs, JayElementT>];
 
 export type RenderElement<
     ViewState extends object,

@@ -437,10 +437,7 @@ export interface HTMLElementProxy<ViewState, ElementType extends HTMLElement>
 
 export interface EventEmitter<EventType, ViewState> {
     (handler: JayEventHandler<EventType, ViewState, void>): void;
-    // this is a trick to ensure that given
-    // createEvent() the event parameter is not required in emit, while given
-    // createEvent<AType>() the event parameter is required
-    emit: unknown extends EventType ? () => void : (event: EventType) => void;
+    emit: (event?: EventType) => void;
 }
 
 export type EventTypeFrom<Type> = Type extends EventEmitter<infer X, any> ? X : null;

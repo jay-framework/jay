@@ -1,5 +1,5 @@
 import { forEach, dynamicElement as de, element as e, dynamicText as dt } from '../../lib/element';
-import {JayElement, HTMLElementCollectionProxy, ReferencesManager} from '../../lib';
+import { JayElement, HTMLElementCollectionProxy, ReferencesManager } from '../../lib';
 import { ConstructContext } from '../../lib';
 
 const item1 = { name: 'name 1', id: 'id-1' };
@@ -255,7 +255,7 @@ describe('collection-element', () => {
 
         function makeElement(data: CinCViewState): JayElement<CinCViewState, any> {
             let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
-            return ConstructContext.withRootContext(data, refManager,() =>
+            return ConstructContext.withRootContext(data, refManager, () =>
                 // noinspection DuplicatedCode
                 de('table', {}, [
                     forEach(
