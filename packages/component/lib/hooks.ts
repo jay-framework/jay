@@ -3,6 +3,7 @@ import { JSONPatch, patch } from 'jay-json-patch';
 import { ContextMarker, EventEmitter, findContext } from 'jay-runtime';
 import { Patcher } from './component';
 import { COMPONENT_CONTEXT, CONTEXT_CREATION_CONTEXT, HookContext } from './component-contexts';
+import {createReactiveContext} from "./context-api.ts";
 
 function currentHookContext(): HookContext {
     return findContext((_) => _ === COMPONENT_CONTEXT || _ === CONTEXT_CREATION_CONTEXT);
@@ -137,4 +138,13 @@ export function provideContext<ContextType>(
     context: ContextType,
 ) {
     currentHookContext().provideContexts.push([marker, context]);
+}
+
+export function provideReactiveContext<ContextType extends object>(
+    marker: ContextMarker<ContextType>,
+    mkContext: () => ContextType
+): ContextType {
+    const context = createReactiveContext(mkContext)
+    currentHookContext().provideContexts.push([marker, context]);
+    return context;
 }
