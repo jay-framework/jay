@@ -409,6 +409,7 @@ export function mkBridgeElement<ViewState>(
                 if (patch.length) endpoint.post(renderMessage(patch));
             };
             let update = normalizeUpdates([postUpdateMessage, ...elements.map((el) => el.update)]);
+            update(viewState);
 
             endpoint.onUpdate(async (inMessage: JPMMessage) => {
                 switch (inMessage.type) {

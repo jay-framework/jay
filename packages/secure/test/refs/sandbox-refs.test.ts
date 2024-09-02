@@ -67,8 +67,8 @@ describe('sandbox-refs', () => {
 
             (bridgeElement.refs.one as HTMLElementProxy<any, any>).onclick(() => {});
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
@@ -114,8 +114,8 @@ describe('sandbox-refs', () => {
                 callback,
             );
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
@@ -134,12 +134,12 @@ describe('sandbox-refs', () => {
                 callback,
             );
 
-            expect(endpoint.outMessages).toHaveLength(2);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(3);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
-            let message1 = endpoint.outMessages[1] as JPMAddEventListener;
+            let message1 = endpoint.outMessages[2] as JPMAddEventListener;
             expect(message1.type).toBe(JayPortMessageType.removeEventListener);
             expect(message1.eventType).toBe('click');
             expect(message1.refName).toBe('one');
@@ -167,8 +167,8 @@ describe('sandbox-refs', () => {
 
             (bridgeElement.refs.one as HTMLElementProxy<any, any>).onclick$(handler$('1'));
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
@@ -182,8 +182,8 @@ describe('sandbox-refs', () => {
                 func$('3'),
             );
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMNativeExec;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMNativeExec;
             expect(message.type).toBe(JayPortMessageType.nativeExec);
             expect(message.refName).toBe('one');
             expect(message.nativeId).toBe('3');
@@ -196,7 +196,7 @@ describe('sandbox-refs', () => {
             let $result = (
                 bridgeElement.refs.one as HTMLElementProxy<ViewState, HTMLDivElement>
             ).exec$(func$('3'));
-            let execMessage = endpoint.outMessages[0] as JPMNativeExec;
+            let execMessage = endpoint.outMessages[1] as JPMNativeExec;
             endpoint.invoke(nativeExecResult(execMessage.correlationId, 12, undefined, 'one'));
             let result = await $result;
 
@@ -209,7 +209,7 @@ describe('sandbox-refs', () => {
             let $result = (
                 bridgeElement.refs.one as HTMLElementProxy<ViewState, HTMLDivElement>
             ).exec$(func$('3'));
-            let execMessage = endpoint.outMessages[0] as JPMNativeExec;
+            let execMessage = endpoint.outMessages[1] as JPMNativeExec;
             endpoint.invoke(
                 nativeExecResult(execMessage.correlationId, undefined, 'failed', 'one'),
             );
@@ -274,8 +274,8 @@ describe('sandbox-refs', () => {
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(() => {});
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
@@ -286,8 +286,8 @@ describe('sandbox-refs', () => {
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(() => {});
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
@@ -300,8 +300,8 @@ describe('sandbox-refs', () => {
                 handler$('2'),
             );
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
@@ -390,8 +390,8 @@ describe('sandbox-refs', () => {
                     .find((item) => item.title === B.title)
                     .exec$(func$('4'));
 
-                expect(endpoint.outMessages).toHaveLength(1);
-                let message = endpoint.outMessages[0] as JPMNativeExec;
+                expect(endpoint.outMessages).toHaveLength(2);
+                let message = endpoint.outMessages[1] as JPMNativeExec;
                 expect(message.type).toBe(JayPortMessageType.nativeExec);
                 expect(message.refName).toBe('one');
                 expect(message.nativeId).toBe('4');
@@ -407,7 +407,7 @@ describe('sandbox-refs', () => {
                 )
                     .find((item) => item.title === B.title)
                     .exec$(func$('4'));
-                let execMessage = endpoint.outMessages[0] as JPMNativeExec;
+                let execMessage = endpoint.outMessages[1] as JPMNativeExec;
                 endpoint.invoke(nativeExecResult(execMessage.correlationId, 14, undefined, 'one'));
                 let result = await $result;
 
@@ -468,10 +468,10 @@ describe('sandbox-refs', () => {
                         element.exec$(func$('4'));
                     },
                 );
-                expect(endpoint.outMessages.length).toBe(3);
-                let execMessageA = endpoint.outMessages[0] as JPMNativeExec;
-                let execMessageB = endpoint.outMessages[1] as JPMNativeExec;
-                let execMessageC = endpoint.outMessages[2] as JPMNativeExec;
+                expect(endpoint.outMessages.length).toBe(4);
+                let execMessageA = endpoint.outMessages[1] as JPMNativeExec;
+                let execMessageB = endpoint.outMessages[2] as JPMNativeExec;
+                let execMessageC = endpoint.outMessages[3] as JPMNativeExec;
 
                 expect(execMessageA.type).toBe(JayPortMessageType.nativeExec);
                 expect(execMessageA.refName).toBe('one');
@@ -500,10 +500,10 @@ describe('sandbox-refs', () => {
                 ).map((element) => {
                     return element.exec$(func$('4'));
                 });
-                expect(endpoint.outMessages.length).toBe(3);
-                let execMessageA = endpoint.outMessages[0] as JPMNativeExec;
-                let execMessageB = endpoint.outMessages[1] as JPMNativeExec;
-                let execMessageC = endpoint.outMessages[2] as JPMNativeExec;
+                expect(endpoint.outMessages.length).toBe(4);
+                let execMessageA = endpoint.outMessages[1] as JPMNativeExec;
+                let execMessageB = endpoint.outMessages[2] as JPMNativeExec;
+                let execMessageC = endpoint.outMessages[3] as JPMNativeExec;
 
                 endpoint.invoke(nativeExecResult(execMessageA.correlationId, 20, undefined, 'one'));
                 endpoint.invoke(nativeExecResult(execMessageB.correlationId, 30, undefined, 'one'));
@@ -634,12 +634,12 @@ describe('sandbox-refs', () => {
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(() => {});
             (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(() => {});
 
-            expect(endpoint.outMessages).toHaveLength(2);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(3);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
-            let message1 = endpoint.outMessages[1] as JPMAddEventListener;
+            let message1 = endpoint.outMessages[2] as JPMAddEventListener;
             expect(message1.type).toBe(JayPortMessageType.addEventListener);
             expect(message1.eventType).toBe('click');
             expect(message1.refName).toBe('two');
@@ -725,8 +725,8 @@ describe('sandbox-refs', () => {
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(() => {});
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');

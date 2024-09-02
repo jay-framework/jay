@@ -77,7 +77,13 @@ function renderWithContexts<ViewState extends object,
 >(
     provideContexts: [ContextMarker<any>, any][],
     render: RenderElement<ViewState, Refs, JayElementT>,
-    viewState: ViewState): JayElementT {
+    viewState: ViewState,
+    index: number = 0): JayElementT {
+    if (provideContexts.length > index) {
+        let [marker, context] = provideContexts[0];
+        return withContext(marker, context,
+            () => renderWithContexts(provideContexts, render, viewState, index+1))
+    }
     return render(viewState);
 }
 
@@ -116,7 +122,6 @@ export function makeJayComponent<
             let contexts: Contexts = contextMarkers.map((marker) => useContext(marker)) as Contexts;
             let coreComp = comp(propsProxy, refs, ...contexts); // wrap event listening with batch reactions
             let { render: renderViewState, ...api } = coreComp;
-            // todo provide contexts
             let element: JayElementT;
             componentContext.reactive.createReaction(() => {
                 let viewStateValueOrGetters = renderViewState(propsProxy);
