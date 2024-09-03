@@ -1,17 +1,9 @@
 import { render, PillarElementRefs } from './pillar.jay-html';
-import { createEvent, makeJayComponent, Props, createDerivedArray } from 'jay-component';
-
-export interface PillarTask {
-    id: string;
-    title: string;
-    description: string;
-}
+import {createEvent, makeJayComponent, Props, createDerivedArray, createMemo} from 'jay-component';
+import {SCRUM_CONTEXT, ScrumContext} from "./scrum-context";
 
 export interface PillarProps {
-    title: string;
-    pillarTasks: Array<PillarTask>;
-    hasNext: boolean;
-    hasPrev: boolean;
+    pillarId: string;
 }
 
 interface MoveTaskEvent {
@@ -19,33 +11,30 @@ interface MoveTaskEvent {
 }
 
 function PillarConstructor(
-    { title, pillarTasks, hasPrev, hasNext }: Props<PillarProps>,
+    { pillarId }: Props<PillarProps>,
     refs: PillarElementRefs,
+    context: ScrumContext
 ) {
-    let onMoveTaskToNext = createEvent<MoveTaskEvent>();
-    let onMoveTaskToPrev = createEvent<MoveTaskEvent>();
-    let onMoveTaskUp = createEvent<MoveTaskEvent>();
-    let onMoveTaskDown = createEvent<MoveTaskEvent>();
+    const onMoveTaskToNext = createEvent<MoveTaskEvent>();
+    const onMoveTaskToPrev = createEvent<MoveTaskEvent>();
+    const onMoveTaskUp = createEvent<MoveTaskEvent>();
+    const onMoveTaskDown = createEvent<MoveTaskEvent>();
 
-    const taskData = createDerivedArray(pillarTasks, (item, index, length) => {
-        let { id, title, description } = item();
+    const pillar = createMemo(() => context.pillars().find(_ => _.pillarId === pillarId()))
+    const title = createMemo(() => pillar().title)
+
+    const taskData = createDerivedArray(() => pillar().pillarTasks, (item, index, length) => {
+        let { taskId } = item();
         return {
-            id,
-            taskProps: {
-                title,
-                description,
-                hasNext: hasNext(),
-                hasPrev: hasPrev(),
-                isBottom: index() === length() - 1,
-                isTop: index() === 0,
-            },
+            taskId,
+            pillarId: pillarId()
         };
     });
 
-    refs.tasks.onNext(({ viewState }) => onMoveTaskToNext.emit({ taskId: viewState.id }));
-    refs.tasks.onPrev(({ viewState }) => onMoveTaskToPrev.emit({ taskId: viewState.id }));
-    refs.tasks.onUp(({ viewState }) => onMoveTaskUp.emit({ taskId: viewState.id }));
-    refs.tasks.onDown(({ viewState }) => onMoveTaskDown.emit({ taskId: viewState.id }));
+    refs.tasks.onNext(({ viewState }) => onMoveTaskToNext.emit({ taskId: viewState.taskId }));
+    refs.tasks.onPrev(({ viewState }) => onMoveTaskToPrev.emit({ taskId: viewState.taskId }));
+    refs.tasks.onUp(({ viewState }) => onMoveTaskUp.emit({ taskId: viewState.taskId }));
+    refs.tasks.onDown(({ viewState }) => onMoveTaskDown.emit({ taskId: viewState.taskId }));
 
     return {
         render: () => ({ title, taskData }),
@@ -56,4 +45,4 @@ function PillarConstructor(
     };
 }
 
-export const Pillar = makeJayComponent(render, PillarConstructor);
+export const Pillar = makeJayComponent(render, PillarConstructor, SCRUM_CONTEXT);

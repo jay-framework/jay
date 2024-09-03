@@ -6,15 +6,15 @@
       data:
         title: string
         taskData:
-        - id: string
-          taskProps: TaskProps
+        - pillarId: string
+          taskId: string
     </script>
   </head>
   <body>
     <div class="pillar">
       <h2 class="pillar-title">{title}</h2>
       <div class="task-list">
-        <Task forEach="taskData" trackBy="id" props="{taskProps}" ref="tasks" />
+        <Task forEach="taskData" trackBy="taskId" pillarId="{pillarId}" taskId="{taskId}" ref="tasks" />
       </div>
     </div>
   </body>
