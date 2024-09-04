@@ -19,7 +19,8 @@ function TaskConstructor({pillarId, taskId}: Props<TaskProps>, refs: TaskElement
     const task = createMemo(() => pillar().pillarTasks[taskIndex()])
 
     createEffect(() => {
-        console.log('task', pillarId(), pillarIndex(), pillar(), taskId(), taskIndex(), task());
+        console.log('task', "pillarId:", pillarId(), "pillarIndex:", pillarIndex(), "taskId:", taskId(),
+            "taskIndex:", taskIndex(), "pillar:", pillar(), "task:", task());
     })
 
     refs.next.onclick(() => onNext.emit());

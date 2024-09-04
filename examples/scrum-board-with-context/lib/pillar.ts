@@ -1,5 +1,5 @@
 import { render, PillarElementRefs } from './pillar.jay-html';
-import {createEvent, makeJayComponent, Props, createDerivedArray, createMemo} from 'jay-component';
+import {createEvent, makeJayComponent, Props, createDerivedArray, createMemo, createEffect} from 'jay-component';
 import {SCRUM_CONTEXT, ScrumContext} from "./scrum-context";
 
 export interface PillarProps {
@@ -22,6 +22,10 @@ function PillarConstructor(
 
     const pillar = createMemo(() => context.pillars().find(_ => _.pillarId === pillarId()))
     const title = createMemo(() => pillar().title)
+
+    createEffect(() => {
+        console.log('pillar', "pillarId:", pillarId(), "pillarIndex:", "pillar:", pillar());
+    })
 
     const taskData = createDerivedArray(() => pillar().pillarTasks, (item, index, length) => {
         let { taskId } = item();

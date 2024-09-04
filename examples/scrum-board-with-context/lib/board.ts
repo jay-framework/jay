@@ -1,5 +1,5 @@
 import { BoardElementRefs, render } from './board.jay-html';
-import {createDerivedArray, makeJayComponent, Props} from 'jay-component';
+import {createDerivedArray, createEffect, makeJayComponent, Props} from 'jay-component';
 import {provideScrumContext} from "./scrum-context";
 
 export interface BoardProps {
@@ -16,6 +16,11 @@ function BoardConstructor({ title }: Props<BoardProps>, refs: BoardElementRefs) 
             pillarId
         };
     });
+
+    createEffect(() => {
+        console.log('board', "pillars:", pillars());
+    })
+
 
     refs.pillars.onMoveTaskToNext(({ viewState, event }) => {
         moveTaskToNext(viewState.pillarId, event.taskId)
