@@ -608,6 +608,48 @@ describe('reactive', () => {
         });
     });
 
+    describe('disable reactive', () => {
+        it('should not run reactions when disabled', () => {
+            const reaction = vi.fn();
+            let reactive = new Reactive();
+            let [state, setState] = reactive.createState(12);
+            reactive.createReaction(() => {
+                reaction(state());
+            });
+
+            expect(reaction.mock.calls.length).toBe(1);
+            reactive.disable();
+            reactive.batchReactions(() => {
+                setState(13);
+                expect(reaction.mock.calls.length).toBe(1);
+            });
+
+            expect(reaction.mock.calls.length).toBe(1);
+            expect(reaction.mock.calls[0][0]).toBe(12);
+        })
+
+        it('should run reactions once enabled', () => {
+            const reaction = vi.fn();
+            let reactive = new Reactive();
+            let [state, setState] = reactive.createState(12);
+            reactive.createReaction(() => {
+                reaction(state());
+            });
+
+            expect(reaction.mock.calls.length).toBe(1);
+            reactive.disable();
+            reactive.batchReactions(() => {
+                setState(13);
+                expect(reaction.mock.calls.length).toBe(1);
+            });
+            reactive.enable();
+
+            expect(reaction.mock.calls.length).toBe(2);
+            expect(reaction.mock.calls[0][0]).toBe(12);
+            expect(reaction.mock.calls[1][0]).toBe(13);
+        })
+    })
+
     describe('reactive pairing', () => {
         it(`A pulls from B. B batch sets B state. expecting to run A reactions`, async () => {
             const runOrder = new RunOrder();

@@ -39,6 +39,7 @@ export class Reactive {
     private inFlush: boolean;
     private reactionGlobalKey: [Reactive, number][] = [];
     private reactivesToFlush: Set<Reactive> = new Set();
+    private disabled = false;
 
     createState<T>(
         value: ValueOrGetter<T>,
@@ -167,7 +168,7 @@ export class Reactive {
     }
 
     flush() {
-        if (this.inFlush) return;
+        if (this.inFlush || this.disabled) return;
         this.inFlush = true;
         try {
             for (let index = 0; index < this.batchedReactionsToRun.length; index++)
@@ -187,6 +188,15 @@ export class Reactive {
             });
             this.reactivesToFlush.clear();
         }
+    }
+
+    enable() {
+        this.disabled = false;
+        this.flush();
+    }
+
+    disable() {
+        this.disabled = true;
     }
 }
 
