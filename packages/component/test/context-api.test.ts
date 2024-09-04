@@ -31,6 +31,17 @@ describe('context api', () => {
                 context.inc();
                 expect(comp.element.dom.querySelector('#text').textContent).toBe('the count is 13');
             });
+
+            it('should be able to call context api multiple times', async () => {
+                const context = mkContext();
+                const comp = withContext(COUNT_CONTEXT, context, () => {
+                    return LabelAndButtonComp({});
+                });
+                context.inc();
+                context.inc();
+                context.inc();
+                expect(comp.element.dom.querySelector('#text').textContent).toBe('the count is 15');
+            });
         });
 
         describe('providing context', () => {
