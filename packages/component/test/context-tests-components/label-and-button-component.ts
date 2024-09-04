@@ -1,6 +1,6 @@
 import { makeJayComponent, Props } from '../../lib';
-import { LabelAndButtonRefs, renderLabelElement } from './label-and-button-element.ts';
-import { COUNT_CONTEXT, CountContext } from './number-context.ts';
+import { LabelAndButtonRefs, renderLabelElement } from './label-and-button-element';
+import { COUNT_CONTEXT, CountContext } from './number-context';
 
 export interface CompProps {}
 export function LabelAndButtonComponent(

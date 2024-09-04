@@ -1,4 +1,4 @@
-import { LabelAndButtonComp } from './label-and-button-component.ts';
+import { LabelAndButtonComp } from './label-and-button-component';
 import {
     childComp,
     ConstructContext,

@@ -144,7 +144,7 @@ export function makeJayComponent<
             componentContext.mounts.push(element.mount);
             componentContext.unmounts.push(element.unmount);
             componentContext.mounts.push(() => componentContext.reactive.enable());
-            componentContext.unmounts.push((() => componentContext.reactive.disable()));
+            componentContext.unmounts.push(() => componentContext.reactive.disable());
 
             let events = {};
             let component = {

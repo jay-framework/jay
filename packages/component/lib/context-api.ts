@@ -4,16 +4,14 @@ import { CONTEXT_CREATION_CONTEXT } from './component-contexts';
 
 function newContextProxy<T extends object>(reactive: Reactive, context: T): T {
     const wrapped = new Map<Function, Function>();
-    const wrap =
-        (target: Function) => {
-            if (!wrapped.has(target))
-                wrapped.set(
-                    target,
-                    (...args) => reactive.batchReactions(() => target.apply(context, args)),
-                );
+    const wrap = (target: Function) => {
+        if (!wrapped.has(target))
+            wrapped.set(target, (...args) =>
+                reactive.batchReactions(() => target.apply(context, args)),
+            );
 
-            return wrapped.get(target)
-        }
+        return wrapped.get(target);
+    };
 
     return new Proxy(context, {
         get(target: T, p: string | symbol, receiver: any): any {

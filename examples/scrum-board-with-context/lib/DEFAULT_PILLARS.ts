@@ -1,4 +1,4 @@
-import {BoardPillar} from "./scrum-context";
+import { BoardPillar } from './scrum-context';
 
 type BoardData = BoardPillar[];
 

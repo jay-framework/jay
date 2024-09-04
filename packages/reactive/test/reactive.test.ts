@@ -626,7 +626,7 @@ describe('reactive', () => {
 
             expect(reaction.mock.calls.length).toBe(1);
             expect(reaction.mock.calls[0][0]).toBe(12);
-        })
+        });
 
         it('should run reactions once enabled', () => {
             const reaction = vi.fn();
@@ -647,8 +647,8 @@ describe('reactive', () => {
             expect(reaction.mock.calls.length).toBe(2);
             expect(reaction.mock.calls[0][0]).toBe(12);
             expect(reaction.mock.calls[1][0]).toBe(13);
-        })
-    })
+        });
+    });
 
     describe('reactive pairing', () => {
         it(`A pulls from B. B batch sets B state. expecting to run A reactions`, async () => {

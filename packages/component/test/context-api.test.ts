@@ -1,7 +1,7 @@
 import { withContext } from 'jay-runtime';
-import { COUNT_CONTEXT, mkContext } from './context-tests-components/number-context.ts';
-import { LabelAndButtonComp } from './context-tests-components/label-and-button-component.ts';
-import { App } from './context-tests-components/app-component.ts';
+import { COUNT_CONTEXT, mkContext } from './context-tests-components/number-context';
+import { LabelAndButtonComp } from './context-tests-components/label-and-button-component';
+import { App } from './context-tests-components/app-component';
 
 describe('context api', () => {
     describe('classic case - component updates context on click, when then renders content from context', () => {

@@ -1,6 +1,6 @@
 import { makeJayComponent, Props, provideContext } from '../../lib';
-import { COUNT_CONTEXT, mkContext } from './number-context.ts';
-import { AppElement, AppRefs } from './app-element.ts';
+import { COUNT_CONTEXT, mkContext } from './number-context';
+import { AppElement, AppRefs } from './app-element';
 
 export interface AppProps {}
 export function AppComponentConstructor({}: Props<AppProps>, refs: AppRefs) {
