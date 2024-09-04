@@ -2,6 +2,8 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
+    RenderElement,
+    ReferencesManager,
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
@@ -27,14 +29,17 @@ export interface DataTypesViewState {
 export interface DataTypesElementRefs {}
 
 export type DataTypesElement = JayElement<DataTypesViewState, DataTypesElementRefs>;
+export type DataTypesElementRender = RenderElement<
+    DataTypesViewState,
+    DataTypesElementRefs,
+    DataTypesElement
+>;
+export type DataTypesElementPreRender = [refs: DataTypesElementRefs, DataTypesElementRender];
 
-export function render(
-    viewState: DataTypesViewState,
-    options?: RenderElementOptions,
-): DataTypesElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () =>
+export function render(options?: RenderElementOptions): DataTypesElementPreRender {
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const render = (viewState: DataTypesViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('span', {}, [dt((vs) => vs.s1)]),
                 e('span', {}, [dt((vs) => vs.n1)]),
@@ -42,6 +47,6 @@ export function render(
                 e('span', {}, [dt((vs) => vs.o1?.s2)]),
                 e('span', {}, [dt((vs) => vs.o1?.n2)]),
             ]),
-        options,
-    );
+        ) as DataTypesElement;
+    return [refManager.getPublicAPI() as DataTypesElementRefs, render];
 }

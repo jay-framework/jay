@@ -3,7 +3,7 @@ import {
     JayComponent,
     JayComponentConstructor,
     MountFunc,
-    provideContext,
+    withContext,
     updateFunc,
     useContext,
 } from 'jay-runtime';
@@ -37,10 +37,11 @@ export function sandboxChildComp<
     let { viewState, endpoint } = useContext(SANDBOX_CREATION_CONTEXT);
     let coordinate = ref.coordinate;
     let context = { compId: endpoint.compId, coordinate, port: endpoint.port };
-    let childComp = provideContext(SANDBOX_BRIDGE_CONTEXT, context, () => {
+    let childComp = withContext(SANDBOX_BRIDGE_CONTEXT, context, () => {
         return compCreator(getProps(viewState));
     });
     ref.set(childComp);
+    ref.mount();
 
     return {
         update: (newViewState) => {
@@ -126,7 +127,7 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
     matchBy: string,
     children: () => SandboxElement<ItemViewState>[],
 ): SandboxElement<ParentViewState> {
-    const { viewState, endpoint, refManager, dataIds, parentComponentReactive } =
+    const { viewState, endpoint, dataIds, parentComponentReactive } =
         useContext(SANDBOX_CREATION_CONTEXT);
     let lastItems: ItemViewState[] = [];
     let childElementsMap: Map<string, SandboxElement<ItemViewState>[]> = new Map();
@@ -140,18 +141,18 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
                 matchBy,
             );
             addedItems.forEach((item) => {
-                let childElements = provideContext(
+                let childElements = withContext(
                     SANDBOX_CREATION_CONTEXT,
                     {
                         endpoint,
                         viewState: item,
-                        refManager,
                         dataIds: [...dataIds, item[matchBy]],
                         isDynamic: true,
                         parentComponentReactive,
                     },
                     children,
                 );
+                childElements.forEach((childElement) => childElement.mount());
                 childElementsMap.set(item[matchBy], childElements);
             });
             removedItems.forEach((item) => {

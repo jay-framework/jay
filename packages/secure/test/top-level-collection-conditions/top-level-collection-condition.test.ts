@@ -1,6 +1,6 @@
 import { setChannel, useMockCommunicationChannel } from '../util/mock-channel';
 import { initializeWorker } from './secure/worker/worker-root';
-import { AppViewState, render } from './secure/main/app.jay-html';
+import { AppViewState, renderAppElement } from './secure/main/app.jay-html';
 
 const COUNTER_COND_COORDINATE = ['comp1'];
 const COUNTER_COND = 'cond';
@@ -31,7 +31,8 @@ describe('top level collections and conditions', () => {
         let channel = useMockCommunicationChannel(VERBOSE);
         setChannel(channel);
         initializeWorker();
-        let appElement = render(viewState);
+        const [refs, render] = renderAppElement({});
+        const appElement = render(viewState);
         let title = (id) =>
             appElement.dom.querySelector(`[data-id="${id}-title"]`) as HTMLDivElement;
         let add = (id) =>

@@ -1,5 +1,5 @@
-import { JayElement, HTMLElementProxy } from 'jay-runtime';
-import { elementBridge, elemRef } from '../../../../lib';
+import { JayElement, HTMLElementProxy, RenderElement, RenderElementOptions } from 'jay-runtime';
+import { elementBridge, SecureReferencesManager } from '../../../../lib';
 import { sandboxElement as e } from '../../../../lib/';
 
 export interface ChildViewState {
@@ -14,11 +14,22 @@ export interface ChildElementRefs {
 }
 
 export type ChildElement = JayElement<ChildViewState, ChildElementRefs>;
+export type ChildElementRender = RenderElement<ChildViewState, ChildElementRefs, ChildElement>;
+export type ChildElementPreRender = [refs: ChildElementRefs, ChildElementRender];
 
-export function render(viewState: ChildViewState): ChildElement {
-    return elementBridge(viewState, () => [
-        e(elemRef('eventToParent')),
-        e(elemRef('eventToParentToChildProp')),
-        e(elemRef('eventToParentToChildApi')),
-    ]);
+export function render(): ChildElementPreRender {
+    const [refManager, [eventToParent, eventToParentToChildProp, eventToParentToChildApi]] =
+        SecureReferencesManager.forElement(
+            ['eventToParent', 'eventToParentToChildProp', 'eventToParentToChildApi'],
+            [],
+            [],
+            [],
+        );
+    const render = (viewState: ChildViewState) =>
+        elementBridge(viewState, refManager, () => [
+            e(eventToParent()),
+            e(eventToParentToChildProp()),
+            e(eventToParentToChildApi()),
+        ]) as ChildElement;
+    return [refManager.getPublicAPI() as ChildElementRefs, render];
 }

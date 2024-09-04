@@ -5,6 +5,7 @@ import './todo.css';
 const ENTER_KEY = 13;
 const ESCAPE_KEY = 27;
 
+// todo move to use immutable data!!!
 function Todo() {
     let data = {
         isFilterAll: false,
@@ -66,7 +67,8 @@ function Todo() {
         jayElement.update(computedData());
     }
 
-    let jayElement = render(computedData());
+    const [refs, render2] = render();
+    const jayElement = render2(computedData());
     let handleSubmit = (todo) => {
         let val = todo.editText.trim();
         if (val) {

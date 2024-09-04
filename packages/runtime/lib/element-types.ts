@@ -45,11 +45,17 @@ export type ElementFrom<Type> = Type extends JayComponent<any, any, infer Elemen
 
 export type JayComponentConstructor<Props> = (props: Props) => JayComponent<Props, any, any>;
 
+export type PreRenderElement<
+    ViewState extends object,
+    Refs extends object,
+    JayElementT extends JayElement<ViewState, Refs>,
+> = (options?: RenderElementOptions) => [Refs, RenderElement<ViewState, Refs, JayElementT>];
+
 export type RenderElement<
     ViewState extends object,
     Refs extends object,
     JayElementT extends JayElement<ViewState, Refs>,
-> = (vs: ViewState, options?: RenderElementOptions) => JayElementT;
+> = (vs: ViewState) => JayElementT;
 
 export interface RenderElementOptions {
     eventWrapper?: JayEventHandlerWrapper<any, any, any>;

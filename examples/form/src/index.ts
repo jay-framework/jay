@@ -9,7 +9,8 @@ const jayWorker = new Worker(new URL('jay-sandbox:./sandbox-root', import.meta.u
 window.onload = function () {
     setMainPort(new JayPort(new HandshakeMessageJayChannel(jayWorker)));
     let target = document.getElementById('target');
-    let app = render({});
+    const [refs, render2] = render();
+    let app = render2({});
     target.innerHTML = '';
     target.appendChild(app.dom);
 };

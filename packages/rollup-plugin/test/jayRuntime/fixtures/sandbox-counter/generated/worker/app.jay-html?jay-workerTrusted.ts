@@ -1,7 +1,7 @@
 import {
+    SecureReferencesManager,
     sandboxRoot,
     sandboxChildComp as childComp,
-    compRef as cr,
     HandshakeMessageJayChannel,
     JayPort,
     setWorkerPort,
@@ -14,13 +14,16 @@ export interface AppViewState {
 }
 
 export function initializeWorker() {
-    sandboxRoot(() => [
-        childComp(
-            Counter,
-            (vs: AppViewState) => ({ initialValue: 12, incrementBy: vs.incrementBy }),
-            cr('a'),
-        ),
-    ]);
+    sandboxRoot(() => {
+        const [, [refA]] = SecureReferencesManager.forSandboxRoot([], [], ['a'], []);
+        return [
+            childComp(
+                Counter,
+                (vs: AppViewState) => ({ initialValue: 12, incrementBy: vs.incrementBy }),
+                refA(),
+            ),
+        ];
+    });
 }
 
 setWorkerPort(new JayPort(new HandshakeMessageJayChannel(self)));

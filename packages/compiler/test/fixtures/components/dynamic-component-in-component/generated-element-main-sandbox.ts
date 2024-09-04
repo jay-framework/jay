@@ -1,16 +1,16 @@
 import {
     JayElement,
     element as e,
+    RenderElement,
+    ReferencesManager,
     conditional as c,
     dynamicElement as de,
     forEach,
     ConstructContext,
-    compRef as cr,
-    compCollectionRef as ccr,
     RenderElementOptions,
 } from 'jay-runtime';
 import { secureChildComp } from 'jay-secure';
-import { CounterRef, CounterRefs } from '../counter/counter-refs';
+import { CounterComponentType, CounterRefs } from '../counter/counter-refs';
 // @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-mainSandbox';
 
@@ -27,23 +27,36 @@ export interface DynamicComponentInComponentViewState {
 
 export interface DynamicComponentInComponentElementRefs {
     counter1: CounterRefs<NestedCounter>;
-    counter2: CounterRef<DynamicComponentInComponentViewState>;
+    counter2: CounterComponentType<DynamicComponentInComponentViewState>;
 }
 
 export type DynamicComponentInComponentElement = JayElement<
     DynamicComponentInComponentViewState,
     DynamicComponentInComponentElementRefs
 >;
+export type DynamicComponentInComponentElementRender = RenderElement<
+    DynamicComponentInComponentViewState,
+    DynamicComponentInComponentElementRefs,
+    DynamicComponentInComponentElement
+>;
+export type DynamicComponentInComponentElementPreRender = [
+    refs: DynamicComponentInComponentElementRefs,
+    DynamicComponentInComponentElementRender,
+];
 
 export function render(
-    viewState: DynamicComponentInComponentViewState,
     options?: RenderElementOptions,
-): DynamicComponentInComponentElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () => {
-            const refCounter1 = ccr('counter1');
-            return de('div', {}, [
+): DynamicComponentInComponentElementPreRender {
+    const [refManager, [refCounter2, refCounter1]] = ReferencesManager.for(
+        options,
+        [],
+        [],
+        ['counter2'],
+        ['counter1'],
+    );
+    const render = (viewState: DynamicComponentInComponentViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
+            de('div', {}, [
                 forEach(
                     (vs) => vs.nestedCounters,
                     (vs1: NestedCounter) => {
@@ -60,11 +73,10 @@ export function render(
                     secureChildComp(
                         Counter,
                         (vs: DynamicComponentInComponentViewState) => ({ initialValue: vs.count1 }),
-                        cr('counter2'),
+                        refCounter2(),
                     ),
                 ),
-            ]);
-        },
-        options,
-    );
+            ]),
+        ) as DynamicComponentInComponentElement;
+    return [refManager.getPublicAPI() as DynamicComponentInComponentElementRefs, render];
 }

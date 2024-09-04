@@ -2,9 +2,10 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
+    RenderElement,
+    ReferencesManager,
     ConstructContext,
     HTMLElementProxy,
-    elemRef as er,
     RenderElementOptions,
 } from 'jay-runtime';
 
@@ -18,19 +19,28 @@ export interface CounterElementRefs {
 }
 
 export type CounterElement = JayElement<CounterViewState, CounterElementRefs>;
+export type CounterElementRender = RenderElement<
+    CounterViewState,
+    CounterElementRefs,
+    CounterElement
+>;
+export type CounterElementPreRender = [refs: CounterElementRefs, CounterElementRender];
 
-export function render(
-    viewState: CounterViewState,
-    options?: RenderElementOptions,
-): CounterElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () =>
-            e('div', {}, [
-                e('button', {}, ['-'], er('subtracter')),
-                e('span', { style: { cssText: 'margin: 0 16px' } }, [dt((vs) => vs.count)]),
-                e('button', {}, ['+'], er('adderButton')),
-            ]),
+export function render(options?: RenderElementOptions): CounterElementPreRender {
+    const [refManager, [refSubtracter, refAdderButton]] = ReferencesManager.for(
         options,
+        ['subtracter', 'adderButton'],
+        [],
+        [],
+        [],
     );
+    const render = (viewState: CounterViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
+            e('div', {}, [
+                e('button', {}, ['-'], refSubtracter()),
+                e('span', { style: { cssText: 'margin: 0 16px' } }, [dt((vs) => vs.count)]),
+                e('button', {}, ['+'], refAdderButton()),
+            ]),
+        ) as CounterElement;
+    return [refManager.getPublicAPI() as CounterElementRefs, render];
 }

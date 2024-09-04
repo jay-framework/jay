@@ -3,8 +3,9 @@ import {
     HTMLElementCollectionProxy,
     HTMLElementProxy,
     RenderElementOptions,
+    RenderElement,
 } from 'jay-runtime';
-import { elemCollectionRef, elementBridge, elemRef } from '../../../../lib';
+import { elementBridge, SecureReferencesManager } from '../../../../lib';
 import {
     sandboxElement as e,
     sandboxForEach as forEach,
@@ -28,19 +29,29 @@ export interface CompElementRefs {
 }
 
 export type CompElement = JayElement<CompViewState, CompElementRefs>;
+export type CompElementRender = RenderElement<CompViewState, CompElementRefs, CompElement>;
+export type CompElementPreRender = [refs: CompElementRefs, CompElementRender];
 
-export function render(viewState: CompViewState, options?: RenderElementOptions): CompElement {
-    return elementBridge(viewState, () => {
-        const refItemButtonExecElement = elemCollectionRef('itemButtonExecElement');
-        return [
-            e(elemRef('buttonExecGlobal')),
-            e(elemRef('buttonExecElement')),
-            e(elemRef('input')),
-            forEach(
-                (viewState: CompViewState) => viewState.items,
-                'id',
-                () => [e(refItemButtonExecElement())],
-            ),
-        ];
-    }) as unknown as CompElement;
+export function render(options?: RenderElementOptions): CompElementPreRender {
+    const [refManager, [result, buttonExecGlobal, buttonExecElement, itemButtonExecElement]] =
+        SecureReferencesManager.forElement(
+            ['result', 'buttonExecGlobal', 'buttonExecElement'],
+            ['itemButtonExecElement'],
+            [],
+            [],
+        );
+    const render = (viewState: CompViewState) =>
+        elementBridge(viewState, refManager, () => {
+            return [
+                e(result()),
+                e(buttonExecGlobal()),
+                e(buttonExecElement()),
+                forEach(
+                    (viewState: CompViewState) => viewState.items,
+                    'id',
+                    () => [e(itemButtonExecElement())],
+                ),
+            ];
+        }) as unknown as CompElement;
+    return [refManager.getPublicAPI() as CompElementRefs, render];
 }

@@ -6,13 +6,13 @@ import {
     dynamicElement as de,
     conditional as c,
     forEach,
-    compRef as cr,
-    compCollectionRef as ccr,
+    RenderElement,
+    ReferencesManager,
 } from 'jay-runtime';
 import { Counter } from './counter';
 import { mainRoot as mr } from '../../../../lib/';
 import { secureChildComp } from '../../../../lib/';
-import { CounterRef, CounterRefs } from './counter-refs';
+import { CounterComponentType, CounterRefs } from './counter-refs';
 
 export interface Counter {
     id: string;
@@ -26,17 +26,24 @@ export interface AppViewState {
 }
 
 export interface AppElementRefs {
-    comp1: CounterRef<AppViewState>;
+    comp1: CounterComponentType<AppViewState>;
     comp2: CounterRefs<Counter>;
 }
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
+export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
+export type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
 
-export function render(viewState: AppViewState, options?: RenderElementOptions): AppElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () => {
-            const refComp2 = ccr('comp2');
+export function renderAppElement(options?: RenderElementOptions): AppElementPreRender {
+    const [refManager, [comp1, comp2]] = ReferencesManager.for(
+        options,
+        [],
+        [],
+        ['comp1'],
+        ['comp2'],
+    );
+    const render = (viewState: AppViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () => {
             return mr(viewState, () =>
                 de('div', {}, [
                     c(
@@ -48,7 +55,7 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
                                 initialCount: vs.initialCount,
                                 id: 'cond',
                             }),
-                            cr('comp1'),
+                            comp1(),
                         ),
                     ),
                     forEach(
@@ -61,14 +68,13 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
                                     initialCount: vs.initialCount,
                                     id: vs.id,
                                 }),
-                                refComp2(),
+                                comp2(),
                             );
                         },
                         'id',
                     ),
                 ]),
             );
-        },
-        options,
-    );
+        }) as AppElement;
+    return [refManager.getPublicAPI() as AppElementRefs, render];
 }

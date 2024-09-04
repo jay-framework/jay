@@ -25,7 +25,8 @@ const jayWorker = new Worker('./worker.js');
 window.onload = function () {
     setMainPort(new JayPort(new HandshakeMessageJayChannel(jayWorker)));
     let target = document.getElementById('target');
-    let app = render({ todos: { initialTodos } });
+    let [refs, doRender] = render();
+    let app = doRender({ todos: { initialTodos } });
     target.innerHTML = '';
     target.appendChild(app.dom);
 };

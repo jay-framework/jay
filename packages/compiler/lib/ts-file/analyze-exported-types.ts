@@ -104,10 +104,10 @@ function autoAddExtension(filename: string) {
 }
 
 function isOrSubclassOf(type: ts.Type, ofClass: string): boolean {
-    if (type.symbol.name === ofClass) return true;
+    if (type.symbol?.name === ofClass) return true;
 
     for (let baseType of type.getBaseTypes() || [])
-        if (baseType.symbol.name === ofClass) return true;
+        if (baseType.symbol?.name === ofClass) return true;
 
     return false;
 }
@@ -156,8 +156,8 @@ export function analyzeExportedTypes(
             types.push(getInterfaceJayType(statement, types));
         } else if (isFunctionDeclaration(statement)) {
             const functionType = tsTypeChecker.getTypeAtLocation(statement.type);
-            if (functionType.symbol) {
-                const typeName = functionType.symbol.name;
+            if (functionType.symbol || functionType.aliasSymbol) {
+                const typeName = functionType.symbol?.name;
                 const functionName = statement?.name.text;
                 const aliasName = functionType.aliasSymbol
                     ? functionType.aliasSymbol.name

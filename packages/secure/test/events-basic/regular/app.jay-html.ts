@@ -3,31 +3,34 @@ import {
     element as e,
     ConstructContext,
     childComp,
-    compRef as cr,
     RenderElementOptions,
+    ReferencesManager,
+    RenderElement,
 } from 'jay-runtime';
-import { CounterRef } from './counter-refs';
+import { CounterComponentType } from './counter-refs';
 import { Counter } from './counter';
 
 export interface AppViewState {}
 
 export interface AppElementRefs {
-    a: CounterRef<AppViewState>;
+    a: CounterComponentType<AppViewState>;
 }
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
+export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
+export type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
 
-export function render(viewState: AppViewState, options?: RenderElementOptions): AppElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () =>
-            e('div', {}, [
+export function render(options?: RenderElementOptions): AppElementPreRender {
+    const [refManager, [a]] = ReferencesManager.for(options, [], [], ['a'], []);
+    const render = (viewState: AppViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () => {
+            return e('div', {}, [
                 childComp(
                     Counter,
                     (vs: AppViewState) => ({ title: 'first counter', initialCount: 12 }),
-                    cr('a'),
+                    a(),
                 ),
-            ]),
-        options,
-    );
+            ]);
+        }) as AppElement;
+    return [refManager.getPublicAPI() as AppElementRefs, render];
 }

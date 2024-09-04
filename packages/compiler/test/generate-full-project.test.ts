@@ -14,7 +14,7 @@ import {
     readTestFile,
 } from './test-utils/file-utils';
 import * as ts from 'typescript';
-import { transformComponentBridge } from '../lib/ts-file/transform-component-bridge';
+import { transformComponentBridge } from '../lib';
 import {
     printTsFile,
     readAndParseJayFile,
@@ -136,9 +136,11 @@ describe('generate full project', () => {
                 );
                 expect(refsFile.validations).toEqual([]);
                 expect(await prettify(refsFile.val)).toEqual(
-                    await readTestFile(
-                        './sandboxed/sandboxed-counter/generated/main',
-                        'counter-refs.d.ts',
+                    await prettify(
+                        await readTestFile(
+                            './sandboxed/sandboxed-counter/generated/main',
+                            'counter-refs.d.ts',
+                        ),
                     ),
                 );
             });

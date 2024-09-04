@@ -7,7 +7,6 @@ import {
     MountFunc,
     updateFunc,
 } from './element-types';
-import { currentConstructionContext } from './context';
 import {
     ComponentCollectionProxy,
     GlobalJayEvents,
@@ -16,14 +15,7 @@ import {
     HTMLElementProxy,
     HTMLElementProxyTarget,
 } from './node-reference-types';
-import { ManagedRef } from './references-manager';
-
-export interface ManagedCollectionRef<ViewState, PublicRefAPI, PublicRefCollectionAPI>
-    extends ManagedRef<PublicRefCollectionAPI> {
-    addRef(ref: PrivateRef<ViewState, PublicRefAPI>);
-    removeRef(ref: PrivateRef<ViewState, PublicRefAPI>);
-    getPublicAPI(): PublicRefCollectionAPI;
-}
+import { ManagedRefs } from './references-manager';
 
 export type ReferenceTarget<ViewState> = HTMLElement | JayComponent<any, ViewState, any>;
 
@@ -39,77 +31,19 @@ export interface PrivateRef<ViewState, PublicRefAPI> {
         type: string,
         handler: JayEventHandler<E, ViewState, any>,
         options?: boolean | AddEventListenerOptions,
-    );
+    ): void;
     removeEventListener<E extends Event>(
         type: string,
         handler: JayEventHandler<E, ViewState, any>,
         options?: EventListenerOptions | boolean,
-    );
+    ): void;
 }
 
-export function elemCollectionRef<ViewState, ElementType extends HTMLElement>(
-    refName: string,
-): () => PrivateRef<ViewState, any> {
-    let { refManager } = currentConstructionContext();
-    let collRef = new HTMLElementCollectionRefImpl<ViewState, ElementType>();
-    refManager.add(refName, collRef);
-    return () => {
-        let { currData, coordinate, refManager } = currentConstructionContext();
-        let ref = new HTMLElementRefImpl<ViewState, ElementType>(
-            currData,
-            coordinate(refName),
-            refManager.eventWrapper,
-            collRef,
-        );
-        collRef.addRef(ref);
-        return ref;
-    };
-}
-
-export function elemRef(refName: string): PrivateRef<any, any> {
-    let { currData, coordinate, refManager } = currentConstructionContext();
-    return refManager.add(
-        refName,
-        new HTMLElementRefImpl(currData, coordinate(refName), refManager.eventWrapper),
-    );
-}
-
-export function compCollectionRef<
+export abstract class PrivateRefs<
     ViewState,
-    ComponentType extends JayComponent<any, ViewState, any>,
->(refName: string): () => PrivateRef<ViewState, any> {
-    let { refManager } = currentConstructionContext();
-    let collRef = new ComponentCollectionRefImpl<ViewState, ComponentType>();
-    refManager.add(refName, collRef);
-    return () => {
-        let { currData, coordinate, refManager } = currentConstructionContext();
-        let ref = new ComponentRefImpl<ViewState, ComponentType>(
-            currData,
-            coordinate(refName),
-            refManager.eventWrapper,
-            collRef,
-        );
-        collRef.addRef(ref);
-        return ref;
-    };
-}
-
-export function compRef(refName: string): PrivateRef<any, any> {
-    let { currData, coordinate, refManager } = currentConstructionContext();
-    return refManager.add(
-        refName,
-        new ComponentRefImpl(currData, coordinate(refName), refManager.eventWrapper),
-    );
-}
-
-abstract class CollectionRefImpl<
-    ViewState,
-    ElementType extends ReferenceTarget<ViewState>,
     PublicRefAPI,
-    PublicCollectionRefAPI,
     RefType extends PrivateRef<ViewState, PublicRefAPI>,
-> implements ManagedCollectionRef<ViewState, PublicRefAPI, PublicCollectionRefAPI>
-{
+> {
     protected elements: Set<RefType> = new Set();
     private listeners = [];
 
@@ -148,7 +82,14 @@ abstract class CollectionRefImpl<
         );
         this.elements.forEach((ref) => ref.removeEventListener(type, listener, options));
     }
+}
 
+abstract class PrivateCollectionRefs<
+    ViewState,
+    PublicRefAPI,
+    PublicCollectionRefAPI,
+    RefType extends PrivateRef<ViewState, PublicRefAPI>,
+> extends PrivateRefs<ViewState, PublicRefAPI, RefType> {
     map<ResultType>(
         handler: (
             referenced: PublicRefAPI,
@@ -169,16 +110,27 @@ abstract class CollectionRefImpl<
     abstract getPublicAPI(): PublicCollectionRefAPI;
 }
 
-class HTMLElementCollectionRefImpl<
-    ViewState,
-    ElementType extends HTMLElement,
-> extends CollectionRefImpl<
-    ViewState,
-    ElementType,
-    HTMLElementProxy<ViewState, ElementType>,
-    HTMLElementCollectionProxy<ViewState, ElementType>,
-    HTMLElementRefImpl<ViewState, ElementType>
-> {
+export class HTMLElementCollectionRefImpl<ViewState, ElementType extends HTMLElement>
+    extends PrivateCollectionRefs<
+        ViewState,
+        HTMLElementProxy<ViewState, ElementType>,
+        HTMLElementCollectionProxy<ViewState, ElementType>,
+        HTMLElementRefImpl<ViewState, ElementType>
+    >
+    implements ManagedRefs
+{
+    mkManagedRef(
+        currData: any,
+        coordinate: Coordinate,
+        eventWrapper: JayEventHandlerWrapper<any, any, any>,
+    ): HTMLElementRefImpl<ViewState, ElementType> {
+        return new HTMLElementRefImpl<ViewState, ElementType>(
+            currData,
+            coordinate,
+            eventWrapper,
+            this,
+        );
+    }
     getPublicAPI(): HTMLElementCollectionProxy<ViewState, ElementType> {
         return newHTMLElementPublicApiProxy<
             ViewState,
@@ -187,16 +139,87 @@ class HTMLElementCollectionRefImpl<
     }
 }
 
+export class HTMLElementRefsImpl<ViewState, ElementType extends HTMLElement>
+    extends PrivateRefs<
+        ViewState,
+        HTMLElementProxy<ViewState, ElementType>,
+        HTMLElementRefImpl<ViewState, ElementType>
+    >
+    implements HTMLElementProxyTarget<ViewState, ElementType>, ManagedRefs
+{
+    mkManagedRef(
+        currData: any,
+        coordinate: Coordinate,
+        eventWrapper: JayEventHandlerWrapper<any, any, any>,
+    ) {
+        return new HTMLElementRefImpl<ViewState, ElementType>(
+            currData,
+            coordinate,
+            eventWrapper,
+            this,
+        );
+    }
+    getPublicAPI(): HTMLElementProxy<ViewState, ElementType> {
+        return newHTMLElementPublicApiProxy<
+            ViewState,
+            HTMLElementProxyTarget<ViewState, ElementType>
+        >(this);
+    }
+
+    exec$<T>(handler: (elem: ElementType, viewState: ViewState) => T): Promise<T> {
+        return [...this.elements][0].exec$(handler);
+    }
+}
+
+export class ComponentRefsImpl<ViewState, ComponentType extends JayComponent<any, ViewState, any>>
+    extends PrivateRefs<ViewState, ComponentType, ComponentRefImpl<ViewState, ComponentType>>
+    implements ManagedRefs
+{
+    getInstance() {
+        return [...this.elements][0]?.getPublicAPI();
+    }
+
+    mkManagedRef(
+        currData: any,
+        coordinate: Coordinate,
+        eventWrapper: JayEventHandlerWrapper<any, any, any>,
+    ) {
+        return new ComponentRefImpl<ViewState, ComponentType>(
+            currData,
+            coordinate,
+            eventWrapper,
+            this,
+        );
+    }
+    getPublicAPI(): ComponentType {
+        return newComponentPublicApiProxy<ViewState, ComponentType>(this) as any as ComponentType;
+    }
+}
+
 export class ComponentCollectionRefImpl<
-    ViewState,
-    ComponentType extends JayComponent<any, ViewState, any>,
-> extends CollectionRefImpl<
-    ViewState,
-    ComponentType,
-    ComponentType,
-    ComponentCollectionProxy<ViewState, ComponentType>,
-    ComponentRefImpl<ViewState, ComponentType>
-> {
+        ViewState,
+        ComponentType extends JayComponent<any, ViewState, any>,
+    >
+    extends PrivateCollectionRefs<
+        ViewState,
+        ComponentType,
+        ComponentCollectionProxy<ViewState, ComponentType>,
+        ComponentRefImpl<ViewState, ComponentType>
+    >
+    implements ManagedRefs
+{
+    mkManagedRef(
+        currData: any,
+        coordinate: Coordinate,
+        eventWrapper: JayEventHandlerWrapper<any, any, any>,
+    ) {
+        return new ComponentRefImpl<ViewState, ComponentType>(
+            currData,
+            coordinate,
+            eventWrapper,
+            this,
+        );
+    }
     getPublicAPI(): ComponentCollectionProxy<ViewState, ComponentType> {
         return newComponentCollectionPublicApiProxy<ViewState, ComponentType>(this);
     }
@@ -206,7 +229,6 @@ export abstract class RefImpl<
     ViewState,
     ElementType extends ReferenceTarget<ViewState>,
     PublicRefAPI,
-    PublicCollectionRefAPI,
     RefType extends PrivateRef<ViewState, PublicRefAPI>,
 > implements PrivateRef<ViewState, PublicRefAPI>
 {
@@ -217,13 +239,7 @@ export abstract class RefImpl<
         public viewState: ViewState,
         public coordinate: Coordinate,
         private eventWrapper: JayEventHandlerWrapper<any, ViewState, any>,
-        private parentCollection?: CollectionRefImpl<
-            ViewState,
-            ElementType,
-            PublicRefAPI,
-            PublicCollectionRefAPI,
-            RefType
-        >,
+        private parentCollection?: PrivateRefs<ViewState, PublicRefAPI, RefType>,
     ) {
         this.viewState = viewState;
     }
@@ -283,7 +299,6 @@ export class HTMLElementRefImpl<ViewState, ElementType extends HTMLElement>
         ViewState,
         ElementType,
         HTMLElementProxy<ViewState, ElementType>,
-        HTMLElementCollectionProxy<ViewState, ElementType>,
         HTMLElementRefImpl<ViewState, ElementType>
     >
     implements HTMLElementProxyTarget<ViewState, any>
@@ -317,7 +332,6 @@ export class ComponentRefImpl<
     ViewState,
     ComponentType,
     ComponentType,
-    ComponentCollectionProxy<ViewState, ComponentType>,
     ComponentRefImpl<ViewState, ComponentType>
 > {
     getFromComponent(prop) {
@@ -329,7 +343,9 @@ export class ComponentRefImpl<
     }
 
     getPublicAPI(): ComponentType {
-        return newComponentPublicApiProxy<ViewState, ComponentType>(this) as any as ComponentType;
+        return newComponentInCollectionPublicApiProxy<ViewState, ComponentType>(
+            this,
+        ) as any as ComponentType;
     }
 }
 
@@ -369,8 +385,17 @@ const EVENT$_TRAP = (target, prop) => {
     return false;
 };
 
-const DELEGATE_TO_COMP_TRAP = (target, prop) => {
+// const GET_COMP_INSTANCE_TRAP = (target: ComponentRefsImpl<any, any>, prop) => {
+//     return (prop === 'comp') && target.getInstance();
+// };
+
+const DELEGATE_REF_TO_COMP_TRAP = (target: ComponentRefImpl<any, any>, prop) => {
     return target.getFromComponent(prop);
+};
+
+const DELEGATE_REFS_TO_COMP_TRAP = (target: ComponentRefsImpl<any, any>, prop) => {
+    const instance = target.getInstance();
+    return instance ? instance[prop] : undefined;
 };
 
 export const GetTrapProxy = (
@@ -394,12 +419,21 @@ export function newHTMLElementPublicApiProxy<ViewState, T>(ref: T): T & GlobalJa
     return new Proxy(ref, HTMLElementRefProxy);
 }
 
-const ComponentRefProxy = GetTrapProxy([EVENT_TRAP, DELEGATE_TO_COMP_TRAP]);
+const ComponentRefProxy = GetTrapProxy([EVENT_TRAP, DELEGATE_REFS_TO_COMP_TRAP]);
 
 export function newComponentPublicApiProxy<ViewState, C extends JayComponent<any, ViewState, any>>(
-    ref: ComponentRefImpl<ViewState, C>,
+    ref: ComponentRefsImpl<ViewState, C>,
 ): JayComponent<any, ViewState, any> {
     return new Proxy(ref, ComponentRefProxy);
+}
+
+const ComponentInCollectionRefProxy = GetTrapProxy([EVENT_TRAP, DELEGATE_REF_TO_COMP_TRAP]);
+
+export function newComponentInCollectionPublicApiProxy<
+    ViewState,
+    C extends JayComponent<any, ViewState, any>,
+>(ref: ComponentRefImpl<ViewState, C>): JayComponent<any, ViewState, any> {
+    return new Proxy(ref, ComponentInCollectionRefProxy);
 }
 
 const ComponentCollectionRefProxy = GetTrapProxy([EVENT_TRAP]);

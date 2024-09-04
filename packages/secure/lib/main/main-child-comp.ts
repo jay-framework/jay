@@ -5,7 +5,7 @@ import {
     createJayContext,
     JayComponent,
     JayComponentConstructor,
-    provideContext,
+    withContext,
 } from 'jay-runtime';
 import { currentConstructionContext, PrivateRef } from 'jay-runtime';
 
@@ -28,7 +28,7 @@ export function secureChildComp<
     let constructContext = currentConstructionContext();
     let coordinate = ref.coordinate;
 
-    return provideContext(SECURE_COORDINATE_MARKER, { coordinate }, () => {
+    return withContext(SECURE_COORDINATE_MARKER, { coordinate }, () => {
         return childComp(compCreator, getProps, ref);
     });
 }

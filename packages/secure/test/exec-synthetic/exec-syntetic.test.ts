@@ -1,6 +1,6 @@
 import { setChannel, useMockCommunicationChannel } from '../util/mock-channel';
 import { initializeWorker } from './secure/worker/worker-root';
-import { render } from './secure/main/app.jay-html';
+import { preRender } from './secure/main/app.jay-html';
 import { eventually10ms } from '../util/eventually';
 
 const VERBOSE = false;
@@ -9,6 +9,7 @@ describe('exec synthetic tests', () => {
         let channel = useMockCommunicationChannel(VERBOSE);
         setChannel(channel);
         initializeWorker();
+        let [, render] = preRender();
         let appElement = render({});
         let result = appElement.dom.querySelector('[data-id="result"]') as HTMLDivElement;
         let buttonExec$Global = appElement.dom.querySelector(

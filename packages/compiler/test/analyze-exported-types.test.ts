@@ -24,8 +24,9 @@ describe('typescript-compiler', () => {
     });
     const relativePath = './test/fixtures/tsconfig.json';
 
-    describe('extract types from element files', () => {
-        it('should extract types from a file', () => {
+    // todo no need to extract types from element files
+    describe.skip('extract types from element files', () => {
+        it('should extract types from an element file', () => {
             let types = analyzeExportedTypes(
                 './test/fixtures/basics/attributes/generated-element.ts',
                 {
@@ -49,7 +50,7 @@ describe('typescript-compiler', () => {
             );
         });
 
-        it('should extract types from a file, adding .ts extension automatically', () => {
+        it('should extract types from a element file, adding .ts extension automatically', () => {
             let types = analyzeExportedTypes(
                 './test/fixtures/basics/attributes/generated-element',
                 {
@@ -74,8 +75,9 @@ describe('typescript-compiler', () => {
         });
     });
 
-    describe('extract types from element definition files', () => {
-        it('should extract types from a definition file', () => {
+    // todo no need to extract types from element definition files
+    describe.skip('extract types from element definition files', () => {
+        it('should extract types from an element definition file', () => {
             let types = analyzeExportedTypes(
                 './test/fixtures/basics/data-types/generated-element',
                 {

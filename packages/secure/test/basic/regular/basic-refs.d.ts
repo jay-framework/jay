@@ -1,22 +1,7 @@
-import {
-    JayComponent,
-    EventEmitter,
-    ComponentCollectionProxy,
-    EventTypeFrom,
-    PropsFrom,
-    ViewStateFrom,
-    ElementFrom,
-} from 'jay-runtime';
+import { ComponentCollectionProxy } from 'jay-runtime';
 import { Basic } from './basic';
 
-export type BasicComponentType = ReturnType<typeof Basic>;
-
-export interface BasicRef<ParentVS>
-    extends JayComponent<
-        PropsFrom<BasicComponentType>,
-        ViewStateFrom<BasicComponentType>,
-        ElementFrom<BasicComponentType>
-    > {}
+export type BasicComponentType<ParentVS> = ReturnType<typeof Basic<ParentVS>>;
 
 export interface BasicRefs<ParentVS>
-    extends ComponentCollectionProxy<ParentVS, BasicRef<ParentVS>> {}
+    extends ComponentCollectionProxy<ParentVS, BasicComponentType<ParentVS>> {}

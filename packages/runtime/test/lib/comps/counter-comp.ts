@@ -1,9 +1,8 @@
 import { dynamicText as dt, element as e } from '../../../lib/element';
-import { Coordinate, JayElement, JayEventHandler } from '../../../lib';
+import { Coordinate, JayElement, JayEventHandler, ReferencesManager } from '../../../lib';
 import { HTMLElementProxy } from '../../../lib';
 import { mkComponentEventHandler } from './make-component-event-handler';
 import { ConstructContext } from '../../../lib/context';
-import { elemRef } from '../../../lib/node-reference';
 
 export interface ViewState {
     count: number;
@@ -18,13 +17,20 @@ interface CounterRefs {
 export interface CounterElement extends JayElement<ViewState, CounterRefs> {}
 
 function renderCounter(viewState: ViewState): CounterElement {
-    return ConstructContext.withRootContext(viewState, () =>
-        e('div', {}, [
-            e('div', {}, ['-'], elemRef('dec')),
-            e('div', {}, [dt((vs) => vs.count)], elemRef('count')),
-            e('div', {}, ['+'], elemRef('inc')),
-        ]),
-    ) as CounterElement;
+    let [refManager, [dec, inc, countRef]] = ReferencesManager.for(
+        {},
+        ['dec', 'inc', 'count'],
+        [],
+        [],
+        [],
+    );
+    return ConstructContext.withRootContext(viewState, refManager, () => {
+        return e('div', {}, [
+            e('div', {}, ['-'], dec()),
+            e('div', {}, [dt((vs) => vs.count)], countRef()),
+            e('div', {}, ['+'], inc()),
+        ]);
+    }) as CounterElement;
 }
 
 export interface CounterData {

@@ -1,4 +1,3 @@
-import { compCollectionRef, compRef, elemCollectionRef, elemRef } from '../../lib/';
 import {
     childComp,
     ConstructContext,
@@ -7,12 +6,13 @@ import {
     element as e,
     forEach,
     HTMLNativeExec,
+    ReferencesManager,
 } from '../../lib/';
 import { JayElement } from '../../lib';
 import { ComponentCollectionProxy, HTMLElementCollectionProxy, HTMLElementProxy } from '../../lib';
 import { Item, ItemProps } from './comps/item';
 import '../../lib/element-test-types';
-import { ItemRef } from './comps/item-refs';
+import { ItemComponentType } from './comps/item-refs';
 
 const SOME_VALUE = 'some text in the element';
 const ANOTHER_VALUE = 'another text value';
@@ -36,9 +36,13 @@ describe('ReferencesManager operations', () => {
 
         function mkElement() {
             let jayElement1;
+            let [refManager, [ref]] = ReferencesManager.for({}, [refName1], [], [], []);
             let jayRootElement = ConstructContext.withRootContext<string, RootElementRefs>(
                 DATA_CONTEXT,
-                () => e('div', {}, [(jayElement1 = e('div', {}, [SOME_VALUE], elemRef(refName1)))]),
+                refManager,
+                () => {
+                    return e('div', {}, [(jayElement1 = e('div', {}, [SOME_VALUE], ref()))]);
+                },
             );
             let mockCallback = vi.fn(() => undefined);
             return { jayRootElement, jayElement1, mockCallback };
@@ -78,12 +82,17 @@ describe('ReferencesManager operations', () => {
                 jayElements2 = [],
                 mockCallback,
                 mockCallback2;
+            let [refManager, [ref_1, ref_2]] = ReferencesManager.for(
+                {},
+                [],
+                [refName1, refName2],
+                [],
+                [],
+            );
             let jayRootElement = ConstructContext.withRootContext<
                 RootElementViewState,
                 RootElementRefs
-            >(viewState, () => {
-                const ref_1 = elemCollectionRef(refName1);
-                const ref_2 = elemCollectionRef(refName2);
+            >(viewState, refManager, () => {
                 return de('div', {}, [
                     forEach(
                         (vs) => vs.items,
@@ -147,14 +156,14 @@ describe('ReferencesManager operations', () => {
         });
 
         it('find should find the first element proxy meeting a criteria based on view state', () => {
-            let { jayRootElement, jayElements, mockCallback } = mkJayElement();
+            let { jayRootElement, jayElements } = mkJayElement();
             let element2 = jayRootElement.refs.refName1.find((vs) => vs === VIEW_STATE.items[1]);
 
             expectRefToJayElement(element2, jayElements[1]);
         });
 
         it('find should find the first element proxy meeting a criteria based on coordinate', () => {
-            let { jayRootElement, jayElements, mockCallback } = mkJayElement();
+            let { jayRootElement, jayElements } = mkJayElement();
             let element2 = jayRootElement.refs.refName1.find((vs, coordinate) =>
                 sameCoordinate(coordinate, COORDINATE_12),
             );
@@ -166,22 +175,23 @@ describe('ReferencesManager operations', () => {
     describe('single referenced component', () => {
         interface RootElementViewState {}
         interface RootElementRefs {
-            refName1: ItemRef<RootElementViewState>;
+            refName1: ItemComponentType<RootElementViewState>;
         }
 
-        let jayComponent: ItemRef<RootElementViewState>,
+        let jayComponent: ItemComponentType<RootElementViewState>,
             jayRootElement: JayElement<RootElementViewState, RootElementRefs>,
             mockCallback;
         beforeEach(() => {
-            jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, () =>
-                e('div', {}, [
+            let [refManager, [ref]] = ReferencesManager.for({}, [], [], [refName1], []);
+            jayRootElement = ConstructContext.withRootContext(DATA_CONTEXT, refManager, () => {
+                return e('div', {}, [
                     childComp(
                         (props: ItemProps) => (jayComponent = Item(props)),
                         (vs) => ({ text: 'hello', dataId: 'AAA' }),
-                        compRef(refName1),
+                        ref(),
                     ),
-                ]),
-            ) as JayElement<RootElementViewState, RootElementRefs>;
+                ]);
+            }) as JayElement<RootElementViewState, RootElementRefs>;
 
             mockCallback = vi.fn(() => undefined);
         });
@@ -212,14 +222,14 @@ describe('ReferencesManager operations', () => {
         interface RootElementRefs {
             refName1: ComponentCollectionProxy<
                 (typeof viewState.items)[0],
-                ItemRef<RootElementViewState>
+                ItemComponentType<(typeof viewState.items)[0]>
             >;
         }
 
         let jayRootElement: JayElement<RootElementViewState, RootElementRefs>, mockCallback;
         beforeEach(() => {
-            jayRootElement = ConstructContext.withRootContext(viewState, () => {
-                const ref1 = compCollectionRef(refName1);
+            let [refManager, [ref1]] = ReferencesManager.for({}, [], [], [], [refName1]);
+            jayRootElement = ConstructContext.withRootContext(viewState, refManager, () => {
                 return de('div', {}, [
                     forEach(
                         (vs: typeof viewState) => vs.items,

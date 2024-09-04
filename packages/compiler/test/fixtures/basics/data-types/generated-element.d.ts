@@ -1,4 +1,4 @@
-import { JayElement, RenderElementOptions } from 'jay-runtime';
+import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
 
 export interface O1 {
     s2: string;
@@ -21,8 +21,11 @@ export interface DataTypesViewState {
 export interface DataTypesElementRefs {}
 
 export type DataTypesElement = JayElement<DataTypesViewState, DataTypesElementRefs>;
+export type DataTypesElementRender = RenderElement<
+    DataTypesViewState,
+    DataTypesElementRefs,
+    DataTypesElement
+>;
+export type DataTypesElementPreRender = [refs: DataTypesElementRefs, DataTypesElementRender];
 
-export declare function render(
-    viewState: DataTypesViewState,
-    options?: RenderElementOptions,
-): DataTypesElement;
+export declare function render(options?: RenderElementOptions): DataTypesElementPreRender;

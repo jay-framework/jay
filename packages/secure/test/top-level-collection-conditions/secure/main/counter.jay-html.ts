@@ -5,8 +5,9 @@ import {
     dynamicAttribute as da,
     ConstructContext,
     HTMLElementProxy,
-    elemRef as er,
     RenderElementOptions,
+    RenderElement,
+    ReferencesManager,
 } from 'jay-runtime';
 
 export interface CounterViewState {
@@ -21,18 +22,27 @@ export interface CounterElementRefs {
 }
 
 export type CounterElement = JayElement<CounterViewState, CounterElementRefs>;
+export type CounterElementRender = RenderElement<
+    CounterViewState,
+    CounterElementRefs,
+    CounterElement
+>;
+export type CounterElementPreRender = [refs: CounterElementRefs, CounterElementRender];
 
-export function render(
-    viewState: CounterViewState,
-    options?: RenderElementOptions,
-): CounterElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () =>
-            e('div', {}, [
+export function render(options?: RenderElementOptions): CounterElementPreRender {
+    const [refManager, [subtracter, adder]] = ReferencesManager.for(
+        options,
+        ['subtracter', 'adder'],
+        [],
+        [],
+        [],
+    );
+    const render = (viewState: CounterViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () => {
+            return e('div', {}, [
                 e('div', { 'data-id': da((vs) => `${vs.id}-title`) }, [dt((vs) => vs.title)]),
                 e('div', {}, [
-                    e('button', { 'data-id': da((vs) => `${vs.id}-sub`) }, ['-'], er('subtracter')),
+                    e('button', { 'data-id': da((vs) => `${vs.id}-sub`) }, ['-'], subtracter()),
                     e(
                         'span',
                         {
@@ -41,9 +51,9 @@ export function render(
                         },
                         [dt((vs) => vs.count)],
                     ),
-                    e('button', { 'data-id': da((vs) => `${vs.id}-add`) }, ['+'], er('adder')),
+                    e('button', { 'data-id': da((vs) => `${vs.id}-add`) }, ['+'], adder()),
                 ]),
-            ]),
-        options,
-    );
+            ]);
+        }) as CounterElement;
+    return [refManager.getPublicAPI() as CounterElementRefs, render];
 }

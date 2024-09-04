@@ -7,7 +7,9 @@ import {
     forEach,
     HTMLElementProxy,
     RenderElementOptions,
-    provideContext,
+    withContext,
+    ReferencesManager,
+    RenderElement,
 } from 'jay-runtime';
 import {
     COMPONENT_CONTEXT,
@@ -21,22 +23,26 @@ import {
     makeJayComponent,
     Props,
     useReactive,
-} from '../lib/component';
+} from '../lib/';
 import { MeasureOfChange, Reactive } from 'jay-reactive';
 import { REPLACE } from 'jay-json-patch';
-import { elemRef } from 'jay-runtime';
 const { makePropsProxy } = forTesting;
 
 describe('state management', () => {
     describe('Props', () => {
-        const contextTestDefaults = { mounts: [], unmounts: [], getComponentInstance: () => null };
+        const contextTestDefaults = {
+            mounts: [],
+            unmounts: [],
+            provideContexts: [],
+            getComponentInstance: () => null,
+        };
         it('should transform an object into a getters object', () => {
             let reactive = new Reactive();
             const props = {
                 name: 'abc',
                 age: 12,
             };
-            let propsGetters = provideContext(
+            let propsGetters = withContext(
                 COMPONENT_CONTEXT,
                 { reactive, ...contextTestDefaults },
                 () => makePropsProxy(reactive, props),
@@ -52,7 +58,7 @@ describe('state management', () => {
                 name: 'abc',
                 age: 12,
             };
-            let updatableProps = provideContext(
+            let updatableProps = withContext(
                 COMPONENT_CONTEXT,
                 { reactive, ...contextTestDefaults },
                 () => makePropsProxy(reactive, props),
@@ -74,7 +80,7 @@ describe('state management', () => {
                 name: 'abc',
                 age: 12,
             };
-            let propsGetters = provideContext(
+            let propsGetters = withContext(
                 COMPONENT_CONTEXT,
                 { reactive, ...contextTestDefaults },
                 () => makePropsProxy(reactive, props),
@@ -89,7 +95,7 @@ describe('state management', () => {
                 name: 'abc',
                 age: 12,
             };
-            let propsGetters = provideContext(
+            let propsGetters = withContext(
                 COMPONENT_CONTEXT,
                 { reactive, ...contextTestDefaults },
                 () => makePropsProxy(reactive, props),
@@ -116,11 +122,20 @@ describe('state management', () => {
             label: HTMLElementProxy<ViewState, HTMLElement>;
         }
         interface LabelElement extends JayElement<ViewState, LabelRefs> {}
+        type LabelElementRender = RenderElement<
+            ViewState,
+            LabelRefs,
+            JayElement<ViewState, LabelRefs>
+        >;
+        type LabelElementPreRender = [refs: LabelRefs, LabelElementRender];
 
-        function renderLabelElement(viewState: ViewState): LabelElement {
-            return ConstructContext.withRootContext(viewState, () =>
-                e('div', {}, [e('div', {}, [dt((vs) => vs.label)], elemRef('label'))]),
-            ) as LabelElement;
+        function renderLabelElement(): LabelElementPreRender {
+            const [refManager, [labelRef]] = ReferencesManager.for({}, ['label'], [], [], []);
+            const render = (viewState: ViewState) =>
+                ConstructContext.withRootContext(viewState, refManager, () => {
+                    return e('div', {}, [e('div', {}, [dt((vs) => vs.label)], labelRef())]);
+                }) as LabelElement;
+            return [refManager.getPublicAPI() as LabelRefs, render];
         }
 
         interface TwoLabelsViewState {
@@ -133,14 +148,29 @@ describe('state management', () => {
             label2: HTMLElementProxy<TwoLabelsViewState, HTMLElement>;
         }
         interface TwoLabelsElement extends JayElement<TwoLabelsViewState, TwoLabelRefs> {}
+        type TwoLabelsElementRender = RenderElement<
+            TwoLabelsViewState,
+            TwoLabelRefs,
+            JayElement<TwoLabelsViewState, TwoLabelRefs>
+        >;
+        type TwoLabelsElementPreRender = [refs: TwoLabelRefs, TwoLabelsElementRender];
 
-        function renderTwoLabelElement(viewState: TwoLabelsViewState): TwoLabelsElement {
-            return ConstructContext.withRootContext(viewState, () =>
-                e('div', {}, [
-                    e('div', {}, [dt((vs) => vs.label1)], elemRef('label1')),
-                    e('div', {}, [dt((vs) => vs.label2)], elemRef('label2')),
-                ]),
-            ) as TwoLabelsElement;
+        function renderTwoLabelElement(): TwoLabelsElementPreRender {
+            const [refManager, [label1Ref, label2Ref]] = ReferencesManager.for(
+                {},
+                ['label1', 'label2'],
+                [],
+                [],
+                [],
+            );
+            const render = (viewState: TwoLabelsViewState) =>
+                ConstructContext.withRootContext(viewState, refManager, () => {
+                    return e('div', {}, [
+                        e('div', {}, [dt((vs) => vs.label1)], label1Ref()),
+                        e('div', {}, [dt((vs) => vs.label2)], label2Ref()),
+                    ]);
+                }) as TwoLabelsElement;
+            return [refManager.getPublicAPI() as TwoLabelRefs, render];
         }
 
         describe('with props', () => {
@@ -518,26 +548,35 @@ describe('state management', () => {
 
             interface PhoneBookRefs {}
             interface PhoneBookElement extends JayElement<PhoneBookViewState, PhoneBookRefs> {}
+            type PhoneBookElementRender = RenderElement<
+                PhoneBookViewState,
+                PhoneBookRefs,
+                PhoneBookElement
+            >;
+            type PhoneBookElementPreRender = [refs: PhoneBookRefs, PhoneBookElementRender];
 
-            function renderPhoneBookElement(viewState: PhoneBookViewState): PhoneBookElement {
-                return ConstructContext.withRootContext(viewState, () =>
-                    de('div', {}, [
-                        forEach(
-                            (_) => _.listings,
-                            (listing: PhoneBookListing) =>
-                                e('div', {}, [
-                                    dt(
-                                        (listing: PhoneBookListing) =>
-                                            `${listing.name}: ${listing.number}, `,
-                                    ),
-                                ]),
-                            'name',
-                        ),
-                        e('div', {}, [
-                            dt((vs) => `number of calls to map: ${vs.numberOfCallsToMap}`),
+            function renderPhoneBookElement(): PhoneBookElementPreRender {
+                const [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+                const render = (viewState: PhoneBookViewState) =>
+                    ConstructContext.withRootContext(viewState, refManager, () =>
+                        de('div', {}, [
+                            forEach(
+                                (_) => _.listings,
+                                (listing: PhoneBookListing) =>
+                                    e('div', {}, [
+                                        dt(
+                                            (listing: PhoneBookListing) =>
+                                                `${listing.name}: ${listing.number}, `,
+                                        ),
+                                    ]),
+                                'name',
+                            ),
+                            e('div', {}, [
+                                dt((vs) => `number of calls to map: ${vs.numberOfCallsToMap}`),
+                            ]),
                         ]),
-                    ]),
-                ) as PhoneBookElement;
+                    ) as PhoneBookElement;
+                return [refManager.getPublicAPI() as PhoneBookRefs, render];
             }
 
             interface Contact {
@@ -738,21 +777,30 @@ describe('state management', () => {
                 value: HTMLElementProxy<CounterViewState, HTMLElement>;
             }
             interface CounterElement extends JayElement<CounterViewState, CounterRefs> {}
+            type CounterElementRender = RenderElement<
+                CounterViewState,
+                CounterRefs,
+                CounterElement
+            >;
+            type CounterElementPreRender = [refs: CounterRefs, CounterElementRender];
 
-            function renderCounterElement(
-                viewState: CounterViewState,
-                options?: RenderElementOptions,
-            ): CounterElement {
-                return ConstructContext.withRootContext(
-                    viewState,
-                    () =>
-                        e('div', {}, [
-                            e('button', {}, ['dec'], elemRef('dec')),
-                            e('div', {}, [dt((vs) => vs.value)], elemRef('value')),
-                            e('button', {}, ['inc'], elemRef('inc')),
-                        ]),
+            function renderCounterElement(options?: RenderElementOptions): CounterElementPreRender {
+                const [refManager, [decRef, valueRef, incRef]] = ReferencesManager.for(
                     options,
-                ) as CounterElement;
+                    ['dec', 'value', 'inc'],
+                    [],
+                    [],
+                    [],
+                );
+                const render = (viewState: CounterViewState) =>
+                    ConstructContext.withRootContext(viewState, refManager, () => {
+                        return e('div', {}, [
+                            e('button', {}, ['dec'], decRef()),
+                            e('div', {}, [dt((vs) => vs.value)], valueRef()),
+                            e('button', {}, ['inc'], incRef()),
+                        ]);
+                    }) as CounterElement;
+                return [refManager.getPublicAPI() as CounterRefs, render];
             }
 
             interface CounterProps {}
@@ -828,6 +876,15 @@ describe('state management', () => {
             }
             interface LabelAndButtonElement
                 extends JayElement<LabelAndButtonViewState, LabelAndButtonRefs> {}
+            type LabelAndButtonElementRender = RenderElement<
+                LabelAndButtonViewState,
+                LabelAndButtonRefs,
+                LabelAndButtonElement
+            >;
+            type LabelAndButtonElementPreRender = [
+                refs: LabelAndButtonRefs,
+                LabelAndButtonElementRender,
+            ];
 
             let renderCount = 0;
 
@@ -837,18 +894,23 @@ describe('state management', () => {
             }
 
             function renderTwoLabelElement(
-                viewState: LabelAndButtonViewState,
                 options?: RenderElementOptions,
-            ): LabelAndButtonElement {
-                return ConstructContext.withRootContext(
-                    viewState,
-                    () =>
-                        e('div', {}, [
-                            e('div', {}, [dt(trackingLabelGetter)], elemRef('label')),
-                            e('button', {}, ['click'], elemRef('button')),
-                        ]),
+            ): LabelAndButtonElementPreRender {
+                const [refManager, [labelRef, buttonRef]] = ReferencesManager.for(
                     options,
-                ) as LabelAndButtonElement;
+                    ['label', 'button'],
+                    [],
+                    [],
+                    [],
+                );
+                const render = (viewState: LabelAndButtonViewState) =>
+                    ConstructContext.withRootContext(viewState, refManager, () => {
+                        return e('div', {}, [
+                            e('div', {}, [dt(trackingLabelGetter)], labelRef()),
+                            e('button', {}, ['click'], buttonRef()),
+                        ]);
+                    }) as LabelAndButtonElement;
+                return [refManager.getPublicAPI() as LabelAndButtonRefs, render];
             }
 
             beforeEach(() => {
@@ -923,9 +985,9 @@ describe('state management', () => {
             }
 
             const Test3 = makeJayComponent(renderTwoLabelElement, TestComponent3);
-            const initialRenderCycles = 2;
+            const initialRenderCycles = 1;
 
-            it('should render twice static elements on first render (before any update)', async () => {
+            it('should render once static elements on first render', async () => {
                 const instance = Test1({ one: 'one', two: 'two' });
                 await instance.element.refs.label.exec$((elem) =>
                     expect(elem.textContent).toBe('one two'),

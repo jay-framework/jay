@@ -1,12 +1,24 @@
-import { JayElement } from 'jay-runtime';
-import { elementBridge } from 'jay-secure';
+import { JayElement, RenderElement } from 'jay-runtime';
+import { SecureReferencesManager, elementBridge } from 'jay-secure';
 
 export interface EmptyElementViewState {}
 
 export interface EmptyElementElementRefs {}
 
 export type EmptyElementElement = JayElement<EmptyElementViewState, EmptyElementElementRefs>;
+export type EmptyElementElementRender = RenderElement<
+    EmptyElementViewState,
+    EmptyElementElementRefs,
+    EmptyElementElement
+>;
+export type EmptyElementElementPreRender = [
+    refs: EmptyElementElementRefs,
+    EmptyElementElementRender,
+];
 
-export function render(viewState: EmptyElementViewState): EmptyElementElement {
-    return elementBridge(viewState, () => []);
+export function render(): EmptyElementElementPreRender {
+    const [refManager, []] = SecureReferencesManager.forElement([], [], [], []);
+    const render = (viewState: EmptyElementViewState) =>
+        elementBridge(viewState, refManager, () => []) as EmptyElementElement;
+    return [refManager.getPublicAPI() as EmptyElementElementRefs, render];
 }

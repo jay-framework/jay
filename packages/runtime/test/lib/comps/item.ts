@@ -1,10 +1,9 @@
 import { dynamicText as dt, element as e } from '../../../lib/element';
-import { JayElement } from '../../../lib';
+import { EventEmitter, JayComponent, JayElement, ReferencesManager } from '../../../lib';
 import { HTMLElementProxy } from '../../../lib';
 import { JayEventHandler } from '../../../lib';
 import { mkComponentEventHandler } from './make-component-event-handler';
 import { ConstructContext } from '../../../lib/context';
-import { elemRef } from '../../../lib/node-reference';
 
 export interface ItemVS {
     text: string;
@@ -18,13 +17,14 @@ export interface ItemRefs {
 export interface ItemElement extends JayElement<ItemVS, ItemRefs> {}
 
 function renderItem(viewState: ItemVS): ItemElement {
-    return ConstructContext.withRootContext(viewState, () =>
-        e('div', { 'data-id': viewState.dataId }, [
+    let [refManager, [done, remove]] = ReferencesManager.for({}, ['done', 'remove'], [], [], []);
+    return ConstructContext.withRootContext(viewState, refManager, () => {
+        return e('div', { 'data-id': viewState.dataId }, [
             e('span', {}, [dt((vs) => `${vs.text} - ${vs.done ? 'done' : 'tbd'}`)]),
-            e('button', { 'data-id': 'done' }, ['done'], elemRef('done')),
-            e('button', { 'data-id': 'remove' }, ['remove'], elemRef('remove')),
-        ]),
-    ) as ItemElement;
+            e('button', { 'data-id': 'done' }, ['done'], done()),
+            e('button', { 'data-id': 'remove' }, ['remove'], remove()),
+        ]);
+    }) as ItemElement;
 }
 
 export interface ItemProps {
@@ -32,7 +32,12 @@ export interface ItemProps {
     dataId: string;
 }
 
-export function Item<ParentVS>(props: ItemProps) {
+export interface ItemComponent<ParentVS> extends JayComponent<ItemProps, ItemVS, ItemElement> {
+    onremove: EventEmitter<string, ParentVS>;
+    getItemSummary: () => string;
+}
+
+export function Item<ParentVS>(props: ItemProps): ItemComponent<ParentVS> {
     let done = false;
     let text = props.text;
     let jayElement = renderItem({ text, done, dataId: props.dataId });

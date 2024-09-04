@@ -1,4 +1,11 @@
-import { JayElement, element as e, ConstructContext, RenderElementOptions } from 'jay-runtime';
+import {
+    JayElement,
+    element as e,
+    RenderElement,
+    ReferencesManager,
+    ConstructContext,
+    RenderElementOptions,
+} from 'jay-runtime';
 
 export interface WhitespaceAndTextViewState {
     text: string;
@@ -12,18 +19,24 @@ export type WhitespaceAndTextElement = JayElement<
     WhitespaceAndTextViewState,
     WhitespaceAndTextElementRefs
 >;
+export type WhitespaceAndTextElementRender = RenderElement<
+    WhitespaceAndTextViewState,
+    WhitespaceAndTextElementRefs,
+    WhitespaceAndTextElement
+>;
+export type WhitespaceAndTextElementPreRender = [
+    refs: WhitespaceAndTextElementRefs,
+    WhitespaceAndTextElementRender,
+];
 
-export function render(
-    viewState: WhitespaceAndTextViewState,
-    options?: RenderElementOptions,
-): WhitespaceAndTextElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () =>
+export function render(options?: RenderElementOptions): WhitespaceAndTextElementPreRender {
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const render = (viewState: WhitespaceAndTextViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('div', {}, [' multi-line text ']),
                 e('div', {}, ['some text', e('span', {}, [' ']), 'another text']),
             ]),
-        options,
-    );
+        ) as WhitespaceAndTextElement;
+    return [refManager.getPublicAPI() as WhitespaceAndTextElementRefs, render];
 }

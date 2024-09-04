@@ -45,6 +45,23 @@ export const Import = {
         'dynamicProperty as dp',
         ImportsFor.implementation,
     ),
+    RenderElement: importStatementFragment(
+        'jay-runtime',
+        'RenderElement',
+        ImportsFor.implementation,
+        ImportsFor.definition,
+        ImportsFor.elementSandbox,
+    ),
+    ReferencesManager: importStatementFragment(
+        'jay-runtime',
+        'ReferencesManager',
+        ImportsFor.implementation,
+    ),
+    SecureReferencesManager: importStatementFragment(
+        'jay-secure',
+        'SecureReferencesManager',
+        ImportsFor.elementSandbox,
+    ),
     conditional: importStatementFragment(
         'jay-runtime',
         'conditional as c',

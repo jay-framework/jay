@@ -1,6 +1,6 @@
 import { setChannel, useMockCommunicationChannel } from '../util/mock-channel';
 import { initializeWorker } from './secure/worker/worker-root';
-import { render } from './secure/main/app.jay-html';
+import { preRender } from './secure/main/app.jay-html';
 import { dispatchEvent } from '../util/dispatch-event';
 
 const VERBOSE = false;
@@ -9,7 +9,8 @@ describe('events synthetic tests', () => {
         let channel = useMockCommunicationChannel(VERBOSE);
         setChannel(channel);
         initializeWorker();
-        let appElement = render({});
+        const [refs, render] = preRender();
+        const appElement = render({});
         let result = appElement.dom.querySelector('[data-id="result"]') as HTMLDivElement;
         let button = appElement.dom.querySelector('[data-id="button"]') as HTMLButtonElement;
         let input = appElement.dom.querySelector('[data-id="input"]') as HTMLInputElement;

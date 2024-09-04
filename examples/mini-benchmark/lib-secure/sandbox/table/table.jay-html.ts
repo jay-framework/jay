@@ -1,5 +1,5 @@
-import { JayElement } from 'jay-runtime';
-import { elementBridge } from 'jay-secure';
+import { JayElement, RenderElement } from 'jay-runtime';
+import { elementBridge, SecureReferencesManager } from 'jay-secure';
 
 export interface Cell {
     id: number;
@@ -18,7 +18,11 @@ export interface TableViewState {
 export interface TableElementRefs {}
 
 export type TableElement = JayElement<TableViewState, TableElementRefs>;
+export type TableElementRender = RenderElement<TableViewState, TableElementRefs, TableElement>;
+export type TableElementPreRender = [refs: TableElementRefs, TableElementRender];
 
-export function render(viewState: TableViewState): TableElement {
-    return elementBridge(viewState, () => []);
+export function render(): TableElementPreRender {
+    const [refManager, []] = SecureReferencesManager.forElement([], [], [], []);
+    const render = (viewState: TableViewState) => elementBridge(viewState, refManager, () => []);
+    return [refManager.getPublicAPI() as TableElementRefs, render];
 }

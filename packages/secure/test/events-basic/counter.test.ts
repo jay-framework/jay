@@ -1,6 +1,6 @@
 import { setChannel, useMockCommunicationChannel } from '../util/mock-channel';
 import { initializeWorker } from './secure/worker/worker-root';
-import { render } from './secure/main/app.jay-html';
+import { renderAppElement } from './secure/main/app.jay-html';
 
 const VERBOSE = false;
 describe('basic events - using counter component', () => {
@@ -8,7 +8,8 @@ describe('basic events - using counter component', () => {
         let channel = useMockCommunicationChannel(VERBOSE);
         setChannel(channel);
         initializeWorker();
-        let appElement = render({});
+        let [refs, render] = renderAppElement();
+        const appElement = render({});
         let title = appElement.dom.querySelector('[data-id="title"]') as HTMLDivElement;
         let add = appElement.dom.querySelector('[data-id="add"]') as HTMLButtonElement;
         let sub = appElement.dom.querySelector('[data-id="sub"]') as HTMLButtonElement;

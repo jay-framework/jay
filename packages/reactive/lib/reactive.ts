@@ -12,60 +12,88 @@ export type Reaction = (measureOfChange: MeasureOfChange) => void;
 export type ValueOrGetter<T> = T | Getter<T>;
 export const GetterMark = Symbol.for('getterMark');
 export const SetterMark = Symbol.for('setterMark');
-type ResetStateDependence = (reactionIndex: number) => void;
+type ResetStateDependence = (reactionGlobalKey: ReactiveGlobalKey) => void;
+type ReactiveGlobalKey = [Reactive, number];
+type Resolve = (value: void) => void;
+
+const runningReactions: ReactiveGlobalKey[] = [];
+
+function pushRunningReaction(reactiveGlobalKey: ReactiveGlobalKey) {
+    runningReactions.push(reactiveGlobalKey);
+}
+
+function popRunningReaction() {
+    runningReactions.pop();
+}
 
 export class Reactive {
-    private runningReactionIndex = undefined;
     private batchedReactionsToRun: MeasureOfChange[] = [];
     private isAutoBatchScheduled = false;
-    private nextStateIndex: number = 0;
-    private resetDependencyOnState: Array<ResetStateDependence> = [];
     private reactionIndex = 0;
     private reactions: Array<Reaction> = [];
-    private reactionDependencies: Array<Set<number>> = [];
+    private reactionDependencies: Array<Set<ResetStateDependence>> = [];
     private dirty: Promise<void> = Promise.resolve();
-    private dirtyResolve: () => void;
+    private dirtyResolve: Resolve;
     private timeout: any = undefined;
     private inBatchReactions: boolean;
     private inFlush: boolean;
+    private reactionGlobalKey: [Reactive, number][] = [];
+    private reactivesToFlush: Set<Reactive> = new Set();
+    private disabled = false;
 
     createState<T>(
         value: ValueOrGetter<T>,
         measureOfChange: MeasureOfChange = MeasureOfChange.FULL,
     ): [get: Getter<T>, set: Setter<T>] {
         let current: T;
-        let reactionsToRerun: boolean[] = [];
-        let stateIndex = this.nextStateIndex++;
+        // we can consolidate both ToRerun patterns.
+        // however, the first is x100 times faster, and x100 times more in use
+        // the second is more generic, yet slower
+        const reactionsToRerun: boolean[] = [];
+        let pairedReactionsToRun = new Set<ReactiveGlobalKey>();
 
         const triggerReactions = () => {
             for (let index = 0; index < reactionsToRerun.length; index++) {
                 if (reactionsToRerun[index]) {
-                    if (!this.inBatchReactions) this.ScheduleAutoBatchRuns();
-                    this.batchedReactionsToRun[index] = Math.max(
-                        measureOfChange,
-                        this.batchedReactionsToRun[index] || 0,
-                    );
+                    this.triggerReaction(index, measureOfChange);
                 }
             }
+            pairedReactionsToRun.forEach(([reactive, index]) => {
+                reactive.triggerReaction(index, measureOfChange);
+                this.reactivesToFlush.add(reactive);
+            });
         };
 
-        let setter = (value: T | Next<T>) => {
+        const setter = (value: T | Next<T>) => {
             let materializedValue =
                 typeof value === 'function' ? (value as Next<T>)(current) : value;
             let isModified = materializedValue !== current;
             current = materializedValue;
-            if (isModified) triggerReactions();
+            if (isModified) {
+                triggerReactions();
+            }
             return current;
         };
 
-        let resetDependency: ResetStateDependence = (reactionIndex) => {
-            reactionsToRerun[reactionIndex] = false;
+        const resetDependency: ResetStateDependence = (reactionGlobalKey) => {
+            reactionsToRerun[reactionGlobalKey[1]] = false;
+        };
+        const resetPairedDependency: ResetStateDependence = (reactionGlobalKey) => {
+            pairedReactionsToRun.delete(reactionGlobalKey);
         };
 
-        let getter = () => {
-            if (this.runningReactionIndex !== undefined) {
-                reactionsToRerun[this.runningReactionIndex] = true;
-                this.reactionDependencies[this.runningReactionIndex].add(stateIndex);
+        const getter = () => {
+            const runningReactionsLength = runningReactions.length;
+            for (let index = runningReactionsLength - 1; index > -1; index--) {
+                const [reactive, reactionIndex] = runningReactions[index];
+                if (reactive === this) {
+                    reactionsToRerun[reactionIndex] = true;
+                    this.reactionDependencies[reactionIndex].add(resetDependency);
+                    break;
+                } else {
+                    pairedReactionsToRun.add(runningReactions[index]);
+                    reactive.reactionDependencies[reactionIndex].add(resetPairedDependency);
+                }
             }
             return current;
         };
@@ -79,13 +107,21 @@ export class Reactive {
 
         getter[GetterMark] = true;
         setter[SetterMark] = true;
-        this.resetDependencyOnState[stateIndex] = resetDependency;
         return [getter, setter];
+    }
+
+    private triggerReaction(index: number, measureOfChange: MeasureOfChange) {
+        if (!this.inBatchReactions) this.ScheduleAutoBatchRuns();
+        this.batchedReactionsToRun[index] = Math.max(
+            measureOfChange,
+            this.batchedReactionsToRun[index] || 0,
+        );
     }
 
     createReaction(func: Reaction) {
         let reactionIndex = this.reactionIndex++;
         this.reactions[reactionIndex] = func;
+        this.reactionGlobalKey[reactionIndex] = [this, reactionIndex];
         this.reactionDependencies[reactionIndex] = new Set();
         this.runReaction(reactionIndex, MeasureOfChange.FULL);
     }
@@ -118,21 +154,21 @@ export class Reactive {
         return this.dirty;
     }
 
-    private runReaction(index: number, measureOfChange: MeasureOfChange) {
-        this.reactionDependencies[index].forEach((stateIndex) =>
-            this.resetDependencyOnState[stateIndex](index),
+    private runReaction(reactionIndex: number, measureOfChange: MeasureOfChange) {
+        this.reactionDependencies[reactionIndex].forEach((resetDependency) =>
+            resetDependency(this.reactionGlobalKey[reactionIndex]),
         );
-        this.reactionDependencies[index].clear();
-        this.runningReactionIndex = index;
+        this.reactionDependencies[reactionIndex].clear();
+        pushRunningReaction(this.reactionGlobalKey[reactionIndex]);
         try {
-            this.reactions[index](measureOfChange);
+            this.reactions[reactionIndex](measureOfChange);
         } finally {
-            this.runningReactionIndex = undefined;
+            popRunningReaction();
         }
     }
 
     flush() {
-        if (this.inFlush) return;
+        if (this.inFlush || this.disabled) return;
         this.inFlush = true;
         try {
             for (let index = 0; index < this.batchedReactionsToRun.length; index++)
@@ -144,15 +180,28 @@ export class Reactive {
                 this.timeout = undefined;
             }
             this.batchedReactionsToRun = [];
-            this.dirtyResolve();
+            this.dirtyResolve && this.dirtyResolve();
         } finally {
             this.inFlush = false;
+            this.reactivesToFlush.forEach((reactive) => {
+                if (!reactive.inBatchReactions) reactive.flush();
+            });
+            this.reactivesToFlush.clear();
         }
+    }
+
+    enable() {
+        this.disabled = false;
+        this.flush();
+    }
+
+    disable() {
+        this.disabled = true;
     }
 }
 
-function mkResolvablePromise() {
-    let resolve;
+function mkResolvablePromise(): [Promise<void>, Resolve] {
+    let resolve: Resolve;
     let promise = new Promise((res) => (resolve = res));
-    return [promise, resolve];
+    return [promise as Promise<void>, resolve];
 }

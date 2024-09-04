@@ -6,11 +6,11 @@ import {
     childComp,
     forEach,
     conditional,
+    ReferencesManager,
 } from '../../lib/index';
 import '../../lib/element-test-types';
 import { Item, ItemProps } from './comps/item';
-import { ItemRef, ItemRefs } from './comps/item-refs';
-import { compCollectionRef, compRef } from '../../lib/node-reference';
+import { ItemComponentType, ItemRefs } from './comps/item-refs';
 
 describe('nested components', () => {
     describe('single nested component', () => {
@@ -19,21 +19,28 @@ describe('nested components', () => {
         }
 
         interface TestRefs {
-            staticComponent: ItemRef<ViewState>;
+            staticComponent: ItemComponentType<ViewState>;
         }
 
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
 
         function renderComposite(viewState: ViewState): TestElement {
-            return ConstructContext.withRootContext(viewState, () =>
-                e('div', {}, [
+            let [refManager, [staticComponent]] = ReferencesManager.for(
+                {},
+                [],
+                [],
+                ['staticComponent'],
+                [],
+            );
+            return ConstructContext.withRootContext(viewState, refManager, () => {
+                return e('div', {}, [
                     childComp(
                         (props: ItemProps) => Item(props),
                         (vs) => ({ text: vs.staticItem, dataId: 'AAA' }),
-                        compRef('staticComponent'),
+                        staticComponent(),
                     ),
-                ]),
-            ) as TestElement;
+                ]);
+            }) as TestElement;
         }
 
         it('create an item nested component with hello world', () => {
@@ -87,30 +94,42 @@ describe('nested components', () => {
         }
 
         interface TestRefs {
-            conditional: ItemRef<ViewState>;
+            conditional: ItemComponentType<ViewState>;
         }
 
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
 
         function renderComposite(viewState: ViewState): TestElement {
-            return ConstructContext.withRootContext(viewState, () =>
-                de('div', {}, [
+            let [refManager, [condRef]] = ReferencesManager.for({}, [], [], ['conditional'], []);
+            return ConstructContext.withRootContext(viewState, refManager, () => {
+                return de('div', {}, [
                     conditional(
                         (vs) => vs.condition,
                         childComp(
                             (props: ItemProps) => Item(props),
                             (vs) => ({ text: vs.staticItem, dataId: 'condition' }),
-                            compRef('conditional'),
+                            condRef(),
                         ),
                     ),
-                ]),
-            ) as TestElement;
+                ]);
+            }) as TestElement;
         }
 
         it('have a reference to a nested conditional component', () => {
             let composite = renderComposite({
                 staticItem: 'hello world',
                 condition: true,
+            });
+            // validate we actually have a reference to the nested component by finding the data id on the nested component dom
+            expect(composite.refs.conditional.element.dom.attributes['data-id'].value).toBe(
+                'condition',
+            );
+        });
+
+        it('have a reference to a nested conditional component 2', () => {
+            let composite = renderComposite({
+                staticItem: 'hello world',
+                condition: false,
             });
             // validate we actually have a reference to the nested component by finding the data id on the nested component dom
             expect(composite.refs.conditional.element.dom.attributes['data-id'].value).toBe(
@@ -135,8 +154,14 @@ describe('nested components', () => {
         interface TestElement extends JayElement<ViewState, TestRefs>, TestRefs {}
 
         function renderComposite(viewState: ViewState): TestElement {
-            return ConstructContext.withRootContext(viewState, () => {
-                const ref = compCollectionRef('forEachOfComponents');
+            let [refManager, [ref]] = ReferencesManager.for(
+                {},
+                [],
+                [],
+                [],
+                ['forEachOfComponents'],
+            );
+            return ConstructContext.withRootContext(viewState, refManager, () => {
                 return de('div', {}, [
                     forEach(
                         (vs: ViewState) => vs.items,
@@ -170,7 +195,7 @@ describe('nested components', () => {
             ).toBe('A');
         });
 
-        it('should update nested components', () => {
+        it('should render nested components', () => {
             let viewState = {
                 items: [
                     { id: 'A', value: 'eleven' },
@@ -206,6 +231,34 @@ describe('nested components', () => {
                     .find((item) => item.id === 'A')
                     .element.dom.querySelector('[data-id="A"] span').textContent,
             ).toBe('eleven - done');
+        });
+
+        it('should update adding nested components', () => {
+            let viewState = {
+                items: [
+                    { id: 'A', value: 'eleven' },
+                    { id: 'B', value: 'twelves' },
+                ],
+            };
+            let viewState_2 = {
+                items: [
+                    { id: 'A', value: 'eleven' },
+                    { id: 'B', value: 'twelves' },
+                    { id: 'C', value: '13' },
+                ],
+            };
+            let composite = renderComposite(viewState);
+            composite.update(viewState_2);
+            let doneButton = composite.refs.forEachOfComponents
+                .find((item) => item.id === 'C')
+                .element.dom.querySelector('button[data-id="done"]') as HTMLButtonElement;
+            doneButton.click();
+
+            expect(
+                composite.refs.forEachOfComponents
+                    .find((item) => item.id === 'C')
+                    .element.dom.querySelector('[data-id="C"] span').textContent,
+            ).toBe('13 - done');
         });
 
         it('should process nested component external events', () => {

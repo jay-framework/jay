@@ -1,0 +1,17 @@
+<html>
+  <head>
+    <link rel="import" href="./pillar" names="Pillar, PillarProps" />
+    <script type="application/yaml-jay">
+      data:
+        title: string
+        boardPillars:
+        - pillarId: string
+    </script>
+  </head>
+  <body>
+    <div class="scrum-board">
+      <h1 class="board-title">{title}</h1>
+      <Pillar ref="pillars" forEach="boardPillars" trackBy="id" pillarId="{pillarId}" />
+    </div>
+  </body>
+</html>

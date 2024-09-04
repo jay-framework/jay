@@ -1,4 +1,4 @@
-import { JayElement, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+import { JayElement, RenderElement, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
 
 export interface ConditionsWithRefsViewState {
     text1: string;
@@ -15,8 +15,14 @@ export type ConditionsWithRefsElement = JayElement<
     ConditionsWithRefsViewState,
     ConditionsWithRefsElementRefs
 >;
+export type ConditionsWithRefsElementRender = RenderElement<
+    ConditionsWithRefsViewState,
+    ConditionsWithRefsElementRefs,
+    ConditionsWithRefsElement
+>;
+export type ConditionsWithRefsElementPreRender = [
+    refs: ConditionsWithRefsElementRefs,
+    ConditionsWithRefsElementRender,
+];
 
-export declare function render(
-    viewState: ConditionsWithRefsViewState,
-    options?: RenderElementOptions,
-): ConditionsWithRefsElement;
+export declare function render(options?: RenderElementOptions): ConditionsWithRefsElementPreRender;

@@ -1,22 +1,23 @@
 import {
     JayElement,
     JayComponent,
-    MountFunc,
-    EventEmitter,
     JayEventHandlerWrapper,
-    RenderElement,
-    createJayContext,
+    withContext,
+    ContextMarker,
     useContext,
-    provideContext,
+    PreRenderElement,
+    RenderElement,
 } from 'jay-runtime';
-import { ValueOrGetter, Getter, Reactive, Setter, MeasureOfChange } from 'jay-reactive';
-import { JSONPatch, patch } from 'jay-json-patch';
+import { Getter, Reactive } from 'jay-reactive';
+import { JSONPatch } from 'jay-json-patch';
 import { HTMLElement } from 'node-html-parser';
+import { createState } from './hooks';
+import { COMPONENT_CONTEXT, ComponentContext } from './component-contexts';
 
 export type Patcher<T> = (...patch: JSONPatch) => void;
 export type hasProps<PropsT> = { props: Getter<PropsT> };
 export type Props<PropsT> = hasProps<PropsT> & {
-    [K in keyof PropsT]: Getter<PropsT[K]>;
+    [K in keyof PropsT]: K extends string ? Getter<PropsT[K]> : PropsT[K];
 };
 
 export type ViewStateGetters<ViewState> = {
@@ -47,143 +48,6 @@ type ConcreteJayComponent<
     JayElementT extends JayElement<ViewState, Refs>,
 > = ConcreteJayComponent1<PropsT, ViewState, Refs, CompCore, JayElementT>;
 
-interface ComponentContext {
-    reactive: Reactive;
-    getComponentInstance: () => JayComponent<any, any, any>;
-    mounts: MountFunc[];
-    unmounts: MountFunc[];
-}
-
-export const COMPONENT_CONTEXT = createJayContext<ComponentContext>();
-
-function currentComponentContext() {
-    return useContext(COMPONENT_CONTEXT);
-}
-
-type EffectCleanup = () => void;
-export function createEffect(effect: () => void | EffectCleanup) {
-    let cleanup = undefined;
-    let mounted = true;
-
-    const clean = () => {
-        if (cleanup !== undefined) {
-            cleanup();
-            cleanup = undefined;
-        }
-    };
-
-    currentComponentContext().reactive.createReaction(() => {
-        clean();
-        cleanup = effect();
-    });
-    currentComponentContext().unmounts.push(() => {
-        mounted = false;
-        clean();
-    });
-    currentComponentContext().mounts.push(() => {
-        cleanup = effect();
-    });
-}
-
-export function createState<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: Setter<T>] {
-    return currentComponentContext().reactive.createState(value);
-}
-
-export function createPatchableState<T>(
-    value: ValueOrGetter<T>,
-): [get: Getter<T>, set: Setter<T>, patchFunc: Patcher<T>] {
-    const [get, set] = createState(value);
-    const patchFunc = (...jsonPatch: JSONPatch) => set(patch(get(), jsonPatch));
-    return [get, set, patchFunc];
-}
-
-export function useReactive(): Reactive {
-    return currentComponentContext().reactive;
-}
-export function createMemo<T>(computation: (prev: T) => T, initialValue?: T): Getter<T> {
-    let [value, setValue] = currentComponentContext().reactive.createState(initialValue);
-    currentComponentContext().reactive.createReaction(() => {
-        setValue((oldValue) => computation(oldValue));
-    });
-    return value;
-}
-
-interface MappedItemTracking<T extends object, U> {
-    reactive: Reactive;
-    setItem: Setter<T>;
-    setIndex: Setter<number>;
-    setLength: Setter<number>;
-    getMappedItem: Getter<U>;
-}
-function makeItemTracking<T extends object, U>(
-    item: T,
-    index: number,
-    length: number,
-    mapCallback: (item: Getter<T>, index: Getter<number>, length: Getter<number>) => U,
-): MappedItemTracking<T, U> {
-    let reactive = new Reactive();
-    let [getItem, setItem] = reactive.createState(item);
-    let [getIndex, setIndex] = reactive.createState(index);
-    let [getLength, setLength] = reactive.createState(length);
-    let [getMappedItem, setMappedItem] = reactive.createState<U>(undefined);
-    reactive.createReaction(() => setMappedItem(mapCallback(getItem, getIndex, getLength)));
-    return {
-        setItem,
-        setIndex,
-        setLength,
-        getMappedItem,
-        reactive,
-    };
-}
-export function createDerivedArray<T extends object, U>(
-    arrayGetter: Getter<T[]>,
-    mapCallback: (item: Getter<T>, index: Getter<number>, length: Getter<number>) => U,
-): Getter<U[]> {
-    let [sourceArray] = currentComponentContext().reactive.createState<T[]>(
-        arrayGetter,
-        MeasureOfChange.PARTIAL,
-    );
-    let [mappedArray, setMappedArray] = createState<U[]>([]);
-    let mappedItemsCache = new WeakMap<T, MappedItemTracking<T, U>>();
-
-    currentComponentContext().reactive.createReaction((measureOfChange: MeasureOfChange) => {
-        let newMappedItemsCache = new WeakMap<T, MappedItemTracking<T, U>>();
-        setMappedArray((oldValue) => {
-            let length = sourceArray().length;
-            let newMappedArray = sourceArray().map((item, index) => {
-                let itemTracking: MappedItemTracking<T, U>;
-                if (!mappedItemsCache.has(item) || measureOfChange == MeasureOfChange.FULL)
-                    newMappedItemsCache.set(
-                        item,
-                        (itemTracking = makeItemTracking<T, U>(item, index, length, mapCallback)),
-                    );
-                else {
-                    newMappedItemsCache.set(item, (itemTracking = mappedItemsCache.get(item)));
-                    itemTracking.reactive.batchReactions(() => {
-                        itemTracking.setItem(item);
-                        itemTracking.setLength(length);
-                        itemTracking.setIndex(index);
-                    });
-                }
-                return itemTracking.getMappedItem();
-            });
-            mappedItemsCache = newMappedItemsCache;
-            return newMappedArray;
-        });
-    });
-    return mappedArray;
-}
-
-export function createEvent<EventType>(
-    eventEffect?: (emitter: EventEmitter<EventType, any>) => void,
-): EventEmitter<EventType, any> {
-    let handler;
-    let emitter: any = (h) => (handler = h);
-    emitter.emit = (event: EventType) => handler && handler({ event });
-    if (eventEffect) createEffect(() => eventEffect(emitter));
-    return emitter;
-}
-
 function materializeViewState<ViewState extends object>(
     vsValueOrGetter: ViewStateGetters<ViewState>,
 ): ViewState {
@@ -196,62 +60,98 @@ function materializeViewState<ViewState extends object>(
     return vs as ViewState;
 }
 
+export type ComponentConstructor<
+    PropsT extends object,
+    Refs extends object,
+    ViewState extends object,
+    Contexts extends Array<any>,
+    CompCore extends JayComponentCore<PropsT, ViewState>,
+> = (props: Props<PropsT>, refs: Refs, ...contexts: Contexts) => CompCore;
+
+type ContextMarkers<T extends any[]> = {
+    [K in keyof T]: ContextMarker<T[K]>;
+};
+
+function renderWithContexts<
+    ViewState extends object,
+    Refs extends object,
+    JayElementT extends JayElement<ViewState, Refs>,
+>(
+    provideContexts: [ContextMarker<any>, any][],
+    render: RenderElement<ViewState, Refs, JayElementT>,
+    viewState: ViewState,
+    index: number = 0,
+): JayElementT {
+    if (provideContexts.length > index) {
+        let [marker, context] = provideContexts[0];
+        return withContext(marker, context, () =>
+            renderWithContexts(provideContexts, render, viewState, index + 1),
+        );
+    }
+    return render(viewState);
+}
+
 export function makeJayComponent<
     PropsT extends object,
     ViewState extends object,
     Refs extends object,
     JayElementT extends JayElement<ViewState, Refs>,
+    Contexts extends Array<any>,
     CompCore extends JayComponentCore<PropsT, ViewState>,
 >(
-    render: RenderElement<ViewState, Refs, JayElementT>,
-    comp: (props: Props<PropsT>, refs: Refs) => CompCore,
+    preRender: PreRenderElement<ViewState, Refs, JayElementT>,
+    comp: ComponentConstructor<PropsT, Refs, ViewState, Contexts, CompCore>,
+    ...contextMarkers: ContextMarkers<Contexts>
 ): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT> {
     return (props) => {
-        let reactive = new Reactive();
-        let mounts: MountFunc[] = [];
-        let unmounts: MountFunc[] = [];
         let componentInstance = null;
         let getComponentInstance = () => {
             return componentInstance;
         };
-        let componentContext = {
-            reactive,
-            mounts,
-            unmounts,
+        let componentContext: ComponentContext = {
+            reactive: new Reactive(),
+            mounts: [],
+            unmounts: [],
+            provideContexts: [],
             getComponentInstance,
         };
-        return provideContext(COMPONENT_CONTEXT, componentContext, () => {
-            let propsProxy = makePropsProxy(reactive, props);
+        return withContext(COMPONENT_CONTEXT, componentContext, () => {
+            let propsProxy = makePropsProxy(componentContext.reactive, props);
 
-            // @ts-ignore
             let eventWrapper: JayEventHandlerWrapper<any, any, any> = (orig, event) => {
-                return reactive.batchReactions(() => orig(event));
+                return componentContext.reactive.batchReactions(() => orig(event));
             };
-            let element: JayElementT = render({} as ViewState, { eventWrapper });
+            let [refs, render] = preRender({ eventWrapper });
 
-            let coreComp = comp(propsProxy, element.refs); // wrap event listening with batch reactions
+            let contexts: Contexts = contextMarkers.map((marker) => useContext(marker)) as Contexts;
+            let coreComp = comp(propsProxy, refs, ...contexts); // wrap event listening with batch reactions
             let { render: renderViewState, ...api } = coreComp;
-
-            reactive.createReaction(() => {
+            let element: JayElementT;
+            componentContext.reactive.createReaction(() => {
                 let viewStateValueOrGetters = renderViewState(propsProxy);
                 let viewState = materializeViewState(viewStateValueOrGetters);
-                element.update(viewState);
+                if (!element)
+                    element = renderWithContexts(
+                        componentContext.provideContexts,
+                        render,
+                        viewState,
+                    );
+                else element.update(viewState);
             });
-            // applyToRefs(refs, element.refs, (func: Function) => (...args) =>
-            //     reactive.batchReactions(() => func(...args))
-            // );
             let update = (updateProps) => {
                 propsProxy.update(updateProps);
             };
-            mounts.push(element.mount);
-            unmounts.push(element.unmount);
+            componentContext.mounts.push(element.mount);
+            componentContext.unmounts.push(element.unmount);
+            componentContext.mounts.push(() => componentContext.reactive.enable());
+            componentContext.unmounts.push(() => componentContext.reactive.disable());
 
             let events = {};
             let component = {
                 element,
                 update,
-                mount: () => mounts.forEach((_) => _()),
-                unmount: () => unmounts.forEach((_) => _()),
+                mount: () => componentContext.mounts.forEach((_) => _()),
+                unmount: () => componentContext.unmounts.forEach((_) => _()),
                 addEventListener: (eventType: string, handler: Function) =>
                     events[eventType](handler),
                 removeEventListener: (eventType: string) => events[eventType](undefined),
@@ -268,7 +168,7 @@ export function makeJayComponent<
                         }
                     } else
                         component[key] = (...args) =>
-                            reactive.batchReactions(() => api[key](...args));
+                            componentContext.reactive.batchReactions(() => api[key](...args));
                 } else {
                     component[key] = api[key];
                 }

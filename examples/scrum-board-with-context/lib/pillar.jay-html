@@ -1,0 +1,21 @@
+<html>
+  <head>
+    <link rel="import" href="./task" names="TaskProps, Task" />
+    <link rel="import" href="./task.jay-html.d" names="TaskViewState" />
+    <script type="application/yaml-jay">
+      data:
+        title: string
+        taskData:
+        - pillarId: string
+          taskId: string
+    </script>
+  </head>
+  <body>
+    <div class="pillar">
+      <h2 class="pillar-title">{title}</h2>
+      <div class="task-list">
+        <Task forEach="taskData" trackBy="taskId" pillarId="{pillarId}" taskId="{taskId}" ref="tasks" />
+      </div>
+    </div>
+  </body>
+</html>

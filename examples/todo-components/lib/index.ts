@@ -26,9 +26,10 @@ const jayWorker = new Worker(new URL('jay-sandbox:./sandbox-root', import.meta.u
 
 window.onload = function () {
     setMainPort(new JayPort(new HandshakeMessageJayChannel(jayWorker)));
-    let target = document.getElementById('target');
+    const target = document.getElementById('target');
 
-    let instance = render({ todoProps: { initialTodos } });
+    const [refs, render2] = render();
+    const instance = render2({ todoProps: { initialTodos } });
     target.innerHTML = '';
     target.appendChild(instance.dom);
 };

@@ -5,8 +5,9 @@ import {
     dynamicAttribute as da,
     ConstructContext,
     HTMLElementProxy,
-    elemRef as er,
     RenderElementOptions,
+    RenderElement,
+    ReferencesManager,
 } from 'jay-runtime';
 
 export interface ChildViewState {
@@ -22,12 +23,21 @@ export interface ChildElementRefs {
 }
 
 export type ChildElement = JayElement<ChildViewState, ChildElementRefs>;
+export type ChildElementRender = RenderElement<ChildViewState, ChildElementRefs, ChildElement>;
+export type ChildElementPreRender = [refs: ChildElementRefs, ChildElementRender];
 
-export function render(viewState: ChildViewState, options?: RenderElementOptions): ChildElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () =>
-            e('div', {}, [
+export function render(options?: RenderElementOptions): ChildElementPreRender {
+    const [refManager, [eventToParent, eventToParentToChildProp, eventToParentToChildApi]] =
+        ReferencesManager.for(
+            options,
+            ['eventToParent', 'eventToParentToChildProp', 'eventToParentToChildApi'],
+            [],
+            [],
+            [],
+        );
+    const render = (viewState: ChildViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () => {
+            return e('div', {}, [
                 e('div', { id: da((vs) => `child-text-from-prop-${vs.id}`) }, [
                     dt((vs) => vs.textFromProp),
                 ]),
@@ -38,21 +48,21 @@ export function render(viewState: ChildViewState, options?: RenderElementOptions
                     'button',
                     { id: da((vs) => `event-to-parent-button-${vs.id}`) },
                     ['event to parent'],
-                    er('eventToParent'),
+                    eventToParent(),
                 ),
                 e(
                     'button',
                     { id: da((vs) => `event-to-parent-to-child-prop-button-${vs.id}`) },
                     ['event to parent, parent update child prop'],
-                    er('eventToParentToChildProp'),
+                    eventToParentToChildProp(),
                 ),
                 e(
                     'button',
                     { id: da((vs) => `event-to-parent-to-child-api-button-${vs.id}`) },
                     ['event to parent, parent calls child api'],
-                    er('eventToParentToChildApi'),
+                    eventToParentToChildApi(),
                 ),
-            ]),
-        options,
-    );
+            ]);
+        }) as ChildElement;
+    return [refManager.getPublicAPI() as ChildElementRefs, render];
 }

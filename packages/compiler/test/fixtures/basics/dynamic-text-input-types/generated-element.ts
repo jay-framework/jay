@@ -2,6 +2,8 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
+    RenderElement,
+    ReferencesManager,
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
@@ -17,18 +19,24 @@ export type DynamicTextInputTypesElement = JayElement<
     DynamicTextInputTypesViewState,
     DynamicTextInputTypesElementRefs
 >;
+export type DynamicTextInputTypesElementRender = RenderElement<
+    DynamicTextInputTypesViewState,
+    DynamicTextInputTypesElementRefs,
+    DynamicTextInputTypesElement
+>;
+export type DynamicTextInputTypesElementPreRender = [
+    refs: DynamicTextInputTypesElementRefs,
+    DynamicTextInputTypesElementRender,
+];
 
-export function render(
-    viewState: DynamicTextInputTypesViewState,
-    options?: RenderElementOptions,
-): DynamicTextInputTypesElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () =>
+export function render(options?: RenderElementOptions): DynamicTextInputTypesElementPreRender {
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const render = (viewState: DynamicTextInputTypesViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('div', {}, [dt((vs) => vs.n1)]),
                 e('div', {}, [dt((vs) => `${vs.n1} + ${vs.n2}`)]),
             ]),
-        options,
-    );
+        ) as DynamicTextInputTypesElement;
+    return [refManager.getPublicAPI() as DynamicTextInputTypesElementRefs, render];
 }

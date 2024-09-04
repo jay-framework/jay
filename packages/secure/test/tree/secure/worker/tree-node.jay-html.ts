@@ -1,6 +1,6 @@
-import { HTMLElementProxy, JayElement } from 'jay-runtime';
+import { HTMLElementProxy, JayElement, RenderElement } from 'jay-runtime';
 import { Node, TreeNode } from './tree-node';
-import { compCollectionRef, elementBridge, elemRef } from '../../../../lib';
+import { elementBridge, SecureReferencesManager } from '../../../../lib';
 import {
     sandboxElement as e,
     sandboxForEach as forEach,
@@ -18,21 +18,35 @@ export interface TreeNodeElementRefs {
 }
 
 export type TreeNodeElement = JayElement<TreeNodeViewState, TreeNodeElementRefs>;
+export type TreeNodeElementRender = RenderElement<
+    TreeNodeViewState,
+    TreeNodeElementRefs,
+    TreeNodeElement
+>;
+export type TreeNodeElementPreRender = [refs: TreeNodeElementRefs, TreeNodeElementRender];
 
-export function render(viewState: TreeNodeViewState): TreeNodeElement {
-    return elementBridge(
-        viewState,
-        () => {
-            const refChild = compCollectionRef('child');
-            return [
-                e(elemRef('head')),
-                forEach(
-                    (viewState: TreeNodeViewState) => viewState.node?.children,
-                    'id',
-                    () => [childComp(TreeNode, (vs) => vs, refChild())],
-                ),
-            ];
-        },
-        [[['node', 'children'], { matchBy: 'id' }]],
-    ) as unknown as TreeNodeElement;
+export function render(): TreeNodeElementPreRender {
+    const [refManager, [head, child]] = SecureReferencesManager.forElement(
+        ['head'],
+        [],
+        [],
+        ['child'],
+    );
+    const render = (viewState: TreeNodeViewState) =>
+        elementBridge(
+            viewState,
+            refManager,
+            () => {
+                return [
+                    e(head()),
+                    forEach(
+                        (viewState: TreeNodeViewState) => viewState.node?.children,
+                        'id',
+                        () => [childComp(TreeNode, (vs) => vs, child())],
+                    ),
+                ];
+            },
+            [[['node', 'children'], { matchBy: 'id' }]],
+        ) as unknown as TreeNodeElement;
+    return [refManager.getPublicAPI() as TreeNodeElementRefs, render];
 }

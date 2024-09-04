@@ -14,7 +14,7 @@ describe('generate the element sandbox files', () => {
             });
 
             it('for simple file with dynamic text', async () => {
-                const folder = 'basics/empty-element';
+                const folder = 'basics/simple-dynamic-text';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(await prettify(runtimeFile)).toEqual(
                     await readGeneratedElementBridgeFile(folder),

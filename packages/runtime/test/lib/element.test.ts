@@ -5,7 +5,7 @@ import {
     dynamicText as dt,
     dynamicProperty as dp,
 } from '../../lib/element';
-import { BaseJayElement, JayElement, noopUpdate } from '../../lib';
+import { BaseJayElement, JayElement, noopUpdate, ReferencesManager } from '../../lib';
 import { ConstructContext } from '../../lib';
 
 const SOME_VALUE = 'some text in the element';
@@ -49,7 +49,8 @@ describe('element', () => {
         beforeEach(() => {
             data = { text: SOME_VALUE };
             updateCount = 0;
-            jayElement = ConstructContext.withRootContext(data, () =>
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+            jayElement = ConstructContext.withRootContext(data, refManager, () =>
                 e('div', {
                     textContent: dp((vs) => {
                         updateCount++;
@@ -93,7 +94,8 @@ describe('element', () => {
         let data: ViewState;
         beforeEach(() => {
             data = { title: 'initial value' };
-            jayElement = ConstructContext.withRootContext(data, () =>
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+            jayElement = ConstructContext.withRootContext(data, refManager, () =>
                 e(
                     'input',
                     {
@@ -122,7 +124,8 @@ describe('element', () => {
         let data: ViewState;
         beforeEach(() => {
             data = { disabled: true };
-            jayElement = ConstructContext.withRootContext(data, () =>
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+            jayElement = ConstructContext.withRootContext(data, refManager, () =>
                 e(
                     'input',
                     {
@@ -152,7 +155,8 @@ describe('element', () => {
         let data: ViewState;
         beforeEach(() => {
             data = { isOne: true, isTwo: false };
-            jayElement = ConstructContext.withRootContext(data, () =>
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+            jayElement = ConstructContext.withRootContext(data, refManager, () =>
                 e(
                     'div',
                     {
@@ -194,7 +198,8 @@ describe('element', () => {
         let data: ViewState;
         beforeEach(() => {
             data = { text: SOME_VALUE, width: '100px', color: 'red' };
-            jayElement = ConstructContext.withRootContext(data, () =>
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+            jayElement = ConstructContext.withRootContext(data, refManager, () =>
                 e('div', {
                     textContent: dp((vs) => vs.text),
                     style: {
@@ -230,7 +235,8 @@ describe('element', () => {
             }
 
             let data: ViewState = { text: SOME_VALUE, text2: ANOTHER_VALUE, text3: VALUE_3 };
-            let jayElement = ConstructContext.withRootContext(data, () =>
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+            let jayElement = ConstructContext.withRootContext(data, refManager, () =>
                 e('div', {}, [
                     e('div', { textContent: dp((vs) => vs.text) }),
                     e('div', {}, [
@@ -260,7 +266,8 @@ describe('element', () => {
 
             let stack = '__update';
             let data: ViewState = { text: SOME_VALUE };
-            let jayElement = ConstructContext.withRootContext(data, () =>
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+            let jayElement = ConstructContext.withRootContext(data, refManager, () =>
                 e('div', {}, [
                     e('div', {}, [VALUE_3]),
                     e('div', {}, [
@@ -293,7 +300,8 @@ describe('element', () => {
 
             let stack = '__update';
             let data: ViewState = { text: SOME_VALUE, text2: ANOTHER_VALUE, text3: VALUE_3 };
-            let jayElement = ConstructContext.withRootContext(data, () =>
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+            let jayElement = ConstructContext.withRootContext(data, refManager, () =>
                 e('div', {}, [
                     e('div', {}, [dt((vs) => vs.text2)]),
                     e('div', {}, [
@@ -339,7 +347,8 @@ describe('element', () => {
         }
 
         function makeElement(data: ViewState) {
-            return ConstructContext.withRootContext(data, () =>
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+            return ConstructContext.withRootContext(data, refManager, () =>
                 e('div', {}, [
                     e('div', { textContent: dp((vs) => vs.text) }),
                     e('div', {}, [

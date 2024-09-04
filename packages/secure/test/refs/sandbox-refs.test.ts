@@ -1,16 +1,11 @@
-import {
-    compCollectionRef,
-    compRef,
-    elemCollectionRef,
-    elemRef,
-    mkBridgeElement,
-} from '../../lib/';
+import { mkBridgeElement, SecureReferencesManager } from '../../lib/';
 import { IJayEndpoint, IJayPort, JayPortInMessageHandler } from '../../lib';
 import { Reactive } from 'jay-reactive';
 import { func$, handler$ } from '../../lib';
 import {
     ComponentCollectionProxy,
     Coordinate,
+    defaultEventWrapper,
     HTMLElementCollectionProxy,
     HTMLElementProxy,
 } from 'jay-runtime';
@@ -47,11 +42,20 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
+            let [refManager, [one, two]] = SecureReferencesManager.for(
+                endpoint,
+                undefined,
+                ['one', 'two'],
+                [],
+                [],
+                [],
+            );
             let bridgeElement = mkBridgeElement(
                 vs,
-                () => [e(elemRef('one')), e(elemRef('two'))],
+                () => [e(one()), e(two())],
                 endpoint,
                 reactive,
+                refManager,
                 getNullComponentInstance,
                 [],
             );
@@ -63,8 +67,8 @@ describe('sandbox-refs', () => {
 
             (bridgeElement.refs.one as HTMLElementProxy<any, any>).onclick(() => {});
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
@@ -110,8 +114,8 @@ describe('sandbox-refs', () => {
                 callback,
             );
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
@@ -130,12 +134,12 @@ describe('sandbox-refs', () => {
                 callback,
             );
 
-            expect(endpoint.outMessages).toHaveLength(2);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(3);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
-            let message1 = endpoint.outMessages[1] as JPMAddEventListener;
+            let message1 = endpoint.outMessages[2] as JPMAddEventListener;
             expect(message1.type).toBe(JayPortMessageType.removeEventListener);
             expect(message1.eventType).toBe('click');
             expect(message1.refName).toBe('one');
@@ -163,8 +167,8 @@ describe('sandbox-refs', () => {
 
             (bridgeElement.refs.one as HTMLElementProxy<any, any>).onclick$(handler$('1'));
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
@@ -178,8 +182,8 @@ describe('sandbox-refs', () => {
                 func$('3'),
             );
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMNativeExec;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMNativeExec;
             expect(message.type).toBe(JayPortMessageType.nativeExec);
             expect(message.refName).toBe('one');
             expect(message.nativeId).toBe('3');
@@ -192,7 +196,7 @@ describe('sandbox-refs', () => {
             let $result = (
                 bridgeElement.refs.one as HTMLElementProxy<ViewState, HTMLDivElement>
             ).exec$(func$('3'));
-            let execMessage = endpoint.outMessages[0] as JPMNativeExec;
+            let execMessage = endpoint.outMessages[1] as JPMNativeExec;
             endpoint.invoke(nativeExecResult(execMessage.correlationId, 12, undefined, 'one'));
             let result = await $result;
 
@@ -205,7 +209,7 @@ describe('sandbox-refs', () => {
             let $result = (
                 bridgeElement.refs.one as HTMLElementProxy<ViewState, HTMLDivElement>
             ).exec$(func$('3'));
-            let execMessage = endpoint.outMessages[0] as JPMNativeExec;
+            let execMessage = endpoint.outMessages[1] as JPMNativeExec;
             endpoint.invoke(
                 nativeExecResult(execMessage.correlationId, undefined, 'failed', 'one'),
             );
@@ -235,24 +239,30 @@ describe('sandbox-refs', () => {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
             let childElementUpdateSpies = [];
+            let [refManager, [one]] = SecureReferencesManager.for(
+                endpoint,
+                undefined,
+                [],
+                ['one'],
+                [],
+                [],
+            );
             let bridgeElement = mkBridgeElement(
                 vs,
-                () => {
-                    const refOne = elemCollectionRef('one');
-                    return [
-                        forEach(
-                            (vs) => vs.items,
-                            'name',
-                            () => {
-                                let childElement = e(refOne());
-                                childElementUpdateSpies.push(vi.spyOn(childElement, 'update'));
-                                return [childElement];
-                            },
-                        ),
-                    ];
-                },
+                () => [
+                    forEach(
+                        (vs) => vs.items,
+                        'name',
+                        () => {
+                            let childElement = e(one());
+                            childElementUpdateSpies.push(vi.spyOn(childElement, 'update'));
+                            return [childElement];
+                        },
+                    ),
+                ],
                 endpoint,
                 reactive,
+                refManager,
                 getNullComponentInstance,
                 [],
             );
@@ -264,8 +274,8 @@ describe('sandbox-refs', () => {
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(() => {});
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
@@ -276,8 +286,8 @@ describe('sandbox-refs', () => {
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(() => {});
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
@@ -290,8 +300,8 @@ describe('sandbox-refs', () => {
                 handler$('2'),
             );
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
@@ -380,8 +390,8 @@ describe('sandbox-refs', () => {
                     .find((item) => item.title === B.title)
                     .exec$(func$('4'));
 
-                expect(endpoint.outMessages).toHaveLength(1);
-                let message = endpoint.outMessages[0] as JPMNativeExec;
+                expect(endpoint.outMessages).toHaveLength(2);
+                let message = endpoint.outMessages[1] as JPMNativeExec;
                 expect(message.type).toBe(JayPortMessageType.nativeExec);
                 expect(message.refName).toBe('one');
                 expect(message.nativeId).toBe('4');
@@ -397,7 +407,7 @@ describe('sandbox-refs', () => {
                 )
                     .find((item) => item.title === B.title)
                     .exec$(func$('4'));
-                let execMessage = endpoint.outMessages[0] as JPMNativeExec;
+                let execMessage = endpoint.outMessages[1] as JPMNativeExec;
                 endpoint.invoke(nativeExecResult(execMessage.correlationId, 14, undefined, 'one'));
                 let result = await $result;
 
@@ -458,10 +468,10 @@ describe('sandbox-refs', () => {
                         element.exec$(func$('4'));
                     },
                 );
-                expect(endpoint.outMessages.length).toBe(3);
-                let execMessageA = endpoint.outMessages[0] as JPMNativeExec;
-                let execMessageB = endpoint.outMessages[1] as JPMNativeExec;
-                let execMessageC = endpoint.outMessages[2] as JPMNativeExec;
+                expect(endpoint.outMessages.length).toBe(4);
+                let execMessageA = endpoint.outMessages[1] as JPMNativeExec;
+                let execMessageB = endpoint.outMessages[2] as JPMNativeExec;
+                let execMessageC = endpoint.outMessages[3] as JPMNativeExec;
 
                 expect(execMessageA.type).toBe(JayPortMessageType.nativeExec);
                 expect(execMessageA.refName).toBe('one');
@@ -490,10 +500,10 @@ describe('sandbox-refs', () => {
                 ).map((element) => {
                     return element.exec$(func$('4'));
                 });
-                expect(endpoint.outMessages.length).toBe(3);
-                let execMessageA = endpoint.outMessages[0] as JPMNativeExec;
-                let execMessageB = endpoint.outMessages[1] as JPMNativeExec;
-                let execMessageC = endpoint.outMessages[2] as JPMNativeExec;
+                expect(endpoint.outMessages.length).toBe(4);
+                let execMessageA = endpoint.outMessages[1] as JPMNativeExec;
+                let execMessageB = endpoint.outMessages[2] as JPMNativeExec;
+                let execMessageC = endpoint.outMessages[3] as JPMNativeExec;
 
                 endpoint.invoke(nativeExecResult(execMessageA.correlationId, 20, undefined, 'one'));
                 endpoint.invoke(nativeExecResult(execMessageB.correlationId, 30, undefined, 'one'));
@@ -583,21 +593,27 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
+            let [refManager, [one, two]] = SecureReferencesManager.for(
+                endpoint,
+                undefined,
+                [],
+                ['one', 'two'],
+                [],
+                [],
+            );
             let bridgeElement = mkBridgeElement(
                 vs,
                 () => {
-                    const refOne = elemCollectionRef('one');
-                    const refTwo = elemCollectionRef('two');
                     return [
                         forEach<VS, VSItem>(
                             (vs) => vs.items,
                             'name',
                             () => [
-                                e(refOne()),
+                                e(one()),
                                 forEach<VSItem, VSSubItem>(
                                     (vs) => vs.subItems,
                                     'id',
-                                    () => [e(refTwo())],
+                                    () => [e(two())],
                                 ),
                             ],
                         ),
@@ -605,6 +621,7 @@ describe('sandbox-refs', () => {
                 },
                 endpoint,
                 reactive,
+                refManager,
                 getNullComponentInstance,
                 [],
             );
@@ -617,12 +634,12 @@ describe('sandbox-refs', () => {
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(() => {});
             (bridgeElement.refs.two as HTMLElementCollectionProxy<any, any>).onclick(() => {});
 
-            expect(endpoint.outMessages).toHaveLength(2);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(3);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
-            let message1 = endpoint.outMessages[1] as JPMAddEventListener;
+            let message1 = endpoint.outMessages[2] as JPMAddEventListener;
             expect(message1.type).toBe(JayPortMessageType.addEventListener);
             expect(message1.eventType).toBe('click');
             expect(message1.refName).toBe('two');
@@ -683,16 +700,20 @@ describe('sandbox-refs', () => {
         function setup(creationViewState = vs) {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
+            let [refManager, [one, two]] = SecureReferencesManager.for(
+                endpoint,
+                undefined,
+                ['one', 'two'],
+                [],
+                [],
+                [],
+            );
             let bridgeElement = mkBridgeElement(
                 creationViewState,
-                () => [
-                    c(
-                        (vs) => vs.condition,
-                        [e(elemRef('one')), c((vs) => vs.condition2, [e(elemRef('two'))])],
-                    ),
-                ],
+                () => [c((vs) => vs.condition, [e(one()), c((vs) => vs.condition2, [e(two())])])],
                 endpoint,
                 reactive,
+                refManager,
                 getNullComponentInstance,
                 [],
             );
@@ -704,8 +725,8 @@ describe('sandbox-refs', () => {
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(() => {});
 
-            expect(endpoint.outMessages).toHaveLength(1);
-            let message = endpoint.outMessages[0] as JPMAddEventListener;
+            expect(endpoint.outMessages).toHaveLength(2);
+            let message = endpoint.outMessages[1] as JPMAddEventListener;
             expect(message.type).toBe(JayPortMessageType.addEventListener);
             expect(message.eventType).toBe('click');
             expect(message.refName).toBe('one');
@@ -726,22 +747,22 @@ describe('sandbox-refs', () => {
             });
         });
 
-        it('should trigger event even if condition === false', () => {
+        it('should not trigger event even if condition === false', () => {
             let { endpoint, bridgeElement } = setup(vs2);
             let callback = vi.fn();
 
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(eventInvocationMessage('click', ['one']));
 
-            expect(callback.mock.calls).toHaveLength(1);
-            expect(callback.mock.calls[0][0]).toEqual({
-                coordinate: ['one'],
-                event: undefined,
-                viewState: vs2,
-            });
+            expect(callback.mock.calls).toHaveLength(0);
+            // expect(callback.mock.calls[0][0]).toEqual({
+            //     coordinate: ['one'],
+            //     event: undefined,
+            //     viewState: vs2,
+            // });
         });
 
-        it('should trigger with if condition updated to false', () => {
+        it('should not trigger with if condition updated to false', () => {
             let { endpoint, bridgeElement } = setup();
             let callback = vi.fn();
 
@@ -749,12 +770,12 @@ describe('sandbox-refs', () => {
             (bridgeElement.refs.one as HTMLElementCollectionProxy<any, any>).onclick(callback);
             endpoint.invoke(eventInvocationMessage('click', ['one']));
 
-            expect(callback.mock.calls).toHaveLength(1);
-            expect(callback.mock.calls[0][0]).toEqual({
-                coordinate: ['one'],
-                event: undefined,
-                viewState: vs2,
-            });
+            expect(callback.mock.calls).toHaveLength(0);
+            // expect(callback.mock.calls[0][0]).toEqual({
+            //     coordinate: ['one'],
+            //     event: undefined,
+            //     viewState: vs2,
+            // });
         });
 
         it('should support nested conditions', () => {
@@ -770,27 +791,27 @@ describe('sandbox-refs', () => {
             bridgeElement.update(vs4);
             endpoint.invoke(eventInvocationMessage('click', ['two']));
 
-            expect(callback.mock.calls).toHaveLength(4);
+            expect(callback.mock.calls).toHaveLength(1);
             expect(callback.mock.calls[0][0]).toEqual({
                 coordinate: ['two'],
                 event: undefined,
                 viewState: vs,
             });
-            expect(callback.mock.calls[1][0]).toEqual({
-                coordinate: ['two'],
-                event: undefined,
-                viewState: vs2,
-            });
-            expect(callback.mock.calls[2][0]).toEqual({
-                coordinate: ['two'],
-                event: undefined,
-                viewState: vs3,
-            });
-            expect(callback.mock.calls[3][0]).toEqual({
-                coordinate: ['two'],
-                event: undefined,
-                viewState: vs4,
-            });
+            // expect(callback.mock.calls[1][0]).toEqual({
+            //     coordinate: ['two'],
+            //     event: undefined,
+            //     viewState: vs2,
+            // });
+            // expect(callback.mock.calls[2][0]).toEqual({
+            //     coordinate: ['two'],
+            //     event: undefined,
+            //     viewState: vs3,
+            // });
+            // expect(callback.mock.calls[3][0]).toEqual({
+            //     coordinate: ['two'],
+            //     event: undefined,
+            //     viewState: vs4,
+            // });
         });
     });
 
@@ -810,21 +831,28 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
+            let [refManager, [one, two]] = SecureReferencesManager.for(
+                endpoint,
+                undefined,
+                [],
+                ['one', 'two'],
+                [],
+                [],
+            );
             let bridgeElement = mkBridgeElement(
                 vs,
                 () => {
-                    const refOne = elemCollectionRef('one');
-                    const refTwo = elemCollectionRef('two');
                     return [
                         forEach<VS, VSItem>(
                             (vs) => vs.items,
                             'name',
-                            () => [e(refOne()), c((vs) => vs.test, [e(refTwo())])],
+                            () => [e(one()), c((vs) => vs.test, [e(two())])],
                         ),
                     ];
                 },
                 endpoint,
                 reactive,
+                refManager,
                 getNullComponentInstance,
                 [],
             );
@@ -892,11 +920,20 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
+            let [refManager, [comp1]] = SecureReferencesManager.for(
+                endpoint,
+                defaultEventWrapper,
+                [],
+                [],
+                ['comp1'],
+                [],
+            );
             let bridgeElement = mkBridgeElement(
                 vs,
-                () => [childComp(Item, (vs) => vs, compRef('comp1'))],
+                () => [childComp(Item, (vs) => vs, comp1())],
                 endpoint,
                 reactive,
+                refManager,
                 getNullComponentInstance,
                 [],
             );
@@ -976,22 +1013,25 @@ describe('sandbox-refs', () => {
         function setup() {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
+            let [refManager, [comp1]] = SecureReferencesManager.for(
+                endpoint,
+                undefined,
+                [],
+                [],
+                ['comp1'],
+                [],
+            );
             let bridgeElement = mkBridgeElement(
                 vs,
                 () => [
                     c(
                         (vs) => vs.shown,
-                        [
-                            childComp(
-                                Item,
-                                (vs) => ({ text: vs.text, dataId: 'a' }),
-                                compRef('comp1'),
-                            ),
-                        ],
+                        [childComp(Item, (vs) => ({ text: vs.text, dataId: 'a' }), comp1())],
                     ),
                 ],
                 endpoint,
                 reactive,
+                refManager,
                 getNullComponentInstance,
                 [],
             );
@@ -1047,20 +1087,28 @@ describe('sandbox-refs', () => {
         function setup(viewState = vs) {
             let endpoint = mkEndpoint();
             let reactive = new Reactive();
+            let [refManager, [comp1]] = SecureReferencesManager.for(
+                endpoint,
+                defaultEventWrapper,
+                [],
+                [],
+                [],
+                ['comp1'],
+            );
             let bridgeElement = mkBridgeElement(
                 viewState,
                 () => {
-                    const refComp1 = compCollectionRef('comp1');
                     return [
                         forEach<ViewStateType, ItemType>(
                             (vs) => vs.items,
                             'dataId',
-                            () => [childComp(Item, (vs) => vs, refComp1())],
+                            () => [childComp(Item, (vs) => vs, comp1())],
                         ),
                     ];
                 },
                 endpoint,
                 reactive,
+                refManager,
                 getNullComponentInstance,
                 [],
             );

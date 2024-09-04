@@ -1,5 +1,5 @@
-import { JayElement } from 'jay-runtime';
-import { elementBridge } from 'jay-secure';
+import { JayElement, RenderElement } from 'jay-runtime';
+import { elementBridge, SecureReferencesManager } from 'jay-secure';
 
 export interface ConditionsViewState {
     text1: string;
@@ -10,7 +10,16 @@ export interface ConditionsViewState {
 export interface ConditionsElementRefs {}
 
 export type ConditionsElement = JayElement<ConditionsViewState, ConditionsElementRefs>;
+export type ConditionsElementRender = RenderElement<
+    ConditionsViewState,
+    ConditionsElementRefs,
+    ConditionsElement
+>;
+export type ConditionsElementPreRender = [refs: ConditionsElementRefs, ConditionsElementRender];
 
-export function render(viewState: ConditionsViewState): ConditionsElement {
-    return elementBridge(viewState, () => []);
+export function render(): ConditionsElementPreRender {
+    const [refManager, []] = SecureReferencesManager.forElement([], [], [], []);
+    const render = (viewState: ConditionsViewState) =>
+        elementBridge(viewState, refManager, () => []);
+    return [refManager.getPublicAPI() as ConditionsElementRefs, render];
 }

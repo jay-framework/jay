@@ -1,7 +1,7 @@
 import { setChannel, useMockCommunicationChannel } from '../util/mock-channel';
 import { initializeWorker } from './secure/worker/worker-root';
 import { Node } from './secure/main/tree-node';
-import { render } from './secure/main/main-root';
+import { preRender } from './secure/main/main-root';
 import { MOVE } from 'jay-json-patch';
 import { renderMessage } from '../../lib/comm-channel/messages';
 
@@ -41,6 +41,7 @@ describe('events synthetic tests', () => {
         let channel = useMockCommunicationChannel(VERBOSE);
         setChannel(channel);
         initializeWorker();
+        let [refs, render] = preRender();
         let appElement = render(viewState);
         let getHeadById = (node: Node) =>
             appElement.dom.querySelector(`[data-ref="head=${node.id}"]`) as HTMLDivElement;

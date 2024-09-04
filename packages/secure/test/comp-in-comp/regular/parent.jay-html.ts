@@ -7,12 +7,11 @@ import {
     ConstructContext,
     HTMLElementProxy,
     childComp,
-    elemRef as er,
-    compRef as cr,
-    compCollectionRef as ccr,
     RenderElementOptions,
+    RenderElement,
+    ReferencesManager,
 } from 'jay-runtime';
-import { ChildRef, ChildRefs } from './child-refs';
+import { ChildComponentType, ChildRefs } from './child-refs';
 import { Child, ChildProps } from './child';
 
 export interface DynamicChild {
@@ -31,17 +30,27 @@ export interface ParentViewState {
 export interface ParentElementRefs {
     parentChangesChildPropButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>;
     parentCallsChildApiButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>;
-    staticChild: ChildRef<ParentViewState>;
+    staticChild: ChildComponentType<ParentViewState>;
     dynamicChildren: ChildRefs<DynamicChild>;
 }
 
 export type ParentElement = JayElement<ParentViewState, ParentElementRefs>;
+export type ParentElementRender = RenderElement<ParentViewState, ParentElementRefs, ParentElement>;
+export type ParentElementPreRender = [refs: ParentElementRefs, ParentElementRender];
 
-export function render(viewState: ParentViewState, options?: RenderElementOptions): ParentElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () => {
-            const refDynamicChildren = ccr('dynamicChildren');
+export function render(options?: RenderElementOptions): ParentElementPreRender {
+    const [
+        refManager,
+        [parentChangesChildPropButton, parentCallsChildApiButton, staticChild, dynamicChildren],
+    ] = ReferencesManager.for(
+        options,
+        ['parentChangesChildPropButton', 'parentCallsChildApiButton'],
+        [],
+        ['staticChild'],
+        ['dynamicChildren'],
+    );
+    const render = (viewState: ParentViewState) =>
+        ConstructContext.withRootContext(viewState, refManager, () => {
             return de('div', {}, [
                 e('div', { id: 'text-from-child-event' }, [dt((vs) => vs.textFromChildEvent)]),
                 e('div', { id: 'view-state-from-child-event' }, [
@@ -54,18 +63,18 @@ export function render(viewState: ParentViewState, options?: RenderElementOption
                     'button',
                     { id: 'parent-changes-child-prop-button' },
                     [' parent changes child prop '],
-                    er('parentChangesChildPropButton'),
+                    parentChangesChildPropButton(),
                 ),
                 e(
                     'button',
                     { id: 'parent-calls-child-api-button' },
                     [' parent calls child api '],
-                    er('parentCallsChildApiButton'),
+                    parentCallsChildApiButton(),
                 ),
                 childComp(
                     Child,
                     (vs: ParentViewState) => ({ textFromParent: vs.childText, id: 'static' }),
-                    cr('staticChild'),
+                    staticChild(),
                 ),
                 forEach(
                     (vs) => vs.dynamicChildren,
@@ -74,14 +83,13 @@ export function render(viewState: ParentViewState, options?: RenderElementOption
                             childComp(
                                 Child,
                                 (vs: DynamicChild) => ({ textFromParent: vs.childText, id: vs.id }),
-                                refDynamicChildren(),
+                                dynamicChildren(),
                             ),
                         ]);
                     },
                     'id',
                 ),
             ]);
-        },
-        options,
-    );
+        }) as ParentElement;
+    return [refManager.getPublicAPI() as ParentElementRefs, render];
 }

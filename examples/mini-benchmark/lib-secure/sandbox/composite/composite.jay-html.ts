@@ -1,5 +1,5 @@
-import { JayElement } from 'jay-runtime';
-import { elementBridge } from 'jay-secure';
+import { JayElement, RenderElement } from 'jay-runtime';
+import { elementBridge, SecureReferencesManager } from 'jay-secure';
 
 export interface CompositeViewState {
     text: string;
@@ -9,7 +9,16 @@ export interface CompositeViewState {
 export interface CompositeElementRefs {}
 
 export type CompositeElement = JayElement<CompositeViewState, CompositeElementRefs>;
+export type CompositeElementRender = RenderElement<
+    CompositeViewState,
+    CompositeElementRefs,
+    CompositeElement
+>;
+export type CompositeElementPreRender = [refs: CompositeElementRefs, CompositeElementRender];
 
-export function render(viewState: CompositeViewState): CompositeElement {
-    return elementBridge(viewState, () => []);
+export function render(): CompositeElementPreRender {
+    const [refManager, []] = SecureReferencesManager.forElement([], [], [], []);
+    const render = (viewState: CompositeViewState) =>
+        elementBridge(viewState, refManager, () => []);
+    return [refManager.getPublicAPI() as CompositeElementRefs, render];
 }

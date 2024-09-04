@@ -2,12 +2,12 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
+    RenderElement,
+    ReferencesManager,
     dynamicElement as de,
     forEach,
     ConstructContext,
     childComp,
-    compRef as cr,
-    compCollectionRef as ccr,
     RenderElementOptions,
 } from 'jay-runtime';
 // @ts-expect-error Cannot find module
@@ -20,19 +20,29 @@ export interface RecursiveComponentsElementRefs {
 }
 
 export type RecursiveComponentsElement = JayElement<Node, RecursiveComponentsElementRefs>;
+export type RecursiveComponentsElementRender = RenderElement<
+    Node,
+    RecursiveComponentsElementRefs,
+    RecursiveComponentsElement
+>;
+export type RecursiveComponentsElementPreRender = [
+    refs: RecursiveComponentsElementRefs,
+    RecursiveComponentsElementRender,
+];
 
-export function render(
-    viewState: Node,
-    options?: RenderElementOptions,
-): RecursiveComponentsElement {
-    return ConstructContext.withRootContext(
-        viewState,
-        () => {
-            const refCounter1 = ccr('counter1');
-            const refCounterTwo = ccr('counterTwo');
-            return e('div', {}, [
+export function render(options?: RenderElementOptions): RecursiveComponentsElementPreRender {
+    const [refManager, [refAR1, refCounter1, refCounterTwo]] = ReferencesManager.for(
+        options,
+        [],
+        [],
+        ['aR1'],
+        ['counter1', 'counterTwo'],
+    );
+    const render = (viewState: Node) =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
+            e('div', {}, [
                 e('div', {}, [dt((vs) => vs.name)]),
-                childComp(TreeNode, (vs: Node) => vs.firstChild, cr('aR1')),
+                childComp(TreeNode, (vs: Node) => vs.firstChild, refAR1()),
                 de('ul', {}, [
                     forEach(
                         (vs) => vs.children,
@@ -61,8 +71,7 @@ export function render(
                         'id',
                     ),
                 ]),
-            ]);
-        },
-        options,
-    );
+            ]),
+        ) as RecursiveComponentsElement;
+    return [refManager.getPublicAPI() as RecursiveComponentsElementRefs, render];
 }

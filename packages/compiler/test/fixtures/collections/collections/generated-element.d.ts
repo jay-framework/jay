@@ -1,4 +1,4 @@
-import { JayElement, RenderElementOptions } from 'jay-runtime';
+import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
 
 export interface Thing {
     name: string;
@@ -15,8 +15,11 @@ export interface CollectionsViewState {
 export interface CollectionsElementRefs {}
 
 export type CollectionsElement = JayElement<CollectionsViewState, CollectionsElementRefs>;
+export type CollectionsElementRender = RenderElement<
+    CollectionsViewState,
+    CollectionsElementRefs,
+    CollectionsElement
+>;
+export type CollectionsElementPreRender = [refs: CollectionsElementRefs, CollectionsElementRender];
 
-export declare function render(
-    viewState: CollectionsViewState,
-    options?: RenderElementOptions,
-): CollectionsElement;
+export declare function render(options?: RenderElementOptions): CollectionsElementPreRender;
