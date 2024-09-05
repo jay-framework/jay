@@ -1,5 +1,5 @@
-import { render, TaskElementRefs, TaskViewState } from './task.jay-html';
-import { createEffect, createEvent, createMemo, makeJayComponent, Props } from 'jay-component';
+import { render, TaskElementRefs } from './task.jay-html';
+import { createEffect, createMemo, makeJayComponent, Props } from 'jay-component';
 import { SCRUM_CONTEXT, ScrumContext } from './scrum-context';
 
 export interface TaskProps {
@@ -10,17 +10,12 @@ export interface TaskProps {
 function TaskConstructor(
     { pillarId, taskId }: Props<TaskProps>,
     refs: TaskElementRefs,
-    context: ScrumContext,
+    {pillars, moveTaskToNext, moveTaskToPrev, moveTaskDown, moveTaskUp}: ScrumContext,
 ) {
-    const onNext = createEvent();
-    const onPrev = createEvent();
-    const onUp = createEvent();
-    const onDown = createEvent();
-
     const pillarIndex = createMemo(() =>
-        context.pillars().findIndex((_) => _.pillarId === pillarId()),
+        pillars().findIndex((_) => _.pillarId === pillarId()),
     );
-    const pillar = createMemo(() => context.pillars()[pillarIndex()]);
+    const pillar = createMemo(() => pillars()[pillarIndex()]);
     const taskIndex = createMemo(() =>
         pillar().pillarTasks.findIndex((_) => _.taskId === taskId()),
     );
@@ -44,10 +39,10 @@ function TaskConstructor(
         );
     });
 
-    refs.next.onclick(() => onNext.emit());
-    refs.up.onclick(() => onUp.emit());
-    refs.down.onclick(() => onDown.emit());
-    refs.prev.onclick(() => onPrev.emit());
+    refs.next.onclick(() => moveTaskToNext(pillarId(), taskId()));
+    refs.up.onclick(() => moveTaskUp(pillarId(), taskId()));
+    refs.down.onclick(() => moveTaskDown(pillarId(), taskId()));
+    refs.prev.onclick(() => moveTaskToPrev(pillarId(), taskId()));
 
     return {
         render: () => ({
@@ -55,13 +50,9 @@ function TaskConstructor(
             description: task().description,
             isTop: taskIndex() === 0,
             isBottom: taskIndex() === pillar().pillarTasks.length - 1,
-            hasNext: pillarIndex() !== context.pillars().length - 1,
+            hasNext: pillarIndex() !== pillars().length - 1,
             hasPrev: pillarIndex() > 0,
-        }),
-        onNext,
-        onDown,
-        onUp,
-        onPrev,
+        })
     };
 }
 
