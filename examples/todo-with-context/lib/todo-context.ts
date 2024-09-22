@@ -1,10 +1,9 @@
-import {Getter} from "jay-reactive";
-import {createJayContext} from "jay-runtime";
-import {createMemo, createState, provideReactiveContext} from "jay-component";
-import {ShownTodo} from "./todo.jay-html";
-import {ADD, patch, REPLACE} from "jay-json-patch";
-import {uuid} from "./uuid";
-
+import { Getter } from 'jay-reactive';
+import { createJayContext } from 'jay-runtime';
+import { createMemo, createState, provideReactiveContext } from 'jay-component';
+import { ShownTodo } from './todo.jay-html';
+import { ADD, patch, REPLACE } from 'jay-json-patch';
+import { uuid } from './uuid';
 
 export interface TodoItem {
     id: string;
@@ -41,12 +40,11 @@ const initialTodos: TodoItem[] = [
     },
 ];
 
-
 export const TODO_CONTEXT = createJayContext<TodoContext>();
 
 export const provideTodoContext = () =>
     provideReactiveContext(TODO_CONTEXT, () => {
-        const [todos, setTodos] = createState(initialTodos)
+        const [todos, setTodos] = createState(initialTodos);
 
         const activeTodoCount = createMemo(() =>
             todos().reduce(function (accum: number, todo: TodoItem) {
@@ -69,7 +67,8 @@ export const provideTodoContext = () =>
                         },
                     },
                 ]),
-            )        }
+            );
+        };
 
         const clearCompleted = () => {
             setTodos(
@@ -77,7 +76,7 @@ export const provideTodoContext = () =>
                     return !todo.isCompleted;
                 }),
             );
-        }
+        };
 
         const toggleAll = (isCompleted: boolean) => {
             setTodos(
@@ -85,12 +84,12 @@ export const provideTodoContext = () =>
                     ...todo,
                     isCompleted,
                 })),
-            )
-        }
+            );
+        };
 
         const remove = (id: string) => {
             setTodos(todos().filter((_) => _.id !== id));
-        }
+        };
 
         const changeTitle = (id: string, newTitle: string) => {
             let itemIndex = todos().findIndex((_) => _.id === id);
@@ -103,7 +102,7 @@ export const provideTodoContext = () =>
                     },
                 ]),
             );
-        }
+        };
 
         const completeToggle = (id: string, newValue: boolean) => {
             let itemIndex = todos().findIndex((_) => _.id === id);
@@ -116,7 +115,7 @@ export const provideTodoContext = () =>
                     },
                 ]),
             );
-        }
+        };
 
         return {
             todos,
@@ -126,7 +125,6 @@ export const provideTodoContext = () =>
             toggleAll,
             remove,
             changeTitle,
-            completeToggle
-        }
-    })
-
+            completeToggle,
+        };
+    });

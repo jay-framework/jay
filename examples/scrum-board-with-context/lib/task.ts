@@ -10,11 +10,9 @@ export interface TaskProps {
 function TaskConstructor(
     { pillarId, taskId }: Props<TaskProps>,
     refs: TaskElementRefs,
-    {pillars, moveTaskToNext, moveTaskToPrev, moveTaskDown, moveTaskUp}: ScrumContext,
+    { pillars, moveTaskToNext, moveTaskToPrev, moveTaskDown, moveTaskUp }: ScrumContext,
 ) {
-    const pillarIndex = createMemo(() =>
-        pillars().findIndex((_) => _.pillarId === pillarId()),
-    );
+    const pillarIndex = createMemo(() => pillars().findIndex((_) => _.pillarId === pillarId()));
     const pillar = createMemo(() => pillars()[pillarIndex()]);
     const taskIndex = createMemo(() =>
         pillar().pillarTasks.findIndex((_) => _.taskId === taskId()),
@@ -52,7 +50,7 @@ function TaskConstructor(
             isBottom: taskIndex() === pillar().pillarTasks.length - 1,
             hasNext: pillarIndex() !== pillars().length - 1,
             hasPrev: pillarIndex() > 0,
-        })
+        }),
     };
 }
 

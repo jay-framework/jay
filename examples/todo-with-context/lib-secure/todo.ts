@@ -2,7 +2,7 @@ import { Filter, render, ShownTodo, TodoElementRefs, TodoViewState } from './tod
 import { createMemo, createState, makeJayComponent, Props } from 'jay-component';
 import './todo.css';
 import { JayEvent } from 'jay-runtime';
-import {provideTodoContext} from "./todo-context";
+import { provideTodoContext } from './todo-context';
 
 const ENTER_KEY = 13;
 
@@ -17,8 +17,7 @@ export interface TodoProps {
 }
 
 function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: TodoElementRefs) {
-
-    const {addTodo, activeTodoCount, todos, clearCompleted, toggleAll} = provideTodoContext();
+    const { addTodo, activeTodoCount, todos, clearCompleted, toggleAll } = provideTodoContext();
 
     const noActiveItems = createMemo(() => activeTodoCount() === 0);
     const activeTodoWord = createMemo(() => (activeTodoCount() > 1 ? 'todos' : 'todo'));
@@ -46,7 +45,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
             let val = newValue.trim();
 
             if (val) {
-                addTodo(val)
+                addTodo(val);
             }
             setNewTodo('');
         }
@@ -61,7 +60,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     });
 
     refs.toggleAll.onchange(({ event }: JayEvent<Event, TodoViewState>) =>
-        toggleAll((event.target as HTMLInputElement).checked)
+        toggleAll((event.target as HTMLInputElement).checked),
     );
 
     return {

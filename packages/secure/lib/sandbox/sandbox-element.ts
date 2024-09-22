@@ -5,7 +5,9 @@ import {
     MountFunc,
     withContext,
     updateFunc,
-    useContext, saveContext, restoreContext,
+    useContext,
+    saveContext,
+    restoreContext,
 } from 'jay-runtime';
 import { SANDBOX_CREATION_CONTEXT, SANDBOX_BRIDGE_CONTEXT } from './sandbox-context';
 import { SecureElementRef } from './sandbox-refs';
@@ -142,8 +144,8 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
                 matchBy,
             );
             addedItems.forEach((item) => {
-                let childElements =
-                    restoreContext(savedContext, () => withContext(
+                let childElements = restoreContext(savedContext, () =>
+                    withContext(
                         SANDBOX_CREATION_CONTEXT,
                         {
                             endpoint,
@@ -153,7 +155,8 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
                             parentComponentReactive,
                         },
                         children,
-                    ));
+                    ),
+                );
                 childElements.forEach((childElement) => childElement.mount());
                 childElementsMap.set(item[matchBy], childElements);
             });

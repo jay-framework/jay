@@ -1,7 +1,7 @@
 import { render, ItemElementRefs, ItemViewState } from './item.jay-html';
-import { createMemo, createState, makeJayComponent, Props} from 'jay-component';
+import { createMemo, createState, makeJayComponent, Props } from 'jay-component';
 import { JayEvent } from 'jay-runtime';
-import {TODO_CONTEXT, TodoContext} from "./todo-context";
+import { TODO_CONTEXT, TodoContext } from './todo-context';
 
 interface ItemProps {
     id: string;
@@ -10,13 +10,14 @@ interface ItemProps {
 const ENTER_KEY = 13;
 const ESCAPE_KEY = 27;
 
-function ItemConstructor({ id }: Props<ItemProps>,
-                         refs: ItemElementRefs,
-                         {todos, remove, completeToggle, changeTitle}: TodoContext) {
-
-    const todo = createMemo(() => todos().find(_ => _.id === id()))
-    const title = createMemo(() => todo().title)
-    const isCompleted = createMemo(() => todo().isCompleted)
+function ItemConstructor(
+    { id }: Props<ItemProps>,
+    refs: ItemElementRefs,
+    { todos, remove, completeToggle, changeTitle }: TodoContext,
+) {
+    const todo = createMemo(() => todos().find((_) => _.id === id()));
+    const title = createMemo(() => todo().title);
+    const isCompleted = createMemo(() => todo().isCompleted);
 
     let [isEditing, setIsEditing] = createState(false);
     let [editText, setEditText] = createState(title);
@@ -27,7 +28,7 @@ function ItemConstructor({ id }: Props<ItemProps>,
             changeTitle(id(), val);
             setIsEditing(false);
         } else {
-            remove(id())
+            remove(id());
         }
     };
 
