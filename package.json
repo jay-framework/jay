@@ -24,7 +24,7 @@
       "dev-environment",
       "packages/*",
       "packages/_deprecated/*",
-      "examples/*",
+      "examples/**",
       "exploration/*"
     ]
   },
