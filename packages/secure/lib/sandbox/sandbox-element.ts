@@ -5,7 +5,7 @@ import {
     MountFunc,
     withContext,
     updateFunc,
-    useContext,
+    useContext, saveContext, restoreContext,
 } from 'jay-runtime';
 import { SANDBOX_CREATION_CONTEXT, SANDBOX_BRIDGE_CONTEXT } from './sandbox-context';
 import { SecureElementRef } from './sandbox-refs';
@@ -131,6 +131,7 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
         useContext(SANDBOX_CREATION_CONTEXT);
     let lastItems: ItemViewState[] = [];
     let childElementsMap: Map<string, SandboxElement<ItemViewState>[]> = new Map();
+    let savedContext = saveContext();
     let update = (viewState: ParentViewState) => {
         let newItems = getItems(viewState) || [];
         let isModified = newItems !== lastItems;
@@ -141,17 +142,18 @@ export function sandboxForEach<ParentViewState, ItemViewState extends object>(
                 matchBy,
             );
             addedItems.forEach((item) => {
-                let childElements = withContext(
-                    SANDBOX_CREATION_CONTEXT,
-                    {
-                        endpoint,
-                        viewState: item,
-                        dataIds: [...dataIds, item[matchBy]],
-                        isDynamic: true,
-                        parentComponentReactive,
-                    },
-                    children,
-                );
+                let childElements =
+                    restoreContext(savedContext, () => withContext(
+                        SANDBOX_CREATION_CONTEXT,
+                        {
+                            endpoint,
+                            viewState: item,
+                            dataIds: [...dataIds, item[matchBy]],
+                            isDynamic: true,
+                            parentComponentReactive,
+                        },
+                        children,
+                    ));
                 childElements.forEach((childElement) => childElement.mount());
                 childElementsMap.set(item[matchBy], childElements);
             });
