@@ -1,10 +1,8 @@
 import { Filter, render, ShownTodo, TodoElementRefs, TodoViewState } from './todo.jay-html';
 import { createMemo, createState, makeJayComponent, Props } from 'jay-component';
-import { uuid } from './uuid';
-import { patch } from 'jay-json-patch';
-import { ADD, REPLACE } from 'jay-json-patch';
 import './todo.css';
 import { JayEvent } from 'jay-runtime';
+import {provideTodoContext} from "./todo-context";
 
 const ENTER_KEY = 13;
 
@@ -19,15 +17,8 @@ export interface TodoProps {
 }
 
 function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: TodoElementRefs) {
-    const [todos, setTodos] = createState(
-        initialTodos().map((_) => ({ ..._, isEditing: false, editText: '' })),
-    );
 
-    const activeTodoCount = createMemo(() =>
-        todos().reduce(function (accum: number, todo: ShownTodo) {
-            return todo.isCompleted ? accum : accum + 1;
-        }, 0),
-    );
+    const {addTodo, activeTodoCount, todos, clearCompleted, toggleAll} = provideTodoContext();
 
     const noActiveItems = createMemo(() => activeTodoCount() === 0);
     const activeTodoWord = createMemo(() => (activeTodoCount() > 1 ? 'todos' : 'todo'));
@@ -55,21 +46,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
             let val = newValue.trim();
 
             if (val) {
-                setTodos(
-                    patch(todos(), [
-                        {
-                            op: ADD,
-                            path: [todos().length],
-                            value: {
-                                id: uuid(),
-                                title: val,
-                                isEditing: false,
-                                editText: '',
-                                isCompleted: false,
-                            },
-                        },
-                    ]),
-                );
+                addTodo(val)
             }
             setNewTodo('');
         }
@@ -80,50 +57,11 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     );
 
     refs.clearCompleted.onclick((event) => {
-        setTodos(
-            todos().filter(function (todo) {
-                return !todo.isCompleted;
-            }),
-        );
-    });
-
-    refs.items.onCompletedToggle(({ event: newCompleted, viewState: item }) => {
-        let itemIndex = todos().findIndex((_) => _.id === item.id);
-        setTodos(
-            patch(todos(), [
-                {
-                    op: REPLACE,
-                    path: [itemIndex, 'isCompleted'],
-                    value: newCompleted,
-                },
-            ]),
-        );
-    });
-
-    refs.items.onTitleChanged(({ event: newTitle, viewState: item }) => {
-        let itemIndex = todos().findIndex((_) => _.id === item.id);
-        setTodos(
-            patch(todos(), [
-                {
-                    op: REPLACE,
-                    path: [itemIndex, 'title'],
-                    value: newTitle,
-                },
-            ]),
-        );
-    });
-
-    refs.items.onRemove(({ viewState: item }) => {
-        setTodos(todos().filter((_) => _ !== item));
+        clearCompleted();
     });
 
     refs.toggleAll.onchange(({ event }: JayEvent<Event, TodoViewState>) =>
-        setTodos(
-            todos().map((todo) => ({
-                ...todo,
-                isCompleted: (event.target as HTMLInputElement).checked,
-            })),
-        ),
+        toggleAll((event.target as HTMLInputElement).checked)
     );
 
     return {

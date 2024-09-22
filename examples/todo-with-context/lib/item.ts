@@ -1,39 +1,42 @@
 import { render, ItemElementRefs, ItemViewState } from './item.jay-html';
-import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+import { createMemo, createState, makeJayComponent, Props} from 'jay-component';
 import { JayEvent } from 'jay-runtime';
+import {TODO_CONTEXT, TodoContext} from "./todo-context";
 
 interface ItemProps {
-    title: string;
-    isCompleted: boolean;
+    id: string;
 }
 
 const ENTER_KEY = 13;
 const ESCAPE_KEY = 27;
 
-function ItemConstructor({ title, isCompleted }: Props<ItemProps>, refs: ItemElementRefs) {
+function ItemConstructor({ id }: Props<ItemProps>,
+                         refs: ItemElementRefs,
+                         {todos, remove, completeToggle, changeTitle}: TodoContext) {
+
+    const todo = createMemo(() => todos().find(_ => _.id === id()))
+    const title = createMemo(() => todo().title)
+    const isCompleted = createMemo(() => todo().isCompleted)
+
     let [isEditing, setIsEditing] = createState(false);
     let [editText, setEditText] = createState(title);
-
-    let onCompletedToggle = createEvent<boolean>();
-    let onRemove = createEvent<null>();
-    let onTitleChanged = createEvent<string>();
 
     let handleSubmit = () => {
         let val = editText().trim();
         if (val) {
-            onTitleChanged.emit(val);
+            changeTitle(id(), val);
             setIsEditing(false);
         } else {
-            onRemove.emit(null);
+            remove(id())
         }
     };
 
-    refs.completed.onchange(() => onCompletedToggle.emit(!isCompleted()));
+    refs.completed.onchange(() => completeToggle(id(), !isCompleted()));
     refs.label.ondblclick(() => {
         setIsEditing(true);
         setEditText(title());
     });
-    refs.button.onclick(() => onRemove.emit(null));
+    refs.button.onclick(() => remove(id()));
     refs.title.onblur(() => handleSubmit());
     refs.title.onchange(({ event }: JayEvent<Event, ItemViewState>) =>
         setEditText((event.target as HTMLInputElement).value),
@@ -49,10 +52,7 @@ function ItemConstructor({ title, isCompleted }: Props<ItemProps>, refs: ItemEle
 
     return {
         render: () => ({ title, isCompleted, isEditing, editText }),
-        onCompletedToggle: onCompletedToggle,
-        onRemove: onRemove,
-        onTitleChanged: onTitleChanged,
     };
 }
 
-export const Item = makeJayComponent(render, ItemConstructor);
+export const Item = makeJayComponent(render, ItemConstructor, TODO_CONTEXT);
