@@ -15,6 +15,8 @@ export {
     withContext,
     useContext,
     findContext,
+    saveContext,
+    restoreContext,
     ConstructContext,
     currentConstructionContext,
 } from './context';

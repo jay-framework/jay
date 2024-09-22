@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<header>
+    <title>Todo element</title>
+    <link rel="import" href="./item" names="Item"/>
+    <script type="application/yaml-jay">
+data:
+    activeTodoCount: number
+    activeTodoWord: string
+    hasItems: boolean
+    noActiveItems: boolean
+    filter: enum (all | active | completed)
+    showClearCompleted: boolean
+    newTodo: string
+    shownTodos:
+    - id: string
+    </script>
+</header>
+<body>
+<div>
+<section class="todoapp">
+    <div>
+        <header class="header">
+            <h1 class="main-title">todos</h1>
+            <input class="new-todo" placeholder="What needs to be done?" value="{newTodo}" ref="newTodo" autofocus/>
+        </header>
+        <section class="main" if="hasItems">
+            <input id="toggle-all" class="toggle-all" type="checkbox" ref="toggleAll" checked={noActiveItems}>
+            <label for="toggle-all"></label>
+            <ul class="todo-list">
+                <Item id="{id}" forEach="shownTodos" trackBy="id" ref="items"/>
+            </ul>
+        </section>
+        <footer class="footer" if="hasItems">
+            <span class="todo-count">
+                <strong>{activeTodoCount}</strong><span> </span><span>{activeTodoWord}</span><span> left</span>
+            </span>
+            <ul class="filters">
+                <li>
+                    <a ref="filterAll" class="{filter == all? selected }">All</a>
+                </li>
+                <span> </span>
+                <li>
+                    <a ref="filterActive" class="{ filter == active? selected}">Active</a>
+                </li>
+                <span> </span>
+                <li>
+                    <a ref="filterCompleted" class="{ filter == completed? selected}">Completed</a>
+                </li>
+            </ul>
+            <button class="clear-completed" if="showClearCompleted" ref="clearCompleted">
+                Clear completed
+            </button>
+
+        </footer>
+    </div>
+</section>
+<footer class="info">
+    <p>Double-click to edit a todo</p>
+    <p>Created by <a href="http://github.com/petehunt/">petehunt</a></p>
+    <p>Part of <a href="http://todomvc.com">TodoMVC</a></p>
+</footer>
+</div>
+</body>
+</html>

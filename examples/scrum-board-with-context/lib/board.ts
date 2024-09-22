@@ -21,19 +21,6 @@ function BoardConstructor({ title }: Props<BoardProps>, refs: BoardElementRefs) 
         console.log('board', 'pillars:', pillars());
     });
 
-    refs.pillars.onMoveTaskToNext(({ viewState, event }) => {
-        moveTaskToNext(viewState.pillarId, event.taskId);
-    });
-    refs.pillars.onMoveTaskToPrev(({ viewState, event }) => {
-        moveTaskToPrev(viewState.pillarId, event.taskId);
-    });
-    refs.pillars.onMoveTaskUp(({ viewState, event }) => {
-        moveTaskUp(viewState.pillarId, event.taskId);
-    });
-    refs.pillars.onMoveTaskDown(({ viewState, event }) => {
-        moveTaskDown(viewState.pillarId, event.taskId);
-    });
-
     return {
         render: () => ({ title, boardPillars }),
     };

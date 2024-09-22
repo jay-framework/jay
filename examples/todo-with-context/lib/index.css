@@ -1,0 +1,39 @@
+body {
+  padding-top: 30px;
+}
+.title {
+  color: #11418c;
+  height: 30px;
+  font-size: 24px;
+  width: 100%;
+  position: fixed;
+  text-align: center;
+  border-bottom: 1px solid #bfdfcf;
+  background-color: #fff;
+  padding: 10px;
+  top: 0;
+  z-index: 9999;
+}
+
+.progress {
+  color: #11418c;
+  font-size: 16px;
+}
+
+.select-example {
+  color: #11418c;
+  font-size: 16px;
+}
+
+.cycles {
+  color: #11418c;
+  font-size: 16px;
+}
+
+.stage {
+  /*margin-top: 20px;*/
+  min-width: 230px;
+  max-width: 550px;
+  margin: 20px auto 0 auto;
+  background-color: #c7efdb;
+}
