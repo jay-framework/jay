@@ -6,7 +6,7 @@ import {
     generateSandboxRootFile,
     parseJayFile,
     prettify,
-    RuntimeMode,
+    RuntimeMode, transformComponent,
 } from '../lib';
 import {
     readGeneratedNamedFile,
@@ -29,21 +29,21 @@ describe('generate full project', () => {
         describe('sandbox target', () => {
             it('generates sandbox root', async () => {
                 const jayFile = await readNamedSourceJayFile(
-                    'sandboxed/sandboxed-counter/source',
+                    'full-projects/counter/source',
                     'app',
                 );
                 const parsedFile = checkValidationErrors(
                     parseJayFile(
                         jayFile,
                         'app.jay-html',
-                        './test/fixtures/sandboxed/sandboxed-counter/source',
+                        './test/fixtures/full-projects/counter/source',
                         {},
                     ),
                 );
                 let sandboxRootFile = generateSandboxRootFile(parsedFile);
                 expect(await prettify(sandboxRootFile)).toEqual(
                     await readGeneratedNamedFile(
-                        'sandboxed/sandboxed-counter/generated/sandbox',
+                        'full-projects/counter/generated/sandbox',
                         'sandbox-root',
                     ),
                 );
@@ -51,12 +51,12 @@ describe('generate full project', () => {
 
             it('generates counter element', async () => {
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(
-                    'sandboxed/sandboxed-counter/source',
+                    'full-projects/counter/source',
                     'counter',
                 );
                 expect(await prettify(runtimeFile)).toEqual(
                     await readGeneratedNamedFile(
-                        'sandboxed/sandboxed-counter/generated/sandbox',
+                        'full-projects/counter/generated/sandbox',
                         'counter.jay-html',
                     ),
                 );
@@ -66,14 +66,14 @@ describe('generate full project', () => {
         describe('source (dev) target', () => {
             it('generates element definition file', async () => {
                 const parsedFile = await readAndParseJayFile(
-                    'sandboxed/sandboxed-counter/source',
+                    'full-projects/counter/source',
                     'counter',
                 );
                 let runtimeFile = generateElementDefinitionFile(parsedFile);
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
-                        'sandboxed/sandboxed-counter/source',
+                        'full-projects/counter/source',
                         'counter.jay-html.d',
                     ),
                 );
@@ -83,7 +83,7 @@ describe('generate full project', () => {
         describe('main target', () => {
             it('generates app element file', async () => {
                 const jayFile = await readNamedSourceJayFile(
-                    'sandboxed/sandboxed-counter/source',
+                    'full-projects/counter/source',
                     'app',
                 );
                 let runtimeFile = generateElementFile(
@@ -91,7 +91,7 @@ describe('generate full project', () => {
                         parseJayFile(
                             jayFile,
                             'app.jay-html',
-                            './test/fixtures/sandboxed/sandboxed-counter/source',
+                            './test/fixtures/full-projects/counter/source',
                             {},
                         ),
                     ),
@@ -99,7 +99,7 @@ describe('generate full project', () => {
                 );
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
-                        'sandboxed/sandboxed-counter/generated/main',
+                        'full-projects/counter/generated/main',
                         'app.jay-html',
                     ),
                 );
@@ -107,7 +107,7 @@ describe('generate full project', () => {
 
             it('generates counter element file', async () => {
                 const jayFile = await readNamedSourceJayFile(
-                    'sandboxed/sandboxed-counter/source',
+                    'full-projects/counter/source',
                     'counter',
                 );
                 let runtimeFile = generateElementFile(
@@ -115,7 +115,7 @@ describe('generate full project', () => {
                         parseJayFile(
                             jayFile,
                             'counter.jay-html',
-                            './test/fixtures/sandboxed/sandboxed-counter/source',
+                            './test/fixtures/full-projects/counter/source',
                             {},
                         ),
                     ),
@@ -123,7 +123,7 @@ describe('generate full project', () => {
                 );
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
-                        'sandboxed/sandboxed-counter/generated/main',
+                        'full-projects/counter/generated/main',
                         'counter.jay-html',
                     ),
                 );
@@ -131,14 +131,14 @@ describe('generate full project', () => {
 
             it('generates counter refs file', async () => {
                 let refsFile = generateComponentRefsDefinitionFile(
-                    './test/fixtures/sandboxed/sandboxed-counter/source/counter',
+                    './test/fixtures/full-projects/counter/source/counter',
                     { relativePath },
                 );
                 expect(refsFile.validations).toEqual([]);
                 expect(await prettify(refsFile.val)).toEqual(
                     await prettify(
                         await readTestFile(
-                            './sandboxed/sandboxed-counter/generated/main',
+                            './full-projects/counter/generated/main',
                             'counter-refs.d.ts',
                         ),
                     ),
@@ -147,7 +147,7 @@ describe('generate full project', () => {
 
             it('generates counter bridge', async () => {
                 const sourceFile = await readTsSourceFile(
-                    'sandboxed/sandboxed-counter/source',
+                    'full-projects/counter/source',
                     'counter.ts',
                 );
 
@@ -157,7 +157,7 @@ describe('generate full project', () => {
 
                 const outputCode = await printTsFile(outputFile);
                 expect(await prettify(outputCode)).toEqual(
-                    await readTestFile('sandboxed/sandboxed-counter/generated/main', 'counter.ts'),
+                    await readTestFile('full-projects/counter/generated/main', 'counter.ts'),
                 );
             });
         });
@@ -167,21 +167,21 @@ describe('generate full project', () => {
         describe('sandbox target', () => {
             it('generates sandbox root', async () => {
                 const jayFile = await readNamedSourceJayFile(
-                    'sandboxed/sandboxed-exec/source',
+                    'full-projects/exec/source',
                     'app',
                 );
                 const parsedFile = checkValidationErrors(
                     parseJayFile(
                         jayFile,
                         'app.jay-html',
-                        './test/fixtures/sandboxed/sandboxed-exec/source',
+                        './test/fixtures/full-projects/exec/source',
                         {},
                     ),
                 );
                 let sandboxRootFile = generateSandboxRootFile(parsedFile);
                 expect(await prettify(sandboxRootFile)).toEqual(
                     await readGeneratedNamedFile(
-                        'sandboxed/sandboxed-exec/generated/sandbox',
+                        'full-projects/exec/generated/sandbox',
                         'sandbox-root',
                     ),
                 );
@@ -189,14 +189,46 @@ describe('generate full project', () => {
 
             it('generates counter element', async () => {
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(
-                    'sandboxed/sandboxed-exec/source',
+                    'full-projects/exec/source',
                     'auto-counter',
                 );
                 expect(await prettify(runtimeFile)).toEqual(
                     await readGeneratedNamedFile(
-                        'sandboxed/sandboxed-exec/generated/sandbox',
+                        'full-projects/exec/generated/sandbox',
                         'auto-counter.jay-html',
                     ),
+                );
+            });
+
+            it('transform counter component', async () => {
+                const sourceFile = await readTsSourceFile(
+                    'full-projects/exec/source',
+                    'auto-counter.ts',
+                );
+
+                const outputFile = ts.transform(sourceFile, [
+                    transformComponent([]),
+                ]);
+
+                const outputCode = await printTsFile(outputFile);
+                expect(await prettify(outputCode)).toEqual(
+                    await readTestFile('full-projects/exec/generated/sandbox', 'auto-counter.ts'),
+                );
+            });
+
+            it('transform a module', async () => {
+                const sourceFile = await readTsSourceFile(
+                    'full-projects/exec/source',
+                    'a-module.ts',
+                );
+
+                const outputFile = ts.transform(sourceFile, [
+                    transformComponent([]),
+                ]);
+
+                const outputCode = await printTsFile(outputFile);
+                expect(await prettify(outputCode)).toEqual(
+                    await readTestFile('full-projects/exec/generated/sandbox', 'a-module.ts'),
                 );
             });
         });
@@ -204,14 +236,14 @@ describe('generate full project', () => {
         describe('source (dev) target', () => {
             it('generates element definition file', async () => {
                 const parsedFile = await readAndParseJayFile(
-                    'sandboxed/sandboxed-exec/source',
+                    'full-projects/exec/source',
                     'auto-counter',
                 );
                 let runtimeFile = generateElementDefinitionFile(parsedFile);
                 expect(runtimeFile.validations).toEqual([]);
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
-                        'sandboxed/sandboxed-exec/source',
+                        'full-projects/exec/source',
                         'auto-counter.jay-html.d',
                     ),
                 );
@@ -221,7 +253,7 @@ describe('generate full project', () => {
         describe('main target', () => {
             it('generates app element file', async () => {
                 const jayFile = await readNamedSourceJayFile(
-                    'sandboxed/sandboxed-exec/source',
+                    'full-projects/exec/source',
                     'app',
                 );
                 let runtimeFile = generateElementFile(
@@ -229,7 +261,7 @@ describe('generate full project', () => {
                         parseJayFile(
                             jayFile,
                             'app.jay-html',
-                            './test/fixtures/sandboxed/sandboxed-exec/source',
+                            './test/fixtures/full-projects/exec/source',
                             {},
                         ),
                     ),
@@ -237,7 +269,7 @@ describe('generate full project', () => {
                 );
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
-                        'sandboxed/sandboxed-exec/generated/main',
+                        'full-projects/exec/generated/main',
                         'app.jay-html',
                     ),
                 );
@@ -245,7 +277,7 @@ describe('generate full project', () => {
 
             it('generates counter element file', async () => {
                 const jayFile = await readNamedSourceJayFile(
-                    'sandboxed/sandboxed-exec/source',
+                    'full-projects/exec/source',
                     'auto-counter',
                 );
                 let runtimeFile = generateElementFile(
@@ -253,7 +285,7 @@ describe('generate full project', () => {
                         parseJayFile(
                             jayFile,
                             'auto-counter.jay-html',
-                            './test/fixtures/sandboxed/sandboxed-exec/source',
+                            './test/fixtures/full-projects/exec/source',
                             {},
                         ),
                     ),
@@ -261,7 +293,7 @@ describe('generate full project', () => {
                 );
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readGeneratedNamedFile(
-                        'sandboxed/sandboxed-exec/generated/main',
+                        'full-projects/exec/generated/main',
                         'auto-counter.jay-html',
                     ),
                 );
@@ -269,23 +301,23 @@ describe('generate full project', () => {
 
             it('generates counter refs file', async () => {
                 let refsFile = generateComponentRefsDefinitionFile(
-                    './test/fixtures/sandboxed/sandboxed-exec/source/auto-counter',
+                    './test/fixtures/full-projects/exec/source/auto-counter',
                     { relativePath },
                 );
                 expect(refsFile.validations).toEqual([]);
                 expect(await prettify(refsFile.val)).toEqual(
                     await prettify(
                         await readTestFile(
-                            './sandboxed/sandboxed-exec/generated/main',
+                            './full-projects/exec/generated/main',
                             'auto-counter-refs.d.ts',
                         ),
                     ),
                 );
             });
 
-            it('generates counter bridge', async () => {
+            it('transform counter bridge', async () => {
                 const sourceFile = await readTsSourceFile(
-                    'sandboxed/sandboxed-exec/source',
+                    'full-projects/exec/source',
                     'auto-counter.ts',
                 );
 
@@ -295,7 +327,7 @@ describe('generate full project', () => {
 
                 const outputCode = await printTsFile(outputFile);
                 expect(await prettify(outputCode)).toEqual(
-                    await readTestFile('sandboxed/sandboxed-exec/generated/main', 'auto-counter.ts'),
+                    await readTestFile('full-projects/exec/generated/main', 'auto-counter.ts'),
                 );
             });
         });

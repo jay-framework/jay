@@ -6,7 +6,7 @@ import {
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
-import { mainRoot as mr, secureChildComp } from 'jay-secure';
+import {FunctionsRepository, mainRoot as mr, secureChildComp} from 'jay-secure';
 import { AutoCounterComponentType } from './auto-counter-refs';
 import { AutoCounter } from './auto-counter?jay-mainSandbox';
 
@@ -22,6 +22,11 @@ export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
 export type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
 
+export const funcRepository: FunctionsRepository = {
+    '1': () => new Promise((resolve) => requestAnimationFrame(resolve)),
+    '2': () => new Promise((resolve) => requestAnimationFrame(resolve)),
+};
+
 export function render(options?: RenderElementOptions): AppElementPreRender {
     const [refManager, [refA]] = ReferencesManager.for(options, [], [], ['a'], []);
     const render = (viewState: AppViewState) =>
@@ -34,6 +39,7 @@ export function render(options?: RenderElementOptions): AppElementPreRender {
                         refA(),
                     ),
                 ]),
+                funcRepository
             ),
         ) as AppElement;
     return [refManager.getPublicAPI() as AppElementRefs, render];
