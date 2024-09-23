@@ -162,4 +162,142 @@ describe('generate full project', () => {
             });
         });
     });
+
+    describe('sandboxed exec$', () => {
+        describe('sandbox target', () => {
+            it('generates sandbox root', async () => {
+                const jayFile = await readNamedSourceJayFile(
+                    'sandboxed/sandboxed-exec/source',
+                    'app',
+                );
+                const parsedFile = checkValidationErrors(
+                    parseJayFile(
+                        jayFile,
+                        'app.jay-html',
+                        './test/fixtures/sandboxed/sandboxed-exec/source',
+                        {},
+                    ),
+                );
+                let sandboxRootFile = generateSandboxRootFile(parsedFile);
+                expect(await prettify(sandboxRootFile)).toEqual(
+                    await readGeneratedNamedFile(
+                        'sandboxed/sandboxed-exec/generated/sandbox',
+                        'sandbox-root',
+                    ),
+                );
+            });
+
+            it('generates counter element', async () => {
+                const runtimeFile = await readFileAndGenerateElementBridgeFile(
+                    'sandboxed/sandboxed-exec/source',
+                    'auto-counter',
+                );
+                expect(await prettify(runtimeFile)).toEqual(
+                    await readGeneratedNamedFile(
+                        'sandboxed/sandboxed-exec/generated/sandbox',
+                        'auto-counter.jay-html',
+                    ),
+                );
+            });
+        });
+
+        describe('source (dev) target', () => {
+            it('generates element definition file', async () => {
+                const parsedFile = await readAndParseJayFile(
+                    'sandboxed/sandboxed-exec/source',
+                    'auto-counter',
+                );
+                let runtimeFile = generateElementDefinitionFile(parsedFile);
+                expect(runtimeFile.validations).toEqual([]);
+                expect(await prettify(runtimeFile.val)).toEqual(
+                    await readGeneratedNamedFile(
+                        'sandboxed/sandboxed-exec/source',
+                        'auto-counter.jay-html.d',
+                    ),
+                );
+            }, 10000);
+        });
+
+        describe('main target', () => {
+            it('generates app element file', async () => {
+                const jayFile = await readNamedSourceJayFile(
+                    'sandboxed/sandboxed-exec/source',
+                    'app',
+                );
+                let runtimeFile = generateElementFile(
+                    checkValidationErrors(
+                        parseJayFile(
+                            jayFile,
+                            'app.jay-html',
+                            './test/fixtures/sandboxed/sandboxed-exec/source',
+                            {},
+                        ),
+                    ),
+                    RuntimeMode.MainSandbox,
+                );
+                expect(await prettify(runtimeFile.val)).toEqual(
+                    await readGeneratedNamedFile(
+                        'sandboxed/sandboxed-exec/generated/main',
+                        'app.jay-html',
+                    ),
+                );
+            });
+
+            it('generates counter element file', async () => {
+                const jayFile = await readNamedSourceJayFile(
+                    'sandboxed/sandboxed-exec/source',
+                    'auto-counter',
+                );
+                let runtimeFile = generateElementFile(
+                    checkValidationErrors(
+                        parseJayFile(
+                            jayFile,
+                            'auto-counter.jay-html',
+                            './test/fixtures/sandboxed/sandboxed-exec/source',
+                            {},
+                        ),
+                    ),
+                    RuntimeMode.MainSandbox,
+                );
+                expect(await prettify(runtimeFile.val)).toEqual(
+                    await readGeneratedNamedFile(
+                        'sandboxed/sandboxed-exec/generated/main',
+                        'auto-counter.jay-html',
+                    ),
+                );
+            });
+
+            it('generates counter refs file', async () => {
+                let refsFile = generateComponentRefsDefinitionFile(
+                    './test/fixtures/sandboxed/sandboxed-exec/source/auto-counter',
+                    { relativePath },
+                );
+                expect(refsFile.validations).toEqual([]);
+                expect(await prettify(refsFile.val)).toEqual(
+                    await prettify(
+                        await readTestFile(
+                            './sandboxed/sandboxed-exec/generated/main',
+                            'auto-counter-refs.d.ts',
+                        ),
+                    ),
+                );
+            });
+
+            it('generates counter bridge', async () => {
+                const sourceFile = await readTsSourceFile(
+                    'sandboxed/sandboxed-exec/source',
+                    'auto-counter.ts',
+                );
+
+                const outputFile = ts.transform(sourceFile, [
+                    transformComponentBridge(RuntimeMode.MainSandbox),
+                ]);
+
+                const outputCode = await printTsFile(outputFile);
+                expect(await prettify(outputCode)).toEqual(
+                    await readTestFile('sandboxed/sandboxed-exec/generated/main', 'auto-counter.ts'),
+                );
+            });
+        });
+    })
 });
