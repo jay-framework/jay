@@ -65,7 +65,17 @@ export function consoleLog() {
     return compileFunctionSplitPatternsBlock([
         createTsSourceFile(`
             @JayPattern(JayTargetEnv.any)
-            function consoleLog(...args: any) {
+            function consoleLog(args: any) {
+                console.log(args);
+            }`),
+    ]).val;
+}
+
+export function consoleLogVarargs() {
+    return compileFunctionSplitPatternsBlock([
+        createTsSourceFile(`
+            @JayPattern(JayTargetEnv.any)
+            function consoleLog(...args: any[]) {
                 console.log(...args);
             }`),
     ]).val;
