@@ -12,7 +12,10 @@ import {
 import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
 import { codeToAst } from './ts-utils/ts-compiler-utils';
 import { SourceFileBindingResolver } from './building-blocks/source-file-binding-resolver';
-import { SourceFileStatementAnalyzer } from './building-blocks/source-file-statement-analyzer';
+import {
+    ScopedSourceFileStatementAnalyzer,
+    SourceFileStatementAnalyzer
+} from './building-blocks/scoped-source-file-statement-analyzer';
 import {
     findComponentConstructorCallsBlock,
     FindComponentConstructorType,

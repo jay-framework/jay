@@ -7,7 +7,7 @@ import {
 } from './transform-event-handler-by-pattern';
 import { transformEventHandlerCallStatement$Block } from './transform-event-handler-call$';
 import { SourceFileBindingResolver } from './source-file-binding-resolver';
-import { SourceFileStatementAnalyzer } from './source-file-statement-analyzer';
+import { SourceFileStatementAnalyzer} from './scoped-source-file-statement-analyzer';
 
 export interface TransformedEventHandler extends FoundEventHandler {
     wasEventHandlerTransformed: boolean;

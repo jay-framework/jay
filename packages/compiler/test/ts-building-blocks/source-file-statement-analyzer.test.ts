@@ -5,8 +5,8 @@ import {
 } from '../../lib/ts-file/building-blocks/compile-function-split-patterns';
 import {
     MatchedPattern,
-    SourceFileStatementAnalyzer,
-} from '../../lib/ts-file/building-blocks/source-file-statement-analyzer';
+    ScopedSourceFileStatementAnalyzer,
+} from '../../lib/ts-file/building-blocks/scoped-source-file-statement-analyzer';
 import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver';
 import { ArrowFunction, Block, CallExpression, ExpressionStatement } from 'typescript';
 import {
@@ -37,7 +37,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 const patterns = readEventTargetValuePattern();
                 const bindingResolver = new SourceFileBindingResolver(sourceFile);
 
-                const analyzedFile = new SourceFileStatementAnalyzer(
+                const analyzedFile = new ScopedSourceFileStatementAnalyzer(
                     sourceFile,
                     bindingResolver,
                     patterns,
@@ -62,7 +62,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 const patterns = readEventTargetValuePattern();
                 const bindingResolver = new SourceFileBindingResolver(sourceFile);
 
-                const analyzedFile = new SourceFileStatementAnalyzer(
+                const analyzedFile = new ScopedSourceFileStatementAnalyzer(
                     sourceFile,
                     bindingResolver,
                     patterns,
@@ -87,7 +87,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 const patterns = readEventTargetValuePattern();
                 const bindingResolver = new SourceFileBindingResolver(sourceFile);
 
-                const analyzedFile = new SourceFileStatementAnalyzer(
+                const analyzedFile = new ScopedSourceFileStatementAnalyzer(
                     sourceFile,
                     bindingResolver,
                     patterns,
@@ -113,7 +113,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 const patterns = readEventTargetValuePattern();
                 const bindingResolver = new SourceFileBindingResolver(sourceFile);
 
-                const analyzedFile = new SourceFileStatementAnalyzer(
+                const analyzedFile = new ScopedSourceFileStatementAnalyzer(
                     sourceFile,
                     bindingResolver,
                     patterns,
@@ -139,7 +139,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 const patterns = readEventTargetValuePattern();
                 const bindingResolver = new SourceFileBindingResolver(sourceFile);
 
-                const analyzedFile = new SourceFileStatementAnalyzer(
+                const analyzedFile = new ScopedSourceFileStatementAnalyzer(
                     sourceFile,
                     bindingResolver,
                     patterns,
@@ -165,7 +165,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 const patterns = setEventTargetValuePattern();
                 const bindingResolver = new SourceFileBindingResolver(sourceFile);
 
-                const analyzedFile = new SourceFileStatementAnalyzer(
+                const analyzedFile = new ScopedSourceFileStatementAnalyzer(
                     sourceFile,
                     bindingResolver,
                     patterns,
@@ -195,7 +195,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 const patterns = eventPreventDefaultPattern();
                 const bindingResolver = new SourceFileBindingResolver(sourceFile);
 
-                const analyzedFile = new SourceFileStatementAnalyzer(
+                const analyzedFile = new ScopedSourceFileStatementAnalyzer(
                     sourceFile,
                     bindingResolver,
                     patterns,
@@ -223,7 +223,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 ];
                 const bindingResolver = new SourceFileBindingResolver(sourceFile);
 
-                const analyzedFile = new SourceFileStatementAnalyzer(
+                const analyzedFile = new ScopedSourceFileStatementAnalyzer(
                     sourceFile,
                     bindingResolver,
                     patterns,
@@ -258,7 +258,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 ];
                 const bindingResolver = new SourceFileBindingResolver(sourceFile);
 
-                const analyzedFile = new SourceFileStatementAnalyzer(
+                const analyzedFile = new ScopedSourceFileStatementAnalyzer(
                     sourceFile,
                     bindingResolver,
                     patterns,
@@ -294,7 +294,7 @@ describe('SourceFileStatementAnalyzer', () => {
             const patterns = consoleLog();
             const bindingResolver = new SourceFileBindingResolver(sourceFile);
 
-            const analyzedFile = new SourceFileStatementAnalyzer(
+            const analyzedFile = new ScopedSourceFileStatementAnalyzer(
                 sourceFile,
                 bindingResolver,
                 patterns,
@@ -303,7 +303,7 @@ describe('SourceFileStatementAnalyzer', () => {
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(
                 new Set([
-                    `exec$(() => console.log('hi')); --> sandbox, patterns matched: []`,
+                    `exec$(() => console.log('hi')); --> sandbox, patterns matched: [0]`,
                 ]),
             );
             expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
@@ -319,7 +319,7 @@ async function printMatchedExpression(matchedExpression: MatchedPattern) {
     return `${matchedExpression.testId}: ${printedExpression} matches ${matchedExpression.patterns.map((_) => _.name).join(', ')}`;
 }
 
-async function printAnalyzedExpressions(analyzer: SourceFileStatementAnalyzer) {
+async function printAnalyzedExpressions(analyzer: ScopedSourceFileStatementAnalyzer) {
     let printed = new Set<string>();
     for await (let expression of analyzer.getMatchedExpressions()) {
         let matchedPattern = analyzer.getExpressionStatus(expression);
@@ -328,7 +328,7 @@ async function printAnalyzedExpressions(analyzer: SourceFileStatementAnalyzer) {
     return printed;
 }
 
-async function printAnalyzedStatements(analyzer: SourceFileStatementAnalyzer) {
+async function printAnalyzedStatements(analyzer: ScopedSourceFileStatementAnalyzer) {
     let printed = new Set<string>();
     for await (let statement of analyzer.getAnalyzedStatements()) {
         let analysisResult = analyzer.getStatementStatus(statement);

@@ -15,7 +15,10 @@ import {
     stringReplacePattern,
 } from './compiler-patterns-for-testing';
 import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver';
-import { SourceFileStatementAnalyzer } from '../../lib/ts-file/building-blocks/source-file-statement-analyzer';
+import {
+    ScopedSourceFileStatementAnalyzer,
+    SourceFileStatementAnalyzer
+} from '../../lib/ts-file/building-blocks/scoped-source-file-statement-analyzer';
 
 describe('split event handler by pattern', () => {
     const READ_EVENT_TARGET_VALUE = readEventTargetValuePattern();
@@ -29,8 +32,7 @@ describe('split event handler by pattern', () => {
                 let analyzer = new SourceFileStatementAnalyzer(
                     sourceFile,
                     bindingResolver,
-                    compiledPatterns,
-                    node
+                    compiledPatterns
                 );
                 if (isFunctionDeclaration(node) || isArrowFunction(node)) {
                     let splitEventHandler = transformEventHandlerByPatternBlock(

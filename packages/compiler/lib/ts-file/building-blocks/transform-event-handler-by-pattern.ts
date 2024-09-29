@@ -17,7 +17,7 @@ import {
 } from './compile-function-split-patterns';
 import { astToCode, codeToAst } from '../ts-utils/ts-compiler-utils';
 import { SourceFileBindingResolver } from './source-file-binding-resolver';
-import { SourceFileStatementAnalyzer } from './source-file-statement-analyzer';
+import {ScopedSourceFileStatementAnalyzer, SourceFileStatementAnalyzer} from './scoped-source-file-statement-analyzer';
 import { ContextualVisitor2, visitWithContext2 } from '../ts-utils/visitor-with-context';
 import { flattenVariable, LiteralVariableRoot } from './name-binding-resolver';
 
@@ -91,7 +91,7 @@ const mkTransformEventHandlerStatementVisitor = (
     factory: ts.NodeFactory,
     context: ts.TransformationContext,
     bindingResolver: SourceFileBindingResolver,
-    analyzer: SourceFileStatementAnalyzer,
+    analyzer: ScopedSourceFileStatementAnalyzer,
 ): {
     sideEffects: TransformEventHandlerStatementVisitorSideEffects;
     visitor: ContextualVisitor2<VisitorContext>;
@@ -200,11 +200,12 @@ export const transformEventHandlerByPatternBlock = (
     factory: ts.NodeFactory,
     eventHandler: ts.FunctionLikeDeclarationBase,
 ): TransformedEventHandlerByPattern => {
+    const scopedAlayzer = analyzer.analyzeForScope(eventHandler);
     const { sideEffects, visitor } = mkTransformEventHandlerStatementVisitor(
         factory,
         context,
         bindingResolver,
-        analyzer,
+        scopedAlayzer,
     );
 
     const transformedEventHandler = visitWithContext2(

@@ -58,6 +58,17 @@ enum PatternMatchType {
 }
 
 export class SourceFileStatementAnalyzer {
+    constructor(
+        private sourceFile: SourceFile,
+        private bindingResolver: SourceFileBindingResolver,
+        private compiledPatterns: CompiledPattern[]) {}
+
+    analyzeForScope(analysisScope: ts.Node) {
+        return new ScopedSourceFileStatementAnalyzer(this.sourceFile, this.bindingResolver, this.compiledPatterns, analysisScope);
+    }
+}
+
+export class ScopedSourceFileStatementAnalyzer {
     private analyzedStatements = new Map<Statement, AnalysisResult>();
     private analyzedExpressions = new Map<Expression, MatchedPattern>();
     private nextId: number = 0;

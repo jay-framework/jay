@@ -13,7 +13,10 @@ import {
     transformEventHandlers,
 } from './building-blocks/transform-event-handlers';
 import { SourceFileBindingResolver } from './building-blocks/source-file-binding-resolver';
-import { SourceFileStatementAnalyzer } from './building-blocks/source-file-statement-analyzer';
+import {
+    ScopedSourceFileStatementAnalyzer,
+    SourceFileStatementAnalyzer
+} from './building-blocks/scoped-source-file-statement-analyzer';
 import {
     findComponentConstructorCallsBlock,
     FindComponentConstructorType,
