@@ -270,6 +270,25 @@ describe('NameBindingResolver', () => {
                 root: mkParameterVariableRoot(functionStatement.parameters[0], 0),
             });
         });
+
+        it('should resolve varargs param', () => {
+            let node = getAstNode('function bla(...a: SomeType[]) {}');
+            let functionStatement = isFunctionLikeDeclarationBase(node) && node;
+
+            let nameResolver = new NameBindingResolver();
+            nameResolver.addFunctionParams(functionStatement);
+
+            let a = nameResolver.variables.get('a');
+            expect(a).toEqual({
+                name: 'a',
+                root: mkParameterVariableRoot(functionStatement.parameters[0], 0),
+                definingStatement: node,
+            });
+            expect(flattenVariable(a)).toEqual({
+                path: [],
+                root: mkParameterVariableRoot(functionStatement.parameters[0], 0),
+            });
+        })
     });
 
     describe('resolve variable assignment', () => {
