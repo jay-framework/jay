@@ -6,7 +6,7 @@ import {
 import { readFixtureFile } from '../test-utils/ts-compiler-test-utils';
 
 describe('parseImportLinks', () => {
-    const fixturePath = 'sandboxed/sandboxed-counter/generated/main/app.jay-html.ts';
+    const fixturePath = 'full-projects/counter/generated/main/app.jay-html.ts';
 
     it('returns jay import links', async () => {
         const { filePath, code } = await readFixtureFile(fixturePath);

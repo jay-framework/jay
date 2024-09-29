@@ -40,6 +40,7 @@ export enum VariableRootType {
     Literal,
     ImportModule,
     FunctionCall,
+    Global,
     Other,
 }
 
@@ -104,10 +105,20 @@ export function mkFunctionCallVariableRoot(node: CallExpression): FunctionCallVa
     return { kind: VariableRootType.FunctionCall, node };
 }
 
+export interface GlobalVariableRoot extends VariableRoot {
+    kind: VariableRootType.Global;
+    name: string,
+}
+
+export function mkGlobalVariableRoot(name: string): GlobalVariableRoot {
+    return { kind: VariableRootType.Global, name };
+}
+
 export interface OtherVariableRoot extends VariableRoot {
     kind: VariableRootType.Other;
     node: ts.Node;
 }
+
 export function mkOtherVariableRoot(node: ts.Node): OtherVariableRoot {
     return { kind: VariableRootType.Other, node };
 }
@@ -127,6 +138,9 @@ export function isLiteralVariableRoot(vr: VariableRoot): vr is LiteralVariableRo
 }
 export function isFunctionCallVariableRoot(vr: VariableRoot): vr is FunctionCallVariableRoot {
     return vr.kind === VariableRootType.FunctionCall;
+}
+export function isGlobalVariableRoot(vr: VariableRoot): vr is GlobalVariableRoot {
+    return vr.kind === VariableRootType.Global;
 }
 export function isOtherVariableRoot(vr: VariableRoot): vr is OtherVariableRoot {
     return vr.kind === VariableRootType.Other;
@@ -390,6 +404,8 @@ export class NameBindingResolver {
             nameResolver.parentNameResolver
         )
             nameResolver = nameResolver.parentNameResolver;
+        if (resolved === UNKNOWN_VARIABLE)
+            return {root: mkGlobalVariableRoot(variableName)};
         return resolved;
     }
 

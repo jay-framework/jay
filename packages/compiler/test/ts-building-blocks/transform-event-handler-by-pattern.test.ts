@@ -25,12 +25,13 @@ describe('split event handler by pattern', () => {
         let splitEventHandlers: TransformedEventHandlerByPattern[] = [];
         let transformer = mkTransformer(({ context, sourceFile, factory }) => {
             let bindingResolver = new SourceFileBindingResolver(sourceFile);
-            let analyzer = new SourceFileStatementAnalyzer(
-                sourceFile,
-                bindingResolver,
-                compiledPatterns,
-            );
             const visitor = (node) => {
+                let analyzer = new SourceFileStatementAnalyzer(
+                    sourceFile,
+                    bindingResolver,
+                    compiledPatterns,
+                    node
+                );
                 if (isFunctionDeclaration(node) || isArrowFunction(node)) {
                     let splitEventHandler = transformEventHandlerByPatternBlock(
                         context,

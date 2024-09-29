@@ -23,6 +23,7 @@ import ts, {
 } from 'typescript';
 import { SourceFileBindingResolver } from './source-file-binding-resolver';
 import {
+    areCompatiblePatternTypes,
     CompiledPattern,
     CompilePatternType,
     CONST_READ_NAME,
@@ -32,7 +33,7 @@ import {
 } from './compile-function-split-patterns';
 import {
     flattenVariable,
-    isFunctionCallVariableRoot,
+    isFunctionCallVariableRoot, isGlobalVariableRoot,
     isLiteralVariableRoot,
     isParamVariableRoot,
     LetOrConst,
@@ -65,8 +66,9 @@ export class SourceFileStatementAnalyzer {
         private sourceFile: SourceFile,
         private bindingResolver: SourceFileBindingResolver,
         private compiledPatterns: CompiledPattern[],
+        analysisScope: ts.Node
     ) {
-        this.analyze();
+        this.analyze(analysisScope);
     }
 
     private addPatternToStatement(statement: Statement, matchedPattern: MatchedPattern) {
@@ -100,7 +102,7 @@ export class SourceFileStatementAnalyzer {
         } else this.analyzedStatements.get(statement).targetEnv = JayTargetEnv.sandbox;
     }
 
-    private analyze() {
+    private analyze(analysisScope: ts.Node) {
         enum RoleInParent {
             none,
             read,
@@ -123,7 +125,7 @@ export class SourceFileStatementAnalyzer {
                 roleInParent === RoleInParent.assign
                     ? CompilePatternType.ASSIGNMENT_LEFT_SIDE
                     : CompilePatternType.RETURN;
-            let { matchedPatterns, matchType } = this.matchPattern(expression, expectedPatternType);
+            let { matchedPatterns, matchType } = this.matchPattern(expression, expectedPatternType, analysisScope);
 
             if (matchType === PatternMatchType.FULL) {
                 let matchedPattern = {
@@ -163,6 +165,7 @@ export class SourceFileStatementAnalyzer {
                 let { matchedPatterns, matchType } = this.matchPattern(
                     expression,
                     expectedPatternType,
+                    analysisScope
                 );
 
                 if (matchType === PatternMatchType.FULL) {
@@ -272,22 +275,22 @@ export class SourceFileStatementAnalyzer {
     private matchPattern(
         patternTarget: Identifier | PropertyAccessExpression,
         expectedPatternType: CompilePatternType,
+        analysisScope: ts.Node
     ): { matchedPatterns: CompiledPattern[]; matchType: PatternMatchType } {
         let variable = this.bindingResolver.explain(patternTarget);
         let resolvedVariable = flattenVariable(variable);
         let matchedPatterns = [];
 
         let currentVariableType: string;
-        if (
-            resolvedVariable.root &&
-            (isParamVariableRoot(resolvedVariable.root) ||
-                isFunctionCallVariableRoot(resolvedVariable.root))
-        ) {
+        if (resolvedVariable.root) {
             if (isParamVariableRoot(resolvedVariable.root))
                 currentVariableType = this.bindingResolver.explainType(
                     resolvedVariable.root.param.type,
                 );
-            else {
+            else if (isGlobalVariableRoot(resolvedVariable.root)) {
+                currentVariableType = resolvedVariable.root.name;
+            }
+            else if (isFunctionCallVariableRoot(resolvedVariable.root)) {
                 let matchedPattern = this.getExpressionStatus(
                     resolvedVariable.root.node.expression,
                 );
@@ -323,25 +326,26 @@ export class SourceFileStatementAnalyzer {
 
         if (currentVariableType) {
             let currentPosition = 0;
-            // variable assigned return value of a pattern
-            if (resolvedVariable.path.length === 0) {
-                return {
-                    matchedPatterns: [
-                        {
-                            patternType: CompilePatternType.KNOWN_VARIABLE_READ,
-                            returnType: currentVariableType,
-                            callArgumentTypes: [],
-                            targetEnvForStatement: JayTargetEnv.any,
-                            name: KNOWN_VARIABLE_READ_NAME,
-                            leftSidePath: [],
-                            leftSideType: currentVariableType,
-                        },
-                    ],
-                    matchType: PatternMatchType.FULL,
-                };
-            }
 
-            while (currentPosition < resolvedVariable.path.length) {
+            while (currentPosition <= resolvedVariable.path.length) {
+                if (resolvedVariable.path.length === 0) {
+                    if (variable.definingStatement && isChildOf(variable.definingStatement, analysisScope)) {
+                        return {
+                            matchedPatterns: [
+                                {
+                                    patternType: CompilePatternType.KNOWN_VARIABLE_READ,
+                                    returnType: currentVariableType,
+                                    callArgumentTypes: [],
+                                    targetEnvForStatement: JayTargetEnv.any,
+                                    name: KNOWN_VARIABLE_READ_NAME,
+                                    leftSidePath: [],
+                                    leftSideType: currentVariableType,
+                                },
+                            ],
+                            matchType: PatternMatchType.FULL,
+                        };
+                    }
+                }
                 let currentMatch = this.compiledPatterns.find((pattern) => {
                     let leftTypeMatch = currentVariableType === pattern.leftSideType;
                     let pathMatch =
@@ -354,8 +358,8 @@ export class SourceFileStatementAnalyzer {
                     let expectedTypeMatch =
                         currentPosition + pattern.leftSidePath.length ===
                         resolvedVariable.path.length
-                            ? pattern.patternType === expectedPatternType
-                            : pattern.patternType === CompilePatternType.RETURN;
+                            ? areCompatiblePatternTypes(pattern.patternType, expectedPatternType)
+                            : areCompatiblePatternTypes(pattern.patternType,CompilePatternType.RETURN);
                     return leftTypeMatch && pathMatch && expectedTypeMatch;
                 });
                 if (currentMatch) {
@@ -398,4 +402,15 @@ export class SourceFileStatementAnalyzer {
     getAnalyzedStatements() {
         return this.analyzedStatements.keys();
     }
+}
+
+function isChildOf(node: ts.Node, parent: ts.Node) {
+    if (node === parent)
+        return false;
+    if (!node.parent)
+        return false;
+    for (const sibling of node.parent.getChildren())
+        if (sibling === node)
+            return true;
+    return isChildOf(node.parent, parent);
 }

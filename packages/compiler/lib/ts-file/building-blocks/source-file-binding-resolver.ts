@@ -115,7 +115,8 @@ export class SourceFileBindingResolver {
                         ) {
                             return `${flattened.root.module.text}.${flattened.path.join('.')}`;
                         }
-                    } else if (builtInType(typeName.text)) return typeName.text;
+                    }
+                    if (builtInType(typeName.text)) return typeName.text;
                 }
             } else if (type.kind === SyntaxKind.StringKeyword) return 'string';
         }

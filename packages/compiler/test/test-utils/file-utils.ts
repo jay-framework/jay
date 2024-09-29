@@ -6,9 +6,9 @@ import { prettify } from '../../lib';
 const { readFile } = promises;
 
 export async function readTestFile(folder, filename) {
-    return await prettify(removeComments(
+    return removeComments(
         (await readFile(path.resolve(__dirname, `../fixtures/${folder}/${filename}`))).toString(),
-    ));
+    );
 }
 
 export async function readSourceJayFile(folder) {

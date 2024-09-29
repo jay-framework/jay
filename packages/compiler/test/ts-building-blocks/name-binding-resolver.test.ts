@@ -23,7 +23,7 @@ import {
     VariableRootType,
     mkFunctionCallVariableRoot,
     mkLiteralVariableRoot,
-    LetOrConst,
+    LetOrConst, mkGlobalVariableRoot, mkOtherVariableRoot,
 } from '../../lib/ts-file/building-blocks/name-binding-resolver';
 
 function toSourceFile(code: string) {
@@ -384,16 +384,20 @@ describe('NameBindingResolver', () => {
         });
 
         describe('resolve let z = a.b.c().d.e', () => {
-            let { a, nameResolver, node } = resolveNamesForVariableStatement('let z = a.b.c().d.e');
-            let functionCallAsRoot = {
-                kind: VariableRootType.FunctionCall,
-                node: (
-                    (node.declarationList.declarations[0].initializer as PropertyAccessExpression)
-                        .expression as PropertyAccessExpression
-                ).expression as CallExpression,
-            };
+            function doResolve() {
+                const {a, nameResolver, node} = resolveNamesForVariableStatement('let z = a.b.c().d.e');
+                const functionCallAsRoot = {
+                    kind: VariableRootType.FunctionCall,
+                    node: (
+                        (node.declarationList.declarations[0].initializer as PropertyAccessExpression)
+                            .expression as PropertyAccessExpression
+                    ).expression as CallExpression,
+                };
+                return {a, nameResolver, node, functionCallAsRoot}
+            }
 
             it('should resolve the z variable', () => {
+                const {nameResolver, functionCallAsRoot, node} = doResolve();
                 expect(nameResolver.variables.has('z'));
                 let z = nameResolver.variables.get('z');
                 expect(z).toEqual({
@@ -416,6 +420,7 @@ describe('NameBindingResolver', () => {
                 });
             });
             it('should resolve the function reference expression', () => {
+                const {nameResolver, functionCallAsRoot, node, a} = doResolve();
                 let functionExpression = functionCallAsRoot.node.expression;
                 let resolvedFunction = nameResolver.resolvePropertyAccessChain(functionExpression);
                 expect(resolvedFunction).toEqual({
@@ -821,6 +826,69 @@ describe('NameBindingResolver', () => {
             });
         });
     });
+
+    describe('support resolve from globals', () => {
+        function resolveNamesForVariableStatement(code: string) {
+            let nameResolver = new NameBindingResolver();
+            let variableStatement = getAstNode(code) as VariableStatement ;
+            nameResolver.addVariableStatement(variableStatement);
+            return { nameResolver, variableStatement };
+        }
+
+        it('resolve let log = console.log', () => {
+            let { nameResolver, variableStatement } =
+                resolveNamesForVariableStatement("let log = console.log");
+
+            expect(nameResolver.variables.has('log'));
+            let log = nameResolver.variables.get('log');
+            expect(log).toEqual({
+                name: 'log',
+                assignedFrom: {
+                    accessedFrom: {
+                        root: mkGlobalVariableRoot('console')
+                    },
+                    accessedByProperty: 'log',
+                },
+                letOrConst: LetOrConst.LET,
+                definingStatement: variableStatement,
+            });
+            expect(flattenVariable(log)).toEqual({
+                path: ['log'],
+                root: mkGlobalVariableRoot('console'),
+            });
+
+        })
+
+        // it('should not resolve random variable as global, only from a list of known globals', () => {
+        //     let { nameResolver, variableStatement } =
+        //         resolveNamesForVariableStatement("let foo = bla.bla");
+        //
+        //     expect(nameResolver.variables.has('log'));
+        //     let log = nameResolver.variables.get('log');
+        //     const variableRoot = mkOtherVariableRoot((variableStatement
+        //         .declarationList[0]
+        //         .declarations[0]
+        //         .initializer as PropertyAccessExpression)
+        //         .expression);
+        //     expect(log).toEqual({
+        //         name: 'foo',
+        //         assignedFrom: {
+        //             accessedFrom: {
+        //                 root: variableRoot
+        //             },
+        //             accessedByProperty: 'bla',
+        //         },
+        //         letOrConst: LetOrConst.LET,
+        //         definingStatement: variableStatement,
+        //     });
+        //     expect(flattenVariable(log)).toEqual({
+        //         path: ['bla'],
+        //         root: variableRoot,
+        //     });
+        //
+        // })
+
+    })
 
     describe('support resolve identifier from parent scope', () => {
         function resolveNamesForVariableStatement(code: string) {

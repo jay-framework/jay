@@ -7,11 +7,11 @@ import ts, {
     isFunctionDeclaration,
     isIdentifier,
     isPropertyAccessExpression,
-    isReturnStatement,
+    isReturnStatement, isSpreadElement,
     SourceFile,
     SyntaxKind,
 } from 'typescript';
-import { flattenVariable } from './name-binding-resolver';
+import {flattenVariable, isGlobalVariableRoot, isParamVariableRoot} from './name-binding-resolver';
 import { mkTransformer } from '../ts-utils/mk-transformer';
 import { JayValidations, WithValidations } from '../../core/with-validations';
 import { astToCode } from '../ts-utils/ts-compiler-utils';
@@ -24,6 +24,14 @@ export enum CompilePatternType {
     ASSIGNMENT_LEFT_SIDE,
     KNOWN_VARIABLE_READ,
     CONST_READ,
+}
+
+export function areCompatiblePatternTypes(type1: CompilePatternType, type2: CompilePatternType) {
+    if (type1 === type2)
+        return true;
+    if (type1 === CompilePatternType.CALL && type2 === CompilePatternType.CHAINABLE_CALL) return true;
+    return type1 === CompilePatternType.CHAINABLE_CALL && type2 === CompilePatternType.CALL;
+
 }
 
 export type CompilePatternVarType = string;
@@ -76,6 +84,27 @@ export interface CompiledPattern {
     name: string;
 }
 
+function extractArgumentType(argument: ts.Expression, sourceFileBinding: SourceFileBindingResolver, node: ts.FunctionDeclaration) {
+    if (isIdentifier(argument) || isPropertyAccessExpression(argument)) {
+        const explainedArgument = flattenVariable(sourceFileBinding.explain(argument));
+        if (isParamVariableRoot(explainedArgument.root)) {
+            const paramIndex = explainedArgument.root.paramIndex
+            return sourceFileBinding.explainType(node.parameters[paramIndex].type)
+        }
+    }
+    if (isSpreadElement(argument)) {
+        return `...${extractArgumentType(argument.expression, sourceFileBinding, node)}`;
+    }
+    return undefined;
+}
+
+function extractArgumentTypes(callExpression: ts.CallExpression, sourceFileBinding: SourceFileBindingResolver, node: ts.FunctionDeclaration) {
+    const callArgs = callExpression.arguments;
+    return callArgs.map(argument => {
+        return extractArgumentType(argument, sourceFileBinding, node);
+    })
+}
+
 export function compileFunctionSplitPatternsBlock(
     patternFiles: SourceFile[],
 ): WithValidations<CompiledPattern[]> {
@@ -109,6 +138,7 @@ export function compileFunctionSplitPatternsBlock(
                     let patternTargetEnv = declaredTargetEnv;
                     let patternType: CompilePatternType;
                     let leftHandSide: Expression;
+                    let callArgumentTypes: string[] = [];
                     if (
                         isReturnStatement(statement) &&
                         isPropertyAccessExpression(statement.expression)
@@ -124,6 +154,7 @@ export function compileFunctionSplitPatternsBlock(
                     ) {
                         patternType = CompilePatternType.CHAINABLE_CALL;
                         leftHandSide = statement.expression.expression;
+                        callArgumentTypes = extractArgumentTypes(statement.expression, sourceFileBinding, node)
                     } else if (
                         isExpressionStatement(statement) &&
                         isCallExpression(statement.expression) &&
@@ -131,6 +162,7 @@ export function compileFunctionSplitPatternsBlock(
                     ) {
                         patternType = CompilePatternType.CALL;
                         leftHandSide = statement.expression.expression;
+                        callArgumentTypes = extractArgumentTypes(statement.expression, sourceFileBinding, node)
                     } else if (
                         isExpressionStatement(statement) &&
                         isBinaryExpression(statement.expression) &&
@@ -140,25 +172,32 @@ export function compileFunctionSplitPatternsBlock(
                     ) {
                         patternType = CompilePatternType.ASSIGNMENT_LEFT_SIDE;
                         leftHandSide = statement.expression.left;
+                        callArgumentTypes = [extractArgumentType(statement.expression.right, sourceFileBinding, node)]
                     }
 
-                    if (patternType !== undefined) {
-                        let resolvedLeftHandSide = flattenVariable(
-                            sourceFileBinding
-                                .findBindingResolver(statement)
-                                .resolvePropertyAccessChain(leftHandSide),
-                        );
+                    let resolvedLeftHandSide = flattenVariable(
+                        sourceFileBinding
+                            .findBindingResolver(statement)
+                            .resolvePropertyAccessChain(leftHandSide),
+                    );
 
+                    let leftSideType: string = undefined;
+                    if (isParamVariableRoot(resolvedLeftHandSide.root)) {
+                        const paramIndex = resolvedLeftHandSide.root.paramIndex;
                         // validate resolvedLeftHandSide is the first parameter
+                        leftSideType = sourceFileBinding.explainType(node.parameters[paramIndex].type)
+                    }
+                    else if (isGlobalVariableRoot(resolvedLeftHandSide.root))
+                        leftSideType = resolvedLeftHandSide.root.name;
+
+                    if (patternType !== undefined && leftSideType !== undefined) {
 
                         compiledPatterns.push({
                             patternType: patternType,
                             leftSidePath: resolvedLeftHandSide.path,
-                            leftSideType: sourceFileBinding.explainType(node.parameters[0].type),
+                            leftSideType: leftSideType,
                             returnType: sourceFileBinding.explainType(node.type),
-                            callArgumentTypes: node.parameters
-                                .slice(1)
-                                .map((param) => sourceFileBinding.explainType(param.type)),
+                            callArgumentTypes: callArgumentTypes,
                             targetEnvForStatement: patternTargetEnv,
                             name,
                         });
