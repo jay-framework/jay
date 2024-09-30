@@ -5,7 +5,7 @@ import {
     eventPreventDefaultPattern,
     readEventKeyCodePattern,
     readEventTargetValuePattern,
-} from './ts-building-blocks/compiler-patterns-for-testing';
+} from './ts-basic-analyzers/compiler-patterns-for-testing';
 
 describe('transform component bridge', () => {
     describe('generate component bridge', () => {

@@ -4,7 +4,7 @@ import { prettify } from '../lib';
 import {
     eventPreventDefaultPattern,
     readEventTargetValuePattern,
-} from './ts-building-blocks/compiler-patterns-for-testing';
+} from './ts-basic-analyzers/compiler-patterns-for-testing';
 
 describe('transform event handlers with secure code split', () => {
     describe('remove main scope imports', () => {

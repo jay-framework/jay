@@ -1,6 +1,6 @@
 import { Expression, Identifier, isIdentifier } from 'typescript';
 import { createTsSourceFile } from '../test-utils/ts-source-utils';
-import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver';
+import { SourceFileBindingResolver } from '../../lib/ts-file/basic-analyzers/source-file-binding-resolver';
 import {
     findComponentConstructorCallsBlock,
     FindComponentConstructorType,

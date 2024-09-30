@@ -1,14 +1,12 @@
 import { createTsSourceFile } from '../test-utils/ts-source-utils';
 import {
-    JayTargetEnv,
     jayTargetEnvName,
-} from '../../lib/ts-file/building-blocks/compile-function-split-patterns';
+} from '../../lib/ts-file/basic-analyzers/compile-function-split-patterns';
 import {
     MatchedPattern,
     ScopedSourceFileStatementAnalyzer,
-} from '../../lib/ts-file/building-blocks/scoped-source-file-statement-analyzer';
-import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver';
-import { ArrowFunction, Block, CallExpression, ExpressionStatement } from 'typescript';
+} from '../../lib/ts-file/basic-analyzers/scoped-source-file-statement-analyzer';
+import { SourceFileBindingResolver } from '../../lib/ts-file/basic-analyzers/source-file-binding-resolver';
 import {
     astToFormattedCode,
     printStatementWithoutChildStatements,

@@ -14,12 +14,12 @@ import {
     CompilePatternType,
     intersectJayTargetEnv,
     JayTargetEnv,
-} from './compile-function-split-patterns';
+} from '../basic-analyzers/compile-function-split-patterns';
 import { astToCode, codeToAst } from '../ts-utils/ts-compiler-utils';
-import { SourceFileBindingResolver } from './source-file-binding-resolver';
-import {ScopedSourceFileStatementAnalyzer, SourceFileStatementAnalyzer} from './scoped-source-file-statement-analyzer';
+import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
+import {ScopedSourceFileStatementAnalyzer, SourceFileStatementAnalyzer} from '../basic-analyzers/scoped-source-file-statement-analyzer';
 import { ContextualVisitor2, visitWithContext2 } from '../ts-utils/visitor-with-context';
-import { flattenVariable, LiteralVariableRoot } from './name-binding-resolver';
+import { flattenVariable, LiteralVariableRoot } from '../basic-analyzers/name-binding-resolver';
 
 interface MatchedPattern {
     pattern: CompiledPattern;

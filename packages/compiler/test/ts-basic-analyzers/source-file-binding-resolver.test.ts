@@ -19,8 +19,8 @@ import {
     mkOtherVariableRoot,
     mkParameterVariableRoot,
     UNKNOWN_VARIABLE,
-} from '../../lib/ts-file/building-blocks/name-binding-resolver';
-import { SourceFileBindingResolver } from '../../lib/ts-file/building-blocks/source-file-binding-resolver';
+} from '../../lib/ts-file/basic-analyzers/name-binding-resolver';
+import { SourceFileBindingResolver } from '../../lib/ts-file/basic-analyzers/source-file-binding-resolver';
 
 describe('SourceFileBindingResolver', () => {
     describe('resolve variables', () => {

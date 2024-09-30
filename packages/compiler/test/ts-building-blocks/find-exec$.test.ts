@@ -1,6 +1,6 @@
 import {createTsSourceFile} from "../test-utils/ts-source-utils";
 import {findExec$} from "../../lib/ts-file/building-blocks/find-exec$";
-import {SourceFileBindingResolver} from "../../lib/ts-file/building-blocks/source-file-binding-resolver";
+import {SourceFileBindingResolver} from "../../lib/ts-file/basic-analyzers/source-file-binding-resolver";
 
 describe('find exec$', (): void => {
 

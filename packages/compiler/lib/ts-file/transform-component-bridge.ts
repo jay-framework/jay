@@ -7,16 +7,15 @@ import { getImportName } from './ts-utils/extract-imports';
 import { MAKE_JAY_COMPONENT } from '../core/constants';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
-import { CompiledPattern } from './building-blocks/compile-function-split-patterns';
+import { CompiledPattern } from './basic-analyzers/compile-function-split-patterns';
 import {
     TransformedEventHandlers,
     transformEventHandlers,
 } from './building-blocks/transform-event-handlers';
-import { SourceFileBindingResolver } from './building-blocks/source-file-binding-resolver';
+import { SourceFileBindingResolver } from './basic-analyzers/source-file-binding-resolver';
 import {
-    ScopedSourceFileStatementAnalyzer,
     SourceFileStatementAnalyzer
-} from './building-blocks/scoped-source-file-statement-analyzer';
+} from './basic-analyzers/scoped-source-file-statement-analyzer';
 import {
     findComponentConstructorCallsBlock,
     FindComponentConstructorType,

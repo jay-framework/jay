@@ -1,6 +1,6 @@
 import ts from 'typescript';
-import {SourceFileBindingResolver} from "./source-file-binding-resolver";
-import {flattenVariable, isImportModuleVariableRoot} from "./name-binding-resolver";
+import {SourceFileBindingResolver} from "../basic-analyzers/source-file-binding-resolver";
+import {flattenVariable, isImportModuleVariableRoot} from "../basic-analyzers/name-binding-resolver";
 
 export function findExec$(bindingResolver: SourceFileBindingResolver, sourceFile: ts.SourceFile) {
     const foundExec$ = [];

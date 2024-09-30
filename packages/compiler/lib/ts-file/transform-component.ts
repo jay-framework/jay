@@ -2,7 +2,7 @@ import ts, { isImportDeclaration } from 'typescript';
 import { mkTransformer, SourceFileTransformerContext } from './ts-utils/mk-transformer';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
-import { CompiledPattern } from './building-blocks/compile-function-split-patterns';
+import { CompiledPattern } from './basic-analyzers/compile-function-split-patterns';
 import { transformImportModeFileExtension } from './building-blocks/transform-import-mode-file-extension';
 import { RuntimeMode } from '../core/runtime-mode';
 import {
@@ -11,11 +11,10 @@ import {
 } from './building-blocks/transform-event-handlers';
 import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
 import { codeToAst } from './ts-utils/ts-compiler-utils';
-import { SourceFileBindingResolver } from './building-blocks/source-file-binding-resolver';
+import { SourceFileBindingResolver } from './basic-analyzers/source-file-binding-resolver';
 import {
-    ScopedSourceFileStatementAnalyzer,
     SourceFileStatementAnalyzer
-} from './building-blocks/scoped-source-file-statement-analyzer';
+} from './basic-analyzers/scoped-source-file-statement-analyzer';
 import {
     findComponentConstructorCallsBlock,
     FindComponentConstructorType,

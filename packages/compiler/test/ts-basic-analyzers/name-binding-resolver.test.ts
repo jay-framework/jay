@@ -24,7 +24,7 @@ import {
     mkFunctionCallVariableRoot,
     mkLiteralVariableRoot,
     LetOrConst, mkGlobalVariableRoot, mkOtherVariableRoot,
-} from '../../lib/ts-file/building-blocks/name-binding-resolver';
+} from '../../lib/ts-file/basic-analyzers/name-binding-resolver';
 
 function toSourceFile(code: string) {
     return ts.createSourceFile('dummy.ts', code, ts.ScriptTarget.Latest, true);

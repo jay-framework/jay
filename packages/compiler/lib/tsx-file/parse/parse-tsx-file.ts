@@ -13,7 +13,7 @@ import {
     findComponentConstructorCallsBlock,
     FindComponentConstructorType,
 } from '../../ts-file/building-blocks/find-component-constructor-calls';
-import { SourceFileBindingResolver } from '../../ts-file/building-blocks/source-file-binding-resolver';
+import { SourceFileBindingResolver } from '../../ts-file/basic-analyzers/source-file-binding-resolver';
 
 export function parseTsxFile(filename: string, source: string): WithValidations<JayTsxFile> {
     const sourceFile = createTsSourceFileFromSource(filename, source, ts.ScriptKind.TSX);
