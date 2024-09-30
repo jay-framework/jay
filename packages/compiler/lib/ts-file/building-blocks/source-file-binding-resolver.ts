@@ -1,10 +1,10 @@
 import ts, {
-    Identifier,
+    Identifier, isArrayTypeNode,
     isBlock,
     isForInStatement,
     isForOfStatement,
     isForStatement,
-    isFunctionDeclaration,
+    isFunctionDeclaration, isFunctionTypeNode,
     isIdentifier,
     isImportDeclaration,
     isStringLiteral,
@@ -25,7 +25,7 @@ import {
 } from './name-binding-resolver';
 import { isFunctionLikeDeclarationBase } from '../ts-utils/ts-compiler-utils';
 
-const BUILT_IN_TYPES = ['RegExp'];
+const BUILT_IN_TYPES = ['RegExp', 'Date'];
 function builtInType(text: string) {
     return BUILT_IN_TYPES.findIndex((_) => _ === text) > -1;
 }
@@ -118,8 +118,20 @@ export class SourceFileBindingResolver {
                     }
                     if (builtInType(typeName.text)) return typeName.text;
                 }
-            } else if (type.kind === SyntaxKind.StringKeyword) return 'string';
+            } else if (type.kind === SyntaxKind.StringKeyword) return 'string'
+            else if (type.kind === SyntaxKind.NumberKeyword) return 'number'
+            else if (type.kind === SyntaxKind.BooleanKeyword) return 'boolean'
+            else if (type.kind === SyntaxKind.VoidKeyword) return 'void'
+            else if (isArrayTypeNode(type)) return `Array<${this.explainType(type.elementType)}>`
+            else if (isFunctionTypeNode(type)) {
+                const paramTypes = type.parameters
+                    .map(param => this.explainType(param.type))
+                    .join(', ')
+                const ret = this.explainType(type.type)
+                return `(${paramTypes}) => ${ret}`;
+            }
         }
+
 
         return undefined;
     }

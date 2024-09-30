@@ -771,4 +771,62 @@ describe('SourceFileBindingResolver', () => {
             ).toEqual(rootBindingResolver.getVariable('x'));
         });
     });
+
+    describe('explain type', () => {
+        it('should resolve basic param types', () => {
+            const sourceFile = createTsSourceFile(`
+                function bla(a: string, b: number, c: boolean, d: Date, e: RegExp) {}
+                `);
+            const bindingResolver = new SourceFileBindingResolver(sourceFile);
+            const func = sourceFile.statements[0] as FunctionDeclaration
+
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual('string')
+            expect(bindingResolver.explainType(func.parameters[1].type)).toEqual('number')
+            expect(bindingResolver.explainType(func.parameters[2].type)).toEqual('boolean')
+            expect(bindingResolver.explainType(func.parameters[3].type)).toEqual('Date')
+            expect(bindingResolver.explainType(func.parameters[4].type)).toEqual('RegExp')
+        })
+
+        it('should resolve imported types', () => {
+            const sourceFile = createTsSourceFile(`
+                import {A} from 'module-a'
+                function bla(a: A) {}
+                `);
+            const bindingResolver = new SourceFileBindingResolver(sourceFile);
+            const func = sourceFile.statements[1] as FunctionDeclaration
+
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual('module-a.A')
+        })
+
+        it('should resolve varargs type', () => {
+            const sourceFile = createTsSourceFile(`
+                function bla(...a: string[]) {}
+                `);
+            const bindingResolver = new SourceFileBindingResolver(sourceFile);
+            const func = sourceFile.statements[0] as FunctionDeclaration
+
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual('Array<string>')
+        })
+
+        it('should resolve function type', () => {
+            const sourceFile = createTsSourceFile(`
+                function bla(a: () => void) {}
+                `);
+            const bindingResolver = new SourceFileBindingResolver(sourceFile);
+            const func = sourceFile.statements[0] as FunctionDeclaration
+
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual('() => void')
+        })
+
+        it('should resolve function with parameters and return type', () => {
+            const sourceFile = createTsSourceFile(`
+                import {A, B} from 'module-a'
+                function bla(a: (a:A) => B) {}
+                `);
+            const bindingResolver = new SourceFileBindingResolver(sourceFile);
+            const func = sourceFile.statements[1] as FunctionDeclaration
+
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual('(module-a.A) => module-a.B')
+        })
+    })
 });
