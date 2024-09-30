@@ -80,3 +80,25 @@ export function consoleLogVarargs() {
             }`),
     ]).val;
 }
+
+export function requestAnimationFramePattern() {
+    return compileFunctionSplitPatternsBlock([
+        createTsSourceFile(`
+            function requestAnimationFramePattern(callback: () => void) {
+                requestAnimationFrame(callback);
+            }`),
+    ]).val;
+}
+
+export function promise() {
+    return compileFunctionSplitPatternsBlock([
+        createTsSourceFile(`
+            function promise2(resolve: (arg: any) => void, reject: () => void) {
+                return new Promise(resolve, reject);
+            }
+            
+            function promise1(resolve: (arg: any) => void) {
+                return new Promise(resolve);
+            }`),
+    ]).val;
+}

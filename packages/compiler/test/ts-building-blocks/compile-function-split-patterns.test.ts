@@ -181,8 +181,7 @@ describe('compile secure function split patterns', () => {
         });
     });
 
-    /** requires expanding SourceFileBinding to support spread operator **/
-    it.skip('should support varargs param', () => {
+    it('should support varargs param', () => {
         const patternFile = createTsSourceFile(`
             @JayPattern(JayTargetEnv.any)
             function consoleLog2(...message: string[]) {
@@ -205,4 +204,50 @@ describe('compile secure function split patterns', () => {
             name: 'consoleLog2',
         });
     });
+
+    it('should support function parameters', () => {
+        const patternFile = createTsSourceFile(`
+            function requestAnimationFramePattern(callback: () => void) {
+                requestAnimationFrame(callback);
+            }`);
+
+        const compiled = compileFunctionSplitPatternsBlock([patternFile]);
+        expect(compiled.validations).toEqual([]);
+        expect(compiled.val.length).toBe(1);
+
+        let compiledPattern = compiled.val[0];
+
+        expect(compiledPattern).toEqual({
+            patternType: CompilePatternType.CALL,
+            leftSidePath: [],
+            leftSideType: 'requestAnimationFrame',
+            returnType: undefined,
+            callArgumentTypes: ['() => void'],
+            targetEnvForStatement: JayTargetEnv.main,
+            name: 'requestAnimationFramePattern',
+        });
+    });
+
+    it('should support new Promise()', () => {
+        const patternFile = createTsSourceFile(`
+            function promise(resolve: (arg: any) => void, reject: () => void) {
+                return new Promise(resolve, reject);
+            }`);
+
+        const compiled = compileFunctionSplitPatternsBlock([patternFile]);
+        expect(compiled.validations).toEqual([]);
+        expect(compiled.val.length).toBe(1);
+
+        let compiledPattern = compiled.val[0];
+
+        expect(compiledPattern).toEqual({
+            patternType: CompilePatternType.CHAINABLE_CALL,
+            leftSidePath: [],
+            leftSideType: 'new Promise',
+            returnType: undefined,
+            callArgumentTypes: ['() => void', '() => void'],
+            targetEnvForStatement: JayTargetEnv.main,
+            name: 'promise',
+        });
+    })
 });

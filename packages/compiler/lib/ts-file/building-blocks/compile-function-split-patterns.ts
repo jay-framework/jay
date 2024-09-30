@@ -5,9 +5,9 @@ import ts, {
     isDecorator,
     isExpressionStatement,
     isFunctionDeclaration,
-    isIdentifier,
+    isIdentifier, isNewExpression,
     isPropertyAccessExpression,
-    isReturnStatement, isSpreadElement,
+    isReturnStatement, isSpreadElement, NodeArray,
     SourceFile,
     SyntaxKind,
 } from 'typescript';
@@ -98,11 +98,14 @@ function extractArgumentType(argument: ts.Expression, sourceFileBinding: SourceF
     return undefined;
 }
 
-function extractArgumentTypes(callExpression: ts.CallExpression, sourceFileBinding: SourceFileBindingResolver, node: ts.FunctionDeclaration) {
-    const callArgs = callExpression.arguments;
+function extractArgumentTypes(callArgs: NodeArray<ts.Expression>, sourceFileBinding: SourceFileBindingResolver, node: ts.FunctionDeclaration) {
     return callArgs.map(argument => {
         return extractArgumentType(argument, sourceFileBinding, node);
     })
+}
+
+function isIdentifierOrPropertyAccessExpression(node: ts.Expression) {
+    return isIdentifier(node) || isPropertyAccessExpression(node);
 }
 
 export function compileFunctionSplitPatternsBlock(
@@ -139,9 +142,10 @@ export function compileFunctionSplitPatternsBlock(
                     let patternType: CompilePatternType;
                     let leftHandSide: Expression;
                     let callArgumentTypes: string[] = [];
+                    let isNew = false;
                     if (
                         isReturnStatement(statement) &&
-                        isPropertyAccessExpression(statement.expression)
+                        isIdentifierOrPropertyAccessExpression(statement.expression)
                     ) {
                         patternType = CompilePatternType.RETURN;
                         leftHandSide = statement.expression;
@@ -149,20 +153,29 @@ export function compileFunctionSplitPatternsBlock(
                     } else if (
                         isReturnStatement(statement) &&
                         isCallExpression(statement.expression) &&
-                        isPropertyAccessExpression(statement.expression.expression) &&
+                        isIdentifierOrPropertyAccessExpression(statement.expression.expression) &&
                         node.type
                     ) {
                         patternType = CompilePatternType.CHAINABLE_CALL;
                         leftHandSide = statement.expression.expression;
-                        callArgumentTypes = extractArgumentTypes(statement.expression, sourceFileBinding, node)
+                        callArgumentTypes = extractArgumentTypes(statement.expression.arguments, sourceFileBinding, node)
+                    } else if (
+                        isReturnStatement(statement) &&
+                        isNewExpression(statement.expression) &&
+                        isIdentifierOrPropertyAccessExpression(statement.expression.expression)
+                    ) {
+                        patternType = CompilePatternType.CHAINABLE_CALL;
+                        leftHandSide = statement.expression.expression;
+                        callArgumentTypes = extractArgumentTypes(statement.expression.arguments, sourceFileBinding, node)
+                        isNew = true;
                     } else if (
                         isExpressionStatement(statement) &&
                         isCallExpression(statement.expression) &&
-                        isPropertyAccessExpression(statement.expression.expression)
+                        isIdentifierOrPropertyAccessExpression(statement.expression.expression)
                     ) {
                         patternType = CompilePatternType.CALL;
                         leftHandSide = statement.expression.expression;
-                        callArgumentTypes = extractArgumentTypes(statement.expression, sourceFileBinding, node)
+                        callArgumentTypes = extractArgumentTypes(statement.expression.arguments, sourceFileBinding, node)
                     } else if (
                         isExpressionStatement(statement) &&
                         isBinaryExpression(statement.expression) &&
@@ -189,7 +202,8 @@ export function compileFunctionSplitPatternsBlock(
                     }
                     else if (isGlobalVariableRoot(resolvedLeftHandSide.root))
                         leftSideType = resolvedLeftHandSide.root.name;
-
+                    if (isNew)
+                        leftSideType = `new ${leftSideType}`;
                     if (patternType !== undefined && leftSideType !== undefined) {
 
                         compiledPatterns.push({
