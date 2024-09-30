@@ -7,6 +7,7 @@ import ts, {
 } from 'typescript';
 import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
 import { flattenVariable, isImportModuleVariableRoot } from '../basic-analyzers/name-binding-resolver';
+import {isIdentifierOrPropertyAccessExpression} from "../basic-analyzers/typescript-extras";
 
 export enum FindComponentConstructorType {
     makeJayComponent = 'makeJayComponent',
@@ -31,8 +32,7 @@ export function findComponentConstructorCalls(
             if (
                 declaration.initializer &&
                 isCallExpression(declaration.initializer) &&
-                (isIdentifier(declaration.initializer.expression) ||
-                    isPropertyAccessExpression(declaration.initializer.expression))
+                isIdentifierOrPropertyAccessExpression(declaration.initializer.expression)
             ) {
                 const explainedInitializer = bindingResolver.explain(
                     declaration.initializer.expression,

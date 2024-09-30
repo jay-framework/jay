@@ -14,6 +14,7 @@ import {
 } from '../basic-analyzers/name-binding-resolver';
 import { isFunctionLikeDeclarationBase } from '../ts-utils/ts-compiler-utils';
 import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
+import {isIdentifierOrPropertyAccessExpression} from "../basic-analyzers/typescript-extras";
 
 export interface FoundEventHandler {
     eventHandlerCallStatement: ExpressionStatement;
@@ -39,8 +40,7 @@ export function findEventHandlersBlock(
             // else
             if (isExpressionStatement(statement) && isCallExpression(statement.expression)) {
                 if (
-                    isPropertyAccessExpression(statement.expression.expression) ||
-                    isIdentifier(statement.expression.expression)
+                    isIdentifierOrPropertyAccessExpression(statement.expression.expression)
                 ) {
                     let functionVariable = bindingResolver.explain(statement.expression.expression);
 

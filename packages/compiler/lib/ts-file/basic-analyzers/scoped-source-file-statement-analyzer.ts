@@ -10,7 +10,6 @@ import ts, {
     isForInStatement,
     isForOfStatement,
     isForStatement,
-    isIdentifier,
     isIfStatement,
     isLiteralExpression, isNewExpression,
     isPropertyAccessExpression,
@@ -39,6 +38,7 @@ import {
     LetOrConst,
 } from './name-binding-resolver';
 import { ContextualVisitChild, visitWithContext } from '../ts-utils/visitor-with-context';
+import {isIdentifierOrPropertyAccessExpression} from "./typescript-extras";
 
 export interface MatchedPattern {
     patterns: CompiledPattern[];
@@ -162,7 +162,7 @@ export class ScopedSourceFileStatementAnalyzer {
             statement: ts.Statement,
             roleInParent: RoleInParent,
         ) => {
-            if (isIdentifier(node.expression) || isPropertyAccessExpression(node.expression)) {
+            if (isIdentifierOrPropertyAccessExpression(node.expression)) {
                 let expression = node.expression;
                 // analyze the function call arguments
                 node.arguments.forEach((argument) =>
@@ -217,7 +217,7 @@ export class ScopedSourceFileStatementAnalyzer {
                 if (isStatement(node)) statement = node;
 
                 if (roleInParent === RoleInParent.read || roleInParent === RoleInParent.assign) {
-                    if (isIdentifier(node) || isPropertyAccessExpression(node))
+                    if (isIdentifierOrPropertyAccessExpression(node))
                         analyzePropertyExpression(node, visitChild, statement, roleInParent);
                     else if (isCallExpression(node) || isNewExpression(node))
                         analyzeCallOrNewExpression(node, visitChild, statement, roleInParent);
@@ -232,8 +232,7 @@ export class ScopedSourceFileStatementAnalyzer {
 
                 if (
                     isCallExpression(node) &&
-                    (isIdentifier(node.expression) ||
-                        isPropertyAccessExpression(node.expression)) &&
+                    isIdentifierOrPropertyAccessExpression(node.expression) &&
                     roleInParent === RoleInParent.none
                 ) {
                     analyzeCallOrNewExpression(node, visitChild, statement, RoleInParent.call);

@@ -5,17 +5,21 @@ import ts, {
     isDecorator,
     isExpressionStatement,
     isFunctionDeclaration,
-    isIdentifier, isNewExpression,
+    isIdentifier,
+    isNewExpression,
     isPropertyAccessExpression,
-    isReturnStatement, isSpreadElement, NodeArray,
+    isReturnStatement,
+    isSpreadElement,
+    NodeArray,
     SourceFile,
     SyntaxKind,
 } from 'typescript';
 import {flattenVariable, isGlobalVariableRoot, isParamVariableRoot} from './name-binding-resolver';
-import { mkTransformer } from '../ts-utils/mk-transformer';
-import { JayValidations, WithValidations } from '../../core/with-validations';
-import { astToCode } from '../ts-utils/ts-compiler-utils';
-import { SourceFileBindingResolver } from './source-file-binding-resolver';
+import {mkTransformer} from '../ts-utils/mk-transformer';
+import {JayValidations, WithValidations} from '../../core/with-validations';
+import {astToCode} from '../ts-utils/ts-compiler-utils';
+import {SourceFileBindingResolver} from './source-file-binding-resolver';
+import {isIdentifierOrPropertyAccessExpression} from "./typescript-extras";
 
 export enum CompilePatternType {
     RETURN,
@@ -85,7 +89,7 @@ export interface CompiledPattern {
 }
 
 function extractArgumentType(argument: ts.Expression, sourceFileBinding: SourceFileBindingResolver, node: ts.FunctionDeclaration) {
-    if (isIdentifier(argument) || isPropertyAccessExpression(argument)) {
+    if (isIdentifierOrPropertyAccessExpression(argument)) {
         const explainedArgument = flattenVariable(sourceFileBinding.explain(argument));
         if (isParamVariableRoot(explainedArgument.root)) {
             const paramIndex = explainedArgument.root.paramIndex
@@ -102,10 +106,6 @@ function extractArgumentTypes(callArgs: NodeArray<ts.Expression>, sourceFileBind
     return callArgs.map(argument => {
         return extractArgumentType(argument, sourceFileBinding, node);
     })
-}
-
-function isIdentifierOrPropertyAccessExpression(node: ts.Expression) {
-    return isIdentifier(node) || isPropertyAccessExpression(node);
 }
 
 export function compileFunctionSplitPatternsBlock(
