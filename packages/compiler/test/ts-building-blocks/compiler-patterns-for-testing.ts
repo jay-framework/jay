@@ -95,10 +95,6 @@ export function promise() {
         createTsSourceFile(`
             function promise2(resolve: (arg: any) => void, reject: () => void) {
                 return new Promise(resolve, reject);
-            }
-            
-            function promise1(resolve: (arg: any) => void) {
-                return new Promise(resolve);
             }`),
     ]).val;
 }

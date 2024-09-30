@@ -199,7 +199,7 @@ describe('compile secure function split patterns', () => {
             leftSidePath: ['log'],
             leftSideType: 'console',
             returnType: undefined,
-            callArgumentTypes: ['string'],
+            callArgumentTypes: ['...Array<string>'],
             targetEnvForStatement: JayTargetEnv.any,
             name: 'consoleLog2',
         });
@@ -243,7 +243,7 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.CHAINABLE_CALL,
             leftSidePath: [],
-            leftSideType: 'new Promise',
+            leftSideType: 'Promise',
             returnType: undefined,
             callArgumentTypes: ['() => void', '() => void'],
             targetEnvForStatement: JayTargetEnv.main,

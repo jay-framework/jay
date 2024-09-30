@@ -15,9 +15,9 @@ import {
 } from '../test-utils/ts-compiler-test-utils';
 import {
     consoleLog, consoleLogVarargs,
-    eventPreventDefaultPattern,
+    eventPreventDefaultPattern, promise,
     readEventKeyCodePattern,
-    readEventTargetValuePattern,
+    readEventTargetValuePattern, requestAnimationFramePattern,
     setEventTargetValuePattern,
     stringLengthPattern,
     stringReplacePattern,
@@ -335,6 +335,34 @@ describe('SourceFileStatementAnalyzer', () => {
             );
             expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
                 `0: console.log('hi', 'jay'); matches consoleLog`
+            ]));
+
+        })
+
+        it('analyze exec$ with new Promise', async () => {
+            const sourceFile = createTsSourceFile(`
+                import {exec$} from "jay-secure";
+                export function bla() {
+                    exec$(() => new Promise((resolve) => requestAnimationFrame(resolve)));
+                }`);
+            const patterns = [...requestAnimationFramePattern(), ...promise()];
+            const bindingResolver = new SourceFileBindingResolver(sourceFile);
+
+            const analyzedFile = new ScopedSourceFileStatementAnalyzer(
+                sourceFile,
+                bindingResolver,
+                patterns,
+                sourceFile.getChildren()[1]
+            );
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(
+                new Set([
+                    `exec$(() => new Promise((resolve) => requestAnimationFrame(resolve))); --> sandbox, patterns matched: [0, 1, 2]`,
+                ]),
+            );
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                `1: new Promise((resolve) => requestAnimationFrame(resolve)); matches promise2`,
+                `2: requestAnimationFrame(resolve); matches requestAnimationFramePattern`
             ]));
 
         })

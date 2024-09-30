@@ -12,11 +12,11 @@ import ts, {
     isForStatement,
     isIdentifier,
     isIfStatement,
-    isLiteralExpression,
+    isLiteralExpression, isNewExpression,
     isPropertyAccessExpression,
     isStatement,
     isVariableStatement,
-    isWhileStatement,
+    isWhileStatement, NewExpression,
     PropertyAccessExpression,
     SourceFile,
     Statement,
@@ -156,8 +156,8 @@ export class ScopedSourceFileStatementAnalyzer {
             }
         };
 
-        const analyzeCallExpression = (
-            node: CallExpression,
+        const analyzeCallOrNewExpression = (
+            node: CallExpression | NewExpression,
             visitChild: ContextualVisitChild<AnalyzeContext>,
             statement: ts.Statement,
             roleInParent: RoleInParent,
@@ -194,7 +194,7 @@ export class ScopedSourceFileStatementAnalyzer {
                     });
                     let matchedPattern = {
                         patterns: matchedPatterns,
-                        expression: isCallExpression(node) ? node : expression,
+                        expression: node,
                         testId: this.nextId++,
                     };
                     this.analyzedExpressions.set(expression, matchedPattern);
@@ -219,8 +219,8 @@ export class ScopedSourceFileStatementAnalyzer {
                 if (roleInParent === RoleInParent.read || roleInParent === RoleInParent.assign) {
                     if (isIdentifier(node) || isPropertyAccessExpression(node))
                         analyzePropertyExpression(node, visitChild, statement, roleInParent);
-                    else if (isCallExpression(node))
-                        analyzeCallExpression(node, visitChild, statement, roleInParent);
+                    else if (isCallExpression(node) || isNewExpression(node))
+                        analyzeCallOrNewExpression(node, visitChild, statement, roleInParent);
                     else if (
                         isBinaryExpression(node) &&
                         node.operatorToken.kind === ts.SyntaxKind.EqualsToken
@@ -236,7 +236,7 @@ export class ScopedSourceFileStatementAnalyzer {
                         isPropertyAccessExpression(node.expression)) &&
                     roleInParent === RoleInParent.none
                 ) {
-                    analyzeCallExpression(node, visitChild, statement, RoleInParent.call);
+                    analyzeCallOrNewExpression(node, visitChild, statement, RoleInParent.call);
                 } else if (isVariableStatement(node)) {
                     node.declarationList.declarations.forEach((declaration) =>
                         visitChild(declaration.initializer, {

@@ -142,7 +142,6 @@ export function compileFunctionSplitPatternsBlock(
                     let patternType: CompilePatternType;
                     let leftHandSide: Expression;
                     let callArgumentTypes: string[] = [];
-                    let isNew = false;
                     if (
                         isReturnStatement(statement) &&
                         isIdentifierOrPropertyAccessExpression(statement.expression)
@@ -167,7 +166,6 @@ export function compileFunctionSplitPatternsBlock(
                         patternType = CompilePatternType.CHAINABLE_CALL;
                         leftHandSide = statement.expression.expression;
                         callArgumentTypes = extractArgumentTypes(statement.expression.arguments, sourceFileBinding, node)
-                        isNew = true;
                     } else if (
                         isExpressionStatement(statement) &&
                         isCallExpression(statement.expression) &&
@@ -202,8 +200,6 @@ export function compileFunctionSplitPatternsBlock(
                     }
                     else if (isGlobalVariableRoot(resolvedLeftHandSide.root))
                         leftSideType = resolvedLeftHandSide.root.name;
-                    if (isNew)
-                        leftSideType = `new ${leftSideType}`;
                     if (patternType !== undefined && leftSideType !== undefined) {
 
                         compiledPatterns.push({
