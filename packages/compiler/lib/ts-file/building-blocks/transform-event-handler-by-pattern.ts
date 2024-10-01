@@ -200,12 +200,12 @@ export const transformEventHandlerByPatternBlock = (
     factory: ts.NodeFactory,
     eventHandler: ts.FunctionLikeDeclarationBase,
 ): TransformedEventHandlerByPattern => {
-    const scopedAlayzer = analyzer.analyzeForScope(eventHandler);
+    const scopedAnalyzer = analyzer.analyzeForScope(eventHandler);
     const { sideEffects, visitor } = mkTransformEventHandlerStatementVisitor(
         factory,
         context,
         bindingResolver,
-        scopedAlayzer,
+        scopedAnalyzer,
     );
 
     const transformedEventHandler = visitWithContext2(

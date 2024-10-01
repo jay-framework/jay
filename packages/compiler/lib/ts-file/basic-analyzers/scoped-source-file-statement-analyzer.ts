@@ -197,7 +197,7 @@ export class ScopedSourceFileStatementAnalyzer {
                         expression: node,
                         testId: this.nextId++,
                     };
-                    this.analyzedExpressions.set(expression, matchedPattern);
+                    this.analyzedExpressions.set(node, matchedPattern);
                     this.addPatternToStatement(statement, matchedPattern);
                 } else {
                     if (isPropertyAccessExpression(node.expression))
@@ -302,7 +302,7 @@ export class ScopedSourceFileStatementAnalyzer {
             }
             else if (isFunctionCallVariableRoot(resolvedVariable.root)) {
                 let matchedPattern = this.getExpressionStatus(
-                    resolvedVariable.root.node.expression,
+                    resolvedVariable.root.node,
                 );
                 if (matchedPattern) {
                     currentVariableType = matchedPattern.patterns.at(-1).returnType;

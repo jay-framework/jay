@@ -3,7 +3,7 @@ import {SourceFileBindingResolver} from "../basic-analyzers/source-file-binding-
 import {flattenVariable, isImportModuleVariableRoot} from "../basic-analyzers/name-binding-resolver";
 
 export function findExec$(bindingResolver: SourceFileBindingResolver, sourceFile: ts.SourceFile) {
-    const foundExec$ = [];
+    const foundExec$: ts.CallExpression[] = [];
 
     function visit(node: ts.Node) {
         if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
