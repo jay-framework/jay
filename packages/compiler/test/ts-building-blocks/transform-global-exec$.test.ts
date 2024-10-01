@@ -10,6 +10,7 @@ import ts from "typescript";
 import {SourceFileStatementAnalyzer} from "../../lib/ts-file/basic-analyzers/scoped-source-file-statement-analyzer";
 import {consoleLog} from "../ts-basic-analyzers/compiler-patterns-for-testing";
 import {transformCode} from "../test-utils/ts-compiler-test-utils";
+import {astToCode, codeToAst} from "../../lib/ts-file/ts-utils/ts-compiler-utils";
 
 
 function testTransformer(compiledPatterns: CompiledPattern[]) {
@@ -40,9 +41,14 @@ describe('transform global exec$ and generate function repository fragment', () 
             }
             `
         const {transformer, transformedExec$s} = testTransformer(consoleLog())
-        const transformed = await transformCode(code, [transformer]);
+        await transformCode(code, [transformer]);
 
-        expect(transformedExec$s).toEqual('')
+        expect(transformedExec$s.length).toBe(1)
 
+        const {wasTransformed, transformedExec$, globalExec$index, functionRepositoryExpression} = transformedExec$s[0];
+        expect(wasTransformed).toBe(true)
+        expect(astToCode(transformedExec$)).toEqual(`exec$(funcGlobal$("0"))`)
+        expect(astToCode(functionRepositoryExpression)).toEqual(`() => console.log("hi")`)
+        expect(globalExec$index).toEqual(0)
     })
 })

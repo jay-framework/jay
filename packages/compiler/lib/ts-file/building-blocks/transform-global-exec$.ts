@@ -34,7 +34,7 @@ export function transformGlobalExec$(
                     (_: ExpressionStatement) => _.expression,
                 ) as Expression[])[0] as CallExpression;
             const functionRepositoryExpression = foundExec$.arguments[0];
-            return {wasTransformed: false, globalExec$index, transformedExec$, functionRepositoryExpression};
+            return {wasTransformed: true, globalExec$index, transformedExec$, functionRepositoryExpression};
         }
     }
     return {wasTransformed: false};
