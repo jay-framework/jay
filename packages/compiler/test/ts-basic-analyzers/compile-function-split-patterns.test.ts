@@ -57,7 +57,7 @@ describe('compile secure function split patterns', () => {
         });
     });
 
-    it('should compile a call expression pattern', () => {
+    it('should compile a call expression on param pattern', () => {
         const patternFile = createTsSourceFile(`
             import {JayEvent} from 'jay-runtime';
     
@@ -80,6 +80,31 @@ describe('compile secure function split patterns', () => {
             callArgumentTypes: [],
             targetEnvForStatement: JayTargetEnv.main,
             name: 'eventPreventDefault',
+        });
+    });
+
+    it('should compile a call expression on imported function pattern', () => {
+        const patternFile = createTsSourceFile(`
+            import {foo} from 'foo';
+    
+            function fooPattern() {
+                foo();
+            }`);
+
+        const compiled = compileFunctionSplitPatternsBlock([patternFile]);
+        expect(compiled.validations).toEqual([]);
+        expect(compiled.val.length).toBe(1);
+
+        let compiledPattern = compiled.val[0];
+
+        expect(compiledPattern).toEqual({
+            patternType: CompilePatternType.CALL,
+            leftSidePath: ['foo'],
+            leftSideType: 'foo.foo',
+            returnType: undefined,
+            callArgumentTypes: [],
+            targetEnvForStatement: JayTargetEnv.main,
+            name: 'fooPattern',
         });
     });
 

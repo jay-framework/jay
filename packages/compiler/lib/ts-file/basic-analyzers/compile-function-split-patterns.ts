@@ -14,7 +14,12 @@ import ts, {
     SourceFile,
     SyntaxKind,
 } from 'typescript';
-import {flattenVariable, isGlobalVariableRoot, isParamVariableRoot} from './name-binding-resolver';
+import {
+    flattenVariable,
+    isGlobalVariableRoot,
+    isImportModuleVariableRoot,
+    isParamVariableRoot
+} from './name-binding-resolver';
 import {mkTransformer} from '../ts-utils/mk-transformer';
 import {JayValidations, WithValidations} from '../../core/with-validations';
 import {astToCode} from '../ts-utils/ts-compiler-utils';
@@ -200,6 +205,8 @@ export function compileFunctionSplitPatternsBlock(
                     }
                     else if (isGlobalVariableRoot(resolvedLeftHandSide.root))
                         leftSideType = resolvedLeftHandSide.root.name;
+                    else if (isImportModuleVariableRoot(resolvedLeftHandSide.root))
+                        leftSideType = sourceFileBinding.explainFlattenedVariableType(resolvedLeftHandSide)
                     if (patternType !== undefined && leftSideType !== undefined) {
 
                         compiledPatterns.push({

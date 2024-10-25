@@ -153,3 +153,9 @@ export async function printStatementWithoutChildStatements(statement: Statement)
 
     return printedStatement;
 }
+
+export function extractVal<T>(context: string, withValidations: WithValidations<T>): T {
+    if (withValidations.validations.length > 0)
+        throw new Error(`${context}\n${withValidations.validations.join('\n')}`);
+    return withValidations.val;
+}
