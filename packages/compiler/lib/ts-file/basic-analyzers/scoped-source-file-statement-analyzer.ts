@@ -32,7 +32,7 @@ import {
 } from './compile-function-split-patterns';
 import {
     flattenVariable,
-    isFunctionCallVariableRoot, isGlobalVariableRoot,
+    isFunctionCallVariableRoot, isGlobalVariableRoot, isImportModuleVariableRoot,
     isLiteralVariableRoot,
     isParamVariableRoot,
     LetOrConst,
@@ -44,6 +44,7 @@ export interface MatchedPattern {
     patterns: CompiledPattern[];
     expression: Expression;
     testId: number;
+    subExpressionsMatching: boolean;
 }
 
 export interface AnalysisResult {
@@ -143,6 +144,7 @@ export class ScopedSourceFileStatementAnalyzer {
                     patterns: matchedPatterns,
                     expression,
                     testId: this.nextId++,
+                    subExpressionsMatching: true
                 };
                 this.analyzedExpressions.set(expression, matchedPattern);
                 this.addPatternToStatement(statement, matchedPattern);
@@ -181,7 +183,7 @@ export class ScopedSourceFileStatementAnalyzer {
 
                 if (matchType === PatternMatchType.FULL) {
                     // check also arguments types are matching the pattern
-                    node.arguments.forEach((argument, index) => {
+                    let areArgumentsMatching = node.arguments.map((argument, index) => {
                         let argumentMatchedPattern = this.getExpressionStatus(argument);
                         let patternTypeMatchArgumentType =
                             !!argumentMatchedPattern &&
@@ -191,11 +193,14 @@ export class ScopedSourceFileStatementAnalyzer {
                         let isLiteral = isLiteralExpression(argument);
                         if (!patternTypeMatchArgumentType && !isLiteral)
                             this.markStatementSandbox(statement);
-                    });
+                        return patternTypeMatchArgumentType || isLiteral;
+                    })
+                        .reduce((prev, curr) => prev && curr, true);
                     let matchedPattern = {
                         patterns: matchedPatterns,
                         expression: node,
                         testId: this.nextId++,
+                        subExpressionsMatching: areArgumentsMatching
                     };
                     this.analyzedExpressions.set(node, matchedPattern);
                     this.addPatternToStatement(statement, matchedPattern);
@@ -219,8 +224,10 @@ export class ScopedSourceFileStatementAnalyzer {
                 if (roleInParent === RoleInParent.read || roleInParent === RoleInParent.assign) {
                     if (isIdentifierOrPropertyAccessExpression(node))
                         analyzePropertyExpression(node, visitChild, statement, roleInParent);
-                    else if (isCallExpression(node) || isNewExpression(node))
+                    else if (isCallExpression(node) || isNewExpression(node)) {
                         analyzeCallOrNewExpression(node, visitChild, statement, roleInParent);
+                        return node;
+                    }
                     else if (
                         isBinaryExpression(node) &&
                         node.operatorToken.kind === ts.SyntaxKind.EqualsToken
@@ -307,6 +314,9 @@ export class ScopedSourceFileStatementAnalyzer {
                 if (matchedPattern) {
                     currentVariableType = matchedPattern.patterns.at(-1).returnType;
                 }
+            }
+            else if (isImportModuleVariableRoot(resolvedVariable.root)) {
+                currentVariableType = this.bindingResolver.explainFlattenedVariableType(resolvedVariable)
             }
         }
 

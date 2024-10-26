@@ -132,29 +132,57 @@ describe('compile secure function split patterns', () => {
         });
     });
 
-    it('should extract the right types for function calls', () => {
-        const patternFile = createTsSourceFile(`
+    describe('param types', () => {
+
+        it('should extract the right param types for function calls', () => {
+            const patternFile = createTsSourceFile(`
             import {A, B, C, D, Target, Result} from 'module';
             function testParams(a: A, b: B, c: C, d: D, target: Target): Result {
                 return target.foo(a, b, c, d)
             }`);
 
-        const compiled = compileFunctionSplitPatternsBlock([patternFile]);
-        expect(compiled.validations).toEqual([]);
-        expect(compiled.val.length).toBe(1);
+            const compiled = compileFunctionSplitPatternsBlock([patternFile]);
+            expect(compiled.validations).toEqual([]);
+            expect(compiled.val.length).toBe(1);
 
-        let compiledPattern = compiled.val[0];
+            let compiledPattern = compiled.val[0];
 
-        expect(compiledPattern).toEqual({
-            patternType: CompilePatternType.CHAINABLE_CALL,
-            leftSidePath: ['foo'],
-            leftSideType: 'module.Target',
-            returnType: 'module.Result',
-            callArgumentTypes: ['module.A', 'module.B', 'module.C', 'module.D'],
-            targetEnvForStatement: JayTargetEnv.main,
-            name: 'testParams',
+            expect(compiledPattern).toEqual({
+                patternType: CompilePatternType.CHAINABLE_CALL,
+                leftSidePath: ['foo'],
+                leftSideType: 'module.Target',
+                returnType: 'module.Result',
+                callArgumentTypes: ['module.A', 'module.B', 'module.C', 'module.D'],
+                targetEnvForStatement: JayTargetEnv.main,
+                name: 'testParams',
+            });
         });
-    });
+
+        it('should extract any param type', () => {
+            const patternFile = createTsSourceFile(`
+            import {target, Result} from 'module';
+            function testParams(a: any): Result {
+                return target.foo(a)
+            }`);
+
+            const compiled = compileFunctionSplitPatternsBlock([patternFile]);
+            expect(compiled.validations).toEqual([]);
+            expect(compiled.val.length).toBe(1);
+
+            let compiledPattern = compiled.val[0];
+
+            expect(compiledPattern).toEqual({
+                patternType: CompilePatternType.CHAINABLE_CALL,
+                leftSidePath: ['target', 'foo'],
+                leftSideType: 'module.target.foo',
+                returnType: 'module.Result',
+                callArgumentTypes: ['any'],
+                targetEnvForStatement: JayTargetEnv.main,
+                name: 'testParams',
+            });
+        });
+    })
+
 
     it('should compile an assignment pattern', () => {
         const patternFile = createTsSourceFile(`

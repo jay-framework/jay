@@ -17,7 +17,8 @@ import ts, {
     VariableDeclarationList,
 } from 'typescript';
 import {
-    flattenVariable,
+    FlattenedAccessChain,
+    flattenVariable, ImportModuleVariableRoot,
     isImportModuleVariableRoot,
     mkOtherVariableRoot,
     mkVariable,
@@ -101,6 +102,19 @@ export class SourceFileBindingResolver {
         return this.findBindingResolver(identifier).resolvePropertyAccessChain(identifier);
     }
 
+    explainFlattenedVariableType(flattened: FlattenedAccessChain): string {
+        if (!!flattened.root) {
+            if (
+                isImportModuleVariableRoot(flattened.root) &&
+                isStringLiteral(flattened.root.module)
+            ) {
+                return `${flattened.root.module.text}.${flattened.path.join('.')}`;
+            }
+        }
+        else
+            return undefined;
+    }
+
     explainType(type: ts.TypeNode): string {
         if (type) {
             if (isTypeReferenceNode(type)) {
@@ -108,19 +122,15 @@ export class SourceFileBindingResolver {
                 if (isIdentifier(typeName)) {
                     let resolved = this.findBindingResolver(typeName).resolveIdentifier(typeName);
                     let flattened = flattenVariable(resolved);
-                    if (!!flattened.root) {
-                        if (
-                            isImportModuleVariableRoot(flattened.root) &&
-                            isStringLiteral(flattened.root.module)
-                        ) {
-                            return `${flattened.root.module.text}.${flattened.path.join('.')}`;
-                        }
-                    }
+                    let typeFromFlattened = this.explainFlattenedVariableType(flattened)
+                    if (typeFromFlattened)
+                        return typeFromFlattened;
                     if (builtInType(typeName.text)) return typeName.text;
                 }
             } else if (type.kind === SyntaxKind.StringKeyword) return 'string'
             else if (type.kind === SyntaxKind.NumberKeyword) return 'number'
             else if (type.kind === SyntaxKind.BooleanKeyword) return 'boolean'
+            else if (type.kind === SyntaxKind.AnyKeyword) return 'any'
             else if (type.kind === SyntaxKind.VoidKeyword) return 'void'
             else if (isArrayTypeNode(type)) return `Array<${this.explainType(type.elementType)}>`
             else if (isFunctionTypeNode(type)) {

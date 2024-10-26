@@ -13,7 +13,7 @@ import {
 } from '../test-utils/ts-compiler-test-utils';
 import {
     consoleLog, consoleLogVarargs,
-    eventPreventDefaultPattern, promise,
+    eventPreventDefaultPattern, foo, promise,
     readEventKeyCodePattern,
     readEventTargetValuePattern, requestAnimationFramePattern,
     setEventTargetValuePattern,
@@ -307,7 +307,61 @@ describe('SourceFileStatementAnalyzer', () => {
             expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
                 `0: console.log('hi'); matches consoleLog`
             ]));
+        })
 
+        it('should match if sub-pattern does matches', async () => {
+            const sourceFile = createTsSourceFile(`
+                import {exec$} from "jay-secure";
+                import {foo} from 'foo';
+                export function bla() {
+                    exec$(() => console.log(foo()));
+                }`);
+            const patterns = [...consoleLog(), ...foo()];
+            const bindingResolver = new SourceFileBindingResolver(sourceFile);
+
+            const analyzedFile = new ScopedSourceFileStatementAnalyzer(
+                sourceFile,
+                bindingResolver,
+                patterns,
+                sourceFile.getChildren()[1]
+            );
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(
+                new Set([
+                    `exec$(() => console.log(foo())); --> sandbox, patterns matched: [0, 1]`,
+                ]),
+            );
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                `0: foo(); matches fooPattern`,
+                `1: console.log(foo()); matches consoleLog`
+            ]));
+        })
+
+        it('should not match if sub-pattern does not match', async () => {
+            const sourceFile = createTsSourceFile(`
+                import {exec$} from "jay-secure";
+                import {foo} from 'foo';
+                export function bla() {
+                    exec$(() => console.log(foo()));
+                }`);
+            const patterns = consoleLog();
+            const bindingResolver = new SourceFileBindingResolver(sourceFile);
+
+            const analyzedFile = new ScopedSourceFileStatementAnalyzer(
+                sourceFile,
+                bindingResolver,
+                patterns,
+                sourceFile.getChildren()[1]
+            );
+
+            expect(await printAnalyzedStatements(analyzedFile)).toEqual(
+                new Set([
+                    `exec$(() => console.log(foo())); --> sandbox, patterns matched: [0]`,
+                ]),
+            );
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                "0: console.log(foo()); matches consoleLog, but has sub expressions not matching any pattern",
+            ]));
         })
 
         it('analyze exec$ with console log varargs', async () => {
@@ -368,8 +422,11 @@ describe('SourceFileStatementAnalyzer', () => {
 });
 
 async function printMatchedExpression(matchedExpression: MatchedPattern) {
-    let printedExpression = (await astToFormattedCode(matchedExpression.expression)).trim();
-    return `${matchedExpression.testId}: ${printedExpression} matches ${matchedExpression.patterns.map((_) => _.name).join(', ')}`;
+    const printedExpression = (await astToFormattedCode(matchedExpression.expression)).trim();
+    const {testId, patterns, subExpressionsMatching} = matchedExpression;
+    const printedPatterns = patterns.map((_) => _.name).join(', ')
+    const matchingSubPatterns = subExpressionsMatching?'':', but has sub expressions not matching any pattern'
+    return `${testId}: ${printedExpression} matches ${printedPatterns}${matchingSubPatterns}`;
 }
 
 async function printAnalyzedExpressions(analyzer: ScopedSourceFileStatementAnalyzer) {
