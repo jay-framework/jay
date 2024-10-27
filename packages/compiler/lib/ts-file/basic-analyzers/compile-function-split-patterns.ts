@@ -23,7 +23,7 @@ import {
 import {mkTransformer} from '../ts-utils/mk-transformer';
 import {JayValidations, WithValidations} from '../../core/with-validations';
 import {astToCode} from '../ts-utils/ts-compiler-utils';
-import {SourceFileBindingResolver} from './source-file-binding-resolver';
+import {ResolvedType, SourceFileBindingResolver} from './source-file-binding-resolver';
 import {isIdentifierOrPropertyAccessExpression} from "./typescript-extras";
 
 export enum CompilePatternType {
@@ -33,6 +33,7 @@ export enum CompilePatternType {
     ASSIGNMENT_LEFT_SIDE,
     KNOWN_VARIABLE_READ,
     CONST_READ,
+    INLINE_ARROW_FUNCTION
 }
 
 export function areCompatiblePatternTypes(type1: CompilePatternType, type2: CompilePatternType) {
@@ -43,10 +44,9 @@ export function areCompatiblePatternTypes(type1: CompilePatternType, type2: Comp
 
 }
 
-export type CompilePatternVarType = string;
-
 export const KNOWN_VARIABLE_READ_NAME = 'knownVariableReadPattern';
 export const CONST_READ_NAME = 'knownVariableReadPattern';
+export const INLINE_ARROW_FUNCTION = 'inlineArrowFunctionPattern';
 
 export enum JayTargetEnv {
     main,
@@ -86,9 +86,9 @@ export function JayPattern(env: JayTargetEnv) {
 export interface CompiledPattern {
     patternType: CompilePatternType;
     leftSidePath: string[];
-    leftSideType: CompilePatternVarType;
-    callArgumentTypes?: CompilePatternVarType[];
-    returnType?: CompilePatternVarType;
+    leftSideType: ResolvedType;
+    callArgumentTypes?: ResolvedType[];
+    returnType: ResolvedType;
     targetEnvForStatement: JayTargetEnv;
     name: string;
 }
@@ -146,7 +146,7 @@ export function compileFunctionSplitPatternsBlock(
                     let patternTargetEnv = declaredTargetEnv;
                     let patternType: CompilePatternType;
                     let leftHandSide: Expression;
-                    let callArgumentTypes: string[] = [];
+                    let callArgumentTypes: ResolvedType[] = [];
                     if (
                         isReturnStatement(statement) &&
                         isIdentifierOrPropertyAccessExpression(statement.expression)
@@ -197,14 +197,14 @@ export function compileFunctionSplitPatternsBlock(
                             .resolvePropertyAccessChain(leftHandSide),
                     );
 
-                    let leftSideType: string = undefined;
+                    let leftSideType: ResolvedType = undefined;
                     if (isParamVariableRoot(resolvedLeftHandSide.root)) {
                         const paramIndex = resolvedLeftHandSide.root.paramIndex;
                         // validate resolvedLeftHandSide is the first parameter
                         leftSideType = sourceFileBinding.explainType(node.parameters[paramIndex].type)
                     }
                     else if (isGlobalVariableRoot(resolvedLeftHandSide.root))
-                        leftSideType = resolvedLeftHandSide.root.name;
+                        leftSideType = sourceFileBinding.globalType(resolvedLeftHandSide.root);
                     else if (isImportModuleVariableRoot(resolvedLeftHandSide.root))
                         leftSideType = sourceFileBinding.explainFlattenedVariableType(resolvedLeftHandSide)
                     if (patternType !== undefined && leftSideType !== undefined) {

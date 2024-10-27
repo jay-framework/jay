@@ -11,34 +11,43 @@ import ts, {
     isForOfStatement,
     isForStatement,
     isIfStatement,
-    isLiteralExpression, isNewExpression,
+    isLiteralExpression,
+    isNewExpression,
     isPropertyAccessExpression,
     isStatement,
     isVariableStatement,
-    isWhileStatement, NewExpression,
+    isWhileStatement,
+    NewExpression,
     PropertyAccessExpression,
     SourceFile,
     Statement,
 } from 'typescript';
-import { SourceFileBindingResolver } from './source-file-binding-resolver';
+import {
+    areResolvedTypesCompatible,
+    FunctionResolvedType,
+    ResolvedType,
+    SourceFileBindingResolver
+} from './source-file-binding-resolver';
 import {
     areCompatiblePatternTypes,
     CompiledPattern,
     CompilePatternType,
-    CONST_READ_NAME,
+    CONST_READ_NAME, INLINE_ARROW_FUNCTION,
     intersectJayTargetEnv,
     JayTargetEnv,
     KNOWN_VARIABLE_READ_NAME,
 } from './compile-function-split-patterns';
 import {
     flattenVariable,
-    isFunctionCallVariableRoot, isGlobalVariableRoot, isImportModuleVariableRoot,
+    isFunctionCallVariableRoot,
+    isGlobalVariableRoot,
+    isImportModuleVariableRoot,
     isLiteralVariableRoot,
     isParamVariableRoot,
     LetOrConst,
 } from './name-binding-resolver';
-import { ContextualVisitChild, visitWithContext } from '../ts-utils/visitor-with-context';
-import {isIdentifierOrPropertyAccessExpression} from "./typescript-extras";
+import {ContextualVisitChild, visitWithContext} from '../ts-utils/visitor-with-context';
+import {byAnd, isIdentifierOrPropertyAccessExpression} from "./typescript-extras";
 
 export interface MatchedPattern {
     patterns: CompiledPattern[];
@@ -127,6 +136,17 @@ export class ScopedSourceFileStatementAnalyzer {
             roleInParent: RoleInParent;
         }
 
+        const addExpressionStatus = (statement: ts.Statement, patterns: CompiledPattern[], expression: Expression, subExpressionsMatching: boolean) => {
+            let matchedPattern = {
+                patterns,
+                expression,
+                testId: this.nextId++,
+                subExpressionsMatching
+            };
+            this.analyzedExpressions.set(expression, matchedPattern);
+            this.addPatternToStatement(statement, matchedPattern);
+        }
+
         const analyzePropertyExpression = (
             expression: Identifier | PropertyAccessExpression,
             visitChild: ContextualVisitChild<AnalyzeContext>,
@@ -140,14 +160,7 @@ export class ScopedSourceFileStatementAnalyzer {
             let { matchedPatterns, matchType } = this.matchPattern(expression, expectedPatternType, analysisScope);
 
             if (matchType === PatternMatchType.FULL) {
-                let matchedPattern = {
-                    patterns: matchedPatterns,
-                    expression,
-                    testId: this.nextId++,
-                    subExpressionsMatching: true
-                };
-                this.analyzedExpressions.set(expression, matchedPattern);
-                this.addPatternToStatement(statement, matchedPattern);
+                addExpressionStatus(statement, matchedPatterns, expression, true)
             } else {
                 if (isPropertyAccessExpression(expression))
                     visitChild(expression.expression, {
@@ -157,6 +170,32 @@ export class ScopedSourceFileStatementAnalyzer {
                 this.markStatementSandbox(statement);
             }
         };
+
+        const analyzeCallParam = (argument: ts.Expression, matchedPatterns: CompiledPattern[], index: number, statement: ts.Statement) => {
+            const expressionStatus = this.getExpressionStatus(argument);
+            const patternTypeMatchArgumentType =
+                !!expressionStatus &&
+                expressionStatus.patterns.length > 0 &&
+                expressionStatus.subExpressionsMatching &&
+                areResolvedTypesCompatible(expressionStatus.patterns[0].returnType,
+                    matchedPatterns[0].callArgumentTypes[index])
+
+            const isLiteral = isLiteralExpression(argument);
+
+            let isScopedVariableAccess = false;
+            if (isIdentifierOrPropertyAccessExpression(argument)) {
+                const variable = this.bindingResolver.explain(argument)
+                const flattened = flattenVariable(variable);
+                isScopedVariableAccess = isParamVariableRoot(flattened.root)
+                    && isChildOf(flattened.root.param, analysisScope)
+
+            }
+
+            const paramMatching = patternTypeMatchArgumentType || isLiteral || isScopedVariableAccess;
+            if (!paramMatching)
+                this.markStatementSandbox(statement);
+            return paramMatching;
+        }
 
         const analyzeCallOrNewExpression = (
             node: CallExpression | NewExpression,
@@ -184,26 +223,10 @@ export class ScopedSourceFileStatementAnalyzer {
                 if (matchType === PatternMatchType.FULL) {
                     // check also arguments types are matching the pattern
                     let areArgumentsMatching = node.arguments.map((argument, index) => {
-                        let argumentMatchedPattern = this.getExpressionStatus(argument);
-                        let patternTypeMatchArgumentType =
-                            !!argumentMatchedPattern &&
-                            argumentMatchedPattern.patterns.length > 0 &&
-                            argumentMatchedPattern.patterns[0].returnType ===
-                                matchedPatterns[0].callArgumentTypes[index];
-                        let isLiteral = isLiteralExpression(argument);
-                        if (!patternTypeMatchArgumentType && !isLiteral)
-                            this.markStatementSandbox(statement);
-                        return patternTypeMatchArgumentType || isLiteral;
+                        return analyzeCallParam(argument, matchedPatterns, index, statement);
                     })
-                        .reduce((prev, curr) => prev && curr, true);
-                    let matchedPattern = {
-                        patterns: matchedPatterns,
-                        expression: node,
-                        testId: this.nextId++,
-                        subExpressionsMatching: areArgumentsMatching
-                    };
-                    this.analyzedExpressions.set(node, matchedPattern);
-                    this.addPatternToStatement(statement, matchedPattern);
+                        .reduce(byAnd(), true);
+                    addExpressionStatus(statement, matchedPatterns, node, areArgumentsMatching)
                 } else {
                     if (isPropertyAccessExpression(node.expression))
                         visitChild(node.expression.expression, {
@@ -254,6 +277,20 @@ export class ScopedSourceFileStatementAnalyzer {
                         this.getStatementStatus(node).targetEnv = JayTargetEnv.main;
                 } else if (isArrowFunction(node) && !isBlock(node.body)) {
                     visitChild(node.body, { statement, roleInParent: RoleInParent.read });
+                    const bodyStatus = this.getExpressionStatus(node.body);
+                    if (!!bodyStatus && bodyStatus.subExpressionsMatching) {
+                        addExpressionStatus(statement, [
+                            {
+                                patternType: CompilePatternType.INLINE_ARROW_FUNCTION,
+                                returnType: new FunctionResolvedType([], bodyStatus.patterns[0].returnType),
+                                callArgumentTypes: [],
+                                targetEnvForStatement: JayTargetEnv.any,
+                                name: INLINE_ARROW_FUNCTION,
+                                leftSidePath: [],
+                                leftSideType: new FunctionResolvedType([], bodyStatus.patterns[0].returnType),
+                            },
+                        ], node, true)
+                    }
                 } else if (isIfStatement(node)) {
                     visitChild(node.expression, { statement, roleInParent: RoleInParent.read });
                     visitChild(node.thenStatement, { statement, roleInParent: RoleInParent.none });
@@ -298,14 +335,14 @@ export class ScopedSourceFileStatementAnalyzer {
         let resolvedVariable = flattenVariable(variable);
         let matchedPatterns = [];
 
-        let currentVariableType: string;
+        let currentVariableType: ResolvedType;
         if (resolvedVariable.root) {
             if (isParamVariableRoot(resolvedVariable.root))
                 currentVariableType = this.bindingResolver.explainType(
                     resolvedVariable.root.param.type,
                 );
             else if (isGlobalVariableRoot(resolvedVariable.root)) {
-                currentVariableType = resolvedVariable.root.name;
+                currentVariableType = this.bindingResolver.globalType(resolvedVariable.root);
             }
             else if (isFunctionCallVariableRoot(resolvedVariable.root)) {
                 let matchedPattern = this.getExpressionStatus(
@@ -367,7 +404,7 @@ export class ScopedSourceFileStatementAnalyzer {
                     }
                 }
                 let currentMatch = this.compiledPatterns.find((pattern) => {
-                    let leftTypeMatch = currentVariableType === pattern.leftSideType;
+                    let leftTypeMatch = areResolvedTypesCompatible(currentVariableType, pattern.leftSideType);
                     let pathMatch =
                         currentPosition + pattern.leftSidePath.length <=
                             resolvedVariable.path.length &&

@@ -76,7 +76,7 @@ export function foo() {
     return extractVal('compile pattern foo', compileFunctionSplitPatternsBlock([
         createTsSourceFile(`
             import {foo} from 'foo';
-            function fooPattern(): string {
+            function fooPattern(): string | any {
                 return foo();
             }`),
     ]));

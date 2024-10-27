@@ -8,7 +8,7 @@ import ts, {
     isIdentifier,
     isImportDeclaration,
     isStringLiteral,
-    isTypeReferenceNode,
+    isTypeReferenceNode, isUnionTypeNode,
     isVariableDeclarationList,
     isVariableStatement,
     PropertyAccessExpression,
@@ -18,18 +18,106 @@ import ts, {
 } from 'typescript';
 import {
     FlattenedAccessChain,
-    flattenVariable, ImportModuleVariableRoot,
+    flattenVariable, GlobalVariableRoot,
     isImportModuleVariableRoot,
     mkOtherVariableRoot,
     mkVariable,
     NameBindingResolver,
 } from './name-binding-resolver';
 import { isFunctionLikeDeclarationBase } from '../ts-utils/ts-compiler-utils';
+import {byAnd} from "./typescript-extras";
 
 const BUILT_IN_TYPES = ['RegExp', 'Date'];
 function builtInType(text: string) {
     return BUILT_IN_TYPES.findIndex((_) => _ === text) > -1;
 }
+
+export interface ResolvedType {
+    canBeAssignedFrom(rightSide: ResolvedType)
+}
+export class BuiltInResolvedType implements ResolvedType {
+    constructor(
+        public readonly name: string,
+    ) {}
+
+    canBeAssignedFrom(rightSide: ResolvedType) {
+        return rightSide instanceof BuiltInResolvedType &&
+            this.name === rightSide.name;
+    }
+}
+export class ImportFromModuleResolvedType implements ResolvedType {
+    constructor(
+        public readonly module: string,
+        public readonly path: string[],
+    ) {}
+
+    canBeAssignedFrom(rightSide: ResolvedType) {
+        if (rightSide instanceof ImportFromModuleResolvedType) {
+            let pathEqual = this.path.length === rightSide.path.length;
+            if (pathEqual) {
+                pathEqual = this.path
+                    .map((value, index) => value === rightSide.path[index])
+                    .reduce(byAnd(), true)
+            }
+            return pathEqual && this.module === rightSide.module;
+        }
+        return false;
+    }
+}
+export class ArrayResolvedType implements ResolvedType {
+    constructor(
+        public readonly itemType: ResolvedType,
+    ) {}
+
+    canBeAssignedFrom(rightSide: ResolvedType) {
+        return rightSide instanceof ArrayResolvedType &&
+            this.itemType === rightSide.itemType;
+    }
+}
+export class FunctionResolvedType implements ResolvedType {
+    constructor(
+        public readonly params: ResolvedType[],
+        public readonly returns: ResolvedType,
+    ) {}
+
+    canBeAssignedFrom(rightSide: ResolvedType) {
+        return rightSide instanceof FunctionResolvedType &&
+            this.returns.canBeAssignedFrom(rightSide.returns)
+    }
+}
+export class UnionResolvedType implements ResolvedType {
+    constructor(
+        public readonly types: ResolvedType[],
+    ) {}
+
+    canBeAssignedFrom(rightSide: ResolvedType) {
+        if (rightSide instanceof UnionResolvedType) {
+            for (const item1 of this.types)
+                for (const item2 of rightSide.types)
+                    if (item1.canBeAssignedFrom(item2))
+                        return true;
+        }
+        else
+            for (const item1 of this.types)
+                if (item1.canBeAssignedFrom(rightSide))
+                    return true;
+
+        return false;
+    }
+
+}
+export class GlobalResolvedType implements ResolvedType {
+    constructor(
+        public readonly name: string,
+    ) {}
+
+    canBeAssignedFrom(rightSide: ResolvedType) {
+        return rightSide instanceof GlobalResolvedType &&
+            this.name === rightSide.name;
+    }
+
+}
+
 
 export class SourceFileBindingResolver {
     private nameBindingResolvers = new Map<ts.Node, NameBindingResolver>();
@@ -102,20 +190,20 @@ export class SourceFileBindingResolver {
         return this.findBindingResolver(identifier).resolvePropertyAccessChain(identifier);
     }
 
-    explainFlattenedVariableType(flattened: FlattenedAccessChain): string {
+    explainFlattenedVariableType(flattened: FlattenedAccessChain): ResolvedType {
         if (!!flattened.root) {
             if (
                 isImportModuleVariableRoot(flattened.root) &&
                 isStringLiteral(flattened.root.module)
             ) {
-                return `${flattened.root.module.text}.${flattened.path.join('.')}`;
+                return new ImportFromModuleResolvedType(flattened.root.module.text, flattened.path);
             }
         }
         else
             return undefined;
     }
 
-    explainType(type: ts.TypeNode): string {
+    explainType(type: ts.TypeNode): ResolvedType {
         if (type) {
             if (isTypeReferenceNode(type)) {
                 let typeName = type.typeName;
@@ -125,24 +213,32 @@ export class SourceFileBindingResolver {
                     let typeFromFlattened = this.explainFlattenedVariableType(flattened)
                     if (typeFromFlattened)
                         return typeFromFlattened;
-                    if (builtInType(typeName.text)) return typeName.text;
+                    if (builtInType(typeName.text)) return new BuiltInResolvedType(typeName.text);
                 }
-            } else if (type.kind === SyntaxKind.StringKeyword) return 'string'
-            else if (type.kind === SyntaxKind.NumberKeyword) return 'number'
-            else if (type.kind === SyntaxKind.BooleanKeyword) return 'boolean'
-            else if (type.kind === SyntaxKind.AnyKeyword) return 'any'
-            else if (type.kind === SyntaxKind.VoidKeyword) return 'void'
-            else if (isArrayTypeNode(type)) return `Array<${this.explainType(type.elementType)}>`
+            } else if (type.kind === SyntaxKind.StringKeyword) return new BuiltInResolvedType('string');
+            else if (type.kind === SyntaxKind.NumberKeyword) return new BuiltInResolvedType('number');
+            else if (type.kind === SyntaxKind.BooleanKeyword) return new BuiltInResolvedType('boolean');
+            else if (type.kind === SyntaxKind.AnyKeyword) return new BuiltInResolvedType('any');
+            else if (type.kind === SyntaxKind.VoidKeyword) return new BuiltInResolvedType('void');
+            else if (isArrayTypeNode(type)) return new ArrayResolvedType(this.explainType(type.elementType))
             else if (isFunctionTypeNode(type)) {
-                const paramTypes = type.parameters
+                const params = type.parameters
                     .map(param => this.explainType(param.type))
-                    .join(', ')
                 const ret = this.explainType(type.type)
-                return `(${paramTypes}) => ${ret}`;
+                return new FunctionResolvedType(params, ret);
             }
+            else if (isUnionTypeNode(type))
+                return new UnionResolvedType(type.types.map(aType => this.explainType(aType)))
         }
 
-
-        return undefined;
+        return new BuiltInResolvedType('void');
     }
+
+    globalType(globalVariableRoot: GlobalVariableRoot): ResolvedType {
+        return new GlobalResolvedType(globalVariableRoot.name);
+    }
+}
+
+export function areResolvedTypesCompatible(type1: ResolvedType, type2: ResolvedType): boolean {
+    return type1.canBeAssignedFrom(type2);
 }

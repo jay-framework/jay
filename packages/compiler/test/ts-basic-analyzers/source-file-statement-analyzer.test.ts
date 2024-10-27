@@ -14,10 +14,8 @@ import {
 import {
     consoleLog, consoleLogVarargs,
     eventPreventDefaultPattern, foo, promise,
-    readEventKeyCodePattern,
     readEventTargetValuePattern, requestAnimationFramePattern,
     setEventTargetValuePattern,
-    stringLengthPattern,
     stringReplacePattern,
 } from './compiler-patterns-for-testing';
 
@@ -301,11 +299,12 @@ describe('SourceFileStatementAnalyzer', () => {
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(
                 new Set([
-                    `exec$(() => console.log('hi')); --> sandbox, patterns matched: [0]`,
+                    `exec$(() => console.log('hi')); --> sandbox, patterns matched: [0, 1]`,
                 ]),
             );
             expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                `0: console.log('hi'); matches consoleLog`
+                `0: console.log('hi'); matches consoleLog`,
+                "1: () => console.log('hi'); matches inlineArrowFunctionPattern",
             ]));
         })
 
@@ -328,12 +327,13 @@ describe('SourceFileStatementAnalyzer', () => {
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(
                 new Set([
-                    `exec$(() => console.log(foo())); --> sandbox, patterns matched: [0, 1]`,
+                    `exec$(() => console.log(foo())); --> sandbox, patterns matched: [0, 1, 2]`,
                 ]),
             );
             expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
                 `0: foo(); matches fooPattern`,
-                `1: console.log(foo()); matches consoleLog`
+                `1: console.log(foo()); matches consoleLog`,
+                "2: () => console.log(foo()); matches inlineArrowFunctionPattern",
             ]));
         })
 
@@ -382,11 +382,12 @@ describe('SourceFileStatementAnalyzer', () => {
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(
                 new Set([
-                    `exec$(() => console.log('hi', 'jay')); --> sandbox, patterns matched: [0]`,
+                    `exec$(() => console.log('hi', 'jay')); --> sandbox, patterns matched: [0, 1]`,
                 ]),
             );
             expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                `0: console.log('hi', 'jay'); matches consoleLog`
+                `0: console.log('hi', 'jay'); matches consoleLog`,
+                "1: () => console.log('hi', 'jay'); matches inlineArrowFunctionPattern",
             ]));
 
         })
@@ -409,12 +410,15 @@ describe('SourceFileStatementAnalyzer', () => {
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(
                 new Set([
-                    `exec$(() => new Promise((resolve) => requestAnimationFrame(resolve))); --> sandbox, patterns matched: [0, 1, 2]`,
+                    `exec$(() => new Promise((resolve) => requestAnimationFrame(resolve))); --> sandbox, patterns matched: [0, 1, 2, 3, 4]`,
                 ]),
             );
             expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                `1: new Promise((resolve) => requestAnimationFrame(resolve)); matches promise2`,
-                `2: requestAnimationFrame(resolve); matches requestAnimationFramePattern`
+                "0: resolve; matches knownVariableReadPattern",
+                "1: requestAnimationFrame(resolve); matches requestAnimationFramePattern",
+                "2: (resolve) => requestAnimationFrame(resolve); matches inlineArrowFunctionPattern",
+                "3: new Promise((resolve) => requestAnimationFrame(resolve)); matches promise2",
+                "4: () => new Promise((resolve) => requestAnimationFrame(resolve)); matches inlineArrowFunctionPattern",
             ]));
 
         })
