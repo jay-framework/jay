@@ -15,11 +15,15 @@ import {
     intersectJayTargetEnv,
     JayTargetEnv,
 } from '../basic-analyzers/compile-function-split-patterns';
-import { astToCode, codeToAst } from '../ts-utils/ts-compiler-utils';
-import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
-import {ScopedSourceFileStatementAnalyzer, SourceFileStatementAnalyzer} from '../basic-analyzers/scoped-source-file-statement-analyzer';
-import { ContextualVisitor2, visitWithContext2 } from '../ts-utils/visitor-with-context';
-import { flattenVariable, LiteralVariableRoot } from '../basic-analyzers/name-binding-resolver';
+import {astToCode, codeToAst} from '../ts-utils/ts-compiler-utils';
+import {SourceFileBindingResolver} from '../basic-analyzers/source-file-binding-resolver';
+import {
+    ScopedSourceFileStatementAnalyzer,
+    SourceFileStatementAnalyzer
+} from '../basic-analyzers/scoped-source-file-statement-analyzer';
+import {ContextualVisitor2, visitWithContext2} from '../ts-utils/visitor-with-context';
+import {flattenVariable, LiteralVariableRoot} from '../basic-analyzers/name-binding-resolver';
+import {FunctionRepositoryCodeFragment} from "./function-repository-builder";
 
 interface MatchedPattern {
     pattern: CompiledPattern;
@@ -29,11 +33,6 @@ interface MatchedPattern {
 interface MatchedVariable {
     variable: Identifier;
     patternKey: number;
-}
-
-export interface FunctionRepositoryCodeFragment {
-    handlerCode: string;
-    constCode: string;
 }
 
 export interface TransformedEventHandlerByPattern {

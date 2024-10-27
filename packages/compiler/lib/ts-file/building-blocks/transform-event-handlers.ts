@@ -1,13 +1,13 @@
 import ts from 'typescript';
 import { FoundEventHandler } from './find-event-handler-functions';
 import {
-    FunctionRepositoryCodeFragment,
     TransformedEventHandlerByPattern,
     transformEventHandlerByPatternBlock,
 } from './transform-event-handler-by-pattern';
 import { transformEventHandlerCallStatement$Block } from './transform-event-handler-call$';
 import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
 import { SourceFileStatementAnalyzer} from '../basic-analyzers/scoped-source-file-statement-analyzer';
+import {FunctionRepositoryCodeFragment} from "./function-repository-builder";
 
 export interface TransformedEventHandler extends FoundEventHandler {
     wasEventHandlerTransformed: boolean;
