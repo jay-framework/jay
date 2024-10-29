@@ -20,7 +20,11 @@ import {
     mkParameterVariableRoot,
     UNKNOWN_VARIABLE,
 } from '../../lib/ts-file/basic-analyzers/name-binding-resolver';
-import { SourceFileBindingResolver } from '../../lib/ts-file/basic-analyzers/source-file-binding-resolver';
+import {
+    ArrayResolvedType,
+    BuiltInResolvedType, FunctionResolvedType, ImportFromModuleResolvedType,
+    SourceFileBindingResolver, UnionResolvedType
+} from '../../lib/ts-file/basic-analyzers/source-file-binding-resolver';
 
 describe('SourceFileBindingResolver', () => {
     describe('resolve variables', () => {
@@ -780,11 +784,11 @@ describe('SourceFileBindingResolver', () => {
             const bindingResolver = new SourceFileBindingResolver(sourceFile);
             const func = sourceFile.statements[0] as FunctionDeclaration
 
-            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual('builtIn:string')
-            expect(bindingResolver.explainType(func.parameters[1].type)).toEqual('builtIn:number')
-            expect(bindingResolver.explainType(func.parameters[2].type)).toEqual('builtIn:boolean')
-            expect(bindingResolver.explainType(func.parameters[3].type)).toEqual('builtIn:Date')
-            expect(bindingResolver.explainType(func.parameters[4].type)).toEqual('builtIn:RegExp')
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(new BuiltInResolvedType('string'))
+            expect(bindingResolver.explainType(func.parameters[1].type)).toEqual(new BuiltInResolvedType('number'))
+            expect(bindingResolver.explainType(func.parameters[2].type)).toEqual(new BuiltInResolvedType('boolean'))
+            expect(bindingResolver.explainType(func.parameters[3].type)).toEqual(new BuiltInResolvedType('Date'))
+            expect(bindingResolver.explainType(func.parameters[4].type)).toEqual(new BuiltInResolvedType('RegExp'))
         })
 
         it('should resolve imported types', () => {
@@ -795,7 +799,7 @@ describe('SourceFileBindingResolver', () => {
             const bindingResolver = new SourceFileBindingResolver(sourceFile);
             const func = sourceFile.statements[1] as FunctionDeclaration
 
-            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual('module:module-a.A')
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(new ImportFromModuleResolvedType('module-a', ['A']))
         })
 
         it('should resolve varargs type', () => {
@@ -805,7 +809,7 @@ describe('SourceFileBindingResolver', () => {
             const bindingResolver = new SourceFileBindingResolver(sourceFile);
             const func = sourceFile.statements[0] as FunctionDeclaration
 
-            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual('Array<builtIn:string>')
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(new ArrayResolvedType(new BuiltInResolvedType('string')))
         })
 
         it('should resolve union types', () => {
@@ -815,7 +819,7 @@ describe('SourceFileBindingResolver', () => {
             const bindingResolver = new SourceFileBindingResolver(sourceFile);
             const func = sourceFile.statements[0] as FunctionDeclaration
 
-            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual('builtIn:string | builtIn:number')
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(new UnionResolvedType([new BuiltInResolvedType('string'), new BuiltInResolvedType('number')]))
         })
 
         it('should resolve function type', () => {
@@ -825,7 +829,7 @@ describe('SourceFileBindingResolver', () => {
             const bindingResolver = new SourceFileBindingResolver(sourceFile);
             const func = sourceFile.statements[0] as FunctionDeclaration
 
-            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual('() => builtIn:void')
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(new FunctionResolvedType([], new BuiltInResolvedType('void')))
         })
 
         it('should resolve function with parameters and return type', () => {
@@ -836,7 +840,11 @@ describe('SourceFileBindingResolver', () => {
             const bindingResolver = new SourceFileBindingResolver(sourceFile);
             const func = sourceFile.statements[1] as FunctionDeclaration
 
-            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual('(module:module-a.A) => module:module-a.B')
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(
+                new FunctionResolvedType([
+                    new ImportFromModuleResolvedType('module-a', ['A'])],
+                    new ImportFromModuleResolvedType('module-a', ['B']))
+                )
         })
     })
 });

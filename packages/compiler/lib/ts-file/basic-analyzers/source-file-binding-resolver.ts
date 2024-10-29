@@ -117,6 +117,15 @@ export class GlobalResolvedType implements ResolvedType {
     }
 
 }
+export class SpreadResolvedType implements ResolvedType {
+    constructor(public readonly arrayType: ResolvedType) {
+    }
+
+    canBeAssignedFrom(rightSide: ResolvedType) {
+        return rightSide instanceof SpreadResolvedType &&
+            this.arrayType.canBeAssignedFrom(rightSide.arrayType)
+    }
+}
 
 
 export class SourceFileBindingResolver {

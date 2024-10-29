@@ -23,7 +23,7 @@ import {
 import {mkTransformer} from '../ts-utils/mk-transformer';
 import {JayValidations, WithValidations} from '../../core/with-validations';
 import {astToCode} from '../ts-utils/ts-compiler-utils';
-import {ResolvedType, SourceFileBindingResolver} from './source-file-binding-resolver';
+import {ResolvedType, SourceFileBindingResolver, SpreadResolvedType} from './source-file-binding-resolver';
 import {isIdentifierOrPropertyAccessExpression} from "./typescript-extras";
 
 export enum CompilePatternType {
@@ -93,7 +93,7 @@ export interface CompiledPattern {
     name: string;
 }
 
-function extractArgumentType(argument: ts.Expression, sourceFileBinding: SourceFileBindingResolver, node: ts.FunctionDeclaration) {
+function extractArgumentType(argument: ts.Expression, sourceFileBinding: SourceFileBindingResolver, node: ts.FunctionDeclaration): ResolvedType {
     if (isIdentifierOrPropertyAccessExpression(argument)) {
         const explainedArgument = flattenVariable(sourceFileBinding.explain(argument));
         if (isParamVariableRoot(explainedArgument.root)) {
@@ -102,7 +102,7 @@ function extractArgumentType(argument: ts.Expression, sourceFileBinding: SourceF
         }
     }
     if (isSpreadElement(argument)) {
-        return `...${extractArgumentType(argument.expression, sourceFileBinding, node)}`;
+        return new SpreadResolvedType(extractArgumentType(argument.expression, sourceFileBinding, node));
     }
     return undefined;
 }

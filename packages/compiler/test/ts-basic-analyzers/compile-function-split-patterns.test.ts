@@ -4,6 +4,11 @@ import {
     JayTargetEnv,
 } from '../../lib/ts-file/basic-analyzers/compile-function-split-patterns';
 import { createTsSourceFile } from '../test-utils/ts-source-utils';
+import {
+    ArrayResolvedType,
+    BuiltInResolvedType, FunctionResolvedType, GlobalResolvedType,
+    ImportFromModuleResolvedType, SpreadResolvedType
+} from "../../lib/ts-file/basic-analyzers/source-file-binding-resolver";
 
 describe('compile secure function split patterns', () => {
     it('should compile a return pattern', () => {
@@ -23,8 +28,8 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.RETURN,
             leftSidePath: ['event', 'target', 'value'],
-            leftSideType: 'module:jay-runtime.JayEvent',
-            returnType: undefined,
+            leftSideType: new ImportFromModuleResolvedType('jay-runtime', ['JayEvent']),
+            returnType: new BuiltInResolvedType('void'),
             callArgumentTypes: [],
             targetEnvForStatement: JayTargetEnv.any,
             name: 'inputValuePattern',
@@ -49,8 +54,8 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.RETURN,
             leftSidePath: ['event', 'target', 'value'],
-            leftSideType: 'module:jay-runtime.JayEvent',
-            returnType: 'builtIn:string',
+            leftSideType: new ImportFromModuleResolvedType('jay-runtime', ['JayEvent']),
+            returnType: new BuiltInResolvedType('string'),
             callArgumentTypes: [],
             targetEnvForStatement: JayTargetEnv.any,
             name: 'inputValuePattern',
@@ -75,8 +80,8 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.CALL,
             leftSidePath: ['event', 'preventDefault'],
-            leftSideType: 'module:jay-runtime.JayEvent',
-            returnType: undefined,
+            leftSideType: new ImportFromModuleResolvedType('jay-runtime', ['JayEvent']),
+            returnType: new BuiltInResolvedType('void'),
             callArgumentTypes: [],
             targetEnvForStatement: JayTargetEnv.main,
             name: 'eventPreventDefault',
@@ -100,8 +105,8 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.CALL,
             leftSidePath: ['foo'],
-            leftSideType: 'module:foo.foo',
-            returnType: undefined,
+            leftSideType: new ImportFromModuleResolvedType('foo', ['foo']),
+            returnType: new BuiltInResolvedType('void'),
             callArgumentTypes: [],
             targetEnvForStatement: JayTargetEnv.main,
             name: 'fooPattern',
@@ -124,9 +129,9 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.CHAINABLE_CALL,
             leftSidePath: ['replace'],
-            leftSideType: 'builtIn:string',
-            returnType: 'builtIn:string',
-            callArgumentTypes: ['builtIn:RegExp', 'builtIn:string'],
+            leftSideType: new BuiltInResolvedType('string'),
+            returnType: new BuiltInResolvedType('string'),
+            callArgumentTypes: [new BuiltInResolvedType('RegExp'), new BuiltInResolvedType('string')],
             targetEnvForStatement: JayTargetEnv.any,
             name: 'stringReplace',
         });
@@ -150,9 +155,13 @@ describe('compile secure function split patterns', () => {
             expect(compiledPattern).toEqual({
                 patternType: CompilePatternType.CHAINABLE_CALL,
                 leftSidePath: ['foo'],
-                leftSideType: 'module:module.Target',
-                returnType: 'module:module.Result',
-                callArgumentTypes: ['module:module.A', 'module:module.B', 'module:module.C', 'module:module.D'],
+                leftSideType: new ImportFromModuleResolvedType('module', ['Target']),
+                returnType: new ImportFromModuleResolvedType('module', ['Result']),
+                callArgumentTypes: [
+                    new ImportFromModuleResolvedType('module', ['A']),
+                    new ImportFromModuleResolvedType('module', ['B']),
+                    new ImportFromModuleResolvedType('module', ['C']),
+                    new ImportFromModuleResolvedType('module', ['D'])],
                 targetEnvForStatement: JayTargetEnv.main,
                 name: 'testParams',
             });
@@ -174,9 +183,9 @@ describe('compile secure function split patterns', () => {
             expect(compiledPattern).toEqual({
                 patternType: CompilePatternType.CHAINABLE_CALL,
                 leftSidePath: ['target', 'foo'],
-                leftSideType: 'module:module.target.foo',
-                returnType: 'module:module.Result',
-                callArgumentTypes: ['builtIn:any'],
+                leftSideType: new ImportFromModuleResolvedType('module', ['target', 'foo']),
+                returnType: new ImportFromModuleResolvedType('module', ['Result']),
+                callArgumentTypes: [new BuiltInResolvedType('any')],
                 targetEnvForStatement: JayTargetEnv.main,
                 name: 'testParams',
             });
@@ -202,9 +211,9 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.ASSIGNMENT_LEFT_SIDE,
             leftSidePath: ['event', 'target', 'value'],
-            leftSideType: 'module:jay-runtime.JayEvent',
-            returnType: 'builtIn:void',
-            callArgumentTypes: ['builtIn:string'],
+            leftSideType: new ImportFromModuleResolvedType('jay-runtime', ['JayEvent']),
+            returnType: new BuiltInResolvedType('void'),
+            callArgumentTypes: [new BuiltInResolvedType('string')],
             targetEnvForStatement: JayTargetEnv.main,
             name: 'setInputValue',
         });
@@ -226,9 +235,9 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.CALL,
             leftSidePath: ['log'],
-            leftSideType: 'global:console',
-            returnType: undefined,
-            callArgumentTypes: ['builtIn:string'],
+            leftSideType: new GlobalResolvedType('console'),
+            returnType: new BuiltInResolvedType('void'),
+            callArgumentTypes: [new BuiltInResolvedType('string')],
             targetEnvForStatement: JayTargetEnv.any,
             name: 'consoleLog1',
         });
@@ -250,9 +259,13 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.CALL,
             leftSidePath: ['log'],
-            leftSideType: 'global:console',
-            returnType: undefined,
-            callArgumentTypes: ['...Array<builtIn:string>'],
+            leftSideType: new GlobalResolvedType('console'),
+            returnType: new BuiltInResolvedType('void'),
+            callArgumentTypes: [new SpreadResolvedType(
+                new ArrayResolvedType(
+                    new BuiltInResolvedType('string')
+                )
+            )],
             targetEnvForStatement: JayTargetEnv.any,
             name: 'consoleLog2',
         });
@@ -273,9 +286,11 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.CALL,
             leftSidePath: [],
-            leftSideType: 'global:requestAnimationFrame',
-            returnType: undefined,
-            callArgumentTypes: ['() => builtIn:void'],
+            leftSideType: new GlobalResolvedType('requestAnimationFrame'),
+            returnType: new BuiltInResolvedType('void'),
+            callArgumentTypes: [new FunctionResolvedType(
+                [],
+                new BuiltInResolvedType('void'))],
             targetEnvForStatement: JayTargetEnv.main,
             name: 'requestAnimationFramePattern',
         });
@@ -296,9 +311,12 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.CHAINABLE_CALL,
             leftSidePath: [],
-            leftSideType: 'global:Promise',
-            returnType: undefined,
-            callArgumentTypes: ['(builtIn:any) => builtIn:void', '() => builtIn:void'],
+            leftSideType: new GlobalResolvedType('Promise'),
+            returnType: new BuiltInResolvedType('void'),
+            callArgumentTypes: [
+                new FunctionResolvedType([new BuiltInResolvedType('any')], new BuiltInResolvedType('void')),
+                new FunctionResolvedType([], new BuiltInResolvedType('void'))
+            ],
             targetEnvForStatement: JayTargetEnv.main,
             name: 'promise',
         });
