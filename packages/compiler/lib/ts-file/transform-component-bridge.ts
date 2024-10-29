@@ -9,7 +9,8 @@ import { findComponentConstructorsBlock } from './building-blocks/find-component
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
 import { CompiledPattern } from './basic-analyzers/compile-function-split-patterns';
 import {
-    TransformedEventHandlers,
+    FunctionRepositoryFragment,
+    getAllFunctionRepositoryFragments,
     transformEventHandlers,
 } from './building-blocks/transform-event-handlers';
 import { SourceFileBindingResolver } from './basic-analyzers/source-file-binding-resolver';
@@ -87,13 +88,14 @@ interface ComponentBridgeTransformerConfig {
 }
 
 function generateFunctionRepository(
-    transformedEventHandlers: TransformedEventHandlers,
+    functionRepositoryFragments: FunctionRepositoryFragment[],
     context: TransformationContext,
 ): { hasFunctionRepository: boolean; functionRepository: Statement[] } {
-    let functionRepositoryFragments = transformedEventHandlers.getAllFunctionRepositoryFragments();
     if (functionRepositoryFragments.length > 0) {
-        let fragments = functionRepositoryFragments
-            .map((_) => `'${_.handlerIndex}': ${_.fragment.handlerCode}`)
+        let fragments = [...new Set(
+            functionRepositoryFragments
+                .map((_) => `'${_.handlerIndex}': ${_.fragment.handlerCode}`))
+        ]
             .join(',\n');
 
         let constants = functionRepositoryFragments.map((_) => _.fragment.constCode);
@@ -116,10 +118,10 @@ function transformSourceFile(
     context: ts.TransformationContext,
     importerMode: RuntimeMode,
     componentConstructorCalls: FoundJayComponentConstructorCall[],
-    transformedEventHandlers: TransformedEventHandlers,
+    functionRepositoryFragments: FunctionRepositoryFragment[],
 ) {
     let { functionRepository, hasFunctionRepository } = generateFunctionRepository(
-        transformedEventHandlers,
+        functionRepositoryFragments,
         context,
     );
 
@@ -176,9 +178,9 @@ function mkComponentBridgeTransformer({
 
     let analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
 
-    let transformedEventHandlers = new TransformedEventHandlers(
-        transformEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers),
-    );
+    const functionRepositoryFragments =
+        getAllFunctionRepositoryFragments(
+            transformEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers))
 
     return transformSourceFile(
         sourceFile,
@@ -186,7 +188,7 @@ function mkComponentBridgeTransformer({
         context,
         importerMode,
         calls,
-        transformedEventHandlers,
+        functionRepositoryFragments,
     );
 }
 

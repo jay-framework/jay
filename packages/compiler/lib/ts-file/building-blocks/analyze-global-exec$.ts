@@ -5,10 +5,11 @@ import {FunctionRepositoryBuilder} from "./function-repository-builder";
 
 export interface TransformedGlobalExec$ {
     wasTransformed: boolean,
+    foundExec$: ts.CallExpression,
     transformedExec$?: ts.CallExpression,
 }
 
-export function transformGlobalExec$(
+export function analyzeGlobalExec$(
     context: ts.TransformationContext,
     analyzer: SourceFileStatementAnalyzer,
     functionRepositoryBuilder: FunctionRepositoryBuilder,
@@ -33,13 +34,31 @@ export function transformGlobalExec$(
         ts.visitNode(foundExec$.arguments[0].body, visitor)
 
     if (foundUnsafeExpression)
-        return {wasTransformed: false};
+        return {foundExec$, wasTransformed: false};
     else {
         const constCode = functionRepositoryBuilder.add(astToCode(foundExec$.arguments[0]))
         const transformedExec$ =
             (codeToAst(`exec$(funcGlobal$('${constCode}'))`, context).map(
                 (_: ExpressionStatement) => _.expression,
             ) as Expression[])[0] as CallExpression;
-        return {wasTransformed: true, transformedExec$};
+        return {foundExec$, wasTransformed: true, transformedExec$};
     }
+}
+
+export function analyseGlobalExec$s(context: ts.TransformationContext,
+                                    analyzer: SourceFileStatementAnalyzer,
+                                    functionRepositoryBuilder: FunctionRepositoryBuilder,
+                                    foundExec$s: ts.CallExpression[],
+): TransformedGlobalExec$[] {
+    return foundExec$s.map(foundExec$ => analyzeGlobalExec$(context, analyzer, functionRepositoryBuilder, foundExec$))
+}
+
+export function transformedGlobalExec$toReplaceMap(transformedGlobalExec$s: TransformedGlobalExec$[]): Map<ts.Node, ts.Node> {
+    const map = new Map<ts.Node, ts.Node>();
+    transformedGlobalExec$s
+        .filter(_ => _.wasTransformed)
+        .forEach(_ => {
+            map.set(_.foundExec$, _.transformedExec$)
+        })
+    return map;
 }

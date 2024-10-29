@@ -7,7 +7,7 @@ import {
 import { transformEventHandlerCallStatement$Block } from './transform-event-handler-call$';
 import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
 import { SourceFileStatementAnalyzer} from '../basic-analyzers/scoped-source-file-statement-analyzer';
-import {FunctionRepositoryCodeFragment} from "./function-repository-builder";
+import {FunctionRepositoryBuilder, FunctionRepositoryCodeFragment} from "./function-repository-builder";
 
 export interface TransformedEventHandler extends FoundEventHandler {
     wasEventHandlerTransformed: boolean;
@@ -21,54 +21,20 @@ export interface FunctionRepositoryFragment {
     fragment: FunctionRepositoryCodeFragment;
 }
 
-export class TransformedEventHandlers {
-    private eventHandlers: Map<ts.Node, TransformedEventHandler[]>;
-    private eventHandlerCallStatements: Map<ts.Node, TransformedEventHandler>;
-    constructor(public readonly transformedEventHandlers: TransformedEventHandler[]) {
-        this.eventHandlers = new Map<ts.Node, TransformedEventHandler[]>();
-        this.eventHandlerCallStatements = new Map<ts.Node, TransformedEventHandler>();
-        transformedEventHandlers.forEach((transformedEventHandler) => {
-            this.eventHandlerCallStatements.set(
-                transformedEventHandler.eventHandlerCallStatement,
-                transformedEventHandler,
-            );
-            if (this.eventHandlers.has(transformedEventHandler.eventHandler))
-                this.eventHandlers
-                    .get(transformedEventHandler.eventHandler)
-                    .push(transformedEventHandler);
-            else
-                this.eventHandlers.set(transformedEventHandler.eventHandler, [
-                    transformedEventHandler,
-                ]);
-        });
-    }
+export function transformedEventHandlersToReplaceMap(transformedEventHandlers: TransformedEventHandler[]): Map<ts.Node, ts.Node> {
+    const map = new Map<ts.Node, ts.Node>();
+    transformedEventHandlers.forEach(_ => {
+        map.set(_.eventHandlerCallStatement, _.transformedEventHandlerCallStatement);
+        map.set(_.eventHandler, _.transformedEventHandler)
+    })
+    return map;
+}
 
-    hasEventHandler(node: ts.Node): boolean {
-        return this.eventHandlers.has(node);
-    }
-
-    hasEventHandlerCallStatement(node: ts.Node): boolean {
-        return this.eventHandlerCallStatements.has(node);
-    }
-
-    getTransformedEventHandlerCallStatement(node: ts.Node): TransformedEventHandler {
-        return this.eventHandlerCallStatements.get(node);
-    }
-
-    getTransformedEventHandler(node: ts.Node): TransformedEventHandler[] {
-        return this.eventHandlers.get(node);
-    }
-
-    getAllFunctionRepositoryFragments(): FunctionRepositoryFragment[] {
-        return Array.from(this.eventHandlers.values()).map((transformEventHandlers) => ({
-            fragment: transformEventHandlers[0].functionRepositoryFragment,
-            handlerIndex: transformEventHandlers[0].handlerIndex,
-        }));
-    }
-
-    includesTransformedEventHandlers() {
-        return this.transformedEventHandlers.length > 0;
-    }
+export function getAllFunctionRepositoryFragments(transformedEventHandlers: TransformedEventHandler[]): FunctionRepositoryFragment[] {
+    return transformedEventHandlers.map((transformEventHandler) => ({
+        fragment: transformEventHandler.functionRepositoryFragment,
+        handlerIndex: transformEventHandler.handlerIndex,
+    }))
 }
 
 export function transformEventHandlers(

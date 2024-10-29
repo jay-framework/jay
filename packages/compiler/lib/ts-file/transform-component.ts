@@ -6,7 +6,7 @@ import { CompiledPattern } from './basic-analyzers/compile-function-split-patter
 import { transformImportModeFileExtension } from './building-blocks/transform-import-mode-file-extension';
 import { RuntimeMode } from '../core/runtime-mode';
 import {
-    TransformedEventHandlers,
+    transformedEventHandlersToReplaceMap,
     transformEventHandlers,
 } from './building-blocks/transform-event-handlers';
 import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
@@ -19,6 +19,9 @@ import {
     findComponentConstructorCallsBlock,
     FindComponentConstructorType,
 } from './building-blocks/find-component-constructor-calls';
+import {analyseGlobalExec$s, transformedGlobalExec$toReplaceMap} from "./building-blocks/analyze-global-exec$";
+import {findExec$} from "./building-blocks/find-exec$";
+import {FunctionRepositoryBuilder} from "./building-blocks/function-repository-builder";
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: CompiledPattern[];
@@ -29,38 +32,38 @@ function isCssImport(node) {
 }
 
 function mkComponentTransformer(sftContext: ComponentSecureFunctionsTransformerConfig) {
-    let { patterns, context, factory, sourceFile } = sftContext;
+    const { patterns, context, factory, sourceFile } = sftContext;
 
     // find the event handlers
-    let bindingResolver = new SourceFileBindingResolver(sourceFile);
+    const bindingResolver = new SourceFileBindingResolver(sourceFile);
 
-    let calls = findComponentConstructorCallsBlock(
+    const calls = findComponentConstructorCallsBlock(
         FindComponentConstructorType.makeJayComponent,
         bindingResolver,
         sourceFile,
     );
-    let constructorExpressions = calls.map(({ comp }) => comp);
-    let constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sourceFile);
-    let foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
+    const constructorExpressions = calls.map(({ comp }) => comp);
+    const constructorDefinitions = findComponentConstructorsBlock(constructorExpressions, sourceFile);
+    const foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
         findEventHandlersBlock(constructorDefinition, bindingResolver),
     );
 
-    let analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
+    const analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
 
-    let transformedEventHandlers = new TransformedEventHandlers(
-        transformEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers),
-    );
+    const transformedEventHandlers1 = transformEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers);
+
+    const eventsReplaceMap = transformedEventHandlersToReplaceMap(transformedEventHandlers1);
+
+    const globalExec$FunctionRepositoryBuilder = new FunctionRepositoryBuilder();
+    const foundExec$ = findExec$(bindingResolver, sourceFile);
+    const transformedGlobalExec$ = analyseGlobalExec$s(context, analyzer, globalExec$FunctionRepositoryBuilder, foundExec$)
+    const globalExec$ReplaceMap = transformedGlobalExec$toReplaceMap(transformedGlobalExec$)
+
+    const replaceMap = new Map([...eventsReplaceMap, ...globalExec$ReplaceMap]);
 
     let visitor = (node) => {
-        if (transformedEventHandlers.hasEventHandlerCallStatement(node)) {
-            let transformedEventHandler =
-                transformedEventHandlers.getTransformedEventHandlerCallStatement(node);
-            node = transformedEventHandler.transformedEventHandlerCallStatement;
-            return ts.visitEachChild(node, visitor, context);
-        }
-        if (transformedEventHandlers.hasEventHandler(node)) {
-            let transformedEventHandler = transformedEventHandlers.getTransformedEventHandler(node);
-            node = transformedEventHandler[0].transformedEventHandler;
+        if (replaceMap.has(node)) {
+            node = replaceMap.get(node);
             return ts.visitEachChild(node, visitor, context);
         }
         if (isImportDeclaration(node)) {
@@ -71,7 +74,7 @@ function mkComponentTransformer(sftContext: ComponentSecureFunctionsTransformerC
     };
     let transformedSourceFile = ts.visitEachChild(sftContext.sourceFile, visitor, context);
 
-    if (transformedEventHandlers.includesTransformedEventHandlers()) {
+    if (transformedEventHandlers1.length > 0) {
         let statements = [...transformedSourceFile.statements];
         let afterImportStatementIndex = findAfterImportStatementIndex(statements);
 

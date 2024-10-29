@@ -2,8 +2,8 @@ import {SourceFileBindingResolver} from "../../lib/ts-file/basic-analyzers/sourc
 import {findExec$} from "../../lib/ts-file/building-blocks/find-exec$";
 import {
     TransformedGlobalExec$,
-    transformGlobalExec$
-} from "../../lib/ts-file/building-blocks/transform-global-exec$";
+    analyzeGlobalExec$
+} from "../../lib/ts-file/building-blocks/analyze-global-exec$";
 import {CompiledPattern} from "../../lib";
 import {mkTransformer} from "../../lib/ts-file/ts-utils/mk-transformer";
 import ts from "typescript";
@@ -24,7 +24,7 @@ function testTransformer(compiledPatterns: CompiledPattern[]) {
         const visitor = (node) => {
             const foundExec$ = foundExec$s.find(_ => _ === node)
             if (!!foundExec$) {
-                const transformedExec$ = transformGlobalExec$(context, analyzer, functionRepositoryBuilder, foundExec$)
+                const transformedExec$ = analyzeGlobalExec$(context, analyzer, functionRepositoryBuilder, foundExec$)
                 transformedExec$s.push(transformedExec$);
             }
             return ts.visitEachChild(node, visitor, context);
