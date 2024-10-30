@@ -6,9 +6,9 @@ import { CompiledPattern } from './basic-analyzers/compile-function-split-patter
 import { transformImportModeFileExtension } from './building-blocks/transform-import-mode-file-extension';
 import { RuntimeMode } from '../core/runtime-mode';
 import {
-    transformedEventHandlersToReplaceMap,
-    transformEventHandlers,
-} from './building-blocks/transform-event-handlers';
+    analyzedEventHandlersToReplaceMap,
+    analyzeEventHandlers,
+} from './building-blocks/analyze-event-handlers';
 import { findAfterImportStatementIndex } from './building-blocks/find-after-import-statement-index';
 import { codeToAst } from './ts-utils/ts-compiler-utils';
 import { SourceFileBindingResolver } from './basic-analyzers/source-file-binding-resolver';
@@ -50,9 +50,9 @@ function mkComponentTransformer(sftContext: ComponentSecureFunctionsTransformerC
 
     const analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
 
-    const transformedEventHandlers1 = transformEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers);
+    const transformedEventHandlers1 = analyzeEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers);
 
-    const eventsReplaceMap = transformedEventHandlersToReplaceMap(transformedEventHandlers1);
+    const eventsReplaceMap = analyzedEventHandlersToReplaceMap(transformedEventHandlers1);
 
     const globalExec$FunctionRepositoryBuilder = new FunctionRepositoryBuilder();
     const foundExec$ = findExec$(bindingResolver, sourceFile);

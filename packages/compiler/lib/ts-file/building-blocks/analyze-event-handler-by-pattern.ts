@@ -192,7 +192,7 @@ const mkTransformEventHandlerStatementVisitor = (
     return { visitor, sideEffects };
 };
 
-export const transformEventHandlerByPatternBlock = (
+export const analyzeEventHandlerByPatternBlock = (
     context: ts.TransformationContext,
     bindingResolver: SourceFileBindingResolver,
     analyzer: SourceFileStatementAnalyzer,

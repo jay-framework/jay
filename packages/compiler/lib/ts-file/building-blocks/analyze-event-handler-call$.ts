@@ -8,8 +8,9 @@ import ts, {
 } from 'typescript';
 import { codeToAst } from '../ts-utils/ts-compiler-utils';
 import { FoundEventHandler } from './find-event-handler-functions';
+import {analyzeEventHandlerByPatternBlock} from "./analyze-event-handler-by-pattern";
 
-const transformEventHandlerCall$ =
+const analyzeEventHandlerCall =
     (context: TransformationContext, factory: NodeFactory, foundEventHandler: FoundEventHandler) =>
     (node) => {
         if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
@@ -34,12 +35,12 @@ const transformEventHandlerCall$ =
         return node;
     };
 
-export const transformEventHandlerCallStatement$Block =
+export const analyzeEventHandlerCallStatement$Block =
     (context: TransformationContext, factory: NodeFactory, foundEventHandler: FoundEventHandler) =>
     (node: ExpressionStatement) => {
         return ts.visitEachChild(
             node,
-            transformEventHandlerCall$(context, factory, foundEventHandler),
+            analyzeEventHandlerCall(context, factory, foundEventHandler),
             context,
         );
     };

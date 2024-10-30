@@ -2,8 +2,8 @@ import { CompiledPattern } from '../../lib';
 import { mkTransformer } from '../../lib/ts-file/ts-utils/mk-transformer';
 import {
     TransformedEventHandlerByPattern,
-    transformEventHandlerByPatternBlock,
-} from '../../lib/ts-file/building-blocks/transform-event-handler-by-pattern';
+    analyzeEventHandlerByPatternBlock,
+} from '../../lib/ts-file/building-blocks/analyze-event-handler-by-pattern';
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import ts, { isArrowFunction, isFunctionDeclaration } from 'typescript';
 import { prettify } from '../../lib';
@@ -34,7 +34,7 @@ describe('split event handler by pattern', () => {
                     compiledPatterns
                 );
                 if (isFunctionDeclaration(node) || isArrowFunction(node)) {
-                    let splitEventHandler = transformEventHandlerByPatternBlock(
+                    let splitEventHandler = analyzeEventHandlerByPatternBlock(
                         context,
                         bindingResolver,
                         analyzer,

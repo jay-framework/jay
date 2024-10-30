@@ -2,9 +2,9 @@ import ts from 'typescript';
 import { FoundEventHandler } from './find-event-handler-functions';
 import {
     TransformedEventHandlerByPattern,
-    transformEventHandlerByPatternBlock,
-} from './transform-event-handler-by-pattern';
-import { transformEventHandlerCallStatement$Block } from './transform-event-handler-call$';
+    analyzeEventHandlerByPatternBlock,
+} from './analyze-event-handler-by-pattern';
+import { analyzeEventHandlerCallStatement$Block } from './analyze-event-handler-call$';
 import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
 import { SourceFileStatementAnalyzer} from '../basic-analyzers/scoped-source-file-statement-analyzer';
 import {FunctionRepositoryBuilder, FunctionRepositoryCodeFragment} from "./function-repository-builder";
@@ -21,7 +21,7 @@ export interface FunctionRepositoryFragment {
     fragment: FunctionRepositoryCodeFragment;
 }
 
-export function transformedEventHandlersToReplaceMap(transformedEventHandlers: TransformedEventHandler[]): Map<ts.Node, ts.Node> {
+export function analyzedEventHandlersToReplaceMap(transformedEventHandlers: TransformedEventHandler[]): Map<ts.Node, ts.Node> {
     const map = new Map<ts.Node, ts.Node>();
     transformedEventHandlers.forEach(_ => {
         map.set(_.eventHandlerCallStatement, _.transformedEventHandlerCallStatement);
@@ -37,7 +37,7 @@ export function getAllFunctionRepositoryFragments(transformedEventHandlers: Tran
     }))
 }
 
-export function transformEventHandlers(
+export function analyzeEventHandlers(
     context: ts.TransformationContext,
     bindingResolver: SourceFileBindingResolver,
     analyzer: SourceFileStatementAnalyzer,
@@ -50,7 +50,7 @@ export function transformEventHandlers(
         if (!handlerToTransformedHandlers.has(foundEventHandler.eventHandler))
             handlerToTransformedHandlers.set(
                 foundEventHandler.eventHandler,
-                transformEventHandlerByPatternBlock(
+                analyzeEventHandlerByPatternBlock(
                     context,
                     bindingResolver,
                     analyzer,
@@ -72,7 +72,7 @@ export function transformEventHandlers(
                 wasEventHandlerTransformed,
                 functionRepositoryFragment,
             } = handlerToTransformedHandlers.get(foundEventHandler.eventHandler);
-            const transformedEventHandlerCallStatement = transformEventHandlerCallStatement$Block(
+            const transformedEventHandlerCallStatement = analyzeEventHandlerCallStatement$Block(
                 context,
                 factory,
                 foundEventHandler,

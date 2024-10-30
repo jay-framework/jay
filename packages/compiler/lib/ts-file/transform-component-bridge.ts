@@ -11,8 +11,8 @@ import { CompiledPattern } from './basic-analyzers/compile-function-split-patter
 import {
     FunctionRepositoryFragment,
     getAllFunctionRepositoryFragments,
-    transformEventHandlers,
-} from './building-blocks/transform-event-handlers';
+    analyzeEventHandlers,
+} from './building-blocks/analyze-event-handlers';
 import { SourceFileBindingResolver } from './basic-analyzers/source-file-binding-resolver';
 import {
     SourceFileStatementAnalyzer
@@ -180,7 +180,7 @@ function mkComponentBridgeTransformer({
 
     const functionRepositoryFragments =
         getAllFunctionRepositoryFragments(
-            transformEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers))
+            analyzeEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers))
 
     return transformSourceFile(
         sourceFile,
