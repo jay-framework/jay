@@ -5,10 +5,14 @@ import { prettify } from '../../lib';
 
 const { readFile } = promises;
 
-export async function readTestFile(folder, filename) {
+export async function readTestFile(folder, filename): Promise<string> {
     return removeComments(
         (await readFile(path.resolve(__dirname, `../fixtures/${folder}/${filename}`))).toString(),
     );
+}
+
+export async function readPrettifyTextFile(folder: string, filename: string) {
+    return prettify(await readTestFile(folder, filename));
 }
 
 export async function readSourceJayFile(folder) {

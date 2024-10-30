@@ -10,7 +10,7 @@ import {
 } from '../lib';
 import {
     readGeneratedNamedFile,
-    readNamedSourceJayFile,
+    readNamedSourceJayFile, readPrettifyTextFile,
     readTestFile,
 } from './test-utils/file-utils';
 import * as ts from 'typescript';
@@ -21,6 +21,7 @@ import {
     readFileAndGenerateElementBridgeFile,
     readTsSourceFile,
 } from './test-utils/ts-compiler-test-utils';
+import {promise, requestAnimationFramePattern} from "./ts-basic-analyzers/compiler-patterns-for-testing";
 
 describe('generate full project', () => {
     const relativePath = './test/fixtures/tsconfig.json';
@@ -207,12 +208,12 @@ describe('generate full project', () => {
                 );
 
                 const outputFile = ts.transform(sourceFile, [
-                    transformComponent([]),
+                    transformComponent([...promise(), ...requestAnimationFramePattern()]),
                 ]);
 
                 const outputCode = await printTsFile(outputFile);
                 expect(await prettify(outputCode)).toEqual(
-                    await readTestFile('full-projects/exec/generated/sandbox', 'auto-counter.ts'),
+                    await readPrettifyTextFile('full-projects/exec/generated/sandbox', 'auto-counter.ts'),
                 );
             });
 
