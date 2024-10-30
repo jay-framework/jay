@@ -307,6 +307,9 @@ export class ScopedSourceFileStatementAnalyzer {
                     isDoStatement(node)
                 ) {
                     this.markStatementSandbox(statement);
+                    node.getChildren().forEach((child) =>
+                        visitChild(child, { statement, roleInParent: RoleInParent.none }),
+                    );
                 } else if (isBinaryExpression(node)) {
                     visitChild(node.right, { statement, roleInParent: RoleInParent.read });
                     visitChild(node.left, {

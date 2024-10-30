@@ -37,15 +37,18 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.getChildren()[1]
+                    sourceFile.statements[1]
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
                     new Set([
-                        `for (let i = 0; i < (event.target as HTMLInputElement).value.length; i++) /*...*/ --> sandbox, patterns matched: []`,
+                        "for (let i = 0; i < (event.target as HTMLInputElement).value.length; i++) /*...*/ --> sandbox, patterns matched: [0]",
+                        "console.log(i); --> sandbox, patterns matched: []",
                     ]),
                 );
-                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([]));
+                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                    "0: (event.target as HTMLInputElement).value; matches inputValuePattern",
+                ]));
             });
 
             it('mandate for in statement in sandbox', async () => {
@@ -62,12 +65,13 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.getChildren()[1]
+                    sourceFile.statements[1]
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
                     new Set([
                         `for (let i in (event.target as HTMLInputElement).value) /*...*/ --> sandbox, patterns matched: []`,
+                        "console.log(i); --> sandbox, patterns matched: []",
                     ]),
                 );
                 expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([]));
@@ -87,12 +91,13 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.getChildren()[1]
+                    sourceFile.statements[1]
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
                     new Set([
                         `for (let i of (event.target as HTMLInputElement).value) /*...*/ --> sandbox, patterns matched: []`,
+                        "console.log(i); --> sandbox, patterns matched: []",
                     ]),
                 );
                 expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([]));
@@ -113,15 +118,19 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.getChildren()[1]
+                    sourceFile.statements[1]
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
                     new Set([
-                        `do /*...*/ while ((event.target as HTMLInputElement).value != 'ok'); --> sandbox, patterns matched: []`,
+                        "do /*...*/ while ((event.target as HTMLInputElement).value != 'ok'); --> sandbox, patterns matched: [1]",
+                        "console.log((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [0]",
                     ]),
                 );
-                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([]));
+                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                    "0: (event.target as HTMLInputElement).value; matches inputValuePattern",
+                    "1: (event.target as HTMLInputElement).value; matches inputValuePattern",
+                ]));
             });
 
             it('mandate while statement in sandbox', async () => {
@@ -139,15 +148,19 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.getChildren()[1]
+                    sourceFile.statements[1]
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
                     new Set([
-                        `while ((event.target as HTMLInputElement).value != 'ok') /*...*/ --> sandbox, patterns matched: []`,
+                        "while ((event.target as HTMLInputElement).value != 'ok') /*...*/ --> sandbox, patterns matched: [0]",
+                        "console.log((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [1]",
                     ]),
                 );
-                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([]));
+                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
+                    "0: (event.target as HTMLInputElement).value; matches inputValuePattern",
+                    "1: (event.target as HTMLInputElement).value; matches inputValuePattern",
+                ]));
             });
         });
 
@@ -165,7 +178,7 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.getChildren()[1]
+                    sourceFile.statements[1]
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
@@ -195,7 +208,7 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.getChildren()[1]
+                    sourceFile.statements[1]
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
@@ -223,7 +236,7 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.getChildren()[1]
+                    sourceFile.statements[1]
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
@@ -258,7 +271,7 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.getChildren()[1]
+                    sourceFile.statements[1]
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
@@ -294,7 +307,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 sourceFile,
                 bindingResolver,
                 patterns,
-                sourceFile.getChildren()[1]
+                sourceFile.statements[1]
             );
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(
@@ -322,7 +335,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 sourceFile,
                 bindingResolver,
                 patterns,
-                sourceFile.getChildren()[1]
+                sourceFile.statements[1]
             );
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(
@@ -351,7 +364,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 sourceFile,
                 bindingResolver,
                 patterns,
-                sourceFile.getChildren()[1]
+                sourceFile.statements[1]
             );
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(
@@ -377,7 +390,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 sourceFile,
                 bindingResolver,
                 patterns,
-                sourceFile.getChildren()[1]
+                sourceFile.statements[1]
             );
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(
@@ -405,7 +418,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 sourceFile,
                 bindingResolver,
                 patterns,
-                sourceFile.getChildren()[1]
+                sourceFile.statements[1]
             );
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(
