@@ -224,12 +224,12 @@ describe('generate full project', () => {
                 );
 
                 const outputFile = ts.transform(sourceFile, [
-                    transformComponent([]),
+                    transformComponent([...promise(), ...requestAnimationFramePattern()]),
                 ]);
 
                 const outputCode = await printTsFile(outputFile);
                 expect(await prettify(outputCode)).toEqual(
-                    await readTestFile('full-projects/exec/generated/sandbox', 'a-module.ts'),
+                    await readPrettifyTextFile('full-projects/exec/generated/sandbox', 'a-module.ts'),
                 );
             });
         });
