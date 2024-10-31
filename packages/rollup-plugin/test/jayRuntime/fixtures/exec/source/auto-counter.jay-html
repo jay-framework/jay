@@ -1,0 +1,15 @@
+<html>
+<head>
+    <script type="application/yaml-jay">
+data:
+  count: number
+    </script>
+</head>
+<body>
+<div>
+    <span style="margin: 0 16px">{count}</span>
+    <button ref="autoCount1">Count using animation frames to 1000, from component file</button>
+    <button ref="autoCount2">Count using animation frames to 1000, from imported file</button>
+</div>
+</body>
+</html>

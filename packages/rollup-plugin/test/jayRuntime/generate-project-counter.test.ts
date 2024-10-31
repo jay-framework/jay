@@ -7,8 +7,8 @@ import {
 } from 'jay-compiler';
 import { generateProject } from '../test-utils/rollup';
 
-describe('jayRuntime plugin - sandbox counter', () => {
-    const projectRoot = './test/jayRuntime/fixtures/sandbox-counter';
+describe('jayRuntime plugin - counter', () => {
+    const projectRoot = './test/jayRuntime/fixtures/counter';
 
     beforeAll(async () => {
         await cleanDistDirectory(projectRoot);

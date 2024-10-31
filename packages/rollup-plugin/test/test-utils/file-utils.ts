@@ -31,7 +31,7 @@ export async function getExpectedCode(
 ): Promise<string> {
     const filePath = path.resolve(projectRoot, 'generated', isWorker ? 'worker' : 'main', filename);
     const code = (await readFile(filePath)).toString();
-    return removeComments(code);
+    return await prettify(removeComments(code));
 }
 
 export async function cleanDistDirectory(projectRoot: string): Promise<void> {
