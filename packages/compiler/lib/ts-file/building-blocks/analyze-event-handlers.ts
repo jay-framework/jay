@@ -13,7 +13,6 @@ export interface TransformedEventHandler extends FoundEventHandler {
     wasEventHandlerTransformed: boolean;
     transformedEventHandler: ts.Node;
     transformedEventHandlerCallStatement: ts.Node;
-    functionRepositoryFragment?: FunctionRepositoryCodeFragment;
 }
 
 export interface FunctionRepositoryFragment {
@@ -30,19 +29,13 @@ export function analyzedEventHandlersToReplaceMap(transformedEventHandlers: Tran
     return map;
 }
 
-export function getAllFunctionRepositoryFragments(transformedEventHandlers: TransformedEventHandler[]): FunctionRepositoryFragment[] {
-    return transformedEventHandlers.map((transformEventHandler) => ({
-        fragment: transformEventHandler.functionRepositoryFragment,
-        handlerIndex: transformEventHandler.handlerIndex,
-    }))
-}
-
 export function analyzeEventHandlers(
     context: ts.TransformationContext,
     bindingResolver: SourceFileBindingResolver,
     analyzer: SourceFileStatementAnalyzer,
     factory: ts.NodeFactory,
     foundEventHandlers: FoundEventHandler[],
+    functionsRepository: FunctionRepositoryBuilder
 ): TransformedEventHandler[] {
     let handlerToTransformedHandlers: Map<ts.Node, TransformedEventHandlerByPattern> = new Map();
 
@@ -56,6 +49,7 @@ export function analyzeEventHandlers(
                     analyzer,
                     factory,
                     foundEventHandler.eventHandler,
+                    functionsRepository,
                 ),
             );
     });
@@ -70,18 +64,18 @@ export function analyzeEventHandlers(
             const {
                 transformedEventHandler,
                 wasEventHandlerTransformed,
-                functionRepositoryFragment,
+                handlerKey,
             } = handlerToTransformedHandlers.get(foundEventHandler.eventHandler);
             const transformedEventHandlerCallStatement = analyzeEventHandlerCallStatement$Block(
                 context,
                 factory,
-                foundEventHandler,
+                handlerKey,
             )(foundEventHandler.eventHandlerCallStatement);
             return {
                 ...foundEventHandler,
                 transformedEventHandler,
                 wasEventHandlerTransformed,
-                functionRepositoryFragment,
+                // functionRepositoryFragment,
                 transformedEventHandlerCallStatement: transformedEventHandlerCallStatement,
             };
         });

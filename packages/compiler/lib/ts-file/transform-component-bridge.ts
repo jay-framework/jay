@@ -10,7 +10,7 @@ import { findEventHandlersBlock } from './building-blocks/find-event-handler-fun
 import { CompiledPattern } from './basic-analyzers/compile-function-split-patterns';
 import {
     FunctionRepositoryFragment,
-    getAllFunctionRepositoryFragments,
+    // getAllFunctionRepositoryFragments,
     analyzeEventHandlers,
 } from './building-blocks/analyze-event-handlers';
 import { SourceFileBindingResolver } from './basic-analyzers/source-file-binding-resolver';
@@ -22,6 +22,7 @@ import {
     FindComponentConstructorType,
     FoundJayComponentConstructorCall,
 } from './building-blocks/find-component-constructor-calls';
+import {FunctionRepositoryBuilder} from "./building-blocks/function-repository-builder";
 
 function generateComponentConstructorCalls(
     context: ts.TransformationContext,
@@ -87,43 +88,45 @@ interface ComponentBridgeTransformerConfig {
     patterns: CompiledPattern[];
 }
 
-function generateFunctionRepository(
-    functionRepositoryFragments: FunctionRepositoryFragment[],
-    context: TransformationContext,
-): { hasFunctionRepository: boolean; functionRepository: Statement[] } {
-    if (functionRepositoryFragments.length > 0) {
-        let fragments = [...new Set(
-            functionRepositoryFragments
-                .map((_) => `'${_.handlerIndex}': ${_.fragment.handlerCode}`))
-        ]
-            .join(',\n');
-
-        let constants = functionRepositoryFragments.map((_) => _.fragment.constCode);
-        let uniqueConstants = [...new Set(constants)];
-        let constantsCodeFragment =
-            uniqueConstants.length > 0 ? uniqueConstants.join('\n') + '\n\n' : '';
-
-        let functionRepository = `${constantsCodeFragment}const funcRepository: FunctionsRepository = {\n${fragments}\n};`;
-
-        return {
-            functionRepository: codeToAst(functionRepository, context) as Statement[],
-            hasFunctionRepository: true,
-        };
-    } else return { hasFunctionRepository: false, functionRepository: [] };
-}
-
+// function generateFunctionRepository(
+//     functionRepositoryFragments: FunctionRepositoryFragment[],
+//     context: TransformationContext,
+// ): { hasFunctionRepository: boolean; functionRepository: Statement[] } {
+//     if (functionRepositoryFragments.length > 0) {
+//         let fragments = [...new Set(
+//             functionRepositoryFragments
+//                 .map((_) => `'${_.handlerIndex}': ${_.fragment.handlerCode}`))
+//         ]
+//             .join(',\n');
+//
+//         let constants = functionRepositoryFragments.map((_) => _.fragment.key);
+//         let uniqueConstants = [...new Set(constants)];
+//         let constantsCodeFragment =
+//             uniqueConstants.length > 0 ? uniqueConstants.join('\n') + '\n\n' : '';
+//
+//         let functionRepository = `${constantsCodeFragment}const funcRepository: FunctionsRepository = {\n${fragments}\n};`;
+//
+//         return {
+//             functionRepository: codeToAst(functionRepository, context) as Statement[],
+//             hasFunctionRepository: true,
+//         };
+//     } else return { hasFunctionRepository: false, functionRepository: [] };
+// }
+//
 function transformSourceFile(
     sourceFile: ts.SourceFile,
     factory: ts.NodeFactory,
     context: ts.TransformationContext,
     importerMode: RuntimeMode,
     componentConstructorCalls: FoundJayComponentConstructorCall[],
-    functionRepositoryFragments: FunctionRepositoryFragment[],
+    componentFunctionRepository: FunctionRepositoryBuilder,
 ) {
-    let { functionRepository, hasFunctionRepository } = generateFunctionRepository(
-        functionRepositoryFragments,
-        context,
-    );
+    let { functionRepository, hasFunctionRepository } =
+        componentFunctionRepository.generate(context)
+    //     generateFunctionRepository(
+    //     functionRepositoryFragments,
+    //     context,
+    // );
 
     let generatedComponentConstructorCalls = generateComponentConstructorCalls(
         context,
@@ -178,9 +181,12 @@ function mkComponentBridgeTransformer({
 
     let analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
 
-    const functionRepositoryFragments =
-        getAllFunctionRepositoryFragments(
-            analyzeEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers))
+    const componentFunctionRepository = new FunctionRepositoryBuilder();
+
+    // const functionRepositoryFragments =
+    //     getAllFunctionRepositoryFragments(
+    analyzeEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers, componentFunctionRepository)
+// )
 
     return transformSourceFile(
         sourceFile,
@@ -188,7 +194,7 @@ function mkComponentBridgeTransformer({
         context,
         importerMode,
         calls,
-        functionRepositoryFragments,
+        componentFunctionRepository,
     );
 }
 

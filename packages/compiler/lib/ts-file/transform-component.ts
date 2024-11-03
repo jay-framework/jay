@@ -44,7 +44,8 @@ function mkComponentTransformer(sftContext: ComponentSecureFunctionsTransformerC
 
     const analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
 
-    const transformedEventHandlers = analyzeEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers);
+    const componentFunctionRepository = new FunctionRepositoryBuilder();
+    const transformedEventHandlers = analyzeEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers, componentFunctionRepository);
     const eventsReplaceMap = analyzedEventHandlersToReplaceMap(transformedEventHandlers);
 
     const globalExec$FunctionRepositoryBuilder = new FunctionRepositoryBuilder();

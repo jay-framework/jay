@@ -23,7 +23,7 @@ import {
 } from '../basic-analyzers/scoped-source-file-statement-analyzer';
 import {ContextualVisitor2, visitWithContext2} from '../ts-utils/visitor-with-context';
 import {flattenVariable, LiteralVariableRoot} from '../basic-analyzers/name-binding-resolver';
-import {FunctionRepositoryCodeFragment} from "./function-repository-builder";
+import {FunctionRepositoryBuilder, FunctionRepositoryCodeFragment} from "./function-repository-builder";
 
 interface MatchedPattern {
     pattern: CompiledPattern;
@@ -37,7 +37,7 @@ interface MatchedVariable {
 
 export interface TransformedEventHandlerByPattern {
     transformedEventHandler: ts.Node;
-    functionRepositoryFragment?: FunctionRepositoryCodeFragment;
+    handlerKey: string;
     wasEventHandlerTransformed: boolean;
 }
 
@@ -65,12 +65,12 @@ function generateFunctionRepository(
     ${safeStatements.map((statement) => astToCode(statement)).join('\n\t')}
 ${returnedObjectProperties.length > 0 ? `\treturn ({${returnedObjectProperties}})\n` : ''}
 }`;
-        return { handlerCode, constCode };
+        return { handlerCode, key: constCode };
     }
     if (matchedReturnPatterns.length > 0) {
         let handlerCode = `({ event }: JayEvent) => ({${returnedObjectProperties}})`;
-        return { handlerCode, constCode };
-    } else return undefined;
+        return { handlerCode, key: constCode };
+    } else return {key: undefined, handlerCode: undefined};
 }
 
 interface TransformEventHandlerStatementVisitorSideEffects {
@@ -198,6 +198,7 @@ export const analyzeEventHandlerByPatternBlock = (
     analyzer: SourceFileStatementAnalyzer,
     factory: ts.NodeFactory,
     eventHandler: ts.FunctionLikeDeclarationBase,
+    functionsRepository: FunctionRepositoryBuilder
 ): TransformedEventHandlerByPattern => {
     const scopedAnalyzer = analyzer.analyzeForScope(eventHandler);
     const { sideEffects, visitor } = mkTransformEventHandlerStatementVisitor(
@@ -227,16 +228,19 @@ export const analyzeEventHandlerByPatternBlock = (
         bodyForFunctionRepository = ts.visitNode(body, replaceBodiesVisitor) as Block;
     }
 
-    const functionRepositoryFragment = generateFunctionRepository(
+    const {handlerCode, key} = generateFunctionRepository(
         sideEffects.matchedReturnPatterns,
         sideEffects.matchedVariableReads,
         sideEffects.matchedConstants,
         bodyForFunctionRepository ? [...bodyForFunctionRepository.statements] : [],
     );
 
+    const handlerKey = functionsRepository.addFunction(handlerCode);
+    functionsRepository.addConst(key);
+
     return {
         transformedEventHandler,
         wasEventHandlerTransformed: sideEffects.wasEventHandlerTransformed,
-        functionRepositoryFragment,
+        handlerKey,
     };
 };

@@ -51,7 +51,7 @@ describe('transform global exec$ and generate function repository fragment', () 
         expect(wasTransformed).toBe(true)
         expect(astToCode(transformedExec$)).toEqual(`exec$(funcGlobal$("0"))`)
         expect(functionRepositoryBuilder.fragments[0].handlerCode).toEqual(`() => console.log("hi")`)
-        expect(functionRepositoryBuilder.fragments[0].constCode).toEqual('0')
+        expect(functionRepositoryBuilder.fragments[0].key).toEqual('0')
     })
 
     it('transform new Promise((resolve) => requestAnimationFrame(resolve))', async () => {
@@ -71,7 +71,7 @@ describe('transform global exec$ and generate function repository fragment', () 
         expect(wasTransformed).toBe(true)
         expect(astToCode(transformedExec$)).toEqual(`exec$(funcGlobal$("0"))`)
         expect(functionRepositoryBuilder.fragments[0].handlerCode).toEqual(`() => new Promise((resolve) => requestAnimationFrame(resolve))`)
-        expect(functionRepositoryBuilder.fragments[0].constCode).toEqual('0')
+        expect(functionRepositoryBuilder.fragments[0].key).toEqual('0')
     })
 
     it('should not transform new Promise((resolve) => requestAnimationFrame(resolve)) if not given requestAnimationFrame pattern', async () => {

@@ -36,9 +36,9 @@ export function analyzeGlobalExec$(
     if (foundUnsafeExpression)
         return {foundExec$, wasTransformed: false};
     else {
-        const constCode = functionRepositoryBuilder.add(astToCode(foundExec$.arguments[0]))
+        const key = functionRepositoryBuilder.addFunction(astToCode(foundExec$.arguments[0]))
         const transformedExec$ =
-            (codeToAst(`exec$(funcGlobal$('${constCode}'))`, context).map(
+            (codeToAst(`exec$(funcGlobal$('${key}'))`, context).map(
                 (_: ExpressionStatement) => _.expression,
             ) as Expression[])[0] as CallExpression;
         return {foundExec$, wasTransformed: true, transformedExec$};

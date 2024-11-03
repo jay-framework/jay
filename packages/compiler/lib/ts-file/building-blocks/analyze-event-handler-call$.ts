@@ -7,11 +7,9 @@ import ts, {
     TransformationContext,
 } from 'typescript';
 import { codeToAst } from '../ts-utils/ts-compiler-utils';
-import { FoundEventHandler } from './find-event-handler-functions';
-import {analyzeEventHandlerByPatternBlock} from "./analyze-event-handler-by-pattern";
 
 const analyzeEventHandlerCall =
-    (context: TransformationContext, factory: NodeFactory, foundEventHandler: FoundEventHandler) =>
+    (context: TransformationContext, factory: NodeFactory, handlerKey: string) =>
     (node) => {
         if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
             return factory.createCallExpression(
@@ -22,7 +20,7 @@ const analyzeEventHandlerCall =
                             node.expression.name.text + '$',
                         ),
                         undefined,
-                        codeToAst(`handler$('${foundEventHandler.handlerIndex}')`, context).map(
+                        codeToAst(`handler$('${handlerKey}')`, context).map(
                             (_: ExpressionStatement) => _.expression,
                         ) as Expression[],
                     ),
@@ -36,11 +34,11 @@ const analyzeEventHandlerCall =
     };
 
 export const analyzeEventHandlerCallStatement$Block =
-    (context: TransformationContext, factory: NodeFactory, foundEventHandler: FoundEventHandler) =>
+    (context: TransformationContext, factory: NodeFactory, handlerKey: string) =>
     (node: ExpressionStatement) => {
         return ts.visitEachChild(
             node,
-            analyzeEventHandlerCall(context, factory, foundEventHandler),
+            analyzeEventHandlerCall(context, factory, handlerKey),
             context,
         );
     };

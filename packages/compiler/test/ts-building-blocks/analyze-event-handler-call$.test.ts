@@ -12,7 +12,7 @@ describe('add event handler call$ to call chain', () => {
         return mkTransformer(({ context, sourceFile, factory }) => {
             return ts.visitEachChild(
                 sourceFile,
-                analyzeEventHandlerCallStatement$Block(context, factory, foundEventHandlerMock),
+                analyzeEventHandlerCallStatement$Block(context, factory, '0'),
                 context,
             );
         });
