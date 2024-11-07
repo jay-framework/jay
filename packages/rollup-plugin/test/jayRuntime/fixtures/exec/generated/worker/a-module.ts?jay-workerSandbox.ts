@@ -5,7 +5,7 @@ export async function moduleDoCount(callback: () => void) {
     cycles = 0;
     while (cycles < 1000) {
         callback();
-        await exec$(funcGlobal$('0'))
+        await exec$(funcGlobal$('1'))
         cycles += 1;
     }
 }

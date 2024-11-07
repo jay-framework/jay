@@ -1,4 +1,4 @@
-import ts, {isImportDeclaration} from 'typescript';
+import ts, {ImportDeclaration, isImportDeclaration} from 'typescript';
 import {mkTransformer, SourceFileTransformerContext} from './ts-utils/mk-transformer';
 import {findComponentConstructorsBlock} from './building-blocks/find-component-constructors';
 import {findEventHandlersBlock} from './building-blocks/find-event-handler-functions';
@@ -19,14 +19,15 @@ import {FunctionRepositoryBuilder} from "./building-blocks/function-repository-b
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: CompiledPattern[];
+    globalFunctionRepository: FunctionRepositoryBuilder
 };
 
-function isCssImport(node) {
+function isCssImport(node: ImportDeclaration) {
     return ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text.endsWith('.css');
 }
 
 function mkComponentTransformer(sftContext: ComponentSecureFunctionsTransformerConfig) {
-    const { patterns, context, factory, sourceFile } = sftContext;
+    const { patterns, globalFunctionRepository, context, factory, sourceFile } = sftContext;
 
     // find the event handlers
     const bindingResolver = new SourceFileBindingResolver(sourceFile);
@@ -48,14 +49,13 @@ function mkComponentTransformer(sftContext: ComponentSecureFunctionsTransformerC
     const transformedEventHandlers = analyzeEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers, componentFunctionRepository);
     const eventsReplaceMap = analyzedEventHandlersToReplaceMap(transformedEventHandlers);
 
-    const globalExec$FunctionRepositoryBuilder = new FunctionRepositoryBuilder();
     const foundExec$ = findExec$(bindingResolver, sourceFile);
-    const transformedGlobalExec$ = analyseGlobalExec$s(context, analyzer, globalExec$FunctionRepositoryBuilder, foundExec$)
+    const transformedGlobalExec$ = analyseGlobalExec$s(context, analyzer, globalFunctionRepository, foundExec$)
     const globalExec$ReplaceMap = transformedGlobalExec$toReplaceMap(transformedGlobalExec$)
 
     const replaceMap = new Map([...eventsReplaceMap, ...globalExec$ReplaceMap]);
 
-    let visitor = (node) => {
+    let visitor = (node: ts.Node) => {
         if (replaceMap.has(node)) {
             node = replaceMap.get(node);
             return ts.visitEachChild(node, visitor, context);
@@ -77,6 +77,7 @@ function mkComponentTransformer(sftContext: ComponentSecureFunctionsTransformerC
 
 export function transformComponent(
     patterns: CompiledPattern[] = [],
+    globalFunctionRepository: FunctionRepositoryBuilder,
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
-    return mkTransformer(mkComponentTransformer, { patterns });
+    return mkTransformer(mkComponentTransformer, { patterns, globalFunctionRepository });
 }

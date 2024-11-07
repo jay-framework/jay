@@ -12,7 +12,7 @@ import {
     TS_EXTENSION,
 } from 'jay-compiler';
 import { JayPluginContext } from '../../../lib';
-import { readTestFile } from '../../test-utils/file-utils';
+import {getGeneratedCode, readTestFile} from '../../test-utils/file-utils';
 import { JayMetadata } from '../../../lib/runtime/metadata';
 import { transformJayFile } from '../../../lib/runtime/transform';
 import { getJayFileStructure } from '../../../lib/runtime/get-jay-file-structure';
@@ -20,7 +20,8 @@ import { removeComments } from '../../../../compiler/lib/utils/prettify';
 
 describe('transformJayFile', () => {
     const jayContext = new JayPluginContext();
-    const folder = 'jayRuntime/fixtures/sandbox-counter/source';
+    const projectRoot = 'jayRuntime/fixtures/counter'
+    const folder = 'jayRuntime/fixtures/counter/source';
 
     const getContext = ({ jay }) =>
         mock<PluginContext>({
@@ -46,7 +47,8 @@ describe('transformJayFile', () => {
         const context = getContext({ jay });
         const result = await transformJayFile(jayContext, context, code, id);
         expect(await prettified(result)).toEqual(
-            removeComments(readGeneratedFile(filePath, id, 'main')),
+            // await getGeneratedCode(projectRoot, filename + '.ts', false)
+            await prettify(removeComments(readGeneratedFile(filePath, id, 'main'))),
         );
         expect(jayContext.getCachedJayFile(filePath)).toMatchObject({
             baseElementName: 'App',
@@ -129,7 +131,7 @@ describe('transformJayFile', () => {
             const result = await transformJayFile(jayContext, context, 'ignored', id);
 
             expect(await prettified(result)).toEqual(
-                removeComments(readGeneratedFile(filePath, id, 'main')),
+                await prettify(removeComments(readGeneratedFile(filePath, id, 'main'))),
             );
         });
     });

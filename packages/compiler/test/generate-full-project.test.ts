@@ -22,6 +22,7 @@ import {
     readTsSourceFile,
 } from './test-utils/ts-compiler-test-utils';
 import {promise, requestAnimationFramePattern} from "./ts-basic-analyzers/compiler-patterns-for-testing";
+import {FunctionRepositoryBuilder} from "../lib/ts-file/building-blocks/function-repository-builder";
 
 describe('generate full project', () => {
     const relativePath = './test/fixtures/tsconfig.json';
@@ -106,6 +107,19 @@ describe('generate full project', () => {
                 );
             });
 
+            it('generates function repository file', async () => {
+                const funcRepository = new FunctionRepositoryBuilder();
+
+                let runtimeFile = funcRepository.generateGlobalFile();
+                expect(await prettify(runtimeFile.functionRepository)).toEqual(
+                    await readGeneratedNamedFile(
+                        'full-projects/counter/generated/main',
+                        'function-repository',
+                    ),
+                );
+            });
+
+
             it('generates counter element file', async () => {
                 const jayFile = await readNamedSourceJayFile(
                     'full-projects/counter/source',
@@ -151,9 +165,10 @@ describe('generate full project', () => {
                     'full-projects/counter/source',
                     'counter.ts',
                 );
+                const globalFunctionRepo = new FunctionRepositoryBuilder();
 
                 const outputFile = ts.transform(sourceFile, [
-                    transformComponentBridge(RuntimeMode.MainSandbox),
+                    transformComponentBridge(RuntimeMode.MainSandbox, [], globalFunctionRepo),
                 ]);
 
                 const outputCode = await printTsFile(outputFile);
@@ -207,8 +222,10 @@ describe('generate full project', () => {
                     'auto-counter.ts',
                 );
 
+                const globalFunctionRepo = new FunctionRepositoryBuilder();
+
                 const outputFile = ts.transform(sourceFile, [
-                    transformComponent([...promise(), ...requestAnimationFramePattern()]),
+                    transformComponent([...promise(), ...requestAnimationFramePattern()], globalFunctionRepo),
                 ]);
 
                 const outputCode = await printTsFile(outputFile);
@@ -223,8 +240,10 @@ describe('generate full project', () => {
                     'a-module.ts',
                 );
 
+                const globalFunctionRepo = new FunctionRepositoryBuilder();
+
                 const outputFile = ts.transform(sourceFile, [
-                    transformComponent([...promise(), ...requestAnimationFramePattern()]),
+                    transformComponent([...promise(), ...requestAnimationFramePattern()], globalFunctionRepo),
                 ]);
 
                 const outputCode = await printTsFile(outputFile);
@@ -276,6 +295,20 @@ describe('generate full project', () => {
                 );
             });
 
+            it('generates function repository file', async () => {
+                const funcRepository = new FunctionRepositoryBuilder();
+                funcRepository.addFunction('() => new Promise((resolve) => requestAnimationFrame(resolve))')
+                funcRepository.addFunction('() => new Promise((resolve) => requestAnimationFrame(resolve))')
+
+                let runtimeFile = funcRepository.generateGlobalFile();
+                expect(await prettify(runtimeFile.functionRepository)).toEqual(
+                    await readGeneratedNamedFile(
+                        'full-projects/exec/generated/main',
+                        'function-repository',
+                    ),
+                );
+            });
+
             it('generates counter element file', async () => {
                 const jayFile = await readNamedSourceJayFile(
                     'full-projects/exec/source',
@@ -322,8 +355,9 @@ describe('generate full project', () => {
                     'auto-counter.ts',
                 );
 
+                const globalFunctionRepo = new FunctionRepositoryBuilder();
                 const outputFile = ts.transform(sourceFile, [
-                    transformComponentBridge(RuntimeMode.MainSandbox),
+                    transformComponentBridge(RuntimeMode.MainSandbox, [], globalFunctionRepo),
                 ]);
 
                 const outputCode = await printTsFile(outputFile);

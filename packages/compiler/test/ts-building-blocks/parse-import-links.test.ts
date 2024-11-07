@@ -78,6 +78,16 @@ describe('parseImportLinks', () => {
                 ],
                 sandbox: true,
             },
+            {
+                module: "./function-repository",
+                names: [
+                    {
+                        name: "funcRepository",
+                        type: JayUnknown,
+                    },
+                ],
+                sandbox: false,
+            },
         ]);
     });
 });

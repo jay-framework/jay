@@ -10,6 +10,7 @@ import { mainRoot as mr, secureChildComp } from 'jay-secure';
 import { CounterComponentType } from './counter-refs';
 // @ts-expect-error Cannot find module
 import { Counter } from './counter?jay-mainSandbox';
+import { funcRepository } from './function-repository';
 
 export interface AppViewState {
     incrementBy: number;
@@ -40,7 +41,7 @@ export function render(options?: RenderElementOptions): AppElementPreRender {
                         refA(),
                     ),
                 ]),
-            ),
+                funcRepository),
         ) as AppElement;
     return [refManager.getPublicAPI() as AppElementRefs, render];
 }

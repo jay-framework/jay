@@ -5,6 +5,7 @@ export { generateComponentRefsDefinitionFile } from './ts-file/generator-compone
 export * from './core/jay-example';
 export * from './core/jay-file';
 export * from './core/jay-imports';
+export * from './core/imports';
 export * from './core/jay-type';
 export * from './core/jay-yaml-structure';
 export * from './core/jay-format';
@@ -23,3 +24,4 @@ export type { CompiledPattern } from './ts-file/basic-analyzers/compile-function
 export { transformComponentImports } from './ts-file/building-blocks/transform-component-imports';
 export { compileFunctionSplitPatternsBlock } from './ts-file/basic-analyzers/compile-function-split-patterns';
 export { createTsSourceFileFromSource } from './ts-file/building-blocks/create-ts-source-file-from-source';
+export { FunctionRepositoryBuilder} from './ts-file/building-blocks/function-repository-builder'

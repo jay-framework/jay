@@ -6,9 +6,10 @@ import {
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
-import {FunctionsRepository, mainRoot as mr, secureChildComp} from 'jay-secure';
+import { mainRoot as mr, secureChildComp} from 'jay-secure';
 import { AutoCounterComponentType } from './auto-counter-refs';
-import { AutoCounter } from './auto-counter.ts?jay-mainSandbox';
+import { AutoCounter } from './auto-counter?jay-mainSandbox';
+import { funcRepository } from './function-repository';
 
 export interface AppViewState {
     incrementBy: number;
@@ -21,11 +22,6 @@ export interface AppElementRefs {
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
 export type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
-
-export const funcRepository: FunctionsRepository = {
-    '1': () => new Promise((resolve) => requestAnimationFrame(resolve)),
-    '2': () => new Promise((resolve) => requestAnimationFrame(resolve)),
-};
 
 export function render(options?: RenderElementOptions): AppElementPreRender {
     const [refManager, [refA]] = ReferencesManager.for(options, [], [], ['a'], []);

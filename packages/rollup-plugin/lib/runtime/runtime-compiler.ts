@@ -1,4 +1,4 @@
-import { hasExtension, hasJayModeExtension, JAY_EXTENSION } from 'jay-compiler';
+import {hasExtension, hasJayModeExtension, Import, JAY_EXTENSION} from 'jay-compiler';
 import { LoadResult, ResolveIdResult, TransformResult } from 'rollup';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
 import { transformJayFile } from './transform';
@@ -11,6 +11,8 @@ import {
 import { loadJayFile } from './load';
 import { JayRollupConfig } from '../common/types';
 import { JayPluginContext } from './jay-plugin-context';
+
+const GLOBAL_FUNC_REPOSITORY = 'GLOBAL_FUNC_REPOSITORY.ts';
 
 export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: JayPluginContext) {
     const jayContext = givenJayContext || new JayPluginContext(jayOptions);
@@ -31,6 +33,8 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
                 (jayOptions.isWorker && importer === undefined)
             )
                 return await removeSandboxPrefixForWorkerRoot(this, source, importer, options);
+            if (source === Import.functionRepository.module)
+                return Promise.resolve(GLOBAL_FUNC_REPOSITORY);
             return null;
         },
         async load(id: string): Promise<LoadResult> {
@@ -39,6 +43,10 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
                 hasJayModeExtension(id, { withTs: true })
             )
                 return await loadJayFile(this, id);
+            else if (id === GLOBAL_FUNC_REPOSITORY) {
+                const {functionRepository} = jayContext.globalFunctionsRepository.generateGlobalFile();
+                return functionRepository;
+            }
             return null;
         },
         async transform(code: string, id: string): Promise<TransformResult> {

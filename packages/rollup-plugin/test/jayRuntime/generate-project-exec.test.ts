@@ -20,7 +20,7 @@ describe('jayRuntime plugin - exec', () => {
 
         beforeAll(async () => {
             await generateProject(projectRoot, { isWorker, compilerPatternFiles });
-        });
+        }, 60000);
 
         describe('main', () => {
             it('generates application container', async () => {

@@ -5,6 +5,11 @@ import {
     eventPreventDefaultPattern,
     readEventTargetValuePattern,
 } from './ts-basic-analyzers/compiler-patterns-for-testing';
+import {FunctionRepositoryBuilder} from "../lib/ts-file/building-blocks/function-repository-builder";
+
+function globalFunctionRepo(): FunctionRepositoryBuilder {
+    return new FunctionRepositoryBuilder()
+}
 
 describe('transform event handlers with secure code split', () => {
     describe('remove main scope imports', () => {
@@ -22,7 +27,7 @@ describe('transform event handlers with secure code split', () => {
                 
                 export const Comp = makeJayComponent(render, CompComponent);`;
 
-            const outputCode = await transformCode(code, [transformComponent([])]);
+            const outputCode = await transformCode(code, [transformComponent([], globalFunctionRepo())]);
 
             expect(outputCode).toEqual(
                 await prettify(`
@@ -53,7 +58,7 @@ describe('transform event handlers with secure code split', () => {
                 
                 export const Comp = makeJayComponent(render, CompComponent);`;
 
-            const outputCode = await transformCode(code, [transformComponent(input_value_pattern)]);
+            const outputCode = await transformCode(code, [transformComponent(input_value_pattern, globalFunctionRepo())]);
 
             expect(outputCode).toEqual(
                 await prettify(`
@@ -85,7 +90,7 @@ describe('transform event handlers with secure code split', () => {
                 
                 export const Comp = makeJayComponent(render, CompComponent);`;
 
-            const outputCode = await transformCode(code, [transformComponent(input_value_pattern)]);
+            const outputCode = await transformCode(code, [transformComponent(input_value_pattern, globalFunctionRepo())]);
 
             expect(outputCode).toEqual(
                 await prettify(`
@@ -123,7 +128,7 @@ describe('transform event handlers with secure code split', () => {
                 
                 export const Comp = makeJayComponent(render, CompComponent);`;
 
-            const outputCode = await transformCode(code, [transformComponent(input_value_pattern)]);
+            const outputCode = await transformCode(code, [transformComponent(input_value_pattern, globalFunctionRepo())]);
 
             expect(outputCode).toEqual(
                 await prettify(`
@@ -159,7 +164,7 @@ describe('transform event handlers with secure code split', () => {
                 
                 export const Comp = makeJayComponent(render, CompComponent);`;
 
-            const outputCode = await transformCode(code, [transformComponent(input_value_pattern)]);
+            const outputCode = await transformCode(code, [transformComponent(input_value_pattern, globalFunctionRepo())]);
 
             expect(outputCode).toEqual(
                 await prettify(`
@@ -194,7 +199,7 @@ describe('transform event handlers with secure code split', () => {
                 export const Comp = makeJayComponent(render, CompComponent);`;
 
             const outputCode = await transformCode(code, [
-                transformComponent(preventDefaultPattern),
+                transformComponent(preventDefaultPattern, globalFunctionRepo()),
             ]);
 
             expect(outputCode).toEqual(

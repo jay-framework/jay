@@ -5,6 +5,7 @@ import { createTsSourceFileFromSource, JayFile } from 'jay-compiler';
 import { CompiledPattern } from 'jay-compiler';
 import { compileFunctionSplitPatternsBlock } from 'jay-compiler';
 import fs from 'fs';
+import {FunctionRepositoryBuilder} from "jay-compiler";
 
 export class JayPluginContext {
     readonly projectRoot: string;
@@ -12,6 +13,7 @@ export class JayPluginContext {
     readonly tsPrinter: ts.Printer;
     readonly compilerPatterns: CompiledPattern[];
     readonly jayFileCache = new Map<string, JayFile>();
+    readonly globalFunctionsRepository: FunctionRepositoryBuilder;
 
     constructor(readonly jayOptions: JayRollupConfig = {}) {
         this.projectRoot = path.dirname(jayOptions.tsConfigFilePath ?? process.cwd());
@@ -29,6 +31,7 @@ export class JayPluginContext {
                     compilerPatternsParseResult.validations.join('\n'),
             );
         this.compilerPatterns = compilerPatternsParseResult.val;
+        this.globalFunctionsRepository = new FunctionRepositoryBuilder();
     }
 
     cacheJayFile(id: string, jayFile: JayFile): JayFile {

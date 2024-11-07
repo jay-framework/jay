@@ -1,14 +1,18 @@
-import {Statement, TransformationContext} from "typescript";
-import {codeToAst} from "../ts-utils/ts-compiler-utils";
 
 export interface FunctionRepositoryCodeFragment {
     handlerCode: string;
     key: string;
 }
 
-export interface GeneratedFunctionRepository {
-    hasFunctionRepository: boolean;
-    functionRepository: Statement[]
+export class GeneratedFunctionRepository {
+    constructor(
+        public readonly hasFunctionRepository: boolean,
+        public readonly functionRepository: string
+    ) {}
+
+    map(mapper: (value: string) => string) {
+        return new GeneratedFunctionRepository(this.hasFunctionRepository, mapper(this.functionRepository));
+    }
 }
 
 export class FunctionRepositoryBuilder {
@@ -31,7 +35,7 @@ export class FunctionRepositoryBuilder {
         this.consts.push(constCode);
     }
 
-    generate(context: TransformationContext): GeneratedFunctionRepository {
+    generate(): GeneratedFunctionRepository {
         if (this.fragments.length > 0) {
             let fragments = [...new Set(
                 this.fragments
@@ -45,10 +49,14 @@ export class FunctionRepositoryBuilder {
 
             let functionRepository = `${constantsCodeFragment}const funcRepository: FunctionsRepository = {\n${fragments}\n};`;
 
-            return {
-                functionRepository: codeToAst(functionRepository, context) as Statement[],
-                hasFunctionRepository: true,
-            };
-        } else return { hasFunctionRepository: false, functionRepository: [] };
+            return new GeneratedFunctionRepository(true, functionRepository);
+        } else return new GeneratedFunctionRepository(false, 'const funcRepository: FunctionsRepository = {}');
+    }
+
+    generateGlobalFile(): GeneratedFunctionRepository {
+        return this.generate()
+            .map(_ => `import {FunctionsRepository} from "jay-secure";
+
+export ${_}`)
     }
 }
