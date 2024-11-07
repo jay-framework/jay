@@ -10,5 +10,5 @@
     "lib": ["ESNext", "DOM"],
   },
   "lib": ["lib.esnext.d.ts", "lib.dom.d.ts"],
-  "exclude": [],
+  "exclude": ["**/generated/**"],
 }
