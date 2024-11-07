@@ -6,6 +6,7 @@ import {
     JayPort,
     setWorkerPort,
 } from 'jay-secure';
+// @ts-expect-error Cannot find module
 import { AutoCounter } from './auto-counter?jay-workerSandbox';
 
 export interface AppViewState {
