@@ -12,7 +12,7 @@ import {
     parseJayFile,
     prettify,
     RuntimeMode,
-    WithValidations,
+    WithValidations, FunctionRepositoryBuilder,
 } from '../../lib';
 import { getFileFromFolder, readNamedSourceJayFile, readTestFile } from './file-utils';
 import { astToCode } from '../../lib/ts-file/ts-utils/ts-compiler-utils';
@@ -100,7 +100,7 @@ export async function readFileAndTsTransform(
 export async function readFileAndGenerateComponentBridgeFile(folder: string, givenFile?: string) {
     return readFileAndTsTransform(
         folder,
-        [transformComponentBridge(RuntimeMode.MainSandbox)],
+        [transformComponentBridge(RuntimeMode.MainSandbox, [], new FunctionRepositoryBuilder())],
         givenFile,
     );
 }
