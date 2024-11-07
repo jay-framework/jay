@@ -10,7 +10,7 @@ import { mainRoot as mr, secureChildComp } from 'jay-secure';
 import { CounterComponentType } from './counter-refs';
 // @ts-expect-error Cannot find module
 import { Counter } from './counter?jay-mainSandbox';
-import { funcRepository }  from './function-repository'
+import { funcRepository } from './function-repository';
 
 export interface AppViewState {
     incrementBy: number;
@@ -28,15 +28,21 @@ export function render(options?: RenderElementOptions): AppElementPreRender {
     const [refManager, [refA]] = ReferencesManager.for(options, [], [], ['a'], []);
     const render = (viewState: AppViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            mr(viewState, () =>
-                e('div', {}, [
-                    secureChildComp(
-                        Counter,
-                        (vs: AppViewState) => ({ initialValue: 12, incrementBy: vs.incrementBy }),
-                        refA(),
-                    ),
-                ]),
-                funcRepository),
+            mr(
+                viewState,
+                () =>
+                    e('div', {}, [
+                        secureChildComp(
+                            Counter,
+                            (vs: AppViewState) => ({
+                                initialValue: 12,
+                                incrementBy: vs.incrementBy,
+                            }),
+                            refA(),
+                        ),
+                    ]),
+                funcRepository,
+            ),
         ) as AppElement;
     return [refManager.getPublicAPI() as AppElementRefs, render];
 }

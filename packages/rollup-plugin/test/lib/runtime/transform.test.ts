@@ -12,7 +12,7 @@ import {
     TS_EXTENSION,
 } from 'jay-compiler';
 import { JayPluginContext } from '../../../lib';
-import {getGeneratedCode, readTestFile} from '../../test-utils/file-utils';
+import { getGeneratedCode, readTestFile } from '../../test-utils/file-utils';
 import { JayMetadata } from '../../../lib/runtime/metadata';
 import { transformJayFile } from '../../../lib/runtime/transform';
 import { getJayFileStructure } from '../../../lib/runtime/get-jay-file-structure';
@@ -20,7 +20,7 @@ import { removeComments } from '../../../../compiler/lib/utils/prettify';
 
 describe('transformJayFile', () => {
     const jayContext = new JayPluginContext();
-    const projectRoot = 'jayRuntime/fixtures/counter'
+    const projectRoot = 'jayRuntime/fixtures/counter';
     const folder = 'jayRuntime/fixtures/counter/source';
 
     const getContext = ({ jay }) =>

@@ -28,20 +28,32 @@ export function render(options?: RenderElementOptions): AppElementPreRender {
     const [refManager, [refA]] = ReferencesManager.for(options, [], [], ['a'], []);
     const render = (viewState: AppViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            mr(viewState, () =>
-                e('div', {}, [
-                    e(
-                        'input',
-                        { type: 'number', id: 'interval', name: 'increment', min: '1', max: '100' },
-                        [],
-                    ),
-                    secureChildComp(
-                        Counter,
-                        (vs: AppViewState) => ({ initialValue: 12, incrementBy: vs.incrementBy }),
-                        refA(),
-                    ),
-                ]),
-                funcRepository),
+            mr(
+                viewState,
+                () =>
+                    e('div', {}, [
+                        e(
+                            'input',
+                            {
+                                type: 'number',
+                                id: 'interval',
+                                name: 'increment',
+                                min: '1',
+                                max: '100',
+                            },
+                            [],
+                        ),
+                        secureChildComp(
+                            Counter,
+                            (vs: AppViewState) => ({
+                                initialValue: 12,
+                                incrementBy: vs.incrementBy,
+                            }),
+                            refA(),
+                        ),
+                    ]),
+                funcRepository,
+            ),
         ) as AppElement;
     return [refManager.getPublicAPI() as AppElementRefs, render];
 }

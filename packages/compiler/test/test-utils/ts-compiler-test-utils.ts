@@ -12,7 +12,8 @@ import {
     parseJayFile,
     prettify,
     RuntimeMode,
-    WithValidations, FunctionRepositoryBuilder,
+    WithValidations,
+    FunctionRepositoryBuilder,
 } from '../../lib';
 import { getFileFromFolder, readNamedSourceJayFile, readTestFile } from './file-utils';
 import { astToCode } from '../../lib/ts-file/ts-utils/ts-compiler-utils';

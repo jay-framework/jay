@@ -668,9 +668,7 @@ export type ${preRenderType} = [refs: ${refsType}, ${renderType}]
 `;
 
     if (importedSandboxedSymbols.size > 0) {
-        imports = imports
-            .plus(Import.secureMainRoot)
-            .plus(Import.functionRepository)
+        imports = imports.plus(Import.secureMainRoot).plus(Import.functionRepository);
 
         renderedRoot = renderedRoot.map(
             (code) =>

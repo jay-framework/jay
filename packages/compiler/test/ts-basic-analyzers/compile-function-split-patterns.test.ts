@@ -6,9 +6,12 @@ import {
 import { createTsSourceFile } from '../test-utils/ts-source-utils';
 import {
     ArrayResolvedType,
-    BuiltInResolvedType, FunctionResolvedType, GlobalResolvedType,
-    ImportFromModuleResolvedType, SpreadResolvedType
-} from "../../lib/ts-file/basic-analyzers/source-file-binding-resolver";
+    BuiltInResolvedType,
+    FunctionResolvedType,
+    GlobalResolvedType,
+    ImportFromModuleResolvedType,
+    SpreadResolvedType,
+} from '../../lib/ts-file/basic-analyzers/source-file-binding-resolver';
 
 describe('compile secure function split patterns', () => {
     it('should compile a return pattern', () => {
@@ -131,14 +134,16 @@ describe('compile secure function split patterns', () => {
             leftSidePath: ['replace'],
             leftSideType: new BuiltInResolvedType('string'),
             returnType: new BuiltInResolvedType('string'),
-            callArgumentTypes: [new BuiltInResolvedType('RegExp'), new BuiltInResolvedType('string')],
+            callArgumentTypes: [
+                new BuiltInResolvedType('RegExp'),
+                new BuiltInResolvedType('string'),
+            ],
             targetEnvForStatement: JayTargetEnv.any,
             name: 'stringReplace',
         });
     });
 
     describe('param types', () => {
-
         it('should extract the right param types for function calls', () => {
             const patternFile = createTsSourceFile(`
             import {A, B, C, D, Target, Result} from 'module';
@@ -161,7 +166,8 @@ describe('compile secure function split patterns', () => {
                     new ImportFromModuleResolvedType('module', ['A']),
                     new ImportFromModuleResolvedType('module', ['B']),
                     new ImportFromModuleResolvedType('module', ['C']),
-                    new ImportFromModuleResolvedType('module', ['D'])],
+                    new ImportFromModuleResolvedType('module', ['D']),
+                ],
                 targetEnvForStatement: JayTargetEnv.main,
                 name: 'testParams',
             });
@@ -190,8 +196,7 @@ describe('compile secure function split patterns', () => {
                 name: 'testParams',
             });
         });
-    })
-
+    });
 
     it('should compile an assignment pattern', () => {
         const patternFile = createTsSourceFile(`
@@ -261,11 +266,9 @@ describe('compile secure function split patterns', () => {
             leftSidePath: ['log'],
             leftSideType: new GlobalResolvedType('console'),
             returnType: new BuiltInResolvedType('void'),
-            callArgumentTypes: [new SpreadResolvedType(
-                new ArrayResolvedType(
-                    new BuiltInResolvedType('string')
-                )
-            )],
+            callArgumentTypes: [
+                new SpreadResolvedType(new ArrayResolvedType(new BuiltInResolvedType('string'))),
+            ],
             targetEnvForStatement: JayTargetEnv.any,
             name: 'consoleLog2',
         });
@@ -288,9 +291,7 @@ describe('compile secure function split patterns', () => {
             leftSidePath: [],
             leftSideType: new GlobalResolvedType('requestAnimationFrame'),
             returnType: new BuiltInResolvedType('void'),
-            callArgumentTypes: [new FunctionResolvedType(
-                [],
-                new BuiltInResolvedType('void'))],
+            callArgumentTypes: [new FunctionResolvedType([], new BuiltInResolvedType('void'))],
             targetEnvForStatement: JayTargetEnv.main,
             name: 'requestAnimationFramePattern',
         });
@@ -314,11 +315,14 @@ describe('compile secure function split patterns', () => {
             leftSideType: new GlobalResolvedType('Promise'),
             returnType: new BuiltInResolvedType('void'),
             callArgumentTypes: [
-                new FunctionResolvedType([new BuiltInResolvedType('any')], new BuiltInResolvedType('void')),
-                new FunctionResolvedType([], new BuiltInResolvedType('void'))
+                new FunctionResolvedType(
+                    [new BuiltInResolvedType('any')],
+                    new BuiltInResolvedType('void'),
+                ),
+                new FunctionResolvedType([], new BuiltInResolvedType('void')),
             ],
             targetEnvForStatement: JayTargetEnv.main,
             name: 'promise',
         });
-    })
+    });
 });

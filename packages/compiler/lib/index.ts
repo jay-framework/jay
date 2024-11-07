@@ -24,4 +24,4 @@ export type { CompiledPattern } from './ts-file/basic-analyzers/compile-function
 export { transformComponentImports } from './ts-file/building-blocks/transform-component-imports';
 export { compileFunctionSplitPatternsBlock } from './ts-file/basic-analyzers/compile-function-split-patterns';
 export { createTsSourceFileFromSource } from './ts-file/building-blocks/create-ts-source-file-from-source';
-export { FunctionRepositoryBuilder} from './ts-file/building-blocks/function-repository-builder'
+export { FunctionRepositoryBuilder } from './ts-file/building-blocks/function-repository-builder';

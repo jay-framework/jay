@@ -177,7 +177,7 @@ export const Import = {
         './function-repository',
         'funcRepository',
         ImportsFor.implementation,
-    )
+    ),
 };
 
 export class Imports {
@@ -206,9 +206,10 @@ export class Imports {
 
     renderFuncRepository(): string[] {
         if (this.imports[Import.functionRepository.index])
-            return [`import { ${Import.functionRepository.statement} }  from '${Import.functionRepository.module}'`];
-        else
-            return [];
+            return [
+                `import { ${Import.functionRepository.statement} }  from '${Import.functionRepository.module}'`,
+            ];
+        else return [];
     }
 
     renderModule(importsFor: ImportsFor, module: string) {

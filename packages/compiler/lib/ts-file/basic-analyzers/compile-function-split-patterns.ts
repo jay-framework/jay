@@ -18,13 +18,17 @@ import {
     flattenVariable,
     isGlobalVariableRoot,
     isImportModuleVariableRoot,
-    isParamVariableRoot
+    isParamVariableRoot,
 } from './name-binding-resolver';
-import {mkTransformer} from '../ts-utils/mk-transformer';
-import {JayValidations, WithValidations} from '../../core/with-validations';
-import {astToCode} from '../ts-utils/ts-compiler-utils';
-import {ResolvedType, SourceFileBindingResolver, SpreadResolvedType} from './source-file-binding-resolver';
-import {isIdentifierOrPropertyAccessExpression} from "./typescript-extras";
+import { mkTransformer } from '../ts-utils/mk-transformer';
+import { JayValidations, WithValidations } from '../../core/with-validations';
+import { astToCode } from '../ts-utils/ts-compiler-utils';
+import {
+    ResolvedType,
+    SourceFileBindingResolver,
+    SpreadResolvedType,
+} from './source-file-binding-resolver';
+import { isIdentifierOrPropertyAccessExpression } from './typescript-extras';
 
 export enum CompilePatternType {
     RETURN,
@@ -33,15 +37,14 @@ export enum CompilePatternType {
     ASSIGNMENT_LEFT_SIDE,
     KNOWN_VARIABLE_READ,
     CONST_READ,
-    INLINE_ARROW_FUNCTION
+    INLINE_ARROW_FUNCTION,
 }
 
 export function areCompatiblePatternTypes(type1: CompilePatternType, type2: CompilePatternType) {
-    if (type1 === type2)
+    if (type1 === type2) return true;
+    if (type1 === CompilePatternType.CALL && type2 === CompilePatternType.CHAINABLE_CALL)
         return true;
-    if (type1 === CompilePatternType.CALL && type2 === CompilePatternType.CHAINABLE_CALL) return true;
     return type1 === CompilePatternType.CHAINABLE_CALL && type2 === CompilePatternType.CALL;
-
 }
 
 export const KNOWN_VARIABLE_READ_NAME = 'knownVariableReadPattern';
@@ -93,24 +96,34 @@ export interface CompiledPattern {
     name: string;
 }
 
-function extractArgumentType(argument: ts.Expression, sourceFileBinding: SourceFileBindingResolver, node: ts.FunctionDeclaration): ResolvedType {
+function extractArgumentType(
+    argument: ts.Expression,
+    sourceFileBinding: SourceFileBindingResolver,
+    node: ts.FunctionDeclaration,
+): ResolvedType {
     if (isIdentifierOrPropertyAccessExpression(argument)) {
         const explainedArgument = flattenVariable(sourceFileBinding.explain(argument));
         if (isParamVariableRoot(explainedArgument.root)) {
-            const paramIndex = explainedArgument.root.paramIndex
-            return sourceFileBinding.explainType(node.parameters[paramIndex].type)
+            const paramIndex = explainedArgument.root.paramIndex;
+            return sourceFileBinding.explainType(node.parameters[paramIndex].type);
         }
     }
     if (isSpreadElement(argument)) {
-        return new SpreadResolvedType(extractArgumentType(argument.expression, sourceFileBinding, node));
+        return new SpreadResolvedType(
+            extractArgumentType(argument.expression, sourceFileBinding, node),
+        );
     }
     return undefined;
 }
 
-function extractArgumentTypes(callArgs: NodeArray<ts.Expression>, sourceFileBinding: SourceFileBindingResolver, node: ts.FunctionDeclaration) {
-    return callArgs.map(argument => {
+function extractArgumentTypes(
+    callArgs: NodeArray<ts.Expression>,
+    sourceFileBinding: SourceFileBindingResolver,
+    node: ts.FunctionDeclaration,
+) {
+    return callArgs.map((argument) => {
         return extractArgumentType(argument, sourceFileBinding, node);
-    })
+    });
 }
 
 export function compileFunctionSplitPatternsBlock(
@@ -162,7 +175,11 @@ export function compileFunctionSplitPatternsBlock(
                     ) {
                         patternType = CompilePatternType.CHAINABLE_CALL;
                         leftHandSide = statement.expression.expression;
-                        callArgumentTypes = extractArgumentTypes(statement.expression.arguments, sourceFileBinding, node)
+                        callArgumentTypes = extractArgumentTypes(
+                            statement.expression.arguments,
+                            sourceFileBinding,
+                            node,
+                        );
                     } else if (
                         isReturnStatement(statement) &&
                         isNewExpression(statement.expression) &&
@@ -170,7 +187,11 @@ export function compileFunctionSplitPatternsBlock(
                     ) {
                         patternType = CompilePatternType.CHAINABLE_CALL;
                         leftHandSide = statement.expression.expression;
-                        callArgumentTypes = extractArgumentTypes(statement.expression.arguments, sourceFileBinding, node)
+                        callArgumentTypes = extractArgumentTypes(
+                            statement.expression.arguments,
+                            sourceFileBinding,
+                            node,
+                        );
                     } else if (
                         isExpressionStatement(statement) &&
                         isCallExpression(statement.expression) &&
@@ -178,7 +199,11 @@ export function compileFunctionSplitPatternsBlock(
                     ) {
                         patternType = CompilePatternType.CALL;
                         leftHandSide = statement.expression.expression;
-                        callArgumentTypes = extractArgumentTypes(statement.expression.arguments, sourceFileBinding, node)
+                        callArgumentTypes = extractArgumentTypes(
+                            statement.expression.arguments,
+                            sourceFileBinding,
+                            node,
+                        );
                     } else if (
                         isExpressionStatement(statement) &&
                         isBinaryExpression(statement.expression) &&
@@ -188,7 +213,13 @@ export function compileFunctionSplitPatternsBlock(
                     ) {
                         patternType = CompilePatternType.ASSIGNMENT_LEFT_SIDE;
                         leftHandSide = statement.expression.left;
-                        callArgumentTypes = [extractArgumentType(statement.expression.right, sourceFileBinding, node)]
+                        callArgumentTypes = [
+                            extractArgumentType(
+                                statement.expression.right,
+                                sourceFileBinding,
+                                node,
+                            ),
+                        ];
                     }
 
                     let resolvedLeftHandSide = flattenVariable(
@@ -201,14 +232,15 @@ export function compileFunctionSplitPatternsBlock(
                     if (isParamVariableRoot(resolvedLeftHandSide.root)) {
                         const paramIndex = resolvedLeftHandSide.root.paramIndex;
                         // validate resolvedLeftHandSide is the first parameter
-                        leftSideType = sourceFileBinding.explainType(node.parameters[paramIndex].type)
-                    }
-                    else if (isGlobalVariableRoot(resolvedLeftHandSide.root))
+                        leftSideType = sourceFileBinding.explainType(
+                            node.parameters[paramIndex].type,
+                        );
+                    } else if (isGlobalVariableRoot(resolvedLeftHandSide.root))
                         leftSideType = sourceFileBinding.globalType(resolvedLeftHandSide.root);
                     else if (isImportModuleVariableRoot(resolvedLeftHandSide.root))
-                        leftSideType = sourceFileBinding.explainFlattenedVariableType(resolvedLeftHandSide)
+                        leftSideType =
+                            sourceFileBinding.explainFlattenedVariableType(resolvedLeftHandSide);
                     if (patternType !== undefined && leftSideType !== undefined) {
-
                         compiledPatterns.push({
                             patternType: patternType,
                             leftSidePath: resolvedLeftHandSide.path,

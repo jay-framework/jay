@@ -1,4 +1,3 @@
-import {FunctionsRepository} from "jay-secure";
+import { FunctionsRepository } from 'jay-secure';
 
-export const funcRepository: FunctionsRepository = {
-};
+export const funcRepository: FunctionsRepository = {};

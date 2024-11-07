@@ -6,11 +6,13 @@ import {
     generateSandboxRootFile,
     parseJayFile,
     prettify,
-    RuntimeMode, transformComponent,
+    RuntimeMode,
+    transformComponent,
 } from '../lib';
 import {
     readGeneratedNamedFile,
-    readNamedSourceJayFile, readPrettifyTextFile,
+    readNamedSourceJayFile,
+    readPrettifyTextFile,
     readTestFile,
 } from './test-utils/file-utils';
 import * as ts from 'typescript';
@@ -21,8 +23,11 @@ import {
     readFileAndGenerateElementBridgeFile,
     readTsSourceFile,
 } from './test-utils/ts-compiler-test-utils';
-import {promise, requestAnimationFramePattern} from "./ts-basic-analyzers/compiler-patterns-for-testing";
-import {FunctionRepositoryBuilder} from "../lib/ts-file/building-blocks/function-repository-builder";
+import {
+    promise,
+    requestAnimationFramePattern,
+} from './ts-basic-analyzers/compiler-patterns-for-testing';
+import { FunctionRepositoryBuilder } from '../lib/ts-file/building-blocks/function-repository-builder';
 
 describe('generate full project', () => {
     const relativePath = './test/fixtures/tsconfig.json';
@@ -30,10 +35,7 @@ describe('generate full project', () => {
     describe('sandboxed counter', () => {
         describe('sandbox target', () => {
             it('generates sandbox root', async () => {
-                const jayFile = await readNamedSourceJayFile(
-                    'full-projects/counter/source',
-                    'app',
-                );
+                const jayFile = await readNamedSourceJayFile('full-projects/counter/source', 'app');
                 const parsedFile = checkValidationErrors(
                     parseJayFile(
                         jayFile,
@@ -84,10 +86,7 @@ describe('generate full project', () => {
 
         describe('main target', () => {
             it('generates app element file', async () => {
-                const jayFile = await readNamedSourceJayFile(
-                    'full-projects/counter/source',
-                    'app',
-                );
+                const jayFile = await readNamedSourceJayFile('full-projects/counter/source', 'app');
                 let runtimeFile = generateElementFile(
                     checkValidationErrors(
                         parseJayFile(
@@ -118,7 +117,6 @@ describe('generate full project', () => {
                     ),
                 );
             });
-
 
             it('generates counter element file', async () => {
                 const jayFile = await readNamedSourceJayFile(
@@ -182,10 +180,7 @@ describe('generate full project', () => {
     describe('sandboxed exec$', () => {
         describe('sandbox target', () => {
             it('generates sandbox root', async () => {
-                const jayFile = await readNamedSourceJayFile(
-                    'full-projects/exec/source',
-                    'app',
-                );
+                const jayFile = await readNamedSourceJayFile('full-projects/exec/source', 'app');
                 const parsedFile = checkValidationErrors(
                     parseJayFile(
                         jayFile,
@@ -225,12 +220,18 @@ describe('generate full project', () => {
                 const globalFunctionRepo = new FunctionRepositoryBuilder();
 
                 const outputFile = ts.transform(sourceFile, [
-                    transformComponent([...promise(), ...requestAnimationFramePattern()], globalFunctionRepo),
+                    transformComponent(
+                        [...promise(), ...requestAnimationFramePattern()],
+                        globalFunctionRepo,
+                    ),
                 ]);
 
                 const outputCode = await printTsFile(outputFile);
                 expect(await prettify(outputCode)).toEqual(
-                    await readPrettifyTextFile('full-projects/exec/generated/sandbox', 'auto-counter.ts'),
+                    await readPrettifyTextFile(
+                        'full-projects/exec/generated/sandbox',
+                        'auto-counter.ts',
+                    ),
                 );
             });
 
@@ -243,12 +244,18 @@ describe('generate full project', () => {
                 const globalFunctionRepo = new FunctionRepositoryBuilder();
 
                 const outputFile = ts.transform(sourceFile, [
-                    transformComponent([...promise(), ...requestAnimationFramePattern()], globalFunctionRepo),
+                    transformComponent(
+                        [...promise(), ...requestAnimationFramePattern()],
+                        globalFunctionRepo,
+                    ),
                 ]);
 
                 const outputCode = await printTsFile(outputFile);
                 expect(await prettify(outputCode)).toEqual(
-                    await readPrettifyTextFile('full-projects/exec/generated/sandbox', 'a-module.ts'),
+                    await readPrettifyTextFile(
+                        'full-projects/exec/generated/sandbox',
+                        'a-module.ts',
+                    ),
                 );
             });
         });
@@ -272,10 +279,7 @@ describe('generate full project', () => {
 
         describe('main target', () => {
             it('generates app element file', async () => {
-                const jayFile = await readNamedSourceJayFile(
-                    'full-projects/exec/source',
-                    'app',
-                );
+                const jayFile = await readNamedSourceJayFile('full-projects/exec/source', 'app');
                 let runtimeFile = generateElementFile(
                     checkValidationErrors(
                         parseJayFile(
@@ -297,8 +301,12 @@ describe('generate full project', () => {
 
             it('generates function repository file', async () => {
                 const funcRepository = new FunctionRepositoryBuilder();
-                funcRepository.addFunction('() => new Promise((resolve) => requestAnimationFrame(resolve))')
-                funcRepository.addFunction('() => new Promise((resolve) => requestAnimationFrame(resolve))')
+                funcRepository.addFunction(
+                    '() => new Promise((resolve) => requestAnimationFrame(resolve))',
+                );
+                funcRepository.addFunction(
+                    '() => new Promise((resolve) => requestAnimationFrame(resolve))',
+                );
 
                 let runtimeFile = funcRepository.generateGlobalFile();
                 expect(await prettify(runtimeFile.functionRepository)).toEqual(
@@ -366,5 +374,5 @@ describe('generate full project', () => {
                 );
             });
         });
-    })
+    });
 });

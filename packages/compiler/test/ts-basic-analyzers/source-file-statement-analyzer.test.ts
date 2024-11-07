@@ -1,7 +1,5 @@
 import { createTsSourceFile } from '../test-utils/ts-source-utils';
-import {
-    jayTargetEnvName,
-} from '../../lib/ts-file/basic-analyzers/compile-function-split-patterns';
+import { jayTargetEnvName } from '../../lib/ts-file/basic-analyzers/compile-function-split-patterns';
 import {
     MatchedPattern,
     ScopedSourceFileStatementAnalyzer,
@@ -12,15 +10,18 @@ import {
     printStatementWithoutChildStatements,
 } from '../test-utils/ts-compiler-test-utils';
 import {
-    consoleLog, consoleLogVarargs,
-    eventPreventDefaultPattern, foo, promise,
-    readEventTargetValuePattern, requestAnimationFramePattern,
+    consoleLog,
+    consoleLogVarargs,
+    eventPreventDefaultPattern,
+    foo,
+    promise,
+    readEventTargetValuePattern,
+    requestAnimationFramePattern,
     setEventTargetValuePattern,
     stringReplacePattern,
 } from './compiler-patterns-for-testing';
 
 describe('SourceFileStatementAnalyzer', () => {
-
     describe('event handlers', () => {
         describe('statements that require code running in sandbox', () => {
             it('mandate for statement in sandbox', async () => {
@@ -37,18 +38,20 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.statements[1]
+                    sourceFile.statements[1],
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
                     new Set([
-                        "for (let i = 0; i < (event.target as HTMLInputElement).value.length; i++) /*...*/ --> sandbox, patterns matched: [0]",
-                        "console.log(i); --> sandbox, patterns matched: []",
+                        'for (let i = 0; i < (event.target as HTMLInputElement).value.length; i++) /*...*/ --> sandbox, patterns matched: [0]',
+                        'console.log(i); --> sandbox, patterns matched: []',
                     ]),
                 );
-                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                    "0: (event.target as HTMLInputElement).value; matches inputValuePattern",
-                ]));
+                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(
+                    new Set([
+                        '0: (event.target as HTMLInputElement).value; matches inputValuePattern',
+                    ]),
+                );
             });
 
             it('mandate for in statement in sandbox', async () => {
@@ -65,13 +68,13 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.statements[1]
+                    sourceFile.statements[1],
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
                     new Set([
                         `for (let i in (event.target as HTMLInputElement).value) /*...*/ --> sandbox, patterns matched: []`,
-                        "console.log(i); --> sandbox, patterns matched: []",
+                        'console.log(i); --> sandbox, patterns matched: []',
                     ]),
                 );
                 expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([]));
@@ -91,13 +94,13 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.statements[1]
+                    sourceFile.statements[1],
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
                     new Set([
                         `for (let i of (event.target as HTMLInputElement).value) /*...*/ --> sandbox, patterns matched: []`,
-                        "console.log(i); --> sandbox, patterns matched: []",
+                        'console.log(i); --> sandbox, patterns matched: []',
                     ]),
                 );
                 expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([]));
@@ -118,19 +121,21 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.statements[1]
+                    sourceFile.statements[1],
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
                     new Set([
                         "do /*...*/ while ((event.target as HTMLInputElement).value != 'ok'); --> sandbox, patterns matched: [1]",
-                        "console.log((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [0]",
+                        'console.log((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [0]',
                     ]),
                 );
-                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                    "0: (event.target as HTMLInputElement).value; matches inputValuePattern",
-                    "1: (event.target as HTMLInputElement).value; matches inputValuePattern",
-                ]));
+                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(
+                    new Set([
+                        '0: (event.target as HTMLInputElement).value; matches inputValuePattern',
+                        '1: (event.target as HTMLInputElement).value; matches inputValuePattern',
+                    ]),
+                );
             });
 
             it('mandate while statement in sandbox', async () => {
@@ -148,19 +153,21 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.statements[1]
+                    sourceFile.statements[1],
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
                     new Set([
                         "while ((event.target as HTMLInputElement).value != 'ok') /*...*/ --> sandbox, patterns matched: [0]",
-                        "console.log((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [1]",
+                        'console.log((event.target as HTMLInputElement).value); --> sandbox, patterns matched: [1]',
                     ]),
                 );
-                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                    "0: (event.target as HTMLInputElement).value; matches inputValuePattern",
-                    "1: (event.target as HTMLInputElement).value; matches inputValuePattern",
-                ]));
+                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(
+                    new Set([
+                        '0: (event.target as HTMLInputElement).value; matches inputValuePattern',
+                        '1: (event.target as HTMLInputElement).value; matches inputValuePattern',
+                    ]),
+                );
             });
         });
 
@@ -178,7 +185,7 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.statements[1]
+                    sourceFile.statements[1],
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
@@ -208,7 +215,7 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.statements[1]
+                    sourceFile.statements[1],
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
@@ -236,7 +243,7 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.statements[1]
+                    sourceFile.statements[1],
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
@@ -271,7 +278,7 @@ describe('SourceFileStatementAnalyzer', () => {
                     sourceFile,
                     bindingResolver,
                     patterns,
-                    sourceFile.statements[1]
+                    sourceFile.statements[1],
                 );
 
                 expect(await printAnalyzedStatements(analyzedFile)).toEqual(
@@ -307,19 +314,19 @@ describe('SourceFileStatementAnalyzer', () => {
                 sourceFile,
                 bindingResolver,
                 patterns,
-                sourceFile.statements[1]
+                sourceFile.statements[1],
             );
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(
+                new Set([`exec$(() => console.log('hi')); --> sandbox, patterns matched: [0, 1]`]),
+            );
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(
                 new Set([
-                    `exec$(() => console.log('hi')); --> sandbox, patterns matched: [0, 1]`,
+                    `0: console.log('hi'); matches consoleLog`,
+                    "1: () => console.log('hi'); matches inlineArrowFunctionPattern",
                 ]),
             );
-            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                `0: console.log('hi'); matches consoleLog`,
-                "1: () => console.log('hi'); matches inlineArrowFunctionPattern",
-            ]));
-        })
+        });
 
         it('should match if sub-pattern does matches', async () => {
             const sourceFile = createTsSourceFile(`
@@ -335,7 +342,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 sourceFile,
                 bindingResolver,
                 patterns,
-                sourceFile.statements[1]
+                sourceFile.statements[1],
             );
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(
@@ -343,12 +350,14 @@ describe('SourceFileStatementAnalyzer', () => {
                     `exec$(() => console.log(foo())); --> sandbox, patterns matched: [0, 1, 2]`,
                 ]),
             );
-            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                `0: foo(); matches fooPattern`,
-                `1: console.log(foo()); matches consoleLog`,
-                "2: () => console.log(foo()); matches inlineArrowFunctionPattern",
-            ]));
-        })
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(
+                new Set([
+                    `0: foo(); matches fooPattern`,
+                    `1: console.log(foo()); matches consoleLog`,
+                    '2: () => console.log(foo()); matches inlineArrowFunctionPattern',
+                ]),
+            );
+        });
 
         it('should not match if sub-pattern does not match', async () => {
             const sourceFile = createTsSourceFile(`
@@ -364,18 +373,18 @@ describe('SourceFileStatementAnalyzer', () => {
                 sourceFile,
                 bindingResolver,
                 patterns,
-                sourceFile.statements[1]
+                sourceFile.statements[1],
             );
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(
+                new Set([`exec$(() => console.log(foo())); --> sandbox, patterns matched: [0]`]),
+            );
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(
                 new Set([
-                    `exec$(() => console.log(foo())); --> sandbox, patterns matched: [0]`,
+                    '0: console.log(foo()); matches consoleLog, but has sub expressions not matching any pattern',
                 ]),
             );
-            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                "0: console.log(foo()); matches consoleLog, but has sub expressions not matching any pattern",
-            ]));
-        })
+        });
 
         it('analyze exec$ with console log varargs', async () => {
             const sourceFile = createTsSourceFile(`
@@ -390,7 +399,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 sourceFile,
                 bindingResolver,
                 patterns,
-                sourceFile.statements[1]
+                sourceFile.statements[1],
             );
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(
@@ -398,12 +407,13 @@ describe('SourceFileStatementAnalyzer', () => {
                     `exec$(() => console.log('hi', 'jay')); --> sandbox, patterns matched: [0, 1]`,
                 ]),
             );
-            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                `0: console.log('hi', 'jay'); matches consoleLog`,
-                "1: () => console.log('hi', 'jay'); matches inlineArrowFunctionPattern",
-            ]));
-
-        })
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(
+                new Set([
+                    `0: console.log('hi', 'jay'); matches consoleLog`,
+                    "1: () => console.log('hi', 'jay'); matches inlineArrowFunctionPattern",
+                ]),
+            );
+        });
 
         it('analyze exec$ with new Promise', async () => {
             const sourceFile = createTsSourceFile(`
@@ -418,7 +428,7 @@ describe('SourceFileStatementAnalyzer', () => {
                 sourceFile,
                 bindingResolver,
                 patterns,
-                sourceFile.statements[1]
+                sourceFile.statements[1],
             );
 
             expect(await printAnalyzedStatements(analyzedFile)).toEqual(
@@ -426,23 +436,26 @@ describe('SourceFileStatementAnalyzer', () => {
                     `exec$(() => new Promise((resolve) => requestAnimationFrame(resolve))); --> sandbox, patterns matched: [0, 1, 2, 3, 4]`,
                 ]),
             );
-            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(new Set([
-                "0: resolve; matches knownVariableReadPattern",
-                "1: requestAnimationFrame(resolve); matches requestAnimationFramePattern",
-                "2: (resolve) => requestAnimationFrame(resolve); matches inlineArrowFunctionPattern",
-                "3: new Promise((resolve) => requestAnimationFrame(resolve)); matches promise2",
-                "4: () => new Promise((resolve) => requestAnimationFrame(resolve)); matches inlineArrowFunctionPattern",
-            ]));
-
-        })
-    })
+            expect(await printAnalyzedExpressions(analyzedFile)).toEqual(
+                new Set([
+                    '0: resolve; matches knownVariableReadPattern',
+                    '1: requestAnimationFrame(resolve); matches requestAnimationFramePattern',
+                    '2: (resolve) => requestAnimationFrame(resolve); matches inlineArrowFunctionPattern',
+                    '3: new Promise((resolve) => requestAnimationFrame(resolve)); matches promise2',
+                    '4: () => new Promise((resolve) => requestAnimationFrame(resolve)); matches inlineArrowFunctionPattern',
+                ]),
+            );
+        });
+    });
 });
 
 async function printMatchedExpression(matchedExpression: MatchedPattern) {
     const printedExpression = (await astToFormattedCode(matchedExpression.expression)).trim();
-    const {testId, patterns, subExpressionsMatching} = matchedExpression;
-    const printedPatterns = patterns.map((_) => _.name).join(', ')
-    const matchingSubPatterns = subExpressionsMatching?'':', but has sub expressions not matching any pattern'
+    const { testId, patterns, subExpressionsMatching } = matchedExpression;
+    const printedPatterns = patterns.map((_) => _.name).join(', ');
+    const matchingSubPatterns = subExpressionsMatching
+        ? ''
+        : ', but has sub expressions not matching any pattern';
     return `${testId}: ${printedExpression} matches ${printedPatterns}${matchingSubPatterns}`;
 }
 

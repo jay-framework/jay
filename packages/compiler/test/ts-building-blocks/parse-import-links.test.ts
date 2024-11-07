@@ -79,10 +79,10 @@ describe('parseImportLinks', () => {
                 sandbox: true,
             },
             {
-                module: "./function-repository",
+                module: './function-repository',
                 names: [
                     {
-                        name: "funcRepository",
+                        name: 'funcRepository',
                         type: JayUnknown,
                     },
                 ],

@@ -107,7 +107,7 @@ export function mkFunctionCallVariableRoot(node: CallExpression): FunctionCallVa
 
 export interface GlobalVariableRoot extends VariableRoot {
     kind: VariableRootType.Global;
-    name: string,
+    name: string;
 }
 
 export function mkGlobalVariableRoot(name: string): GlobalVariableRoot {
@@ -404,8 +404,7 @@ export class NameBindingResolver {
             nameResolver.parentNameResolver
         )
             nameResolver = nameResolver.parentNameResolver;
-        if (resolved === UNKNOWN_VARIABLE)
-            return {root: mkGlobalVariableRoot(variableName)};
+        if (resolved === UNKNOWN_VARIABLE) return { root: mkGlobalVariableRoot(variableName) };
         return resolved;
     }
 

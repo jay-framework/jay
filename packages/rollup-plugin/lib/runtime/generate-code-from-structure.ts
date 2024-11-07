@@ -70,7 +70,13 @@ function generateCodeFromTsFile(
             if (!code.includes('makeJayComponent')) return code;
             return transformTsCode(
                 jayContext,
-                [transformComponentBridge(mode, jayContext.compilerPatterns, jayContext.globalFunctionsRepository)],
+                [
+                    transformComponentBridge(
+                        mode,
+                        jayContext.compilerPatterns,
+                        jayContext.globalFunctionsRepository,
+                    ),
+                ],
                 id,
                 code,
             );
@@ -80,7 +86,12 @@ function generateCodeFromTsFile(
         case RuntimeMode.WorkerSandbox:
             return transformTsCode(
                 jayContext,
-                [transformComponent(jayContext.compilerPatterns, jayContext.globalFunctionsRepository)],
+                [
+                    transformComponent(
+                        jayContext.compilerPatterns,
+                        jayContext.globalFunctionsRepository,
+                    ),
+                ],
                 id,
                 code,
             );

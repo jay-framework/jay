@@ -6,10 +6,10 @@ import {
     readEventKeyCodePattern,
     readEventTargetValuePattern,
 } from './ts-basic-analyzers/compiler-patterns-for-testing';
-import {FunctionRepositoryBuilder} from "../lib/ts-file/building-blocks/function-repository-builder";
+import { FunctionRepositoryBuilder } from '../lib/ts-file/building-blocks/function-repository-builder';
 
 function globalFunctionRepo(): FunctionRepositoryBuilder {
-    return new FunctionRepositoryBuilder()
+    return new FunctionRepositoryBuilder();
 }
 
 describe('transform component bridge', () => {
@@ -86,7 +86,11 @@ describe('transform component bridge', () => {
                     export const Comp = makeJayComponent(render, CompComponent);`;
 
                 const outputCode = await transformCode(code, [
-                    transformComponentBridge(RuntimeMode.MainSandbox, input_value_pattern, globalFunctionRepo()),
+                    transformComponentBridge(
+                        RuntimeMode.MainSandbox,
+                        input_value_pattern,
+                        globalFunctionRepo(),
+                    ),
                 ]);
 
                 expect(outputCode).toEqual(
@@ -117,7 +121,11 @@ describe('transform component bridge', () => {
                     export const Comp = makeJayComponent(render, CompComponent);`;
 
                 const outputCode = await transformCode(code, [
-                    transformComponentBridge(RuntimeMode.MainSandbox, input_value_pattern, globalFunctionRepo()),
+                    transformComponentBridge(
+                        RuntimeMode.MainSandbox,
+                        input_value_pattern,
+                        globalFunctionRepo(),
+                    ),
                 ]);
 
                 expect(outputCode).toEqual(
@@ -152,7 +160,11 @@ describe('transform component bridge', () => {
                     export const Comp = makeJayComponent(render, CompComponent);`;
 
                 const outputCode = await transformCode(code, [
-                    transformComponentBridge(RuntimeMode.MainSandbox, input_value_pattern, globalFunctionRepo()),
+                    transformComponentBridge(
+                        RuntimeMode.MainSandbox,
+                        input_value_pattern,
+                        globalFunctionRepo(),
+                    ),
                 ]);
 
                 expect(outputCode).toEqual(
@@ -180,7 +192,11 @@ describe('transform component bridge', () => {
                     export const Comp = makeJayComponent(render, CompComponent);`;
 
                 const outputCode = await transformCode(code, [
-                    transformComponentBridge(RuntimeMode.MainSandbox, input_value_pattern, globalFunctionRepo()),
+                    transformComponentBridge(
+                        RuntimeMode.MainSandbox,
+                        input_value_pattern,
+                        globalFunctionRepo(),
+                    ),
                 ]);
 
                 expect(outputCode).toEqual(
@@ -212,7 +228,11 @@ describe('transform component bridge', () => {
                     export const Comp = makeJayComponent(render, CompComponent);`;
 
                 const outputCode = await transformCode(code, [
-                    transformComponentBridge(RuntimeMode.MainSandbox, preventDefaultPattern, globalFunctionRepo()),
+                    transformComponentBridge(
+                        RuntimeMode.MainSandbox,
+                        preventDefaultPattern,
+                        globalFunctionRepo(),
+                    ),
                 ]);
 
                 expect(outputCode).toEqual(
@@ -255,7 +275,11 @@ describe('transform component bridge', () => {
                     export const Comp = makeJayComponent(render, CompComponent);`;
 
                 const outputCode = await transformCode(code, [
-                    transformComponentBridge(RuntimeMode.MainSandbox, patterns, globalFunctionRepo()),
+                    transformComponentBridge(
+                        RuntimeMode.MainSandbox,
+                        patterns,
+                        globalFunctionRepo(),
+                    ),
                 ]);
 
                 expect(outputCode).toEqual(

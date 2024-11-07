@@ -6,8 +6,11 @@ import {
 } from './analyze-event-handler-by-pattern';
 import { analyzeEventHandlerCallStatement$Block } from './analyze-event-handler-call$';
 import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
-import { SourceFileStatementAnalyzer} from '../basic-analyzers/scoped-source-file-statement-analyzer';
-import {FunctionRepositoryBuilder, FunctionRepositoryCodeFragment} from "./function-repository-builder";
+import { SourceFileStatementAnalyzer } from '../basic-analyzers/scoped-source-file-statement-analyzer';
+import {
+    FunctionRepositoryBuilder,
+    FunctionRepositoryCodeFragment,
+} from './function-repository-builder';
 
 export interface TransformedEventHandler extends FoundEventHandler {
     wasEventHandlerTransformed: boolean;
@@ -20,12 +23,14 @@ export interface FunctionRepositoryFragment {
     fragment: FunctionRepositoryCodeFragment;
 }
 
-export function analyzedEventHandlersToReplaceMap(transformedEventHandlers: TransformedEventHandler[]): Map<ts.Node, ts.Node> {
+export function analyzedEventHandlersToReplaceMap(
+    transformedEventHandlers: TransformedEventHandler[],
+): Map<ts.Node, ts.Node> {
     const map = new Map<ts.Node, ts.Node>();
-    transformedEventHandlers.forEach(_ => {
+    transformedEventHandlers.forEach((_) => {
         map.set(_.eventHandlerCallStatement, _.transformedEventHandlerCallStatement);
-        map.set(_.eventHandler, _.transformedEventHandler)
-    })
+        map.set(_.eventHandler, _.transformedEventHandler);
+    });
     return map;
 }
 
@@ -35,7 +40,7 @@ export function analyzeEventHandlers(
     analyzer: SourceFileStatementAnalyzer,
     factory: ts.NodeFactory,
     foundEventHandlers: FoundEventHandler[],
-    functionsRepository: FunctionRepositoryBuilder
+    functionsRepository: FunctionRepositoryBuilder,
 ): TransformedEventHandler[] {
     let handlerToTransformedHandlers: Map<ts.Node, TransformedEventHandlerByPattern> = new Map();
 
@@ -61,11 +66,8 @@ export function analyzeEventHandlers(
                     .wasEventHandlerTransformed,
         )
         .map((foundEventHandler) => {
-            const {
-                transformedEventHandler,
-                wasEventHandlerTransformed,
-                handlerKey,
-            } = handlerToTransformedHandlers.get(foundEventHandler.eventHandler);
+            const { transformedEventHandler, wasEventHandlerTransformed, handlerKey } =
+                handlerToTransformedHandlers.get(foundEventHandler.eventHandler);
             const transformedEventHandlerCallStatement = analyzeEventHandlerCallStatement$Block(
                 context,
                 factory,

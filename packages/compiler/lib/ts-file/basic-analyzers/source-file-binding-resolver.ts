@@ -1,14 +1,17 @@
 import ts, {
-    Identifier, isArrayTypeNode,
+    Identifier,
+    isArrayTypeNode,
     isBlock,
     isForInStatement,
     isForOfStatement,
     isForStatement,
-    isFunctionDeclaration, isFunctionTypeNode,
+    isFunctionDeclaration,
+    isFunctionTypeNode,
     isIdentifier,
     isImportDeclaration,
     isStringLiteral,
-    isTypeReferenceNode, isUnionTypeNode,
+    isTypeReferenceNode,
+    isUnionTypeNode,
     isVariableDeclarationList,
     isVariableStatement,
     PropertyAccessExpression,
@@ -18,14 +21,15 @@ import ts, {
 } from 'typescript';
 import {
     FlattenedAccessChain,
-    flattenVariable, GlobalVariableRoot,
+    flattenVariable,
+    GlobalVariableRoot,
     isImportModuleVariableRoot,
     mkOtherVariableRoot,
     mkVariable,
     NameBindingResolver,
 } from './name-binding-resolver';
 import { isFunctionLikeDeclarationBase } from '../ts-utils/ts-compiler-utils';
-import {byAnd} from "./typescript-extras";
+import { byAnd } from './typescript-extras';
 
 const BUILT_IN_TYPES = ['RegExp', 'Date'];
 function builtInType(text: string) {
@@ -33,16 +37,13 @@ function builtInType(text: string) {
 }
 
 export interface ResolvedType {
-    canBeAssignedFrom(rightSide: ResolvedType)
+    canBeAssignedFrom(rightSide: ResolvedType);
 }
 export class BuiltInResolvedType implements ResolvedType {
-    constructor(
-        public readonly name: string,
-    ) {}
+    constructor(public readonly name: string) {}
 
     canBeAssignedFrom(rightSide: ResolvedType) {
-        return rightSide instanceof BuiltInResolvedType &&
-            this.name === rightSide.name;
+        return rightSide instanceof BuiltInResolvedType && this.name === rightSide.name;
     }
 }
 export class ImportFromModuleResolvedType implements ResolvedType {
@@ -57,7 +58,7 @@ export class ImportFromModuleResolvedType implements ResolvedType {
             if (pathEqual) {
                 pathEqual = this.path
                     .map((value, index) => value === rightSide.path[index])
-                    .reduce(byAnd(), true)
+                    .reduce(byAnd(), true);
             }
             return pathEqual && this.module === rightSide.module;
         }
@@ -65,13 +66,10 @@ export class ImportFromModuleResolvedType implements ResolvedType {
     }
 }
 export class ArrayResolvedType implements ResolvedType {
-    constructor(
-        public readonly itemType: ResolvedType,
-    ) {}
+    constructor(public readonly itemType: ResolvedType) {}
 
     canBeAssignedFrom(rightSide: ResolvedType) {
-        return rightSide instanceof ArrayResolvedType &&
-            this.itemType === rightSide.itemType;
+        return rightSide instanceof ArrayResolvedType && this.itemType === rightSide.itemType;
     }
 }
 export class FunctionResolvedType implements ResolvedType {
@@ -81,52 +79,42 @@ export class FunctionResolvedType implements ResolvedType {
     ) {}
 
     canBeAssignedFrom(rightSide: ResolvedType) {
-        return rightSide instanceof FunctionResolvedType &&
+        return (
+            rightSide instanceof FunctionResolvedType &&
             this.returns.canBeAssignedFrom(rightSide.returns)
+        );
     }
 }
 export class UnionResolvedType implements ResolvedType {
-    constructor(
-        public readonly types: ResolvedType[],
-    ) {}
+    constructor(public readonly types: ResolvedType[]) {}
 
     canBeAssignedFrom(rightSide: ResolvedType) {
         if (rightSide instanceof UnionResolvedType) {
             for (const item1 of this.types)
                 for (const item2 of rightSide.types)
-                    if (item1.canBeAssignedFrom(item2))
-                        return true;
-        }
-        else
-            for (const item1 of this.types)
-                if (item1.canBeAssignedFrom(rightSide))
-                    return true;
+                    if (item1.canBeAssignedFrom(item2)) return true;
+        } else for (const item1 of this.types) if (item1.canBeAssignedFrom(rightSide)) return true;
 
         return false;
     }
-
 }
 export class GlobalResolvedType implements ResolvedType {
-    constructor(
-        public readonly name: string,
-    ) {}
+    constructor(public readonly name: string) {}
 
     canBeAssignedFrom(rightSide: ResolvedType) {
-        return rightSide instanceof GlobalResolvedType &&
-            this.name === rightSide.name;
+        return rightSide instanceof GlobalResolvedType && this.name === rightSide.name;
     }
-
 }
 export class SpreadResolvedType implements ResolvedType {
-    constructor(public readonly arrayType: ResolvedType) {
-    }
+    constructor(public readonly arrayType: ResolvedType) {}
 
     canBeAssignedFrom(rightSide: ResolvedType) {
-        return rightSide instanceof SpreadResolvedType &&
+        return (
+            rightSide instanceof SpreadResolvedType &&
             this.arrayType.canBeAssignedFrom(rightSide.arrayType)
+        );
     }
 }
-
 
 export class SourceFileBindingResolver {
     private nameBindingResolvers = new Map<ts.Node, NameBindingResolver>();
@@ -207,9 +195,7 @@ export class SourceFileBindingResolver {
             ) {
                 return new ImportFromModuleResolvedType(flattened.root.module.text, flattened.path);
             }
-        }
-        else
-            return undefined;
+        } else return undefined;
     }
 
     explainType(type: ts.TypeNode): ResolvedType {
@@ -219,25 +205,26 @@ export class SourceFileBindingResolver {
                 if (isIdentifier(typeName)) {
                     let resolved = this.findBindingResolver(typeName).resolveIdentifier(typeName);
                     let flattened = flattenVariable(resolved);
-                    let typeFromFlattened = this.explainFlattenedVariableType(flattened)
-                    if (typeFromFlattened)
-                        return typeFromFlattened;
+                    let typeFromFlattened = this.explainFlattenedVariableType(flattened);
+                    if (typeFromFlattened) return typeFromFlattened;
                     if (builtInType(typeName.text)) return new BuiltInResolvedType(typeName.text);
                 }
-            } else if (type.kind === SyntaxKind.StringKeyword) return new BuiltInResolvedType('string');
-            else if (type.kind === SyntaxKind.NumberKeyword) return new BuiltInResolvedType('number');
-            else if (type.kind === SyntaxKind.BooleanKeyword) return new BuiltInResolvedType('boolean');
+            } else if (type.kind === SyntaxKind.StringKeyword)
+                return new BuiltInResolvedType('string');
+            else if (type.kind === SyntaxKind.NumberKeyword)
+                return new BuiltInResolvedType('number');
+            else if (type.kind === SyntaxKind.BooleanKeyword)
+                return new BuiltInResolvedType('boolean');
             else if (type.kind === SyntaxKind.AnyKeyword) return new BuiltInResolvedType('any');
             else if (type.kind === SyntaxKind.VoidKeyword) return new BuiltInResolvedType('void');
-            else if (isArrayTypeNode(type)) return new ArrayResolvedType(this.explainType(type.elementType))
+            else if (isArrayTypeNode(type))
+                return new ArrayResolvedType(this.explainType(type.elementType));
             else if (isFunctionTypeNode(type)) {
-                const params = type.parameters
-                    .map(param => this.explainType(param.type))
-                const ret = this.explainType(type.type)
+                const params = type.parameters.map((param) => this.explainType(param.type));
+                const ret = this.explainType(type.type);
                 return new FunctionResolvedType(params, ret);
-            }
-            else if (isUnionTypeNode(type))
-                return new UnionResolvedType(type.types.map(aType => this.explainType(aType)))
+            } else if (isUnionTypeNode(type))
+                return new UnionResolvedType(type.types.map((aType) => this.explainType(aType)));
         }
 
         return new BuiltInResolvedType('void');

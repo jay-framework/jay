@@ -9,8 +9,7 @@ import ts, {
 import { codeToAst } from '../ts-utils/ts-compiler-utils';
 
 const analyzeEventHandlerCall =
-    (context: TransformationContext, factory: NodeFactory, handlerKey: string) =>
-    (node) => {
+    (context: TransformationContext, factory: NodeFactory, handlerKey: string) => (node) => {
         if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
             return factory.createCallExpression(
                 factory.createPropertyAccessExpression(

@@ -1,6 +1,6 @@
-import ts, {isImportDeclaration, isStringLiteral} from 'typescript';
-import {codeToAst} from "../ts-utils/ts-compiler-utils";
-import {JAY_SECURE} from "../../core/constants";
+import ts, { isImportDeclaration, isStringLiteral } from 'typescript';
+import { codeToAst } from '../ts-utils/ts-compiler-utils';
+import { JAY_SECURE } from '../../core/constants';
 
 // function findJaySecureImport(statements: ts.Node[]) {
 //     return statements.find(statement =>
@@ -17,13 +17,15 @@ function findAfterImportStatementIndex(statements: ts.Node[]) {
     return lastIndex;
 }
 
-export function transformComponentImports(needsHandler$: boolean,
-                                          needsFunc$: boolean,
-                                          needsFuncGlobal$: boolean,
-                                          transformedSourceFile: ts.SourceFile,
-                                          context: ts.TransformationContext,
-                                          factory: ts.NodeFactory,
-                                          sourceFile: ts.SourceFile) {
+export function transformComponentImports(
+    needsHandler$: boolean,
+    needsFunc$: boolean,
+    needsFuncGlobal$: boolean,
+    transformedSourceFile: ts.SourceFile,
+    context: ts.TransformationContext,
+    factory: ts.NodeFactory,
+    sourceFile: ts.SourceFile,
+) {
     if (needsHandler$ || needsFunc$ || needsFuncGlobal$) {
         const statements = [...transformedSourceFile.statements];
         // const jaySecureImport = findJaySecureImport(statements);
@@ -33,14 +35,17 @@ export function transformComponentImports(needsHandler$: boolean,
         // else {
         const afterImportStatementIndex = findAfterImportStatementIndex(statements);
         const importClause = [
-            ...needsHandler$?['handler$']:[],
-            ...needsFunc$?['func$']:[],
-            ...needsFuncGlobal$?['funcGlobal$']:[]
-        ].join(', ')
+            ...(needsHandler$ ? ['handler$'] : []),
+            ...(needsFunc$ ? ['func$'] : []),
+            ...(needsFuncGlobal$ ? ['funcGlobal$'] : []),
+        ].join(', ');
 
         const allStatements = [
             ...statements.slice(0, afterImportStatementIndex),
-            codeToAst(`import { ${importClause} } from '${JAY_SECURE}';`, context)[0] as ts.Statement,
+            codeToAst(
+                `import { ${importClause} } from '${JAY_SECURE}';`,
+                context,
+            )[0] as ts.Statement,
             ...statements.slice(afterImportStatementIndex),
         ];
         return factory.updateSourceFile(sourceFile, allStatements);

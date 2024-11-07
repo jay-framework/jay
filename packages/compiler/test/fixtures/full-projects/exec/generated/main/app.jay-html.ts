@@ -6,11 +6,11 @@ import {
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
-import { mainRoot as mr, secureChildComp} from 'jay-secure';
+import { mainRoot as mr, secureChildComp } from 'jay-secure';
 import { AutoCounterComponentType } from './auto-counter-refs';
 // @ts-expect-error Cannot find module
 import { AutoCounter } from './auto-counter?jay-mainSandbox';
-import { funcRepository} from "./function-repository";
+import { funcRepository } from './function-repository';
 
 export interface AppViewState {
     incrementBy: number;
@@ -28,15 +28,17 @@ export function render(options?: RenderElementOptions): AppElementPreRender {
     const [refManager, [refA]] = ReferencesManager.for(options, [], [], ['a'], []);
     const render = (viewState: AppViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            mr(viewState, () =>
-                e('div', {}, [
-                    secureChildComp(
-                        AutoCounter,
-                        (vs: AppViewState) => ({ initialValue: 12 }),
-                        refA(),
-                    ),
-                ]),
-                funcRepository
+            mr(
+                viewState,
+                () =>
+                    e('div', {}, [
+                        secureChildComp(
+                            AutoCounter,
+                            (vs: AppViewState) => ({ initialValue: 12 }),
+                            refA(),
+                        ),
+                    ]),
+                funcRepository,
             ),
         ) as AppElement;
     return [refManager.getPublicAPI() as AppElementRefs, render];

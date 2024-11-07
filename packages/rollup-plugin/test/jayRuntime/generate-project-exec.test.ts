@@ -9,7 +9,7 @@ import { generateProject } from '../test-utils/rollup';
 
 describe('jayRuntime plugin - exec', () => {
     const projectRoot = './test/jayRuntime/fixtures/exec';
-    const compilerPatternFiles = [`${projectRoot}/patterns/patterns.ts`]
+    const compilerPatternFiles = [`${projectRoot}/patterns/patterns.ts`];
 
     beforeAll(async () => {
         await cleanDistDirectory(projectRoot);

@@ -22,8 +22,11 @@ import {
 } from '../../lib/ts-file/basic-analyzers/name-binding-resolver';
 import {
     ArrayResolvedType,
-    BuiltInResolvedType, FunctionResolvedType, ImportFromModuleResolvedType,
-    SourceFileBindingResolver, UnionResolvedType
+    BuiltInResolvedType,
+    FunctionResolvedType,
+    ImportFromModuleResolvedType,
+    SourceFileBindingResolver,
+    UnionResolvedType,
 } from '../../lib/ts-file/basic-analyzers/source-file-binding-resolver';
 
 describe('SourceFileBindingResolver', () => {
@@ -782,14 +785,24 @@ describe('SourceFileBindingResolver', () => {
                 function bla(a: string, b: number, c: boolean, d: Date, e: RegExp) {}
                 `);
             const bindingResolver = new SourceFileBindingResolver(sourceFile);
-            const func = sourceFile.statements[0] as FunctionDeclaration
+            const func = sourceFile.statements[0] as FunctionDeclaration;
 
-            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(new BuiltInResolvedType('string'))
-            expect(bindingResolver.explainType(func.parameters[1].type)).toEqual(new BuiltInResolvedType('number'))
-            expect(bindingResolver.explainType(func.parameters[2].type)).toEqual(new BuiltInResolvedType('boolean'))
-            expect(bindingResolver.explainType(func.parameters[3].type)).toEqual(new BuiltInResolvedType('Date'))
-            expect(bindingResolver.explainType(func.parameters[4].type)).toEqual(new BuiltInResolvedType('RegExp'))
-        })
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(
+                new BuiltInResolvedType('string'),
+            );
+            expect(bindingResolver.explainType(func.parameters[1].type)).toEqual(
+                new BuiltInResolvedType('number'),
+            );
+            expect(bindingResolver.explainType(func.parameters[2].type)).toEqual(
+                new BuiltInResolvedType('boolean'),
+            );
+            expect(bindingResolver.explainType(func.parameters[3].type)).toEqual(
+                new BuiltInResolvedType('Date'),
+            );
+            expect(bindingResolver.explainType(func.parameters[4].type)).toEqual(
+                new BuiltInResolvedType('RegExp'),
+            );
+        });
 
         it('should resolve imported types', () => {
             const sourceFile = createTsSourceFile(`
@@ -797,40 +810,51 @@ describe('SourceFileBindingResolver', () => {
                 function bla(a: A) {}
                 `);
             const bindingResolver = new SourceFileBindingResolver(sourceFile);
-            const func = sourceFile.statements[1] as FunctionDeclaration
+            const func = sourceFile.statements[1] as FunctionDeclaration;
 
-            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(new ImportFromModuleResolvedType('module-a', ['A']))
-        })
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(
+                new ImportFromModuleResolvedType('module-a', ['A']),
+            );
+        });
 
         it('should resolve varargs type', () => {
             const sourceFile = createTsSourceFile(`
                 function bla(...a: string[]) {}
                 `);
             const bindingResolver = new SourceFileBindingResolver(sourceFile);
-            const func = sourceFile.statements[0] as FunctionDeclaration
+            const func = sourceFile.statements[0] as FunctionDeclaration;
 
-            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(new ArrayResolvedType(new BuiltInResolvedType('string')))
-        })
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(
+                new ArrayResolvedType(new BuiltInResolvedType('string')),
+            );
+        });
 
         it('should resolve union types', () => {
             const sourceFile = createTsSourceFile(`
                 function bla(a: string | number) {}
                 `);
             const bindingResolver = new SourceFileBindingResolver(sourceFile);
-            const func = sourceFile.statements[0] as FunctionDeclaration
+            const func = sourceFile.statements[0] as FunctionDeclaration;
 
-            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(new UnionResolvedType([new BuiltInResolvedType('string'), new BuiltInResolvedType('number')]))
-        })
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(
+                new UnionResolvedType([
+                    new BuiltInResolvedType('string'),
+                    new BuiltInResolvedType('number'),
+                ]),
+            );
+        });
 
         it('should resolve function type', () => {
             const sourceFile = createTsSourceFile(`
                 function bla(a: () => void) {}
                 `);
             const bindingResolver = new SourceFileBindingResolver(sourceFile);
-            const func = sourceFile.statements[0] as FunctionDeclaration
+            const func = sourceFile.statements[0] as FunctionDeclaration;
 
-            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(new FunctionResolvedType([], new BuiltInResolvedType('void')))
-        })
+            expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(
+                new FunctionResolvedType([], new BuiltInResolvedType('void')),
+            );
+        });
 
         it('should resolve function with parameters and return type', () => {
             const sourceFile = createTsSourceFile(`
@@ -838,13 +862,14 @@ describe('SourceFileBindingResolver', () => {
                 function bla(a: (a:A) => B) {}
                 `);
             const bindingResolver = new SourceFileBindingResolver(sourceFile);
-            const func = sourceFile.statements[1] as FunctionDeclaration
+            const func = sourceFile.statements[1] as FunctionDeclaration;
 
             expect(bindingResolver.explainType(func.parameters[0].type)).toEqual(
-                new FunctionResolvedType([
-                    new ImportFromModuleResolvedType('module-a', ['A'])],
-                    new ImportFromModuleResolvedType('module-a', ['B']))
-                )
-        })
-    })
+                new FunctionResolvedType(
+                    [new ImportFromModuleResolvedType('module-a', ['A'])],
+                    new ImportFromModuleResolvedType('module-a', ['B']),
+                ),
+            );
+        });
+    });
 });

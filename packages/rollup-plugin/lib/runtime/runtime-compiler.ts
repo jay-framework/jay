@@ -1,4 +1,4 @@
-import {hasExtension, hasJayModeExtension, Import, JAY_EXTENSION} from 'jay-compiler';
+import { hasExtension, hasJayModeExtension, Import, JAY_EXTENSION } from 'jay-compiler';
 import { LoadResult, ResolveIdResult, TransformResult } from 'rollup';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
 import { transformJayFile } from './transform';
@@ -44,7 +44,8 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             )
                 return await loadJayFile(this, id);
             else if (id === GLOBAL_FUNC_REPOSITORY) {
-                const {functionRepository} = jayContext.globalFunctionsRepository.generateGlobalFile();
+                const { functionRepository } =
+                    jayContext.globalFunctionsRepository.generateGlobalFile();
                 return functionRepository;
             }
             return null;

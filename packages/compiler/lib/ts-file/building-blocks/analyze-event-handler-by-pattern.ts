@@ -15,15 +15,18 @@ import {
     intersectJayTargetEnv,
     JayTargetEnv,
 } from '../basic-analyzers/compile-function-split-patterns';
-import {astToCode, codeToAst} from '../ts-utils/ts-compiler-utils';
-import {SourceFileBindingResolver} from '../basic-analyzers/source-file-binding-resolver';
+import { astToCode, codeToAst } from '../ts-utils/ts-compiler-utils';
+import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
 import {
     ScopedSourceFileStatementAnalyzer,
-    SourceFileStatementAnalyzer
+    SourceFileStatementAnalyzer,
 } from '../basic-analyzers/scoped-source-file-statement-analyzer';
-import {ContextualVisitor2, visitWithContext2} from '../ts-utils/visitor-with-context';
-import {flattenVariable, LiteralVariableRoot} from '../basic-analyzers/name-binding-resolver';
-import {FunctionRepositoryBuilder, FunctionRepositoryCodeFragment} from "./function-repository-builder";
+import { ContextualVisitor2, visitWithContext2 } from '../ts-utils/visitor-with-context';
+import { flattenVariable, LiteralVariableRoot } from '../basic-analyzers/name-binding-resolver';
+import {
+    FunctionRepositoryBuilder,
+    FunctionRepositoryCodeFragment,
+} from './function-repository-builder';
 
 interface MatchedPattern {
     pattern: CompiledPattern;
@@ -70,7 +73,7 @@ ${returnedObjectProperties.length > 0 ? `\treturn ({${returnedObjectProperties}}
     if (matchedReturnPatterns.length > 0) {
         let handlerCode = `({ event }: JayEvent) => ({${returnedObjectProperties}})`;
         return { handlerCode, key: constCode };
-    } else return {key: undefined, handlerCode: undefined};
+    } else return { key: undefined, handlerCode: undefined };
 }
 
 interface TransformEventHandlerStatementVisitorSideEffects {
@@ -198,7 +201,7 @@ export const analyzeEventHandlerByPatternBlock = (
     analyzer: SourceFileStatementAnalyzer,
     factory: ts.NodeFactory,
     eventHandler: ts.FunctionLikeDeclarationBase,
-    functionsRepository: FunctionRepositoryBuilder
+    functionsRepository: FunctionRepositoryBuilder,
 ): TransformedEventHandlerByPattern => {
     const scopedAnalyzer = analyzer.analyzeForScope(eventHandler);
     const { sideEffects, visitor } = mkTransformEventHandlerStatementVisitor(
@@ -228,7 +231,7 @@ export const analyzeEventHandlerByPatternBlock = (
         bodyForFunctionRepository = ts.visitNode(body, replaceBodiesVisitor) as Block;
     }
 
-    const {handlerCode, key} = generateFunctionRepository(
+    const { handlerCode, key } = generateFunctionRepository(
         sideEffects.matchedReturnPatterns,
         sideEffects.matchedVariableReads,
         sideEffects.matchedConstants,

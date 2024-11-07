@@ -1,7 +1,7 @@
 import { render, AutoCounterElementRefs } from './auto-counter.jay-html';
 import { createState, makeJayComponent, Props } from 'jay-component';
-import {exec$} from "jay-secure";
-import {moduleDoCount} from "./a-module";
+import { exec$ } from 'jay-secure';
+import { moduleDoCount } from './a-module';
 
 export interface AutoCounterProps {
     initialValue: number;
@@ -17,8 +17,8 @@ function AutoCounterConstructor(
     async function doCount() {
         cycles = 0;
         while (cycles < 1000) {
-            setCount(count() + 1)
-            await exec$(() => new Promise((resolve) => requestAnimationFrame(resolve)))
+            setCount(count() + 1);
+            await exec$(() => new Promise((resolve) => requestAnimationFrame(resolve)));
             cycles += 1;
         }
     }
