@@ -22,7 +22,7 @@ export type Composite2ElementRender = RenderElement<
     Composite2ElementRefs,
     Composite2Element
 >;
-export type Composite2ElementPreRender = [refs: Composite2ElementRefs, Composite2ElementRender];
+export type Composite2ElementPreRender = [Composite2ElementRefs, Composite2ElementRender];
 
 export function render(options?: RenderElementOptions): Composite2ElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

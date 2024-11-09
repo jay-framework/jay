@@ -664,7 +664,7 @@ function renderFunctionImplementation(
 
     let renderedElement = `export type ${elementType} = JayElement<${viewStateType}, ${refsType}>
 export type ${renderType} = RenderElement<${viewStateType}, ${refsType}, ${elementType}>
-export type ${preRenderType} = [refs: ${refsType}, ${renderType}]
+export type ${preRenderType} = [${refsType}, ${renderType}]
 `;
 
     if (importedSandboxedSymbols.size > 0) {

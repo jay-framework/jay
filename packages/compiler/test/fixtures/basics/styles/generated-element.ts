@@ -17,7 +17,7 @@ export interface StylesElementRefs {}
 
 export type StylesElement = JayElement<StylesViewState, StylesElementRefs>;
 export type StylesElementRender = RenderElement<StylesViewState, StylesElementRefs, StylesElement>;
-export type StylesElementPreRender = [refs: StylesElementRefs, StylesElementRender];
+export type StylesElementPreRender = [StylesElementRefs, StylesElementRender];
 
 export function render(options?: RenderElementOptions): StylesElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

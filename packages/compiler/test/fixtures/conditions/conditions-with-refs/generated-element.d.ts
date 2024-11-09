@@ -21,7 +21,7 @@ export type ConditionsWithRefsElementRender = RenderElement<
     ConditionsWithRefsElement
 >;
 export type ConditionsWithRefsElementPreRender = [
-    refs: ConditionsWithRefsElementRefs,
+    ConditionsWithRefsElementRefs,
     ConditionsWithRefsElementRender,
 ];
 

@@ -39,7 +39,7 @@ export type DynamicComponentInComponentElementRender = RenderElement<
     DynamicComponentInComponentElement
 >;
 export type DynamicComponentInComponentElementPreRender = [
-    refs: DynamicComponentInComponentElementRefs,
+    DynamicComponentInComponentElementRefs,
     DynamicComponentInComponentElementRender,
 ];
 

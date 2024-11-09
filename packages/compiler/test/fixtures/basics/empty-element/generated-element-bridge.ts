@@ -11,10 +11,7 @@ export type EmptyElementElementRender = RenderElement<
     EmptyElementElementRefs,
     EmptyElementElement
 >;
-export type EmptyElementElementPreRender = [
-    refs: EmptyElementElementRefs,
-    EmptyElementElementRender,
-];
+export type EmptyElementElementPreRender = [EmptyElementElementRefs, EmptyElementElementRender];
 
 export function render(): EmptyElementElementPreRender {
     const [refManager, []] = SecureReferencesManager.forElement([], [], [], []);

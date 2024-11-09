@@ -15,6 +15,6 @@ export type AutoCounterElementRender = RenderElement<
     AutoCounterElementRefs,
     AutoCounterElement
 >;
-export type AutoCounterElementPreRender = [refs: AutoCounterElementRefs, AutoCounterElementRender];
+export type AutoCounterElementPreRender = [AutoCounterElementRefs, AutoCounterElementRender];
 
 export declare function render(options?: RenderElementOptions): AutoCounterElementPreRender;

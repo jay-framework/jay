@@ -27,7 +27,7 @@ export type RecursiveComponentsElementRender = RenderElement<
     RecursiveComponentsElement
 >;
 export type RecursiveComponentsElementPreRender = [
-    refs: RecursiveComponentsElementRefs,
+    RecursiveComponentsElementRefs,
     RecursiveComponentsElementRender,
 ];
 

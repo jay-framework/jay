@@ -12,6 +12,6 @@ export interface AppElementRefs {
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
-export type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
+export type AppElementPreRender = [AppElementRefs, AppElementRender];
 
 export declare function render(options?: RenderElementOptions): AppElementPreRender;

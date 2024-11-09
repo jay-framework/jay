@@ -35,7 +35,7 @@ export type CollectionWithRefsElementRender = RenderElement<
     CollectionWithRefsElement
 >;
 export type CollectionWithRefsElementPreRender = [
-    refs: CollectionWithRefsElementRefs,
+    CollectionWithRefsElementRefs,
     CollectionWithRefsElementRender,
 ];
 

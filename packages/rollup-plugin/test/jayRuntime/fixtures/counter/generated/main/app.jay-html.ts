@@ -22,7 +22,7 @@ export interface AppElementRefs {
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
-export type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
+export type AppElementPreRender = [AppElementRefs, AppElementRender];
 
 export function render(options?: RenderElementOptions): AppElementPreRender {
     const [refManager, [refA]] = ReferencesManager.for(options, [], [], ['a'], []);

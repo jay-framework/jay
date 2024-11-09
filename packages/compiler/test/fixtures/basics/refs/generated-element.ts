@@ -21,7 +21,7 @@ export interface RefsElementRefs {
 
 export type RefsElement = JayElement<RefsViewState, RefsElementRefs>;
 export type RefsElementRender = RenderElement<RefsViewState, RefsElementRefs, RefsElement>;
-export type RefsElementPreRender = [refs: RefsElementRefs, RefsElementRender];
+export type RefsElementPreRender = [RefsElementRefs, RefsElementRender];
 
 export function render(options?: RenderElementOptions): RefsElementPreRender {
     const [refManager, [refRef1, refRef, refRef3]] = ReferencesManager.for(

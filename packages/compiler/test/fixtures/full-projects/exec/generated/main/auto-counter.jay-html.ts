@@ -24,7 +24,7 @@ export type AutoCounterElementRender = RenderElement<
     AutoCounterElementRefs,
     AutoCounterElement
 >;
-export type AutoCounterElementPreRender = [refs: AutoCounterElementRefs, AutoCounterElementRender];
+export type AutoCounterElementPreRender = [AutoCounterElementRefs, AutoCounterElementRender];
 
 export function render(options?: RenderElementOptions): AutoCounterElementPreRender {
     const [refManager, [refAutoCount1, refAutoCount2]] = ReferencesManager.for(

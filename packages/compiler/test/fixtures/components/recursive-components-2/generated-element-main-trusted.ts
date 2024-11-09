@@ -29,7 +29,7 @@ export type RecursiveComponents2ElementRender = RenderElement<
     RecursiveComponents2Element
 >;
 export type RecursiveComponents2ElementPreRender = [
-    refs: RecursiveComponents2ElementRefs,
+    RecursiveComponents2ElementRefs,
     RecursiveComponents2ElementRender,
 ];
 

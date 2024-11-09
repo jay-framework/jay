@@ -20,6 +20,6 @@ export type CollectionsElementRender = RenderElement<
     CollectionsElementRefs,
     CollectionsElement
 >;
-export type CollectionsElementPreRender = [refs: CollectionsElementRefs, CollectionsElementRender];
+export type CollectionsElementPreRender = [CollectionsElementRefs, CollectionsElementRender];
 
 export declare function render(options?: RenderElementOptions): CollectionsElementPreRender;
