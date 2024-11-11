@@ -26,18 +26,11 @@ export function findEventHandlersBlock(
     functionDeclaration: FunctionLikeDeclarationBase,
     bindingResolver: SourceFileBindingResolver,
 ): FoundEventHandler[] {
-    // const nameBindingResolver = new NameBindingResolver();
-    // nameBindingResolver.addFunctionParams(functionDeclaration);
-
     const foundEventHandlers: FoundEventHandler[] = [];
     const foundEventHandlerFunctionsToHandlerIndex = new Map();
     let nextEventHandlerIndex = 0;
     if (isBlock(functionDeclaration.body)) {
         functionDeclaration.body.statements.forEach((statement) => {
-            // if (isVariableStatement(statement)) nameBindingResolver.addVariableStatement(statement);
-            // else if (isFunctionDeclaration(statement))
-            //     nameBindingResolver.addFunctionDeclaration(statement);
-            // else
             if (isExpressionStatement(statement) && isCallExpression(statement.expression)) {
                 if (isIdentifierOrPropertyAccessExpression(statement.expression.expression)) {
                     let functionVariable = bindingResolver.explain(statement.expression.expression);
