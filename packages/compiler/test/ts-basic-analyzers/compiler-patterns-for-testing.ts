@@ -15,6 +15,19 @@ export function readEventTargetValuePattern() {
     );
 }
 
+export function readCheckedPattern() {
+    return extractVal(
+        'compile pattern readCheckedPattern',
+        compileFunctionSplitPatternsBlock([
+            createTsSourceFile(`
+            import {JayEvent} from 'jay-runtime';
+            function inputCheckedPattern({ event }: JayEvent<any, any>) {
+                return event.target.checked;
+            }`),
+        ]),
+    );
+}
+
 export function readEventKeyCodePattern() {
     return extractVal(
         'compile pattern readEventKeyCodePattern',
@@ -23,6 +36,19 @@ export function readEventKeyCodePattern() {
             import {JayEvent} from 'jay-runtime';
             function eventKeyCode({event}: JayEvent<any, any>): number {
                 return event.keyCode;
+            }`),
+        ]),
+    );
+}
+
+export function readEventWhichPattern() {
+    return extractVal(
+        'compile pattern readEventKeyCodePattern',
+        compileFunctionSplitPatternsBlock([
+            createTsSourceFile(`
+            import {JayEvent} from 'jay-runtime';
+            function eventWhich({event}: JayEvent<any, any>): number {
+                return event.which;
             }`),
         ]),
     );

@@ -1,5 +1,5 @@
 import { generateComponentRefsDefinitionFile, prettify } from '../lib';
-import { readTestFile } from './test-utils/file-utils';
+import { readFixtureFileRaw } from './test-utils/file-utils';
 
 describe('generate the refs file', () => {
     it('should support events in refs', async () => {
@@ -9,7 +9,7 @@ describe('generate the refs file', () => {
         );
         expect(refsFile.validations).toEqual([]);
         expect(await prettify(refsFile.val)).toEqual(
-            await prettify(await readTestFile('./components/counter', 'counter-refs.d.ts')),
+            await prettify(await readFixtureFileRaw('./components/counter', 'counter-refs.d.ts')),
         );
     });
 });

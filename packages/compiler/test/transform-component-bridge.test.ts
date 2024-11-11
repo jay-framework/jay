@@ -6,7 +6,7 @@ import {
     readEventKeyCodePattern,
     readEventTargetValuePattern,
 } from './ts-basic-analyzers/compiler-patterns-for-testing';
-import { FunctionRepositoryBuilder } from '../lib/ts-file/building-blocks/function-repository-builder';
+import { FunctionRepositoryBuilder } from '../lib';
 
 function globalFunctionRepo(): FunctionRepositoryBuilder {
     return new FunctionRepositoryBuilder();

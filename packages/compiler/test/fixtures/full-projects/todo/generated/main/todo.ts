@@ -1,0 +1,24 @@
+// @ts-expect-error Cannot find module
+import { render } from './todo.jay-html?jay-mainSandbox';
+import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
+import './todo.css';
+import { JayEvent } from 'jay-runtime';
+export interface TodoItem {
+    id: string;
+    title: string;
+    isCompleted: boolean;
+}
+export interface TodoProps {
+    initialTodos: Array<TodoItem>;
+}
+const ENTER_KEY = 13;
+const funcRepository: FunctionsRepository = {
+    '0': ({ event }: JayEvent) => {
+        if (event.keyCode === ENTER_KEY) {
+            event.preventDefault();
+        }
+        return { $0: event.keyCode };
+    },
+    '1': ({ event }: JayEvent) => ({ $0: event.target.value }),
+};
+export const TodoComponent = makeJayComponentBridge(render, { funcRepository });

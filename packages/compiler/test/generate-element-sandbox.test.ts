@@ -1,5 +1,5 @@
 import { prettify } from '../lib';
-import { readGeneratedElementBridgeFile } from './test-utils/file-utils';
+import { readFixtureElementBridgeFile } from './test-utils/file-utils';
 import { readFileAndGenerateElementBridgeFile } from './test-utils/ts-compiler-test-utils';
 
 describe('generate the element sandbox files', () => {
@@ -9,7 +9,7 @@ describe('generate the element sandbox files', () => {
                 const folder = 'basics/empty-element';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(await prettify(runtimeFile)).toEqual(
-                    await readGeneratedElementBridgeFile(folder),
+                    await readFixtureElementBridgeFile(folder),
                 );
             });
 
@@ -17,7 +17,7 @@ describe('generate the element sandbox files', () => {
                 const folder = 'basics/simple-dynamic-text';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(await prettify(runtimeFile)).toEqual(
-                    await readGeneratedElementBridgeFile(folder),
+                    await readFixtureElementBridgeFile(folder),
                 );
             });
 
@@ -25,7 +25,7 @@ describe('generate the element sandbox files', () => {
                 const folder = 'basics/refs';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(await prettify(runtimeFile)).toEqual(
-                    await readGeneratedElementBridgeFile(folder),
+                    await readFixtureElementBridgeFile(folder),
                 );
             });
         });
@@ -35,7 +35,7 @@ describe('generate the element sandbox files', () => {
                 const folder = 'components/counter';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(await prettify(runtimeFile)).toEqual(
-                    await readGeneratedElementBridgeFile(folder),
+                    await readFixtureElementBridgeFile(folder),
                 );
             });
 
@@ -43,7 +43,7 @@ describe('generate the element sandbox files', () => {
                 const folder = 'components/component-in-component';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(await prettify(runtimeFile)).toEqual(
-                    await readGeneratedElementBridgeFile(folder),
+                    await readFixtureElementBridgeFile(folder),
                 );
             });
 
@@ -51,7 +51,7 @@ describe('generate the element sandbox files', () => {
                 const folder = 'components/dynamic-component-in-component';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(await prettify(runtimeFile)).toEqual(
-                    await readGeneratedElementBridgeFile(
+                    await readFixtureElementBridgeFile(
                         'components/dynamic-component-in-component',
                     ),
                 );
@@ -63,7 +63,7 @@ describe('generate the element sandbox files', () => {
                 const folder = 'collections/collection-with-refs';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(await prettify(runtimeFile)).toEqual(
-                    await readGeneratedElementBridgeFile(folder),
+                    await readFixtureElementBridgeFile(folder),
                 );
             });
         });
