@@ -22,6 +22,7 @@ import {
 } from './building-blocks/analyze-global-exec$';
 import { findExec$ } from './building-blocks/find-exec$';
 import { FunctionRepositoryBuilder } from './building-blocks/function-repository-builder';
+import {filterEventHandlersToHaveJayEventType} from "./building-blocks/filter-event-handlers-to-have-jay-event-type";
 
 type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & {
     patterns: CompiledPattern[];
@@ -51,6 +52,7 @@ function mkComponentTransformer(sftContext: ComponentSecureFunctionsTransformerC
     const foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
         findEventHandlersBlock(constructorDefinition, bindingResolver),
     );
+    const elementsEventHandlers = filterEventHandlersToHaveJayEventType(foundEventHandlers, bindingResolver);
 
     const analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
 
@@ -60,7 +62,7 @@ function mkComponentTransformer(sftContext: ComponentSecureFunctionsTransformerC
         bindingResolver,
         analyzer,
         factory,
-        foundEventHandlers,
+        elementsEventHandlers,
         componentFunctionRepository,
     );
     const eventsReplaceMap = analyzedEventHandlersToReplaceMap(transformedEventHandlers);

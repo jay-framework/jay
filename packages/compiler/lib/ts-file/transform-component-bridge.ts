@@ -19,6 +19,7 @@ import {
 import { FunctionRepositoryBuilder } from './building-blocks/function-repository-builder';
 import { findExec$ } from './building-blocks/find-exec$';
 import { analyseGlobalExec$s } from './building-blocks/analyze-global-exec$';
+import {filterEventHandlersToHaveJayEventType} from "./building-blocks/filter-event-handlers-to-have-jay-event-type";
 
 function generateComponentConstructorCalls(
     context: ts.TransformationContext,
@@ -142,6 +143,7 @@ function mkComponentBridgeTransformer({
     let foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
         findEventHandlersBlock(constructorDefinition, bindingResolver),
     );
+    const elementsEventHandlers = filterEventHandlersToHaveJayEventType(foundEventHandlers, bindingResolver);
 
     let analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
 
@@ -151,7 +153,7 @@ function mkComponentBridgeTransformer({
         bindingResolver,
         analyzer,
         factory,
-        foundEventHandlers,
+        elementsEventHandlers,
         componentFunctionRepository,
     );
 
