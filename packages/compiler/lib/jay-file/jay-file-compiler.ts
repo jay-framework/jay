@@ -193,8 +193,12 @@ function renderFunctionDeclaration(preRenderType: string): string {
     return `export declare function render(options?: RenderElementOptions): ${preRenderType}`;
 }
 
+function textEscape(s: string): string {
+    return s.replace(/'/g, "\\'");
+}
+
 function renderTextNode(variables: Variables, text: string, indent: Indent): RenderFragment {
-    return parseTextExpression(text, variables).map((_) => indent.firstLine + _);
+    return parseTextExpression(textEscape(text), variables).map((_) => indent.firstLine + _);
 }
 
 function elementNameToJayType(element: HTMLElement): JayType {
