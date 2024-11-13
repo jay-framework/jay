@@ -19,7 +19,7 @@ import {
     getFileFromFolder,
     readFixtureSourceJayFile,
     readFixtureFile,
-    fixtureDir
+    fixtureDir,
 } from './file-utils';
 import { astToCode } from '../../lib/ts-file/ts-utils/ts-compiler-utils';
 import { JayHtmlFile } from '../../lib';

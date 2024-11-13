@@ -51,9 +51,7 @@ describe('generate the element sandbox files', () => {
                 const folder = 'components/dynamic-component-in-component';
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(await prettify(runtimeFile)).toEqual(
-                    await readFixtureElementBridgeFile(
-                        'components/dynamic-component-in-component',
-                    ),
+                    await readFixtureElementBridgeFile('components/dynamic-component-in-component'),
                 );
             });
         });

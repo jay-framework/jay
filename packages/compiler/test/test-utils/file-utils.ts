@@ -13,9 +13,7 @@ export function fixtureDir(folder): string {
 }
 
 export async function readFixtureFileRaw(folder, filename): Promise<string> {
-    return removeComments(
-        (await readFile(fixtureFilePath(folder, filename))).toString(),
-    );
+    return removeComments((await readFile(fixtureFilePath(folder, filename))).toString());
 }
 
 export async function readFixtureSourceJayFile(folder, file) {

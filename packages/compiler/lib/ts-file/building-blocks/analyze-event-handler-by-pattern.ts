@@ -6,7 +6,8 @@ import ts, {
     isExpression,
     isIdentifier,
     isLiteralExpression,
-    isStatement, TypeReferenceNode,
+    isStatement,
+    TypeReferenceNode,
     Visitor,
 } from 'typescript';
 import {
@@ -16,7 +17,7 @@ import {
     JayTargetEnv,
 } from '../basic-analyzers/compile-function-split-patterns';
 import { astToCode, codeToAst } from '../ts-utils/ts-compiler-utils';
-import {SourceFileBindingResolver} from '../basic-analyzers/source-file-binding-resolver';
+import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
 import {
     ScopedSourceFileStatementAnalyzer,
     SourceFileStatementAnalyzer,
@@ -27,7 +28,7 @@ import {
     FunctionRepositoryBuilder,
     FunctionRepositoryCodeFragment,
 } from './function-repository-builder';
-import {isFirstParamJayEvent} from "./filter-event-handlers-to-have-jay-event-type";
+import { isFirstParamJayEvent } from './filter-event-handlers-to-have-jay-event-type';
 
 interface MatchedPattern {
     pattern: CompiledPattern;
@@ -50,10 +51,8 @@ function generateFunctionRepository(
     matchedVariableReads: MatchedVariable[],
     matchedConstants: string[],
     safeStatements: ts.Statement[],
-    originalJayEventType: ts.TypeReferenceNode
 ): FunctionRepositoryCodeFragment {
     const constCode = [...new Set(matchedConstants)].join('\n');
-    const typeArguments: string[] = originalJayEventType.typeArguments?.map(node => astToCode(node));
 
     let readPatternsReturnProperties = matchedReturnPatterns.map(
         ({ pattern, patternKey }) => `$${patternKey}: ${pattern.leftSidePath.join('.')}`,
@@ -67,14 +66,14 @@ function generateFunctionRepository(
         ...variableReadsReturnProperties,
     ].join(',\n');
     if (safeStatements.length > 0) {
-        const handlerCode = `({ event }: JayEvent<${typeArguments.join(', ')}>) => {
+        const handlerCode = `({ event }: JayEvent<any, any>) => {
     ${safeStatements.map((statement) => astToCode(statement)).join('\n\t')}
 ${returnedObjectProperties.length > 0 ? `\treturn ({${returnedObjectProperties}})\n` : ''}
 }`;
         return { handlerCode, key: constCode };
     }
     if (matchedReturnPatterns.length > 0) {
-        let handlerCode = `({ event }: JayEvent<${typeArguments.join(', ')}>) => ({${returnedObjectProperties}})`;
+        let handlerCode = `({ event }: JayEvent<any, any>) => ({${returnedObjectProperties}})`;
         return { handlerCode, key: constCode };
     } else return { key: undefined, handlerCode: undefined };
 }
@@ -222,17 +221,19 @@ export const analyzeEventHandlerByPatternBlock = (
     );
 
     // replace JayEvent<X, VS> to JayEvent<any, VS>
-    if (sideEffects.wasEventHandlerTransformed &&
-        isFirstParamJayEvent(eventHandler, bindingResolver)) {
+    if (
+        sideEffects.wasEventHandlerTransformed &&
+        isFirstParamJayEvent(eventHandler, bindingResolver)
+    ) {
         const originalJayEventType = eventHandler.parameters[0].type as TypeReferenceNode;
         if (originalJayEventType.typeArguments?.length === 2) {
             const transformedJayEventType = factory.createTypeReferenceNode(
                 originalJayEventType.typeName,
                 [
                     factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword),
-                    originalJayEventType.typeArguments[1]
-                ]
-            )
+                    originalJayEventType.typeArguments[1],
+                ],
+            );
             let visitor = (node: ts.Node) => {
                 if (node === originalJayEventType) {
                     return ts.visitEachChild(transformedJayEventType, visitor, context);
@@ -261,7 +262,6 @@ export const analyzeEventHandlerByPatternBlock = (
             sideEffects.matchedVariableReads,
             sideEffects.matchedConstants,
             bodyForFunctionRepository ? [...bodyForFunctionRepository.statements] : [],
-            originalJayEventType
         );
 
         const handlerKey = functionsRepository.addFunction(handlerCode);
@@ -272,11 +272,10 @@ export const analyzeEventHandlerByPatternBlock = (
             wasEventHandlerTransformed: sideEffects.wasEventHandlerTransformed,
             handlerKey,
         };
-
-    }
-    else return {
-        handlerKey: "",
-        transformedEventHandler,
-        wasEventHandlerTransformed: false
-    }
+    } else
+        return {
+            handlerKey: '',
+            transformedEventHandler,
+            wasEventHandlerTransformed: false,
+        };
 };

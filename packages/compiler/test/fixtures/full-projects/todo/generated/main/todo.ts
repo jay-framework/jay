@@ -1,10 +1,6 @@
 import {
-    Filter,
     render,
-    ShownTodo,
-    TodoElementRefs,
-    TodoViewState,
-// @ts-expect-error Cannot find module
+    // @ts-expect-error Cannot find module
 } from './todo.jay-html?jay-mainSandbox';
 import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
 import './todo.css';
@@ -19,12 +15,12 @@ export interface TodoProps {
 }
 const ENTER_KEY = 13;
 const funcRepository: FunctionsRepository = {
-    '0': ({ event }: JayEvent<KeyboardEvent, TodoViewState>) => {
+    '0': ({ event }: JayEvent<any, any>) => {
         if (event.keyCode === ENTER_KEY) {
             event.preventDefault();
         }
         return { $0: event.keyCode };
     },
-    '1': ({ event }: JayEvent<Event, TodoViewState>) => ({ $0: event.target.value }),
+    '1': ({ event }: JayEvent<any, any>) => ({ $0: event.target.value }),
 };
 export const TodoComponent = makeJayComponentBridge(render, { funcRepository });

@@ -4,7 +4,7 @@ import {
     ShownTodo,
     TodoElementRefs,
     TodoViewState,
-// @ts-expect-error Cannot find module
+    // @ts-expect-error Cannot find module
 } from './todo.jay-html?jay-workerSandbox';
 import { createMemo, createState, makeJayComponent, Props } from 'jay-component';
 // @ts-expect-error Cannot find module
@@ -47,32 +47,30 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     refs.filterActive.onclick(() => setFilter(Filter.active));
     refs.filterCompleted.onclick(() => setFilter(Filter.completed));
     refs.filterAll.onclick(() => setFilter(Filter.all));
-    refs.newTodo
-        .onkeydown$(handler$('0'))
-        .then(({ event }: JayEvent<any, TodoViewState>) => {
-            if (event.$0 === ENTER_KEY) {
-                let newValue = newTodo();
-                let val = newValue.trim();
-                if (val) {
-                    setTodos(
-                        patch(todos(), [
-                            {
-                                op: ADD,
-                                path: [todos().length],
-                                value: {
-                                    id: uuid(),
-                                    title: val,
-                                    isEditing: false,
-                                    editText: '',
-                                    isCompleted: false,
-                                },
+    refs.newTodo.onkeydown$(handler$('0')).then(({ event }: JayEvent<any, TodoViewState>) => {
+        if (event.$0 === ENTER_KEY) {
+            let newValue = newTodo();
+            let val = newValue.trim();
+            if (val) {
+                setTodos(
+                    patch(todos(), [
+                        {
+                            op: ADD,
+                            path: [todos().length],
+                            value: {
+                                id: uuid(),
+                                title: val,
+                                isEditing: false,
+                                editText: '',
+                                isCompleted: false,
                             },
-                        ]),
-                    );
-                }
-                setNewTodo('');
+                        },
+                    ]),
+                );
             }
-        });
+            setNewTodo('');
+        }
+    });
     refs.newTodo
         .oninput$(handler$('1'))
         .then(({ event }: JayEvent<any, TodoViewState>) => setNewTodo(event.$0));

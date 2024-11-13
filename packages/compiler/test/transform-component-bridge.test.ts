@@ -34,7 +34,7 @@ describe('transform component bridge', () => {
             expect(outputCode).toEqual(
                 await prettify(`
                 import { makeJayComponentBridge } from 'jay-secure';
-                import { CompElementRefs, render } from './generated-element?jay-mainSandbox';
+                import { render } from './generated-element?jay-mainSandbox';
                 export const Comp = makeJayComponentBridge(render);
                 `),
             );
@@ -61,7 +61,7 @@ describe('transform component bridge', () => {
             expect(outputCode).toEqual(
                 await prettify(`
                 import { makeJayComponentBridge } from 'jay-secure';
-                import { CompElementRefs, render } from './generated-element?jay-mainSandbox';
+                import { render } from './generated-element?jay-mainSandbox';
                 import 'bla.css';
                 export const Comp = makeJayComponentBridge(render);
                 `),
@@ -97,9 +97,9 @@ describe('transform component bridge', () => {
                     await prettify(`
                     import {JayEvent} from 'jay-runtime';
                     import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
-                    import { CompElementRefs, render, ViewState } from './generated-element?jay-mainSandbox';
+                    import { render } from './generated-element?jay-mainSandbox';
                     const funcRepository: FunctionsRepository = {
-                        '0': ({ event }: JayEvent<Event, ViewState>) => ({ $0: event.target.value }),
+                        '0': ({ event }: JayEvent<any, any>) => ({ $0: event.target.value }),
                     };
                     export const Comp = makeJayComponentBridge(render, { funcRepository });
                     `),
@@ -110,7 +110,7 @@ describe('transform component bridge', () => {
                 const code = `
                     import {JayEvent} from 'jay-runtime';
                     import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
-                    import { CompElementRefs, render, ViewState } from './generated-element';
+                    import { render } from './generated-element';
                     
                     function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
                         let [text, setText] = createState('');
@@ -132,10 +132,10 @@ describe('transform component bridge', () => {
                     await prettify(`
                     import {JayEvent} from 'jay-runtime';
                     import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
-                    import { CompElementRefs, render, ViewState } from './generated-element?jay-mainSandbox';
+                    import { render } from './generated-element?jay-mainSandbox';
                     const funcRepository: FunctionsRepository = {
-                        '0': ({ event }: JayEvent<Event, ViewState>) => ({ $0: event.target.value }),
-                        '1': ({ event }: JayEvent<Event, ViewState>) => ({ $0: event.target.value })
+                        '0': ({ event }: JayEvent<any, any>) => ({ $0: event.target.value }),
+                        '1': ({ event }: JayEvent<any, any>) => ({ $0: event.target.value })
                     };
                     export const Comp = makeJayComponentBridge(render, { funcRepository });
                     `),
@@ -171,9 +171,9 @@ describe('transform component bridge', () => {
                     await prettify(`
                     import {JayEvent} from 'jay-runtime';
                     import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
-                    import { CompElementRefs, render, ViewState } from './generated-element?jay-mainSandbox';
+                    import { render } from './generated-element?jay-mainSandbox';
                     const funcRepository: FunctionsRepository = {
-                        '0': ({ event }: JayEvent<Event, ViewState>) => ({ $0: event.target.value }),
+                        '0': ({ event }: JayEvent<any, any>) => ({ $0: event.target.value }),
                     };
                     export const Comp = makeJayComponentBridge(render, { funcRepository });`),
                 );
@@ -202,7 +202,7 @@ describe('transform component bridge', () => {
                 expect(outputCode).toEqual(
                     await prettify(`
                     import { makeJayComponentBridge } from 'jay-secure';
-                    import { CompElementRefs, render } from './generated-element?jay-mainSandbox';
+                    import { render } from './generated-element?jay-mainSandbox';
                     export const Comp = makeJayComponentBridge(render);`),
                 );
             });
@@ -239,9 +239,9 @@ describe('transform component bridge', () => {
                     await prettify(`
                     import {JayEvent} from 'jay-runtime';
                     import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
-                    import { CompElementRefs, render, ViewState } from './generated-element?jay-mainSandbox';
+                    import { render } from './generated-element?jay-mainSandbox';
                     const funcRepository: FunctionsRepository = {
-                        '0': ({ event }: JayEvent<Event, ViewState>) => {
+                        '0': ({ event }: JayEvent<any, any>) => {
                             event.preventDefault();
                         },
                     };
@@ -286,10 +286,10 @@ describe('transform component bridge', () => {
                     await prettify(`
                     import {JayEvent} from 'jay-runtime';
                     import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
-                    import { CompElementRefs, render, ViewState } from './generated-element?jay-mainSandbox';
+                    import { render } from './generated-element?jay-mainSandbox';
                     const KEY_CODE = 13;
                     const funcRepository: FunctionsRepository = {
-                        '0': ({ event }: JayEvent<Event, ViewState>) => {
+                        '0': ({ event }: JayEvent<any, any>) => {
                             if (event.keyCode === KEY_CODE) {
                                 event.preventDefault();
                             }

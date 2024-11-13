@@ -15,7 +15,9 @@ describe('transform component bridge with fixtures', () => {
         it('preserves the renamed value', async () => {
             expect(
                 await readFileAndGenerateComponentBridgeFile(folder, 'counter-render-renamed'),
-            ).toEqual(await readFixtureFileRaw(folder, 'generated-component-bridge-render-renamed.ts'));
+            ).toEqual(
+                await readFixtureFileRaw(folder, 'generated-component-bridge-render-renamed.ts'),
+            );
         });
     });
 });

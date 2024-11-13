@@ -7,20 +7,12 @@ import {
 import { analyzeEventHandlerCallStatement$Block } from './analyze-event-handler-call$';
 import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
 import { SourceFileStatementAnalyzer } from '../basic-analyzers/scoped-source-file-statement-analyzer';
-import {
-    FunctionRepositoryBuilder,
-    FunctionRepositoryCodeFragment,
-} from './function-repository-builder';
+import { FunctionRepositoryBuilder } from './function-repository-builder';
 
 export interface TransformedEventHandler extends FoundEventHandler {
     wasEventHandlerTransformed: boolean;
     transformedEventHandler: ts.Node;
     transformedEventHandlerCallStatement: ts.Node;
-}
-
-export interface FunctionRepositoryFragment {
-    handlerIndex: number;
-    fragment: FunctionRepositoryCodeFragment;
 }
 
 export function analyzedEventHandlersToReplaceMap(

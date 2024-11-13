@@ -19,7 +19,7 @@ import {
 import { FunctionRepositoryBuilder } from './building-blocks/function-repository-builder';
 import { findExec$ } from './building-blocks/find-exec$';
 import { analyseGlobalExec$s } from './building-blocks/analyze-global-exec$';
-import {filterEventHandlersToHaveJayEventType} from "./building-blocks/filter-event-handlers-to-have-jay-event-type";
+import { filterEventHandlersToHaveJayEventType } from './building-blocks/filter-event-handlers-to-have-jay-event-type';
 
 function generateComponentConstructorCalls(
     context: ts.TransformationContext,
@@ -67,9 +67,8 @@ function transformImport(
                 true,
                 importerMode,
             )}`;
-            const importClause = astToCode(node.importClause);
             return codeToAst(
-                `import ${importClause} from '${importModule}'`,
+                `import { ${astToCode(renderImportSpecifier)} } from '${importModule}'`,
                 context,
             )[0] as ts.Statement;
         }
@@ -144,7 +143,10 @@ function mkComponentBridgeTransformer({
     let foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
         findEventHandlersBlock(constructorDefinition, bindingResolver),
     );
-    const elementsEventHandlers = filterEventHandlersToHaveJayEventType(foundEventHandlers, bindingResolver);
+    const elementsEventHandlers = filterEventHandlersToHaveJayEventType(
+        foundEventHandlers,
+        bindingResolver,
+    );
 
     let analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
 

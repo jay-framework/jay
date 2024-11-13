@@ -3,14 +3,18 @@ import {
     getImportByName,
     parseImportLinks,
 } from '../../lib/ts-file/parse-jay-file/parse-import-links';
-import {fixtureFilePath, readFixtureFile, readFixtureSourceJayFile} from "../test-utils/file-utils";
+import {
+    fixtureFilePath,
+    readFixtureFile,
+    readFixtureSourceJayFile,
+} from '../test-utils/file-utils';
 
 describe('parseImportLinks', () => {
     const fixturePath = 'full-projects/counter/generated/main';
-    const filename = "app.jay-html"
+    const filename = 'app.jay-html';
 
     it('returns jay import links', async () => {
-        const filePath = fixtureFilePath(fixturePath, filename)
+        const filePath = fixtureFilePath(fixturePath, filename);
         const code = await readFixtureFile(fixturePath, filename);
         const sourceFile = createTsSourceFileFromSource(filePath, code);
         expect(parseImportLinks(sourceFile)).toEqual([

@@ -38,6 +38,8 @@ export function prettifyHtml(html: string): string {
 export function removeComments(code: string): string {
     return code
         .split('\n')
-        .filter((line) => !line.includes('// @ts-expect-error '))
+        .filter(
+            (line) => !(line.includes('// @ts-expect-error ') || line.includes('// @ts-ignore')),
+        )
         .join('\n');
 }
