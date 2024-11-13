@@ -1,0 +1,36 @@
+body {
+  margin: 0;
+  padding-top: 50px;
+}
+.title {
+  color: #11418c;
+  height: 30px;
+  font-size: 24px;
+  width: 100%;
+  position: fixed;
+  text-align: center;
+  border-bottom: 1px solid #bfdfcf;
+  background-color: #fff;
+  padding: 10px;
+  top: 0;
+}
+
+.progress {
+  color: #11418c;
+  font-size: 16px;
+}
+
+.select-example {
+  color: #11418c;
+  font-size: 16px;
+}
+
+.cycles {
+  color: #11418c;
+  font-size: 16px;
+}
+
+.stage {
+  padding: 10px;
+  background-color: #c7efdb;
+}

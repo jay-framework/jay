@@ -1,0 +1,13 @@
+<html>
+  <head>
+    <script type="application/yaml-jay">
+      data:
+        text: string
+    </script>
+  </head>
+  <body>
+    <div>
+      <div>{text}</div>
+    </div>
+  </body>
+</html>

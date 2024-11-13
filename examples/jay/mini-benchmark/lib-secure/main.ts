@@ -1,8 +1,9 @@
 import { createState, makeJayComponent, Props } from 'jay-component';
-import {MainElementRefs, MainViewState, render, SelectedExample} from './main.jay-html';
+import { MainElementRefs, render, SelectedExample } from './main.jay-html';
 import {JayEvent} from "jay-runtime";
+import {MainViewState} from "../lib/main.jay-html";
 
-interface MainProps {}
+export interface MainProps {}
 
 const examples = Object.keys(SelectedExample)
     .filter((_) => !isNaN(Number(_)))
