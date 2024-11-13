@@ -76,4 +76,21 @@ describe('findEventHandlersBlock', () => {
         const filtered = filterEventHandlersToHaveJayEventType(foundEventHandlers, bindingResolver);
         expect(filtered).toHaveLength(0);
     })
+
+    it('should filter out event handler with JayEvent not having two generic type arguments', () => {
+        const sourceFile = createTsSourceFile(`
+            import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+            import { Refs, render } from './generated-element';
+            import { JayEvent } from 'jay-runtime';
+            
+            function AComponent({ initialValue }: Props<CounterProps>, refs: Refs) {
+              refs.one.onclick(({ event }: JayEvent) => setCount(count() - 1));
+              refs.two.onclick(({ event }: JayEvent<A>) => setCount(count() - 1));
+              refs.three.onclick(({ event }: JayEvent<A, B, C>) => setCount(count() - 1));
+            }
+            export const Comp = makeJayComponent(render, AComponent);`);
+        const {foundEventHandlers, bindingResolver} = findEventHandlerFunctions(sourceFile);
+        const filtered = filterEventHandlersToHaveJayEventType(foundEventHandlers, bindingResolver);
+        expect(filtered).toHaveLength(0);
+    })
 })

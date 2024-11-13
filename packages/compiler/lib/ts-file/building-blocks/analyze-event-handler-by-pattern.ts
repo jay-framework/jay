@@ -6,7 +6,7 @@ import ts, {
     isExpression,
     isIdentifier,
     isLiteralExpression,
-    isStatement,
+    isStatement, TypeReferenceNode,
     Visitor,
 } from 'typescript';
 import {
@@ -16,7 +16,7 @@ import {
     JayTargetEnv,
 } from '../basic-analyzers/compile-function-split-patterns';
 import { astToCode, codeToAst } from '../ts-utils/ts-compiler-utils';
-import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
+import {SourceFileBindingResolver} from '../basic-analyzers/source-file-binding-resolver';
 import {
     ScopedSourceFileStatementAnalyzer,
     SourceFileStatementAnalyzer,
@@ -27,6 +27,7 @@ import {
     FunctionRepositoryBuilder,
     FunctionRepositoryCodeFragment,
 } from './function-repository-builder';
+import {isFirstParamJayEvent} from "./filter-event-handlers-to-have-jay-event-type";
 
 interface MatchedPattern {
     pattern: CompiledPattern;
@@ -49,8 +50,10 @@ function generateFunctionRepository(
     matchedVariableReads: MatchedVariable[],
     matchedConstants: string[],
     safeStatements: ts.Statement[],
+    originalJayEventType: ts.TypeReferenceNode
 ): FunctionRepositoryCodeFragment {
-    let constCode = [...new Set(matchedConstants)].join('\n');
+    const constCode = [...new Set(matchedConstants)].join('\n');
+    const typeArguments: string[] = originalJayEventType.typeArguments?.map(node => astToCode(node));
 
     let readPatternsReturnProperties = matchedReturnPatterns.map(
         ({ pattern, patternKey }) => `$${patternKey}: ${pattern.leftSidePath.join('.')}`,
@@ -64,14 +67,14 @@ function generateFunctionRepository(
         ...variableReadsReturnProperties,
     ].join(',\n');
     if (safeStatements.length > 0) {
-        let handlerCode = `({ event }: JayEvent) => {
+        const handlerCode = `({ event }: JayEvent<${typeArguments.join(', ')}>) => {
     ${safeStatements.map((statement) => astToCode(statement)).join('\n\t')}
 ${returnedObjectProperties.length > 0 ? `\treturn ({${returnedObjectProperties}})\n` : ''}
 }`;
         return { handlerCode, key: constCode };
     }
     if (matchedReturnPatterns.length > 0) {
-        let handlerCode = `({ event }: JayEvent) => ({${returnedObjectProperties}})`;
+        let handlerCode = `({ event }: JayEvent<${typeArguments.join(', ')}>) => ({${returnedObjectProperties}})`;
         return { handlerCode, key: constCode };
     } else return { key: undefined, handlerCode: undefined };
 }
@@ -211,39 +214,69 @@ export const analyzeEventHandlerByPatternBlock = (
         scopedAnalyzer,
     );
 
-    const transformedEventHandler = visitWithContext2(
+    let transformedEventHandler = visitWithContext2(
         eventHandler,
         { parentStatementTargetEnv: JayTargetEnv.any },
         context,
         visitor,
     );
 
-    let bodyForFunctionRepository: Block = undefined;
-    if (isBlock(eventHandler.body) && sideEffects.mainContextBlocks.has(eventHandler.body)) {
-        let body = sideEffects.mainContextBlocks.get(eventHandler.body);
-        const replaceBodiesVisitor: Visitor = (node: ts.Node) => {
-            let mainNode =
-                isBlock(node) && sideEffects.mainContextBlocks.has(node)
-                    ? sideEffects.mainContextBlocks.get(node)
-                    : node;
-            return ts.visitEachChild(mainNode, replaceBodiesVisitor, context);
+    // replace JayEvent<X, VS> to JayEvent<any, VS>
+    if (sideEffects.wasEventHandlerTransformed &&
+        isFirstParamJayEvent(eventHandler, bindingResolver)) {
+        const originalJayEventType = eventHandler.parameters[0].type as TypeReferenceNode;
+        if (originalJayEventType.typeArguments?.length === 2) {
+            const transformedJayEventType = factory.createTypeReferenceNode(
+                originalJayEventType.typeName,
+                [
+                    factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword),
+                    originalJayEventType.typeArguments[1]
+                ]
+            )
+            let visitor = (node: ts.Node) => {
+                if (node === originalJayEventType) {
+                    return ts.visitEachChild(transformedJayEventType, visitor, context);
+                }
+                return ts.visitEachChild(node, visitor, context);
+            };
+            transformedEventHandler = ts.visitEachChild(transformedEventHandler, visitor, context);
+        }
+
+        // generate function repository body
+        let bodyForFunctionRepository: Block = undefined;
+        if (isBlock(eventHandler.body) && sideEffects.mainContextBlocks.has(eventHandler.body)) {
+            let body = sideEffects.mainContextBlocks.get(eventHandler.body);
+            const replaceBodiesVisitor: Visitor = (node: ts.Node) => {
+                let mainNode =
+                    isBlock(node) && sideEffects.mainContextBlocks.has(node)
+                        ? sideEffects.mainContextBlocks.get(node)
+                        : node;
+                return ts.visitEachChild(mainNode, replaceBodiesVisitor, context);
+            };
+            bodyForFunctionRepository = ts.visitNode(body, replaceBodiesVisitor) as Block;
+        }
+
+        const { handlerCode, key } = generateFunctionRepository(
+            sideEffects.matchedReturnPatterns,
+            sideEffects.matchedVariableReads,
+            sideEffects.matchedConstants,
+            bodyForFunctionRepository ? [...bodyForFunctionRepository.statements] : [],
+            originalJayEventType
+        );
+
+        const handlerKey = functionsRepository.addFunction(handlerCode);
+        functionsRepository.addConst(key);
+
+        return {
+            transformedEventHandler,
+            wasEventHandlerTransformed: sideEffects.wasEventHandlerTransformed,
+            handlerKey,
         };
-        bodyForFunctionRepository = ts.visitNode(body, replaceBodiesVisitor) as Block;
+
     }
-
-    const { handlerCode, key } = generateFunctionRepository(
-        sideEffects.matchedReturnPatterns,
-        sideEffects.matchedVariableReads,
-        sideEffects.matchedConstants,
-        bodyForFunctionRepository ? [...bodyForFunctionRepository.statements] : [],
-    );
-
-    const handlerKey = functionsRepository.addFunction(handlerCode);
-    functionsRepository.addConst(key);
-
-    return {
+    else return {
+        handlerKey: "",
         transformedEventHandler,
-        wasEventHandlerTransformed: sideEffects.wasEventHandlerTransformed,
-        handlerKey,
-    };
+        wasEventHandlerTransformed: false
+    }
 };

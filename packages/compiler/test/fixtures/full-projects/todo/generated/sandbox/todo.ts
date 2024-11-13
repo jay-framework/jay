@@ -49,7 +49,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     refs.filterAll.onclick(() => setFilter(Filter.all));
     refs.newTodo
         .onkeydown$(handler$('0'))
-        .then(({ event }: JayEvent<KeyboardEvent, TodoViewState>) => {
+        .then(({ event }: JayEvent<any, TodoViewState>) => {
             if (event.$0 === ENTER_KEY) {
                 let newValue = newTodo();
                 let val = newValue.trim();
@@ -75,7 +75,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
         });
     refs.newTodo
         .oninput$(handler$('1'))
-        .then(({ event }: JayEvent<Event, TodoViewState>) => setNewTodo(event.$0));
+        .then(({ event }: JayEvent<any, TodoViewState>) => setNewTodo(event.$0));
     refs.clearCompleted.onclick((event) => {
         setTodos(
             todos().filter(function (todo) {

@@ -55,7 +55,7 @@ describe('transform event handlers with secure code split', () => {
                 
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
                     let [text, setText] = createState('');
-                    refs.input.onchange(({event}: JayEvent) => setText((event.target as HTMLInputElement).value));
+                    refs.input.onchange(({event}: JayEvent<Event, ViewState>) => setText((event.target as HTMLInputElement).value));
                 }
                 
                 export const Comp = makeJayComponent(render, CompComponent);`;
@@ -74,7 +74,7 @@ describe('transform event handlers with secure code split', () => {
                     let [text, setText] = createState('');
                     refs.input
                         .onchange$(handler$('0'))
-                        .then(({event}: JayEvent) => setText(event.$0));
+                        .then(({event}: JayEvent<any, ViewState>) => setText(event.$0));
                 }
                 export const Comp = makeJayComponent(render, CompComponent);`),
             );
@@ -88,8 +88,8 @@ describe('transform event handlers with secure code split', () => {
                 
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
                     let [text, setText] = createState('');
-                    refs.input.onchange(({event}: JayEvent) => setText((event.target as HTMLInputElement).value));
-                    refs.input2.onchange(({event}: JayEvent) => setText((event.target as HTMLInputElement).value));
+                    refs.input.onchange(({event}: JayEvent<Event, ViewState>) => setText((event.target as HTMLInputElement).value));
+                    refs.input2.onchange(({event}: JayEvent<Event, ViewState>) => setText((event.target as HTMLInputElement).value));
                 }
                 
                 export const Comp = makeJayComponent(render, CompComponent);`;
@@ -108,10 +108,10 @@ describe('transform event handlers with secure code split', () => {
                     let [text, setText] = createState('');
                     refs.input
                         .onchange$(handler$('0'))
-                        .then(({event}: JayEvent) => setText(event.$0));
+                        .then(({event}: JayEvent<any, ViewState>) => setText(event.$0));
                     refs.input2
                         .onchange$(handler$('1'))
-                        .then(({event}: JayEvent) => setText(event.$0));
+                        .then(({event}: JayEvent<any, ViewState>) => setText(event.$0));
                 }
                 export const Comp = makeJayComponent(render, CompComponent);`),
             );
@@ -125,7 +125,7 @@ describe('transform event handlers with secure code split', () => {
                 
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
                     let [text, setText] = createState('');
-                    function updateText({event}: JayEvent) {
+                    function updateText({event}: JayEvent<Event, ViewState>) {
                         setText((event.target as HTMLInputElement).value);
                     }
                     refs.input.onchange(updateText);
@@ -146,7 +146,7 @@ describe('transform event handlers with secure code split', () => {
                 import { handler$} from 'jay-secure';
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
                     let [text, setText] = createState('');
-                    function updateText({event}: JayEvent) {
+                    function updateText({event}: JayEvent<any, ViewState>) {
                         setText(event.$0);
                     }
                     refs.input
@@ -200,7 +200,7 @@ describe('transform event handlers with secure code split', () => {
                 
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
                     let [text, setText] = createState('');
-                    refs.input.onchange(({event}: JayEvent) => {
+                    refs.input.onchange(({event}: JayEvent<Event, ViewState>) => {
                         event.preventDefault();
                         setText((event.target as HTMLInputElement).value)
                     });
@@ -222,7 +222,7 @@ describe('transform event handlers with secure code split', () => {
                     let [text, setText] = createState('');
                     refs.input
                         .onchange$(handler$('0'))
-                        .then(({event}: JayEvent) => {
+                        .then(({event}: JayEvent<any, ViewState>) => {
                         setText((event.target as HTMLInputElement).value)
                     });
                 }
@@ -238,7 +238,7 @@ describe('transform event handlers with secure code split', () => {
                 
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
                     let [text, setText] = createState('');
-                    refs.input.onchange(({event}: JayEvent) => {
+                    refs.input.onchange(({event}: JayEvent<Event, ViewState>) => {
                         event.preventDefault();
                         setText((event.target as HTMLInputElement).value)
                     });
@@ -260,7 +260,7 @@ describe('transform event handlers with secure code split', () => {
                     let [text, setText] = createState('');
                     refs.input
                         .onchange$(handler$('0'))
-                        .then(({event}: JayEvent) => {
+                        .then(({event}: JayEvent<any, ViewState>) => {
                         setText((event.target as HTMLInputElement).value)
                     });
                 }

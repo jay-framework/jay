@@ -67,8 +67,9 @@ function transformImport(
                 true,
                 importerMode,
             )}`;
+            const importClause = astToCode(node.importClause);
             return codeToAst(
-                `import { ${astToCode(renderImportSpecifier)} } from '${importModule}'`,
+                `import ${importClause} from '${importModule}'`,
                 context,
             )[0] as ts.Statement;
         }

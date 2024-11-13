@@ -33,10 +33,10 @@ function ItemConstructor({ title, isCompleted }: Props<ItemProps>, refs: ItemEle
     refs.title.onblur(() => handleSubmit());
     refs.title
         .onchange$(handler$('0'))
-        .then(({ event }: JayEvent<Event, ItemViewState>) => setEditText(event.$0));
+        .then(({ event }: JayEvent<any, ItemViewState>) => setEditText(event.$0));
     refs.title
         .onkeydown$(handler$('1'))
-        .then(({ event, viewState: todo }: JayEvent<KeyboardEvent, ItemViewState>) => {
+        .then(({ event, viewState: todo }: JayEvent<any, ItemViewState>) => {
             if (event.$0 === ESCAPE_KEY) {
                 todo.editText = todo.title;
                 todo.isEditing = false;

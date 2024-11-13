@@ -16,8 +16,7 @@ import {
 } from '../ts-basic-analyzers/compiler-patterns-for-testing';
 import { SourceFileBindingResolver } from '../../lib/ts-file/basic-analyzers/source-file-binding-resolver';
 import { SourceFileStatementAnalyzer } from '../../lib/ts-file/basic-analyzers/scoped-source-file-statement-analyzer';
-import { FunctionRepositoryBuilder } from '../../lib/ts-file/building-blocks/function-repository-builder';
-import { FunctionsRepository } from 'jay-secure';
+import { FunctionRepositoryBuilder } from '../../lib';
 
 describe('split event handler by pattern', () => {
     const READ_EVENT_TARGET_VALUE = readEventTargetValuePattern();
@@ -57,7 +56,7 @@ describe('split event handler by pattern', () => {
         it('should replace function call parameter for arrow event handler', async () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
-                ({event}: JayEvent) => setText((event.target as HTMLInputElement).value)`;
+                ({event}: JayEvent<Event, ViewState>) => setText((event.target as HTMLInputElement).value)`;
             const { transformer, splitEventHandlers, functionsRepository } =
                 testTransformer(READ_EVENT_TARGET_VALUE);
             let transformed = await transformCode(inputEventHandler, [transformer]);
@@ -65,18 +64,18 @@ describe('split event handler by pattern', () => {
             expect(transformed).toEqual(
                 await prettify(`
                 import {JayEvent} from 'jay-runtime';
-                ({event}: JayEvent) => setText(event.$0)`),
+                ({event}: JayEvent<any, ViewState>) => setText(event.$0)`),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await printFragments(functionsRepository)).toEqual([
-                await prettify(`({ event }: JayEvent) => ({$0: event.target.value})`),
+                await prettify(`({ event }: JayEvent<Event, ViewState>) => ({$0: event.target.value})`),
             ]);
         });
 
         it('should replace function call parameter for function event handler', async () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
-                function bla({event}: JayEvent) { 
+                function bla({event}: JayEvent<Event, ViewState>) { 
                     setText((event.target as HTMLInputElement).value) 
                 }`;
             const { transformer, splitEventHandlers, functionsRepository } =
@@ -86,20 +85,20 @@ describe('split event handler by pattern', () => {
             expect(transformed).toEqual(
                 await prettify(`
                 import { JayEvent } from 'jay-runtime';
-                function bla({ event }: JayEvent) {
+                function bla({ event }: JayEvent<any, ViewState>) {
                     setText(event.$0) 
                 }`),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await printFragments(functionsRepository)).toEqual([
-                await prettify(`({ event }: JayEvent) => ({$0: event.target.value})`),
+                await prettify(`({ event }: JayEvent<Event, ViewState>) => ({$0: event.target.value})`),
             ]);
         });
 
         it('should not support partial pattern matching assignment, which creates invalid code', async () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
-                function bla({event}: JayEvent) {
+                function bla({event}: JayEvent<Event, ViewState>) {
                     let target = event.target as HTMLInputElement;  
                     setText(target.value) 
                 }`;
@@ -110,21 +109,21 @@ describe('split event handler by pattern', () => {
             expect(transformed).toEqual(
                 await prettify(`
                 import {JayEvent} from 'jay-runtime';
-                function bla({event}: JayEvent) {
+                function bla({event}: JayEvent<any, ViewState>) {
                     let target = event.target as HTMLInputElement; 
                     setText(event.$0) 
                 }`),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await printFragments(functionsRepository)).toEqual([
-                await prettify(`({ event }: JayEvent) => ({$0: event.target.value})`),
+                await prettify(`({ event }: JayEvent<Event, ViewState>) => ({$0: event.target.value})`),
             ]);
         });
 
         it('should support variable 2', async () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
-                function bla({event}: JayEvent) {
+                function bla({event}: JayEvent<Event, ViewState>) {
                     let value = (event.target as HTMLInputElement).value;  
                     setText(value) 
                 }`;
@@ -135,7 +134,7 @@ describe('split event handler by pattern', () => {
             expect(transformed).toEqual(
                 await prettify(`
                 import {JayEvent} from 'jay-runtime';
-                function bla({event}: JayEvent) {
+                function bla({event}: JayEvent<any, ViewState>) {
                     setText(event.$0);
                 }`),
             );
@@ -143,7 +142,7 @@ describe('split event handler by pattern', () => {
 
             // todo we can optimize out the variable declaration here.
             expect(await printFragments(functionsRepository)).toEqual([
-                await prettify(`({ event }: JayEvent) => {
+                await prettify(`({ event }: JayEvent<Event, ViewState>) => {
                     let value = (event.target as HTMLInputElement).value;
                     return { $0: event.target.value };
                 };`),
@@ -190,7 +189,7 @@ describe('split event handler by pattern', () => {
         it('should extract event.preventDefault()', async () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
-                ({event}: JayEvent) => {
+                ({event}: JayEvent<Event, ViewState>) => {
                     event.preventDefault();
                     console.log('mark');
                 }`;
@@ -201,13 +200,13 @@ describe('split event handler by pattern', () => {
             expect(transformed).toEqual(
                 await prettify(`
                 import {JayEvent} from 'jay-runtime';
-                ({event}: JayEvent) => {
+                ({event}: JayEvent<any, ViewState>) => {
                     console.log('mark');
                 }`),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await printFragments(functionsRepository)).toEqual([
-                await prettify(`({event}: JayEvent) => {
+                await prettify(`({event}: JayEvent<Event, ViewState>) => {
                     event.preventDefault();
                 }`),
             ]);
@@ -218,7 +217,7 @@ describe('split event handler by pattern', () => {
         it('should support input validations using regex, single line', async () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
-                ({event}: JayEvent) => {
+                ({event}: JayEvent<Event, ViewState>) => {
                     event.target.value = event.target.value.replace(/[^A-Za-z0-9]+/g, '');
                 }`;
             const { transformer, splitEventHandlers, functionsRepository } = testTransformer([
@@ -231,13 +230,13 @@ describe('split event handler by pattern', () => {
             expect(transformed).toEqual(
                 await prettify(`
                 import {JayEvent} from 'jay-runtime';
-                ({event}: JayEvent) => {}
+                ({event}: JayEvent<any, ViewState>) => {}
                 `),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await printFragments(functionsRepository)).toEqual([
                 await prettify(`
-                ({ event }: JayEvent) => {
+                ({ event }: JayEvent<Event, ViewState>) => {
                     event.target.value = event.target.value.replace(/[^A-Za-z0-9]+/g, '');
                 }`),
             ]);
@@ -246,7 +245,7 @@ describe('split event handler by pattern', () => {
         it('should support input validations using regex with variable declaration', async () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
-                ({event}: JayEvent) => {
+                ({event}: JayEvent<Event, ViewState>) => {
                     const inputValue = event.target.value;
                     const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
                     event.target.value = validValue;
@@ -261,13 +260,13 @@ describe('split event handler by pattern', () => {
             expect(transformed).toEqual(
                 await prettify(`
                 import {JayEvent} from 'jay-runtime';
-                ({event}: JayEvent) => {}
+                ({event}: JayEvent<any, ViewState>) => {}
                 `),
             );
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await printFragments(functionsRepository)).toEqual([
                 await prettify(`
-                ({ event }: JayEvent) => {
+                ({ event }: JayEvent<Event, ViewState>) => {
                     const inputValue = event.target.value;
                     const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
                     event.target.value = validValue;
@@ -280,7 +279,7 @@ describe('split event handler by pattern', () => {
         it('should support both assign pattern and a read expression (pattern for set state)', async () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
-                ({event}: JayEvent) => {
+                ({event}: JayEvent<Event, ViewState>) => {
                     const inputValue = event.target.value;
                     const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
                     event.target.value = validValue;
@@ -296,7 +295,7 @@ describe('split event handler by pattern', () => {
             expect(transformed).toEqual(
                 await prettify(`
                 import {JayEvent} from 'jay-runtime';
-                ({event}: JayEvent) => {
+                ({event}: JayEvent<any, ViewState>) => {
                     setState(event.$0)
                 }
                 `),
@@ -304,7 +303,7 @@ describe('split event handler by pattern', () => {
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await printFragments(functionsRepository)).toEqual([
                 await prettify(`
-                ({ event }: JayEvent) => {
+                ({ event }: JayEvent<Event, ViewState>) => {
                     const inputValue = event.target.value;
                     const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
                     event.target.value = validValue;
@@ -316,7 +315,7 @@ describe('split event handler by pattern', () => {
         it('should support reading the same value multiple times, with one function repository variable', async () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
-                ({event}: JayEvent) => {
+                ({event}: JayEvent<Event, ViewState>) => {
                     setState1(event.target.value);
                     setState2(event.target.value);
                 }`;
@@ -330,7 +329,7 @@ describe('split event handler by pattern', () => {
             expect(transformed).toEqual(
                 await prettify(`
                 import {JayEvent} from 'jay-runtime';
-                ({event}: JayEvent) => {
+                ({event}: JayEvent<any, ViewState>) => {
                     setState1(event.$0);
                     setState2(event.$0);
                 }
@@ -339,14 +338,14 @@ describe('split event handler by pattern', () => {
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await printFragments(functionsRepository)).toEqual([
                 await prettify(`
-                ({ event }: JayEvent) => ({ $0: event.target.value });`),
+                ({ event }: JayEvent<Event, ViewState>) => ({ $0: event.target.value });`),
             ]);
         });
 
         it('support if statement', async () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
-                ({event}: JayEvent) => {
+                ({event}: JayEvent<Event, ViewState>) => {
                     if (event.keyCode === 20) {
                         event.preventDefault();
                         let newValue = newTodo();
@@ -363,7 +362,7 @@ describe('split event handler by pattern', () => {
             expect(transformed).toEqual(
                 await prettify(`
                 import {JayEvent} from 'jay-runtime';
-                ({event}: JayEvent) => {
+                ({event}: JayEvent<any, ViewState>) => {
                     if (event.$0 === 20) {
                         let newValue = newTodo();
                         let val = newValue.trim();
@@ -375,7 +374,7 @@ describe('split event handler by pattern', () => {
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await printFragments(functionsRepository)).toEqual([
                 await prettify(`
-                ({ event }: JayEvent) => {
+                ({ event }: JayEvent<Event, ViewState>) => {
                     if (event.keyCode === 20) {
                         event.preventDefault();
                     }  
@@ -388,7 +387,7 @@ describe('split event handler by pattern', () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
                 const ENTER_KEY = 13;
-                ({event}: JayEvent) => {
+                ({event}: JayEvent<Event, ViewState>) => {
                     if (event.keyCode === ENTER_KEY) {
                         event.preventDefault();
                         let newValue = newTodo();
@@ -406,7 +405,7 @@ describe('split event handler by pattern', () => {
                 await prettify(`
                 import {JayEvent} from 'jay-runtime';
                 const ENTER_KEY = 13;
-                ({event}: JayEvent) => {
+                ({event}: JayEvent<any, ViewState>) => {
                     if (event.$0 === ENTER_KEY) {
                         let newValue = newTodo();
                         let val = newValue.trim();
@@ -418,7 +417,7 @@ describe('split event handler by pattern', () => {
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await printFragments(functionsRepository)).toEqual([
                 await prettify(`
-                ({ event }: JayEvent) => {
+                ({ event }: JayEvent<Event, ViewState>) => {
                     if (event.keyCode === ENTER_KEY) {
                         event.preventDefault();
                     }  
@@ -435,7 +434,7 @@ describe('split event handler by pattern', () => {
             const inputEventHandler = `
                 import {JayEvent} from 'jay-runtime';
                 let ENTER_KEY = 13;
-                ({event}: JayEvent) => {
+                ({event}: JayEvent<Event, ViewState>) => {
                     if (event.keyCode === ENTER_KEY) {
                         event.preventDefault();
                         let newValue = newTodo();
@@ -453,7 +452,7 @@ describe('split event handler by pattern', () => {
                 await prettify(`
                 import {JayEvent} from 'jay-runtime';
                 let ENTER_KEY = 13;
-                ({event}: JayEvent) => {
+                ({event}: JayEvent<any, ViewState>) => {
                     if (event.$0 === ENTER_KEY) {
                         event.preventDefault();
                         let newValue = newTodo();
@@ -466,7 +465,7 @@ describe('split event handler by pattern', () => {
             expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
             expect(await printFragments(functionsRepository)).toEqual([
                 await prettify(`
-                ({ event }: JayEvent) => ({ $0: event.keyCode });`),
+                ({ event }: JayEvent<Event, ViewState>) => ({ $0: event.keyCode });`),
             ]);
         });
     });
