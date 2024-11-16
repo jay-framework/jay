@@ -17,7 +17,7 @@ export type SimpleDynamicTextElementRender = RenderElement<
     SimpleDynamicTextElement
 >;
 export type SimpleDynamicTextElementPreRender = [
-    refs: SimpleDynamicTextElementRefs,
+    SimpleDynamicTextElementRefs,
     SimpleDynamicTextElementRender,
 ];
 

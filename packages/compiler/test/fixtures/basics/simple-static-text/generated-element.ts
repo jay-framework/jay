@@ -23,7 +23,7 @@ export type SimpleStaticTextElementRender = RenderElement<
     SimpleStaticTextElement
 >;
 export type SimpleStaticTextElementPreRender = [
-    refs: SimpleStaticTextElementRefs,
+    SimpleStaticTextElementRefs,
     SimpleStaticTextElementRender,
 ];
 

@@ -24,7 +24,7 @@ export type ConditionsElementRender = RenderElement<
     ConditionsElementRefs,
     ConditionsElement
 >;
-export type ConditionsElementPreRender = [refs: ConditionsElementRefs, ConditionsElementRender];
+export type ConditionsElementPreRender = [ConditionsElementRefs, ConditionsElementRender];
 
 export function render(options?: RenderElementOptions): ConditionsElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

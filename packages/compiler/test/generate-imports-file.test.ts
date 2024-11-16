@@ -3,7 +3,7 @@ import {
     readFileAndGenerateImportsFileFromTsFile,
 } from './test-utils/ts-compiler-test-utils';
 import { prettify } from '../lib';
-import { readGeneratedNamedFile } from './test-utils/file-utils';
+import { readFixtureFile } from './test-utils/file-utils';
 
 describe('generateImportsFileFromTsFile', () => {
     describe('counter', () => {
@@ -11,7 +11,7 @@ describe('generateImportsFileFromTsFile', () => {
             const folder = 'components/counter';
             const output = await readFileAndGenerateImportsFileFromTsFile(folder);
             expect(output).toEqual(
-                await prettify(await readGeneratedNamedFile(folder, 'generated-imports-file')),
+                await prettify(await readFixtureFile(folder, 'generated-imports-file')),
             );
         });
     });
@@ -23,7 +23,7 @@ describe('generateImportsFileFromJayFile', () => {
             const folder = 'components/component-in-component';
             const output = await readFileAndGenerateImportsFileFromJayFile(folder);
             expect(output).toEqual(
-                await prettify(await readGeneratedNamedFile(folder, 'generated-imports-file')),
+                await prettify(await readFixtureFile(folder, 'generated-imports-file')),
             );
         });
     });

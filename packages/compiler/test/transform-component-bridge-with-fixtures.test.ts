@@ -1,11 +1,11 @@
-import { readTestFile } from './test-utils/file-utils';
+import { readFixtureFileRaw } from './test-utils/file-utils';
 import { readFileAndGenerateComponentBridgeFile } from './test-utils/ts-compiler-test-utils';
 
 describe('transform component bridge with fixtures', () => {
     it('transform counter component', async () => {
         const folder = 'components/counter';
         expect(await readFileAndGenerateComponentBridgeFile(folder)).toEqual(
-            await readTestFile(folder, 'generated-component-bridge.ts'),
+            await readFixtureFileRaw(folder, 'generated-component-bridge.ts'),
         );
     });
 
@@ -14,8 +14,10 @@ describe('transform component bridge with fixtures', () => {
 
         it('preserves the renamed value', async () => {
             expect(
-                await readFileAndGenerateComponentBridgeFile(folder, 'counter-render-renamed.ts'),
-            ).toEqual(await readTestFile(folder, 'generated-component-bridge-render-renamed.ts'));
+                await readFileAndGenerateComponentBridgeFile(folder, 'counter-render-renamed'),
+            ).toEqual(
+                await readFixtureFileRaw(folder, 'generated-component-bridge-render-renamed.ts'),
+            );
         });
     });
 });

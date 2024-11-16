@@ -7,7 +7,7 @@ import { loadJayFile } from '../../../lib/runtime/load';
 
 describe('load', () => {
     describe('loadJayFile', () => {
-        const folder = 'jayRuntime/fixtures/sandbox-counter/source';
+        const folder = 'jayRuntime/fixtures/counter/source';
         const file = 'app.jay-html';
         const { filePath: originId, code } = readTestFile(folder, file);
         const id = `${originId}${TS_EXTENSION}`;

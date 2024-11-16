@@ -1,5 +1,5 @@
 import { prettify, RuntimeMode } from '../lib';
-import { readGeneratedElementFile, readGeneratedNamedFile } from './test-utils/file-utils';
+import { readFixtureElementFile, readFixtureFile } from './test-utils/file-utils';
 import { readFileAndGenerateElementFile } from './test-utils/ts-compiler-test-utils';
 
 describe('generate the runtime file', () => {
@@ -8,77 +8,77 @@ describe('generate the runtime file', () => {
             const folder = 'basics/simple-dynamic-text';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
         it('for simple file with static text', async () => {
             const folder = 'basics/simple-static-text';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
         it('for an empty element', async () => {
             const folder = 'basics/empty-element';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
         it('for different data types', async () => {
             const folder = 'basics/data-types';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
         it('for a composition of divs', async () => {
             const folder = 'basics/composite';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
         it('for composition of divs 2', async () => {
             const folder = 'basics/composite 2';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
         it('for styles', async () => {
             const folder = 'basics/styles';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
         it('refs', async () => {
             const folder = 'basics/refs';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
         it('with different attributes and properties', async () => {
             const folder = 'basics/attributes';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
         it('with different view state input types', async () => {
             const folder = 'basics/dynamic-text-input-types';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
         it('whitespace collapsing and handling', async () => {
             const folder = 'basics/whitespace-and-text';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
     });
 
@@ -87,21 +87,21 @@ describe('generate the runtime file', () => {
             const folder = 'conditions/conditions';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
         it('for conditional with refs', async () => {
             const folder = 'conditions/conditions-with-refs';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
         it('for enums and conditions', async () => {
             const folder = 'conditions/conditions-with-enum';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
     });
 
@@ -110,14 +110,14 @@ describe('generate the runtime file', () => {
             const folder = 'collections/collections';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
         it('for collections with refs', async () => {
             const folder = 'collections/collection-with-refs';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
     });
 
@@ -129,7 +129,7 @@ describe('generate the runtime file', () => {
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readGeneratedNamedFile(folder, 'generated-element-main-trusted'),
+                    await readFixtureFile(folder, 'generated-element-main-trusted'),
                 );
             });
 
@@ -138,7 +138,7 @@ describe('generate the runtime file', () => {
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readGeneratedNamedFile(folder, 'generated-element-main-trusted'),
+                    await readFixtureFile(folder, 'generated-element-main-trusted'),
                 );
             });
 
@@ -147,7 +147,7 @@ describe('generate the runtime file', () => {
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readGeneratedNamedFile(folder, 'generated-element-main-trusted'),
+                    await readFixtureFile(folder, 'generated-element-main-trusted'),
                 );
             });
 
@@ -156,7 +156,7 @@ describe('generate the runtime file', () => {
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readGeneratedNamedFile(folder, 'generated-element-main-trusted'),
+                    await readFixtureFile(folder, 'generated-element-main-trusted'),
                 );
             });
 
@@ -165,7 +165,7 @@ describe('generate the runtime file', () => {
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readGeneratedNamedFile(folder, 'generated-element-main-trusted'),
+                    await readFixtureFile(folder, 'generated-element-main-trusted'),
                 );
             });
 
@@ -178,7 +178,7 @@ describe('generate the runtime file', () => {
                 );
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readGeneratedNamedFile(folder, 'generated-element-main-trusted'),
+                    await readFixtureFile(folder, 'generated-element-main-trusted'),
                 );
             });
         });
@@ -190,7 +190,7 @@ describe('generate the runtime file', () => {
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'),
+                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
                 );
             });
 
@@ -199,7 +199,7 @@ describe('generate the runtime file', () => {
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'),
+                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
                 );
             });
 
@@ -208,7 +208,7 @@ describe('generate the runtime file', () => {
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'),
+                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
                 );
             });
 
@@ -217,7 +217,7 @@ describe('generate the runtime file', () => {
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'),
+                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
                 );
             });
 
@@ -226,7 +226,7 @@ describe('generate the runtime file', () => {
                 const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'),
+                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
                 );
             });
 
@@ -239,7 +239,7 @@ describe('generate the runtime file', () => {
                 );
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readGeneratedNamedFile(folder, 'generated-element-main-sandbox'),
+                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
                 );
             });
         });

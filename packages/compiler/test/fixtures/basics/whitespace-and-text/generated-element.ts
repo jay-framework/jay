@@ -25,7 +25,7 @@ export type WhitespaceAndTextElementRender = RenderElement<
     WhitespaceAndTextElement
 >;
 export type WhitespaceAndTextElementPreRender = [
-    refs: WhitespaceAndTextElementRefs,
+    WhitespaceAndTextElementRefs,
     WhitespaceAndTextElementRender,
 ];
 

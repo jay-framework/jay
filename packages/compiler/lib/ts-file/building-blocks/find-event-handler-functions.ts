@@ -11,9 +11,10 @@ import {
     flattenVariable,
     isFunctionVariableRoot,
     isParamVariableRoot,
-} from './name-binding-resolver';
+} from '../basic-analyzers/name-binding-resolver';
 import { isFunctionLikeDeclarationBase } from '../ts-utils/ts-compiler-utils';
-import { SourceFileBindingResolver } from './source-file-binding-resolver';
+import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
+import { isIdentifierOrPropertyAccessExpression } from '../basic-analyzers/typescript-extras';
 
 export interface FoundEventHandler {
     eventHandlerCallStatement: ExpressionStatement;
@@ -25,23 +26,13 @@ export function findEventHandlersBlock(
     functionDeclaration: FunctionLikeDeclarationBase,
     bindingResolver: SourceFileBindingResolver,
 ): FoundEventHandler[] {
-    // const nameBindingResolver = new NameBindingResolver();
-    // nameBindingResolver.addFunctionParams(functionDeclaration);
-
     const foundEventHandlers: FoundEventHandler[] = [];
     const foundEventHandlerFunctionsToHandlerIndex = new Map();
     let nextEventHandlerIndex = 0;
     if (isBlock(functionDeclaration.body)) {
         functionDeclaration.body.statements.forEach((statement) => {
-            // if (isVariableStatement(statement)) nameBindingResolver.addVariableStatement(statement);
-            // else if (isFunctionDeclaration(statement))
-            //     nameBindingResolver.addFunctionDeclaration(statement);
-            // else
             if (isExpressionStatement(statement) && isCallExpression(statement.expression)) {
-                if (
-                    isPropertyAccessExpression(statement.expression.expression) ||
-                    isIdentifier(statement.expression.expression)
-                ) {
+                if (isIdentifierOrPropertyAccessExpression(statement.expression.expression)) {
                     let functionVariable = bindingResolver.explain(statement.expression.expression);
 
                     let accessChain = flattenVariable(functionVariable);

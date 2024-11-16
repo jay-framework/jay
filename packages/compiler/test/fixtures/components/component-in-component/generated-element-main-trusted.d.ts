@@ -25,7 +25,7 @@ export type ComponentInComponentElementRender = RenderElement<
     ComponentInComponentElement
 >;
 export type ComponentInComponentElementPreRender = [
-    refs: ComponentInComponentElementRefs,
+    ComponentInComponentElementRefs,
     ComponentInComponentElementRender,
 ];
 

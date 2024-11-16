@@ -30,7 +30,7 @@ export type TreeNodeElementRender = RenderElement<
     TreeNodeElementRefs,
     TreeNodeElement
 >;
-export type TreeNodeElementPreRender = [refs: TreeNodeElementRefs, TreeNodeElementRender];
+export type TreeNodeElementPreRender = [TreeNodeElementRefs, TreeNodeElementRender];
 
 export function render(options?: RenderElementOptions): TreeNodeElementPreRender {
     const [refManager, [refHead, refAR1]] = ReferencesManager.for(

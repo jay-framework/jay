@@ -5,35 +5,37 @@ import { prettify } from '../../lib';
 
 const { readFile } = promises;
 
-export async function readTestFile(folder, filename) {
-    return removeComments(
-        (await readFile(path.resolve(__dirname, `../fixtures/${folder}/${filename}`))).toString(),
-    );
+export function fixtureFilePath(folder, filename): string {
+    return path.resolve(__dirname, `../fixtures/${folder}/${filename}`);
+}
+export function fixtureDir(folder): string {
+    return path.resolve(__dirname, `../fixtures/${folder}`);
 }
 
-export async function readSourceJayFile(folder) {
-    return readTestFile(folder, 'source.jay-html');
-}
-export async function readNamedSourceJayFile(folder, file) {
-    return readTestFile(folder, `${file}.jay-html`);
+export async function readFixtureFileRaw(folder, filename): Promise<string> {
+    return removeComments((await readFile(fixtureFilePath(folder, filename))).toString());
 }
 
-export async function readGeneratedNamedFile(folder, file) {
-    return prettify(await readTestFile(folder, `${file}.ts`));
-}
-export async function readGeneratedElementFile(folder) {
-    return prettify(await readTestFile(folder, 'generated-element.ts'));
+export async function readFixtureSourceJayFile(folder, file) {
+    return readFixtureFileRaw(folder, `${file}.jay-html`);
 }
 
-export async function readGeneratedElementBridgeFile(folder) {
-    return prettify(await readTestFile(folder, 'generated-element-bridge.ts'));
+export async function readFixtureFile(folder, file) {
+    return prettify(await readFixtureFileRaw(folder, `${file}.ts`));
+}
+export async function readFixtureElementFile(folder) {
+    return prettify(await readFixtureFileRaw(folder, 'generated-element.ts'));
 }
 
-export async function readGeneratedElementDefinitionFile(
+export async function readFixtureElementBridgeFile(folder) {
+    return prettify(await readFixtureFileRaw(folder, 'generated-element-bridge.ts'));
+}
+
+export async function readFixtureElementDefinitionFile(
     folder: string,
     filename: string = 'generated-element.d.ts',
 ) {
-    return prettify(await readTestFile(folder, filename));
+    return prettify(await readFixtureFileRaw(folder, filename));
 }
 
 export function getFileFromFolder(folder: string): string {

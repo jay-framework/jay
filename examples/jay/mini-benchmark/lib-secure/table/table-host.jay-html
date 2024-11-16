@@ -1,0 +1,37 @@
+<html>
+  <head>
+    <link rel="import" href="./table" names="Table" />
+    <script type="application/yaml-jay">
+      data:
+        size: number
+        updates: number
+        stateManagement: string
+    </script>
+  </head>
+  <body>
+    <div>
+      <div>
+        <label for="size">Size of the table to generate: </label
+        ><input id="size" ref="size" value="{size}" />
+      </div>
+      <div>
+        <label for="updates">Number of updates at each cycle: </label
+        ><input id="updates" ref="updates" value="{updates}" />
+      </div>
+      <div>
+        <label for="state-management">Number of updates at each cycle: </label>
+        <select id="state-management" ref="state-management">
+          <option value="immutable">immutable</option>
+          <option value="immer">immer</option>
+          <option value="json-patch">json-patch</option>
+        </select>
+      </div>
+      <Table
+        ref="table"
+        tableSize="{size}"
+        numCellsToUpdate="{updates}"
+        stateManagement="{stateManagement}"
+      />
+    </div>
+  </body>
+</html>

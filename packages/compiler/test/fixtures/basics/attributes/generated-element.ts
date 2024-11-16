@@ -27,7 +27,7 @@ export type AttributesElementRender = RenderElement<
     AttributesElementRefs,
     AttributesElement
 >;
-export type AttributesElementPreRender = [refs: AttributesElementRefs, AttributesElementRender];
+export type AttributesElementPreRender = [AttributesElementRefs, AttributesElementRender];
 
 export function render(options?: RenderElementOptions): AttributesElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

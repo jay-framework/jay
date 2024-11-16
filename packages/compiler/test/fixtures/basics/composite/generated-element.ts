@@ -21,7 +21,7 @@ export type CompositeElementRender = RenderElement<
     CompositeElementRefs,
     CompositeElement
 >;
-export type CompositeElementPreRender = [refs: CompositeElementRefs, CompositeElementRender];
+export type CompositeElementPreRender = [CompositeElementRefs, CompositeElementRender];
 
 export function render(options?: RenderElementOptions): CompositeElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

@@ -173,6 +173,11 @@ export const Import = {
         'secureChildComp',
         ImportsFor.implementation,
     ),
+    functionRepository: importStatementFragment(
+        './function-repository',
+        'funcRepository',
+        ImportsFor.implementation,
+    ),
 };
 
 export class Imports {
@@ -197,6 +202,14 @@ export class Imports {
         moduleImportStatements.push(this.renderModule(importsFor, 'jay-runtime'));
         moduleImportStatements.push(this.renderModule(importsFor, 'jay-secure'));
         return moduleImportStatements.filter((_) => !!_).join('\n');
+    }
+
+    renderFuncRepository(): string[] {
+        if (this.imports[Import.functionRepository.index])
+            return [
+                `import { ${Import.functionRepository.statement} }  from '${Import.functionRepository.module}'`,
+            ];
+        else return [];
     }
 
     renderModule(importsFor: ImportsFor, module: string) {

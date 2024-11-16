@@ -35,7 +35,7 @@ export type ConditionsWithEnumElementRender = RenderElement<
     ConditionsWithEnumElement
 >;
 export type ConditionsWithEnumElementPreRender = [
-    refs: ConditionsWithEnumElementRefs,
+    ConditionsWithEnumElementRefs,
     ConditionsWithEnumElementRender,
 ];
 

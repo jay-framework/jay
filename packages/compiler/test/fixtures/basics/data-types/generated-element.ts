@@ -34,7 +34,7 @@ export type DataTypesElementRender = RenderElement<
     DataTypesElementRefs,
     DataTypesElement
 >;
-export type DataTypesElementPreRender = [refs: DataTypesElementRefs, DataTypesElementRender];
+export type DataTypesElementPreRender = [DataTypesElementRefs, DataTypesElementRender];
 
 export function render(options?: RenderElementOptions): DataTypesElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

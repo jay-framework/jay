@@ -3,13 +3,19 @@ import {
     getImportByName,
     parseImportLinks,
 } from '../../lib/ts-file/parse-jay-file/parse-import-links';
-import { readFixtureFile } from '../test-utils/ts-compiler-test-utils';
+import {
+    fixtureFilePath,
+    readFixtureFile,
+    readFixtureSourceJayFile,
+} from '../test-utils/file-utils';
 
 describe('parseImportLinks', () => {
-    const fixturePath = 'sandboxed/sandboxed-counter/generated/main/app.jay-html.ts';
+    const fixturePath = 'full-projects/counter/generated/main';
+    const filename = 'app.jay-html';
 
     it('returns jay import links', async () => {
-        const { filePath, code } = await readFixtureFile(fixturePath);
+        const filePath = fixtureFilePath(fixturePath, filename);
+        const code = await readFixtureFile(fixturePath, filename);
         const sourceFile = createTsSourceFileFromSource(filePath, code);
         expect(parseImportLinks(sourceFile)).toEqual([
             {
@@ -77,6 +83,16 @@ describe('parseImportLinks', () => {
                     },
                 ],
                 sandbox: true,
+            },
+            {
+                module: './function-repository',
+                names: [
+                    {
+                        name: 'funcRepository',
+                        type: JayUnknown,
+                    },
+                ],
+                sandbox: false,
             },
         ]);
     });

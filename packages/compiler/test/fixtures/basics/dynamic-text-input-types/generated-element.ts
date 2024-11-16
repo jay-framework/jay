@@ -25,7 +25,7 @@ export type DynamicTextInputTypesElementRender = RenderElement<
     DynamicTextInputTypesElement
 >;
 export type DynamicTextInputTypesElementPreRender = [
-    refs: DynamicTextInputTypesElementRefs,
+    DynamicTextInputTypesElementRefs,
     DynamicTextInputTypesElementRender,
 ];
 

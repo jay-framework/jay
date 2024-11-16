@@ -52,7 +52,7 @@ export interface TodoElementRefs {
 
 export type TodoElement = JayElement<TodoViewState, TodoElementRefs>;
 export type TodoElementRender = RenderElement<TodoViewState, TodoElementRefs, TodoElement>;
-export type TodoElementPreRender = [refs: TodoElementRefs, TodoElementRender];
+export type TodoElementPreRender = [TodoElementRefs, TodoElementRender];
 
 export function render(options?: RenderElementOptions): TodoElementPreRender {
     const [

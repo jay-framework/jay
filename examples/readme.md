@@ -3,15 +3,16 @@
 The Jay examples folder includes 4 categories of examples, demonstrating different aspects of Jay.
 
 ## Jay
+
 Demonstrates the plain usage of Jay, and includes the examples
 
 ### counter
 
-Sandboxed counter as a Jay Component running from a worker 
+Sandboxed counter as a Jay Component running from a worker
 
 ### form
 
-Sandboxed form  as a Jay Component running from a worker
+Sandboxed form as a Jay Component running from a worker
 
 ### mini-benchmark
 
@@ -66,4 +67,3 @@ Shows a Todo MVC example without the component package
 ### mini-benchmark-react
 
 The react version of the mini-benchmark example, for comparing performance
-

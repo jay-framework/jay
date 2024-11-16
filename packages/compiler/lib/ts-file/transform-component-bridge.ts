@@ -1,4 +1,4 @@
-import ts, { Statement, TransformationContext } from 'typescript';
+import ts from 'typescript';
 import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
 import { astToCode, codeToAst } from './ts-utils/ts-compiler-utils';
 import { mkTransformer, SourceFileTransformerContext } from './ts-utils/mk-transformer';
@@ -7,18 +7,19 @@ import { getImportName } from './ts-utils/extract-imports';
 import { MAKE_JAY_COMPONENT } from '../core/constants';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
-import { CompiledPattern } from './building-blocks/compile-function-split-patterns';
-import {
-    TransformedEventHandlers,
-    transformEventHandlers,
-} from './building-blocks/transform-event-handlers';
-import { SourceFileBindingResolver } from './building-blocks/source-file-binding-resolver';
-import { SourceFileStatementAnalyzer } from './building-blocks/source-file-statement-analyzer';
+import { CompiledPattern } from './basic-analyzers/compile-function-split-patterns';
+import { analyzeEventHandlers } from './building-blocks/analyze-event-handlers';
+import { SourceFileBindingResolver } from './basic-analyzers/source-file-binding-resolver';
+import { SourceFileStatementAnalyzer } from './basic-analyzers/scoped-source-file-statement-analyzer';
 import {
     findComponentConstructorCallsBlock,
     FindComponentConstructorType,
     FoundJayComponentConstructorCall,
 } from './building-blocks/find-component-constructor-calls';
+import { FunctionRepositoryBuilder } from './building-blocks/function-repository-builder';
+import { findExec$ } from './building-blocks/find-exec$';
+import { analyseGlobalExec$s } from './building-blocks/analyze-global-exec$';
+import { filterEventHandlersToHaveJayEventType } from './building-blocks/filter-event-handlers-to-have-jay-event-type';
 
 function generateComponentConstructorCalls(
     context: ts.TransformationContext,
@@ -49,7 +50,6 @@ function getRenderImportSpecifier(node: ts.ImportDeclaration): ts.ImportSpecifie
 
 function transformImport(
     node: ts.ImportDeclaration,
-    factory: ts.NodeFactory,
     importerMode: RuntimeMode,
     context: ts.TransformationContext,
     hasFunctionRepository: boolean,
@@ -82,30 +82,7 @@ function transformImport(
 interface ComponentBridgeTransformerConfig {
     importerMode: RuntimeMode;
     patterns: CompiledPattern[];
-}
-
-function generateFunctionRepository(
-    transformedEventHandlers: TransformedEventHandlers,
-    context: TransformationContext,
-): { hasFunctionRepository: boolean; functionRepository: Statement[] } {
-    let functionRepositoryFragments = transformedEventHandlers.getAllFunctionRepositoryFragments();
-    if (functionRepositoryFragments.length > 0) {
-        let fragments = functionRepositoryFragments
-            .map((_) => `'${_.handlerIndex}': ${_.fragment.handlerCode}`)
-            .join(',\n');
-
-        let constants = functionRepositoryFragments.map((_) => _.fragment.constCode);
-        let uniqueConstants = [...new Set(constants)];
-        let constantsCodeFragment =
-            uniqueConstants.length > 0 ? uniqueConstants.join('\n') + '\n\n' : '';
-
-        let functionRepository = `${constantsCodeFragment}const funcRepository: FunctionsRepository = {\n${fragments}\n};`;
-
-        return {
-            functionRepository: codeToAst(functionRepository, context) as Statement[],
-            hasFunctionRepository: true,
-        };
-    } else return { hasFunctionRepository: false, functionRepository: [] };
+    globalFunctionRepository: FunctionRepositoryBuilder;
 }
 
 function transformSourceFile(
@@ -114,12 +91,9 @@ function transformSourceFile(
     context: ts.TransformationContext,
     importerMode: RuntimeMode,
     componentConstructorCalls: FoundJayComponentConstructorCall[],
-    transformedEventHandlers: TransformedEventHandlers,
+    componentFunctionRepository: FunctionRepositoryBuilder,
 ) {
-    let { functionRepository, hasFunctionRepository } = generateFunctionRepository(
-        transformedEventHandlers,
-        context,
-    );
+    let { functionRepository, hasFunctionRepository } = componentFunctionRepository.generate();
 
     let generatedComponentConstructorCalls = generateComponentConstructorCalls(
         context,
@@ -131,20 +105,17 @@ function transformSourceFile(
         .map((statement) => {
             if (ts.isInterfaceDeclaration(statement)) return statement;
             else if (ts.isImportDeclaration(statement))
-                return transformImport(
-                    statement,
-                    factory,
-                    importerMode,
-                    context,
-                    hasFunctionRepository,
-                );
+                return transformImport(statement, importerMode, context, hasFunctionRepository);
             else return undefined;
         })
         .filter((_) => !!_);
 
+    const funcRepositoryStatements = hasFunctionRepository
+        ? (codeToAst(functionRepository, context) as ts.Statement[])
+        : [];
     let allStatements = [
         ...transformedStatements,
-        ...functionRepository,
+        ...funcRepositoryStatements,
         generatedComponentConstructorCalls,
     ].filter((_) => !!_);
 
@@ -157,6 +128,7 @@ function mkComponentBridgeTransformer({
     context,
     importerMode,
     patterns,
+    globalFunctionRepository,
 }: SourceFileTransformerContext & ComponentBridgeTransformerConfig) {
     let bindingResolver = new SourceFileBindingResolver(sourceFile);
 
@@ -171,12 +143,25 @@ function mkComponentBridgeTransformer({
     let foundEventHandlers = constructorDefinitions.flatMap((constructorDefinition) =>
         findEventHandlersBlock(constructorDefinition, bindingResolver),
     );
+    const elementsEventHandlers = filterEventHandlersToHaveJayEventType(
+        foundEventHandlers,
+        bindingResolver,
+    );
 
     let analyzer = new SourceFileStatementAnalyzer(sourceFile, bindingResolver, patterns);
 
-    let transformedEventHandlers = new TransformedEventHandlers(
-        transformEventHandlers(context, bindingResolver, analyzer, factory, foundEventHandlers),
+    const componentFunctionRepository = new FunctionRepositoryBuilder();
+    analyzeEventHandlers(
+        context,
+        bindingResolver,
+        analyzer,
+        factory,
+        elementsEventHandlers,
+        componentFunctionRepository,
     );
+
+    const foundExec$ = findExec$(bindingResolver, sourceFile);
+    analyseGlobalExec$s(context, analyzer, globalFunctionRepository, foundExec$);
 
     return transformSourceFile(
         sourceFile,
@@ -184,13 +169,18 @@ function mkComponentBridgeTransformer({
         context,
         importerMode,
         calls,
-        transformedEventHandlers,
+        componentFunctionRepository,
     );
 }
 
 export function transformComponentBridge(
     importerMode: RuntimeMode,
     patterns: CompiledPattern[] = [],
+    globalFunctionRepository: FunctionRepositoryBuilder,
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
-    return mkTransformer(mkComponentBridgeTransformer, { importerMode, patterns });
+    return mkTransformer(mkComponentBridgeTransformer, {
+        importerMode,
+        patterns,
+        globalFunctionRepository,
+    });
 }

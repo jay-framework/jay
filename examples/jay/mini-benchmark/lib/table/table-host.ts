@@ -11,17 +11,20 @@ function TableHostConstructor({ cycles }: Props<TableHostProps>, refs: TableHost
     let [updates, setUpdates] = createState(100);
     let [stateManagement, setStateManagement] = createState('immutable');
 
-    refs.size
-        .oninput$(({ event }) => (event.target as HTMLInputElement).value)
-        .then(({ event: size }) => setSize(Number(size)));
+    refs.size.oninput(({ event }) => {
+        const size = (event.target as HTMLInputElement).value;
+        setSize(Number(size));
+    });
 
-    refs.updates
-        .oninput$(({ event }) => (event.target as HTMLInputElement).value)
-        .then(({ event: updates }) => setUpdates(Number(updates)));
+    refs.updates.oninput(({ event }) => {
+        const updates = (event.target as HTMLInputElement).value;
+        setUpdates(Number(updates));
+    });
 
-    refs.stateManagement
-        .oninput$(({ event }) => (event.target as HTMLSelectElement).value)
-        .then(({ event: newStateManagement }) => setStateManagement(newStateManagement));
+    refs.stateManagement.oninput(({ event }) => {
+        const newStateManagement = (event.target as HTMLSelectElement).value;
+        setStateManagement(newStateManagement);
+    });
 
     const run = (progressCallback: (string) => void) => {
         benchmark((index) => refs.table.updateData(index), cycles(), progressCallback);

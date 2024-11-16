@@ -20,12 +20,12 @@ const initialTodos = [
     },
 ];
 
-const jayWorker = new Worker(new URL('jay-sandbox:./sandbox-root', import.meta.url), {
-    type: 'module',
-});
+// const jayWorker = new Worker(new URL('jay-sandbox:./sandbox-root', import.meta.url), {
+//     type: 'module',
+// });
 
 window.onload = function () {
-    setMainPort(new JayPort(new HandshakeMessageJayChannel(jayWorker)));
+    // setMainPort(new JayPort(new HandshakeMessageJayChannel(jayWorker)));
     const target = document.getElementById('target');
 
     const [refs, render2] = render();

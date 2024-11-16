@@ -1,5 +1,6 @@
 import { createState, makeJayComponent, Props } from 'jay-component';
-import { MainElementRefs, render, SelectedExample } from './main.jay-html';
+import { MainElementRefs, MainViewState, render, SelectedExample } from './main.jay-html';
+import { JayEvent } from 'jay-runtime';
 
 interface MainProps {}
 
@@ -12,13 +13,15 @@ function MainConstructor({}: Props<MainProps>, refs: MainElementRefs) {
     let [cycles, setCycles] = createState(1000);
     let [progress, setProgress] = createState('');
 
-    refs.chooseExample
-        .onchange$(({ event }) => (event.target as HTMLSelectElement).selectedIndex)
-        .then(({ event: index }) => setSelectedExample(Number(examples[index].value)));
+    refs.chooseExample.onchange(({ event }: JayEvent<Event, MainViewState>) => {
+        const index = (event.target as HTMLSelectElement).selectedIndex;
+        setSelectedExample(Number(examples[index].value));
+    });
 
-    refs.cycles
-        .oninput$(({ event }) => (event.target as HTMLInputElement).value)
-        .then(({ event: cycles }) => setCycles(Number(cycles)));
+    refs.cycles.oninput(({ event }: JayEvent<Event, MainViewState>) => {
+        const cycles = (event.target as HTMLInputElement).value;
+        setCycles(Number(cycles));
+    });
 
     refs.run.onclick(() => {
         if (selectedExample() === SelectedExample.basic) refs.basic.run(setProgress);

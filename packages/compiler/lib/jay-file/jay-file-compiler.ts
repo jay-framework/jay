@@ -147,7 +147,8 @@ function renderImports(
     refImportsInUse: Set<string>,
     importerMode: RuntimeMode,
 ): string {
-    let runtimeImport = imports.render(importsFor);
+    const runtimeImport = imports.render(importsFor);
+    const funcRepositoryImport = imports.renderFuncRepository();
 
     // todo validate the actual imported file
     let renderedComponentImports = componentImports.map((importStatement) => {
@@ -186,7 +187,7 @@ function renderImports(
         return imports.join('\n');
     });
 
-    return [runtimeImport, ...renderedComponentImports].join('\n');
+    return [runtimeImport, ...renderedComponentImports, ...funcRepositoryImport].join('\n');
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -663,15 +664,17 @@ function renderFunctionImplementation(
 
     let renderedElement = `export type ${elementType} = JayElement<${viewStateType}, ${refsType}>
 export type ${renderType} = RenderElement<${viewStateType}, ${refsType}, ${elementType}>
-export type ${preRenderType} = [refs: ${refsType}, ${renderType}]
+export type ${preRenderType} = [${refsType}, ${renderType}]
 `;
 
     if (importedSandboxedSymbols.size > 0) {
-        imports = imports.plus(Import.secureMainRoot);
+        imports = imports.plus(Import.secureMainRoot).plus(Import.functionRepository);
+
         renderedRoot = renderedRoot.map(
             (code) =>
                 `      mr(viewState, () =>
-${Indent.forceIndent(code, 4)})`,
+${Indent.forceIndent(code, 4)},
+        funcRepository)`,
         );
     }
 

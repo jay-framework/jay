@@ -1,0 +1,13 @@
+<html>
+  <head>
+    <link rel="import" href="./main" names="Main, MainProps" sandbox="true" />
+    <script type="application/yaml-jay">
+data:
+    </script>
+  </head>
+  <body>
+    <div>
+      <Main ></Main>
+    </div>
+  </body>
+</html>

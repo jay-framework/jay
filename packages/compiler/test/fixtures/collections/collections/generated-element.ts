@@ -30,7 +30,7 @@ export type CollectionsElementRender = RenderElement<
     CollectionsElementRefs,
     CollectionsElement
 >;
-export type CollectionsElementPreRender = [refs: CollectionsElementRefs, CollectionsElementRender];
+export type CollectionsElementPreRender = [CollectionsElementRefs, CollectionsElementRender];
 
 export function render(options?: RenderElementOptions): CollectionsElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
