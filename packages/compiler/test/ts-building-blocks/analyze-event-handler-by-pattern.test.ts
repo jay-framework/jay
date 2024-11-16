@@ -9,7 +9,7 @@ import ts, { isArrowFunction, isFunctionDeclaration } from 'typescript';
 import { prettify } from '../../lib';
 import {
     eventPreventDefaultPattern,
-    readEventKeyCodePattern,
+    readEventKeyCodePattern, readEventTargetSelectedIndexPattern,
     readEventTargetValuePattern,
     setEventTargetValuePattern,
     stringReplacePattern,
@@ -20,6 +20,7 @@ import { FunctionRepositoryBuilder } from '../../lib';
 
 describe('split event handler by pattern', () => {
     const READ_EVENT_TARGET_VALUE = readEventTargetValuePattern();
+    const READ_EVENT_TARGET_SELECTED_INDEX = readEventTargetSelectedIndexPattern();
     const EVENT_PREVENT_DEFAULT = eventPreventDefaultPattern();
 
     function testTransformer(compiledPatterns: CompiledPattern[]) {
@@ -145,6 +146,35 @@ describe('split event handler by pattern', () => {
                 await prettify(`({ event }: JayEvent<any, any>) => {
                     let value = (event.target as HTMLInputElement).value;
                     return { $0: event.target.value };
+                };`),
+            ]);
+        });
+
+        it('should support variable 3', async () => {
+            const inputEventHandler = `
+                import {JayEvent} from 'jay-runtime';
+                function bla({event}: JayEvent<Event, ViewState>) {
+                    const index = (event.target as HTMLSelectElement).selectedIndex
+                    setSelectedExample(Number(examples[index].value))
+                }`;
+            const { transformer, splitEventHandlers, functionsRepository } =
+                testTransformer(READ_EVENT_TARGET_SELECTED_INDEX);
+            let transformed = await transformCode(inputEventHandler, [transformer]);
+
+            expect(transformed).toEqual(
+                await prettify(`
+                import {JayEvent} from 'jay-runtime';
+                function bla({event}: JayEvent<any, ViewState>) {
+                    setSelectedExample(Number(examples[event.$0].value));
+                }`),
+            );
+            expect(splitEventHandlers[0].wasEventHandlerTransformed).toBeTruthy();
+
+            // todo we can optimize out the variable declaration here.
+            expect(await printFragments(functionsRepository)).toEqual([
+                await prettify(`({ event }: JayEvent<any, any>) => {
+                    const index = (event.target as HTMLSelectElement).selectedIndex;
+                    return { $0: event.target.selectedIndex };
                 };`),
             ]);
         });

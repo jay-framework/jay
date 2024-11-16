@@ -1,6 +1,7 @@
 import { compileFunctionSplitPatternsBlock } from '../../lib';
 import { createTsSourceFile } from '../test-utils/ts-source-utils';
 import { extractVal } from '../test-utils/ts-compiler-test-utils';
+import {JayEvent} from "jay-runtime";
 
 export function readEventTargetValuePattern() {
     return extractVal(
@@ -10,6 +11,19 @@ export function readEventTargetValuePattern() {
             import {JayEvent} from 'jay-runtime';
             function inputValuePattern({event}: JayEvent<any, any>): string {
                 return event.target.value;
+            }`),
+        ]),
+    );
+}
+
+export function readEventTargetSelectedIndexPattern() {
+    return extractVal(
+        'compile pattern readEventTargetSelectedIndexPattern',
+        compileFunctionSplitPatternsBlock([
+            createTsSourceFile(`
+            import {JayEvent} from 'jay-runtime';
+            function inputSelectedIndexPattern({ event }: JayEvent<any, any>): number {
+                return event.target.selectedIndex;
             }`),
         ]),
     );
