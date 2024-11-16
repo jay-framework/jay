@@ -31,7 +31,7 @@ export function render(options?: RenderElementOptions): TextWithApostropheElemen
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState: TextWithApostropheViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            e('div', {}, ['static text\'s']),
+            e('div', {}, ["static text's"]),
         ) as TextWithApostropheElement;
     return [refManager.getPublicAPI() as TextWithApostropheElementRefs, render];
 }
