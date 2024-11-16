@@ -18,6 +18,13 @@ describe('generate the runtime file', () => {
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
+        it('for text with apostrophe', async () => {
+            const folder = 'basics/text-with-apostrophe';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+        });
+
         it('for an empty element', async () => {
             const folder = 'basics/empty-element';
             const elementFile = await readFileAndGenerateElementFile(folder);
