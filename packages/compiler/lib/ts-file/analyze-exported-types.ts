@@ -97,9 +97,9 @@ function getComponentType(
 }
 
 function autoAddExtension(filename: string) {
-    if (fs.existsSync(filename)) return filename;
-    else if (fs.existsSync(filename + '.ts')) return filename + '.ts';
+    if (fs.existsSync(filename + '.ts')) return filename + '.ts';
     else if (fs.existsSync(filename + '.d.ts')) return filename + '.d.ts';
+    else if (fs.existsSync(filename)) return filename;
     else throw new Error(`File not found. Tried ${filename}, ${filename}.ts and ${filename}.d.ts`);
 }
 
