@@ -9,7 +9,8 @@ import ts, { isArrowFunction, isFunctionDeclaration } from 'typescript';
 import { prettify } from '../../lib';
 import {
     eventPreventDefaultPattern,
-    readEventKeyCodePattern, readEventTargetSelectedIndexPattern,
+    readEventKeyCodePattern,
+    readEventTargetSelectedIndexPattern,
     readEventTargetValuePattern,
     setEventTargetValuePattern,
     stringReplacePattern,
@@ -157,8 +158,9 @@ describe('split event handler by pattern', () => {
                     const index = (event.target as HTMLSelectElement).selectedIndex
                     setSelectedExample(Number(examples[index].value))
                 }`;
-            const { transformer, splitEventHandlers, functionsRepository } =
-                testTransformer(READ_EVENT_TARGET_SELECTED_INDEX);
+            const { transformer, splitEventHandlers, functionsRepository } = testTransformer(
+                READ_EVENT_TARGET_SELECTED_INDEX,
+            );
             let transformed = await transformCode(inputEventHandler, [transformer]);
 
             expect(transformed).toEqual(

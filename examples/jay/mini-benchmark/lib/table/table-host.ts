@@ -14,17 +14,17 @@ function TableHostConstructor({ cycles }: Props<TableHostProps>, refs: TableHost
     refs.size.oninput(({ event }) => {
         const size = (event.target as HTMLInputElement).value;
         setSize(Number(size));
-    })
+    });
 
     refs.updates.oninput(({ event }) => {
         const updates = (event.target as HTMLInputElement).value;
         setUpdates(Number(updates));
-    })
+    });
 
     refs.stateManagement.oninput(({ event }) => {
         const newStateManagement = (event.target as HTMLSelectElement).value;
-        setStateManagement(newStateManagement)
-    })
+        setStateManagement(newStateManagement);
+    });
 
     const run = (progressCallback: (string) => void) => {
         benchmark((index) => refs.table.updateData(index), cycles(), progressCallback);

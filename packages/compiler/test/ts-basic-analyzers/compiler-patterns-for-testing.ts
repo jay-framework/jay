@@ -1,7 +1,7 @@
 import { compileFunctionSplitPatternsBlock } from '../../lib';
 import { createTsSourceFile } from '../test-utils/ts-source-utils';
 import { extractVal } from '../test-utils/ts-compiler-test-utils';
-import {JayEvent} from "jay-runtime";
+import { JayEvent } from 'jay-runtime';
 
 export function readEventTargetValuePattern() {
     return extractVal(

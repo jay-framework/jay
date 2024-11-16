@@ -6,7 +6,8 @@ import ts, {
     isBinaryExpression,
     isBlock,
     isCallExpression,
-    isDoStatement, isElementAccessExpression,
+    isDoStatement,
+    isElementAccessExpression,
     isForInStatement,
     isForOfStatement,
     isForStatement,
@@ -357,8 +358,7 @@ export class ScopedSourceFileStatementAnalyzer {
                     node.getChildren().forEach((child) =>
                         visitChild(child, { statement, roleInParent: RoleInParent.read }),
                     );
-                }
-                else {
+                } else {
                     node.getChildren().forEach((child) =>
                         visitChild(child, { statement, roleInParent: RoleInParent.none }),
                     );
