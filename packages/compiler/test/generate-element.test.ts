@@ -22,7 +22,7 @@ describe('generate the runtime file', () => {
             const folder = 'basics/text-with-apostrophe';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readGeneratedElementFile(folder));
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
         it('for an empty element', async () => {

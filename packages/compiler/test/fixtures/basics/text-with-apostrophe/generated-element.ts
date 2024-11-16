@@ -23,7 +23,7 @@ export type TextWithApostropheElementRender = RenderElement<
     TextWithApostropheElement
 >;
 export type TextWithApostropheElementPreRender = [
-    refs: TextWithApostropheElementRefs,
+    TextWithApostropheElementRefs,
     TextWithApostropheElementRender,
 ];
 
