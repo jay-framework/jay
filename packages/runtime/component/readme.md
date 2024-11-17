@@ -12,26 +12,16 @@ hooks to create computed values:
 * [createMemo](./docs/create-memo.md)
 * [createDerivedArray](./docs/create-derived-array.md)
 
-hooks to create reactions:
+hooks to create reactions & events:
+
+* [createEffect](./docs/create-effect.md)
+* [createEvent](./docs/create-event.md)
+
+Hooks for providing context:
+
+Hooks to get Component Reactive Instance:
 
 
-
-
-## `provideContext`
-
-* **Purpose:** Provides a context value to child components.
-* **Parameters:**
-    * `marker`: A unique symbol identifying the context.
-    * `context`: The value to provide.
-* **Returns:** Nothing.
-
-## `provideReactiveContext`
-
-* **Purpose:** Provides a reactive context value to child components.
-* **Parameters:**
-    * `marker`: A unique symbol identifying the context.
-    * `mkContext`: A function that creates the initial context value.
-* **Returns:** The created reactive context value.
 
 ## `useReactive`
 
