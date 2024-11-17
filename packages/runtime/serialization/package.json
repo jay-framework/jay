@@ -18,8 +18,7 @@
     "dist"
   ],
   "dependencies": {
-    "jay-json-patch": "workspace:^",
-    "jay-reactive": "workspace:^"
+    "jay-json-patch": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",
