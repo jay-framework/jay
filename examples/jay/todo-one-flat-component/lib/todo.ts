@@ -1,7 +1,7 @@
 import { Filter, render, ShownTodo, TodoElementRefs } from './todo.jay-html';
 import {
     createMemo,
-    createPatchableState,
+    createPatchableSignal,
     createSignal,
     makeJayComponent,
     Props,
@@ -24,7 +24,7 @@ interface TodoProps {
 }
 
 function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: TodoElementRefs) {
-    const [todos, setTodos, patchTodos] = createPatchableState(
+    const [todos, setTodos, patchTodos] = createPatchableSignal(
         initialTodos().map((_) => ({ ..._, isEditing: false, editText: '' })),
     );
 

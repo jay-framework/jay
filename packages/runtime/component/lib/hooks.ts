@@ -36,7 +36,7 @@ export function createSignal<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: 
     return currentHookContext().reactive.createSignal(value);
 }
 
-export function createPatchableState<T>(
+export function createPatchableSignal<T>(
     value: ValueOrGetter<T>,
 ): [get: Getter<T>, set: Setter<T>, patchFunc: Patcher<T>] {
     const [get, set] = createSignal(value);
