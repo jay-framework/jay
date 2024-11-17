@@ -22,8 +22,29 @@ declare function listCompare<T, S>(
 ): Array<MatchResult<T, S>>;
 ```
 
-The algorithm creates a list of instructions, including `ITEM_ADDED`, `ITEM_MOVED` and `ITEM_REMOVED` to be applied
-to the `oldArray` in order to get to the `newArray`.
+The algorithm compares two instances of a RandomAccessLinkedList data structure and generates instructions for 
+transforming one list into the other.
+
+### Inputs:
+
+* `oldArray`: The first RandomAccessLinkedList instance (assumed to be the original list).
+* `newArray`: The second RandomAccessLinkedList instance (assumed to be the desired state).
+* `mkElement`: A function that takes an item value and an ID and creates an element of type S. 
+  This function is application specific to the application using the algorithm.
+
+### Outputs:
+
+An array of `MatchResult` objects, which describe the changes needed to transform the old list into the new list. 
+Each `MatchResult` object has the following properties:
+
+* `action`: A string representing the type of change needed. Possible values are:
+  * `ITEM_ADDED`: A new item needs to be inserted.
+  * `ITEM_REMOVED`: An existing item needs to be removed.
+  * `ITEM_MOVED`: An existing item needs to be moved to a different position.
+* `item`: The value of the item being added or moved (applicable for ITEM_ADDED and ITEM_MOVED).
+* `pos`: The position in the new list where the item should be (applicable for ITEM_ADDED and ITEM_MOVED).
+* `fromPos`: The original position of the item being moved from (applicable for ITEM_MOVED).
+* `elem`: The attachment object of type `S` created for the item for application specific usage.
 
 ## algorithm notes
 
