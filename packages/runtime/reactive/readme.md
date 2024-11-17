@@ -1,4 +1,4 @@
-# Reactive Module
+# Jay Reactive Module
 
 The Reactive module is a minimal reactive core implementation that handles storing data,
 reacting to data change and detecting if data has actually changed.
@@ -7,27 +7,26 @@ Reactive will strive to run reactions as a batch and will do so **sync** when us
 **async** if `batchReactions` was not used. When there are pending reactions to be run async, `toBeClean`
 can be used to wait for the reactions to run using `await reactive.toBeClean()`.
 
-It is intended to be an internal core implementation for state management and not a user facing API.
+The package one class - the `Reactive` which is a simple reactive core, at which reactions are dependent on signals.
+When a signal is updated, any of the dependent reactions are re-run.
 
-The package one class - the `Reactive` which is a simple reactive core, at which reactions are dependent on state.
-When a state is updated, any of the dependent reactions are re-run.
-
-The reactions auto track which states they depend on. On each run of a reaction,
-it will recalculate dependencies to ensure it only depends on state values that are actually in use.
-A direct impact is that conditions based on state are supported in reactions, and the reaction rerun will take
+The reactions auto track which signals they depend on. On each run of a reaction,
+it will recalculate dependencies to ensure it only depends on signal values that are actually in use.
+A direct impact is that conditions based on signals are supported in reactions, and the reaction rerun will take
 into account the conditions.
 
-Reactive can also Pair, creating dependencies between multiple Reactive instances. See the section below on Reactive Pairing
+Reactive can also pair, creating dependencies between multiple Reactive instances. See the section below on Reactive Pairing
 
-- [createSignal](#createSignal)
-- [createReaction](#createReaction)
-- [MeasureOfChange](#MeasureOfChange)
-- [batchReactions](#batchReactions)
-- [toBeClean](#toBeClean)
-- [flush](#flush)
-- [Reactive Pairing](#paring)
+## Notes:
+* `Reactive` is intended to be an internal core implementation for state management and not a user facing API.
+* `Reactive` is used by `jay-component` as state management for components, at which each component has it's own independent 
+  instance of `Reactive`.
+* `jay-component` also defines reactive context which is also using an independent `Reactive` instance.
+* one `Reactive` can depend on a signal from another `Reactive` creating `Reactive` pairing discussed below.
+* `jay-reactive` is inspired by [solid.js](https://www.solidjs.com/) state management (amazing framework, BTW).
+* `Reactive.enable` and `Reactive.disable` are used by `jay-component` to disable and enable reactive as a component unmounts and mounts.
 
-# <a name="createSignal">createSignal</a>
+## createSignal
 
 ```typescript
 type Next<T> = (t: T) => T;
@@ -40,66 +39,62 @@ declare function createSignal<T>(
 ): [get: Getter<T>, set: Setter<T>];
 ```
 
-Creates a state getter / setter pair such that when setting state, any dependent reaction is rerun.
+Creates a signal getter / setter pair such that when setting signal value, any dependent reaction is rerun.
 The reactions run on `setTimeout(...,0)`, or at the end of a batch when using `batchReactions`.
 
-The getter always returns the state value
+The getter always returns the signal value
 The setter accepts a new value or a function to compute the next value, as well as a `MeasureOfChange`.
 
 ```typescript
-const [state, setState] = reactive.createSignal(12);
+const [getter, setter] = reactive.createSignal(12);
 
-state(); // returns 12
-setState(13);
-setState((x) => x + 1);
+getter(); // returns 12
+setter(13);
+setter((x) => x + 1);
 
-const [state2, setState2] = reactive.createSignal(() => `state is ${state()}`);
+const [getter2, setter2] = reactive.createSignal(() => `signal value is ${getter()}`);
 ```
 
-## createSignal parameters
+### createSignal parameters
 
-- `value: ValueOrGetter<T>` - an initial value for the state, or a getter function to track using `createReaction`.
-- `measureOfChange: MeasureOfChange = MeasureOfChange.FULL` - an indicator of how large a change is state is considered
-  within reactions that depend on this state.
+- `value: ValueOrGetter<T>` - an initial value for the signal, or a getter function to track using `createReaction`.
+- `measureOfChange: MeasureOfChange = MeasureOfChange.FULL` - an indicator of how large a change is signal is considered
+  within reactions that depend on this signal (when a reaction is run, it also gets the `max(...measureOfChange)` 
+  of all signals that have changed and it depends on).
 
-## state
+### getter
 
-the first function returned by `createSignal` is the `state` function which returns the current value of the state.
+the first function returned by `createSignal` is the `getter` function which returns the current value of the signal.
 
-## setState
+### setter
 
-The second function returned is `setState` which accepts two parameters
+The second function returned is `setter` which accepts one parameter - a new value for the signal, 
+or a function to update the signal value. Note that a change is defined by strict equality - using the `===` and `!==` operators.
 
-- a new value for the state, or a function to update the state value
-- a `MeasureOfChange` which can be used by reactions how to react to a change
-  The function will trigger reactions if the value has changed.
-
-Note that a change is defined by strict equality - using the `===` and `!==` operators.
-
-# <a name="createReaction">createReaction</a>
+## createReaction
 
 ```typescript
 export type Reaction = (measureOfChange: MeasureOfChange) => void;
-declare function createReaction(func: Reaction);
+reactive.createReaction(func: Reaction);
 ```
 
-creates a reaction that re-runs when state it depends on changes.
+Creates a reaction that re-runs when signals it depends on changes.
 It will re-run on `setTimeout(..., 0)`, or at the end of a batch when using `batchReactions`.
-The `Reaction` accepts a `MeasureOfChange` parameter which can be used to fine tune how the reaction should behave.
+The `Reaction` accepts a `MeasureOfChange` computed as the `max(...measureOfChange)`
+of all signals that have changed and the reaction depends on.
 
 The `Reaction` function is running once as part of the call to `createReaction` used to figure out what
-initial dependencies to track.
-
-On each run of the `Reaction` function dependencies are recomputed and the function will only rerun with relevant dependencies are updated.
+initial dependencies to track. On each run of the `Reaction` function dependencies are recomputed and the 
+function will only rerun with relevant dependencies are updated.
 
 ```typescript
 reactive.createReaction(() => {
-  console.log(state());
+  console.log(signalGetter());
 });
 ```
 
-Note that only dependencies (state getters) that are actually in use are set as dependencies.
-In the following case, the reaction will track states `a` and `b`, but will fail to track state `c`
+Note that only dependencies (signal getters) that are actually in use are set as dependencies.
+In the following case, the reaction will track signals `a` and `b`, but will not track signal `c` (by design).
 
 ```typescript
 const [a, setA] = reactive.createSignal(true);
@@ -114,13 +109,13 @@ reactive.createReaction(() => {
 
 Once `a` or `b` update, the reaction will rerun.
 
-If `a` is set to false, the reaction will now depend on `a` and `c`, and will not depend anymore on `b`.
+If `a` is set to false, the reaction will now depend on `a` and `c`.
 
-# <a name="MeasureOfChange">MeasureOfChange</a>
+## MeasureOfChange
 
-Measure of Change is an optional value passed when creating state, which is then used to tune how reactions run.
+Measure of Change is an optional value passed when creating signals, which is then used to tune how reactions run.
 The `MeasureOfChange` is defined as an ordered enum, at which case the reaction always gets the max `MeasureOfChange`
-from states that are updated.
+from signals that are updated.
 
 It is defined as
 
@@ -134,20 +129,20 @@ export enum MeasureOfChange {
 
 At which
 
-- `NO_CHANGE` - allows to update a state without triggering reactions
-- `PARTIAL` - triggers reactions with the `PARTIAL` measure of change, unless other states are updated with a higher measure of change
+- `NO_CHANGE` - allows to update a signal without triggering reactions
+- `PARTIAL` - triggers reactions with the `PARTIAL` measure of change, unless other signals are updated with a higher measure of change
 - `FULL` - triggers reactions with the `FULL` measure of change
 
 see the `jay-component` library, the `createDerivedArray` function for an example use case.
 
-# <a name="batchReactions">batchReactions</a>
+## batchReactions
 
 ```typescript
-declare function batchReactions(func: () => void);
+reactive.batchReactions(func: () => void);
 ```
 
-Batch reaction enables to update multiple states while computing reactions only once. It is important for
-performance optimizations, to enable rendering DOM updates once when a component updates multiple states. It
+Batch reaction enables to update multiple signals while computing reactions only once. It is important for
+performance optimizations, to enable rendering DOM updates once when a component updates multiple signals. It
 is built for the component API to optimize rendering.
 
 ```typescript
@@ -159,56 +154,68 @@ let reactive = new Reactive((reactive) => {
     console.log(a(), b(), c());
   });
 });
+// will print the console log false abc def 
 
 reactive.batchReactions(() => {
   setA(true);
   setB('abcde');
   setC('fghij');
 });
+// will print the console log true abcde fghij 
 ```
 
-# <a name="toBeClean">toBeClean</a>
+## toBeClean
 
 ```typescript
-declare function toBeClean(): Promise<void>;
+reactive.toBeClean(): Promise<void>;
 ```
 
 returns a promise that is resolved when pending reactions have run. If there are no pending reactions, the promise
 will resolve immediately.
 
 ```typescript
-reactive.setStateA(12);
-reactive.setStateB('Joe');
+setA(12);
+setB('Joe');
 // waits for reaction to run
 await reactive.toBeClean();
 ```
 
-# <a name="flush">flush</a>
+## flush
 
 ```typescript
-declare function flush(): void;
+reactive.flush(): void;
 ```
 
 In the case of not using batch reactions, reactive will auto batch the reactions and run them async.
 `flush` can be used to force the reactions to run sync.
 
 ```typescript
-reactive.setStateA(12);
-reactive.setStateB('Joe');
-// forces reactions to run
+setA(12);
+setB('Joe');
+// forces reactions to run synchronosly
 reactive.flush();
 ```
 
-# <a name="paring">Reactive Pairing</a>
+## enable & disable
+
+```typescript
+reactive.enable();
+reactive.disable();
+```
+
+Enables and disables the reactive. 
+A Disabled reactive will not run reactions. 
+
+* When calling enable, the reactive will also flush any pending reactions.
+* Reactive are created, by default, enabled.
+
+## Reactive Pairing
 
 Reactive Pairing is useful when an application has multiple reactive instances who need to sync flush between them.
 For instance, with Jay, a context is one reactive and component is another instance of a reactive.
 
-Pairing is done by setting a second `B` reactive state from one reactive `A`.
-When paired, once reactive `A` flushes, it will also flush reactive `B` immediately after completing the reaction
-who updated state on `B`, continuing to run `A` reactions only after.
+Pairing is done by getting a signal value of reactive `A` from a reaction of reactive `B`.
+When paired, once reactive `A` flushes, it will also trigger a flush of reactive `B` after `A` flush completes.
 
-Reactive Pairing has one limitation - it does not allow two different reaction on `A` to update states on `B` as
-it will trigger double running of `B`. Instead, use a single reaction on `A` to update both states on `B`.
-In some cases, we are forced to use two different reactions in `A`, at which we can just create a 3rd reaction to
-update `B` (semantically, it can be two `createMemo` and one `createEffect` in Jay component semantics).
+Reactive Pairing allows a Jay Component (`A`) to read signal values from a Jay Reactive Context (`B`). 
+Once the context signals are updated, the component reactions that depends on the context will also run.
