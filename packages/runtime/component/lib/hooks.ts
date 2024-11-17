@@ -9,7 +9,7 @@ function currentHookContext(): HookContext {
     return findContext((_) => _ === COMPONENT_CONTEXT || _ === CONTEXT_CREATION_CONTEXT);
 }
 
-type EffectCleanup = () => void;
+export type EffectCleanup = () => void;
 export function createEffect(effect: () => void | EffectCleanup) {
     let cleanup = undefined;
 

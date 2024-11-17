@@ -1,4 +1,4 @@
-# Documentation for Context Management Functions
+# Context API Implementation
 
 These functions provide a mechanism for managing and sharing context within a hierarchical structure,
 used with `JayElement`s.
