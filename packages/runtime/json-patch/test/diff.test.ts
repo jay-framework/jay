@@ -141,10 +141,10 @@ describe('diff', () => {
     describe('object array values', () => {
         describe('with an array context', () => {
             const TOP_LEVEL_ARRAY_CONTEXT: ArrayContexts = [
-                [[], { lastArray: null, matchBy: 'id' }],
+                [[], { matchBy: 'id' }],
             ];
             const NESTED_ARRAY_CONTEXT: ArrayContexts = [
-                [['b'], { lastArray: null, matchBy: 'id' }],
+                [['b'], { matchBy: 'id' }],
             ];
             it('should return empty for the same array with a context', () => {
                 let patch = diff(
