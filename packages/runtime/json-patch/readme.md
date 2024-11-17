@@ -6,7 +6,7 @@ JSON Patch compatible with RFC 6902 from the IETF, with support for item movemen
 This JSON Patch algorithm is unique by it's support for array item movement (`move` operation). 
 Most other JSON Patch algorithm, when faced with a new item in an array, will resort for `add`, `replace` 
 and `remove` operations 
-[See overview of other implementations](../../../design-log/23 - JSON compare and patch.md)
+[See overview of other implementations](../../../design-log/23%20-%20JSON%20compare%20and%20patch.md)
 
 ## The diff signature
 
