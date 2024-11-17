@@ -1,8 +1,8 @@
 # Jay Runtime
 
 The Jay Runtime library is an efficient dom manipulation library, built to be the output of code generation (compiler).
-The runtime basic building block is the `JayElement<ViewState, Refs>` which is an instance returned from the `element` and `
-dynamicElement functions.
+The runtime basic building block is the `JayElement<ViewState, Refs>` which is an instance returned from the `element` and 
+`dynamicElement` functions.
 
 ## JayElement
 
@@ -25,13 +25,26 @@ interface JayElement<ViewState, Refs> extends BaseJayElement<ViewState> {
 }
 ```
 
+### Properties:
+
+* `dom`: An HTMLElement instance representing the DOM element associated with this JayElement. 
+  This is the element that will be rendered to the page.
+* `update`: A function of type `type updateFunc<ViewState> = (newData: ViewState) => void`. 
+   This function is responsible for updating the internal state (ViewState) of the JayElement and re-rendering its 
+   DOM representation if necessary. The ViewState is considered an **immutable** object by the internals of the `update` function.
+* `mount`: A function of type `type mountFunc = () => void`. This function is used to mount a previously unmounted `JayElement`. 
+   `JayElement`s are created in mount state. 
+* `unmount`: A function of type `type mountFunc = () => void`. This function is designed to be called when the JayElement is removed from the DOM. 
+* `refs`: This property holds references by `ref` to DOM elements or other components within the JayElement. 
+  These references can be used to set event listeners, interact with child elements or component APIs.
+
 ## building JayElements
 
-The runtime library provides a number of constructor functions used to create JayElements. A Typical JayElement takes
-the form of
+While in Jay the Jay compiler generates the code for `JayElement` from `jay-html` files, the below explains how to 
+code Jay elements directly. In most cases, it is not to be coded directly.
 
 ```typescript
-import { element as e, dynamicText as dt, ConstructContext } from '../../lib/element';
+import { element as e, dynamicText as dt, ConstructContext } from 'jay-runtime';
 
 interface ViewState {
   text: string;
@@ -49,25 +62,9 @@ export default function render(viewState: ViewState) {
 }
 ```
 
-**Note:** this code is not intended to be written by hand - it is intended to be the compiler output. In this section we
-discuss how this code works
+# Jay element building blocks
 
-The building blocks are
-
-- [element()](#element)
-- [Static Text Content](#text)
-- [Static Attribute Values](#attribute)
-- [dynamicElement()](#dynamicElement)
-- [dynamicText()](#dynamicText)
-- [dynamicAttribute()](#dynamicAttribute)
-- [dynamicProperty()](#dynamicProperty)
-- [Jay Component](#JayComponent)
-- [childComp()](#childComp)
-- [forEach()](#forEach)
-- [conditional()](#conditional)
-- [ConstructionContext](#ConstructionContext)
-
-### <a name="element">element</a>
+## element
 
 The `element` function creates a simple 'static' element - element who has a fixed number of dom children. The static
 element itself can have dynamic attributes or inner text. To create dynamic number of dom children use `dynamicElement`
@@ -91,7 +88,18 @@ at which
   attributes `DynamicAttribute<T>` or dynamic properties `DynamicProperty<T>`
 - `children` - the children of the element - can be more elements, static text (string) or dynamic text (TextElement<T>)
 
-### <a name="text">Static Text Content</a>
+Given the Jay HTML
+```html
+<button>-</button>
+```
+
+It is compiled into
+```javascript
+import {element as e} from "jay-runtime";
+e('button', {}, ['-'])
+```
+
+## Static Text Content
 
 Static text content is supported as a string constant that is passed as a member of the `children` parameter of the
 `element` or `dynamicElement` functions.
@@ -102,7 +110,7 @@ A simple example
 e('div', {}, ['some static text']);
 ```
 
-### <a name="attribute">Static Attribute Value</a>
+## Static Attribute Value
 
 Static attribute values are supported as a string constant that is passed as a member of the `attributes` parameter of
 the
@@ -125,7 +133,7 @@ e(
 );
 ```
 
-### <a name="dynamicElement">dynamicElement</a>
+## dynamicElement
 
 Dynamic element is a constructor for an element that supports dynamic adding and removing children. Internally, it is
 using a [Kindergarten](kindergarten.md) to manage groups of childrens.
@@ -159,13 +167,14 @@ at which
   - static text (string)
   - dynamic text (TextElement<T>)
 
-### <a name="dynamicText">dynamicText</a>
+## dynamicText
 
 Dynamic Text creates a text element that is dynamic and can be updated as data changes.
 
 Dynamic text looks like
 
 ```typescript
+import {dynamicText as dt} from "jay-runtime";
 dt((vs) => vs.text);
 dt((vs) => `${vs.firstName} ${vs.lastName}`);
 ```
@@ -182,7 +191,7 @@ at which
 
 - `textContent` - a function that renders the text from the current data item
 
-### <a name="dynamicAttribute">dynamicAttribute</a>
+## dynamicAttribute
 
 Dynamic Attribute creates an attribute whos value updates as the data changes.
 
@@ -190,10 +199,7 @@ Dynamic Attribute looks like
 
 ```typescript
 {
-    class
-
-:
-    da(vs => `${vs.bool1 ? 'main' : 'second'}`)
+    "class": da(vs => `${vs.bool1 ? 'main' : 'second'}`)
 }
 ```
 
@@ -209,7 +215,7 @@ at which
 
 - `attributeValue` - a function that renders the attribute value from the current data item
 
-### <a name="dynamicProperty">dynamicProperty</a>
+## dynamicProperty
 
 Dynamic Property creates a property whos value updates as the data changes.
 
@@ -233,7 +239,7 @@ at which
 
 - `propertyValue` - a function that renders the property value from the current data item
 
-### <a name="JayComponent">Jay Component</a>
+## Jay Component
 
 Jay Components are logic wrappers over a Jay Element, and can be coded using any coding methodology. They have to
 conform to the Jay Component interface below
@@ -256,7 +262,7 @@ at which
 - `update`, `mount` and `unmount` have the same signature as the Jay Element functions allowing the component to wrap
   the element functions to add update and lifecycle logic.
 
-### <a name="childComp">childComp</a>
+## childComp
 
 Child components are components nested into the jay file of another component. The nesting itself is done using
 the `childComp` constructor which accepts a function that returns a `JayComponent`
@@ -295,7 +301,7 @@ at which
 - `compCreator` is a function that given props, returns the component instance
 - `getProps` is a function that given the parent element view state, returns the props of the component
 
-### <a name="forEach">forEach</a>
+## forEach
 
 ```typescript
 declare function forEach<ViewState, Item>(
@@ -305,7 +311,7 @@ declare function forEach<ViewState, Item>(
 ): ForEach<ViewState, Item>;
 ```
 
-### <a name="conditional">conditional</a>
+## conditional
 
 ```typescript
 declare function conditional<ViewState>(
@@ -314,7 +320,7 @@ declare function conditional<ViewState>(
 ): Conditional<ViewState>;
 ```
 
-### <a name="ConstructionContext">ConstructionContext</a>
+## ConstructionContext
 
 ```typescript
 declare class ConstructContext<A extends Array<any>> {
