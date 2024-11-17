@@ -17,8 +17,9 @@ Creates a unique symbol (a `ContextMarker`) to identify a specific context type.
 Temporarily establishes a new context for a given block of code.
 
 **Parameters:**
-_ `marker`: The `ContextMarker` identifying the context type.
-_ `context`: The actual context value to be provided. \* `callback`: The function to execute within the new context.
+
+* `marker`: The `ContextMarker` identifying the context type.
+* `context`: The actual context value to be provided. \* `callback`: The function to execute within the new context.
 
 **Returns:** The return value of the `callback` function.
 
@@ -26,7 +27,9 @@ _ `context`: The actual context value to be provided. \* `callback`: The functio
 
 Retrieves the current context value for a given `ContextMarker`.
 
-**Parameters:** \* `marker`: The `ContextMarker` identifying the context type.
+**Parameters:** 
+
+* `marker`: The `ContextMarker` identifying the context type.
 
 **Returns:** The current context value.
 
@@ -34,7 +37,9 @@ Retrieves the current context value for a given `ContextMarker`.
 
 Searches the current context stack for a context matching the given predicate.
 
-**Parameters:** \* `predicate`: A function that takes a `ContextMarker` and returns a boolean indicating whether it's the desired context.
+**Parameters:** 
+
+* `predicate`: A function that takes a `ContextMarker` and returns a boolean indicating whether it's the desired context.
 
 **Returns:** The found context value, or `undefined` if not found.
 
@@ -51,8 +56,9 @@ Restores a previously saved context stack. The function is used internally by Ja
 to ensure passing the right context to newly created child components.
 
 **Parameters:**
-_ `savedContext`: The saved context stack to restore.
-_ `callback`: The function to execute within the restored context.
+
+* `savedContext`: The saved context stack to restore.
+* `callback`: The function to execute within the restored context.
 
 **Returns:** The return value of the `callback` function.
 
