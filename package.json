@@ -22,7 +22,8 @@
   "workspaces": {
     "packages": [
       "dev-environment",
-      "packages/*",
+      "packages/runtime/*",
+      "packages/compiler/*",
       "packages/_deprecated/*",
       "examples/**",
       "exploration/*"

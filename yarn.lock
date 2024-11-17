@@ -10650,9 +10650,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jay-cli@workspace:^, jay-cli@workspace:packages/cli":
+"jay-cli@workspace:^, jay-cli@workspace:packages/compiler/cli":
   version: 0.0.0-use.local
-  resolution: "jay-cli@workspace:packages/cli"
+  resolution: "jay-cli@workspace:packages/compiler/cli"
   dependencies:
     "@types/node": ^20.11.5
     "@types/shelljs": ^0.8.15
@@ -10671,9 +10671,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"jay-compiler@workspace:^, jay-compiler@workspace:packages/compiler":
+"jay-compiler@workspace:^, jay-compiler@workspace:packages/compiler/compiler":
   version: 0.0.0-use.local
-  resolution: "jay-compiler@workspace:packages/compiler"
+  resolution: "jay-compiler@workspace:packages/compiler/compiler"
   dependencies:
     "@caiogondim/strip-margin": ^1.0.0
     "@testing-library/jest-dom": ^6.2.0
@@ -10700,9 +10700,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"jay-component@workspace:^, jay-component@workspace:packages/component":
+"jay-component@workspace:^, jay-component@workspace:packages/runtime/component":
   version: 0.0.0-use.local
-  resolution: "jay-component@workspace:packages/component"
+  resolution: "jay-component@workspace:packages/runtime/component"
   dependencies:
     "@testing-library/jest-dom": ^6.2.0
     "@types/node": ^20.11.5
@@ -11036,9 +11036,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"jay-json-patch@workspace:^, jay-json-patch@workspace:packages/json-patch":
+"jay-json-patch@workspace:^, jay-json-patch@workspace:packages/runtime/json-patch":
   version: 0.0.0-use.local
-  resolution: "jay-json-patch@workspace:packages/json-patch"
+  resolution: "jay-json-patch@workspace:packages/runtime/json-patch"
   dependencies:
     "@types/node": ^20.11.5
     jay-dev-environment: "workspace:^"
@@ -11051,9 +11051,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"jay-list-compare@workspace:^, jay-list-compare@workspace:packages/list-compare":
+"jay-list-compare@workspace:^, jay-list-compare@workspace:packages/runtime/list-compare":
   version: 0.0.0-use.local
-  resolution: "jay-list-compare@workspace:packages/list-compare"
+  resolution: "jay-list-compare@workspace:packages/runtime/list-compare"
   dependencies:
     "@types/node": ^20.11.5
     jay-dev-environment: "workspace:^"
@@ -11080,9 +11080,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"jay-reactive@workspace:^, jay-reactive@workspace:packages/reactive":
+"jay-reactive@workspace:^, jay-reactive@workspace:packages/runtime/reactive":
   version: 0.0.0-use.local
-  resolution: "jay-reactive@workspace:packages/reactive"
+  resolution: "jay-reactive@workspace:packages/runtime/reactive"
   dependencies:
     "@types/node": ^20.11.5
     jay-dev-environment: "workspace:^"
@@ -11094,9 +11094,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"jay-runtime@workspace:^, jay-runtime@workspace:packages/runtime":
+"jay-runtime@workspace:^, jay-runtime@workspace:packages/runtime/runtime":
   version: 0.0.0-use.local
-  resolution: "jay-runtime@workspace:packages/runtime"
+  resolution: "jay-runtime@workspace:packages/runtime/runtime"
   dependencies:
     "@testing-library/jest-dom": ^6.2.0
     "@types/jsdom": ^21.1.6
@@ -11115,9 +11115,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"jay-secure@workspace:^, jay-secure@workspace:packages/secure":
+"jay-secure@workspace:^, jay-secure@workspace:packages/runtime/secure":
   version: 0.0.0-use.local
-  resolution: "jay-secure@workspace:packages/secure"
+  resolution: "jay-secure@workspace:packages/runtime/secure"
   dependencies:
     "@testing-library/jest-dom": ^6.2.0
     "@types/node": ^20.11.5
@@ -11137,9 +11137,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"jay-serialization@workspace:^, jay-serialization@workspace:packages/serialization":
+"jay-serialization@workspace:^, jay-serialization@workspace:packages/runtime/serialization":
   version: 0.0.0-use.local
-  resolution: "jay-serialization@workspace:packages/serialization"
+  resolution: "jay-serialization@workspace:packages/runtime/serialization"
   dependencies:
     "@types/node": ^20.11.5
     jay-dev-environment: "workspace:^"
@@ -15430,9 +15430,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"rollup-plugin-jay@workspace:^, rollup-plugin-jay@workspace:packages/rollup-plugin":
+"rollup-plugin-jay@workspace:^, rollup-plugin-jay@workspace:packages/compiler/rollup-plugin":
   version: 0.0.0-use.local
-  resolution: "rollup-plugin-jay@workspace:packages/rollup-plugin"
+  resolution: "rollup-plugin-jay@workspace:packages/compiler/rollup-plugin"
   dependencies:
     "@types/node": ^20.11.5
     fast-glob: ^3.3.2
@@ -17699,9 +17699,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite-plugin-jay@workspace:^, vite-plugin-jay@workspace:packages/vite-plugin":
+"vite-plugin-jay@workspace:^, vite-plugin-jay@workspace:packages/compiler/vite-plugin":
   version: 0.0.0-use.local
-  resolution: "vite-plugin-jay@workspace:packages/vite-plugin"
+  resolution: "vite-plugin-jay@workspace:packages/compiler/vite-plugin"
   dependencies:
     "@types/node": ^20.11.5
     jay-component: "workspace:^"

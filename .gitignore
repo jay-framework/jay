@@ -3,7 +3,7 @@ dist
 dist-secure
 build
 *.iml
-/packages/compiler/lib/expressions/expression-parser.js
+/packages/compiler/compiler/lib/expressions/expression-parser.js
 examples/**/*.d.ts
 examples/**/lib/**/*.jay-html.ts
 **/coverage/
