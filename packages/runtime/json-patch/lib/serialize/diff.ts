@@ -11,7 +11,6 @@ type MeasureOfChange = number;
 type DataFields = number;
 type ArrayContext = {
     matchBy: string;
-    lastArray?: List<any, any>;
 };
 export type ArrayContexts = [JSONPointer, ArrayContext][];
 
@@ -93,14 +92,14 @@ function diffArrayWithContext(
     path: JSONPointer,
     contexts: [JSONPointer, ArrayContext][],
 ) {
-    let { matchBy, lastArray } = context;
-    lastArray = lastArray || new List<any, any>(oldValue, matchBy);
-    let newArray = new List<any, any>(newValue, matchBy);
-    let instructions = listCompare<any, any>(lastArray, newArray, () => {});
-    let arrayPatch: JSONPatch = instructions.map((instruction) =>
+    let { matchBy } = context;
+    const lastArray = new List<any, any>(oldValue, matchBy);
+    const newArray = new List<any, any>(newValue, matchBy);
+    const instructions = listCompare<any, any>(lastArray, newArray, () => {});
+    const arrayPatch: JSONPatch = instructions.map((instruction) =>
         LIST_COMPARE_RESULT_TO_JSON_PATCH[instruction.action](instruction, path),
     ) as JSONPatch;
-    let arrayItemPatches: [JSONPatch, MeasureOfChange, DataFields][] = [
+    const arrayItemPatches: [JSONPatch, MeasureOfChange, DataFields][] = [
         [arrayPatch, instructions.length, newValue.length],
     ];
     newArray.forEach((newArrayItem, _, index) => {
