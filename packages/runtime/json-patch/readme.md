@@ -1,6 +1,6 @@
 # JSON Patch algorithm (diff, patch)
 
-JSON Patch compatible with RFC 6902 from the IETF, with support for item movement and immutable objects,
+JSON Patch compatible with RFC 6902 from the IETF, with support for **item movement** and **immutable** objects,
 [JSON Patch page](https://jsonpatch.com/)
 
 This JSON Patch algorithm is unique by it's support for array item movement (`move` operation). 
