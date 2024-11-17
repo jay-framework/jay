@@ -1,4 +1,4 @@
-import { createState, provideReactiveContext } from 'jay-component';
+import { createSignal, provideReactiveContext } from 'jay-component';
 import { Getter, Setter } from 'jay-reactive';
 import { createJayContext } from 'jay-runtime';
 import { DEFAULT_PILLARS } from './DEFAULT_PILLARS';
@@ -54,7 +54,7 @@ function moveTask(
 
 export const provideScrumContext = () =>
     provideReactiveContext(SCRUM_CONTEXT, () => {
-        let [pillars, setPillars] = createState(DEFAULT_PILLARS);
+        let [pillars, setPillars] = createSignal(DEFAULT_PILLARS);
 
         const moveTaskToNext = (pillarId: string, taskId: string) => {
             setPillars(moveTask(pillars(), pillarId, taskId, +1, 0));

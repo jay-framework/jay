@@ -11,7 +11,7 @@ import {
 import { Getter, Reactive } from 'jay-reactive';
 import { JSONPatch } from 'jay-json-patch';
 import { HTMLElement } from 'node-html-parser';
-import { createState } from './hooks';
+import { createSignal } from './hooks';
 import { COMPONENT_CONTEXT, ComponentContext } from './component-contexts';
 
 export type Patcher<T> = (...patch: JSONPatch) => void;
@@ -204,20 +204,20 @@ function makePropsProxy<PropsT extends object>(
 ): UpdatableProps<PropsT> {
     const stateMap = {};
 
-    const [_props, _setProps] = createState(props);
+    const [_props, _setProps] = createSignal(props);
 
     const update = (newProps: PropsT) => {
         reactive.batchReactions(() => {
             _setProps(newProps);
             for (const prop in newProps) {
                 if (!stateMap.hasOwnProperty(prop))
-                    stateMap[prop as string] = reactive.createState(newProps[prop]);
+                    stateMap[prop as string] = reactive.createSignal(newProps[prop]);
                 else stateMap[prop as string][1](newProps[prop]);
             }
         });
     };
     const getter = (obj: PropsT, prop: string | number | symbol) => {
-        if (!stateMap.hasOwnProperty(prop)) stateMap[prop] = reactive.createState(obj[prop]);
+        if (!stateMap.hasOwnProperty(prop)) stateMap[prop] = reactive.createSignal(obj[prop]);
         return stateMap[prop][0];
     };
     return new Proxy(props, {

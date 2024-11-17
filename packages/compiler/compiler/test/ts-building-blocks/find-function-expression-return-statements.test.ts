@@ -11,7 +11,7 @@ describe('findFunctionExpressionReturnStatement', () => {
 
     const sourceFile = createTsSourceFile(`
 function CounterConstructor({ initialValue }: Props<CounterProps>) {
-    let [count] = createState(initialValue);
+    let [count] = createSignal(initialValue);
     return {
         render: () => (<div>{count()}</div>);
     };
@@ -27,7 +27,7 @@ function CounterConstructor({ initialValue }: Props<CounterProps>) {
     describe('on more than one return statement', () => {
         const sourceFile = createTsSourceFile(`
 function CounterConstructor({ initialValue }: Props<CounterProps>) {
-    let [count] = createState(initialValue);
+    let [count] = createSignal(initialValue);
     if (count() > 0) {
         return {
             render: () => (<div>{count()}</div>);

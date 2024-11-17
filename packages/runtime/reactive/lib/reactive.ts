@@ -41,7 +41,7 @@ export class Reactive {
     private reactivesToFlush: Set<Reactive> = new Set();
     private disabled = false;
 
-    createState<T>(
+    createSignal<T>(
         value: ValueOrGetter<T>,
         measureOfChange: MeasureOfChange = MeasureOfChange.FULL,
     ): [get: Getter<T>, set: Setter<T>] {

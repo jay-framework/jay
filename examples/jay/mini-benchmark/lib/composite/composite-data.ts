@@ -1,5 +1,5 @@
 import { render, CompositeElementRefs } from './composite.jay-html';
-import { createState, makeJayComponent, useReactive, Props } from 'jay-component';
+import { createSignal, makeJayComponent, useReactive, Props } from 'jay-component';
 import benchmark from '../benchmark';
 
 interface CompositeProps {
@@ -7,8 +7,8 @@ interface CompositeProps {
 }
 
 function CompositeConstructor({ cycles }: Props<CompositeProps>, refs: CompositeElementRefs) {
-    let [text, setText] = createState('name');
-    let [text2, setText2] = createState('text 2');
+    let [text, setText] = createSignal('name');
+    let [text2, setText2] = createSignal('text 2');
     let reactive = useReactive();
 
     const makeData = (index) => {

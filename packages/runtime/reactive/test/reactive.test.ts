@@ -5,21 +5,21 @@ describe('reactive', () => {
     describe('create state', () => {
         it('with a default value', () => {
             let reactive = new Reactive();
-            let [state] = reactive.createState(12);
+            let [state] = reactive.createSignal(12);
 
             expect(state()).toBe(12);
         });
 
         it('with a getter function', () => {
             let reactive = new Reactive();
-            let [state] = reactive.createState(() => 12);
+            let [state] = reactive.createSignal(() => 12);
 
             expect(state()).toBe(12);
         });
 
         it('should support state update with a value', () => {
             let reactive = new Reactive();
-            let [state, setState] = reactive.createState(12);
+            let [state, setState] = reactive.createSignal(12);
             setState(13);
 
             expect(state()).toBe(13);
@@ -27,7 +27,7 @@ describe('reactive', () => {
 
         it('should support state update with a function', () => {
             let reactive = new Reactive();
-            let [state, setState] = reactive.createState(12);
+            let [state, setState] = reactive.createSignal(12);
             setState((x) => x + 1);
 
             expect(state()).toBe(13);
@@ -35,8 +35,8 @@ describe('reactive', () => {
 
         it('should support state update as a reaction to another state change', async () => {
             let reactive = new Reactive();
-            let [state, setState] = reactive.createState(12);
-            let [state2, setState2] = reactive.createState(() => state() + 1);
+            let [state, setState] = reactive.createSignal(12);
+            let [state2, setState2] = reactive.createSignal(() => state() + 1);
             setState(20);
 
             await reactive.toBeClean();
@@ -63,7 +63,7 @@ describe('reactive', () => {
             const reaction = vi.fn();
             let reactive = new Reactive();
             let [setState] = reactive.batchReactions(() => {
-                let [state, setState] = reactive.createState(12);
+                let [state, setState] = reactive.createSignal(12);
                 reactive.createReaction(() => {
                     reaction(state());
                 });
@@ -82,8 +82,8 @@ describe('reactive', () => {
             const reaction = vi.fn();
             let reactive = new Reactive();
             let { setState2 } = reactive.batchReactions(() => {
-                let [state, setState] = reactive.createState(12);
-                let [state2, setState2] = reactive.createState(100);
+                let [state, setState] = reactive.createSignal(12);
+                let [state2, setState2] = reactive.createSignal(100);
                 reactive.createReaction(() => {
                     reaction(state());
                 });
@@ -100,7 +100,7 @@ describe('reactive', () => {
             const reaction = vi.fn();
             let reactive = new Reactive();
             let { setState } = reactive.batchReactions(() => {
-                let [state, setState] = reactive.createState(12);
+                let [state, setState] = reactive.createSignal(12);
                 reactive.createReaction(() => {
                     reaction(state());
                 });
@@ -118,7 +118,7 @@ describe('reactive', () => {
         it('should batch re-calculations using the batch operation (single state)', () => {
             const reaction = vi.fn();
             let reactive = new Reactive();
-            let [state, setState] = reactive.createState(12);
+            let [state, setState] = reactive.createSignal(12);
             reactive.createReaction(() => {
                 reaction(state());
             });
@@ -138,8 +138,8 @@ describe('reactive', () => {
         it('should run a reaction once even if multiple states it depends on are updated', () => {
             const reaction = vi.fn();
             let reactive = new Reactive();
-            let [state, setState] = reactive.createState(12);
-            let [state2, setState2] = reactive.createState(34);
+            let [state, setState] = reactive.createSignal(12);
+            let [state2, setState2] = reactive.createSignal(34);
             reactive.createReaction(() => {
                 reaction(state() + state2());
             });
@@ -159,9 +159,9 @@ describe('reactive', () => {
         it('should batch re-calculations using the batch operation (multiple states)', () => {
             const reaction = vi.fn();
             let reactive = new Reactive();
-            let [a, setA] = reactive.createState(false);
-            let [b, setB] = reactive.createState('abc');
-            let [c, setC] = reactive.createState('def');
+            let [a, setA] = reactive.createSignal(false);
+            let [b, setB] = reactive.createSignal('abc');
+            let [c, setC] = reactive.createSignal('def');
             reactive.createReaction(() => {
                 reaction(a(), b(), c());
             });
@@ -183,7 +183,7 @@ describe('reactive', () => {
 
         it('should return the value of the callback', () => {
             let reactive = new Reactive();
-            let [state, setState] = reactive.createState(12);
+            let [state, setState] = reactive.createSignal(12);
             reactive.createReaction(() => {
                 state();
             });
@@ -198,7 +198,7 @@ describe('reactive', () => {
 
         it('should flatten out nested batchReactions', () => {
             let reactive = new Reactive();
-            let [state, setState] = reactive.createState(12);
+            let [state, setState] = reactive.createSignal(12);
             reactive.createReaction(() => {
                 reactive.batchReactions(() => {
                     setState((_) => _ + 1);
@@ -220,8 +220,8 @@ describe('reactive', () => {
 
         it('should not trigger nested flash (first from timeout, second from batch reaction)', async () => {
             let reactive = new Reactive();
-            let [state1, setState1] = reactive.createState(12);
-            let [state2, setState2] = reactive.createState(12);
+            let [state1, setState1] = reactive.createSignal(12);
+            let [state2, setState2] = reactive.createSignal(12);
             reactive.createReaction(() => {
                 reactive.batchReactions(() => {
                     setState2(state1() + 10);
@@ -241,9 +241,9 @@ describe('reactive', () => {
                 let reaction23 = 0,
                     reaction13 = 0,
                     reaction12 = 0;
-                let [state1, setState1] = reactive.createState(12);
-                let [state2, setState2] = reactive.createState(12);
-                let [state3, setState3] = reactive.createState(12);
+                let [state1, setState1] = reactive.createSignal(12);
+                let [state2, setState2] = reactive.createSignal(12);
+                let [state3, setState3] = reactive.createSignal(12);
                 reactive.createReaction(() => {
                     state2();
                     state3();
@@ -307,8 +307,8 @@ describe('reactive', () => {
             const reaction = vi.fn();
             let reactive = new Reactive();
 
-            let [state, setState] = reactive.createState(12);
-            let [state2, setState2] = reactive.createState(24);
+            let [state, setState] = reactive.createSignal(12);
+            let [state2, setState2] = reactive.createSignal(24);
             reactive.createReaction(() => {
                 reaction(state() + state2());
             });
@@ -327,8 +327,8 @@ describe('reactive', () => {
             const reaction = vi.fn();
             let reactive = new Reactive();
 
-            let [state, setState] = reactive.createState(12);
-            let [state2, setState2] = reactive.createState(24);
+            let [state, setState] = reactive.createSignal(12);
+            let [state2, setState2] = reactive.createSignal(24);
             reactive.createReaction(() => {
                 reaction(state() + state2());
             });
@@ -348,8 +348,8 @@ describe('reactive', () => {
             const reaction2 = vi.fn();
             let reactive = new Reactive();
 
-            let [state, setState] = reactive.createState(12);
-            let [state2, setState2] = reactive.createState(24);
+            let [state, setState] = reactive.createSignal(12);
+            let [state2, setState2] = reactive.createSignal(24);
             reactive.createReaction(() => {
                 reaction1(state());
             });
@@ -375,10 +375,10 @@ describe('reactive', () => {
         it('should run reactions in dependency order', () => {
             const reaction2 = vi.fn();
             let reactive = new Reactive();
-            let [state, setState] = reactive.createState(1);
-            let [state2, setState2] = reactive.createState(2);
-            let [state3, setState3] = reactive.createState(3);
-            let [state4, setState4] = reactive.createState(10);
+            let [state, setState] = reactive.createSignal(1);
+            let [state2, setState2] = reactive.createSignal(2);
+            let [state3, setState3] = reactive.createSignal(3);
+            let [state4, setState4] = reactive.createSignal(10);
             reactive.createReaction(() => {
                 setState2(state() + 1);
             });
@@ -404,8 +404,8 @@ describe('reactive', () => {
         function mkReactive() {
             const reaction = vi.fn();
             let reactive = new Reactive();
-            let [state, setState] = reactive.createState(12, MeasureOfChange.FULL);
-            let [state2, setState2] = reactive.createState(12, MeasureOfChange.PARTIAL);
+            let [state, setState] = reactive.createSignal(12, MeasureOfChange.FULL);
+            let [state2, setState2] = reactive.createSignal(12, MeasureOfChange.PARTIAL);
             reactive.createReaction((measureOfChange) => {
                 let num = state() + state2();
                 reaction(num, measureOfChange);
@@ -463,13 +463,13 @@ describe('reactive', () => {
         const B = 'B';
         function mkReactive() {
             let reactive = new Reactive();
-            let [ABSwitch, setABSwitch] = reactive.createState('A');
-            let [stateA1, setStateA1] = reactive.createState(10);
-            let [stateA2, setStateA2] = reactive.createState(12);
-            let [stateB1, setStateB1] = reactive.createState(110);
-            let [stateB2, setStateB2] = reactive.createState(112);
-            let [result, setResult] = reactive.createState(0);
-            let [numberOfReactionRuns, setNumberOfReactionRuns] = reactive.createState(0);
+            let [ABSwitch, setABSwitch] = reactive.createSignal('A');
+            let [stateA1, setStateA1] = reactive.createSignal(10);
+            let [stateA2, setStateA2] = reactive.createSignal(12);
+            let [stateB1, setStateB1] = reactive.createSignal(110);
+            let [stateB2, setStateB2] = reactive.createSignal(112);
+            let [result, setResult] = reactive.createSignal(0);
+            let [numberOfReactionRuns, setNumberOfReactionRuns] = reactive.createSignal(0);
             reactive.createReaction((measureOfChange) => {
                 if (ABSwitch() === 'A') setResult(stateA1() + stateA2());
                 else setResult(stateB1() + stateB2());
@@ -612,7 +612,7 @@ describe('reactive', () => {
         it('should not run reactions when disabled', () => {
             const reaction = vi.fn();
             let reactive = new Reactive();
-            let [state, setState] = reactive.createState(12);
+            let [state, setState] = reactive.createSignal(12);
             reactive.createReaction(() => {
                 reaction(state());
             });
@@ -631,7 +631,7 @@ describe('reactive', () => {
         it('should run reactions once enabled', () => {
             const reaction = vi.fn();
             let reactive = new Reactive();
-            let [state, setState] = reactive.createState(12);
+            let [state, setState] = reactive.createSignal(12);
             reactive.createReaction(() => {
                 reaction(state());
             });
@@ -654,10 +654,10 @@ describe('reactive', () => {
         it(`A pulls from B. B batch sets B state. expecting to run A reactions`, async () => {
             const runOrder = new RunOrder();
             const B = new ReactiveWithTracking('B', runOrder);
-            const [b1, setB1] = B.createState(1);
+            const [b1, setB1] = B.createSignal(1);
 
             const A = new ReactiveWithTracking('A', runOrder);
-            const [a1, setA1] = A.createState('');
+            const [a1, setA1] = A.createSignal('');
             A.createReaction(() => {
                 setA1(`The B reactive Value is - ${b1()}`);
             });
@@ -672,8 +672,8 @@ describe('reactive', () => {
 
             expect(a1()).toBe('The B reactive Value is - 4');
             expect(runOrder.log).toEqual([
-                'B - createState B1',
-                'A - createState A1',
+                'B - createSignal B1',
+                'A - createSignal A1',
                 'A - i   : (B1) -> (A1)',
                 'A - await toBeClean!!!',
                 'B - await toBeClean!!!',
@@ -687,15 +687,15 @@ describe('reactive', () => {
         it(`A uses B. A batch, B batch sets B state. expecting to flush B on B batch end`, async () => {
             const runOrder = new RunOrder();
             const B = new ReactiveWithTracking('B', runOrder);
-            const [b1, setB1] = B.createState(1);
-            const [b2, setB2] = B.createState('the length is 1');
+            const [b1, setB1] = B.createSignal(1);
+            const [b2, setB2] = B.createSignal('the length is 1');
             B.createReaction(() => {
                 setB2(`the length is ${b1()}`);
             });
 
             const A = new ReactiveWithTracking('A', runOrder);
-            const [a1, setA1] = A.createState([1, 2, 3]);
-            const [a2, setA2] = A.createState('');
+            const [a1, setA1] = A.createSignal([1, 2, 3]);
+            const [a2, setA2] = A.createSignal('');
             A.createReaction(() => {
                 setA2(`${JSON.stringify(a1())} - ${b2()}`);
             });
@@ -711,11 +711,11 @@ describe('reactive', () => {
 
             expect(a2()).toBe('[1,2,3,4] - the length is 4');
             expect(runOrder.log).toEqual([
-                'B - createState B1',
-                'B - createState B2',
+                'B - createSignal B1',
+                'B - createSignal B2',
                 'B - i   : (B1) -> (B2)',
-                'A - createState A1',
-                'A - createState A2',
+                'A - createSignal A1',
+                'A - createSignal A2',
                 'A - i   : (A1,B2) -> (A2)',
                 'A - await toBeClean!!!',
                 'B - await toBeClean!!!',
@@ -731,15 +731,15 @@ describe('reactive', () => {
         it(`A uses B. A reaction sets B state without B Batch. expecting B to flush async then flush A again`, async () => {
             const runOrder = new RunOrder();
             const B = new ReactiveWithTracking('B', runOrder);
-            const [b1, setB1] = B.createState(3);
-            const [b2, setB2] = B.createState('the length is 3');
+            const [b1, setB1] = B.createSignal(3);
+            const [b2, setB2] = B.createSignal('the length is 3');
             B.createReaction(() => {
                 setB2(`the length is ${b1()}`);
             });
 
             const A = new ReactiveWithTracking('A', runOrder);
-            const [a1, setA1] = A.createState([1, 2, 3]);
-            const [a2, setA2] = A.createState('');
+            const [a1, setA1] = A.createSignal([1, 2, 3]);
+            const [a2, setA2] = A.createSignal('');
             A.createReaction(() => {
                 setB1(a1().length);
             });
@@ -761,11 +761,11 @@ describe('reactive', () => {
             expect(a2()).toBe('[1,2,3,4] - the length is 4');
 
             expect(runOrder.log).toEqual([
-                'B - createState B1',
-                'B - createState B2',
+                'B - createSignal B1',
+                'B - createSignal B2',
                 'B - i   : (B1) -> (B2)',
-                'A - createState A1',
-                'A - createState A2',
+                'A - createSignal A1',
+                'A - createSignal A2',
                 'A - i   : (A1) -> (B1)',
                 'A - ii  : (A1,B2) -> (A2)',
                 'A - await toBeClean!!!',
@@ -785,10 +785,10 @@ describe('reactive', () => {
         it(`A pulls from B. A batch, B batch sets B state. expecting to run A reactions`, async () => {
             const runOrder = new RunOrder();
             const B = new ReactiveWithTracking('B', runOrder);
-            const [b1, setB1] = B.createState(1);
+            const [b1, setB1] = B.createSignal(1);
 
             const A = new ReactiveWithTracking('A', runOrder);
-            const [a1, setA1] = A.createState('');
+            const [a1, setA1] = A.createSignal('');
             A.createReaction(() => {
                 setA1(`The B reactive Value is - ${b1()}`);
             });
@@ -805,8 +805,8 @@ describe('reactive', () => {
 
             expect(a1()).toBe('The B reactive Value is - 4');
             expect(runOrder.log).toEqual([
-                'B - createState B1',
-                'A - createState A1',
+                'B - createSignal B1',
+                'A - createSignal A1',
                 'A - i   : (B1) -> (A1)',
                 'A - await toBeClean!!!',
                 'B - await toBeClean!!!',
@@ -820,10 +820,10 @@ describe('reactive', () => {
         it(`A pull from B. B batch sets B state. expecting to run A reactions`, async () => {
             const runOrder = new RunOrder();
             const B = new ReactiveWithTracking('B', runOrder);
-            const [b1, setB1] = B.createState(1);
+            const [b1, setB1] = B.createSignal(1);
 
             const A = new ReactiveWithTracking('A', runOrder);
-            const [a1, setA1] = A.createState('');
+            const [a1, setA1] = A.createSignal('');
             A.createReaction(() => {
                 setA1(`The B reactive Value is - ${b1()}`);
             });
@@ -838,8 +838,8 @@ describe('reactive', () => {
 
             expect(a1()).toBe('The B reactive Value is - 4');
             expect(runOrder.log).toEqual([
-                'B - createState B1',
-                'A - createState A1',
+                'B - createSignal B1',
+                'A - createSignal A1',
                 'A - i   : (B1) -> (A1)',
                 'A - await toBeClean!!!',
                 'B - await toBeClean!!!',
@@ -853,10 +853,10 @@ describe('reactive', () => {
         it(`A uses B. A updates B twice with batching. B flushes twice as a result`, async () => {
             const runOrder = new RunOrder();
             const B = new ReactiveWithTracking('B', runOrder);
-            const [b1, setB1] = B.createState(3);
-            const [b2, setB2] = B.createState(b1() + 1);
-            const [b3, setB3] = B.createState(5);
-            const [b4, setB4] = B.createState(b3() + 1);
+            const [b1, setB1] = B.createSignal(3);
+            const [b2, setB2] = B.createSignal(b1() + 1);
+            const [b3, setB3] = B.createSignal(5);
+            const [b4, setB4] = B.createSignal(b3() + 1);
             B.createReaction(() => {
                 setB2(b1() + 1);
             });
@@ -865,8 +865,8 @@ describe('reactive', () => {
             });
 
             const A = new ReactiveWithTracking('A', runOrder);
-            const [a1, setA1] = A.createState(1);
-            const [a2, setA2] = A.createState(b2() + 1);
+            const [a1, setA1] = A.createSignal(1);
+            const [a2, setA2] = A.createSignal(b2() + 1);
             A.createReaction(() => {
                 B.batchReactions(() => {
                     setB1(a1() + 1);
@@ -889,14 +889,14 @@ describe('reactive', () => {
             });
             expect(b4()).toEqual(15);
             expect(runOrder.log).toEqual([
-                'B - createState B1',
-                'B - createState B2',
-                'B - createState B3',
-                'B - createState B4',
+                'B - createSignal B1',
+                'B - createSignal B2',
+                'B - createSignal B3',
+                'B - createSignal B4',
                 'B - i   : (B1) -> (B2)',
                 'B - ii  : (B3) -> (B4)',
-                'A - createState A1',
-                'A - createState A2',
+                'A - createSignal A1',
+                'A - createSignal A2',
                 'A - i   : (A1) -> (B1)',
                 'B - flush!!!',
                 'B - i   : (B1) -> (B2)',
@@ -920,16 +920,16 @@ describe('reactive', () => {
         it(`A uses B. A updates B using B batch, and expects on next reactions to have B flushed`, async () => {
             const runOrder = new RunOrder();
             const B = new ReactiveWithTracking('B', runOrder);
-            const [b1, setB1] = B.createState(3);
-            const [b2, setB2] = B.createState('the length is 3');
+            const [b1, setB1] = B.createSignal(3);
+            const [b2, setB2] = B.createSignal('the length is 3');
             B.createReaction(() => {
                 setB2(`the length is ${b1()}`);
             });
 
             const A = new ReactiveWithTracking('A', runOrder);
-            const [a1, setA1] = A.createState([1, 2, 3]);
-            const [a2, setA2] = A.createState('');
-            const [a3, setA3] = A.createState(0);
+            const [a1, setA1] = A.createSignal([1, 2, 3]);
+            const [a2, setA2] = A.createSignal('');
+            const [a3, setA3] = A.createSignal(0);
             A.createReaction(() => {
                 setA3(b1());
             });
@@ -953,12 +953,12 @@ describe('reactive', () => {
             expect(b1()).toBe(4); // updated
             expect(a2()).toBe('[1,2,3,4] - the length is 4');
             expect(runOrder.log).toEqual([
-                'B - createState B1',
-                'B - createState B2',
+                'B - createSignal B1',
+                'B - createSignal B2',
                 'B - i   : (B1) -> (B2)',
-                'A - createState A1',
-                'A - createState A2',
-                'A - createState A3',
+                'A - createSignal A1',
+                'A - createSignal A2',
+                'A - createSignal A3',
                 'A - i   : (B1) -> (A3)',
                 'A - ii  : (A1) -> (B1)',
                 'B - flush!!!',
@@ -978,15 +978,15 @@ describe('reactive', () => {
             const runOrder = new RunOrder();
 
             const A = new ReactiveWithTracking('A', runOrder);
-            const [a1, setA1] = A.createState(1);
-            const [a2, setA2] = A.createState(1);
+            const [a1, setA1] = A.createSignal(1);
+            const [a2, setA2] = A.createSignal(1);
 
             let B: Reactive;
             let b1, setB1;
             A.createReaction(() => {
                 if (!B) {
                     B = new ReactiveWithTracking('B', runOrder);
-                    [b1, setB1] = B.createState(1);
+                    [b1, setB1] = B.createSignal(1);
                     B.createReaction(() => {
                         setB1(a1() + 1);
                     });
@@ -1007,10 +1007,10 @@ describe('reactive', () => {
             expect(a2()).toBe(12);
 
             expect(runOrder.log).toEqual([
-                'A - createState A1',
-                'A - createState A2',
+                'A - createSignal A1',
+                'A - createSignal A2',
                 'A - i   : () -> ()',
-                'B - createState B1',
+                'B - createSignal B1',
                 'B - i   : (A1) -> (B1)',
                 'A - ii  : (B1) -> (A2)',
                 'A - await toBeClean!!!',

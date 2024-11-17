@@ -19,7 +19,7 @@ into account the conditions.
 
 Reactive can also Pair, creating dependencies between multiple Reactive instances. See the section below on Reactive Pairing
 
-- [createState](#createState)
+- [createSignal](#createSignal)
 - [createReaction](#createReaction)
 - [MeasureOfChange](#MeasureOfChange)
 - [batchReactions](#batchReactions)
@@ -27,14 +27,14 @@ Reactive can also Pair, creating dependencies between multiple Reactive instance
 - [flush](#flush)
 - [Reactive Pairing](#paring)
 
-# <a name="createState">createState</a>
+# <a name="createSignal">createSignal</a>
 
 ```typescript
 type Next<T> = (t: T) => T;
 type Setter<T> = (t: T | Next<T>) => T;
 type Getter<T> = () => T;
 type ValueOrGetter<T> = T | Getter<T>;
-declare function createState<T>(
+declare function createSignal<T>(
   value: ValueOrGetter<T>,
   measureOfChange: MeasureOfChange = MeasureOfChange.FULL,
 ): [get: Getter<T>, set: Setter<T>];
@@ -47,16 +47,16 @@ The getter always returns the state value
 The setter accepts a new value or a function to compute the next value, as well as a `MeasureOfChange`.
 
 ```typescript
-const [state, setState] = reactive.createState(12);
+const [state, setState] = reactive.createSignal(12);
 
 state(); // returns 12
 setState(13);
 setState((x) => x + 1);
 
-const [state2, setState2] = reactive.createState(() => `state is ${state()}`);
+const [state2, setState2] = reactive.createSignal(() => `state is ${state()}`);
 ```
 
-## createState parameters
+## createSignal parameters
 
 - `value: ValueOrGetter<T>` - an initial value for the state, or a getter function to track using `createReaction`.
 - `measureOfChange: MeasureOfChange = MeasureOfChange.FULL` - an indicator of how large a change is state is considered
@@ -64,7 +64,7 @@ const [state2, setState2] = reactive.createState(() => `state is ${state()}`);
 
 ## state
 
-the first function returned by `createState` is the `state` function which returns the current value of the state.
+the first function returned by `createSignal` is the `state` function which returns the current value of the state.
 
 ## setState
 
@@ -102,9 +102,9 @@ Note that only dependencies (state getters) that are actually in use are set as 
 In the following case, the reaction will track states `a` and `b`, but will fail to track state `c`
 
 ```typescript
-const [a, setA] = reactive.createState(true);
-const [b, setB] = reactive.createState('abc');
-const [c, setC] = reactive.createState('def');
+const [a, setA] = reactive.createSignal(true);
+const [b, setB] = reactive.createSignal('abc');
+const [c, setC] = reactive.createSignal('def');
 
 reactive.createReaction(() => {
   if (a()) b();
@@ -152,9 +152,9 @@ is built for the component API to optimize rendering.
 
 ```typescript
 let reactive = new Reactive((reactive) => {
-  const [a, setA] = reactive.createState(false);
-  const [b, setB] = reactive.createState('abc');
-  const [c, setC] = reactive.createState('def');
+  const [a, setA] = reactive.createSignal(false);
+  const [b, setB] = reactive.createSignal('abc');
+  const [c, setC] = reactive.createSignal('def');
   reactive.createReaction(() => {
     console.log(a(), b(), c());
   });

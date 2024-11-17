@@ -75,11 +75,11 @@ describe('transform component bridge', () => {
             it('create event.target.value in function repository', async () => {
                 const code = `
                     import {JayEvent} from 'jay-runtime';
-                    import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+                    import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
                     import { CompElementRefs, render, ViewState } from './generated-element';
                     
                     function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
-                        let [text, setText] = createState('');
+                        let [text, setText] = createSignal('');
                         refs.input.onchange(({event}: JayEvent<Event, ViewState>) => setText((event.target as HTMLInputElement).value));
                     }
                     
@@ -109,11 +109,11 @@ describe('transform component bridge', () => {
             it('replace event.target.value for two event handlers', async () => {
                 const code = `
                     import {JayEvent} from 'jay-runtime';
-                    import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+                    import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
                     import { render } from './generated-element';
                     
                     function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
-                        let [text, setText] = createState('');
+                        let [text, setText] = createSignal('');
                         refs.input.onchange(({event}: JayEvent<Event, ViewState>) => setText((event.target as HTMLInputElement).value));
                         refs.input2.onchange(({event}: JayEvent<Event, ViewState>) => setText((event.target as HTMLInputElement).value));
                     }
@@ -145,11 +145,11 @@ describe('transform component bridge', () => {
             it('replace event.target.value for two event handler reusing the handler', async () => {
                 const code = `
                     import {JayEvent} from 'jay-runtime';
-                    import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+                    import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
                     import { CompElementRefs, render, ViewState } from './generated-element';
                     
                     function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
-                        let [text, setText] = createState('');
+                        let [text, setText] = createSignal('');
                         function updateText({event}: JayEvent<Event, ViewState>) {
                             setText((event.target as HTMLInputElement).value);
                         }
@@ -181,11 +181,11 @@ describe('transform component bridge', () => {
 
             it('should not transform an event handler that does not match any pattern', async () => {
                 const code = `
-                    import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+                    import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
                     import { CompElementRefs, render } from './generated-element';
                     
                     function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
-                        let [count, setCount] = createState('');
+                        let [count, setCount] = createSignal('');
                         refs.input.onchange(() => setCount(count()+1));
                     }
                     
@@ -214,11 +214,11 @@ describe('transform component bridge', () => {
             it('extract event.preventDefault()', async () => {
                 const code = `
                     import {JayEvent} from 'jay-runtime';
-                    import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+                    import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
                     import { CompElementRefs, render, ViewState } from './generated-element';
                     
                     function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
-                        let [text, setText] = createState('');
+                        let [text, setText] = createSignal('');
                         refs.input.onchange(({event}: JayEvent<Event, ViewState>) => {
                             event.preventDefault();
                             setText((event.target as HTMLInputElement).value)
@@ -257,13 +257,13 @@ describe('transform component bridge', () => {
             it('create constant in functions repository', async () => {
                 const code = `
                     import {JayEvent} from 'jay-runtime';
-                    import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+                    import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
                     import { CompElementRefs, render, ViewState } from './generated-element';
                     
                     const KEY_CODE = 13;
                     
                     function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
-                        let [text, setText] = createState('');
+                        let [text, setText] = createSignal('');
                         refs.input.onchange(({event}: JayEvent<Event, ViewState>) => {
                             if (event.keyCode === KEY_CODE) {
                                 event.preventDefault();

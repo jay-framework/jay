@@ -1,5 +1,5 @@
 import benchmark from '../benchmark';
-import { createState, makeJayComponent, Props } from 'jay-component';
+import { createSignal, makeJayComponent, Props } from 'jay-component';
 import {
     render as TableHostRender,
     TableHostElementRefs,
@@ -12,9 +12,9 @@ interface TableHostProps {
 }
 
 function TableHostConstructor({ cycles }: Props<TableHostProps>, refs: TableHostElementRefs) {
-    let [size, setSize] = createState(100);
-    let [updates, setUpdates] = createState(100);
-    let [stateManagement, setStateManagement] = createState('immutable');
+    let [size, setSize] = createSignal(100);
+    let [updates, setUpdates] = createSignal(100);
+    let [stateManagement, setStateManagement] = createSignal('immutable');
 
     refs.size.oninput(({ event }: JayEvent<Event, TableHostViewState>) => {
         const size = (event.target as HTMLInputElement).value;

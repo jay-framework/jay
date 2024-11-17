@@ -49,11 +49,11 @@ mutableObj.arr[1].e = 7;
 mutableObj.arr[1].push({ e: 12 });
 ```
 
-When using Mutable with `createState`, createState adds a change listener on the mutable object to run
+When using Mutable with `createSignal`, createSignal adds a change listener on the mutable object to run
 reactions when a mutable object changes
 
 ```typescript
-let [theState, setTheState] = reactive.createState(mutableObject(obj));
+let [theState, setTheState] = reactive.createSignal(mutableObject(obj));
 
 reactive.createReaction(() => console.log(theState()));
 

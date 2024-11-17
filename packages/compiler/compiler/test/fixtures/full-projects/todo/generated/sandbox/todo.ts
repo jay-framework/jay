@@ -6,7 +6,7 @@ import {
     TodoViewState,
     // @ts-expect-error Cannot find module
 } from './todo.jay-html?jay-workerSandbox';
-import { createMemo, createState, makeJayComponent, Props } from 'jay-component';
+import { createMemo, createSignal, makeJayComponent, Props } from 'jay-component';
 // @ts-expect-error Cannot find module
 import { uuid } from './uuid?jay-workerSandbox';
 import { patch } from 'jay-json-patch';
@@ -23,7 +23,7 @@ export interface TodoProps {
     initialTodos: Array<TodoItem>;
 }
 function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: TodoElementRefs) {
-    const [todos, setTodos] = createState(
+    const [todos, setTodos] = createSignal(
         initialTodos().map((_) => ({ ..._, isEditing: false, editText: '' })),
     );
     const activeTodoCount = createMemo(() =>
@@ -35,8 +35,8 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     const activeTodoWord = createMemo(() => (activeTodoCount() > 1 ? 'todos' : 'todo'));
     const hasItems = createMemo(() => todos().length > 0);
     const showClearCompleted = createMemo(() => !!todos().find((_) => _.isCompleted));
-    const [filter, setFilter] = createState<Filter>(Filter.all);
-    const [newTodo, setNewTodo] = createState('');
+    const [filter, setFilter] = createSignal<Filter>(Filter.all);
+    const [newTodo, setNewTodo] = createSignal('');
     const shownTodos = createMemo(() => [
         ...todos().filter((todo) => {
             if (filter() === Filter.completed) return todo.isCompleted;

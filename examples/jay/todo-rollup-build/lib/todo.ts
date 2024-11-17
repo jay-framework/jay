@@ -1,5 +1,5 @@
 import { Filter, render, ShownTodo, TodoElementRefs } from './todo.jay-html';
-import { createMemo, createState, makeJayComponent, Props } from 'jay-component';
+import { createMemo, createSignal, makeJayComponent, Props } from 'jay-component';
 import { uuid } from './uuid';
 import { patch } from 'jay-json-patch';
 import { ADD, REPLACE } from 'jay-json-patch';
@@ -17,7 +17,7 @@ export interface TodoProps {
 }
 
 function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: TodoElementRefs) {
-    const [todos, setTodos] = createState(
+    const [todos, setTodos] = createSignal(
         initialTodos().map((_) => ({ ..._, isEditing: false, editText: '' })),
     );
 
@@ -31,8 +31,8 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     const activeTodoWord = createMemo(() => (activeTodoCount() > 1 ? 'todos' : 'todo'));
     const hasItems = createMemo(() => todos().length > 0);
     const showClearCompleted = createMemo(() => !!todos().find((_) => _.isCompleted));
-    const [filter, setFilter] = createState<Filter>(Filter.all);
-    const [newTodo, setNewTodo] = createState('');
+    const [filter, setFilter] = createSignal<Filter>(Filter.all);
+    const [newTodo, setNewTodo] = createSignal('');
 
     const shownTodos = createMemo(() => [
         ...todos().filter((todo) => {

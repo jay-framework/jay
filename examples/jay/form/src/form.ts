@@ -1,5 +1,5 @@
 import { render, FormElementRefs } from './form.jay-html';
-import { createState, makeJayComponent, Props } from 'jay-component';
+import { createSignal, makeJayComponent, Props } from 'jay-component';
 import { JayEvent } from 'jay-runtime';
 
 export interface CounterProps {
@@ -7,9 +7,9 @@ export interface CounterProps {
 }
 
 function FormConstructor({ initialValue }: Props<CounterProps>, refs: FormElementRefs) {
-    let [firstName, setFirstName] = createState('');
-    let [lastName, setLastName] = createState('');
-    let [greeting, setGreeting] = createState('');
+    let [firstName, setFirstName] = createSignal('');
+    let [lastName, setLastName] = createSignal('');
+    let [greeting, setGreeting] = createSignal('');
 
     refs.firstName.oninput(({ event }: JayEvent<any, any>) => setFirstName(event.target.value));
     refs.lastName.oninput(({ event }: JayEvent<any, any>) => setLastName(event.target.value));

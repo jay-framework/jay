@@ -1,5 +1,5 @@
 import { render, ConditionsElementRefs } from './conditions.jay-html';
-import { createState, makeJayComponent, useReactive, Props } from 'jay-component';
+import { createSignal, makeJayComponent, useReactive, Props } from 'jay-component';
 import benchmark from '../benchmark';
 
 interface ConditionsProps {
@@ -7,9 +7,9 @@ interface ConditionsProps {
 }
 
 function ConditionsConstructor({ cycles }: Props<ConditionsProps>, refs: ConditionsElementRefs) {
-    let [text1, setText1] = createState('name');
-    let [text2, setText2] = createState('text 2');
-    let [cond, setCond] = createState(true);
+    let [text1, setText1] = createSignal('name');
+    let [text2, setText2] = createSignal('text 2');
+    let [cond, setCond] = createSignal(true);
     let reactive = useReactive();
 
     const makeData = (index) => {

@@ -109,13 +109,13 @@ export class ReactiveWithTracking extends Reactive {
         super();
     }
 
-    createState<T>(
+    createSignal<T>(
         value: ValueOrGetter<T>,
         measureOfChange: MeasureOfChange = MeasureOfChange.FULL,
     ): [get: Getter<T>, set: Setter<T>] {
         const stateName = this.name + this.stateIndex++;
-        this.runOrder.log.push(`${this.name} - createState ${stateName}`);
-        const [getter, setter] = super.createState(value, measureOfChange);
+        this.runOrder.log.push(`${this.name} - createSignal ${stateName}`);
+        const [getter, setter] = super.createSignal(value, measureOfChange);
         const loggedSetter: Setter<T> = (value: T | Next<T>) => {
             this.runOrder.logSetState(stateName);
             return setter(value);

@@ -39,7 +39,7 @@ describe('findMakeJayComponentImportTransformerBlock', () => {
     it('should find import makeJayComponent given multiple imports', async () => {
         const sourceFile = createTsSourceFile(`
         | import { CounterElementRefs, render } from './generated-element';
-        | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+        | import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
         `);
         const name = findMakeJayComponentImportTransformerBlock(makeJayComponentName, sourceFile);
         expect(name).toEqual('makeJayComponent');

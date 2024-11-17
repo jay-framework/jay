@@ -1,6 +1,6 @@
 import { Getter } from 'jay-reactive';
 import { createJayContext } from 'jay-runtime';
-import { createMemo, createState, provideReactiveContext } from 'jay-component';
+import { createMemo, createSignal, provideReactiveContext } from 'jay-component';
 import { ShownTodo } from './todo.jay-html';
 import { ADD, patch, REPLACE } from 'jay-json-patch';
 import { uuid } from './uuid';
@@ -44,7 +44,7 @@ export const TODO_CONTEXT = createJayContext<TodoContext>();
 
 export const provideTodoContext = () =>
     provideReactiveContext(TODO_CONTEXT, () => {
-        const [todos, setTodos] = createState(initialTodos);
+        const [todos, setTodos] = createSignal(initialTodos);
 
         const activeTodoCount = createMemo(() =>
             todos().reduce(function (accum: number, todo: TodoItem) {

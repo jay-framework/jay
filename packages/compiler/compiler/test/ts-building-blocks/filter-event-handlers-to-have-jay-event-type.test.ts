@@ -29,7 +29,7 @@ describe('findEventHandlersBlock', () => {
 
     it('should filter out any event handler not defined with JayEvent param type', () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
             import { Refs, render } from './generated-element';
             import { JayEvent } from 'jay-runtime';
             
@@ -46,7 +46,7 @@ describe('findEventHandlersBlock', () => {
 
     it('should retain event handler with JayEvent param type', () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
             import { Refs, render } from './generated-element';
             import { JayEvent } from 'jay-runtime';
             
@@ -62,7 +62,7 @@ describe('findEventHandlersBlock', () => {
 
     it('should filter out event handler with JayEvent param type if imported from another module', () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
             import { Refs, render } from './generated-element';
             import { JayEvent } from 'some-other-module';
             
@@ -77,7 +77,7 @@ describe('findEventHandlersBlock', () => {
 
     it('should filter out event handler with JayEvent not having two generic type arguments', () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
             import { Refs, render } from './generated-element';
             import { JayEvent } from 'jay-runtime';
             

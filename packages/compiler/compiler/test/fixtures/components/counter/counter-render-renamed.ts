@@ -1,12 +1,12 @@
 import { CounterElementRefs, render as BasicRender } from './generated-element-main-trusted';
-import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
 
 export interface CounterProps {
     initialValue: number;
 }
 
 function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
-    let [count, setCount] = createState(initialValue);
+    let [count, setCount] = createSignal(initialValue);
     refs.adderButton.onclick = () => setCount(count() + 1);
     refs.subtracter.onclick = () => setCount(count() - 1);
     let onChange = createEvent<number>((emitter) => emitter.emit(count()));

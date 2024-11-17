@@ -1,14 +1,14 @@
 import { ParentElementRefs, render as ParentRender } from './parent.jay-html';
-import { makeJayComponent, Props, createState } from 'jay-component';
+import { makeJayComponent, Props, createSignal } from 'jay-component';
 import { REPLACE, patch } from 'jay-json-patch';
 
 export interface ParentProps {}
 function ParentConstructor({}: Props<ParentProps>, refs: ParentElementRefs) {
-    let [textFromChildEvent, setTextFromChildEvent] = createState('-');
-    let [viewStateFromChildEvent, setViewStataFromChildEvent] = createState('-');
-    let [coordinateFromChildEvent, setCoordinateFromChildEvent] = createState('-');
-    let [childText, setChildText] = createState('-');
-    let [dynamicChildren, setDynamicChildren] = createState([{ id: 'A', childText: '-' }]);
+    let [textFromChildEvent, setTextFromChildEvent] = createSignal('-');
+    let [viewStateFromChildEvent, setViewStataFromChildEvent] = createSignal('-');
+    let [coordinateFromChildEvent, setCoordinateFromChildEvent] = createSignal('-');
+    let [childText, setChildText] = createSignal('-');
+    let [dynamicChildren, setDynamicChildren] = createSignal([{ id: 'A', childText: '-' }]);
 
     refs.parentChangesChildPropButton.onclick(({ event, coordinate, viewState }) => {
         setChildText(

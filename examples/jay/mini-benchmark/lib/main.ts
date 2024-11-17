@@ -1,4 +1,4 @@
-import { createState, makeJayComponent, Props } from 'jay-component';
+import { createSignal, makeJayComponent, Props } from 'jay-component';
 import { MainElementRefs, MainViewState, render, SelectedExample } from './main.jay-html';
 import { JayEvent } from 'jay-runtime';
 
@@ -9,9 +9,11 @@ const examples = Object.keys(SelectedExample)
     .map((_) => ({ value: _, name: SelectedExample[_] }));
 
 function MainConstructor({}: Props<MainProps>, refs: MainElementRefs) {
-    let [selectedExample, setSelectedExample] = createState<SelectedExample>(SelectedExample.basic);
-    let [cycles, setCycles] = createState(1000);
-    let [progress, setProgress] = createState('');
+    let [selectedExample, setSelectedExample] = createSignal<SelectedExample>(
+        SelectedExample.basic,
+    );
+    let [cycles, setCycles] = createSignal(1000);
+    let [progress, setProgress] = createSignal('');
 
     refs.chooseExample.onchange(({ event }: JayEvent<Event, MainViewState>) => {
         const index = (event.target as HTMLSelectElement).selectedIndex;

@@ -1,5 +1,5 @@
 import { CollectionsElementRefs, render } from './collections.jay-html';
-import { createMemo, createState, makeJayComponent, Props, useReactive } from 'jay-component';
+import { createMemo, createSignal, makeJayComponent, Props, useReactive } from 'jay-component';
 import benchmark from '../benchmark';
 import { ADD, JSONPatch, MOVE, REMOVE, REPLACE } from 'jay-json-patch';
 import { patch } from 'jay-json-patch';
@@ -9,9 +9,9 @@ interface CollectionsProps {
 }
 
 function CollectionsConstructor({ cycles }: Props<CollectionsProps>, refs: CollectionsElementRefs) {
-    let [title] = createState('collection');
+    let [title] = createSignal('collection');
     let reactive = useReactive();
-    let [items, setItems] = createState([
+    let [items, setItems] = createSignal([
         { name: 'car', completed: false, cost: 10, id: 'a' },
         { name: 'plane', completed: true, cost: 100, id: 'b' },
         { name: 'boat', completed: false, cost: 50, id: 'c' },

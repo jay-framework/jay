@@ -1,5 +1,5 @@
 import { render, ItemElementRefs } from './item.jay-html';
-import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
 
 interface ItemProps {
     title: string;
@@ -10,8 +10,8 @@ const ENTER_KEY = 13;
 const ESCAPE_KEY = 27;
 
 function ItemConstructor({ title, isCompleted }: Props<ItemProps>, refs: ItemElementRefs) {
-    let [isEditing, setIsEditing] = createState(false);
-    let [editText, setEditText] = createState(title);
+    let [isEditing, setIsEditing] = createSignal(false);
+    let [editText, setEditText] = createSignal(title);
 
     let onCompletedToggle = createEvent<boolean>();
     let onRemove = createEvent<null>();

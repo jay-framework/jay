@@ -32,14 +32,14 @@ export function createEffect(effect: () => void | EffectCleanup) {
     });
 }
 
-export function createState<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: Setter<T>] {
-    return currentHookContext().reactive.createState(value);
+export function createSignal<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: Setter<T>] {
+    return currentHookContext().reactive.createSignal(value);
 }
 
 export function createPatchableState<T>(
     value: ValueOrGetter<T>,
 ): [get: Getter<T>, set: Setter<T>, patchFunc: Patcher<T>] {
-    const [get, set] = createState(value);
+    const [get, set] = createSignal(value);
     const patchFunc = (...jsonPatch: JSONPatch) => set(patch(get(), jsonPatch));
     return [get, set, patchFunc];
 }
@@ -49,7 +49,7 @@ export function useReactive(): Reactive {
 }
 
 export function createMemo<T>(computation: (prev: T) => T, initialValue?: T): Getter<T> {
-    let [value, setValue] = currentHookContext().reactive.createState(initialValue);
+    let [value, setValue] = currentHookContext().reactive.createSignal(initialValue);
     currentHookContext().reactive.createReaction(() => {
         setValue((oldValue) => computation(oldValue));
     });
@@ -70,10 +70,10 @@ function makeItemTracking<T extends object, U>(
     mapCallback: (item: Getter<T>, index: Getter<number>, length: Getter<number>) => U,
 ): MappedItemTracking<T, U> {
     let reactive = new Reactive();
-    let [getItem, setItem] = reactive.createState(item);
-    let [getIndex, setIndex] = reactive.createState(index);
-    let [getLength, setLength] = reactive.createState(length);
-    let [getMappedItem, setMappedItem] = reactive.createState<U>(undefined);
+    let [getItem, setItem] = reactive.createSignal(item);
+    let [getIndex, setIndex] = reactive.createSignal(index);
+    let [getLength, setLength] = reactive.createSignal(length);
+    let [getMappedItem, setMappedItem] = reactive.createSignal<U>(undefined);
     reactive.createReaction(() => setMappedItem(mapCallback(getItem, getIndex, getLength)));
     return {
         setItem,
@@ -88,11 +88,11 @@ export function createDerivedArray<T extends object, U>(
     arrayGetter: Getter<T[]>,
     mapCallback: (item: Getter<T>, index: Getter<number>, length: Getter<number>) => U,
 ): Getter<U[]> {
-    let [sourceArray] = currentHookContext().reactive.createState<T[]>(
+    let [sourceArray] = currentHookContext().reactive.createSignal<T[]>(
         arrayGetter,
         MeasureOfChange.PARTIAL,
     );
-    let [mappedArray, setMappedArray] = createState<U[]>([]);
+    let [mappedArray, setMappedArray] = createSignal<U[]>([]);
     let mappedItemsCache = new WeakMap<T, MappedItemTracking<T, U>>();
 
     currentHookContext().reactive.createReaction((measureOfChange: MeasureOfChange) => {
