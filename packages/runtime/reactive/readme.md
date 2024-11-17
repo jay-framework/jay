@@ -18,13 +18,14 @@ into account the conditions.
 Reactive can also pair, creating dependencies between multiple Reactive instances. See the section below on Reactive Pairing
 
 ## Notes:
-* `Reactive` is intended to be an internal core implementation for state management and not a user facing API.
-* `Reactive` is used by `jay-component` as state management for components, at which each component has it's own independent 
+
+- `Reactive` is intended to be an internal core implementation for state management and not a user facing API.
+- `Reactive` is used by `jay-component` as state management for components, at which each component has it's own independent
   instance of `Reactive`.
-* `jay-component` also defines reactive context which is also using an independent `Reactive` instance.
-* one `Reactive` can depend on a signal from another `Reactive` creating `Reactive` pairing discussed below.
-* `jay-reactive` is inspired by [solid.js](https://www.solidjs.com/) state management (amazing framework, BTW).
-* `Reactive.enable` and `Reactive.disable` are used by `jay-component` to disable and enable reactive as a component unmounts and mounts.
+- `jay-component` also defines reactive context which is also using an independent `Reactive` instance.
+- one `Reactive` can depend on a signal from another `Reactive` creating `Reactive` pairing discussed below.
+- `jay-reactive` is inspired by [solid.js](https://www.solidjs.com/) state management (amazing framework, BTW).
+- `Reactive.enable` and `Reactive.disable` are used by `jay-component` to disable and enable reactive as a component unmounts and mounts.
 
 ## createSignal
 
@@ -59,7 +60,7 @@ const [getter2, setter2] = reactive.createSignal(() => `signal value is ${getter
 
 - `value: ValueOrGetter<T>` - an initial value for the signal, or a getter function to track using `createReaction`.
 - `measureOfChange: MeasureOfChange = MeasureOfChange.FULL` - an indicator of how large a change is signal is considered
-  within reactions that depend on this signal (when a reaction is run, it also gets the `max(...measureOfChange)` 
+  within reactions that depend on this signal (when a reaction is run, it also gets the `max(...measureOfChange)`
   of all signals that have changed and it depends on).
 
 ### getter
@@ -68,7 +69,7 @@ the first function returned by `createSignal` is the `getter` function which ret
 
 ### setter
 
-The second function returned is `setter` which accepts one parameter - a new value for the signal, 
+The second function returned is `setter` which accepts one parameter - a new value for the signal,
 or a function to update the signal value. Note that a change is defined by strict equality - using the `===` and `!==` operators.
 
 ## createReaction
@@ -84,7 +85,7 @@ The `Reaction` accepts a `MeasureOfChange` computed as the `max(...measureOfChan
 of all signals that have changed and the reaction depends on.
 
 The `Reaction` function is running once as part of the call to `createReaction` used to figure out what
-initial dependencies to track. On each run of the `Reaction` function dependencies are recomputed and the 
+initial dependencies to track. On each run of the `Reaction` function dependencies are recomputed and the
 function will only rerun with relevant dependencies are updated.
 
 ```typescript
@@ -154,14 +155,14 @@ let reactive = new Reactive((reactive) => {
     console.log(a(), b(), c());
   });
 });
-// will print the console log false abc def 
+// will print the console log false abc def
 
 reactive.batchReactions(() => {
   setA(true);
   setB('abcde');
   setC('fghij');
 });
-// will print the console log true abcde fghij 
+// will print the console log true abcde fghij
 ```
 
 ## toBeClean
@@ -203,11 +204,11 @@ reactive.enable();
 reactive.disable();
 ```
 
-Enables and disables the reactive. 
-A Disabled reactive will not run reactions. 
+Enables and disables the reactive.
+A Disabled reactive will not run reactions.
 
-* When calling enable, the reactive will also flush any pending reactions.
-* Reactive are created, by default, enabled.
+- When calling enable, the reactive will also flush any pending reactions.
+- Reactive are created, by default, enabled.
 
 ## Reactive Pairing
 
@@ -217,5 +218,5 @@ For instance, with Jay, a context is one reactive and component is another insta
 Pairing is done by getting a signal value of reactive `A` from a reaction of reactive `B`.
 When paired, once reactive `A` flushes, it will also trigger a flush of reactive `B` after `A` flush completes.
 
-Reactive Pairing allows a Jay Component (`A`) to read signal values from a Jay Reactive Context (`B`). 
+Reactive Pairing allows a Jay Component (`A`) to read signal values from a Jay Reactive Context (`B`).
 Once the context signals are updated, the component reactions that depends on the context will also run.

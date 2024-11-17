@@ -28,19 +28,20 @@ declare function deserialize<T extends object>(jsonPatch: JSONPatch): [T, Deseri
 
 ## library notes
 
-* The library assumes the object to serialize and deserialize are immutable objects. 
+- The library assumes the object to serialize and deserialize are immutable objects.
   It always creates new instances in deserialization.
-* The library serialization always serializes the first object in full on the path `[]`, 
-  which is then deserialized as is.  
-* It is using the `jay-json-patch` library to compute and apply the `JSONPatch`es.
-* The `ArrayContexts` parameter is the same from the `jay-json-patch` library.
-* The library is used by `jay-secure` for the worker - main context communication.
-* The library can also be used for server - client communication if also using global object version management, 
-  such as optimistic locking. 
+- The library serialization always serializes the first object in full on the path `[]`,
+  which is then deserialized as is.
+- It is using the `jay-json-patch` library to compute and apply the `JSONPatch`es.
+- The `ArrayContexts` parameter is the same from the `jay-json-patch` library.
+- The library is used by `jay-secure` for the worker - main context communication.
+- The library can also be used for server - client communication if also using global object version management,
+  such as optimistic locking.
 
 ## examples
 
 Serialization:
+
 ```typescript
 let [patch, nextSerialize] = serialize({ a: 1, b: 2, c: 'abcd', d: true });
 expect(patch).toEqual([{ op: ADD, path: [], value: { a: 1, b: 2, c: 'abcd', d: true } }]);
@@ -53,8 +54,11 @@ expect(patch).toEqual([{ op: REPLACE, path: ['b'], value: 12 }]);
 ```
 
 Deserialization:
+
 ```typescript
-let [target, nextSerialize] = deserialize([{ op: ADD, path: [], value: { a: 1, b: 2, c: 'abcd', d: true } }]);
+let [target, nextSerialize] = deserialize([
+  { op: ADD, path: [], value: { a: 1, b: 2, c: 'abcd', d: true } },
+]);
 expect(target).toEqual({ a: 1, b: 2, c: 'abcd', d: true });
 
 [target, nextSerialize] = nextSerialize([{ op: REPLACE, path: ['a'], value: 11 }]);
@@ -63,5 +67,3 @@ expect(target).toEqual({ a: 11, b: 2, c: 'abcd', d: true });
 [target, nextSerialize] = nextSerialize([{ op: REPLACE, path: ['b'], value: 12 }]);
 expect(target).toEqual({ a: 11, b: 12, c: 'abcd', d: true });
 ```
-
-

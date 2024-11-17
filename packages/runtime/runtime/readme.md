@@ -1,7 +1,7 @@
 # Jay Runtime
 
 The Jay Runtime library is an efficient dom manipulation library, built to be the output of code generation (compiler).
-The runtime basic building block is the `JayElement<ViewState, Refs>` which is an instance returned from the `element` and 
+The runtime basic building block is the `JayElement<ViewState, Refs>` which is an instance returned from the `element` and
 `dynamicElement` functions.
 
 ## JayElement
@@ -27,20 +27,20 @@ interface JayElement<ViewState, Refs> extends BaseJayElement<ViewState> {
 
 ### Properties:
 
-* `dom`: An HTMLElement instance representing the DOM element associated with this JayElement. 
+- `dom`: An HTMLElement instance representing the DOM element associated with this JayElement.
   This is the element that will be rendered to the page.
-* `update`: A function of type `type updateFunc<ViewState> = (newData: ViewState) => void`. 
-   This function is responsible for updating the internal state (ViewState) of the JayElement and re-rendering its 
-   DOM representation if necessary. The ViewState is considered an **immutable** object by the internals of the `update` function.
-* `mount`: A function of type `type mountFunc = () => void`. This function is used to mount a previously unmounted `JayElement`. 
-   `JayElement`s are created in mount state. 
-* `unmount`: A function of type `type mountFunc = () => void`. This function is designed to be called when the JayElement is removed from the DOM. 
-* `refs`: This property holds references by `ref` to DOM elements or other components within the JayElement. 
+- `update`: A function of type `type updateFunc<ViewState> = (newData: ViewState) => void`.
+  This function is responsible for updating the internal state (ViewState) of the JayElement and re-rendering its
+  DOM representation if necessary. The ViewState is considered an **immutable** object by the internals of the `update` function.
+- `mount`: A function of type `type mountFunc = () => void`. This function is used to mount a previously unmounted `JayElement`.
+  `JayElement`s are created in mount state.
+- `unmount`: A function of type `type mountFunc = () => void`. This function is designed to be called when the JayElement is removed from the DOM.
+- `refs`: This property holds references by `ref` to DOM elements or other components within the JayElement.
   These references can be used to set event listeners, interact with child elements or component APIs.
 
 ## building JayElements
 
-While in Jay the Jay compiler generates the code for `JayElement` from `jay-html` files, the below explains how to 
+While in Jay the Jay compiler generates the code for `JayElement` from `jay-html` files, the below explains how to
 code Jay elements directly. In most cases, it is not to be coded directly.
 
 ```typescript
@@ -89,14 +89,16 @@ at which
 - `children` - the children of the element - can be more elements, static text (string) or dynamic text (TextElement<T>)
 
 Given the Jay HTML
+
 ```html
 <button>-</button>
 ```
 
 It is compiled into
+
 ```javascript
-import {element as e} from "jay-runtime";
-e('button', {}, ['-'])
+import { element as e } from 'jay-runtime';
+e('button', {}, ['-']);
 ```
 
 ## Static Text Content
@@ -174,7 +176,7 @@ Dynamic Text creates a text element that is dynamic and can be updated as data c
 Dynamic text looks like
 
 ```typescript
-import {dynamicText as dt} from "jay-runtime";
+import { dynamicText as dt } from 'jay-runtime';
 dt((vs) => vs.text);
 dt((vs) => `${vs.firstName} ${vs.lastName}`);
 ```

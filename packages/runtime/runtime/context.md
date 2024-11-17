@@ -1,7 +1,7 @@
 # Documentation for Context Management Functions
 
-These functions provide a mechanism for managing and sharing context within a hierarchical structure, 
-used with `JayElement`s. 
+These functions provide a mechanism for managing and sharing context within a hierarchical structure,
+used with `JayElement`s.
 
 **it is intended to be an internal API for `jay-runtime` and `jay-component`**.
 **The `jay-component` library defines the public Jay context API**.
@@ -17,9 +17,8 @@ Creates a unique symbol (a `ContextMarker`) to identify a specific context type.
 Temporarily establishes a new context for a given block of code.
 
 **Parameters:**
-    * `marker`: The `ContextMarker` identifying the context type.
-    * `context`: The actual context value to be provided.
-    * `callback`: The function to execute within the new context.
+_ `marker`: The `ContextMarker` identifying the context type.
+_ `context`: The actual context value to be provided. \* `callback`: The function to execute within the new context.
 
 **Returns:** The return value of the `callback` function.
 
@@ -27,8 +26,7 @@ Temporarily establishes a new context for a given block of code.
 
 Retrieves the current context value for a given `ContextMarker`.
 
-**Parameters:**
-    * `marker`: The `ContextMarker` identifying the context type.
+**Parameters:** \* `marker`: The `ContextMarker` identifying the context type.
 
 **Returns:** The current context value.
 
@@ -36,15 +34,14 @@ Retrieves the current context value for a given `ContextMarker`.
 
 Searches the current context stack for a context matching the given predicate.
 
-**Parameters:**
-    * `predicate`: A function that takes a `ContextMarker` and returns a boolean indicating whether it's the desired context.
+**Parameters:** \* `predicate`: A function that takes a `ContextMarker` and returns a boolean indicating whether it's the desired context.
 
 **Returns:** The found context value, or `undefined` if not found.
 
 ## `saveContext`
 
 Saves the current context stack for later restoration. The function is used internally by JayComponent update collection
-to ensure passing the right context to newly created child components. 
+to ensure passing the right context to newly created child components.
 
 **Returns:** The saved context stack.
 
@@ -54,8 +51,8 @@ Restores a previously saved context stack. The function is used internally by Ja
 to ensure passing the right context to newly created child components.
 
 **Parameters:**
-    * `savedContext`: The saved context stack to restore.
-    * `callback`: The function to execute within the restored context.
+_ `savedContext`: The saved context stack to restore.
+_ `callback`: The function to execute within the restored context.
 
 **Returns:** The return value of the `callback` function.
 
