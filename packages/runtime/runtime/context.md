@@ -18,8 +18,8 @@ Temporarily establishes a new context for a given block of code.
 
 **Parameters:**
 
-* `marker`: The `ContextMarker` identifying the context type.
-* `context`: The actual context value to be provided. \* `callback`: The function to execute within the new context.
+- `marker`: The `ContextMarker` identifying the context type.
+- `context`: The actual context value to be provided. \* `callback`: The function to execute within the new context.
 
 **Returns:** The return value of the `callback` function.
 
@@ -27,9 +27,9 @@ Temporarily establishes a new context for a given block of code.
 
 Retrieves the current context value for a given `ContextMarker`.
 
-**Parameters:** 
+**Parameters:**
 
-* `marker`: The `ContextMarker` identifying the context type.
+- `marker`: The `ContextMarker` identifying the context type.
 
 **Returns:** The current context value.
 
@@ -37,9 +37,9 @@ Retrieves the current context value for a given `ContextMarker`.
 
 Searches the current context stack for a context matching the given predicate.
 
-**Parameters:** 
+**Parameters:**
 
-* `predicate`: A function that takes a `ContextMarker` and returns a boolean indicating whether it's the desired context.
+- `predicate`: A function that takes a `ContextMarker` and returns a boolean indicating whether it's the desired context.
 
 **Returns:** The found context value, or `undefined` if not found.
 
@@ -57,8 +57,8 @@ to ensure passing the right context to newly created child components.
 
 **Parameters:**
 
-* `savedContext`: The saved context stack to restore.
-* `callback`: The function to execute within the restored context.
+- `savedContext`: The saved context stack to restore.
+- `callback`: The function to execute within the restored context.
 
 **Returns:** The return value of the `callback` function.
 
