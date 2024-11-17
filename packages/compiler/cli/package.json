@@ -8,7 +8,7 @@
     "build:watch": "npm run build:cli-link && npm run build:js -- --watch",
     "build:js": "vite build",
     "build:check-types": "tsc",
-    "build:cli-link": "cd ../../node_modules/.bin && ln -sf ../../packages/cli/dist/index.js jay-cli",
+    "build:cli-link": "cd ../../../node_modules/.bin && ln -sf ../../../packages/cli/dist/index.js jay-cli",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
     "test": ":",
