@@ -28,7 +28,7 @@ declare function diff<T>(
 
 The `diff` function accepts two values and computes the difference between.
 
-n default mode, it only supports `add` and `remove` operations. 
+In default mode, it only supports `add`, `replace` and `remove` operations. 
 In order to support `move` a `contexts: ArrayContexts` 3rd parameter has to be provided. 
 The `ArrayContexts` is an array of tuples including `JSONPointer` and `ArrayContext` which instruct the algorithm
 how to compare the array at the `JSONPointer` location. The `ArrayContext` has the name of an attribute to match object by,
