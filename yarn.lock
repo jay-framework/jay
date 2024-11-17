@@ -11144,7 +11144,6 @@ __metadata:
     "@types/node": ^20.11.5
     jay-dev-environment: "workspace:^"
     jay-json-patch: "workspace:^"
-    jay-reactive: "workspace:^"
     rimraf: ^5.0.5
     tsup: ^8.0.1
     typescript: ^5.3.3
