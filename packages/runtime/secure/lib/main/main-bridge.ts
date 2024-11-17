@@ -9,7 +9,13 @@ import {
     useContext,
     PreRenderElement,
 } from 'jay-runtime';
-import { createState, JayComponentCore, makeJayComponent, Props, useReactive } from 'jay-component';
+import {
+    createSignal,
+    JayComponentCore,
+    makeJayComponent,
+    Props,
+    useReactive,
+} from 'jay-component';
 import { IJayEndpoint, JPMMessage } from '../comm-channel/comm-channel';
 import { SECURE_COMPONENT_MARKER } from './main-contexts';
 import { SECURE_COORDINATE_MARKER } from './main-child-comp';
@@ -42,7 +48,7 @@ function makeComponentBridgeConstructor<
     Refs extends object,
     ViewState extends object,
 >(props: Props<PropsT>, refs: Refs): JayComponentCore<PropsT, ViewState> & MainComponentBridge {
-    let [viewState, setViewState] = createState<ViewState>({} as ViewState);
+    let [viewState, setViewState] = createSignal<ViewState>({} as ViewState);
     let reactive = useReactive();
     let { endpoint, port, funcRepository } = useContext(SECURE_COMPONENT_MARKER);
 

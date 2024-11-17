@@ -2,7 +2,7 @@ import { Filter, render, ShownTodo, TodoElementRefs } from './todo.jay-html';
 import {
     createMemo,
     createPatchableState,
-    createState,
+    createSignal,
     makeJayComponent,
     Props,
 } from 'jay-component';
@@ -38,8 +38,8 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     const activeTodoWord = createMemo(() => (activeTodoCount() > 1 ? 'todos' : 'todo'));
     const hasItems = createMemo(() => todos().length > 0);
     const showClearCompleted = createMemo(() => !!todos().find((_) => _.isCompleted));
-    const [filter, setFilter] = createState<Filter>(Filter.all);
-    const [newTodo, setNewTodo] = createState('');
+    const [filter, setFilter] = createSignal<Filter>(Filter.all);
+    const [newTodo, setNewTodo] = createSignal('');
 
     const shownTodos = createMemo(() => [
         ...todos().filter((todo) => {

@@ -1,5 +1,5 @@
 import { render, AutoCounterElementRefs } from './auto-counter.jay-html?jay-workerSandbox';
-import { createState, makeJayComponent, Props } from 'jay-component';
+import { createSignal, makeJayComponent, Props } from 'jay-component';
 import { exec$ } from 'jay-secure';
 import { moduleDoCount } from './a-module?jay-workerSandbox';
 import { funcGlobal$ } from 'jay-secure';
@@ -10,7 +10,7 @@ function AutoCounterConstructor(
     { initialValue }: Props<AutoCounterProps>,
     refs: AutoCounterElementRefs,
 ) {
-    let [count, setCount] = createState(initialValue);
+    let [count, setCount] = createSignal(initialValue);
     let cycles = 0;
     async function doCount() {
         cycles = 0;

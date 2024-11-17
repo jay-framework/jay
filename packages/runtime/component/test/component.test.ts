@@ -18,7 +18,7 @@ import {
     createEvent,
     createMemo,
     createPatchableState,
-    createState,
+    createSignal,
     forTesting,
     makeJayComponent,
     Props,
@@ -210,7 +210,7 @@ describe('state management', () => {
             }
 
             function LabelComponentWithInternalState(props: Props<Name>, refs: LabelRefs) {
-                let [label, setLabel] = createState('Hello ' + props.name());
+                let [label, setLabel] = createSignal('Hello ' + props.name());
 
                 return {
                     render: () => ({
@@ -281,7 +281,7 @@ describe('state management', () => {
             }
 
             function LabelComponentWithInternalState(props: Props<Name>, refs: LabelRefs) {
-                let [label, setLabel] = createState(() => 'Hello ' + props.name());
+                let [label, setLabel] = createSignal(() => 'Hello ' + props.name());
 
                 return {
                     render: () => ({
@@ -327,7 +327,7 @@ describe('state management', () => {
                 { firstName, lastName }: Props<Name>,
                 refs: LabelRefs,
             ) {
-                let [label, setLabel] = createState(
+                let [label, setLabel] = createSignal(
                     () => 'Hello ' + firstName() + ' ' + lastName(),
                 );
 
@@ -362,7 +362,7 @@ describe('state management', () => {
             }
 
             function LabelComponentWithCreateEffect({ name }: Props<Name>, refs: LabelRefs) {
-                let [label, setLabel] = createState('');
+                let [label, setLabel] = createSignal('');
                 let resourceAllocated = false;
                 let effectRunCount = 0;
                 let effectCleanupRunCount = 0;
@@ -495,7 +495,7 @@ describe('state management', () => {
             });
 
             function LabelComponentWithCreateMemo2({}: Props<never>, refs: TwoLabelRefs) {
-                let [state1, setState1] = createState('one');
+                let [state1, setState1] = createSignal('one');
                 let memoDependsOnName = 0,
                     memoDependsOnAge = 0;
                 let label1 = createMemo(() => {
@@ -602,7 +602,7 @@ describe('state management', () => {
                 }: Props<Contacts>,
                 refs: PhoneBookRefs,
             ) {
-                let [numberOfCallsToMap, setNumberOfCallsToMap] = useReactive().createState(
+                let [numberOfCallsToMap, setNumberOfCallsToMap] = useReactive().createSignal(
                     0,
                     MeasureOfChange.PARTIAL,
                 );
@@ -727,7 +727,7 @@ describe('state management', () => {
             }
 
             function LabelComponentWithAPI({ name, age }: Props<Name>, refs: TwoLabelRefs) {
-                let [label1, setLabel1] = createState(() => `hello ${name()}`);
+                let [label1, setLabel1] = createSignal(() => `hello ${name()}`);
                 let label2 = createMemo(() => {
                     return 'age ' + age();
                 });
@@ -806,7 +806,7 @@ describe('state management', () => {
             interface CounterProps {}
 
             function CounterComponent({}: Props<CounterProps>, refs: CounterRefs) {
-                let [value, setValue] = createState(0);
+                let [value, setValue] = createSignal(0);
                 refs.inc.onclick(() => setValue(value() + 1));
                 refs.dec.onclick(() => setValue(value() - 1));
                 let onChange = createEvent<CounterChangeEvent>((emitter) =>
@@ -933,8 +933,8 @@ describe('state management', () => {
             const Test1 = makeJayComponent(renderTwoLabelElement, TestComponent1);
 
             function TestComponent2({}: Props<null>, refs: LabelAndButtonRefs) {
-                let [one, setOne] = createState('');
-                let [two, setTwo] = createState('');
+                let [one, setOne] = createSignal('');
+                let [two, setTwo] = createSignal('');
                 const setValues = (a, b) => {
                     setOne(a);
                     setTwo(b);
@@ -960,9 +960,9 @@ describe('state management', () => {
             }
 
             function TestComponent3({}: Props<null>, refs: LabelAndButtonRefs) {
-                let [one, setOne] = createState(12);
-                let [two, setTwo] = createState(34);
-                let [three, setThree] = createState(0);
+                let [one, setOne] = createSignal(12);
+                let [two, setTwo] = createSignal(34);
+                let [three, setThree] = createSignal(0);
                 let reactive = useReactive();
                 let [isWaiting, resolve] = mkResolvablePromise();
                 refs.button.onclick(async () => {

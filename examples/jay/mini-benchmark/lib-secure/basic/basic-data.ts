@@ -1,12 +1,12 @@
 import { BasicElementRefs, render as BasicRender } from './basic.jay-html';
-import { createState, makeJayComponent, useReactive, Props } from 'jay-component';
+import { createSignal, makeJayComponent, useReactive, Props } from 'jay-component';
 import benchmark from '../benchmark';
 
 interface BasicProps {
     cycles: number;
 }
 function BasicConstructor({ cycles }: Props<BasicProps>, refs: BasicElementRefs) {
-    let [text, setText] = createState('name');
+    let [text, setText] = createSignal('name');
     let reactive = useReactive();
 
     const run = (progressCallback: (string) => void) => {

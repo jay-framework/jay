@@ -20,7 +20,7 @@ describe('findComponentConstructorsBlock', () => {
 
     it('find private named component constructor', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+        | import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
         | import { CounterElementRefs, render } from './generated-element';
         |
         | function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
@@ -34,7 +34,7 @@ describe('findComponentConstructorsBlock', () => {
 
     it('find private named arrow component constructor', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+        | import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
         | import { CounterElementRefs, render } from './generated-element';
         |
         | const CounterComponent = ({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) => {
@@ -48,7 +48,7 @@ describe('findComponentConstructorsBlock', () => {
 
     it('find inline named component constructor', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+        | import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
         | import { CounterElementRefs, render } from './generated-element';
         |
         | export const Counter = makeJayComponent(render, 
@@ -61,7 +61,7 @@ describe('findComponentConstructorsBlock', () => {
 
     it('find inline component constructor', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+        | import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
         | import { CounterElementRefs, render } from './generated-element';
         |
         | export const Counter = makeJayComponent(render, 
@@ -74,7 +74,7 @@ describe('findComponentConstructorsBlock', () => {
 
     it('find inline arrow component constructor', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+        | import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
         | import { CounterElementRefs, render } from './generated-element';
         |
         | export const Counter = makeJayComponent(render, 

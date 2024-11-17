@@ -1,5 +1,5 @@
 import { render, ItemElementRefs, ItemViewState } from './item.jay-html';
-import { createMemo, createState, makeJayComponent, Props } from 'jay-component';
+import { createMemo, createSignal, makeJayComponent, Props } from 'jay-component';
 import { JayEvent } from 'jay-runtime';
 import { TODO_CONTEXT, TodoContext } from './todo-context';
 
@@ -19,8 +19,8 @@ function ItemConstructor(
     const title = createMemo(() => todo().title);
     const isCompleted = createMemo(() => todo().isCompleted);
 
-    let [isEditing, setIsEditing] = createState(false);
-    let [editText, setEditText] = createState(title);
+    let [isEditing, setIsEditing] = createSignal(false);
+    let [editText, setEditText] = createSignal(title);
 
     let handleSubmit = () => {
         let val = editText().trim();

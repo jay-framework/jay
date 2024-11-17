@@ -21,7 +21,7 @@ describe('getBaseElementName', () => {
     }
 
     const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayTsxComponent, Props } from 'jay-component';
+        | import { createEvent, createSignal, makeJayTsxComponent, Props } from 'jay-component';
         | function CounterConstructor({ initialValue }: Props<CounterProps>) {}
         | export const Counter = makeJayTsxComponent(CounterConstructor);
         `);
@@ -34,7 +34,7 @@ describe('getBaseElementName', () => {
 
     describe('on no component constructor', () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayTsxComponent, Props } from 'jay-component';
+        | import { createEvent, createSignal, makeJayTsxComponent, Props } from 'jay-component';
         | export function CounterConstructor({ initialValue }: Props<CounterProps>) {}
         `);
 
@@ -47,7 +47,7 @@ describe('getBaseElementName', () => {
 
     describe('on more than one component constructor', () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createState, makeJayTsxComponent, Props } from 'jay-component';
+        | import { createEvent, createSignal, makeJayTsxComponent, Props } from 'jay-component';
         | function CounterConstructor({ initialValue }: Props<CounterProps>) {}
         | export const Counter = makeJayTsxComponent(CounterConstructor);
         | export const Counter2 = makeJayTsxComponent(CounterConstructor);

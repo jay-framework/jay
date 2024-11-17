@@ -1,10 +1,10 @@
 import { CompElementRefs, render as CompRender } from './comp.jay-html';
-import { makeJayComponent, Props, createState } from 'jay-component';
+import { makeJayComponent, Props, createSignal } from 'jay-component';
 
 export interface CompProps {}
 function CompConstructor({}: Props<CompProps>, refs: CompElementRefs) {
-    let [text, setText] = createState('default result');
-    let [items] = createState([
+    let [text, setText] = createSignal('default result');
+    let [items] = createSignal([
         { id: 'a', text: 'alpha' },
         { id: 'b', text: 'beta' },
         { id: 'c', text: 'gamma' },

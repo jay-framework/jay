@@ -1,5 +1,5 @@
 import { render, CounterElementRefs } from './counter.jay-html?jay-workerSandbox';
-import { createState, makeJayComponent, Props } from 'jay-component';
+import { createSignal, makeJayComponent, Props } from 'jay-component';
 export interface CounterProps {
     initialValue: number;
     incrementBy: number;
@@ -8,7 +8,7 @@ function CounterConstructor(
     { initialValue, incrementBy }: Props<CounterProps>,
     refs: CounterElementRefs,
 ) {
-    let [count, setCount] = createState(initialValue);
+    let [count, setCount] = createSignal(initialValue);
     refs.subtracter.onclick(() => setCount(count() - incrementBy()));
     refs.adderButton.onclick(() => setCount(count() + incrementBy()));
     return {

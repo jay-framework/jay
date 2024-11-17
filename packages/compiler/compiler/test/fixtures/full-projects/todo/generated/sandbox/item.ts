@@ -1,6 +1,6 @@
 // @ts-expect-error Cannot find module
 import { render, ItemElementRefs, ItemViewState } from './item.jay-html?jay-workerSandbox';
-import { createEvent, createState, makeJayComponent, Props } from 'jay-component';
+import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
 import { JayEvent } from 'jay-runtime';
 import { handler$ } from 'jay-secure';
 interface ItemProps {
@@ -10,8 +10,8 @@ interface ItemProps {
 const ENTER_KEY = 13;
 const ESCAPE_KEY = 27;
 function ItemConstructor({ title, isCompleted }: Props<ItemProps>, refs: ItemElementRefs) {
-    let [isEditing, setIsEditing] = createState(false);
-    let [editText, setEditText] = createState(title);
+    let [isEditing, setIsEditing] = createSignal(false);
+    let [editText, setEditText] = createSignal(title);
     let onCompletedToggle = createEvent<boolean>();
     let onRemove = createEvent<null>();
     let onTitleChanged = createEvent<string>();

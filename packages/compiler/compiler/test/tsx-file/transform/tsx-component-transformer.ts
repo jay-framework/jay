@@ -19,14 +19,14 @@ describe('tsxComponentTransformer', () => {
     }
 
     const source = `
-import { createState, makeJayTsxComponent, Props } from 'jay-component';
+import { createSignal, makeJayTsxComponent, Props } from 'jay-component';
 
 export interface CounterProps {
     initialValue: number;
 }
 
 function CounterConstructor({ initialValue }: Props<CounterProps>) {
-    let [count, setCount] = createState(initialValue);
+    let [count, setCount] = createSignal(initialValue);
 
     return {
         render: (
@@ -48,7 +48,7 @@ export const Counter = makeJayTsxComponent(CounterConstructor);
         expect(validations).toEqual([]);
         expect(code).toEqual(`
 import { CounterElementRefs, render } from './counter.jay-html';
-import { makeJayComponent, Props, createMemo, createState } from 'jay-component';
+import { makeJayComponent, Props, createMemo, createSignal } from 'jay-component';
 
 export interface CounterProps {
     initialValue: number;
@@ -58,7 +58,7 @@ function CounterConstructor(
   { initialValue }: Props<CounterProps>,
   refs: CounterElementRefs
 ) {
-    let [count, setCount] = createState(initialValue);
+    let [count, setCount] = createSignal(initialValue);
 
     refs._ref_0.onclick(() => setCount(count() - 1));
     refs._ref_1.onclick(() => setCount(count() + 1));

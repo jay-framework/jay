@@ -1,5 +1,5 @@
 import { Line, render, TableElementRefs } from './table.jay-html';
-import { createState, makeJayComponent, Props } from 'jay-component';
+import { createSignal, makeJayComponent, Props } from 'jay-component';
 import { produce } from 'immer';
 import { JSONPatch, patch, REPLACE } from 'jay-json-patch';
 
@@ -24,7 +24,7 @@ function TableConstructor(
     { tableSize, numCellsToUpdate, stateManagement }: Props<TableProps>,
     refs: TableElementRefs,
 ) {
-    let [line, setLine] = createState(() => initTable(tableSize()));
+    let [line, setLine] = createSignal(() => initTable(tableSize()));
 
     const updateData = (cycle: number) => {
         if (stateManagement() === 'immutable') {

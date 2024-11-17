@@ -97,7 +97,7 @@ describe('transformJayFile', () => {
                     {
                         module: 'jay-component',
                         names: [
-                            { name: 'createState', type: JayUnknown },
+                            { name: 'createSignal', type: JayUnknown },
                             { name: 'makeJayComponent', type: JayUnknown },
                             { name: 'Props', type: JayUnknown },
                         ],

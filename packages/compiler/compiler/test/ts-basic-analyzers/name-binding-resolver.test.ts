@@ -613,11 +613,11 @@ describe('NameBindingResolver', () => {
             });
         });
 
-        it('resolve let [state, getState] = createState()', () => {
+        it('resolve let [state, getState] = createSignal()', () => {
             let { node, nameResolver } = resolveNamesForVariableStatement(
-                'let [state, getState] = createState()',
+                'let [state, getState] = createSignal()',
             );
-            let createStateFunction = node.declarationList.declarations[0]
+            let createSignalFunction = node.declarationList.declarations[0]
                 .initializer as CallExpression;
 
             expect(nameResolver.variables.has('state'));
@@ -628,7 +628,7 @@ describe('NameBindingResolver', () => {
                 accessedByProperty: '0',
                 accessedFrom: {
                     assignedFrom: {
-                        root: mkFunctionCallVariableRoot(createStateFunction),
+                        root: mkFunctionCallVariableRoot(createSignalFunction),
                     },
                     definingStatement: node,
                 },
@@ -636,7 +636,7 @@ describe('NameBindingResolver', () => {
             });
             expect(flattenVariable(state)).toEqual({
                 path: ['0'],
-                root: mkFunctionCallVariableRoot(createStateFunction),
+                root: mkFunctionCallVariableRoot(createSignalFunction),
             });
 
             expect(nameResolver.variables.has('getState'));
@@ -647,7 +647,7 @@ describe('NameBindingResolver', () => {
                 accessedByProperty: '1',
                 accessedFrom: {
                     assignedFrom: {
-                        root: mkFunctionCallVariableRoot(createStateFunction),
+                        root: mkFunctionCallVariableRoot(createSignalFunction),
                     },
                     definingStatement: node,
                 },
@@ -655,7 +655,7 @@ describe('NameBindingResolver', () => {
             });
             expect(flattenVariable(getState)).toEqual({
                 path: ['1'],
-                root: mkFunctionCallVariableRoot(createStateFunction),
+                root: mkFunctionCallVariableRoot(createSignalFunction),
             });
         });
 

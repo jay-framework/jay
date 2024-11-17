@@ -1,5 +1,5 @@
 import { BoardElementRefs, render } from './board.jay-html';
-import { createDerivedArray, createState, makeJayComponent, Props } from 'jay-component';
+import { createDerivedArray, createSignal, makeJayComponent, Props } from 'jay-component';
 import { ADD, JSONPatch, patch, REMOVE } from 'jay-json-patch';
 import { DEFAULT_PILLARS } from './DEFAULT_PILLARS';
 
@@ -8,7 +8,7 @@ export interface BoardProps {
 }
 
 function BoardConstructor({ title }: Props<BoardProps>, refs: BoardElementRefs) {
-    let [pillars, setPillars] = createState(DEFAULT_PILLARS);
+    let [pillars, setPillars] = createSignal(DEFAULT_PILLARS);
 
     const boardPillars = createDerivedArray(pillars, (item, index, length) => {
         let { pillarId, title, pillarTasks } = item();

@@ -5,14 +5,14 @@ import { prettifyHtml } from '../../../lib/utils/prettify';
 describe('parseTsxFile', () => {
     const filename = 'dummy.tsx';
     const code = `
-import { createState, makeJayTsxComponent, Props } from 'jay-component';
+import { createSignal, makeJayTsxComponent, Props } from 'jay-component';
 
 export interface CounterProps {
     initialValue: number;
 }
 
 function CounterConstructor({ initialValue }: Props<CounterProps>) {
-    let [count, setCount] = createState(initialValue);
+    let [count, setCount] = createSignal(initialValue);
 
     return {
         render: (
@@ -37,7 +37,7 @@ export const Counter = makeJayTsxComponent(CounterConstructor);
                 {
                     module: 'jay-component',
                     names: [
-                        { name: 'createState', type: JayUnknown },
+                        { name: 'createSignal', type: JayUnknown },
                         { name: 'makeJayTsxComponent', type: JayUnknown },
                         { name: 'Props', type: JayUnknown },
                     ],
@@ -59,7 +59,7 @@ export const Counter = makeJayTsxComponent(CounterConstructor);
 
     describe('on no component constructor', () => {
         const code = `
-        | import { createState, makeJayTsxComponent, Props } from 'jay-component';
+        | import { createSignal, makeJayTsxComponent, Props } from 'jay-component';
         | function CounterConstructor({ initialValue }: Props<CounterProps>) {}
         `;
 

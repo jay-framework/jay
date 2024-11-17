@@ -1,5 +1,5 @@
 import { ChildElementRefs, render as ChildRender } from './child.jay-html';
-import { makeJayComponent, Props, createMemo, createEvent, createState } from 'jay-component';
+import { makeJayComponent, Props, createMemo, createEvent, createSignal } from 'jay-component';
 
 export interface ChildProps {
     textFromParent: string;
@@ -11,7 +11,7 @@ export interface ChildEvent {
 }
 function ChildConstructor({ textFromParent, id }: Props<ChildProps>, refs: ChildElementRefs) {
     let textFromProp = createMemo(() => `text from parent: ${textFromParent()}`);
-    let [textFromAPI, setTextFromAPI] = createState('-');
+    let [textFromAPI, setTextFromAPI] = createSignal('-');
     let onChildClick = createEvent<ChildEvent>();
 
     refs.eventToParent.onclick(({ event, viewState, coordinate }) =>
