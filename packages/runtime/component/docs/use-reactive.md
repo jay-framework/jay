@@ -1,4 +1,4 @@
-## useReactive
+# useReactive
 
 Gets the current reactive context of the current component or reactive context.
 
