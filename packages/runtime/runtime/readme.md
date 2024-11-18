@@ -95,7 +95,7 @@ interface JayElement<ViewState, Refs> extends BaseJayElement<ViewState> {
 
 ## implementation details
 
-* See the [Runtime Implementation](./docs/jay-element.md) for the details of the `jay-html` generated target.
-* See the [Runtime Implementation](./docs/runtime.md) for the details of the jay element creation functions used by the `jay-html` generated target.
+* See the [Generated JayElement](./docs/jay-element.md) for the details of the `jay-html` generated target.
+* See the [Generated JayElement creation Functions](./docs/runtime.md) for the details of the jay element creation functions used by the `jay-html` generated target.
 * See the [Context Implementation](./docs/context.md) for the details of the context API internals (not the public API).
 * See the [Kindergarten](./docs/kindergarten.md) for the class responsible to manage the children of a DOM element.
