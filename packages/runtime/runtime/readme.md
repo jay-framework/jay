@@ -58,7 +58,9 @@ const jayElement: CounterElement = render2({count: 12});
 
 The members above in the jay element creation sequence:
 * `render`: the generated function from the `jay-html` file.
-* `refs`: an object holding the references for DOM elements or child components. In the example above, it has two members - `subtracter` and `adderButton`.
+* `refs`: an object holding the references for DOM elements or child components. 
+   In the example above, it has two members - `subtracter` and `adderButton`.
+   Read more about `refs` in [refs.md](./docs/refs.md)
 * `render2`: a function, that given the element view state will create the actual element, including the DOM, `update`, `mount` and `unmount` functions
   as well as wire the DOM into the `refs`.
 * `jayElement: CounterElement = JayElement<CounterViewState, CounterElementRefs>`: the created Jay element
@@ -90,8 +92,7 @@ interface JayElement<ViewState, Refs> extends BaseJayElement<ViewState> {
 - `unmount`: A function of type `type mountFunc = () => void`. This function is designed to be called when the JayElement is removed from the DOM.
 - `refs`: This property holds references by `ref` to DOM elements or other components within the JayElement.
   These references can be used to set event listeners, interact with child elements or component APIs.
-
-
+  Read more about `refs` in [refs.md](./docs/refs.md).
 
 ## implementation details
 
