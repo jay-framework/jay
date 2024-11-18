@@ -9,7 +9,7 @@ function currentHookContext(): HookContext {
     return findContext((_) => _ === COMPONENT_CONTEXT || _ === CONTEXT_CREATION_CONTEXT);
 }
 
-type EffectCleanup = () => void;
+export type EffectCleanup = () => void;
 export function createEffect(effect: () => void | EffectCleanup) {
     let cleanup = undefined;
 
@@ -36,7 +36,7 @@ export function createSignal<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: 
     return currentHookContext().reactive.createSignal(value);
 }
 
-export function createPatchableState<T>(
+export function createPatchableSignal<T>(
     value: ValueOrGetter<T>,
 ): [get: Getter<T>, set: Setter<T>, patchFunc: Patcher<T>] {
     const [get, set] = createSignal(value);

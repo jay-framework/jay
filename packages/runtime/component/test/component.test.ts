@@ -17,7 +17,7 @@ import {
     createEffect,
     createEvent,
     createMemo,
-    createPatchableState,
+    createPatchableSignal,
     createSignal,
     forTesting,
     makeJayComponent,
@@ -127,7 +127,7 @@ describe('state management', () => {
             LabelRefs,
             JayElement<ViewState, LabelRefs>
         >;
-        type LabelElementPreRender = [refs: LabelRefs, LabelElementRender];
+        type LabelElementPreRender = [LabelRefs, LabelElementRender];
 
         function renderLabelElement(): LabelElementPreRender {
             const [refManager, [labelRef]] = ReferencesManager.for({}, ['label'], [], [], []);
@@ -153,7 +153,7 @@ describe('state management', () => {
             TwoLabelRefs,
             JayElement<TwoLabelsViewState, TwoLabelRefs>
         >;
-        type TwoLabelsElementPreRender = [refs: TwoLabelRefs, TwoLabelsElementRender];
+        type TwoLabelsElementPreRender = [TwoLabelRefs, TwoLabelsElementRender];
 
         function renderTwoLabelElement(): TwoLabelsElementPreRender {
             const [refManager, [label1Ref, label2Ref]] = ReferencesManager.for(
@@ -252,7 +252,7 @@ describe('state management', () => {
             }
 
             function LabelComponentWithInternalState(props: Props<Name>, refs: LabelRefs) {
-                let [data, setData, patchData] = createPatchableState({
+                let [data, setData, patchData] = createPatchableSignal({
                     label: 'Hello ' + props.name(),
                 });
 
@@ -553,7 +553,7 @@ describe('state management', () => {
                 PhoneBookRefs,
                 PhoneBookElement
             >;
-            type PhoneBookElementPreRender = [refs: PhoneBookRefs, PhoneBookElementRender];
+            type PhoneBookElementPreRender = [PhoneBookRefs, PhoneBookElementRender];
 
             function renderPhoneBookElement(): PhoneBookElementPreRender {
                 const [refManager, []] = ReferencesManager.for({}, [], [], [], []);
@@ -782,7 +782,7 @@ describe('state management', () => {
                 CounterRefs,
                 CounterElement
             >;
-            type CounterElementPreRender = [refs: CounterRefs, CounterElementRender];
+            type CounterElementPreRender = [CounterRefs, CounterElementRender];
 
             function renderCounterElement(options?: RenderElementOptions): CounterElementPreRender {
                 const [refManager, [decRef, valueRef, incRef]] = ReferencesManager.for(
@@ -881,10 +881,7 @@ describe('state management', () => {
                 LabelAndButtonRefs,
                 LabelAndButtonElement
             >;
-            type LabelAndButtonElementPreRender = [
-                refs: LabelAndButtonRefs,
-                LabelAndButtonElementRender,
-            ];
+            type LabelAndButtonElementPreRender = [LabelAndButtonRefs, LabelAndButtonElementRender];
 
             let renderCount = 0;
 
