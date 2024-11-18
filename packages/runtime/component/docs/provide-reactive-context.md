@@ -1,4 +1,4 @@
-# `provideReactiveContext`
+# provideReactiveContext
 
 Provides a reactive context value to child components.
 

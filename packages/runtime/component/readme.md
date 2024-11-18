@@ -1,5 +1,11 @@
 # Jay Component
 
+The Jay Component library defines the methods of constructing a Jay Component.
+
+# Creating Components
+
+* [Creating Jay Components](./docs/component.md)
+
 # Jay Component Hooks
 
 hooks to create signals:
@@ -19,11 +25,11 @@ hooks to create reactions & events:
 
 Hooks for providing context:
 
+* [provideContext](./docs/provide-context.md)
+* [provideReactiveContext](./docs/provide-reactive-context.md)
+
 Hooks to get Component Reactive Instance:
 
+* [use-reactive](./docs/use-reactive.md)
 
 
-## `useReactive`
-
-* **Purpose:** Gets the current reactive context.
-* **Returns:** The current reactive context object.

@@ -1,4 +1,4 @@
-# `provideContext`
+# provideContext
 
 Provides a context value to child components.
 

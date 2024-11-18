@@ -6,7 +6,7 @@ export interface CounterProps {
 }
 
 function CounterConstructor({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
-    let [count, setCount] = createSignal(initialValue);
+    const [count, setCount] = createSignal(initialValue);
 
     refs.subtracter.onclick(() => setCount(count() - 1));
     refs.adderButton.onclick(() => setCount(count() + 1));
