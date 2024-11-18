@@ -1,4 +1,4 @@
-# Runtime Implementation
+# Generated JayElement creation Functions
 
 > note: this is an "how it works doc"
 
