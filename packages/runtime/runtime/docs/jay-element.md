@@ -1,4 +1,4 @@
-## generated JayElement
+# Generated JayElement
 
 > note: this is an "how it works doc"
 
