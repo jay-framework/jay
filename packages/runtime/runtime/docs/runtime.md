@@ -1,5 +1,7 @@
 # Runtime Implementation
 
+> note: this is an "how it works doc"
+
 While in Jay the Jay compiler generates the code for `JayElement` from `jay-html` files, the below explains how to
 code Jay elements directly. In most cases, it is not to be coded directly.
 
