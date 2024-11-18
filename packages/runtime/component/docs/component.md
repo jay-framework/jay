@@ -13,6 +13,8 @@ interface JayComponent<Props, ViewState, jayElement extends BaseJayElement<ViewS
 }
 ```
 
+the `jay-component` library defines a reactive and elegant way to create headless Jay-Components.
+
 ## Simple Example
 
 ```typescript
