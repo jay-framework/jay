@@ -30,6 +30,6 @@ Hooks for providing context:
 
 Hooks to get Component Reactive Instance:
 
-* [use-reactive](./docs/use-reactive.md)
+* [useReactive](./docs/use-reactive.md)
 
 
