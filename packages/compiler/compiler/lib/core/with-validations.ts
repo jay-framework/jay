@@ -28,3 +28,11 @@ export class WithValidations<Value> {
         ]);
     }
 }
+
+export function checkValidationErrors<T>(withValidations: WithValidations<T>): T {
+    const { validations } = withValidations;
+    if (validations.length > 0) {
+        throw new Error(validations.join('\n'));
+    }
+    return withValidations.val!;
+}

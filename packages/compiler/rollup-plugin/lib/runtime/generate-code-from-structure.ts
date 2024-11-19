@@ -1,7 +1,6 @@
 import * as ts from 'typescript';
 import { transform } from 'typescript';
 import {
-    checkDiagnosticsErrors,
     checkValidationErrors,
     transformComponentBridge,
     transformComponent,
@@ -19,6 +18,16 @@ import { PluginContext } from 'rollup';
 import { JayPluginContext } from './jay-plugin-context';
 import { JayMetadata } from './metadata';
 import { writeGeneratedFile } from '../common/files';
+
+export function checkDiagnosticsErrors(tsCode: ts.TransformationResult<ts.SourceFile>) {
+    if (tsCode.diagnostics.length > 0) {
+        throw new Error(
+            `typescript transpilation failed ${tsCode.diagnostics
+                .map((diagnostic) => diagnostic.toString())
+                .join('\n')}`,
+        );
+    }
+}
 
 export async function generateCodeFromStructure(
     jayContext: JayPluginContext,
