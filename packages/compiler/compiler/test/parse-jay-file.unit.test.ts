@@ -6,7 +6,7 @@ import {
     JayNumber,
     JayObjectType,
     JayString,
-} from '../lib/core/jay-type';
+} from '../lib';
 import { stripMargin } from './test-utils/strip-margin';
 
 describe('compiler', () => {

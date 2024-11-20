@@ -10,7 +10,7 @@ import {
     getImportName,
     getImportSpecifiers,
 } from '../ts-utils//extract-imports';
-import { JayUnknown } from '../../core/jay-type';
+import { JayUnknown } from '../../generation-utils/jay-type';
 
 export function parseImportLinks(sourceFile: ts.SourceFile): JayImportLink[] {
     const importDeclarations = extractImportDeclarations(sourceFile).filter((importDeclaration) =>

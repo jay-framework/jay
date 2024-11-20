@@ -1,4 +1,4 @@
-import { WithValidations } from '../../core/with-validations';
+import { WithValidations } from '../../generation-utils/with-validations';
 import { capitalCase } from 'change-case';
 import { hasExtension, withoutExtension } from '../../core/runtime-mode';
 import { JAY_EXTENSION, JAY_TS_EXTENSION } from '../../core/constants';

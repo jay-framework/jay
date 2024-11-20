@@ -3,8 +3,9 @@
 Gets the current reactive context of the current component or reactive context.
 
 ```typescript
-declare function useReactive(): Reactive
+declare function useReactive(): Reactive;
 ```
-## Returns: 
+
+## Returns:
 
 The current reactive context object.

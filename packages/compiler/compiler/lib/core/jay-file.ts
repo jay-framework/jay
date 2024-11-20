@@ -1,7 +1,7 @@
 import { HTMLElement } from 'node-html-parser';
 import { JayImportLink } from './jay-imports';
 import { JayFormat } from './jay-format';
-import { JayType } from './jay-type';
+import { JayType } from '../generation-utils/jay-type';
 import { JsxBlock } from '../tsx-file/jsx-block';
 import { JayExample } from './jay-example';
 

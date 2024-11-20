@@ -1,12 +1,12 @@
 export * from './jay-file/jay-file-compiler';
 export { parseJayFile, getJayHtmlImports } from './jay-file/jay-file-parser';
-export { WithValidations } from './core/with-validations';
+export { WithValidations } from './generation-utils/with-validations';
 export { generateComponentRefsDefinitionFile } from './ts-file/generator-component-refs';
 export * from './core/jay-example';
 export * from './core/jay-file';
 export * from './core/jay-imports';
-export * from './core/imports';
-export * from './core/jay-type';
+export * from './generation-utils/imports';
+export * from './generation-utils/jay-type';
 export * from './core/jay-yaml-structure';
 export * from './core/jay-format';
 export { prettify } from './utils/prettify';
@@ -24,4 +24,4 @@ export { transformComponentImports } from './ts-file/building-blocks/transform-c
 export { compileFunctionSplitPatternsBlock } from './ts-file/basic-analyzers/compile-function-split-patterns';
 export { createTsSourceFileFromSource } from './ts-file/building-blocks/create-ts-source-file-from-source';
 export { FunctionRepositoryBuilder } from './ts-file/building-blocks/function-repository-builder';
-export { checkValidationErrors } from './core/with-validations';
+export { checkValidationErrors } from './generation-utils/with-validations';

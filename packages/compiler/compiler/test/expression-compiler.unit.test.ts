@@ -14,7 +14,7 @@ import {
     Variables,
 } from '../lib/expressions/expression-compiler';
 
-import { Import } from '../lib/core/imports';
+import { Import } from '../lib';
 import {
     JayBoolean,
     JayEnumType,
@@ -23,7 +23,7 @@ import {
     JayObjectType,
     JayString,
     JayUnknown,
-} from '../lib/core/jay-type';
+} from '../lib';
 
 describe('expression-compiler', () => {
     describe('variables', () => {

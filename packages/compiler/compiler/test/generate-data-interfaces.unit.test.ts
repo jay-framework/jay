@@ -8,7 +8,7 @@ import {
     JayNumber,
     JayObjectType,
     JayString,
-} from '../lib/core/jay-type';
+} from '../lib';
 
 describe('generate data interfaces', () => {
     it('should generate simple interface', () => {

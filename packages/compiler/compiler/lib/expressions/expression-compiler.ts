@@ -1,8 +1,8 @@
-import { RenderFragment } from '../core/render-fragment';
+import { RenderFragment } from '../generation-utils/render-fragment';
 import { parse } from './expression-parser.cjs';
-import { JayValidations } from '../core/with-validations';
-import { Import, Imports } from '../core/imports';
-import { JayImportedType, JayObjectType, JayType, JayUnknown } from '../core/jay-type';
+import { JayValidations } from '../generation-utils/with-validations';
+import { Import, Imports } from '../generation-utils/imports';
+import { JayImportedType, JayObjectType, JayType, JayUnknown } from '../generation-utils/jay-type';
 import { JayImportName } from '../core/jay-imports';
 
 export class Accessor {

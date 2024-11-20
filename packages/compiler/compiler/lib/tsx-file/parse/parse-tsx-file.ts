@@ -1,5 +1,5 @@
 import { JayTsxFile } from '../../core/jay-file';
-import { WithValidations } from '../../core/with-validations';
+import { WithValidations } from '../../generation-utils/with-validations';
 import { getImportByName, parseImportLinks } from '../../ts-file/parse-jay-file/parse-import-links';
 import { createTsSourceFileFromSource } from '../../ts-file/building-blocks/create-ts-source-file-from-source';
 import { getBaseElementName } from '../../ts-file/building-blocks/get-base-element-name';

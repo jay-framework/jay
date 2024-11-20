@@ -11,7 +11,7 @@ used with `JayElement`s.
 
 Creates a unique symbol (a `ContextMarker`) to identify a specific context type.
 
-### Returns: 
+### Returns:
 
 A `ContextMarker` symbol.
 

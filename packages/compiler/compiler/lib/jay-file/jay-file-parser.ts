@@ -1,5 +1,5 @@
 import { HTMLElement, parse } from 'node-html-parser';
-import { JayValidations, WithValidations } from '../core/with-validations';
+import { JayValidations, WithValidations } from '../generation-utils/with-validations';
 import yaml from 'js-yaml';
 import { capitalCase, pascalCase } from 'change-case';
 import pluralize from 'pluralize';
@@ -14,7 +14,7 @@ import {
     JayType,
     JayUnknown,
     resolvePrimitiveType,
-} from '../core/jay-type';
+} from '../generation-utils/jay-type';
 import { ResolveTsConfigOptions } from '../ts-file/ts-utils/resolve-ts-config';
 import { JayFormat } from '../core/jay-format';
 import { JayImportLink, JayImportName } from '../core/jay-imports';

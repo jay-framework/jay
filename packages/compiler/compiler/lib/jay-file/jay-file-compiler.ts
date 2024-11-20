@@ -1,7 +1,7 @@
-import { WithValidations } from '../core/with-validations';
+import { WithValidations } from '../generation-utils/with-validations';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
-import { Ref, RenderFragment } from '../core/render-fragment';
+import { Ref, RenderFragment } from '../generation-utils/render-fragment';
 import {
     parseAccessor,
     parseAttributeExpression,
@@ -15,7 +15,7 @@ import {
 } from '../expressions/expression-compiler';
 import { htmlElementTagNameMap } from './html-element-tag-name-map';
 import { camelCase } from 'camel-case';
-import { Import, Imports, ImportsFor } from '../core/imports';
+import { Import, Imports, ImportsFor } from '../generation-utils/imports';
 import {
     JayArrayType,
     JayAtomicType,
@@ -27,7 +27,7 @@ import {
     JayType,
     JayTypeAlias,
     JayUnknown,
-} from '../core/jay-type';
+} from '../generation-utils/jay-type';
 import { getModeFileExtension, MainRuntimeModes, RuntimeMode } from '../core/runtime-mode';
 import { JayImportLink } from '../core/jay-imports';
 import { JayHtmlFile } from '../core/jay-file';

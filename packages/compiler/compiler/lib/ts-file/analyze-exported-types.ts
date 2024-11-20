@@ -11,7 +11,7 @@ import {
     JayType,
     JayUnknown,
     resolvePrimitiveType,
-} from '../core/jay-type';
+} from '../generation-utils/jay-type';
 import ts, {
     convertCompilerOptionsFromJson,
     createProgram,
