@@ -1,7 +1,7 @@
 import {
     checkValidationErrors,
-    JayFile,
-    JayFormat,
+    SourceFileType,
+    SourceFileFormat,
     parseJayFile,
     parseTypeScriptFile,
     WithValidations,
@@ -16,7 +16,7 @@ export async function getJayFileStructure(
     context: PluginContext,
     code: string,
     id: string,
-): Promise<{ meta: JayMetadata; jayFile: JayFile }> {
+): Promise<{ meta: JayMetadata; jayFile: SourceFileType }> {
     const meta = getSourceJayMetadata(context, id);
     const sourceJayFile = jayContext.getCachedJayFile(meta.originId);
     if (Boolean(sourceJayFile)) return { meta, jayFile: sourceJayFile };
@@ -30,12 +30,12 @@ async function getJayFile(
     jayContext: JayPluginContext,
     meta: JayMetadata,
     code: string,
-): Promise<WithValidations<JayFile>> {
+): Promise<WithValidations<SourceFileType>> {
     const { originId: id, format } = meta;
     switch (format) {
-        case JayFormat.JayHtml:
+        case SourceFileFormat.JayHtml:
             return await getJayStructureFromJayHtmlSource(jayContext, code, id);
-        case JayFormat.TypeScript:
+        case SourceFileFormat.TypeScript:
             return await getJayStructureFromTypeScriptSource(code, id);
         default:
             throw new Error(`Unknown Jay format ${format}`);
@@ -46,7 +46,7 @@ async function getJayStructureFromJayHtmlSource(
     jayContext: JayPluginContext,
     code: string,
     id: string,
-): Promise<WithValidations<JayFile>> {
+): Promise<WithValidations<SourceFileType>> {
     const { filename, dirname } = getFileContext(id);
     return await parseJayFile(code, filename, dirname, {
         relativePath: jayContext.jayOptions.tsConfigFilePath,
@@ -56,6 +56,6 @@ async function getJayStructureFromJayHtmlSource(
 async function getJayStructureFromTypeScriptSource(
     code: string,
     id: string,
-): Promise<WithValidations<JayFile>> {
+): Promise<WithValidations<SourceFileType>> {
     return await parseTypeScriptFile(id, code);
 }

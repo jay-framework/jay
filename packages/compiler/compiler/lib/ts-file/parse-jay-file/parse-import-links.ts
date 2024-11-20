@@ -3,13 +3,13 @@ import {
     hasExtension,
     JAY_QUERY_MAIN_SANDBOX,
     JAY_QUERY_WORKER_SANDBOX,
-} from '../../core/runtime-mode';
-import { JayImportLink, JayImportName } from '../../core/jay-imports';
+} from '../../generation-utils/runtime-mode';
+import { JayImportLink, JayImportName } from '../../generation-utils/jay-imports';
 import {
     extractImportDeclarations,
     getImportName,
     getImportSpecifiers,
-} from '../ts-utils//extract-imports';
+} from '../ts-utils/extract-imports';
 import { JayUnknown } from '../../generation-utils/jay-type';
 
 export function parseImportLinks(sourceFile: ts.SourceFile): JayImportLink[] {

@@ -1,4 +1,4 @@
-import { JayImportName } from './jay-imports';
+import { JayImportName } from '../generation-utils/jay-imports';
 
 export interface JayYamlStructure {
     data: any;

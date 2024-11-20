@@ -5,7 +5,7 @@ import {
     JAY_QUERY_MAIN_SANDBOX,
     JAY_QUERY_WORKER_TRUSTED_TS,
     JayAtomicType,
-    JayFormat,
+    SourceFileFormat,
     JayObjectType,
     JayUnknown,
     prettify,
@@ -41,7 +41,7 @@ describe('transformJayFile', () => {
     const filename = 'app.jay-html';
     const { code, filePath } = readTestFile(folder, filename);
     const id = `${filePath}.ts`;
-    const jay: JayMetadata = { originId: filePath, format: JayFormat.JayHtml };
+    const jay: JayMetadata = { originId: filePath, format: SourceFileFormat.JayHtml };
 
     it('returns generated code', async () => {
         const context = getContext({ jay });
@@ -62,7 +62,7 @@ describe('transformJayFile', () => {
         const filename = 'counter.jay-html';
         const { code, filePath } = readTestFile(folder, filename);
         const id = `${filePath}${JAY_QUERY_MAIN_SANDBOX}${TS_EXTENSION}`;
-        const jay: JayMetadata = { originId: filePath, format: JayFormat.JayHtml };
+        const jay: JayMetadata = { originId: filePath, format: SourceFileFormat.JayHtml };
 
         it('generates element file', async () => {
             const context = getContext({ jay });
@@ -75,7 +75,7 @@ describe('transformJayFile', () => {
     describe('for typescript file', () => {
         const { code, filePath } = readTestFile(folder, 'counter.ts');
         const id = filePath;
-        const jay: JayMetadata = { originId: filePath, format: JayFormat.TypeScript };
+        const jay: JayMetadata = { originId: filePath, format: SourceFileFormat.TypeScript };
 
         it('returns the file code', async () => {
             const context = getContext({ jay });
@@ -83,7 +83,7 @@ describe('transformJayFile', () => {
 
             expect(await prettified(result)).toEqual(code);
             expect(jayContext.getCachedJayFile(id)).toEqual({
-                format: JayFormat.TypeScript,
+                format: SourceFileFormat.TypeScript,
                 baseElementName: 'Counter',
                 imports: [
                     {
@@ -121,7 +121,7 @@ describe('transformJayFile', () => {
         const filename = 'app.jay-html';
         const { code, filePath } = readTestFile(folder, filename);
         const id = `${filePath}.ts`;
-        const jay: JayMetadata = { originId: filePath, format: JayFormat.JayHtml };
+        const jay: JayMetadata = { originId: filePath, format: SourceFileFormat.JayHtml };
         const jayContext = new JayPluginContext();
 
         it('uses the jayFile', async () => {
@@ -144,7 +144,7 @@ describe('transformJayFile', () => {
         );
         const jay: JayMetadata = {
             originId: filePath,
-            format: JayFormat.TypeScript,
+            format: SourceFileFormat.TypeScript,
             isWorkerRoot: true,
         };
 

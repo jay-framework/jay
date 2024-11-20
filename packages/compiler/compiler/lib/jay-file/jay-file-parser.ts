@@ -16,10 +16,11 @@ import {
     resolvePrimitiveType,
 } from '../generation-utils/jay-type';
 import { ResolveTsConfigOptions } from '../ts-file/ts-utils/resolve-ts-config';
-import { JayFormat } from '../core/jay-format';
-import { JayImportLink, JayImportName } from '../core/jay-imports';
-import { JayYamlStructure } from '../core/jay-yaml-structure';
-import { JayHtmlFile } from '../core/jay-file';
+import { SourceFileFormat } from '../generation-utils/source-file-format';
+import { JayImportLink, JayImportName } from '../generation-utils/jay-imports';
+import { JayYamlStructure } from './jay-yaml-structure';
+
+import {JayHtmlSourceFile} from "./jay-html-source-file";
 
 export function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj);
@@ -163,7 +164,7 @@ export function parseJayFile(
     filename: string,
     filePath: string,
     options: ResolveTsConfigOptions,
-): WithValidations<JayHtmlFile> {
+): WithValidations<JayHtmlSourceFile> {
     const normalizedFileName = normalizeFilename(filename);
     const baseElementName = capitalCase(normalizedFileName, { delimiter: '' });
     let root = parse(html);
@@ -192,13 +193,13 @@ export function parseJayFile(
     }
     return new WithValidations(
         {
-            format: JayFormat.JayHtml,
+            format: SourceFileFormat.JayHtml,
             types,
             examples,
             imports,
             body,
             baseElementName,
-        } as JayHtmlFile,
+        } as JayHtmlSourceFile,
         validations,
     );
 }

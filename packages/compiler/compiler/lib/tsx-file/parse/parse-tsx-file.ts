@@ -1,9 +1,9 @@
-import { JayTsxFile } from '../../core/jay-file';
+import { JayTsxSourceFile } from '../../generation-utils/source-file-type';
 import { WithValidations } from '../../generation-utils/with-validations';
 import { getImportByName, parseImportLinks } from '../../ts-file/parse-jay-file/parse-import-links';
 import { createTsSourceFileFromSource } from '../../ts-file/building-blocks/create-ts-source-file-from-source';
 import { getBaseElementName } from '../../ts-file/building-blocks/get-base-element-name';
-import { JAY_COMPONENT, MAKE_JAY_TSX_COMPONENT } from '../../core/constants';
+import { JAY_COMPONENT, MAKE_JAY_TSX_COMPONENT } from '../../generation-utils/constants';
 import { findComponentConstructorsBlock } from '../../ts-file/building-blocks/find-component-constructors';
 import { findFunctionExpressionReturnStatements } from '../../ts-file/building-blocks/find-function-expression-return-statements';
 import ts from 'typescript';
@@ -15,7 +15,7 @@ import {
 } from '../../ts-file/building-blocks/find-component-constructor-calls';
 import { SourceFileBindingResolver } from '../../ts-file/basic-analyzers/source-file-binding-resolver';
 
-export function parseTsxFile(filename: string, source: string): WithValidations<JayTsxFile> {
+export function parseTsxFile(filename: string, source: string): WithValidations<JayTsxSourceFile> {
     const sourceFile = createTsSourceFileFromSource(filename, source, ts.ScriptKind.TSX);
 
     const imports = parseImportLinks(sourceFile);
@@ -85,5 +85,5 @@ export function parseTsxFile(filename: string, source: string): WithValidations<
         imports,
         baseElementName,
         jsxBlock: renderedJsxes[0], // TODO support multiple bodies
-    } as JayTsxFile);
+    } as JayTsxSourceFile);
 }

@@ -1,5 +1,5 @@
 import { parseTsxFile } from '../../../lib/tsx-file/parse/parse-tsx-file';
-import { JayFile, JayUnknown, MAKE_JAY_TSX_COMPONENT, WithValidations } from '../../../lib';
+import {SourceFileType, JayUnknown, MAKE_JAY_TSX_COMPONENT, WithValidations, JayTsxSourceFile} from '../../../lib';
 import { prettifyHtml } from '../../../lib/utils/prettify';
 
 describe('parseTsxFile', () => {
@@ -45,7 +45,7 @@ export const Counter = makeJayTsxComponent(CounterConstructor);
                 },
             ],
             baseElementName: 'Counter',
-        } as JayFile);
+        } as JayTsxSourceFile);
         expect(prettifyHtml(jayFile.jsxBlock.getHtml())).toEqual(
             prettifyHtml(`
            <div>

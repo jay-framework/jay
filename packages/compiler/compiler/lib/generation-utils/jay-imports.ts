@@ -1,4 +1,4 @@
-import { JayType } from '../generation-utils/jay-type';
+import { JayType } from './jay-type';
 
 export interface JayImportName {
     name: string;

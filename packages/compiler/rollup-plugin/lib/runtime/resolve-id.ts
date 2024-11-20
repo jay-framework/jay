@@ -2,7 +2,7 @@ import { CustomPluginOptions, PluginContext, ResolveIdResult, ResolvedId } from 
 import { watchChangesFor } from './watch';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
 import { appendJayMetadata, jayMetadataFromModuleMetadata } from './metadata';
-import { hasExtension, JAY_QUERY_WORKER_TRUSTED_TS, JayFormat, TS_EXTENSION } from 'jay-compiler';
+import { hasExtension, JAY_QUERY_WORKER_TRUSTED_TS, SourceFileFormat, TS_EXTENSION } from 'jay-compiler';
 
 export interface ResolveIdOptions {
     attributes: Record<string, string>;
@@ -28,7 +28,7 @@ export async function addTsExtensionForJayFile(
         return { id, meta: appendJayMetadata(context, id, { format, originId }) };
     } else {
         watchChangesFor(context, resolved.id);
-        const format = JayFormat.JayHtml;
+        const format = SourceFileFormat.JayHtml;
         const originId = resolved.id;
         const id = `${originId}${TS_EXTENSION}`;
         console.info(`[resolveId] resolved ${id} as ${format}`);
@@ -52,7 +52,7 @@ export async function resolveJayModeFile(
     if (!resolved) return null;
 
     const resolvedJayMeta = jayMetadataFromModuleMetadata(resolved.id, resolved.meta);
-    const format = resolvedJayMeta.format || JayFormat.TypeScript;
+    const format = resolvedJayMeta.format || SourceFileFormat.TypeScript;
     const originId = resolvedJayMeta.originId || resolved.id;
     const id = getResolvedId(resolved, mode, originId);
     console.info(`[resolveId] resolved ${id} as ${format}`);
@@ -79,7 +79,7 @@ export async function removeSandboxPrefixForWorkerRoot(
         id,
         meta: appendJayMetadata(context, id, {
             originId,
-            format: JayFormat.TypeScript,
+            format: SourceFileFormat.TypeScript,
             isWorkerRoot: true,
         }),
     };

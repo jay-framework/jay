@@ -1,15 +1,7 @@
 import ts, { isImportDeclaration, isStringLiteral } from 'typescript';
 import { codeToAst } from '../ts-utils/ts-compiler-utils';
-import { JAY_SECURE } from '../../core/constants';
+import { JAY_SECURE } from '../../generation-utils/constants';
 
-// function findJaySecureImport(statements: ts.Node[]) {
-//     return statements.find(statement =>
-//         isImportDeclaration(statement) &&
-//         isStringLiteral(statement.moduleSpecifier) &&
-//         statement.moduleSpecifier.text === JAY_SECURE
-//     )
-// }
-//
 function findAfterImportStatementIndex(statements: ts.Node[]) {
     let lastIndex = 0;
     // noinspection LoopStatementThatDoesntLoopJS
@@ -28,11 +20,6 @@ export function transformComponentImports(
 ) {
     if (needsHandler$ || needsFunc$ || needsFuncGlobal$) {
         const statements = [...transformedSourceFile.statements];
-        // const jaySecureImport = findJaySecureImport(statements);
-        // if (jaySecureImport) {
-        //
-        // }
-        // else {
         const afterImportStatementIndex = findAfterImportStatementIndex(statements);
         const importClause = [
             ...(needsHandler$ ? ['handler$'] : []),

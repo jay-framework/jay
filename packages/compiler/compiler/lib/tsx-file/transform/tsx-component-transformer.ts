@@ -1,9 +1,9 @@
 import ts from 'typescript';
-import { JayTsxFile } from '../../core/jay-file';
+import { JayTsxSourceFile } from '../../generation-utils/source-file-type';
 import { mkTransformer, SourceFileTransformerContext } from '../../ts-file/ts-utils/mk-transformer';
 
 export function tsxComponentTransformer(
-    jayTsxFile: JayTsxFile,
+    jayTsxFile: JayTsxSourceFile,
 ): (context: ts.TransformationContext) => ts.Transformer<ts.SourceFile> {
     return mkTransformer(mkSourceFileTransformer, { jayTsxFile });
 }
@@ -13,7 +13,7 @@ function mkSourceFileTransformer({
     sourceFile,
     context,
     jayTsxFile,
-}: SourceFileTransformerContext & { jayTsxFile: JayTsxFile }): ts.SourceFile {
+}: SourceFileTransformerContext & { jayTsxFile: JayTsxSourceFile }): ts.SourceFile {
     // TODO transform to component
     return sourceFile;
 }

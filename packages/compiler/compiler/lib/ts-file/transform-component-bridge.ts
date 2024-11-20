@@ -1,10 +1,10 @@
 import ts from 'typescript';
-import { getModeFileExtension, RuntimeMode } from '../core/runtime-mode';
+import { getModeFileExtension, RuntimeMode } from '../generation-utils/runtime-mode';
 import { astToCode, codeToAst } from './ts-utils/ts-compiler-utils';
 import { mkTransformer, SourceFileTransformerContext } from './ts-utils/mk-transformer';
 import { findMakeJayComponentImport } from './building-blocks/find-make-jay-component-import';
 import { getImportName } from './ts-utils/extract-imports';
-import { MAKE_JAY_COMPONENT } from '../core/constants';
+import { MAKE_JAY_COMPONENT } from '../generation-utils/constants';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
 import { CompiledPattern } from './basic-analyzers/compile-function-split-patterns';

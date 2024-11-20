@@ -1,7 +1,7 @@
 import * as ts from 'typescript';
 import { JayRollupConfig } from '../common/types';
 import path from 'node:path';
-import { createTsSourceFileFromSource, JayFile } from 'jay-compiler';
+import { createTsSourceFileFromSource, SourceFileType } from 'jay-compiler';
 import { CompiledPattern } from 'jay-compiler';
 import { compileFunctionSplitPatternsBlock } from 'jay-compiler';
 import fs from 'fs';
@@ -12,7 +12,7 @@ export class JayPluginContext {
     readonly outputDir: string;
     readonly tsPrinter: ts.Printer;
     readonly compilerPatterns: CompiledPattern[];
-    readonly jayFileCache = new Map<string, JayFile>();
+    readonly jayFileCache = new Map<string, SourceFileType>();
     readonly globalFunctionsRepository: FunctionRepositoryBuilder;
 
     constructor(readonly jayOptions: JayRollupConfig = {}) {
@@ -34,13 +34,13 @@ export class JayPluginContext {
         this.globalFunctionsRepository = new FunctionRepositoryBuilder();
     }
 
-    cacheJayFile(id: string, jayFile: JayFile): JayFile {
+    cacheJayFile(id: string, jayFile: SourceFileType): SourceFileType {
         console.info('[cache] set', id);
         this.jayFileCache.set(id, jayFile);
         return jayFile;
     }
 
-    getCachedJayFile(id: string): JayFile {
+    getCachedJayFile(id: string): SourceFileType {
         const jayFile = this.jayFileCache.get(id);
         if (Boolean(jayFile)) {
             console.info('[cache] hit', id);

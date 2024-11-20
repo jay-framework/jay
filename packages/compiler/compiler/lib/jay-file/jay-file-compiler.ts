@@ -28,9 +28,10 @@ import {
     JayTypeAlias,
     JayUnknown,
 } from '../generation-utils/jay-type';
-import { getModeFileExtension, MainRuntimeModes, RuntimeMode } from '../core/runtime-mode';
-import { JayImportLink } from '../core/jay-imports';
-import { JayHtmlFile } from '../core/jay-file';
+import { getModeFileExtension, MainRuntimeModes, RuntimeMode } from '../generation-utils/runtime-mode';
+import { JayImportLink } from '../generation-utils/jay-imports';
+
+import {JayHtmlSourceFile} from "./jay-html-source-file";
 
 class Indent {
     private readonly base: string;
@@ -918,7 +919,7 @@ ${renderedBridge.rendered}
 }
 
 export function generateElementDefinitionFile(
-    parsedFile: WithValidations<JayHtmlFile>,
+    parsedFile: WithValidations<JayHtmlSourceFile>,
 ): WithValidations<string> {
     return parsedFile.map((jayFile) => {
         let types = generateTypes(jayFile.types);
@@ -955,7 +956,7 @@ export function generateElementDefinitionFile(
 }
 
 export function generateElementFile(
-    jayFile: JayHtmlFile,
+    jayFile: JayHtmlSourceFile,
     importerMode: MainRuntimeModes,
 ): WithValidations<string> {
     let types = generateTypes(jayFile.types);
@@ -985,7 +986,7 @@ export function generateElementFile(
     return new WithValidations(renderedFile, renderedImplementation.validations);
 }
 
-export function generateElementBridgeFile(jayFile: JayHtmlFile): string {
+export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
     let types = generateTypes(jayFile.types);
     let {
         renderedRefs,
@@ -1033,7 +1034,7 @@ export function generateElementBridgeFile(jayFile: JayHtmlFile): string {
 const CALL_INITIALIZE_WORKER = `setWorkerPort(new JayPort(new HandshakeMessageJayChannel(self)));
 initializeWorker();`;
 
-export function generateSandboxRootFile(jayFile: JayHtmlFile): string {
+export function generateSandboxRootFile(jayFile: JayHtmlSourceFile): string {
     // let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(
     //     jayFile.imports,
     // );

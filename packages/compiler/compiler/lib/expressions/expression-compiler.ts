@@ -3,7 +3,7 @@ import { parse } from './expression-parser.cjs';
 import { JayValidations } from '../generation-utils/with-validations';
 import { Import, Imports } from '../generation-utils/imports';
 import { JayImportedType, JayObjectType, JayType, JayUnknown } from '../generation-utils/jay-type';
-import { JayImportName } from '../core/jay-imports';
+import { JayImportName } from '../generation-utils/jay-imports';
 
 export class Accessor {
     readonly terms: Array<string>;

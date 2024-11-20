@@ -1,14 +1,14 @@
 import { extractImportedModules, isRelativeImport } from './ts-utils/extract-imports';
-import { JAY_QUERY_WORKER_TRUSTED } from '../core/runtime-mode';
+import { JAY_QUERY_WORKER_TRUSTED } from '../generation-utils/runtime-mode';
 import { createTsSourceFileFromSource } from './building-blocks/create-ts-source-file-from-source';
-import { JayFile } from '../core/jay-file';
+import { SourceFileType } from '../generation-utils/source-file-type';
 
 export function generateImportsFileFromTsSource(filename: string, source: string): string {
     const sourceFile = createTsSourceFileFromSource(filename, source);
     return fromImportModules(extractImportedModules(sourceFile));
 }
 
-export function generateImportsFileFromJayFile(jayFile: JayFile): string {
+export function generateImportsFileFromJayFile(jayFile: SourceFileType): string {
     return fromImportModules(jayFile.imports.map((link) => link.module));
 }
 

@@ -22,12 +22,12 @@ import {
     fixtureDir,
 } from './file-utils';
 import { astToCode } from '../../lib/ts-file/ts-utils/ts-compiler-utils';
-import { JayHtmlFile } from '../../lib';
+import { JayHtmlSourceFile } from '../../lib';
 
 export async function readAndParseJayFile(
     folder: string,
     givenFile?: string,
-): Promise<WithValidations<JayHtmlFile>> {
+): Promise<WithValidations<JayHtmlSourceFile>> {
     const file = givenFile || getFileFromFolder(folder);
     const dirname = fixtureDir(folder);
     const filename = `${file}.jay-html`;

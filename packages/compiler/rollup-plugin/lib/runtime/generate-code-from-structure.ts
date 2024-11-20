@@ -9,9 +9,9 @@ import {
     generateImportsFileFromJayFile,
     generateSandboxRootFile,
     getModeFromExtension,
-    JayFile,
-    JayFormat,
-    JayHtmlFile,
+    SourceFileType,
+    SourceFileFormat,
+    JayHtmlSourceFile,
     RuntimeMode,
 } from 'jay-compiler';
 import { PluginContext } from 'rollup';
@@ -35,19 +35,19 @@ export async function generateCodeFromStructure(
     code: string,
     id: string,
     meta: JayMetadata,
-    jayFile: JayFile,
+    jayFile: SourceFileType,
 ): Promise<string> {
     const { format } = meta;
     const mode = getModeFromExtension(id);
     const tsCode =
-        format === JayFormat.JayHtml
-            ? generateCodeFromJayHtmlFile(mode, jayFile as JayHtmlFile)
+        format === SourceFileFormat.JayHtml
+            ? generateCodeFromJayHtmlFile(mode, jayFile as JayHtmlSourceFile)
             : generateCodeFromTsFile(jayContext, mode, jayFile, id, code);
     await writeGeneratedFile(jayContext, context, id, tsCode);
     return tsCode;
 }
 
-export function generateCodeFromJayHtmlFile(mode: RuntimeMode, jayFile: JayHtmlFile): string {
+export function generateCodeFromJayHtmlFile(mode: RuntimeMode, jayFile: JayHtmlSourceFile): string {
     switch (mode) {
         case RuntimeMode.MainTrusted:
         case RuntimeMode.MainSandbox:
@@ -61,14 +61,14 @@ export function generateCodeFromJayHtmlFile(mode: RuntimeMode, jayFile: JayHtmlF
     }
 }
 
-function hasSandboxImport(jayFile: JayFile): boolean {
+function hasSandboxImport(jayFile: SourceFileType): boolean {
     return jayFile.imports.some((link) => link.sandbox);
 }
 
 function generateCodeFromTsFile(
     jayContext: JayPluginContext,
     mode: RuntimeMode,
-    jayFile: JayFile,
+    jayFile: SourceFileType,
     id: string,
     code: string,
 ): string {
