@@ -1,5 +1,5 @@
 import { parseTsxFile } from '../../../lib/tsx-file/parse/parse-tsx-file';
-import {SourceFileType, JayUnknown, MAKE_JAY_TSX_COMPONENT, WithValidations, JayTsxSourceFile} from '../../../lib';
+import {CompilerSourceFile, JayUnknown, MAKE_JAY_TSX_COMPONENT, WithValidations, JayTsxSourceFile} from '../../../lib';
 import { prettifyHtml } from '../../../lib/utils/prettify';
 
 describe('parseTsxFile', () => {

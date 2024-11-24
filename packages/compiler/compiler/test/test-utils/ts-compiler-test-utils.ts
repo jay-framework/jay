@@ -21,7 +21,7 @@ import {
     readFixtureFile,
     fixtureDir,
 } from './file-utils';
-import { astToCode } from '../../lib/ts-file/ts-utils/ts-compiler-utils';
+import { astToCode } from '../../lib/components-files/ts-utils/ts-compiler-utils';
 import { JayHtmlSourceFile } from '../../lib';
 
 export async function readAndParseJayFile(

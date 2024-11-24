@@ -30,7 +30,7 @@ import {
     readEventTargetValuePattern,
     readEventWhichPattern,
     requestAnimationFramePattern,
-} from './ts-basic-analyzers/compiler-patterns-for-testing';
+} from './component-files/ts-basic-analyzers/compiler-patterns-for-testing';
 import { FunctionRepositoryBuilder } from '../lib';
 
 describe('generate full project', () => {

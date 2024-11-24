@@ -9,7 +9,7 @@ import {
     generateImportsFileFromJayFile,
     generateSandboxRootFile,
     getModeFromExtension,
-    SourceFileType,
+    CompilerSourceFile,
     SourceFileFormat,
     JayHtmlSourceFile,
     RuntimeMode,
@@ -35,7 +35,7 @@ export async function generateCodeFromStructure(
     code: string,
     id: string,
     meta: JayMetadata,
-    jayFile: SourceFileType,
+    jayFile: CompilerSourceFile,
 ): Promise<string> {
     const { format } = meta;
     const mode = getModeFromExtension(id);
@@ -61,14 +61,14 @@ export function generateCodeFromJayHtmlFile(mode: RuntimeMode, jayFile: JayHtmlS
     }
 }
 
-function hasSandboxImport(jayFile: SourceFileType): boolean {
+function hasSandboxImport(jayFile: CompilerSourceFile): boolean {
     return jayFile.imports.some((link) => link.sandbox);
 }
 
 function generateCodeFromTsFile(
     jayContext: JayPluginContext,
     mode: RuntimeMode,
-    jayFile: SourceFileType,
+    jayFile: CompilerSourceFile,
     id: string,
     code: string,
 ): string {

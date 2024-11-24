@@ -1,6 +1,6 @@
 import ts from 'typescript';
-import { JayTsxSourceFile } from '../../compiler-shared/source-file-type';
-import { mkTransformer, SourceFileTransformerContext } from '../../ts-file/ts-utils/mk-transformer';
+import { JayTsxSourceFile } from '../../shared/compiler-source-file';
+import { mkTransformer, SourceFileTransformerContext } from '../../components-files/ts-utils/mk-transformer';
 
 export function tsxComponentTransformer(
     jayTsxFile: JayTsxSourceFile,

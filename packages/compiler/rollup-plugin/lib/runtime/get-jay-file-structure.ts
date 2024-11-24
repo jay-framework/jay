@@ -1,9 +1,9 @@
 import {
     checkValidationErrors,
-    SourceFileType,
+    CompilerSourceFile,
     SourceFileFormat,
     parseJayFile,
-    parseTypeScriptFile,
+    parseGenericTypescriptFile,
     WithValidations,
 } from 'jay-compiler';
 import { PluginContext } from 'rollup';
@@ -16,7 +16,7 @@ export async function getJayFileStructure(
     context: PluginContext,
     code: string,
     id: string,
-): Promise<{ meta: JayMetadata; jayFile: SourceFileType }> {
+): Promise<{ meta: JayMetadata; jayFile: CompilerSourceFile }> {
     const meta = getSourceJayMetadata(context, id);
     const sourceJayFile = jayContext.getCachedJayFile(meta.originId);
     if (Boolean(sourceJayFile)) return { meta, jayFile: sourceJayFile };
@@ -30,7 +30,7 @@ async function getJayFile(
     jayContext: JayPluginContext,
     meta: JayMetadata,
     code: string,
-): Promise<WithValidations<SourceFileType>> {
+): Promise<WithValidations<CompilerSourceFile>> {
     const { originId: id, format } = meta;
     switch (format) {
         case SourceFileFormat.JayHtml:
@@ -46,7 +46,7 @@ async function getJayStructureFromJayHtmlSource(
     jayContext: JayPluginContext,
     code: string,
     id: string,
-): Promise<WithValidations<SourceFileType>> {
+): Promise<WithValidations<CompilerSourceFile>> {
     const { filename, dirname } = getFileContext(id);
     return await parseJayFile(code, filename, dirname, {
         relativePath: jayContext.jayOptions.tsConfigFilePath,
@@ -56,6 +56,6 @@ async function getJayStructureFromJayHtmlSource(
 async function getJayStructureFromTypeScriptSource(
     code: string,
     id: string,
-): Promise<WithValidations<SourceFileType>> {
-    return await parseTypeScriptFile(id, code);
+): Promise<WithValidations<CompilerSourceFile>> {
+    return await parseGenericTypescriptFile(id, code);
 }
