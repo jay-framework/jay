@@ -1,7 +1,7 @@
 import { extractImportedModules, isRelativeImport } from './ts-utils/extract-imports';
-import { JAY_QUERY_WORKER_TRUSTED } from '../generation-utils/runtime-mode';
+import { JAY_QUERY_WORKER_TRUSTED } from '../compiler-shared/runtime-mode';
 import { createTsSourceFileFromSource } from './building-blocks/create-ts-source-file-from-source';
-import { SourceFileType } from '../generation-utils/source-file-type';
+import { SourceFileType } from '../compiler-shared/source-file-type';
 
 export function generateImportsFileFromTsSource(filename: string, source: string): string {
     const sourceFile = createTsSourceFileFromSource(filename, source);

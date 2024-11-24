@@ -1,10 +1,10 @@
 import { HTMLElement, parse } from 'node-html-parser';
-import { JayValidations, WithValidations } from '../generation-utils/with-validations';
+import { JayValidations, WithValidations } from '../compiler-shared/with-validations';
 import yaml from 'js-yaml';
 import { capitalCase, pascalCase } from 'change-case';
 import pluralize from 'pluralize';
 import { parseEnumValues, parseImportNames, parseIsEnum } from '../expressions/expression-compiler';
-import { analyzeExportedTypes } from '../ts-file/basic-analyzers/analyze-exported-types';
+import { analyzeExportedTypes, ResolveTsConfigOptions } from '../analyze-exported-types';
 import path from 'path';
 import {
     JayArrayType,
@@ -14,10 +14,9 @@ import {
     JayType,
     JayUnknown,
     resolvePrimitiveType,
-} from '../generation-utils/jay-type';
-import { ResolveTsConfigOptions } from '../ts-file/ts-utils/resolve-ts-config';
-import { SourceFileFormat } from '../generation-utils/source-file-format';
-import { JayImportLink, JayImportName } from '../generation-utils/jay-imports';
+} from '../compiler-shared/jay-type';
+import { SourceFileFormat } from '../compiler-shared/source-file-format';
+import { JayImportLink, JayImportName } from '../compiler-shared/jay-imports';
 import { JayYamlStructure } from './jay-yaml-structure';
 
 import {JayHtmlSourceFile} from "./jay-html-source-file";

@@ -1,9 +1,9 @@
-import { RenderFragment } from '../generation-utils/render-fragment';
+import { RenderFragment } from '../compiler-shared/render-fragment';
 import { parse } from './expression-parser.cjs';
-import { JayValidations } from '../generation-utils/with-validations';
-import { Import, Imports } from '../generation-utils/imports';
-import { JayImportedType, JayObjectType, JayType, JayUnknown } from '../generation-utils/jay-type';
-import { JayImportName } from '../generation-utils/jay-imports';
+import { JayValidations } from '../compiler-shared/with-validations';
+import { Import, Imports } from '../compiler-shared/imports';
+import { JayImportedType, JayObjectType, JayType, JayUnknown } from '../compiler-shared/jay-type';
+import { JayImportName } from '../compiler-shared/jay-imports';
 
 export class Accessor {
     readonly terms: Array<string>;

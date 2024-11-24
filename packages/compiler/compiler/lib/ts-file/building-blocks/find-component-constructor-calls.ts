@@ -9,6 +9,7 @@ import {
     isImportModuleVariableRoot,
 } from '../basic-analyzers/name-binding-resolver';
 import { isIdentifierOrPropertyAccessExpression } from '../basic-analyzers/typescript-extras';
+import {JAY_COMPONENT} from "rollup-plugin-jay";
 
 export enum FindComponentConstructorType {
     makeJayComponent = 'makeJayComponent',
@@ -45,7 +46,7 @@ export function findComponentConstructorCalls(
                     flattened.root &&
                     isImportModuleVariableRoot(flattened.root) &&
                     isStringLiteral(flattened.root.module) &&
-                    flattened.root.module.text === 'jay-component'
+                    flattened.root.module.text === JAY_COMPONENT
                 ) {
                     let render =
                         findType === FindComponentConstructorType.makeJayComponent

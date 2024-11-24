@@ -1,3 +1,5 @@
+import {JAY_RUNTIME, JAY_SECURE} from "./constants";
+
 export enum ImportsFor {
     definition,
     implementation,
@@ -18,158 +20,158 @@ function importStatementFragment(module: string, statement: string, ...usage: Im
 
 export const Import = {
     jayElement: importStatementFragment(
-        'jay-runtime',
+        JAY_RUNTIME,
         'JayElement',
         ImportsFor.definition,
         ImportsFor.implementation,
         ImportsFor.elementSandbox,
     ),
-    element: importStatementFragment('jay-runtime', 'element as e', ImportsFor.implementation),
+    element: importStatementFragment(JAY_RUNTIME, 'element as e', ImportsFor.implementation),
     dynamicText: importStatementFragment(
-        'jay-runtime',
+        JAY_RUNTIME,
         'dynamicText as dt',
         ImportsFor.implementation,
     ),
     dynamicAttribute: importStatementFragment(
-        'jay-runtime',
+        JAY_RUNTIME,
         'dynamicAttribute as da',
         ImportsFor.implementation,
     ),
     booleanAttribute: importStatementFragment(
-        'jay-runtime',
+        JAY_RUNTIME,
         'booleanAttribute as ba',
         ImportsFor.implementation,
     ),
     dynamicProperty: importStatementFragment(
-        'jay-runtime',
+        JAY_RUNTIME,
         'dynamicProperty as dp',
         ImportsFor.implementation,
     ),
     RenderElement: importStatementFragment(
-        'jay-runtime',
+        JAY_RUNTIME,
         'RenderElement',
         ImportsFor.implementation,
         ImportsFor.definition,
         ImportsFor.elementSandbox,
     ),
     ReferencesManager: importStatementFragment(
-        'jay-runtime',
+        JAY_RUNTIME,
         'ReferencesManager',
         ImportsFor.implementation,
     ),
     SecureReferencesManager: importStatementFragment(
-        'jay-secure',
+        JAY_SECURE,
         'SecureReferencesManager',
         ImportsFor.elementSandbox,
     ),
     conditional: importStatementFragment(
-        'jay-runtime',
+        JAY_RUNTIME,
         'conditional as c',
         ImportsFor.implementation,
     ),
     dynamicElement: importStatementFragment(
-        'jay-runtime',
+        JAY_RUNTIME,
         'dynamicElement as de',
         ImportsFor.implementation,
     ),
-    forEach: importStatementFragment('jay-runtime', 'forEach', ImportsFor.implementation),
+    forEach: importStatementFragment(JAY_RUNTIME, 'forEach', ImportsFor.implementation),
     ConstructContext: importStatementFragment(
-        'jay-runtime',
+        JAY_RUNTIME,
         'ConstructContext',
         ImportsFor.implementation,
     ),
     HTMLElementCollectionProxy: importStatementFragment(
-        'jay-runtime',
+        JAY_RUNTIME,
         'HTMLElementCollectionProxy',
         ImportsFor.definition,
         ImportsFor.implementation,
         ImportsFor.elementSandbox,
     ),
     HTMLElementProxy: importStatementFragment(
-        'jay-runtime',
+        JAY_RUNTIME,
         'HTMLElementProxy',
         ImportsFor.definition,
         ImportsFor.implementation,
         ImportsFor.elementSandbox,
     ),
-    childComp: importStatementFragment('jay-runtime', 'childComp', ImportsFor.implementation),
-    elemRef: importStatementFragment('jay-runtime', 'elemRef as er', ImportsFor.implementation),
+    childComp: importStatementFragment(JAY_RUNTIME, 'childComp', ImportsFor.implementation),
+    elemRef: importStatementFragment(JAY_RUNTIME, 'elemRef as er', ImportsFor.implementation),
     elemCollectionRef: importStatementFragment(
-        'jay-runtime',
+        JAY_RUNTIME,
         'elemCollectionRef as ecr',
         ImportsFor.implementation,
     ),
-    compRef: importStatementFragment('jay-runtime', 'compRef as cr', ImportsFor.implementation),
+    compRef: importStatementFragment(JAY_RUNTIME, 'compRef as cr', ImportsFor.implementation),
     compCollectionRef: importStatementFragment(
-        'jay-runtime',
+        JAY_RUNTIME,
         'compCollectionRef as ccr',
         ImportsFor.implementation,
     ),
     RenderElementOptions: importStatementFragment(
-        'jay-runtime',
+        JAY_RUNTIME,
         'RenderElementOptions',
         ImportsFor.implementation,
         ImportsFor.definition,
     ),
     sandboxElementBridge: importStatementFragment(
-        'jay-secure',
+        JAY_SECURE,
         'elementBridge',
         ImportsFor.elementSandbox,
     ),
-    sandboxRoot: importStatementFragment('jay-secure', 'sandboxRoot', ImportsFor.elementSandbox),
+    sandboxRoot: importStatementFragment(JAY_SECURE, 'sandboxRoot', ImportsFor.elementSandbox),
     sandboxElement: importStatementFragment(
-        'jay-secure',
+        JAY_SECURE,
         'sandboxElement as e',
         ImportsFor.elementSandbox,
     ),
     sandboxChildComp: importStatementFragment(
-        'jay-secure',
+        JAY_SECURE,
         'sandboxChildComp as childComp',
         ImportsFor.elementSandbox,
     ),
     sandboxElemRef: importStatementFragment(
-        'jay-secure',
+        JAY_SECURE,
         'elemRef as er',
         ImportsFor.elementSandbox,
     ),
     sandboxElemCollectionRef: importStatementFragment(
-        'jay-secure',
+        JAY_SECURE,
         'elemCollectionRef as ecr',
         ImportsFor.elementSandbox,
     ),
     sandboxCompRef: importStatementFragment(
-        'jay-secure',
+        JAY_SECURE,
         'compRef as cr',
         ImportsFor.elementSandbox,
     ),
     sandboxCompCollectionRef: importStatementFragment(
-        'jay-secure',
+        JAY_SECURE,
         'compCollectionRef as ccr',
         ImportsFor.elementSandbox,
     ),
     sandboxForEach: importStatementFragment(
-        'jay-secure',
+        JAY_SECURE,
         'sandboxForEach as forEach',
         ImportsFor.elementSandbox,
     ),
     handshakeMessageJayChannel: importStatementFragment(
-        'jay-secure',
+        JAY_SECURE,
         'HandshakeMessageJayChannel',
         ImportsFor.elementSandbox,
     ),
-    jayPort: importStatementFragment('jay-secure', 'JayPort', ImportsFor.elementSandbox),
+    jayPort: importStatementFragment(JAY_SECURE, 'JayPort', ImportsFor.elementSandbox),
     setWorkerPort: importStatementFragment(
-        'jay-secure',
+        JAY_SECURE,
         'setWorkerPort',
         ImportsFor.elementSandbox,
     ),
     secureMainRoot: importStatementFragment(
-        'jay-secure',
+        JAY_SECURE,
         'mainRoot as mr',
         ImportsFor.implementation,
     ),
     secureChildComp: importStatementFragment(
-        'jay-secure',
+        JAY_SECURE,
         'secureChildComp',
         ImportsFor.implementation,
     ),
@@ -199,8 +201,8 @@ export class Imports {
 
     render(importsFor: ImportsFor) {
         let moduleImportStatements = [];
-        moduleImportStatements.push(this.renderModule(importsFor, 'jay-runtime'));
-        moduleImportStatements.push(this.renderModule(importsFor, 'jay-secure'));
+        moduleImportStatements.push(this.renderModule(importsFor, JAY_RUNTIME));
+        moduleImportStatements.push(this.renderModule(importsFor, JAY_SECURE));
         return moduleImportStatements.filter((_) => !!_).join('\n');
     }
 

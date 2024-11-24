@@ -1,7 +1,7 @@
-import { WithValidations } from '../generation-utils/with-validations';
+import { WithValidations } from '../compiler-shared/with-validations';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
-import { Ref, RenderFragment } from '../generation-utils/render-fragment';
+import { Ref, RenderFragment } from '../compiler-shared/render-fragment';
 import {
     parseAccessor,
     parseAttributeExpression,
@@ -15,7 +15,7 @@ import {
 } from '../expressions/expression-compiler';
 import { htmlElementTagNameMap } from './html-element-tag-name-map';
 import { camelCase } from 'camel-case';
-import { Import, Imports, ImportsFor } from '../generation-utils/imports';
+import { Import, Imports, ImportsFor } from '../compiler-shared/imports';
 import {
     JayArrayType,
     JayAtomicType,
@@ -27,9 +27,9 @@ import {
     JayType,
     JayTypeAlias,
     JayUnknown,
-} from '../generation-utils/jay-type';
-import { getModeFileExtension, MainRuntimeModes, RuntimeMode } from '../generation-utils/runtime-mode';
-import { JayImportLink } from '../generation-utils/jay-imports';
+} from '../compiler-shared/jay-type';
+import { getModeFileExtension, MainRuntimeModes, RuntimeMode } from '../compiler-shared/runtime-mode';
+import { JayImportLink } from '../compiler-shared/jay-imports';
 
 import {JayHtmlSourceFile} from "./jay-html-source-file";
 

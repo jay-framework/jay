@@ -1,12 +1,12 @@
-import { WithValidations } from '../../generation-utils/with-validations';
+import { WithValidations } from '../../compiler-shared/with-validations';
 import { capitalCase } from 'change-case';
-import { hasExtension, withoutExtension } from '../../generation-utils/runtime-mode';
-import { JAY_EXTENSION, JAY_TS_EXTENSION } from '../../generation-utils/constants';
+import { hasExtension, withoutExtension } from '../../compiler-shared/runtime-mode';
+import { JAY_EXTENSION, JAY_TS_EXTENSION } from '../../compiler-shared/constants';
 import { parseImportLinks } from './parse-import-links';
 import path from 'node:path';
 import { createTsSourceFileFromSource } from '../building-blocks/create-ts-source-file-from-source';
-import { SourceFileFormat } from '../../generation-utils/source-file-format';
-import { TypeScriptModuleSourceFile } from '../../generation-utils/source-file-type';
+import { SourceFileFormat } from '../../compiler-shared/source-file-format';
+import { TypeScriptModuleSourceFile } from '../../compiler-shared/source-file-type';
 
 export function parseTypeScriptFile(
     filePath: string,

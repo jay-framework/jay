@@ -1,9 +1,9 @@
-import { JayTsxSourceFile } from '../../generation-utils/source-file-type';
-import { WithValidations } from '../../generation-utils/with-validations';
+import { JayTsxSourceFile } from '../../compiler-shared/source-file-type';
+import { WithValidations } from '../../compiler-shared/with-validations';
 import { getImportByName, parseImportLinks } from '../../ts-file/parse-jay-file/parse-import-links';
 import { createTsSourceFileFromSource } from '../../ts-file/building-blocks/create-ts-source-file-from-source';
 import { getBaseElementName } from '../../ts-file/building-blocks/get-base-element-name';
-import { JAY_COMPONENT, MAKE_JAY_TSX_COMPONENT } from '../../generation-utils/constants';
+import { JAY_COMPONENT, MAKE_JAY_TSX_COMPONENT } from '../../compiler-shared/constants';
 import { findComponentConstructorsBlock } from '../../ts-file/building-blocks/find-component-constructors';
 import { findFunctionExpressionReturnStatements } from '../../ts-file/building-blocks/find-function-expression-return-statements';
 import ts from 'typescript';

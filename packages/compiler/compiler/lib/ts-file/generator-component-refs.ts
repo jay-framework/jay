@@ -1,8 +1,6 @@
-import { WithValidations } from '../generation-utils/with-validations';
-import { analyzeExportedTypes } from './basic-analyzers/analyze-exported-types';
-
-import { ResolveTsConfigOptions } from './ts-utils/resolve-ts-config';
-import { JayComponentType } from '../generation-utils/jay-type';
+import { WithValidations } from '../compiler-shared/with-validations';
+import { analyzeExportedTypes, ResolveTsConfigOptions } from '../analyze-exported-types';
+import { JayComponentType } from '../compiler-shared/jay-type';
 
 export function generateComponentRefsDefinitionFile(
     filepath: string,
