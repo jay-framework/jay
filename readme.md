@@ -42,7 +42,8 @@ A Jay Contract includes 3 elements
 
 ## Jay Element / the view
 
-The jay element is a `jay-html` file expected to be generated from design tools of an extended HTML format.
+The jay element is a `jay-html` file is **expected to be generated from design tools** of an extended HTML format. 
+**No developers should write HTML / CSS / JSX anymore!**
 
 ```html
 <html>
