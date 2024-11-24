@@ -1,4 +1,4 @@
-import {JAY_RUNTIME, JAY_SECURE} from "./constants";
+import { JAY_RUNTIME, JAY_SECURE } from './constants';
 
 export enum ImportsFor {
     definition,
@@ -129,21 +129,13 @@ export const Import = {
         'sandboxChildComp as childComp',
         ImportsFor.elementSandbox,
     ),
-    sandboxElemRef: importStatementFragment(
-        JAY_SECURE,
-        'elemRef as er',
-        ImportsFor.elementSandbox,
-    ),
+    sandboxElemRef: importStatementFragment(JAY_SECURE, 'elemRef as er', ImportsFor.elementSandbox),
     sandboxElemCollectionRef: importStatementFragment(
         JAY_SECURE,
         'elemCollectionRef as ecr',
         ImportsFor.elementSandbox,
     ),
-    sandboxCompRef: importStatementFragment(
-        JAY_SECURE,
-        'compRef as cr',
-        ImportsFor.elementSandbox,
-    ),
+    sandboxCompRef: importStatementFragment(JAY_SECURE, 'compRef as cr', ImportsFor.elementSandbox),
     sandboxCompCollectionRef: importStatementFragment(
         JAY_SECURE,
         'compCollectionRef as ccr',
@@ -160,11 +152,7 @@ export const Import = {
         ImportsFor.elementSandbox,
     ),
     jayPort: importStatementFragment(JAY_SECURE, 'JayPort', ImportsFor.elementSandbox),
-    setWorkerPort: importStatementFragment(
-        JAY_SECURE,
-        'setWorkerPort',
-        ImportsFor.elementSandbox,
-    ),
+    setWorkerPort: importStatementFragment(JAY_SECURE, 'setWorkerPort', ImportsFor.elementSandbox),
     secureMainRoot: importStatementFragment(
         JAY_SECURE,
         'mainRoot as mr',

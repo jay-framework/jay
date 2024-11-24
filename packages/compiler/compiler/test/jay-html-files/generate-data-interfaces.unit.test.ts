@@ -1,14 +1,7 @@
 import { generateTypes } from '../../lib';
 import stripMargin from '@caiogondim/strip-margin';
 
-import {
-    JayArrayType,
-    JayBoolean,
-    JayDate,
-    JayNumber,
-    JayObjectType,
-    JayString,
-} from '../../lib';
+import { JayArrayType, JayBoolean, JayDate, JayNumber, JayObjectType, JayString } from '../../lib';
 
 describe('generate data interfaces', () => {
     it('should generate simple interface', () => {

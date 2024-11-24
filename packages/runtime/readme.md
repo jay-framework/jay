@@ -36,4 +36,3 @@ reacting to data change and detecting if data has actually changed.
 
 The Jay Runtime library is an efficient dom manipulation library, built to be the output of code generation (`jay-compiler`).
 See the `jay-compiler` docs for the format of the `jay-html` file that compiles to `jay-runtime` types.
-

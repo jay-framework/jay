@@ -2,7 +2,12 @@ import { CustomPluginOptions, PluginContext, ResolveIdResult, ResolvedId } from 
 import { watchChangesFor } from './watch';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
 import { appendJayMetadata, jayMetadataFromModuleMetadata } from './metadata';
-import { hasExtension, JAY_QUERY_WORKER_TRUSTED_TS, SourceFileFormat, TS_EXTENSION } from 'jay-compiler';
+import {
+    hasExtension,
+    JAY_QUERY_WORKER_TRUSTED_TS,
+    SourceFileFormat,
+    TS_EXTENSION,
+} from 'jay-compiler';
 
 export interface ResolveIdOptions {
     attributes: Record<string, string>;

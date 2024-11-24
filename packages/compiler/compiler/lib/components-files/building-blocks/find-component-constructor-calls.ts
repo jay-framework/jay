@@ -1,16 +1,11 @@
-import ts, {
-    isCallExpression,
-    isStringLiteral,
-    isVariableStatement,
-} from 'typescript';
+import ts, { isCallExpression, isStringLiteral, isVariableStatement } from 'typescript';
 import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
 import {
     flattenVariable,
     isImportModuleVariableRoot,
 } from '../basic-analyzers/name-binding-resolver';
 import { isIdentifierOrPropertyAccessExpression } from '../basic-analyzers/typescript-extras';
-import {JAY_COMPONENT} from "../../shared/constants";
-
+import { JAY_COMPONENT } from '../../shared/constants';
 
 export enum FindComponentConstructorType {
     makeJayComponent = 'makeJayComponent',

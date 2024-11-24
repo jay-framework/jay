@@ -1,5 +1,5 @@
 import fs from 'fs';
-export * from './resolve-ts-config'
+export * from './resolve-ts-config';
 
 import { resolveTsConfig, ResolveTsConfigOptions } from './resolve-ts-config';
 import {

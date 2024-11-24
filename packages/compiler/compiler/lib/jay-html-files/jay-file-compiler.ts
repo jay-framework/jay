@@ -1,7 +1,7 @@
-import {WithValidations} from '../shared/with-validations';
-import {HTMLElement, NodeType} from 'node-html-parser';
+import { WithValidations } from '../shared/with-validations';
+import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
-import {Ref, RenderFragment} from '../shared/render-fragment';
+import { Ref, RenderFragment } from '../shared/render-fragment';
 import {
     parseAccessor,
     parseAttributeExpression,
@@ -13,9 +13,9 @@ import {
     parseTextExpression,
     Variables,
 } from '../expressions/expression-compiler';
-import {htmlElementTagNameMap} from './html-element-tag-name-map';
-import {camelCase} from 'camel-case';
-import {Import, Imports, ImportsFor} from '../shared/imports';
+import { htmlElementTagNameMap } from './html-element-tag-name-map';
+import { camelCase } from 'camel-case';
+import { Import, Imports, ImportsFor } from '../shared/imports';
 import {
     JayArrayType,
     JayAtomicType,
@@ -28,10 +28,10 @@ import {
     JayTypeAlias,
     JayUnknown,
 } from '../shared/jay-type';
-import {getModeFileExtension, MainRuntimeModes, RuntimeMode} from '../shared/runtime-mode';
-import {JayImportLink} from '../shared/jay-imports';
+import { getModeFileExtension, MainRuntimeModes, RuntimeMode } from '../shared/runtime-mode';
+import { JayImportLink } from '../shared/jay-imports';
 
-import {JayHtmlSourceFile} from "./jay-html-source-file";
+import { JayHtmlSourceFile } from './jay-html-source-file';
 
 class Indent {
     private readonly base: string;
@@ -521,7 +521,9 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                     return new RenderFragment('', Imports.none(), [
                         `forEach directive - failed to resolve type for forEach=${forEach}`,
                     ]);
-                let forEachVariables = variables.childVariableFor((forEachAccessor.resolvedType as JayArrayType).itemType);
+                let forEachVariables = variables.childVariableFor(
+                    (forEachAccessor.resolvedType as JayArrayType).itemType,
+                );
                 let childElement = renderHtmlElement(
                     htmlElement,
                     forEachVariables,
@@ -813,7 +815,9 @@ ${indent.firstLine}])`,
                 return new RenderFragment('', Imports.none(), [
                     `forEach directive - failed to resolve type for forEach=${forEach}`,
                 ]);
-            let forEachVariables = variables.childVariableFor((forEachAccessor.resolvedType as JayArrayType).itemType);
+            let forEachVariables = variables.childVariableFor(
+                (forEachAccessor.resolvedType as JayArrayType).itemType,
+            );
             let childElement = renderHtmlElement(
                 htmlElement,
                 forEachVariables,

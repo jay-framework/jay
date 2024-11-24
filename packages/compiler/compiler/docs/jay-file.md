@@ -1,8 +1,8 @@
 # Jay File Format & Parsing
 
-The Jay format is based on standard HTML with minimal additions. 
+The Jay format is based on standard HTML with minimal additions.
 
-An example Jay HTML file is 
+An example Jay HTML file is
 
 ```html
 <html>
@@ -23,6 +23,7 @@ An example Jay HTML file is
 ```
 
 The Jay HTML file differs from a regular HTML file with 5 aspects:
+
 1. Import component and types
 2. The `application/yaml-jay` for data contract definition
 3. Sub-components
@@ -33,35 +34,35 @@ The Jay HTML file differs from a regular HTML file with 5 aspects:
 
 ## importing components and types
 
-import in jay-html is very similar to typescript import, adapted for an html format. 
+import in jay-html is very similar to typescript import, adapted for an html format.
 Normally, we only import components and data types from a jay-html file.
 
 ```html
-<link rel="import" href="{path}" names="{names to import}" sandbox="{boolean}"/>
+<link rel="import" href="{path}" names="{names to import}" sandbox="{boolean}" />
 ```
 
-* `path` - a relative or absolute path to the file from which to import
-* `names to import` - list of exported members to import. Names can be renamed using the `name as anotherName` syntax.
+- `path` - a relative or absolute path to the file from which to import
+- `names to import` - list of exported members to import. Names can be renamed using the `name as anotherName` syntax.
   multiple names can be imported separated by a comma `name1, name2, name3`.
-* `sandbox` - (defaults to false) should the file be imported as a sandboxed component. 
+- `sandbox` - (defaults to false) should the file be imported as a sandboxed component.
 
 examples:
 
 ```html
-<link rel="import" href="./component1.ts" names="comp1" sandbox="false"/>
-<link rel="import" href="./component2.ts" names="comp2 as Main, Comp2Props" sandbox="true"/>
+<link rel="import" href="./component1.ts" names="comp1" sandbox="false" />
+<link rel="import" href="./component2.ts" names="comp2 as Main, Comp2Props" sandbox="true" />
 ```
 
 ## The `application/yaml-jay` Data Contract
 
-The data contract defines the `ViewState` - the input data for the element. 
-The ViewState is defined as a `YAML` script, which root is `data:`. 
+The data contract defines the `ViewState` - the input data for the element.
+The ViewState is defined as a `YAML` script, which root is `data:`.
 Each property of the yaml is a property of the element view state, including nested objects and arrays.
 
 The supported data types:
 
 | type          | example                                                                 |
-|---------------|-------------------------------------------------------------------------|
+| ------------- | ----------------------------------------------------------------------- |
 | string        | `text: string`                                                          |
 | number        | `n1: number`                                                            |
 | boolean       | `b1: boolean`                                                           |
@@ -72,22 +73,25 @@ The supported data types:
 | -----------   | ----------------                                                        |
 
 > note: The jay html file considers the view state as the **current view state** to be bound  
-> into components and elements. 
-> 
-> The `forEach` directive changes the **current view state** from an object to the items of 
+> into components and elements.
+>
+> The `forEach` directive changes the **current view state** from an object to the items of
 > a child array.
-> 
-> e.g. 
-> ``` yaml
+>
+> e.g.
+>
+> ```yaml
 > data:
 >   a1:
->   - b1: string
->   - key: string
+>     - b1: string
+>     - key: string
 > ```
-> 
-> ``` html
+>
+> ```html
 > <!-- here the current view state is a1 -->
-> <div forEach="a1" trackBy="kay"> <!-- here the current view state is elements of the array a1 --> </div>
+> <div forEach="a1" trackBy="kay">
+>   <!-- here the current view state is elements of the array a1 -->
+> </div>
 > ```
 
 ## Sub components
@@ -95,16 +99,19 @@ The supported data types:
 Jay html files allows to use sub-components as part of the html tree.
 
 To use a sub-component, it has to first be imported as a link tag
+
 ```html
-<link rel="import" href="./component1.ts" names="comp1" sandbox="false"/>
+<link rel="import" href="./component1.ts" names="comp1" sandbox="false" />
 ```
 
 and then used as any other HTML element
+
 ```html
 <comp1 prop1="value1" prop2="{value2}"></comp1>
 ```
 
-Component properties can be supplied as 
+Component properties can be supplied as
+
 1. static values - `prop1="value1"`
 2. bindings to the current view state named property - `prop2="{value2}"`
 3. bindings to the current view state itself - `prop3: "{.}"`
@@ -116,13 +123,14 @@ Component properties can be supplied as
 
 References are declaration of elements or sub-components that the component code can reference.
 
-For each html element or component with a `ref` attribute, a member is created in the Jay element refs type to represent how 
+For each html element or component with a `ref` attribute, a member is created in the Jay element refs type to represent how
 that html element or component can be interacted with.
 
 examples:
+
 ```html
 <div ref="ref1">{text}</div>
-<Counter ref="counter1" initialValue={count1} />
+<Counter ref="counter1" initialValue="{count1}" />
 ```
 
 The `jay-runtime` library defines the reference types - see [refs.md](../../../runtime/runtime/docs/refs.md).
@@ -134,12 +142,15 @@ The `{}` binding to the current view state allows to render values into HTML tex
 The `{}` syntax supports the `.` notation to access sub-elements, embedding within strings and simple expressions.
 
 examples:
+
 ```html
-<div>{text}</div> 
+<div>{text}</div>
 <div>this is the name: {name}</div>
 <div>this is a sub property: {obj.member.sub}</div>
-<div>conditional: {hasName?name}</div> <!-- renders name if hasName is true, else empty string -->
-<div>conditional: {hasName?name:otherProp}</div> <!-- renders name if hasName is true, else otherProperty of view state -->
+<div>conditional: {hasName?name}</div>
+<!-- renders name if hasName is true, else empty string -->
+<div>conditional: {hasName?name:otherProp}</div>
+<!-- renders name if hasName is true, else otherProperty of view state -->
 <div>not: {!hasName}</div>
 <div>enum equals: {enumProperty === EnumMember}</div>
 <div>enum not equals: {enumProperty !== EnumMember}</div>
@@ -150,14 +161,17 @@ examples:
 HTML Class bindings allows using expressions for optional class inclusion
 
 examples:
+
 ```html
-<div class="{isOne? class1} tree"></div> <!-- will include class1 if isOne is true -->
-<div class="{isOne? class1:class2} tree"></div> <!-- will include class1 if isOne is true, else class2 -->
+<div class="{isOne? class1} tree"></div>
+<!-- will include class1 if isOne is true -->
+<div class="{isOne? class1:class2} tree"></div>
+<!-- will include class1 if isOne is true, else class2 -->
 ```
 
 ## special directives `if`
 
-The `if` directive is an attribute which can appear on any HTML element or sub-component. 
+The `if` directive is an attribute which can appear on any HTML element or sub-component.
 It indicates conditional rendering based on the given expression.
 
 ```html
@@ -175,10 +189,10 @@ In the above example, the `an open item` div will be rendered if `open` is true.
 The `forEach` and `trackBy`directives are attributes which can appear on any HTML element or sub-component.
 It indicates repeated rendering based on the given expressions.
 
-The `forEach` takes an expression that resolves to an array of items. 
+The `forEach` takes an expression that resolves to an array of items.
 Once resolved, the rendered item view state are the items of the array.
 
-The `trackBy` is an attribute of type `string` of the array items, the forEach item view state, used as a key 
+The `trackBy` is an attribute of type `string` of the array items, the forEach item view state, used as a key
 for tracking items to DOM elements (note that in Jay, view state is immutable, requiring a key to track by instances).
 
 ```html

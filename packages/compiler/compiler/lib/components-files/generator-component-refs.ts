@@ -1,5 +1,8 @@
 import { WithValidations } from '../shared/with-validations';
-import { analyzeExportedTypes, ResolveTsConfigOptions } from '../analyze-exported-types/analyze-exported-types';
+import {
+    analyzeExportedTypes,
+    ResolveTsConfigOptions,
+} from '../analyze-exported-types/analyze-exported-types';
 import { JayComponentType } from '../shared/jay-type';
 
 export function generateComponentRefsDefinitionFile(

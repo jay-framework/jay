@@ -170,7 +170,11 @@ describe('resolve-id', () => {
             ).toEqual({
                 id: `${resolveId}${JAY_QUERY_WORKER_TRUSTED_TS}`,
                 meta: {
-                    jay: { isWorkerRoot: true, format: SourceFileFormat.TypeScript, originId: resolveId },
+                    jay: {
+                        isWorkerRoot: true,
+                        format: SourceFileFormat.TypeScript,
+                        originId: resolveId,
+                    },
                 },
             });
         });

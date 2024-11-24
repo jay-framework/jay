@@ -4,7 +4,10 @@ import yaml from 'js-yaml';
 import { capitalCase, pascalCase } from 'change-case';
 import pluralize from 'pluralize';
 import { parseEnumValues, parseImportNames, parseIsEnum } from '../expressions/expression-compiler';
-import { analyzeExportedTypes, ResolveTsConfigOptions } from '../analyze-exported-types/analyze-exported-types';
+import {
+    analyzeExportedTypes,
+    ResolveTsConfigOptions,
+} from '../analyze-exported-types/analyze-exported-types';
 import path from 'path';
 import {
     JayArrayType,
@@ -19,7 +22,7 @@ import { SourceFileFormat } from '../shared/source-file-format';
 import { JayImportLink, JayImportName } from '../shared/jay-imports';
 import { JayYamlStructure } from './jay-yaml-structure';
 
-import {JayHtmlSourceFile} from "./jay-html-source-file";
+import { JayHtmlSourceFile } from './jay-html-source-file';
 
 export function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj);

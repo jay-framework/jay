@@ -25,4 +25,4 @@ export { compileFunctionSplitPatternsBlock } from './components-files/basic-anal
 export { createTsSourceFileFromSource } from './components-files/building-blocks/create-ts-source-file-from-source';
 export { FunctionRepositoryBuilder } from './components-files/building-blocks/function-repository-builder';
 export { checkValidationErrors } from './shared/with-validations';
-export { type JayHtmlSourceFile} from "./jay-html-files/jay-html-source-file";
+export { type JayHtmlSourceFile } from './jay-html-files/jay-html-source-file';

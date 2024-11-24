@@ -3,10 +3,7 @@ import {
     getImportByName,
     parseImportLinks,
 } from '../../../lib/components-files/building-blocks/parse-import-links';
-import {
-    fixtureFilePath,
-    readFixtureFile,
-} from '../../test-utils/file-utils';
+import { fixtureFilePath, readFixtureFile } from '../../test-utils/file-utils';
 
 describe('parseImportLinks', () => {
     const fixturePath = 'full-projects/counter/generated/main';

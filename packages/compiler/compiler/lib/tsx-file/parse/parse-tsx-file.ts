@@ -1,6 +1,9 @@
 import { JayTsxSourceFile } from '../../shared/compiler-source-file';
 import { WithValidations } from '../../shared/with-validations';
-import { getImportByName, parseImportLinks } from '../../components-files/building-blocks/parse-import-links';
+import {
+    getImportByName,
+    parseImportLinks,
+} from '../../components-files/building-blocks/parse-import-links';
 import { createTsSourceFileFromSource } from '../../components-files/building-blocks/create-ts-source-file-from-source';
 import { getBaseElementName } from '../../components-files/building-blocks/get-base-element-name';
 import { JAY_COMPONENT, MAKE_JAY_TSX_COMPONENT } from '../../shared/constants';
