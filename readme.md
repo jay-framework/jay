@@ -1,60 +1,100 @@
 # The Jay Project
 
-The Jay Project started as an attempt of solving the handover from designers to developers with a new take on an old approach -
-**designer to use any design tool, export the design to the developer, which is then using the design as part of the code project**.
-It has evolved into solving another problem of **building a user interface using 3rd party components while preventing cross site scripting**.
+**Experimental Framework!!**
 
-## Design handover problem
+![Jay head image](./assets/jay-head.gif)
 
-Learning from other project, we know that code generation is great for one way export, but fails on re-export. like any
-development process, the work a designer does is never one off, but an iterative process at which the designer makes some design,
-the developer builds some part of the application, then due to feedback (dev feedback, QA, product, early adopters, etc) the designer
-updates the design, then the developer re-implements the design, etc.
+**Experimental Framework!!**
 
-![iterative design and feedback](design-log/Into%20to%20Jay%201.png 'iterative design and feedback')
+Jay is aiming to solve the design to code challenge. How designers and developers cooperate on a software project. 
+**The designer to use any design tool, from which `jay-html` files are generated. The `jay-html` files include the UI as well 
+as the contract between design and code, which the developer imports when coding Headless Components**, or 
+**The developer creates an Headless Component from which a contract is extracted, loaded into the designer design tool to 
+build the UI with**.
 
-Because there is no good tool for design export and re-export, we find that today, the way designers and developers are working
-is by the **designer designing and the developer _re-implementing_ the design** using code tools. The designer will export design
-assets using tools like Adobe XP or photoshop, which are CSS snippets, image snippets, SVGs, etc. The developer, using those
-design assets, will build the UI using tools like JSX, SSAS, etc.
+# Key Concepts of Jay
 
-![Comparing Jay with known workflow](design-log/Into%20to%20Jay%202.png 'Comparing Jay with known workflow')
+* Jay is a contract between design tools and headless components.
+* Jay allows the designer, in their design tools, to create the user interface and deploy the application (yes, the designer)
+  pending CI flows.
+* Jay frees the developer from writing HTML, CSS and JSX. 
+* Jay Components are headless components, who can be tested and verified regardless of the UI.
+* Jay can generate React applications, reusing all the existing React ecosystem
+* Jay can generate Jay native applications, which enables way more aggressive optimizations
+* Jay can generate safe 3rd party applications, allowing to incorporate 3rd party components and plugins in isolation, 
+  with next to zero performance and DevEx impact.
 
-Jay approach is to create a **declerative format** that can be generated from design tools, and used directly by the code.
-As the designer continues to update the design, the developer code who is using the design should inherit the update automatically.
-Only if the contract between design and code changes, the developer will need to update the code - and should see type safe validations
-that represent that contract change.
+# Why Jay?
 
-The next question is which format should the Jay file take? To answer that question we need to formulate the requirements from the Jay File -
+Jay set out to solve the 
+[Design handover problem](./design-log/000%20-%20design%20handover%20problem.md).
+The solution for the handover problem, introducing a contract, is actually a solution for another problem of 
+[Extending user interface with 3rd party components](./design-log/001%20-%203rd%20party%20code%20problem.md).
 
-1. should be declarative that a design tool can generate
-2. should support any existing HTML / CSS capability
-3. should support any future HTML / CSS capability
+# Quick intro to Jay
 
-When examining this question and requirements, there is only one potential format that meets all of those - and that is HTML / CSS.
+## Jay Contract 
 
-## Extending user interface with 3rd party components
+A Jay Contract includes 3 elements
+1. The `view state` - data that a headless Jay Component hands over to the view or Jay Element to render
+2. The `refs` - named html elements or components in the view (Jay Element) to interact with
+3. The `variants` - design variations or states that appear in the contract as booleans or enumerations.
 
-The problem of extending user interfaces with 3rd party components is quite common - and has one known resolution.
-Consider any kind of dashboard or website that needs to include components from a 3rd party while ensuring the 3rd party
-does not have access to the host cookies, assets or REST APIs. The standard tool on the web is using **IFrames**, which
-solves the problem using multiple domains, and the browser security model.
+## Jay Element / the view
 
-However, IFrames have a host of problems - from loading times to limited flexibility - no simple solution to overflow the IFrame boundaries
-for things like modal dialogs. IFrames are not built for many small frames - consider a table at which each cell should be an IFrame...
-or consider compositions of component in component...
+The jay element is a `jay-html` file expected to be generated from design tools of an extended HTML format.
 
-![IFrame vs Jay security model](design-log/Into%20to%20Jay%203.png 'IFrame vs Jay security model')
+```html
+<html>
+  <head>
+    <script type="application/yaml-jay">
+      data:
+        count: number
+    </script>
+  </head>
+  <body>
+    <div>
+      <button ref="subtracter">-</button>
+      <span style="margin: 0 16px">{count}</span>
+      <button ref="adder-button">+</button>
+    </div>
+  </body>
+</html>
+```
 
-Jay as a potential of solving this problem by introducing two new concepts - **Jay Element** and **Jay Component**.
-**Jay Element** is what the Jay File contains, and what the developer imports. Because it is logic free, it is safe to
-run on the main window. **Jay Component** is the code the developer writes that imports the Jay Element. It is unsafe as it includes
-3rd party code - and those has to run inside an IFrame. However, Jay can run the **all Jay Components in a single IFrame** while supporting
-multiple components on the page, including component in component and such.
+Read more about Jay Elements format in [jay-file.md](packages%2Fcompiler%2Fcompiler%2Fdocs%2Fjay-file.md)
 
-## Contribution
+## Jay Component / the headless component
 
-### Development Environment Setup
+Jay Components are headless component working with the contract TS `.d.ts` files generated from the `jay-html`. 
+
+```typescript
+import { render, CounterElementRefs } from './counter.jay-html';
+import { createSignal, makeJayComponent, Props } from 'jay-component';
+
+export interface CounterProps {
+    initialValue: number;
+}
+
+function CounterConstructor({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+    const [count, setCount] = createSignal(initialValue);
+
+    refs.subtracter.onclick(() => setCount(count() - 1));
+    refs.adderButton.onclick(() => setCount(count() + 1));
+
+    return {
+        render: () => ({ count }),
+    };
+}
+
+export const Counter = makeJayComponent(render, CounterConstructor);
+```
+
+Read more about Jay Components in [readme.md](packages%2Fruntime%2Fcomponent%2Freadme.md)
+
+# Contribution
+
+## Development Environment Setup
 
 Install Node version from [./.nvmrc]. Recommended to use [nvm](https://github.com/nvm-sh/nvm).
 
@@ -71,7 +111,7 @@ yarn run build
 
 Mark `.yarn` directory as excluded in IntelliJ.
 
-### Development Environment Setup
+## Development Environment Setup
 
 For IntelliJ IDEA, copy vitest runtime configuration to show console logs in test results:
 

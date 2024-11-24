@@ -9,3 +9,5 @@ declare function useReactive(): Reactive;
 ## Returns:
 
 The current reactive context object.
+
+Read more about Jay Reactive in [reactive](..%2F..%2Freactive)
