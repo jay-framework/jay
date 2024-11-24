@@ -1,7 +1,7 @@
 import { transform } from 'typescript';
 
 import { tsxComponentTransformer } from '../../../lib/tsx-file/transform/tsx-component-transformer';
-import { JayTsxFile, WithValidations } from '../../../lib';
+import { JayTsxSourceFile, WithValidations } from '../../../lib';
 import { createTsxSourceFile } from '../../test-utils/ts-source-utils';
 import { parseTsxFile } from '../../../lib/tsx-file/parse/parse-tsx-file';
 
@@ -9,7 +9,7 @@ describe('tsxComponentTransformer', () => {
     function transformFile(code: string): WithValidations<string> {
         const sourceFile = createTsxSourceFile(code);
         const jayTsxFile = parseTsxFile(sourceFile.fileName, sourceFile.text);
-        return jayTsxFile.flatMap((jayTsxFile: JayTsxFile) => {
+        return jayTsxFile.flatMap((jayTsxFile: JayTsxSourceFile) => {
             const transformed = transform(sourceFile, [tsxComponentTransformer(jayTsxFile)]);
             return new WithValidations(
                 transformed.transformed[0].getText(),

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { PluginContext } from 'rollup';
-import { JAY_DTS_EXTENSION, JAY_EXTENSION } from '../../../compiler/lib/core/constants';
+import { JAY_DTS_EXTENSION, JAY_EXTENSION } from 'jay-compiler';
 import { mkdir, readFile } from 'node:fs/promises';
 import { writeFile } from 'fs/promises';
 import { JayPluginContext } from '../runtime/jay-plugin-context';

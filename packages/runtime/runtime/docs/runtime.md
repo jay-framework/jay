@@ -125,11 +125,11 @@ at which
 - `attributes` - an object who's keys are attribute names, and values are static attributes values (strings), dynamic
   attributes `DynamicAttribute<T>` or dynamic properties `DynamicProperty<T>`
 - `children` - the children of the element - can be any of
-    - `Conditional` - for supporting conditional children, using the `if` directive in the jay file
-    - `ForEach` - for supporting collection children, using the `forEach` directive in the jay file
-    - `elements` - for child elements, who can be dynamic, but the element inclusion itself is static
-    - static text (string)
-    - dynamic text (TextElement<T>)
+  - `Conditional` - for supporting conditional children, using the `if` directive in the jay file
+  - `ForEach` - for supporting collection children, using the `forEach` directive in the jay file
+  - `elements` - for child elements, who can be dynamic, but the element inclusion itself is static
+  - static text (string)
+  - dynamic text (TextElement<T>)
 
 ## dynamicText
 

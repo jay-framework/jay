@@ -1,6 +1,6 @@
 import {
     checkValidationErrors,
-    JayFile,
+    CompilerSourceFile,
     parseJayFile,
     RuntimeMode,
     WithValidations,
@@ -22,7 +22,7 @@ function checkFileExists(filepath): Promise<Boolean> {
 export async function generateFiles(
     dir: string,
     codeGenerationFunction: (
-        jayFile: JayFile,
+        jayFile: CompilerSourceFile,
         importerMode: RuntimeMode,
     ) => WithValidations<string>,
     afterGenerationFunction: (html: string, filename: string, filePath: string) => void,

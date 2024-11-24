@@ -1,7 +1,7 @@
 import { getJayMetadata, isWorkerRoot, JayMetadata } from '../../../lib/runtime/metadata';
 import { mock } from 'vitest-mock-extended';
 import { PluginContext } from 'rollup';
-import { JayFormat } from 'jay-compiler';
+import { SourceFileFormat } from 'jay-compiler';
 
 describe('metadata', () => {
     const originId = 'origin/id';
@@ -21,7 +21,7 @@ describe('metadata', () => {
 
         describe('checkPresent', () => {
             const checkPresent = true;
-            const format = JayFormat.JayHtml;
+            const format = SourceFileFormat.JayHtml;
 
             it('throws error when originId or format is not present', () => {
                 expect(

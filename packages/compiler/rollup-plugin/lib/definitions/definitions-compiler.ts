@@ -10,7 +10,7 @@ import { LoadResult, PluginContext, TransformResult } from 'rollup';
 import { getFileContext, readFileAsString, writeDefinitionFile } from '../common/files';
 import { generateRefsComponents, getRefsFilePaths } from './refs-compiler';
 import path from 'node:path';
-import { JAY_EXTENSION } from '../../../compiler/lib/core/constants';
+import { JAY_EXTENSION } from 'jay-compiler';
 
 export function jayDefinitions() {
     const generatedRefPaths: Set<string> = new Set();

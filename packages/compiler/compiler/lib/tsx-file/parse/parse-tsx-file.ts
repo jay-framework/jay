@@ -1,21 +1,24 @@
-import { JayTsxFile } from '../../core/jay-file';
-import { WithValidations } from '../../core/with-validations';
-import { getImportByName, parseImportLinks } from '../../ts-file/parse-jay-file/parse-import-links';
-import { createTsSourceFileFromSource } from '../../ts-file/building-blocks/create-ts-source-file-from-source';
-import { getBaseElementName } from '../../ts-file/building-blocks/get-base-element-name';
-import { JAY_COMPONENT, MAKE_JAY_TSX_COMPONENT } from '../../core/constants';
-import { findComponentConstructorsBlock } from '../../ts-file/building-blocks/find-component-constructors';
-import { findFunctionExpressionReturnStatements } from '../../ts-file/building-blocks/find-function-expression-return-statements';
+import { JayTsxSourceFile } from '../../shared/compiler-source-file';
+import { WithValidations } from '../../shared/with-validations';
+import {
+    getImportByName,
+    parseImportLinks,
+} from '../../components-files/building-blocks/parse-import-links';
+import { createTsSourceFileFromSource } from '../../components-files/building-blocks/create-ts-source-file-from-source';
+import { getBaseElementName } from '../../components-files/building-blocks/get-base-element-name';
+import { JAY_COMPONENT, MAKE_JAY_TSX_COMPONENT } from '../../shared/constants';
+import { findComponentConstructorsBlock } from '../../components-files/building-blocks/find-component-constructors';
+import { findFunctionExpressionReturnStatements } from '../../components-files/building-blocks/find-function-expression-return-statements';
 import ts from 'typescript';
-import { getObjectPropertiesMap } from '../../ts-file/building-blocks/get-object-properties-map';
+import { getObjectPropertiesMap } from '../../components-files/building-blocks/get-object-properties-map';
 import { parseJsx } from './parse-jsx';
 import {
     findComponentConstructorCallsBlock,
     FindComponentConstructorType,
-} from '../../ts-file/building-blocks/find-component-constructor-calls';
-import { SourceFileBindingResolver } from '../../ts-file/basic-analyzers/source-file-binding-resolver';
+} from '../../components-files/building-blocks/find-component-constructor-calls';
+import { SourceFileBindingResolver } from '../../components-files/basic-analyzers/source-file-binding-resolver';
 
-export function parseTsxFile(filename: string, source: string): WithValidations<JayTsxFile> {
+export function parseTsxFile(filename: string, source: string): WithValidations<JayTsxSourceFile> {
     const sourceFile = createTsSourceFileFromSource(filename, source, ts.ScriptKind.TSX);
 
     const imports = parseImportLinks(sourceFile);
@@ -85,5 +88,5 @@ export function parseTsxFile(filename: string, source: string): WithValidations<
         imports,
         baseElementName,
         jsxBlock: renderedJsxes[0], // TODO support multiple bodies
-    } as JayTsxFile);
+    } as JayTsxSourceFile);
 }

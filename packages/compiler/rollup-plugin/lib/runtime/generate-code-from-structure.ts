@@ -1,7 +1,6 @@
 import * as ts from 'typescript';
 import { transform } from 'typescript';
 import {
-    checkDiagnosticsErrors,
     checkValidationErrors,
     transformComponentBridge,
     transformComponent,
@@ -10,9 +9,9 @@ import {
     generateImportsFileFromJayFile,
     generateSandboxRootFile,
     getModeFromExtension,
-    JayFile,
-    JayFormat,
-    JayHtmlFile,
+    CompilerSourceFile,
+    SourceFileFormat,
+    JayHtmlSourceFile,
     RuntimeMode,
 } from 'jay-compiler';
 import { PluginContext } from 'rollup';
@@ -20,25 +19,35 @@ import { JayPluginContext } from './jay-plugin-context';
 import { JayMetadata } from './metadata';
 import { writeGeneratedFile } from '../common/files';
 
+export function checkDiagnosticsErrors(tsCode: ts.TransformationResult<ts.SourceFile>) {
+    if (tsCode.diagnostics.length > 0) {
+        throw new Error(
+            `typescript transpilation failed ${tsCode.diagnostics
+                .map((diagnostic) => diagnostic.toString())
+                .join('\n')}`,
+        );
+    }
+}
+
 export async function generateCodeFromStructure(
     jayContext: JayPluginContext,
     context: PluginContext,
     code: string,
     id: string,
     meta: JayMetadata,
-    jayFile: JayFile,
+    jayFile: CompilerSourceFile,
 ): Promise<string> {
     const { format } = meta;
     const mode = getModeFromExtension(id);
     const tsCode =
-        format === JayFormat.JayHtml
-            ? generateCodeFromJayHtmlFile(mode, jayFile as JayHtmlFile)
+        format === SourceFileFormat.JayHtml
+            ? generateCodeFromJayHtmlFile(mode, jayFile as JayHtmlSourceFile)
             : generateCodeFromTsFile(jayContext, mode, jayFile, id, code);
     await writeGeneratedFile(jayContext, context, id, tsCode);
     return tsCode;
 }
 
-export function generateCodeFromJayHtmlFile(mode: RuntimeMode, jayFile: JayHtmlFile): string {
+export function generateCodeFromJayHtmlFile(mode: RuntimeMode, jayFile: JayHtmlSourceFile): string {
     switch (mode) {
         case RuntimeMode.MainTrusted:
         case RuntimeMode.MainSandbox:
@@ -52,14 +61,14 @@ export function generateCodeFromJayHtmlFile(mode: RuntimeMode, jayFile: JayHtmlF
     }
 }
 
-function hasSandboxImport(jayFile: JayFile): boolean {
+function hasSandboxImport(jayFile: CompilerSourceFile): boolean {
     return jayFile.imports.some((link) => link.sandbox);
 }
 
 function generateCodeFromTsFile(
     jayContext: JayPluginContext,
     mode: RuntimeMode,
-    jayFile: JayFile,
+    jayFile: CompilerSourceFile,
     id: string,
     code: string,
 ): string {

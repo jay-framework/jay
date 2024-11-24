@@ -5,7 +5,7 @@ import {
     JAY_EXTENSION,
     JAY_QUERY_MAIN_SANDBOX,
     JAY_QUERY_WORKER_TRUSTED_TS,
-    JayFormat,
+    SourceFileFormat,
     TS_EXTENSION,
 } from 'jay-compiler';
 import {
@@ -43,7 +43,7 @@ describe('resolve-id', () => {
             const context = getContext({ resolvedId });
             expect(await addTsExtensionForJayFile(context, source, importer, options)).toEqual({
                 id: `${originId}${TS_EXTENSION}`,
-                meta: { jay: { originId, format: JayFormat.JayHtml } },
+                meta: { jay: { originId, format: SourceFileFormat.JayHtml } },
             });
         });
 
@@ -63,7 +63,7 @@ describe('resolve-id', () => {
                 id: originId,
                 meta: {
                     jay: {
-                        format: JayFormat.JayHtml,
+                        format: SourceFileFormat.JayHtml,
                         originId,
                     },
                 } as JayMetadata,
@@ -94,7 +94,7 @@ describe('resolve-id', () => {
         const resolveId = 'counter.ts';
         const source = `./counter${TS_EXTENSION}${JAY_QUERY_MAIN_SANDBOX}`;
         const importer = '/root/src/app.jay-html.ts';
-        const format = JayFormat.JayHtml;
+        const format = SourceFileFormat.JayHtml;
         const meta = { jay: { format } };
         const resolvedId = {
             id: path.join(path.dirname(importer), resolveId),
@@ -116,7 +116,7 @@ describe('resolve-id', () => {
                 id: path.join(path.dirname(importer), resolveId),
                 meta: {
                     jay: {
-                        format: JayFormat.JayHtml,
+                        format: SourceFileFormat.JayHtml,
                         originId: path.join(path.dirname(importer), `counter${JAY_EXTENSION}`),
                     } as JayMetadata,
                 },
@@ -150,7 +150,7 @@ describe('resolve-id', () => {
                 const context = getContext({ meta, resolvedId });
                 expect(await resolveJayModeFile(context, source, importer, options)).toEqual({
                     id: `${path.join(path.dirname(importer), source)}${TS_EXTENSION}`,
-                    meta: { jay: { originId: resolvedId.id, format: JayFormat.TypeScript } },
+                    meta: { jay: { originId: resolvedId.id, format: SourceFileFormat.TypeScript } },
                 });
             });
         });
@@ -170,7 +170,11 @@ describe('resolve-id', () => {
             ).toEqual({
                 id: `${resolveId}${JAY_QUERY_WORKER_TRUSTED_TS}`,
                 meta: {
-                    jay: { isWorkerRoot: true, format: JayFormat.TypeScript, originId: resolveId },
+                    jay: {
+                        isWorkerRoot: true,
+                        format: SourceFileFormat.TypeScript,
+                        originId: resolveId,
+                    },
                 },
             });
         });
@@ -192,7 +196,7 @@ describe('resolve-id', () => {
                     meta: {
                         jay: {
                             isWorkerRoot: true,
-                            format: JayFormat.TypeScript,
+                            format: SourceFileFormat.TypeScript,
                             originId: path.resolve(
                                 path.dirname(importer),
                                 `${filename}${TS_EXTENSION}`,
