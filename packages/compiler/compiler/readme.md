@@ -10,6 +10,8 @@ The library includes the functionality to
   - Generate Jay HTML definition files (.d.ts)
   - Generate Jay element files (runtime generated for Jay HTML files)
   - Generate Jay element bridge files (running in sandbox environment for secure setup)
+- Compiler Patterns
+  - [Compile Compiler Patterns](./docs/compiler-patterns.md)
 - For Component Files
   - Extract component exported types
   - Generate component definition files
