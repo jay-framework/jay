@@ -9,7 +9,8 @@ import {
     isImportModuleVariableRoot,
 } from '../basic-analyzers/name-binding-resolver';
 import { isIdentifierOrPropertyAccessExpression } from '../basic-analyzers/typescript-extras';
-import {JAY_COMPONENT} from "rollup-plugin-jay";
+import {JAY_COMPONENT} from "../../compiler-shared/constants";
+
 
 export enum FindComponentConstructorType {
     makeJayComponent = 'makeJayComponent',
