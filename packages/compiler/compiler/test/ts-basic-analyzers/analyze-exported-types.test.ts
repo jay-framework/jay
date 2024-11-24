@@ -1,4 +1,4 @@
-import { analyzeExportedTypes } from '../lib/ts-file/analyze-exported-types';
+import { analyzeExportedTypes } from '../../lib/ts-file/basic-analyzers/analyze-exported-types';
 
 import {
     JayArrayType,
@@ -11,7 +11,7 @@ import {
     JayObjectType,
     JayString,
     JayUnknown,
-} from '../lib';
+} from '../../lib';
 
 describe('typescript-compiler', () => {
     const O1 = new JayObjectType('O1', {

@@ -4,7 +4,7 @@ import yaml from 'js-yaml';
 import { capitalCase, pascalCase } from 'change-case';
 import pluralize from 'pluralize';
 import { parseEnumValues, parseImportNames, parseIsEnum } from '../expressions/expression-compiler';
-import { analyzeExportedTypes } from '../ts-file/analyze-exported-types';
+import { analyzeExportedTypes } from '../ts-file/basic-analyzers/analyze-exported-types';
 import path from 'path';
 import {
     JayArrayType,

@@ -1,5 +1,5 @@
 import { WithValidations } from '../generation-utils/with-validations';
-import { analyzeExportedTypes } from './analyze-exported-types';
+import { analyzeExportedTypes } from './basic-analyzers/analyze-exported-types';
 
 import { ResolveTsConfigOptions } from './ts-utils/resolve-ts-config';
 import { JayComponentType } from '../generation-utils/jay-type';

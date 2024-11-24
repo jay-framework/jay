@@ -1,6 +1,6 @@
 import fs from 'fs';
 
-import { resolveTsConfig, ResolveTsConfigOptions } from './ts-utils/resolve-ts-config';
+import { resolveTsConfig, ResolveTsConfigOptions } from '../ts-utils/resolve-ts-config';
 import {
     JayArrayType,
     JayComponentApiMember,
@@ -11,7 +11,7 @@ import {
     JayType,
     JayUnknown,
     resolvePrimitiveType,
-} from '../generation-utils/jay-type';
+} from '../../generation-utils/jay-type';
 import ts, {
     convertCompilerOptionsFromJson,
     createProgram,

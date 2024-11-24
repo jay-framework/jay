@@ -1,7 +1,5 @@
 import ts, {
     isCallExpression,
-    isIdentifier,
-    isPropertyAccessExpression,
     isStringLiteral,
     isVariableStatement,
 } from 'typescript';
