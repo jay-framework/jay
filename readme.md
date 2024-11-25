@@ -93,6 +93,46 @@ export const Counter = makeJayComponent(render, CounterConstructor);
 
 Read more about Jay Components in [readme.md](packages%2Fruntime%2Fcomponent%2Freadme.md)
 
+# Examples
+
+Jay example projects can be found at the examples folder.
+
+To build and run the examples, run in the jay project root:
+```shell
+yarn install
+yarn build 
+```
+
+Then, under each example open the `html` files under the `dist` folder.
+
+The examples are organized into 4 categories
+
+- Jay examples
+  - [counter](examples%2Fjay%2Fcounter) - simple counter
+  - [form](examples%2Fjay%2Fform) - simple form
+  - [mini-benchmark](examples%2Fjay%2Fmini-benchmark) - mini benchmark to show Jay performance, with and without security
+  - [scrum-board](examples%2Fjay%2Fscrum-board) - scrum board showing 3 levels of nested components
+  - [todo](examples%2Fjay%2Ftodo) - todo list as two levels of nested components
+  - [todo-one-flat-component](examples%2Fjay%2Ftodo-one-flat-component) - todo list as one big component
+  - [todo-rollup-build](examples%2Fjay%2Ftodo-rollup-build) - todo list built using rollup and not using vite
+  - [tree](examples%2Fjay%2Ftree) - a recursive tree example
+- Jay Context
+  - [scrum-board-with-context](examples%2Fjay-context%2Fscrum-board-with-context) - the same scrum board example using jay context
+  - [todo-with-context](examples%2Fjay-context%2Ftodo-with-context) - the same todo list example using jay context
+- Jay Low Leven APIs
+  - [counter-raw](examples%2Fjay-low-level-apis%2Fcounter-raw) - counter example not using the Jay Component APIs. Only using jay-runtime. 
+  - [todo-raw](examples%2Fjay-low-level-apis%2Ftodo-raw) - todo list not using the Jay Component APIs. Only using jay-runtime.
+- React
+  - [mini-benchmark-react](examples%2Freact%2Fmini-benchmark-react) - the same mini benchmark implemented as a React application for comparison.
+
+# Design log
+
+The design log is a log of design decisions taken when building Jay. 
+It is organized in chronological order.
+
+* The design log is not documentation of Jay. It documents the design decisions taken over time, not the current product.
+* Each document is true to the time it was written. If that was updated later on, a new document will introduce the reasons why.
+
 # Contribution
 
 ## Development Environment Setup
