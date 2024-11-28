@@ -1,0 +1,189 @@
+<html>
+<head>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Audiowide|Sofia|Trirong">
+    <style>h1.a {
+        font-family: "Audiowide", sans-serif;
+    }
+
+    h1.b {
+        font-family: "Sofia", sans-serif;
+    }
+
+    h1.c {
+        font-family: "Trirong", serif;
+    }</style>
+    <script type="application/yaml-jay">
+data:
+      screen: enum (done | welcome | set | play)
+      start: enum (hover | regular)
+      time: string
+      up: enum (hover | regular)
+      down: enum (hover | regular)
+      play: enum (hover | regular)
+      timeLeft: string
+      stop: enum (hover | regular)
+      pause: enum (hover | regular)
+      restart: enum (hover | regular)
+    </script>
+</head>
+<body style="margin: 0">
+<div style="display: flex;flex-direction: column;justify-content: center;align-items: center;position: absolute;width: 100%; aspect-ratio: 800 / 447;background-color: rgb(240, 240, 240);">
+    <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 24px;width: 100%;height: 240px;min-width: 626px;max-width: 626px;min-height: 240px;max-height: 240px;background-color: rgb(255, 255, 255);">
+        <div if="screen === welcome">
+            <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 24px;width: 626px;height: 240px;min-width: 626px;max-width: 626px;min-height: 240px;max-height: 240px;background-color: rgb(255, 255, 255);">
+                <div style="display: flex;flex-direction: column;justify-content: flex-end;align-items: center;width: 100%;height: 90px;min-height: 90px;max-height: 90px;">
+                    <span style="display: block;  font-size: 21px; font-weight: 700; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(0, 6, 36);width: 626px;height: 28px; line-height: 28px;">Welcome to our countdown!</span>
+                </div>
+                <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;width: 626px;height: 30px;min-height: 30px;max-height: 30px;">
+                    <span style="display: block;  font-size: 16px; font-weight: 400; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(78, 82, 108);width: 100%;height: fit-content; line-height: 24px;">Use this countdown timer for all your quick, time-sensitive activities!</span>
+                </div>
+                <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;width: 100%;height: 120px;min-height: 120px;max-height: 120px;">
+                    <div ref="start_welcome"
+                         style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 20px;width: 86px;height: 36px;min-width: 86px;max-width: 86px;min-height: 36px;max-height: 36px;background-color: rgb(0, 0, 0);">
+                        <div if="start === hover">
+                            <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 20px;width: 86px;height: 36px;min-width: 86px;max-width: 86px;min-height: 36px;max-height: 36px;background-color: rgb(93, 93, 93);">
+                                <span style="display: block; letter-spacing: 0.64px; font-size: 16px; font-weight: 400; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(255, 255, 255);width: 86px;height: 24px; line-height: 24px;">Start</span>
+                            </div>
+                        </div>
+                        <div if="start === regular">
+                            <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 20px;width: 86px;height: 36px;min-width: 86px;max-width: 86px;min-height: 36px;max-height: 36px;background-color: rgb(0, 0, 0);">
+                                <span style="display: block; letter-spacing: 0.64px; font-size: 16px; font-weight: 400; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(255, 255, 255);width: 86px;height: 24px; line-height: 24px;">Start</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div if="screen === set">
+            <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 24px;width: 626px;height: 240px;max-width: 626px;min-height: 240px;max-height: 240px;background-color: rgb(255, 255, 255);">
+                <div style="display: flex;flex-direction: column;justify-content: flex-end;align-items: center;width: 100%;height: 40px;min-height: 40px;max-height: 40px;padding-left: 301px;padding-right: 301px;">
+                    <img style="width: 24px;height: 24px;"
+                         src="timer.png"></div>
+                <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;width: 100%;height: fit-content;min-height: 37px;max-height: 37px;">
+                    <span style="display: block; letter-spacing: 0.72px; font-size: 18px; font-weight: 400; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(0, 6, 36);width: 626px;height: 24px; line-height: 24px;">Set Timer</span>
+                </div>
+                <div style="display: flex;flex-direction: column;justify-content: flex-end;align-items: center;width: 626px;height: 43px;min-width: 626px;max-width: 626px;min-height: 43px;max-height: 43px;">
+                    <div style="display: flex;flex-direction: row;justify-content: center;align-items: center;width: 220px;height: 36px;min-width: 220px;max-width: 220px;min-height: 36px;max-height: 36px;background-color: rgb(255, 255, 255);gap: 8px;">
+                        <input style="display: flex;flex-direction: row;align-items: center;border-radius: 4px;width: fit-content;height: fit-content;min-width: 173px;max-width: 173px;min-height: 36px;max-height: 36px;padding-left: 8px;border: solid; border-color: rgb(0, 0, 0);"
+                               ref="time_set" type="text" value="{time}">
+                        <div style="display: flex;flex-direction: column;width: 36px;height: 36px;min-width: 36px;max-width: 36px;min-height: 36px;max-height: 36px;">
+                            <div ref="up_set"
+                                 style="display: flex;flex-direction: column;align-items: center;width: 100%;height: 18px;min-width: 36px;max-width: 36px;min-height: 18px;max-height: 18px;background-color: rgb(255, 255, 255);gap: 10px;">
+                                <div if="up === regular">
+                                    <div style="display: flex;flex-direction: column;align-items: center;width: 36px;height: 18px;min-width: 36px;max-width: 36px;min-height: 18px;max-height: 18px;background-color: rgb(255, 255, 255);gap: 10px;">
+                                        <img style="width: 100%;height: 18px;"
+                                             src="up-gray.png">
+                                    </div>
+                                </div>
+                                <div if="up === hover">
+                                    <div style="display: flex;flex-direction: column;align-items: center;width: 36px;height: 18px;min-width: 36px;max-width: 36px;min-height: 18px;max-height: 18px;background-color: rgb(255, 255, 255);gap: 10px;">
+                                        <img style="width: 36px;height: 18px;"
+                                             src="up-black.png">
+                                    </div>
+                                </div>
+                            </div>
+                            <div ref="down_set"
+                                 style="display: flex;flex-direction: column;width: 100%;height: 18px;min-width: 36px;max-width: 36px;min-height: 18px;max-height: 18px;background-color: rgb(255, 255, 255);gap: 10px;">
+                                <div if="down === hover">
+                                    <div style="display: flex;flex-direction: column;width: 36px;height: 18px;min-width: 36px;max-width: 36px;min-height: 18px;max-height: 18px;background-color: rgb(255, 255, 255);gap: 10px;">
+                                        <img style="width: 36px;height: 18px;"
+                                             src="down-black.png">
+                                    </div>
+                                </div>
+                                <div if="down === regular">
+                                    <div style="display: flex;flex-direction: column;width: 36px;height: 18px;min-width: 36px;max-width: 36px;min-height: 18px;max-height: 18px;background-color: rgb(255, 255, 255);gap: 10px;">
+                                        <img style="width: 36px;height: 18px;"
+                                             src="down-gray.png">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;width: 100%;height: fit-content;min-height: 120px;max-height: 120px;">
+                    <div ref="play_set"
+                         style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 20px;width: 86px;height: 36px;min-width: 86px;max-width: 86px;min-height: 36px;max-height: 36px;background-color: rgb(0, 0, 0);">
+                        <div if="play === hover">
+                            <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 20px;width: 86px;height: 36px;min-width: 86px;max-width: 86px;min-height: 36px;max-height: 36px;background-color: rgb(93, 93, 93);">
+                                <span style="display: block; letter-spacing: 0.64px; font-size: 16px; font-weight: 400; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(255, 255, 255);width: 86px;height: 24px; line-height: 24px;">Play</span>
+                            </div>
+                        </div>
+                        <div if="play === regular">
+                            <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 20px;width: 86px;height: 36px;min-width: 86px;max-width: 86px;min-height: 36px;max-height: 36px;background-color: rgb(0, 0, 0);">
+                                <span style="display: block; letter-spacing: 0.64px; font-size: 16px; font-weight: 400; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(255, 255, 255);width: 86px;height: 24px; line-height: 24px;">Play</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div if="screen === play">
+            <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 24px;width: 626px;height: 240px;max-width: 626px;min-height: 240px;max-height: 240px;background-color: rgb(255, 255, 255);">
+                <div style="display: flex;flex-direction: column;justify-content: flex-end;align-items: center;width: 100%;height: 40px;min-height: 40px;max-height: 40px;padding-left: 301px;padding-right: 301px;">
+                    <img style="width: 24px;height: 24px;"
+                         src="timer.png"></div>
+                <div style="display: flex;flex-direction: row;justify-content: center;align-items: center;width: 626px;height: fit-content;min-height: 37px;max-height: 37px;">
+                    <span style="display: block; letter-spacing: 0.72px; font-size: 18px; font-weight: 400; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(0, 6, 36);width: 626px;height: 24px; line-height: 24px;">Time is Ticking</span>
+                </div>
+                <div style="display: flex;flex-direction: row;justify-content: center;align-items: center;width: 100%;height: 43px;min-height: 43px;max-height: 43px;">
+                    <span style="display: block;  font-size: 34px; font-weight: 400; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(0, 6, 36);width: 626px;height: 43px; line-height: 24px;">{timeLeft}</span>
+                </div>
+                <div style="display: flex;flex-direction: row;justify-content: center;align-items: center;width: 100%;height: 120px;min-height: 120px;max-height: 120px;gap: 12px;">
+                    <div ref="stop_play"
+                         style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 20px;width: 86px;height: 36px;min-width: 86px;max-width: 86px;min-height: 36px;max-height: 36px;background-color: rgb(255, 255, 255);padding-left: 22px;padding-right: 22px;border: solid; border-color: rgb(0, 0, 0);">
+                        <div if="stop === hover">
+                            <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 20px;width: 86px;height: 36px;min-width: 86px;max-width: 86px;min-height: 36px;max-height: 36px;background-color: rgb(93, 93, 93);padding-left: 22px;padding-right: 22px;border: solid; border-color: rgb(93, 93, 93);">
+                                <span style="display: block; letter-spacing: 0.64px; font-size: 16px; font-weight: 400; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(255, 255, 255);width: 86px;height: 24px; line-height: 24px;">Stop</span>
+                            </div>
+                        </div>
+                        <div if="stop === regular">
+                            <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 20px;width: 86px;height: 36px;min-width: 86px;max-width: 86px;min-height: 36px;max-height: 36px;background-color: rgb(255, 255, 255);padding-left: 22px;padding-right: 22px;border: solid; border-color: rgb(0, 0, 0);">
+                                <span style="display: block; letter-spacing: 0.64px; font-size: 16px; font-weight: 400; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(0, 0, 0);width: 86px;height: 24px; line-height: 24px;">Stop</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div ref="pause_play"
+                         style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 20px;width: 86px;height: 36px;min-width: 86px;max-width: 86px;min-height: 36px;max-height: 36px;background-color: rgb(255, 255, 255);padding-left: 22px;padding-right: 22px;border: solid; border-color: rgb(0, 0, 0);">
+                        <div if="pause === hover">
+                            <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 20px;width: 86px;height: 36px;min-width: 86px;max-width: 86px;min-height: 36px;max-height: 36px;background-color: rgb(93, 93, 93);padding-left: 22px;padding-right: 22px;border: solid; border-color: rgb(93, 93, 93);">
+                                <span style="display: block; letter-spacing: 0.64px; font-size: 16px; font-weight: 400; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(255, 255, 255);width: 86px;height: 24px; line-height: 24px;">Pause</span>
+                            </div>
+                        </div>
+                        <div if="pause === regular">
+                            <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 20px;width: 86px;height: 36px;min-width: 86px;max-width: 86px;min-height: 36px;max-height: 36px;background-color: rgb(255, 255, 255);padding-left: 22px;padding-right: 22px;border: solid; border-color: rgb(0, 0, 0);">
+                                <span style="display: block; letter-spacing: 0.64px; font-size: 16px; font-weight: 400; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(0, 0, 0);width: 86px;height: 24px; line-height: 24px;">Pause</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div if="screen === done">
+            <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 24px;width: 626px;height: 240px;max-width: 626px;min-height: 240px;max-height: 240px;background-color: rgb(255, 255, 255);">
+                <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;width: 100%;height: 120px;min-height: 120px;max-height: 120px;">
+                    <img style="width: 120px;height: 120px;"
+                         src="hourglass.png"></div>
+                <div style="display: flex;flex-direction: column;justify-content: flex-end;align-items: center;width: 100%;height: 30px;min-height: 30px;max-height: 30px;">
+                    <span style="display: block;  font-size: 21px; font-weight: 700; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(0, 6, 36);width: 626px;height: 28px; line-height: 28px;">Time is Up</span>
+                </div>
+                <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;width: 100%;height: 90px;min-height: 90px;max-height: 90px;">
+                    <div ref="restart_done"
+                         style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 20px;width: 86px;height: 36px;min-width: 86px;max-width: 86px;min-height: 36px;max-height: 36px;background-color: rgb(0, 0, 0);">
+                        <div if="restart === hover">
+                            <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 20px;width: 86px;height: 36px;min-width: 86px;max-width: 86px;min-height: 36px;max-height: 36px;background-color: rgb(93, 93, 93);">
+                                <span style="display: block; letter-spacing: 0.64px; font-size: 16px; font-weight: 400; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(255, 255, 255);width: 86px;height: 24px; line-height: 24px;">Restart</span>
+                            </div>
+                        </div>
+                        <div if="restart === regular">
+                            <div style="display: flex;flex-direction: column;justify-content: center;align-items: center;border-radius: 20px;width: 86px;height: 36px;min-width: 86px;max-width: 86px;min-height: 36px;max-height: 36px;background-color: rgb(0, 0, 0);">
+                                <span style="display: block; letter-spacing: 0.64px; font-size: 16px; font-weight: 400; font-style: normal; text-align: CENTER; text-decoration: none;color: rgb(255, 255, 255);width: 86px;height: 24px; line-height: 24px;">Restart</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
