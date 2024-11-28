@@ -24,10 +24,10 @@ The library includes the functionality to
 
 The main folders in the compiler package are:
 
-* [components-files](lib%2Fcomponents-files) - contains the typescript generators and transformers for component files
-  * [basic-analyzers](lib%2Fcomponents-files%2Fbasic-analyzers) - low level analyzers to detect what is an identifier,
+- [components-files](lib%2Fcomponents-files) - contains the typescript generators and transformers for component files
+  - [basic-analyzers](lib%2Fcomponents-files%2Fbasic-analyzers) - low level analyzers to detect what is an identifier,
     pattern matching on AST, etc.
-  * [building-blocks](lib%2Fcomponents-files%2Fbuilding-blocks) - building blocks for type script component file transformations
-* [jay-html-files](lib%2Fjay-html-files) - contains the jay-html file parsing and code generators
-* [expressions](lib%2Fexpressions) - contains the expressions parse used by jay-html files bindings
-* [analyze-exported-types](lib%2Fanalyze-exported-types) - analyzes exported types for component files
+  - [building-blocks](lib%2Fcomponents-files%2Fbuilding-blocks) - building blocks for type script component file transformations
+- [jay-html-files](lib%2Fjay-html-files) - contains the jay-html file parsing and code generators
+- [expressions](lib%2Fexpressions) - contains the expressions parse used by jay-html files bindings
+- [analyze-exported-types](lib%2Fanalyze-exported-types) - analyzes exported types for component files

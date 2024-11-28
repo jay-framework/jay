@@ -27,4 +27,3 @@ The next question is which format should the Jay file take? To answer that quest
 3. should support any future HTML / CSS capability
 
 When examining this question and requirements, there is only one potential format that meets all of those - and that is HTML / CSS.
-
