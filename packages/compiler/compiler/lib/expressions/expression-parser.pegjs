@@ -29,6 +29,12 @@ classExpression
 singleClassExpression
   = ternaryClassExpression
   / cssClassName
+  / singleClassPropertyAccessor
+
+singleClassPropertyAccessor
+  =  '{' _ cls: propertyAccessor _ '}' {
+  return cls.render().plusImport(da)
+}
 
 ternaryClassExpression
   = [{] _  acc:condition _ [?] _ classY:cssClassName classN:(_ [:] _ cssClassName)? _ [}] {

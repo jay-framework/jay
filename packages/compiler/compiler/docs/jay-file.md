@@ -158,11 +158,13 @@ examples:
 
 ### class bindings
 
-HTML Class bindings allows using expressions for optional class inclusion
+HTML Class bindings allows using expressions for dynamic and optional class inclusion
 
 examples:
 
 ```html
+<div class="{viewStateProp}"></div>
+<!-- will add a class name per the value of the viewStateProp -->
 <div class="{isOne? class1} tree"></div>
 <!-- will include class1 if isOne is true -->
 <div class="{isOne? class1:class2} tree"></div>
