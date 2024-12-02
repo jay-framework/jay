@@ -1,0 +1,13 @@
+<html>
+  <head>
+    <link rel="import" href="./host" names="Host"/>
+    <script type="application/yaml-jay">
+      data:
+    </script>
+  </head>
+  <body>
+    <div>
+      <Host ref="a"></Host>
+    </div>
+  </body>
+</html>

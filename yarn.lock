@@ -10797,6 +10797,29 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"jay-example-large-app@workspace:examples/jay/large-app":
+  version: 0.0.0-use.local
+  resolution: "jay-example-large-app@workspace:examples/jay/large-app"
+  dependencies:
+    "@babel/core": ^7.23.7
+    "@babel/preset-env": ^7.23.8
+    "@babel/preset-typescript": ^7.23.3
+    jay-cli: "workspace:^"
+    jay-component: "workspace:^"
+    jay-dev-environment: "workspace:^"
+    jay-reactive: "workspace:^"
+    jay-runtime: "workspace:^"
+    jay-secure: "workspace:^"
+    nodemon: ^3.0.3
+    rimraf: ^5.0.5
+    tslib: ^2.6.2
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vite-plugin-inspect: ^0.8.1
+    vite-plugin-jay: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "jay-example-mini-benchmark@workspace:examples/jay/mini-benchmark":
   version: 0.0.0-use.local
   resolution: "jay-example-mini-benchmark@workspace:examples/jay/mini-benchmark"

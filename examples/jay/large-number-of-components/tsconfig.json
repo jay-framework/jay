@@ -1,0 +1,13 @@
+{
+  "extends": "jay-dev-environment/examples/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "paths": {
+      "jay-component": ["../../packages/component/lib"],
+      "jay-reactive": ["../../packages/reactive/lib"],
+      "jay-runtime": ["../../packages/runtime/lib"],
+      "jay-secure": ["../../packages/secure/lib"],
+      "rollup-plugin-jay": ["../../packages/rollup-plugin-jay/lib"],
+    },
+  },
+}

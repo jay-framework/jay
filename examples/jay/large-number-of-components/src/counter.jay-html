@@ -1,0 +1,16 @@
+<html>
+  <head>
+    <script type="application/yaml-jay">
+      data:
+        count: number
+        counterClass: string
+    </script>
+  </head>
+  <body>
+    <div>
+      <button ref="subtracter">-</button>
+      <span class="{counterClass}" style="margin: 0 16px;">{count}</span>
+      <button ref="adder-button">+</button>
+    </div>
+  </body>
+</html>

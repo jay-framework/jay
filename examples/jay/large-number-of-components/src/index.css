@@ -1,0 +1,48 @@
+body {
+  margin: 0;
+  padding-top: 30px;
+}
+.title {
+  color: #11418c;
+  height: 30px;
+  font-size: 24px;
+  width: 100%;
+  position: fixed;
+  text-align: center;
+  border-bottom: 1px solid #bfdfcf;
+  background-color: #fff;
+  padding: 10px;
+  top: 0;
+}
+
+.stage {
+  margin-top: 30px;
+  text-align: center;
+  background-color: #c7efdb;
+}
+
+
+.blueCounter {
+  color: #93c5fd;
+  margin: 0 16px;
+}
+
+.lavenderCounter {
+  color: #f0abfc;
+  margin: 0 16px;
+}
+
+.grayCounter {
+  color: #b2bec7;
+  margin: 0 16px;
+}
+
+.purpleCounter {
+  color: #d291bc;
+  margin: 0 16px;
+}
+
+.yellowCounter {
+  color: #f9e79f;
+  margin: 0 16px;
+}

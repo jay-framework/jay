@@ -1,0 +1,26 @@
+<html>
+<head>
+    <link rel="import" href="./counter" names="Counter"/>
+    <script type="application/yaml-jay">
+        data:
+          numberOfCounters: number
+          total: number
+          counters:
+            - key: string
+              count: number
+              counterClass: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>large app with lots of Reactives and child components</h1>
+    <div>
+        <label for="number-of-counters">Number of Counters:</label>
+        <input id="number-of-counters" ref="numberOfCounters" value="{numberOfCounters}"/>
+    </div>
+    <div>Total count: {total}</div>
+    <br>
+    <Counter forEach="counters" trackBy="key" initialValue="{count}" counterClass="{counterClass}" ref="counter"/>
+</div>
+</body>
+</html>
