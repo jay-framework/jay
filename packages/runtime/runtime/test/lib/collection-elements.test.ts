@@ -2,12 +2,12 @@ import { forEach, dynamicElement as de, element as e, dynamicText as dt } from '
 import { JayElement, HTMLElementCollectionProxy, ReferencesManager } from '../../lib';
 import { ConstructContext } from '../../lib';
 
-const item1 = { name: 'name 1', id: 'id-1' };
-const item2 = { name: 'name 2', id: 'id-2' };
-const item2_1 = { name: 'name 2_1', id: 'id-2' };
-const item3 = { name: 'name 3', id: 'id-3' };
-const item4 = { name: 'name 4', id: 'id-4' };
-const item5 = { name: 'name 5', id: 'id-5' };
+const item1 = { name: 'name 1', id: 'id-1', key: '1' };
+const item2 = { name: 'name 2', id: 'id-2', key: '2' };
+const item2_1 = { name: 'name 2_1', id: 'id-2', key: '2' };
+const item3 = { name: 'name 3', id: 'id-3', key: '3' };
+const item4 = { name: 'name 4', id: 'id-4', key: '4' };
+const item5 = { name: 'name 5', id: 'id-5', key: '5' };
 
 describe('collection-element', () => {
     interface Item {
@@ -170,7 +170,7 @@ describe('collection-element', () => {
         }
         interface TodoListElement extends JayElement<ViewState, TodoListRefs> {}
 
-        function makeElement(data: ViewState): TodoListElement {
+        function makeElement(data: ViewState, trackBy: string = 'id'): TodoListElement {
             let [refManager, [ref]] = ReferencesManager.for({}, [], ['done'], [], []);
             return ConstructContext.withRootContext(data, refManager, () => {
                 // noinspection DuplicatedCode
@@ -183,7 +183,7 @@ describe('collection-element', () => {
                                 e('button', {}, ['done'], ref()),
                             ]);
                         },
-                        'id',
+                        trackBy,
                     ),
                 ]);
             }) as TodoListElement;
@@ -216,6 +216,15 @@ describe('collection-element', () => {
             todoListElement.refs.done.find((item) => item === item2).exec$((el) => el.click());
             expect(fn.mock.calls[0][0].viewState).toBe(item2);
             expect(fn.mock.calls[0][0].coordinate).toEqual(['id-2', 'done']);
+        });
+
+        it('should support any trackBy attribute', () => {
+            let todoListElement = makeElement({ items: [item1, item2, item3] }, "key");
+            let fn = vi.fn();
+            todoListElement.refs.done.onclick(fn);
+            todoListElement.refs.done.find((item) => item === item2).exec$((el) => el.click());
+            expect(fn.mock.calls[0][0].viewState).toBe(item2);
+            expect(fn.mock.calls[0][0].coordinate).toEqual(['2', 'done']);
         });
 
         it('should remove a todo item on click on the done button', () => {

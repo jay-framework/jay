@@ -92,10 +92,12 @@ export function wrapWithModifiedCheck<T extends object>(
 export class ConstructContext<A extends Array<any>> {
     data: A;
     forStaticElements: boolean;
+    trackBy: string
 
-    constructor(data: A, forStaticElements: boolean = true) {
+    constructor(data: A, forStaticElements: boolean = true, trackBy: string = 'id') {
         this.data = data;
         this.forStaticElements = forStaticElements;
+        this.trackBy = trackBy;
     }
 
     get currData() {
@@ -106,7 +108,7 @@ export class ConstructContext<A extends Array<any>> {
         return [
             ...this.data
                 .slice(1)
-                .map((_) => _.id)
+                .map((_) => _[this.trackBy])
                 .reverse(),
             refName,
         ];
@@ -116,8 +118,8 @@ export class ConstructContext<A extends Array<any>> {
         return [...a, b];
     }
 
-    forItem<T>(t: T) {
-        return new ConstructContext(ConstructContext.acc(this.data, t), false);
+    forItem<T>(t: T, trackBy: string) {
+        return new ConstructContext(ConstructContext.acc(this.data, t), false, trackBy);
     }
 
     static withRootContext<ViewState, Refs>(

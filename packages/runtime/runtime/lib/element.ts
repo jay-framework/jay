@@ -191,13 +191,13 @@ export function forEach<T, Item>(
     elemCreator: (Item) => BaseJayElement<Item>,
     matchBy: string,
 ): ForEach<T, Item> {
-    return { getItems, elemCreator, matchBy };
+    return { getItems, elemCreator, trackBy: matchBy };
 }
 
 export interface ForEach<ViewState, Item> {
     getItems: (T) => Array<Item>;
     elemCreator: (Item, String) => BaseJayElement<Item>;
-    matchBy: string;
+    trackBy: string;
 }
 
 function applyListChanges<Item>(
@@ -223,7 +223,7 @@ export function mkUpdateCollection<ViewState, Item>(
     group: KindergartenGroup,
 ): [updateFunc<ViewState>, MountFunc, MountFunc] {
     let lastItems = [];
-    let lastItemsList = new List<Item, BaseJayElement<Item>>([], child.matchBy);
+    let lastItemsList = new List<Item, BaseJayElement<Item>>([], child.trackBy);
     let mount = () => lastItemsList.forEach((value, attach) => attach.mount);
     let unmount = () => lastItemsList.forEach((value, attach) => attach.unmount);
     // todo handle data updates of the parent contexts
@@ -234,12 +234,12 @@ export function mkUpdateCollection<ViewState, Item>(
         let isModified = items !== lastItems;
         lastItems = items;
         if (isModified) {
-            let itemsList = new List<Item, BaseJayElement<Item>>(items, child.matchBy);
+            let itemsList = new List<Item, BaseJayElement<Item>>(items, child.trackBy);
             let instructions = listCompare<Item, BaseJayElement<Item>>(
                 lastItemsList,
                 itemsList,
                 (item, id) => {
-                    let childContext = parentContext.forItem(item);
+                    let childContext = parentContext.forItem(item, child.trackBy);
                     return restoreContext(savedContext, () =>
                         withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () =>
                             wrapWithModifiedCheck(
