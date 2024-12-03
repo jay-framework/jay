@@ -131,7 +131,7 @@ describe('expression-compiler', () => {
 
         it('class as value from view state', () => {
             const actual = parseClassExpression('{classProperty}', defaultVars);
-            expect(actual.rendered).toEqual("da(vs => `${vs.classProperty}`)");
+            expect(actual.rendered).toEqual('da(vs => `${vs.classProperty}`)');
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy();
         });
 

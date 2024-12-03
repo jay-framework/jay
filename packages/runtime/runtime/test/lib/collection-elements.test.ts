@@ -219,7 +219,7 @@ describe('collection-element', () => {
         });
 
         it('should support any trackBy attribute', () => {
-            let todoListElement = makeElement({ items: [item1, item2, item3] }, "key");
+            let todoListElement = makeElement({ items: [item1, item2, item3] }, 'key');
             let fn = vi.fn();
             todoListElement.refs.done.onclick(fn);
             todoListElement.refs.done.find((item) => item === item2).exec$((el) => el.click());

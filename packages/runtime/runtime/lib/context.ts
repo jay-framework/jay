@@ -92,7 +92,7 @@ export function wrapWithModifiedCheck<T extends object>(
 export class ConstructContext<A extends Array<any>> {
     data: A;
     forStaticElements: boolean;
-    trackBy: string
+    trackBy: string;
 
     constructor(data: A, forStaticElements: boolean = true, trackBy: string = 'id') {
         this.data = data;
