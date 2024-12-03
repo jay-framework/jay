@@ -7,14 +7,16 @@ function validateMove({ from, path }: JSONPatchMove) {
 }
 
 export function patch<T>(target: T, jsonPatch: JSONPatch, level = 0): T {
-    let copy: T = (Array.isArray(target) ? [...target] : { ...target }) as T;
-    let patchesGroupedByProp = jsonPatch.reduce((prev, patchOperation) => {
+    const copy: T = (Array.isArray(target) ? [...target] : { ...target }) as T;
+    let equalCount = 0;
+    const patchesGroupedByProp = jsonPatch.reduce((prev, patchOperation) => {
         const pathItem = patchOperation.path[level];
         const op = patchOperation.op;
         if (patchOperation.path.length - 1 === level) {
             if (op === REPLACE || op === ADD) {
                 if (Array.isArray(copy) && op === ADD)
                     copy.splice(pathItem as number, 0, patchOperation.value);
+                else if (copy[pathItem] === patchOperation.value) equalCount += 1;
                 else copy[pathItem] = patchOperation.value;
             } else if (op === REMOVE) {
                 if (Array.isArray(copy)) copy.splice(pathItem as number, 1);
@@ -29,7 +31,12 @@ export function patch<T>(target: T, jsonPatch: JSONPatch, level = 0): T {
     }, {});
 
     Object.keys(patchesGroupedByProp).forEach((key) => {
-        if (copy[key]) copy[key] = patch(copy[key], patchesGroupedByProp[key], level + 1);
+        if (copy[key]) {
+            const patched = patch(copy[key], patchesGroupedByProp[key], level + 1);
+            if (target[key] === patched) equalCount += patchesGroupedByProp[key].length;
+            else copy[key] = patch(copy[key], patchesGroupedByProp[key], level + 1);
+        }
     });
-    return copy;
+    if (equalCount === jsonPatch.length) return target;
+    else return copy;
 }

@@ -48,8 +48,11 @@ The function returns a tuple of 3 values -
 declare function patch<T>(target: T, jsonPatch: JSONPatch, level = 0): T;
 ```
 
-The function receives a `target` object and a `jsonPatch` and always returns a new object.
+The function receives a `target` object and a `jsonPatch` and returns a new object only if there is actual change.
 The `level` parameter is internal for the function working recursively.
+
+On patches of type `REPLACE` the function validates the replacement value is different from the original value.
+If the replacement value is the same by the `===` operator, the operation is ignored.
 
 ## Algorithm notes
 

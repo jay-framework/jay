@@ -1,5 +1,4 @@
-import { patch } from '../lib';
-import { ADD, JSONPatch, MOVE, REMOVE, REPLACE } from '../lib';
+import { ADD, JSONPatch, MOVE, patch, REMOVE, REPLACE } from '../lib';
 
 describe('apply JSON patch', () => {
     describe('flat object', () => {
@@ -10,6 +9,15 @@ describe('apply JSON patch', () => {
                 { op: REPLACE, path: ['c'], value: 5 },
             ]);
             expect(obj).toEqual({ a: 1, b: 4, c: 5 });
+        });
+
+        it('should not replace objects if a value to replace is the same as the original value', () => {
+            const obj = { a: 1, b: 2, c: 3 };
+            const patchedObj = patch(obj, [
+                { op: REPLACE, path: ['b'], value: 2 },
+                { op: REPLACE, path: ['c'], value: 3 },
+            ]);
+            expect(obj).toBe(patchedObj);
         });
 
         it('should apply an add patch', () => {
@@ -35,6 +43,24 @@ describe('apply JSON patch', () => {
             expect(obj).toEqual({ x: { a: 1, b: 4, c: 5 } });
         });
 
+        it('should not replace objects if a value to replace is the same as the original value', () => {
+            const obj = { x: { a: 1, b: 2, c: 3 } };
+            const patchedObj = patch(obj, [
+                { op: REPLACE, path: ['x', 'b'], value: 2 },
+                { op: REPLACE, path: ['x', 'c'], value: 3 },
+            ]);
+            expect(patchedObj).toBe(obj);
+        });
+
+        it('should replace objects if at least one patch is different', () => {
+            const obj = { x: { a: 1, b: 2, c: 3 } };
+            const patchedObj = patch(obj, [
+                { op: REPLACE, path: ['x', 'b'], value: 2 },
+                { op: REPLACE, path: ['x', 'c'], value: 4 },
+            ]);
+            expect(patchedObj).toEqual({ x: { a: 1, b: 2, c: 4 } });
+        });
+
         it('should apply an add patch', () => {
             let obj = { x: { a: 1, b: 2, c: 3 } };
             obj = patch(obj, [{ op: ADD, path: ['x', 'd'], value: 4 }]);
@@ -56,6 +82,15 @@ describe('apply JSON patch', () => {
                 { op: REPLACE, path: [1], value: 5 },
             ]);
             expect(obj).toEqual([4, 5, 3]);
+        });
+
+        it('should not replace arrays if a value to replace is the same as the original value', () => {
+            const obj = [1, 2, 3];
+            const patchedObj = patch(obj, [
+                { op: REPLACE, path: [0], value: 1 },
+                { op: REPLACE, path: [1], value: 2 },
+            ]);
+            expect(patchedObj).toBe(obj);
         });
 
         it('should apply an add patch at the middle', () => {
@@ -131,6 +166,35 @@ describe('apply JSON patch', () => {
                 { id: 1, c: '1' },
                 { id: 3, c: '3' },
                 { id: 2, c: '2' },
+            ]);
+        });
+
+        it('should not update the array if all updates are equal', () => {
+            const obj = [
+                { id: 1, c: '1' },
+                { id: 2, c: '2' },
+                { id: 3, c: '3' },
+            ];
+            const patchedObj = patch(obj, [{ op: REPLACE, path: [1], value: obj[1] }]);
+            expect(patchedObj).toBe(obj);
+        });
+
+        it('should update the array if at least one child object is updated', () => {
+            const obj = [
+                { id: 1, c: '1' },
+                { id: 2, c: '2' },
+                { id: 3, c: '3' },
+            ];
+            const patchedObj = patch(obj, [
+                { op: REPLACE, path: [1], value: obj[1] },
+                { op: REPLACE, path: [0, 'c'], value: '999' },
+            ]);
+            expect(patchedObj).not.toBe(obj);
+            expect(patchedObj[1]).toBe(obj[1]);
+            expect(patchedObj).toEqual([
+                { id: 1, c: '999' },
+                { id: 2, c: '2' },
+                { id: 3, c: '3' },
             ]);
         });
     });
