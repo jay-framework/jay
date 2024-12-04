@@ -4,54 +4,47 @@ export class RunOrder {
     log: string[] = [];
     private getStates: string[][] = [];
     private setStates: string[][] = [];
+    private scheduledReactions: string[][] = [];
     private inReaction: number = -1;
     private batches: string[] = [];
     private reactionLogPosition: number[] = [];
-
-    logReaction(
-        reactive: string,
-        reaction: string,
-        readingStates: string[],
-        settingStates: string[],
-    ) {
-        this.log.push(
-            `${reactive} - ${reaction}: (${readingStates.join(',')}) -> (${settingStates.join(',')})`,
-        );
-    }
-
-    logReady() {
-        this.log.push('-- setup complete --');
-    }
-
-    logStartBatch(reactive: string) {
-        this.log.push(`${reactive} - start batch `);
-    }
-
-    logExternalSetState(reactive: string, state: string) {
-        this.log.push(`${reactive} -   external set state ${state} `);
-    }
-
-    logEndBatch(reactive: string) {
-        this.log.push(`${reactive} - end batch `);
-    }
+    private ident = '';
+    private settingSignalFromBatch: string = '';
 
     logGetState(name: string) {
         if (this.inReaction > -1) this.getStates[this.inReaction].push(name);
     }
     logSetState(name: string) {
         if (this.inReaction > -1) this.setStates[this.inReaction].push(name);
-        else this.log.push(`${this.batches.join(', ')} - batch: setState ${name}`);
+        else {
+            this.scheduledReactions[this.inReaction] = [];
+            this.settingSignalFromBatch = name;
+        }
     }
+
+    logAfterSetState() {
+        if (this.inReaction === -1) {
+            const scheduledReactions = this.scheduledReactions[this.inReaction].join(',');
+            this.log.push(`${this.ident}${this.batches.join(', ')} - batch: -> (${this.settingSignalFromBatch}) --> (${scheduledReactions})`);
+        }
+    }
+
     beforeReaction() {
         this.inReaction++;
         this.getStates[this.inReaction] = [];
         this.setStates[this.inReaction] = [];
+        this.scheduledReactions[this.inReaction] = [];
         this.reactionLogPosition.push(this.log.length);
+        this.ident += '  ';
     }
 
     completeReaction(name: string, reactionName: string) {
+        this.ident = this.ident.slice(0, -2)
         const reactionLogPosition = this.reactionLogPosition.pop();
-        const logMessage = `${name} - ${reactionName}: (${this.getStates[this.inReaction].join(',')}) -> (${this.setStates[this.inReaction].join(',')})`;
+        const signalGetters = this.getStates[this.inReaction].join(',');
+        const signalSetters = this.setStates[this.inReaction].join(',');
+        const scheduledReactions = this.scheduledReactions[this.inReaction].join(',');
+        const logMessage = `${this.ident}${name} - ${reactionName}: (${signalGetters}) -> (${signalSetters}) --> (${scheduledReactions})`;
         this.log.splice(reactionLogPosition, 0, logMessage);
         this.inReaction--;
     }
@@ -65,43 +58,62 @@ export class RunOrder {
     }
 
     flush(name: string) {
-        this.log.push(`${name} - flush!!!`);
+        this.log.push(`${this.ident}${name} - flush!!!`);
+        this.ident += '  ';
+    }
+
+    flushEnd(name: string) {
+        this.ident = this.ident.slice(0, -2)
+        this.log.push(`${this.ident}${name} - flush end`);
     }
 
     logToBeClean(name: string) {
-        this.log.push(`${name} - await toBeClean!!!`);
+        this.log.push(`${this.ident}${name} - await toBeClean!!!`);
+    }
+
+    triggerReaction(name: string, index: number, scheduleAutoBatchRuns: boolean) {
+        this.scheduledReactions[this.inReaction].push(`${name} - ${formatReactionName(index)}${scheduleAutoBatchRuns?' async':''}`);
+    }
+
+    createSignal(name: string, stateName: string) {
+        this.log.push(`${this.ident}${name} - createSignal ${stateName}`);
     }
 }
 
-function romanNumbers(num: number) {
-    switch (num) {
-        case 1:
-            return 'i   ';
-        case 2:
-            return 'ii  ';
-        case 3:
-            return 'iii ';
-        case 4:
-            return 'iv  ';
-        case 5:
-            return 'v   ';
-        case 6:
-            return 'vi  ';
-        case 7:
-            return 'vii ';
-        case 8:
-            return 'viii';
-        case 9:
-            return 'ix  ';
-        case 10:
-            return 'x   ';
+const romanNumerals = {
+    M: 1000,
+    CM: 900,
+    D: 500,
+    CD: 400,
+    C: 100,
+    XC: 90,
+    L: 50,
+    XL: 40,
+    X: 10,
+    IX: 9,
+    V: 5,
+    IV: 4,
+    I: 1
+};
+
+function toRoman(num) {
+    let roman = '';
+    for (let
+        i in romanNumerals) {
+        while (num >= romanNumerals[i]) {
+            roman += i;
+            num -= romanNumerals[i];
+        }
     }
-    return '' + num;
+
+    return roman;
+}
+function formatReactionName(num: number) {
+    return toRoman(num+1);
 }
 
 export class ReactiveWithTracking extends Reactive {
     stateIndex: number = 1;
-    reactionNameIndex: number = 1;
     constructor(
         public readonly name: string,
         private runOrder: RunOrder,
@@ -114,11 +126,13 @@ export class ReactiveWithTracking extends Reactive {
         measureOfChange: MeasureOfChange = MeasureOfChange.FULL,
     ): [get: Getter<T>, set: Setter<T>] {
         const stateName = this.name + this.stateIndex++;
-        this.runOrder.log.push(`${this.name} - createSignal ${stateName}`);
+        this.runOrder.createSignal(this.name, stateName)
         const [getter, setter] = super.createSignal(value, measureOfChange);
         const loggedSetter: Setter<T> = (value: T | Next<T>) => {
             this.runOrder.logSetState(stateName);
-            return setter(value);
+            const ret = setter(value);
+            this.runOrder.logAfterSetState();
+            return ret;
         };
         const loggedGetter: Getter<T> = () => {
             this.runOrder.logGetState(stateName);
@@ -128,7 +142,7 @@ export class ReactiveWithTracking extends Reactive {
     }
 
     createReaction(func: Reaction) {
-        const reactionName = romanNumbers(this.reactionNameIndex++);
+        const reactionName = formatReactionName(this.reactionIndex);
         super.createReaction((measureOfChange) => {
             this.runOrder.beforeReaction();
             try {
@@ -137,6 +151,11 @@ export class ReactiveWithTracking extends Reactive {
                 this.runOrder.completeReaction(this.name, reactionName);
             }
         });
+    }
+
+    triggerReaction(index: number, measureOfChange: MeasureOfChange, paired: boolean) {
+        this.runOrder.triggerReaction(this.name, index, !this.inBatchReactions && !paired);
+        super.triggerReaction(index, measureOfChange, paired);
     }
 
     batchReactions<T>(func: () => T): T {
@@ -151,6 +170,7 @@ export class ReactiveWithTracking extends Reactive {
     flush() {
         this.runOrder.flush(this.name);
         super.flush();
+        this.runOrder.flushEnd(this.name);
     }
 
     toBeClean(): Promise<void> {

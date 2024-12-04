@@ -29,13 +29,13 @@ function popRunningReaction() {
 export class Reactive {
     private batchedReactionsToRun: MeasureOfChange[] = [];
     private isAutoBatchScheduled = false;
-    private reactionIndex = 0;
+    protected reactionIndex = 0;
     private reactions: Array<Reaction> = [];
     private reactionDependencies: Array<Set<ResetStateDependence>> = [];
     private dirty: Promise<void> = Promise.resolve();
     private dirtyResolve: Resolve;
     private timeout: any = undefined;
-    private inBatchReactions: boolean;
+    protected inBatchReactions: boolean;
     private inFlush: boolean;
     private reactionGlobalKey: [Reactive, number][] = [];
     private reactivesToFlush: Set<Reactive> = new Set();
@@ -55,11 +55,11 @@ export class Reactive {
         const triggerReactions = () => {
             for (let index = 0; index < reactionsToRerun.length; index++) {
                 if (reactionsToRerun[index]) {
-                    this.triggerReaction(index, measureOfChange);
+                    this.triggerReaction(index, measureOfChange, false);
                 }
             }
             pairedReactionsToRun.forEach(([reactive, index]) => {
-                reactive.triggerReaction(index, measureOfChange);
+                reactive.triggerReaction(index, measureOfChange, true);
                 this.reactivesToFlush.add(reactive);
             });
         };
@@ -110,8 +110,8 @@ export class Reactive {
         return [getter, setter];
     }
 
-    private triggerReaction(index: number, measureOfChange: MeasureOfChange) {
-        if (!this.inBatchReactions) this.ScheduleAutoBatchRuns();
+    protected triggerReaction(index: number, measureOfChange: MeasureOfChange, paired: boolean) {
+        if (!this.inBatchReactions && !paired) this.ScheduleAutoBatchRuns();
         this.batchedReactionsToRun[index] = Math.max(
             measureOfChange,
             this.batchedReactionsToRun[index] || 0,
