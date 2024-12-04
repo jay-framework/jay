@@ -10797,9 +10797,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"jay-example-large-app@workspace:examples/jay/large-app":
+"jay-example-large-number-of-components@workspace:examples/jay/large-number-of-components":
   version: 0.0.0-use.local
-  resolution: "jay-example-large-app@workspace:examples/jay/large-app"
+  resolution: "jay-example-large-number-of-components@workspace:examples/jay/large-number-of-components"
   dependencies:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
