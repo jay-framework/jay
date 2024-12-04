@@ -8,7 +8,7 @@ import {
     PreRenderElement,
     RenderElement,
 } from 'jay-runtime';
-import { Getter, Reactive } from 'jay-reactive';
+import {Getter, mkReactive, Reactive} from 'jay-reactive';
 import { JSONPatch } from 'jay-json-patch';
 import { HTMLElement } from 'node-html-parser';
 import { createSignal } from './hooks';
@@ -109,7 +109,7 @@ export function makeJayComponent<
             return componentInstance;
         };
         let componentContext: ComponentContext = {
-            reactive: new Reactive(),
+            reactive: mkReactive(),
             mounts: [],
             unmounts: [],
             provideContexts: [],

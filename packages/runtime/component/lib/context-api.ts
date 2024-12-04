@@ -1,4 +1,4 @@
-import { GetterMark, Reactive, SetterMark } from 'jay-reactive';
+import {GetterMark, mkReactive, Reactive, SetterMark} from 'jay-reactive';
 import { withContext } from 'jay-runtime';
 import { CONTEXT_CREATION_CONTEXT } from './component-contexts';
 
@@ -23,7 +23,7 @@ function newContextProxy<T extends object>(reactive: Reactive, context: T): T {
 }
 
 export function createReactiveContext<T extends object>(mkContext: () => T): T {
-    const reactive = new Reactive();
+    const reactive = mkReactive('ctx', mkContext.name);
     const context = withContext(
         CONTEXT_CREATION_CONTEXT,
         { reactive, mounts: [], unmounts: [], provideContexts: [] },
