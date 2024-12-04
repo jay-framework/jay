@@ -205,3 +205,11 @@ function mkResolvablePromise(): [Promise<void>, Resolve] {
     let promise = new Promise((res) => (resolve = res));
     return [promise as Promise<void>, resolve];
 }
+
+let _mkReactive = (...reactiveNames: (string | number)[]) => new Reactive()
+export function setMkReactive(mkReactive: (...reactiveNames: (string | number)[]) => Reactive) {
+    _mkReactive = mkReactive;
+}
+export function mkReactive(...reactiveNames: (string | number)[]) {
+    return _mkReactive(...reactiveNames);
+}

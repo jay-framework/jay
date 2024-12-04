@@ -1,5 +1,5 @@
 import { MeasureOfChange, Reactive } from '../lib';
-import { ReactiveWithTracking, RunOrder } from './reactive-with-tracking';
+import { ReactiveWithTracking, ReactiveTracer } from '../lib/reactive-with-tracing';
 
 describe('reactive', () => {
     describe('create state', () => {
@@ -652,7 +652,7 @@ describe('reactive', () => {
 
     describe('reactive pairing', () => {
         it(`A pulls from B. B batch sets B state. expecting to run A reactions`, async () => {
-            const runOrder = new RunOrder();
+            const runOrder = new ReactiveTracer();
             const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createSignal(1);
 
@@ -687,7 +687,7 @@ describe('reactive', () => {
         });
 
         it(`A uses B. A batch, B batch sets B state. expecting to flush B on B batch end`, async () => {
-            const runOrder = new RunOrder();
+            const runOrder = new ReactiveTracer();
             const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createSignal(1);
             const [b2, setB2] = B.createSignal('the length is 1');
@@ -733,7 +733,7 @@ describe('reactive', () => {
         });
 
         it(`A uses B. A reaction sets B state without B Batch. expecting B to flush async then flush A again`, async () => {
-            const runOrder = new RunOrder();
+            const runOrder = new ReactiveTracer();
             const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createSignal(3);
             const [b2, setB2] = B.createSignal('the length is 3');
@@ -790,7 +790,7 @@ describe('reactive', () => {
         });
 
         it(`A pulls from B. A batch, B batch sets B state. expecting to run A reactions`, async () => {
-            const runOrder = new RunOrder();
+            const runOrder = new ReactiveTracer();
             const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createSignal(1);
 
@@ -827,7 +827,7 @@ describe('reactive', () => {
         });
 
         it(`A pull from B. B batch sets B state. expecting to run A reactions`, async () => {
-            const runOrder = new RunOrder();
+            const runOrder = new ReactiveTracer();
             const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createSignal(1);
 
@@ -862,7 +862,7 @@ describe('reactive', () => {
         });
 
         it(`A uses B. A updates B twice with batching. B flushes twice as a result`, async () => {
-            const runOrder = new RunOrder();
+            const runOrder = new ReactiveTracer();
             const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createSignal(3);
             const [b2, setB2] = B.createSignal(b1() + 1);
@@ -934,7 +934,7 @@ describe('reactive', () => {
         });
 
         it(`A uses B. A updates B using B batch, and expects on next reactions to have B flushed`, async () => {
-            const runOrder = new RunOrder();
+            const runOrder = new ReactiveTracer();
             const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createSignal(3);
             const [b2, setB2] = B.createSignal('the length is 3');
@@ -994,7 +994,7 @@ describe('reactive', () => {
         });
 
         it('should track getter of parent A reactive when read from child B reactive (createDerivedArray case)', async () => {
-            const runOrder = new RunOrder();
+            const runOrder = new ReactiveTracer();
 
             const A = new ReactiveWithTracking('A', runOrder);
             const [a1, setA1] = A.createSignal(1);
