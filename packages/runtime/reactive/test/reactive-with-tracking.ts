@@ -25,7 +25,9 @@ export class RunOrder {
     logAfterSetState() {
         if (this.inReaction === -1) {
             const scheduledReactions = this.scheduledReactions[this.inReaction].join(',');
-            this.log.push(`${this.ident}${this.batches.join(', ')} - batch: -> (${this.settingSignalFromBatch}) --> (${scheduledReactions})`);
+            this.log.push(
+                `${this.ident}${this.batches.join(', ')} - batch: -> (${this.settingSignalFromBatch}) --> (${scheduledReactions})`,
+            );
         }
     }
 
@@ -39,7 +41,7 @@ export class RunOrder {
     }
 
     completeReaction(name: string, reactionName: string) {
-        this.ident = this.ident.slice(0, -2)
+        this.ident = this.ident.slice(0, -2);
         const reactionLogPosition = this.reactionLogPosition.pop();
         const signalGetters = this.getStates[this.inReaction].join(',');
         const signalSetters = this.setStates[this.inReaction].join(',');
@@ -63,7 +65,7 @@ export class RunOrder {
     }
 
     flushEnd(name: string) {
-        this.ident = this.ident.slice(0, -2)
+        this.ident = this.ident.slice(0, -2);
         this.log.push(`${this.ident}${name} - flush end`);
     }
 
@@ -72,7 +74,9 @@ export class RunOrder {
     }
 
     triggerReaction(name: string, index: number, scheduleAutoBatchRuns: boolean) {
-        this.scheduledReactions[this.inReaction].push(`${name} - ${formatReactionName(index)}${scheduleAutoBatchRuns?' async':''}`);
+        this.scheduledReactions[this.inReaction].push(
+            `${name} - ${formatReactionName(index)}${scheduleAutoBatchRuns ? ' async' : ''}`,
+        );
     }
 
     createSignal(name: string, stateName: string) {
@@ -93,13 +97,12 @@ const romanNumerals = {
     IX: 9,
     V: 5,
     IV: 4,
-    I: 1
+    I: 1,
 };
 
 function toRoman(num) {
     let roman = '';
-    for (let
-        i in romanNumerals) {
+    for (let i in romanNumerals) {
         while (num >= romanNumerals[i]) {
             roman += i;
             num -= romanNumerals[i];
@@ -109,7 +112,7 @@ function toRoman(num) {
     return roman;
 }
 function formatReactionName(num: number) {
-    return toRoman(num+1);
+    return toRoman(num + 1);
 }
 
 export class ReactiveWithTracking extends Reactive {
@@ -126,7 +129,7 @@ export class ReactiveWithTracking extends Reactive {
         measureOfChange: MeasureOfChange = MeasureOfChange.FULL,
     ): [get: Getter<T>, set: Setter<T>] {
         const stateName = this.name + this.stateIndex++;
-        this.runOrder.createSignal(this.name, stateName)
+        this.runOrder.createSignal(this.name, stateName);
         const [getter, setter] = super.createSignal(value, measureOfChange);
         const loggedSetter: Setter<T> = (value: T | Next<T>) => {
             this.runOrder.logSetState(stateName);
