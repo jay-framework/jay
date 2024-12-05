@@ -6,7 +6,7 @@ import {
     ContextMarker,
     useContext,
     PreRenderElement,
-    RenderElement,
+    RenderElement, MountFunc,
 } from 'jay-runtime';
 import {Getter, mkReactive, Reactive} from 'jay-reactive';
 import { JSONPatch } from 'jay-json-patch';
@@ -91,6 +91,28 @@ function renderWithContexts<
     return render(viewState);
 }
 
+function mkMounts(componentContext: ComponentContext, element: JayElement<any, any>): [MountFunc, MountFunc] {
+
+    const [mounted, setMounted] = componentContext.mountedSignal;
+
+    componentContext.reactive.createReaction(() => {
+        if (mounted)
+            element.mount()
+        else
+            element.unmount();
+    })
+
+    const mount = () => {
+        componentContext.reactive.enable();
+        componentContext.reactive.batchReactions(() => setMounted(true));
+    }
+    const unmount = () => {
+        componentContext.reactive.batchReactions(() => setMounted(false));
+        componentContext.reactive.disable();
+    }
+    return [mount, unmount]
+}
+
 export function makeJayComponent<
     PropsT extends object,
     ViewState extends object,
@@ -105,15 +127,15 @@ export function makeJayComponent<
 ): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT> {
     return (props) => {
         let componentInstance = null;
-        let getComponentInstance = () => {
+        const getComponentInstance = () => {
             return componentInstance;
         };
-        let componentContext: ComponentContext = {
-            reactive: mkReactive(),
-            mounts: [],
-            unmounts: [],
+        const reactive = mkReactive();
+        const componentContext: ComponentContext = {
+            mountedSignal: reactive.createSignal(true),
+            reactive,
             provideContexts: [],
-            getComponentInstance,
+            getComponentInstance
         };
         return withContext(COMPONENT_CONTEXT, componentContext, () => {
             let propsProxy = makePropsProxy(componentContext.reactive, props);
@@ -127,6 +149,7 @@ export function makeJayComponent<
             let coreComp = comp(propsProxy, refs, ...contexts); // wrap event listening with batch reactions
             let { render: renderViewState, ...api } = coreComp;
             let element: JayElementT;
+
             componentContext.reactive.createReaction(() => {
                 let viewStateValueOrGetters = renderViewState(propsProxy);
                 let viewState = materializeViewState(viewStateValueOrGetters);
@@ -138,20 +161,17 @@ export function makeJayComponent<
                     );
                 else element.update(viewState);
             });
+            const [mount, unmount] = mkMounts(componentContext, element);
             let update = (updateProps) => {
                 propsProxy.update(updateProps);
             };
-            componentContext.mounts.push(element.mount);
-            componentContext.unmounts.push(element.unmount);
-            componentContext.mounts.push(() => componentContext.reactive.enable());
-            componentContext.unmounts.push(() => componentContext.reactive.disable());
 
             let events = {};
             let component = {
                 element,
                 update,
-                mount: () => componentContext.mounts.forEach((_) => _()),
-                unmount: () => componentContext.unmounts.forEach((_) => _()),
+                mount,
+                unmount,
                 addEventListener: (eventType: string, handler: Function) =>
                     events[eventType](handler),
                 removeEventListener: (eventType: string) => events[eventType](undefined),

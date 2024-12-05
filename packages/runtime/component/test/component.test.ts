@@ -12,7 +12,7 @@ import {
     RenderElement,
 } from 'jay-runtime';
 import {
-    COMPONENT_CONTEXT,
+    COMPONENT_CONTEXT, ComponentContext,
     createDerivedArray,
     createEffect,
     createEvent,
@@ -30,21 +30,20 @@ const { makePropsProxy } = forTesting;
 
 describe('state management', () => {
     describe('Props', () => {
-        const contextTestDefaults = {
-            mounts: [],
-            unmounts: [],
+        const contextTestDefaults: Omit<ComponentContext, "reactive" | "mountedSignal"> = {
             provideContexts: [],
             getComponentInstance: () => null,
         };
         it('should transform an object into a getters object', () => {
-            let reactive = new Reactive();
+            const reactive = new Reactive();
+            const mountedSignal = reactive.createSignal(true);
             const props = {
                 name: 'abc',
                 age: 12,
             };
             let propsGetters = withContext(
                 COMPONENT_CONTEXT,
-                { reactive, ...contextTestDefaults },
+                { reactive, mountedSignal, ...contextTestDefaults },
                 () => makePropsProxy(reactive, props),
             );
 
@@ -53,14 +52,15 @@ describe('state management', () => {
         });
 
         it('should update values when given new props', () => {
-            let reactive = new Reactive();
+            const reactive = new Reactive();
+            const mountedSignal = reactive.createSignal(true);
             const props = {
                 name: 'abc',
                 age: 12,
             };
             let updatableProps = withContext(
                 COMPONENT_CONTEXT,
-                { reactive, ...contextTestDefaults },
+                { reactive, mountedSignal, ...contextTestDefaults },
                 () => makePropsProxy(reactive, props),
             );
 
@@ -75,14 +75,15 @@ describe('state management', () => {
         });
 
         it('should give back the props using the .props property', () => {
-            let reactive = new Reactive();
+            const reactive = new Reactive();
+            const mountedSignal = reactive.createSignal(true);
             const props = {
                 name: 'abc',
                 age: 12,
             };
             let propsGetters = withContext(
                 COMPONENT_CONTEXT,
-                { reactive, ...contextTestDefaults },
+                { reactive, mountedSignal, ...contextTestDefaults },
                 () => makePropsProxy(reactive, props),
             );
 
@@ -90,14 +91,15 @@ describe('state management', () => {
         });
 
         it('should give back the updated props using the .props property', () => {
-            let reactive = new Reactive();
+            const reactive = new Reactive();
+            const mountedSignal = reactive.createSignal(true);
             const props = {
                 name: 'abc',
                 age: 12,
             };
             let propsGetters = withContext(
                 COMPONENT_CONTEXT,
-                { reactive, ...contextTestDefaults },
+                { reactive, mountedSignal, ...contextTestDefaults },
                 () => makePropsProxy(reactive, props),
             );
 
@@ -394,6 +396,17 @@ describe('state management', () => {
 
             it('should run create effect on initial component creation', async () => {
                 let instance = label({ name: 'world' });
+                await instance.element.refs.label.exec$((elem) =>
+                    expect(elem.textContent).toBe('hello world'),
+                );
+                expect(instance.getResourceState().resourceAllocated).toBe(true);
+                expect(instance.getResourceState().effectRunCount).toBe(1);
+                expect(instance.getResourceState().effectCleanupRunCount).toBe(0);
+            });
+
+            it('should not rerun the effect if component mount is called while the component is mounted', async () => {
+                let instance = label({ name: 'world' });
+                instance.mount();
                 await instance.element.refs.label.exec$((elem) =>
                     expect(elem.textContent).toBe('hello world'),
                 );

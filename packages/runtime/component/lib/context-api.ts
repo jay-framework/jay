@@ -26,7 +26,7 @@ export function createReactiveContext<T extends object>(mkContext: () => T): T {
     const reactive = mkReactive('ctx', mkContext.name);
     const context = withContext(
         CONTEXT_CREATION_CONTEXT,
-        { reactive, mounts: [], unmounts: [], provideContexts: [] },
+        { reactive, mountedSignal: reactive.createSignal(true), provideContexts: [] },
         mkContext,
     );
     return newContextProxy(reactive, context);

@@ -20,16 +20,27 @@ export function createEffect(effect: () => void | EffectCleanup) {
         }
     };
 
+    let lastMounted = false;
+    const mounted = currentHookContext().mountedSignal[0];
     currentHookContext().reactive.createReaction(() => {
-        clean();
-        cleanup = effect();
+        if (lastMounted !== mounted()) {
+            if (mounted())
+                cleanup = effect();
+            else
+                clean();
+            lastMounted = mounted()
+        }
+        else if (mounted()) {
+            clean();
+            cleanup = effect();
+        }
     });
-    currentHookContext().unmounts.push(() => {
-        clean();
-    });
-    currentHookContext().mounts.push(() => {
-        cleanup = effect();
-    });
+    // currentHookContext().unmounts.push(() => {
+    //     clean();
+    // });
+    // currentHookContext().mounts.push(() => {
+    //     cleanup = effect();
+    // });
 }
 
 export function createSignal<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: Setter<T>] {
