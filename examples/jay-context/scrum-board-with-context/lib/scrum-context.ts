@@ -63,10 +63,10 @@ export const provideScrumContext = () =>
             setPillars(moveTask(pillars(), pillarId, taskId, -1, 0));
         };
         const moveTaskUp = (pillarId: string, taskId: string) => {
-            setPillars(moveTask(pillars(), pillarId, taskId, 0, +1));
+            setPillars(moveTask(pillars(), pillarId, taskId, 0, -1));
         };
         const moveTaskDown = (pillarId: string, taskId: string) => {
-            setPillars(moveTask(pillars(), pillarId, taskId, 0, -1));
+            setPillars(moveTask(pillars(), pillarId, taskId, 0, +1));
         };
 
         return {

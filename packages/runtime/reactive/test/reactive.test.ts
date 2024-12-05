@@ -1,5 +1,5 @@
 import { MeasureOfChange, Reactive } from '../lib';
-import { ReactiveWithTracking, RunOrder } from './reactive-with-tracking';
+import { ReactiveWithTracking, ReactiveTracer } from '../lib/reactive-with-tracing';
 
 describe('reactive', () => {
     describe('create state', () => {
@@ -651,12 +651,45 @@ describe('reactive', () => {
     });
 
     describe('reactive pairing', () => {
-        it(`A pulls from B. B batch sets B state. expecting to run A reactions`, async () => {
-            const runOrder = new RunOrder();
+        it(`without enabling pairing, when A pulls from B. B batch sets B state. expecting to not run A reactions`, async () => {
+            const runOrder = new ReactiveTracer();
             const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createSignal(1);
 
             const A = new ReactiveWithTracking('A', runOrder);
+            const [a1, setA1] = A.createSignal('');
+            A.createReaction(() => {
+                setA1(`The B reactive Value is - ${b1()}`);
+            });
+            await A.toBeClean();
+            await B.toBeClean();
+
+            expect(a1()).toBe('The B reactive Value is - 1');
+
+            B.batchReactions(() => {
+                setB1(4);
+            });
+
+            expect(a1()).toBe('The B reactive Value is - 1');
+            expect(runOrder.log).toEqual([
+                'B - createSignal B1',
+                'A - createSignal A1',
+                'A - I: (B1) -> (A1) --> ()',
+                'A - await toBeClean!!!',
+                'B - await toBeClean!!!',
+                'B - batch: -> (B1) --> ()',
+                'B - flush!!!',
+                'B - flush end',
+            ]);
+        });
+
+        it(`A pulls from B. B batch sets B state. expecting to run A reactions`, async () => {
+            const runOrder = new ReactiveTracer();
+            const B = new ReactiveWithTracking('B', runOrder);
+            const [b1, setB1] = B.createSignal(1);
+
+            const A = new ReactiveWithTracking('A', runOrder);
+            A.enablePairing(B);
             const [a1, setA1] = A.createSignal('');
             A.createReaction(() => {
                 setA1(`The B reactive Value is - ${b1()}`);
@@ -687,7 +720,7 @@ describe('reactive', () => {
         });
 
         it(`A uses B. A batch, B batch sets B state. expecting to flush B on B batch end`, async () => {
-            const runOrder = new RunOrder();
+            const runOrder = new ReactiveTracer();
             const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createSignal(1);
             const [b2, setB2] = B.createSignal('the length is 1');
@@ -696,6 +729,7 @@ describe('reactive', () => {
             });
 
             const A = new ReactiveWithTracking('A', runOrder);
+            A.enablePairing(B);
             const [a1, setA1] = A.createSignal([1, 2, 3]);
             const [a2, setA2] = A.createSignal('');
             A.createReaction(() => {
@@ -733,7 +767,7 @@ describe('reactive', () => {
         });
 
         it(`A uses B. A reaction sets B state without B Batch. expecting B to flush async then flush A again`, async () => {
-            const runOrder = new RunOrder();
+            const runOrder = new ReactiveTracer();
             const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createSignal(3);
             const [b2, setB2] = B.createSignal('the length is 3');
@@ -742,6 +776,7 @@ describe('reactive', () => {
             });
 
             const A = new ReactiveWithTracking('A', runOrder);
+            A.enablePairing(B);
             const [a1, setA1] = A.createSignal([1, 2, 3]);
             const [a2, setA2] = A.createSignal('');
             A.createReaction(() => {
@@ -790,11 +825,12 @@ describe('reactive', () => {
         });
 
         it(`A pulls from B. A batch, B batch sets B state. expecting to run A reactions`, async () => {
-            const runOrder = new RunOrder();
+            const runOrder = new ReactiveTracer();
             const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createSignal(1);
 
             const A = new ReactiveWithTracking('A', runOrder);
+            A.enablePairing(B);
             const [a1, setA1] = A.createSignal('');
             A.createReaction(() => {
                 setA1(`The B reactive Value is - ${b1()}`);
@@ -827,11 +863,12 @@ describe('reactive', () => {
         });
 
         it(`A pull from B. B batch sets B state. expecting to run A reactions`, async () => {
-            const runOrder = new RunOrder();
+            const runOrder = new ReactiveTracer();
             const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createSignal(1);
 
             const A = new ReactiveWithTracking('A', runOrder);
+            A.enablePairing(B);
             const [a1, setA1] = A.createSignal('');
             A.createReaction(() => {
                 setA1(`The B reactive Value is - ${b1()}`);
@@ -862,7 +899,7 @@ describe('reactive', () => {
         });
 
         it(`A uses B. A updates B twice with batching. B flushes twice as a result`, async () => {
-            const runOrder = new RunOrder();
+            const runOrder = new ReactiveTracer();
             const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createSignal(3);
             const [b2, setB2] = B.createSignal(b1() + 1);
@@ -876,6 +913,7 @@ describe('reactive', () => {
             });
 
             const A = new ReactiveWithTracking('A', runOrder);
+            A.enablePairing(B);
             const [a1, setA1] = A.createSignal(1);
             const [a2, setA2] = A.createSignal(b2() + 1);
             A.createReaction(() => {
@@ -934,7 +972,7 @@ describe('reactive', () => {
         });
 
         it(`A uses B. A updates B using B batch, and expects on next reactions to have B flushed`, async () => {
-            const runOrder = new RunOrder();
+            const runOrder = new ReactiveTracer();
             const B = new ReactiveWithTracking('B', runOrder);
             const [b1, setB1] = B.createSignal(3);
             const [b2, setB2] = B.createSignal('the length is 3');
@@ -943,6 +981,7 @@ describe('reactive', () => {
             });
 
             const A = new ReactiveWithTracking('A', runOrder);
+            A.enablePairing(B);
             const [a1, setA1] = A.createSignal([1, 2, 3]);
             const [a2, setA2] = A.createSignal('');
             const [a3, setA3] = A.createSignal(0);
@@ -984,7 +1023,7 @@ describe('reactive', () => {
                 'B - await toBeClean!!!',
                 'A - batch: -> (A1) --> (A - II,A - III)',
                 'A - flush!!!',
-                '  A - II: (A1) -> (B1) --> (B - I,A - I)',
+                '  A - II: (A1) -> (B1) --> (A - I,B - I)',
                 '    B - flush!!!',
                 '      B - I: (B1) -> (B2) --> (A - III)',
                 '    B - flush end',
@@ -993,8 +1032,8 @@ describe('reactive', () => {
             ]);
         });
 
-        it('should track getter of parent A reactive when read from child B reactive (createDerivedArray case)', async () => {
-            const runOrder = new RunOrder();
+        it('should track getter of parent A reactive when read from child B reactive', async () => {
+            const runOrder = new ReactiveTracer();
 
             const A = new ReactiveWithTracking('A', runOrder);
             const [a1, setA1] = A.createSignal(1);
@@ -1005,6 +1044,7 @@ describe('reactive', () => {
             A.createReaction(() => {
                 if (!B) {
                     B = new ReactiveWithTracking('B', runOrder);
+                    B.enablePairing(A);
                     [b1, setB1] = B.createSignal(1);
                     B.createReaction(() => {
                         setB1(a1() + 1);
@@ -1022,8 +1062,8 @@ describe('reactive', () => {
                 setA1(10);
             });
 
-            expect(b1()).toBe(11);
-            expect(a2()).toBe(12);
+            expect(b1()).toBe(11); // B follows A signals
+            expect(a2()).toBe(3); // A does not follow B signals
 
             expect(runOrder.log).toEqual([
                 'A - createSignal A1',
@@ -1038,9 +1078,8 @@ describe('reactive', () => {
                 'A - flush!!!',
                 '  A - I: () -> () --> ()',
                 '    B - flush!!!',
-                '      B - I: (A1) -> (B1) --> (A - II)',
+                '      B - I: (A1) -> (B1) --> ()',
                 '    B - flush end',
-                '  A - II: (B1) -> (A2) --> ()',
                 '  B - flush!!!',
                 '  B - flush end',
                 'A - flush end',

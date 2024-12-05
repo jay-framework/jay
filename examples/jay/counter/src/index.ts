@@ -1,3 +1,4 @@
+// import 'jay-reactive/tracing'
 import { render } from './app.jay-html';
 import { JayPort, setMainPort, HandshakeMessageJayChannel } from 'jay-secure';
 import './index.css';

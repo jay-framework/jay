@@ -40,6 +40,7 @@ export class Reactive {
     private reactionGlobalKey: [Reactive, number][] = [];
     private reactivesToFlush: Set<Reactive> = new Set();
     private disabled = false;
+    private allowedPairedReactives = new WeakSet<Reactive>();
 
     createSignal<T>(
         value: ValueOrGetter<T>,
@@ -59,8 +60,10 @@ export class Reactive {
                 }
             }
             pairedReactionsToRun.forEach(([reactive, index]) => {
-                reactive.triggerReaction(index, measureOfChange, true);
-                this.reactivesToFlush.add(reactive);
+                if (reactive.allowedPairedReactives.has(this)) {
+                    reactive.triggerReaction(index, measureOfChange, true);
+                    this.reactivesToFlush.add(reactive);
+                }
             });
         };
 
@@ -116,6 +119,10 @@ export class Reactive {
             measureOfChange,
             this.batchedReactionsToRun[index] || 0,
         );
+    }
+
+    enablePairing(sourceReactive: Reactive) {
+        this.allowedPairedReactives.add(sourceReactive);
     }
 
     createReaction(func: Reaction) {
@@ -204,4 +211,12 @@ function mkResolvablePromise(): [Promise<void>, Resolve] {
     let resolve: Resolve;
     let promise = new Promise((res) => (resolve = res));
     return [promise as Promise<void>, resolve];
+}
+
+let _mkReactive = (...reactiveNames: (string | number)[]) => new Reactive();
+export function setMkReactive(mkReactive: (...reactiveNames: (string | number)[]) => Reactive) {
+    _mkReactive = mkReactive;
+}
+export function mkReactive(...reactiveNames: (string | number)[]) {
+    return _mkReactive(...reactiveNames);
 }

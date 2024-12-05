@@ -6,9 +6,12 @@ export default defineConfig({
         minify: false,
         target: 'es2020',
         lib: {
-            entry: resolve(__dirname, 'lib/index.ts'),
+            entry: {
+                index: resolve(__dirname, 'lib/index.ts'),
+                tracing: resolve(__dirname, 'lib/reactive-with-tracing.ts'),
+            },
             name: 'jayReactive',
-            fileName: 'index',
+            // fileName: 'index',
             formats: ['es'],
         },
     },

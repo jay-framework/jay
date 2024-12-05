@@ -1,4 +1,4 @@
-import { Getter, MeasureOfChange, Reactive, Setter, ValueOrGetter } from 'jay-reactive';
+import { Getter, MeasureOfChange, mkReactive, Reactive, Setter, ValueOrGetter } from 'jay-reactive';
 import { JSONPatch, patch } from 'jay-json-patch';
 import { ContextMarker, EventEmitter, findContext } from 'jay-runtime';
 import { Patcher } from './component';
@@ -20,16 +20,24 @@ export function createEffect(effect: () => void | EffectCleanup) {
         }
     };
 
+    let lastMounted = false;
+    const mounted = currentHookContext().mountedSignal[0];
     currentHookContext().reactive.createReaction(() => {
-        clean();
-        cleanup = effect();
+        if (lastMounted !== mounted()) {
+            if (mounted()) cleanup = effect();
+            else clean();
+            lastMounted = mounted();
+        } else if (mounted()) {
+            clean();
+            cleanup = effect();
+        }
     });
-    currentHookContext().unmounts.push(() => {
-        clean();
-    });
-    currentHookContext().mounts.push(() => {
-        cleanup = effect();
-    });
+    // currentHookContext().unmounts.push(() => {
+    //     clean();
+    // });
+    // currentHookContext().mounts.push(() => {
+    //     cleanup = effect();
+    // });
 }
 
 export function createSignal<T>(value: ValueOrGetter<T>): [get: Getter<T>, set: Setter<T>] {
@@ -57,31 +65,59 @@ export function createMemo<T>(computation: (prev: T) => T, initialValue?: T): Ge
 }
 
 interface MappedItemTracking<T extends object, U> {
-    reactive: Reactive;
-    setItem: Setter<T>;
-    setIndex: Setter<number>;
-    setLength: Setter<number>;
-    getMappedItem: Getter<U>;
+    mappedItem: U;
+    item: T;
+    index: number;
+    length: number;
+    usedIndex: boolean;
+    usedLength: boolean;
 }
-function makeItemTracking<T extends object, U>(
+
+type TrackableGetter<T> = {
+    getter: Getter<T>;
+    wasUsed(): boolean;
+};
+function trackableGetter<T>(value: T): TrackableGetter<T> {
+    let wasUsed = false;
+    return {
+        getter: () => {
+            wasUsed = true;
+            return value;
+        },
+        wasUsed: () => wasUsed,
+    };
+}
+
+function mapItem<T extends object, U>(
     item: T,
     index: number,
     length: number,
+    force: boolean,
+    cached: MappedItemTracking<T, U>,
     mapCallback: (item: Getter<T>, index: Getter<number>, length: Getter<number>) => U,
 ): MappedItemTracking<T, U> {
-    let reactive = new Reactive();
-    let [getItem, setItem] = reactive.createSignal(item);
-    let [getIndex, setIndex] = reactive.createSignal(index);
-    let [getLength, setLength] = reactive.createSignal(length);
-    let [getMappedItem, setMappedItem] = reactive.createSignal<U>(undefined);
-    reactive.createReaction(() => setMappedItem(mapCallback(getItem, getIndex, getLength)));
-    return {
-        setItem,
-        setIndex,
-        setLength,
-        getMappedItem,
-        reactive,
-    };
+    const itemGetter = trackableGetter(item);
+    const indexGetter = trackableGetter(index);
+    const lengthGetter = trackableGetter(length);
+
+    const needToMap =
+        force ||
+        !cached ||
+        item !== cached.item ||
+        (index !== cached.index && cached.usedIndex) ||
+        (length !== cached.length && cached.usedLength);
+
+    if (needToMap) {
+        const mappedItem = mapCallback(itemGetter.getter, indexGetter.getter, lengthGetter.getter);
+        return {
+            item,
+            mappedItem,
+            index,
+            length,
+            usedIndex: indexGetter.wasUsed(),
+            usedLength: lengthGetter.wasUsed(),
+        };
+    } else return cached;
 }
 
 export function createDerivedArray<T extends object, U>(
@@ -100,21 +136,17 @@ export function createDerivedArray<T extends object, U>(
         setMappedArray((oldValue) => {
             let length = sourceArray().length;
             let newMappedArray = sourceArray().map((item, index) => {
-                let itemTracking: MappedItemTracking<T, U>;
-                if (!mappedItemsCache.has(item) || measureOfChange == MeasureOfChange.FULL)
-                    newMappedItemsCache.set(
-                        item,
-                        (itemTracking = makeItemTracking<T, U>(item, index, length, mapCallback)),
-                    );
-                else {
-                    newMappedItemsCache.set(item, (itemTracking = mappedItemsCache.get(item)));
-                    itemTracking.reactive.batchReactions(() => {
-                        itemTracking.setItem(item);
-                        itemTracking.setLength(length);
-                        itemTracking.setIndex(index);
-                    });
-                }
-                return itemTracking.getMappedItem();
+                const force = measureOfChange == MeasureOfChange.FULL;
+                const mappedItemTracking = mapItem(
+                    item,
+                    index,
+                    length,
+                    force,
+                    mappedItemsCache.get(item),
+                    mapCallback,
+                );
+                newMappedItemsCache.set(item, mappedItemTracking);
+                return mappedItemTracking.mappedItem;
             });
             mappedItemsCache = newMappedItemsCache;
             return newMappedArray;
