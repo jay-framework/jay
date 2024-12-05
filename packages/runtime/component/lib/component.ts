@@ -13,6 +13,7 @@ import { JSONPatch } from 'jay-json-patch';
 import { HTMLElement } from 'node-html-parser';
 import { createSignal } from './hooks';
 import { COMPONENT_CONTEXT, ComponentContext } from './component-contexts';
+import {CONTEXT_REACTIVE_SYMBOL_CONTEXT} from "./context-api";
 
 export type Patcher<T> = (...patch: JSONPatch) => void;
 export type hasProps<PropsT> = { props: Getter<PropsT> };
@@ -145,7 +146,11 @@ export function makeJayComponent<
             };
             let [refs, render] = preRender({ eventWrapper });
 
-            let contexts: Contexts = contextMarkers.map((marker) => useContext(marker)) as Contexts;
+            let contexts: Contexts = contextMarkers.map((marker) => {
+                const context = useContext(marker);
+                reactive.enablePairing(context[CONTEXT_REACTIVE_SYMBOL_CONTEXT]);
+                return context
+            }) as Contexts;
             let coreComp = comp(propsProxy, refs, ...contexts); // wrap event listening with batch reactions
             let { render: renderViewState, ...api } = coreComp;
             let element: JayElementT;
