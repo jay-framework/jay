@@ -6,14 +6,15 @@ import {
     ContextMarker,
     useContext,
     PreRenderElement,
-    RenderElement, MountFunc,
+    RenderElement,
+    MountFunc,
 } from 'jay-runtime';
-import {Getter, mkReactive, Reactive} from 'jay-reactive';
+import { Getter, mkReactive, Reactive } from 'jay-reactive';
 import { JSONPatch } from 'jay-json-patch';
 import { HTMLElement } from 'node-html-parser';
 import { createSignal } from './hooks';
 import { COMPONENT_CONTEXT, ComponentContext } from './component-contexts';
-import {CONTEXT_REACTIVE_SYMBOL_CONTEXT} from "./context-api";
+import { CONTEXT_REACTIVE_SYMBOL_CONTEXT } from './context-api';
 
 export type Patcher<T> = (...patch: JSONPatch) => void;
 export type hasProps<PropsT> = { props: Getter<PropsT> };
@@ -92,26 +93,26 @@ function renderWithContexts<
     return render(viewState);
 }
 
-function mkMounts(componentContext: ComponentContext, element: JayElement<any, any>): [MountFunc, MountFunc] {
-
+function mkMounts(
+    componentContext: ComponentContext,
+    element: JayElement<any, any>,
+): [MountFunc, MountFunc] {
     const [mounted, setMounted] = componentContext.mountedSignal;
 
     componentContext.reactive.createReaction(() => {
-        if (mounted)
-            element.mount()
-        else
-            element.unmount();
-    })
+        if (mounted) element.mount();
+        else element.unmount();
+    });
 
     const mount = () => {
         componentContext.reactive.enable();
         componentContext.reactive.batchReactions(() => setMounted(true));
-    }
+    };
     const unmount = () => {
         componentContext.reactive.batchReactions(() => setMounted(false));
         componentContext.reactive.disable();
-    }
-    return [mount, unmount]
+    };
+    return [mount, unmount];
 }
 
 export function makeJayComponent<
@@ -136,7 +137,7 @@ export function makeJayComponent<
             mountedSignal: reactive.createSignal(true),
             reactive,
             provideContexts: [],
-            getComponentInstance
+            getComponentInstance,
         };
         return withContext(COMPONENT_CONTEXT, componentContext, () => {
             let propsProxy = makePropsProxy(componentContext.reactive, props);
@@ -149,7 +150,7 @@ export function makeJayComponent<
             let contexts: Contexts = contextMarkers.map((marker) => {
                 const context = useContext(marker);
                 reactive.enablePairing(context[CONTEXT_REACTIVE_SYMBOL_CONTEXT]);
-                return context
+                return context;
             }) as Contexts;
             let coreComp = comp(propsProxy, refs, ...contexts); // wrap event listening with batch reactions
             let { render: renderViewState, ...api } = coreComp;

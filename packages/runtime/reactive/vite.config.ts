@@ -8,7 +8,7 @@ export default defineConfig({
         lib: {
             entry: {
                 index: resolve(__dirname, 'lib/index.ts'),
-                tracing: resolve(__dirname, 'lib/reactive-with-tracing.ts')
+                tracing: resolve(__dirname, 'lib/reactive-with-tracing.ts'),
             },
             name: 'jayReactive',
             // fileName: 'index',

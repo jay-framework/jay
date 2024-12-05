@@ -1,4 +1,4 @@
-import {GetterMark, mkReactive, Reactive, SetterMark} from 'jay-reactive';
+import { GetterMark, mkReactive, Reactive, SetterMark } from 'jay-reactive';
 import { withContext } from 'jay-runtime';
 import { CONTEXT_CREATION_CONTEXT } from './component-contexts';
 
@@ -16,9 +16,12 @@ function newContextProxy<T extends object>(reactive: Reactive, context: T): T {
 
     return new Proxy(context, {
         get(target: T, p: string | symbol, receiver: any): any {
-            if (p === CONTEXT_REACTIVE_SYMBOL_CONTEXT)
-                return reactive;
-            else if (!target[p][GetterMark] && !target[p][SetterMark] && typeof target[p] === 'function')
+            if (p === CONTEXT_REACTIVE_SYMBOL_CONTEXT) return reactive;
+            else if (
+                !target[p][GetterMark] &&
+                !target[p][SetterMark] &&
+                typeof target[p] === 'function'
+            )
                 return wrap(target[p]);
             else return target[p];
         },

@@ -1,4 +1,4 @@
-import {Getter, MeasureOfChange, mkReactive, Reactive, Setter, ValueOrGetter} from 'jay-reactive';
+import { Getter, MeasureOfChange, mkReactive, Reactive, Setter, ValueOrGetter } from 'jay-reactive';
 import { JSONPatch, patch } from 'jay-json-patch';
 import { ContextMarker, EventEmitter, findContext } from 'jay-runtime';
 import { Patcher } from './component';
@@ -24,13 +24,10 @@ export function createEffect(effect: () => void | EffectCleanup) {
     const mounted = currentHookContext().mountedSignal[0];
     currentHookContext().reactive.createReaction(() => {
         if (lastMounted !== mounted()) {
-            if (mounted())
-                cleanup = effect();
-            else
-                clean();
-            lastMounted = mounted()
-        }
-        else if (mounted()) {
+            if (mounted()) cleanup = effect();
+            else clean();
+            lastMounted = mounted();
+        } else if (mounted()) {
             clean();
             cleanup = effect();
         }
@@ -72,20 +69,23 @@ interface MappedItemTracking<T extends object, U> {
     item: T;
     index: number;
     length: number;
-    usedIndex: boolean,
-    usedLength: boolean
+    usedIndex: boolean;
+    usedLength: boolean;
 }
 
 type TrackableGetter<T> = {
-    getter: Getter<T>
-    wasUsed(): boolean
-}
+    getter: Getter<T>;
+    wasUsed(): boolean;
+};
 function trackableGetter<T>(value: T): TrackableGetter<T> {
-    let wasUsed = false
+    let wasUsed = false;
     return {
-        getter: () => {wasUsed = true; return value},
-        wasUsed: () => wasUsed
-    }
+        getter: () => {
+            wasUsed = true;
+            return value;
+        },
+        wasUsed: () => wasUsed,
+    };
 }
 
 function mapItem<T extends object, U>(
@@ -94,24 +94,30 @@ function mapItem<T extends object, U>(
     length: number,
     force: boolean,
     cached: MappedItemTracking<T, U>,
-    mapCallback: (item: Getter<T>, index: Getter<number>, length: Getter<number>) => U): MappedItemTracking<T, U> {
-
+    mapCallback: (item: Getter<T>, index: Getter<number>, length: Getter<number>) => U,
+): MappedItemTracking<T, U> {
     const itemGetter = trackableGetter(item);
     const indexGetter = trackableGetter(index);
     const lengthGetter = trackableGetter(length);
 
-    const needToMap = force ||
-        (!cached) ||
-        (item !== cached.item) ||
+    const needToMap =
+        force ||
+        !cached ||
+        item !== cached.item ||
         (index !== cached.index && cached.usedIndex) ||
         (length !== cached.length && cached.usedLength);
 
     if (needToMap) {
-        const mappedItem = mapCallback(itemGetter.getter, indexGetter.getter, lengthGetter.getter)
-        return {item, mappedItem, index, length, usedIndex: indexGetter.wasUsed(), usedLength: lengthGetter.wasUsed()};
-    }
-    else
-        return cached;
+        const mappedItem = mapCallback(itemGetter.getter, indexGetter.getter, lengthGetter.getter);
+        return {
+            item,
+            mappedItem,
+            index,
+            length,
+            usedIndex: indexGetter.wasUsed(),
+            usedLength: lengthGetter.wasUsed(),
+        };
+    } else return cached;
 }
 
 export function createDerivedArray<T extends object, U>(
@@ -131,8 +137,15 @@ export function createDerivedArray<T extends object, U>(
             let length = sourceArray().length;
             let newMappedArray = sourceArray().map((item, index) => {
                 const force = measureOfChange == MeasureOfChange.FULL;
-                const mappedItemTracking = mapItem(item, index, length, force, mappedItemsCache.get(item), mapCallback);
-                newMappedItemsCache.set(item, mappedItemTracking)
+                const mappedItemTracking = mapItem(
+                    item,
+                    index,
+                    length,
+                    force,
+                    mappedItemsCache.get(item),
+                    mapCallback,
+                );
+                newMappedItemsCache.set(item, mappedItemTracking);
                 return mappedItemTracking.mappedItem;
             });
             mappedItemsCache = newMappedItemsCache;

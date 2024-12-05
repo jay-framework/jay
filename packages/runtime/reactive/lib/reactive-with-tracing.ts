@@ -6,7 +6,7 @@ import {
     Reactive,
     setMkReactive,
     Setter,
-    ValueOrGetter
+    ValueOrGetter,
 } from '../lib';
 
 export class ReactiveTracer {
@@ -35,7 +35,9 @@ export class ReactiveTracer {
 
     logAfterSetState() {
         if (this.inReaction === -1) {
-            const scheduledReactions = [...this.scheduledReactions[this.inReaction]].sort().join(',');
+            const scheduledReactions = [...this.scheduledReactions[this.inReaction]]
+                .sort()
+                .join(',');
             this.doLog(
                 `${this.batches.join(', ')} - batch: -> (${this.settingSignalFromBatch}) --> (${scheduledReactions})`,
             );
@@ -60,8 +62,7 @@ export class ReactiveTracer {
         const logMessage = `${this.ident}${name} - ${reactionName}: (${signalGetters}) -> (${signalSetters}) --> (${scheduledReactions})`;
         this.log.splice(reactionLogPosition, 0, logMessage);
         this.inReaction--;
-        if (this.inReaction === -1)
-            this.flushLog()
+        if (this.inReaction === -1) this.flushLog();
     }
 
     beforeBatch(name: string) {
@@ -98,13 +99,12 @@ export class ReactiveTracer {
 
     doLog(message: string) {
         this.log.push(`${this.ident}${message}`);
-        if (this.inReaction === -1)
-            this.flushLog();
+        if (this.inReaction === -1) this.flushLog();
     }
 
     flushLog() {
         if (this.flushToConsole) {
-            this.log.forEach(entry => console.debug(entry));
+            this.log.forEach((entry) => console.debug(entry));
             this.log = [];
         }
     }
@@ -211,8 +211,8 @@ export class ReactiveWithTracking extends Reactive {
 const globalReactiveTracer = new ReactiveTracer(true);
 let runningNumber = 1;
 function numberToAlphaNumeric(num) {
-    const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-    let result = "";
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let result = '';
 
     while (num > 0) {
         num--;
@@ -220,8 +220,11 @@ function numberToAlphaNumeric(num) {
         num = Math.floor(num / 26);
     }
 
-    return result || "A";
+    return result || 'A';
 }
 setMkReactive((...reactiveNames: (string | number)[]) => {
-    return new ReactiveWithTracking([numberToAlphaNumeric(runningNumber++), ...reactiveNames].join('-'), globalReactiveTracer)
-})
+    return new ReactiveWithTracking(
+        [numberToAlphaNumeric(runningNumber++), ...reactiveNames].join('-'),
+        globalReactiveTracer,
+    );
+});

@@ -677,9 +677,9 @@ describe('reactive', () => {
                 'A - I: (B1) -> (A1) --> ()',
                 'A - await toBeClean!!!',
                 'B - await toBeClean!!!',
-                "B - batch: -> (B1) --> ()",
-                "B - flush!!!",
-                "B - flush end",
+                'B - batch: -> (B1) --> ()',
+                'B - flush!!!',
+                'B - flush end',
             ]);
         });
 
@@ -1078,10 +1078,10 @@ describe('reactive', () => {
                 'A - flush!!!',
                 '  A - I: () -> () --> ()',
                 '    B - flush!!!',
-                "      B - I: (A1) -> (B1) --> ()",
-                "    B - flush end",
-                "  B - flush!!!",
-                "  B - flush end",
+                '      B - I: (A1) -> (B1) --> ()',
+                '    B - flush end',
+                '  B - flush!!!',
+                '  B - flush end',
                 'A - flush end',
             ]);
         });

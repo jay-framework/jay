@@ -12,7 +12,8 @@ import {
     RenderElement,
 } from 'jay-runtime';
 import {
-    COMPONENT_CONTEXT, ComponentContext,
+    COMPONENT_CONTEXT,
+    ComponentContext,
     createDerivedArray,
     createEffect,
     createEvent,
@@ -30,7 +31,7 @@ const { makePropsProxy } = forTesting;
 
 describe('state management', () => {
     describe('Props', () => {
-        const contextTestDefaults: Omit<ComponentContext, "reactive" | "mountedSignal"> = {
+        const contextTestDefaults: Omit<ComponentContext, 'reactive' | 'mountedSignal'> = {
             provideContexts: [],
             getComponentInstance: () => null,
         };

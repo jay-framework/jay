@@ -213,7 +213,7 @@ function mkResolvablePromise(): [Promise<void>, Resolve] {
     return [promise as Promise<void>, resolve];
 }
 
-let _mkReactive = (...reactiveNames: (string | number)[]) => new Reactive()
+let _mkReactive = (...reactiveNames: (string | number)[]) => new Reactive();
 export function setMkReactive(mkReactive: (...reactiveNames: (string | number)[]) => Reactive) {
     _mkReactive = mkReactive;
 }
