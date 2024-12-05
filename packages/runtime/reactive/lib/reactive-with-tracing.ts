@@ -35,7 +35,7 @@ export class ReactiveTracer {
 
     logAfterSetState() {
         if (this.inReaction === -1) {
-            const scheduledReactions = this.scheduledReactions[this.inReaction].add(',');
+            const scheduledReactions = [...this.scheduledReactions[this.inReaction]].sort().join(',');
             this.doLog(
                 `${this.batches.join(', ')} - batch: -> (${this.settingSignalFromBatch}) --> (${scheduledReactions})`,
             );

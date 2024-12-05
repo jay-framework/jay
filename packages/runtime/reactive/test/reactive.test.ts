@@ -1023,7 +1023,7 @@ describe('reactive', () => {
                 'B - await toBeClean!!!',
                 'A - batch: -> (A1) --> (A - II,A - III)',
                 'A - flush!!!',
-                '  A - II: (A1) -> (B1) --> (B - I,A - I)',
+                '  A - II: (A1) -> (B1) --> (A - I,B - I)',
                 '    B - flush!!!',
                 '      B - I: (B1) -> (B2) --> (A - III)',
                 '    B - flush end',
