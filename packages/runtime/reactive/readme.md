@@ -112,30 +112,6 @@ Once `a` or `b` update, the reaction will rerun.
 
 If `a` is set to false, the reaction will now depend on `a` and `c`.
 
-## MeasureOfChange
-
-Measure of Change is an optional value passed when creating signals, which is then used to tune how reactions run.
-The `MeasureOfChange` is defined as an ordered enum, at which case the reaction always gets the max `MeasureOfChange`
-from signals that are updated.
-
-It is defined as
-
-```typescript
-export enum MeasureOfChange {
-  NO_CHANGE,
-  PARTIAL,
-  FULL,
-}
-```
-
-At which
-
-- `NO_CHANGE` - allows to update a signal without triggering reactions
-- `PARTIAL` - triggers reactions with the `PARTIAL` measure of change, unless other signals are updated with a higher measure of change
-- `FULL` - triggers reactions with the `FULL` measure of change
-
-see the `jay-component` library, the `createDerivedArray` function for an example use case.
-
 ## batchReactions
 
 ```typescript
@@ -210,13 +186,48 @@ A Disabled reactive will not run reactions.
 - When calling enable, the reactive will also flush any pending reactions.
 - Reactive are created, by default, enabled.
 
-## Reactive Pairing
+## MeasureOfChange
+
+Measure of Change is an optional value passed when creating signals, which is then used to tune how reactions run.
+The `MeasureOfChange` is defined as an ordered enum, at which case the reaction always gets the max `MeasureOfChange`
+from signals that are updated.
+
+It is defined as
+
+```typescript
+export enum MeasureOfChange {
+  NO_CHANGE,
+  PARTIAL,
+  FULL,
+}
+```
+
+At which
+
+- `NO_CHANGE` - allows to update a signal without triggering reactions
+- `PARTIAL` - triggers reactions with the `PARTIAL` measure of change, unless other signals are updated with a higher measure of change
+- `FULL` - triggers reactions with the `FULL` measure of change
+
+see the `jay-component` library, the `createDerivedArray` function for an example use case.
+
+## enablePairing
 
 Reactive Pairing is useful when an application has multiple reactive instances who need to sync flush between them.
 For instance, with Jay, a context is one reactive and component is another instance of a reactive.
 
-Pairing is done by getting a signal value of reactive `A` from a reaction of reactive `B`.
-When paired, once reactive `A` flushes, it will also trigger a flush of reactive `B` after `A` flush completes.
+Pairing is created explicitly using the `enablePairing` API, 
+then by reading a signal value of reactive `A` from a reaction of reactive `B`. 
+When paired, once reactive `A` flushes, it will also trigger a flush of reactive `B` after `A` flush completes, 
+which will re-run the reaction in `B` that have read a signal value of `A`.
 
-Reactive Pairing allows a Jay Component (`A`) to read signal values from a Jay Reactive Context (`B`).
-Once the context signals are updated, the component reactions that depends on the context will also run.
+```typescript
+reactive.enablePairing(anotherReactive);
+```
+
+* `reactive` the reactive from which `anotherReactive` signal values are read. In Jay, a component. The `B` above.
+* `anotherReactive` the reactive from which signal values are read. In Jay, a context. The `A` above.
+
+example:
+```typescript
+B.enablePairing(A)
+```

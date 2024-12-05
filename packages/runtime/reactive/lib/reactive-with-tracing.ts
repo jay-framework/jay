@@ -11,9 +11,9 @@ import {
 
 export class ReactiveTracer {
     log: string[] = [];
-    private getStates: string[][] = [];
-    private setStates: string[][] = [];
-    private scheduledReactions: string[][] = [];
+    private getStates: Set<string>[] = [];
+    private setStates: Set<string>[] = [];
+    private scheduledReactions: Set<string>[] = [];
     private inReaction: number = -1;
     private batches: string[] = [];
     private reactionLogPosition: number[] = [];
@@ -23,19 +23,19 @@ export class ReactiveTracer {
     constructor(private flushToConsole: boolean = false) {}
 
     logGetState(name: string) {
-        if (this.inReaction > -1) this.getStates[this.inReaction].push(name);
+        if (this.inReaction > -1) this.getStates[this.inReaction].add(name);
     }
     logSetState(name: string) {
-        if (this.inReaction > -1) this.setStates[this.inReaction].push(name);
+        if (this.inReaction > -1) this.setStates[this.inReaction].add(name);
         else {
-            this.scheduledReactions[this.inReaction] = [];
+            this.scheduledReactions[this.inReaction] = new Set();
             this.settingSignalFromBatch = name;
         }
     }
 
     logAfterSetState() {
         if (this.inReaction === -1) {
-            const scheduledReactions = this.scheduledReactions[this.inReaction].join(',');
+            const scheduledReactions = this.scheduledReactions[this.inReaction].add(',');
             this.doLog(
                 `${this.batches.join(', ')} - batch: -> (${this.settingSignalFromBatch}) --> (${scheduledReactions})`,
             );
@@ -44,9 +44,9 @@ export class ReactiveTracer {
 
     beforeReaction() {
         this.inReaction++;
-        this.getStates[this.inReaction] = [];
-        this.setStates[this.inReaction] = [];
-        this.scheduledReactions[this.inReaction] = [];
+        this.getStates[this.inReaction] = new Set();
+        this.setStates[this.inReaction] = new Set();
+        this.scheduledReactions[this.inReaction] = new Set();
         this.reactionLogPosition.push(this.log.length);
         this.ident += '  ';
     }
@@ -54,9 +54,9 @@ export class ReactiveTracer {
     completeReaction(name: string, reactionName: string) {
         this.ident = this.ident.slice(0, -2);
         const reactionLogPosition = this.reactionLogPosition.pop();
-        const signalGetters = this.getStates[this.inReaction].join(',');
-        const signalSetters = this.setStates[this.inReaction].join(',');
-        const scheduledReactions = this.scheduledReactions[this.inReaction].join(',');
+        const signalGetters = [...this.getStates[this.inReaction]].sort().join(',');
+        const signalSetters = [...this.setStates[this.inReaction]].sort().join(',');
+        const scheduledReactions = [...this.scheduledReactions[this.inReaction]].sort().join(',');
         const logMessage = `${this.ident}${name} - ${reactionName}: (${signalGetters}) -> (${signalSetters}) --> (${scheduledReactions})`;
         this.log.splice(reactionLogPosition, 0, logMessage);
         this.inReaction--;
@@ -87,7 +87,7 @@ export class ReactiveTracer {
     }
 
     triggerReaction(name: string, index: number, scheduleAutoBatchRuns: boolean) {
-        this.scheduledReactions[this.inReaction].push(
+        this.scheduledReactions[this.inReaction].add(
             `${name} - ${formatReactionName(index)}${scheduleAutoBatchRuns ? ' async' : ''}`,
         );
     }
