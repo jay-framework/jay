@@ -7,8 +7,8 @@ return as part of the returned object event emitters. The `createEvent` function
 
 The event emitter itself is a function to register `JayEventHandler`s and has a member to `emit` events.
 
-`createEvent` can optionally accept an effect function that can be used to create an effect to emit an event
-whenever the signals it depends on change.
+`createEvent` can optionally accept an `eventEffect` function which is used to create an effect given the event emitter.
+It makes it simple to create an event that is triggered reactively based on the `eventEffect` effect function.  
 
 ```typescript
 interface EventEmitter<EventType, ViewState> {
@@ -71,5 +71,8 @@ function CounterComponent({}: Props<CounterProps>, refs: CounterRefs) {
   };
 }
 ```
+
+In the above example, the `createEffect` parameter of `createEvent` is a function that reads the signal `value`, and
+those the effect will run anytime the `value` signal changes, emitting an event.
 
 See the full example in [component.test.ts](../test/component.test.ts).
