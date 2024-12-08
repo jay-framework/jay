@@ -147,6 +147,92 @@ describe('conditional-element', () => {
         });
     });
 
+    describe('using the same reference under different branches', () => {
+        interface ConditionalRefs {
+            button1: HTMLElementProxy<ViewState, HTMLElement>;
+        }
+        interface ConditionalElement extends JayElement<ViewState, ConditionalRefs> {}
+
+        function makeElement(data: ViewState): ConditionalElement {
+            let [refManager, [button1]] = ReferencesManager.for({}, ['button1'], [], [], []);
+            return ConstructContext.withRootContext(data, refManager, () => {
+                // noinspection DuplicatedCode
+                return de('div', {}, [
+                    conditional(
+                        (newViewState) => newViewState.condition,
+                        e(
+                            'button',
+                            { id: 'button' },
+                            [dt((data) => `true: ${data.text1}`)],
+                            button1(),
+                        ),
+                    ),
+                    conditional(
+                        (newViewState) => !newViewState.condition,
+                        e(
+                            'button',
+                            { id: 'button' },
+                            [dt((data) => `false: ${data.text2}`)],
+                            button1(),
+                        ),
+                    ),
+                ]);
+            }) as ConditionalElement;
+        }
+
+        it('should register and invoke events on the ref for both variants (condition === true or false)', () => {
+            const mockCallback = vi.fn();
+            const jayElement = makeElement({
+                text1: SOME_VALUE,
+                condition: true,
+                text2: ANOTHER_VALUE,
+            });
+            jayElement.refs.button1.onclick(mockCallback);
+
+            // true variant
+            expect(jayElement.dom.querySelector('#button')).toHaveTextContent(
+                `true: ${SOME_VALUE}`,
+            );
+            jayElement.refs.button1.exec$((elem) => elem.click());
+            jayElement.refs.button1.exec$((elem) => {
+                expect(elem).toHaveTextContent(`true: ${SOME_VALUE}`);
+            });
+            expect(mockCallback.mock.calls.length).toBe(1);
+
+            // false variant
+            jayElement.update({
+                text1: SOME_VALUE,
+                condition: false,
+                text2: ANOTHER_VALUE,
+            });
+
+            expect(jayElement.dom.querySelector('#button')).toHaveTextContent(
+                `false: ${ANOTHER_VALUE}`,
+            );
+            jayElement.refs.button1.exec$((elem) => {
+                expect(elem).toHaveTextContent(`false: ${ANOTHER_VALUE}`);
+            });
+            jayElement.refs.button1.exec$((elem) => elem.click());
+            expect(mockCallback.mock.calls.length).toBe(2);
+
+            // true variant again
+            jayElement.update({
+                text1: SOME_VALUE,
+                condition: true,
+                text2: ANOTHER_VALUE,
+            });
+
+            expect(jayElement.dom.querySelector('#button')).toHaveTextContent(
+                `true: ${SOME_VALUE}`,
+            );
+            jayElement.refs.button1.exec$((elem) => {
+                expect(elem).toHaveTextContent(`true: ${SOME_VALUE}`);
+            });
+            jayElement.refs.button1.exec$((elem) => elem.click());
+            expect(mockCallback.mock.calls.length).toBe(3);
+        });
+    });
+
     // those tests do not work, yet they should check that a conditional does not update the dom when not needed
     // when updating the dom, using the call to ensureNode, we loss focus on the input. this test is intended to validate
     // we preserve the focus on the input

@@ -8,7 +8,7 @@ return as part of the returned object event emitters. The `createEvent` function
 The event emitter itself is a function to register `JayEventHandler`s and has a member to `emit` events.
 
 `createEvent` can optionally accept an `eventEffect` function which is used to create an effect given the event emitter.
-It makes it simple to create an event that is triggered reactively based on the `eventEffect` effect function.  
+It makes it simple to create an event that is triggered reactively based on the `eventEffect` effect function.
 
 ```typescript
 interface EventEmitter<EventType, ViewState> {

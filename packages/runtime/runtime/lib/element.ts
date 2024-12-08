@@ -264,11 +264,11 @@ function mkUpdateCondition<ViewState>(
 ): [updateFunc<ViewState>, MountFunc, MountFunc] {
     let mount = noopMount,
         unmount = noopMount;
+    let lastResult = false;
     if (isJayElement(child.elem) && child.elem.mount !== noopMount) {
-        mount = () => (child.elem as BaseJayElement<ViewState>).mount();
+        mount = () => lastResult && (child.elem as BaseJayElement<ViewState>).mount();
         unmount = () => (child.elem as BaseJayElement<ViewState>).unmount();
     }
-    let lastResult = false;
     const update = (newData: ViewState) => {
         let result = child.condition(newData);
 

@@ -115,7 +115,7 @@ describe('nested components', () => {
             }) as TestElement;
         }
 
-        it('have a reference to a nested conditional component', () => {
+        it('should have a reference to a nested conditional component with condition true', () => {
             let composite = renderComposite({
                 staticItem: 'hello world',
                 condition: true,
@@ -126,15 +126,13 @@ describe('nested components', () => {
             );
         });
 
-        it('have a reference to a nested conditional component 2', () => {
+        it('should not have a reference to a nested conditional component with condition false', () => {
             let composite = renderComposite({
                 staticItem: 'hello world',
                 condition: false,
             });
             // validate we actually have a reference to the nested component by finding the data id on the nested component dom
-            expect(composite.refs.conditional.element.dom.attributes['data-id'].value).toBe(
-                'condition',
-            );
+            expect(composite.refs.conditional.element).not.toBeDefined();
         });
     });
 
