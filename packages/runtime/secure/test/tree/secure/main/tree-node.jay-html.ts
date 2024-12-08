@@ -55,17 +55,20 @@ export function render(options?: RenderElementOptions): TreeNodeElementPreRender
                 ),
                 c(
                     (vs) => vs.open,
-                    () => de('ul', { 'data-ref': da((vs) => `list=${vs.node?.id}`) }, [
-                        forEach(
-                            (vs) => vs.node?.children,
-                            (vs1: Node) => {
-                                return withContext(SECURE_COMPONENT_MARKER, context, () => {
-                                    return e('li', {}, [childComp(TreeNode, (vs) => vs, child())]);
-                                });
-                            },
-                            'id',
-                        ),
-                    ]),
+                    () =>
+                        de('ul', { 'data-ref': da((vs) => `list=${vs.node?.id}`) }, [
+                            forEach(
+                                (vs) => vs.node?.children,
+                                (vs1: Node) => {
+                                    return withContext(SECURE_COMPONENT_MARKER, context, () => {
+                                        return e('li', {}, [
+                                            childComp(TreeNode, (vs) => vs, child()),
+                                        ]);
+                                    });
+                                },
+                                'id',
+                            ),
+                        ]),
                 ),
             ]);
         }) as TreeNodeElement;

@@ -48,15 +48,16 @@ export function renderAppElement(options?: RenderElementOptions): AppElementPreR
                 de('div', {}, [
                     c(
                         (vs) => vs.cond,
-                        () => secureChildComp(
-                            Counter,
-                            (vs: AppViewState) => ({
-                                title: 'conditional counter',
-                                initialCount: vs.initialCount,
-                                id: 'cond',
-                            }),
-                            comp1(),
-                        ),
+                        () =>
+                            secureChildComp(
+                                Counter,
+                                (vs: AppViewState) => ({
+                                    title: 'conditional counter',
+                                    initialCount: vs.initialCount,
+                                    id: 'cond',
+                                }),
+                                comp1(),
+                            ),
                     ),
                     forEach(
                         (vs) => vs.counters,
