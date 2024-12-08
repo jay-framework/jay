@@ -70,11 +70,14 @@ export function render(
                 ),
                 c(
                     (vs) => vs.condition,
-                    () => secureChildComp(
-                        Counter,
-                        (vs: DynamicComponentInComponentViewState) => ({ initialValue: vs.count1 }),
-                        refCounter2(),
-                    ),
+                    () =>
+                        secureChildComp(
+                            Counter,
+                            (vs: DynamicComponentInComponentViewState) => ({
+                                initialValue: vs.count1,
+                            }),
+                            refCounter2(),
+                        ),
                 ),
             ]),
         ) as DynamicComponentInComponentElement;

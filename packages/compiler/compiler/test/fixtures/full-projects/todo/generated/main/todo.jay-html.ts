@@ -95,99 +95,102 @@ export function render(options?: RenderElementOptions): TodoElementPreRender {
                         ]),
                         c(
                             (vs) => vs.hasItems,
-                            () => e('section', { class: 'main' }, [
-                                e(
-                                    'input',
-                                    {
-                                        id: 'toggle-all',
-                                        class: 'toggle-all',
-                                        type: 'checkbox',
-                                        checked: dp((vs) => vs.noActiveItems),
-                                    },
-                                    [],
-                                    refToggleAll(),
-                                ),
-                                e('label', { for: 'toggle-all' }, []),
-                                de('ul', { class: 'todo-list' }, [
-                                    forEach(
-                                        (vs) => vs.shownTodos,
-                                        (vs1: ShownTodo) => {
-                                            return secureChildComp(
-                                                Item,
-                                                (vs: ShownTodo) => ({
-                                                    title: vs.title,
-                                                    isCompleted: vs.isCompleted,
-                                                }),
-                                                refItems(),
-                                            );
+                            () =>
+                                e('section', { class: 'main' }, [
+                                    e(
+                                        'input',
+                                        {
+                                            id: 'toggle-all',
+                                            class: 'toggle-all',
+                                            type: 'checkbox',
+                                            checked: dp((vs) => vs.noActiveItems),
                                         },
-                                        'id',
+                                        [],
+                                        refToggleAll(),
                                     ),
+                                    e('label', { for: 'toggle-all' }, []),
+                                    de('ul', { class: 'todo-list' }, [
+                                        forEach(
+                                            (vs) => vs.shownTodos,
+                                            (vs1: ShownTodo) => {
+                                                return secureChildComp(
+                                                    Item,
+                                                    (vs: ShownTodo) => ({
+                                                        title: vs.title,
+                                                        isCompleted: vs.isCompleted,
+                                                    }),
+                                                    refItems(),
+                                                );
+                                            },
+                                            'id',
+                                        ),
+                                    ]),
                                 ]),
-                            ]),
                         ),
                         c(
                             (vs) => vs.hasItems,
-                            () => de('footer', { class: 'footer' }, [
-                                e('span', { class: 'todo-count' }, [
-                                    e('strong', {}, [dt((vs) => vs.activeTodoCount)]),
-                                    e('span', {}, [' ']),
-                                    e('span', {}, [dt((vs) => vs.activeTodoWord)]),
-                                    e('span', {}, [' left']),
-                                ]),
-                                e('ul', { class: 'filters' }, [
-                                    e('li', {}, [
-                                        e(
-                                            'a',
-                                            {
-                                                class: da(
-                                                    (vs) =>
-                                                        `${vs.filter === Filter.all ? 'selected' : ''}`,
-                                                ),
-                                            },
-                                            ['All'],
-                                            refFilterAll(),
-                                        ),
+                            () =>
+                                de('footer', { class: 'footer' }, [
+                                    e('span', { class: 'todo-count' }, [
+                                        e('strong', {}, [dt((vs) => vs.activeTodoCount)]),
+                                        e('span', {}, [' ']),
+                                        e('span', {}, [dt((vs) => vs.activeTodoWord)]),
+                                        e('span', {}, [' left']),
                                     ]),
-                                    e('span', {}, [' ']),
-                                    e('li', {}, [
-                                        e(
-                                            'a',
-                                            {
-                                                class: da(
-                                                    (vs) =>
-                                                        `${vs.filter === Filter.active ? 'selected' : ''}`,
-                                                ),
-                                            },
-                                            ['Active'],
-                                            refFilterActive(),
-                                        ),
+                                    e('ul', { class: 'filters' }, [
+                                        e('li', {}, [
+                                            e(
+                                                'a',
+                                                {
+                                                    class: da(
+                                                        (vs) =>
+                                                            `${vs.filter === Filter.all ? 'selected' : ''}`,
+                                                    ),
+                                                },
+                                                ['All'],
+                                                refFilterAll(),
+                                            ),
+                                        ]),
+                                        e('span', {}, [' ']),
+                                        e('li', {}, [
+                                            e(
+                                                'a',
+                                                {
+                                                    class: da(
+                                                        (vs) =>
+                                                            `${vs.filter === Filter.active ? 'selected' : ''}`,
+                                                    ),
+                                                },
+                                                ['Active'],
+                                                refFilterActive(),
+                                            ),
+                                        ]),
+                                        e('span', {}, [' ']),
+                                        e('li', {}, [
+                                            e(
+                                                'a',
+                                                {
+                                                    class: da(
+                                                        (vs) =>
+                                                            `${vs.filter === Filter.completed ? 'selected' : ''}`,
+                                                    ),
+                                                },
+                                                ['Completed'],
+                                                refFilterCompleted(),
+                                            ),
+                                        ]),
                                     ]),
-                                    e('span', {}, [' ']),
-                                    e('li', {}, [
-                                        e(
-                                            'a',
-                                            {
-                                                class: da(
-                                                    (vs) =>
-                                                        `${vs.filter === Filter.completed ? 'selected' : ''}`,
-                                                ),
-                                            },
-                                            ['Completed'],
-                                            refFilterCompleted(),
-                                        ),
-                                    ]),
-                                ]),
-                                c(
-                                    (vs) => vs.showClearCompleted,
-                                    () => e(
-                                        'button',
-                                        { class: 'clear-completed' },
-                                        [' Clear completed '],
-                                        refClearCompleted(),
+                                    c(
+                                        (vs) => vs.showClearCompleted,
+                                        () =>
+                                            e(
+                                                'button',
+                                                { class: 'clear-completed' },
+                                                [' Clear completed '],
+                                                refClearCompleted(),
+                                            ),
                                     ),
-                                ),
-                            ]),
+                                ]),
                         ),
                     ]),
                 ]),

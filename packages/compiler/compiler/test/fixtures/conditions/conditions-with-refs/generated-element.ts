@@ -49,18 +49,20 @@ export function render(options?: RenderElementOptions): ConditionsWithRefsElemen
             de('div', {}, [
                 c(
                     (vs) => vs.cond,
-                    () => e(
-                        'div',
-                        { style: { cssText: 'color:red' } },
-                        [dt((vs) => vs.text1)],
-                        refText1(),
-                    ),
+                    () =>
+                        e(
+                            'div',
+                            { style: { cssText: 'color:red' } },
+                            [dt((vs) => vs.text1)],
+                            refText1(),
+                        ),
                 ),
                 c(
                     (vs) => !vs.cond,
-                    () => e('div', { style: { cssText: 'color:green' } }, [
-                        e('span', {}, [dt((vs) => vs.text2)], refText2()),
-                    ]),
+                    () =>
+                        e('div', { style: { cssText: 'color:green' } }, [
+                            e('span', {}, [dt((vs) => vs.text2)], refText2()),
+                        ]),
                 ),
             ]),
         ) as ConditionsWithRefsElement;
