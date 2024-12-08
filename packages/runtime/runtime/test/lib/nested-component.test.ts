@@ -105,7 +105,7 @@ describe('nested components', () => {
                 return de('div', {}, [
                     conditional(
                         (vs) => vs.condition,
-                        childComp(
+                        () => childComp(
                             (props: ItemProps) => Item(props),
                             (vs) => ({ text: vs.staticItem, dataId: 'condition' }),
                             condRef(),

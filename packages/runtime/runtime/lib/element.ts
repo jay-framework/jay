@@ -4,7 +4,7 @@ import { RandomAccessLinkedList as List } from 'jay-list-compare';
 import {
     BaseJayElement,
     JayComponent,
-    JayComponentConstructor,
+    JayComponentConstructor, JayElement,
     MountFunc,
     noopMount,
     noopUpdate,
@@ -146,15 +146,19 @@ function setAttribute<ViewState, S>(
 
 export function conditional<ViewState>(
     condition: (newData: ViewState) => boolean,
-    elem: BaseJayElement<ViewState> | TextElement<ViewState> | string,
+    elem: () => BaseJayElement<ViewState> | TextElement<ViewState> | string,
 ): Conditional<ViewState> {
-    if (typeof elem === 'string') return { condition, elem: text(elem) };
-    else return { condition, elem };
+    return {
+        condition,
+        elem: () => {
+            const createdElem = elem();
+            return (typeof createdElem === 'string')? text(createdElem): createdElem
+        }}
 }
 
 export interface Conditional<ViewState> {
     condition: (newData: ViewState) => boolean;
-    elem: BaseJayElement<ViewState> | TextElement<ViewState>;
+    elem: () => BaseJayElement<ViewState> | TextElement<ViewState>;
 }
 
 function isJayElement<ViewState>(
@@ -265,22 +269,28 @@ function mkUpdateCondition<ViewState>(
     let mount = noopMount,
         unmount = noopMount;
     let lastResult = false;
-    if (isJayElement(child.elem) && child.elem.mount !== noopMount) {
-        mount = () => lastResult && (child.elem as BaseJayElement<ViewState>).mount();
-        unmount = () => (child.elem as BaseJayElement<ViewState>).unmount();
-    }
+    let childElement: BaseJayElement<ViewState> | TextElement<ViewState> = undefined;
+    // if (isJayElement(child.elem) && child.elem.mount !== noopMount) {
+    //     mount = () => lastResult && (child.elem as BaseJayElement<ViewState>).mount();
+    //     unmount = () => (child.elem as BaseJayElement<ViewState>).unmount();
+    // }
     const update = (newData: ViewState) => {
+        if (!childElement) {
+            childElement = child.elem()
+            mount = () => lastResult && childElement.mount();
+            unmount = () => childElement.unmount();
+        }
         let result = child.condition(newData);
 
         if (result) {
             if (!lastResult) {
-                group.ensureNode(child.elem.dom);
-                child.elem.mount();
+                group.ensureNode(childElement.dom);
+                childElement.mount();
             }
-            child.elem.update(newData);
+            childElement.update(newData);
         } else if (lastResult) {
-            group.removeNode(child.elem.dom);
-            child.elem.unmount();
+            group.removeNode(childElement.dom);
+            childElement.unmount();
         }
         lastResult = result;
     };

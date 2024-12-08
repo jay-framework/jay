@@ -27,13 +27,13 @@ describe('conditional-element', () => {
                 de('div', {}, [
                     conditional(
                         (newViewState) => newViewState.condition,
-                        e('div', { style: { cssText: 'color:red' }, id: 'text1' }, [
+                        () => e('div', { style: { cssText: 'color:red' }, id: 'text1' }, [
                             dt((data) => data.text1),
                         ]),
                     ),
                     conditional(
                         (newViewState) => !newViewState.condition,
-                        e('div', { style: { cssText: 'color:green' }, id: 'text2' }, [
+                        () => e('div', { style: { cssText: 'color:green' }, id: 'text2' }, [
                             dt((data) => data.text2),
                         ]),
                     ),
@@ -104,7 +104,7 @@ describe('conditional-element', () => {
                 return de('div', {}, [
                     conditional(
                         (newViewState) => newViewState.condition,
-                        e(
+                        () => e(
                             'div',
                             { style: { cssText: 'color:red' } },
                             [dt((data) => data.text1)],
@@ -113,7 +113,7 @@ describe('conditional-element', () => {
                     ),
                     conditional(
                         (newViewState) => !newViewState.condition,
-                        e(
+                        () => e(
                             'div',
                             { style: { cssText: 'color:green' } },
                             [dt((data) => data.text2)],
@@ -160,7 +160,7 @@ describe('conditional-element', () => {
                 return de('div', {}, [
                     conditional(
                         (newViewState) => newViewState.condition,
-                        e(
+                        () => e(
                             'button',
                             { id: 'button' },
                             [dt((data) => `true: ${data.text1}`)],
@@ -169,7 +169,7 @@ describe('conditional-element', () => {
                     ),
                     conditional(
                         (newViewState) => !newViewState.condition,
-                        e(
+                        () => e(
                             'button',
                             { id: 'button' },
                             [dt((data) => `false: ${data.text2}`)],
@@ -258,7 +258,7 @@ describe('conditional-element', () => {
                 de('div', {}, [
                     conditional(
                         (newViewState) => newViewState.condition,
-                        e('input', { ref: 'input1', id: 'input1' }, []),
+                        () => e('input', { ref: 'input1', id: 'input1' }, []),
                     ),
                 ]),
             ) as ConditionalElement;
