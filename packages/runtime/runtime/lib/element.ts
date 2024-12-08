@@ -270,10 +270,6 @@ function mkUpdateCondition<ViewState>(
         unmount = noopMount;
     let lastResult = false;
     let childElement: BaseJayElement<ViewState> | TextElement<ViewState> = undefined;
-    // if (isJayElement(child.elem) && child.elem.mount !== noopMount) {
-    //     mount = () => lastResult && (child.elem as BaseJayElement<ViewState>).mount();
-    //     unmount = () => (child.elem as BaseJayElement<ViewState>).unmount();
-    // }
     const update = (newData: ViewState) => {
         if (!childElement) {
             childElement = child.elem()
