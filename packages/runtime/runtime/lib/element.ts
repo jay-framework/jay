@@ -4,7 +4,7 @@ import { RandomAccessLinkedList as List } from 'jay-list-compare';
 import {
     BaseJayElement,
     JayComponent,
-    JayComponentConstructor, JayElement,
+    JayComponentConstructor,
     MountFunc,
     noopMount,
     noopUpdate,
@@ -152,8 +152,9 @@ export function conditional<ViewState>(
         condition,
         elem: () => {
             const createdElem = elem();
-            return (typeof createdElem === 'string')? text(createdElem): createdElem
-        }}
+            return typeof createdElem === 'string' ? text(createdElem) : createdElem;
+        },
+    };
 }
 
 export interface Conditional<ViewState> {
@@ -272,7 +273,7 @@ function mkUpdateCondition<ViewState>(
     let childElement: BaseJayElement<ViewState> | TextElement<ViewState> = undefined;
     const update = (newData: ViewState) => {
         if (!childElement) {
-            childElement = child.elem()
+            childElement = child.elem();
             mount = () => lastResult && childElement.mount();
             unmount = () => childElement.unmount();
         }

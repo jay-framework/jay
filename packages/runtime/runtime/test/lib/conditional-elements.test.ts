@@ -27,15 +27,17 @@ describe('conditional-element', () => {
                 de('div', {}, [
                     conditional(
                         (newViewState) => newViewState.condition,
-                        () => e('div', { style: { cssText: 'color:red' }, id: 'text1' }, [
-                            dt((data) => data.text1),
-                        ]),
+                        () =>
+                            e('div', { style: { cssText: 'color:red' }, id: 'text1' }, [
+                                dt((data) => data.text1),
+                            ]),
                     ),
                     conditional(
                         (newViewState) => !newViewState.condition,
-                        () => e('div', { style: { cssText: 'color:green' }, id: 'text2' }, [
-                            dt((data) => data.text2),
-                        ]),
+                        () =>
+                            e('div', { style: { cssText: 'color:green' }, id: 'text2' }, [
+                                dt((data) => data.text2),
+                            ]),
                     ),
                 ]),
             );
@@ -104,21 +106,23 @@ describe('conditional-element', () => {
                 return de('div', {}, [
                     conditional(
                         (newViewState) => newViewState.condition,
-                        () => e(
-                            'div',
-                            { style: { cssText: 'color:red' } },
-                            [dt((data) => data.text1)],
-                            text1(),
-                        ),
+                        () =>
+                            e(
+                                'div',
+                                { style: { cssText: 'color:red' } },
+                                [dt((data) => data.text1)],
+                                text1(),
+                            ),
                     ),
                     conditional(
                         (newViewState) => !newViewState.condition,
-                        () => e(
-                            'div',
-                            { style: { cssText: 'color:green' } },
-                            [dt((data) => data.text2)],
-                            text2(),
-                        ),
+                        () =>
+                            e(
+                                'div',
+                                { style: { cssText: 'color:green' } },
+                                [dt((data) => data.text2)],
+                                text2(),
+                            ),
                     ),
                 ]);
             }) as ConditionalElement;
@@ -160,21 +164,23 @@ describe('conditional-element', () => {
                 return de('div', {}, [
                     conditional(
                         (newViewState) => newViewState.condition,
-                        () => e(
-                            'button',
-                            { id: 'button' },
-                            [dt((data) => `true: ${data.text1}`)],
-                            button1(),
-                        ),
+                        () =>
+                            e(
+                                'button',
+                                { id: 'button' },
+                                [dt((data) => `true: ${data.text1}`)],
+                                button1(),
+                            ),
                     ),
                     conditional(
                         (newViewState) => !newViewState.condition,
-                        () => e(
-                            'button',
-                            { id: 'button' },
-                            [dt((data) => `false: ${data.text2}`)],
-                            button1(),
-                        ),
+                        () =>
+                            e(
+                                'button',
+                                { id: 'button' },
+                                [dt((data) => `false: ${data.text2}`)],
+                                button1(),
+                            ),
                     ),
                 ]);
             }) as ConditionalElement;

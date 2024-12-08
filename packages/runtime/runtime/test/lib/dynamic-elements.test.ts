@@ -37,7 +37,10 @@ describe('dynamic-element with mixed content', () => {
                     'id',
                 ),
                 dt((data) => data.separator),
-                conditional((data) => data.items.length === 0, () => 'no items found'),
+                conditional(
+                    (data) => data.items.length === 0,
+                    () => 'no items found',
+                ),
             ]),
         );
     }
