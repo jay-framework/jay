@@ -49,7 +49,7 @@ export function render(options?: RenderElementOptions): ConditionsWithRefsElemen
             de('div', {}, [
                 c(
                     (vs) => vs.cond,
-                    e(
+                    () => e(
                         'div',
                         { style: { cssText: 'color:red' } },
                         [dt((vs) => vs.text1)],
@@ -58,7 +58,7 @@ export function render(options?: RenderElementOptions): ConditionsWithRefsElemen
                 ),
                 c(
                     (vs) => !vs.cond,
-                    e('div', { style: { cssText: 'color:green' } }, [
+                    () => e('div', { style: { cssText: 'color:green' } }, [
                         e('span', {}, [dt((vs) => vs.text2)], refText2()),
                     ]),
                 ),

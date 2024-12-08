@@ -435,7 +435,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
 
     function c(renderedCondition: RenderFragment, childElement: RenderFragment) {
         return new RenderFragment(
-            `${indent.firstLine}c(${renderedCondition.rendered},\n${childElement.rendered}\n${indent.firstLine})`,
+            `${indent.firstLine}c(${renderedCondition.rendered},\n() => ${childElement.rendered}\n${indent.firstLine})`,
             Imports.merge(childElement.imports, renderedCondition.imports).plus(Import.conditional),
             [...renderedCondition.validations, ...childElement.validations],
             [...renderedCondition.refs, ...childElement.refs],

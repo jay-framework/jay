@@ -70,7 +70,7 @@ export function render(
                 ),
                 c(
                     (vs) => vs.condition,
-                    secureChildComp(
+                    () => secureChildComp(
                         Counter,
                         (vs: DynamicComponentInComponentViewState) => ({ initialValue: vs.count1 }),
                         refCounter2(),

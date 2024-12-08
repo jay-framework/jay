@@ -46,15 +46,15 @@ export function render(options?: RenderElementOptions): ConditionsWithEnumElemen
             de('div', {}, [
                 c(
                     (vs) => vs.cond === Cond.one,
-                    e('div', { style: { cssText: 'color:red' } }, [dt((vs) => vs.text1)]),
+                    () => e('div', { style: { cssText: 'color:red' } }, [dt((vs) => vs.text1)]),
                 ),
                 c(
                     (vs) => vs.cond === Cond.two,
-                    e('div', { style: { cssText: 'color:red' } }, [dt((vs) => vs.text2)]),
+                    () => e('div', { style: { cssText: 'color:red' } }, [dt((vs) => vs.text2)]),
                 ),
                 c(
                     (vs) => vs.cond !== Cond.one,
-                    e('div', { style: { cssText: 'color:green' } }, [dt((vs) => vs.text3)]),
+                    () => e('div', { style: { cssText: 'color:green' } }, [dt((vs) => vs.text3)]),
                 ),
             ]),
         ) as ConditionsWithEnumElement;

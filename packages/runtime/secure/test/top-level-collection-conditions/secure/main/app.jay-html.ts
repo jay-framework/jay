@@ -32,7 +32,7 @@ export interface AppElementRefs {
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
-export type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
+export type AppElementPreRender = [AppElementRefs, AppElementRender];
 
 export function renderAppElement(options?: RenderElementOptions): AppElementPreRender {
     const [refManager, [comp1, comp2]] = ReferencesManager.for(
@@ -48,7 +48,7 @@ export function renderAppElement(options?: RenderElementOptions): AppElementPreR
                 de('div', {}, [
                     c(
                         (vs) => vs.cond,
-                        secureChildComp(
+                        () => secureChildComp(
                             Counter,
                             (vs: AppViewState) => ({
                                 title: 'conditional counter',

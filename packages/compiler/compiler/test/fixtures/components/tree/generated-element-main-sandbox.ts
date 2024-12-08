@@ -55,7 +55,7 @@ export function render(options?: RenderElementOptions): TreeNodeElementPreRender
                 ),
                 c(
                     (vs) => vs.open,
-                    de('ul', {}, [
+                    () => de('ul', {}, [
                         forEach(
                             (vs) => vs.node?.children,
                             (vs1: Node) => {

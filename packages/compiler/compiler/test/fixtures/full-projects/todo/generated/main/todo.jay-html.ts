@@ -95,7 +95,7 @@ export function render(options?: RenderElementOptions): TodoElementPreRender {
                         ]),
                         c(
                             (vs) => vs.hasItems,
-                            e('section', { class: 'main' }, [
+                            () => e('section', { class: 'main' }, [
                                 e(
                                     'input',
                                     {
@@ -128,7 +128,7 @@ export function render(options?: RenderElementOptions): TodoElementPreRender {
                         ),
                         c(
                             (vs) => vs.hasItems,
-                            de('footer', { class: 'footer' }, [
+                            () => de('footer', { class: 'footer' }, [
                                 e('span', { class: 'todo-count' }, [
                                     e('strong', {}, [dt((vs) => vs.activeTodoCount)]),
                                     e('span', {}, [' ']),
@@ -180,7 +180,7 @@ export function render(options?: RenderElementOptions): TodoElementPreRender {
                                 ]),
                                 c(
                                     (vs) => vs.showClearCompleted,
-                                    e(
+                                    () => e(
                                         'button',
                                         { class: 'clear-completed' },
                                         [' Clear completed '],
