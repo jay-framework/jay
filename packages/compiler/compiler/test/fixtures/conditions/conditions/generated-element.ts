@@ -33,11 +33,11 @@ export function render(options?: RenderElementOptions): ConditionsElementPreRend
             de('div', {}, [
                 c(
                     (vs) => vs.cond,
-                    e('div', { style: { cssText: 'color:red' } }, [dt((vs) => vs.text1)]),
+                    () => e('div', { style: { cssText: 'color:red' } }, [dt((vs) => vs.text1)]),
                 ),
                 c(
                     (vs) => !vs.cond,
-                    e('div', { style: { cssText: 'color:green' } }, [dt((vs) => vs.text2)]),
+                    () => e('div', { style: { cssText: 'color:green' } }, [dt((vs) => vs.text2)]),
                 ),
             ]),
         ) as ConditionsElement;

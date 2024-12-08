@@ -33,7 +33,7 @@ export type TreeNodeElementRender = RenderElement<
     TreeNodeElementRefs,
     TreeNodeElement
 >;
-export type TreeNodeElementPreRender = [refs: TreeNodeElementRefs, TreeNodeElementRender];
+export type TreeNodeElementPreRender = [TreeNodeElementRefs, TreeNodeElementRender];
 
 export function render(options?: RenderElementOptions): TreeNodeElementPreRender {
     const [refManager, [head, child]] = ReferencesManager.for(options, ['head'], [], [], ['child']);
@@ -51,17 +51,18 @@ export function render(options?: RenderElementOptions): TreeNodeElementPreRender
                 ),
                 c(
                     (vs) => vs.open,
-                    de('ul', { 'data-ref': da((vs) => `list=${vs.node?.id}`) }, [
-                        forEach(
-                            (vs) => vs.node?.children,
-                            (vs1: Node) => {
-                                return e('li', {}, [
-                                    childComp(TreeNode, (vs: Node) => vs, child()),
-                                ]);
-                            },
-                            'id',
-                        ),
-                    ]),
+                    () =>
+                        de('ul', { 'data-ref': da((vs) => `list=${vs.node?.id}`) }, [
+                            forEach(
+                                (vs) => vs.node?.children,
+                                (vs1: Node) => {
+                                    return e('li', {}, [
+                                        childComp(TreeNode, (vs: Node) => vs, child()),
+                                    ]);
+                                },
+                                'id',
+                            ),
+                        ]),
                 ),
             ]);
         }) as TreeNodeElement;

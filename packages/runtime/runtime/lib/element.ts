@@ -146,15 +146,20 @@ function setAttribute<ViewState, S>(
 
 export function conditional<ViewState>(
     condition: (newData: ViewState) => boolean,
-    elem: BaseJayElement<ViewState> | TextElement<ViewState> | string,
+    elem: () => BaseJayElement<ViewState> | TextElement<ViewState> | string,
 ): Conditional<ViewState> {
-    if (typeof elem === 'string') return { condition, elem: text(elem) };
-    else return { condition, elem };
+    return {
+        condition,
+        elem: () => {
+            const createdElem = elem();
+            return typeof createdElem === 'string' ? text(createdElem) : createdElem;
+        },
+    };
 }
 
 export interface Conditional<ViewState> {
     condition: (newData: ViewState) => boolean;
-    elem: BaseJayElement<ViewState> | TextElement<ViewState>;
+    elem: () => BaseJayElement<ViewState> | TextElement<ViewState>;
 }
 
 function isJayElement<ViewState>(
@@ -264,23 +269,25 @@ function mkUpdateCondition<ViewState>(
 ): [updateFunc<ViewState>, MountFunc, MountFunc] {
     let mount = noopMount,
         unmount = noopMount;
-    if (isJayElement(child.elem) && child.elem.mount !== noopMount) {
-        mount = () => (child.elem as BaseJayElement<ViewState>).mount();
-        unmount = () => (child.elem as BaseJayElement<ViewState>).unmount();
-    }
     let lastResult = false;
+    let childElement: BaseJayElement<ViewState> | TextElement<ViewState> = undefined;
     const update = (newData: ViewState) => {
+        if (!childElement) {
+            childElement = child.elem();
+            mount = () => lastResult && childElement.mount();
+            unmount = () => childElement.unmount();
+        }
         let result = child.condition(newData);
 
         if (result) {
             if (!lastResult) {
-                group.ensureNode(child.elem.dom);
-                child.elem.mount();
+                group.ensureNode(childElement.dom);
+                childElement.mount();
             }
-            child.elem.update(newData);
+            childElement.update(newData);
         } else if (lastResult) {
-            group.removeNode(child.elem.dom);
-            child.elem.unmount();
+            group.removeNode(childElement.dom);
+            childElement.unmount();
         }
         lastResult = result;
     };

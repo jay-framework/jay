@@ -55,17 +55,18 @@ export function render(options?: RenderElementOptions): TreeNodeElementPreRender
                 ),
                 c(
                     (vs) => vs.open,
-                    de('ul', {}, [
-                        forEach(
-                            (vs) => vs.node?.children,
-                            (vs1: Node) => {
-                                return e('li', {}, [
-                                    secureChildComp(TreeNode, (vs: Node) => vs, refAR1()),
-                                ]);
-                            },
-                            'id',
-                        ),
-                    ]),
+                    () =>
+                        de('ul', {}, [
+                            forEach(
+                                (vs) => vs.node?.children,
+                                (vs1: Node) => {
+                                    return e('li', {}, [
+                                        secureChildComp(TreeNode, (vs: Node) => vs, refAR1()),
+                                    ]);
+                                },
+                                'id',
+                            ),
+                        ]),
                 ),
             ]),
         ) as TreeNodeElement;
