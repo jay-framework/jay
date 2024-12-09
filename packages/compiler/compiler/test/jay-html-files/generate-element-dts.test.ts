@@ -43,6 +43,16 @@ describe('generate the definition file', () => {
         );
     });
 
+    it('for conditional with repeated refs', async () => {
+        const folder = 'conditions/conditions-with-repeated-ref';
+        const parsedFile = await readAndParseJayFile(folder);
+        let definitionFile = generateElementDefinitionFile(parsedFile);
+        expect(definitionFile.validations).toEqual([]);
+        expect(await prettify(definitionFile.val)).toEqual(
+            await readFixtureElementDefinitionFile(folder),
+        );
+    });
+
     it('for collection refs', async () => {
         const folder = 'collections/collection-with-refs';
         const parsedFile = await readAndParseJayFile(folder);

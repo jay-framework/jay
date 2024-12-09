@@ -17,6 +17,7 @@ import { htmlElementTagNameMap } from './html-element-tag-name-map';
 import { camelCase } from 'camel-case';
 import { Import, Imports, ImportsFor } from '../shared/imports';
 import {
+    equalJayTypes,
     JayArrayType,
     JayAtomicType,
     JayComponentType,
@@ -25,7 +26,7 @@ import {
     JayImportedType,
     JayObjectType,
     JayType,
-    JayTypeAlias,
+    JayTypeAlias, JayUnionType,
     JayUnknown,
 } from '../shared/jay-type';
 import { getModeFileExtension, MainRuntimeModes, RuntimeMode } from '../shared/runtime-mode';
@@ -278,7 +279,6 @@ function renderElementRef(
         let refs = [
             {
                 ref: refName,
-                originalName,
                 constName,
                 dynamicRef,
                 autoRef: false,
@@ -342,7 +342,6 @@ function renderChildCompRef(
     let refs = [
         {
             ref: refName,
-            originalName,
             constName,
             dynamicRef,
             autoRef: !element.attributes.ref,
@@ -623,6 +622,34 @@ function renderRefsForReferenceManager(refs: Ref[]) {
     };
 }
 
+function optimizeRefs({rendered, imports, validations, refs}: RenderFragment) {
+    const mergedRefsMap = refs.reduce((refsMap, ref) => {
+        if (refsMap[ref.ref] === ref.ref) {
+            const firstRef: Ref = refsMap[ref.ref];
+            if (!equalJayTypes(firstRef.viewStateType, ref.viewStateType))
+                validations.push(`invalid usage of refs: the ref [${ref.ref}] is used with two different view types [${firstRef.viewStateType.name}, ${ref.viewStateType.name}]`);
+            else if (firstRef.dynamicRef !== ref.dynamicRef)
+                validations.push(`invalid usage of refs: the ref [${ref.ref}] is used once with forEach and second time without`);
+            else {
+                if (!equalJayTypes(firstRef.elementType, ref.elementType)) {
+                    if (firstRef.elementType instanceof JayUnionType) {
+                        if (!firstRef.elementType.hasType(ref.elementType))
+                            firstRef.elementType = new JayUnionType([...firstRef.elementType.ofTypes, ref.elementType])
+                    }
+                    else
+                        firstRef.elementType = new JayUnionType([firstRef.elementType, ref.elementType])
+                }
+            }
+        }
+        else
+            refsMap[ref.ref] = ref;
+        return refsMap;
+    }, {});
+
+    const mergedRefs: Ref[] = Object.values(mergedRefsMap);
+    return new RenderFragment(rendered, imports, validations, mergedRefs)
+}
+
 function renderFunctionImplementation(
     types: JayType,
     rootBodyElement: HTMLElement,
@@ -638,8 +665,8 @@ function renderFunctionImplementation(
     renderedImplementation: RenderFragment;
     refImportsInUse: Set<string>;
 } {
-    let variables = new Variables(types);
-    let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(importStatements);
+    const variables = new Variables(types);
+    const { importedSymbols, importedSandboxedSymbols } = processImportedComponents(importStatements);
     let renderedRoot = renderNode(firstElementChild(rootBodyElement), {
         variables,
         importedSymbols,
@@ -649,6 +676,7 @@ function renderFunctionImplementation(
         nextAutoRefName: newAutoRefNameGenerator(),
         importerMode,
     });
+    renderedRoot = optimizeRefs(renderedRoot);
     const elementType = baseElementName + 'Element';
     const refsType = baseElementName + 'ElementRefs';
     const viewStateType = types.name;

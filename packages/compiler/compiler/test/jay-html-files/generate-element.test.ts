@@ -104,6 +104,13 @@ describe('generate the runtime file', () => {
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
+        it('for conditional with the same ref on different branches', async () => {
+            const folder = 'conditions/conditions-with-repeated-ref';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
         it('for enums and conditions', async () => {
             const folder = 'conditions/conditions-with-enum';
             const elementFile = await readFileAndGenerateElementFile(folder);

@@ -5,7 +5,6 @@ import { JayType } from './jay-type';
 export interface Ref {
     ref: string;
     constName: string;
-    originalName: string;
     dynamicRef: boolean;
     autoRef: boolean;
     viewStateType: JayType;

@@ -1,0 +1,16 @@
+<html>
+<head>
+    <script type="application/yaml-jay">
+data:
+    text1: string
+    text2: string
+    cond: boolean
+    </script>
+</head>
+<body>
+<div>
+    <div style="color:red" if="cond" ref="text1"><h1>{text1}</h1></div>
+    <div style="color:green" if="!cond" ref="text1"><span>{text2}</span></div>
+</div>
+</body>
+</html>
