@@ -36,13 +36,7 @@ export type ConditionsWithRepeatedRefElementPreRender = [
 ];
 
 export function render(options?: RenderElementOptions): ConditionsWithRepeatedRefElementPreRender {
-    const [refManager, [refText1]] = ReferencesManager.for(
-        options,
-        ['text1'],
-        [],
-        [],
-        [],
-    );
+    const [refManager, [refText1]] = ReferencesManager.for(options, ['text1'], [], [], []);
     const render = (viewState: ConditionsWithRepeatedRefViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             de('div', {}, [

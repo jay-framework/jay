@@ -26,7 +26,8 @@ import {
     JayImportedType,
     JayObjectType,
     JayType,
-    JayTypeAlias, JayUnionType,
+    JayTypeAlias,
+    JayUnionType,
     JayUnknown,
 } from '../shared/jay-type';
 import { getModeFileExtension, MainRuntimeModes, RuntimeMode } from '../shared/runtime-mode';
@@ -622,32 +623,39 @@ function renderRefsForReferenceManager(refs: Ref[]) {
     };
 }
 
-function optimizeRefs({rendered, imports, validations, refs}: RenderFragment) {
+function optimizeRefs({ rendered, imports, validations, refs }: RenderFragment) {
     const mergedRefsMap = refs.reduce((refsMap, ref) => {
         if (refsMap[ref.ref] === ref.ref) {
             const firstRef: Ref = refsMap[ref.ref];
             if (!equalJayTypes(firstRef.viewStateType, ref.viewStateType))
-                validations.push(`invalid usage of refs: the ref [${ref.ref}] is used with two different view types [${firstRef.viewStateType.name}, ${ref.viewStateType.name}]`);
+                validations.push(
+                    `invalid usage of refs: the ref [${ref.ref}] is used with two different view types [${firstRef.viewStateType.name}, ${ref.viewStateType.name}]`,
+                );
             else if (firstRef.dynamicRef !== ref.dynamicRef)
-                validations.push(`invalid usage of refs: the ref [${ref.ref}] is used once with forEach and second time without`);
+                validations.push(
+                    `invalid usage of refs: the ref [${ref.ref}] is used once with forEach and second time without`,
+                );
             else {
                 if (!equalJayTypes(firstRef.elementType, ref.elementType)) {
                     if (firstRef.elementType instanceof JayUnionType) {
                         if (!firstRef.elementType.hasType(ref.elementType))
-                            firstRef.elementType = new JayUnionType([...firstRef.elementType.ofTypes, ref.elementType])
-                    }
-                    else
-                        firstRef.elementType = new JayUnionType([firstRef.elementType, ref.elementType])
+                            firstRef.elementType = new JayUnionType([
+                                ...firstRef.elementType.ofTypes,
+                                ref.elementType,
+                            ]);
+                    } else
+                        firstRef.elementType = new JayUnionType([
+                            firstRef.elementType,
+                            ref.elementType,
+                        ]);
                 }
             }
-        }
-        else
-            refsMap[ref.ref] = ref;
+        } else refsMap[ref.ref] = ref;
         return refsMap;
     }, {});
 
     const mergedRefs: Ref[] = Object.values(mergedRefsMap);
-    return new RenderFragment(rendered, imports, validations, mergedRefs)
+    return new RenderFragment(rendered, imports, validations, mergedRefs);
 }
 
 function renderFunctionImplementation(
@@ -666,7 +674,8 @@ function renderFunctionImplementation(
     refImportsInUse: Set<string>;
 } {
     const variables = new Variables(types);
-    const { importedSymbols, importedSandboxedSymbols } = processImportedComponents(importStatements);
+    const { importedSymbols, importedSandboxedSymbols } =
+        processImportedComponents(importStatements);
     let renderedRoot = renderNode(firstElementChild(rootBodyElement), {
         variables,
         importedSymbols,
