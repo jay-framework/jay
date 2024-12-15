@@ -19,25 +19,6 @@ function splitPropsEvents(reactProps: object): [object, object] {
     return [props, events];
 }
 
-function jay4ReactPreRender<ViewState extends object,
-    Refs extends object,
-    JayElementT extends JayElement<ViewState, Refs>>
-(setViewState: Dispatch<SetStateAction<ViewState>>): PreRenderElement<ViewState, Refs, JayElementT> {
-    return (options?: RenderElementOptions) => {
-        const refs = refsRecorder<Refs>();
-        return [refs, vs => {
-            setViewState(vs)
-            return {
-                update: newData => setViewState(newData),
-                mount: () => {},
-                unmount: () => {},
-                refs
-            } as JayElementT
-        }]
-    }
-
-}
-
 export function jay4react<
     ViewState extends object,
     ReactEvents extends JayReactEvents,
@@ -78,6 +59,8 @@ export function jay4react<
                     }]
                 }
             myInstanceRef.current = mkJayComponent(preRender)(props as PropsT);
+            Object.keys(events).forEach(event =>
+                myInstanceRef.current.addEventListener(event.substring(2), events[event]));
         }, []);
 
         if (myInstanceRef.current)

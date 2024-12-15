@@ -18,10 +18,7 @@ export interface CounterElementEvents extends JayReactEvents {
     adder: JayReactElementEvents;
 }
 
-export interface CounterElementProps extends Jay4ReactElementProps<CounterElementViewState, CounterElementEvents> {
-    viewState: CounterElementViewState;
-    events: CounterElementEvents;
-}
+export interface CounterElementProps extends Jay4ReactElementProps<CounterElementViewState, CounterElementEvents> {}
 
 export function CounterElement({ viewState, events: { subtracter, adder }, eventsWrapper }: CounterElementProps): ReactElement<CounterElementProps, any> {
     const { count } = viewState;
