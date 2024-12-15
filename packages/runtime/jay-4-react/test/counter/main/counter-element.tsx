@@ -1,12 +1,8 @@
 import * as React from 'react';
-import {
-    JayReactElementEvents,
-    JayReactEvents
-} from '../../../lib/main-element-events';
 import {ReactElement} from "react";
 import {HTMLElementProxy} from "jay-runtime";
 import {Jay4ReactElementProps} from "../../../lib";
-import {eventsFor} from "../../../lib/jay4react-events";
+import {eventsFor, JayReactElementEvents, JayReactEvents} from "../../../lib/jay4react-events";
 
 export interface CounterElementViewState {
     count: number;
@@ -27,15 +23,15 @@ export interface CounterElementProps extends Jay4ReactElementProps<CounterElemen
     events: CounterElementEvents;
 }
 
-export function CounterElement({ viewState, events: { subtracter, adder } }: CounterElementProps): ReactElement<CounterElementProps, any> {
+export function CounterElement({ viewState, events: { subtracter, adder }, eventsWrapper }: CounterElementProps): ReactElement<CounterElementProps, any> {
     const { count } = viewState;
     return (
         <div>
-            <button {...eventsFor(['subtracter'], viewState, subtracter)}>-</button>
+            <button role="sub" {...eventsFor(['subtracter'], viewState, subtracter, eventsWrapper)}>-</button>
             <span role="value" style={{margin: '0 16px'}}>
                 {count}
             </span>
-            <button {...eventsFor(['adder'], viewState, adder)}>+</button>
+            <button role="add" {...eventsFor(['adder'], viewState, adder, eventsWrapper)}>+</button>
         </div>
     );
 }

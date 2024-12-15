@@ -17,12 +17,14 @@ describe('Simple react component', () => {
     });
 
     it('counter with button click - subtract', async () => {
+        await mkElement();
         // screen.debug();
         fireEvent.click(screen.getByRole('sub'));
         expect(screen.getByRole('value')).toHaveTextContent('11');
     });
 
     it('counter with multiple button clicks - subtract, subtract, subtract, adder', async () => {
+        await mkElement();
         // screen.debug();
         fireEvent.click(screen.getByRole('sub'));
         fireEvent.click(screen.getByRole('sub'));

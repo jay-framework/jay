@@ -1,10 +1,11 @@
-import {JayComponent, JayElement, PreRenderElement, RenderElementOptions} from "jay-runtime";
+import {JayComponent, JayElement, JayEventHandlerWrapper, PreRenderElement, RenderElementOptions} from "jay-runtime";
 import React, {Dispatch, FC, SetStateAction, useEffect, useRef, useState} from "react";
-import {JayReactEvents, refsRecorder} from "./jay4react-events";
+import {getReactEvents, JayReactEvents, refsRecorder} from "./jay4react-events";
 
 export interface Jay4ReactElementProps<ViewState, ReactEvents extends JayReactEvents> {
     viewState: ViewState;
     events: ReactEvents;
+    eventsWrapper?: JayEventHandlerWrapper<any, any, any>
 }
 
 function splitPropsEvents(reactProps: object): [object, object] {
@@ -55,12 +56,16 @@ export function jay4react<
 
     return (reactProps: ReactComponentProps) => {
         const [props, events] = splitPropsEvents(reactProps);
-        const myInstanceRef = useRef(null);
+        const myInstanceRef = useRef<JayComponent<PropsT, ViewState, JayElementT>>(null);
+        const _refs = useRef<Refs>(null);
+        const _eventsWrapper = useRef<JayEventHandlerWrapper<any, any, any>>(null);
         let [viewState, setViewState] = useState<ViewState>(null);
         useEffect(() => {
             const preRender: PreRenderElement<ViewState, Refs, JayElementT> =
                 (options?: RenderElementOptions) => {
+                    _eventsWrapper.current = options?.eventWrapper;
                     const refs = refsRecorder<Refs>();
+                    _refs.current = refs;
                     return [refs, vs => {
                         setViewState(vs)
                         viewState = vs;
@@ -75,12 +80,17 @@ export function jay4react<
             myInstanceRef.current = mkJayComponent(preRender)(props as PropsT);
         }, []);
 
+        if (myInstanceRef.current)
+            myInstanceRef.current.update(props as PropsT);
+        // todo set the jay component events
+
         if (!viewState)
             return React.createElement('div')
         else
             return reactElement({
                 viewState,
-                events: {}
+                events: getReactEvents(_refs.current),
+                eventsWrapper: _eventsWrapper.current
             } as ReactElementProps)
     }
 }
