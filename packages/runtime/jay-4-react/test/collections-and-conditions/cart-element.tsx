@@ -1,7 +1,7 @@
 import * as React from 'react';
-import {eventsFor, JayReactElementEvents, JayReactEvents} from "../../../lib/jay4react-events";
-import {Jay4ReactElementProps} from "../../../lib";
-import {HTMLElementCollectionProxy, HTMLElementProxy} from "jay-runtime";
+import { eventsFor, JayReactElementEvents, JayReactEvents } from '../../lib/jay4react-events';
+import { Jay4ReactElementProps } from '../../lib';
+import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
 
 export interface CartLineItem {
     id: string;
@@ -28,11 +28,12 @@ export interface CartElementEvents extends JayReactEvents {
     continueShopping: JayReactElementEvents;
 }
 
-export interface CartElementProps extends Jay4ReactElementProps<CartElementViewState, CartElementEvents>{}
+export interface CartElementProps
+    extends Jay4ReactElementProps<CartElementViewState, CartElementEvents> {}
 
-export function CartElement({viewState, events, eventsWrapper}: CartElementProps) {
+export function CartElement({ viewState, events, eventsWrapper }: CartElementProps) {
     const { lineItems, minimumOrderReached, total } = viewState;
-    const {checkout, removeItem, continueShopping} = events;
+    const { checkout, removeItem, continueShopping } = events;
     return (
         <div>
             <h2>Shopping Cart</h2>
@@ -43,7 +44,15 @@ export function CartElement({viewState, events, eventsWrapper}: CartElementProps
                     price:
                     <span>{lineItem.price}, </span>
                     <button
-                        role={"removeItem-" + lineItem.id} {...eventsFor(['removeItem', lineItem.id], lineItem, removeItem, eventsWrapper)}>x
+                        role={'removeItem-' + lineItem.id}
+                        {...eventsFor(
+                            ['removeItem', lineItem.id],
+                            lineItem,
+                            removeItem,
+                            eventsWrapper,
+                        )}
+                    >
+                        x
                     </button>
                 </div>
             ))}
@@ -53,12 +62,24 @@ export function CartElement({viewState, events, eventsWrapper}: CartElementProps
                 <div role="condition">
                     minimum order value not reached
                     <button
-                        role="continueShopping" {...eventsFor(['continueShopping'], viewState, continueShopping, eventsWrapper)}>x</button>
+                        role="continueShopping"
+                        {...eventsFor(
+                            ['continueShopping'],
+                            viewState,
+                            continueShopping,
+                            eventsWrapper,
+                        )}
+                    >
+                        x
+                    </button>
                 </div>
             )}
             <div role="total">Total: {total}</div>
             <button
-                role="checkout" {...eventsFor(['checkout'], viewState, checkout, eventsWrapper)}>x
+                role="checkout"
+                {...eventsFor(['checkout'], viewState, checkout, eventsWrapper)}
+            >
+                x
             </button>
         </div>
     );

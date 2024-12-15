@@ -1,5 +1,5 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
-import App from './main/App';
+import { fireEvent, render, screen } from '@testing-library/react';
+import App from './App';
 
 const VERBOSE = true;
 

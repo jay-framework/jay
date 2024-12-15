@@ -1,6 +1,5 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
-import App, {AppProps} from './main/App';
-import {CartProps} from "./main/cart";
+import { fireEvent, render, screen } from '@testing-library/react';
+import App, { AppProps } from './App';
 
 const VERBOSE = true;
 
@@ -57,19 +56,19 @@ describe('cart testing conditions and collections', () => {
 
     it('should report simple events (checkout)', async () => {
         let mock = vi.fn();
-        let { rerender } = await mkElement({...DEFAULT_PROPS, log: mock});
+        let { rerender } = await mkElement({ ...DEFAULT_PROPS, log: mock });
 
         fireEvent.click(screen.getByRole('checkout'));
-        expect(mock).toHaveBeenCalledOnce()
-        expect(mock).toHaveBeenCalledWith('cart event: checkout')
-    })
+        expect(mock).toHaveBeenCalledOnce();
+        expect(mock).toHaveBeenCalledWith('cart event: checkout');
+    });
 
     it('should report forEach item events (remove)', async () => {
         let mock = vi.fn();
-        let { rerender } = await mkElement({...DEFAULT_PROPS, log: mock});
+        let { rerender } = await mkElement({ ...DEFAULT_PROPS, log: mock });
 
         fireEvent.click(screen.getByRole('removeItem-b'));
-        expect(mock).toHaveBeenCalledOnce()
-        expect(mock).toHaveBeenCalledWith('removed item b')
-    })
+        expect(mock).toHaveBeenCalledOnce();
+        expect(mock).toHaveBeenCalledWith('removed item b');
+    });
 });
