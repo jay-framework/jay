@@ -65,7 +65,6 @@ export function jay4react<
 
         if (myInstanceRef.current)
             myInstanceRef.current.update(props as PropsT);
-        // todo set the jay component events
 
         if (!viewState)
             return React.createElement('div')
