@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { eventsFor, JayReactElementEvents, JayReactEvents } from '../../lib/jay4react-events';
+import { eventsFor, JayReactElementEvents, JayReactEvents } from '../../lib';
 import { Jay4ReactElementProps } from '../../lib';
 import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
 
