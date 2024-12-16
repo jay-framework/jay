@@ -1,8 +1,7 @@
-import { CartElementRefs, CartLineItem } from './cart-element';
+import { render, CartElementRefs, CartLineItem } from './cart.jay-html';
 import { makeJayComponent, Props, createEvent, createMemo } from 'jay-component';
 import { FC } from 'react';
 import { jay4react } from '../../lib';
-import { CartElement } from './cart-element';
 import { JayEvent } from 'jay-runtime';
 
 export interface CartProps {
@@ -43,6 +42,6 @@ export interface ReactCartProps extends CartProps {
     onRemoveItem?: (event: JayEvent<CartRemoveItemEvent, any>) => void;
     onCartEvent?: (event: JayEvent<CartEvent, any>) => void;
 }
-export const Cart: FC<ReactCartProps> = jay4react(CartElement, (preRender) =>
+export const Cart: FC<ReactCartProps> = jay4react(render, (preRender) =>
     makeJayComponent(preRender, CartConstructor),
 );

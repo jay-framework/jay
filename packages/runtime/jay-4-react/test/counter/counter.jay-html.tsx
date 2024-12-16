@@ -21,7 +21,7 @@ export interface CounterElementEvents extends JayReactEvents {
 export interface CounterElementProps
     extends Jay4ReactElementProps<CounterElementViewState, CounterElementEvents> {}
 
-export function CounterElement({
+export function render({
     viewState,
     events: { subtracter, adder },
     eventsWrapper,

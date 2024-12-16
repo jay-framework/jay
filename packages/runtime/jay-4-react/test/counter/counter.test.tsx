@@ -1,8 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import App from './App';
 
-const VERBOSE = true;
-
 describe('Simple react component', () => {
     async function mkElement() {
         render(<App />);
@@ -12,7 +10,6 @@ describe('Simple react component', () => {
         await mkElement();
 
         // screen.debug();
-        // fireEvent.click(screen.getByRole('sub'))
         expect(screen.getByRole('value')).toHaveTextContent('12');
     });
 

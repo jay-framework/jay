@@ -1,4 +1,4 @@
-import { CounterElement, CounterElementRefs } from './counter-element';
+import { render, CounterElementRefs } from './counter.jay-html';
 import { makeJayComponent, Props, createSignal } from 'jay-component';
 import { jay4react } from '../../lib';
 import { FC } from 'react';
@@ -17,6 +17,6 @@ function CounterConstructor({ initialCount }: Props<CounterProps>, refs: Counter
 }
 
 export interface ReactCounterProps extends CounterProps {}
-export const Counter: FC<ReactCounterProps> = jay4react(CounterElement, (preRender) =>
+export const Counter: FC<ReactCounterProps> = jay4react(render, (preRender) =>
     makeJayComponent(preRender, CounterConstructor),
 );

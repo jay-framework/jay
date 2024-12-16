@@ -31,7 +31,7 @@ export interface CartElementEvents extends JayReactEvents {
 export interface CartElementProps
     extends Jay4ReactElementProps<CartElementViewState, CartElementEvents> {}
 
-export function CartElement({ viewState, events, eventsWrapper }: CartElementProps) {
+export function render({ viewState, events, eventsWrapper }: CartElementProps) {
     const { lineItems, minimumOrderReached, total } = viewState;
     const { checkout, removeItem, continueShopping } = events;
     return (
