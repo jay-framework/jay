@@ -43,8 +43,8 @@ export function jay4react<
         const myInstanceRef = useRef<JayComponent<PropsT, ViewState, JayElementT>>(null);
         const _refs = useRef<Refs>(null);
         const _eventsWrapper = useRef<JayEventHandlerWrapper<any, any, any>>(null);
-        let [viewState, setViewState] = useState<ViewState>(null);
-        useEffect(() => {
+        let viewState, setViewState;
+        if (!myInstanceRef.current) {
             const preRender: PreRenderElement<ViewState, Refs, JayElementT> = (
                 options?: RenderElementOptions,
             ) => {
@@ -54,8 +54,7 @@ export function jay4react<
                 return [
                     refs,
                     (vs) => {
-                        setViewState(vs);
-                        viewState = vs;
+                        [viewState, setViewState] = useState<ViewState>(vs);
                         return {
                             update: (newData) => setViewState(newData),
                             mount: () => {},
@@ -69,16 +68,15 @@ export function jay4react<
             Object.keys(events).forEach((event) =>
                 myInstanceRef.current.addEventListener(event.substring(2), events[event]),
             );
-        }, []);
+        } else {
+            [viewState, setViewState] = useState<ViewState>(null);
+            myInstanceRef.current.update(props as PropsT);
+        }
 
-        if (myInstanceRef.current) myInstanceRef.current.update(props as PropsT);
-
-        if (!viewState) return React.createElement('div');
-        else
-            return reactElement({
-                viewState,
-                events: getReactEvents(_refs.current),
-                eventsWrapper: _eventsWrapper.current,
-            } as ReactElementProps);
+        return reactElement({
+            viewState,
+            events: getReactEvents(_refs.current),
+            eventsWrapper: _eventsWrapper.current,
+        } as ReactElementProps);
     };
 }
