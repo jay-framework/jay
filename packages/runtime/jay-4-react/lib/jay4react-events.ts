@@ -25,14 +25,14 @@ export class EventsContext {
     }
 
     coordinate(refName: string): Coordinate{
-        return [refName, ...this.coordinateBase]
+        return [...this.coordinateBase, refName]
     }
     events(refName: string): JayReactElementEvents {
         return this.reactEvents[refName];
     }
 
     child(id: string, viewState: object) {
-        return new EventsContext(viewState, [id, ...this.coordinateBase], this.eventsWrapper, this.reactEvents)
+        return new EventsContext(viewState, [ ...this.coordinateBase, id], this.eventsWrapper, this.reactEvents)
     }
 
     withViewState(viewState: object) {

@@ -27,7 +27,7 @@ function CartConstructor(
     let onCartEvent = createEvent<CartEvent>();
 
     refs.removeItem.onclick(({ coordinate }) => {
-        onRemoveItem.emit({ itemId: coordinate[1] });
+        onRemoveItem.emit({ itemId: coordinate[0] });
     });
     refs.checkout.onclick(() => onCartEvent.emit({ type: 'checkout' }));
     refs.continueShopping.onclick(() => onCartEvent.emit({ type: 'continueShopping' }));
