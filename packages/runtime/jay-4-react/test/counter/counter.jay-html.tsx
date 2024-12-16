@@ -13,10 +13,12 @@ export interface CounterElementRefs {
     adder: HTMLElementProxy<CounterElementViewState, HTMLButtonElement>;
 }
 
-export interface CounterElementProps
-    extends Jay4ReactElementProps<CounterElementViewState> {}
+export interface CounterElementProps extends Jay4ReactElementProps<CounterElementViewState> {}
 
-export function render({viewState, eventsContext}: CounterElementProps): ReactElement<CounterElementProps, any> {
+export function render({
+    viewState,
+    eventsContext,
+}: CounterElementProps): ReactElement<CounterElementProps, any> {
     const { count } = viewState;
     return (
         <div>

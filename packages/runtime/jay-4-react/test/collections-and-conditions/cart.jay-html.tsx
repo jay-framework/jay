@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { eventsFor, JayReactElementEvents, JayReactEvents } from '../../lib';
+import { eventsFor } from '../../lib';
 import { Jay4ReactElementProps } from '../../lib';
 import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
 
@@ -22,8 +22,7 @@ export interface CartElementRefs {
     continueShopping: HTMLElementProxy<CartElementViewState, HTMLButtonElement>;
 }
 
-export interface CartElementProps
-    extends Jay4ReactElementProps<CartElementViewState> {}
+export interface CartElementProps extends Jay4ReactElementProps<CartElementViewState> {}
 
 export function render({ viewState, eventsContext }: CartElementProps) {
     const { lineItems, minimumOrderReached, total } = viewState;
@@ -58,10 +57,7 @@ export function render({ viewState, eventsContext }: CartElementProps) {
                 </div>
             )}
             <div role="total">Total: {total}</div>
-            <button
-                role="checkout"
-                {...eventsFor(eventsContext, 'checkout')}
-            >
+            <button role="checkout" {...eventsFor(eventsContext, 'checkout')}>
                 x
             </button>
         </div>

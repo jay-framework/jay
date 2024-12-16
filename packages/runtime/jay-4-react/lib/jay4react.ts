@@ -1,11 +1,6 @@
-import {
-    JayComponent,
-    JayElement,
-    PreRenderElement,
-    RenderElementOptions,
-} from 'jay-runtime';
-import { FC, useRef, useState } from 'react';
-import {EventsContext, refsRecorder} from './jay4react-events';
+import { JayComponent, JayElement, PreRenderElement, RenderElementOptions } from 'jay-runtime';
+import {Dispatch, FC, SetStateAction, useRef, useState} from 'react';
+import { EventsContext, refsRecorder } from './jay4react-events';
 
 export interface Jay4ReactElementProps<ViewState> {
     viewState: ViewState;
@@ -38,8 +33,8 @@ export function jay4react<
     return (reactProps: ReactComponentProps) => {
         const [props, events] = splitPropsEvents(reactProps);
         const myInstanceRef = useRef<JayComponent<PropsT, ViewState, JayElementT>>(null);
-        const _eventsContext = useRef<EventsContext>(null)
-        let viewState, setViewState;
+        const _eventsContext = useRef<EventsContext>(null);
+        let viewState: ViewState, setViewState: Dispatch<SetStateAction<ViewState>>;
         if (!myInstanceRef.current) {
             const preRender: PreRenderElement<ViewState, Refs, JayElementT> = (
                 options?: RenderElementOptions,
@@ -70,7 +65,7 @@ export function jay4react<
 
         return reactElement({
             viewState,
-            eventsContext: _eventsContext.current
+            eventsContext: _eventsContext.current,
         } as ReactElementProps);
     };
 }
