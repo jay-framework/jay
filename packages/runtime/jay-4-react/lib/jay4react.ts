@@ -1,17 +1,15 @@
 import {
     JayComponent,
     JayElement,
-    JayEventHandlerWrapper,
     PreRenderElement,
     RenderElementOptions,
 } from 'jay-runtime';
-import React, { Dispatch, FC, SetStateAction, useEffect, useRef, useState } from 'react';
-import { getReactEvents, JayReactEvents, refsRecorder } from './jay4react-events';
+import { FC, useRef, useState } from 'react';
+import {EventsContext, refsRecorder} from './jay4react-events';
 
-export interface Jay4ReactElementProps<ViewState, ReactEvents extends JayReactEvents> {
+export interface Jay4ReactElementProps<ViewState> {
     viewState: ViewState;
-    events: ReactEvents;
-    eventsWrapper?: JayEventHandlerWrapper<any, any, any>;
+    eventsContext: EventsContext;
 }
 
 function splitPropsEvents(reactProps: object): [object, object] {
@@ -26,8 +24,7 @@ function splitPropsEvents(reactProps: object): [object, object] {
 
 export function jay4react<
     ViewState extends object,
-    ReactEvents extends JayReactEvents,
-    ReactElementProps extends Jay4ReactElementProps<ViewState, ReactEvents>,
+    ReactElementProps extends Jay4ReactElementProps<ViewState>,
     ReactComponentProps extends object,
     PropsT extends object,
     Refs extends object,
@@ -41,19 +38,17 @@ export function jay4react<
     return (reactProps: ReactComponentProps) => {
         const [props, events] = splitPropsEvents(reactProps);
         const myInstanceRef = useRef<JayComponent<PropsT, ViewState, JayElementT>>(null);
-        const _refs = useRef<Refs>(null);
-        const _eventsWrapper = useRef<JayEventHandlerWrapper<any, any, any>>(null);
+        const _eventsContext = useRef<EventsContext>(null)
         let viewState, setViewState;
         if (!myInstanceRef.current) {
             const preRender: PreRenderElement<ViewState, Refs, JayElementT> = (
                 options?: RenderElementOptions,
             ) => {
-                _eventsWrapper.current = options?.eventWrapper;
-                const refs = refsRecorder<Refs>();
-                _refs.current = refs;
+                const [refs, eventsContext] = refsRecorder<Refs>(options.eventWrapper);
                 return [
                     refs,
                     (vs) => {
+                        _eventsContext.current = eventsContext.withViewState(vs);
                         [viewState, setViewState] = useState<ViewState>(vs);
                         return {
                             update: (newData) => setViewState(newData),
@@ -75,8 +70,7 @@ export function jay4react<
 
         return reactElement({
             viewState,
-            events: getReactEvents(_refs.current),
-            eventsWrapper: _eventsWrapper.current,
+            eventsContext: _eventsContext.current
         } as ReactElementProps);
     };
 }

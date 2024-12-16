@@ -1,4 +1,4 @@
-import { JayEventHandler, JayEventHandlerWrapper } from 'jay-runtime';
+import {Coordinate, JayEventHandler, JayEventHandlerWrapper} from 'jay-runtime';
 import * as React from 'react';
 
 type eventType = string;
@@ -13,17 +13,52 @@ function uppercaseThirdLetter(str) {
         return str;
     }
 }
+
+export class EventsContext {
+
+    constructor(
+        public readonly viewState: object,
+        public readonly coordinateBase: Coordinate,
+        public readonly eventsWrapper: JayEventHandlerWrapper<any, any, any>,
+        private reactEvents: JayReactEvents) {
+
+    }
+
+    coordinate(refName: string): Coordinate{
+        return [refName, ...this.coordinateBase]
+    }
+    events(refName: string): JayReactElementEvents {
+        return this.reactEvents[refName];
+    }
+
+    child(id: string, viewState: object) {
+        return new EventsContext(viewState, [id, ...this.coordinateBase], this.eventsWrapper, this.reactEvents)
+    }
+
+    withViewState(viewState: object) {
+        return new EventsContext(viewState, this.coordinateBase, this.eventsWrapper, this.reactEvents);
+    }
+
+}
+
+
 export function eventsFor<ViewState>(
-    coordinate: string[],
-    viewState: ViewState,
-    events: JayReactElementEvents,
-    eventsWrapper?: JayEventHandlerWrapper<any, any, any>,
+    eventsContext: EventsContext,
+    refName: string,
+    // coordinate: string[],
+    // viewState: ViewState,
+    // events: JayReactElementEvents,
+    // eventsWrapper?: JayEventHandlerWrapper<any, any, any>,
 ) {
     const reactCallbacks = {};
+    const events = eventsContext.events(refName);
     Object.entries(events).forEach((event) => {
         const name: string = uppercaseThirdLetter(event[0]);
         const handler = event[1];
         reactCallbacks[name] = (reactEvent: React.SyntheticEvent) => {
+            const coordinate = eventsContext.coordinate(refName);
+            const viewState = eventsContext.viewState;
+            const eventsWrapper = eventsContext.eventsWrapper;
             const jayEvent = { viewState, coordinate, event: reactEvent.nativeEvent };
             if (eventsWrapper) eventsWrapper(handler, jayEvent);
             else handler({ viewState, coordinate, event: reactEvent.nativeEvent });
@@ -46,24 +81,30 @@ function refRecorder() {
     return [proxy, ref];
 }
 
-const GET_REFS = Symbol();
-export function refsRecorder<Refs>(): Refs {
+// export interface EventsContext {
+//     getEvents: () => JayReactEvents,
+//     eventWrapper?: JayEventHandlerWrapper<any, any, any>
+// }
+
+export function refsRecorder<Refs>(eventWrapper?: JayEventHandlerWrapper<any, any, any>): [Refs, EventsContext] {
     const refs = {};
-    return new Proxy(
+    const events: JayReactEvents = {};
+    const _0 = new Proxy(
         {},
         {
             get(target: {}, p: string | symbol, receiver: any): any {
-                if (p === GET_REFS)
-                    return Object.fromEntries(
-                        Object.entries(refs).map(([key, value]) => [key, value[1]]),
-                    );
-                else return (refs[p] && refs[p][0]) || (refs[p] = refRecorder())[0];
+                if (refs[p]) {
+                    return refs[p]
+                }
+                else {
+                    const [proxy, ref] = refRecorder()
+                    events[p as string] = ref
+                    return refs[p] = proxy
+                }
+                // return (refs[p] && refs[p][0]) || (refs[p] = refRecorder())[0];
             },
         },
     ) as Refs;
-}
-
-export function getReactEvents<Refs>(refs: Refs): JayReactEvents {
-    if (refs) return refs[GET_REFS];
-    else return {};
+    const _1 = new EventsContext(null, [], eventWrapper, events)
+    return [_0, _1];
 }

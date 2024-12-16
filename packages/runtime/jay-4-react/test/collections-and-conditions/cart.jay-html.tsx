@@ -22,18 +22,11 @@ export interface CartElementRefs {
     continueShopping: HTMLElementProxy<CartElementViewState, HTMLButtonElement>;
 }
 
-export interface CartElementEvents extends JayReactEvents {
-    checkout: JayReactElementEvents;
-    removeItem: JayReactElementEvents;
-    continueShopping: JayReactElementEvents;
-}
-
 export interface CartElementProps
-    extends Jay4ReactElementProps<CartElementViewState, CartElementEvents> {}
+    extends Jay4ReactElementProps<CartElementViewState> {}
 
-export function render({ viewState, events, eventsWrapper }: CartElementProps) {
+export function render({ viewState, eventsContext }: CartElementProps) {
     const { lineItems, minimumOrderReached, total } = viewState;
-    const { checkout, removeItem, continueShopping } = events;
     return (
         <div>
             <h2>Shopping Cart</h2>
@@ -45,12 +38,7 @@ export function render({ viewState, events, eventsWrapper }: CartElementProps) {
                     <span>{lineItem.price}, </span>
                     <button
                         role={'removeItem-' + lineItem.id}
-                        {...eventsFor(
-                            ['removeItem', lineItem.id],
-                            lineItem,
-                            removeItem,
-                            eventsWrapper,
-                        )}
+                        {...eventsFor(eventsContext.child(lineItem.id, lineItem), 'removeItem')}
                     >
                         x
                     </button>
@@ -63,12 +51,7 @@ export function render({ viewState, events, eventsWrapper }: CartElementProps) {
                     minimum order value not reached
                     <button
                         role="continueShopping"
-                        {...eventsFor(
-                            ['continueShopping'],
-                            viewState,
-                            continueShopping,
-                            eventsWrapper,
-                        )}
+                        {...eventsFor(eventsContext, 'continueShopping')}
                     >
                         x
                     </button>
@@ -77,7 +60,7 @@ export function render({ viewState, events, eventsWrapper }: CartElementProps) {
             <div role="total">Total: {total}</div>
             <button
                 role="checkout"
-                {...eventsFor(['checkout'], viewState, checkout, eventsWrapper)}
+                {...eventsFor(eventsContext, 'checkout')}
             >
                 x
             </button>
