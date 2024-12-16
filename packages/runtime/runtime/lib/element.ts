@@ -244,7 +244,7 @@ export function mkUpdateCollection<ViewState, Item>(
                 lastItemsList,
                 itemsList,
                 (item, id) => {
-                    let childContext = parentContext.forItem(item, child.trackBy);
+                    let childContext = parentContext.forItem(item, id);
                     return restoreContext(savedContext, () =>
                         withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () =>
                             wrapWithModifiedCheck(
