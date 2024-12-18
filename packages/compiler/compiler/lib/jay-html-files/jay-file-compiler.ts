@@ -1,7 +1,7 @@
-import { WithValidations } from '../shared/with-validations';
+import { WithValidations } from 'jay-compiler-shared';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
-import { Ref, RenderFragment } from '../shared/render-fragment';
+import { Ref, RenderFragment } from 'jay-compiler-shared';
 import {
     parseAccessor,
     parseAttributeExpression,
@@ -15,7 +15,7 @@ import {
 } from '../expressions/expression-compiler';
 import { htmlElementTagNameMap } from './html-element-tag-name-map';
 import { camelCase } from 'camel-case';
-import { Import, Imports, ImportsFor } from '../shared/imports';
+import { Import, Imports, ImportsFor } from 'jay-compiler-shared';
 import {
     equalJayTypes,
     JayArrayType,
@@ -29,9 +29,9 @@ import {
     JayTypeAlias,
     JayUnionType,
     JayUnknown,
-} from '../shared/jay-type';
-import { getModeFileExtension, MainRuntimeModes, RuntimeMode } from '../shared/runtime-mode';
-import { JayImportLink } from '../shared/jay-imports';
+} from 'jay-compiler-shared';
+import { getModeFileExtension, MainRuntimeModes, RuntimeMode } from 'jay-compiler-shared';
+import { JayImportLink } from 'jay-compiler-shared';
 
 import { JayHtmlSourceFile } from './jay-html-source-file';
 

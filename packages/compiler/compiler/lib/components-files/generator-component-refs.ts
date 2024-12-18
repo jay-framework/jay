@@ -1,9 +1,9 @@
-import { WithValidations } from '../shared/with-validations';
+import { WithValidations } from 'jay-compiler-shared';
 import {
     analyzeExportedTypes,
     ResolveTsConfigOptions,
 } from '../analyze-exported-types/analyze-exported-types';
-import { JayComponentType } from '../shared/jay-type';
+import { JayComponentType } from 'jay-compiler-shared';
 
 export function generateComponentRefsDefinitionFile(
     filepath: string,

@@ -1,16 +1,14 @@
 import {
     checkCodeErrors,
-    checkValidationErrors,
     generateElementDefinitionFile,
     getJayHtmlImports,
-    hasExtension,
     parseJayFile,
 } from 'jay-compiler';
 import { LoadResult, PluginContext, TransformResult } from 'rollup';
 import { getFileContext, readFileAsString, writeDefinitionFile } from '../common/files';
 import { generateRefsComponents, getRefsFilePaths } from './refs-compiler';
 import path from 'node:path';
-import { JAY_EXTENSION } from 'jay-compiler';
+import { JAY_EXTENSION, hasExtension, checkValidationErrors } from 'jay-compiler-shared';
 
 export function jayDefinitions() {
     const generatedRefPaths: Set<string> = new Set();

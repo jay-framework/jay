@@ -1,6 +1,6 @@
 import { extractImportedModules } from '../../../lib';
-import { JAY_QUERY_MAIN_SANDBOX } from '../../../lib';
 import { createTsSourceFileFromSource } from '../../../lib';
+import { JAY_QUERY_MAIN_SANDBOX } from 'jay-compiler-shared';
 
 describe('extractImports', () => {
     const filePath = '/root/src/index.ts';

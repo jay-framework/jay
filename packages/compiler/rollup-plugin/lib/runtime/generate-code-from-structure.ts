@@ -1,23 +1,25 @@
 import * as ts from 'typescript';
 import { transform } from 'typescript';
 import {
-    checkValidationErrors,
     transformComponentBridge,
     transformComponent,
     generateElementBridgeFile,
     generateElementFile,
     generateImportsFileFromJayFile,
     generateSandboxRootFile,
-    getModeFromExtension,
-    CompilerSourceFile,
-    SourceFileFormat,
     JayHtmlSourceFile,
-    RuntimeMode,
 } from 'jay-compiler';
 import { PluginContext } from 'rollup';
 import { JayPluginContext } from './jay-plugin-context';
 import { JayMetadata } from './metadata';
 import { writeGeneratedFile } from '../common/files';
+import {
+    checkValidationErrors,
+    CompilerSourceFile,
+    getModeFromExtension,
+    RuntimeMode,
+    SourceFileFormat,
+} from 'jay-compiler-shared';
 
 export function checkDiagnosticsErrors(tsCode: ts.TransformationResult<ts.SourceFile>) {
     if (tsCode.diagnostics.length > 0) {

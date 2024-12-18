@@ -1,5 +1,5 @@
 import { HTMLElement, parse } from 'node-html-parser';
-import { JayValidations, WithValidations } from '../shared/with-validations';
+import { JayValidations, WithValidations } from 'jay-compiler-shared';
 import yaml from 'js-yaml';
 import { capitalCase, pascalCase } from 'change-case';
 import pluralize from 'pluralize';
@@ -17,9 +17,9 @@ import {
     JayType,
     JayUnknown,
     resolvePrimitiveType,
-} from '../shared/jay-type';
-import { SourceFileFormat } from '../shared/source-file-format';
-import { JayImportLink, JayImportName } from '../shared/jay-imports';
+} from 'jay-compiler-shared';
+import { SourceFileFormat } from 'jay-compiler-shared';
+import { JayImportLink, JayImportName } from 'jay-compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
 
 import { JayHtmlSourceFile } from './jay-html-source-file';

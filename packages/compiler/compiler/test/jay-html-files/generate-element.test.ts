@@ -1,6 +1,7 @@
-import { prettify, RuntimeMode } from '../../lib';
+import { prettify } from '../../lib';
 import { readFixtureElementFile, readFixtureFile } from '../test-utils/file-utils';
 import { readFileAndGenerateElementFile } from '../test-utils/ts-compiler-test-utils';
+import { RuntimeMode } from 'jay-compiler-shared';
 
 describe('generate the runtime file', () => {
     describe('basics', () => {

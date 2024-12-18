@@ -7,7 +7,7 @@ import {
     JAY_QUERY_WORKER_TRUSTED_TS,
     SourceFileFormat,
     TS_EXTENSION,
-} from 'jay-compiler';
+} from 'jay-compiler-shared';
 
 export interface ResolveIdOptions {
     attributes: Record<string, string>;

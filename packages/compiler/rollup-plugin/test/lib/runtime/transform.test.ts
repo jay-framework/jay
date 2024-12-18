@@ -8,15 +8,15 @@ import {
     SourceFileFormat,
     JayObjectType,
     JayUnknown,
-    prettify,
     TS_EXTENSION,
-} from 'jay-compiler';
+} from 'jay-compiler-shared';
 import { JayPluginContext } from '../../../lib';
-import { getGeneratedCode, readTestFile } from '../../test-utils/file-utils';
+import { readTestFile } from '../../test-utils/file-utils';
 import { JayMetadata } from '../../../lib/runtime/metadata';
 import { transformJayFile } from '../../../lib/runtime/transform';
 import { getJayFileStructure } from '../../../lib/runtime/get-jay-file-structure';
 import { removeComments } from '../../../../compiler/lib/utils/prettify';
+import { prettify } from 'jay-compiler';
 
 describe('transformJayFile', () => {
     const jayContext = new JayPluginContext();

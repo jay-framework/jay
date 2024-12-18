@@ -1,8 +1,8 @@
-import { SourceFileFormat } from '../shared/source-file-format';
-import { JayType } from '../shared/jay-type';
+import { SourceFileFormat } from 'jay-compiler-shared';
+import { JayType } from 'jay-compiler-shared';
 import { JayExample } from './jay-example';
 import { HTMLElement } from 'node-html-parser';
-import { CompilerSourceFile } from '../shared/compiler-source-file';
+import { CompilerSourceFile } from 'jay-compiler-shared';
 
 export interface JayHtmlSourceFile extends CompilerSourceFile {
     format: SourceFileFormat.JayHtml;

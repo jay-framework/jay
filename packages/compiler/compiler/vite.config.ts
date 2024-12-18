@@ -16,7 +16,7 @@ export default defineConfig({
             transformMixedEsModules: true,
         },
         rollupOptions: {
-            external: ['jay-component', 'jay-runtime', 'jay-secure'],
+            external: ['jay-component', 'jay-runtime', 'jay-secure', 'jay-compiler-shared'],
         },
     },
     test: {

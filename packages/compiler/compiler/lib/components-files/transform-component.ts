@@ -4,7 +4,7 @@ import { findComponentConstructorsBlock } from './building-blocks/find-component
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
 import { CompiledPattern } from './basic-analyzers/compile-function-split-patterns';
 import { transformImportModeFileExtension } from './building-blocks/transform-import-mode-file-extension';
-import { RuntimeMode } from '../shared/runtime-mode';
+import { RuntimeMode } from 'jay-compiler-shared';
 import {
     analyzedEventHandlersToReplaceMap,
     analyzeEventHandlers,

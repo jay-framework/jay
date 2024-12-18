@@ -1,12 +1,12 @@
 import ts from 'typescript';
 import { createTsSourceFile } from '../../test-utils/ts-source-utils';
 import { getBaseElementName } from '../../../lib/components-files/building-blocks/get-base-element-name';
-import { MAKE_JAY_TSX_COMPONENT } from '../../../lib';
 import {
     findComponentConstructorCallsBlock,
     FindComponentConstructorType,
 } from '../../../lib/components-files/building-blocks/find-component-constructor-calls';
 import { SourceFileBindingResolver } from '../../../lib/components-files/basic-analyzers/source-file-binding-resolver';
+import { MAKE_JAY_TSX_COMPONENT } from 'jay-compiler-shared';
 
 describe('getBaseElementName', () => {
     const makeJayTsxComponentName = MAKE_JAY_TSX_COMPONENT;

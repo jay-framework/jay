@@ -1,18 +1,14 @@
 import path from 'node:path';
-import * as ts from 'typescript';
+import ts from 'typescript';
 import { isStatement, Statement, TransformerFactory } from 'typescript';
 import {
-    checkValidationErrors,
     transformComponentBridge,
     generateElementBridgeFile,
     generateElementFile,
     generateImportsFileFromJayFile,
     generateImportsFileFromTsSource,
-    MainRuntimeModes,
     parseJayFile,
     prettify,
-    RuntimeMode,
-    WithValidations,
     FunctionRepositoryBuilder,
 } from '../../lib';
 import {
@@ -23,6 +19,12 @@ import {
 } from './file-utils';
 import { astToCode } from '../../lib/components-files/ts-utils/ts-compiler-utils';
 import { JayHtmlSourceFile } from '../../lib';
+import {
+    checkValidationErrors,
+    MainRuntimeModes,
+    RuntimeMode,
+    WithValidations,
+} from 'jay-compiler-shared';
 
 export async function readAndParseJayFile(
     folder: string,

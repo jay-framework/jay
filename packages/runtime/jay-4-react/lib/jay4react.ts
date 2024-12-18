@@ -1,5 +1,5 @@
 import { JayComponent, JayElement, PreRenderElement, RenderElementOptions } from 'jay-runtime';
-import {Dispatch, FC, SetStateAction, useRef, useState} from 'react';
+import { Dispatch, FC, SetStateAction, useRef, useState } from 'react';
 import { EventsContext, refsRecorder } from './jay4react-events';
 
 export interface Jay4ReactElementProps<ViewState> {

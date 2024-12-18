@@ -11,7 +11,7 @@ import {
     JayObjectType,
     JayString,
     JayUnknown,
-} from '../../lib';
+} from 'jay-compiler-shared';
 
 describe('typescript-compiler', () => {
     const O1 = new JayObjectType('O1', {

@@ -1,9 +1,10 @@
-import { createTsSourceFileFromSource, JayImportLink, JayUnknown } from '../../../lib';
+import { createTsSourceFileFromSource } from '../../../lib';
 import {
     getImportByName,
     parseImportLinks,
 } from '../../../lib/components-files/building-blocks/parse-import-links';
 import { fixtureFilePath, readFixtureFile } from '../../test-utils/file-utils';
+import { JayImportLink, JayUnknown } from 'jay-compiler-shared';
 
 describe('parseImportLinks', () => {
     const fixturePath = 'full-projects/counter/generated/main';

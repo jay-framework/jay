@@ -1,15 +1,15 @@
-import {
-    checkValidationErrors,
-    CompilerSourceFile,
-    parseJayFile,
-    RuntimeMode,
-    WithValidations,
-} from 'jay-compiler';
+import { parseJayFile } from 'jay-compiler';
 import chalk from 'chalk';
 import { findAllJayFiles } from './find-all-jay-files';
 import { promises as fsp } from 'fs';
 import fs from 'fs';
 import path from 'path';
+import {
+    checkValidationErrors,
+    CompilerSourceFile,
+    RuntimeMode,
+    WithValidations,
+} from 'jay-compiler-shared';
 
 function checkFileExists(filepath): Promise<Boolean> {
     return new Promise((resolve, reject) => {

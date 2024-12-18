@@ -1,7 +1,13 @@
 import ts from 'typescript';
 import { prettifyHtml } from '../utils/prettify';
 import { astToCode } from '../components-files/ts-utils/ts-compiler-utils';
+import { CompilerSourceFile, SourceFileFormat } from 'jay-compiler-shared';
 
+export interface JayTsxSourceFile extends CompilerSourceFile {
+    format: SourceFileFormat.JayTsx;
+    baseElementName: string;
+    jsxBlock: JsxBlock;
+}
 export interface JsxBlockData {
     htmlFragments: string[];
     refs: ts.ArrowFunction[];

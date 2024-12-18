@@ -48,10 +48,7 @@ export class EventsContext {
     }
 }
 
-export function eventsFor<ViewState>(
-    eventsContext: EventsContext,
-    refName: string,
-) {
+export function eventsFor<ViewState>(eventsContext: EventsContext, refName: string) {
     const reactCallbacks = {};
     const events = eventsContext.events(refName);
     Object.entries(events).forEach((event) => {

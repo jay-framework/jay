@@ -12,7 +12,7 @@ import {
     JayType,
     JayUnknown,
     resolvePrimitiveType,
-} from '../shared/jay-type';
+} from 'jay-compiler-shared';
 import ts, {
     convertCompilerOptionsFromJson,
     createProgram,

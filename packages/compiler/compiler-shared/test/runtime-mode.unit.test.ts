@@ -5,7 +5,7 @@ import {
     hasJayModeExtension,
     RuntimeMode,
     withoutExtension,
-} from '../../lib';
+} from '../lib';
 
 describe('hasExtension', () => {
     it('returns true when the filename ends with the extension', () => {

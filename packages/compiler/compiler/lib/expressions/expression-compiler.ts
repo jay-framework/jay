@@ -1,9 +1,9 @@
-import { RenderFragment } from '../shared/render-fragment';
+import { RenderFragment } from 'jay-compiler-shared';
 import { parse } from './expression-parser.cjs';
-import { JayValidations } from '../shared/with-validations';
-import { Import, Imports } from '../shared/imports';
-import { JayImportedType, JayObjectType, JayType, JayUnknown } from '../shared/jay-type';
-import { JayImportName } from '../shared/jay-imports';
+import { JayValidations } from 'jay-compiler-shared';
+import { Import, Imports } from 'jay-compiler-shared';
+import { JayImportedType, JayObjectType, JayType, JayUnknown } from 'jay-compiler-shared';
+import { JayImportName } from 'jay-compiler-shared';
 
 export class Accessor {
     readonly terms: Array<string>;
