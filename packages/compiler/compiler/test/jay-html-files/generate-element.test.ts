@@ -141,7 +141,7 @@ describe('generate the runtime file', () => {
             const importerMode: RuntimeMode = RuntimeMode.MainTrusted;
             it('for simple refs', async () => {
                 const folder = 'components/counter';
-                const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
+                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
                     await readFixtureFile(folder, 'generated-element-main-trusted'),
@@ -150,7 +150,7 @@ describe('generate the runtime file', () => {
 
             it('nesting components in other components', async () => {
                 const folder = 'components/component-in-component';
-                const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
+                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
                     await readFixtureFile(folder, 'generated-element-main-trusted'),
@@ -159,7 +159,7 @@ describe('generate the runtime file', () => {
 
             it('dynamic nesting components in other components', async () => {
                 const folder = 'components/dynamic-component-in-component';
-                const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
+                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
                     await readFixtureFile(folder, 'generated-element-main-trusted'),
@@ -168,7 +168,7 @@ describe('generate the runtime file', () => {
 
             it('recursive-components', async () => {
                 const folder = 'components/recursive-components';
-                const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
+                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
                     await readFixtureFile(folder, 'generated-element-main-trusted'),
@@ -177,7 +177,7 @@ describe('generate the runtime file', () => {
 
             it('recursive-components-2', async () => {
                 const folder = 'components/recursive-components-2';
-                const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
+                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
                     await readFixtureFile(folder, 'generated-element-main-trusted'),
@@ -188,8 +188,7 @@ describe('generate the runtime file', () => {
                 const folder = 'components/tree';
                 const elementFile = await readFileAndGenerateElementFile(
                     folder,
-                    importerMode,
-                    'tree-node',
+                    {importerMode, givenFile: 'tree-node'}
                 );
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
@@ -202,7 +201,7 @@ describe('generate the runtime file', () => {
             const importerMode: RuntimeMode = RuntimeMode.MainSandbox;
             it('for simple refs', async () => {
                 const folder = 'components/counter';
-                const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
+                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
                     await readFixtureFile(folder, 'generated-element-main-sandbox'),
@@ -211,7 +210,7 @@ describe('generate the runtime file', () => {
 
             it('nesting components in other components', async () => {
                 const folder = 'components/component-in-component';
-                const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
+                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
                     await readFixtureFile(folder, 'generated-element-main-sandbox'),
@@ -220,7 +219,7 @@ describe('generate the runtime file', () => {
 
             it('dynamic nesting components in other components', async () => {
                 const folder = 'components/dynamic-component-in-component';
-                const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
+                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
                     await readFixtureFile(folder, 'generated-element-main-sandbox'),
@@ -229,7 +228,7 @@ describe('generate the runtime file', () => {
 
             it('recursive-components', async () => {
                 const folder = 'components/recursive-components';
-                const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
+                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
                     await readFixtureFile(folder, 'generated-element-main-sandbox'),
@@ -238,7 +237,7 @@ describe('generate the runtime file', () => {
 
             it('recursive-components-2', async () => {
                 const folder = 'components/recursive-components-2';
-                const elementFile = await readFileAndGenerateElementFile(folder, importerMode);
+                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
                     await readFixtureFile(folder, 'generated-element-main-sandbox'),
@@ -249,8 +248,7 @@ describe('generate the runtime file', () => {
                 const folder = 'components/tree';
                 const elementFile = await readFileAndGenerateElementFile(
                     folder,
-                    importerMode,
-                    'tree-node',
+                    {importerMode, givenFile: 'tree-node'}
                 );
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(

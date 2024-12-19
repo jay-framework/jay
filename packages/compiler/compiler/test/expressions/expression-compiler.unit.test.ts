@@ -12,7 +12,7 @@ import {
     parsePropertyExpression,
     parseTextExpression,
     Variables,
-} from '../../lib/expressions/expression-compiler';
+} from '../../lib/jay-html-files/expressions/expression-compiler';
 
 import { Import } from 'jay-compiler-shared';
 import {

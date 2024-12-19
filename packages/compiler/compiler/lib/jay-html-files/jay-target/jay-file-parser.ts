@@ -7,7 +7,7 @@ import { parseEnumValues, parseImportNames, parseIsEnum } from '../expressions/e
 import {
     analyzeExportedTypes,
     ResolveTsConfigOptions,
-} from '../analyze-exported-types/analyze-exported-types';
+} from '../../analyze-exported-types/analyze-exported-types';
 import path from 'path';
 import {
     JayArrayType,

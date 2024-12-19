@@ -1,26 +1,21 @@
 import path from 'node:path';
-import ts from 'typescript';
-import { isStatement, Statement, TransformerFactory } from 'typescript';
+import ts, {isStatement, Statement, TransformerFactory} from 'typescript';
 import {
-    transformComponentBridge,
+    FunctionRepositoryBuilder,
     generateElementBridgeFile,
     generateElementFile,
     generateImportsFileFromJayFile,
     generateImportsFileFromTsSource,
+    JayHtmlSourceFile,
     parseJayFile,
     prettify,
-    FunctionRepositoryBuilder,
+    transformComponentBridge,
 } from '../../lib';
-import {
-    getFileFromFolder,
-    readFixtureSourceJayFile,
-    readFixtureFile,
-    fixtureDir,
-} from './file-utils';
-import { astToCode } from '../../lib/components-files/ts-utils/ts-compiler-utils';
-import { JayHtmlSourceFile } from '../../lib';
+import {fixtureDir, getFileFromFolder, readFixtureFile, readFixtureSourceJayFile,} from './file-utils';
+import {astToCode} from '../../lib/components-files/ts-utils/ts-compiler-utils';
 import {
     checkValidationErrors,
+    GenerateTarget,
     MainRuntimeModes,
     RuntimeMode,
     WithValidations,
@@ -47,18 +42,26 @@ export async function readFileAndGenerateElementBridgeFile(folder: string, given
     return generateElementBridgeFile(parsedFile);
 }
 
+interface ReadFileAndGenerateElementFileOptions {
+    importerMode?: MainRuntimeModes,
+    givenFile?: string,
+    generateTarget?: GenerateTarget
+}
+
 export async function readFileAndGenerateElementFile(
     folder: string,
-    importerMode: MainRuntimeModes = RuntimeMode.MainTrusted,
-    givenFile?: string,
+    options?: ReadFileAndGenerateElementFileOptions,
 ) {
+    const givenFile = options?.givenFile || null;
+    const importerMode = options?.importerMode || RuntimeMode.MainTrusted
+    const generateTarget = options?.generateTarget || GenerateTarget.jay;
     const dirname = path.resolve(__dirname, '../fixtures', folder);
     const file = givenFile || getFileFromFolder(folder);
     const jayFile = await readFixtureSourceJayFile(folder, file);
     const parsedFile = checkValidationErrors(
         parseJayFile(jayFile, `${file}.jay-html`, dirname, {}),
     );
-    return generateElementFile(parsedFile, importerMode);
+    return generateElementFile(parsedFile, importerMode, generateTarget);
 }
 
 export async function readTsSourceFile(filePath: string, fileName: string) {

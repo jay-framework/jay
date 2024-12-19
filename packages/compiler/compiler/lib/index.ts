@@ -1,8 +1,8 @@
-export * from './jay-html-files/jay-file-compiler';
-export { parseJayFile, getJayHtmlImports } from './jay-html-files/jay-file-parser';
+export * from './jay-html-files';
+export { parseJayFile, getJayHtmlImports } from './jay-html-files/jay-target/jay-file-parser';
 export { generateComponentRefsDefinitionFile } from './components-files/generator-component-refs';
-export * from './jay-html-files/jay-example';
-export * from './jay-html-files/jay-yaml-structure';
+export * from './jay-html-files/jay-target/jay-example';
+export * from './jay-html-files/jay-target/jay-yaml-structure';
 export { prettify } from './utils/prettify';
 export * from './components-files/transform-component-bridge';
 export * from './components-files/transform-component';
@@ -16,4 +16,4 @@ export { transformComponentImports } from './components-files/building-blocks/tr
 export { compileFunctionSplitPatternsBlock } from './components-files/basic-analyzers/compile-function-split-patterns';
 export { createTsSourceFileFromSource } from './components-files/building-blocks/create-ts-source-file-from-source';
 export { FunctionRepositoryBuilder } from './components-files/building-blocks/function-repository-builder';
-export { type JayHtmlSourceFile } from './jay-html-files/jay-html-source-file';
+export { type JayHtmlSourceFile } from './jay-html-files/jay-target/jay-html-source-file';

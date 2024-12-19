@@ -27,6 +27,10 @@ export async function readFixtureElementFile(folder) {
     return prettify(await readFixtureFileRaw(folder, 'generated-element.ts'));
 }
 
+export async function readFixtureReactElementFile(folder) {
+    return prettify(await readFixtureFileRaw(folder, 'generated-react-element.tsx'));
+}
+
 export async function readFixtureElementBridgeFile(folder) {
     return prettify(await readFixtureFileRaw(folder, 'generated-element-bridge.ts'));
 }
