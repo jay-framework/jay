@@ -93,8 +93,23 @@ export function parseTextExpression(expression: string, vars: Variables): Render
     return doParse(expression, 'dynamicText', vars);
 }
 
+function unescapeBackslash(jsCode) {
+    return jsCode.replace(/\\(.)/g, (match, char) => {
+        if (char === '\\') {
+            return '\\'; // Retain a single backslash for '\\'
+        }
+        switch (char) {
+            case 't': return '\t'; // Tab
+            case 'n': return '\n'; // Newline
+            case 'r': return '\r'; // Carriage return
+            default: return char; // Leave other escaped characters as is
+        }
+    });
+}
+
 export function parseReactTextExpression(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, 'reactDynamicText', vars);
+    return doParse(expression, 'reactDynamicText', vars)
+        .map(_ => unescapeBackslash(_));
 }
 
 export function parseBooleanAttributeExpression(
