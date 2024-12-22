@@ -97,6 +97,36 @@ dynamicProperty
       renderFragment;
 }
 
+reactDynamicText
+  = reactTemplate:reactTemplate {
+  let [renderFragment, isDynamic] = reactTemplate;
+  return renderFragment;
+}
+
+reactTemplate
+  = a:_ head:((string _)+)? tail:("{" _ accessorExpression _ '}' _ (string _)*)* {
+    const renderText = (w, h) => {
+      return h?
+        h.reduce((acc, str) => acc + str[0] + (str[1].length?' ':''), w.length?' ':''):
+        w.length?' ':''
+    }
+    if (tail.length === 0)
+      return [new RenderFragment(renderText(a, head), none), false];
+    else if (tail.length === 1 && !head && a.length === 0 && tail[0][5].length === 0 && tail[0][6].length === 0) {
+        let accessor = tail[0][2].map(_ => `{${_}}`);
+        return [accessor, true];
+    }
+    else {
+      let reducedFragment = tail.reduce(function(result, element) {
+        let accessor = element[2];
+        return RenderFragment.merge(result, accessor.map(_ => `\{${_}}${renderText(element[5], element[6])}`));
+      }, new RenderFragment(`${renderText(a, head)}`, none)).map(exp => exp)
+
+      return [reducedFragment, true]
+    }
+  }
+
+
 dynamicText
   = template:template {
   let [renderFragment, isDynamic] = template;

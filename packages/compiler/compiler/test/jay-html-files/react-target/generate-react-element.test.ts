@@ -1,6 +1,6 @@
 import {readFileAndGenerateElementFile} from "../../test-utils/ts-compiler-test-utils";
 import {prettify} from "../../../lib";
-import {readFixtureElementFile, readFixtureReactElementFile} from "../../test-utils/file-utils";
+import {readFixtureReactElementFile} from "../../test-utils/file-utils";
 import {GenerateTarget} from "jay-compiler-shared";
 
 describe('generate the runtime file for react target', () => {

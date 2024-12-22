@@ -151,7 +151,6 @@ export function renderImports(
     importerMode: RuntimeMode,
 ): string {
     const runtimeImport = imports.render(importsFor);
-    // const funcRepositoryImport = imports.renderFuncRepository();
 
     // todo validate the actual imported file
     let renderedComponentImports = componentImports.map((importStatement) => {
@@ -291,11 +290,11 @@ function renderElementRef(
     } else return RenderFragment.empty();
 }
 
-function isConditional(node: Node): boolean {
+export function isConditional(node: Node): boolean {
     return node.nodeType !== NodeType.TEXT_NODE && (node as HTMLElement).hasAttribute('if');
 }
 
-function isForEach(node: Node): boolean {
+export function isForEach(node: Node): boolean {
     return node.nodeType !== NodeType.TEXT_NODE && (node as HTMLElement).hasAttribute('forEach');
 }
 

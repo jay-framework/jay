@@ -1,4 +1,3 @@
-import { generateTypes } from '../../lib';
 import stripMargin from '@caiogondim/strip-margin';
 
 import {
@@ -9,6 +8,7 @@ import {
     JayObjectType,
     JayString,
 } from 'jay-compiler-shared';
+import {generateTypes} from "../../lib/jay-html-files/jay-target/jay-file-compiler";
 
 describe('generate data interfaces', () => {
     it('should generate simple interface', () => {

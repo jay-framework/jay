@@ -9,7 +9,7 @@ import {
     parseEnumValues,
     parseImportNames,
     parseIsEnum,
-    parsePropertyExpression,
+    parsePropertyExpression, parseReactTextExpression,
     parseTextExpression,
     Variables,
 } from '../../lib/jay-html-files/expressions/expression-compiler';
@@ -440,6 +440,112 @@ describe('expression-compiler', () => {
         it('fail and report broken expression', () => {
             expect(() => {
                 parseTextExpression('some broken { expression', defaultVars);
+            }).toThrow('failed to parse expression [some broken { expression]. ');
+        });
+    });
+
+    describe('parseReactTextExpression', () => {
+        let defaultVars = new Variables(
+            new JayObjectType('data', {
+                string1: JayString,
+                string3: JayString,
+            }),
+        );
+
+        it('constant string expression', () => {
+            const actual = parseReactTextExpression('some constant string', defaultVars);
+            expect(actual.rendered).toEqual("some constant string");
+        });
+
+        it('constant number expression', () => {
+            const actual = parseReactTextExpression('123123', defaultVars);
+            expect(actual.rendered).toEqual("123123");
+        });
+
+        it('single accessor', () => {
+            const actual = parseReactTextExpression('{string1}', defaultVars);
+            expect(actual.rendered).toEqual('{vs.string1}');
+        });
+
+        it('single accessor in text', () => {
+            const actual = parseReactTextExpression('some {string1} thing', defaultVars);
+            expect(actual.rendered).toEqual('some {vs.string1} thing');
+        });
+
+        it('multi accessor in text', () => {
+            const actual = parseReactTextExpression('some {string1} and {string3} thing', defaultVars);
+            expect(actual.rendered).toEqual(
+                'some {vs.string1} and {vs.string3} thing',
+            );
+        });
+
+        it('accessor in text not in type renders the type should reports the problem', () => {
+            const actual = parseReactTextExpression('some {string2} thing', defaultVars);
+            expect(actual.rendered).toEqual('some {vs.string2} thing');
+            expect(actual.validations).toEqual(['the data field [string2] not found in Jay data']);
+        });
+
+        it('accessor in simple text not in type renders the type should reports the problem', () => {
+            const actual = parseReactTextExpression('{string2}', defaultVars);
+            expect(actual.rendered).toEqual('{vs.string2}');
+            expect(actual.validations).toEqual(['the data field [string2] not found in Jay data']);
+        });
+
+        describe('trim whitespace', () => {
+            it('trim whitespace to a single space', () => {
+                const actual = parseReactTextExpression('  text  ', defaultVars);
+                expect(actual.rendered).toEqual(" text ");
+            });
+
+            it('trim left whitespace to a single space', () => {
+                const actual = parseReactTextExpression('  text', defaultVars);
+                expect(actual.rendered).toEqual(" text");
+            });
+
+            it('right left whitespace to a single space', () => {
+                const actual = parseReactTextExpression('text  ', defaultVars);
+                expect(actual.rendered).toEqual("text ");
+            });
+
+            it('middle whitespace to a single space', () => {
+                const actual = parseReactTextExpression('text     text2', defaultVars);
+                expect(actual.rendered).toEqual("text text2");
+            });
+
+            it('left whitespace to template', () => {
+                const actual = parseReactTextExpression('  {string1}', defaultVars);
+                expect(actual.rendered).toEqual(' {vs.string1}');
+            });
+
+            it('right whitespace to template', () => {
+                const actual = parseReactTextExpression('{string1}   ', defaultVars);
+                expect(actual.rendered).toEqual('{vs.string1} ');
+            });
+
+            it('mid whitespace to template', () => {
+                const actual = parseReactTextExpression('{string1}   {string1}', defaultVars);
+                expect(actual.rendered).toEqual('{vs.string1} {vs.string1}');
+            });
+
+            it('middle multiline whitespace to a single space', () => {
+                const actual = parseReactTextExpression('text   \n \t text2', defaultVars);
+                expect(actual.rendered).toEqual("text text2");
+            });
+        });
+
+        it('use space instead of line break', () => {
+            const actual = parseReactTextExpression('abc\ndef', defaultVars);
+            expect(actual.rendered).toEqual("abc def");
+        });
+
+        it('trim all whitespace to a single space', () => {
+            const actual = parseReactTextExpression('  \n\t\r\n  ', defaultVars);
+            expect(actual.rendered).toEqual(" ");
+        });
+
+        it('fail and report broken expression', () => {
+            expect(() => {
+                parseReactTextExpression('some broken { expression', defaultVars);
             }).toThrow('failed to parse expression [some broken { expression]. ');
         });
     });

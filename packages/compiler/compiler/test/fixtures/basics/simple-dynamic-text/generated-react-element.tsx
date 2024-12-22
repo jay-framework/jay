@@ -1,4 +1,4 @@
-import { Jay4ReactElementProps } from 'jay-secure-react';
+import { Jay4ReactElementProps } from 'jay-4-react';
 import { ReactElement } from 'react';
 
 export interface SimpleDynamicTextViewState {
@@ -7,11 +7,11 @@ export interface SimpleDynamicTextViewState {
 
 export interface SimpleDynamicTextElementRefs {}
 
-export interface SimpleDynamicProps extends Jay4ReactElementProps<SimpleDynamicTextViewState> {}
+export interface SimpleDynamicTextElementProps extends Jay4ReactElementProps<SimpleDynamicTextViewState> {}
 
 export function render({
-    viewState,
+    vs,
     eventsContext,
-}: SimpleDynamicProps): ReactElement<SimpleDynamicProps, any> {
-    return <div>{viewState.s1}</div>;
+}: SimpleDynamicTextElementProps): ReactElement<SimpleDynamicTextElementProps, any> {
+    return <div>{vs.s1}</div>;
 }

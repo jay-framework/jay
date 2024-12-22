@@ -1,4 +1,4 @@
-import {JAY_4_REACT, JAY_RUNTIME, JAY_SECURE} from './constants';
+import {JAY_4_REACT, JAY_RUNTIME, JAY_SECURE, REACT} from './constants';
 
 export enum ImportsFor {
     definition,
@@ -21,7 +21,8 @@ function importStatementFragment(module: string, statement: string, ...usage: Im
 const importsOrder = {
     JAY_RUNTIME: 1,
     JAY_SECURE: 2,
-    JAY_4_REACT: 3
+    REACT: 3,
+    JAY_4_REACT: 4
 }
 export const Import: Record<string, ImportName> = {
     jayElement: importStatementFragment(
@@ -178,6 +179,12 @@ export const Import: Record<string, ImportName> = {
         'Jay4ReactElementProps',
         ImportsFor.implementation,
         ImportsFor.definition
+    ),
+    ReactElement: importStatementFragment(
+        `react`,
+        'ReactElement',
+        ImportsFor.implementation,
+        ImportsFor.definition
     )
 };
 
@@ -219,35 +226,7 @@ export class Imports {
         return modulesToImport
             .map(module => `import {${moduleImportStatements.get(module).join(', ')}} from "${module}";`)
             .join('\n');
-
-        // moduleImportStatements.push(this.renderModule(importsFor, JAY_RUNTIME));
-        // moduleImportStatements.push(this.renderModule(importsFor, JAY_SECURE));
-        // return moduleImportStatements.filter((_) => !!_).join('\n');
     }
-
-    // renderFuncRepository(): string[] {
-    //     if (this.imports[Import.functionRepository.index])
-    //         return [
-    //             `import { ${Import.functionRepository.statement} }  from '${Import.functionRepository.module}'`,
-    //         ];
-    //     else return [];
-    // }
-
-    // renderModule(importsFor: ImportsFor, module: string) {
-    //     let toBeRenderedImports = [];
-    //     for (let importKey in Import) {
-    //         let importName = Import[importKey];
-    //         if (
-    //             this.imports[importName.index] &&
-    //             importName.usage.includes(importsFor) &&
-    //             importName.module === module
-    //         )
-    //             toBeRenderedImports.push(importName.statement);
-    //     }
-    //     if (toBeRenderedImports.length > 0)
-    //         return `import {${toBeRenderedImports.join(', ')}} from "${module}";`;
-    //     else return undefined;
-    // }
 
     static none(): Imports {
         return new Imports([]);

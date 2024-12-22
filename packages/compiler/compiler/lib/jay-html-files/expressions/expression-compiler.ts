@@ -93,6 +93,10 @@ export function parseTextExpression(expression: string, vars: Variables): Render
     return doParse(expression, 'dynamicText', vars);
 }
 
+export function parseReactTextExpression(expression: string, vars: Variables): RenderFragment {
+    return doParse(expression, 'reactDynamicText', vars);
+}
+
 export function parseBooleanAttributeExpression(
     expression: string,
     vars: Variables,
