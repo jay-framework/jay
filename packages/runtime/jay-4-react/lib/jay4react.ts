@@ -3,7 +3,7 @@ import { Dispatch, FC, SetStateAction, useRef, useState } from 'react';
 import { EventsContext, refsRecorder } from './jay4react-events';
 
 export interface Jay4ReactElementProps<ViewState> {
-    viewState: ViewState;
+    vs: ViewState;
     eventsContext: EventsContext;
 }
 
@@ -64,7 +64,7 @@ export function jay4react<
         }
 
         return reactElement({
-            viewState,
+            vs:viewState,
             eventsContext: _eventsContext.current,
         } as ReactElementProps);
     };

@@ -16,10 +16,10 @@ export interface CounterElementRefs {
 export interface CounterElementProps extends Jay4ReactElementProps<CounterElementViewState> {}
 
 export function render({
-    viewState,
+    vs,
     eventsContext,
 }: CounterElementProps): ReactElement<CounterElementProps, any> {
-    const { count } = viewState;
+    const { count } = vs;
     return (
         <div>
             <button role="sub" {...eventsFor(eventsContext, 'subtracter')}>

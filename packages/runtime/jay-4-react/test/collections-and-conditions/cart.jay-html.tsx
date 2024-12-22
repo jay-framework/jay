@@ -24,8 +24,8 @@ export interface CartElementRefs {
 
 export interface CartElementProps extends Jay4ReactElementProps<CartElementViewState> {}
 
-export function render({ viewState, eventsContext }: CartElementProps) {
-    const { lineItems, minimumOrderReached, total } = viewState;
+export function render({ vs, eventsContext }: CartElementProps) {
+    const { lineItems, minimumOrderReached, total } = vs;
     return (
         <div>
             <h2>Shopping Cart</h2>
