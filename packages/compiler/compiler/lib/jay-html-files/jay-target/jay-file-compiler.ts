@@ -35,7 +35,7 @@ import { JayImportLink } from 'jay-compiler-shared';
 
 import { JayHtmlSourceFile } from './jay-html-source-file';
 
-class Indent {
+export class Indent {
     private readonly base: string;
     readonly firstLineBreak: boolean;
     readonly lastLineIndent: boolean;
@@ -78,7 +78,7 @@ class Indent {
     }
 }
 
-function newAutoRefNameGenerator() {
+export function newAutoRefNameGenerator() {
     let nextId = 1;
     return function (): string {
         return 'aR' + nextId++;
@@ -143,7 +143,7 @@ export function generateTypes(types: JayType): string {
     return renderInterface(types);
 }
 
-function renderImports(
+export function renderImports(
     imports: Imports,
     importsFor: ImportsFor,
     componentImports: Array<JayImportLink>,
@@ -151,7 +151,7 @@ function renderImports(
     importerMode: RuntimeMode,
 ): string {
     const runtimeImport = imports.render(importsFor);
-    const funcRepositoryImport = imports.renderFuncRepository();
+    // const funcRepositoryImport = imports.renderFuncRepository();
 
     // todo validate the actual imported file
     let renderedComponentImports = componentImports.map((importStatement) => {
@@ -190,7 +190,7 @@ function renderImports(
         return imports.join('\n');
     });
 
-    return [runtimeImport, ...renderedComponentImports, ...funcRepositoryImport].join('\n');
+    return [runtimeImport, ...renderedComponentImports].join('\n');
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -538,7 +538,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
     }
 }
 
-function firstElementChild(node: Node): HTMLElement {
+export function firstElementChild(node: Node): HTMLElement {
     // todo validate there is only one child
     return node.childNodes.find((child) => child.nodeType === NodeType.ELEMENT_NODE) as HTMLElement;
 }
@@ -548,7 +548,7 @@ const isComponentRef = (ref: Ref) =>
 const isCollectionRef = (ref: Ref) => ref.dynamicRef;
 const isComponentCollectionRef = (ref: Ref) => isCollectionRef(ref) && isComponentRef(ref);
 
-function renderRefsType(refs: Ref[], refsType: string) {
+export function renderRefsType(refs: Ref[], refsType: string) {
     let renderedRefs;
     let imports = Imports.none();
     let refImportsInUse = new Set<string>();
@@ -580,7 +580,7 @@ ${renderedReferences}
     return { imports, renderedRefs, refImportsInUse };
 }
 
-function processImportedComponents(importStatements: JayImportLink[]) {
+export function processImportedComponents(importStatements: JayImportLink[]) {
     return importStatements.reduce(
         (processedImports, importStatement) => {
             importStatement.names.forEach((importName) => {
@@ -623,7 +623,7 @@ function renderRefsForReferenceManager(refs: Ref[]) {
     };
 }
 
-function optimizeRefs({ rendered, imports, validations, refs }: RenderFragment) {
+export function optimizeRefs({ rendered, imports, validations, refs }: RenderFragment) {
     const mergedRefsMap = refs.reduce((refsMap, ref) => {
         if (refsMap[ref.ref] === ref.ref) {
             const firstRef: Ref = refsMap[ref.ref];
