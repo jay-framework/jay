@@ -12,5 +12,13 @@ describe('generate the runtime file for react target', () => {
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureReactElementFile(folder));
         });
+
+        it('for simple file with static text', async () => {
+            const folder = 'basics/simple-static-text';
+            const elementFile = await readFileAndGenerateElementFile(folder, options);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureReactElementFile(folder));
+        });
+
     });
 });
