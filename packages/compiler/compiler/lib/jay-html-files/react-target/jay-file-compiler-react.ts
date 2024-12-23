@@ -83,7 +83,7 @@ function renderReactNode(node: Node, renderContext: RenderContext) {
                 : childNodes
                     .map((_) => renderReactNode(_, childContext))
                     .reduce(
-                        (prev, current) => RenderFragment.merge(prev, current, ',\n'),
+                        (prev, current) => RenderFragment.merge(prev, current, '\n'),
                         RenderFragment.empty(),
                     )
                     .map((children) =>
