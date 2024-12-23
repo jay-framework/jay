@@ -9,6 +9,7 @@ import {
 } from "jay-compiler-shared";
 import {JayHtmlSourceFile} from "../jay-target/jay-html-source-file";
 import {
+    elementNameToJayType,
     firstElementChild,
     generateTypes, Indent, isConditional, isForEach,
     newAutoRefNameGenerator, optimizeRefs,
@@ -17,6 +18,8 @@ import {
 import {HTMLElement, NodeType} from "node-html-parser";
 import {parseReactTextExpression, parseTextExpression, Variables} from "../expressions/expression-compiler";
 import Node from 'node-html-parser/dist/nodes/node';
+import {camelCase} from "camel-case";
+import {eventsFor} from "jay-4-react";
 
 interface RenderContext {
     variables: Variables;
@@ -27,6 +30,28 @@ interface RenderContext {
     nextAutoRefName: () => string;
     importerMode: RuntimeMode;
 }
+
+function renderElementRef(
+    element: HTMLElement,
+    { dynamicRef, variables }: RenderContext,
+): RenderFragment {
+    if (element.attributes.ref) {
+        let originalName = element.attributes.ref;
+        let refName = camelCase(originalName);
+        let refs = [
+            {
+                ref: refName,
+                constName: null,
+                dynamicRef,
+                autoRef: false,
+                elementType: elementNameToJayType(element),
+                viewStateType: variables.currentType,
+            },
+        ];
+        return new RenderFragment(`{...eventsFor(eventsContext, '${refName}')}`, Imports.for(Import.eventsFor), [], refs);
+    } else return RenderFragment.empty();
+}
+
 
 function renderReactNode(node: Node, renderContext: RenderContext) {
     let { variables, importedSymbols, importedSandboxedSymbols, indent, dynamicRef, importerMode } =
@@ -46,9 +71,9 @@ function renderReactNode(node: Node, renderContext: RenderContext) {
         ref: RenderFragment,
         currIndent: Indent = indent,
     ): RenderFragment {
-        const refWithPrefixComma = ref.rendered.length ? `, ${ref.rendered}` : '';
+        ref = ref.map(_ => _.length? ' ' + _: '');
         return new RenderFragment(
-            `${currIndent.firstLine}<${tagName} ${attributes.rendered}>${children.rendered}${currIndent.lastLine}</${tagName}>`,
+            `${currIndent.firstLine}<${tagName}${ref.rendered} ${attributes.rendered}>${children.rendered}${currIndent.lastLine}</${tagName}>`,
             children.imports.plus(attributes.imports).plus(ref.imports),
             [...attributes.validations, ...children.validations, ...ref.validations],
             [...attributes.refs, ...children.refs, ...ref.refs],
@@ -93,7 +118,7 @@ function renderReactNode(node: Node, renderContext: RenderContext) {
                     );
 
         let attributes = RenderFragment.empty() // renderAttributes(htmlElement, childContext);
-        let renderedRef = RenderFragment.empty() // renderElementRef(htmlElement, childContext);
+        let renderedRef = renderElementRef(htmlElement, childContext);
 
         // if (needDynamicElement)
         //     return de(htmlElement.rawTagName, attributes, childRenders, renderedRef, currIndent);

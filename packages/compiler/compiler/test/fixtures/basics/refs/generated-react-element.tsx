@@ -1,6 +1,6 @@
-import {eventsFor, Jay4ReactElementProps} from 'jay-4-react';
-import { ReactElement } from 'react';
 import {HTMLElementProxy} from "jay-runtime";
+import { Jay4ReactElementProps, eventsFor} from 'jay-4-react';
+import { ReactElement } from 'react';
 
 export interface RefsViewState {
     text: string;
@@ -20,7 +20,7 @@ export function render({
 }: RefsElementProps): ReactElement<RefsElementProps, any> {
     return <div>
         <div {...eventsFor(eventsContext, 'ref1')}>{vs.text}</div>
-        <div {...eventsFor(eventsContext, 'ref$')}>{vs.text}</div>
+        <div {...eventsFor(eventsContext, 'ref')}>{vs.text}</div>
         <div>
             <div {...eventsFor(eventsContext, 'ref3')}>{vs.text}</div>
         </div>

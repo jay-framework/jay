@@ -204,7 +204,7 @@ function renderTextNode(variables: Variables, text: string, indent: Indent): Ren
     return parseTextExpression(textEscape(text), variables).map((_) => indent.firstLine + _);
 }
 
-function elementNameToJayType(element: HTMLElement): JayType {
+export function elementNameToJayType(element: HTMLElement): JayType {
     return htmlElementTagNameMap[element.rawTagName]
         ? new JayHTMLType(htmlElementTagNameMap[element.rawTagName])
         : new JayHTMLType('HTMLElement');
@@ -250,10 +250,6 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             );
             renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
         }
-        // else if (attrCanonical === 'for') {
-        //     let attributeExpression = parseAttributeExpression(attributes[attrName], variables);
-        //     renderedAttributes.push(attributeExpression.map(_ => `htmlFor: ${_}`))
-        // }
         else {
             let attributeExpression = parseAttributeExpression(attributes[attrName], variables);
             renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));

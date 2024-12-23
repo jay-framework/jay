@@ -24,7 +24,7 @@ const importsOrder = {
     REACT: 3,
     JAY_4_REACT: 4
 }
-export const Import: Record<string, ImportName> = {
+export const Import = {
     jayElement: importStatementFragment(
         JAY_RUNTIME,
         'JayElement',
@@ -185,7 +185,14 @@ export const Import: Record<string, ImportName> = {
         'ReactElement',
         ImportsFor.implementation,
         ImportsFor.definition
-    )
+    ),
+    eventsFor: importStatementFragment(
+        JAY_4_REACT,
+        'eventsFor',
+        ImportsFor.implementation,
+        ImportsFor.definition
+    ),
+
 };
 
 export class Imports {
