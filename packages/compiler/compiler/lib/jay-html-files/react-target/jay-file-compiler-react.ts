@@ -16,10 +16,14 @@ import {
     processImportedComponents, renderImports, renderRefsType
 } from "../jay-target/jay-file-compiler";
 import {HTMLElement, NodeType} from "node-html-parser";
-import {parseReactTextExpression, parseTextExpression, Variables} from "../expressions/expression-compiler";
+import {
+    parseReactClassExpression, parseReactPropertyExpression,
+    parseReactTextExpression,
+    Variables
+} from "../expressions/expression-compiler";
 import Node from 'node-html-parser/dist/nodes/node';
 import {camelCase} from "camel-case";
-import {eventsFor} from "jay-4-react";
+import parse from 'style-to-object';
 
 interface RenderContext {
     variables: Variables;
@@ -30,6 +34,63 @@ interface RenderContext {
     nextAutoRefName: () => string;
     importerMode: RuntimeMode;
 }
+
+const attributesRequiresQuotes = /[- ]/;
+function inlineStyleToReact(inlineStyle: string): string {
+    const styleObject = parse(inlineStyle);
+    return '{' + Object.entries(styleObject).map(([key, value]) => {
+        if (key.match(attributesRequiresQuotes))
+            return `"${key}": "${value}"`
+        else
+            return `${key}: "${value}"`
+    }).join(',') + '}';
+}
+
+const PROPERTY = 1,
+    BOOLEAN_ATTRIBUTE = 3;
+const propertyMapping = {
+    value: { type: PROPERTY },
+    checked: { type: PROPERTY },
+    disabled: { type: BOOLEAN_ATTRIBUTE },
+};
+const reactRenamedAttributes = {
+    'for': 'htmlFor'
+}
+function renderAttributes(element: HTMLElement, { variables }: RenderContext): RenderFragment {
+    let attributes = element.attributes;
+    let renderedAttributes = [];
+    Object.keys(attributes).forEach((attrName) => {
+        const reactAttributeName = reactRenamedAttributes[attrName] || attrName;
+        if (
+            attrName === 'if' ||
+            attrName === 'foreach' ||
+            attrName === 'trackby' ||
+            attrName === 'ref'
+        )
+            return;
+        if (attrName === 'style')
+            renderedAttributes.push(
+                new RenderFragment(`style={${inlineStyleToReact(attributes[attrName])}}`),
+            );
+        else if (attrName === 'class') {
+            let classExpression = parseReactClassExpression(attributes[attrName], variables);
+            renderedAttributes.push(classExpression.map((_) => `className=${_}`));
+        } else {
+            let attributeExpression = parseReactPropertyExpression(attributes[attrName], variables);
+            if (attributeExpression.rendered === "''")
+                renderedAttributes.push(attributeExpression.map((_) => `${reactAttributeName}`));
+            else
+                renderedAttributes.push(attributeExpression.map((_) => `${reactAttributeName}=${_}`));
+        }
+    });
+
+    return renderedAttributes
+        .reduce(
+            (prev, current) => RenderFragment.merge(prev, current, ' '),
+            RenderFragment.empty(),
+        );
+}
+
 
 function renderElementRef(
     element: HTMLElement,
@@ -72,6 +133,14 @@ function renderReactNode(node: Node, renderContext: RenderContext) {
         currIndent: Indent = indent,
     ): RenderFragment {
         ref = ref.map(_ => _.length? ' ' + _: '');
+        if (children.rendered.length === 0)
+            return new RenderFragment(
+                `${currIndent.firstLine}<${tagName}${ref.rendered} ${attributes.rendered}/>`,
+                children.imports.plus(attributes.imports).plus(ref.imports),
+                [...attributes.validations, ...children.validations, ...ref.validations],
+                [...attributes.refs, ...children.refs, ...ref.refs],
+            );
+        else
         return new RenderFragment(
             `${currIndent.firstLine}<${tagName}${ref.rendered} ${attributes.rendered}>${children.rendered}${currIndent.lastLine}</${tagName}>`,
             children.imports.plus(attributes.imports).plus(ref.imports),
@@ -117,7 +186,7 @@ function renderReactNode(node: Node, renderContext: RenderContext) {
                             : children,
                     );
 
-        let attributes = RenderFragment.empty() // renderAttributes(htmlElement, childContext);
+        let attributes = renderAttributes(htmlElement, childContext);
         let renderedRef = renderElementRef(htmlElement, childContext);
 
         // if (needDynamicElement)

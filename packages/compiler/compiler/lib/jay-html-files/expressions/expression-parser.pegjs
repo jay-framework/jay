@@ -8,6 +8,24 @@
     let ba = options.ba;
 }
 
+reactClassExpression
+  = _ head: singleClassExpression tail:(_ singleClassExpression)* _ {
+    let isDynamic = false;
+    const renderClass = cls => {
+      isDynamic = isDynamic || cls instanceof RenderFragment;
+      return cls instanceof RenderFragment?
+        cls :
+        new RenderFragment(cls, none);
+    }
+    let classString = tail.reduce((result, tuple) => {
+      const classExp = tuple[1];
+      return RenderFragment.merge(result, renderClass(classExp), ' ')
+    }, renderClass(head));
+    return isDynamic?
+      classString.map(_ => `{${_}}`):
+      classString.map(_ => `"${_}"`);
+  }
+
 classExpression
   = _ head: singleClassExpression tail:(_ singleClassExpression)* _ {
     let isDynamic = false;
@@ -94,6 +112,14 @@ dynamicProperty
   let [renderFragment, isDynamic] = template;
   return isDynamic ?
       renderFragment.map(_ => `dp(vs => ${_})`).plusImport(dp):
+      renderFragment;
+}
+
+reactDynamicProperty
+  = template:template {
+  let [renderFragment, isDynamic] = template;
+  return isDynamic ?
+      renderFragment.map(_ => `{${_}}`):
       renderFragment;
 }
 

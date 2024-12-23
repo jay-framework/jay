@@ -9,7 +9,7 @@
   "scripts": {
     "build": "npm run build:pegjs && npm run build:js && npm run build:types",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
-    "build:pegjs": "pegjs --allowed-start-rules dynamicAttribute,booleanAttribute,dynamicText,dynamicProperty,conditionFunc,accessor,Identifier,classExpression,dynamicComponentProp,importNames,enum,is_enum,reactDynamicText  -o lib/jay-html-files/expressions/expression-parser.cjs lib/jay-html-files/expressions/expression-parser.pegjs",
+    "build:pegjs": "pegjs --allowed-start-rules dynamicAttribute,booleanAttribute,dynamicText,dynamicProperty,conditionFunc,accessor,Identifier,classExpression,dynamicComponentProp,importNames,enum,is_enum,reactDynamicText,reactDynamicProperty,reactClassExpression  -o lib/jay-html-files/expressions/expression-parser.cjs lib/jay-html-files/expressions/expression-parser.pegjs",
     "build:js": "vite build",
     "build:types": "tsup lib/index.ts --dts-only --format cjs",
     "build:check-types": "tsc",
@@ -31,6 +31,7 @@
     "node-html-parser": "^6.1.12",
     "pegjs": "^0.10.0",
     "pluralize": "^8.0.0",
+    "style-to-object": "^1.0.8",
     "typescript": "^5.3.3"
   },
   "devDependencies": {

@@ -31,8 +31,8 @@ export function render({
         <div data-attribute={`${vs.text}-abcd`}/>
         <div data-attribute={`abcd-${vs.text}`}/>
         <div data-attribute={`abcd-${vs.text}-abcd`}/>
-        <button disabled={vs.bool1}></button>
-        <button disabled={!vs.bool1}></button>
-        <button disabled></button>
+        <button disabled={vs.bool1}/>
+        <button disabled={!vs.bool1}/>
+        <button disabled/>
     </div>;
 }

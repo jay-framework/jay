@@ -127,12 +127,21 @@ export function parsePropertyExpression(expression: string, vars: Variables): Re
     return doParse(expression, 'dynamicProperty', vars);
 }
 
+export function parseReactPropertyExpression(expression: string, vars: Variables): RenderFragment {
+    return doParse(expression, 'reactDynamicProperty', vars);
+}
+
 export function parseComponentPropExpression(expression: string, vars: Variables): RenderFragment {
     return doParse(expression, 'dynamicComponentProp', vars);
 }
 
 export function parseClassExpression(expression: string, vars: Variables): RenderFragment {
     return doParse(expression, 'classExpression', vars);
+}
+
+export function parseReactClassExpression(expression: string, vars: Variables): RenderFragment {
+    const {rendered, validations, refs}: RenderFragment = doParse(expression, 'reactClassExpression', vars)
+    return new RenderFragment(rendered, Imports.none(), validations, refs);
 }
 
 export function parseImportNames(expression: string): JayImportName[] {
