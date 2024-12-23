@@ -15,9 +15,7 @@ export function render({
     eventsContext,
 }: StylesElementProps): ReactElement<StylesElementProps, any> {
     return <div>
-        <div>
-            <div style={{color:"red"}}>{vs.text1}</div>
-            <div style={{color:"green"}}>{vs.text2}</div>
-        </div>
+        <div style={{color:"red"}}>{vs.text1}</div>
+        <div style={{color:"green"}}>{vs.text2}</div>
     </div>;
 }
