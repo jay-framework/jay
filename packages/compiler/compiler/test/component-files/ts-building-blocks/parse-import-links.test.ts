@@ -62,6 +62,16 @@ describe('parseImportLinks', () => {
                 sandbox: false,
             },
             {
+                module: './function-repository',
+                names: [
+                    {
+                        name: 'funcRepository',
+                        type: JayUnknown,
+                    },
+                ],
+                sandbox: false,
+            },
+            {
                 module: './counter-refs',
                 names: [
                     {
@@ -80,16 +90,6 @@ describe('parseImportLinks', () => {
                     },
                 ],
                 sandbox: true,
-            },
-            {
-                module: './function-repository',
-                names: [
-                    {
-                        name: 'funcRepository',
-                        type: JayUnknown,
-                    },
-                ],
-                sandbox: false,
             },
         ]);
     });
