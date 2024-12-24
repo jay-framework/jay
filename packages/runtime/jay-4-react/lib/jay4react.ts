@@ -4,7 +4,7 @@ import { EventsContext, refsRecorder } from './jay4react-events';
 
 export interface Jay4ReactElementProps<ViewState> {
     vs: ViewState;
-    eventsContext: EventsContext;
+    context: EventsContext;
 }
 
 function splitPropsEvents(reactProps: object): [object, object] {
@@ -65,7 +65,7 @@ export function jay4react<
 
         return reactElement({
             vs:viewState,
-            eventsContext: _eventsContext.current,
+            context: _eventsContext.current,
         } as ReactElementProps);
     };
 }

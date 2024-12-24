@@ -17,18 +17,18 @@ export interface CounterElementProps extends Jay4ReactElementProps<CounterElemen
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: CounterElementProps): ReactElement<CounterElementProps, any> {
     const { count } = vs;
     return (
         <div>
-            <button role="sub" {...eventsFor(eventsContext, 'subtracter')}>
+            <button role="sub" {...eventsFor(context, 'subtracter')}>
                 -
             </button>
             <span role="value" style={{ margin: '0 16px' }}>
                 {count}
             </span>
-            <button role="add" {...eventsFor(eventsContext, 'adder')}>
+            <button role="add" {...eventsFor(context, 'adder')}>
                 +
             </button>
         </div>

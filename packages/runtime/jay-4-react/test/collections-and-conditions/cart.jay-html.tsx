@@ -24,7 +24,7 @@ export interface CartElementRefs {
 
 export interface CartElementProps extends Jay4ReactElementProps<CartElementViewState> {}
 
-export function render({ vs, eventsContext }: CartElementProps) {
+export function render({ vs, context }: CartElementProps) {
     const { lineItems, minimumOrderReached, total } = vs;
     return (
         <div>
@@ -37,7 +37,7 @@ export function render({ vs, eventsContext }: CartElementProps) {
                     <span>{lineItem.price}, </span>
                     <button
                         role={'removeItem-' + lineItem.id}
-                        {...eventsFor(eventsContext.child(lineItem.id, lineItem), 'removeItem')}
+                        {...eventsFor(context.child(lineItem.id, lineItem), 'removeItem')}
                     >
                         x
                     </button>
@@ -50,14 +50,14 @@ export function render({ vs, eventsContext }: CartElementProps) {
                     minimum order value not reached
                     <button
                         role="continueShopping"
-                        {...eventsFor(eventsContext, 'continueShopping')}
+                        {...eventsFor(context, 'continueShopping')}
                     >
                         x
                     </button>
                 </div>
             )}
             <div role="total">Total: {total}</div>
-            <button role="checkout" {...eventsFor(eventsContext, 'checkout')}>
+            <button role="checkout" {...eventsFor(context, 'checkout')}>
                 x
             </button>
         </div>
