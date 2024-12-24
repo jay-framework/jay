@@ -138,7 +138,7 @@ function peg$parse(input, options) {
 
   var peg$FAILED = {},
 
-      peg$startRuleFunctions = { dynamicAttribute: peg$parsedynamicAttribute, booleanAttribute: peg$parsebooleanAttribute, dynamicText: peg$parsedynamicText, dynamicProperty: peg$parsedynamicProperty, conditionFunc: peg$parseconditionFunc, accessor: peg$parseaccessor, Identifier: peg$parseIdentifier, classExpression: peg$parseclassExpression, dynamicComponentProp: peg$parsedynamicComponentProp, importNames: peg$parseimportNames, enum: peg$parseenum, is_enum: peg$parseis_enum, reactDynamicText: peg$parsereactDynamicText, reactDynamicProperty: peg$parsereactDynamicProperty, reactClassExpression: peg$parsereactClassExpression },
+      peg$startRuleFunctions = { dynamicAttribute: peg$parsedynamicAttribute, booleanAttribute: peg$parsebooleanAttribute, dynamicText: peg$parsedynamicText, dynamicProperty: peg$parsedynamicProperty, conditionFunc: peg$parseconditionFunc, accessor: peg$parseaccessor, Identifier: peg$parseIdentifier, classExpression: peg$parseclassExpression, dynamicComponentProp: peg$parsedynamicComponentProp, importNames: peg$parseimportNames, enum: peg$parseenum, is_enum: peg$parseis_enum, reactDynamicText: peg$parsereactDynamicText, reactDynamicProperty: peg$parsereactDynamicProperty, reactClassExpression: peg$parsereactClassExpression, condition: peg$parsecondition },
       peg$startRuleFunction  = peg$parsedynamicAttribute,
 
       peg$c0 = function(head, tail) {

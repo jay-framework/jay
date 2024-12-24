@@ -89,6 +89,10 @@ export function parseCondition(expression: string, vars: Variables): RenderFragm
     return doParse(expression, 'conditionFunc', vars);
 }
 
+export function parseReactCondition(expression: string, vars: Variables): RenderFragment {
+    return doParse(expression, 'condition', vars);
+}
+
 export function parseTextExpression(expression: string, vars: Variables): RenderFragment {
     return doParse(expression, 'dynamicText', vars);
 }

@@ -17,7 +17,8 @@ import {
 } from "../jay-target/jay-file-compiler";
 import {HTMLElement, NodeType} from "node-html-parser";
 import {
-    parseReactClassExpression, parseReactPropertyExpression,
+    parseCondition,
+    parseReactClassExpression, parseReactCondition, parseReactPropertyExpression,
     parseReactTextExpression,
     Variables
 } from "../expressions/expression-compiler";
@@ -149,6 +150,15 @@ function renderReactNode(node: Node, renderContext: RenderContext) {
         );
     }
 
+    function c(renderedCondition: RenderFragment, childElement: RenderFragment) {
+        return new RenderFragment(
+            `${indent.firstLine}{(${renderedCondition.rendered}) && (${childElement.rendered})}`,
+            Imports.merge(childElement.imports, renderedCondition.imports),
+            [...renderedCondition.validations, ...childElement.validations],
+            [...renderedCondition.refs, ...childElement.refs],
+        );
+    }
+
 
     function renderHtmlElement(htmlElement, newVariables: Variables, currIndent: Indent = indent) {
         // if (importedSymbols.has(htmlElement.rawTagName))
@@ -201,7 +211,14 @@ function renderReactNode(node: Node, renderContext: RenderContext) {
             return renderTextNode(variables, text, indent); //.map(_ => ident + _);
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
-            return renderHtmlElement(htmlElement, variables);
+            if (isConditional(htmlElement)) {
+                let condition = htmlElement.getAttribute('if');
+                let childElement = renderHtmlElement(htmlElement, variables, indent.child());
+                let renderedCondition = parseReactCondition(condition, variables);
+                return c(renderedCondition, childElement);
+            }
+            else
+                return renderHtmlElement(htmlElement, variables);
         case NodeType.COMMENT_NODE:
             break;
     }
