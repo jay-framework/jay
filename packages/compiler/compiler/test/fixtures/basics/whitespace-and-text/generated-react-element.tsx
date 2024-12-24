@@ -16,9 +16,11 @@ export function render({
     eventsContext,
 }: WhitespaceAndTextElementProps): ReactElement<WhitespaceAndTextElementProps, any> {
     return <div>
+        <div> multi-line text </div>
         <div>
-            multi-line text
+            some text
+            <span> </span>
+            another text
         </div>
-        <div>some text<span> </span>another text</div>
     </div>;
 }

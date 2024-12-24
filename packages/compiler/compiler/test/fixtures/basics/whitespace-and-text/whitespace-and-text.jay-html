@@ -9,9 +9,7 @@ data:
 </head>
 <body>
 <div>
-    <div>
-        multi-line text
-    </div>
+    <div> multi-line text </div>
     <div>some text<span> </span>another text</div>
 </div>
 </body>

@@ -12,6 +12,6 @@ export function render({
     eventsContext,
 }: EmptyElementElementProps): ReactElement<EmptyElementElementProps, any> {
     return (<div>
-        <div attr="value"></div>
+        <div attr="value"/>
     </div>);
 }
