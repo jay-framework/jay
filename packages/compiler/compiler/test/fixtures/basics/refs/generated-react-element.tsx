@@ -16,13 +16,13 @@ export interface RefsElementProps extends Jay4ReactElementProps<RefsViewState> {
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: RefsElementProps): ReactElement<RefsElementProps, any> {
     return <div>
-        <div {...eventsFor(eventsContext, 'ref1')}>{vs.text}</div>
-        <div {...eventsFor(eventsContext, 'ref')}>{vs.text}</div>
+        <div {...eventsFor(context, 'ref1')}>{vs.text}</div>
+        <div {...eventsFor(context, 'ref')}>{vs.text}</div>
         <div>
-            <div {...eventsFor(eventsContext, 'ref3')}>{vs.text}</div>
+            <div {...eventsFor(context, 'ref3')}>{vs.text}</div>
         </div>
     </div>;
 }

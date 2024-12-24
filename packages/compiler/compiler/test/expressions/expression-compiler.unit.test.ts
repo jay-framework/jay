@@ -30,7 +30,7 @@ describe('expression-compiler', () => {
         it('resolve simple accessor', () => {
             let variables = new Variables(new JayObjectType('data', { name: JayString }));
             expect(variables.resolveAccessor(['name'])).toEqual(
-                new Accessor(['name'], [], JayString),
+                new Accessor('vs', ['name'], [], JayString),
             );
         });
 
@@ -41,7 +41,7 @@ describe('expression-compiler', () => {
                 }),
             );
             expect(variables.resolveAccessor(['child', 'name'])).toEqual(
-                new Accessor(['child', 'name'], [], JayString),
+                new Accessor('vs', ['child', 'name'], [], JayString),
             );
         });
 
@@ -52,7 +52,7 @@ describe('expression-compiler', () => {
                 }),
             );
             expect(variables.resolveAccessor(['child', 'name', 'bla'])).toEqual(
-                new Accessor(
+                new Accessor('vs',
                     ['child', 'name', 'bla'],
                     ['the data field [child.name.bla] not found in Jay data'],
                     JayUnknown,
@@ -562,22 +562,22 @@ describe('expression-compiler', () => {
 
         it('parse simple primitive accessor', () => {
             const actual = parseAccessor('string1', defaultVars);
-            expect(actual).toEqual(new Accessor(['string1'], [], JayString));
+            expect(actual).toEqual(new Accessor('vs', ['string1'], [], JayString));
         });
 
         it('parse simple object accessor', () => {
             const actual = parseAccessor('object2', defaultVars);
-            expect(actual).toEqual(new Accessor(['object2'], [], object2));
+            expect(actual).toEqual(new Accessor('vs', ['object2'], [], object2));
         });
 
         it('parse nested primitive accessor', () => {
             const actual = parseAccessor('object2.num2', defaultVars);
-            expect(actual).toEqual(new Accessor(['object2', 'num2'], [], JayNumber));
+            expect(actual).toEqual(new Accessor('vs', ['object2', 'num2'], [], JayNumber));
         });
 
         it('parse self accessor', () => {
             const actual = parseAccessor('.', defaultVars);
-            expect(actual).toEqual(new Accessor(['.'], [], object1));
+            expect(actual).toEqual(new Accessor('vs', ['.'], [], object1));
         });
 
         it('parse top level imported type', () => {
@@ -590,7 +590,7 @@ describe('expression-compiler', () => {
                 ),
             );
             const actual = parseAccessor('bla', variables);
-            expect(actual).toEqual(new Accessor(['bla'], [], JayString));
+            expect(actual).toEqual(new Accessor('vs', ['bla'], [], JayString));
         });
 
         it('parse nested imported type', () => {
@@ -605,13 +605,13 @@ describe('expression-compiler', () => {
                 }),
             );
             const actual = parseAccessor('prop1.bla', variables);
-            expect(actual).toEqual(new Accessor(['prop1', 'bla'], [], JayString));
+            expect(actual).toEqual(new Accessor('vs', ['prop1', 'bla'], [], JayString));
         });
 
         it('parse wrong accessor', () => {
             const actual = parseAccessor('object2.not_a_member', defaultVars);
             expect(actual).toEqual(
-                new Accessor(
+                new Accessor('vs',
                     ['object2', 'not_a_member'],
                     ['the data field [object2.not_a_member] not found in Jay data'],
                     JayUnknown,

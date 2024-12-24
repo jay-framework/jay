@@ -12,7 +12,7 @@ export interface StylesElementProps extends Jay4ReactElementProps<StylesViewStat
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: StylesElementProps): ReactElement<StylesElementProps, any> {
     return <div>
         <div style={{color:"red"}}>{vs.text1}</div>

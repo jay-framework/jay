@@ -6,11 +6,13 @@ import { JayImportedType, JayObjectType, JayType, JayUnknown } from 'jay-compile
 import { JayImportName } from 'jay-compiler-shared';
 
 export class Accessor {
+    readonly rootVar: string;
     readonly terms: Array<string>;
     readonly validations: JayValidations;
     readonly resolvedType: JayType;
 
-    constructor(terms: Array<string>, validations: JayValidations, resolvedType: JayType) {
+    constructor(rootVar: string, terms: Array<string>, validations: JayValidations, resolvedType: JayType) {
+        this.rootVar = rootVar;
         this.terms = terms;
         this.validations = validations;
         this.resolvedType = resolvedType;
@@ -18,7 +20,7 @@ export class Accessor {
 
     render() {
         let renderedAccessor =
-            this.terms.length === 1 && this.terms[0] === '.' ? 'vs' : 'vs.' + this.terms.join('?.');
+            this.terms.length === 1 && this.terms[0] === '.' ? this.rootVar : this.rootVar + '.' + this.terms.join('?.');
         return new RenderFragment(`${renderedAccessor}`, Imports.none(), this.validations);
     }
 }
@@ -30,7 +32,7 @@ export class Variables {
     readonly parent: Variables;
     private readonly depth;
     constructor(currentTypes: JayType, parent: Variables = undefined, depth: number = 0) {
-        this.currentVar = depth === 0 ? 'viewState' : 'vs' + depth;
+        this.currentVar = depth === 0 ? 'vs' : 'vs' + depth;
         this.currentContext = depth === 0 ? 'context' : 'cx' + depth;
         this.depth = depth;
         this.parent = parent;
@@ -52,7 +54,7 @@ export class Variables {
                 curr = JayUnknown;
             }
         });
-        return new Accessor(accessor, validations, curr);
+        return new Accessor(this.currentVar, accessor, validations, curr);
     }
 
     childVariableFor(resolvedForEachType: JayType): Variables {

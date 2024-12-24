@@ -1,7 +1,7 @@
 import {
-    Import, Imports, ImportsFor,
+    Import, Imports, ImportsFor, JayArrayType,
     JayImportLink,
-    JayType,
+    JayType, JayUnknown,
     MainRuntimeModes,
     RenderFragment,
     RuntimeMode,
@@ -17,7 +17,7 @@ import {
 } from "../jay-target/jay-file-compiler";
 import {HTMLElement, NodeType} from "node-html-parser";
 import {
-    parseCondition,
+    parseAccessor,
     parseReactClassExpression, parseReactCondition, parseReactPropertyExpression,
     parseReactTextExpression,
     Variables
@@ -62,14 +62,17 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
     let renderedAttributes = [];
     Object.keys(attributes).forEach((attrName) => {
         const reactAttributeName = reactRenamedAttributes[attrName] || attrName;
-        if (
+        if (attrName === `trackBy`)
+            renderedAttributes.push(
+                new RenderFragment(`key={${variables.currentVar}.${attributes[attrName]}}`),
+            );
+        else if (
             attrName === 'if' ||
-            attrName === 'foreach' ||
-            attrName === 'trackby' ||
+            attrName === 'forEach' ||
             attrName === 'ref'
         )
             return;
-        if (attrName === 'style')
+        else if (attrName === 'style')
             renderedAttributes.push(
                 new RenderFragment(`style={${inlineStyleToReact(attributes[attrName])}}`),
             );
@@ -110,7 +113,7 @@ function renderElementRef(
                 viewStateType: variables.currentType,
             },
         ];
-        return new RenderFragment(`{...eventsFor(eventsContext, '${refName}')}`, Imports.for(Import.eventsFor), [], refs);
+        return new RenderFragment(`{...eventsFor(${variables.currentContext}, '${refName}')}`, Imports.for(Import.eventsFor), [], refs);
     } else return RenderFragment.empty();
 }
 
@@ -159,6 +162,22 @@ function renderReactNode(node: Node, renderContext: RenderContext) {
         );
     }
 
+    function renderForEach(
+        renderedForEach: RenderFragment,
+        parentVariables: Variables,
+        collectionVariables: Variables,
+        trackBy: string,
+        childElement: RenderFragment,
+    ) {
+        return new RenderFragment(
+            `${indent.firstLine}{${renderedForEach.rendered}.map((${collectionVariables.currentVar}: ${collectionVariables.currentType.name}) => {
+${indent.curr}const ${collectionVariables.currentContext} = ${parentVariables.currentContext}.child(${collectionVariables.currentVar}.${trackBy}, ${collectionVariables.currentVar});            
+${indent.curr}return (${childElement.rendered})})}`,
+            childElement.imports,
+            [...renderedForEach.validations, ...childElement.validations],
+            childElement.refs,
+        )
+    }
 
     function renderHtmlElement(htmlElement, newVariables: Variables, currIndent: Indent = indent) {
         // if (importedSymbols.has(htmlElement.rawTagName))
@@ -211,13 +230,34 @@ function renderReactNode(node: Node, renderContext: RenderContext) {
             return renderTextNode(variables, text, indent); //.map(_ => ident + _);
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
+            if (isForEach(htmlElement)) dynamicRef = true;
+
             if (isConditional(htmlElement)) {
                 let condition = htmlElement.getAttribute('if');
                 let childElement = renderHtmlElement(htmlElement, variables, indent.child());
                 let renderedCondition = parseReactCondition(condition, variables);
                 return c(renderedCondition, childElement);
-            }
-            else
+            } else if (isForEach(htmlElement)) {
+                let forEach = htmlElement.getAttribute('forEach'); // todo extract type
+                let trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
+
+                let forEachAccessor = parseAccessor(forEach, variables);
+                // Todo check if type unknown throw exception
+                let forEachFragment = forEachAccessor.render();
+                if (forEachAccessor.resolvedType === JayUnknown)
+                    return new RenderFragment('', Imports.none(), [
+                        `forEach directive - failed to resolve type for forEach=${forEach}`,
+                    ]);
+                let forEachVariables = variables.childVariableFor(
+                    (forEachAccessor.resolvedType as JayArrayType).itemType,
+                );
+                let childElement = renderHtmlElement(
+                    htmlElement,
+                    forEachVariables,
+                    indent.child().noFirstLineBreak().withLastLineBreak(),
+                );
+                return renderForEach(forEachFragment, variables, forEachVariables, trackBy, childElement);
+            } else
                 return renderHtmlElement(htmlElement, variables);
         case NodeType.COMMENT_NODE:
             break;
@@ -275,7 +315,7 @@ function renderFunctionImplementation(
     const renderedImplementation = renderedRoot.map(rootNode =>
         `export function render({
     vs,
-    eventsContext,
+    context,
 }: ${reactPropsType}): ReactElement<${reactPropsType}, any> {
     return ${rootNode};
 }`)

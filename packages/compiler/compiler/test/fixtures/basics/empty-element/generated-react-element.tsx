@@ -9,7 +9,7 @@ export interface EmptyElementElementProps extends Jay4ReactElementProps<EmptyEle
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: EmptyElementElementProps): ReactElement<EmptyElementElementProps, any> {
     return (<div>
         <div attr="value"/>

@@ -13,7 +13,7 @@ export interface WhitespaceAndTextElementProps extends Jay4ReactElementProps<Whi
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: WhitespaceAndTextElementProps): ReactElement<WhitespaceAndTextElementProps, any> {
     return <div>
         <div> multi-line text </div>

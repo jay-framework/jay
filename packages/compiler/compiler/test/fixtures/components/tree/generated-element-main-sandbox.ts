@@ -61,7 +61,7 @@ export function render(options?: RenderElementOptions): TreeNodeElementPreRender
                                 (vs) => vs.node?.children,
                                 (vs1: Node) => {
                                     return e('li', {}, [
-                                        secureChildComp(TreeNode, (vs: Node) => vs, refAR1()),
+                                        secureChildComp(TreeNode, (vs1: Node) => vs1, refAR1()),
                                     ]);
                                 },
                                 'id',

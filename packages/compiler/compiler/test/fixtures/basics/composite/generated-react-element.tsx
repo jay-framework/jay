@@ -12,7 +12,7 @@ export interface CompositeElementProps extends Jay4ReactElementProps<CompositeVi
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: CompositeElementProps): ReactElement<CompositeElementProps, any> {
     return <div>
         <div>{vs.text}</div>

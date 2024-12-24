@@ -468,7 +468,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             variables: newVariables,
         });
         if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
-        let getProps = `(vs: ${newVariables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
+        let getProps = `(${newVariables.currentVar}: ${newVariables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
         if (
             importedSandboxedSymbols.has(htmlElement.rawTagName) ||
             importerMode === RuntimeMode.MainSandbox
@@ -762,7 +762,7 @@ function renderElementBridgeNode(node: Node, context: RenderContext): RenderFrag
             variables: newVariables,
         });
         if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
-        let getProps = `(vs: ${newVariables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
+        let getProps = `(${newVariables.currentVar}: ${newVariables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
         return new RenderFragment(
             `${currIndent.firstLine}childComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
             Imports.for(Import.sandboxChildComp)

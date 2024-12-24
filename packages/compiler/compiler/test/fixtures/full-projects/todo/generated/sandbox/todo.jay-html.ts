@@ -76,7 +76,7 @@ export function render(): TodoElementPreRender {
                 () => [
                     childComp(
                         Item,
-                        (vs: ShownTodo) => ({ title: vs.title, isCompleted: vs.isCompleted }),
+                        (vs1: ShownTodo) => ({ title: vs1.title, isCompleted: vs1.isCompleted }),
                         refItems(),
                     ),
                 ],

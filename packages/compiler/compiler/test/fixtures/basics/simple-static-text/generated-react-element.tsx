@@ -11,7 +11,7 @@ export interface SimpleStaticTextElementProps extends Jay4ReactElementProps<Simp
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: SimpleStaticTextElementProps): ReactElement<SimpleStaticTextElementProps, any> {
     return <div>static text</div>;
 }

@@ -62,7 +62,7 @@ export function render(
                     (vs1: NestedCounter) => {
                         return secureChildComp(
                             Counter,
-                            (vs: NestedCounter) => ({ initialValue: vs.counter }),
+                            (vs1: NestedCounter) => ({ initialValue: vs1.counter }),
                             refCounter1(),
                         );
                     },

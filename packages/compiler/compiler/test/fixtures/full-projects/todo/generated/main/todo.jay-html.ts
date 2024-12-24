@@ -115,9 +115,9 @@ export function render(options?: RenderElementOptions): TodoElementPreRender {
                                             (vs1: ShownTodo) => {
                                                 return secureChildComp(
                                                     Item,
-                                                    (vs: ShownTodo) => ({
-                                                        title: vs.title,
-                                                        isCompleted: vs.isCompleted,
+                                                    (vs1: ShownTodo) => ({
+                                                        title: vs1.title,
+                                                        isCompleted: vs1.isCompleted,
                                                     }),
                                                     refItems(),
                                                 );

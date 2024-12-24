@@ -60,7 +60,7 @@ export function render(options?: RenderElementOptions): TreeNodeElementPreRender
                                 (vs) => vs.node?.children,
                                 (vs1: Node) => {
                                     return e('li', {}, [
-                                        childComp(TreeNode, (vs: Node) => vs, refAR1()),
+                                        childComp(TreeNode, (vs1: Node) => vs1, refAR1()),
                                     ]);
                                 },
                                 'id',

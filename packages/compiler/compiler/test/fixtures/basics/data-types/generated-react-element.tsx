@@ -25,7 +25,7 @@ export interface DataTypesElementProps extends Jay4ReactElementProps<DataTypesVi
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: DataTypesElementProps): ReactElement<DataTypesElementProps, any> {
     return (<div>
         <span>{vs.s1}</span>

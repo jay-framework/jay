@@ -15,7 +15,7 @@ export interface AttributesElementProps extends Jay4ReactElementProps<Attributes
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: AttributesElementProps): ReactElement<AttributesElementProps, any> {
     return <div>
         <div style={{background: "red"}}>{vs.text}</div>

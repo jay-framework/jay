@@ -12,7 +12,7 @@ export interface DynamicTextInputTypesElementProps extends Jay4ReactElementProps
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: DynamicTextInputTypesElementProps): ReactElement<DynamicTextInputTypesElementProps, any> {
     return <div>
         <div>{vs.n1}</div>

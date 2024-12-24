@@ -50,10 +50,10 @@ export function render(options?: RenderElementOptions): RecursiveComponentsEleme
                             return e('li', {}, [
                                 childComp(
                                     TreeNode,
-                                    (vs: Node) => ({
-                                        name: vs.name,
-                                        id: vs.id,
-                                        children: vs.children,
+                                    (vs1: Node) => ({
+                                        name: vs1.name,
+                                        id: vs1.id,
+                                        children: vs1.children,
                                     }),
                                     refCounter1(),
                                 ),
@@ -65,7 +65,7 @@ export function render(options?: RenderElementOptions): RecursiveComponentsEleme
                         (vs) => vs.children,
                         (vs1: Node) => {
                             return e('li', {}, [
-                                childComp(TreeNode, (vs: Node) => vs, refCounterTwo()),
+                                childComp(TreeNode, (vs1: Node) => vs1, refCounterTwo()),
                             ]);
                         },
                         'id',

@@ -20,7 +20,7 @@ export interface ConditionsWithEnumElementProps extends Jay4ReactElementProps<Co
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: ConditionsWithEnumElementProps): ReactElement<ConditionsWithEnumElementProps, any> {
     return <div>
         {vs.cond === Cond.one && (<div style={{color: "red"}}>{vs.text1}</div>)}

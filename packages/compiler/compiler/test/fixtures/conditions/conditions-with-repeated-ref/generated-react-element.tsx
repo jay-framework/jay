@@ -16,10 +16,10 @@ export interface ConditionsWithRepeatedRefElementProps extends Jay4ReactElementP
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: ConditionsWithRepeatedRefElementProps): ReactElement<ConditionsWithRepeatedRefElementProps, any> {
     return <div>
-        {vs.cond && (<div {...eventsFor(eventsContext, 'text1')} style={{color: "red"}}><h1>{vs.text1}</h1></div>)}
-        {!vs.cond && (<div {...eventsFor(eventsContext, 'text1')} style={{color: "green"}}><span>{vs.text2}</span></div>)}
+        {vs.cond && (<div {...eventsFor(context, 'text1')} style={{color: "red"}}><h1>{vs.text1}</h1></div>)}
+        {!vs.cond && (<div {...eventsFor(context, 'text1')} style={{color: "green"}}><span>{vs.text2}</span></div>)}
     </div>;
 }

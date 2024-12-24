@@ -13,7 +13,7 @@ export interface ConditionsElementProps extends Jay4ReactElementProps<Conditions
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: ConditionsElementProps): ReactElement<ConditionsElementProps, any> {
     return <div>
         {vs.cond && (<div style={{color:"red"}}>{vs.text1}</div>)}

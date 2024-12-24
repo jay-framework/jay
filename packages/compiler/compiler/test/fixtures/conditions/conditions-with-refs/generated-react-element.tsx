@@ -17,12 +17,12 @@ export interface ConditionsWithRefsElementProps extends Jay4ReactElementProps<Co
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: ConditionsWithRefsElementProps): ReactElement<ConditionsWithRefsElementProps, any> {
     return <div>
-        {vs.cond && (<div {...eventsFor(eventsContext, 'text1')} style={{color: "red"}}>{vs.text1}</div>)}
+        {vs.cond && (<div {...eventsFor(context, 'text1')} style={{color: "red"}}>{vs.text1}</div>)}
         {!vs.cond && (<div style={{color: "green"}}>
-            <span {...eventsFor(eventsContext, 'text2')}>{vs.text2}</span>
+            <span {...eventsFor(context, 'text2')}>{vs.text2}</span>
         </div>)}
     </div>;
 }

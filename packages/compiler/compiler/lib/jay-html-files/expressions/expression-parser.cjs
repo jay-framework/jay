@@ -170,7 +170,7 @@ function peg$parse(input, options) {
             return RenderFragment.merge(result, renderClass(classExp), ' ')
           }, renderClass(head));
           return isDynamic?
-            classString.map(_ => `da(vs => \`${_}\`)`):
+            classString.map(_ => `da(${vars.currentVar} => \`${_}\`)`):
             classString.map(_ => `'${_}'`);
         },
       peg$c2 = "{",
@@ -229,13 +229,13 @@ function peg$parse(input, options) {
       peg$c40 = function(template) {
         let [renderFragment, isDynamic] = template;
         return isDynamic ?
-            renderFragment.map(_ => `ba(vs => ${_})`).plusImport(ba):
+            renderFragment.map(_ => `ba(${vars.currentVar} => ${_})`).plusImport(ba):
             renderFragment;
       },
       peg$c41 = function(template) {
         let [renderFragment, isDynamic] = template;
         return isDynamic ?
-            renderFragment.map(_ => `da(vs => ${_})`).plusImport(da):
+            renderFragment.map(_ => `da(${vars.currentVar} => ${_})`).plusImport(da):
             renderFragment;
       },
       peg$c42 = function(num) {
@@ -248,7 +248,7 @@ function peg$parse(input, options) {
       peg$c44 = function(template) {
         let [renderFragment, isDynamic] = template;
         return isDynamic ?
-            renderFragment.map(_ => `dp(vs => ${_})`).plusImport(dp):
+            renderFragment.map(_ => `dp(${vars.currentVar} => ${_})`).plusImport(dp):
             renderFragment;
       },
       peg$c45 = function(template) {
@@ -285,7 +285,7 @@ function peg$parse(input, options) {
       peg$c48 = function(template) {
         let [renderFragment, isDynamic] = template;
         return isDynamic ?
-            renderFragment.map(_ => `dt(vs => ${_})`).plusImport(dt):
+            renderFragment.map(_ => `dt(${vars.currentVar} => ${_})`).plusImport(dt):
             renderFragment;
       },
       peg$c49 = function(a, head, tail) {

@@ -13,7 +13,7 @@ export interface Composite2ElementProps extends Jay4ReactElementProps<Composite2
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: Composite2ElementProps): ReactElement<Composite2ElementProps, any> {
     return <div>
         <h1>{vs.title}</h1>

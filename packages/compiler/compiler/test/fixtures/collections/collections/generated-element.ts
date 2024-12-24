@@ -51,7 +51,7 @@ export function render(options?: RenderElementOptions): CollectionsElementPreRen
                                                 'color:green; width: 100px; display: inline-block;',
                                         },
                                     },
-                                    [dt((vs) => vs.name)],
+                                    [dt((vs1) => vs1.name)],
                                 ),
                                 e(
                                     'span',
@@ -61,7 +61,7 @@ export function render(options?: RenderElementOptions): CollectionsElementPreRen
                                                 'color:red; width: 100px; display: inline-block;',
                                         },
                                     },
-                                    [dt((vs) => vs.completed)],
+                                    [dt((vs1) => vs1.completed)],
                                 ),
                                 e(
                                     'span',
@@ -71,7 +71,7 @@ export function render(options?: RenderElementOptions): CollectionsElementPreRen
                                                 'color:blue; width: 100px; display: inline-block;',
                                         },
                                     },
-                                    [dt((vs) => vs.cost)],
+                                    [dt((vs1) => vs1.cost)],
                                 ),
                             ]);
                         },

@@ -61,7 +61,7 @@ export function render(
                     (vs1: NestedCounter) => {
                         return childComp(
                             Counter,
-                            (vs: NestedCounter) => ({ initialValue: vs.counter }),
+                            (vs1: NestedCounter) => ({ initialValue: vs1.counter }),
                             refCounter1(),
                         );
                     },

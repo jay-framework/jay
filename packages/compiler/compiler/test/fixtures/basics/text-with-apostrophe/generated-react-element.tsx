@@ -11,7 +11,7 @@ export interface TextWithApostropheElementProps extends Jay4ReactElementProps<Te
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: TextWithApostropheElementProps): ReactElement<TextWithApostropheElementProps, any> {
     return <div>static text's</div>;
 }

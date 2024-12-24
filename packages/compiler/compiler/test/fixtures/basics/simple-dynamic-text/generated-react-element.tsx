@@ -11,7 +11,7 @@ export interface SimpleDynamicTextElementProps extends Jay4ReactElementProps<Sim
 
 export function render({
     vs,
-    eventsContext,
+    context,
 }: SimpleDynamicTextElementProps): ReactElement<SimpleDynamicTextElementProps, any> {
     return <div>{vs.s1}</div>;
 }
