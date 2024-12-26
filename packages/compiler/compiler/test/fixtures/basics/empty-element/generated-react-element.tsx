@@ -11,8 +11,10 @@ export function render({
     vs,
     context,
 }: EmptyElementElementProps): ReactElement<EmptyElementElementProps, any> {
-    return (<div>
-        {/* @ts-ignore */}
-        <div attr="value"/>
-    </div>);
+    return (
+        <div>
+            {/* @ts-ignore */}
+            <div attr="value" />
+        </div>
+    );
 }

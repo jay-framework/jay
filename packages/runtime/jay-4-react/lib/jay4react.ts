@@ -64,7 +64,7 @@ export function jay4react<
         }
 
         return reactElement({
-            vs:viewState,
+            vs: viewState,
             context: _eventsContext.current,
         } as ReactElementProps);
     };

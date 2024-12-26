@@ -1,8 +1,5 @@
-import { WithValidations } from 'jay-compiler-shared';
-import {
-    analyzeExportedTypes,
-    ResolveTsConfigOptions,
-} from '../analyze-exported-types/analyze-exported-types';
+import { isComponentType, WithValidations } from 'jay-compiler-shared';
+import { analyzeExportedTypes, ResolveTsConfigOptions } from 'jay-compiler-analyze-exported-types';
 import { JayComponentType } from 'jay-compiler-shared';
 
 export function generateComponentRefsDefinitionFile(
@@ -11,8 +8,8 @@ export function generateComponentRefsDefinitionFile(
 ): WithValidations<string> {
     let types = analyzeExportedTypes(filepath, options);
 
-    let componentTypes: Array<JayComponentType> = types.filter(
-        (_) => _ instanceof JayComponentType,
+    let componentTypes: Array<JayComponentType> = types.filter((_) =>
+        isComponentType(_),
     ) as Array<JayComponentType>;
 
     let relativeFilename = filepath.substring(filepath.lastIndexOf('/') + 1);

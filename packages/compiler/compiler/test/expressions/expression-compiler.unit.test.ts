@@ -9,7 +9,8 @@ import {
     parseEnumValues,
     parseImportNames,
     parseIsEnum,
-    parsePropertyExpression, parseReactTextExpression,
+    parsePropertyExpression,
+    parseReactTextExpression,
     parseTextExpression,
     Variables,
 } from '../../lib/jay-html-files/expressions/expression-compiler';
@@ -52,7 +53,8 @@ describe('expression-compiler', () => {
                 }),
             );
             expect(variables.resolveAccessor(['child', 'name', 'bla'])).toEqual(
-                new Accessor('vs',
+                new Accessor(
+                    'vs',
                     ['child', 'name', 'bla'],
                     ['the data field [child.name.bla] not found in Jay data'],
                     JayUnknown,
@@ -454,12 +456,12 @@ describe('expression-compiler', () => {
 
         it('constant string expression', () => {
             const actual = parseReactTextExpression('some constant string', defaultVars);
-            expect(actual.rendered).toEqual("some constant string");
+            expect(actual.rendered).toEqual('some constant string');
         });
 
         it('constant number expression', () => {
             const actual = parseReactTextExpression('123123', defaultVars);
-            expect(actual.rendered).toEqual("123123");
+            expect(actual.rendered).toEqual('123123');
         });
 
         it('single accessor', () => {
@@ -473,10 +475,11 @@ describe('expression-compiler', () => {
         });
 
         it('multi accessor in text', () => {
-            const actual = parseReactTextExpression('some {string1} and {string3} thing', defaultVars);
-            expect(actual.rendered).toEqual(
-                'some {vs.string1} and {vs.string3} thing',
+            const actual = parseReactTextExpression(
+                'some {string1} and {string3} thing',
+                defaultVars,
             );
+            expect(actual.rendered).toEqual('some {vs.string1} and {vs.string3} thing');
         });
 
         it('accessor in text not in type renders the type should reports the problem', () => {
@@ -494,22 +497,22 @@ describe('expression-compiler', () => {
         describe('trim whitespace', () => {
             it('trim whitespace to a single space', () => {
                 const actual = parseReactTextExpression('  text  ', defaultVars);
-                expect(actual.rendered).toEqual(" text ");
+                expect(actual.rendered).toEqual(' text ');
             });
 
             it('trim left whitespace to a single space', () => {
                 const actual = parseReactTextExpression('  text', defaultVars);
-                expect(actual.rendered).toEqual(" text");
+                expect(actual.rendered).toEqual(' text');
             });
 
             it('right left whitespace to a single space', () => {
                 const actual = parseReactTextExpression('text  ', defaultVars);
-                expect(actual.rendered).toEqual("text ");
+                expect(actual.rendered).toEqual('text ');
             });
 
             it('middle whitespace to a single space', () => {
                 const actual = parseReactTextExpression('text     text2', defaultVars);
-                expect(actual.rendered).toEqual("text text2");
+                expect(actual.rendered).toEqual('text text2');
             });
 
             it('left whitespace to template', () => {
@@ -529,18 +532,18 @@ describe('expression-compiler', () => {
 
             it('middle multiline whitespace to a single space', () => {
                 const actual = parseReactTextExpression('text   \n \t text2', defaultVars);
-                expect(actual.rendered).toEqual("text text2");
+                expect(actual.rendered).toEqual('text text2');
             });
         });
 
         it('use space instead of line break', () => {
             const actual = parseReactTextExpression('abc\ndef', defaultVars);
-            expect(actual.rendered).toEqual("abc def");
+            expect(actual.rendered).toEqual('abc def');
         });
 
         it('trim all whitespace to a single space', () => {
             const actual = parseReactTextExpression('  \n\t\r\n  ', defaultVars);
-            expect(actual.rendered).toEqual(" ");
+            expect(actual.rendered).toEqual(' ');
         });
 
         it('fail and report broken expression', () => {
@@ -611,7 +614,8 @@ describe('expression-compiler', () => {
         it('parse wrong accessor', () => {
             const actual = parseAccessor('object2.not_a_member', defaultVars);
             expect(actual).toEqual(
-                new Accessor('vs',
+                new Accessor(
+                    'vs',
                     ['object2', 'not_a_member'],
                     ['the data field [object2.not_a_member] not found in Jay data'],
                     JayUnknown,

@@ -1,4 +1,4 @@
-import { analyzeExportedTypes } from '../../lib/analyze-exported-types/analyze-exported-types';
+import { analyzeExportedTypes } from '../lib/analyze-exported-types';
 
 import {
     JayArrayType,
@@ -22,17 +22,16 @@ describe('typescript-compiler', () => {
         s3: JayString,
         n3: JayNumber,
     });
-    const relativePath = './test/fixtures/tsconfig.json';
+
+    const FIXTURES = './test/fixtures';
+    const TSCONFIG = FIXTURES + '/tsconfig.json';
 
     // todo no need to extract types from element files
     describe.skip('extract types from element files', () => {
         it('should extract types from an element file', () => {
-            let types = analyzeExportedTypes(
-                './test/fixtures/basics/attributes/generated-element.ts',
-                {
-                    relativePath,
-                },
-            );
+            let types = analyzeExportedTypes(FIXTURES + '/basics/attributes/generated-element.ts', {
+                relativePath: TSCONFIG,
+            });
 
             expect(types).toEqual(
                 expect.arrayContaining([
@@ -51,12 +50,9 @@ describe('typescript-compiler', () => {
         });
 
         it('should extract types from a element file, adding .ts extension automatically', () => {
-            let types = analyzeExportedTypes(
-                './test/fixtures/basics/attributes/generated-element',
-                {
-                    relativePath,
-                },
-            );
+            let types = analyzeExportedTypes(FIXTURES + '/basics/attributes/generated-element', {
+                relativePath: TSCONFIG,
+            });
 
             expect(types).toEqual(
                 expect.arrayContaining([
@@ -78,12 +74,9 @@ describe('typescript-compiler', () => {
     // todo no need to extract types from element definition files
     describe.skip('extract types from element definition files', () => {
         it('should extract types from an element definition file', () => {
-            let types = analyzeExportedTypes(
-                './test/fixtures/basics/data-types/generated-element',
-                {
-                    relativePath,
-                },
-            );
+            let types = analyzeExportedTypes(FIXTURES + '/basics/data-types/generated-element', {
+                relativePath: TSCONFIG,
+            });
 
             expect(types).toEqual(
                 expect.arrayContaining([
@@ -104,12 +97,9 @@ describe('typescript-compiler', () => {
         });
 
         it('should extract types from a definition file, auto adding .d.ts', () => {
-            let types = analyzeExportedTypes(
-                './test/fixtures/basics/data-types/generated-element',
-                {
-                    relativePath,
-                },
-            );
+            let types = analyzeExportedTypes(FIXTURES + '/basics/data-types/generated-element', {
+                relativePath: TSCONFIG,
+            });
 
             expect(types).toEqual(
                 expect.arrayContaining([
@@ -131,9 +121,9 @@ describe('typescript-compiler', () => {
     });
 
     describe('extract types from component files', () => {
-        it('should extract types from a simple component using makeJayComponent', () => {
-            let types = analyzeExportedTypes('./test/fixtures/components/counter/counter', {
-                relativePath,
+        it('component using makeJayComponent', () => {
+            let types = analyzeExportedTypes(FIXTURES + '/components/counter/counter', {
+                relativePath: TSCONFIG,
             });
 
             expect(types).toEqual(
@@ -149,19 +139,19 @@ describe('typescript-compiler', () => {
             );
         });
 
-        it('should extract types from a simple component with explicit written component constructor', () => {
-            let types = analyzeExportedTypes('./test/fixtures/components/imports/component1', {
-                relativePath,
+        it('component with explicit written component constructor', () => {
+            let types = analyzeExportedTypes(FIXTURES + '/components/imports/component1', {
+                relativePath: TSCONFIG,
             });
 
             expect(types).toEqual(expect.arrayContaining([new JayComponentType('comp1', [])]));
         });
 
-        it('should extract types from a simple component with explicit written component constructor and type', () => {
+        it('component with explicit written component constructor and type', () => {
             let types = analyzeExportedTypes(
-                './test/fixtures/components/recursive-components-2/tree-node.d.ts',
+                FIXTURES + '/components/recursive-components-2/tree-node.d.ts',
                 {
-                    relativePath,
+                    relativePath: TSCONFIG,
                 },
             );
 
@@ -183,11 +173,11 @@ describe('typescript-compiler', () => {
             );
         });
 
-        it('should extract types from a recursive component', () => {
+        it('recursive component', () => {
             let types = analyzeExportedTypes(
-                './test/fixtures/components/recursive-components/tree-node',
+                FIXTURES + '/components/recursive-components/tree-node',
                 {
-                    relativePath,
+                    relativePath: TSCONFIG,
                 },
             );
 

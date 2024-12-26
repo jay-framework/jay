@@ -7,9 +7,11 @@ import {
     RenderElementOptions,
 } from 'jay-runtime';
 import { mainRoot as mr, secureChildComp } from 'jay-secure';
-import { AutoCounterComponentType } from './auto-counter-refs';
-import { AutoCounter } from './auto-counter?jay-mainSandbox';
+// @ts-expect-error Cannot find module
 import { funcRepository } from './function-repository';
+import { AutoCounterComponentType } from './auto-counter-refs';
+// @ts-expect-error Cannot find module
+import { AutoCounter } from './auto-counter?jay-mainSandbox';
 
 export interface AppViewState {
     incrementBy: number;

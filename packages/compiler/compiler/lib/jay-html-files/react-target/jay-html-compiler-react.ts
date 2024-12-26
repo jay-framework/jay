@@ -1,33 +1,39 @@
 import {
-    Import, Imports, ImportsFor, JayArrayType,
+    Import,
+    Imports,
+    ImportsFor,
+    JayArrayType,
     JayImportLink,
-    JayType, JayUnknown,
+    JayType,
+    JayUnknown,
     MainRuntimeModes,
     RenderFragment,
     RuntimeMode,
-    WithValidations
-} from "jay-compiler-shared";
-import {JayHtmlSourceFile} from "../jay-target/jay-html-source-file";
-import {HTMLElement, NodeType} from "node-html-parser";
+    WithValidations,
+} from 'jay-compiler-shared';
+import { JayHtmlSourceFile } from '../jay-target/jay-html-source-file';
+import { HTMLElement, NodeType } from 'node-html-parser';
 import {
     parseAccessor,
-    parseReactClassExpression, parseReactCondition, parseReactPropertyExpression,
+    parseReactClassExpression,
+    parseReactCondition,
+    parseReactPropertyExpression,
     parseReactTextExpression,
-    Variables
-} from "../expressions/expression-compiler";
+    Variables,
+} from '../expressions/expression-compiler';
 import Node from 'node-html-parser/dist/nodes/node';
-import {camelCase} from "camel-case";
+import { camelCase } from 'camel-case';
 import parse from 'style-to-object';
-import {ensureSingleChildElement, isConditional, isForEach} from "../jay-target/jay-html-helpers";
-import {generateTypes} from "../jay-target/jay-html-compile-types";
-import {Indent} from "../jay-target/indent";
+import { ensureSingleChildElement, isConditional, isForEach } from '../jay-target/jay-html-helpers';
+import { generateTypes } from '../jay-target/jay-html-compile-types';
+import { Indent } from '../jay-target/indent';
 import {
     elementNameToJayType,
     newAutoRefNameGenerator,
     optimizeRefs,
-    renderRefsType
-} from "../jay-target/jay-html-compile-refs";
-import {processImportedComponents, renderImports} from "../jay-target/jay-html-compile-imports";
+    renderRefsType,
+} from '../jay-target/jay-html-compile-refs';
+import { processImportedComponents, renderImports } from '../jay-target/jay-html-compile-imports';
 
 interface RenderContext {
     variables: Variables;
@@ -42,12 +48,16 @@ interface RenderContext {
 const attributesRequiresQuotes = /[- ]/;
 function inlineStyleToReact(inlineStyle: string): string {
     const styleObject = parse(inlineStyle);
-    return '{' + Object.entries(styleObject).map(([key, value]) => {
-        if (key.match(attributesRequiresQuotes))
-            return `"${key}": "${value}"`
-        else
-            return `${key}: "${value}"`
-    }).join(',') + '}';
+    return (
+        '{' +
+        Object.entries(styleObject)
+            .map(([key, value]) => {
+                if (key.match(attributesRequiresQuotes)) return `"${key}": "${value}"`;
+                else return `${key}: "${value}"`;
+            })
+            .join(',') +
+        '}'
+    );
 }
 
 const PROPERTY = 1,
@@ -58,8 +68,8 @@ const propertyMapping = {
     disabled: { type: BOOLEAN_ATTRIBUTE },
 };
 const reactRenamedAttributes = {
-    'for': 'htmlFor'
-}
+    for: 'htmlFor',
+};
 function renderAttributes(element: HTMLElement, { variables }: RenderContext): RenderFragment {
     let attributes = element.attributes;
     let renderedAttributes = [];
@@ -69,12 +79,7 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             renderedAttributes.push(
                 new RenderFragment(`key={${variables.currentVar}.${attributes[attrName]}}`),
             );
-        else if (
-            attrName === 'if' ||
-            attrName === 'forEach' ||
-            attrName === 'ref'
-        )
-            return;
+        else if (attrName === 'if' || attrName === 'forEach' || attrName === 'ref') return;
         else if (attrName === 'style')
             renderedAttributes.push(
                 new RenderFragment(`style={${inlineStyleToReact(attributes[attrName])}}`),
@@ -87,17 +92,17 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             if (attributeExpression.rendered === "''")
                 renderedAttributes.push(attributeExpression.map((_) => `${reactAttributeName}`));
             else
-                renderedAttributes.push(attributeExpression.map((_) => `${reactAttributeName}=${_}`));
+                renderedAttributes.push(
+                    attributeExpression.map((_) => `${reactAttributeName}=${_}`),
+                );
         }
     });
 
-    return renderedAttributes
-        .reduce(
-            (prev, current) => RenderFragment.merge(prev, current, ' '),
-            RenderFragment.empty(),
-        );
+    return renderedAttributes.reduce(
+        (prev, current) => RenderFragment.merge(prev, current, ' '),
+        RenderFragment.empty(),
+    );
 }
-
 
 function renderElementRef(
     element: HTMLElement,
@@ -116,10 +121,14 @@ function renderElementRef(
                 viewStateType: variables.currentType,
             },
         ];
-        return new RenderFragment(`{...eventsFor(${variables.currentContext}, '${refName}')}`, Imports.for(Import.eventsFor), [], refs);
+        return new RenderFragment(
+            `{...eventsFor(${variables.currentContext}, '${refName}')}`,
+            Imports.for(Import.eventsFor),
+            [],
+            refs,
+        );
     } else return RenderFragment.empty();
 }
-
 
 function renderReactNode(node: Node, renderContext: RenderContext): RenderFragment {
     let { variables, importedSymbols, importedSandboxedSymbols, indent, dynamicRef, importerMode } =
@@ -129,7 +138,9 @@ function renderReactNode(node: Node, renderContext: RenderContext): RenderFragme
         return s.replace(/'/g, "\\'");
     }
     function renderTextNode(variables: Variables, text: string, indent: Indent): RenderFragment {
-        return parseReactTextExpression(textEscape(text), variables).map((_) => indent.firstLine + _);
+        return parseReactTextExpression(textEscape(text), variables).map(
+            (_) => indent.firstLine + _,
+        );
     }
 
     function e(
@@ -139,7 +150,7 @@ function renderReactNode(node: Node, renderContext: RenderContext): RenderFragme
         ref: RenderFragment,
         currIndent: Indent = indent,
     ): RenderFragment {
-        ref = ref.map(_ => _.length? ' ' + _: '');
+        ref = ref.map((_) => (_.length ? ' ' + _ : ''));
         if (children.rendered.length === 0)
             return new RenderFragment(
                 `${currIndent.firstLine}<${tagName}${ref.rendered} ${attributes.rendered}/>`,
@@ -148,12 +159,12 @@ function renderReactNode(node: Node, renderContext: RenderContext): RenderFragme
                 [...attributes.refs, ...children.refs, ...ref.refs],
             );
         else
-        return new RenderFragment(
-            `${currIndent.firstLine}<${tagName}${ref.rendered} ${attributes.rendered}>${children.rendered}${currIndent.lastLine}</${tagName}>`,
-            children.imports.plus(attributes.imports).plus(ref.imports),
-            [...attributes.validations, ...children.validations, ...ref.validations],
-            [...attributes.refs, ...children.refs, ...ref.refs],
-        );
+            return new RenderFragment(
+                `${currIndent.firstLine}<${tagName}${ref.rendered} ${attributes.rendered}>${children.rendered}${currIndent.lastLine}</${tagName}>`,
+                children.imports.plus(attributes.imports).plus(ref.imports),
+                [...attributes.validations, ...children.validations, ...ref.validations],
+                [...attributes.refs, ...children.refs, ...ref.refs],
+            );
     }
 
     function c(renderedCondition: RenderFragment, childElement: RenderFragment) {
@@ -179,7 +190,7 @@ ${indent.curr}return (${childElement.rendered})})}`,
             childElement.imports,
             [...renderedForEach.validations, ...childElement.validations],
             childElement.refs,
-        )
+        );
     }
 
     function renderHtmlElement(htmlElement, newVariables: Variables, currIndent: Indent = indent) {
@@ -189,30 +200,35 @@ ${indent.curr}return (${childElement.rendered})})}`,
         let childNodes =
             node.childNodes.length > 1
                 ? node.childNodes.filter(
-                    (_) => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '',
-                )
+                      (_) => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '',
+                  )
                 : node.childNodes;
 
         let childIndent = currIndent.child();
         if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE)
             childIndent = childIndent.noFirstLineBreak();
 
-        let childContext = { ...renderContext, variables: newVariables, indent: childIndent, dynamicRef };
+        let childContext = {
+            ...renderContext,
+            variables: newVariables,
+            indent: childIndent,
+            dynamicRef,
+        };
 
         let childRenders =
             childNodes.length === 0
                 ? RenderFragment.empty()
                 : childNodes
-                    .map((_) => renderReactNode(_, childContext))
-                    .reduce(
-                        (prev, current) => RenderFragment.merge(prev, current, '\n'),
-                        RenderFragment.empty(),
-                    )
-                    .map((children) =>
-                        childIndent.firstLineBreak
-                            ? `\n${children}\n${currIndent.firstLine}`
-                            : children,
-                    );
+                      .map((_) => renderReactNode(_, childContext))
+                      .reduce(
+                          (prev, current) => RenderFragment.merge(prev, current, '\n'),
+                          RenderFragment.empty(),
+                      )
+                      .map((children) =>
+                          childIndent.firstLineBreak
+                              ? `\n${children}\n${currIndent.firstLine}`
+                              : children,
+                      );
 
         let attributes = renderAttributes(htmlElement, childContext);
         let renderedRef = renderElementRef(htmlElement, childContext);
@@ -252,9 +268,14 @@ ${indent.curr}return (${childElement.rendered})})}`,
                     forEachVariables,
                     indent.child().noFirstLineBreak().withLastLineBreak(),
                 );
-                return renderForEach(forEachFragment, variables, forEachVariables, trackBy, childElement);
-            } else
-                return renderHtmlElement(htmlElement, variables);
+                return renderForEach(
+                    forEachFragment,
+                    variables,
+                    forEachVariables,
+                    trackBy,
+                    childElement,
+                );
+            } else return renderHtmlElement(htmlElement, variables);
         case NodeType.COMMENT_NODE:
             break;
     }
@@ -293,18 +314,14 @@ function renderFunctionImplementation(
             importerMode,
         });
         renderedRoot = optimizeRefs(renderedRoot);
-    }
-    else
-        renderedRoot = new RenderFragment('', Imports.none(), rootElement.validations)
+    } else renderedRoot = new RenderFragment('', Imports.none(), rootElement.validations);
     const elementType = baseElementName + 'Element';
     const refsType = baseElementName + 'ElementRefs';
     const viewStateType = types.name;
     const renderType = `${elementType}Render`;
     const reactPropsType = `${elementType}Props`;
     const preRenderType = `${elementType}PreRender`;
-    let imports = Imports.none()
-        .plus(Import.Jay4ReactElementProps)
-        .plus(Import.ReactElement);
+    let imports = Imports.none().plus(Import.Jay4ReactElementProps).plus(Import.ReactElement);
     const {
         imports: refImports,
         renderedRefs,
@@ -312,15 +329,17 @@ function renderFunctionImplementation(
     } = renderRefsType(renderedRoot.refs, refsType);
     imports = imports.plus(refImports);
 
-    const renderedReactProps = `export interface ${reactPropsType} extends Jay4ReactElementProps<${viewStateType}> {}`
+    const renderedReactProps = `export interface ${reactPropsType} extends Jay4ReactElementProps<${viewStateType}> {}`;
 
-    const renderedImplementation = renderedRoot.map(rootNode =>
-        `export function render({
+    const renderedImplementation = renderedRoot.map(
+        (rootNode) =>
+            `export function render({
     vs,
     context,
 }: ${reactPropsType}): ReactElement<${reactPropsType}, any> {
     return ${rootNode};
-}`)
+}`,
+    );
 
     return {
         renderedRefs,
@@ -329,20 +348,19 @@ function renderFunctionImplementation(
         preRenderType,
         refsType,
         renderedImplementation: renderedImplementation.plusImport(imports),
-        refImportsInUse
+        refImportsInUse,
     };
 }
 
-
 export function generateElementDefinitionFileReactTarget(
-    parsedFile: WithValidations<JayHtmlSourceFile>
+    parsedFile: WithValidations<JayHtmlSourceFile>,
 ): WithValidations<string> {
     return null;
 }
 
 export function generateElementFileReactTarget(
     jayFile: JayHtmlSourceFile,
-    importerMode: MainRuntimeModes
+    importerMode: MainRuntimeModes,
 ): WithValidations<string> {
     const types = generateTypes(jayFile.types);
     const { renderedRefs, renderedReactProps, renderedImplementation, refImportsInUse } =
@@ -352,7 +370,7 @@ export function generateElementFileReactTarget(
             jayFile.imports,
             jayFile.baseElementName,
             importerMode,
-        )
+        );
     let renderedFile = [
         renderImports(
             renderedImplementation.imports,

@@ -7,7 +7,8 @@ export interface SimpleDynamicTextViewState {
 
 export interface SimpleDynamicTextElementRefs {}
 
-export interface SimpleDynamicTextElementProps extends Jay4ReactElementProps<SimpleDynamicTextViewState> {}
+export interface SimpleDynamicTextElementProps
+    extends Jay4ReactElementProps<SimpleDynamicTextViewState> {}
 
 export function render({
     vs,

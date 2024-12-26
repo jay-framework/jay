@@ -1,4 +1,11 @@
-import {JayArrayType, JayAtomicType, JayEnumType, JayImportedType, JayObjectType, JayType} from "jay-compiler-shared";
+import {
+    JayArrayType,
+    JayAtomicType,
+    JayEnumType,
+    JayImportedType,
+    JayObjectType,
+    JayType,
+} from 'jay-compiler-shared';
 
 function renderInterface(aType: JayType): string {
     let childInterfaces = [];

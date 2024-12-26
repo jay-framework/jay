@@ -8,14 +8,19 @@ export interface DynamicTextInputTypesViewState {
 
 export interface DynamicTextInputTypesElementRefs {}
 
-export interface DynamicTextInputTypesElementProps extends Jay4ReactElementProps<DynamicTextInputTypesViewState> {}
+export interface DynamicTextInputTypesElementProps
+    extends Jay4ReactElementProps<DynamicTextInputTypesViewState> {}
 
 export function render({
     vs,
     context,
 }: DynamicTextInputTypesElementProps): ReactElement<DynamicTextInputTypesElementProps, any> {
-    return <div>
-        <div>{vs.n1}</div>
-        <div>{vs.n1} + {vs.n2}</div>
-    </div>;
+    return (
+        <div>
+            <div>{vs.n1}</div>
+            <div>
+                {vs.n1} + {vs.n2}
+            </div>
+        </div>
+    );
 }

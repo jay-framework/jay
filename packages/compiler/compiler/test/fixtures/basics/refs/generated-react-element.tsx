@@ -1,5 +1,5 @@
-import {HTMLElementProxy} from "jay-runtime";
-import { Jay4ReactElementProps, eventsFor} from 'jay-4-react';
+import { HTMLElementProxy } from 'jay-runtime';
+import { Jay4ReactElementProps, eventsFor } from 'jay-4-react';
 import { ReactElement } from 'react';
 
 export interface RefsViewState {
@@ -14,15 +14,14 @@ export interface RefsElementRefs {
 
 export interface RefsElementProps extends Jay4ReactElementProps<RefsViewState> {}
 
-export function render({
-    vs,
-    context,
-}: RefsElementProps): ReactElement<RefsElementProps, any> {
-    return <div>
-        <div {...eventsFor(context, 'ref1')}>{vs.text}</div>
-        <div {...eventsFor(context, 'ref')}>{vs.text}</div>
+export function render({ vs, context }: RefsElementProps): ReactElement<RefsElementProps, any> {
+    return (
         <div>
-            <div {...eventsFor(context, 'ref3')}>{vs.text}</div>
+            <div {...eventsFor(context, 'ref1')}>{vs.text}</div>
+            <div {...eventsFor(context, 'ref')}>{vs.text}</div>
+            <div>
+                <div {...eventsFor(context, 'ref3')}>{vs.text}</div>
+            </div>
         </div>
-    </div>;
+    );
 }

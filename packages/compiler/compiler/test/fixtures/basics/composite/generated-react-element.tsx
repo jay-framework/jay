@@ -14,9 +14,11 @@ export function render({
     vs,
     context,
 }: CompositeElementProps): ReactElement<CompositeElementProps, any> {
-    return <div>
-        <div>{vs.text}</div>
-        <div>static</div>
-        <div>{vs.text2}</div>
-    </div>;
+    return (
+        <div>
+            <div>{vs.text}</div>
+            <div>static</div>
+            <div>{vs.text2}</div>
+        </div>
+    );
 }

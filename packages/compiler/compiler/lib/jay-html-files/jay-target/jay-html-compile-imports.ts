@@ -2,11 +2,14 @@ import {
     getModeFileExtension,
     Imports,
     ImportsFor,
+    isComponentType,
+    isImportedType,
+    isObjectType,
     JayComponentType,
     JayImportedType,
     JayImportLink,
-    RuntimeMode
-} from "jay-compiler-shared";
+    RuntimeMode,
+} from 'jay-compiler-shared';
 
 export function renderImports(
     imports: Imports,
@@ -25,11 +28,7 @@ export function renderImports(
 
         let imports = [];
         importStatement.names
-            .filter(
-                (symbol) =>
-                    symbol.type instanceof JayImportedType &&
-                    symbol.type.type instanceof JayComponentType,
-            )
+            .filter((symbol) => isImportedType(symbol.type) && isComponentType(symbol.type.type))
             .map((symbol) => ((symbol.type as JayImportedType).type as JayComponentType).name)
             .filter(
                 (compType) =>
@@ -67,6 +66,6 @@ export function processImportedComponents(importStatements: JayImportLink[]) {
             });
             return processedImports;
         },
-        {importedSymbols: new Set<string>(), importedSandboxedSymbols: new Set<string>()},
+        { importedSymbols: new Set<string>(), importedSandboxedSymbols: new Set<string>() },
     );
 }

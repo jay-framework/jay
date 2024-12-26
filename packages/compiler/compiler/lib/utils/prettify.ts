@@ -39,7 +39,12 @@ export function removeComments(code: string): string {
     return code
         .split('\n')
         .filter(
-            (line) => !(line.includes('// @ts-expect-error ') || line.includes('// @ts-ignore')),
+            (line) =>
+                !(
+                    line.includes('// @ts-expect-error ') ||
+                    line.includes('// @ts-ignore') ||
+                    line.includes('{/* @ts-ignore */}')
+                ),
         )
         .join('\n');
 }

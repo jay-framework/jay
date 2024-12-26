@@ -1,5 +1,5 @@
-import {HTMLElementProxy} from "jay-runtime";
-import { Jay4ReactElementProps, eventsFor} from 'jay-4-react';
+import { HTMLElementProxy } from 'jay-runtime';
+import { Jay4ReactElementProps, eventsFor } from 'jay-4-react';
 import { ReactElement } from 'react';
 
 export interface CounterViewState {
@@ -17,9 +17,11 @@ export function render({
     vs,
     context,
 }: CounterElementProps): ReactElement<CounterElementProps, any> {
-    return <div>
-        <button {...eventsFor(context, 'subtracter')}>-</button>
-        <span style={{margin: "0 16px"}}>{vs.count}</span>
-        <button {...eventsFor(context, 'adderButton')}>+</button>
-    </div>;
+    return (
+        <div>
+            <button {...eventsFor(context, 'subtracter')}>-</button>
+            <span style={{ margin: '0 16px' }}>{vs.count}</span>
+            <button {...eventsFor(context, 'adderButton')}>+</button>
+        </div>
+    );
 }

@@ -10,9 +10,9 @@ import {
     MainRuntimeModes,
     RenderFragment,
     RuntimeMode,
-    WithValidations
+    WithValidations,
 } from 'jay-compiler-shared';
-import {HTMLElement, NodeType} from 'node-html-parser';
+import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
 import {
     parseAccessor,
@@ -25,20 +25,20 @@ import {
     parseTextExpression,
     Variables,
 } from '../expressions/expression-compiler';
-import {camelCase} from 'camel-case';
+import { camelCase } from 'camel-case';
 
-import {JayHtmlSourceFile} from './jay-html-source-file';
-import {ensureSingleChildElement, isConditional, isForEach} from "./jay-html-helpers";
-import {generateTypes} from "./jay-html-compile-types";
-import {Indent} from "./indent";
+import { JayHtmlSourceFile } from './jay-html-source-file';
+import { ensureSingleChildElement, isConditional, isForEach } from './jay-html-helpers';
+import { generateTypes } from './jay-html-compile-types';
+import { Indent } from './indent';
 import {
     elementNameToJayType,
     newAutoRefNameGenerator,
     optimizeRefs,
     renderRefsForReferenceManager,
-    renderRefsType
-} from "./jay-html-compile-refs";
-import {processImportedComponents, renderImports} from "./jay-html-compile-imports";
+    renderRefsType,
+} from './jay-html-compile-refs';
+import { processImportedComponents, renderImports } from './jay-html-compile-imports';
 
 interface RenderContext {
     variables: Variables;
@@ -101,8 +101,7 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
                 variables,
             );
             renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
-        }
-        else {
+        } else {
             let attributeExpression = parseAttributeExpression(attributes[attrName], variables);
             renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
         }
@@ -408,9 +407,7 @@ function renderFunctionImplementation(
             importerMode,
         });
         renderedRoot = optimizeRefs(renderedRoot);
-    }
-    else
-        renderedRoot = new RenderFragment('', Imports.none(), rootElement.validations)
+    } else renderedRoot = new RenderFragment('', Imports.none(), rootElement.validations);
     const elementType = baseElementName + 'Element';
     const refsType = baseElementName + 'ElementRefs';
     const viewStateType = types.name;

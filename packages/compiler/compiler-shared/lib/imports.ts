@@ -1,4 +1,4 @@
-import {JAY_4_REACT, JAY_RUNTIME, JAY_SECURE, REACT} from './constants';
+import { JAY_4_REACT, JAY_RUNTIME, JAY_SECURE, REACT } from './constants';
 
 export enum ImportsFor {
     definition,
@@ -14,7 +14,11 @@ interface ImportName {
 }
 
 let nextKey = 0;
-function importStatementFragment(module: string, statement: string, ...usage: ImportsFor[]): ImportName {
+function importStatementFragment(
+    module: string,
+    statement: string,
+    ...usage: ImportsFor[]
+): ImportName {
     return { module, index: nextKey++, statement, usage };
 }
 
@@ -22,8 +26,8 @@ const importsOrder = {
     JAY_RUNTIME: 1,
     JAY_SECURE: 2,
     REACT: 3,
-    JAY_4_REACT: 4
-}
+    JAY_4_REACT: 4,
+};
 export const Import = {
     jayElement: importStatementFragment(
         JAY_RUNTIME,
@@ -178,21 +182,20 @@ export const Import = {
         JAY_4_REACT,
         'Jay4ReactElementProps',
         ImportsFor.implementation,
-        ImportsFor.definition
+        ImportsFor.definition,
     ),
     ReactElement: importStatementFragment(
         `react`,
         'ReactElement',
         ImportsFor.implementation,
-        ImportsFor.definition
+        ImportsFor.definition,
     ),
     eventsFor: importStatementFragment(
         JAY_4_REACT,
         'eventsFor',
         ImportsFor.implementation,
-        ImportsFor.definition
+        ImportsFor.definition,
     ),
-
 };
 
 export class Imports {
@@ -216,22 +219,22 @@ export class Imports {
         let moduleImportStatements: Map<string, string[]> = new Map();
         for (let importKey in Import) {
             let importName = Import[importKey];
-            if (
-                this.imports[importName.index] &&
-                importName.usage.includes(importsFor)
-            ) {
+            if (this.imports[importName.index] && importName.usage.includes(importsFor)) {
                 if (moduleImportStatements.has(importName.module))
-                    moduleImportStatements.get(importName.module).push(importName.statement)
-                else
-                    moduleImportStatements.set(importName.module, [importName.statement])
+                    moduleImportStatements.get(importName.module).push(importName.statement);
+                else moduleImportStatements.set(importName.module, [importName.statement]);
             }
         }
 
-        const modulesToImport = [...moduleImportStatements.keys()]
-            .sort((a,b) => (importsOrder[a] || 999) - (importsOrder[b] || 999));
+        const modulesToImport = [...moduleImportStatements.keys()].sort(
+            (a, b) => (importsOrder[a] || 999) - (importsOrder[b] || 999),
+        );
 
         return modulesToImport
-            .map(module => `import {${moduleImportStatements.get(module).join(', ')}} from "${module}";`)
+            .map(
+                (module) =>
+                    `import {${moduleImportStatements.get(module).join(', ')}} from "${module}";`,
+            )
             .join('\n');
     }
 

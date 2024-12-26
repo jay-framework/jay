@@ -27,11 +27,13 @@ export function render({
     vs,
     context,
 }: DataTypesElementProps): ReactElement<DataTypesElementProps, any> {
-    return (<div>
-        <span>{vs.s1}</span>
-        <span>{vs.n1}</span>
-        <span>{vs.b1}</span>
-        <span>{vs.o1?.s2}</span>
-        <span>{vs.o1?.n2}</span>
-    </div>);
+    return (
+        <div>
+            <span>{vs.s1}</span>
+            <span>{vs.n1}</span>
+            <span>{vs.b1}</span>
+            <span>{vs.o1?.s2}</span>
+            <span>{vs.o1?.n2}</span>
+        </div>
+    );
 }

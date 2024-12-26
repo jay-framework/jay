@@ -8,10 +8,10 @@ import {
     JayTypeAlias,
     JayUnionType,
     Ref,
-    RenderFragment
-} from "jay-compiler-shared";
-import {HTMLElement} from "node-html-parser";
-import {htmlElementTagNameMap} from "./html-element-tag-name-map";
+    RenderFragment,
+} from 'jay-compiler-shared';
+import { HTMLElement } from 'node-html-parser';
+import { htmlElementTagNameMap } from './html-element-tag-name-map';
 
 const isComponentRef = (ref: Ref) =>
     ref.elementType instanceof JayComponentType || ref.elementType instanceof JayTypeAlias;
@@ -47,7 +47,7 @@ export function renderRefsType(refs: Ref[], refsType: string) {
 ${renderedReferences}
 }`;
     } else renderedRefs = `export interface ${refsType} {}`;
-    return {imports, renderedRefs, refImportsInUse};
+    return { imports, renderedRefs, refImportsInUse };
 }
 
 export function elementNameToJayType(element: HTMLElement): JayType {
@@ -63,7 +63,12 @@ export function newAutoRefNameGenerator() {
     };
 }
 
-export function optimizeRefs({rendered, imports, validations, refs}: RenderFragment): RenderFragment {
+export function optimizeRefs({
+    rendered,
+    imports,
+    validations,
+    refs,
+}: RenderFragment): RenderFragment {
     const mergedRefsMap = refs.reduce((refsMap, ref) => {
         if (refsMap[ref.ref] === ref.ref) {
             const firstRef: Ref = refsMap[ref.ref];

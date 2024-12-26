@@ -7,7 +7,8 @@ export interface TextWithApostropheViewState {
 
 export interface TextWithApostropheElementRefs {}
 
-export interface TextWithApostropheElementProps extends Jay4ReactElementProps<TextWithApostropheViewState> {}
+export interface TextWithApostropheElementProps
+    extends Jay4ReactElementProps<TextWithApostropheViewState> {}
 
 export function render({
     vs,

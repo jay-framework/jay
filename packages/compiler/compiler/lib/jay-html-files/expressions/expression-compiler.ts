@@ -1,9 +1,18 @@
-import { RenderFragment } from 'jay-compiler-shared';
+import {
+    Import,
+    Imports,
+    isImportedType,
+    isObjectType,
+    JayImportedType,
+    JayImportName,
+    JayObjectType,
+    JayType,
+    JayTypeKind,
+    JayUnknown,
+    JayValidations,
+    RenderFragment,
+} from 'jay-compiler-shared';
 import { parse } from './expression-parser.cjs';
-import { JayValidations } from 'jay-compiler-shared';
-import { Import, Imports } from 'jay-compiler-shared';
-import { JayImportedType, JayObjectType, JayType, JayUnknown } from 'jay-compiler-shared';
-import { JayImportName } from 'jay-compiler-shared';
 
 export class Accessor {
     readonly rootVar: string;
@@ -11,7 +20,12 @@ export class Accessor {
     readonly validations: JayValidations;
     readonly resolvedType: JayType;
 
-    constructor(rootVar: string, terms: Array<string>, validations: JayValidations, resolvedType: JayType) {
+    constructor(
+        rootVar: string,
+        terms: Array<string>,
+        validations: JayValidations,
+        resolvedType: JayType,
+    ) {
         this.rootVar = rootVar;
         this.terms = terms;
         this.validations = validations;
@@ -20,7 +34,9 @@ export class Accessor {
 
     render() {
         let renderedAccessor =
-            this.terms.length === 1 && this.terms[0] === '.' ? this.rootVar : this.rootVar + '.' + this.terms.join('?.');
+            this.terms.length === 1 && this.terms[0] === '.'
+                ? this.rootVar
+                : this.rootVar + '.' + this.terms.join('?.');
         return new RenderFragment(`${renderedAccessor}`, Imports.none(), this.validations);
     }
 }
@@ -46,9 +62,9 @@ export class Variables {
         accessor.forEach((member) => {
             if (member === '.')
                 return; // do not advance curr
-            else if (curr instanceof JayObjectType && curr.props[member]) {
+            else if (isObjectType(curr) && curr.props[member]) {
                 curr = curr.props[member];
-                if (curr instanceof JayImportedType) curr = curr.type;
+                if (isImportedType(curr)) curr = curr.type;
             } else {
                 validations.push(`the data field [${accessor.join('.')}] not found in Jay data`);
                 curr = JayUnknown;
@@ -105,17 +121,20 @@ function unescapeBackslash(jsCode) {
             return '\\'; // Retain a single backslash for '\\'
         }
         switch (char) {
-            case 't': return '\t'; // Tab
-            case 'n': return '\n'; // Newline
-            case 'r': return '\r'; // Carriage return
-            default: return char; // Leave other escaped characters as is
+            case 't':
+                return '\t'; // Tab
+            case 'n':
+                return '\n'; // Newline
+            case 'r':
+                return '\r'; // Carriage return
+            default:
+                return char; // Leave other escaped characters as is
         }
     });
 }
 
 export function parseReactTextExpression(expression: string, vars: Variables): RenderFragment {
-    return doParse(expression, 'reactDynamicText', vars)
-        .map(_ => unescapeBackslash(_));
+    return doParse(expression, 'reactDynamicText', vars).map((_) => unescapeBackslash(_));
 }
 
 export function parseBooleanAttributeExpression(
@@ -146,7 +165,11 @@ export function parseClassExpression(expression: string, vars: Variables): Rende
 }
 
 export function parseReactClassExpression(expression: string, vars: Variables): RenderFragment {
-    const {rendered, validations, refs}: RenderFragment = doParse(expression, 'reactClassExpression', vars)
+    const { rendered, validations, refs }: RenderFragment = doParse(
+        expression,
+        'reactClassExpression',
+        vars,
+    );
     return new RenderFragment(rendered, Imports.none(), validations, refs);
 }
 

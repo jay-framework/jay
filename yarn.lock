@@ -11028,6 +11028,35 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"jay-compiler-analyze-exported-types@workspace:^, jay-compiler-analyze-exported-types@workspace:packages/compiler/compiler-analyze-exported-types":
+  version: 0.0.0-use.local
+  resolution: "jay-compiler-analyze-exported-types@workspace:packages/compiler/compiler-analyze-exported-types"
+  dependencies:
+    "@caiogondim/strip-margin": ^1.0.0
+    "@testing-library/jest-dom": ^6.2.0
+    "@types/js-beautify": ^1
+    "@types/js-yaml": ^4.0.9
+    "@types/node": ^20.11.5
+    change-case: ^4.1.2
+    jay-compiler-shared: "workspace:^"
+    jay-component: "workspace:^"
+    jay-dev-environment: "workspace:^"
+    jay-runtime: "workspace:^"
+    jay-secure: "workspace:^"
+    jest-diff: ^29.7.0
+    jest-matcher-utils: ^29.7.0
+    js-beautify: ^1.14.11
+    js-yaml: ^4.1.0
+    node-html-parser: ^6.1.12
+    pluralize: ^8.0.0
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
 "jay-compiler-shared@workspace:^, jay-compiler-shared@workspace:packages/compiler/compiler-shared":
   version: 0.0.0-use.local
   resolution: "jay-compiler-shared@workspace:packages/compiler/compiler-shared"
@@ -11067,6 +11096,7 @@ __metadata:
     "@types/js-yaml": ^4.0.9
     "@types/node": ^20.11.5
     change-case: ^4.1.2
+    jay-compiler-analyze-exported-types: "workspace:^"
     jay-compiler-shared: "workspace:^"
     jay-component: "workspace:^"
     jay-dev-environment: "workspace:^"

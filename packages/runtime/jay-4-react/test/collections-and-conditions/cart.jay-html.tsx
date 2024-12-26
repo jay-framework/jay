@@ -48,10 +48,7 @@ export function render({ vs, context }: CartElementProps) {
             ) : (
                 <div role="condition">
                     minimum order value not reached
-                    <button
-                        role="continueShopping"
-                        {...eventsFor(context, 'continueShopping')}
-                    >
+                    <button role="continueShopping" {...eventsFor(context, 'continueShopping')}>
                         x
                     </button>
                 </div>

@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "jsx": "preserve",
+    "module": "ESNext",
+    "esModuleInterop": true,
+    "target": "esnext",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "outDir": "build",
+    "lib": ["ESNext", "DOM"],
+  },
+  "lib": ["lib.esnext.d.ts", "lib.dom.d.ts"],
+  "exclude": ["**/generated/**"],
+}

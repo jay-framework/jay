@@ -23,6 +23,7 @@
   "dependencies": {
     "@types/js-yaml": "^4.0.9",
     "change-case": "^4.1.2",
+    "jay-compiler-analyze-exported-types": "workspace:^",
     "jay-compiler-shared": "workspace:^",
     "jay-component": "workspace:^",
     "jay-runtime": "workspace:^",

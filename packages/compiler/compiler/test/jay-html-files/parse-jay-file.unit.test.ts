@@ -6,6 +6,7 @@ import {
     JayNumber,
     JayObjectType,
     JayString,
+    JayTypeKind,
 } from 'jay-compiler-shared';
 import { stripMargin } from '../test-utils/strip-margin';
 
@@ -188,9 +189,11 @@ describe('compiler', () => {
                                 name: 'comp1',
                                 type: {
                                     name: 'comp1',
+                                    kind: JayTypeKind.imported,
                                     type: {
                                         api: [],
                                         name: 'comp1',
+                                        kind: JayTypeKind.component,
                                     },
                                 },
                             },
@@ -205,9 +208,11 @@ describe('compiler', () => {
                                 name: 'comp2',
                                 type: {
                                     name: 'comp3',
+                                    kind: JayTypeKind.imported,
                                     type: {
                                         api: [],
                                         name: 'comp2',
+                                        kind: JayTypeKind.component,
                                     },
                                 },
                             },
@@ -221,9 +226,11 @@ describe('compiler', () => {
                                 name: 'comp4',
                                 type: {
                                     name: 'comp4',
+                                    kind: JayTypeKind.imported,
                                     type: {
                                         api: [],
                                         name: 'comp4',
+                                        kind: JayTypeKind.component,
                                     },
                                 },
                             },
@@ -237,9 +244,11 @@ describe('compiler', () => {
                                 name: 'comp5',
                                 type: {
                                     name: 'comp5',
+                                    kind: JayTypeKind.imported,
                                     type: {
                                         api: [],
                                         name: 'comp5',
+                                        kind: JayTypeKind.component,
                                     },
                                 },
                             },
@@ -253,9 +262,11 @@ describe('compiler', () => {
                                 name: 'comp6',
                                 type: {
                                     name: 'comp6',
+                                    kind: JayTypeKind.imported,
                                     type: {
                                         api: [],
                                         name: 'comp6',
+                                        kind: JayTypeKind.component,
                                     },
                                 },
                             },

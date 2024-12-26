@@ -15,11 +15,13 @@ export function render({
     vs,
     context,
 }: Composite2ElementProps): ReactElement<Composite2ElementProps, any> {
-    return <div>
-        <h1>{vs.title}</h1>
-        <section>
-            <div>{vs.subtitle}</div>
-            <div>{vs.article}</div>
-        </section>
-    </div>;
+    return (
+        <div>
+            <h1>{vs.title}</h1>
+            <section>
+                <div>{vs.subtitle}</div>
+                <div>{vs.article}</div>
+            </section>
+        </div>
+    );
 }

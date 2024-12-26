@@ -9,18 +9,21 @@ export interface WhitespaceAndTextViewState {
 
 export interface WhitespaceAndTextElementRefs {}
 
-export interface WhitespaceAndTextElementProps extends Jay4ReactElementProps<WhitespaceAndTextViewState> {}
+export interface WhitespaceAndTextElementProps
+    extends Jay4ReactElementProps<WhitespaceAndTextViewState> {}
 
 export function render({
     vs,
     context,
 }: WhitespaceAndTextElementProps): ReactElement<WhitespaceAndTextElementProps, any> {
-    return <div>
-        <div> multi-line text </div>
+    return (
         <div>
-            some text
-            <span> </span>
-            another text
+            <div> multi-line text </div>
+            <div>
+                some text
+                <span> </span>
+                another text
+            </div>
         </div>
-    </div>;
+    );
 }

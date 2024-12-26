@@ -1,4 +1,4 @@
-import { Jay4ReactElementProps} from 'jay-4-react';
+import { Jay4ReactElementProps } from 'jay-4-react';
 import { ReactElement } from 'react';
 
 export interface ConditionsViewState {
@@ -15,8 +15,10 @@ export function render({
     vs,
     context,
 }: ConditionsElementProps): ReactElement<ConditionsElementProps, any> {
-    return <div>
-        {vs.cond && (<div style={{color:"red"}}>{vs.text1}</div>)}
-        {!vs.cond && (<div style={{color:"green"}}>{vs.text2}</div>)}
-    </div>;
+    return (
+        <div>
+            {vs.cond && <div style={{ color: 'red' }}>{vs.text1}</div>}
+            {!vs.cond && <div style={{ color: 'green' }}>{vs.text2}</div>}
+        </div>
+    );
 }
