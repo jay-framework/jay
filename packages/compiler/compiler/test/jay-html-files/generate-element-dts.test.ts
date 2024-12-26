@@ -2,7 +2,7 @@ import { generateElementDefinitionFile, prettify } from '../../lib';
 import { readFixtureElementDefinitionFile } from '../test-utils/file-utils';
 import { readAndParseJayFile } from '../test-utils/ts-compiler-test-utils';
 
-describe('generate the definition file', () => {
+describe('generate jay-html definition', () => {
     it('should generate definition file for simple file', async () => {
         const folder = 'basics/data-types';
         const parsedFile = await readAndParseJayFile(folder);

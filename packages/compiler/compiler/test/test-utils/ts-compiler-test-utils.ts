@@ -42,7 +42,7 @@ export async function readFileAndGenerateElementBridgeFile(folder: string, given
     return generateElementBridgeFile(parsedFile);
 }
 
-interface ReadFileAndGenerateElementFileOptions {
+export interface ReadFileAndGenerateElementFileOptions {
     importerMode?: MainRuntimeModes,
     givenFile?: string,
     generateTarget?: GenerateTarget

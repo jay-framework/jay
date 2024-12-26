@@ -2,7 +2,7 @@ import { prettify } from '../../lib';
 import { readFixtureElementBridgeFile } from '../test-utils/file-utils';
 import { readFileAndGenerateElementBridgeFile } from '../test-utils/ts-compiler-test-utils';
 
-describe('generate the element sandbox files', () => {
+describe('generate jay-html element for sandbox', () => {
     describe('generate element bridges', () => {
         describe('basic', () => {
             it('for an empty element', async () => {

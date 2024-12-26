@@ -1,10 +1,13 @@
-import {readFileAndGenerateElementFile} from "../../test-utils/ts-compiler-test-utils";
+import {
+    readFileAndGenerateElementFile,
+    ReadFileAndGenerateElementFileOptions
+} from "../../test-utils/ts-compiler-test-utils";
 import {prettify} from "../../../lib";
-import {readFixtureFile, readFixtureReactElementFile} from "../../test-utils/file-utils";
+import {readFixtureReactElementFile, readFixtureReactFile} from "../../test-utils/file-utils";
 import {GenerateTarget, RuntimeMode} from "jay-compiler-shared";
 
-describe('generate the runtime file for react target', () => {
-    const options = {generateTarget: GenerateTarget.react};
+describe('generate jay-html element for react target', () => {
+    const options: ReadFileAndGenerateElementFileOptions = {generateTarget: GenerateTarget.react};
 
     describe('basics', () => {
         it('for simple file with dynamic text', async () => {
@@ -139,123 +142,66 @@ describe('generate the runtime file for react target', () => {
         });
     });
 
-    describe.skip('components', () => {
-        describe('for main trusted environment (running in main window, component is not sandboxed)', () => {
-            const importerMode: RuntimeMode = RuntimeMode.MainTrusted;
+    describe('components', () => {
+        describe('import jay component from jay-html with react compile target', () => {
+            const options: ReadFileAndGenerateElementFileOptions = {
+                generateTarget: GenerateTarget.react,
+                importerMode: RuntimeMode.MainTrusted
+            };
             it('for simple refs', async () => {
                 const folder = 'components/counter';
-                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
+                const elementFile = await readFileAndGenerateElementFile(folder, options);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-trusted'),
+                    await readFixtureReactFile(folder, 'generated-react-element-main-trusted'),
                 );
             });
 
-            it('nesting components in other components', async () => {
+            it.skip('nesting components in other components', async () => {
                 const folder = 'components/component-in-component';
-                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
+                const elementFile = await readFileAndGenerateElementFile(folder, options);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-trusted'),
+                    await readFixtureReactFile(folder, 'generated-react-element-main-trusted'),
                 );
             });
 
-            it('dynamic nesting components in other components', async () => {
+            it.skip('dynamic nesting components in other components', async () => {
                 const folder = 'components/dynamic-component-in-component';
-                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
+                const elementFile = await readFileAndGenerateElementFile(folder, options);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-trusted'),
+                    await readFixtureReactFile(folder, 'generated-react-element-main-trusted'),
                 );
             });
 
-            it('recursive-components', async () => {
+            it.skip('recursive-components', async () => {
                 const folder = 'components/recursive-components';
-                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
+                const elementFile = await readFileAndGenerateElementFile(folder, options);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-trusted'),
+                    await readFixtureReactFile(folder, 'generated-react-element-main-trusted'),
                 );
             });
 
-            it('recursive-components-2', async () => {
+            it.skip('recursive-components-2', async () => {
                 const folder = 'components/recursive-components-2';
-                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
+                const elementFile = await readFileAndGenerateElementFile(folder, options);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-trusted'),
+                    await readFixtureReactFile(folder, 'generated-react-element-main-trusted'),
                 );
             });
 
-            it('tree', async () => {
+            it.skip('tree', async () => {
                 const folder = 'components/tree';
                 const elementFile = await readFileAndGenerateElementFile(
                     folder,
-                    {importerMode, givenFile: 'tree-node'}
+                    {...options, givenFile: 'tree-node'}
                 );
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-trusted'),
-                );
-            });
-        });
-
-        describe('for main sandboxed environment (running in main window, component is sandboxed)', () => {
-            const importerMode: RuntimeMode = RuntimeMode.MainSandbox;
-            it('for simple refs', async () => {
-                const folder = 'components/counter';
-                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
-                expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
-                );
-            });
-
-            it('nesting components in other components', async () => {
-                const folder = 'components/component-in-component';
-                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
-                expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
-                );
-            });
-
-            it('dynamic nesting components in other components', async () => {
-                const folder = 'components/dynamic-component-in-component';
-                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
-                expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
-                );
-            });
-
-            it('recursive-components', async () => {
-                const folder = 'components/recursive-components';
-                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
-                expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
-                );
-            });
-
-            it('recursive-components-2', async () => {
-                const folder = 'components/recursive-components-2';
-                const elementFile = await readFileAndGenerateElementFile(folder, {importerMode});
-                expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
-                );
-            });
-
-            it('tree', async () => {
-                const folder = 'components/tree';
-                const elementFile = await readFileAndGenerateElementFile(
-                    folder,
-                    {importerMode, givenFile: 'tree-node'}
-                );
-                expect(elementFile.validations).toEqual([]);
-                expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureFile(folder, 'generated-element-main-sandbox'),
+                    await readFixtureReactFile(folder, 'generated-react-element-main-trusted'),
                 );
             });
         });

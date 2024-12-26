@@ -3,7 +3,7 @@ import { readFixtureElementFile, readFixtureFile } from '../test-utils/file-util
 import { readFileAndGenerateElementFile } from '../test-utils/ts-compiler-test-utils';
 import { RuntimeMode } from 'jay-compiler-shared';
 
-describe('generate the runtime file', () => {
+describe('generate jay-html element', () => {
     describe('basics', () => {
         it('for simple file with dynamic text', async () => {
             const folder = 'basics/simple-dynamic-text';

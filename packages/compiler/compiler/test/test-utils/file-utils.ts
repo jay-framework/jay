@@ -23,6 +23,9 @@ export async function readFixtureSourceJayFile(folder, file) {
 export async function readFixtureFile(folder, file) {
     return prettify(await readFixtureFileRaw(folder, `${file}.ts`));
 }
+export async function readFixtureReactFile(folder, file) {
+    return prettify(await readFixtureFileRaw(folder, `${file}.tsx`));
+}
 export async function readFixtureElementFile(folder) {
     return prettify(await readFixtureFileRaw(folder, 'generated-element.ts'));
 }
