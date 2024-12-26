@@ -12,6 +12,7 @@ export function render({
     context,
 }: EmptyElementElementProps): ReactElement<EmptyElementElementProps, any> {
     return (<div>
+        {/* @ts-ignore */}
         <div attr="value"/>
     </div>);
 }

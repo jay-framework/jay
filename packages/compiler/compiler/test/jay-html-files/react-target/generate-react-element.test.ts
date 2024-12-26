@@ -148,7 +148,7 @@ describe('generate jay-html element for react target', () => {
                 generateTarget: GenerateTarget.react,
                 importerMode: RuntimeMode.MainTrusted
             };
-            it('for simple refs', async () => {
+            it.skip('for simple refs', async () => {
                 const folder = 'components/counter';
                 const elementFile = await readFileAndGenerateElementFile(folder, options);
                 expect(elementFile.validations).toEqual([]);

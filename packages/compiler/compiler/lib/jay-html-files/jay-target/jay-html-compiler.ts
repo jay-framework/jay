@@ -1,7 +1,19 @@
-import { WithValidations } from 'jay-compiler-shared';
-import { HTMLElement, NodeType } from 'node-html-parser';
+import {
+    Import,
+    Imports,
+    ImportsFor,
+    JayArrayType,
+    JayComponentType,
+    JayImportLink,
+    JayType,
+    JayUnknown,
+    MainRuntimeModes,
+    RenderFragment,
+    RuntimeMode,
+    WithValidations
+} from 'jay-compiler-shared';
+import {HTMLElement, NodeType} from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
-import { Ref, RenderFragment } from 'jay-compiler-shared';
 import {
     parseAccessor,
     parseAttributeExpression,
@@ -13,77 +25,20 @@ import {
     parseTextExpression,
     Variables,
 } from '../expressions/expression-compiler';
-import { htmlElementTagNameMap } from './html-element-tag-name-map';
-import { camelCase } from 'camel-case';
-import { Import, Imports, ImportsFor } from 'jay-compiler-shared';
+import {camelCase} from 'camel-case';
+
+import {JayHtmlSourceFile} from './jay-html-source-file';
+import {ensureSingleChildElement, isConditional, isForEach} from "./jay-html-helpers";
+import {generateTypes} from "./jay-html-compile-types";
+import {Indent} from "./indent";
 import {
-    equalJayTypes,
-    JayArrayType,
-    JayAtomicType,
-    JayComponentType,
-    JayEnumType,
-    JayHTMLType,
-    JayImportedType,
-    JayObjectType,
-    JayType,
-    JayTypeAlias,
-    JayUnionType,
-    JayUnknown,
-} from 'jay-compiler-shared';
-import { getModeFileExtension, MainRuntimeModes, RuntimeMode } from 'jay-compiler-shared';
-import { JayImportLink } from 'jay-compiler-shared';
-
-import { JayHtmlSourceFile } from './jay-html-source-file';
-
-export class Indent {
-    private readonly base: string;
-    readonly firstLineBreak: boolean;
-    readonly lastLineIndent: boolean;
-    constructor(parent: string, firstLineBreak = true, lastLineIndent = false) {
-        this.base = parent;
-        this.firstLineBreak = firstLineBreak;
-        this.lastLineIndent = lastLineIndent;
-    }
-    get firstLine(): string {
-        return this.firstLineBreak ? this.base : '';
-    }
-    get curr(): string {
-        return this.base + '  ';
-    }
-    get lastLine(): string {
-        return this.lastLineIndent ? this.base : '';
-    }
-
-    child(): Indent {
-        return new Indent(this.base + '  ');
-    }
-
-    noFirstLineBreak() {
-        return new Indent(this.base, false);
-    }
-    withFirstLineBreak() {
-        return new Indent(this.base, true);
-    }
-    withLastLineBreak() {
-        return new Indent(this.base, false, true);
-    }
-
-    static forceIndent(code: string, size: number = 2) {
-        let indent = '';
-        for (let i = 0; i < size; i++) indent += ' ';
-        return code
-            .split('\n')
-            .map((_) => (_.length > 0 ? indent + _ : _))
-            .join('\n');
-    }
-}
-
-export function newAutoRefNameGenerator() {
-    let nextId = 1;
-    return function (): string {
-        return 'aR' + nextId++;
-    };
-}
+    elementNameToJayType,
+    newAutoRefNameGenerator,
+    optimizeRefs,
+    renderRefsForReferenceManager,
+    renderRefsType
+} from "./jay-html-compile-refs";
+import {processImportedComponents, renderImports} from "./jay-html-compile-imports";
 
 interface RenderContext {
     variables: Variables;
@@ -93,103 +48,6 @@ interface RenderContext {
     importedSandboxedSymbols: Set<string>;
     nextAutoRefName: () => string;
     importerMode: RuntimeMode;
-}
-
-function renderInterface(aType: JayType): string {
-    let childInterfaces = [];
-
-    let genInterface = '';
-    if (aType instanceof JayObjectType) {
-        const propKeys = Object.keys(aType.props);
-        if (propKeys.length === 0) genInterface = `export interface ${aType.name} {}`;
-        else {
-            genInterface = `export interface ${aType.name} {\n`;
-            genInterface += Object.keys(aType.props)
-                .map((prop) => {
-                    let childType = aType.props[prop];
-                    if (childType instanceof JayImportedType) {
-                        return `  ${prop}: ${childType.name}`;
-                    } else if (childType instanceof JayObjectType) {
-                        childInterfaces.push(renderInterface(childType));
-                        return `  ${prop}: ${childType.name}`;
-                    } else if (childType instanceof JayArrayType) {
-                        let arrayItemType = childType.itemType;
-                        if (arrayItemType instanceof JayObjectType) {
-                            childInterfaces.push(renderInterface(arrayItemType));
-                            return `  ${prop}: Array<${arrayItemType.name}>`;
-                        } else {
-                            throw new Error('not implemented yet');
-                            // todo implement array of array or array of primitive
-                        }
-                    } else if (childType instanceof JayAtomicType)
-                        return `  ${prop}: ${childType.name}`;
-                    else if (childType instanceof JayEnumType) {
-                        let genEnum = `export enum ${childType.name} {\n${childType.values
-                            .map((_) => '  ' + _)
-                            .join(',\n')}\n}`;
-                        childInterfaces.push(genEnum);
-                        return `  ${prop}: ${childType.name}`;
-                    } else throw new Error('unknown type');
-                })
-                .join(',\n');
-            genInterface += '\n}';
-        }
-    }
-    return [...childInterfaces, genInterface].join('\n\n');
-}
-
-// exported for testing
-export function generateTypes(types: JayType): string {
-    return renderInterface(types);
-}
-
-export function renderImports(
-    imports: Imports,
-    importsFor: ImportsFor,
-    componentImports: Array<JayImportLink>,
-    refImportsInUse: Set<string>,
-    importerMode: RuntimeMode,
-): string {
-    const runtimeImport = imports.render(importsFor);
-
-    // todo validate the actual imported file
-    let renderedComponentImports = componentImports.map((importStatement) => {
-        let symbols = importStatement.names
-            .map((symbol) => (symbol.as ? `${symbol.name} as ${symbol.as}` : symbol.name))
-            .join(', ');
-
-        let imports = [];
-        importStatement.names
-            .filter(
-                (symbol) =>
-                    symbol.type instanceof JayImportedType &&
-                    symbol.type.type instanceof JayComponentType,
-            )
-            .map((symbol) => ((symbol.type as JayImportedType).type as JayComponentType).name)
-            .filter(
-                (compType) =>
-                    refImportsInUse.has(compType + 'ComponentType') ||
-                    refImportsInUse.has(compType + 'Refs'),
-            )
-            .map((compType) => {
-                let importSymbols = [];
-                if (refImportsInUse.has(compType + 'ComponentType'))
-                    importSymbols.push(compType + 'ComponentType');
-                if (refImportsInUse.has(compType + 'Refs')) importSymbols.push(compType + 'Refs');
-                imports.push(
-                    `import {${importSymbols.join(', ')}} from "${importStatement.module}-refs";`,
-                );
-            });
-        imports.push(
-            `import {${symbols}} from "${importStatement.module}${getModeFileExtension(
-                importStatement.sandbox,
-                importerMode,
-            )}";`,
-        );
-        return imports.join('\n');
-    });
-
-    return [runtimeImport, ...renderedComponentImports].join('\n');
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -202,12 +60,6 @@ function textEscape(s: string): string {
 
 function renderTextNode(variables: Variables, text: string, indent: Indent): RenderFragment {
     return parseTextExpression(textEscape(text), variables).map((_) => indent.firstLine + _);
-}
-
-export function elementNameToJayType(element: HTMLElement): JayType {
-    return htmlElementTagNameMap[element.rawTagName]
-        ? new JayHTMLType(htmlElementTagNameMap[element.rawTagName])
-        : new JayHTMLType('HTMLElement');
 }
 
 const PROPERTY = 1,
@@ -284,14 +136,6 @@ function renderElementRef(
         ];
         return new RenderFragment(`${constName}()`, Imports.none(), [], refs);
     } else return RenderFragment.empty();
-}
-
-export function isConditional(node: Node): boolean {
-    return node.nodeType !== NodeType.TEXT_NODE && (node as HTMLElement).hasAttribute('if');
-}
-
-export function isForEach(node: Node): boolean {
-    return node.nodeType !== NodeType.TEXT_NODE && (node as HTMLElement).hasAttribute('forEach');
 }
 
 function renderChildCompProps(element: HTMLElement, { variables }: RenderContext): RenderFragment {
@@ -533,126 +377,6 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
     }
 }
 
-export function firstElementChild(node: Node): HTMLElement {
-    // todo validate there is only one child
-    return node.childNodes.find((child) => child.nodeType === NodeType.ELEMENT_NODE) as HTMLElement;
-}
-
-const isComponentRef = (ref: Ref) =>
-    ref.elementType instanceof JayComponentType || ref.elementType instanceof JayTypeAlias;
-const isCollectionRef = (ref: Ref) => ref.dynamicRef;
-const isComponentCollectionRef = (ref: Ref) => isCollectionRef(ref) && isComponentRef(ref);
-
-export function renderRefsType(refs: Ref[], refsType: string) {
-    let renderedRefs;
-    let imports = Imports.none();
-    let refImportsInUse = new Set<string>();
-    let refsToRender = refs.filter((_) => !_.autoRef);
-    if (refsToRender.length > 0) {
-        const renderedReferences = refsToRender
-            .map((ref) => {
-                let referenceType;
-                if (isComponentCollectionRef(ref)) {
-                    referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`;
-                    refImportsInUse.add(`${ref.elementType.name}Refs`);
-                } else if (isCollectionRef(ref)) {
-                    referenceType = `HTMLElementCollectionProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
-                    imports = imports.plus(Import.HTMLElementCollectionProxy);
-                } else if (isComponentRef(ref)) {
-                    referenceType = `${ref.elementType.name}ComponentType<${ref.viewStateType.name}>`;
-                    refImportsInUse.add(`${ref.elementType.name}ComponentType`);
-                } else {
-                    referenceType = `HTMLElementProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
-                    imports = imports.plus(Import.HTMLElementProxy);
-                }
-                return `  ${ref.ref}: ${referenceType}`;
-            })
-            .join(',\n');
-        renderedRefs = `export interface ${refsType} {
-${renderedReferences}
-}`;
-    } else renderedRefs = `export interface ${refsType} {}`;
-    return { imports, renderedRefs, refImportsInUse };
-}
-
-export function processImportedComponents(importStatements: JayImportLink[]) {
-    return importStatements.reduce(
-        (processedImports, importStatement) => {
-            importStatement.names.forEach((importName) => {
-                let name = importName.as || importName.name;
-                processedImports.importedSymbols.add(name);
-                if (importStatement.sandbox) processedImports.importedSandboxedSymbols.add(name);
-            });
-            return processedImports;
-        },
-        { importedSymbols: new Set<string>(), importedSandboxedSymbols: new Set<string>() },
-    );
-}
-
-function renderRefsForReferenceManager(refs: Ref[]) {
-    const elemRefs = refs.filter((_) => !isComponentRef(_) && !isCollectionRef(_));
-    const elemCollectionRefs = refs.filter((_) => !isComponentRef(_) && isCollectionRef(_));
-    const compRefs = refs.filter((_) => isComponentRef(_) && !isCollectionRef(_));
-    const compCollectionRefs = refs.filter((_) => isComponentRef(_) && isCollectionRef(_));
-
-    const elemRefsDeclarations = elemRefs.map((ref) => `'${ref.ref}'`).join(', ');
-    const elemCollectionRefsDeclarations = elemCollectionRefs
-        .map((ref) => `'${ref.ref}'`)
-        .join(', ');
-    const compRefsDeclarations = compRefs.map((ref) => `'${ref.ref}'`).join(', ');
-    const compCollectionRefsDeclarations = compCollectionRefs
-        .map((ref) => `'${ref.ref}'`)
-        .join(', ');
-    const refVariables = [
-        ...elemRefs.map((ref) => ref.constName),
-        ...elemCollectionRefs.map((ref) => ref.constName),
-        ...compRefs.map((ref) => ref.constName),
-        ...compCollectionRefs.map((ref) => ref.constName),
-    ].join(', ');
-    return {
-        elemRefsDeclarations,
-        elemCollectionRefsDeclarations,
-        compRefsDeclarations,
-        compCollectionRefsDeclarations,
-        refVariables,
-    };
-}
-
-export function optimizeRefs({ rendered, imports, validations, refs }: RenderFragment) {
-    const mergedRefsMap = refs.reduce((refsMap, ref) => {
-        if (refsMap[ref.ref] === ref.ref) {
-            const firstRef: Ref = refsMap[ref.ref];
-            if (!equalJayTypes(firstRef.viewStateType, ref.viewStateType))
-                validations.push(
-                    `invalid usage of refs: the ref [${ref.ref}] is used with two different view types [${firstRef.viewStateType.name}, ${ref.viewStateType.name}]`,
-                );
-            else if (firstRef.dynamicRef !== ref.dynamicRef)
-                validations.push(
-                    `invalid usage of refs: the ref [${ref.ref}] is used once with forEach and second time without`,
-                );
-            else {
-                if (!equalJayTypes(firstRef.elementType, ref.elementType)) {
-                    if (firstRef.elementType instanceof JayUnionType) {
-                        if (!firstRef.elementType.hasType(ref.elementType))
-                            firstRef.elementType = new JayUnionType([
-                                ...firstRef.elementType.ofTypes,
-                                ref.elementType,
-                            ]);
-                    } else
-                        firstRef.elementType = new JayUnionType([
-                            firstRef.elementType,
-                            ref.elementType,
-                        ]);
-                }
-            }
-        } else refsMap[ref.ref] = ref;
-        return refsMap;
-    }, {});
-
-    const mergedRefs: Ref[] = Object.values(mergedRefsMap);
-    return new RenderFragment(rendered, imports, validations, mergedRefs);
-}
-
 function renderFunctionImplementation(
     types: JayType,
     rootBodyElement: HTMLElement,
@@ -671,16 +395,22 @@ function renderFunctionImplementation(
     const variables = new Variables(types);
     const { importedSymbols, importedSandboxedSymbols } =
         processImportedComponents(importStatements);
-    let renderedRoot = renderNode(firstElementChild(rootBodyElement), {
-        variables,
-        importedSymbols,
-        indent: new Indent('    '),
-        dynamicRef: false,
-        importedSandboxedSymbols,
-        nextAutoRefName: newAutoRefNameGenerator(),
-        importerMode,
-    });
-    renderedRoot = optimizeRefs(renderedRoot);
+    const rootElement = ensureSingleChildElement(rootBodyElement);
+    let renderedRoot: RenderFragment;
+    if (rootElement.val) {
+        renderedRoot = renderNode(rootElement.val, {
+            variables,
+            importedSymbols,
+            indent: new Indent('    '),
+            dynamicRef: false,
+            importedSandboxedSymbols,
+            nextAutoRefName: newAutoRefNameGenerator(),
+            importerMode,
+        });
+        renderedRoot = optimizeRefs(renderedRoot);
+    }
+    else
+        renderedRoot = new RenderFragment('', Imports.none(), rootElement.validations)
     const elementType = baseElementName + 'Element';
     const refsType = baseElementName + 'ElementRefs';
     const viewStateType = types.name;

@@ -3,12 +3,12 @@ import {JayHtmlSourceFile} from "./jay-target/jay-html-source-file";
 import {
     generateElementDefinitionFile as generateElementDefinitionFileJayTarget,
     generateElementFile as generateElementFileJayTarget,
-} from './jay-target/jay-file-compiler'
+} from './jay-target/jay-html-compiler'
 import {
     generateElementDefinitionFileReactTarget,
     generateElementFileReactTarget
-} from "./react-target/jay-file-compiler-react";
-export {generateElementBridgeFile, generateSandboxRootFile} from './jay-target/jay-file-compiler'
+} from "./react-target/jay-html-compiler-react";
+export {generateElementBridgeFile, generateSandboxRootFile} from './jay-target/jay-html-compiler'
 
 export function generateElementDefinitionFile(
     parsedFile: WithValidations<JayHtmlSourceFile>,

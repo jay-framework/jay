@@ -8,7 +8,8 @@ import {
     JayObjectType,
     JayString,
 } from 'jay-compiler-shared';
-import {generateTypes} from "../../lib/jay-html-files/jay-target/jay-file-compiler";
+
+import {generateTypes} from "../../lib/jay-html-files/jay-target/jay-html-compile-types";
 
 describe('generate data interfaces', () => {
     it('should generate simple interface', () => {

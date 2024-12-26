@@ -8,13 +8,6 @@ import {
     WithValidations
 } from "jay-compiler-shared";
 import {JayHtmlSourceFile} from "../jay-target/jay-html-source-file";
-import {
-    elementNameToJayType,
-    firstElementChild,
-    generateTypes, Indent, isConditional, isForEach,
-    newAutoRefNameGenerator, optimizeRefs,
-    processImportedComponents, renderImports, renderRefsType
-} from "../jay-target/jay-file-compiler";
 import {HTMLElement, NodeType} from "node-html-parser";
 import {
     parseAccessor,
@@ -25,6 +18,16 @@ import {
 import Node from 'node-html-parser/dist/nodes/node';
 import {camelCase} from "camel-case";
 import parse from 'style-to-object';
+import {ensureSingleChildElement, isConditional, isForEach} from "../jay-target/jay-html-helpers";
+import {generateTypes} from "../jay-target/jay-html-compile-types";
+import {Indent} from "../jay-target/indent";
+import {
+    elementNameToJayType,
+    newAutoRefNameGenerator,
+    optimizeRefs,
+    renderRefsType
+} from "../jay-target/jay-html-compile-refs";
+import {processImportedComponents, renderImports} from "../jay-target/jay-html-compile-imports";
 
 interface RenderContext {
     variables: Variables;
@@ -118,7 +121,7 @@ function renderElementRef(
 }
 
 
-function renderReactNode(node: Node, renderContext: RenderContext) {
+function renderReactNode(node: Node, renderContext: RenderContext): RenderFragment {
     let { variables, importedSymbols, importedSandboxedSymbols, indent, dynamicRef, importerMode } =
         renderContext;
 
@@ -194,10 +197,6 @@ ${indent.curr}return (${childElement.rendered})})}`,
         if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE)
             childIndent = childIndent.noFirstLineBreak();
 
-        let needDynamicElement = childNodes
-            .map((_) => isConditional(_) || isForEach(_))
-            .reduce((prev, current) => prev || current, false);
-
         let childContext = { ...renderContext, variables: newVariables, indent: childIndent, dynamicRef };
 
         let childRenders =
@@ -218,10 +217,7 @@ ${indent.curr}return (${childElement.rendered})})}`,
         let attributes = renderAttributes(htmlElement, childContext);
         let renderedRef = renderElementRef(htmlElement, childContext);
 
-        // if (needDynamicElement)
-        //     return de(htmlElement.rawTagName, attributes, childRenders, renderedRef, currIndent);
-        // else
-            return e(htmlElement.rawTagName, attributes, childRenders, renderedRef, currIndent);
+        return e(htmlElement.rawTagName, attributes, childRenders, renderedRef, currIndent);
     }
 
     switch (node.nodeType) {
@@ -284,16 +280,22 @@ function renderFunctionImplementation(
     const { importedSymbols, importedSandboxedSymbols } =
         processImportedComponents(importStatements);
 
-    let renderedRoot = renderReactNode(firstElementChild(rootBodyElement), {
-        variables,
-        importedSymbols,
-        indent: new Indent('    '),
-        dynamicRef: false,
-        importedSandboxedSymbols,
-        nextAutoRefName: newAutoRefNameGenerator(),
-        importerMode,
-    });
-    renderedRoot = optimizeRefs(renderedRoot);
+    const rootElement = ensureSingleChildElement(rootBodyElement);
+    let renderedRoot: RenderFragment;
+    if (rootElement.val) {
+        renderedRoot = renderReactNode(rootElement.val, {
+            variables,
+            importedSymbols,
+            indent: new Indent('    '),
+            dynamicRef: false,
+            importedSandboxedSymbols,
+            nextAutoRefName: newAutoRefNameGenerator(),
+            importerMode,
+        });
+        renderedRoot = optimizeRefs(renderedRoot);
+    }
+    else
+        renderedRoot = new RenderFragment('', Imports.none(), rootElement.validations)
     const elementType = baseElementName + 'Element';
     const refsType = baseElementName + 'ElementRefs';
     const viewStateType = types.name;

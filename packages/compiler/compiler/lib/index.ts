@@ -1,5 +1,5 @@
 export * from './jay-html-files';
-export { parseJayFile, getJayHtmlImports } from './jay-html-files/jay-target/jay-file-parser';
+export { parseJayFile, getJayHtmlImports } from './jay-html-files/jay-target/jay-html-parser';
 export { generateComponentRefsDefinitionFile } from './components-files/generator-component-refs';
 export * from './jay-html-files/jay-target/jay-example';
 export * from './jay-html-files/jay-target/jay-yaml-structure';
