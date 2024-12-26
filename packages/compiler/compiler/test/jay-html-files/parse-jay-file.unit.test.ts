@@ -41,7 +41,6 @@ describe('compiler', () => {
             expect(jayFile.val.types).toEqual(
                 new JayObjectType('BaseViewState', { text: JayString }),
             );
-            expect(jayFile.val.examples).toEqual([]);
         });
 
         it('should append the base name to the view state type', () => {
@@ -60,30 +59,6 @@ describe('compiler', () => {
             expect(jayFile.val.types).toEqual(
                 new JayObjectType('BaseElementNameViewState', { text: JayString }),
             );
-            expect(jayFile.val.examples).toEqual([]);
-        });
-
-        it('should parse simple string type with a simple example', () => {
-            let jayFile = parseJayFile(
-                jayFileWith(
-                    ` data:
-                        |   text: string
-                        |
-                        | example:
-                        |   text: 'hello world'`,
-                    '<body></body>',
-                ),
-                'Base',
-                '',
-                {},
-            );
-
-            expect(jayFile.val.types).toEqual(
-                new JayObjectType('BaseViewState', { text: JayString }),
-            );
-            expect(jayFile.val.examples).toEqual([
-                { name: 'example', data: { text: 'hello world' } },
-            ]);
         });
 
         it('should parse invalid type', () => {
@@ -138,7 +113,6 @@ describe('compiler', () => {
                     ),
                 }),
             );
-            expect(jayFile.val.examples).toEqual([]);
         });
 
         it('should parse enum types', () => {
@@ -158,7 +132,6 @@ describe('compiler', () => {
                     an_enum: new JayEnumType('AnEnum', ['one', 'two', 'three']),
                 }),
             );
-            expect(jayFile.val.examples).toEqual([]);
         });
 
         it('should parse import links', () => {

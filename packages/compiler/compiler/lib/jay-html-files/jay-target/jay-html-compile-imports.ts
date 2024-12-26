@@ -4,7 +4,6 @@ import {
     ImportsFor,
     isComponentType,
     isImportedType,
-    isObjectType,
     JayComponentType,
     JayImportedType,
     JayImportLink,

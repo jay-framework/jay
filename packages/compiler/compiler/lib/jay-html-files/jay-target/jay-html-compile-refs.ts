@@ -19,14 +19,14 @@ const isCollectionRef = (ref: Ref) => ref.dynamicRef;
 const isComponentCollectionRef = (ref: Ref) => isCollectionRef(ref) && isComponentRef(ref);
 
 export function renderRefsType(refs: Ref[], refsType: string) {
-    let renderedRefs;
+    let renderedRefs: string;
     let imports = Imports.none();
     let refImportsInUse = new Set<string>();
     let refsToRender = refs.filter((_) => !_.autoRef);
     if (refsToRender.length > 0) {
         const renderedReferences = refsToRender
             .map((ref) => {
-                let referenceType;
+                let referenceType: string;
                 if (isComponentCollectionRef(ref)) {
                     referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`;
                     refImportsInUse.add(`${ref.elementType.name}Refs`);

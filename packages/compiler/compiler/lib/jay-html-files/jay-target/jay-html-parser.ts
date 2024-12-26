@@ -82,17 +82,6 @@ function parseTypes(
     else if (typeof jayYaml.data === 'string') return resolveImportedType(imports, jayYaml.data);
 }
 
-function parseExamples(jayYaml: JayYamlStructure, validations: JayValidations) {
-    return Object.keys(jayYaml)
-        .filter((_) => _ !== 'data')
-        .map((exampleName) => {
-            return {
-                name: exampleName,
-                data: jayYaml[exampleName],
-            };
-        });
-}
-
 function parseYaml(root: HTMLElement): WithValidations<JayYamlStructure> {
     let validations = [];
     let jayYamlElements = root.querySelectorAll('[type="application/yaml-jay"]');
@@ -151,7 +140,6 @@ function parseImports(
             return { module, names: [] };
         }
     });
-    //new Set(imports.flatMap(_ => _.names.map(sym => sym.as? sym.as : sym.name)));
 }
 
 function normalizeFilename(filename: string): string {
@@ -171,7 +159,6 @@ export function parseJayFile(
     let { val: jayYaml, validations } = parseYaml(root);
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
-    let examples = parseExamples(jayYaml, validations);
     let imports = parseImports(
         root.querySelectorAll('link[rel="import"]'),
         validations,
@@ -181,10 +168,8 @@ export function parseJayFile(
     let importNames = imports.flatMap((_) => _.names);
     let types = parseTypes(jayYaml, validations, baseElementName, importNames);
 
-    // let validations = [...typeValidations, ...importValidations];
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
-    // let {types, examples} = typesAndExamples;
     let body = root.querySelector('body');
     if (body === null) {
         validations.push(`jay file must have exactly a body tag`);
@@ -194,7 +179,6 @@ export function parseJayFile(
         {
             format: SourceFileFormat.JayHtml,
             types,
-            examples,
             imports,
             body,
             baseElementName,

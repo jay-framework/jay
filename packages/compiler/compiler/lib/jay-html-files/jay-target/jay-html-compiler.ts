@@ -112,7 +112,7 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             (prev, current) => RenderFragment.merge(prev, current, ', '),
             RenderFragment.empty(),
         )
-        .map((_) => `{${_}}`);
+        .map((_: string) => `{${_}}`);
 }
 
 function renderElementRef(
@@ -167,7 +167,7 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
                 (prev, current) => RenderFragment.merge(prev, current, ', '),
                 RenderFragment.empty(),
             )
-            .map((_) => `({${_}})`);
+            .map((_: string) => `({${_}})`);
     }
 }
 
@@ -227,7 +227,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
         );
     }
 
-    function renderHtmlElement(htmlElement, newVariables: Variables, currIndent: Indent = indent) {
+    function renderHtmlElement(htmlElement: HTMLElement, newVariables: Variables, currIndent: Indent = indent) {
         if (importedSymbols.has(htmlElement.rawTagName))
             return renderNestedComponent(htmlElement, newVariables, currIndent);
 
