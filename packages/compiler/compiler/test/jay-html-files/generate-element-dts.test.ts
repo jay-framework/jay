@@ -1,6 +1,7 @@
-import { generateElementDefinitionFile, prettify } from '../../lib';
+import { generateElementDefinitionFile } from '../../lib';
 import { readFixtureElementDefinitionFile } from '../test-utils/file-utils';
 import { readAndParseJayFile } from '../test-utils/ts-compiler-test-utils';
+import { prettify } from 'jay-compiler-shared';
 
 describe('generate jay-html definition', () => {
     it('should generate definition file for simple file', async () => {

@@ -1,7 +1,6 @@
 import { promises } from 'node:fs';
 import path from 'node:path';
-import { removeComments } from '../../lib/utils/prettify';
-import { prettify } from '../../lib';
+import { prettify, removeComments } from 'jay-compiler-shared';
 
 const { readFile } = promises;
 

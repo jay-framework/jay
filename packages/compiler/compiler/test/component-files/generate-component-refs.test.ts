@@ -1,5 +1,6 @@
-import { generateComponentRefsDefinitionFile, prettify } from '../../lib';
+import { generateComponentRefsDefinitionFile } from '../../lib';
 import { readFixtureFileRaw } from '../test-utils/file-utils';
+import { prettify } from 'jay-compiler-shared';
 
 describe('generate the refs file', () => {
     it('should support events in refs', async () => {

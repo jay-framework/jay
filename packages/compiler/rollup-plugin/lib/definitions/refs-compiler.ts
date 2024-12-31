@@ -1,8 +1,8 @@
 import chalk from 'chalk';
-import { generateComponentRefsDefinitionFile, prettify } from 'jay-compiler';
+import { generateComponentRefsDefinitionFile } from 'jay-compiler';
 import path from 'node:path';
 import { promises as fsp } from 'node:fs';
-import { JayImportLink } from 'jay-compiler-shared';
+import { JayImportLink, prettify } from 'jay-compiler-shared';
 
 export function getRefsFilePaths(
     generatedRefPaths: Set<string>,

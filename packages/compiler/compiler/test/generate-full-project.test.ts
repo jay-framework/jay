@@ -4,7 +4,6 @@ import {
     generateElementFile,
     generateSandboxRootFile,
     parseJayFile,
-    prettify,
     transformComponent,
 } from '../lib';
 import {
@@ -30,7 +29,7 @@ import {
     requestAnimationFramePattern,
 } from './component-files/ts-basic-analyzers/compiler-patterns-for-testing';
 import { FunctionRepositoryBuilder } from '../lib';
-import { checkValidationErrors, RuntimeMode } from 'jay-compiler-shared';
+import { checkValidationErrors, prettify, RuntimeMode } from 'jay-compiler-shared';
 
 describe('generate full project', () => {
     const relativePath = './test/fixtures/tsconfig.json';

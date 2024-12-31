@@ -227,7 +227,11 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
         );
     }
 
-    function renderHtmlElement(htmlElement: HTMLElement, newVariables: Variables, currIndent: Indent = indent) {
+    function renderHtmlElement(
+        htmlElement: HTMLElement,
+        newVariables: Variables,
+        currIndent: Indent = indent,
+    ) {
         if (importedSymbols.has(htmlElement.rawTagName))
             return renderNestedComponent(htmlElement, newVariables, currIndent);
 

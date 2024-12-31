@@ -1,11 +1,11 @@
 import { transformCode } from '../test-utils/ts-compiler-test-utils';
 import { transformComponent } from '../../lib';
-import { prettify } from '../../lib';
 import {
     eventPreventDefaultPattern,
     readEventTargetValuePattern,
 } from './ts-basic-analyzers/compiler-patterns-for-testing';
 import { FunctionRepositoryBuilder } from '../../lib';
+import { prettify } from 'jay-compiler-shared';
 
 function globalFunctionRepo(): FunctionRepositoryBuilder {
     return new FunctionRepositoryBuilder();

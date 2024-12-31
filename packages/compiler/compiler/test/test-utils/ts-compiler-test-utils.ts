@@ -8,7 +8,6 @@ import {
     generateImportsFileFromTsSource,
     JayHtmlSourceFile,
     parseJayFile,
-    prettify,
     transformComponentBridge,
 } from '../../lib';
 import {
@@ -22,6 +21,7 @@ import {
     checkValidationErrors,
     GenerateTarget,
     MainRuntimeModes,
+    prettify,
     RuntimeMode,
     WithValidations,
 } from 'jay-compiler-shared';

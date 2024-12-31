@@ -8,3 +8,5 @@ export * from './source-file-format';
 export * from './render-fragment';
 export * from './compiler-source-file';
 export * from './generate-target';
+export * from './errors';
+export * from './prettify';

@@ -1,7 +1,7 @@
 import { LoadResult, PluginContext } from 'rollup';
 import { getJayMetadata } from './metadata';
 import { readFileAsString } from '../common/files';
-import { checkCodeErrors } from 'jay-compiler';
+import { checkCodeErrors } from '../common/errors';
 
 export async function loadJayFile(context: PluginContext, id: string): Promise<LoadResult> {
     console.info(`[load] start ${id}`);

@@ -6,7 +6,6 @@ import {
 } from '../../../lib/components-files/building-blocks/analyze-event-handler-by-pattern';
 import { transformCode } from '../../test-utils/ts-compiler-test-utils';
 import ts, { isArrowFunction, isFunctionDeclaration } from 'typescript';
-import { prettify } from '../../../lib';
 import {
     eventPreventDefaultPattern,
     readEventKeyCodePattern,
@@ -18,6 +17,7 @@ import {
 import { SourceFileBindingResolver } from '../../../lib/components-files/basic-analyzers/source-file-binding-resolver';
 import { SourceFileStatementAnalyzer } from '../../../lib/components-files/basic-analyzers/scoped-source-file-statement-analyzer';
 import { FunctionRepositoryBuilder } from '../../../lib';
+import { prettify } from 'jay-compiler-shared';
 
 describe('split event handler by pattern', () => {
     const READ_EVENT_TARGET_VALUE = readEventTargetValuePattern();

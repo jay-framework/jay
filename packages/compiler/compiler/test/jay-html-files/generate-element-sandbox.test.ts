@@ -1,6 +1,6 @@
-import { prettify } from '../../lib';
 import { readFixtureElementBridgeFile } from '../test-utils/file-utils';
 import { readFileAndGenerateElementBridgeFile } from '../test-utils/ts-compiler-test-utils';
+import { prettify } from 'jay-compiler-shared';
 
 describe('generate jay-html element for sandbox', () => {
     describe('generate element bridges', () => {

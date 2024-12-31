@@ -1,7 +1,6 @@
-import { prettify } from '../../lib';
 import { readFixtureElementFile, readFixtureFile } from '../test-utils/file-utils';
 import { readFileAndGenerateElementFile } from '../test-utils/ts-compiler-test-utils';
-import { RuntimeMode } from 'jay-compiler-shared';
+import { prettify, RuntimeMode } from 'jay-compiler-shared';
 
 describe('generate jay-html element', () => {
     describe('basics', () => {
