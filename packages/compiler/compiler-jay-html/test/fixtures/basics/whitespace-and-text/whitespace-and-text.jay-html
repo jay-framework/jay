@@ -1,0 +1,16 @@
+<html>
+<head>
+    <script type="application/yaml-jay">
+data:
+    text: string
+    text2: string
+    text3: string
+    </script>
+</head>
+<body>
+<div>
+    <div> multi-line text </div>
+    <div>some text<span> </span>another text</div>
+</div>
+</body>
+</html>

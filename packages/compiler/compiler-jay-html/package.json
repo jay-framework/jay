@@ -1,0 +1,52 @@
+{
+  "name": "jay-compiler-jay-html",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "build": "npm run build:pegjs && npm run build:js && npm run build:types",
+    "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
+    "build:pegjs": "pegjs --allowed-start-rules dynamicAttribute,booleanAttribute,dynamicText,dynamicProperty,conditionFunc,accessor,Identifier,classExpression,dynamicComponentProp,importNames,enum,is_enum,reactDynamicText,reactDynamicProperty,reactClassExpression,condition  -o lib/expressions/expression-parser.cjs lib/expressions/expression-parser.pegjs",
+    "build:js": "vite build",
+    "build:types": "tsup lib/index.ts --dts-only --format cjs",
+    "build:check-types": "tsc",
+    "clean": "rimraf dist",
+    "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "change-case": "^4.1.2",
+    "jay-compiler-analyze-exported-types": "workspace:^",
+    "jay-compiler-shared": "workspace:^",
+    "jay-component": "workspace:^",
+    "jay-runtime": "workspace:^",
+    "jay-secure": "workspace:^",
+    "js-yaml": "^4.1.0",
+    "node-html-parser": "^6.1.12",
+    "pegjs": "^0.10.0",
+    "pluralize": "^8.0.0",
+    "style-to-object": "^1.0.8",
+    "typescript": "^5.3.3"
+  },
+  "devDependencies": {
+    "@caiogondim/strip-margin": "^1.0.0",
+    "@testing-library/jest-dom": "^6.2.0",
+    "@types/js-beautify": "^1",
+    "@types/node": "^20.11.5",
+    "jay-dev-environment": "workspace:^",
+    "jest-diff": "^29.7.0",
+    "jest-matcher-utils": "^29.7.0",
+    "js-beautify": "^1.14.11",
+    "rimraf": "^5.0.5",
+    "tsup": "^8.0.1",
+    "vite": "^5.0.11",
+    "vitest": "^1.2.1"
+  }
+}

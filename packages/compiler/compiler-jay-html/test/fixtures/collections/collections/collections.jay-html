@@ -1,0 +1,25 @@
+<html>
+<head>
+    <script type="application/yaml-jay">
+data:
+    title: string
+    things:
+    -  name: string
+       completed: boolean
+       cost: number
+       id: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+    <div>
+        <div forEach="things" trackBy="id">
+            <span style="color:green; width: 100px; display: inline-block;">{name}</span>
+            <span style="color:red; width: 100px; display: inline-block;">{completed}</span>
+            <span style="color:blue; width: 100px; display: inline-block;">{cost}</span>
+        </div>
+    </div>
+</div>
+</body>
+</html>

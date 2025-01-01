@@ -1,4 +1,4 @@
-import { parseJayFile, parseGenericTypescriptFile } from 'jay-compiler';
+import { parseGenericTypescriptFile } from 'jay-compiler';
 import { PluginContext } from 'rollup';
 import { JayPluginContext } from './jay-plugin-context';
 import { getSourceJayMetadata, JayMetadata } from './metadata';
@@ -9,6 +9,7 @@ import {
     SourceFileFormat,
     WithValidations,
 } from 'jay-compiler-shared';
+import { parseJayFile } from 'jay-compiler-jay-html';
 
 export async function getJayFileStructure(
     jayContext: JayPluginContext,

@@ -2,8 +2,8 @@
   "name": "jay",
   "scripts": {
     "build": "wsrun -te --report build",
-    "build:check-types": "wsrun -p 'jay-@(cli|compiler|compiler-shared|jay-compiler-analyze-exported-types|component|json-patch|list-compare|reactive|runtime|secure|serialization)' -p '@(rollup|vite)-plugin-jay' -e --prefix build:check-types",
-    "build:watch": "wsrun -p 'jay-@(cli|compiler|compiler-shared|jay-compiler-analyze-exported-types|component|json-patch|list-compare|reactive|runtime|secure|serialization)' -p '@(rollup|vite)-plugin-jay' --prefix build:watch",
+    "build:check-types": "wsrun -p 'jay-@(cli|compiler|compiler-shared|compiler-analyze-exported-types|compiler-jay-html|component|json-patch|list-compare|reactive|runtime|secure|serialization)' -p '@(rollup|vite)-plugin-jay' -e --prefix build:check-types",
+    "build:watch": "wsrun -p 'jay-@(cli|compiler|compiler-shared|compiler-analyze-exported-types|compiler-jay-html|component|json-patch|list-compare|reactive|runtime|secure|serialization)' -p '@(rollup|vite)-plugin-jay' --prefix build:watch",
     "clean": "wsrun clean",
     "clean:node_modules": "rimraf node_modules && rimraf packages/*/node_modules && rimraf examples/*/node_modules && rimraf exploration/*/node_modules",
     "clean:node_modules:with-cache": "npm run clean:node_modules && yarn cache clean",

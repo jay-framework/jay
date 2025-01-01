@@ -22,29 +22,29 @@ export async function readFixtureSourceJayFile(folder, file) {
 export async function readFixtureFile(folder, file) {
     return prettify(await readFixtureFileRaw(folder, `${file}.ts`));
 }
-export async function readFixtureReactFile(folder, file) {
-    return prettify(await readFixtureFileRaw(folder, `${file}.tsx`));
-}
-export async function readFixtureElementFile(folder) {
-    return prettify(await readFixtureFileRaw(folder, 'generated-element.ts'));
-}
+// export async function readFixtureReactFile(folder, file) {
+//     return prettify(await readFixtureFileRaw(folder, `${file}.tsx`));
+// }
+// export async function readFixtureElementFile(folder) {
+//     return prettify(await readFixtureFileRaw(folder, 'generated-element.ts'));
+// }
 
-export async function readFixtureReactElementFile(folder) {
-    return prettify(
-        removeComments(await readFixtureFileRaw(folder, 'generated-react-element.tsx')),
-    );
-}
+// export async function readFixtureReactElementFile(folder) {
+//     return prettify(
+//         removeComments(await readFixtureFileRaw(folder, 'generated-react-element.tsx')),
+//     );
+// }
 
-export async function readFixtureElementBridgeFile(folder) {
-    return prettify(await readFixtureFileRaw(folder, 'generated-element-bridge.ts'));
-}
-
-export async function readFixtureElementDefinitionFile(
-    folder: string,
-    filename: string = 'generated-element.d.ts',
-) {
-    return prettify(await readFixtureFileRaw(folder, filename));
-}
+// export async function readFixtureElementBridgeFile(folder) {
+//     return prettify(await readFixtureFileRaw(folder, 'generated-element-bridge.ts'));
+// }
+//
+// export async function readFixtureElementDefinitionFile(
+//     folder: string,
+//     filename: string = 'generated-element.d.ts',
+// ) {
+//     return prettify(await readFixtureFileRaw(folder, filename));
+// }
 
 export function getFileFromFolder(folder: string): string {
     return folder.split('/').slice(-1)[0];

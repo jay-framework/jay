@@ -1,4 +1,3 @@
-import { parseJayFile } from 'jay-compiler';
 import chalk from 'chalk';
 import { findAllJayFiles } from './find-all-jay-files';
 import { promises as fsp } from 'fs';
@@ -10,6 +9,7 @@ import {
     RuntimeMode,
     WithValidations,
 } from 'jay-compiler-shared';
+import { parseJayFile } from 'jay-compiler-jay-html';
 
 function checkFileExists(filepath): Promise<Boolean> {
     return new Promise((resolve, reject) => {

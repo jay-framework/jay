@@ -1,0 +1,17 @@
+<html>
+<head>
+    <script type="application/yaml-jay">
+data:
+    text: string
+    </script>
+</head>
+<body>
+<div>
+    <div ref="ref1">{text}</div>
+    <div ref="ref$">{text}</div>
+    <div>
+        <div ref="ref3">{text}</div>
+    </div>
+</div>
+</body>
+</html>

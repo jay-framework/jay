@@ -2,8 +2,6 @@ import {
     generateComponentRefsDefinitionFile,
     generateElementDefinitionFile,
     generateElementFile,
-    generateSandboxRootFile,
-    parseJayFile,
     transformComponent,
 } from '../lib';
 import {
@@ -30,6 +28,7 @@ import {
 } from './component-files/ts-basic-analyzers/compiler-patterns-for-testing';
 import { FunctionRepositoryBuilder } from '../lib';
 import { checkValidationErrors, prettify, RuntimeMode } from 'jay-compiler-shared';
+import { generateSandboxRootFile, parseJayFile } from 'jay-compiler-jay-html';
 
 describe('generate full project', () => {
     const relativePath = './test/fixtures/tsconfig.json';

@@ -3,11 +3,8 @@ import { transform } from 'typescript';
 import {
     transformComponentBridge,
     transformComponent,
-    generateElementBridgeFile,
     generateElementFile,
     generateImportsFileFromJayFile,
-    generateSandboxRootFile,
-    JayHtmlSourceFile,
 } from 'jay-compiler';
 import { PluginContext } from 'rollup';
 import { JayPluginContext } from './jay-plugin-context';
@@ -20,6 +17,11 @@ import {
     RuntimeMode,
     SourceFileFormat,
 } from 'jay-compiler-shared';
+import {
+    generateElementBridgeFile,
+    generateSandboxRootFile,
+    JayHtmlSourceFile,
+} from 'jay-compiler-jay-html';
 
 export function checkDiagnosticsErrors(tsCode: ts.TransformationResult<ts.SourceFile>) {
     if (tsCode.diagnostics.length > 0) {

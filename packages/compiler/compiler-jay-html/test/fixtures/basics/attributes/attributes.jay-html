@@ -1,0 +1,32 @@
+<html>
+<head>
+    <script type="application/yaml-jay">
+data:
+    text: string
+    text2: string
+    text3: string
+    bool1: boolean
+    color: string
+    </script>
+</head>
+<body>
+<div>
+    <div style="background: red;">{text}</div>
+    <div data-attribute="a value">static</div>
+    <input value="some value"/>
+    <input id="abc" value="{text2}"/>
+    <input type="checkbox" checked="{bool1}" value="{text2}"/>
+    <label for="abc"/>
+    <div class="main second">{text3}</div>
+    <div class="{bool1?main}">{text3}</div>
+    <div class="{bool1?main:second}">{text3}</div>
+    <div data-attribute="{text}"/>
+    <div data-attribute="{text}-abcd"/>
+    <div data-attribute="abcd-{text}"/>
+    <div data-attribute="abcd-{text}-abcd"/>
+    <button disabled="{bool1}"></button>
+    <button disabled="{!bool1}"></button>
+    <button disabled></button>
+</div>
+</body>
+</html>
