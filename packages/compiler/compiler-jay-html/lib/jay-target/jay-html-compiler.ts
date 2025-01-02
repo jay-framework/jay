@@ -1,7 +1,8 @@
 import {
     Import,
     Imports,
-    ImportsFor, isArrayType,
+    ImportsFor,
+    isArrayType,
     JayArrayType,
     JayComponentType,
     JayImportLink,
@@ -368,8 +369,9 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
 
                 const paramName = forEachAccessor.rootVar;
                 const paramType = variables.currentType.name;
-                const forEachFragment = forEachAccessor.render().map((_) =>
-                    `(${paramName}: ${paramType}) => ${_}`);
+                const forEachFragment = forEachAccessor
+                    .render()
+                    .map((_) => `(${paramName}: ${paramType}) => ${_}`);
                 let forEachVariables = variables.childVariableFor(
                     (forEachAccessor.resolvedType as JayArrayType).itemType,
                 );
@@ -591,8 +593,9 @@ ${indent.firstLine}])`,
 
             const paramName = forEachAccessor.rootVar;
             const paramType = variables.currentType.name;
-            const forEachFragment = forEachAccessor.render().map((_) =>
-                `(${paramName}: ${paramType}) => ${_}`);
+            const forEachFragment = forEachAccessor
+                .render()
+                .map((_) => `(${paramName}: ${paramType}) => ${_}`);
             let forEachVariables = variables.childVariableFor(
                 (forEachAccessor.resolvedType as JayArrayType).itemType,
             );

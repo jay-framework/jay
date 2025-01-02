@@ -36,9 +36,9 @@ export interface CollectionWithRefsElementProps
     extends Jay4ReactElementProps<CollectionWithRefsViewState> {}
 
 export function render({
-                           vs,
-                           context,
-                       }: CollectionWithRefsElementProps): ReactElement<CollectionWithRefsElementProps, any> {
+    vs,
+    context,
+}: CollectionWithRefsElementProps): ReactElement<CollectionWithRefsElementProps, any> {
     return (
         <div>
             <h1>{vs.title}</h1>
