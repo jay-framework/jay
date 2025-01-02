@@ -2,7 +2,6 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
-    dynamicAttribute as da,
     RenderElement,
     ReferencesManager,
     dynamicElement as de,
@@ -10,6 +9,7 @@ import {
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
+import { secureChildComp } from 'jay-secure';
 // @ts-expect-error Cannot find module
 import { treeNode, Node } from './tree-node?jay-mainSandbox';
 
@@ -35,7 +35,7 @@ export type RecursiveComponents2ElementPreRender = [
 ];
 
 export function render(options?: RenderElementOptions): RecursiveComponents2ElementPreRender {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [refManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);
     const render = (viewState: RecursiveComponents2ViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
@@ -45,7 +45,9 @@ export function render(options?: RenderElementOptions): RecursiveComponents2Elem
                     forEach(
                         (vs: RecursiveComponents2ViewState) => vs.node?.children,
                         (vs1: Node) => {
-                            return e('li', {}, [e('TreeNode', { props: da((vs1) => vs1) }, [])]);
+                            return e('li', {}, [
+                                secureChildComp(treeNode, (vs1: Node) => vs1, refAR1()),
+                            ]);
                         },
                         'id',
                     ),
