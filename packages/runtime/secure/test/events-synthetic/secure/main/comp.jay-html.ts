@@ -34,7 +34,7 @@ export interface CompElementRefs {
 
 export type CompElement = JayElement<CompViewState, CompElementRefs>;
 export type CompElementRender = RenderElement<CompViewState, CompElementRefs, CompElement>;
-export type CompElementPreRender = [refs: CompElementRefs, CompElementRender];
+export type CompElementPreRender = [CompElementRefs, CompElementRender];
 
 export function render(options?: RenderElementOptions): CompElementPreRender {
     const [refManager, [result, button, buttonExec, input, itemButton, itemInput]] =

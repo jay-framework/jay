@@ -12,10 +12,9 @@ import {
     useContext,
     withContext,
     RenderElement,
-    ReferencesManager,
+    ReferencesManager, MapEventEmitterViewState, ComponentCollectionProxy, OnlyEventEmitters,
 } from 'jay-runtime';
 import { secureChildComp as childComp } from '../../../../lib/';
-import { TreeNodeRefs } from './tree-node-refs';
 import { TreeNode, Node } from './tree-node';
 import { SECURE_COMPONENT_MARKER } from '../../../../lib/main/main-contexts';
 
@@ -25,6 +24,9 @@ export interface TreeNodeViewState {
     open: boolean;
 }
 
+export type TreeNodeRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof TreeNode>>;
+export type TreeNodeRefs<ParentVS> = ComponentCollectionProxy<ParentVS, TreeNodeRef<ParentVS>> &
+    OnlyEventEmitters<TreeNodeRef<ParentVS>>;
 export interface TreeNodeElementRefs {
     head: HTMLElementProxy<TreeNodeViewState, HTMLDivElement>;
     child: TreeNodeRefs<Node>;

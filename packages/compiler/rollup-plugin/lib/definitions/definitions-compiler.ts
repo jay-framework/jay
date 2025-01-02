@@ -1,7 +1,6 @@
 import { generateElementDefinitionFile } from 'jay-compiler';
 import { LoadResult, PluginContext, TransformResult } from 'rollup';
 import { getFileContext, readFileAsString, writeDefinitionFile } from '../common/files';
-import { generateRefsComponents, getRefsFilePaths } from './refs-compiler';
 import path from 'node:path';
 import { JAY_EXTENSION, hasExtension, checkValidationErrors } from 'jay-compiler-shared';
 import { parseJayFile, getJayHtmlImports } from 'jay-compiler-jay-html';
@@ -39,14 +38,6 @@ export function jayDefinitions() {
             const tsCode = checkValidationErrors(generateElementDefinitionFile(parsedFile));
             const generatedFilename = await writeDefinitionFile(dirname, filename, tsCode);
             context.info(`[transform] generated ${generatedFilename}`);
-
-            const newRefsPaths = getRefsFilePaths(
-                generatedRefPaths,
-                dirname,
-                parsedFile.val.imports,
-            );
-            newRefsPaths.forEach((path) => generatedRefPaths.add(path));
-            await generateRefsComponents(newRefsPaths);
 
             return { code: '', map: null };
         },

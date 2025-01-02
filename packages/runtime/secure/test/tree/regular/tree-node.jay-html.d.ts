@@ -1,5 +1,11 @@
-import { JayElement, HTMLElementProxy, RenderElementOptions, RenderElement } from 'jay-runtime';
-import { TreeNodeRefs } from './tree-node-refs';
+import {
+    JayElement,
+    HTMLElementProxy,
+    RenderElementOptions,
+    RenderElement,
+    MapEventEmitterViewState,
+    ComponentCollectionProxy, OnlyEventEmitters
+} from 'jay-runtime';
 import { TreeNode, Node } from './tree-node';
 
 export interface TreeNodeViewState {
@@ -8,6 +14,9 @@ export interface TreeNodeViewState {
     open: boolean;
 }
 
+export type TreeNodeRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof TreeNode>>;
+export type TreeNodeRefs<ParentVS> = ComponentCollectionProxy<ParentVS, TreeNodeRef<ParentVS>> &
+    OnlyEventEmitters<TreeNodeRef<ParentVS>>;
 export interface TreeNodeElementRefs {
     head: HTMLElementProxy<TreeNodeViewState, HTMLDivElement>;
     child: TreeNodeRefs<Node>;
@@ -19,6 +28,6 @@ export type TreeNodeElementRender = RenderElement<
     TreeNodeElementRefs,
     TreeNodeElement
 >;
-export type TreeNodeElementPreRender = [refs: TreeNodeElementRefs, TreeNodeElementRender];
+export type TreeNodeElementPreRender = [TreeNodeElementRefs, TreeNodeElementRender];
 
 export declare function render(options?: RenderElementOptions): TreeNodeElementPreRender;

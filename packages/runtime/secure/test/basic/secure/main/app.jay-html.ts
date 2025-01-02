@@ -4,25 +4,25 @@ import {
     ConstructContext,
     RenderElementOptions,
     RenderElement,
-    ReferencesManager,
+    ReferencesManager, MapEventEmitterViewState,
 } from 'jay-runtime';
 import { mainRoot as mr } from '../../../../lib/';
 import { Basic } from './basic';
 import { secureChildComp } from '../../../../lib';
-import { BasicComponentType } from '../../regular/basic-refs';
 
 export interface AppViewState {
     firstName: string;
     lastName: string;
 }
 
+export type BasicRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Basic>>;
 export interface AppElementRefs {
-    comp1: BasicComponentType<AppViewState>;
+    comp1: BasicRef<AppViewState>;
 }
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
 type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
-type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
+type AppElementPreRender = [AppElementRefs, AppElementRender];
 
 export function renderAppElement(options?: RenderElementOptions): AppElementPreRender {
     const [refManager, [comp1]] = ReferencesManager.for(options, [], [], ['comp1'], []);

@@ -26,7 +26,7 @@ export function initializeWorker() {
                 ],
             ),
             sandboxForEach<any, any>(
-                (vs) => vs.counters,
+                (vs) => vs.subCounters,
                 'id',
                 () => [
                     sandboxChildComp(

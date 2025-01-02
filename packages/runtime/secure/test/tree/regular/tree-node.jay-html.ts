@@ -11,9 +11,8 @@ import {
     childComp,
     RenderElementOptions,
     RenderElement,
-    ReferencesManager,
+    ReferencesManager, MapEventEmitterViewState, ComponentCollectionProxy, OnlyEventEmitters,
 } from 'jay-runtime';
-import { TreeNodeRefs } from './tree-node-refs';
 import { TreeNode, Node } from './tree-node';
 
 export interface TreeNodeViewState {
@@ -22,6 +21,9 @@ export interface TreeNodeViewState {
     open: boolean;
 }
 
+export type TreeNodeRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof TreeNode>>;
+export type TreeNodeRefs<ParentVS> = ComponentCollectionProxy<ParentVS, TreeNodeRef<ParentVS>> &
+    OnlyEventEmitters<TreeNodeRef<ParentVS>>;
 export interface TreeNodeElementRefs {
     head: HTMLElementProxy<TreeNodeViewState, HTMLDivElement>;
     child: TreeNodeRefs<Node>;

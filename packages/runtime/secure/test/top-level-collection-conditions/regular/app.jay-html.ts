@@ -8,12 +8,11 @@ import {
     childComp,
     RenderElementOptions,
     RenderElement,
-    ReferencesManager,
+    ReferencesManager, MapEventEmitterViewState, ComponentCollectionProxy, OnlyEventEmitters,
 } from 'jay-runtime';
-import { CounterComponentType, CounterRefs } from './counter-refs';
 import { Counter } from './counter';
 
-export interface Counter {
+export interface SubCounter {
     id: string;
     initialCount: number;
 }
@@ -21,12 +20,15 @@ export interface Counter {
 export interface AppViewState {
     cond: boolean;
     initialCount: number;
-    counters: Array<Counter>;
+    subCounters: Array<SubCounter>;
 }
 
+export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
+export type CounterRefs<ParentVS> = ComponentCollectionProxy<ParentVS, CounterRef<ParentVS>> &
+    OnlyEventEmitters<CounterRef<ParentVS>>;
 export interface AppElementRefs {
-    comp1: CounterComponentType<AppViewState>;
-    comp2: CounterRefs<Counter>;
+    comp1: CounterRef<AppViewState>;
+    comp2: CounterRefs<SubCounter>;
 }
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
@@ -58,11 +60,11 @@ export function render(options?: RenderElementOptions): AppElementPreRender {
                         ),
                 ),
                 forEach(
-                    (vs) => vs.counters,
-                    (vs1: Counter) => {
+                    (vs) => vs.subCounters,
+                    (vs1: SubCounter) => {
                         return childComp(
                             Counter,
-                            (vs: Counter) => ({
+                            (vs: SubCounter) => ({
                                 title: `collection counter ${vs.id}`,
                                 initialCount: vs.initialCount,
                                 id: vs.id,

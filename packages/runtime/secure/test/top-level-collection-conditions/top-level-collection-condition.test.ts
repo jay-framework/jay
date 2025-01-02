@@ -9,20 +9,20 @@ const COUNTER_A_COORDINATE = [COUNTER_A_ID, 'comp2'];
 const COUNTER_B_ID = 'b';
 const COUNTER_C_ID = 'c';
 const initialCountById = (viewState: AppViewState, id: string) =>
-    viewState.counters.find((_) => _.id === id).initialCount;
+    viewState.subCounters.find((_) => _.id === id).initialCount;
 const condCounterTitle = 'conditional counter';
 const collCounterTitle = (id: string) => `collection counter ${id}`;
 const COUNTER_A = { id: COUNTER_A_ID, initialCount: 13 };
 const COUNTER_B = { id: COUNTER_B_ID, initialCount: 14 };
 const COUNTER_C = { id: COUNTER_C_ID, initialCount: 15 };
-const viewState: AppViewState = { cond: true, initialCount: 12, counters: [COUNTER_A, COUNTER_B] };
+const viewState: AppViewState = { cond: true, initialCount: 12, subCounters: [COUNTER_A, COUNTER_B] };
 
 const viewState2: AppViewState = {
     cond: false,
     initialCount: 12,
-    counters: [COUNTER_A, COUNTER_B],
+    subCounters: [COUNTER_A, COUNTER_B],
 };
-const viewState3: AppViewState = { cond: true, initialCount: 12, counters: [COUNTER_C, COUNTER_A] };
+const viewState3: AppViewState = { cond: true, initialCount: 12, subCounters: [COUNTER_C, COUNTER_A] };
 
 const VERBOSE = false;
 

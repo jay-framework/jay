@@ -4,22 +4,22 @@ import {
     ConstructContext,
     RenderElementOptions,
     RenderElement,
-    ReferencesManager,
+    ReferencesManager, MapEventEmitterViewState,
 } from 'jay-runtime';
 import { Counter } from './counter';
 import { mainRoot as mr } from '../../../../lib/';
 import { secureChildComp } from '../../../../lib';
-import { CounterComponentType } from '../../regular/counter-refs';
 
 export interface AppViewState {}
 
+export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
 export interface AppElementRefs {
-    a: CounterComponentType<AppViewState>;
+    a: CounterRef<AppViewState>;
 }
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
-export type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
+export type AppElementPreRender = [AppElementRefs, AppElementRender];
 
 export function renderAppElement(options?: RenderElementOptions): AppElementPreRender {
     const [refManager, [a]] = ReferencesManager.for(options, [], [], ['a'], []);

@@ -1,4 +1,3 @@
-export { generateComponentRefsDefinitionFile } from './components-files/generator-component-refs';
 export * from './components-files/transform-component-bridge';
 export * from './components-files/transform-component';
 export * from './components-files/ts-utils/extract-imports';
