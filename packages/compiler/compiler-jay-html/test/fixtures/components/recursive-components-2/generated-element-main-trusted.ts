@@ -42,7 +42,7 @@ export function render(options?: RenderElementOptions): RecursiveComponents2Elem
                 e('div', {}, [dt((vs) => vs.node?.name)]),
                 de('ul', {}, [
                     forEach(
-                        (vs) => vs.node?.children,
+                        (vs: RecursiveComponents2ViewState) => vs.node?.children,
                         (vs1: Node) => {
                             return e('li', {}, [e('TreeNode', { props: da((vs1) => vs1) }, [])]);
                         },

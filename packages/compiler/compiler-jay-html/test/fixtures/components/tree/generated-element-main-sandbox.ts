@@ -58,7 +58,7 @@ export function render(options?: RenderElementOptions): TreeNodeElementPreRender
                     () =>
                         de('ul', {}, [
                             forEach(
-                                (vs) => vs.node?.children,
+                                (vs: TreeNodeViewState) => vs.node?.children,
                                 (vs1: Node) => {
                                     return e('li', {}, [
                                         secureChildComp(TreeNode, (vs1: Node) => vs1, refAR1()),

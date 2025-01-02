@@ -123,6 +123,27 @@ export const Import = {
         ImportsFor.implementation,
         ImportsFor.definition,
     ),
+    MapEventEmitterViewState: importStatementFragment(
+        JAY_RUNTIME,
+        'MapEventEmitterViewState',
+        ImportsFor.implementation,
+        ImportsFor.definition,
+        ImportsFor.elementSandbox,
+    ),
+    OnlyEventEmitters: importStatementFragment(
+        JAY_RUNTIME,
+        'OnlyEventEmitters',
+        ImportsFor.implementation,
+        ImportsFor.definition,
+        ImportsFor.elementSandbox,
+    ),
+    ComponentCollectionProxy: importStatementFragment(
+        JAY_RUNTIME,
+        'ComponentCollectionProxy',
+        ImportsFor.implementation,
+        ImportsFor.definition,
+        ImportsFor.elementSandbox,
+    ),
     sandboxElementBridge: importStatementFragment(
         JAY_SECURE,
         'elementBridge',

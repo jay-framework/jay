@@ -13,9 +13,20 @@ export interface Item {
     id: string;
 }
 
+export interface GroupItem {
+    itemId: string;
+    item: string;
+}
+
+export interface Group {
+    groupId: string;
+    groupItems: Array<GroupItem>;
+}
+
 export interface CollectionWithRefsViewState {
     title: string;
     items: Array<Item>;
+    groups: Array<Group>;
 }
 
 export interface CollectionWithRefsElementRefs {
@@ -45,9 +56,20 @@ export function render(): CollectionWithRefsElementPreRender {
     const render = (viewState: CollectionWithRefsViewState) =>
         elementBridge(viewState, refManager, () => [
             forEach(
-                (vs) => vs.items,
+                (vs: CollectionWithRefsViewState) => vs.items,
                 'id',
                 () => [e(refName()), e(refCompleted()), e(refCost()), e(refDone())],
+            ),
+            forEach(
+                (vs: CollectionWithRefsViewState) => vs.groups,
+                'groupId',
+                () => [
+                    forEach(
+                        (vs1: Group) => vs1.groupItems,
+                        'itemId',
+                        () => [],
+                    ),
+                ],
             ),
         ]) as CollectionWithRefsElement;
     return [refManager.getPublicAPI() as CollectionWithRefsElementRefs, render];

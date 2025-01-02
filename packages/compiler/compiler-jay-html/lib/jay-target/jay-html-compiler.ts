@@ -1,7 +1,7 @@
 import {
     Import,
     Imports,
-    ImportsFor,
+    ImportsFor, isArrayType,
     JayArrayType,
     JayComponentType,
     JayImportLink,
@@ -353,16 +353,23 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 let renderedCondition = parseCondition(condition, variables);
                 return c(renderedCondition, childElement);
             } else if (isForEach(htmlElement)) {
-                let forEach = htmlElement.getAttribute('forEach'); // todo extract type
-                let trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
+                const forEach = htmlElement.getAttribute('forEach'); // todo extract type
+                const trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
 
-                let forEachAccessor = parseAccessor(forEach, variables);
-                // Todo check if type unknown throw exception
-                let forEachFragment = forEachAccessor.render().map((_) => `vs => ${_}`);
+                const forEachAccessor = parseAccessor(forEach, variables);
                 if (forEachAccessor.resolvedType === JayUnknown)
                     return new RenderFragment('', Imports.none(), [
-                        `forEach directive - failed to resolve type for forEach=${forEach}`,
+                        `forEach directive - failed to resolve forEach type [forEach=${forEach}]`,
                     ]);
+                if (!isArrayType(forEachAccessor.resolvedType))
+                    return new RenderFragment('', Imports.none(), [
+                        `forEach directive - resolved forEach type is not an array [forEach=${forEach}]`,
+                    ]);
+
+                const paramName = forEachAccessor.rootVar;
+                const paramType = variables.currentType.name;
+                const forEachFragment = forEachAccessor.render().map((_) =>
+                    `(${paramName}: ${paramType}) => ${_}`);
                 let forEachVariables = variables.childVariableFor(
                     (forEachAccessor.resolvedType as JayArrayType).itemType,
                 );
@@ -572,12 +579,20 @@ ${indent.firstLine}])`,
             let forEach = htmlElement.getAttribute('forEach'); // todo extract type
             let trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
             let forEachAccessor = parseAccessor(forEach, variables);
-            // Todo check if type unknown throw exception
-            let forEachFragment = forEachAccessor.render().map((_) => `vs => ${_}`);
+
             if (forEachAccessor.resolvedType === JayUnknown)
                 return new RenderFragment('', Imports.none(), [
-                    `forEach directive - failed to resolve type for forEach=${forEach}`,
+                    `forEach directive - failed to resolve forEach type [forEach=${forEach}]`,
                 ]);
+            if (!isArrayType(forEachAccessor.resolvedType))
+                return new RenderFragment('', Imports.none(), [
+                    `forEach directive - resolved forEach type is not an array [forEach=${forEach}]`,
+                ]);
+
+            const paramName = forEachAccessor.rootVar;
+            const paramType = variables.currentType.name;
+            const forEachFragment = forEachAccessor.render().map((_) =>
+                `(${paramName}: ${paramType}) => ${_}`);
             let forEachVariables = variables.childVariableFor(
                 (forEachAccessor.resolvedType as JayArrayType).itemType,
             );

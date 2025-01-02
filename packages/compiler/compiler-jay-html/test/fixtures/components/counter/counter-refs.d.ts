@@ -1,9 +1,13 @@
-import { EventEmitter, ComponentCollectionProxy, EventTypeFrom } from 'jay-runtime';
+import { ComponentCollectionProxy, MapEventEmitterViewState, OnlyEventEmitters } from 'jay-runtime';
 import { Counter } from './counter';
 
-export type CounterComponentType<ParentVS> = ReturnType<typeof Counter<ParentVS>>;
+export type CounterComponentType<ParentVS> = MapEventEmitterViewState<
+    ParentVS,
+    ReturnType<typeof Counter>
+>;
 
-export interface CounterRefs<ParentVS>
-    extends ComponentCollectionProxy<ParentVS, CounterComponentType<ParentVS>> {
-    onChange: EventEmitter<EventTypeFrom<CounterComponentType<ParentVS>['onChange']>, ParentVS>;
-}
+export type CounterRefs<ParentVS> = ComponentCollectionProxy<
+    ParentVS,
+    CounterComponentType<ParentVS>
+> &
+    OnlyEventEmitters<CounterComponentType<ParentVS>>;

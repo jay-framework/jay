@@ -18,9 +18,20 @@ export interface Item {
     id: string;
 }
 
+export interface GroupItem {
+    itemId: string;
+    item: string;
+}
+
+export interface Group {
+    groupId: string;
+    groupItems: Array<GroupItem>;
+}
+
 export interface CollectionWithRefsViewState {
     title: string;
     items: Array<Item>;
+    groups: Array<Group>;
 }
 
 export interface CollectionWithRefsElementRefs {
@@ -58,7 +69,7 @@ export function render(options?: RenderElementOptions): CollectionWithRefsElemen
                 e('h1', {}, [dt((vs) => vs.title)]),
                 de('div', {}, [
                     forEach(
-                        (vs) => vs.items,
+                        (vs: CollectionWithRefsViewState) => vs.items,
                         (vs1: Item) => {
                             return e('div', {}, [
                                 e(
@@ -108,6 +119,23 @@ export function render(options?: RenderElementOptions): CollectionWithRefsElemen
                             ]);
                         },
                         'id',
+                    ),
+                    forEach(
+                        (vs: CollectionWithRefsViewState) => vs.groups,
+                        (vs1: Group) => {
+                            return de('div', {}, [
+                                forEach(
+                                    (vs1: Group) => vs1.groupItems,
+                                    (vs2: GroupItem) => {
+                                        return e('div', {}, [
+                                            e('div', {}, [dt((vs2) => vs2.item)]),
+                                        ]);
+                                    },
+                                    'itemId',
+                                ),
+                            ]);
+                        },
+                        'groupId',
                     ),
                 ]),
             ]),

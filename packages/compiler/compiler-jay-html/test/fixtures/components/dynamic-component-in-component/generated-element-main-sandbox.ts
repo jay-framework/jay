@@ -8,9 +8,11 @@ import {
     forEach,
     ConstructContext,
     RenderElementOptions,
+    MapEventEmitterViewState,
+    OnlyEventEmitters,
+    ComponentCollectionProxy,
 } from 'jay-runtime';
 import { secureChildComp } from 'jay-secure';
-import { CounterComponentType, CounterRefs } from '../counter/counter-refs';
 // @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-mainSandbox';
 
@@ -25,9 +27,14 @@ export interface DynamicComponentInComponentViewState {
     count1: number;
 }
 
+export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
+// @ts-ignore component type not defined because of import error above
+export type CounterRefs<ParentVS> = ComponentCollectionProxy<ParentVS, CounterRef<ParentVS>> &
+    OnlyEventEmitters<CounterRef<ParentVS>>;
+
 export interface DynamicComponentInComponentElementRefs {
     counter1: CounterRefs<NestedCounter>;
-    counter2: CounterComponentType<DynamicComponentInComponentViewState>;
+    counter2: CounterRef<DynamicComponentInComponentViewState>;
 }
 
 export type DynamicComponentInComponentElement = JayElement<
@@ -58,7 +65,7 @@ export function render(
         ConstructContext.withRootContext(viewState, refManager, () =>
             de('div', {}, [
                 forEach(
-                    (vs) => vs.nestedCounters,
+                    (vs: DynamicComponentInComponentViewState) => vs.nestedCounters,
                     (vs1: NestedCounter) => {
                         return secureChildComp(
                             Counter,

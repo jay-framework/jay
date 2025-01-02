@@ -1,8 +1,8 @@
 import {
     readFileAndGenerateElementFile,
     ReadFileAndGenerateElementFileOptions,
-} from '../../test-utils/file-utils';
-import { readFixtureReactElementFile, readFixtureReactFile } from '../../test-utils/file-utils';
+} from '../test-utils/file-utils';
+import { readFixtureReactElementFile, readFixtureReactFile } from '../test-utils/file-utils';
 import { GenerateTarget, prettify, RuntimeMode } from 'jay-compiler-shared';
 
 describe('generate jay-html element for react target', () => {
@@ -182,26 +182,26 @@ describe('generate jay-html element for react target', () => {
                 generateTarget: GenerateTarget.react,
                 importerMode: RuntimeMode.MainTrusted,
             };
-            it.skip('for simple refs', async () => {
-                const folder = 'components/counter';
+            it('for simple refs', async () => {
+                const folder = 'components-react-target/counter';
                 const elementFile = await readFileAndGenerateElementFile(folder, options);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureReactFile(folder, 'generated-react-element-main-trusted'),
+                    await readFixtureReactFile(folder, 'generated-react-element'),
                 );
             });
 
             it.skip('nesting components in other components', async () => {
-                const folder = 'components/component-in-component';
+                const folder = 'components-react-target/component-in-component';
                 const elementFile = await readFileAndGenerateElementFile(folder, options);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureReactFile(folder, 'generated-react-element-main-trusted'),
+                    await readFixtureReactFile(folder, 'generated-react-element'),
                 );
             });
 
             it.skip('dynamic nesting components in other components', async () => {
-                const folder = 'components/dynamic-component-in-component';
+                const folder = 'components-react-target/dynamic-component-in-component';
                 const elementFile = await readFileAndGenerateElementFile(folder, options);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
@@ -210,7 +210,7 @@ describe('generate jay-html element for react target', () => {
             });
 
             it.skip('recursive-components', async () => {
-                const folder = 'components/recursive-components';
+                const folder = 'components-react-target/recursive-components';
                 const elementFile = await readFileAndGenerateElementFile(folder, options);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
@@ -219,7 +219,7 @@ describe('generate jay-html element for react target', () => {
             });
 
             it.skip('recursive-components-2', async () => {
-                const folder = 'components/recursive-components-2';
+                const folder = 'components-react-target/recursive-components-2';
                 const elementFile = await readFileAndGenerateElementFile(folder, options);
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
@@ -228,7 +228,7 @@ describe('generate jay-html element for react target', () => {
             });
 
             it.skip('tree', async () => {
-                const folder = 'components/tree';
+                const folder = 'components-react-target/tree';
                 const elementFile = await readFileAndGenerateElementFile(folder, {
                     ...options,
                     givenFile: 'tree-node',

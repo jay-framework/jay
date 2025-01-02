@@ -40,7 +40,7 @@ export function render(options?: RenderElementOptions): CollectionsElementPreRen
                 e('h1', {}, [dt((vs) => vs.title)]),
                 de('div', {}, [
                     forEach(
-                        (vs) => vs.things,
+                        (vs: CollectionsViewState) => vs.things,
                         (vs1: Thing) => {
                             return e('div', {}, [
                                 e(

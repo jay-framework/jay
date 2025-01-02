@@ -18,24 +18,32 @@ const isComponentRef = (ref: Ref) =>
 const isCollectionRef = (ref: Ref) => ref.dynamicRef;
 const isComponentCollectionRef = (ref: Ref) => isCollectionRef(ref) && isComponentRef(ref);
 
+enum RefsNeeded {
+    REF,
+    REF_AND_REFS,
+}
 export function renderRefsType(refs: Ref[], refsType: string) {
     let renderedRefs: string;
     let imports = Imports.none();
-    let refImportsInUse = new Set<string>();
-    let refsToRender = refs.filter((_) => !_.autoRef);
+    const refImportsInUse = new Set<string>();
+    const refsToRender = refs.filter((_) => !_.autoRef);
+
+    const componentRefs = new Map<string, RefsNeeded>();
+
     if (refsToRender.length > 0) {
         const renderedReferences = refsToRender
             .map((ref) => {
                 let referenceType: string;
                 if (isComponentCollectionRef(ref)) {
                     referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`;
-                    refImportsInUse.add(`${ref.elementType.name}Refs`);
+                    componentRefs.set(ref.elementType.name, RefsNeeded.REF_AND_REFS);
                 } else if (isCollectionRef(ref)) {
                     referenceType = `HTMLElementCollectionProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
                     imports = imports.plus(Import.HTMLElementCollectionProxy);
                 } else if (isComponentRef(ref)) {
-                    referenceType = `${ref.elementType.name}ComponentType<${ref.viewStateType.name}>`;
-                    refImportsInUse.add(`${ref.elementType.name}ComponentType`);
+                    referenceType = `${ref.elementType.name}Ref<${ref.viewStateType.name}>`;
+                    if (!componentRefs.has(ref.elementType.name))
+                        componentRefs.set(ref.elementType.name, RefsNeeded.REF);
                 } else {
                     referenceType = `HTMLElementProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
                     imports = imports.plus(Import.HTMLElementProxy);
@@ -43,7 +51,24 @@ export function renderRefsType(refs: Ref[], refsType: string) {
                 return `  ${ref.ref}: ${referenceType}`;
             })
             .join(',\n');
-        renderedRefs = `export interface ${refsType} {
+
+        const renderedComponentRefs = [...componentRefs].map(([componentName, refsNeeded]) => {
+            let refTypes = `export type ${componentName}Ref<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof ${componentName}>>;`;
+            imports = imports.plus(Import.MapEventEmitterViewState);
+            if (refsNeeded === RefsNeeded.REF_AND_REFS) {
+                refTypes += `
+export type ${componentName}Refs<ParentVS> =
+    ComponentCollectionProxy<ParentVS, ${componentName}Ref<ParentVS>> &
+    OnlyEventEmitters<${componentName}Ref<ParentVS>>
+`;
+                imports = imports
+                    .plus(Import.ComponentCollectionProxy)
+                    .plus(Import.OnlyEventEmitters);
+            }
+            return refTypes;
+        });
+        renderedRefs = `${renderedComponentRefs.join('\n')}
+export interface ${refsType} {
 ${renderedReferences}
 }`;
     } else renderedRefs = `export interface ${refsType} {}`;

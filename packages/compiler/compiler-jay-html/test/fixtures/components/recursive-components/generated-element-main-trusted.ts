@@ -9,10 +9,15 @@ import {
     ConstructContext,
     childComp,
     RenderElementOptions,
+    MapEventEmitterViewState,
+    OnlyEventEmitters,
+    ComponentCollectionProxy,
 } from 'jay-runtime';
-// @ts-expect-error Cannot find module
-import { TreeNodeRefs } from './tree-node-refs';
 import { TreeNode, Node } from './tree-node';
+
+export type TreeNodeRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof TreeNode>>;
+export type TreeNodeRefs<ParentVS> = ComponentCollectionProxy<ParentVS, TreeNodeRef<ParentVS>> &
+    OnlyEventEmitters<TreeNodeRef<ParentVS>>;
 
 export interface RecursiveComponentsElementRefs {
     counter1: TreeNodeRefs<Node>;
@@ -45,7 +50,7 @@ export function render(options?: RenderElementOptions): RecursiveComponentsEleme
                 childComp(TreeNode, (vs: Node) => vs.firstChild, refAR1()),
                 de('ul', {}, [
                     forEach(
-                        (vs) => vs.children,
+                        (vs: Node) => vs.children,
                         (vs1: Node) => {
                             return e('li', {}, [
                                 childComp(
@@ -62,7 +67,7 @@ export function render(options?: RenderElementOptions): RecursiveComponentsEleme
                         'id',
                     ),
                     forEach(
-                        (vs) => vs.children,
+                        (vs: Node) => vs.children,
                         (vs1: Node) => {
                             return e('li', {}, [
                                 childComp(TreeNode, (vs1: Node) => vs1, refCounterTwo()),

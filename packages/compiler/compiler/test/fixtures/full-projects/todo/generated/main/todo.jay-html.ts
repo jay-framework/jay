@@ -12,9 +12,11 @@ import {
     ConstructContext,
     HTMLElementProxy,
     RenderElementOptions,
+    MapEventEmitterViewState,
+    OnlyEventEmitters,
+    ComponentCollectionProxy,
 } from 'jay-runtime';
 import { secureChildComp } from 'jay-secure';
-import { ItemRefs } from './item-refs';
 // @ts-expect-error Cannot find module
 import { Item } from './item?jay-mainSandbox';
 
@@ -40,6 +42,11 @@ export interface TodoViewState {
     newTodo: string;
     shownTodos: Array<ShownTodo>;
 }
+
+export type ItemRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Item>>;
+// @ts-ignore error due to cannot find item jay html module above
+export type ItemRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ItemRef<ParentVS>> &
+    OnlyEventEmitters<ItemRef<ParentVS>>;
 
 export interface TodoElementRefs {
     newTodo: HTMLElementProxy<TodoViewState, HTMLInputElement>;

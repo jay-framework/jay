@@ -9,8 +9,10 @@ import {
     ConstructContext,
     childComp,
     RenderElementOptions,
+    MapEventEmitterViewState,
+    OnlyEventEmitters,
+    ComponentCollectionProxy,
 } from 'jay-runtime';
-import { CounterComponentType, CounterRefs } from '../counter/counter-refs';
 import { Counter } from '../counter/counter';
 
 export interface NestedCounter {
@@ -24,9 +26,13 @@ export interface DynamicComponentInComponentViewState {
     count1: number;
 }
 
+export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
+export type CounterRefs<ParentVS> = ComponentCollectionProxy<ParentVS, CounterRef<ParentVS>> &
+    OnlyEventEmitters<CounterRef<ParentVS>>;
+
 export interface DynamicComponentInComponentElementRefs {
     counter1: CounterRefs<NestedCounter>;
-    counter2: CounterComponentType<DynamicComponentInComponentViewState>;
+    counter2: CounterRef<DynamicComponentInComponentViewState>;
 }
 
 export type DynamicComponentInComponentElement = JayElement<
@@ -57,7 +63,7 @@ export function render(
         ConstructContext.withRootContext(viewState, refManager, () =>
             de('div', {}, [
                 forEach(
-                    (vs) => vs.nestedCounters,
+                    (vs: DynamicComponentInComponentViewState) => vs.nestedCounters,
                     (vs1: NestedCounter) => {
                         return childComp(
                             Counter,

@@ -1,0 +1,19 @@
+<html>
+<head>
+    <link rel="import" href="../counter/counter" names="Counter"/>
+    <script type="application/yaml-jay">
+data:
+  nestedCounters:
+    - counter: number
+      id: string
+  condition: boolean
+  count1: number
+    </script>
+</head>
+<body>
+<div>
+    <Counter forEach="nestedCounters" trackBy="id" ref="counter1" initialValue={counter} />
+    <Counter if="condition" ref="counter2" initialValue="{count1}" />
+</div>
+</body>
+</html>

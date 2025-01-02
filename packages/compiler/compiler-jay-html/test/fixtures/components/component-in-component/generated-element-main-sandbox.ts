@@ -5,9 +5,9 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
+    MapEventEmitterViewState,
 } from 'jay-runtime';
 import { secureChildComp } from 'jay-secure';
-import { CounterComponentType } from '../counter/counter-refs';
 // @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-mainSandbox';
 // @ts-expect-error Cannot find module
@@ -20,9 +20,10 @@ export interface ComponentInComponentViewState {
     count4: CounterData;
 }
 
+export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
 export interface ComponentInComponentElementRefs {
-    counter1: CounterComponentType<ComponentInComponentViewState>;
-    counterTwo: CounterComponentType<ComponentInComponentViewState>;
+    counter1: CounterRef<ComponentInComponentViewState>;
+    counterTwo: CounterRef<ComponentInComponentViewState>;
 }
 
 export type ComponentInComponentElement = JayElement<

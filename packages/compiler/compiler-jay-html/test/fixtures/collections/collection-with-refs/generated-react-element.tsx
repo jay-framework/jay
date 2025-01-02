@@ -9,9 +9,20 @@ export interface Item {
     id: string;
 }
 
+export interface GroupItem {
+    itemId: string;
+    item: string;
+}
+
+export interface Group {
+    groupId: string;
+    groupItems: Array<GroupItem>;
+}
+
 export interface CollectionWithRefsViewState {
     title: string;
     items: Array<Item>;
+    groups: Array<Group>;
 }
 
 export interface CollectionWithRefsElementRefs {
@@ -25,9 +36,9 @@ export interface CollectionWithRefsElementProps
     extends Jay4ReactElementProps<CollectionWithRefsViewState> {}
 
 export function render({
-    vs,
-    context,
-}: CollectionWithRefsElementProps): ReactElement<CollectionWithRefsElementProps, any> {
+                           vs,
+                           context,
+                       }: CollectionWithRefsElementProps): ReactElement<CollectionWithRefsElementProps, any> {
     return (
         <div>
             <h1>{vs.title}</h1>
@@ -65,6 +76,21 @@ export function render({
                             >
                                 done
                             </button>
+                        </div>
+                    );
+                })}
+                {vs.groups.map((vs1: Group) => {
+                    const cx1 = context.child(vs1.groupId, vs1);
+                    return (
+                        <div key={vs1.groupId}>
+                            {vs1.groupItems.map((vs2: GroupItem) => {
+                                const cx2 = cx1.child(vs2.itemId, vs2);
+                                return (
+                                    <div key={vs2.itemId}>
+                                        <div>{vs2.item}</div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     );
                 })}

@@ -8,6 +8,11 @@ data:
        completed: boolean
        cost: number
        id: string
+    groups:
+    -  groupId: string
+       groupItems:
+       -  itemId: string
+          item: string
     </script>
 </head>
 <body>
@@ -19,6 +24,11 @@ data:
             <span style="color:red; width: 100px; display: inline-block;" ref="completed">{completed}</span>
             <span style="color:blue; width: 100px; display: inline-block;" ref="cost">{cost}</span>
             <button style="border:1px blue; background: darkblue; color: white; display: inline-block;" ref="done">done</button>
+        </div>
+        <div forEach="groups" trackBy="groupId">
+            <div forEach="groupItems" trackBy="itemId">
+                <div>{item}</div>
+            </div>
         </div>
     </div>
 </div>

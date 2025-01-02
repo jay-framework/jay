@@ -43,6 +43,10 @@ describe('parseImportLinks', () => {
                         name: 'RenderElementOptions',
                         type: JayUnknown,
                     },
+                    {
+                        name: 'MapEventEmitterViewState',
+                        type: JayUnknown,
+                    },
                 ],
                 sandbox: false,
             },
@@ -66,16 +70,6 @@ describe('parseImportLinks', () => {
                 names: [
                     {
                         name: 'funcRepository',
-                        type: JayUnknown,
-                    },
-                ],
-                sandbox: false,
-            },
-            {
-                module: './counter-refs',
-                names: [
-                    {
-                        name: 'CounterComponentType',
                         type: JayUnknown,
                     },
                 ],

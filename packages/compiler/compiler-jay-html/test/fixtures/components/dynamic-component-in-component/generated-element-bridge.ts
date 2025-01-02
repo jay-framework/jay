@@ -1,11 +1,16 @@
-import { JayElement, RenderElement } from 'jay-runtime';
+import {
+    JayElement,
+    RenderElement,
+    MapEventEmitterViewState,
+    OnlyEventEmitters,
+    ComponentCollectionProxy,
+} from 'jay-runtime';
 import {
     SecureReferencesManager,
     elementBridge,
     sandboxChildComp as childComp,
     sandboxForEach as forEach,
 } from 'jay-secure';
-import { CounterComponentType, CounterRefs } from '../counter/counter-refs';
 // @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-workerSandbox';
 
@@ -20,9 +25,14 @@ export interface DynamicComponentInComponentViewState {
     count1: number;
 }
 
+export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
+// @ts-ignore component type not defined because of import error above
+export type CounterRefs<ParentVS> = ComponentCollectionProxy<ParentVS, CounterRef<ParentVS>> &
+    OnlyEventEmitters<CounterRef<ParentVS>>;
+
 export interface DynamicComponentInComponentElementRefs {
     counter1: CounterRefs<NestedCounter>;
-    counter2: CounterComponentType<DynamicComponentInComponentViewState>;
+    counter2: CounterRef<DynamicComponentInComponentViewState>;
 }
 
 export type DynamicComponentInComponentElement = JayElement<
@@ -49,7 +59,7 @@ export function render(): DynamicComponentInComponentElementPreRender {
     const render = (viewState: DynamicComponentInComponentViewState) =>
         elementBridge(viewState, refManager, () => [
             forEach(
-                (vs) => vs.nestedCounters,
+                (vs: DynamicComponentInComponentViewState) => vs.nestedCounters,
                 'id',
                 () => [
                     childComp(

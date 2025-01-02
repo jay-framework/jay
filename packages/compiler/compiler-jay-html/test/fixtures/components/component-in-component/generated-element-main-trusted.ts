@@ -6,8 +6,8 @@ import {
     ConstructContext,
     childComp,
     RenderElementOptions,
+    MapEventEmitterViewState,
 } from 'jay-runtime';
-import { CounterComponentType } from '../counter/counter-refs';
 import { Counter } from '../counter/counter';
 import { CounterViewState as CounterData } from '../counter/generated-element-main-trusted';
 
@@ -18,9 +18,10 @@ export interface ComponentInComponentViewState {
     count4: CounterData;
 }
 
+export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
 export interface ComponentInComponentElementRefs {
-    counter1: CounterComponentType<ComponentInComponentViewState>;
-    counterTwo: CounterComponentType<ComponentInComponentViewState>;
+    counter1: CounterRef<ComponentInComponentViewState>;
+    counterTwo: CounterRef<ComponentInComponentViewState>;
 }
 
 export type ComponentInComponentElement = JayElement<

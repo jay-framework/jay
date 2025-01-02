@@ -442,6 +442,18 @@ export interface EventEmitter<EventType, ViewState> {
 
 export type EventTypeFrom<Type> = Type extends EventEmitter<infer X, any> ? X : null;
 
+export type MapEventEmitterViewState<ParentViewState, ComponentType> = {
+    [key in keyof ComponentType]: ComponentType[key] extends EventEmitter<infer T, any>
+        ? EventEmitter<T, ParentViewState>
+        : ComponentType[key];
+};
+
+export type OnlyEventEmitters<ComponentType> = {
+    [key in keyof ComponentType as ComponentType[key] extends EventEmitter<any, any>
+        ? key
+        : never]: ComponentType[key];
+};
+
 export interface ComponentProxy<
     ViewState,
     ComponentType extends JayComponent<any, ViewState, any>,
