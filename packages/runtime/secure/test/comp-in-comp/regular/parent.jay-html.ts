@@ -9,7 +9,10 @@ import {
     childComp,
     RenderElementOptions,
     RenderElement,
-    ReferencesManager, MapEventEmitterViewState, ComponentCollectionProxy, OnlyEventEmitters,
+    ReferencesManager,
+    MapEventEmitterViewState,
+    ComponentCollectionProxy,
+    OnlyEventEmitters,
 } from 'jay-runtime';
 import { Child, ChildProps } from './child';
 

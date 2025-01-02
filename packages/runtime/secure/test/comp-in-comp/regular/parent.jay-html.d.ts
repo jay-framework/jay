@@ -4,7 +4,8 @@ import {
     RenderElementOptions,
     RenderElement,
     MapEventEmitterViewState,
-    ComponentCollectionProxy, OnlyEventEmitters
+    ComponentCollectionProxy,
+    OnlyEventEmitters,
 } from 'jay-runtime';
 import { Child, ChildProps } from './child';
 

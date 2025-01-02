@@ -3,7 +3,10 @@ import {
     RenderElementOptions,
     ReferencesManager,
     JayElement,
-    RenderElement, MapEventEmitterViewState, ComponentCollectionProxy, OnlyEventEmitters,
+    RenderElement,
+    MapEventEmitterViewState,
+    ComponentCollectionProxy,
+    OnlyEventEmitters,
 } from 'jay-runtime';
 import { mainRoot as mr } from '../../../../lib/';
 import { secureChildComp } from '../../../../lib/';

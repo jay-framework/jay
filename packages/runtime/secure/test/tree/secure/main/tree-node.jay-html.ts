@@ -12,7 +12,10 @@ import {
     useContext,
     withContext,
     RenderElement,
-    ReferencesManager, MapEventEmitterViewState, ComponentCollectionProxy, OnlyEventEmitters,
+    ReferencesManager,
+    MapEventEmitterViewState,
+    ComponentCollectionProxy,
+    OnlyEventEmitters,
 } from 'jay-runtime';
 import { secureChildComp as childComp } from '../../../../lib/';
 import { TreeNode, Node } from './tree-node';

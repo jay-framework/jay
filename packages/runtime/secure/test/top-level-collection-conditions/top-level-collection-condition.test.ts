@@ -15,14 +15,22 @@ const collCounterTitle = (id: string) => `collection counter ${id}`;
 const COUNTER_A = { id: COUNTER_A_ID, initialCount: 13 };
 const COUNTER_B = { id: COUNTER_B_ID, initialCount: 14 };
 const COUNTER_C = { id: COUNTER_C_ID, initialCount: 15 };
-const viewState: AppViewState = { cond: true, initialCount: 12, subCounters: [COUNTER_A, COUNTER_B] };
+const viewState: AppViewState = {
+    cond: true,
+    initialCount: 12,
+    subCounters: [COUNTER_A, COUNTER_B],
+};
 
 const viewState2: AppViewState = {
     cond: false,
     initialCount: 12,
     subCounters: [COUNTER_A, COUNTER_B],
 };
-const viewState3: AppViewState = { cond: true, initialCount: 12, subCounters: [COUNTER_C, COUNTER_A] };
+const viewState3: AppViewState = {
+    cond: true,
+    initialCount: 12,
+    subCounters: [COUNTER_C, COUNTER_A],
+};
 
 const VERBOSE = false;
 

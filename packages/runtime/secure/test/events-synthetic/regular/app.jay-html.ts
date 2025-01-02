@@ -5,7 +5,8 @@ import {
     childComp,
     RenderElementOptions,
     RenderElement,
-    ReferencesManager, MapEventEmitterViewState,
+    ReferencesManager,
+    MapEventEmitterViewState,
 } from 'jay-runtime';
 import { Comp } from './comp';
 

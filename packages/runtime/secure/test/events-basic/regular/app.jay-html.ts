@@ -5,7 +5,8 @@ import {
     childComp,
     RenderElementOptions,
     ReferencesManager,
-    RenderElement, MapEventEmitterViewState,
+    RenderElement,
+    MapEventEmitterViewState,
 } from 'jay-runtime';
 import { Counter } from './counter';
 

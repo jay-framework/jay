@@ -1,8 +1,4 @@
-import {
-    generateElementDefinitionFile,
-    generateElementFile,
-    transformComponent,
-} from '../lib';
+import { generateElementDefinitionFile, generateElementFile, transformComponent } from '../lib';
 import {
     readFixtureFile,
     readFixtureSourceJayFile,

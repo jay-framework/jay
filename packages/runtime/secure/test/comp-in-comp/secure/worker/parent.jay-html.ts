@@ -3,7 +3,10 @@ import {
     HTMLElementProxy,
     RenderElement,
     RenderElementOptions,
-    ReferencesManager, MapEventEmitterViewState, ComponentCollectionProxy, OnlyEventEmitters,
+    ReferencesManager,
+    MapEventEmitterViewState,
+    ComponentCollectionProxy,
+    OnlyEventEmitters,
 } from 'jay-runtime';
 import { elementBridge, SecureReferencesManager } from '../../../../lib';
 import {

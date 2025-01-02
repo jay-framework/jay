@@ -11,7 +11,10 @@ import {
     childComp,
     RenderElementOptions,
     RenderElement,
-    ReferencesManager, MapEventEmitterViewState, ComponentCollectionProxy, OnlyEventEmitters,
+    ReferencesManager,
+    MapEventEmitterViewState,
+    ComponentCollectionProxy,
+    OnlyEventEmitters,
 } from 'jay-runtime';
 import { TreeNode, Node } from './tree-node';
 

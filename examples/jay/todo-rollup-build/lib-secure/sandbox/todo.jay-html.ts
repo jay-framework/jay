@@ -1,4 +1,11 @@
-import { HTMLElementProxy, JayElement, RenderElement } from 'jay-runtime';
+import {
+    ComponentCollectionProxy,
+    HTMLElementProxy,
+    JayElement,
+    MapEventEmitterViewState,
+    OnlyEventEmitters,
+    RenderElement,
+} from 'jay-runtime';
 import { elementBridge, SecureReferencesManager } from 'jay-secure';
 import {
     sandboxElement as e,
@@ -6,7 +13,6 @@ import {
     sandboxForEach as forEach,
     sandboxChildComp as childComp,
 } from 'jay-secure';
-import { ItemRefs } from '../../lib/item-refs';
 import { Item, ItemProps } from './item';
 
 export enum Filter {
@@ -32,6 +38,9 @@ export interface TodoViewState {
     shownTodos: Array<ShownTodo>;
 }
 
+export type ItemRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Item>>;
+export type ItemRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ItemRef<ParentVS>> &
+    OnlyEventEmitters<ItemRef<ParentVS>>;
 export interface TodoElementRefs {
     newTodo: HTMLElementProxy<TodoViewState, HTMLInputElement>;
     toggleAll: HTMLElementProxy<TodoViewState, HTMLInputElement>;
@@ -44,7 +53,7 @@ export interface TodoElementRefs {
 
 export type TodoElement = JayElement<TodoViewState, TodoElementRefs>;
 export type TodoElementRender = RenderElement<TodoViewState, TodoElementRefs, TodoElement>;
-export type TodoElementPreRender = [refs: TodoElementRefs, TodoElementRender];
+export type TodoElementPreRender = [TodoElementRefs, TodoElementRender];
 
 export function render(): TodoElementPreRender {
     const [

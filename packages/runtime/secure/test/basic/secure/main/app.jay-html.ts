@@ -4,7 +4,8 @@ import {
     ConstructContext,
     RenderElementOptions,
     RenderElement,
-    ReferencesManager, MapEventEmitterViewState,
+    ReferencesManager,
+    MapEventEmitterViewState,
 } from 'jay-runtime';
 import { mainRoot as mr } from '../../../../lib/';
 import { Basic } from './basic';

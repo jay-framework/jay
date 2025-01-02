@@ -1,5 +1,10 @@
-import {JayElement, MapEventEmitterViewState, RenderElement, RenderElementOptions} from 'jay-runtime';
-import {Parent} from "./parent";
+import {
+    JayElement,
+    MapEventEmitterViewState,
+    RenderElement,
+    RenderElementOptions,
+} from 'jay-runtime';
+import { Parent } from './parent';
 
 export interface AppViewState {}
 

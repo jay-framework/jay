@@ -7,7 +7,10 @@ import {
     conditional as c,
     forEach,
     RenderElement,
-    ReferencesManager, MapEventEmitterViewState, ComponentCollectionProxy, OnlyEventEmitters,
+    ReferencesManager,
+    MapEventEmitterViewState,
+    ComponentCollectionProxy,
+    OnlyEventEmitters,
 } from 'jay-runtime';
 import { Counter as CounterComponentType } from '../../regular/counter';
 import { Counter } from './counter';
@@ -25,7 +28,10 @@ export interface AppViewState {
     subCounters: Array<SubCounter>;
 }
 
-export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof CounterComponentType>>;
+export type CounterRef<ParentVS> = MapEventEmitterViewState<
+    ParentVS,
+    ReturnType<typeof CounterComponentType>
+>;
 export type CounterRefs<ParentVS> = ComponentCollectionProxy<ParentVS, CounterRef<ParentVS>> &
     OnlyEventEmitters<CounterRef<ParentVS>>;
 export interface AppElementRefs {

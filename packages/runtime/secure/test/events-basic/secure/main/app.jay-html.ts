@@ -4,7 +4,8 @@ import {
     ConstructContext,
     RenderElementOptions,
     RenderElement,
-    ReferencesManager, MapEventEmitterViewState,
+    ReferencesManager,
+    MapEventEmitterViewState,
 } from 'jay-runtime';
 import { Counter } from './counter';
 import { mainRoot as mr } from '../../../../lib/';

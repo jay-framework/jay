@@ -1,5 +1,10 @@
-import {JayElement, MapEventEmitterViewState, RenderElement, RenderElementOptions} from 'jay-runtime';
-import {Counter} from "./counter";
+import {
+    JayElement,
+    MapEventEmitterViewState,
+    RenderElement,
+    RenderElementOptions,
+} from 'jay-runtime';
+import { Counter } from './counter';
 
 export interface AppViewState {}
 

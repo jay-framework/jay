@@ -2,7 +2,7 @@ import { Jay4ReactElementProps, eventsFor } from 'jay-4-react';
 import { ReactElement } from 'react';
 import { Counter } from '../counter/counter';
 import { CounterViewState as CounterData } from '../counter/generated-react-element';
-import { CounterComponentType } from '../counter/counter-refs';
+import { MapEventEmitterViewState } from 'jay-runtime';
 
 export interface ComponentInComponentViewState {
     count1: number;
@@ -11,9 +11,10 @@ export interface ComponentInComponentViewState {
     count4: CounterData;
 }
 
+export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
 export interface ComponentInComponentElementRefs {
-    counter1: CounterComponentType<ComponentInComponentViewState>;
-    counterTwo: CounterComponentType<ComponentInComponentViewState>;
+    counter1: CounterRef<ComponentInComponentViewState>;
+    counterTwo: CounterRef<ComponentInComponentViewState>;
 }
 
 export interface ComponentInComponentElementProps

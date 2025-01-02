@@ -1,9 +1,10 @@
 import {
     ComponentCollectionProxy,
     JayElement,
-    MapEventEmitterViewState, OnlyEventEmitters,
+    MapEventEmitterViewState,
+    OnlyEventEmitters,
     RenderElement,
-    RenderElementOptions
+    RenderElementOptions,
 } from 'jay-runtime';
 import { Counter } from './counter';
 

@@ -1,5 +1,10 @@
-import {JayElement, MapEventEmitterViewState, RenderElement, RenderElementOptions} from 'jay-runtime';
-import {Comp} from "./comp";
+import {
+    JayElement,
+    MapEventEmitterViewState,
+    RenderElement,
+    RenderElementOptions,
+} from 'jay-runtime';
+import { Comp } from './comp';
 
 export interface AppViewState {}
 
