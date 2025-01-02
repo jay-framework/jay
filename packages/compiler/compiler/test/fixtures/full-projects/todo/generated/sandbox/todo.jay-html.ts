@@ -81,7 +81,7 @@ export function render(): TodoElementPreRender {
             e(refNewTodo()),
             e(refToggleAll()),
             forEach(
-                (vs) => vs.shownTodos,
+                (vs: TodoViewState) => vs.shownTodos,
                 'id',
                 () => [
                     childComp(

@@ -118,7 +118,7 @@ export function render(options?: RenderElementOptions): TodoElementPreRender {
                                     e('label', { for: 'toggle-all' }, []),
                                     de('ul', { class: 'todo-list' }, [
                                         forEach(
-                                            (vs) => vs.shownTodos,
+                                            (vs: TodoViewState) => vs.shownTodos,
                                             (vs1: ShownTodo) => {
                                                 return secureChildComp(
                                                     Item,
