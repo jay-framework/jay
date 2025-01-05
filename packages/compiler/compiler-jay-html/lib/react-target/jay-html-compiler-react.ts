@@ -13,8 +13,8 @@ import {
     RuntimeMode,
     WithValidations,
 } from 'jay-compiler-shared';
-import {JayHtmlSourceFile} from '../jay-target/jay-html-source-file';
-import {HTMLElement, NodeType} from 'node-html-parser';
+import { JayHtmlSourceFile } from '../jay-target/jay-html-source-file';
+import { HTMLElement, NodeType } from 'node-html-parser';
 import {
     parseAccessor,
     parseComponentPropExpression,
@@ -25,18 +25,18 @@ import {
     Variables,
 } from '../expressions/expression-compiler';
 import Node from 'node-html-parser/dist/nodes/node';
-import {camelCase} from 'camel-case';
+import { camelCase } from 'camel-case';
 import parse from 'style-to-object';
-import {ensureSingleChildElement, isConditional, isForEach} from '../jay-target/jay-html-helpers';
-import {generateTypes} from '../jay-target/jay-html-compile-types';
-import {Indent} from '../jay-target/indent';
+import { ensureSingleChildElement, isConditional, isForEach } from '../jay-target/jay-html-helpers';
+import { generateTypes } from '../jay-target/jay-html-compile-types';
+import { Indent } from '../jay-target/indent';
 import {
     elementNameToJayType,
     newAutoRefNameGenerator,
     optimizeRefs,
     renderRefsType,
 } from '../jay-target/jay-html-compile-refs';
-import {processImportedComponents, renderImports} from '../jay-target/jay-html-compile-imports';
+import { processImportedComponents, renderImports } from '../jay-target/jay-html-compile-imports';
 
 interface RenderContext {
     variables: Variables;
@@ -151,11 +151,10 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
         let prop = parseComponentPropExpression(attributes.props, variables);
         return RenderFragment.merge(prop, new RenderFragment('', imports, [], []));
     } else {
-        return props
-            .reduce(
-                (prev, current) => RenderFragment.merge(prev, current, ', '),
-                RenderFragment.empty(),
-            );
+        return props.reduce(
+            (prev, current) => RenderFragment.merge(prev, current, ', '),
+            RenderFragment.empty(),
+        );
     }
 }
 
@@ -183,10 +182,8 @@ function renderChildCompRef(
             [],
             refs,
         );
-    else
-        return new RenderFragment('', Imports.for(Import.eventsFor), [], refs);
+    else return new RenderFragment('', Imports.for(Import.eventsFor), [], refs);
 }
-
 
 function renderReactNode(node: Node, renderContext: RenderContext): RenderFragment {
     let { variables, importedSymbols, importedSandboxedSymbols, indent, dynamicRef, importerMode } =
@@ -280,14 +277,12 @@ ${indent.curr}return (${childElement.rendered})})}`,
         //         refs.refs,
         //     );
         // else
-            return new RenderFragment(
-                `${currIndent.firstLine}<${htmlElement.rawTagName} ${props.rendered} ${refs.rendered}/>`,
-                Imports.none()
-                    .plus(props.imports)
-                    .plus(refs.imports),
-                props.validations,
-                refs.refs,
-            );
+        return new RenderFragment(
+            `${currIndent.firstLine}<${htmlElement.rawTagName} ${props.rendered} ${refs.rendered}/>`,
+            Imports.none().plus(props.imports).plus(refs.imports),
+            props.validations,
+            refs.refs,
+        );
     }
 
     function renderHtmlElement(htmlElement, newVariables: Variables, currIndent: Indent = indent) {

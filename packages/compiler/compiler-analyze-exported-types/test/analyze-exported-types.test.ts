@@ -1,4 +1,4 @@
-import { analyzeExportedTypes } from '../lib/analyze-exported-types';
+import { analyzeExportedTypes } from '../lib';
 
 import {
     JayArrayType,

@@ -1,7 +1,7 @@
 import { MapEventEmitterViewState } from 'jay-runtime';
 import { Jay4ReactElementProps, eventsFor } from 'jay-4-react';
 import { ReactElement } from 'react';
-import {Counter} from '../counter/counter';
+import { Counter } from '../counter/counter';
 import { CounterViewState as CounterData } from '../counter/generated-react-element';
 
 export interface ComponentInComponentViewState {

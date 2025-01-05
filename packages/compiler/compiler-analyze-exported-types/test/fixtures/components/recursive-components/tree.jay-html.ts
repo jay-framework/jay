@@ -8,7 +8,10 @@ import {
     forEach,
     ConstructContext,
     childComp,
-    RenderElementOptions, MapEventEmitterViewState, ComponentCollectionProxy, OnlyEventEmitters,
+    RenderElementOptions,
+    MapEventEmitterViewState,
+    ComponentCollectionProxy,
+    OnlyEventEmitters,
 } from 'jay-runtime';
 import { TreeNode, Node } from './tree-node';
 
