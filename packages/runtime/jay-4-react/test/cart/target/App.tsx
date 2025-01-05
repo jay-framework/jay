@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Cart, CartProps } from './cart';
 import {jay2React} from "../../../lib";
 
-const CartCounter = jay2React(Cart);
+const ReactCart = jay2React(Cart);
 
 export interface AppProps extends CartProps {
     log?: (message: string) => void;
@@ -10,7 +10,7 @@ export interface AppProps extends CartProps {
 
 export default function App({ log, minimumOrder, total, lineItems }: AppProps) {
     return (
-        <CartCounter
+        <ReactCart
             lineItems={lineItems}
             minimumOrder={minimumOrder}
             total={total}
