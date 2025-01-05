@@ -1,6 +1,15 @@
-import { JayComponent, JayElement, PreRenderElement, RenderElementOptions } from 'jay-runtime';
+import {
+    EventEmitter,
+    JayComponent,
+    JayElement,
+    OnlyEventEmitters,
+    PreRenderElement,
+    RenderElementOptions
+} from 'jay-runtime';
 import { Dispatch, FC, SetStateAction, useRef, useState } from 'react';
 import { EventsContext, refsRecorder } from './jay4react-events';
+import * as React from "react";
+import {ComponentConstructor, JayComponentCore, makeJayComponent} from "jay-component";
 
 export interface Jay4ReactElementProps<ViewState> {
     vs: ViewState;
@@ -17,20 +26,28 @@ function splitPropsEvents(reactProps: object): [object, object] {
     return [props, events];
 }
 
-export function jay4react<
-    ViewState extends object,
-    ReactElementProps extends Jay4ReactElementProps<ViewState>,
-    ReactComponentProps extends object,
+const _Element = Symbol();
+const _comp = Symbol();
+
+type EventEmittersToReactCallbacks<T> = {
+    [Key in keyof T]: T[Key] extends EventEmitter<infer EventType, any>?
+        (event: EventType) => void :
+        T[Key]
+}
+
+type Jay2React<Comp extends (...args: any) => any> = Parameters<Comp>[0] & EventEmittersToReactCallbacks<OnlyEventEmitters<ReturnType<Comp>>>
+
+export function jay2React<
     PropsT extends object,
+    ViewState extends object,
     Refs extends object,
     JayElementT extends JayElement<ViewState, Refs>,
->(
-    reactElement: FC<ReactElementProps>,
-    mkJayComponent: (
-        preRender: PreRenderElement<ViewState, Refs, JayElementT>,
-    ) => (props: PropsT) => JayComponent<PropsT, ViewState, JayElementT>,
-): FC<ReactComponentProps> {
-    return (reactProps: ReactComponentProps) => {
+    CompConstructor extends (...args: any) => any
+>(comp: CompConstructor): React.FC<Jay2React<CompConstructor>> {
+    const reactElement: React.FC<ViewState> = comp[_Element];
+    const compConstructor: ComponentConstructor<PropsT, Refs, ViewState, any, any> = comp[_comp]
+
+    return (reactProps: Jay2React<CompConstructor>) => {
         const [props, events] = splitPropsEvents(reactProps);
         const myInstanceRef = useRef<JayComponent<PropsT, ViewState, JayElementT>>(null);
         const _eventsContext = useRef<EventsContext>(null);
@@ -54,9 +71,9 @@ export function jay4react<
                     },
                 ];
             };
-            myInstanceRef.current = mkJayComponent(preRender)(props as PropsT);
-            Object.keys(events).forEach((event) =>
-                myInstanceRef.current.addEventListener(event.substring(2), events[event]),
+            myInstanceRef.current = makeJayComponent(preRender, compConstructor)(props as PropsT);
+            Object.keys(events).forEach((eventName) =>
+                myInstanceRef.current.addEventListener(eventName.substring(2), ({event}) => events[eventName](event)),
             );
         } else {
             [viewState, setViewState] = useState<ViewState>(null);
@@ -66,6 +83,27 @@ export function jay4react<
         return reactElement({
             vs: viewState,
             context: _eventsContext.current,
-        } as ReactElementProps);
+        } as Jay2React<CompConstructor>);
     };
+}
+
+export function makeJay2ReactComponent<
+    PropsT extends object,
+    Refs extends object,
+    ViewState extends object,
+    ReactViewState extends Jay4ReactElementProps<ViewState>,
+    Contexts extends Array<any>,
+    CompCore extends JayComponentCore<PropsT, ViewState>,
+>(
+    reactElement: React.FC<ReactViewState>,
+    compConstructor: ComponentConstructor<PropsT, Refs, ViewState, Contexts, CompCore>
+): (props: PropsT) => ReturnType<ComponentConstructor<PropsT, Refs, ViewState, Contexts, CompCore>> {
+    const comp = (props: PropsT) => {
+        throw Error('See design log 33')
+    }
+
+    comp[_Element] = reactElement;
+    comp[_comp] = compConstructor;
+
+    return comp;
 }

@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { eventsFor } from '../../lib';
-import { Jay4ReactElementProps } from '../../lib';
+import { eventsFor } from '../../../lib';
+import { Jay4ReactElementProps } from '../../../lib';
 import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
 
 export interface CartLineItem {

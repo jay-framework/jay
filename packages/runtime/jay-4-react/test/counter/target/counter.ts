@@ -1,0 +1,26 @@
+import { render, CounterElementRefs } from './counter.jay-html';
+import { Props, createSignal, createEvent } from 'jay-component';
+import {makeJay2ReactComponent} from '../../../lib';
+
+export interface CounterProps {
+    initialValue: number;
+}
+
+function CounterConstructor({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
+    let [count, setCount] = createSignal(initialValue);
+
+    refs.subtracter.onclick(() => setCount(count() - 1));
+    refs.adder.onclick(() => setCount(count() + 1));
+
+    let onChange = createEvent<number>((emitter) => emitter.emit(count()));
+    let reset = () => {
+        setCount(0);
+    };
+    return {
+        render: () => ({ count }),
+        onChange,
+        reset,
+    };
+}
+
+export const Counter = makeJay2ReactComponent(render, CounterConstructor);

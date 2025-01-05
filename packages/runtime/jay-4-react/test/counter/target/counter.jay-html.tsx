@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { ReactElement } from 'react';
 import { HTMLElementProxy } from 'jay-runtime';
-import { Jay4ReactElementProps } from '../../lib';
-import { eventsFor } from '../../lib';
+import { Jay4ReactElementProps } from '../../../lib';
+import { eventsFor } from '../../../lib';
 
 export interface CounterElementViewState {
     count: number;
