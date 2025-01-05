@@ -41,6 +41,7 @@
     "@types/js-beautify": "^1",
     "@types/node": "^20.11.5",
     "jay-dev-environment": "workspace:^",
+    "jay-4-react": "workspace:^",
     "jest-diff": "^29.7.0",
     "jest-matcher-utils": "^29.7.0",
     "js-beautify": "^1.14.11",

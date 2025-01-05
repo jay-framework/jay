@@ -1,5 +1,6 @@
 import {
     equalJayTypes,
+    GenerateTarget,
     Import,
     Imports,
     JayComponentType,
@@ -10,8 +11,8 @@ import {
     Ref,
     RenderFragment,
 } from 'jay-compiler-shared';
-import { HTMLElement } from 'node-html-parser';
-import { htmlElementTagNameMap } from './html-element-tag-name-map';
+import {HTMLElement} from 'node-html-parser';
+import {htmlElementTagNameMap} from './html-element-tag-name-map';
 
 const isComponentRef = (ref: Ref) =>
     ref.elementType instanceof JayComponentType || ref.elementType instanceof JayTypeAlias;
@@ -22,7 +23,7 @@ enum RefsNeeded {
     REF,
     REF_AND_REFS,
 }
-export function renderRefsType(refs: Ref[], refsType: string) {
+export function renderRefsType(refs: Ref[], refsType: string, generateTarget: GenerateTarget = GenerateTarget.jay) {
     let renderedRefs: string;
     let imports = Imports.none();
     const refImportsInUse = new Set<string>();
@@ -53,7 +54,8 @@ export function renderRefsType(refs: Ref[], refsType: string) {
             .join(',\n');
 
         const renderedComponentRefs = [...componentRefs].map(([componentName, refsNeeded]) => {
-            let refTypes = `export type ${componentName}Ref<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof ${componentName}>>;`;
+            const elementType = generateTarget === GenerateTarget.jay? `ReturnType<typeof ${componentName}>`: 'any';
+            let refTypes = `export type ${componentName}Ref<ParentVS> = MapEventEmitterViewState<ParentVS, ${elementType}>;`;
             imports = imports.plus(Import.MapEventEmitterViewState);
             if (refsNeeded === RefsNeeded.REF_AND_REFS) {
                 refTypes += `

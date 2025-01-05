@@ -182,7 +182,7 @@ describe('generate jay-html element for react target', () => {
                 generateTarget: GenerateTarget.react,
                 importerMode: RuntimeMode.MainTrusted,
             };
-            it('for simple refs', async () => {
+            it('for simple component element', async () => {
                 const folder = 'components-react-target/counter';
                 const elementFile = await readFileAndGenerateElementFile(folder, options);
                 expect(elementFile.validations).toEqual([]);
@@ -191,7 +191,7 @@ describe('generate jay-html element for react target', () => {
                 );
             });
 
-            it.skip('nesting components in other components', async () => {
+            it('nesting components in other components', async () => {
                 const folder = 'components-react-target/component-in-component';
                 const elementFile = await readFileAndGenerateElementFile(folder, options);
                 expect(elementFile.validations).toEqual([]);

@@ -1,8 +1,8 @@
+import { MapEventEmitterViewState } from 'jay-runtime';
 import { Jay4ReactElementProps, eventsFor } from 'jay-4-react';
 import { ReactElement } from 'react';
-import { Counter } from '../counter/counter';
+import {Counter} from '../counter/counter';
 import { CounterViewState as CounterData } from '../counter/generated-react-element';
-import { MapEventEmitterViewState } from 'jay-runtime';
 
 export interface ComponentInComponentViewState {
     count1: number;
@@ -11,7 +11,7 @@ export interface ComponentInComponentViewState {
     count4: CounterData;
 }
 
-export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
+export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, any>;
 export interface ComponentInComponentElementRefs {
     counter1: CounterRef<ComponentInComponentViewState>;
     counterTwo: CounterRef<ComponentInComponentViewState>;
@@ -27,15 +27,15 @@ export function render({
     return (
         <div>
             {/* @ts-ignore */}
-            <Counter {...eventsFor(context, 'counter1')} initialValue={vs.count1} />
+            <Counter initialValue={vs.count1} {...eventsFor(context, 'counter1')} />
             {/* @ts-ignore */}
-            <Counter {...eventsFor(context, 'counterTwo')} initialValue={vs.count2} />
+            <Counter initialValue={vs.count2} {...eventsFor(context, 'counterTwo')} />
             {/* @ts-ignore */}
             <Counter initialValue={vs.count3} />
             {/* @ts-ignore */}
             <Counter initialValue={vs.count4?.count} />
             {/* @ts-ignore */}
-            <Counter initialValue="25" />
+            <Counter initialValue={25} />
         </div>
     );
 }
