@@ -8,12 +8,13 @@ import {
     forEach,
     ConstructContext,
     childComp,
-    RenderElementOptions,
+    RenderElementOptions, MapEventEmitterViewState, ComponentCollectionProxy, OnlyEventEmitters,
 } from 'jay-runtime';
-// @ts-expect-error Cannot find module
-import { TreeNodeRefs } from './tree-node-refs';
 import { TreeNode, Node } from './tree-node';
 
+export type TreeNodeRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof TreeNode>>;
+export type TreeNodeRefs<ParentVS> = ComponentCollectionProxy<ParentVS, TreeNodeRef<ParentVS>> &
+    OnlyEventEmitters<TreeNodeRef<ParentVS>>;
 export interface TreeElementRefs {
     counter1: TreeNodeRefs<Node>;
     counterTwo: TreeNodeRefs<Node>;

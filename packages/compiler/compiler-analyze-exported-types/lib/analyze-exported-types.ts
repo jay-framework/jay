@@ -3,6 +3,8 @@ export * from './resolve-ts-config';
 
 import { resolveTsConfig, ResolveTsConfigOptions } from './resolve-ts-config';
 import {
+    JAY_4_REACT,
+    JAY_COMPONENT,
     JayArrayType,
     JayComponentApiMember,
     JayComponentType,
@@ -10,7 +12,7 @@ import {
     JayElementType,
     JayObjectType,
     JayType,
-    JayUnknown,
+    JayUnknown, MAKE_JAY_4_REACT_COMPONENT, MAKE_JAY_COMPONENT,
     resolvePrimitiveType,
 } from 'jay-compiler-shared';
 import ts, {
@@ -20,10 +22,10 @@ import ts, {
     InterfaceDeclaration,
     isCallExpression,
     isFunctionDeclaration,
-    isIdentifier,
-    isInterfaceDeclaration,
+    isIdentifier, isImportDeclaration,
+    isInterfaceDeclaration, isNamedImports,
     isPropertySignature,
-    isQualifiedName,
+    isQualifiedName, isStringLiteral,
     isTypeAliasDeclaration,
     isTypeReferenceNode,
     isVariableStatement,
@@ -139,6 +141,41 @@ function isExportedStatement(statement: Statement) {
     );
 }
 
+interface ImportedSymbol {
+    module: string,
+    namedImport: string,
+    symbol?: ts.Symbol
+}
+const SYMBOLS: Record<string, ImportedSymbol> = {
+    MAKE_JAY_COMPONENT: {module: JAY_COMPONENT, namedImport: MAKE_JAY_COMPONENT},
+}
+
+function findImportedSymbol(module: string, namedImport: string): ImportedSymbol {
+    return Object.values(SYMBOLS).find(importedSymbol =>
+        importedSymbol.module === module && importedSymbol.namedImport == namedImport)
+}
+
+function mapImportedSymbols(statements: ts.NodeArray<ts.Statement>, tsTypeChecker: TypeChecker) {
+    statements
+        .filter(isImportDeclaration)
+        .forEach(importDeclaration => {
+            if (isStringLiteral(importDeclaration.moduleSpecifier) &&
+                importDeclaration.importClause.namedBindings) {
+                const module = importDeclaration.moduleSpecifier.text;
+                if (isNamedImports(importDeclaration.importClause.namedBindings)) {
+                    importDeclaration.importClause.namedBindings.elements.forEach(namedImport => {
+                        const name = namedImport.name.text;
+                        const importedSymbol = findImportedSymbol(module, name);
+                        if (importedSymbol)
+                            importedSymbol.symbol = tsTypeChecker.getTypeAtLocation(namedImport).symbol;
+                    })
+                }
+
+            }
+        })
+    return SYMBOLS
+}
+
 export function analyzeExportedTypes(
     filename: string,
     options: ResolveTsConfigOptions = {},
@@ -152,6 +189,8 @@ export function analyzeExportedTypes(
     const tsTypeChecker = program.getTypeChecker();
 
     const types = [];
+
+    const {MAKE_JAY_COMPONENT} = mapImportedSymbols(sourceFile.statements, tsTypeChecker);
 
     for (const statement of sourceFile.statements.filter(isExportedStatement)) {
         if (isInterfaceDeclaration(statement)) {
@@ -187,7 +226,7 @@ export function analyzeExportedTypes(
                         declaration.initializer.expression,
                     );
                     const name = declaration.name.text;
-                    if (functionType.symbol.name === 'makeJayComponent') {
+                    if (functionType.symbol === MAKE_JAY_COMPONENT.symbol) {
                         // function = makeJayComponent => (props) => ComponentType
                         const callMakeJayComponentSignature = tsTypeChecker.getResolvedSignature(
                             declaration.initializer,
