@@ -182,30 +182,32 @@ describe('generate jay-html element for react target', () => {
                 generateTarget: GenerateTarget.react,
                 importerMode: RuntimeMode.MainTrusted,
             };
+            const sourceFolder = 'components-react-target/source';
+            const targetFolder = 'components-react-target/target';
             it('for simple component element', async () => {
-                const folder = 'components-react-target/counter';
-                const elementFile = await readFileAndGenerateElementFile(folder, options);
+                const elementFile = await readFileAndGenerateElementFile(sourceFolder,
+                    {...options, givenFile: 'counter'});
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureReactFile(folder, 'generated-react-element'),
+                    await readFixtureReactFile(targetFolder, 'counter.jay-html'),
                 );
             });
 
             it('nesting components in other components', async () => {
-                const folder = 'components-react-target/component-in-component';
-                const elementFile = await readFileAndGenerateElementFile(folder, options);
+                const elementFile = await readFileAndGenerateElementFile(sourceFolder,
+                    {...options, givenFile: 'component-in-component'});
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureReactFile(folder, 'generated-react-element'),
+                    await readFixtureReactFile(targetFolder, 'component-in-component.jay-html'),
                 );
             });
 
             it.skip('dynamic nesting components in other components', async () => {
-                const folder = 'components-react-target/dynamic-component-in-component';
-                const elementFile = await readFileAndGenerateElementFile(folder, options);
+                const elementFile = await readFileAndGenerateElementFile(sourceFolder,
+                    {...options, givenFile: 'component-in-component'});
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
-                    await readFixtureReactFile(folder, 'generated-react-element-main-trusted'),
+                    await readFixtureReactFile(targetFolder, 'component-in-component.jay-html'),
                 );
             });
 

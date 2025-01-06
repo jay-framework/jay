@@ -1,7 +1,7 @@
-import { CounterElementRefs, render } from './generated-react-element';
+import { CounterElementRefs, render } from './counter.jay-html';
 import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
 import { FC } from 'react';
-import { jay4react } from 'jay-4-react';
+import { makeJay2ReactComponent } from 'jay-4-react';
 
 export interface CounterProps {
     initialValue: number;
@@ -22,7 +22,4 @@ function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterEl
     };
 }
 
-export interface ReactCounterProps extends CounterProps {}
-export const Counter: FC<ReactCounterProps> = jay4react(render, (preRender) =>
-    makeJayComponent(preRender, CounterComponent),
-) as FC<ReactCounterProps>;
+export const Counter = makeJay2ReactComponent(render, CounterComponent)

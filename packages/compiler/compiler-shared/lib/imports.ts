@@ -1,4 +1,5 @@
 import { JAY_4_REACT, JAY_RUNTIME, JAY_SECURE, REACT } from './constants';
+import {makeJay2ReactComponent} from "jay-4-react";
 
 export enum ImportsFor {
     definition,
@@ -199,21 +200,33 @@ export const Import = {
         'funcRepository',
         ImportsFor.implementation,
     ),
-    Jay4ReactElementProps: importStatementFragment(
-        JAY_4_REACT,
-        'Jay4ReactElementProps',
-        ImportsFor.implementation,
-        ImportsFor.definition,
-    ),
     ReactElement: importStatementFragment(
         `react`,
         'ReactElement',
         ImportsFor.implementation,
         ImportsFor.definition,
     ),
+    Jay4ReactElementProps: importStatementFragment(
+        JAY_4_REACT,
+        'Jay4ReactElementProps',
+        ImportsFor.implementation,
+        ImportsFor.definition,
+    ),
     eventsFor: importStatementFragment(
         JAY_4_REACT,
         'eventsFor',
+        ImportsFor.implementation,
+        ImportsFor.definition,
+    ),
+    jay2React: importStatementFragment(
+        JAY_4_REACT,
+        'jay2React',
+        ImportsFor.implementation,
+        ImportsFor.definition,
+    ),
+    makeJay2ReactComponent: importStatementFragment(
+        JAY_4_REACT,
+        'makeJay2ReactComponent',
         ImportsFor.implementation,
         ImportsFor.definition,
     ),

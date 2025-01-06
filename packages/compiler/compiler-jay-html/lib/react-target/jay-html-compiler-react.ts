@@ -7,8 +7,8 @@ import {
     JayComponentType,
     JayImportLink,
     JayType,
-    JayUnknown,
-    MainRuntimeModes,
+    JayUnknown, JayValidations,
+    MainRuntimeModes, Ref,
     RenderFragment,
     RuntimeMode,
     WithValidations,
@@ -185,7 +185,7 @@ function renderChildCompRef(
     else return new RenderFragment('', Imports.for(Import.eventsFor), [], refs);
 }
 
-function renderReactNode(node: Node, renderContext: RenderContext): RenderFragment {
+function renderReactNode(node: Node, renderContext: RenderContext, outReactChildComps: Map<string, string>): RenderFragment {
     let { variables, importedSymbols, importedSandboxedSymbols, indent, dynamicRef, importerMode } =
         renderContext;
 
@@ -277,8 +277,10 @@ ${indent.curr}return (${childElement.rendered})})}`,
         //         refs.refs,
         //     );
         // else
+        const reactChildComp = 'React' + htmlElement.rawTagName;
+        outReactChildComps.set(htmlElement.rawTagName, reactChildComp)
         return new RenderFragment(
-            `${currIndent.firstLine}<${htmlElement.rawTagName} ${props.rendered} ${refs.rendered}/>`,
+            `${currIndent.firstLine}<${reactChildComp} ${props.rendered} ${refs.rendered}/>`,
             Imports.none().plus(props.imports).plus(refs.imports),
             props.validations,
             refs.refs,
@@ -311,7 +313,7 @@ ${indent.curr}return (${childElement.rendered})})}`,
             childNodes.length === 0
                 ? RenderFragment.empty()
                 : childNodes
-                      .map((_) => renderReactNode(_, childContext))
+                      .map((_) => renderReactNode(_, childContext, outReactChildComps))
                       .reduce(
                           (prev, current) => RenderFragment.merge(prev, current, '\n'),
                           RenderFragment.empty(),
@@ -394,6 +396,7 @@ function renderFunctionImplementation(
         processImportedComponents(importStatements);
 
     const rootElement = ensureSingleChildElement(rootBodyElement);
+    const reactChildComps = new Map<string, string>()
     let renderedRoot: RenderFragment;
     if (rootElement.val) {
         renderedRoot = renderReactNode(rootElement.val, {
@@ -404,13 +407,13 @@ function renderFunctionImplementation(
             importedSandboxedSymbols,
             nextAutoRefName: newAutoRefNameGenerator(),
             importerMode,
-        });
+        },
+            reactChildComps);
         renderedRoot = optimizeRefs(renderedRoot);
     } else renderedRoot = new RenderFragment('', Imports.none(), rootElement.validations);
     const elementType = baseElementName + 'Element';
     const refsType = baseElementName + 'ElementRefs';
     const viewStateType = types.name;
-    const renderType = `${elementType}Render`;
     const reactPropsType = `${elementType}Props`;
     const preRenderType = `${elementType}PreRender`;
     let imports = Imports.none().plus(Import.Jay4ReactElementProps).plus(Import.ReactElement);
@@ -423,9 +426,16 @@ function renderFunctionImplementation(
 
     const renderedReactProps = `export interface ${reactPropsType} extends Jay4ReactElementProps<${viewStateType}> {}`;
 
+    let renderedReactChildComponents = '';
+    if (reactChildComps.size > 0) {
+        imports = imports.plus(Import.jay2React);
+        renderedReactChildComponents = [...reactChildComps.entries()].map(
+            ([comp, reactComp]) => `const ${reactComp} = jay2React(${comp});`)
+            .join('\n') + '\n\n';
+    }
     const renderedImplementation = renderedRoot.map(
         (rootNode) =>
-            `export function render({
+            `${renderedReactChildComponents}export function render({
     vs,
     context,
 }: ${reactPropsType}): ReactElement<${reactPropsType}, any> {
