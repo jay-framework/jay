@@ -1,5 +1,5 @@
-import { Jay4ReactElementProps } from 'jay-4-react';
 import { ReactElement } from 'react';
+import { Jay4ReactElementProps } from 'jay-4-react';
 
 export interface TextWithApostropheViewState {
     s1: string;

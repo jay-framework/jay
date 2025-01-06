@@ -1,6 +1,6 @@
 import { HTMLElementCollectionProxy } from 'jay-runtime';
-import { Jay4ReactElementProps, eventsFor } from 'jay-4-react';
 import { ReactElement } from 'react';
+import { Jay4ReactElementProps, eventsFor } from 'jay-4-react';
 
 export interface Item {
     name: string;

@@ -185,8 +185,10 @@ describe('generate jay-html element for react target', () => {
             const sourceFolder = 'components-react-target/source';
             const targetFolder = 'components-react-target/target';
             it('for simple component element', async () => {
-                const elementFile = await readFileAndGenerateElementFile(sourceFolder,
-                    {...options, givenFile: 'counter'});
+                const elementFile = await readFileAndGenerateElementFile(sourceFolder, {
+                    ...options,
+                    givenFile: 'counter',
+                });
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
                     await readFixtureReactFile(targetFolder, 'counter.jay-html'),
@@ -194,8 +196,10 @@ describe('generate jay-html element for react target', () => {
             });
 
             it('nesting components in other components', async () => {
-                const elementFile = await readFileAndGenerateElementFile(sourceFolder,
-                    {...options, givenFile: 'component-in-component'});
+                const elementFile = await readFileAndGenerateElementFile(sourceFolder, {
+                    ...options,
+                    givenFile: 'component-in-component',
+                });
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
                     await readFixtureReactFile(targetFolder, 'component-in-component.jay-html'),
@@ -203,8 +207,10 @@ describe('generate jay-html element for react target', () => {
             });
 
             it.skip('dynamic nesting components in other components', async () => {
-                const elementFile = await readFileAndGenerateElementFile(sourceFolder,
-                    {...options, givenFile: 'component-in-component'});
+                const elementFile = await readFileAndGenerateElementFile(sourceFolder, {
+                    ...options,
+                    givenFile: 'component-in-component',
+                });
                 expect(elementFile.validations).toEqual([]);
                 expect(await prettify(elementFile.val)).toEqual(
                     await readFixtureReactFile(targetFolder, 'component-in-component.jay-html'),

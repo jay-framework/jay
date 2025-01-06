@@ -1,6 +1,6 @@
 <html>
 <head>
-    <link rel="import" href="../counter/counter" names="Counter"/>
+    <link rel="import" href="./counter" names="Counter"/>
     <script type="application/yaml-jay">
 data:
   nestedCounters:

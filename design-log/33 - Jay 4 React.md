@@ -8,31 +8,32 @@ This leads to the following principles:
 
 1. Write the components in Jay.
 2. Use Jay component from React using the adapter function `jay2React`
-2. Jay compiler to generate regular React components.
-3. Anything that goes into the sandbox is running regular Jay.
+3. Jay compiler to generate regular React components.
+4. Anything that goes into the sandbox is running regular Jay.
 
 **The end result is that a Jay component can be used as a React component,
 and can use React components as child components.**
 
 ## jay2React
 
-The `jay2React` function accepts a Jay Component and returns a React Component. 
+The `jay2React` function accepts a Jay Component and returns a React Component.
 
 ```typescript
 const ReactCart = jay2React(Cart);
 ```
 
 At which
-* `Cart` is the Jay Component
-* `ReactCart` is the React Component
 
-In terms of signature it handles the types mapping including mapping Jay props to React props and 
+- `Cart` is the Jay Component
+- `ReactCart` is the React Component
+
+In terms of signature it handles the types mapping including mapping Jay props to React props and
 mapping Jay event handlers to React callback props.
 
 In terms of implementation, it relays on the compiler to transform the Jay Component and Jay Element.
-The React Component `makeJayComponent` is replaced with `makeJay2ReactComponent` making the Jay component into 
+The React Component `makeJayComponent` is replaced with `makeJay2ReactComponent` making the Jay component into
 a higher level react component, accepting the element as a react component.
-The Jay Element is generated as a React Component. 
+The Jay Element is generated as a React Component.
 
 ## The generations / transformations
 
@@ -182,4 +183,3 @@ function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterEl
 
 export const Counter = makeJay2ReactComponent(render, CounterComponent);
 ```
-

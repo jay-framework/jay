@@ -3,7 +3,7 @@ import {
     RenderElement,
     HTMLElementProxy,
     RenderElementOptions,
-    HTMLElementCollectionProxy
+    HTMLElementCollectionProxy,
 } from 'jay-runtime';
 
 export interface CartLineItem {
@@ -26,11 +26,7 @@ export interface CartElementRefs {
 }
 
 export type CartElement = JayElement<CartElementViewState, CartElementRefs>;
-export type CartElementRender = RenderElement<
-    CartViewState,
-    CartElementRefs,
-    CartElement
->;
+export type CartElementRender = RenderElement<CartViewState, CartElementRefs, CartElement>;
 export type CounterElementPreRender = [CartElementRefs, CartElementRender];
 
 export declare function render(options?: RenderElementOptions): CartElementPreRender;

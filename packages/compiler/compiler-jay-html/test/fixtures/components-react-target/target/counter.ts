@@ -22,4 +22,4 @@ function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterEl
     };
 }
 
-export const Counter = makeJay2ReactComponent(render, CounterComponent)
+export const Counter = makeJay2ReactComponent(render, CounterComponent);

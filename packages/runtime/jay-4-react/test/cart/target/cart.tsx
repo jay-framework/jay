@@ -1,6 +1,6 @@
 import { render, CartElementRefs, CartLineItem } from './cart.jay-html';
 import { Props, createEvent, createMemo } from 'jay-component';
-import { makeJay2ReactComponent } from "../../../lib";
+import { makeJay2ReactComponent } from '../../../lib';
 
 export interface CartProps {
     lineItems: CartLineItem[];

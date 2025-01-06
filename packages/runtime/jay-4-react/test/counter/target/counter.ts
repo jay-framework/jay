@@ -1,6 +1,6 @@
 import { render, CounterElementRefs } from './counter.jay-html';
 import { Props, createSignal, createEvent } from 'jay-component';
-import {makeJay2ReactComponent} from '../../../lib';
+import { makeJay2ReactComponent } from '../../../lib';
 
 export interface CounterProps {
     initialValue: number;

@@ -1,5 +1,5 @@
 import { JAY_4_REACT, JAY_RUNTIME, JAY_SECURE, REACT } from './constants';
-import {makeJay2ReactComponent} from "jay-4-react";
+import { makeJay2ReactComponent } from 'jay-4-react';
 
 export enum ImportsFor {
     definition,
