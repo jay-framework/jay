@@ -6,7 +6,7 @@ import {
     PreRenderElement,
     RenderElementOptions
 } from 'jay-runtime';
-import { Dispatch, FC, SetStateAction, useRef, useState } from 'react';
+import {Dispatch, SetStateAction, useRef, useState} from 'react';
 import { EventsContext, refsRecorder } from './jay4react-events';
 import * as React from "react";
 import {ComponentConstructor, JayComponentCore, makeJayComponent} from "jay-component";
