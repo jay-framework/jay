@@ -1,0 +1,33 @@
+<html>
+<head>
+    <script type="application/yaml-jay">
+data:
+    minimumOrderReached: boolean
+    total: number
+    lineItems:
+    -   id: string
+        name: string
+        quantity: number
+        price: number
+    </script>
+</head>
+<body>
+<div>
+    <h2>Shopping Cart</h2>
+    <div forEach="lineItems" trackBy="id">
+        {lineItem.name}, quantity:
+        <span>{lineItem.quantity}, </span>
+        price:
+        <span>{lineItem.price}, </span>
+        <button role="removeItem-{lineItem.id}" ref="removeItem">x</button>
+        <div if="minimumOrderReached" role="condition">minimum order price reached</div>
+        <div if="!minimumOrderReached" role="condition">
+            minimum order value not reached
+            <button ref="continueShopping">x</button>
+        </div>
+        <div role="total">Total: {total}</div>
+        <button role="checkout" ref="checkout">x</button>
+    </div>
+</div>
+</body>
+</html>
