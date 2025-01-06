@@ -7,8 +7,8 @@ import {
     JayComponentType,
     JayImportLink,
     JayType,
-    JayUnknown, JayValidations,
-    MainRuntimeModes, Ref,
+    JayUnknown,
+    MainRuntimeModes,
     RenderFragment,
     RuntimeMode,
     WithValidations,
@@ -452,12 +452,6 @@ function renderFunctionImplementation(
         renderedImplementation: renderedImplementation.plusImport(imports),
         refImportsInUse,
     };
-}
-
-export function generateElementDefinitionFileReactTarget(
-    parsedFile: WithValidations<JayHtmlSourceFile>,
-): WithValidations<string> {
-    return null;
 }
 
 export function generateElementFileReactTarget(
