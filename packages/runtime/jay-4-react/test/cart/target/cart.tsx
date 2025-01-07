@@ -1,5 +1,5 @@
-import { render, CartElementRefs, CartLineItem } from './cart.jay-html';
-import { Props, createEvent, createMemo } from 'jay-component';
+import {render, CartElementRefs, CartLineItem, render2} from './cart.jay-html';
+import {Props, createEvent, createMemo, makeJayComponent} from 'jay-component';
 import { makeJay2ReactComponent } from '../../../lib';
 
 export interface CartProps {
@@ -37,3 +37,4 @@ function CartConstructor(
 }
 
 export const Cart = makeJay2ReactComponent(render, CartConstructor);
+export const Cart2 = makeJayComponent(render2, CartConstructor);

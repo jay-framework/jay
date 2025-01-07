@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import App from './App';
+import App from './target/App';
 import { vi } from 'vitest';
 
 describe('Simple react component', () => {

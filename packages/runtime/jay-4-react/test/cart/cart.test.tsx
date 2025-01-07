@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import App, { AppProps } from './App';
+import App, { AppProps } from './target/App';
 
 const ITEM_A_1 = { name: 'item 1', price: 10, quantity: 1, id: 'a' };
 const ITEM_A_2 = { name: 'item 1', price: 15, quantity: 3, id: 'a' };

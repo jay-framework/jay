@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { eventsFor } from '../../../lib';
+import {eventsFor, mimicJayElement} from '../../../lib';
 import { Jay4ReactElementProps } from '../../../lib';
 import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
 
@@ -60,3 +60,5 @@ export function render({ vs, context }: CartElementProps) {
         </div>
     );
 }
+
+export const render2 = mimicJayElement(render)
