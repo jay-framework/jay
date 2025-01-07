@@ -1,9 +1,8 @@
 import * as React from 'react';
-import {Cart, Cart2, CartProps} from './cart';
-import {jay2React, jay2React2} from '../../../lib';
+import {Cart, CartProps} from './cart';
+import {jay2React} from '../../../lib';
 
-const ReactCart = jay2React(Cart);
-const ReactCart2 = jay2React2(() => Cart2);
+const ReactCart2 = jay2React(() => Cart);
 
 export interface AppProps extends CartProps {
     log?: (message: string) => void;

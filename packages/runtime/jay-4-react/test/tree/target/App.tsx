@@ -1,8 +1,8 @@
 import * as React from 'react';
 import { TreeNode, Node } from './tree-node';
-import {jay2React, jay2React2} from '../../../lib';
+import {jay2React} from '../../../lib';
 
-const ReactTreeNode = jay2React2(() => TreeNode);
+const ReactTreeNode = jay2React(() => TreeNode);
 
 interface AppProps {
     node: Node

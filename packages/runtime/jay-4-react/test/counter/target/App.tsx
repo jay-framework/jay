@@ -1,9 +1,8 @@
 import * as React from 'react';
-import {Counter , Counter2} from './counter';
-import {jay2React, jay2React2} from '../../../lib';
+import {Counter} from './counter';
+import {jay2React} from '../../../lib';
 
-const ReactCounter = jay2React(Counter);
-const ReactCounter2 = jay2React2(() => Counter2);
+const ReactCounter2 = jay2React(() => Counter);
 
 interface AppProps {
     onCounterChange: (message: string) => void;

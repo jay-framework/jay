@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ReactElement } from 'react';
 import { HTMLElementProxy } from 'jay-runtime';
-import {jay2React, jay2React2, Jay4ReactElementProps, mimicJayElement} from '../../../lib';
+import {jay2React, Jay4ReactElementProps, mimicJayElement} from '../../../lib';
 import { eventsFor } from '../../../lib';
 import {Node} from "../source/tree-node";
 import {TreeNode} from "./tree-node";
@@ -18,7 +18,7 @@ export interface TreeNodeElementRefs {
 
 export interface TreeNodeElementProps extends Jay4ReactElementProps<TreeNodeViewState> {}
 
-const ReactTreeNode = jay2React2(() => TreeNode);
+const ReactTreeNode = jay2React(() => TreeNode);
 
 export function render({
     vs,

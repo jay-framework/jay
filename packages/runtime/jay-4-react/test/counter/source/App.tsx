@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Counter } from './counter';
 import { jay2React } from '../../../lib';
 
-const ReactCounter = jay2React(Counter);
+const ReactCounter = jay2React(() => Counter);
 
 interface AppProps {
     onCounterChange: (message: string) => void;

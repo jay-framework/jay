@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Cart, CartProps } from './cart';
 import { jay2React } from '../../../lib';
 
-const ReactCart = jay2React(Cart);
+const ReactCart = jay2React(() => Cart);
 
 export interface AppProps extends CartProps {
     log?: (message: string) => void;
