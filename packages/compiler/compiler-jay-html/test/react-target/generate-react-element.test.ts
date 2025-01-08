@@ -176,7 +176,7 @@ describe('generate jay-html element for react target', () => {
         });
     });
 
-    describe('components', () => {
+    describe('jay2react components', () => {
         describe('import jay component from jay-html with react compile target', () => {
             const options: ReadFileAndGenerateElementFileOptions = {
                 generateTarget: GenerateTarget.react,

@@ -6,6 +6,7 @@
       "jay-component": ["../component/lib"],
       "jay-runtime": ["../runtime/lib"],
       "jay-secure": ["../secure/lib"],
+      "react": ["./node_modules/@types/react"],
     },
   },
 }

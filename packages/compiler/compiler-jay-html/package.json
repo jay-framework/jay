@@ -40,6 +40,7 @@
     "@testing-library/jest-dom": "^6.2.0",
     "@types/js-beautify": "^1",
     "@types/node": "^20.11.5",
+    "@types/react": "^18.2.0",
     "jay-4-react": "workspace:^",
     "jay-dev-environment": "workspace:^",
     "jest-diff": "^29.7.0",

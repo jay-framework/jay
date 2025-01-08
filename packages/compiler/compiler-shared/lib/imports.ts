@@ -223,9 +223,9 @@ export const Import = {
         ImportsFor.implementation,
         ImportsFor.definition,
     ),
-    makeJay2ReactComponent: importStatementFragment(
+    mimicJayElement: importStatementFragment(
         JAY_4_REACT,
-        'makeJay2ReactComponent',
+        'mimicJayElement',
         ImportsFor.implementation,
         ImportsFor.definition,
     ),

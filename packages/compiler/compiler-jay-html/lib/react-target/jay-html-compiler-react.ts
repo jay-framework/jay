@@ -423,7 +423,10 @@ function renderFunctionImplementation(
     const viewStateType = types.name;
     const reactPropsType = `${elementType}Props`;
     const preRenderType = `${elementType}PreRender`;
-    let imports = Imports.none().plus(Import.Jay4ReactElementProps).plus(Import.ReactElement);
+    let imports = Imports.none()
+        .plus(Import.Jay4ReactElementProps)
+        .plus(Import.ReactElement)
+        .plus(Import.mimicJayElement);
     const {
         imports: refImports,
         renderedRefs,
@@ -438,7 +441,7 @@ function renderFunctionImplementation(
         imports = imports.plus(Import.jay2React);
         renderedReactChildComponents =
             [...reactChildComps.entries()]
-                .map(([comp, reactComp]) => `const ${reactComp} = jay2React(${comp});`)
+                .map(([comp, reactComp]) => `const ${reactComp} = jay2React(() => ${comp});`)
                 .join('\n') + '\n\n';
     }
     const renderedImplementation = renderedRoot.map(
@@ -448,7 +451,9 @@ function renderFunctionImplementation(
     context,
 }: ${reactPropsType}): ReactElement<${reactPropsType}, any> {
     return ${rootNode};
-}`,
+}
+
+export const render2 = mimicJayElement(render)`,
     );
 
     return {

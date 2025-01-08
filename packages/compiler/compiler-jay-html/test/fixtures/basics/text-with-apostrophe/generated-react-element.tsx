@@ -1,5 +1,5 @@
 import { ReactElement } from 'react';
-import { Jay4ReactElementProps } from 'jay-4-react';
+import { Jay4ReactElementProps, mimicJayElement } from 'jay-4-react';
 
 export interface TextWithApostropheViewState {
     s1: string;
@@ -16,3 +16,5 @@ export function render({
 }: TextWithApostropheElementProps): ReactElement<TextWithApostropheElementProps, any> {
     return <div>static text's</div>;
 }
+
+export const render2 = mimicJayElement(render);

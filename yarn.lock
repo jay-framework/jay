@@ -4913,6 +4913,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/react@npm:^18.2.0":
+  version: 18.3.18
+  resolution: "@types/react@npm:18.3.18"
+  dependencies:
+    "@types/prop-types": "*"
+    csstype: ^3.0.2
+  checksum: 5933597bc9f53e282f0438f0bb76d0f0fab60faabe760ea806e05ffe6f5c61b9b4d363e1a03a8fea47c510d493c6cf926cdeeba9f7074fa97b61940c350245e7
+  languageName: node
+  linkType: hard
+
 "@types/resolve@npm:1.17.1":
   version: 1.17.1
   resolution: "@types/resolve@npm:1.17.1"
@@ -11066,6 +11076,7 @@ __metadata:
     "@types/js-beautify": ^1
     "@types/js-yaml": ^4.0.9
     "@types/node": ^20.11.5
+    "@types/react": ^18.2.0
     change-case: ^4.1.2
     jay-4-react: "workspace:^"
     jay-compiler-analyze-exported-types: "workspace:^"

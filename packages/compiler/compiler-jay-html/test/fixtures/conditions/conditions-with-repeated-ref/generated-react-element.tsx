@@ -1,6 +1,6 @@
 import { HTMLElementProxy } from 'jay-runtime';
 import { ReactElement } from 'react';
-import { Jay4ReactElementProps, eventsFor } from 'jay-4-react';
+import { Jay4ReactElementProps, eventsFor, mimicJayElement } from 'jay-4-react';
 
 export interface ConditionsWithRepeatedRefViewState {
     text1: string;
@@ -37,3 +37,5 @@ export function render({
         </div>
     );
 }
+
+export const render2 = mimicJayElement(render);

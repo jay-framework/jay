@@ -1,5 +1,5 @@
 import { ReactElement } from 'react';
-import { Jay4ReactElementProps } from 'jay-4-react';
+import { Jay4ReactElementProps, mimicJayElement } from 'jay-4-react';
 
 export interface StylesViewState {
     text1: string;
@@ -18,3 +18,5 @@ export function render({ vs, context }: StylesElementProps): ReactElement<Styles
         </div>
     );
 }
+
+export const render2 = mimicJayElement(render);
