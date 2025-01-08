@@ -1,22 +1,29 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import App from './target/App';
-import {Node} from './target/tree-node'
+import { Node } from './target/tree-node';
 import { vi } from 'vitest';
 
 describe('Simple react component', () => {
-
     const NODE: Node = {
-        id: "a", name: "root", children: [
-            {id: 'a1', name: '[A]', children: [
-                    {id: 'a1a1', name: '[A.A]', children: [
-                            {id: 'a1a1a1', name: '[A.A.A]', children: []}
-                        ]
+        id: 'a',
+        name: 'root',
+        children: [
+            {
+                id: 'a1',
+                name: '[A]',
+                children: [
+                    {
+                        id: 'a1a1',
+                        name: '[A.A]',
+                        children: [{ id: 'a1a1a1', name: '[A.A.A]', children: [] }],
                     },
-                    {id: 'a1b1', name: '[A.B]', children: []},
-                ]},
-            {id: 'b1', name: '[B]', children: []},
-            {id: 'c1', name: '[C]', children: []}]
-    }
+                    { id: 'a1b1', name: '[A.B]', children: [] },
+                ],
+            },
+            { id: 'b1', name: '[B]', children: [] },
+            { id: 'c1', name: '[C]', children: [] },
+        ],
+    };
 
     async function mkElement() {
         const onCounterChange = vi.fn();

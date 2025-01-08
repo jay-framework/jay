@@ -1,6 +1,6 @@
 import * as React from 'react';
-import {Counter} from './counter';
-import {jay2React} from '../../../lib';
+import { Counter } from './counter';
+import { jay2React } from '../../../lib';
 
 const ReactCounter2 = jay2React(() => Counter);
 

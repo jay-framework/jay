@@ -1,6 +1,6 @@
 import * as React from 'react';
-import {Cart, CartProps} from './cart';
-import {jay2React} from '../../../lib';
+import { Cart, CartProps } from './cart';
+import { jay2React } from '../../../lib';
 
 const ReactCart2 = jay2React(() => Cart);
 

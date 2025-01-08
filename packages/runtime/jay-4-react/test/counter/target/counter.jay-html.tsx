@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { ReactElement } from 'react';
 import { HTMLElementProxy } from 'jay-runtime';
-import {Jay4ReactElementProps, mimicJayElement} from '../../../lib';
+import { Jay4ReactElementProps, mimicJayElement } from '../../../lib';
 import { eventsFor } from '../../../lib';
 
 export interface CounterElementViewState {
@@ -35,4 +35,4 @@ export function render({
     );
 }
 
-export const render2 = mimicJayElement(render)
+export const render2 = mimicJayElement(render);

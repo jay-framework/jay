@@ -6,10 +6,10 @@ import {
     PreRenderElement,
     RenderElementOptions,
 } from 'jay-runtime';
-import {Dispatch, ReactElement, SetStateAction, useRef, useState} from 'react';
+import { Dispatch, ReactElement, SetStateAction, useRef, useState } from 'react';
 import { EventsContext, refsRecorder } from './jay4react-events';
 import * as React from 'react';
-import {Getter} from "jay-reactive";
+import { Getter } from 'jay-reactive';
 
 export interface Jay4ReactElementProps<ViewState> {
     vs: ViewState;
@@ -27,7 +27,9 @@ function splitPropsEvents(reactProps: object): [object, object] {
 }
 
 type EventEmittersToReactCallbacks<T> = {
-    [Key in keyof T]: T[Key] extends EventEmitter<infer EventType, any>
+    [Key in keyof T as T[Key] extends EventEmitter<any, any>
+        ? Key
+        : never]?: T[Key] extends EventEmitter<infer EventType, any>
         ? (event: EventType) => void
         : T[Key];
 };
@@ -40,33 +42,32 @@ export function jay2React<
     ViewState extends object,
     Refs extends object,
     JayElementT extends JayElement<ViewState, Refs>,
-    CompConstructor extends (...args: any) => any
+    CompConstructor extends (...args: any) => any,
 >(comp: Getter<CompConstructor>): React.FC<Jay2React<CompConstructor>> {
     return (reactProps: Jay2React<CompConstructor>) => {
         const [props, events] = splitPropsEvents(reactProps);
         const myInstanceRef = useRef<JayComponent<PropsT, ViewState, JayElementT>>(null);
         if (!myInstanceRef.current) {
             myInstanceRef.current = comp()(props);
-        }
-        else {
+        } else {
             const reactViewStateState = useState<ViewState>(null);
-            myInstanceRef.current.update({...props, reactViewStateState} as PropsT);
+            myInstanceRef.current.update({ ...props, reactViewStateState } as PropsT);
         }
         Object.keys(events).forEach((eventName) =>
             myInstanceRef.current.addEventListener(eventName.substring(2), ({ event }) =>
                 events[eventName](event),
             ),
         );
-        return myInstanceRef.current.element['react'] as ReactElement
-    }
+        return myInstanceRef.current.element['react'] as ReactElement;
+    };
 }
 
 export function mimicJayElement<
     ViewState extends object,
     Refs extends object,
     JayElementT extends JayElement<ViewState, Refs>,
-    ElementProps extends Jay4ReactElementProps<ViewState>>(reactElement: React.FC<ElementProps>): PreRenderElement<ViewState, Refs, JayElementT> {
-
+    ElementProps extends Jay4ReactElementProps<ViewState>,
+>(reactElement: React.FC<ElementProps>): PreRenderElement<ViewState, Refs, JayElementT> {
     const preRender: PreRenderElement<ViewState, Refs, JayElementT> = (
         options?: RenderElementOptions,
     ) => {
@@ -87,19 +88,19 @@ export function mimicJayElement<
                         element['react'] = reactElement({
                             vs: newData,
                             context: _eventsContext,
-                        } as ElementProps)
+                        } as ElementProps);
                         if (newData['reactViewStateState'])
                             [viewState, setViewState] = newData['reactViewStateState'];
                         // newData['setViewState'](newData);
                         // useRef();
                         // useState<ViewState>(null); // to make react happy
                         // [viewState, setViewState] = useState<ViewState>(null);
-                        setViewState(newData)
+                        setViewState(newData);
                     },
                     mount: () => {},
                     unmount: () => {},
                     refs,
-                    react
+                    react,
                 } as unknown as JayElementT;
                 return element;
             },

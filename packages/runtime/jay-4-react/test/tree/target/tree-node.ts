@@ -1,4 +1,4 @@
-import {render, render2, TreeNodeElementRefs} from './tree-node.jay-html';
+import { render, render2, TreeNodeElementRefs } from './tree-node.jay-html';
 import { createSignal, createMemo, makeJayComponent, Props } from 'jay-component';
 
 export interface Node {
@@ -19,7 +19,7 @@ function TreeNodeConstructor({ name, id, children }: Props<Node>, refs: TreeNode
 
     refs.head.onclick(() => {
         setOpen(!open());
-    })
+    });
 
     return {
         render: () => ({ headChar, node, open }),

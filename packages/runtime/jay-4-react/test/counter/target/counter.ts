@@ -1,5 +1,5 @@
-import {render, CounterElementRefs, render2} from './counter.jay-html';
-import {Props, createSignal, createEvent, makeJayComponent} from 'jay-component';
+import { render, CounterElementRefs, render2 } from './counter.jay-html';
+import { Props, createSignal, createEvent, makeJayComponent } from 'jay-component';
 
 export interface CounterProps {
     initialValue: number;
