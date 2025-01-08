@@ -12,7 +12,7 @@ import { JayMetadata } from './metadata';
 import { writeGeneratedFile } from '../common/files';
 import {
     checkValidationErrors,
-    CompilerSourceFile,
+    CompilerSourceFile, GenerateTarget,
     getModeFromExtension,
     RuntimeMode,
     SourceFileFormat,
@@ -43,19 +43,20 @@ export async function generateCodeFromStructure(
 ): Promise<string> {
     const { format } = meta;
     const mode = getModeFromExtension(id);
+    const generationTarget: GenerateTarget = jayContext.jayOptions.generationTarget || GenerateTarget.jay;
     const tsCode =
         format === SourceFileFormat.JayHtml
-            ? generateCodeFromJayHtmlFile(mode, jayFile as JayHtmlSourceFile)
+            ? generateCodeFromJayHtmlFile(mode, jayFile as JayHtmlSourceFile, generationTarget)
             : generateCodeFromTsFile(jayContext, mode, jayFile, id, code);
     await writeGeneratedFile(jayContext, context, id, tsCode);
     return tsCode;
 }
 
-export function generateCodeFromJayHtmlFile(mode: RuntimeMode, jayFile: JayHtmlSourceFile): string {
+export function generateCodeFromJayHtmlFile(mode: RuntimeMode, jayFile: JayHtmlSourceFile, generationTarget: GenerateTarget): string {
     switch (mode) {
         case RuntimeMode.MainTrusted:
         case RuntimeMode.MainSandbox:
-            return checkValidationErrors(generateElementFile(jayFile, mode));
+            return checkValidationErrors(generateElementFile(jayFile, mode, generationTarget));
         case RuntimeMode.WorkerSandbox:
             return generateElementBridgeFile(jayFile);
         case RuntimeMode.WorkerTrusted:
