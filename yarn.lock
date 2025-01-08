@@ -4883,7 +4883,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react-dom@npm:^18, @types/react-dom@npm:^18.0.0":
+"@types/react-dom@npm:^18, @types/react-dom@npm:^18.0.0, @types/react-dom@npm:^18.3.5":
   version: 18.3.5
   resolution: "@types/react-dom@npm:18.3.5"
   peerDependencies:
@@ -4913,7 +4913,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react@npm:^18.2.0":
+"@types/react@npm:^18.2.0, @types/react@npm:^18.3.18":
   version: 18.3.18
   resolution: "@types/react@npm:18.3.18"
   dependencies:
@@ -5221,7 +5221,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitejs/plugin-react@npm:^4.2.1":
+"@vitejs/plugin-react@npm:^4.2.1, @vitejs/plugin-react@npm:^4.3.4":
   version: 4.3.4
   resolution: "@vitejs/plugin-react@npm:4.3.4"
   dependencies:
@@ -10987,6 +10987,36 @@ __metadata:
   languageName: node
   linkType: hard
 
+"jay-4-react-example-todo-components@workspace:examples/jay-4-react/todo":
+  version: 0.0.0-use.local
+  resolution: "jay-4-react-example-todo-components@workspace:examples/jay-4-react/todo"
+  dependencies:
+    "@babel/core": ^7.23.7
+    "@babel/preset-env": ^7.23.8
+    "@babel/preset-typescript": ^7.23.3
+    "@rollup/plugin-node-resolve": ^15.2.3
+    "@types/react": ^18.3.18
+    "@types/react-dom": ^18.3.5
+    "@vitejs/plugin-react": ^4.3.4
+    jay-cli: "workspace:^"
+    jay-component: "workspace:^"
+    jay-dev-environment: "workspace:^"
+    jay-json-patch: "workspace:^"
+    jay-reactive: "workspace:^"
+    jay-runtime: "workspace:^"
+    jay-serialization: "workspace:^"
+    nodemon: ^3.0.3
+    react: ^18.3.1
+    react-dom: ^18.3.1
+    rimraf: ^5.0.5
+    tslib: ^2.6.2
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vite-plugin-inspect: ^0.8.1
+    vite-plugin-jay: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "jay-4-react@workspace:^, jay-4-react@workspace:packages/runtime/jay-4-react":
   version: 0.0.0-use.local
   resolution: "jay-4-react@workspace:packages/runtime/jay-4-react"
@@ -15433,7 +15463,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-dom@npm:^18.2.0":
+"react-dom@npm:^18.2.0, react-dom@npm:^18.3.1":
   version: 18.3.1
   resolution: "react-dom@npm:18.3.1"
   dependencies:
@@ -15564,7 +15594,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react@npm:^18.2.0":
+"react@npm:^18.2.0, react@npm:^18.3.1":
   version: 18.3.1
   resolution: "react@npm:18.3.1"
   dependencies:
