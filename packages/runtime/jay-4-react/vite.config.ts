@@ -21,6 +21,8 @@ export default defineConfig({
                 'jay-runtime',
                 'jay-serialization',
                 'jay-secure',
+                'react',
+                'react-dom',
             ],
         },
     },
