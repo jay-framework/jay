@@ -1,14 +1,4 @@
-import {
-    checkValidationErrors,
-    generateComponentRefsDefinitionFile,
-    generateElementDefinitionFile,
-    generateElementFile,
-    generateSandboxRootFile,
-    parseJayFile,
-    prettify,
-    RuntimeMode,
-    transformComponent,
-} from '../lib';
+import { generateElementDefinitionFile, generateElementFile, transformComponent } from '../lib';
 import {
     readFixtureFile,
     readFixtureSourceJayFile,
@@ -32,6 +22,8 @@ import {
     requestAnimationFramePattern,
 } from './component-files/ts-basic-analyzers/compiler-patterns-for-testing';
 import { FunctionRepositoryBuilder } from '../lib';
+import { checkValidationErrors, prettify, RuntimeMode } from 'jay-compiler-shared';
+import { generateSandboxRootFile, parseJayFile } from 'jay-compiler-jay-html';
 
 describe('generate full project', () => {
     const relativePath = './test/fixtures/tsconfig.json';
@@ -106,17 +98,6 @@ describe('generate full project', () => {
                 );
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readFixtureFile(FIXTURE_MAIN, 'counter.jay-html'),
-                );
-            });
-
-            it('generates counter refs file', async () => {
-                let refsFile = generateComponentRefsDefinitionFile(
-                    './test/fixtures/full-projects/counter/source/counter',
-                    { relativePath },
-                );
-                expect(refsFile.validations).toEqual([]);
-                expect(await prettify(refsFile.val)).toEqual(
-                    await prettify(await readFixtureFileRaw(FIXTURE_MAIN, 'counter-refs.d.ts')),
                 );
             });
 
@@ -249,19 +230,6 @@ describe('generate full project', () => {
                 );
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readFixtureFile(FIXTURE_MAIN, 'auto-counter.jay-html'),
-                );
-            });
-
-            it('generates counter refs file', async () => {
-                let refsFile = generateComponentRefsDefinitionFile(
-                    './test/fixtures/full-projects/exec/source/auto-counter',
-                    { relativePath },
-                );
-                expect(refsFile.validations).toEqual([]);
-                expect(await prettify(refsFile.val)).toEqual(
-                    await prettify(
-                        await readFixtureFileRaw(FIXTURE_MAIN, 'auto-counter-refs.d.ts'),
-                    ),
                 );
             });
 
@@ -410,17 +378,6 @@ describe('generate full project', () => {
                 );
             });
 
-            it('generates todo refs file', async () => {
-                let refsFile = generateComponentRefsDefinitionFile(
-                    './test/fixtures/full-projects/todo/source/todo',
-                    { relativePath },
-                );
-                expect(refsFile.validations).toEqual([]);
-                expect(await prettify(refsFile.val)).toEqual(
-                    await prettify(await readFixtureFileRaw(FIXTURE_MAIN, 'todo-refs.d.ts')),
-                );
-            });
-
             it('generates todo bridge', async () => {
                 const sourceFile = await readTsSourceFile(FIXTURE_SOURCE, 'todo');
                 const globalFunctionRepo = new FunctionRepositoryBuilder();
@@ -443,17 +400,6 @@ describe('generate full project', () => {
                 );
                 expect(await prettify(runtimeFile.val)).toEqual(
                     await readFixtureFile(FIXTURE_MAIN, 'item.jay-html'),
-                );
-            });
-
-            it('generates item refs file', async () => {
-                let refsFile = generateComponentRefsDefinitionFile(
-                    './test/fixtures/full-projects/todo/source/item',
-                    { relativePath },
-                );
-                expect(refsFile.validations).toEqual([]);
-                expect(await prettify(refsFile.val)).toEqual(
-                    await prettify(await readFixtureFileRaw(FIXTURE_MAIN, 'item-refs.d.ts')),
                 );
             });
 

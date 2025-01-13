@@ -2,7 +2,7 @@ import { PluginContext, TransformResult } from 'rollup';
 import { getJayFileStructure } from './get-jay-file-structure';
 import { JayPluginContext } from './jay-plugin-context';
 import { generateCodeFromStructure } from './generate-code-from-structure';
-import { getModeFromExtension } from 'jay-compiler';
+import { getModeFromExtension } from 'jay-compiler-shared';
 import { getJayMetadata } from './metadata';
 
 export async function transformJayFile(

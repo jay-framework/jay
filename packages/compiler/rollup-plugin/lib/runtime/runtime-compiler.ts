@@ -1,4 +1,4 @@
-import { hasExtension, hasJayModeExtension, Import, JAY_EXTENSION } from 'jay-compiler';
+import { hasExtension, hasJayModeExtension, Import, JAY_EXTENSION } from 'jay-compiler-shared';
 import { LoadResult, ResolveIdResult, TransformResult } from 'rollup';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
 import { transformJayFile } from './transform';
@@ -25,7 +25,13 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             options: ResolveIdOptions,
         ): Promise<ResolveIdResult> {
             if (hasExtension(source, JAY_EXTENSION))
-                return await addTsExtensionForJayFile(this, source, importer, options);
+                return await addTsExtensionForJayFile(
+                    this,
+                    source,
+                    importer,
+                    options,
+                    jayOptions.generationTarget,
+                );
             if (hasJayModeExtension(source))
                 return await resolveJayModeFile(this, source, importer, options);
             if (

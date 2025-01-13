@@ -1,0 +1,6 @@
+{
+  "extends": "jay-dev-environment/library-dom/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+  },
+}

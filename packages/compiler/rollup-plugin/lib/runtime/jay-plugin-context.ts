@@ -1,11 +1,14 @@
 import * as ts from 'typescript';
 import { JayRollupConfig } from '../common/types';
 import path from 'node:path';
-import { createTsSourceFileFromSource, CompilerSourceFile } from 'jay-compiler';
+import {
+    createTsSourceFileFromSource,
+    compileFunctionSplitPatternsBlock,
+    FunctionRepositoryBuilder,
+} from 'jay-compiler';
 import { CompiledPattern } from 'jay-compiler';
-import { compileFunctionSplitPatternsBlock } from 'jay-compiler';
 import fs from 'fs';
-import { FunctionRepositoryBuilder } from 'jay-compiler';
+import { CompilerSourceFile } from 'jay-compiler-shared';
 
 export class JayPluginContext {
     readonly projectRoot: string;

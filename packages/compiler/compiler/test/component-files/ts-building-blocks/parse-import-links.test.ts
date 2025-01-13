@@ -1,9 +1,10 @@
-import { createTsSourceFileFromSource, JayImportLink, JayUnknown } from '../../../lib';
+import { createTsSourceFileFromSource } from '../../../lib';
 import {
     getImportByName,
     parseImportLinks,
 } from '../../../lib/components-files/building-blocks/parse-import-links';
 import { fixtureFilePath, readFixtureFile } from '../../test-utils/file-utils';
+import { JayImportLink, JayUnknown } from 'jay-compiler-shared';
 
 describe('parseImportLinks', () => {
     const fixturePath = 'full-projects/counter/generated/main';
@@ -42,6 +43,10 @@ describe('parseImportLinks', () => {
                         name: 'RenderElementOptions',
                         type: JayUnknown,
                     },
+                    {
+                        name: 'MapEventEmitterViewState',
+                        type: JayUnknown,
+                    },
                 ],
                 sandbox: false,
             },
@@ -61,10 +66,10 @@ describe('parseImportLinks', () => {
                 sandbox: false,
             },
             {
-                module: './counter-refs',
+                module: './function-repository',
                 names: [
                     {
-                        name: 'CounterComponentType',
+                        name: 'funcRepository',
                         type: JayUnknown,
                     },
                 ],
@@ -79,16 +84,6 @@ describe('parseImportLinks', () => {
                     },
                 ],
                 sandbox: true,
-            },
-            {
-                module: './function-repository',
-                names: [
-                    {
-                        name: 'funcRepository',
-                        type: JayUnknown,
-                    },
-                ],
-                sandbox: false,
             },
         ]);
     });

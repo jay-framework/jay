@@ -1,9 +1,10 @@
 import { transform } from 'typescript';
 
 import { tsxComponentTransformer } from '../../../lib/tsx-file/transform/tsx-component-transformer';
-import { JayTsxSourceFile, WithValidations } from '../../../lib';
 import { createTsxSourceFile } from '../../test-utils/ts-source-utils';
 import { parseTsxFile } from '../../../lib/tsx-file/parse/parse-tsx-file';
+import { WithValidations } from 'jay-compiler-shared';
+import { JayTsxSourceFile } from '../../../lib/tsx-file/jsx-block';
 
 describe('tsxComponentTransformer', () => {
     function transformFile(code: string): WithValidations<string> {

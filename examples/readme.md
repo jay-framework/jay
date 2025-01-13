@@ -1,6 +1,6 @@
 # Jay Examples
 
-The Jay examples folder includes 4 categories of examples, demonstrating different aspects of Jay.
+The Jay examples folder includes 5 categories of examples, demonstrating different aspects of Jay.
 
 ## Jay
 
@@ -37,6 +37,14 @@ non sandboxed Todo MVC using plain rollup build
 ### tree
 
 a non sandboxed version of a tree, with recursive component structure
+
+## Jay 4 React
+
+Demonstrates how to use Jay Components with a React project.
+
+### todo
+
+A Todo MVC example written in Jay, compiled to React and used by a React application.
 
 ## Context API
 

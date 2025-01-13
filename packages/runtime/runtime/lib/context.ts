@@ -80,46 +80,31 @@ export function wrapWithModifiedCheck<T extends object>(
 ): BaseJayElement<T> {
     let update = baseJayElement.update;
     let current = initialData;
-    let isModified;
     baseJayElement.update = (newData: T) => {
-        isModified = newData !== current;
+        let isModified = newData !== current;
         current = newData;
         if (isModified) update(current);
     };
     return baseJayElement;
 }
 
-export class ConstructContext<A extends Array<any>> {
-    data: A;
-    forStaticElements: boolean;
-    trackBy: string;
-
-    constructor(data: A, forStaticElements: boolean = true, trackBy: string = 'id') {
-        this.data = data;
-        this.forStaticElements = forStaticElements;
-        this.trackBy = trackBy;
-    }
+export class ConstructContext<ViewState> {
+    constructor(
+        private readonly data: ViewState,
+        public readonly forStaticElements: boolean = true,
+        private readonly coordinateBase: Coordinate = [],
+    ) {}
 
     get currData() {
-        return this.data[this.data.length - 1];
+        return this.data;
     }
 
     coordinate = (refName: string): Coordinate => {
-        return [
-            ...this.data
-                .slice(1)
-                .map((_) => _[this.trackBy])
-                .reverse(),
-            refName,
-        ];
+        return [...this.coordinateBase, refName];
     };
 
-    static acc<A extends Array<any>, B>(a: A, b: B): [...A, B] {
-        return [...a, b];
-    }
-
-    forItem<T>(t: T, trackBy: string) {
-        return new ConstructContext(ConstructContext.acc(this.data, t), false, trackBy);
+    forItem<ChildViewState>(childViewState: ChildViewState, id: string) {
+        return new ConstructContext(childViewState, false, [...this.coordinateBase, id]);
     }
 
     static withRootContext<ViewState, Refs>(
@@ -127,7 +112,7 @@ export class ConstructContext<A extends Array<any>> {
         refManager: ReferencesManager,
         elementConstructor: () => BaseJayElement<ViewState>,
     ): JayElement<ViewState, Refs> {
-        let context = new ConstructContext([viewState]);
+        let context = new ConstructContext(viewState);
         let element = withContext(CONSTRUCTION_CONTEXT_MARKER, context, () =>
             wrapWithModifiedCheck(currentConstructionContext().currData, elementConstructor()),
         );

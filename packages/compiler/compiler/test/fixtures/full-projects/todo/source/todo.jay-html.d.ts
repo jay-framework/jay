@@ -1,6 +1,12 @@
-import { JayElement, RenderElement, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
-// @ts-expect-error Cannot find module
-import { ItemRefs } from './item-refs';
+import {
+    JayElement,
+    RenderElement,
+    HTMLElementProxy,
+    RenderElementOptions,
+    MapEventEmitterViewState,
+    OnlyEventEmitters,
+    ComponentCollectionProxy,
+} from 'jay-runtime';
 import { Item } from './item';
 
 export enum Filter {
@@ -25,6 +31,10 @@ export interface TodoViewState {
     newTodo: string;
     shownTodos: Array<ShownTodo>;
 }
+
+export type ItemRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Item>>;
+export type ItemRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ItemRef<ParentVS>> &
+    OnlyEventEmitters<ItemRef<ParentVS>>;
 
 export interface TodoElementRefs {
     newTodo: HTMLElementProxy<TodoViewState, HTMLInputElement>;

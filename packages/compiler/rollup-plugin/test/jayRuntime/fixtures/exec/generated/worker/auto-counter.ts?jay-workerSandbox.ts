@@ -1,6 +1,7 @@
 import { render, AutoCounterElementRefs } from './auto-counter.jay-html?jay-workerSandbox';
 import { createSignal, makeJayComponent, Props } from 'jay-component';
 import { exec$ } from 'jay-secure';
+// @ts-expect-error Cannot find module
 import { moduleDoCount } from './a-module?jay-workerSandbox';
 import { funcGlobal$ } from 'jay-secure';
 export interface AutoCounterProps {

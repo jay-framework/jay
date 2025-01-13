@@ -27,7 +27,7 @@ export interface ItemElementRefs {
 
 export type ItemElement = JayElement<ItemViewState, ItemElementRefs>;
 export type ItemElementRender = RenderElement<ItemViewState, ItemElementRefs, ItemElement>;
-export type ItemElementPreRender = [refs: ItemElementRefs, ItemElementRender];
+export type ItemElementPreRender = [ItemElementRefs, ItemElementRender];
 
 export function render(options?: RenderElementOptions): ItemElementPreRender {
     const [refManager, [refCompleted, refLabel, refButton, refTitle]] = ReferencesManager.for(

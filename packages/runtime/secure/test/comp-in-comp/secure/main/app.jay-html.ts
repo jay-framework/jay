@@ -13,7 +13,7 @@ export interface AppViewState {}
 
 export interface AppElementRefs {}
 export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
-export type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
+export type AppElementPreRender = [AppElementRefs, AppElementRender];
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
 

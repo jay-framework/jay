@@ -1,4 +1,4 @@
-import { TS_EXTENSION } from 'jay-compiler';
+import { TS_EXTENSION } from 'jay-compiler-shared';
 import { PluginContext } from 'rollup';
 import { mock } from 'vitest-mock-extended';
 import { readTestFile } from '../../test-utils/file-utils';

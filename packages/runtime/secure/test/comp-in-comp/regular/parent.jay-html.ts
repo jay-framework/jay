@@ -10,8 +10,10 @@ import {
     RenderElementOptions,
     RenderElement,
     ReferencesManager,
+    MapEventEmitterViewState,
+    ComponentCollectionProxy,
+    OnlyEventEmitters,
 } from 'jay-runtime';
-import { ChildComponentType, ChildRefs } from './child-refs';
 import { Child, ChildProps } from './child';
 
 export interface DynamicChild {
@@ -27,16 +29,19 @@ export interface ParentViewState {
     dynamicChildren: Array<DynamicChild>;
 }
 
+export type ChildRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Child>>;
+export type ChildRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ChildRef<ParentVS>> &
+    OnlyEventEmitters<ChildRef<ParentVS>>;
 export interface ParentElementRefs {
     parentChangesChildPropButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>;
     parentCallsChildApiButton: HTMLElementProxy<ParentViewState, HTMLButtonElement>;
-    staticChild: ChildComponentType<ParentViewState>;
+    staticChild: ChildRef<ParentViewState>;
     dynamicChildren: ChildRefs<DynamicChild>;
 }
 
 export type ParentElement = JayElement<ParentViewState, ParentElementRefs>;
 export type ParentElementRender = RenderElement<ParentViewState, ParentElementRefs, ParentElement>;
-export type ParentElementPreRender = [refs: ParentElementRefs, ParentElementRender];
+export type ParentElementPreRender = [ParentElementRefs, ParentElementRender];
 
 export function render(options?: RenderElementOptions): ParentElementPreRender {
     const [

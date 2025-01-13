@@ -24,7 +24,7 @@ export interface ChildElementRefs {
 
 export type ChildElement = JayElement<ChildViewState, ChildElementRefs>;
 export type ChildElementRender = RenderElement<ChildViewState, ChildElementRefs, ChildElement>;
-export type ChildElementPreRender = [refs: ChildElementRefs, ChildElementRender];
+export type ChildElementPreRender = [ChildElementRefs, ChildElementRender];
 
 export function render(options?: RenderElementOptions): ChildElementPreRender {
     const [refManager, [eventToParent, eventToParentToChildProp, eventToParentToChildApi]] =

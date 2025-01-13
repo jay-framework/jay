@@ -5,7 +5,7 @@
       data:
           cond: boolean
           initialCount: number
-          counters:
+          subCounters:
           -  id: string
              initialCount: number
     </script>

@@ -6,19 +6,20 @@ import {
     RenderElementOptions,
     RenderElement,
     ReferencesManager,
+    MapEventEmitterViewState,
 } from 'jay-runtime';
 import { Parent } from './parent';
-import { ParentComponentType } from './parent-refs';
 
 export interface AppViewState {}
 
+export type ParentRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Parent>>;
 export interface AppElementRefs {
-    comp1: ParentComponentType<AppViewState>;
+    comp1: ParentRef<AppViewState>;
 }
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
-export type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
+export type AppElementPreRender = [AppElementRefs, AppElementRender];
 
 export function render(options?: RenderElementOptions): AppElementPreRender {
     const [refManager, [comp1]] = ReferencesManager.for(options, [], [], ['comp1'], []);

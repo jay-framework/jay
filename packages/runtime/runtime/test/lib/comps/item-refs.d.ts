@@ -1,9 +1,7 @@
 import { ComponentCollectionProxy, ComponentProxy, EventEmitter } from '../../../lib';
 import { Item } from './item';
+import { MapEventEmitterViewState, OnlyEventEmitters } from '../../../dist';
 
-export type ItemComponentType<ParentVS> = ReturnType<typeof Item<ParentVS>>;
-
-export interface ItemRefs<ParentVS>
-    extends ComponentCollectionProxy<ParentVS, ItemComponentType<ParentVS>> {
-    onremove: EventEmitter<string, ParentVS>;
-}
+export type ItemRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Item>>;
+export type ItemRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ItemRef<ParentVS>> &
+    OnlyEventEmitters<ItemRef<ParentVS>>;

@@ -1,10 +1,7 @@
 import { ComponentCollectionProxy, EventEmitter, JayComponent } from '../../../lib';
 import { ViewState, Counter } from './counter-comp';
+import { MapEventEmitterViewState, OnlyEventEmitters } from '../../../dist';
 
-type extractEventType<Type> = Type extends EventEmitter<infer X, any> ? X : null;
-export type CounterComponentType = ReturnType<typeof Counter>;
-
-export interface CounterRefs<ParentVS>
-    extends ComponentCollectionProxy<ViewState, CounterComponentType> {
-    onChange: EventEmitter<extractEventType<CounterComponentType['onChange']>, ParentVS>;
-}
+export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
+export type CounterRefs<ParentVS> = ComponentCollectionProxy<ParentVS, CounterRef<ParentVS>> &
+    OnlyEventEmitters<CounterRef<ParentVS>>;

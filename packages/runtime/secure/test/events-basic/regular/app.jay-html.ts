@@ -6,19 +6,20 @@ import {
     RenderElementOptions,
     ReferencesManager,
     RenderElement,
+    MapEventEmitterViewState,
 } from 'jay-runtime';
-import { CounterComponentType } from './counter-refs';
 import { Counter } from './counter';
 
 export interface AppViewState {}
 
+export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
 export interface AppElementRefs {
-    a: CounterComponentType<AppViewState>;
+    a: CounterRef<AppViewState>;
 }
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
-export type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
+export type AppElementPreRender = [AppElementRefs, AppElementRender];
 
 export function render(options?: RenderElementOptions): AppElementPreRender {
     const [refManager, [a]] = ReferencesManager.for(options, [], [], ['a'], []);

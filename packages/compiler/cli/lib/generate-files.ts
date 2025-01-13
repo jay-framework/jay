@@ -1,15 +1,16 @@
-import {
-    checkValidationErrors,
-    CompilerSourceFile,
-    parseJayFile,
-    RuntimeMode,
-    WithValidations,
-} from 'jay-compiler';
 import chalk from 'chalk';
 import { findAllJayFiles } from './find-all-jay-files';
 import { promises as fsp } from 'fs';
 import fs from 'fs';
 import path from 'path';
+import {
+    checkValidationErrors,
+    CompilerSourceFile,
+    GenerateTarget,
+    RuntimeMode,
+    WithValidations,
+} from 'jay-compiler-shared';
+import { parseJayFile } from 'jay-compiler-jay-html';
 
 function checkFileExists(filepath): Promise<Boolean> {
     return new Promise((resolve, reject) => {
@@ -24,10 +25,12 @@ export async function generateFiles(
     codeGenerationFunction: (
         jayFile: CompilerSourceFile,
         importerMode: RuntimeMode,
+        generateTarget: GenerateTarget,
     ) => WithValidations<string>,
     afterGenerationFunction: (html: string, filename: string, filePath: string) => void,
     outputExtension: string,
     destinationDir?: string,
+    compilationTarget?: string,
 ) {
     console.log(chalk.whiteBright('Jay generating files for ', dir));
     let jayFiles = await findAllJayFiles(dir);
@@ -43,7 +46,13 @@ export async function generateFiles(
                 {},
             ),
         );
-        const generatedFile = codeGenerationFunction(parsedFile, RuntimeMode.MainTrusted);
+        const generateTarget: GenerateTarget =
+            compilationTarget === 'react' ? GenerateTarget.react : GenerateTarget.jay;
+        const generatedFile = codeGenerationFunction(
+            parsedFile,
+            RuntimeMode.MainTrusted,
+            generateTarget,
+        );
         const generateFileName = jayFile + outputExtension;
         if (generatedFile.validations.length > 0) {
             console.log(

@@ -1,12 +1,12 @@
-import { WithValidations } from '../shared/with-validations';
+import { WithValidations } from 'jay-compiler-shared';
 import { capitalCase } from 'change-case';
-import { hasExtension, withoutExtension } from '../shared/runtime-mode';
-import { JAY_EXTENSION, JAY_TS_EXTENSION } from '../shared/constants';
+import { hasExtension, withoutExtension } from 'jay-compiler-shared';
+import { JAY_EXTENSION, JAY_TS_EXTENSION } from 'jay-compiler-shared';
 import { parseImportLinks } from '../components-files/building-blocks/parse-import-links';
 import path from 'node:path';
 import { createTsSourceFileFromSource } from '../components-files/building-blocks/create-ts-source-file-from-source';
-import { SourceFileFormat } from '../shared/source-file-format';
-import { GenericTypescriptSourceFile } from '../shared/compiler-source-file';
+import { SourceFileFormat } from 'jay-compiler-shared';
+import { GenericTypescriptSourceFile } from 'jay-compiler-shared';
 
 export function parseGenericTypescriptFile(
     filePath: string,

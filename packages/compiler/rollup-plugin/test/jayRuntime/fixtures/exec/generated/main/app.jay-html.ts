@@ -5,18 +5,24 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
+    MapEventEmitterViewState,
 } from 'jay-runtime';
 import { mainRoot as mr, secureChildComp } from 'jay-secure';
-import { AutoCounterComponentType } from './auto-counter-refs';
-import { AutoCounter } from './auto-counter?jay-mainSandbox';
+// @ts-expect-error Cannot find module
 import { funcRepository } from './function-repository';
+// @ts-expect-error Cannot find module
+import { AutoCounter } from './auto-counter?jay-mainSandbox';
 
 export interface AppViewState {
     incrementBy: number;
 }
 
+export type AutoCounterRef<ParentVS> = MapEventEmitterViewState<
+    ParentVS,
+    ReturnType<typeof AutoCounter>
+>;
 export interface AppElementRefs {
-    a: AutoCounterComponentType<AppViewState>;
+    a: AutoCounterRef<AppViewState>;
 }
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;

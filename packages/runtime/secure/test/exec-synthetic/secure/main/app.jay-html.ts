@@ -5,6 +5,7 @@ import {
     RenderElementOptions,
     RenderElement,
     ReferencesManager,
+    MapEventEmitterViewState,
 } from 'jay-runtime';
 import { FunctionsRepository, mainRoot as mr } from '../../../../lib/';
 import { Comp } from './comp';
@@ -12,11 +13,14 @@ import { secureChildComp } from '../../../../lib';
 
 export interface AppViewState {}
 
-export interface AppElementRefs {}
+export type CompRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Comp>>;
+export interface AppElementRefs {
+    comp1: CompRef<AppViewState>;
+}
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
-export type AppElementPreRender = [refs: AppElementRefs, AppElementRender];
+export type AppElementPreRender = [AppElementRefs, AppElementRender];
 
 export const funcRepository: FunctionsRepository = {
     '2': () => {

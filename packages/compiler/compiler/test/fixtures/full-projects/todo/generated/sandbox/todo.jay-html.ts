@@ -1,4 +1,11 @@
-import { JayElement, RenderElement, HTMLElementProxy } from 'jay-runtime';
+import {
+    JayElement,
+    RenderElement,
+    HTMLElementProxy,
+    MapEventEmitterViewState,
+    OnlyEventEmitters,
+    ComponentCollectionProxy,
+} from 'jay-runtime';
 import {
     SecureReferencesManager,
     elementBridge,
@@ -6,8 +13,6 @@ import {
     sandboxChildComp as childComp,
     sandboxForEach as forEach,
 } from 'jay-secure';
-// @ts-expect-error Cannot find module
-import { ItemRefs } from './item-refs';
 // @ts-expect-error Cannot find module
 import { Item } from './item?jay-workerSandbox';
 
@@ -33,6 +38,11 @@ export interface TodoViewState {
     newTodo: string;
     shownTodos: Array<ShownTodo>;
 }
+
+export type ItemRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Item>>;
+// @ts-ignore error due to cannot find item jay html module above
+export type ItemRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ItemRef<ParentVS>> &
+    OnlyEventEmitters<ItemRef<ParentVS>>;
 
 export interface TodoElementRefs {
     newTodo: HTMLElementProxy<TodoViewState, HTMLInputElement>;
@@ -71,12 +81,12 @@ export function render(): TodoElementPreRender {
             e(refNewTodo()),
             e(refToggleAll()),
             forEach(
-                (vs) => vs.shownTodos,
+                (vs: TodoViewState) => vs.shownTodos,
                 'id',
                 () => [
                     childComp(
                         Item,
-                        (vs: ShownTodo) => ({ title: vs.title, isCompleted: vs.isCompleted }),
+                        (vs1: ShownTodo) => ({ title: vs1.title, isCompleted: vs1.isCompleted }),
                         refItems(),
                     ),
                 ],

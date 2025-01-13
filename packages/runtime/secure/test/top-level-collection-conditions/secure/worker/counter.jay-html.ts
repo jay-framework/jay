@@ -19,7 +19,7 @@ export type CounterElementRender = RenderElement<
     CounterElementRefs,
     CounterElement
 >;
-export type CounterElementPreRender = [refs: CounterElementRefs, CounterElementRender];
+export type CounterElementPreRender = [CounterElementRefs, CounterElementRender];
 
 export function render(): CounterElementPreRender {
     const [refManager, [subtracter, adder]] = SecureReferencesManager.forElement(

@@ -1,5 +1,5 @@
 import ts, { isImportDeclaration, isStringLiteral } from 'typescript';
-import { JAY_COMPONENT } from '../../shared/constants';
+import { JAY_COMPONENT } from 'jay-compiler-shared';
 import { getImportName, getImportSpecifiers } from '../ts-utils/extract-imports';
 
 export function findMakeJayComponentImport(makeJayComponentName: string, node: ts.Node): string {

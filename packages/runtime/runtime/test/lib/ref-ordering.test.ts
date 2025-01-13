@@ -9,7 +9,7 @@ import {
     RenderElementOptions,
 } from '../../lib';
 import { Item, ItemProps } from './comps/item';
-import { ItemComponentType } from './comps/item-refs';
+import { ItemRef } from './comps/item-refs';
 
 describe('ref creation ordering with reference targets', () => {
     describe('for single element', () => {
@@ -63,7 +63,7 @@ describe('ref creation ordering with reference targets', () => {
     describe('for single component', () => {
         interface RootElementViewState {}
         interface RootElementRefs {
-            refName1: ItemComponentType<RootElementViewState>;
+            refName1: ItemRef<RootElementViewState>;
         }
 
         function preRenderJayElement(

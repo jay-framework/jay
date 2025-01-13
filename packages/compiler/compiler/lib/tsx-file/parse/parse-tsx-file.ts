@@ -1,12 +1,12 @@
-import { JayTsxSourceFile } from '../../shared/compiler-source-file';
-import { WithValidations } from '../../shared/with-validations';
+import { JayTsxSourceFile } from '../jsx-block';
+import { WithValidations } from 'jay-compiler-shared';
 import {
     getImportByName,
     parseImportLinks,
 } from '../../components-files/building-blocks/parse-import-links';
 import { createTsSourceFileFromSource } from '../../components-files/building-blocks/create-ts-source-file-from-source';
 import { getBaseElementName } from '../../components-files/building-blocks/get-base-element-name';
-import { JAY_COMPONENT, MAKE_JAY_TSX_COMPONENT } from '../../shared/constants';
+import { JAY_COMPONENT, MAKE_JAY_TSX_COMPONENT } from 'jay-compiler-shared';
 import { findComponentConstructorsBlock } from '../../components-files/building-blocks/find-component-constructors';
 import { findFunctionExpressionReturnStatements } from '../../components-files/building-blocks/find-function-expression-return-statements';
 import ts from 'typescript';

@@ -1,9 +1,5 @@
-import {
-    SourceFileFormat,
-    JayUnknown,
-    parseGenericTypescriptFile,
-    WithValidations,
-} from '../../../lib';
+import { parseGenericTypescriptFile } from '../../../lib';
+import { JayUnknown, SourceFileFormat, WithValidations } from 'jay-compiler-shared';
 
 describe('parseJayTypeScriptFile', () => {
     const filePath = '/root/source/app.jay-html.ts';

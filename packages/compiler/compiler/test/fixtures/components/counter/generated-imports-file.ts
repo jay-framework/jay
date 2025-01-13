@@ -1,1 +1,1 @@
-import './generated-element-main-trusted?jay-workerTrusted';
+import './counter.jay-html?jay-workerTrusted';

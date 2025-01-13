@@ -16,6 +16,6 @@ export type CounterElementRender = RenderElement<
     CounterElementRefs,
     CounterElement
 >;
-export type CounterPreRender = [refs: CounterElementRefs, CounterElementRender];
+export type CounterPreRender = [CounterElementRefs, CounterElementRender];
 
 export declare function render(options?: RenderElementOptions): CounterPreRender;
