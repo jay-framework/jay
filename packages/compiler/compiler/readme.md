@@ -5,7 +5,7 @@ The Jay Compiler is the core library to build and transform jay HTML files and j
 The library includes the functionality to
 
 - For Jay HTML files
-  - [Parse Jay HTML files]((../compiler-jay-html/readme.md)
+  - [Parse Jay HTML files](../compiler-jay-html/readme.md)
   - [Parse Jay HTML expressions](../compiler-jay-html/readme.md#the--binding)
   - Generate Jay HTML definition files (.d.ts)
   - Generate Jay element files (runtime generated for Jay HTML files)
