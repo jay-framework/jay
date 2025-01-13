@@ -28,7 +28,7 @@ export function render({
 }: ComponentInComponentElementProps): ReactElement<ComponentInComponentElementProps, any> {
     return (
         <div>
-            <ReactCounter initialValue={vs.count1} {...eventsFor(context, 'counter1')} />
+            <ReactCounter initialValue={vs.count1} title={'counter 1'} {...eventsFor(context, 'counter1')} />
             <ReactCounter initialValue={vs.count2} {...eventsFor(context, 'counterTwo')} />
             <ReactCounter initialValue={vs.count3} />
             <ReactCounter initialValue={vs.count4?.count} />

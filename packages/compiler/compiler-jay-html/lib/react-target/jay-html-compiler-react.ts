@@ -152,7 +152,7 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
         return RenderFragment.merge(prop, new RenderFragment('', imports, [], []));
     } else {
         return props.reduce(
-            (prev, current) => RenderFragment.merge(prev, current, ', '),
+            (prev, current) => RenderFragment.merge(prev, current, ' '),
             RenderFragment.empty(),
         );
     }
