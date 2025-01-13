@@ -38,4 +38,4 @@ The main folders in the compiler package are:
   - [building-blocks](lib/components-files/building-blocks) - building blocks for type script component file transformations
 - [jay-html-files](../compiler-jay-html) - contains the jay-html file parsing and code generators
 - [expressions](../compiler-jay-html/lib/expressions) - contains the expressions parse used by jay-html files bindings
-- [analyze-exported-types](../Fanalyze-exported-types) - analyzes exported types for component files
+- [analyze-exported-types](../analyze-exported-types) - analyzes exported types for component files
