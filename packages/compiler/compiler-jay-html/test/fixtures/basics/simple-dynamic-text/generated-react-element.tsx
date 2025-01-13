@@ -10,11 +10,11 @@ export interface SimpleDynamicTextElementRefs {}
 export interface SimpleDynamicTextElementProps
     extends Jay4ReactElementProps<SimpleDynamicTextViewState> {}
 
-export function render({
+export function reactRender({
     vs,
     context,
 }: SimpleDynamicTextElementProps): ReactElement<SimpleDynamicTextElementProps, any> {
     return <div>{vs.s1}</div>;
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

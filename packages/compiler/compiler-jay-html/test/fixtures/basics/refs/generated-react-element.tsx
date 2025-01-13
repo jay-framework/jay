@@ -14,7 +14,7 @@ export interface RefsElementRefs {
 
 export interface RefsElementProps extends Jay4ReactElementProps<RefsViewState> {}
 
-export function render({ vs, context }: RefsElementProps): ReactElement<RefsElementProps, any> {
+export function reactRender({ vs, context }: RefsElementProps): ReactElement<RefsElementProps, any> {
     return (
         <div>
             <div {...eventsFor(context, 'ref1')}>{vs.text}</div>
@@ -26,4 +26,4 @@ export function render({ vs, context }: RefsElementProps): ReactElement<RefsElem
     );
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

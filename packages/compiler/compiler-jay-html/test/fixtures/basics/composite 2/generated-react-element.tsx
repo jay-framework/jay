@@ -11,7 +11,7 @@ export interface Composite2ElementRefs {}
 
 export interface Composite2ElementProps extends Jay4ReactElementProps<Composite2ViewState> {}
 
-export function render({
+export function reactRender({
     vs,
     context,
 }: Composite2ElementProps): ReactElement<Composite2ElementProps, any> {
@@ -26,4 +26,4 @@ export function render({
     );
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

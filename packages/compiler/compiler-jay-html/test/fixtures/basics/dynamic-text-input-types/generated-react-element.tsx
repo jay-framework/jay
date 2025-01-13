@@ -11,7 +11,7 @@ export interface DynamicTextInputTypesElementRefs {}
 export interface DynamicTextInputTypesElementProps
     extends Jay4ReactElementProps<DynamicTextInputTypesViewState> {}
 
-export function render({
+export function reactRender({
     vs,
     context,
 }: DynamicTextInputTypesElementProps): ReactElement<DynamicTextInputTypesElementProps, any> {
@@ -25,4 +25,4 @@ export function render({
     );
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

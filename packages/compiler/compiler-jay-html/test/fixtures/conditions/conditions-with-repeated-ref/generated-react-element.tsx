@@ -15,7 +15,7 @@ export interface ConditionsWithRepeatedRefElementRefs {
 export interface ConditionsWithRepeatedRefElementProps
     extends Jay4ReactElementProps<ConditionsWithRepeatedRefViewState> {}
 
-export function render({
+export function reactRender({
     vs,
     context,
 }: ConditionsWithRepeatedRefElementProps): ReactElement<
@@ -38,4 +38,4 @@ export function render({
     );
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

@@ -13,7 +13,7 @@ export interface AttributesElementRefs {}
 
 export interface AttributesElementProps extends Jay4ReactElementProps<AttributesViewState> {}
 
-export function render({
+export function reactRender({
     vs,
     context,
 }: AttributesElementProps): ReactElement<AttributesElementProps, any> {
@@ -40,4 +40,4 @@ export function render({
     );
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

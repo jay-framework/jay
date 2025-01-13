@@ -446,14 +446,14 @@ function renderFunctionImplementation(
     }
     const renderedImplementation = renderedRoot.map(
         (rootNode) =>
-            `${renderedReactChildComponents}export function render({
+            `${renderedReactChildComponents}export function reactRender({
     vs,
     context,
 }: ${reactPropsType}): ReactElement<${reactPropsType}, any> {
     return ${rootNode};
 }
 
-export const render2 = mimicJayElement(render)`,
+export const render = mimicJayElement(reactRender)`,
     );
 
     return {

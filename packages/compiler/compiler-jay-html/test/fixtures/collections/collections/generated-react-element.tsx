@@ -17,7 +17,7 @@ export interface CollectionsElementRefs {}
 
 export interface CollectionsElementProps extends Jay4ReactElementProps<CollectionsViewState> {}
 
-export function render({
+export function reactRender({
     vs,
     context,
 }: CollectionsElementProps): ReactElement<CollectionsElementProps, any> {
@@ -50,4 +50,4 @@ export function render({
     );
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

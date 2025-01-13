@@ -10,7 +10,7 @@ export interface CompositeElementRefs {}
 
 export interface CompositeElementProps extends Jay4ReactElementProps<CompositeViewState> {}
 
-export function render({
+export function reactRender({
     vs,
     context,
 }: CompositeElementProps): ReactElement<CompositeElementProps, any> {
@@ -23,4 +23,4 @@ export function render({
     );
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

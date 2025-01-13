@@ -10,7 +10,7 @@ export interface StylesElementRefs {}
 
 export interface StylesElementProps extends Jay4ReactElementProps<StylesViewState> {}
 
-export function render({ vs, context }: StylesElementProps): ReactElement<StylesElementProps, any> {
+export function reactRender({ vs, context }: StylesElementProps): ReactElement<StylesElementProps, any> {
     return (
         <div>
             <div style={{ color: 'red' }}>{vs.text1}</div>
@@ -19,4 +19,4 @@ export function render({ vs, context }: StylesElementProps): ReactElement<Styles
     );
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

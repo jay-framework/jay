@@ -35,7 +35,7 @@ export interface CollectionWithRefsElementRefs {
 export interface CollectionWithRefsElementProps
     extends Jay4ReactElementProps<CollectionWithRefsViewState> {}
 
-export function render({
+export function reactRender({
     vs,
     context,
 }: CollectionWithRefsElementProps): ReactElement<CollectionWithRefsElementProps, any> {
@@ -99,4 +99,4 @@ export function render({
     );
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

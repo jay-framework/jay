@@ -16,7 +16,7 @@ export interface ConditionsWithRefsElementRefs {
 export interface ConditionsWithRefsElementProps
     extends Jay4ReactElementProps<ConditionsWithRefsViewState> {}
 
-export function render({
+export function reactRender({
     vs,
     context,
 }: ConditionsWithRefsElementProps): ReactElement<ConditionsWithRefsElementProps, any> {
@@ -36,4 +36,4 @@ export function render({
     );
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

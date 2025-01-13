@@ -10,11 +10,11 @@ export interface TextWithApostropheElementRefs {}
 export interface TextWithApostropheElementProps
     extends Jay4ReactElementProps<TextWithApostropheViewState> {}
 
-export function render({
+export function reactRender({
     vs,
     context,
 }: TextWithApostropheElementProps): ReactElement<TextWithApostropheElementProps, any> {
     return <div>static text's</div>;
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

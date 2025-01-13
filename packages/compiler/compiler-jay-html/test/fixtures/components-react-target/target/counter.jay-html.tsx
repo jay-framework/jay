@@ -13,7 +13,7 @@ export interface CounterElementRefs {
 
 export interface CounterElementProps extends Jay4ReactElementProps<CounterViewState> {}
 
-export function render({
+export function reactRender({
     vs,
     context,
 }: CounterElementProps): ReactElement<CounterElementProps, any> {
@@ -26,4 +26,4 @@ export function render({
     );
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

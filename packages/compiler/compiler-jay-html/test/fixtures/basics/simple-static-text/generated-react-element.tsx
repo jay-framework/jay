@@ -10,11 +10,11 @@ export interface SimpleStaticTextElementRefs {}
 export interface SimpleStaticTextElementProps
     extends Jay4ReactElementProps<SimpleStaticTextViewState> {}
 
-export function render({
+export function reactRender({
     vs,
     context,
 }: SimpleStaticTextElementProps): ReactElement<SimpleStaticTextElementProps, any> {
     return <div>static text</div>;
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

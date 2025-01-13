@@ -23,7 +23,7 @@ export interface DataTypesElementRefs {}
 
 export interface DataTypesElementProps extends Jay4ReactElementProps<DataTypesViewState> {}
 
-export function render({
+export function reactRender({
     vs,
     context,
 }: DataTypesElementProps): ReactElement<DataTypesElementProps, any> {
@@ -38,4 +38,4 @@ export function render({
     );
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

@@ -12,7 +12,7 @@ export interface WhitespaceAndTextElementRefs {}
 export interface WhitespaceAndTextElementProps
     extends Jay4ReactElementProps<WhitespaceAndTextViewState> {}
 
-export function render({
+export function reactRender({
     vs,
     context,
 }: WhitespaceAndTextElementProps): ReactElement<WhitespaceAndTextElementProps, any> {
@@ -28,4 +28,4 @@ export function render({
     );
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);

@@ -19,7 +19,7 @@ export interface ConditionsWithEnumElementRefs {}
 export interface ConditionsWithEnumElementProps
     extends Jay4ReactElementProps<ConditionsWithEnumViewState> {}
 
-export function render({
+export function reactRender({
     vs,
     context,
 }: ConditionsWithEnumElementProps): ReactElement<ConditionsWithEnumElementProps, any> {
@@ -32,4 +32,4 @@ export function render({
     );
 }
 
-export const render2 = mimicJayElement(render);
+export const render = mimicJayElement(reactRender);
