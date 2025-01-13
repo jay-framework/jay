@@ -12,7 +12,8 @@ import { JayMetadata } from './metadata';
 import { writeGeneratedFile } from '../common/files';
 import {
     checkValidationErrors,
-    CompilerSourceFile, GenerateTarget,
+    CompilerSourceFile,
+    GenerateTarget,
     getModeFromExtension,
     RuntimeMode,
     SourceFileFormat,
@@ -43,7 +44,8 @@ export async function generateCodeFromStructure(
 ): Promise<string> {
     const { format } = meta;
     const mode = getModeFromExtension(id);
-    const generationTarget: GenerateTarget = jayContext.jayOptions.generationTarget || GenerateTarget.jay;
+    const generationTarget: GenerateTarget =
+        jayContext.jayOptions.generationTarget || GenerateTarget.jay;
     const tsCode =
         format === SourceFileFormat.JayHtml
             ? generateCodeFromJayHtmlFile(mode, jayFile as JayHtmlSourceFile, generationTarget)
@@ -52,7 +54,11 @@ export async function generateCodeFromStructure(
     return tsCode;
 }
 
-export function generateCodeFromJayHtmlFile(mode: RuntimeMode, jayFile: JayHtmlSourceFile, generationTarget: GenerateTarget): string {
+export function generateCodeFromJayHtmlFile(
+    mode: RuntimeMode,
+    jayFile: JayHtmlSourceFile,
+    generationTarget: GenerateTarget,
+): string {
     switch (mode) {
         case RuntimeMode.MainTrusted:
         case RuntimeMode.MainSandbox:

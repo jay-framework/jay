@@ -5,7 +5,8 @@ import fs from 'fs';
 import path from 'path';
 import {
     checkValidationErrors,
-    CompilerSourceFile, GenerateTarget,
+    CompilerSourceFile,
+    GenerateTarget,
     RuntimeMode,
     WithValidations,
 } from 'jay-compiler-shared';
@@ -24,12 +25,12 @@ export async function generateFiles(
     codeGenerationFunction: (
         jayFile: CompilerSourceFile,
         importerMode: RuntimeMode,
-        generateTarget: GenerateTarget
+        generateTarget: GenerateTarget,
     ) => WithValidations<string>,
     afterGenerationFunction: (html: string, filename: string, filePath: string) => void,
     outputExtension: string,
     destinationDir?: string,
-    compilationTarget?: string
+    compilationTarget?: string,
 ) {
     console.log(chalk.whiteBright('Jay generating files for ', dir));
     let jayFiles = await findAllJayFiles(dir);
@@ -45,8 +46,13 @@ export async function generateFiles(
                 {},
             ),
         );
-        const generateTarget: GenerateTarget = compilationTarget === 'react' ? GenerateTarget.react : GenerateTarget.jay;
-        const generatedFile = codeGenerationFunction(parsedFile, RuntimeMode.MainTrusted, generateTarget);
+        const generateTarget: GenerateTarget =
+            compilationTarget === 'react' ? GenerateTarget.react : GenerateTarget.jay;
+        const generatedFile = codeGenerationFunction(
+            parsedFile,
+            RuntimeMode.MainTrusted,
+            generateTarget,
+        );
         const generateFileName = jayFile + outputExtension;
         if (generatedFile.validations.length > 0) {
             console.log(

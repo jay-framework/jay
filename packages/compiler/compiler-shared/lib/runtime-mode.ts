@@ -26,8 +26,10 @@ export function hasExtension(
 ): boolean {
     const fullTsExtension = withTs ? `${extension}${TS_EXTENSION}` : extension;
     const fullTsxExtension = withTs ? `${extension}${TSX_EXTENSION}` : extension;
-    return (filename.endsWith(fullTsExtension) && filename.length > fullTsExtension.length) ||
-        (filename.endsWith(fullTsxExtension) && filename.length > fullTsxExtension.length);
+    return (
+        (filename.endsWith(fullTsExtension) && filename.length > fullTsExtension.length) ||
+        (filename.endsWith(fullTsxExtension) && filename.length > fullTsxExtension.length)
+    );
 }
 
 export function hasJayModeExtension(

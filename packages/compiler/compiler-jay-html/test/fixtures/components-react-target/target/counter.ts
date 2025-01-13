@@ -1,9 +1,9 @@
-import { CounterElementRefs, render2 } from './counter.jay-html';
+import { CounterElementRefs, render } from './counter.jay-html';
 import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
 
 export interface CounterProps {
     initialValue: number;
-    title?: string
+    title?: string;
 }
 
 function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
@@ -21,4 +21,4 @@ function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterEl
     };
 }
 
-export const Counter = makeJayComponent(render2, CounterComponent);
+export const Counter = makeJayComponent(render, CounterComponent);

@@ -14,7 +14,10 @@ export interface RefsElementRefs {
 
 export interface RefsElementProps extends Jay4ReactElementProps<RefsViewState> {}
 
-export function reactRender({ vs, context }: RefsElementProps): ReactElement<RefsElementProps, any> {
+export function reactRender({
+    vs,
+    context,
+}: RefsElementProps): ReactElement<RefsElementProps, any> {
     return (
         <div>
             <div {...eventsFor(context, 'ref1')}>{vs.text}</div>

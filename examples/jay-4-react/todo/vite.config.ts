@@ -1,16 +1,16 @@
-import {resolve} from 'path';
+import { resolve } from 'path';
 import Inspect from 'vite-plugin-inspect';
-import {defineConfig} from 'vitest/config';
-import {JayRollupConfig, jayRuntime} from 'vite-plugin-jay';
-import {rimrafSync} from 'rimraf';
-import react from '@vitejs/plugin-react'
-import {GenerateTarget} from "jay-compiler-shared";
+import { defineConfig } from 'vitest/config';
+import { JayRollupConfig, jayRuntime } from 'vite-plugin-jay';
+import { rimrafSync } from 'rimraf';
+import react from '@vitejs/plugin-react';
+import { GenerateTarget } from 'jay-compiler-shared';
 
 const root = resolve(__dirname);
 const jayOptions: JayRollupConfig = {
     tsConfigFilePath: resolve(root, 'tsconfig.json'),
     outputDir: 'build/jay-runtime',
-    generationTarget: GenerateTarget.react
+    generationTarget: GenerateTarget.react,
 };
 
 export default defineConfig(({ mode }) => {

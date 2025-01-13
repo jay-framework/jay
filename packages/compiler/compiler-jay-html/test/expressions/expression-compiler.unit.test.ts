@@ -9,7 +9,8 @@ import {
     parseEnumValues,
     parseImportNames,
     parseIsEnum,
-    parsePropertyExpression, parseReactClassExpression,
+    parsePropertyExpression,
+    parseReactClassExpression,
     parseReactTextExpression,
     parseTextExpression,
     Variables,
@@ -178,12 +179,12 @@ describe('expression-compiler', () => {
 
         it('one static class declaration', () => {
             const actual = parseReactClassExpression('class1', defaultVars);
-            expect(actual.rendered).toEqual("\"class1\"");
+            expect(actual.rendered).toEqual('"class1"');
         });
 
         it('static class declaration', () => {
             const actual = parseReactClassExpression('class1 class2', defaultVars);
-            expect(actual.rendered).toEqual("\"class1 class2\"");
+            expect(actual.rendered).toEqual('"class1 class2"');
         });
 
         it('class as value from view state', () => {

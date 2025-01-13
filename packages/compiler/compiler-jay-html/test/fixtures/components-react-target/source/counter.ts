@@ -3,7 +3,7 @@ import { createEvent, createSignal, makeJayComponent, Props } from 'jay-componen
 
 export interface CounterProps {
     initialValue: number;
-    title?: string
+    title?: string;
 }
 
 function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {

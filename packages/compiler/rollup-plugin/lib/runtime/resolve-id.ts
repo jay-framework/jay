@@ -7,7 +7,8 @@ import {
     hasExtension,
     JAY_QUERY_WORKER_TRUSTED_TS,
     SourceFileFormat,
-    TS_EXTENSION, TSX_EXTENSION,
+    TS_EXTENSION,
+    TSX_EXTENSION,
 } from 'jay-compiler-shared';
 
 export interface ResolveIdOptions {
@@ -22,13 +23,18 @@ export async function addTsExtensionForJayFile(
     source: string,
     importer: string | undefined,
     options: ResolveIdOptions,
-    generationTarget: GenerateTarget = GenerateTarget.jay
+    generationTarget: GenerateTarget = GenerateTarget.jay,
 ): Promise<ResolveIdResult> {
     const resolved = await context.resolve(source, importer, { ...options, skipSelf: true });
-    if (!resolved || hasExtension(resolved.id, TS_EXTENSION) || hasExtension(resolved.id, TSX_EXTENSION)) return null;
+    if (
+        !resolved ||
+        hasExtension(resolved.id, TS_EXTENSION) ||
+        hasExtension(resolved.id, TSX_EXTENSION)
+    )
+        return null;
 
     const resolvedJayMeta = jayMetadataFromModuleMetadata(resolved.id, resolved.meta);
-    const extension = generationTarget === GenerateTarget.react?TSX_EXTENSION:TS_EXTENSION;
+    const extension = generationTarget === GenerateTarget.react ? TSX_EXTENSION : TS_EXTENSION;
     if (resolvedJayMeta.originId) {
         const { format, originId } = resolvedJayMeta;
         const id = `${originId}${extension}`;

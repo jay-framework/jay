@@ -1,7 +1,7 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import { App } from './app'
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import './index.css';
+import { App } from './app';
 
 const initialTodos = [
     {
@@ -23,6 +23,6 @@ const initialTodos = [
 
 createRoot(document.getElementById('target')!).render(
     <StrictMode>
-        <App initialTodos={initialTodos}/>
+        <App initialTodos={initialTodos} />
     </StrictMode>,
-)
+);
