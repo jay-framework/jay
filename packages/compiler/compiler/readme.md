@@ -22,10 +22,10 @@ The library includes the functionality to
 
 ## Compile Target
 
-The compiler supports two compile targets - `Jay` and `React` (default `Jay`). 
+The compiler supports two compile targets - `Jay` and `React` (default `Jay`).
 The compile target only impacts how Jay Elements are generated, not including the `.d.ts` element files.
 
-See examples of `Jay` compile targets at [jay](..%2F..%2F..%2Fexamples%2Fjay), 
+See examples of `Jay` compile targets at [jay](..%2F..%2F..%2Fexamples%2Fjay),
 and examples of `React` compile target at [jay-4-react](..%2F..%2F..%2Fexamples%2Fjay-4-react).
 
 ## package structure
