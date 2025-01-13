@@ -183,3 +183,67 @@ function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterEl
 
 export const Counter = makeJay2ReactComponent(render, CounterComponent);
 ```
+
+# Update 
+
+The approach above requires transforming the component as well.
+Can we create a method at which we do not transform the component, only generating the elements as React?
+
+Yes, we can.
+
+The jay-4-react package does just that.
+
+The element is transformed into a React component, with an adapter function that mimics a Jay Element
+
+A Counter, from above is generated now as
+```typescript jsx
+import * as React from 'react';
+import { ReactElement } from 'react';
+import { HTMLElementProxy } from 'jay-runtime';
+import { Jay4ReactElementProps, mimicJayElement } from '../../../lib';
+import { eventsFor } from '../../../lib';
+
+export interface CounterElementViewState {
+    count: number;
+}
+
+export interface CounterElementRefs {
+    subtracter: HTMLElementProxy<CounterElementViewState, HTMLButtonElement>;
+    adder: HTMLElementProxy<CounterElementViewState, HTMLButtonElement>;
+}
+
+export interface CounterElementProps extends Jay4ReactElementProps<CounterElementViewState> {}
+
+export function reactRender({
+    vs,
+    context,
+}: CounterElementProps): ReactElement<CounterElementProps, any> {
+    const { count } = vs;
+    return (
+        <div>
+            <button role="sub" {...eventsFor(context, 'subtracter')}>
+                -
+            </button>
+            <span role="value" style={{ margin: '0 16px' }}>
+                {count}
+            </span>
+            <button role="add" {...eventsFor(context, 'adder')}>
+                +
+            </button>
+        </div>
+    );
+}
+
+export const render = mimicJayElement(reactRender);
+```
+
+and `render` has the semantics of a Jay Element.
+
+To use a Jay Component from an element or React Component, we use the `jay2React` adapter.
+In the case of elements, it is generated into the element file who renders a sub-jay component. In the case of a React
+component using Jay component, it has to be used explicitly.
+
+The result is that we can now use Jay as React applications, including all the features of Jay
+* Design to code
+* Secure 3rd parties
+* Jay programming model
