@@ -25,7 +25,7 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             options: ResolveIdOptions,
         ): Promise<ResolveIdResult> {
             if (hasExtension(source, JAY_EXTENSION))
-                return await addTsExtensionForJayFile(this, source, importer, options);
+                return await addTsExtensionForJayFile(this, source, importer, options, jayOptions.generationTarget);
             if (hasJayModeExtension(source))
                 return await resolveJayModeFile(this, source, importer, options);
             if (

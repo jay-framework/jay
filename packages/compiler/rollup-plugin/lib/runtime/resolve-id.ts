@@ -3,10 +3,11 @@ import { watchChangesFor } from './watch';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
 import { appendJayMetadata, jayMetadataFromModuleMetadata } from './metadata';
 import {
+    GenerateTarget,
     hasExtension,
     JAY_QUERY_WORKER_TRUSTED_TS,
     SourceFileFormat,
-    TS_EXTENSION,
+    TS_EXTENSION, TSX_EXTENSION,
 } from 'jay-compiler-shared';
 
 export interface ResolveIdOptions {
@@ -21,21 +22,23 @@ export async function addTsExtensionForJayFile(
     source: string,
     importer: string | undefined,
     options: ResolveIdOptions,
+    generationTarget: GenerateTarget = GenerateTarget.jay
 ): Promise<ResolveIdResult> {
     const resolved = await context.resolve(source, importer, { ...options, skipSelf: true });
-    if (!resolved || hasExtension(resolved.id, TS_EXTENSION)) return null;
+    if (!resolved || hasExtension(resolved.id, TS_EXTENSION) || hasExtension(resolved.id, TSX_EXTENSION)) return null;
 
     const resolvedJayMeta = jayMetadataFromModuleMetadata(resolved.id, resolved.meta);
+    const extension = generationTarget === GenerateTarget.react?TSX_EXTENSION:TS_EXTENSION;
     if (resolvedJayMeta.originId) {
         const { format, originId } = resolvedJayMeta;
-        const id = `${originId}${TS_EXTENSION}`;
+        const id = `${originId}${extension}`;
         console.info(`[resolveId] resolved ${id} as ${format}`);
         return { id, meta: appendJayMetadata(context, id, { format, originId }) };
     } else {
         watchChangesFor(context, resolved.id);
         const format = SourceFileFormat.JayHtml;
         const originId = resolved.id;
-        const id = `${originId}${TS_EXTENSION}`;
+        const id = `${originId}${extension}`;
         console.info(`[resolveId] resolved ${id} as ${format}`);
         return { id, meta: appendJayMetadata(context, id, { format, originId }) };
     }

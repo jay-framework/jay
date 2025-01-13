@@ -8,6 +8,7 @@ export enum RuntimeMode {
 export type MainRuntimeModes = RuntimeMode.MainSandbox | RuntimeMode.MainTrusted;
 
 export const TS_EXTENSION = '.ts';
+export const TSX_EXTENSION = '.tsx';
 export const JAY_QUERY_PREFIX = '?jay-';
 
 export const JAY_QUERY_MAIN_SANDBOX = `${JAY_QUERY_PREFIX}${RuntimeMode.MainSandbox}`;
@@ -23,8 +24,10 @@ export function hasExtension(
     extension: string,
     { withTs = false }: { withTs?: boolean } = {},
 ): boolean {
-    const fullExtension = withTs ? `${extension}${TS_EXTENSION}` : extension;
-    return filename.endsWith(fullExtension) && filename.length > fullExtension.length;
+    const fullTsExtension = withTs ? `${extension}${TS_EXTENSION}` : extension;
+    const fullTsxExtension = withTs ? `${extension}${TSX_EXTENSION}` : extension;
+    return (filename.endsWith(fullTsExtension) && filename.length > fullTsExtension.length) ||
+        (filename.endsWith(fullTsxExtension) && filename.length > fullTsxExtension.length);
 }
 
 export function hasJayModeExtension(
