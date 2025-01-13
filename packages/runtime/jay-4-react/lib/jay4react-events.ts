@@ -14,6 +14,16 @@ function uppercaseThirdLetter(str) {
     }
 }
 
+const SPECIAL_JAY_TO_REACT_EVENT_NAMES = {
+    onkeydown: 'onKeyDown',
+    ondblclick: 'onDoubleClick',
+}
+
+function jayToReactEventName(jayEventName: string) {
+    return SPECIAL_JAY_TO_REACT_EVENT_NAMES[jayEventName] ||
+        uppercaseThirdLetter(jayEventName);
+}
+
 export class EventsContext {
     constructor(
         public readonly viewState: object,
@@ -52,15 +62,20 @@ export function eventsFor<ViewState>(eventsContext: EventsContext, refName: stri
     const reactCallbacks = {};
     const events = eventsContext.events(refName);
     Object.entries(events).forEach((event) => {
-        const name: string = uppercaseThirdLetter(event[0]);
+
+        const name: string = jayToReactEventName(event[0]);
         const handler = event[1];
         reactCallbacks[name] = (reactEvent: React.SyntheticEvent) => {
             const coordinate = eventsContext.coordinate(refName);
             const viewState = eventsContext.viewState;
             const eventsWrapper = eventsContext.eventsWrapper;
-            const jayEvent = { viewState, coordinate, event: reactEvent.nativeEvent };
+            const jayEvent = {
+                viewState,
+                coordinate,
+                event: reactEvent?.nativeEvent? reactEvent.nativeEvent : reactEvent
+            };
             if (eventsWrapper) eventsWrapper(handler, jayEvent);
-            else handler({ viewState, coordinate, event: reactEvent.nativeEvent });
+            else handler(jayEvent);
         };
     });
     return reactCallbacks;
