@@ -10,21 +10,26 @@
 
 reactClassExpression
   = _ head: singleClassExpression tail:(_ singleClassExpression)* _ {
-    let isDynamic = false;
-    const renderClass = cls => {
-      isDynamic = isDynamic || cls instanceof RenderFragment;
-      return cls instanceof RenderFragment?
-        cls :
-        new RenderFragment(cls, none);
+    const classes = [head, ...tail.map(_ => _[1])];
+    const isDynamic = classes.find(_ => _ instanceof RenderFragment);
+    if (isDynamic) {
+        if (tail.length === 0)
+            return head.map(_ => `\{${_}\}`);
+        const mappedClasses = classes.map(cls => {
+            return cls instanceof RenderFragment ?
+                cls.map(_ => `\$\{${_}\}`) :
+                new RenderFragment(cls, none)
+        })
+        const reduced = mappedClasses.reduce(
+            (result, fragment) => RenderFragment.merge(result, fragment, ' '),
+            RenderFragment.empty());
+
+        return reduced.map(_ => `\{\`${_}\`\}`)
     }
-    let classString = tail.reduce((result, tuple) => {
-      const classExp = tuple[1];
-      return RenderFragment.merge(result, renderClass(classExp), ' ')
-    }, renderClass(head));
-    return isDynamic?
-      classString.map(_ => `{${_}}`):
-      classString.map(_ => `"${_}"`);
-  }
+    else
+        return new RenderFragment(classes.join(' '), none)
+            .map(_ => `"${_}"`);
+}
 
 classExpression
   = _ head: singleClassExpression tail:(_ singleClassExpression)* _ {

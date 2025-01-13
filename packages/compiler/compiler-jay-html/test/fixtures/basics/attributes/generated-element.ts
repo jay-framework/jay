@@ -55,6 +55,16 @@ export function render(options?: RenderElementOptions): AttributesElementPreRend
                 e('div', { class: da((vs) => `${vs.bool1 ? 'main' : 'second'}`) }, [
                     dt((vs) => vs.text3),
                 ]),
+                e(
+                    'div',
+                    {
+                        class: da(
+                            (vs) =>
+                                `first-class ${vs.bool1 ? 'main' : 'second'} ${!vs.bool1 ? 'third' : 'forth'}`,
+                        ),
+                    },
+                    [dt((vs) => vs.text3)],
+                ),
                 e('div', { 'data-attribute': da((vs) => vs.text) }, []),
                 e('div', { 'data-attribute': da((vs) => `${vs.text}-abcd`) }, []),
                 e('div', { 'data-attribute': da((vs) => `abcd-${vs.text}`) }, []),

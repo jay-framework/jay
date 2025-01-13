@@ -9,7 +9,7 @@ import {
     parseEnumValues,
     parseImportNames,
     parseIsEnum,
-    parsePropertyExpression,
+    parsePropertyExpression, parseReactClassExpression,
     parseReactTextExpression,
     parseTextExpression,
     Variables,
@@ -164,6 +164,56 @@ describe('expression-compiler', () => {
             const actual = parseClassExpression('{isOne? class1:class2} three', defaultVars);
             expect(actual.rendered).toEqual("da(vs => `${vs.isOne?'class1':'class2'} three`)");
             expect(actual.imports.has(Import.dynamicAttribute)).toBeTruthy();
+        });
+    });
+
+    describe('parseReactClass', () => {
+        let defaultVars = new Variables(
+            new JayObjectType('data', {
+                isOne: JayBoolean,
+                isTwo: JayBoolean,
+                anEnum: new JayEnumType('AnEnum', ['one', 'two', 'three']),
+            }),
+        );
+
+        it('one static class declaration', () => {
+            const actual = parseReactClassExpression('class1', defaultVars);
+            expect(actual.rendered).toEqual("\"class1\"");
+        });
+
+        it('static class declaration', () => {
+            const actual = parseReactClassExpression('class1 class2', defaultVars);
+            expect(actual.rendered).toEqual("\"class1 class2\"");
+        });
+
+        it('class as value from view state', () => {
+            const actual = parseReactClassExpression('{classProperty}', defaultVars);
+            expect(actual.rendered).toEqual('{vs.classProperty}');
+        });
+
+        it('dynamic class declaration', () => {
+            const actual = parseReactClassExpression(
+                '{isOne? class1} {isTwo? classTwo} three',
+                defaultVars,
+            );
+            expect(actual.rendered).toEqual(
+                "{`${vs.isOne?'class1':''} ${vs.isTwo?'classTwo':''} three`}",
+            );
+        });
+
+        it('one dynamic class declaration', () => {
+            const actual = parseReactClassExpression('{isOne? class1}', defaultVars);
+            expect(actual.rendered).toEqual("{vs.isOne?'class1':''}");
+        });
+
+        it('dynamic class declaration with enum', () => {
+            const actual = parseReactClassExpression('{anEnum == one? class1}', defaultVars);
+            expect(actual.rendered).toEqual("{vs.anEnum === AnEnum.one?'class1':''}");
+        });
+
+        it('dynamic class declaration with fallback', () => {
+            const actual = parseReactClassExpression('{isOne? class1:class2} three', defaultVars);
+            expect(actual.rendered).toEqual("{`${vs.isOne?'class1':'class2'} three`}");
         });
     });
 
