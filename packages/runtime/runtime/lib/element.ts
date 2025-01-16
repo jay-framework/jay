@@ -115,7 +115,7 @@ function doSetAttribute<S>(
     value: S,
     attributeStyle: AttributeStyle,
 ) {
-    const isHTMLElement = target instanceof HTMLElement;
+    const isHTMLElement = target instanceof Element;
     if (isHTMLElement && attributeStyle === ATTRIBUTE) {
         target.setAttribute(key, value as unknown as string);
     }

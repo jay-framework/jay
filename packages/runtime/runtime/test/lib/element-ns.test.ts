@@ -8,7 +8,7 @@ describe('elements with namespace', () => {
                 svg('circle', { cx: '100', cy: '100', r: '50', fill: 'blue' }, []),
             ]);
 
-            expect(jayElement.dom.outerHTML).toBe('<svg><circle></circle></svg>');
+            expect(jayElement.dom.outerHTML).toBe('<svg width="200" height="200" viewBox="0 0 200"><circle cx="100" cy="100" r="50" fill="blue"></circle></svg>');
         });
     });
 });
