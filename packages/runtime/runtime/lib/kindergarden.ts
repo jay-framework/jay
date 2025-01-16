@@ -62,10 +62,10 @@ export class KindergartenGroup {
 }
 
 export class Kindergarten {
-    readonly parentNode: HTMLElement;
+    readonly parentNode: Element;
     private groups: Array<KindergartenGroup> = [];
 
-    constructor(parentNode: HTMLElement) {
+    constructor(parentNode: Element) {
         this.parentNode = parentNode;
     }
 

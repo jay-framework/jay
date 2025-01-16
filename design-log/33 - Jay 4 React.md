@@ -184,7 +184,7 @@ function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterEl
 export const Counter = makeJay2ReactComponent(render, CounterComponent);
 ```
 
-# Update 
+# Update
 
 The approach above requires transforming the component as well.
 Can we create a method at which we do not transform the component, only generating the elements as React?
@@ -196,6 +196,7 @@ The jay-4-react package does just that.
 The element is transformed into a React component, with an adapter function that mimics a Jay Element
 
 A Counter, from above is generated now as
+
 ```typescript jsx
 import * as React from 'react';
 import { ReactElement } from 'react';
@@ -244,6 +245,7 @@ In the case of elements, it is generated into the element file who renders a sub
 component using Jay component, it has to be used explicitly.
 
 The result is that we can now use Jay as React applications, including all the features of Jay
-* Design to code
-* Secure 3rd parties
-* Jay programming model
+
+- Design to code
+- Secure 3rd parties
+- Jay programming model

@@ -17,7 +17,7 @@ import {
 } from './node-reference-types';
 import { ManagedRefs } from './references-manager';
 
-export type ReferenceTarget<ViewState> = HTMLElement | JayComponent<any, ViewState, any>;
+export type ReferenceTarget<ViewState> = Element | JayComponent<any, ViewState, any>;
 
 export interface PrivateRef<ViewState, PublicRefAPI> {
     update: updateFunc<ViewState>;

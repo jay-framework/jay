@@ -16,14 +16,14 @@ window.onload = () => {
     svgimg.setAttribute('y', '0');
 
     svgimg.onclick = () => {
-        console.log('hi')
-    }
+        console.log('hi');
+    };
 
     svg.appendChild(svgimg);
 
     const div = document.createElementNS('http://www.w3.org/1999/xhtml', 'div');
-    div.appendChild(document.createTextNode('hi'))
+    div.appendChild(document.createTextNode('hi'));
 
     target.appendChild(svg);
     target.appendChild(div);
-}
+};
