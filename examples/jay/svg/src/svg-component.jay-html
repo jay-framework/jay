@@ -1,0 +1,19 @@
+<html xmlns:svg="http://www.w3.org/2000/svg">
+<head>
+  <script type="application/yaml-jay">
+data:
+    shape: enum (circle | square)
+    color: string
+    clickMessage: string
+  </script>
+</head>
+<body>
+<div>
+  <svg:svg width="200" height="200" viewBox="0 0 200">
+    <circle if="shape === circle" r="50" cx="100" cy="100" fill="{color}" ref="shape"></circle>
+    <svg:rect if="shape === square" x="60" y="60" height="80" width="80" fill="{color}" ref="shape"></svg:rect>
+    <text x="70" y="100" fill="white" ref="message">{clickMessage}</text>
+  </svg:svg>
+</div>
+</body>
+</html>
