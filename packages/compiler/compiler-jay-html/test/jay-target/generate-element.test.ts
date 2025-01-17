@@ -256,4 +256,20 @@ describe('generate jay-html element', () => {
             });
         });
     });
+
+    describe('html namespaces', () => {
+        it('for simple svg', async () => {
+            const folder = 'html-namespaces/simple-svg';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        it('for simple mathml', async () => {
+            const folder = 'html-namespaces/simple-mathml';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+    });
 });

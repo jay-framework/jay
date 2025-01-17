@@ -1,0 +1,24 @@
+<html xmlns:ml="http://www.w3.org/1998/Math/MathML">
+    <head>
+        <script type="application/yaml-jay">
+    data:
+        color: string
+</script>
+</head>
+<body>
+<div>
+    <ml:math display="block">
+        <mrow>
+            <msup>
+                <mi>x</mi>
+                <mn>2</mn>
+            </msup>
+            <msup>
+                <mi>y</mi>
+                <mn>2</mn>
+            </msup>
+        </mrow>
+    </ml:math>
+</div>
+</body>
+</html>

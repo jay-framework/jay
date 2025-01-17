@@ -6,7 +6,7 @@ export enum ImportsFor {
     elementSandbox,
 }
 
-interface ImportName {
+export interface ImportName {
     index: number;
     statement: string;
     module: string;
@@ -37,6 +37,16 @@ export const Import = {
         ImportsFor.elementSandbox,
     ),
     element: importStatementFragment(JAY_RUNTIME, 'element as e', ImportsFor.implementation),
+    svgElement: importStatementFragment(
+        JAY_RUNTIME,
+        'svgElement as svg',
+        ImportsFor.implementation,
+    ),
+    mathMlElement: importStatementFragment(
+        JAY_RUNTIME,
+        'mathMLElement as ml',
+        ImportsFor.implementation,
+    ),
     dynamicText: importStatementFragment(
         JAY_RUNTIME,
         'dynamicText as dt',
@@ -82,6 +92,16 @@ export const Import = {
     dynamicElement: importStatementFragment(
         JAY_RUNTIME,
         'dynamicElement as de',
+        ImportsFor.implementation,
+    ),
+    svgDynamicElement: importStatementFragment(
+        JAY_RUNTIME,
+        'svgDynamicElement as dsvg',
+        ImportsFor.implementation,
+    ),
+    mathMLDynamicElement: importStatementFragment(
+        JAY_RUNTIME,
+        'mathMLDynamicElement as dml',
         ImportsFor.implementation,
     ),
     forEach: importStatementFragment(JAY_RUNTIME, 'forEach', ImportsFor.implementation),

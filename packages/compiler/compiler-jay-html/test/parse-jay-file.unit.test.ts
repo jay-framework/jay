@@ -1,4 +1,4 @@
-import { parseJayFile } from '../../lib';
+import { parseJayFile } from '../lib';
 import {
     JayArrayType,
     JayBoolean,
@@ -8,7 +8,7 @@ import {
     JayString,
     JayTypeKind,
 } from 'jay-compiler-shared';
-import { stripMargin } from '../test-utils/strip-margin';
+import { stripMargin } from './test-utils/strip-margin';
 
 describe('compiler', () => {
     function jayFileWith(jayYaml, body, links?) {
@@ -248,6 +248,30 @@ describe('compiler', () => {
                     },
                 ]),
             );
+        });
+
+        it('should parse namespaces types', () => {
+            let jayFile = parseJayFile(
+                `
+                    <html xmlns:svg="http://www.w3.org/2000/svg">
+                        <head>
+                            <script type="application/yaml-jay">
+                    data:
+                    </script>
+                    </head>
+                    <body>
+                    <div>
+                    </div>
+                    </body>
+                    </html>`,
+                'Base',
+                '',
+                {},
+            );
+
+            expect(jayFile.val.namespaces).toEqual([
+                { prefix: 'svg', namespace: 'http://www.w3.org/2000/svg' },
+            ]);
         });
 
         it('should report on a file with two yaml-jay', () => {

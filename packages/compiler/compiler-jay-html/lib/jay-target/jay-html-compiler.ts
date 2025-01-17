@@ -28,7 +28,7 @@ import {
 } from '../expressions/expression-compiler';
 import { camelCase } from 'camel-case';
 
-import { JayHtmlSourceFile } from './jay-html-source-file';
+import { JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
 import { ensureSingleChildElement, isConditional, isForEach } from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
@@ -40,6 +40,7 @@ import {
     renderRefsType,
 } from './jay-html-compile-refs';
 import { processImportedComponents, renderImports } from './jay-html-compile-imports';
+import { tagToNamespace } from './tag-to-namespace';
 
 interface RenderContext {
     variables: Variables;
@@ -49,6 +50,7 @@ interface RenderContext {
     importedSandboxedSymbols: Set<string>;
     nextAutoRefName: () => string;
     importerMode: RuntimeMode;
+    namespaces: JayHtmlNamespace[];
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -204,9 +206,14 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
         currIndent: Indent = indent,
     ): RenderFragment {
         const refWithPrefixComma = ref.rendered.length ? `, ${ref.rendered}` : '';
+        const tagFunc = tagToNamespace(tagName, true, context.namespaces);
         return new RenderFragment(
-            `${currIndent.firstLine}de('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}]${refWithPrefixComma})`,
-            children.imports.plus(Import.dynamicElement).plus(attributes.imports).plus(ref.imports),
+            `${currIndent.firstLine}${tagFunc.elementFunction}('${tagFunc.tag}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}]${refWithPrefixComma})`,
+            children.imports
+                .plus(Import.dynamicElement)
+                .plus(attributes.imports)
+                .plus(ref.imports)
+                .plus(tagFunc.import),
             [...attributes.validations, ...children.validations, ...ref.validations],
             [...attributes.refs, ...children.refs, ...ref.refs],
         );
@@ -220,9 +227,14 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
         currIndent: Indent = indent,
     ): RenderFragment {
         const refWithPrefixComma = ref.rendered.length ? `, ${ref.rendered}` : '';
+        const tagFunc = tagToNamespace(tagName, false, context.namespaces);
         return new RenderFragment(
-            `${currIndent.firstLine}e('${tagName}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}]${refWithPrefixComma})`,
-            children.imports.plus(Import.element).plus(attributes.imports).plus(ref.imports),
+            `${currIndent.firstLine}${tagFunc.elementFunction}('${tagFunc.tag}', ${attributes.rendered}, [${children.rendered}${currIndent.lastLine}]${refWithPrefixComma})`,
+            children.imports
+                .plus(Import.element)
+                .plus(attributes.imports)
+                .plus(ref.imports)
+                .plus(tagFunc.import),
             [...attributes.validations, ...children.validations, ...ref.validations],
             [...attributes.refs, ...children.refs, ...ref.refs],
         );
@@ -394,6 +406,7 @@ function renderFunctionImplementation(
     rootBodyElement: HTMLElement,
     importStatements: JayImportLink[],
     baseElementName: string,
+    namespaces: JayHtmlNamespace[],
     importerMode: RuntimeMode,
 ): {
     renderedRefs: string;
@@ -418,6 +431,7 @@ function renderFunctionImplementation(
             importedSandboxedSymbols,
             nextAutoRefName: newAutoRefNameGenerator(),
             importerMode,
+            namespaces,
         });
         renderedRoot = optimizeRefs(renderedRoot);
     } else renderedRoot = new RenderFragment('', Imports.none(), rootElement.validations);
@@ -628,6 +642,7 @@ function renderBridge(
         importedSandboxedSymbols,
         nextAutoRefName: newAutoRefNameGenerator(),
         importerMode: RuntimeMode.WorkerSandbox,
+        namespaces: [],
     });
 
     const {
@@ -671,6 +686,7 @@ function renderSandboxRoot(
         importedSandboxedSymbols,
         nextAutoRefName: newAutoRefNameGenerator(),
         importerMode: RuntimeMode.WorkerSandbox,
+        namespaces: [],
     });
     let refsPart =
         renderedBridge.rendered.length > 0
@@ -715,6 +731,7 @@ export function generateElementDefinitionFile(
             jayFile.body,
             jayFile.imports,
             jayFile.baseElementName,
+            jayFile.namespaces,
             RuntimeMode.WorkerTrusted,
         );
         return [
@@ -739,16 +756,17 @@ export function generateElementFile(
     jayFile: JayHtmlSourceFile,
     importerMode: MainRuntimeModes,
 ): WithValidations<string> {
-    let types = generateTypes(jayFile.types);
-    let { renderedRefs, renderedElement, renderedImplementation, refImportsInUse } =
+    const types = generateTypes(jayFile.types);
+    const { renderedRefs, renderedElement, renderedImplementation, refImportsInUse } =
         renderFunctionImplementation(
             jayFile.types,
             jayFile.body,
             jayFile.imports,
             jayFile.baseElementName,
+            jayFile.namespaces,
             importerMode,
         );
-    let renderedFile = [
+    const renderedFile = [
         renderImports(
             renderedImplementation.imports.plus(Import.element).plus(Import.jayElement),
             ImportsFor.implementation,
@@ -781,6 +799,7 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
         jayFile.body,
         jayFile.imports,
         jayFile.baseElementName,
+        jayFile.namespaces,
         RuntimeMode.WorkerSandbox,
     );
     let renderedBridge = renderBridge(

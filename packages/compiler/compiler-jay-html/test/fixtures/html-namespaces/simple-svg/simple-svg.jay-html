@@ -1,0 +1,15 @@
+<html xmlns:svg="http://www.w3.org/2000/svg">
+    <head>
+        <script type="application/yaml-jay">
+    data:
+        color: string
+</script>
+</head>
+<body>
+<div>
+    <svg:svg width="200" height="200" viewBox="0 0 200">
+        <circle r="50" cx="100" cy="100" fill="{color}"></circle>
+    </svg:svg>
+</div>
+</body>
+</html>
