@@ -19,7 +19,7 @@ import { SourceFileFormat } from 'jay-compiler-shared';
 import { JayImportLink, JayImportName } from 'jay-compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
 
-import { JayHtmlSourceFile } from './jay-html-source-file';
+import { JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
 
 export function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj);
@@ -80,6 +80,15 @@ function parseTypes(
     if (typeof jayYaml.data === 'object')
         return resolveType(jayYaml.data, validations, [baseElementName + 'ViewState'], imports);
     else if (typeof jayYaml.data === 'string') return resolveImportedType(imports, jayYaml.data);
+}
+
+function parseNamespaces(root: HTMLElement): JayHtmlNamespace[] {
+    const html = root.querySelector('html');
+    if (html)
+        return Object.keys(html.attributes)
+            .filter((_) => _.startsWith('xmlns:'))
+            .map((_) => ({ prefix: _.substring(6), namespace: html.attributes[_] }));
+    else return [];
 }
 
 function parseYaml(root: HTMLElement): WithValidations<JayYamlStructure> {
@@ -154,9 +163,10 @@ export function parseJayFile(
 ): WithValidations<JayHtmlSourceFile> {
     const normalizedFileName = normalizeFilename(filename);
     const baseElementName = capitalCase(normalizedFileName, { delimiter: '' });
-    let root = parse(html);
+    const root = parse(html);
 
-    let { val: jayYaml, validations } = parseYaml(root);
+    const namespaces = parseNamespaces(root);
+    const { val: jayYaml, validations } = parseYaml(root);
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
     let imports = parseImports(
@@ -165,8 +175,8 @@ export function parseJayFile(
         filePath,
         options,
     );
-    let importNames = imports.flatMap((_) => _.names);
-    let types = parseTypes(jayYaml, validations, baseElementName, importNames);
+    const importNames = imports.flatMap((_) => _.names);
+    const types = parseTypes(jayYaml, validations, baseElementName, importNames);
 
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
@@ -182,6 +192,7 @@ export function parseJayFile(
             imports,
             body,
             baseElementName,
+            namespaces,
         } as JayHtmlSourceFile,
         validations,
     );

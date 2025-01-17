@@ -25,7 +25,7 @@ const STYLE = 'style';
 
 function mkRef<ViewState>(
     ref: PrivateRef<ViewState, any>,
-    referenced: HTMLElement | JayComponent<any, ViewState, any>,
+    referenced: Element | JayComponent<any, ViewState, any>,
     updates: updateFunc<ViewState>[],
     mounts: MountFunc[],
     unmounts: MountFunc[],
@@ -110,23 +110,23 @@ export type Attribute<ViewState, S> =
 export type Attributes<ViewState> = Record<string, Attribute<ViewState, any>>;
 
 function doSetAttribute<S>(
-    target: HTMLElement | CSSStyleDeclaration,
+    target: Element | CSSStyleDeclaration,
     key: string,
     value: S,
     attributeStyle: AttributeStyle,
 ) {
-    const isHTMLElement = target instanceof HTMLElement;
+    const isHTMLElement = target instanceof Element;
     if (isHTMLElement && attributeStyle === ATTRIBUTE) {
         target.setAttribute(key, value as unknown as string);
     }
-    if (isHTMLElement && attributeStyle === BOOLEAN_ATTRIBUTE) {
+    else if (isHTMLElement && attributeStyle === BOOLEAN_ATTRIBUTE) {
         if (value) target.setAttribute(key, value as unknown as string);
         else target.removeAttribute(key);
     } else target[key] = value;
 }
 
 function setAttribute<ViewState, S>(
-    target: HTMLElement | CSSStyleDeclaration,
+    target: Element | CSSStyleDeclaration,
     key: string,
     value: string | DynamicAttributeOrProperty<ViewState, S>,
     updates: updateFunc<ViewState>[],
@@ -322,105 +322,126 @@ export function dynamicText<ViewState>(
     };
 }
 
-export function element<ViewState>(
-    tagName: string,
-    attributes: Attributes<ViewState>,
-    children: Array<BaseJayElement<ViewState> | TextElement<ViewState> | string> = [],
-    ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>,
-): BaseJayElement<ViewState> {
-    let { e, updates, mounts, unmounts } = createBaseElement(tagName, attributes, ref);
+type ElementChildren<ViewState> = Array<
+    BaseJayElement<ViewState> | TextElement<ViewState> | string
+>;
+const elementNS =
+    (ns: string) =>
+    <ViewState>(
+        tagName: string,
+        attributes: Attributes<ViewState>,
+        children: ElementChildren<ViewState> = [],
+        ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>,
+    ): BaseJayElement<ViewState> => {
+        let { e, updates, mounts, unmounts } = createBaseElement(ns, tagName, attributes, ref);
 
-    children.forEach((child) => {
-        if (typeof child === 'string') child = text(child);
-        e.append(child.dom);
-        if (child.update !== noopUpdate) updates.push(child.update);
-        if (child.mount !== noopMount) {
-            mounts.push(child.mount);
-            unmounts.push(child.unmount);
-        }
-    });
-    return {
-        dom: e,
-        update: normalizeUpdates(updates),
-        mount: normalizeMount(mounts),
-        unmount: normalizeMount(unmounts),
-    };
-}
-
-export function dynamicElement<ViewState>(
-    tagName: string,
-    attributes: Attributes<ViewState>,
-    children: Array<
-        | Conditional<ViewState>
-        | ForEach<ViewState, any>
-        | TextElement<ViewState>
-        | BaseJayElement<ViewState>
-        | string
-    > = [],
-    ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>,
-): BaseJayElement<ViewState> {
-    let { e, updates, mounts, unmounts } = createBaseElement(tagName, attributes, ref);
-
-    let kindergarten = new Kindergarten(e);
-    children.forEach((child) => {
-        if (typeof child === 'string') child = text(child);
-        let group = kindergarten.newGroup();
-        let update = noopUpdate,
-            mount = noopMount,
-            unmount = noopMount;
-        if (isCondition(child)) {
-            [update, mount, unmount] = mkUpdateCondition(child, group);
-        } else if (isForEach(child)) {
-            [update, mount, unmount] = mkUpdateCollection(child, group);
-        } else {
-            group.ensureNode(child.dom);
-            if (child.update !== noopUpdate) update = child.update;
+        children.forEach((child) => {
+            if (typeof child === 'string') child = text(child);
+            e.append(child.dom);
+            if (child.update !== noopUpdate) updates.push(child.update);
             if (child.mount !== noopMount) {
-                mount = child.mount;
-                unmount = child.unmount;
+                mounts.push(child.mount);
+                unmounts.push(child.unmount);
             }
-        }
-
-        if (update !== noopUpdate) {
-            let context = currentConstructionContext();
-            update(context.currData);
-            updates.push(update);
-        }
-
-        if (mount !== noopMount) {
-            mounts.push(mount);
-            unmounts.push(unmount);
-        }
-    });
-
-    return {
-        dom: e,
-        update: normalizeUpdates(updates),
-        mount: normalizeMount(mounts),
-        unmount: normalizeMount(unmounts),
+        });
+        return {
+            dom: e,
+            update: normalizeUpdates(updates),
+            mount: normalizeMount(mounts),
+            unmount: normalizeMount(unmounts),
+        };
     };
-}
+
+const HTML = 'http://www.w3.org/1999/xhtml';
+const SVG = 'http://www.w3.org/2000/svg';
+const MathML = 'http://www.w3.org/1998/Math/MathML';
+export const element = elementNS(HTML);
+export const svgElement = elementNS(SVG);
+export const mathMLElement = elementNS(MathML);
+
+type DynamicElementChildren<ViewState> = Array<
+    | Conditional<ViewState>
+    | ForEach<ViewState, any>
+    | TextElement<ViewState>
+    | BaseJayElement<ViewState>
+    | string
+>;
+
+export const dynamicElementNS =
+    (ns: string) =>
+    <ViewState>(
+        tagName: string,
+        attributes: Attributes<ViewState>,
+        children: DynamicElementChildren<ViewState> = [],
+        ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>,
+    ): BaseJayElement<ViewState> => {
+        let { e, updates, mounts, unmounts } = createBaseElement(ns, tagName, attributes, ref);
+
+        let kindergarten = new Kindergarten(e);
+        children.forEach((child) => {
+            if (typeof child === 'string') child = text(child);
+            let group = kindergarten.newGroup();
+            let update = noopUpdate,
+                mount = noopMount,
+                unmount = noopMount;
+            if (isCondition(child)) {
+                [update, mount, unmount] = mkUpdateCondition(child, group);
+            } else if (isForEach(child)) {
+                [update, mount, unmount] = mkUpdateCollection(child, group);
+            } else {
+                group.ensureNode(child.dom);
+                if (child.update !== noopUpdate) update = child.update;
+                if (child.mount !== noopMount) {
+                    mount = child.mount;
+                    unmount = child.unmount;
+                }
+            }
+
+            if (update !== noopUpdate) {
+                let context = currentConstructionContext();
+                update(context.currData);
+                updates.push(update);
+            }
+
+            if (mount !== noopMount) {
+                mounts.push(mount);
+                unmounts.push(unmount);
+            }
+        });
+
+        return {
+            dom: e,
+            update: normalizeUpdates(updates),
+            mount: normalizeMount(mounts),
+            unmount: normalizeMount(unmounts),
+        };
+    };
+
+export const dynamicElement = dynamicElementNS(HTML);
+export const svgDynamicElement = dynamicElementNS(SVG);
+export const mathMLDynamicElement = dynamicElementNS(MathML);
 
 function createBaseElement<ViewState>(
+    ns: string,
     tagName: string,
     attributes: Attributes<ViewState>,
     ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>,
 ): {
-    e: HTMLElement;
+    e: Element;
     updates: updateFunc<ViewState>[];
     mounts: MountFunc[];
     unmounts: MountFunc[];
 } {
-    let e = document.createElement(tagName);
+    let e = document.createElementNS(ns, tagName);
     let updates: updateFunc<ViewState>[] = [];
     let mounts: MountFunc[] = [];
     let unmounts: MountFunc[] = [];
     if (ref) mkRef(ref, e, updates, mounts, unmounts);
     Object.entries(attributes).forEach(([key, value]) => {
-        if (key === STYLE) {
+        if (key === STYLE && e instanceof HTMLElement) {
             Object.entries(value).forEach(([styleKey, styleValue]) => {
                 setAttribute(
-                    e.style,
+                    (e as HTMLElement).style,
                     styleKey,
                     styleValue as string | DynamicAttributeOrProperty<ViewState, any>,
                     updates,

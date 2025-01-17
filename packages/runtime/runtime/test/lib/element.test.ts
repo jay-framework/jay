@@ -4,7 +4,7 @@ import {
     booleanAttribute as ba,
     dynamicText as dt,
     dynamicProperty as dp,
-} from '../../lib/element';
+} from '../../lib';
 import { BaseJayElement, JayElement, noopUpdate, ReferencesManager } from '../../lib';
 import { ConstructContext } from '../../lib';
 
@@ -212,8 +212,8 @@ describe('element', () => {
 
         it('should create element with styles', () => {
             expect(jayElement.dom.textContent).toBe(SOME_VALUE);
-            expect(jayElement.dom.style.color).toBe('red');
-            expect(jayElement.dom.style.width).toBe('100px');
+            expect((jayElement.dom as HTMLElement).style.color).toBe('red');
+            expect((jayElement.dom as HTMLElement).style.width).toBe('100px');
         });
 
         it('should update element styles', () => {
@@ -221,8 +221,8 @@ describe('element', () => {
             jayElement.update(data);
 
             expect(jayElement.dom.textContent).toBe(ANOTHER_VALUE);
-            expect(jayElement.dom.style.color).toBe('green');
-            expect(jayElement.dom.style.width).toBe('120px');
+            expect((jayElement.dom as HTMLElement).style.color).toBe('green');
+            expect((jayElement.dom as HTMLElement).style.width).toBe('120px');
         });
     });
 
