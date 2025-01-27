@@ -176,16 +176,16 @@ function AppComponentConstructor(_, refs: TimerScreenElementRefs) {
      */
     return {
         render: () => ({
-            screen: screen(),
-            start: start(),
+            screen,
+            start,
             time: `${seconds()}`,
-            play: play(),
+            play,
             timeLeft: `${timeLeft()}`,
-            stop: stop(),
-            pause: pause(),
-            restart: restart(),
-            up: up(),
-            down: down(),
+            stop,
+            pause,
+            restart,
+            up,
+            down,
         }),
     };
 }
