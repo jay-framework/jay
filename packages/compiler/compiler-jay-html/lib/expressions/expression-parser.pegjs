@@ -195,7 +195,7 @@ accessorExpression
 
 conditionFunc
   = cond:condition {
-  return cond.map(_ => `vs => ${_}`)
+  return cond.map(_ => `${vars.currentVar} => ${_}`)
 }
 
 condition

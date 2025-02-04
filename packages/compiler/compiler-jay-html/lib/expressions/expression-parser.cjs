@@ -378,7 +378,7 @@ function peg$parse(input, options) {
       }
     },
     peg$c50 = function (cond) {
-      return cond.map((_) => `vs => ${_}`);
+      return cond.map((_) => `${vars.currentVar} => ${_}`);
     },
     peg$c51 = function (not, head) {
       return not ? head.render().map((_) => `!${_}`) : head.render();

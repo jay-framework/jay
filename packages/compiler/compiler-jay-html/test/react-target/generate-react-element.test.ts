@@ -174,6 +174,15 @@ describe('generate jay-html element for react target', () => {
                 await readFixtureReactElementFile(folder),
             );
         });
+
+        it('for collections with conditions', async () => {
+            const folder = 'collections/collections-with-conditions';
+            const elementFile = await readFileAndGenerateElementFile(folder, options);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(
+                await readFixtureReactElementFile(folder),
+            );
+        });
     });
 
     describe('jay2react components', () => {
