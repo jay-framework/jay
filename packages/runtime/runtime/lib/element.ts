@@ -118,8 +118,7 @@ function doSetAttribute<S>(
     const isHTMLElement = target instanceof Element;
     if (isHTMLElement && attributeStyle === ATTRIBUTE) {
         target.setAttribute(key, value as unknown as string);
-    }
-    else if (isHTMLElement && attributeStyle === BOOLEAN_ATTRIBUTE) {
+    } else if (isHTMLElement && attributeStyle === BOOLEAN_ATTRIBUTE) {
         if (value) target.setAttribute(key, value as unknown as string);
         else target.removeAttribute(key);
     } else target[key] = value;
