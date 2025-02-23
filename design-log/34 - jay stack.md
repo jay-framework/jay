@@ -88,6 +88,7 @@ The App APIs
 ```typescript
 declare async function urlLoading(settings: AppSettings): Promise<Params & SystemParams>
 declare async function slowlyChangingDataLoader(params: Params & SystemParams, settings: AppSettings): Promise<ServerViewState, ServerProps>
+declare async function rerenderRoute(params: Params);
 ```
 
 ### fast Changing Data Rendering

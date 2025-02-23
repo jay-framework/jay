@@ -13,10 +13,10 @@ sequenceDiagram
     Note right of comp: load slowly<br>changing data
     comp->>page: server vs + server props
     deactivate comp
-    Note left of page: rendering page <BR>component slowly<br>changing data<br>using vs<br>to jay-html
+    Note left of page: map server vs to <br>child component props
     page->>child: props
     activate child
     Note right of child: load slowly<br>changing data
     child->>page: server vs + server props
     deactivate child
-    Note left of page: rendering child <br>components slowly<br>changing data<br>using vs<br>to jay-html
+    Note left of page: rendering all <br>components slowly<br>changing data<br>using vs<br>to jay-html
