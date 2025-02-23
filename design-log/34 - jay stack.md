@@ -130,3 +130,18 @@ The client rendering starts with a loaded `HTML` file importing the client libra
 2. A script in the `HTML` page reads the `client props` of each application
 3. The script initializes each application component with the `client props`
 4. The page is now interactive using Jay logic
+
+### App Settings
+
+The `AppSettings` member of all the app APIs above is a structure enabling the configuration of an application from 
+the design tool. It is required as a design tool does not have access to configure environment variables or secrets, 
+while configuration of NPM imported packages is always a challenge. The `AppSettings` are to put order in this space.
+
+It is a server environment only entity, which includes an abstraction of configurations and secrets. 
+
+```typescript
+declare interface AppSettings {
+    getConfig(key: string): string
+    getSecret(key: string): string
+}
+```
