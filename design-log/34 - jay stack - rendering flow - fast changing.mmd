@@ -1,0 +1,11 @@
+sequenceDiagram
+    participant page as page <br>slowly rendered <br>jay-html
+    participant comp as page component
+    page->>comp: server props + <br>app settings
+    activate comp
+    Note right of comp: load fast<br>changing data
+    comp->>page: vs + client props
+    deactivate comp
+    activate page
+    Note left of page: rendering html<br>sending to client
+    deactivate page

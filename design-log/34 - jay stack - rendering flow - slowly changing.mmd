@@ -1,0 +1,15 @@
+sequenceDiagram
+    participant page as page jay-html
+    participant comp as page component
+    Note left of page: slowly changing<br>data
+    page->>comp: link (import page comp.) +<br> app settings
+    activate comp
+    Note right of comp: url loading
+    comp->>page: (params, system params)[]
+    deactivate comp
+    page->>comp: params, system params + <br>app settings
+    activate comp
+    Note right of comp: load slowly<br>changing data
+    comp->>page: server vs + server props
+    deactivate comp
+    Note left of page: rendering slowly<br>changing data<br>using vs<br>to jay-html
