@@ -44,12 +44,12 @@ with a developer building features.
 ```
 /src
   /pages
-    /index.jay-html           -- index page on route /
+    /page.jay-html           -- index page on route /
     /products
-      /[slug].jay-html        -- product page on route /products/[slug], where slug is a parameter
+      /[slug]/page.jay-html        -- product page on route /products/[slug], where slug is a parameter
     /[[lang]]/shop            -- optional parameter
-      /[...slugs].jay-html    -- catch all route
-      /[[...slugs]].jay-html  -- optional catch all route
+      /[...slugs]/page.jay-html    -- catch all route
+      /[[...slugs]]/page.jay-html  -- optional catch all route
   /components
   /node_modules
     /app-1                    -- application functionality, including pages and components
