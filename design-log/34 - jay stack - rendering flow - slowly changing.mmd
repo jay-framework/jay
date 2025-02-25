@@ -14,7 +14,7 @@ sequenceDiagram
     comp->>page: server vs + server props
     deactivate comp
     Note left of page: map server vs to <br>child component props
-    page->>child: props
+    page->>child: props + app settings
     activate child
     Note right of child: load slowly<br>changing data
     child->>page: server vs + server props

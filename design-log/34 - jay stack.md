@@ -66,6 +66,9 @@ The Jay rendering process has 3 steps - of which all are optional.
 2. fast changing data rendering (similar to SSR in other frameworks)
 3. client rendering
 
+**This section presents the flow and ideas for the rendering process. 
+Next we will explore different APIs to package those ideas.**
+
 ### Slowly changing Data Rendering
 
 The slowly changing data rendering is used to load param values for pages with url parameters, as well as loading 
@@ -78,11 +81,14 @@ system parameter values (languages). The rendering continues by loading data for
    1. `params` - defined by the application, like `slug`.
    2. `system params` - defined by Jay, but loaded by the application, like `lang`.
 3. For each set of `(params, system params)` load the `server view state` and `server props`.
-   1. The `server view state` is used for pre-rendering.
+   1. The `server view state` is used for pre-rendering the jay-html.
    2. The `server props` are used for fast rendering.
+3. The `server view state` is mapped to child components `props`, which are used to call the child components slowly data loading.
+   The child components return also `server view state` and `server props`. 
 4. The `server view state` is used to pre-render the `jay-html` into `pre-rendered-jay-html`.
    1. The `pre-rendered-jay-html` is the `jay-html` with the `server view state` values replaced, 
-      as well as compiled to server JS to render `HTML` given the rest of the `view state` at the fast changing data rendering.  
+      as well as compiled to server JS to render `HTML` given the rest of the `view state` at the fast changing data rendering.
+   2. There can be more then one `jay-html`s pre-rendered - one for the page, and additional ones for the child components.
 
 The App APIs
 ```typescript
@@ -108,7 +114,8 @@ as well as `client props` to be sent to the client component as part of the `htm
    2. redirect
    3. error
    4. other HTTP statuses
-3. render the final `html` with the `client props` as part of the content
+3. load child components fast changing data, again returning `view state` and `client props`.
+4. render the final `html` with the `client props` as part of the content
    1. The server can render the `jay-html` as `HTML`
    2. The server embeds in the `HTML` the client scripts for the applications included
    3. The server embeds in the `HTML` the `client props`
@@ -146,3 +153,14 @@ declare interface AppSettings {
     getSecret(key: string): string
 }
 ```
+
+
+## Component API
+
+We extend the component API to support slowly and fact changing data, to support the flows above.
+
+We explore 3 different API alternatives, on the store product page case, in
+
+1. [34 - 1 - jay stack - exported loaders API option.md](34%20-%201%20-%20jay%20stack%20-%20exported%20loaders%20API%20option.md)
+2. [34 - 2 - jay stack - hooks style API option.md](34%20-%202%20-%20jay%20stack%20-%20hooks%20style%20API%20option.md)
+3. [34 - 3 - jay stack - name convenstion based API option.md](34%20-%203%20-%20jay%20stack%20-%20name%20convenstion%20based%20API%20option.md)
