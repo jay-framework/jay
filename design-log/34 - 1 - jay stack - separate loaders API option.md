@@ -3,6 +3,9 @@
 With this option we define hooks for slowly and fast changing data that separate functions then the component function,
 connected via the `makePageComponentFunction`.
 
+The main advantage of this option is that it is simple, no need for special compiler tricks, 
+as well as it is strongly typed.
+
 ## the product page component file
 
 ```typescript
