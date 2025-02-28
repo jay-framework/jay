@@ -113,3 +113,4 @@ export function createECommContext() {
 }
 ```
 
+## expanding server rendering for components
