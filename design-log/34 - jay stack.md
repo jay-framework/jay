@@ -154,6 +154,21 @@ declare interface AppSettings {
 }
 ```
 
+## Data Flow
+
+This section describes how different sources of data flow to the different stages of page rendering. 
+
+![34 - jay stack - page data flow.svg](34%20-%20jay%20stack%20-%20page%20data%20flow.svg)
+
+The inputs are:
+1. `params` - from the url params of all applications installed on the page, as defined by each application `urlLoader`. 
+2. `systemParams` - params that applications can load with the `urlLoader` stage, that are known and shared, like `lang`
+3. `pageSettings` - an application config for this page
+4. `appSettings` - an application config for the whole application, including both config and secrets
+5. the slowly changing data stage accepts all the above sources, and produces `server props` and a partial `view state` for rendering
+6. the fast changing data stage accepts the `params`, `systemParams`, `pageSettings`, `appSettings` and the `server props` 
+   and produces the `client props` and a partial `view state` for rendering
+7. the client rendering accepts only the `params`, `systemParams` and `client props` and produces the rest of the `view state`
 
 ## Component API
 

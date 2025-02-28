@@ -1,0 +1,28 @@
+stateDiagram-v2
+    sysParams: System params
+    params
+    pageProps: Page Props
+    pageSettings: Page Settings
+    appSettings: App Settings
+    slowly: Slowly Changing Data Loader
+    fast: fast Changing Data Loader
+    client: client rendering
+    vs: ViewState
+
+    sysParams --> pageProps
+    params --> pageProps
+    pageSettings --> slowly
+    appSettings --> slowly
+    pageProps --> slowly
+
+    slowly --> fast : server props
+    slowly --> vs : partial render
+    pageSettings --> fast
+    appSettings --> fast
+    pageProps --> fast
+
+    fast --> client: client props
+    fast --> vs : partial render
+    pageProps --> client
+
+    client --> vs : full render
