@@ -137,4 +137,15 @@ provideReactiveContext(STORE_CONTEXT, (carryForward) => {
 })
 ```
 
-## expanding server rendering for components
+## Context discussion
+
+Do we really need server context as a separate API?
+maybe we only need an application to be able to provide client context? 
+
+In server environment, a server `urlLoader`, `renderSlowlyChanging` and `renderFastChanging` can just import 
+a module who loads the app settings and acts as the context for all server functions.
+
+The `renderFastChanging` function can pass information to the page `makeJayComponent` who can 
+provide a jay context to any child components.
+
+
