@@ -176,9 +176,9 @@ We extend the component API to support slowly and fact changing data, to support
 
 We explore 3 different API alternatives, on the store product page case, in
 
-1. [34 - 1 - jay stack - exported loaders API option.md](34%20-%201%20-%20jay%20stack%20-%20exported%20loaders%20API%20option.md)
+1. [34 - 1 - jay stack - separate loaders API option.md](34%20-%201%20-%20jay%20stack%20-%20separate%20loaders%20API%20option.md)
 2. [34 - 2 - jay stack - hooks style API option.md](34%20-%202%20-%20jay%20stack%20-%20hooks%20style%20API%20option.md)
-3. [34 - 3 - jay stack - name convenstion based API option.md](34%20-%203%20-%20jay%20stack%20-%20name%20convenstion%20based%20API%20option.md)
+3. [34 - 3 - jay stack - name convention based API option.md](34%20-%203%20-%20jay%20stack%20-%20name%20convention%20based%20API%20option.md)
 
 It looks like the first option is the best because of the type system for application context - both server and client.
 
