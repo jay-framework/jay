@@ -1,4 +1,4 @@
-# Jay Stack - Loaders APIs option
+# Jay Stack - Hooks style API option
 
 With this option we define hooks for slowly and fast changing data that are written as part of the component.
 
