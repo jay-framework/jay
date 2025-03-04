@@ -226,8 +226,6 @@ passing information from server to client.
 ## proposed full stack component API
 
 ```typescript
-import {Component} from "react";
-
 type UrlParams = Array<Record<string, string>>
 type LoadParams<ServerContexts> = (contexts: ServerContexts) => Promise<UrlParams>
 
@@ -236,14 +234,18 @@ interface PartialRender<ViewState extends object, CarryForward> {
     carryForward: CarryForward
 }
 
-type RenderSlowly<ServerContexts, PropsT extends object, ViewState, SlowlyCarryForward> =
-    (contexts: ServerContexts, props: PropsT) => PartialRender<ViewState, SlowlyCarryForward>
-type RenderFast<ServerContexts, PropsT extends object, SlowlyCarryForward, ViewState, FastCarryForward> =
-    (contexts: ServerContexts, props: PropsT) => PartialRender<ViewState, FastCarryForward>
+type RenderSlowly<ServerContexts, PropsT extends object, SlowlyViewState extends object, SlowlyCarryForward> =
+    (contexts: ServerContexts, props: PropsT) => PartialRender<SlowlyViewState, SlowlyCarryForward>
+type RenderFast<ServerContexts, PropsT extends object, SlowlyCarryForward, FastViewState extends object, FastCarryForward> =
+    (contexts: ServerContexts, props: PropsT) => PartialRender<FastViewState, FastCarryForward>
+
+type PartialSubtract<T, P extends Partial<T>> = Omit<T, keyof P>;
 
 interface ComponentDeclaration<
     PropsT extends object,
     ViewState extends object,
+    SlowlyViewState extends Partial<ViewState>,
+    FastViewState extends PartialSubtract<ViewState, SlowlyViewState>,
     Refs extends object,
     SlowlyCarryForward extends object,
     FastCarryForward extends object,
@@ -254,14 +256,16 @@ interface ComponentDeclaration<
 > {
     elementPreRender: PreRenderElement<ViewState, Refs, JayElementT>,
     loadParams?: LoadParams<ServerContexts>
-    renderSlowlyChanging?: RenderSlowly<ServerContexts, PropsT, ViewState>,
-    renderFastChanging?: RenderFast<ServerContexts, PropsT & SlowlyCarryForward, SlowlyCarryForward, ViewState>
-    comp: ComponentConstructor<PropsT & FastCarryForward, Refs, ViewState, ClientContexts, CompCore>,
+    renderSlowlyChanging?: RenderSlowly<ServerContexts, PropsT, SlowlyViewState, SlowlyCarryForward>,
+    renderFastChanging?: RenderFast<ServerContexts, PropsT & SlowlyCarryForward, SlowlyCarryForward, FastViewState, FastCarryForward>
+    comp: ComponentConstructor<PropsT & FastCarryForward, Refs, FastViewState, ClientContexts, CompCore>,
 }
 
-declare export function makeJayStackComponent<
+declare function makeJayStackComponent<
     PropsT extends object,
     ViewState extends object,
+    SlowlyViewState extends Partial<ViewState>,
+    FastViewState extends PartialSubtract<ViewState, SlowlyViewState>,
     Refs extends object,
     SlowlyCarryForward extends object,
     FastCarryForward extends object,
@@ -270,7 +274,8 @@ declare export function makeJayStackComponent<
     ClientContexts extends Array<any>,
     CompCore extends JayComponentCore<PropsT, ViewState>,
 >(
-    compDeclaration: ComponentDeclaration<PropsT, ViewState, Refs, SlowlyCarryForward, FastCarryForward, 
+    compDeclaration: ComponentDeclaration<PropsT, ViewState, SlowlyViewState, FastViewState, 
+        Refs, SlowlyCarryForward, FastCarryForward, 
         JayElementT, ServerContexts, ClientContexts, CompCore>,
     serverContextMarkers: ContextMarkers<ServerContexts>,
     clientContextMarkers: ContextMarkers<ClientContexts>
