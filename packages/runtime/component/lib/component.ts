@@ -70,7 +70,7 @@ export type ComponentConstructor<
     CompCore extends JayComponentCore<PropsT, ViewState>,
 > = (props: Props<PropsT>, refs: Refs, ...contexts: Contexts) => CompCore;
 
-type ContextMarkers<T extends any[]> = {
+export type ContextMarkers<T extends any[]> = {
     [K in keyof T]: ContextMarker<T[K]>;
 };
 

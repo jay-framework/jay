@@ -15,14 +15,14 @@ stateDiagram-v2
     appSettings --> slowly
     pageProps --> slowly
 
-    slowly --> fast : server props
+    slowly --> fast : server carry forward
     slowly --> vs : partial render
     pageSettings --> fast
     appSettings --> fast
     pageProps --> fast
 
-    fast --> client: client props
-    fast --> vs : partial render
+    fast --> client: client carry forward
+    fast --> vs : complete HTML render
     pageProps --> client
 
-    client --> vs : full render
+    client --> vs : interactive render<br>(hydration)

@@ -165,10 +165,15 @@ The inputs are:
 2. `systemParams` - params that applications can load with the `urlLoader` stage, that are known and shared, like `lang`
 3. `pageSettings` - an application config for this page
 4. `appSettings` - an application config for the whole application, including both config and secrets
-5. the slowly changing data stage accepts all the above sources, and produces `server props` and a partial `view state` for rendering
-6. the fast changing data stage accepts the `params`, `systemParams`, `pageSettings`, `appSettings` and the `server props` 
-   and produces the `client props` and a partial `view state` for rendering
-7. the client rendering accepts only the `params`, `systemParams` and `client props` and produces the rest of the `view state`
+5. the slowly changing data stage is running on build time / startup time / data change time, 
+   accepting all the above sources (1..4), and produces `server carry forward` 
+   and a partial `view state` for early rendering of slowly changing data. 
+   Any value rendered at this stage is considered constant by later stages.
+6. the fast changing data stage is running on page serving as part of server side rendering, 
+   accepts the `params`, `systemParams`, `pageSettings`, `appSettings` and the `server carry forward` 
+   and produces the `client carry forward` and a partial `view state` to complete the html rendering of the page.
+7. the client rendering accepts only the `params`, `systemParams` and `client carry forward` and 
+   produces the same partial `view state` as the fast changing stage for interactive rendering
 
 ## Component API
 
@@ -180,5 +185,107 @@ We explore 3 different API alternatives, on the store product page case, in
 2. [34 - 2 - jay stack - hooks style API option.md](34%20-%202%20-%20jay%20stack%20-%20hooks%20style%20API%20option.md)
 3. [34 - 3 - jay stack - name convention based API option.md](34%20-%203%20-%20jay%20stack%20-%20name%20convention%20based%20API%20option.md)
 
-It looks like the first option is the best because of the type system for application context - both server and client.
+It looks like the first option is the best because as it is the simplest,
+and if we need server context to pass to client context (not final), this option works best.
+
+## Context discussion
+
+Do we really need server context as a separate API?
+maybe we only need an application to be able to provide client context?
+
+In server environment, a server `urlLoader`, `renderSlowlyChanging` and `renderFastChanging` can just import
+a module who loads the app settings and acts as the context for all server functions.
+
+The `renderFastChanging` function can pass information to the page `makeJayComponent` who can
+provide a jay context to any child components.
+
+Still, for server operations, it makes sense to have a singleton object that holds connections to network,
+configured API clients, etc. How does an application declares such a server component?
+
+Maybe, instead of server context as in `provideServerContext`, we need instead a mechanism
+for an application imported from `NPM` library or from the project code to initialize, such that
+the initialization result is actually the server context provided to all server hooks?
+
+one such mechanism is the default initialization of code running as part of a module import. 
+Such global code can use an API to load settings and secrets, initialize a global server state of the application.
+However, such an option does not, by default, support settings reload during development (which can be mitigated using 
+a dedicated API).
+
+However, context is still needed for passing data from parent component to child components, or from the page
+component to child components. JayStack may introduce a way for an application to provide context to child components 
+of the application.
+
+Consider a store application, with a related products component that can be placed on any page. 
+The store application can have a page main component which only provides a store context, including the current product
+on a product page. The related products component can then use that context to show contextual related products.
+
+This leads to the result that we need both client and server contexts, which are responsible to pass information 
+from parent to child components. The `urlLoader`, `renderSlowlyChanging` and `renderFastChanging` are responsible for 
+passing information from server to client. 
+
+## proposed full stack component API
+
+```typescript
+import {Component} from "react";
+
+type UrlParams = Array<Record<string, string>>
+type LoadParams<ServerContexts> = (contexts: ServerContexts) => Promise<UrlParams>
+
+interface PartialRender<ViewState extends object, CarryForward> {
+    render: Partial<ViewState>,
+    carryForward: CarryForward
+}
+
+type RenderSlowly<ServerContexts, PropsT extends object, ViewState, SlowlyCarryForward> =
+    (contexts: ServerContexts, props: PropsT) => PartialRender<ViewState, SlowlyCarryForward>
+type RenderFast<ServerContexts, PropsT extends object, SlowlyCarryForward, ViewState, FastCarryForward> =
+    (contexts: ServerContexts, props: PropsT) => PartialRender<ViewState, FastCarryForward>
+
+interface ComponentDeclaration<
+    PropsT extends object,
+    ViewState extends object,
+    Refs extends object,
+    SlowlyCarryForward extends object,
+    FastCarryForward extends object,
+    JayElementT extends JayElement<ViewState, Refs>,
+    ServerContexts extends Array<any>,
+    ClientContexts extends Array<any>,
+    CompCore extends JayComponentCore<PropsT, ViewState>,
+> {
+    elementPreRender: PreRenderElement<ViewState, Refs, JayElementT>,
+    loadParams?: LoadParams<ServerContexts>
+    renderSlowlyChanging?: RenderSlowly<ServerContexts, PropsT, ViewState>,
+    renderFastChanging?: RenderFast<ServerContexts, PropsT & SlowlyCarryForward, SlowlyCarryForward, ViewState>
+    comp: ComponentConstructor<PropsT & FastCarryForward, Refs, ViewState, ClientContexts, CompCore>,
+}
+
+declare export function makeJayStackComponent<
+    PropsT extends object,
+    ViewState extends object,
+    Refs extends object,
+    SlowlyCarryForward extends object,
+    FastCarryForward extends object,
+    JayElementT extends JayElement<ViewState, Refs>,
+    ServerContexts extends Array<any>,
+    ClientContexts extends Array<any>,
+    CompCore extends JayComponentCore<PropsT, ViewState>,
+>(
+    compDeclaration: ComponentDeclaration<PropsT, ViewState, Refs, SlowlyCarryForward, FastCarryForward, 
+        JayElementT, ServerContexts, ClientContexts, CompCore>,
+    serverContextMarkers: ContextMarkers<ServerContexts>,
+    clientContextMarkers: ContextMarkers<ClientContexts>
+): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>
+```
+
+The above `makeJayStackComponent` is compiled into `makeJayComponent` for the client application, 
+and in server environment is used to run `loadParams`, `renderSlowlyChanging` and `renderFastChanging` if present.
+
+
+and for server context
+```typescript
+declare function provideServerContext<ContextType>(
+    marker: ContextMarker<ContextType>,
+    context: ContextType,
+)
+```
 
