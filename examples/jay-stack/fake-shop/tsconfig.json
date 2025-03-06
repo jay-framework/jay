@@ -18,7 +18,11 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    "paths": {
+      "jay-stack-runtime": ["../../packages/jay-stack-runtime/lib"]
+    }
   },
   "include": ["src"]
 }
