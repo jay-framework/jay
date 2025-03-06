@@ -2,7 +2,7 @@ import {JayElement} from "jay-runtime";
 import {ConcreteJayComponent, ContextMarkers, JayComponentCore} from "jay-component";
 import {ComponentDeclaration, PartialSubtract} from "./jay-stack-types";
 
-function makeJayStackComponent<
+export function makeJayStackComponent<
     PropsT extends object,
     ViewState extends object,
     StaticViewState extends Partial<ViewState>,

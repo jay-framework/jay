@@ -1,28 +1,14 @@
 {
+  "extends": "jay-dev-environment/examples/tsconfig.json",
   "compilerOptions": {
-    "target": "ES2020",
-    "useDefineForClassFields": true,
-    "module": "ESNext",
-    "lib": ["ES2020", "DOM", "DOM.Iterable"],
-    "skipLibCheck": true,
-
-    /* Bundler mode */
-    "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
-    "isolatedModules": true,
-    "moduleDetection": "force",
-    "noEmit": true,
-
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-
+    "outDir": "dist",
     "paths": {
-      "jay-stack-runtime": ["../../packages/jay-stack-runtime/lib"]
-    }
+      "jay-component": ["../../packages/component/lib"],
+      "jay-reactive": ["../../packages/reactive/lib"],
+      "jay-runtime": ["../../packages/runtime/lib"],
+      "jay-secure": ["../../packages/secure/lib"],
+      "rollup-plugin-jay": ["../../packages/rollup-plugin-jay/lib"],
+    },
   },
   "include": ["src"]
 }

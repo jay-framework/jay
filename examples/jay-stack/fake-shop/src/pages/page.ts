@@ -1,6 +1,8 @@
-import {makeJayStackComponent} from 'jay-stack-runtime';
+import { makeJayStackComponent } from 'jay-stack-runtime';
 
 
 
 
-makeJayStackComponent
+// makeJayStackComponent({
+//
+// })
