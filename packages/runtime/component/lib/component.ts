@@ -42,7 +42,7 @@ type ConcreteJayComponent1<
     JayElementT extends JayElement<ViewState, Refs>,
 > = Omit<CompCore, 'render'> & JayComponent<PropsT, ViewState, JayElementT>;
 
-type ConcreteJayComponent<
+export type ConcreteJayComponent<
     PropsT extends object,
     ViewState,
     Refs,
