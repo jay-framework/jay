@@ -1,7 +1,7 @@
 import {JayRoute, JayRouteParamType} from "./route-scanner";
 
 
-export function routeToExpressRoute(route: JayRoute) {
+export function routeToExpressRoute(route: JayRoute): string {
     return '/' + route.segments.map(segment => {
         if (typeof segment === 'string')
             return segment

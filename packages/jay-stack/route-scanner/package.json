@@ -2,7 +2,7 @@
   "name": "jay-stack-route-scanner",
   "version": "1.0.0",
   "type": "module",
-  "main": "dist/index",
+  "main": "dist/index.cjs",
   "scripts": {
     "build": "npm run build:js && npm run build:types",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
