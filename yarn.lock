@@ -12443,7 +12443,7 @@ __metadata:
     "@types/node": ^20.11.5
     jay-component: "workspace:^"
     jay-dev-environment: "workspace:^"
-    jay-stack-runtime: "workspace:^"
+    jay-runtime: "workspace:^"
     nodemon: ^3.0.3
     replace-in-file: ^7.1.0
     rimraf: ^5.0.5
@@ -19421,6 +19421,8 @@ __metadata:
     compression: ^1.7.5
     cross-env: ^7.0.3
     express: ^5.0.1
+    jay-cli: "workspace:^"
+    jay-dev-environment: "workspace:^"
     jay-stack-route-scanner: "workspace:^"
     jay-stack-runtime: "workspace:^"
     sirv: ^3.0.0

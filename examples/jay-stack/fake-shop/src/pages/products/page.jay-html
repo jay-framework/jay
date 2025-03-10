@@ -1,13 +1,24 @@
 <html>
   <head>
-    <link rel="import" href="./counter" names="Counter" sandbox="true" />
     <script type="application/yaml-jay">
       data:
+        products:
+          - name: string
+            price: number
+            sku: string
+            id: string
     </script>
   </head>
   <body>
     <div>
-      <Counter initialValue="12" ref="a"></Counter>
+      products
+      <ul>
+        <li foreach="products" trackby="id">
+          <div>{name}</div>
+          <div>{price}</div>
+          <div>{sku}</div>
+        </li>
+      </ul>
     </div>
   </body>
 </html>

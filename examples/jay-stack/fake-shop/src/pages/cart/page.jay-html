@@ -1,13 +1,12 @@
 <html>
   <head>
-    <link rel="import" href="./counter" names="Counter" sandbox="true" />
     <script type="application/yaml-jay">
       data:
     </script>
   </head>
   <body>
     <div>
-      <Counter initialValue="12" ref="a"></Counter>
+      cart
     </div>
   </body>
 </html>

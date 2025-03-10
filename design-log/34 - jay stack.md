@@ -294,3 +294,12 @@ declare function provideServerContext<ContextType>(
 )
 ```
 
+## Update 
+
+Trying to implement the above failed, as the type inference was too complex and failed to infer the `DynamicViewState`
+for the component constructor. As a result, we result to another option, using a builder pattern
+
+[34 - 4 - jay stack - using builder.md](34%20-%204%20-%20jay%20stack%20-%20using%20builder.md)
+
+This option seems to be working.
+
