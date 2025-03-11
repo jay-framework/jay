@@ -1,3 +1,4 @@
+import {Product} from "./pages/products/page.jay-html";
 
 export const products = [
     {
@@ -72,3 +73,10 @@ export const products = [
     }
 ];
 
+export async function getProducts() {
+    return products;
+}
+
+export async function getProductBySlug(slug: string): Promise<Product> {
+    return products.find(product => product.slug === slug)
+}

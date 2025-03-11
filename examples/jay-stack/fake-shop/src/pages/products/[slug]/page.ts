@@ -1,9 +1,9 @@
-import {makeJayStackComponent, PartialRender, UrlParams} from 'jay-stack-runtime';
-import {PageViewState, PageElement, render, PageElementRefs} from './page.jay-html'
+import {makeJayStackComponent, PageProps, UrlParams} from 'jay-stack-runtime';
+import {render, PageElementRefs} from './page.jay-html'
 import {Props} from "jay-component";
-import {products} from "../../../products-database";
+import {getProductBySlug, getProducts} from "../../../products-database";
+import {getAvailableUnits} from "../../../inventory-service";
 
-interface PageProps {}
 interface ProductPageParams extends UrlParams {
     slug: string
 }
@@ -11,16 +11,19 @@ interface ProductPageParams extends UrlParams {
 interface ProductsCarryForward {
     productId: string
 }
+interface ProductAndInventoryCarryForward {
+    productId: string
+    inStock: boolean
+}
 
 async function urlLoader(): Promise<Iterator<ProductPageParams>> {
-    return Promise.resolve(
-        products
-            .map(({slug}) => ({slug}))
-            .values())
+    return (await getProducts())
+        .map(({slug}) => ({slug}))
+        .values();
 }
 
 async function renderSlowlyChanging(props: PageProps & ProductPageParams) {
-    const {name,sku,price, id} = products.find(product => product.slug === props.slug)
+    const {name,sku,price, id} = await getProductBySlug(props.slug)
     return {
         render: {name, sku, price, id},
         carryForward: {productId: id}
@@ -28,16 +31,20 @@ async function renderSlowlyChanging(props: PageProps & ProductPageParams) {
 }
 
 async function renderFastChanging(props: PageProps & ProductPageParams & ProductsCarryForward) {
+    const availableProducts = await getAvailableUnits(props.productId);
+    const inStock = availableProducts > 0;
     return {
-        render: ({inStock: true}),
-        carryForward: {productId: props.productId}
+        render: ({inStock}),
+        carryForward: {
+            productId: props.productId,
+            inStock
+        }
     }
 }
 
-function ProductsPageConstructor(props: Props<PageProps & ProductPageParams & ProductsCarryForward>, refs: PageElementRefs) {
-
+function ProductsPageConstructor(props: Props<PageProps & ProductPageParams & ProductAndInventoryCarryForward>, refs: PageElementRefs) {
     return {
-        render: () => ({inStock: true})
+        render: () => ({inStock: props.inStock})
     }
 }
 

@@ -1,26 +1,25 @@
-import {makeJayStackComponent, PartialRender, UrlParams} from 'jay-stack-runtime';
-import {PageViewState, PageElement, render, PageElementRefs, Product} from './page.jay-html'
+import {makeJayStackComponent, } from 'jay-stack-runtime';
+import {render, PageElementRefs, Product} from './page.jay-html'
 import {Props} from "jay-component";
-import {products} from "../../products-database";
+import {getProducts} from "../../products-database";
 
 interface PageProps {}
 
 interface ProductsCarryForward {
-    products: Array<Product>
 }
 
 async function renderSlowlyChanging(props: PageProps) {
-    // const product = products.find(product => product.slug === props.slug)
+    const products = await getProducts();
     return {
         render: {products},
-        carryForward: {products}
+        carryForward: {}
     }
 }
 
 async function renderFastChanging(props: PageProps & ProductsCarryForward) {
     return {
         render: ({}),
-        carryForward: {products}
+        carryForward: {}
     }
 }
 
