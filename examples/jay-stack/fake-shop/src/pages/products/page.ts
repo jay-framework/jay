@@ -29,7 +29,7 @@ function ProductsPageConstructor(props: Props<PageProps & ProductsCarryForward>,
     }
 }
 
-makeJayStackComponent(render)
+export const page = makeJayStackComponent(render)
     .withProps<PageProps>()
     .withSlowlyRender(renderSlowlyChanging)
     .withFastRender(renderFastChanging)

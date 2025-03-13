@@ -1,6 +1,8 @@
 import fs from 'node:fs/promises'
 import express from 'express'
 import {scanRoutes, routeToExpressRoute} from 'jay-stack-route-scanner'
+import { jayRuntime } from 'vite-plugin-jay';
+import {DevSlowlyChangingPhase} from "jay-stack-runtime";
 
 // Constants
 const isProduction = process.env.NODE_ENV === 'production'
@@ -11,6 +13,12 @@ const base = process.env.BASE || '/'
 const templateHtml = isProduction
     ? await fs.readFile('./dist/client/index.html', 'utf-8')
     : ''
+
+const jayOptions = {
+  tsConfigFilePath: './tsconfig.json',
+  outputDir: 'build/jay-runtime',
+};
+
 
 // Create http server
 const app = express()
@@ -28,6 +36,7 @@ async function initApp() {
     const { createServer } = await import('vite')
     vite = await createServer({
       server: { middlewareMode: true },
+      plugins: [jayRuntime(jayOptions)],
       appType: 'custom',
       base,
     })
@@ -41,6 +50,7 @@ async function initApp() {
 
 // Serve HTML
   const routes = await initRoutes();
+  const slowlyPhase = new DevSlowlyChangingPhase();
 
   routes.forEach(route => {
     app.get(routeToExpressRoute(route), async (req, res) => {
@@ -56,6 +66,18 @@ async function initApp() {
           template = await fs.readFile('./index.html', 'utf-8')
           template = await vite.transformIndexHtml(url, template)
           console.log(route, url, routeToExpressRoute(route));
+          const pageComponent = (await vite.ssrLoadModule('/src/pages/products/[slug]/page.ts')).page
+
+          const renderedSlowly = await slowlyPhase.runSlowlyForPage(pageComponent, req.params, {language: 'en'})
+
+          if (renderedSlowly.kind === "PartialRender") {
+            console.log(renderedSlowly);
+          }
+          else if (renderedSlowly.kind === "ClientError") {
+            console.warn('client error', renderedSlowly.status)
+          }
+
+
           render = (await vite.ssrLoadModule('/src/entry-server.ts')).render
         } else {
           template = templateHtml

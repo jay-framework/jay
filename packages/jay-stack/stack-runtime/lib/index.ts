@@ -1,2 +1,5 @@
 export * from './jay-stack-types'
 export * from './jay-stack-builder'
+export * from './slowly-changing-runner'
+export * from './fast-changing-runner'
+export * from './render-results'

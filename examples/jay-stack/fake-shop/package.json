@@ -16,7 +16,8 @@
     "express": "^5.0.1",
     "jay-stack-route-scanner": "workspace:^",
     "jay-stack-runtime": "workspace:^",
-    "sirv": "^3.0.0"
+    "sirv": "^3.0.0",
+    "vite-plugin-jay": "workspace:^"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

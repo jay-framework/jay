@@ -1,4 +1,4 @@
-import {makeJayStackComponent, PageProps, UrlParams} from 'jay-stack-runtime';
+import {makeJayStackComponent, PageProps, partialRender, UrlParams} from 'jay-stack-runtime';
 import {render, PageElementRefs} from './page.jay-html'
 import {Props} from "jay-component";
 import {getProductBySlug, getProducts} from "../../../products-database";
@@ -16,7 +16,7 @@ interface ProductAndInventoryCarryForward {
     inStock: boolean
 }
 
-async function urlLoader(): Promise<Iterator<ProductPageParams>> {
+async function urlLoader(): Promise<IterableIterator<ProductPageParams>> {
     return (await getProducts())
         .map(({slug}) => ({slug}))
         .values();
@@ -24,22 +24,16 @@ async function urlLoader(): Promise<Iterator<ProductPageParams>> {
 
 async function renderSlowlyChanging(props: PageProps & ProductPageParams) {
     const {name,sku,price, id} = await getProductBySlug(props.slug)
-    return {
-        render: {name, sku, price, id},
-        carryForward: {productId: id}
-    }
+    return partialRender({name, sku, price, id},{productId: id})
 }
 
 async function renderFastChanging(props: PageProps & ProductPageParams & ProductsCarryForward) {
     const availableProducts = await getAvailableUnits(props.productId);
     const inStock = availableProducts > 0;
-    return {
-        render: ({inStock}),
-        carryForward: {
-            productId: props.productId,
-            inStock
-        }
-    }
+    return partialRender({inStock}, {
+        productId: props.productId,
+        inStock
+    })
 }
 
 function ProductsPageConstructor(props: Props<PageProps & ProductPageParams & ProductAndInventoryCarryForward>, refs: PageElementRefs) {
@@ -48,7 +42,7 @@ function ProductsPageConstructor(props: Props<PageProps & ProductPageParams & Pr
     }
 }
 
-makeJayStackComponent(render)
+export const page = makeJayStackComponent(render)
     .withProps<PageProps>()
     .withLoadParams(urlLoader)
     .withSlowlyRender(renderSlowlyChanging)
