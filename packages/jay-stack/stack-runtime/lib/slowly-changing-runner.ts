@@ -1,13 +1,18 @@
-import {JayStackComponentDefinition, PageProps, PartialRender, SlowlyRenderResult} from "./jay-stack-types";
+import {
+    AnyJayStackComponentDefinition, AnySlowlyRenderResult,
+    JayStackComponentDefinition,
+    PageProps,
+    PartialRender,
+    SlowlyRenderResult
+} from "./jay-stack-types";
 import {JayComponentCore} from "jay-component";
 import {UrlParams} from "./jay-stack-types";
 import {notFound} from "./render-results";
 
-export type AnyJayStackComponentDefinition = JayStackComponentDefinition<object, object, object, object[], object[], object, UrlParams, Object, any>
-export type AnySlowlyRenderResult = SlowlyRenderResult<object, object>
-
 export interface SlowlyChangingPhase {
-    runSlowlyForPage(componentDefinition: AnyJayStackComponentDefinition, pageParams: object, pageProps: PageProps):
+    runSlowlyForPage(componentDefinition: AnyJayStackComponentDefinition,
+                     pageParams: object,
+                     pageProps: PageProps):
         Promise<AnySlowlyRenderResult>
 }
 

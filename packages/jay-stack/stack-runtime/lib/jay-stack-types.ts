@@ -29,7 +29,9 @@ export interface PartialRender<ViewState extends object, CarryForward> {
 }
 
 export type SlowlyRenderResult<ViewState extends object, CarryForward> = PartialRender<ViewState, CarryForward> | ServerError5xx | ClientError4xx
+export type AnySlowlyRenderResult = SlowlyRenderResult<object, object>
 export type FastRenderResult<ViewState extends object, CarryForward> = PartialRender<ViewState, CarryForward> | ServerError5xx | ClientError4xx | Redirect3xx
+export type AnyFastRenderResult = FastRenderResult<object, object>
 
 export type LoadParams<ServerContexts, Params extends UrlParams> =
     (contexts: ServerContexts) => Promise<IterableIterator<Params>>
@@ -58,3 +60,5 @@ export interface JayStackComponentDefinition<
     fastRender: RenderFast<ServerContexts, PropsT & CarryForward, CarryForward, ViewState, CarryForward>
     comp: ComponentConstructor<PropsT & CarryForward, Refs, ViewState, ClientContexts, CompCore>
 }
+
+export type AnyJayStackComponentDefinition = JayStackComponentDefinition<object, object, object, object[], object[], object, UrlParams, Object, any>

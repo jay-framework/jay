@@ -2,7 +2,7 @@ import fs from 'node:fs/promises'
 import express from 'express'
 import {scanRoutes, routeToExpressRoute} from 'jay-stack-route-scanner'
 import { jayRuntime } from 'vite-plugin-jay';
-import {DevSlowlyChangingPhase} from "jay-stack-runtime";
+import {DevSlowlyChangingPhase, renderFastChangingData} from "jay-stack-runtime";
 
 // Constants
 const isProduction = process.env.NODE_ENV === 'production'
@@ -56,11 +56,13 @@ async function initApp() {
     app.get(routeToExpressRoute(route), async (req, res) => {
       try {
         const url = req.originalUrl.replace(base, '')
+        const params = req.params;
+        const pageProps = {language: 'en'};
 
         /** @type {string} */
         let template
         /** @type {import('./src/entry-server.ts').render} */
-        let render
+        let render, viewState, carryForward
         if (!isProduction) {
           // Always read fresh template in development
           template = await fs.readFile('./index.html', 'utf-8')
@@ -68,10 +70,15 @@ async function initApp() {
           console.log(route, url, routeToExpressRoute(route));
           const pageComponent = (await vite.ssrLoadModule('/src/pages/products/[slug]/page.ts')).page
 
-          const renderedSlowly = await slowlyPhase.runSlowlyForPage(pageComponent, req.params, {language: 'en'})
+          const renderedSlowly = await slowlyPhase.runSlowlyForPage(pageComponent, params, pageProps)
 
           if (renderedSlowly.kind === "PartialRender") {
-            console.log(renderedSlowly);
+            const renderedFast = await renderFastChangingData(pageComponent, params, pageProps, renderedSlowly.carryForward)
+            if (renderedFast.kind === "PartialRender") {
+              viewState = {...renderedSlowly.render, ...renderedFast.render}
+              carryForward = renderedFast.carryForward
+            }
+            console.log(renderedSlowly, renderedFast);
           }
           else if (renderedSlowly.kind === "ClientError") {
             console.warn('client error', renderedSlowly.status)
@@ -86,7 +93,11 @@ async function initApp() {
 
         const rendered = await render(url)
 
-        rendered.html += `<span>${routeToExpressRoute(route)}</span>`
+        rendered.html += `<div>${routeToExpressRoute(route)}</div>`
+        if (viewState)
+          rendered.html += `<div>${JSON.stringify(viewState)}</div>`
+        if (carryForward)
+          rendered.html += `<div>${JSON.stringify(carryForward)}</div>`
 
         const html = template
             .replace(`<!--app-head-->`, rendered.head ?? '')
