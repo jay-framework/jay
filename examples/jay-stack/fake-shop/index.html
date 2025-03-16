@@ -23,13 +23,13 @@
         const render = (viewState) => ConstructContext.withRootContext(
                 viewState, refManager,
                 () => e('div', {}, [
-                  childComp(pageComp, (vs) => ({title: 'My Scrum Board'}), refA())
+                  childComp(pageComp, (vs) => (vs), refA())
                 ]))
         return [refManager.getPublicAPI(), render];
       }
 
       const [refs, render] = preRender();
-      const app = render()
+      const app = render({...viewState, ...carryForward})
       target.appendChild(app.dom);
     </script>
   </body>
