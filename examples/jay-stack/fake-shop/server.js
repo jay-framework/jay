@@ -55,7 +55,7 @@ async function initApp() {
   routes.forEach(route => {
     app.get(routeToExpressRoute(route), async (req, res) => {
       try {
-        const url = req.originalUrl.replace(base, '')
+        const url = req.  originalUrl.replace(base, '')
         const params = req.params;
         const pageProps = {language: 'en'};
 
@@ -66,7 +66,7 @@ async function initApp() {
         if (!isProduction) {
           // Always read fresh template in development
           template = await fs.readFile('./index.html', 'utf-8')
-          template = await vite.transformIndexHtml(url, template)
+          template = await vite.transformIndexHtml('/', template)
           console.log(route, url, routeToExpressRoute(route));
           const pageComponent = (await vite.ssrLoadModule('/src/pages/products/[slug]/page.ts')).page
 

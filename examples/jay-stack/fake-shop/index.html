@@ -9,6 +9,12 @@
   </head>
   <body>
     <div id="app"><!--app-html--></div>
-    <script type="module" src="/src/entry-client.ts"></script>
+<!--    <script type="module" src="/src/entry-client.ts"></script>-->
+    <script type="module">
+      import {init} from "/src/entry-client.ts"
+      import {render} from '/src/pages/page.jay-html'
+      init();
+      console.log('hi')
+    </script>
   </body>
 </html>
