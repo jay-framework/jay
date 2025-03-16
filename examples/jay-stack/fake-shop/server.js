@@ -3,6 +3,7 @@ import express from 'express'
 import {scanRoutes, routeToExpressRoute} from 'jay-stack-route-scanner'
 import { jayRuntime } from 'vite-plugin-jay';
 import {DevSlowlyChangingPhase, renderFastChangingData} from "jay-stack-runtime";
+import path from 'node:path'
 
 // Constants
 const isProduction = process.env.NODE_ENV === 'production'
@@ -62,13 +63,13 @@ async function initApp() {
         /** @type {string} */
         let template
         /** @type {import('./src/entry-server.ts').render} */
-        let render, viewState, carryForward
+        let viewState, carryForward, pageComponentPath
         if (!isProduction) {
           // Always read fresh template in development
           template = await fs.readFile('./index.html', 'utf-8')
-          template = await vite.transformIndexHtml('/', template)
           console.log(route, url, routeToExpressRoute(route));
-          const pageComponent = (await vite.ssrLoadModule('/src/pages/products/[slug]/page.ts')).page
+          pageComponentPath = route.filePath.replace('page.jay-html', 'page.ts');
+          const pageComponent = (await vite.ssrLoadModule(pageComponentPath)).page
 
           const renderedSlowly = await slowlyPhase.runSlowlyForPage(pageComponent, params, pageProps)
 
@@ -84,26 +85,27 @@ async function initApp() {
             console.warn('client error', renderedSlowly.status)
           }
 
+          const relativePageComponentPath = path.resolve(base, pageComponentPath)
+          const appScript = `
+import {page} from '${relativePageComponentPath}';
+const viewState = ${JSON.stringify(viewState)}
+const carryForward = ${JSON.stringify(carryForward)}
+        `
 
-          render = (await vite.ssrLoadModule('/src/entry-server.ts')).render
+          template = template
+              // .replace(`<!--app-head-->`, rendered.head ?? '')
+              .replace(`<!--app-script-->`, appScript ?? '')
+          template = await vite.transformIndexHtml('/', template)
+
+          res.status(200).set({ 'Content-Type': 'text/html' }).send(template)
+          return;
+
         } else {
           template = templateHtml
-          render = (await import('./dist/server/entry-server.js')).render
+          // render = (await import('./dist/server/entry-server.js')).render
         }
 
-        const rendered = await render(url)
-
-        rendered.html += `<div>${routeToExpressRoute(route)}</div>`
-        if (viewState)
-          rendered.html += `<div>${JSON.stringify(viewState)}</div>`
-        if (carryForward)
-          rendered.html += `<div>${JSON.stringify(carryForward)}</div>`
-
-        const html = template
-            .replace(`<!--app-head-->`, rendered.head ?? '')
-            .replace(`<!--app-html-->`, rendered.html ?? '')
-
-        res.status(200).set({ 'Content-Type': 'text/html' }).send(html)
+        res.status(200).set({ 'Content-Type': 'text/html' }).send('not implemented yet')
       } catch (e) {
         vite?.ssrFixStacktrace(e)
         console.log(e.stack)

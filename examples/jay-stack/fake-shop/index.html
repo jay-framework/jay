@@ -8,13 +8,29 @@
     <!--app-head-->
   </head>
   <body>
-    <div id="app"><!--app-html--></div>
-<!--    <script type="module" src="/src/entry-client.ts"></script>-->
+    <div id="target"></div>
     <script type="module">
-      import {init} from "/src/entry-client.ts"
-      import {render} from '/src/pages/page.jay-html'
-      init();
-      console.log('hi')
+      import {ReferencesManager, ConstructContext, element as e, childComp} from 'jay-runtime';
+      import {makeJayComponent} from 'jay-component';
+      <!--app-script-->
+
+      const target = document.getElementById('target');
+      const pageComp = makeJayComponent(page.render, page.comp);
+
+      const preRender = () => {
+        const [refManager, [refA]] =
+                ReferencesManager.for({}, [], [], ['a'], []);
+        const render = (viewState) => ConstructContext.withRootContext(
+                viewState, refManager,
+                () => e('div', {}, [
+                  childComp(pageComp, (vs) => ({title: 'My Scrum Board'}), refA())
+                ]))
+        return [refManager.getPublicAPI(), render];
+      }
+
+      const [refs, render] = preRender();
+      const app = render()
+      target.appendChild(app.dom);
     </script>
   </body>
 </html>
