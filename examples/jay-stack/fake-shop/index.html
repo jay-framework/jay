@@ -10,27 +10,14 @@
   <body>
     <div id="target"></div>
     <script type="module">
-      import {ReferencesManager, ConstructContext, element as e, childComp} from 'jay-runtime';
       import {makeJayComponent} from 'jay-component';
       <!--app-script-->
 
       const target = document.getElementById('target');
       const pageComp = makeJayComponent(page.render, page.comp);
 
-      const preRender = () => {
-        const [refManager, [refA]] =
-                ReferencesManager.for({}, [], [], ['a'], []);
-        const render = (viewState) => ConstructContext.withRootContext(
-                viewState, refManager,
-                () => e('div', {}, [
-                  childComp(pageComp, (vs) => (vs), refA())
-                ]))
-        return [refManager.getPublicAPI(), render];
-      }
-
-      const [refs, render] = preRender();
-      const app = render({...viewState, ...carryForward})
-      target.appendChild(app.dom);
+      const instance = pageComp({...viewState, ...carryForward})
+      target.appendChild(instance.element.dom);
     </script>
   </body>
 </html>
