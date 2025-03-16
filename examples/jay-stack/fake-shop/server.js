@@ -89,7 +89,7 @@ async function initApp() {
 
           const relativePageComponentPath = path.resolve(base, route.compPath)
           const appScript = `
-import {page} from '/src/pages${route.route}/page.ts';
+import {page} from '/src/pages${route.rawRoute}/page.ts';
 const viewState = ${JSON.stringify(viewState)}
 const carryForward = ${JSON.stringify(carryForward)}
         `

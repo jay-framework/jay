@@ -13,7 +13,7 @@ export interface JayRouteParam {
 export type JayRouteSegment = string | JayRouteParam
 export type JayRoute = {
     segments: JayRouteSegment[],
-    route: string,
+    rawRoute: string,
     jayHtmlPath: string,
     compPath: string
 }
@@ -34,15 +34,13 @@ export interface ScanFilesOptions {
 }
 
 function convertToRoutePath(BASE_DIR: string, jayHtmlPath: string, {jayHtmlFilename, compFilename}: ScanFilesOptions): JayRoute {
-    let routePath = jayHtmlPath
+    let rawRoute = jayHtmlPath
         .replace(BASE_DIR, '')
         .replace(`/${jayHtmlFilename}`, '')
         .replace('\\', '/'); // Normalize Windows paths
 
-    const route = routePath;
-
     // Handle parameters in folder names
-    const segments: JayRouteSegment[] = routePath
+    const segments: JayRouteSegment[] = rawRoute
         .split('/')
         .filter(segment => segment.length > 0)
         .map(segment => {
@@ -63,7 +61,7 @@ function convertToRoutePath(BASE_DIR: string, jayHtmlPath: string, {jayHtmlFilen
         })
 
     const compPath = jayHtmlPath.replace(jayHtmlFilename, compFilename)
-    return { segments, jayHtmlPath, compPath, route }
+    return { segments, jayHtmlPath, compPath, rawRoute }
 }
 
 async function scanDirectory(BASE_DIR: string, directory: string, options: ScanFilesOptions): Promise<JayRoutes> {
