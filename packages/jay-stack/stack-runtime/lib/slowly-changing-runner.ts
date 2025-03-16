@@ -7,7 +7,7 @@ import {
 } from "./jay-stack-types";
 import {JayComponentCore} from "jay-component";
 import {UrlParams} from "./jay-stack-types";
-import {notFound} from "./render-results";
+import {notFound, partialRender} from "./render-results";
 
 export interface SlowlyChangingPhase {
     runSlowlyForPage(componentDefinition: AnyJayStackComponentDefinition,
@@ -31,13 +31,23 @@ function equalParams(aPageParams: UrlParams, pageParams: UrlParams) {
 export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
     async runSlowlyForPage(componentDefinition: AnyJayStackComponentDefinition, pageParams: UrlParams, pageProps: PageProps):
         Promise<AnySlowlyRenderResult> {
-        const pagesParams = await componentDefinition.loadParams([])
-        for (const aPageParams of pagesParams) {
-            if (equalParams(aPageParams, pageParams)) {
-                return componentDefinition.slowlyRender({...pageProps, ...pageParams}, [])
+
+        if (componentDefinition.loadParams) {
+            const pagesParams = await componentDefinition.loadParams([])
+            for (const aPageParams of pagesParams) {
+                if (equalParams(aPageParams, pageParams)) {
+                    if (componentDefinition.slowlyRender)
+                        return componentDefinition.slowlyRender({...pageProps, ...pageParams}, [])
+                    else
+                        return partialRender({}, {})
+                }
             }
+            return notFound();
         }
-        return notFound();
+        else if (componentDefinition.slowlyRender)
+            return componentDefinition.slowlyRender({...pageProps, ...pageParams}, [])
+        else
+            return partialRender({}, {})
     }
 
 }
