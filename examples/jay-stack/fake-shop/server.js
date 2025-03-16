@@ -87,7 +87,6 @@ async function initApp() {
             console.warn('client error', renderedSlowly.status)
           }
 
-          const relativePageComponentPath = path.resolve(base, route.compPath)
           const appScript = `
 import {page} from '/src/pages${route.rawRoute}/page.ts';
 const viewState = ${JSON.stringify(viewState)}
@@ -95,19 +94,16 @@ const carryForward = ${JSON.stringify(carryForward)}
         `
 
           template = template
-              // .replace(`<!--app-head-->`, rendered.head ?? '')
               .replace(`<!--app-script-->`, appScript ?? '')
           template = await vite.transformIndexHtml((!!url)? url : '/', template)
 
           res.status(200).set({ 'Content-Type': 'text/html' }).send(template)
-          return;
 
         } else {
           template = templateHtml
           // render = (await import('./dist/server/entry-server.js')).render
+          res.status(200).set({ 'Content-Type': 'text/html' }).send('not implemented yet')
         }
-
-        res.status(200).set({ 'Content-Type': 'text/html' }).send('not implemented yet')
       } catch (e) {
         vite?.ssrFixStacktrace(e)
         console.log(e.stack)
