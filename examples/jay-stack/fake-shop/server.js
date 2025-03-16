@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import express from 'express'
-import {scanRoutes, routeToExpressRoute} from 'jay-stack-route-scanner'
-import { jayRuntime } from 'vite-plugin-jay';
+import {routeToExpressRoute, scanRoutes} from 'jay-stack-route-scanner'
+import {jayRuntime} from 'vite-plugin-jay';
 import {DevSlowlyChangingPhase, renderFastChangingData} from "jay-stack-runtime";
 import path from 'node:path'
 
@@ -25,8 +25,10 @@ const jayOptions = {
 const app = express()
 
 async function initRoutes() {
-  const routes = await scanRoutes('./src/pages', 'page.jay-html')
-  return routes;
+  return await scanRoutes('./src/pages', {
+    jayHtmlFilename: 'page.jay-html',
+    compFilename: 'page.ts'
+  });
 }
 
 async function initApp() {
@@ -63,13 +65,12 @@ async function initApp() {
         /** @type {string} */
         let template
         /** @type {import('./src/entry-server.ts').render} */
-        let viewState, carryForward, pageComponentPath
+        let viewState, carryForward
         if (!isProduction) {
           // Always read fresh template in development
           template = await fs.readFile('./index.html', 'utf-8')
           console.log(route, url, routeToExpressRoute(route));
-          pageComponentPath = route.filePath.replace('page.jay-html', 'page.ts');
-          const pageComponent = (await vite.ssrLoadModule(pageComponentPath)).page
+          const pageComponent = (await vite.ssrLoadModule(route.compPath)).page
 
           const renderedSlowly = await slowlyPhase.runSlowlyForPage(pageComponent, params, pageProps)
 
@@ -85,7 +86,7 @@ async function initApp() {
             console.warn('client error', renderedSlowly.status)
           }
 
-          const relativePageComponentPath = path.resolve(base, pageComponentPath)
+          const relativePageComponentPath = path.resolve(base, route.compPath)
           const appScript = `
 import {page} from '${relativePageComponentPath}';
 const viewState = ${JSON.stringify(viewState)}

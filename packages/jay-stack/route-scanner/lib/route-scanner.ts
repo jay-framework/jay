@@ -13,7 +13,8 @@ export interface JayRouteParam {
 export type JayRouteSegment = string | JayRouteParam
 export type JayRoute = {
     segments: JayRouteSegment[],
-    filePath: string
+    jayHtmlPath: string,
+    compPath: string
 }
 export type JayRoutes = JayRoute[]
 
@@ -26,11 +27,15 @@ export type JayRoutes = JayRoute[]
 // \]$        - Ends with ]
 const PARSE_PARAM = /^\[(\[)?(\.\.\.)?([^\]]+)\]?\]$/;
 
+export interface ScanFilesOptions {
+    jayHtmlFilename: string,
+    compFilename: string
+}
 
-function convertToRoutePath(BASE_DIR: string, filePath: string, fileNameToRoute: string): JayRoute {
-    let routePath = filePath
+function convertToRoutePath(BASE_DIR: string, jayHtmlPath: string, {jayHtmlFilename, compFilename}: ScanFilesOptions): JayRoute {
+    let routePath = jayHtmlPath
         .replace(BASE_DIR, '')
-        .replace(`/${fileNameToRoute}`, '')
+        .replace(`/${jayHtmlFilename}`, '')
         .replace('\\', '/'); // Normalize Windows paths
 
     // Handle parameters in folder names
@@ -54,10 +59,11 @@ function convertToRoutePath(BASE_DIR: string, filePath: string, fileNameToRoute:
             else return name
         })
 
-    return { segments, filePath }
+    const compPath = jayHtmlPath.replace(jayHtmlFilename, compFilename)
+    return { segments, jayHtmlPath, compPath }
 }
 
-async function scanDirectory(BASE_DIR: string, directory: string, fileNameToRoute: string): Promise<JayRoutes> {
+async function scanDirectory(BASE_DIR: string, directory: string, options: ScanFilesOptions): Promise<JayRoutes> {
     let routes: JayRoutes = []
     const items = await fs.readdir(directory, { withFileTypes: true });
 
@@ -65,18 +71,18 @@ async function scanDirectory(BASE_DIR: string, directory: string, fileNameToRout
         const fullPath = path.join(directory, item.name);
 
         if (item.isDirectory()) {
-            routes = [...routes, ...await scanDirectory(BASE_DIR, fullPath, fileNameToRoute)];
-        } else if (item.name === fileNameToRoute) {
-            const route = convertToRoutePath(BASE_DIR, fullPath, fileNameToRoute);
+            routes = [...routes, ...await scanDirectory(BASE_DIR, fullPath, options)];
+        } else if (item.name === options.jayHtmlFilename) {
+            const route = convertToRoutePath(BASE_DIR, fullPath, options);
             routes.push(route);
         }
     }
     return routes;
 }
 
-export async function scanRoutes(baseDir: string, fileNameToRoute: string): Promise<JayRoutes> {
+export async function scanRoutes(baseDir: string, options: ScanFilesOptions): Promise<JayRoutes> {
     // Normalize base directory path
     const BASE_DIR = path.resolve(baseDir);
 
-    return await scanDirectory(BASE_DIR, BASE_DIR, fileNameToRoute);
+    return await scanDirectory(BASE_DIR, BASE_DIR, options);
 }
