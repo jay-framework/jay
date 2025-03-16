@@ -1,8 +1,9 @@
-import {routeToExpressRoute, scanRoutes} from "../lib";
+import {routeToExpressRoute, ScanFilesOptions, scanRoutes} from "../lib";
 
 describe('route-to-express-route', () => {
+    const options: ScanFilesOptions = {jayHtmlFilename: 'page.jay-html', compFilename: 'page.ts'}
     it('should convert routes to express routes', async () => {
-        const routes = await scanRoutes('./test/fixtures/', 'page.jay-html');
+        const routes = await scanRoutes('./test/fixtures/', options);
         const expressRoutes = new Set(routes.map((route) => routeToExpressRoute(route)))
         expect (expressRoutes).toEqual(new Set([
             "/",
