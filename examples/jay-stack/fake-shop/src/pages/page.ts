@@ -1,5 +1,5 @@
-import { makeJayStackComponent } from 'jay-stack-runtime';
-import {PageViewState, PageElement, render, PageElementRefs} from './page.jay-html'
+import {makeJayStackComponent, PageProps} from 'jay-stack-runtime';
+import {render, PageElementRefs} from './page.jay-html'
 import {Props} from "jay-component";
 
 interface HomePageProps {}
@@ -11,7 +11,6 @@ function homePageConstructor(props: Props<HomePageProps>, refs: PageElementRefs)
     }
 }
 
-makeJayStackComponent({
-    elementPreRender: render,
-    comp: homePageConstructor
-})
+export const page = makeJayStackComponent(render)
+    .withProps<PageProps>()
+    .withInteractive(homePageConstructor)

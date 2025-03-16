@@ -1,9 +1,7 @@
-import {makeJayStackComponent, partialRender,} from 'jay-stack-runtime';
+import {makeJayStackComponent, PageProps, partialRender,} from 'jay-stack-runtime';
 import {render, PageElementRefs, Product} from './page.jay-html'
 import {Props} from "jay-component";
 import {getProducts} from "../../products-database";
-
-interface PageProps {}
 
 interface ProductsCarryForward {
 }

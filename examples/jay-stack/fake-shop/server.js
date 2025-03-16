@@ -64,12 +64,13 @@ async function initApp() {
 
         /** @type {string} */
         let template
-        /** @type {import('./src/entry-server.ts').render} */
+        /** @type {object} */
         let viewState, carryForward
         if (!isProduction) {
           // Always read fresh template in development
           template = await fs.readFile('./index.html', 'utf-8')
-          console.log(route, url, routeToExpressRoute(route));
+          console.log(url, route);
+
           const pageComponent = (await vite.ssrLoadModule(route.compPath)).page
 
           const renderedSlowly = await slowlyPhase.runSlowlyForPage(pageComponent, params, pageProps)
@@ -88,7 +89,7 @@ async function initApp() {
 
           const relativePageComponentPath = path.resolve(base, route.compPath)
           const appScript = `
-import {page} from '${relativePageComponentPath}';
+import {page} from '/src/pages${route.route}/page.ts';
 const viewState = ${JSON.stringify(viewState)}
 const carryForward = ${JSON.stringify(carryForward)}
         `
@@ -96,7 +97,7 @@ const carryForward = ${JSON.stringify(carryForward)}
           template = template
               // .replace(`<!--app-head-->`, rendered.head ?? '')
               .replace(`<!--app-script-->`, appScript ?? '')
-          template = await vite.transformIndexHtml('/', template)
+          template = await vite.transformIndexHtml((!!url)? url : '/', template)
 
           res.status(200).set({ 'Content-Type': 'text/html' }).send(template)
           return;
