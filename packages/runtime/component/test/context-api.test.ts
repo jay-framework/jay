@@ -48,12 +48,21 @@ describe('context api', () => {
             it('provides and consumes context', () => {
                 const app = App({});
                 expect(app.element.dom.querySelector('#text').textContent).toBe('the count is 12');
+                expect(app.element.dom.querySelector('#parent-text').textContent).toBe('12');
             });
 
             it('inc context value from parent', () => {
                 const app = App({});
                 app.element.refs.button.exec$((elem) => elem.click());
                 expect(app.element.dom.querySelector('#text').textContent).toBe('the count is 13');
+                expect(app.element.dom.querySelector('#parent-text').textContent).toBe('13');
+            });
+
+            it('inc context value from child', () => {
+                const app = App({});
+                (app.element.dom.querySelector('#component-button') as HTMLElement).click();
+                expect(app.element.dom.querySelector('#text').textContent).toBe('the count is 13');
+                expect(app.element.dom.querySelector('#parent-text').textContent).toBe('13');
             });
         });
     });

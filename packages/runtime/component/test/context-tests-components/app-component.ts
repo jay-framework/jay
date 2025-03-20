@@ -8,7 +8,7 @@ export function AppComponentConstructor({}: Props<AppProps>, refs: AppRefs) {
     provideContext(COUNT_CONTEXT, context);
     refs.button.onclick(() => context.inc());
     return {
-        render: () => ({}),
+        render: () => ({ parentCount: context.count() }),
     };
 }
 

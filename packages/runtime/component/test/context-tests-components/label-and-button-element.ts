@@ -23,10 +23,7 @@ export type LabelAndButtonElementRender = RenderElement<
     LabelAndButtonRefs,
     LabelAndButtonElement
 >;
-export type LabelAndButtonElementPreRender = [
-    refs: LabelAndButtonRefs,
-    LabelAndButtonElementRender,
-];
+export type LabelAndButtonElementPreRender = [LabelAndButtonRefs, LabelAndButtonElementRender];
 
 export function renderLabelElement(options?: RenderElementOptions): LabelAndButtonElementPreRender {
     const [refManager, [button]] = ReferencesManager.for(options, ['button'], [], [], []);
