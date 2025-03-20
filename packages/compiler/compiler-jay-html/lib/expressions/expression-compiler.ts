@@ -93,10 +93,6 @@ function doParse(expression: string, startRule, vars?: Variables) {
     }
 }
 
-export function parseIdentifier(expression: string, vars: Variables): RenderFragment {
-    return new RenderFragment(doParse(expression, 'Identifier', vars), Imports.none());
-}
-
 export function parseAccessor(expression: string, vars: Variables): Accessor {
     return doParse(expression, 'accessor', vars);
 }
