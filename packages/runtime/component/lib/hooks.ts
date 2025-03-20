@@ -3,7 +3,7 @@ import { JSONPatch, patch } from 'jay-json-patch';
 import { ContextMarker, EventEmitter, findContext } from 'jay-runtime';
 import { Patcher } from './component';
 import { COMPONENT_CONTEXT, CONTEXT_CREATION_CONTEXT, HookContext } from './component-contexts';
-import { createReactiveContext } from './context-api';
+import { CONTEXT_REACTIVE_SYMBOL_CONTEXT, createReactiveContext } from './context-api';
 
 function currentHookContext(): HookContext {
     return findContext((_) => _ === COMPONENT_CONTEXT || _ === CONTEXT_CREATION_CONTEXT);
