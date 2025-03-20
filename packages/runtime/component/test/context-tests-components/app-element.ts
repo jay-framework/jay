@@ -4,20 +4,23 @@ import {
     ConstructContext,
     element as e,
     HTMLElementProxy,
+    dynamicText as dt,
     JayElement,
     ReferencesManager,
     RenderElement,
     RenderElementOptions,
 } from 'jay-runtime';
 
-export interface AppViewState {}
+export interface AppViewState {
+    parentCount: number;
+}
 export interface AppRefs {
     button: HTMLElementProxy<AppViewState, HTMLButtonElement>;
     labelAndButton: ReturnType<typeof LabelAndButtonComp>;
 }
 export interface AppElement extends JayElement<AppViewState, AppRefs> {}
 export type AppElementRender = RenderElement<AppViewState, AppRefs, AppElement>;
-export type AppElementPreRender = [refs: AppRefs, AppElementRender];
+export type AppElementPreRender = [AppRefs, AppElementRender];
 
 export function AppElement(options?: RenderElementOptions): AppElementPreRender {
     const [refManager, [button, labelAndButton]] = ReferencesManager.for(
@@ -32,6 +35,7 @@ export function AppElement(options?: RenderElementOptions): AppElementPreRender 
             return e('div', {}, [
                 childComp(LabelAndButtonComp, (vs) => ({}), labelAndButton()),
                 e('button', { id: 'parent-button' }, ['inc'], button()),
+                e('div', { id: 'parent-text' }, [dt((vs) => vs.parentCount)]),
             ]);
         }) as AppElement;
     return [refManager.getPublicAPI() as AppRefs, render];

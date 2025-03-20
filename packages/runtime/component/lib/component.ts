@@ -156,6 +156,12 @@ export function makeJayComponent<
             let { render: renderViewState, ...api } = coreComp;
             let element: JayElementT;
 
+            componentContext.provideContexts.forEach(
+                ([marker, context]) =>
+                    context[CONTEXT_REACTIVE_SYMBOL_CONTEXT] &&
+                    reactive.enablePairing(context[CONTEXT_REACTIVE_SYMBOL_CONTEXT]),
+            );
+
             componentContext.reactive.createReaction(() => {
                 let viewStateValueOrGetters = renderViewState(propsProxy);
                 let viewState = materializeViewState(viewStateValueOrGetters);
