@@ -31,7 +31,7 @@ export type UpdatableProps<PropsT> = Props<PropsT> & {
 };
 
 export interface JayComponentCore<PropsT, ViewState> {
-    render: (props: Props<PropsT>) => ViewStateGetters<ViewState>;
+    render: () => ViewStateGetters<ViewState>;
 }
 
 type ConcreteJayComponent1<
@@ -163,7 +163,7 @@ export function makeJayComponent<
             );
 
             componentContext.reactive.createReaction(() => {
-                let viewStateValueOrGetters = renderViewState(propsProxy);
+                let viewStateValueOrGetters = renderViewState();
                 let viewState = materializeViewState(viewStateValueOrGetters);
                 if (!element)
                     element = renderWithContexts(
