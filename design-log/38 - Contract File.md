@@ -86,6 +86,10 @@ contract:
       data type: string
       interactive type: HTMLInputElement
       description: the new todo item text data and interactive element to edit it
+    - tag: filter
+      data type: enum (all | active | completed)
+      variant: enum (all | active | completed)
+      description: variant of the selected filter applied to the list of todo items
     - sub contract: shownTodos
       tags:
         - tag: title
@@ -101,4 +105,125 @@ contract:
 
 The above is better, yet still raises two questions - 
 1. should the description be one or two? it seems very clear that the description of data and interactive tags are different
-2. how to indicate a variant? when a tag is both data and variant, the definition looks redundant. 
+2. using `data type` we understand it is data, using `interactive type` we understand it is interactive tag. 
+   how to indicate a variant? when a tag is both data and variant, the definition looks redundant.
+
+```YAML
+contract:
+  name: Todo List
+  tags:
+    - tag: newTodo
+      data: 
+        string: the new todo item text data 
+      interactive: 
+        HTMLInputElement: interactive element to edit it
+        
+    - tag: filter
+      data:
+         all: show all the items 
+         active: show only active items
+         completed: show only completed items
+      description: variant of the selected filter applied to the list of todo items
+      
+    - sub contract: shownTodos
+      tags:
+        - tag: title
+          data: 
+             string: the todo item text
+          interactive:
+             HTMLInputElement: interactive element to edit it
+             
+        - tag: isCompleted  
+          data:
+            boolean: indicating if the todo item is active or completed
+          interactive: 
+            HTMLInputElement: interactive element to toggle between active and completed
+```
+with this option, any data that is `boolean` or `enum` is also a variant.
+
+Another alternative, a little bit more explicit while still handling all the concerns above
+```yaml
+contract:
+   name: Todo List
+   tags:
+      - tag: newTodo
+        type: [data, interactive]
+        dataType: string
+        elementType: HTMLInputElement
+        description: [new todo item value, entering a new todo item text] 
+
+      - tag: filter
+        type: variant
+        variantType: enum
+        values: [all, active, completed]
+        description: "variant of the selected filter applied to the list of todo items"
+
+      - tag: filterAll
+        type: interactive
+        elementType: [HTMLAnchorElement, HTMLButtonElement]
+        description: "clears any other filter"
+
+      - subContract: shownTodos
+        tags:
+           - tag: title
+             type: [data, interactive]
+             dataType: string
+             elementType: HTMLInputElement
+             description: ["the todo item text", "interactive element to edit it"]
+
+           - tag: isCompleted
+             type: [data, interactive, variant]
+             dataType: boolean
+             elementType: HTMLInputElement
+             description: ["indicating if the todo item is active or completed", 
+                           "interactive element to toggle between active and completed",
+                           "variant for active or completed todo item"]        
+```
+
+Another concern is contract reuse, which we can form as 
+```YAML
+contract:
+   name: Todo List
+   tags:
+      - sub contract: shownTodos
+        link: <filepath of the reused contract>
+```
+
+## Formal definition of a contract file
+
+We define a contract file as a `YAML` file, at which onw file holds one contract.
+A contract can be used as a component contract, as a page contract or reused as a sub contract of each.
+
+The structure of a contract file includes
+* top level `contact:`
+* `name` - the name of the contract
+* `tags` - a list of tags of the contract. 
+
+Each tag definition includes
+* `tag` - the name of the tag
+* `type` - one or more of `data`, `interactive`, `variant`, as a value (one value) or a list (two or three values)
+* `required` - if the tag is required. defaults to `false`
+* `dataType` - the data type for `data` or `variant` tags
+  * for `data` tags - can be `string`, `number`, `boolean`, `enum`, `Currency`, `Date`, `DateWithTimezone` and `Promise<T>`
+  * for `variant` tags - can be `boolean` or `enum`
+  * `enum` requires a following key `values`
+  * `Promise<T>` requires a following key `resolveTo`
+* `values` - list of enum values
+* `resolvesTo` - the type a promise is resolved to, which can be any valid `dataType`
+* `elementType` - the interactive element type for `interactive` elements. 
+  The element type can be any valid DOM element type, an imported Jay component, or a list of types.
+* `description` - description of the tag. Can be a text, or a list of texts if we want different description per tag type
+* `subContract` - defines an hierarchical structure of contracts, which is the equivalent of `Array<object>` or `object`.
+  sub contracts definition includes
+  * `cardinality` - optional, indicating if `one` or `many` are allowed. defaults to `many`
+  * `link` - link to a contract from another file
+  * `tags` - the tags of the sub contract
+
+application package
+
+- navigation map
+- pages
+- contracts
+- context
+- components (Jay Component)
+- figma assets
