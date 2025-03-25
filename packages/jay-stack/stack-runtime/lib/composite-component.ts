@@ -35,7 +35,7 @@ export function makeCompositeJayComponent<
                     viewState = {...viewState, ...instance.render()})
                 return viewState;
             }
-        } as CompCore
+        } as unknown as CompCore
     }
 
     const contextMarkers = parts.reduce((cm, part) => {
