@@ -12444,6 +12444,7 @@ __metadata:
     jay-component: "workspace:^"
     jay-dev-environment: "workspace:^"
     jay-runtime: "workspace:^"
+    jay-stack-route-scanner: "workspace:^"
     nodemon: ^3.0.3
     replace-in-file: ^7.1.0
     rimraf: ^5.0.5
