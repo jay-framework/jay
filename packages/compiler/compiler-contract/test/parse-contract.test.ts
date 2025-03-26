@@ -65,9 +65,95 @@ subContracts:
                 {
                     name: 'imageDetails',
                     tags: [
-                        {tag: 'image', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLImageElement"]},
+                        {tag: 'image', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLImageElement"]}
                     ],
                     subContracts: []
+                }
+            ]
+        })
+    })
+
+    it('should parse form contract with nested sections', () => {
+        const contract = `
+name: userForm
+tags:
+  - tag: submitButton
+    type: interactive
+    elementType: HTMLButtonElement
+subContracts:
+  - name: personalInfo
+    tags:
+      - tag: sectionTitle
+        type: data
+        dataType: string
+    subContracts:
+      - name: nameFields
+        tags:
+          - tag: firstName
+            type: [data, interactive]
+            dataType: string
+            elementType: HTMLInputElement
+          - tag: lastName
+            type: [data, interactive]
+            dataType: string
+            elementType: HTMLInputElement
+  - name: contactInfo
+    tags:
+      - tag: sectionTitle
+        type: data
+        dataType: string
+    subContracts:
+      - name: contactFields
+        tags:
+          - tag: email
+            type: [data, interactive]
+            dataType: string
+            elementType: HTMLInputElement
+          - tag: phone
+            type: [data, interactive]
+            dataType: string
+            elementType: HTMLInputElement
+        `
+
+        const result = parseContract(contract, '', '')
+        expect(result.validations.length).toBe(0)
+        expect(result.val).toEqual({
+            name: 'userForm',
+            tags: [
+                {tag: 'submitButton', type: [ContractTagType.interactive], elementType: ["HTMLButtonElement"]}
+            ],
+            subContracts: [
+                {
+                    name: 'personalInfo',
+                    tags: [
+                        {tag: 'sectionTitle', type: [ContractTagType.data], dataType: JayString}
+                    ],
+                    subContracts: [
+                        {
+                            name: 'nameFields',
+                            tags: [
+                                {tag: 'firstName', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]},
+                                {tag: 'lastName', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]}
+                            ],
+                            subContracts: []
+                        }
+                    ]
+                },
+                {
+                    name: 'contactInfo',
+                    tags: [
+                        {tag: 'sectionTitle', type: [ContractTagType.data], dataType: JayString}
+                    ],
+                    subContracts: [
+                        {
+                            name: 'contactFields',
+                            tags: [
+                                {tag: 'email', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]},
+                                {tag: 'phone', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]}
+                            ],
+                            subContracts: []
+                        }
+                    ]
                 }
             ]
         })
