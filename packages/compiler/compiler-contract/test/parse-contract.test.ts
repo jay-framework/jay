@@ -237,4 +237,16 @@ tags:
         const result = parseContract(contract, 'invalid.yaml', '/path/to/invalid.yaml')
         expect(result.validations).toEqual(["Tag [button] of type [interactive] must have an elementType"])
     })
+
+    it('should report validation error if the tag type an unknown type', () => {
+        const contract = `
+name: invalid
+tags:
+  - tag: button
+    type: unknown
+        `
+
+        const result = parseContract(contract, 'invalid.yaml', '/path/to/invalid.yaml')
+        expect(result.validations).toEqual(["unknown tag type [unknown]"])
+    })
 });
