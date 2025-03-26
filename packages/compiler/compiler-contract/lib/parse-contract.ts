@@ -1,4 +1,4 @@
-import {WithValidations, JayType} from "jay-compiler-shared";
+import {WithValidations, JayType, resolvePrimitiveType} from "jay-compiler-shared";
 import {Contract, ContractTag, ContractTagType, SubContract} from "../contract";
 import yaml from "js-yaml";
 import {JayNumber, JayString} from "jay-compiler-shared";
@@ -26,8 +26,9 @@ interface ParsedYaml {
 
 function parseDataType(dataType?: string): JayType | undefined {
     if (!dataType) return undefined;
-    if (dataType === 'number') return JayNumber;
-    if (dataType === 'string') return JayString;
+    const resolvedPrimitive = resolvePrimitiveType(dataType)
+    if (resolvedPrimitive)
+        return resolvedPrimitive;
     return undefined;
 }
 
