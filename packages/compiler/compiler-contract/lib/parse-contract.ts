@@ -31,7 +31,7 @@ function parseDataType(dataType?: string): JayType | undefined {
     return undefined;
 }
 
-function parseDescription(description?: string): Array<string> | undefined {
+function parseDescription(description?: string | string[]): Array<string> | undefined {
     if (!description) return undefined;
     if (Array.isArray(description)) return description;
     return [description];
