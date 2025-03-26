@@ -12,8 +12,7 @@ export default defineConfig({
             fileName: 'index',
             formats: ['cjs'],
         },
-        rollupOptions: {
-        },
+        rollupOptions: {},
     },
     test: {
         globals: true,

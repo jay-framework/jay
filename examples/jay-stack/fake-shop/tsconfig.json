@@ -10,5 +10,5 @@
       "rollup-plugin-jay": ["../../packages/rollup-plugin-jay/lib"],
     },
   },
-  "include": ["src"]
+  "include": ["src"],
 }

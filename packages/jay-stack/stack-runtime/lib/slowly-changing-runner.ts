@@ -1,19 +1,21 @@
 import {
-    AnyJayStackComponentDefinition, AnySlowlyRenderResult,
+    AnyJayStackComponentDefinition,
+    AnySlowlyRenderResult,
     JayStackComponentDefinition,
     PageProps,
     PartialRender,
-    SlowlyRenderResult
-} from "./jay-stack-types";
-import {JayComponentCore} from "jay-component";
-import {UrlParams} from "./jay-stack-types";
-import {notFound, partialRender} from "./render-results";
+    SlowlyRenderResult,
+} from './jay-stack-types';
+import { JayComponentCore } from 'jay-component';
+import { UrlParams } from './jay-stack-types';
+import { notFound, partialRender } from './render-results';
 
 export interface SlowlyChangingPhase {
-    runSlowlyForPage(componentDefinition: AnyJayStackComponentDefinition,
-                     pageParams: object,
-                     pageProps: PageProps):
-        Promise<AnySlowlyRenderResult>
+    runSlowlyForPage(
+        componentDefinition: AnyJayStackComponentDefinition,
+        pageParams: object,
+        pageProps: PageProps,
+    ): Promise<AnySlowlyRenderResult>;
 }
 
 function urlParamsKey(params: UrlParams) {
@@ -26,30 +28,29 @@ function equalParams(aPageParams: UrlParams, pageParams: UrlParams) {
     return urlParamsKey(aPageParams) === urlParamsKey(pageParams);
 }
 
-
-
 export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
-    async runSlowlyForPage(componentDefinition: AnyJayStackComponentDefinition, pageParams: UrlParams, pageProps: PageProps):
-        Promise<AnySlowlyRenderResult> {
-
+    async runSlowlyForPage(
+        componentDefinition: AnyJayStackComponentDefinition,
+        pageParams: UrlParams,
+        pageProps: PageProps,
+    ): Promise<AnySlowlyRenderResult> {
         if (componentDefinition.loadParams) {
-            const pagesParams = await componentDefinition.loadParams([])
+            const pagesParams = await componentDefinition.loadParams([]);
             for (const aPageParams of pagesParams) {
                 if (equalParams(aPageParams, pageParams)) {
                     if (componentDefinition.slowlyRender)
-                        return componentDefinition.slowlyRender({...pageProps, ...pageParams}, [])
-                    else
-                        return partialRender({}, {})
+                        return componentDefinition.slowlyRender(
+                            { ...pageProps, ...pageParams },
+                            [],
+                        );
+                    else return partialRender({}, {});
                 }
             }
             return notFound();
-        }
-        else if (componentDefinition.slowlyRender)
-            return componentDefinition.slowlyRender({...pageProps, ...pageParams}, [])
-        else
-            return partialRender({}, {})
+        } else if (componentDefinition.slowlyRender)
+            return componentDefinition.slowlyRender({ ...pageProps, ...pageParams }, []);
+        else return partialRender({}, {});
     }
-
 }
 
 export async function runLoadParams<
@@ -61,10 +62,22 @@ export async function runLoadParams<
     PropsT extends object,
     Params extends UrlParams,
     CarryForward extends object,
-    CompCore extends JayComponentCore<PropsT, ViewState>
->(compDefinition: JayStackComponentDefinition<StaticViewState, ViewState, Refs, ServerContexts, ClientContexts, PropsT, Params, CarryForward, CompCore>,
-  serverContexts: ServerContexts) {
-    compDefinition.loadParams(serverContexts)
+    CompCore extends JayComponentCore<PropsT, ViewState>,
+>(
+    compDefinition: JayStackComponentDefinition<
+        StaticViewState,
+        ViewState,
+        Refs,
+        ServerContexts,
+        ClientContexts,
+        PropsT,
+        Params,
+        CarryForward,
+        CompCore
+    >,
+    serverContexts: ServerContexts,
+) {
+    compDefinition.loadParams(serverContexts);
 }
 
 export function runSlowlyChangingRender<
@@ -76,7 +89,17 @@ export function runSlowlyChangingRender<
     PropsT extends object,
     Params extends UrlParams,
     CarryForward extends object,
-    CompCore extends JayComponentCore<PropsT, ViewState>
->(compDefinition: JayStackComponentDefinition<StaticViewState, ViewState, Refs, ServerContexts, ClientContexts, PropsT, Params, CarryForward, CompCore>) {
-
-}
+    CompCore extends JayComponentCore<PropsT, ViewState>,
+>(
+    compDefinition: JayStackComponentDefinition<
+        StaticViewState,
+        ViewState,
+        Refs,
+        ServerContexts,
+        ClientContexts,
+        PropsT,
+        Params,
+        CarryForward,
+        CompCore
+    >,
+) {}

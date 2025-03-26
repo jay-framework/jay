@@ -14,59 +14,67 @@ import { createSignal, makeJayComponent, Props, UrlParams } from 'jay-component'
 import { StoreContext, STORE_CONTEXT } from 'fake-ecomm';
 
 async function urlLoader(context: StoreContext): UrlParams {
-   return (await context.getAllProducts())
-           .map(_ => ({slug: _.slug}))
+  return (await context.getAllProducts()).map((_) => ({ slug: _.slug }));
 }
 
 export interface ProductPageProps extends PageSystemProps {
-   slug: string;
+  slug: string;
 }
 
-async function renderSlowlyChanging(context: StoreContext, {slug, lang}: ProductPageProps): PartialRender<ProductPageViewState, Product> {
-   const product = await context.getProductBySlug(slug, lang)
-   return ({
-      render: {product},
-      carryForward: product
-   })
+async function renderSlowlyChanging(
+  context: StoreContext,
+  { slug, lang }: ProductPageProps,
+): PartialRender<ProductPageViewState, Product> {
+  const product = await context.getProductBySlug(slug, lang);
+  return {
+    render: { product },
+    carryForward: product,
+  };
 }
 
 interface ProductInventory {
-   inventory: number
+  inventory: number;
 }
 
-async function renderFastChanging(context: StoreContext, props: ProductPageProps, product: Product): PartialRender<ProductPageViewState, ProductInventory> {
-   const {inventory} = await context.getProductInventory(product.id)
-   return {
-      render: inventory,
-      carryForward: product
-   }
+async function renderFastChanging(
+  context: StoreContext,
+  props: ProductPageProps,
+  product: Product,
+): PartialRender<ProductPageViewState, ProductInventory> {
+  const { inventory } = await context.getProductInventory(product.id);
+  return {
+    render: inventory,
+    carryForward: product,
+  };
 }
 
-function ProductPageConstructor({ slug, lang }: Props<ProductPageProps>,
-                                refs: ProductPageRefs,
-                                product: Product,
-                                {inventory}: ProductInventory) {
+function ProductPageConstructor(
+  { slug, lang }: Props<ProductPageProps>,
+  refs: ProductPageRefs,
+  product: Product,
+  { inventory }: ProductInventory,
+) {
+  const [selectedOption, setSelectedOption] = createSignal(product.options[0].key);
 
-   const [selectedOption, setSelectedOption] = createSignal(product.options[0].key);
+  // ... interactive event handlers
 
-   // ... interactive event handlers
-
-   return {
-      render: {selectedOption}
-   }
+  return {
+    render: { selectedOption },
+  };
 }
 
 export const ProductPage = makeJayPageComponent(
-        render,
-        ProductPageConstructor,
-        urlLoader,
-        renderSlowlyChanging,
-        renderFastChanging,
-        StoreContext
+  render,
+  ProductPageConstructor,
+  urlLoader,
+  renderSlowlyChanging,
+  renderFastChanging,
+  StoreContext,
 );
 ```
 
 The above flow works by
+
 1. `makeJayPageComponent` connects all the different callbacks with zero or more server contexts
    (contexts available on the server environment)
 2. running `urlLoader`, returning a set of `UrlParams`
@@ -85,34 +93,33 @@ such as
 
 ```typescript
 import { createJayContext } from 'jay-runtime';
-import { createAppSettings, provideServerContext } from 'jay-stack'
+import { createAppSettings, provideServerContext } from 'jay-stack';
 
 interface StoreContext {
-   getAllProducts(): Promise<Product[]>
-   getProductBySlug(slug: string): Promise<Product>
-   getProductInventory(id: string): Promise<number>
+  getAllProducts(): Promise<Product[]>;
+  getProductBySlug(slug: string): Promise<Product>;
+  getProductInventory(id: string): Promise<number>;
 }
 
 export const STORE_SETTINGS = createAppSettingsMarker();
 export const STORE_CONTEXT = createJayContext<StoreContext>();
 
 export function createECommContext() {
+  const settings = createAppSettings(STORE_SETTINGS);
+  const ecommClient = new ECommClient(
+    settings.getConfig('account'),
+    settings.getSecret('ecomm-api-key'),
+  );
 
-   const settings = createAppSettings(STORE_SETTINGS);
-   const ecommClient = new ECommClient(
-           settings.getConfig('account'),
-           settings.getSecret('ecomm-api-key')
-   )
+  const getAllProducts = () => ecommClient.getAllProducts();
+  const getProductBySlug = (slug: string) => ecommClient.getProductBySlug(slug);
+  const getProductInventory = (id: string) => ecommClient.getProductInventory(id);
 
-   const getAllProducts = () => ecommClient.getAllProducts();
-   const getProductBySlug = (slug: string) => ecommClient.getProductBySlug(slug);
-   const getProductInventory = (id: string) => ecommClient.getProductInventory(id)
-
-   provideServerContext(STORE_CONTEXT, {
-      getAllProducts,
-      getProductBySlug,
-      getProductInventory
-   })
+  provideServerContext(STORE_CONTEXT, {
+    getAllProducts,
+    getProductBySlug,
+    getProductInventory,
+  });
 }
 ```
 
@@ -122,21 +129,17 @@ the server context and data for the client context.
 
 ```typescript
 provideServerContext(STORE_CONTEXT, () => {
-   return {
-      context: {},
-      carryForward: {}
-   }
-})
+  return {
+    context: {},
+    carryForward: {},
+  };
+});
 
 provideContext(STORE_CONTEXT, (carryForward) => {
-    return {} // the client context
-})
+  return {}; // the client context
+});
 
 provideReactiveContext(STORE_CONTEXT, (carryForward) => {
-   return {} // the client context
-})
+  return {}; // the client context
+});
 ```
-
-
-
-

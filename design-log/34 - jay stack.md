@@ -1,6 +1,6 @@
 # Jay Stack
 
-Jay Stack is the name of the full stack framework for Jay. 
+Jay Stack is the name of the full stack framework for Jay.
 Like anything else in Jay, it is first designed to enable a design tool to create designs with collaboration
 with a developer building features.
 
@@ -9,32 +9,32 @@ with a developer building features.
 1. Integrated with a design tool, such that
    1. A design tool can create new pages
    2. A design tool can add functionality with pre-made contracts to a page
-   4. A design tool can use a project defined functionality with project defined contract on a page
-   5. A design tool can use pre-made components or project defined components on a page
-6. Support page routing, including
+   3. A design tool can use a project defined functionality with project defined contract on a page
+   4. A design tool can use pre-made components or project defined components on a page
+2. Support page routing, including
    1. page url
-   8. page url with parameters
-   9. page url with optional and catch all parameters
-   10. support different error pages
-11. support rendering model for website, including
-    1. url / param loading for pages with params
-    13. slowly changing data support and pre-rendering
-    14. routing hook to redirect and choose pre-rendered page
-    15. fast changing data support and rendering
-    16. async data rendering
-    16. client hydration and rendering
-11. support an application model, pre-made functionalities that can be installed at the design tool, including
-    1. pre-made page functionality
-    13. application global context for setting
-    14. application pre-made components to be added to pages
-    15. application navigation, how to navigate from one application page to another
+   2. page url with parameters
+   3. page url with optional and catch all parameters
+   4. support different error pages
+3. support rendering model for website, including
+   1. url / param loading for pages with params
+   2. slowly changing data support and pre-rendering
+   3. routing hook to redirect and choose pre-rendered page
+   4. fast changing data support and rendering
+   5. async data rendering
+   6. client hydration and rendering
+4. support an application model, pre-made functionalities that can be installed at the design tool, including
+   1. pre-made page functionality
+   2. application global context for setting
+   3. application pre-made components to be added to pages
+   4. application navigation, how to navigate from one application page to another
 
-# The Key concepts of Jay Stack are 
+# The Key concepts of Jay Stack are
 
 1. Pages - similar to any other meta framework, a page is a definition file that generates one or more website pages
 2. Page Component - the Jay Component of the page. A Page can have more then one Page Component (due to applications).
-3. Application - an entity to be installed at the design tool. An application consists of Designed Pages, Page Components, 
-   General application context and settings and Application Components. 
+3. Application - an entity to be installed at the design tool. An application consists of Designed Pages, Page Components,
+   General application context and settings and Application Components.
 4. Jay Components - including the Jay component and Jay element.
 5. Backend code
 6. Frontend code
@@ -66,42 +66,46 @@ The Jay rendering process has 3 steps - of which all are optional.
 2. fast changing data rendering (similar to SSR in other frameworks)
 3. client rendering
 
-**This section presents the flow and ideas for the rendering process. 
+**This section presents the flow and ideas for the rendering process.
 Next we will explore different APIs to package those ideas.**
 
 ### Slowly changing Data Rendering
 
-The slowly changing data rendering is used to load param values for pages with url parameters, as well as loading 
+The slowly changing data rendering is used to load param values for pages with url parameters, as well as loading
 system parameter values (languages). The rendering continues by loading data for each set of params and pre-rendering the page.
 
 ![34 - jay stack - rendering flow - slowly changing.mmd](34%20-%20jay%20stack%20-%20rendering%20flow%20-%20slowly%20changing.svg)
 
-1. Given a route to a `jay-html` file, the file is loaded. 
+1. Given a route to a `jay-html` file, the file is loaded.
 2. Call the url loading API to load all dynamic `param` values - set of `params` and `system params`.
    1. `params` - defined by the application, like `slug`.
    2. `system params` - defined by Jay, but loaded by the application, like `lang`.
 3. For each set of `(params, system params)` load the `server view state` and `server props`.
    1. The `server view state` is used for pre-rendering the jay-html.
    2. The `server props` are used for fast rendering.
-3. The `server view state` is mapped to child components `props`, which are used to call the child components slowly data loading.
-   The child components return also `server view state` and `server props`. 
-4. The `server view state` is used to pre-render the `jay-html` into `pre-rendered-jay-html`.
-   1. The `pre-rendered-jay-html` is the `jay-html` with the `server view state` values replaced, 
+4. The `server view state` is mapped to child components `props`, which are used to call the child components slowly data loading.
+   The child components return also `server view state` and `server props`.
+5. The `server view state` is used to pre-render the `jay-html` into `pre-rendered-jay-html`.
+   1. The `pre-rendered-jay-html` is the `jay-html` with the `server view state` values replaced,
       as well as compiled to server JS to render `HTML` given the rest of the `view state` at the fast changing data rendering.
    2. There can be more then one `jay-html`s pre-rendered - one for the page, and additional ones for the child components.
 
 The App APIs
+
 ```typescript
-declare async function urlLoading(settings: AppSettings): Promise<Params & SystemParams>
-declare async function slowlyChangingDataLoader(params: Params & SystemParams, settings: AppSettings): Promise<ServerViewState, ServerProps>
+declare async function urlLoading(settings: AppSettings): Promise<Params & SystemParams>;
+declare async function slowlyChangingDataLoader(
+  params: Params & SystemParams,
+  settings: AppSettings,
+): Promise<ServerViewState, ServerProps>;
 declare async function rerenderRoute(params: Params);
 ```
 
 ### fast Changing Data Rendering
 
 The fast changing data rendering starts with a `pre-rendered jay-html`, or the original `jay-html` is no pre-rendering was done.
-Given the application `server props`, it loads the `view state` to render the final `html` to be sent to the browser, 
-as well as `client props` to be sent to the client component as part of the `html` content.  
+Given the application `server props`, it loads the `view state` to render the final `html` to be sent to the browser,
+as well as `client props` to be sent to the client component as part of the `html` content.
 
 ![34 - jay stack - rendering flow - fast changing.svg](34%20-%20jay%20stack%20-%20rendering%20flow%20-%20fast%20changing.svg)
 
@@ -109,7 +113,7 @@ as well as `client props` to be sent to the client component as part of the `htm
    or, if not present, the original `jay-html`.
    1. If `pre-rendered jay-html` is found, the `props` are the `ServerProps` as defined in the slowly changing phase.
    2. If not found, the original `jay-html` is used, the `props` are the extracted `params` from the url & `SystemParams`.
-2. load the fast changing data and return 
+2. load the fast changing data and return
    1. The data for rendering - `view state` and `client props`
    2. redirect
    3. error
@@ -121,10 +125,19 @@ as well as `client props` to be sent to the client component as part of the `htm
    3. The server embeds in the `HTML` the `client props`
 
 The App APIs
+
 ```typescript
-declare async function fastChangingDataLoader(props: ServerProps, settings: AppSettings): RouteResult
-declare type RouteResult = Render<ViewState, ClientProps> | NotFound | TemporaryRedirect | PermanentRedirect | 
-    Error | HTTPStatus 
+declare async function fastChangingDataLoader(
+  props: ServerProps,
+  settings: AppSettings,
+): RouteResult;
+declare type RouteResult =
+  | Render<ViewState, ClientProps>
+  | NotFound
+  | TemporaryRedirect
+  | PermanentRedirect
+  | Error
+  | HTTPStatus;
 ```
 
 ### Client Rendering
@@ -141,38 +154,39 @@ The client rendering starts with a loaded `HTML` file importing the client libra
 
 ### App Settings
 
-The `AppSettings` member of all the app APIs above is a structure enabling the configuration of an application from 
-the design tool. It is required as a design tool does not have access to configure environment variables or secrets, 
+The `AppSettings` member of all the app APIs above is a structure enabling the configuration of an application from
+the design tool. It is required as a design tool does not have access to configure environment variables or secrets,
 while configuration of NPM imported packages is always a challenge. The `AppSettings` are to put order in this space.
 
-It is a server environment only entity, which includes an abstraction of configurations and secrets. 
+It is a server environment only entity, which includes an abstraction of configurations and secrets.
 
 ```typescript
 declare interface AppSettings {
-    getConfig(key: string): string
-    getSecret(key: string): string
+  getConfig(key: string): string;
+  getSecret(key: string): string;
 }
 ```
 
 ## Data Flow
 
-This section describes how different sources of data flow to the different stages of page rendering. 
+This section describes how different sources of data flow to the different stages of page rendering.
 
 ![34 - jay stack - page data flow.svg](34%20-%20jay%20stack%20-%20page%20data%20flow.svg)
 
 The inputs are:
-1. `params` - from the url params of all applications installed on the page, as defined by each application `urlLoader`. 
+
+1. `params` - from the url params of all applications installed on the page, as defined by each application `urlLoader`.
 2. `systemParams` - params that applications can load with the `urlLoader` stage, that are known and shared, like `lang`
 3. `pageSettings` - an application config for this page
 4. `appSettings` - an application config for the whole application, including both config and secrets
-5. the slowly changing data stage is running on build time / startup time / data change time, 
-   accepting all the above sources (1..4), and produces `server carry forward` 
-   and a partial `view state` for early rendering of slowly changing data. 
+5. the slowly changing data stage is running on build time / startup time / data change time,
+   accepting all the above sources (1..4), and produces `server carry forward`
+   and a partial `view state` for early rendering of slowly changing data.
    Any value rendered at this stage is considered constant by later stages.
-6. the fast changing data stage is running on page serving as part of server side rendering, 
-   accepts the `params`, `systemParams`, `pageSettings`, `appSettings` and the `server carry forward` 
+6. the fast changing data stage is running on page serving as part of server side rendering,
+   accepts the `params`, `systemParams`, `pageSettings`, `appSettings` and the `server carry forward`
    and produces the `client carry forward` and a partial `view state` to complete the html rendering of the page.
-7. the client rendering accepts only the `params`, `systemParams` and `client carry forward` and 
+7. the client rendering accepts only the `params`, `systemParams` and `client carry forward` and
    produces the same partial `view state` as the fast changing stage for interactive rendering
 
 ## Component API
@@ -206,95 +220,126 @@ Maybe, instead of server context as in `provideServerContext`, we need instead a
 for an application imported from `NPM` library or from the project code to initialize, such that
 the initialization result is actually the server context provided to all server hooks?
 
-one such mechanism is the default initialization of code running as part of a module import. 
+one such mechanism is the default initialization of code running as part of a module import.
 Such global code can use an API to load settings and secrets, initialize a global server state of the application.
-However, such an option does not, by default, support settings reload during development (which can be mitigated using 
+However, such an option does not, by default, support settings reload during development (which can be mitigated using
 a dedicated API).
 
 However, context is still needed for passing data from parent component to child components, or from the page
-component to child components. JayStack may introduce a way for an application to provide context to child components 
+component to child components. JayStack may introduce a way for an application to provide context to child components
 of the application.
 
-Consider a store application, with a related products component that can be placed on any page. 
+Consider a store application, with a related products component that can be placed on any page.
 The store application can have a page main component which only provides a store context, including the current product
 on a product page. The related products component can then use that context to show contextual related products.
 
-This leads to the result that we need both client and server contexts, which are responsible to pass information 
-from parent to child components. The `urlLoader`, `renderSlowlyChanging` and `renderFastChanging` are responsible for 
-passing information from server to client. 
+This leads to the result that we need both client and server contexts, which are responsible to pass information
+from parent to child components. The `urlLoader`, `renderSlowlyChanging` and `renderFastChanging` are responsible for
+passing information from server to client.
 
 ## proposed full stack component API
 
 ```typescript
-type UrlParams = Array<Record<string, string>>
-type LoadParams<ServerContexts> = (contexts: ServerContexts) => Promise<UrlParams>
+type UrlParams = Array<Record<string, string>>;
+type LoadParams<ServerContexts> = (contexts: ServerContexts) => Promise<UrlParams>;
 
 interface PartialRender<ViewState extends object, CarryForward> {
-    render: Partial<ViewState>,
-    carryForward: CarryForward
+  render: Partial<ViewState>;
+  carryForward: CarryForward;
 }
 
-type RenderSlowly<ServerContexts, PropsT extends object, SlowlyViewState extends object, SlowlyCarryForward> =
-    (contexts: ServerContexts, props: PropsT) => PartialRender<SlowlyViewState, SlowlyCarryForward>
-type RenderFast<ServerContexts, PropsT extends object, SlowlyCarryForward, FastViewState extends object, FastCarryForward> =
-    (contexts: ServerContexts, props: PropsT) => PartialRender<FastViewState, FastCarryForward>
+type RenderSlowly<
+  ServerContexts,
+  PropsT extends object,
+  SlowlyViewState extends object,
+  SlowlyCarryForward,
+> = (contexts: ServerContexts, props: PropsT) => PartialRender<SlowlyViewState, SlowlyCarryForward>;
+type RenderFast<
+  ServerContexts,
+  PropsT extends object,
+  SlowlyCarryForward,
+  FastViewState extends object,
+  FastCarryForward,
+> = (contexts: ServerContexts, props: PropsT) => PartialRender<FastViewState, FastCarryForward>;
 
 type PartialSubtract<T, P extends Partial<T>> = Omit<T, keyof P>;
 
 interface ComponentDeclaration<
-    PropsT extends object,
-    ViewState extends object,
-    SlowlyViewState extends Partial<ViewState>,
-    FastViewState extends PartialSubtract<ViewState, SlowlyViewState>,
-    Refs extends object,
-    SlowlyCarryForward extends object,
-    FastCarryForward extends object,
-    JayElementT extends JayElement<ViewState, Refs>,
-    ServerContexts extends Array<any>,
-    ClientContexts extends Array<any>,
-    CompCore extends JayComponentCore<PropsT, ViewState>,
+  PropsT extends object,
+  ViewState extends object,
+  SlowlyViewState extends Partial<ViewState>,
+  FastViewState extends PartialSubtract<ViewState, SlowlyViewState>,
+  Refs extends object,
+  SlowlyCarryForward extends object,
+  FastCarryForward extends object,
+  JayElementT extends JayElement<ViewState, Refs>,
+  ServerContexts extends Array<any>,
+  ClientContexts extends Array<any>,
+  CompCore extends JayComponentCore<PropsT, ViewState>,
 > {
-    elementPreRender: PreRenderElement<ViewState, Refs, JayElementT>,
-    loadParams?: LoadParams<ServerContexts>
-    renderSlowlyChanging?: RenderSlowly<ServerContexts, PropsT, SlowlyViewState, SlowlyCarryForward>,
-    renderFastChanging?: RenderFast<ServerContexts, PropsT & SlowlyCarryForward, SlowlyCarryForward, FastViewState, FastCarryForward>
-    comp: ComponentConstructor<PropsT & FastCarryForward, Refs, FastViewState, ClientContexts, CompCore>,
+  elementPreRender: PreRenderElement<ViewState, Refs, JayElementT>;
+  loadParams?: LoadParams<ServerContexts>;
+  renderSlowlyChanging?: RenderSlowly<ServerContexts, PropsT, SlowlyViewState, SlowlyCarryForward>;
+  renderFastChanging?: RenderFast<
+    ServerContexts,
+    PropsT & SlowlyCarryForward,
+    SlowlyCarryForward,
+    FastViewState,
+    FastCarryForward
+  >;
+  comp: ComponentConstructor<
+    PropsT & FastCarryForward,
+    Refs,
+    FastViewState,
+    ClientContexts,
+    CompCore
+  >;
 }
 
 declare function makeJayStackComponent<
-    PropsT extends object,
-    ViewState extends object,
-    SlowlyViewState extends Partial<ViewState>,
-    FastViewState extends PartialSubtract<ViewState, SlowlyViewState>,
-    Refs extends object,
-    SlowlyCarryForward extends object,
-    FastCarryForward extends object,
-    JayElementT extends JayElement<ViewState, Refs>,
-    ServerContexts extends Array<any>,
-    ClientContexts extends Array<any>,
-    CompCore extends JayComponentCore<PropsT, ViewState>,
+  PropsT extends object,
+  ViewState extends object,
+  SlowlyViewState extends Partial<ViewState>,
+  FastViewState extends PartialSubtract<ViewState, SlowlyViewState>,
+  Refs extends object,
+  SlowlyCarryForward extends object,
+  FastCarryForward extends object,
+  JayElementT extends JayElement<ViewState, Refs>,
+  ServerContexts extends Array<any>,
+  ClientContexts extends Array<any>,
+  CompCore extends JayComponentCore<PropsT, ViewState>,
 >(
-    compDeclaration: ComponentDeclaration<PropsT, ViewState, SlowlyViewState, FastViewState, 
-        Refs, SlowlyCarryForward, FastCarryForward, 
-        JayElementT, ServerContexts, ClientContexts, CompCore>,
-    serverContextMarkers: ContextMarkers<ServerContexts>,
-    clientContextMarkers: ContextMarkers<ClientContexts>
-): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>
+  compDeclaration: ComponentDeclaration<
+    PropsT,
+    ViewState,
+    SlowlyViewState,
+    FastViewState,
+    Refs,
+    SlowlyCarryForward,
+    FastCarryForward,
+    JayElementT,
+    ServerContexts,
+    ClientContexts,
+    CompCore
+  >,
+  serverContextMarkers: ContextMarkers<ServerContexts>,
+  clientContextMarkers: ContextMarkers<ClientContexts>,
+): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>;
 ```
 
-The above `makeJayStackComponent` is compiled into `makeJayComponent` for the client application, 
+The above `makeJayStackComponent` is compiled into `makeJayComponent` for the client application,
 and in server environment is used to run `loadParams`, `renderSlowlyChanging` and `renderFastChanging` if present.
 
-
 and for server context
+
 ```typescript
 declare function provideServerContext<ContextType>(
-    marker: ContextMarker<ContextType>,
-    context: ContextType,
-)
+  marker: ContextMarker<ContextType>,
+  context: ContextType,
+);
 ```
 
-## Update 
+## Update
 
 Trying to implement the above failed, as the type inference was too complex and failed to infer the `DynamicViewState`
 for the component constructor. As a result, we result to another option, using a builder pattern
@@ -302,4 +347,3 @@ for the component constructor. As a result, we result to another option, using a
 [34 - 4 - jay stack - using builder.md](34%20-%204%20-%20jay%20stack%20-%20using%20builder.md)
 
 This option seems to be working.
-

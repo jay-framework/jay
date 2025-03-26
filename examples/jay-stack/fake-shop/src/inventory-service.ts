@@ -1,4 +1,3 @@
-
 const availabilityMap = new Map([
     ['1', 1],
     ['2', 0],
@@ -10,8 +9,8 @@ const availabilityMap = new Map([
     ['8', 4],
     ['9', 0],
     ['10', 0],
-])
+]);
 
 export function getAvailableUnits(productId: string): Promise<number> {
-    return Promise.resolve(availabilityMap[productId])
+    return Promise.resolve(availabilityMap[productId]);
 }

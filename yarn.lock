@@ -9805,6 +9805,26 @@ __metadata:
   languageName: node
   linkType: hard
 
+"fake-shop@workspace:examples/jay-stack/fake-shop":
+  version: 0.0.0-use.local
+  resolution: "fake-shop@workspace:examples/jay-stack/fake-shop"
+  dependencies:
+    "@types/express": ^5.0.0
+    "@types/node": ^22.10.0
+    compression: ^1.7.5
+    cross-env: ^7.0.3
+    express: ^5.0.1
+    jay-cli: "workspace:^"
+    jay-dev-environment: "workspace:^"
+    jay-stack-route-scanner: "workspace:^"
+    jay-stack-runtime: "workspace:^"
+    sirv: ^3.0.0
+    typescript: ~5.7.2
+    vite: ^6.0.1
+    vite-plugin-jay: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "fast-deep-equal@npm:^3.1.1, fast-deep-equal@npm:^3.1.3":
   version: 3.1.3
   resolution: "fast-deep-equal@npm:3.1.3"
@@ -19410,26 +19430,6 @@ __metadata:
     typescript: ^5.3.3
     vite: ^5.0.11
     vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"vite-typescript-starter@workspace:examples/jay-stack/fake-shop":
-  version: 0.0.0-use.local
-  resolution: "vite-typescript-starter@workspace:examples/jay-stack/fake-shop"
-  dependencies:
-    "@types/express": ^5.0.0
-    "@types/node": ^22.10.0
-    compression: ^1.7.5
-    cross-env: ^7.0.3
-    express: ^5.0.1
-    jay-cli: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-stack-route-scanner: "workspace:^"
-    jay-stack-runtime: "workspace:^"
-    sirv: ^3.0.0
-    typescript: ~5.7.2
-    vite: ^6.0.1
-    vite-plugin-jay: "workspace:^"
   languageName: unknown
   linkType: soft
 
