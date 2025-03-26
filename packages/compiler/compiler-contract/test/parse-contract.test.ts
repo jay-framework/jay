@@ -192,4 +192,49 @@ tags:
             ]
         })
     })
+
+    it('should report validation error if type is data and dataType is not provided', () => {
+        const contract = `
+name: invalid
+tags:
+  - tag: count
+    type: data
+  - tag: name
+    type: data
+    dataType: string
+        `
+
+        const result = parseContract(contract, 'invalid.yaml', '/path/to/invalid.yaml')
+        expect(result.validations).toEqual(["Tag [count] of type [data] must have a dataType"])
+    })
+
+    it('should report validation error if type is variant and dataType is not provided', () => {
+        const contract = `
+name: invalid
+tags:
+  - tag: status
+    type: variant
+  - tag: priority
+    type: variant
+    dataType: string
+        `
+
+        const result = parseContract(contract, 'invalid.yaml', '/path/to/invalid.yaml')
+        expect(result.validations).toEqual(["Tag [status] of type [variant] must have a dataType"])
+    })
+
+    it('should report validation error if type is interactive and elementType is not provided', () => {
+        const contract = `
+name: invalid
+tags:
+  - tag: button
+    type: interactive
+  - tag: input
+    type: interactive
+    elementType: HTMLInputElement
+        `
+
+        const result = parseContract(contract, 'invalid.yaml', '/path/to/invalid.yaml')
+        expect(result.validations).toEqual(["Tag [button] of type [interactive] must have an elementType"])
+    })
 });

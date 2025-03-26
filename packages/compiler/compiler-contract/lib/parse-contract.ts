@@ -1,4 +1,4 @@
-import {WithValidations, JayType, resolvePrimitiveType} from "jay-compiler-shared";
+import {WithValidations, JayType} from "jay-compiler-shared";
 import {Contract, ContractTag, ContractTagType, SubContract} from "../contract";
 import yaml from "js-yaml";
 import {JayNumber, JayString} from "jay-compiler-shared";
@@ -9,7 +9,7 @@ interface ParsedYamlTag {
     required: boolean;
     dataType?: string;
     elementType?: string;
-    description?: string | string[];
+    description?: string;
 }
 
 interface ParsedYamlSubContract {
@@ -26,13 +26,12 @@ interface ParsedYaml {
 
 function parseDataType(dataType?: string): JayType | undefined {
     if (!dataType) return undefined;
-    const resolvedPrimitive = resolvePrimitiveType(dataType)
-    if (resolvedPrimitive)
-        return resolvedPrimitive;
+    if (dataType === 'number') return JayNumber;
+    if (dataType === 'string') return JayString;
     return undefined;
 }
 
-function parseDescription(description?: string | string[]): Array<string> | undefined {
+function parseDescription(description?: string): Array<string> | undefined {
     if (!description) return undefined;
     if (Array.isArray(description)) return description;
     return [description];
@@ -43,35 +42,77 @@ function parseElementType(elementType?: string): Array<string> | undefined {
     return [elementType];
 }
 
-function parseType(type: string | string[]): Array<ContractTagType> {
+function parseType(type: string | string[]): WithValidations<Array<ContractTagType>> {
     if (Array.isArray(type)) {
-        return type.map(t => t === 'data' ? ContractTagType.data : ContractTagType.interactive);
+        return type.map(t => parseType(t))
+            .reduce((acc, val) =>
+                acc.merge(val, (a,b) => [...a, ...b]), new WithValidations([]));
     }
-    return [type === 'data' ? ContractTagType.data : ContractTagType.interactive];
+    if (type === 'data')
+        return new WithValidations([ContractTagType.data])
+    else if (type === 'variant')
+        return new WithValidations([ContractTagType.variant]);
+    else if (type === 'interactive')
+        return new WithValidations([ContractTagType.interactive]);
+    else
+        return new WithValidations([], [`unknown tag type [${type}]`]);
 }
 
-function parseSubContract(subContract: ParsedYamlSubContract): SubContract {
-    const parsedSubContracts = subContract.subContracts?.map(parseSubContract);
-    return {
-        name: subContract.name,
-        tags: subContract.tags.map((tag) => {
-            const dataType = parseDataType(tag.dataType);
-            const description = parseDescription(tag.description);
-            const elementType = parseElementType(tag.elementType);
-            const required = tag.required;
+function parseTag(tag: ParsedYamlTag, filename: string, filePath: string): WithValidations<ContractTag> {
+    const types = parseType(tag.type);
+    const validations = types.validations;
 
-            const contractTag: ContractTag = {
-                tag: tag.tag,
-                type: parseType(tag.type),
-                ...(required && { required }),
-                ...(dataType && { dataType }),
-                ...(description && { description }),
-                ...(elementType && { elementType })
-            };
-            return contractTag;
-        }),
-        ...(parsedSubContracts?.length ? { subContracts: parsedSubContracts } : {})
+    // Validate data type tags
+    if (types.val.includes(ContractTagType.data) && !tag.dataType) {
+        validations.push(`Tag [${tag.tag}] of type [data] must have a dataType`);
+    }
+
+    // Validate variant type tags
+    if (types.val.includes(ContractTagType.variant) && !tag.dataType) {
+        validations.push(`Tag [${tag.tag}] of type [variant] must have a dataType`);
+    }
+
+    // Validate interactive type tags
+    if (types.val.includes(ContractTagType.interactive) && !tag.elementType) {
+        validations.push(`Tag [${tag.tag}] of type [interactive] must have an elementType`);
+    }
+
+    const dataType = parseDataType(tag.dataType);
+    const description = parseDescription(tag.description);
+    const elementType = parseElementType(tag.elementType);
+    const required = tag.required;
+
+    const contractTag: ContractTag = {
+        tag: tag.tag,
+        type: types.val,
+        ...(required && { required }),
+        ...(dataType && { dataType }),
+        ...(description && { description }),
+        ...(elementType && { elementType })
     };
+
+    return new WithValidations<ContractTag>(contractTag, validations);
+}
+
+function parseSubContract(subContract: ParsedYamlSubContract, filename: string, filePath: string): WithValidations<SubContract> {
+    const subContracts = subContract.subContracts?.map(sc => parseSubContract(sc, filename, filePath));
+    const allValidations = subContracts?.flatMap(sc => sc.validations) || [];
+    const parsedSubContracts = subContracts?.map(sc => sc.val)
+        .filter((sc): sc is SubContract => !!sc) || [];
+
+    const tagResults = subContract.tags.map(tag => parseTag(tag, filename, filePath));
+    const tagValidations = tagResults.flatMap(tr => tr.validations);
+    const parsedTags = tagResults.map(tr => tr.val)
+        .filter((tag): tag is ContractTag => !!tag);
+
+    return new WithValidations<SubContract>(
+        {
+            name: subContract.name,
+            tags: parsedTags,
+            ...(parsedSubContracts.length ? { subContracts: parsedSubContracts } : {})
+        },
+        [...allValidations, ...tagValidations]
+    );
 }
 
 export function parseContract(
@@ -82,29 +123,21 @@ export function parseContract(
     try {
         const parsedYaml = yaml.load(contractYaml) as ParsedYaml;
         
-        const parsedSubContracts = parsedYaml.subContracts?.map(parseSubContract);
+        const subContracts = parsedYaml.subContracts?.map(sc => parseSubContract(sc, filename, filePath));
+        const allValidations = subContracts?.flatMap(sc => sc.validations) || [];
+        const parsedSubContracts = subContracts?.map(sc => sc.val).filter((sc): sc is SubContract => !!sc) || [];
+
+        const tagResults = parsedYaml.tags.map(tag => parseTag(tag, filename, filePath));
+        const tagValidations = tagResults.flatMap(tr => tr.validations);
+        const parsedTags = tagResults.map(tr => tr.val).filter((tag): tag is ContractTag => !!tag);
+
         const contract: Contract = {
             name: parsedYaml.name,
-            tags: parsedYaml.tags.map((tag) => {
-                const dataType = parseDataType(tag.dataType);
-                const description = parseDescription(tag.description);
-                const elementType = parseElementType(tag.elementType);
-                const required = tag.required;
-
-                const contractTag: ContractTag = {
-                    tag: tag.tag,
-                    type: parseType(tag.type),
-                    ...(required && { required }),
-                    ...(dataType && { dataType }),
-                    ...(description && { description }),
-                    ...(elementType && { elementType })
-                };
-                return contractTag;
-            }),
-            ...(parsedSubContracts?.length ? { subContracts: parsedSubContracts } : {})
+            tags: parsedTags,
+            ...(parsedSubContracts.length ? { subContracts: parsedSubContracts } : {})
         };
 
-        return new WithValidations<Contract>(contract);
+        return new WithValidations<Contract>(contract, [...allValidations, ...tagValidations]);
     }
     catch (e) {
         throw new Error(`failed to parse contract YAML ${filename} at ${filePath}, ${e.message}`)
