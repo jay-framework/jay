@@ -67,7 +67,6 @@ subContracts:
                     tags: [
                         {tag: 'image', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLImageElement"]}
                     ],
-                    subContracts: []
                 }
             ]
         })
@@ -135,7 +134,6 @@ subContracts:
                                 {tag: 'firstName', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]},
                                 {tag: 'lastName', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]}
                             ],
-                            subContracts: []
                         }
                     ]
                 },
@@ -151,8 +149,44 @@ subContracts:
                                 {tag: 'email', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]},
                                 {tag: 'phone', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]}
                             ],
-                            subContracts: []
                         }
+                    ]
+                }
+            ]
+        })
+    })
+
+    it('should parse contract with tags containing descriptions', () => {
+        const contract = `
+name: profile
+tags:
+  - tag: username
+    type: data
+    dataType: string
+    description: The user's display name
+  - tag: avatar
+    type: [data, interactive]
+    dataType: string
+    elementType: HTMLImageElement
+    description: 
+      - The user's profile picture
+      - Click to upload a new image
+        `
+
+        const result = parseContract(contract, '', '')
+        expect(result.validations.length).toBe(0)
+        expect(result.val).toEqual({
+            name: 'profile',
+            tags: [
+                {tag: 'username', type: [ContractTagType.data], dataType: JayString, description: ["The user's display name"]},
+                {
+                    tag: 'avatar',
+                    type: [ContractTagType.data, ContractTagType.interactive],
+                    dataType: JayString,
+                    elementType: ["HTMLImageElement"],
+                    description: [
+                        "The user's profile picture",
+                        "Click to upload a new image"
                     ]
                 }
             ]

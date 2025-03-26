@@ -9,7 +9,7 @@ interface ParsedYamlTag {
     required: boolean;
     dataType?: string;
     elementType?: string;
-    description?: string;
+    description?: string | string[];
 }
 
 interface ParsedYamlSubContract {
@@ -31,8 +31,9 @@ function parseDataType(dataType?: string): JayType | undefined {
     return undefined;
 }
 
-function parseDescription(description?: string): Array<string> | undefined {
+function parseDescription(description?: string | string[]): Array<string> | undefined {
     if (!description) return undefined;
+    if (Array.isArray(description)) return description;
     return [description];
 }
 
@@ -49,6 +50,7 @@ function parseType(type: string | string[]): Array<ContractTagType> {
 }
 
 function parseSubContract(subContract: ParsedYamlSubContract): SubContract {
+    const parsedSubContracts = subContract.subContracts?.map(parseSubContract);
     return {
         name: subContract.name,
         tags: subContract.tags.map((tag) => {
@@ -67,7 +69,7 @@ function parseSubContract(subContract: ParsedYamlSubContract): SubContract {
             };
             return contractTag;
         }),
-        subContracts: subContract.subContracts?.map(parseSubContract) || []
+        ...(parsedSubContracts?.length ? { subContracts: parsedSubContracts } : {})
     };
 }
 
@@ -78,8 +80,8 @@ export function parseContract(
 ): WithValidations<Contract> {
     try {
         const parsedYaml = yaml.load(contractYaml) as ParsedYaml;
-
-        const subContracts = parsedYaml.subContracts?.map(parseSubContract);
+        
+        const parsedSubContracts = parsedYaml.subContracts?.map(parseSubContract);
         const contract: Contract = {
             name: parsedYaml.name,
             tags: parsedYaml.tags.map((tag) => {
@@ -98,7 +100,7 @@ export function parseContract(
                 };
                 return contractTag;
             }),
-            ...(subContracts && { subContracts })
+            ...(parsedSubContracts?.length ? { subContracts: parsedSubContracts } : {})
         };
 
         return new WithValidations<Contract>(contract);
