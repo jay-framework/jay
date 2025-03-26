@@ -1,0 +1,9 @@
+sequenceDiagram
+    participant page as page html <br>inc client props
+    participant comp as page component
+    page->>comp: client props
+    activate comp
+    Note right of comp: create interactive<br>jay component
+    comp->>page: vs
+    deactivate comp
+    Note left of page: interactive app<br>connect to the DOM

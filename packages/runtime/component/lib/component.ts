@@ -31,7 +31,7 @@ export type UpdatableProps<PropsT> = Props<PropsT> & {
 };
 
 export interface JayComponentCore<PropsT, ViewState> {
-    render: (props: Props<PropsT>) => ViewStateGetters<ViewState>;
+    render: () => ViewStateGetters<ViewState>;
 }
 
 type ConcreteJayComponent1<
@@ -42,7 +42,7 @@ type ConcreteJayComponent1<
     JayElementT extends JayElement<ViewState, Refs>,
 > = Omit<CompCore, 'render'> & JayComponent<PropsT, ViewState, JayElementT>;
 
-type ConcreteJayComponent<
+export type ConcreteJayComponent<
     PropsT extends object,
     ViewState,
     Refs,
@@ -70,7 +70,7 @@ export type ComponentConstructor<
     CompCore extends JayComponentCore<PropsT, ViewState>,
 > = (props: Props<PropsT>, refs: Refs, ...contexts: Contexts) => CompCore;
 
-type ContextMarkers<T extends any[]> = {
+export type ContextMarkers<T extends any[]> = {
     [K in keyof T]: ContextMarker<T[K]>;
 };
 
@@ -163,7 +163,7 @@ export function makeJayComponent<
             );
 
             componentContext.reactive.createReaction(() => {
-                let viewStateValueOrGetters = renderViewState(propsProxy);
+                let viewStateValueOrGetters = renderViewState();
                 let viewState = materializeViewState(viewStateValueOrGetters);
                 if (!element)
                     element = renderWithContexts(

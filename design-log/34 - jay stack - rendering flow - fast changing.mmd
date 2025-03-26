@@ -1,0 +1,20 @@
+sequenceDiagram
+    participant page as page <br>slowly rendered <br>jay-html
+    participant comp as page component
+    participant child as child components
+    page->>comp: server props + <br>app settings
+    activate comp
+    Note right of comp: load fast<br>changing data
+    comp->>page: vs + client props
+    deactivate comp
+    activate page
+    Note left of page: map vs to child <br>components props
+    page->>child: props + app settings
+    deactivate page
+    activate child
+    Note right of child: load fast<br>changing data
+    child->>page: vs + client props
+    deactivate child
+    activate page
+    Note left of page: rendering html<br>send to client
+    deactivate page

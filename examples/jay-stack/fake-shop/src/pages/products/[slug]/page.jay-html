@@ -1,0 +1,28 @@
+<html>
+<head>
+  <script type="application/yaml-jay">
+    data:
+      name: string
+      price: number
+      sku: string
+      id: string
+      inStock: boolean
+  </script>
+</head>
+<body>
+<div>
+  <div>
+    product page
+  </div>
+  <h1>{name}</h1>
+  <h2>{price}</h2>
+  <h2>{sku}</h2>
+  <div if="inStock">
+    <button ref="add-to-cart">add to cart</button>
+  </div>
+  <div if="!inStock">
+    out of stock, come back later
+  </div>
+</div>
+</body>
+</html>
