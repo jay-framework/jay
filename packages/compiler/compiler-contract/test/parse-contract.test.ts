@@ -289,9 +289,11 @@ describe('parse contract', () => {
             name: invalid
             tags:
               - tag: button
-                type: string
+                type: data
+                dataType: string
               - tag: button
-                type: string
+                type: data
+                dataType: string
         `
 
             const result = parseContract(contract, 'invalid.yaml', '/path/to/invalid.yaml')
@@ -302,7 +304,8 @@ describe('parse contract', () => {
             const contract = `
             tags:
               - tag: button
-                type: string
+                type: data
+                dataType: string
         `
 
             const result = parseContract(contract, 'invalid.yaml', '/path/to/invalid.yaml')

@@ -105,13 +105,24 @@ function parseSubContract(subContract: ParsedYamlSubContract, filename: string, 
     const parsedTags = tagResults.map(tr => tr.val)
         .filter((tag): tag is ContractTag => !!tag);
 
+    // Check for duplicate tag names in subContract
+    const tagNames = new Set<string>();
+    const duplicateTagValidations: string[] = [];
+    
+    parsedTags.forEach(tag => {
+        if (tagNames.has(tag.tag)) {
+            duplicateTagValidations.push(`Duplicate tag name [${tag.tag}] in subContract [${subContract.name}]`);
+        }
+        tagNames.add(tag.tag);
+    });
+
     return new WithValidations<SubContract>(
         {
             name: subContract.name,
             tags: parsedTags,
             ...(parsedSubContracts.length ? { subContracts: parsedSubContracts } : {})
         },
-        [...allValidations, ...tagValidations]
+        [...allValidations, ...tagValidations, ...duplicateTagValidations]
     );
 }
 
@@ -131,13 +142,24 @@ export function parseContract(
         const tagValidations = tagResults.flatMap(tr => tr.validations);
         const parsedTags = tagResults.map(tr => tr.val).filter((tag): tag is ContractTag => !!tag);
 
+        // Check for duplicate tag names at root level
+        const tagNames = new Set<string>();
+        const duplicateTagValidations: string[] = [];
+        
+        parsedTags.forEach(tag => {
+            if (tagNames.has(tag.tag)) {
+                duplicateTagValidations.push(`Duplicate tag name [${tag.tag}]`);
+            }
+            tagNames.add(tag.tag);
+        });
+
         const contract: Contract = {
             name: parsedYaml.name,
             tags: parsedTags,
             ...(parsedSubContracts.length ? { subContracts: parsedSubContracts } : {})
         };
 
-        return new WithValidations<Contract>(contract, [...allValidations, ...tagValidations]);
+        return new WithValidations<Contract>(contract, [...allValidations, ...tagValidations, ...duplicateTagValidations]);
     }
     catch (e) {
         throw new Error(`failed to parse contract YAML ${filename} at ${filePath}, ${e.message}`)
