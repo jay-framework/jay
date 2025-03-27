@@ -153,13 +153,19 @@ export function parseContract(
             tagNames.add(tag.tag);
         });
 
+        // Check if contract has a name
+        const nameValidations: string[] = [];
+        if (!parsedYaml.name) {
+            nameValidations.push('Contract must have a name');
+        }
+
         const contract: Contract = {
             name: parsedYaml.name,
             tags: parsedTags,
             ...(parsedSubContracts.length ? { subContracts: parsedSubContracts } : {})
         };
 
-        return new WithValidations<Contract>(contract, [...allValidations, ...tagValidations, ...duplicateTagValidations]);
+        return new WithValidations<Contract>(contract, [...allValidations, ...tagValidations, ...duplicateTagValidations, ...nameValidations]);
     }
     catch (e) {
         throw new Error(`failed to parse contract YAML ${filename} at ${filePath}, ${e.message}`)

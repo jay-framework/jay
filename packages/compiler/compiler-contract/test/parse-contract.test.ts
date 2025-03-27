@@ -309,7 +309,7 @@ describe('parse contract', () => {
         `
 
             const result = parseContract(contract, 'invalid.yaml', '/path/to/invalid.yaml')
-            expect(result.validations).toEqual(["A Contact must have a name"])
+            expect(result.validations).toEqual(["Contract must have a name"])
         })
     })
 });
