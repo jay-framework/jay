@@ -17,6 +17,7 @@ interface ParsedYamlSubContract {
     repeated: boolean;
     tags: Array<ParsedYamlTag>;
     subContracts?: Array<ParsedYamlSubContract>;
+    link?: string;
 }
 
 interface ParsedYaml {
@@ -100,7 +101,19 @@ function parseTag(tag: ParsedYamlTag, linkedContractResolver?: LinkedContractRes
 }
 
 function parseSubContract(subContract: ParsedYamlSubContract, linkedContractResolver?: LinkedContractResolver): WithValidations<SubContract> {
-    const subContracts = subContract.subContracts?.map(sc => parseSubContract(sc, linkedContractResolver));
+    if (subContract.link) {
+        const linkedContract = linkedContractResolver.resolveContract(subContract.link);
+        const {tag} = subContract;
+        const {tags} = linkedContract;
+        return new WithValidations<SubContract>({
+            tag,
+            tags,
+            ...(subContract.repeated ? {repeated: subContract.repeated} : {}),
+            ...(linkedContract.subContracts ? {subContracts: linkedContract.subContracts} : {})
+        }, [])
+    }
+
+    const subContracts = subContract.subContracts?.map(sc => parseSubContract(sc));
     const allValidations = subContracts?.flatMap(sc => sc.validations) || [];
     const parsedSubContracts = subContracts?.map(sc => sc.val)
         .filter((sc): sc is SubContract => !!sc) || [];
@@ -113,7 +126,7 @@ function parseSubContract(subContract: ParsedYamlSubContract, linkedContractReso
     // Check for duplicate tag names in subContract
     const tagNames = new Set<string>();
     const duplicateTagValidations: string[] = [];
-    
+
     parsedTags.forEach(tag => {
         if (tagNames.has(tag.tag)) {
             duplicateTagValidations.push(`Duplicate tag name [${tag.tag}] in subContract [${subContract.tag}]`);
@@ -152,7 +165,7 @@ export function parseContract(
         // Check for duplicate tag names at root level
         const tagNames = new Set<string>();
         const duplicateTagValidations: string[] = [];
-        
+
         parsedTags.forEach(tag => {
             if (tagNames.has(tag.tag)) {
                 duplicateTagValidations.push(`Duplicate tag name [${tag.tag}]`);

@@ -250,7 +250,7 @@ describe('parse contract', () => {
             repeated: true
         `
 
-        const galleryItemParsedContract = parseContract(contract)
+        const galleryItemParsedContract = parseContract(galleryItemContract)
         const resolver: LinkedContractResolver = {
             resolveContract(link: string): Contract {
                 if (link === "gallery-item")

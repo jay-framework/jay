@@ -15,20 +15,15 @@ export interface ContractTag {
     description?: Array<string>
 }
 
-export interface SubContractLink {
-    tag: string
-    link: string
-    repeated?: boolean
-}
 export interface SubContract {
     tag: string;
     tags: Array<ContractTag>
     repeated?: boolean;
-    subContracts?: Array<SubContract | SubContractLink>
+    subContracts?: Array<SubContract>
 }
 
 export interface Contract {
     name: string;
     tags: Array<ContractTag>
-    subContracts?: Array<SubContract | SubContractLink>
+    subContracts?: Array<SubContract>
 }
