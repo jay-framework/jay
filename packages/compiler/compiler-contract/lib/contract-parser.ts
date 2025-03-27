@@ -14,6 +14,7 @@ interface ParsedYamlTag {
 
 interface ParsedYamlSubContract {
     name: string;
+    repeated: boolean;
     tags: Array<ParsedYamlTag>;
     subContracts?: Array<ParsedYamlSubContract>;
 }
@@ -116,10 +117,13 @@ function parseSubContract(subContract: ParsedYamlSubContract, filename: string, 
         tagNames.add(tag.tag);
     });
 
+    const repeated = subContract.repeated;
+
     return new WithValidations<SubContract>(
         {
             name: subContract.name,
             tags: parsedTags,
+            ...(repeated? {repeated}: {}),
             ...(parsedSubContracts.length ? { subContracts: parsedSubContracts } : {})
         },
         [...allValidations, ...tagValidations, ...duplicateTagValidations]

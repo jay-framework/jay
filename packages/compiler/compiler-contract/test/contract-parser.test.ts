@@ -45,6 +45,7 @@ describe('parse contract', () => {
             elementType: HTMLButtonElement
         subContracts:
           - name: imageDetails
+            repeated: true
             tags:
               - tag: image
                 type: [data, interactive]
@@ -64,6 +65,7 @@ describe('parse contract', () => {
             subContracts: [
                 {
                     name: 'imageDetails',
+                    repeated: true,
                     tags: [
                         {tag: 'image', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLImageElement"]}
                     ],
