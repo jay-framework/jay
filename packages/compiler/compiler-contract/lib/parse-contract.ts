@@ -42,9 +42,9 @@ function parseElementType(elementType?: string): Array<string> | undefined {
     return [elementType];
 }
 
-function parseType(type: string | string[]): WithValidations<Array<ContractTagType>> {
+function parseType(type: string | string[], tagName: string): WithValidations<Array<ContractTagType>> {
     if (Array.isArray(type)) {
-        return type.map(t => parseType(t))
+        return type.map(t => parseType(t, tagName))
             .reduce((acc, val) =>
                 acc.merge(val, (a,b) => [...a, ...b]), new WithValidations([]));
     }
@@ -55,11 +55,11 @@ function parseType(type: string | string[]): WithValidations<Array<ContractTagTy
     else if (type === 'interactive')
         return new WithValidations([ContractTagType.interactive]);
     else
-        return new WithValidations([], [`unknown tag type [${type}]`]);
+        return new WithValidations([], [`Tag [${tagName}] has an unknown tag type [${type}]`]);
 }
 
 function parseTag(tag: ParsedYamlTag, filename: string, filePath: string): WithValidations<ContractTag> {
-    const types = parseType(tag.type);
+    const types = parseType(tag.type, tag.tag);
     const validations = types.validations;
 
     // Validate data type tags
