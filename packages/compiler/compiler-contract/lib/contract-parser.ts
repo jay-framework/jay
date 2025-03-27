@@ -13,7 +13,7 @@ interface ParsedYamlTag {
 }
 
 interface ParsedYamlSubContract {
-    name: string;
+    tag: string;
     repeated: boolean;
     tags: Array<ParsedYamlTag>;
     subContracts?: Array<ParsedYamlSubContract>;
@@ -23,6 +23,10 @@ interface ParsedYaml {
     name: string;
     tags: Array<ParsedYamlTag>;
     subContracts?: Array<ParsedYamlSubContract>;
+}
+
+export interface LinkedContractResolver {
+    resolveContract(link: string): Contract;
 }
 
 function parseDataType(dataType?: string): JayType | undefined {
@@ -59,7 +63,7 @@ function parseType(type: string | string[], tagName: string): WithValidations<Ar
         return new WithValidations([], [`Tag [${tagName}] has an unknown tag type [${type}]`]);
 }
 
-function parseTag(tag: ParsedYamlTag, filename: string, filePath: string): WithValidations<ContractTag> {
+function parseTag(tag: ParsedYamlTag, linkedContractResolver?: LinkedContractResolver): WithValidations<ContractTag> {
     const types = parseType(tag.type, tag.tag);
     const validations = types.validations;
 
@@ -95,13 +99,13 @@ function parseTag(tag: ParsedYamlTag, filename: string, filePath: string): WithV
     return new WithValidations<ContractTag>(contractTag, validations);
 }
 
-function parseSubContract(subContract: ParsedYamlSubContract, filename: string, filePath: string): WithValidations<SubContract> {
-    const subContracts = subContract.subContracts?.map(sc => parseSubContract(sc, filename, filePath));
+function parseSubContract(subContract: ParsedYamlSubContract, linkedContractResolver?: LinkedContractResolver): WithValidations<SubContract> {
+    const subContracts = subContract.subContracts?.map(sc => parseSubContract(sc, linkedContractResolver));
     const allValidations = subContracts?.flatMap(sc => sc.validations) || [];
     const parsedSubContracts = subContracts?.map(sc => sc.val)
         .filter((sc): sc is SubContract => !!sc) || [];
 
-    const tagResults = subContract.tags.map(tag => parseTag(tag, filename, filePath));
+    const tagResults = subContract.tags.map(tag => parseTag(tag, linkedContractResolver));
     const tagValidations = tagResults.flatMap(tr => tr.validations);
     const parsedTags = tagResults.map(tr => tr.val)
         .filter((tag): tag is ContractTag => !!tag);
@@ -112,7 +116,7 @@ function parseSubContract(subContract: ParsedYamlSubContract, filename: string, 
     
     parsedTags.forEach(tag => {
         if (tagNames.has(tag.tag)) {
-            duplicateTagValidations.push(`Duplicate tag name [${tag.tag}] in subContract [${subContract.name}]`);
+            duplicateTagValidations.push(`Duplicate tag name [${tag.tag}] in subContract [${subContract.tag}]`);
         }
         tagNames.add(tag.tag);
     });
@@ -121,7 +125,7 @@ function parseSubContract(subContract: ParsedYamlSubContract, filename: string, 
 
     return new WithValidations<SubContract>(
         {
-            name: subContract.name,
+            tag: subContract.tag,
             tags: parsedTags,
             ...(repeated? {repeated}: {}),
             ...(parsedSubContracts.length ? { subContracts: parsedSubContracts } : {})
@@ -132,17 +136,16 @@ function parseSubContract(subContract: ParsedYamlSubContract, filename: string, 
 
 export function parseContract(
     contractYaml: string,
-    filename: string,
-    filePath: string,
+    linkedContractResolver?: LinkedContractResolver
 ): WithValidations<Contract> {
     try {
         const parsedYaml = yaml.load(contractYaml) as ParsedYaml;
         
-        const subContracts = parsedYaml.subContracts?.map(sc => parseSubContract(sc, filename, filePath));
+        const subContracts = parsedYaml.subContracts?.map(sc => parseSubContract(sc, linkedContractResolver));
         const allValidations = subContracts?.flatMap(sc => sc.validations) || [];
         const parsedSubContracts = subContracts?.map(sc => sc.val).filter((sc): sc is SubContract => !!sc) || [];
 
-        const tagResults = parsedYaml.tags.map(tag => parseTag(tag, filename, filePath));
+        const tagResults = parsedYaml.tags.map(tag => parseTag(tag, linkedContractResolver));
         const tagValidations = tagResults.flatMap(tr => tr.validations);
         const parsedTags = tagResults.map(tr => tr.val).filter((tag): tag is ContractTag => !!tag);
 
@@ -172,6 +175,6 @@ export function parseContract(
         return new WithValidations<Contract>(contract, [...allValidations, ...tagValidations, ...duplicateTagValidations, ...nameValidations]);
     }
     catch (e) {
-        throw new Error(`failed to parse contract YAML ${filename} at ${filePath}, ${e.message}`)
+        throw new Error(`failed to parse contract YAML, ${e.message}.`)
     }
 }

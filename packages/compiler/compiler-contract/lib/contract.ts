@@ -16,10 +16,12 @@ export interface ContractTag {
 }
 
 export interface SubContractLink {
+    tag: string
     link: string
+    repeated?: boolean
 }
 export interface SubContract {
-    name: string;
+    tag: string;
     tags: Array<ContractTag>
     repeated?: boolean;
     subContracts?: Array<SubContract | SubContractLink>
