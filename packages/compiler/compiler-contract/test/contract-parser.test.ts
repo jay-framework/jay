@@ -1,5 +1,5 @@
-import {parseContract} from "../lib/parse-contract";
-import {ContractTagType} from "../contract";
+import {parseContract} from "../lib/contract-parser";
+import {ContractTagType} from "../lib/contract";
 import {JayNumber, JayString} from "jay-compiler-shared";
 
 describe('parse contract', () => {

@@ -1,5 +1,5 @@
 import {WithValidations, JayType} from "jay-compiler-shared";
-import {Contract, ContractTag, ContractTagType, SubContract} from "../contract";
+import {Contract, ContractTag, ContractTagType, SubContract} from "./contract";
 import yaml from "js-yaml";
 import {JayNumber, JayString} from "jay-compiler-shared";
 

@@ -15,14 +15,18 @@ export interface ContractTag {
     description?: Array<string>
 }
 
+export interface SubContractLink {
+    link: string
+}
 export interface SubContract {
     name: string;
     tags: Array<ContractTag>
-    subContracts?: Array<SubContract>
+    repeated?: boolean;
+    subContracts?: Array<SubContract | SubContractLink>
 }
 
 export interface Contract {
     name: string;
     tags: Array<ContractTag>
-    subContracts?: Array<SubContract>
+    subContracts?: Array<SubContract | SubContractLink>
 }
