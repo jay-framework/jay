@@ -1,6 +1,6 @@
-import {LinkedContractResolver, parseContract} from "../lib/contract-parser";
-import {Contract, ContractTagType} from "../lib/contract";
-import {JayNumber, JayString} from "jay-compiler-shared";
+import {LinkedContractResolver, parseContract} from "../lib";
+import {Contract, ContractTagType} from "../lib";
+import {JayBoolean, JayNumber, JayString} from "jay-compiler-shared";
 
 describe('parse contract', () => {
     it('should parse counter contract', () => {
@@ -30,45 +30,105 @@ describe('parse contract', () => {
         })
     })
 
-    it('should parse gallery contract', () => {
+    it('should parse contract with sub-contract', () => {
         const contract = `
-        name: gallery
+        name: todo
         tags:
-          - tag: mainImage
-            type: data
-            dataType: string
-          - tag: prevButton
-            type: interactive
-            elementType: HTMLButtonElement
-          - tag: nextButton
-            type: interactive
-            elementType: HTMLButtonElement
-        subContracts:
-          - tag: imageDetails
-            repeated: true
+          - tag: items
+            type: sub-contract
             tags:
-              - tag: image
-                type: [data, interactive]
+              - tag: title
+                type: data
                 dataType: string
-                elementType: HTMLImageElement
+              - tag: completed
+                type: data
+                dataType: boolean
         `
 
         const result = parseContract(contract)
         expect(result.validations.length).toBe(0)
         expect(result.val).toEqual({
-            name: 'gallery',
+            name: 'todo',
             tags: [
-                {tag: 'mainImage', type: [ContractTagType.data], dataType: JayString},
-                {tag: 'prevButton', type: [ContractTagType.interactive], elementType: ["HTMLButtonElement"]},
-                {tag: 'nextButton', type: [ContractTagType.interactive], elementType: ["HTMLButtonElement"]}
-            ],
-            subContracts: [
                 {
-                    tag: 'imageDetails',
+                    tag: 'items',
+                    type: [ContractTagType.subContract],
+                    tags: [
+                        {tag: 'title', type: [ContractTagType.data], dataType: JayString},
+                        {tag: 'completed', type: [ContractTagType.data], dataType: JayBoolean}
+                    ]
+                }
+            ]
+        })
+    })
+
+    it('should parse contract with linked sub-contract', () => {
+        const contract = `
+        name: todo
+        tags:
+          - tag: items
+            type: sub-contract
+            link: ./todo-item.contract.yaml
+        `
+
+        const mockResolver = {
+            resolveContract: (link: string) => {
+                if (link === `./todo-item.contract.yaml`)
+                    return ({
+                        name: 'todo-item',
+                        tags: [
+                            {tag: 'title', type: [ContractTagType.data], dataType: JayString},
+                            {tag: 'completed', type: [ContractTagType.data], dataType: JayNumber}
+                        ]
+                    })}
+        }
+
+        const result = parseContract(contract, mockResolver)
+        expect(result.validations.length).toBe(0)
+        expect(result.val).toEqual({
+            name: 'todo',
+            tags: [
+                {
+                    tag: 'items',
+                    type: [ContractTagType.subContract],
+                    tags: [
+                        {tag: 'title', type: [ContractTagType.data], dataType: JayString},
+                        {tag: 'completed', type: [ContractTagType.data], dataType: JayNumber}
+                    ]
+                }
+            ]
+        })
+    })
+
+    it('should parse contract with repeated sub-contract', () => {
+        const contract = `
+        name: todo
+        tags:
+          - tag: items
+            type: sub-contract
+            repeated: true
+            tags:
+              - tag: title
+                type: data
+                dataType: string
+              - tag: completed
+                type: data
+                dataType: number
+        `
+
+        const result = parseContract(contract)
+        expect(result.validations.length).toBe(0)
+        expect(result.val).toEqual({
+            name: 'todo',
+            tags: [
+                {
+                    tag: 'items',
+                    type: [ContractTagType.subContract],
                     repeated: true,
                     tags: [
-                        {tag: 'image', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLImageElement"]}
-                    ],
+                        {tag: 'title', type: [ContractTagType.data], dataType: JayString},
+                        {tag: 'completed', type: [ContractTagType.data], dataType: JayNumber}
+                    ]
                 }
             ]
         })
@@ -81,14 +141,14 @@ describe('parse contract', () => {
           - tag: submitButton
             type: interactive
             elementType: HTMLButtonElement
-        subContracts:
           - tag: personalInfo
+            type: sub-contract
             tags:
               - tag: sectionTitle
                 type: data
                 dataType: string
-            subContracts:
               - tag: nameFields
+                type: sub-contract
                 tags:
                   - tag: firstName
                     type: [data, interactive]
@@ -99,12 +159,13 @@ describe('parse contract', () => {
                     dataType: string
                     elementType: HTMLInputElement
           - tag: contactInfo
+            type: sub-contract
             tags:
               - tag: sectionTitle
                 type: data
                 dataType: string
-            subContracts:
               - tag: contactFields
+                type: sub-contract
                 tags:
                   - tag: email
                     type: [data, interactive]
@@ -121,42 +182,42 @@ describe('parse contract', () => {
         expect(result.val).toEqual({
             name: 'userForm',
             tags: [
-                {tag: 'submitButton', type: [ContractTagType.interactive], elementType: ["HTMLButtonElement"]}
-            ],
-            subContracts: [
+                {tag: 'submitButton', type: [ContractTagType.interactive], elementType: ["HTMLButtonElement"]},
                 {
                     tag: 'personalInfo',
+                    type: [ContractTagType.subContract],
                     tags: [
-                        {tag: 'sectionTitle', type: [ContractTagType.data], dataType: JayString}
-                    ],
-                    subContracts: [
+                        {tag: 'sectionTitle', type: [ContractTagType.data], dataType: JayString},
                         {
                             tag: 'nameFields',
+                            type: [ContractTagType.subContract],
                             tags: [
                                 {tag: 'firstName', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]},
                                 {tag: 'lastName', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]}
                             ],
                         }
-                    ]
+                    ],
                 },
                 {
                     tag: 'contactInfo',
+                    type: [ContractTagType.subContract],
                     tags: [
-                        {tag: 'sectionTitle', type: [ContractTagType.data], dataType: JayString}
-                    ],
-                    subContracts: [
+                        {tag: 'sectionTitle', type: [ContractTagType.data], dataType: JayString},
                         {
                             tag: 'contactFields',
+                            type: [ContractTagType.subContract],
                             tags: [
                                 {tag: 'email', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]},
                                 {tag: 'phone', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]}
                             ],
                         }
-                    ]
+
+                    ],
                 }
-            ]
+            ],
         })
     })
+
 
     it('should parse contract with tags containing descriptions', () => {
         const contract = `
@@ -223,65 +284,9 @@ describe('parse contract', () => {
         })
     })
 
-    it('should parse a linked sub contract', () => {
-        const galleryItemContract = `
-        name: gallery-item
-        tags:
-          - tag: image
-            type: [data, interactive]
-            dataType: string
-            elementType: HTMLImageElement
-        `
-        const contract = `
-        name: gallery
-        tags:
-          - tag: mainImage
-            type: data
-            dataType: string
-          - tag: prevButton
-            type: interactive
-            elementType: HTMLButtonElement
-          - tag: nextButton
-            type: interactive
-            elementType: HTMLButtonElement
-        subContracts:
-          - tag: galleryItem
-            link: gallery-item
-            repeated: true
-        `
-
-        const galleryItemParsedContract = parseContract(galleryItemContract)
-        const resolver: LinkedContractResolver = {
-            resolveContract(link: string): Contract {
-                if (link === "gallery-item")
-                    return galleryItemParsedContract.val
-            }
-        }
-        const parsedContract = parseContract(contract, resolver)
-        expect(parsedContract.validations.length).toBe(0)
-        expect(parsedContract.val).toEqual({
-            name: 'gallery',
-            tags: [
-                {tag: 'mainImage', type: [ContractTagType.data], dataType: JayString},
-                {tag: 'prevButton', type: [ContractTagType.interactive], elementType: ["HTMLButtonElement"]},
-                {tag: 'nextButton', type: [ContractTagType.interactive], elementType: ["HTMLButtonElement"]}
-            ],
-            subContracts: [
-                {
-                    tag: 'galleryItem',
-                    repeated: true,
-                    tags: [
-                        {tag: 'image', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLImageElement"]}
-                    ],
-                }
-            ]
-        })
-    })
-
     // parse variant enum
 
     describe('validations', () => {
-
         it('should report validation error if type is data and dataType is not provided', () => {
             const contract = `
             name: invalid
@@ -291,7 +296,7 @@ describe('parse contract', () => {
               - tag: name
                 type: data
                 dataType: string
-        `
+            `
 
             const result = parseContract(contract)
             expect(result.validations).toEqual(["Tag [count] of type [data] must have a dataType"])
@@ -306,7 +311,7 @@ describe('parse contract', () => {
               - tag: priority
                 type: variant
                 dataType: string
-        `
+            `
 
             const result = parseContract(contract)
             expect(result.validations).toEqual(["Tag [status] of type [variant] must have a dataType"])
@@ -321,7 +326,7 @@ describe('parse contract', () => {
               - tag: input
                 type: interactive
                 elementType: HTMLInputElement
-        `
+            `
 
             const result = parseContract(contract)
             expect(result.validations).toEqual(["Tag [button] of type [interactive] must have an elementType"])
@@ -333,38 +338,73 @@ describe('parse contract', () => {
             tags:
               - tag: button
                 type: unknown
-        `
+            `
 
             const result = parseContract(contract)
             expect(result.validations).toEqual(["Tag [button] has an unknown tag type [unknown]"])
         })
 
-        it('should report validation error if two tags have the same name', () => {
+        it('should report validation error if sub-contract is mixed with other types', () => {
             const contract = `
             name: invalid
             tags:
-              - tag: button
-                type: data
-                dataType: string
-              - tag: button
-                type: data
-                dataType: string
-        `
+              - tag: items
+                type: [sub-contract, data]
+                tags:
+                  - tag: title
+                    type: data
+                    dataType: string
+            `
 
             const result = parseContract(contract)
-            expect(result.validations).toEqual(["Duplicate tag name [button]"])
+            expect(result.validations).toEqual(["Tag [items] cannot be both sub-contract and other types"
+            ,"Tag [items] of type [data] must have a dataType"])
         })
 
-        it('should report validation error if a contract does not have a name', () => {
+        it('should report validation error if sub-contract has dataType', () => {
             const contract = `
+            name: invalid
             tags:
-              - tag: button
-                type: data
+              - tag: items
+                type: sub-contract
                 dataType: string
-        `
+                tags:
+                  - tag: title
+                    type: data
+                    dataType: string
+            `
 
             const result = parseContract(contract)
-            expect(result.validations).toEqual(["Contract must have a name"])
+            expect(result.validations).toEqual(["Tag [items] of type [sub-contract] cannot have a dataType"])
+        })
+
+        it('should report validation error if sub-contract has elementType', () => {
+            const contract = `
+            name: invalid
+            tags:
+              - tag: items
+                type: sub-contract
+                elementType: HTMLDivElement
+                tags:
+                  - tag: title
+                    type: data
+                    dataType: string
+            `
+
+            const result = parseContract(contract)
+            expect(result.validations).toEqual(["Tag [items] of type [sub-contract] cannot have an elementType"])
+        })
+
+        it('should report validation error if sub-contract has no tags or link', () => {
+            const contract = `
+            name: invalid
+            tags:
+              - tag: items
+                type: sub-contract
+            `
+
+            const result = parseContract(contract)
+            expect(result.validations).toEqual(["Tag [items] of type [sub-contract] must have either tags or a link"])
         })
     })
-});
+})
