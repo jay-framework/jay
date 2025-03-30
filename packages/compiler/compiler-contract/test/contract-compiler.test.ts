@@ -1,6 +1,7 @@
 import {parseContract} from "../lib";
 import {compileContract} from "../lib";
 import {prettify} from "jay-compiler-shared";
+import { HTMLElementProxy } from 'jay-runtime';
 
 describe('compile contract', () => {
     it('should compile counter contract', async () => {
@@ -23,6 +24,8 @@ describe('compile contract', () => {
         
         expect(result.validations.length).toBe(0);
         expect(await prettify(result.val)).toBe(await prettify(`
+        import { HTMLElementProxy } from 'jay-runtime';
+
         export interface CounterViewState {
             count: number;
         }
@@ -53,6 +56,8 @@ describe('compile contract', () => {
         
         expect(result.validations.length).toBe(0);
         expect(await prettify(result.val)).toBe(await prettify(`
+        import { HTMLElementProxy } from 'jay-runtime';
+
         export interface Item {
             title: string;
             completed: boolean;
@@ -75,11 +80,13 @@ describe('compile contract', () => {
             repeated: true
             tags:
               - tag: title
-                type: data
+                type: data, interactive
                 dataType: string
+                elementType: HTMLInputElement
               - tag: completed
-                type: data
+                type: data, interactive
                 dataType: boolean
+                elementType: HTMLInputElement
         `
 
         const parsedContract = parseContract(contract);
@@ -87,6 +94,8 @@ describe('compile contract', () => {
         
         expect(result.validations.length).toBe(0);
         expect(await prettify(result.val)).toBe(await prettify(`
+        import { HTMLElementCollectionProxy } from 'jay-runtime';
+
         export interface Items {
             title: string;
             completed: boolean;
@@ -97,6 +106,8 @@ describe('compile contract', () => {
         }
 
         export interface TodoRefs {
+            title: HTMLElementCollectionProxy<Items, HTMLInputElement>;
+            completed: HTMLElementCollectionProxy<Items, HTMLInputElement>;
         }`));
     });
 
@@ -148,6 +159,8 @@ describe('compile contract', () => {
         
         expect(result.validations.length).toBe(0);
         expect(await prettify(result.val)).toBe(await prettify(`
+        import { HTMLElementProxy } from 'jay-runtime';
+
         export interface NameFields {
             firstName: string;
             lastName: string;
@@ -247,6 +260,8 @@ describe('compile contract', () => {
         
         expect(result.validations.length).toBe(0);
         expect(await prettify(result.val)).toBe(await prettify(`
+        import { HTMLElementProxy } from 'jay-runtime';
+
         export interface CounterViewState {
             count: number;
         }
