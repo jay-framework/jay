@@ -9,12 +9,12 @@ export class WithValidations<Value> {
         this.validations = validations;
     }
 
-    map<R>(func: (T) => R): WithValidations<R> {
+    map<R>(func: (v: Value) => R): WithValidations<R> {
         if (this.val) return new WithValidations<R>(func(this.val), this.validations);
         else return new WithValidations<R>(undefined, this.validations);
     }
 
-    flatMap<R>(func: (T) => WithValidations<R>): WithValidations<R> {
+    flatMap<R>(func: (v: Value) => WithValidations<R>): WithValidations<R> {
         if (this.val) {
             let that = func(this.val);
             return new WithValidations<R>(that.val, [...this.validations, ...that.validations]);

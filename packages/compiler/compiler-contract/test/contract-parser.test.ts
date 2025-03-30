@@ -1,6 +1,6 @@
 import {LinkedContractResolver, parseContract} from "../lib";
 import {Contract, ContractTagType} from "../lib";
-import {JayBoolean, JayNumber, JayString} from "jay-compiler-shared";
+import {JayBoolean, JayEnumType, JayNumber, JayString} from "jay-compiler-shared";
 
 describe('parse contract', () => {
     it('should parse counter contract', () => {
@@ -26,6 +26,25 @@ describe('parse contract', () => {
                 {tag: 'count', type: [ContractTagType.data], dataType: JayNumber},
                 {tag: 'add', type: [ContractTagType.interactive], elementType: ["HTMLButtonElement"]},
                 {tag: 'subtract', type: [ContractTagType.interactive], elementType: ["HTMLButtonElement"]}
+            ]
+        })
+    })
+
+    it('should parse enum types', () => {
+        const contract = `
+        name: counter
+        tags: 
+          - tag: variant
+            type: variant
+            dataType: enum (one | two | three)
+        `
+
+        const result = parseContract(contract)
+        expect(result.validations.length).toBe(0)
+        expect(result.val).toEqual({
+            name: 'counter',
+            tags: [
+                {tag: 'variant', type: [ContractTagType.variant], dataType: new JayEnumType('variant', ['one', 'two', 'three'])},
             ]
         })
     })
