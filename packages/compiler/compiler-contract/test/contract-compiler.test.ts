@@ -25,6 +25,11 @@ describe('compile contract', () => {
         expect(await prettify(result.val)).toBe(await prettify(`
         export interface CounterViewState {
             count: number;
+        }
+
+        export interface CounterRefs {
+            add: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
+            subtract: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
         }`));
     });
 
@@ -55,6 +60,9 @@ describe('compile contract', () => {
 
         export interface TodoViewState {
             item: Item;
+        }
+
+        export interface TodoRefs {
         }`));
     });
 
@@ -86,6 +94,9 @@ describe('compile contract', () => {
 
         export interface TodoViewState {
             items: Array<Items>;
+        }
+
+        export interface TodoRefs {
         }`));
     });
 
@@ -160,6 +171,14 @@ describe('compile contract', () => {
         export interface UserFormViewState {
             personalInfo: PersonalInfo;
             contactInfo: ContactInfo;
+        }
+
+        export interface UserFormRefs {
+            submitButton: HTMLElementProxy<UserFormViewState, HTMLButtonElement>;
+            firstName: HTMLElementProxy<NameFields, HTMLInputElement>;
+            lastName: HTMLElementProxy<NameFields, HTMLInputElement>;
+            email: HTMLElementProxy<ContactFields, HTMLInputElement>;
+            phone: HTMLElementProxy<ContactFields, HTMLInputElement>;
         }`));
     });
 
@@ -201,6 +220,9 @@ describe('compile contract', () => {
         export interface TodoViewState {
             filter: Filter;
             items: Array<Items>;
+        }
+
+        export interface TodoRefs {
         }`));
     });
 
@@ -227,6 +249,11 @@ describe('compile contract', () => {
         expect(await prettify(result.val)).toBe(await prettify(`
         export interface CounterViewState {
             count: number;
+        }
+
+        export interface CounterRefs {
+            add: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
+            subtract: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
         }`));
     });
 }); 
