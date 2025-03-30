@@ -44,7 +44,7 @@ describe('parse contract', () => {
         expect(result.val).toEqual({
             name: 'counter',
             tags: [
-                {tag: 'variant', type: [ContractTagType.variant], dataType: new JayEnumType('variant', ['one', 'two', 'three'])},
+                {tag: 'variant', type: [ContractTagType.variant], dataType: new JayEnumType('Variant', ['one', 'two', 'three'])},
             ]
         })
     })
