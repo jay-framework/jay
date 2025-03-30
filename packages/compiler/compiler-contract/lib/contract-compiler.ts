@@ -1,11 +1,10 @@
-import {JayArrayType, JayAtomicType, JayObjectType, JayType, WithValidations} from "jay-compiler-shared";
+import {JayArrayType, JayObjectType, JayType, WithValidations, JayEnumType} from "jay-compiler-shared";
 import {Contract, ContractTag, ContractTagType} from "./contract";
 import {generateTypes} from "../../compiler-jay-html/lib/jay-target/jay-html-compile-types";
 import {pascalCase} from "change-case";
 
 function createJayTypeFromTag(tag: ContractTag): JayType {
     if (tag.type.includes(ContractTagType.subContract)) {
-
         const props: Record<string, JayType> = {};
         tag.tags
             .filter(_ => dataVariantOrSubContract(_))
@@ -15,6 +14,8 @@ function createJayTypeFromTag(tag: ContractTag): JayType {
 
         const objectType = new JayObjectType(pascalCase(tag.tag), props);
         return tag.repeated ? new JayArrayType(objectType) : objectType;
+    } else if (tag.type.includes(ContractTagType.variant) && tag.dataType instanceof JayEnumType) {
+        return tag.dataType;
     } else {
         return tag.dataType;
     }

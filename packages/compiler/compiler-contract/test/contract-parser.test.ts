@@ -1,5 +1,5 @@
-import {LinkedContractResolver, parseContract} from "../lib";
-import {Contract, ContractTagType} from "../lib";
+import {parseContract} from "../lib";
+import {ContractTagType} from "../lib";
 import {JayBoolean, JayEnumType, JayNumber, JayString} from "jay-compiler-shared";
 
 describe('parse contract', () => {

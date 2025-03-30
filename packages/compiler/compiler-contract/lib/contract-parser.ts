@@ -1,7 +1,6 @@
 import {WithValidations, JayType, resolvePrimitiveType, JayEnumType} from "jay-compiler-shared";
 import {Contract, ContractTag, ContractTagType} from "./contract";
 import yaml from "js-yaml";
-import {JayNumber, JayString} from "jay-compiler-shared";
 import {parseIsEnum, parseEnumValues} from "../../compiler-jay-html/lib/expressions/expression-compiler";
 import {pascalCase} from "change-case";
 
@@ -67,7 +66,7 @@ function parseTag(tag: ParsedYamlTag, linkedContractResolver?: LinkedContractRes
     const types = parseType(tag.type, tag.tag);
     const validations = types.validations;
 
-    // Validate that sub-contract type is not mixed with other types
+    // Validate that subcontract type is not mixed with other types
     if (types.val.includes(ContractTagType.subContract) && types.val.length > 1) {
         validations.push(`Tag [${tag.tag}] cannot be both sub-contract and other types`);
     }
@@ -87,7 +86,7 @@ function parseTag(tag: ParsedYamlTag, linkedContractResolver?: LinkedContractRes
         validations.push(`Tag [${tag.tag}] of type [interactive] must have an elementType`);
     }
 
-    // Validate sub-contract type tags
+    // Validate subcontract type tags
     if (types.val.includes(ContractTagType.subContract)) {
         if (!tag.tags && !tag.link) {
             validations.push(`Tag [${tag.tag}] of type [sub-contract] must have either tags or a link`);
@@ -105,7 +104,7 @@ function parseTag(tag: ParsedYamlTag, linkedContractResolver?: LinkedContractRes
     const elementType = parseElementType(tag.elementType);
     const required = tag.required;
 
-    // Handle linked sub-contract
+    // Handle linked subcontract
     if (tag.link && linkedContractResolver) {
         const linkedContract = linkedContractResolver.resolveContract(tag.link);
         return new WithValidations<ContractTag>({
@@ -118,14 +117,14 @@ function parseTag(tag: ParsedYamlTag, linkedContractResolver?: LinkedContractRes
         }, validations);
     }
 
-    // Handle inline sub-contract
+    // Handle inline subcontract
     if (tag.tags) {
         const subTagResults = tag.tags.map(subTag => parseTag(subTag, linkedContractResolver));
         const subTagValidations = subTagResults.flatMap(tr => tr.validations);
         const parsedSubTags = subTagResults.map(tr => tr.val)
             .filter((tag): tag is ContractTag => !!tag);
 
-        // Check for duplicate tag names in sub-contract
+        // Check for duplicate tag names in subcontract
         const tagNames = new Set<string>();
         const duplicateTagValidations: string[] = [];
 

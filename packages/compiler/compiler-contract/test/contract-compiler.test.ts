@@ -169,8 +169,7 @@ describe('compile contract', () => {
         tags:
           - tag: filter
             type: variant
-            dataType: string
-            values: [all, active, completed]
+            dataType: enum(all | active | completed)
           - tag: items
             type: sub-contract
             repeated: true
@@ -188,20 +187,20 @@ describe('compile contract', () => {
         
         expect(result.validations.length).toBe(0);
         expect(await prettify(result.val)).toBe(await prettify(`
-        export interface Items {
-            title: string;
-            completed: boolean;
-        }
-        
         export enum Filter {
           all,
           active,
           completed 
         }
 
+        export interface Items {
+            title: string;
+            completed: boolean;
+        }
+
         export interface TodoViewState {
             filter: Filter;
-            items: Items[];
+            items: Array<Items>;
         }`));
     });
 
