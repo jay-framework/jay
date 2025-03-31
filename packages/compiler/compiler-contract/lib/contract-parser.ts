@@ -41,7 +41,7 @@ function parseDescription(description?: string | string[]): Array<string> | unde
 
 function parseElementType(elementType?: string): Array<string> | undefined {
     if (!elementType) return undefined;
-    return [elementType];
+    return elementType.split('|').map(type => type.trim());
 }
 
 function parseType(type: string | string[], tagName: string): WithValidations<Array<ContractTagType>> {

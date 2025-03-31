@@ -19,7 +19,7 @@ describe('parse contract', () => {
         `
 
         const result = parseContract(contract)
-        expect(result.validations.length).toBe(0)
+        expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'counter',
             tags: [
@@ -40,7 +40,7 @@ describe('parse contract', () => {
         `
 
         const result = parseContract(contract)
-        expect(result.validations.length).toBe(0)
+        expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'counter',
             tags: [
@@ -65,7 +65,7 @@ describe('parse contract', () => {
         `
 
         const result = parseContract(contract)
-        expect(result.validations.length).toBe(0)
+        expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'todo',
             tags: [
@@ -103,7 +103,7 @@ describe('parse contract', () => {
         }
 
         const result = parseContract(contract, mockResolver)
-        expect(result.validations.length).toBe(0)
+        expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'todo',
             tags: [
@@ -136,7 +136,7 @@ describe('parse contract', () => {
         `
 
         const result = parseContract(contract)
-        expect(result.validations.length).toBe(0)
+        expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'todo',
             tags: [
@@ -197,7 +197,7 @@ describe('parse contract', () => {
         `
 
         const result = parseContract(contract)
-        expect(result.validations.length).toBe(0)
+        expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'userForm',
             tags: [
@@ -237,6 +237,30 @@ describe('parse contract', () => {
         })
     })
 
+    it ('should parse contract with multiple interactive element types', () => {
+        const contract = `
+        name: choices
+        tags:
+          - tag: select
+            type: [data, interactive]
+            dataType: enum (one | two | three)
+            elementType: HTMLSelectElement | HTMLInputElement
+        `
+        const result = parseContract(contract)
+        expect(result.validations).toEqual([]);
+        expect(result.val).toEqual({
+            name: 'choices',
+            tags: [
+                {tag: 'select',
+                    type: [ContractTagType.data, ContractTagType.interactive],
+                    dataType: new JayEnumType('Select', ['one', 'two', 'three']),
+                    elementType: ['HTMLSelectElement', 'HTMLInputElement']
+                    },
+            ]
+        })
+        
+    })
+
 
     it('should parse contract with tags containing descriptions', () => {
         const contract = `
@@ -256,7 +280,7 @@ describe('parse contract', () => {
         `
 
         const result = parseContract(contract)
-        expect(result.validations.length).toBe(0)
+        expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'profile',
             tags: [
@@ -292,7 +316,7 @@ describe('parse contract', () => {
         `
 
         const result = parseContract(contract)
-        expect(result.validations.length).toBe(0)
+        expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'counter',
             tags: [
