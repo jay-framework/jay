@@ -1,7 +1,6 @@
 import {parseContract} from "../lib";
 import {compileContract} from "../lib";
 import {prettify} from "jay-compiler-shared";
-import { HTMLElementProxy } from 'jay-runtime';
 
 describe('compile contract', () => {
     it('should compile counter contract', async () => {
@@ -22,7 +21,7 @@ describe('compile contract', () => {
         const parsedContract = parseContract(contract);
         const result = compileContract(parsedContract);
         
-        expect(result.validations.length).toBe(0);
+        expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(await prettify(`
         import { HTMLElementProxy } from 'jay-runtime';
 
@@ -54,10 +53,8 @@ describe('compile contract', () => {
         const parsedContract = parseContract(contract);
         const result = compileContract(parsedContract);
         
-        expect(result.validations.length).toBe(0);
+        expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(await prettify(`
-        import { HTMLElementProxy } from 'jay-runtime';
-
         export interface Item {
             title: string;
             completed: boolean;
@@ -80,11 +77,11 @@ describe('compile contract', () => {
             repeated: true
             tags:
               - tag: title
-                type: data, interactive
+                type: [data, interactive]
                 dataType: string
                 elementType: HTMLInputElement
               - tag: completed
-                type: data, interactive
+                type: [data, interactive]
                 dataType: boolean
                 elementType: HTMLInputElement
         `
@@ -92,7 +89,7 @@ describe('compile contract', () => {
         const parsedContract = parseContract(contract);
         const result = compileContract(parsedContract);
         
-        expect(result.validations.length).toBe(0);
+        expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(await prettify(`
         import { HTMLElementCollectionProxy } from 'jay-runtime';
 
@@ -157,7 +154,7 @@ describe('compile contract', () => {
         const parsedContract = parseContract(contract);
         const result = compileContract(parsedContract);
         
-        expect(result.validations.length).toBe(0);
+        expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(await prettify(`
         import { HTMLElementProxy } from 'jay-runtime';
 
@@ -217,7 +214,7 @@ describe('compile contract', () => {
         const parsedContract = parseContract(contract);
         const result = compileContract(parsedContract);
         
-        expect(result.validations.length).toBe(0);
+        expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(await prettify(`
         export enum Filter {
           all,
@@ -258,7 +255,7 @@ describe('compile contract', () => {
         const parsedContract = parseContract(contract);
         const result = compileContract(parsedContract);
         
-        expect(result.validations.length).toBe(0);
+        expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(await prettify(`
         import { HTMLElementProxy } from 'jay-runtime';
 
