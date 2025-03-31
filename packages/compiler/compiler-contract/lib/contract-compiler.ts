@@ -39,7 +39,7 @@ function dataVariantOrSubContract(tag: ContractTag) {
         tag.type.includes(ContractTagType.subContract)
 }
 
-function collectRefs(tags: ContractTag[], viewStateType: JayType, parentName: string = ''): Ref[] {
+function collectRefs(tags: ContractTag[], viewStateType: JayType, parentName: string = '', isRepeated: boolean = false): Ref[] {
     const refs: Ref[] = [];
 
     for (const tag of tags) {
@@ -47,7 +47,7 @@ function collectRefs(tags: ContractTag[], viewStateType: JayType, parentName: st
             const ref: Ref = {
                 ref: tag.tag,
                 constName: '',
-                dynamicRef: false,
+                dynamicRef: isRepeated,
                 autoRef: false,
                 viewStateType: viewStateType,
                 elementType: { name: tag.elementType?.[0] || 'HTMLElement', kind: 0 }
@@ -56,7 +56,7 @@ function collectRefs(tags: ContractTag[], viewStateType: JayType, parentName: st
         } else if (tag.type.includes(ContractTagType.subContract)) {
             const subInterfaceName = tag.tag.charAt(0).toUpperCase() + tag.tag.slice(1);
             const subViewStateType = { name: subInterfaceName, kind: 0 };
-            refs.push(...collectRefs(tag.tags || [], subViewStateType, subInterfaceName));
+            refs.push(...collectRefs(tag.tags || [], subViewStateType, subInterfaceName, tag.repeated));
         }
     }
 
