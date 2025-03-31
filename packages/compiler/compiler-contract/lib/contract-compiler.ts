@@ -44,13 +44,14 @@ function collectRefs(tags: ContractTag[], viewStateType: JayType, parentName: st
 
     for (const tag of tags) {
         if (tag.type.includes(ContractTagType.interactive)) {
+            const elementType = tag.elementType?.join(' | ') || 'HTMLElement';
             const ref: Ref = {
                 ref: tag.tag,
                 constName: '',
                 dynamicRef: isRepeated,
                 autoRef: false,
                 viewStateType: viewStateType,
-                elementType: { name: tag.elementType?.[0] || 'HTMLElement', kind: 0 }
+                elementType: { name: elementType, kind: 0 }
             };
             refs.push(ref);
         } else if (tag.type.includes(ContractTagType.subContract)) {

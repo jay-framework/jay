@@ -268,4 +268,36 @@ describe('compile contract', () => {
             subtract: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
         }`));
     });
+
+    it('should compile contract with multiple interactive element types', async () => {
+        const contract = `
+        name: choices
+        tags:
+          - tag: select
+            type: [data, interactive]
+            dataType: enum (one | two | three)
+            elementType: HTMLSelectElement | HTMLInputElement
+        `
+
+        const parsedContract = parseContract(contract);
+        const result = compileContract(parsedContract);
+        
+        expect(result.validations.length).toBe(0);
+        expect(await prettify(result.val)).toBe(await prettify(`
+        import { HTMLElementProxy } from 'jay-runtime';
+
+        export enum Select {
+            one,
+            two,
+            three
+        }
+
+        export interface ChoicesViewState {
+            select: Select;
+        }
+
+        export interface ChoicesRefs {
+            select: HTMLElementProxy<ChoicesViewState, HTMLSelectElement | HTMLInputElement>;
+        }`));
+    });
 }); 
