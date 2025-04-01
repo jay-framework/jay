@@ -1,6 +1,8 @@
-import {parseContract} from "../lib";
+import {LinkedContractResolver, parseContract} from "../lib";
 import {compileContract} from "../lib";
 import {prettify} from "jay-compiler-shared";
+import {ContractTagType} from "../lib";
+import {JayString, JayBoolean} from "jay-compiler-shared";
 
 describe('compile contract', () => {
     it('should compile counter contract', async () => {
@@ -300,4 +302,89 @@ describe('compile contract', () => {
             select: HTMLElementProxy<ChoicesViewState, HTMLSelectElement | HTMLInputElement>;
         }`));
     });
-}); 
+
+    describe('linked sub contracts', () => {
+
+        const mockResolver: LinkedContractResolver = {
+            loadContract: (link: string) => {
+                if (link === './todo-item.contract.yaml') {
+                    return {
+                        name: 'todo-item',
+                        tags: [
+                            { tag: 'title', type: [ContractTagType.data], dataType: JayString },
+                            { tag: 'completed', type: [ContractTagType.data], dataType: JayBoolean },
+                            { tag: 'toggleButton', type: [ContractTagType.interactive], elementType: ['HTMLButtonElement'] }
+                        ]
+                    };
+                }
+                throw new Error(`Unknown link: ${link}`);
+            }
+        };
+
+        it('should compile contract with linked sub-contract', async () => {
+            const contract = `
+            name: todo
+            tags:
+              - tag: item
+                type: sub-contract
+                link: ./todo-item.contract.yaml
+              - tag: addButton
+                type: interactive
+                elementType: HTMLButtonElement
+        `
+
+
+            const parsedContract = parseContract(contract, mockResolver);
+            const result = compileContract(parsedContract);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(await prettify(`
+            import { HTMLElementProxy } from 'jay-runtime';
+            import { TodoItemViewState } from './todo-item.contract';
+    
+            export interface TodoViewState {
+                item: TodoItemViewState;
+            }
+    
+            export interface TodoRefs {
+                addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
+                item: {
+                    toggleButton: TodoItemRefs;
+                };
+            }`));
+        });
+
+        it('should compile contract with repeated linked sub-contract', async () => {
+            const contract = `
+            name: todo
+            tags:
+              - tag: items
+                type: sub-contract
+                repeated: true
+                link: ./todo-item.contract.yaml
+              - tag: addButton
+                type: interactive
+                elementType: HTMLButtonElement
+        `
+
+            const parsedContract = parseContract(contract, mockResolver);
+            const result = compileContract(parsedContract);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(await prettify(`
+            import { HTMLElementProxy, HTMLElementCollectionProxy } from 'jay-runtime';
+            import { TodoItemViewState } from './todo-item.contract';
+    
+            export interface TodoViewState {
+                items: Array<TodoItemViewState>;
+            }
+    
+            export interface TodoRefs {
+                addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
+                items: {
+                    toggleButton: TodoItemRepeatedRefs;
+                };
+            }`));
+        });
+    })
+});
