@@ -90,6 +90,29 @@ describe('parse contract', () => {
             link: ./todo-item.contract.yaml
         `
 
+        const result = parseContract(contract)
+        expect(result.validations).toEqual([]);
+        expect(result.val).toEqual({
+            name: 'todo',
+            tags: [
+                {
+                    tag: 'items',
+                    type: [ContractTagType.subContract],
+                    link: "./todo-item.contract.yaml",
+                }
+            ]
+        })
+    })
+
+    it('should parse contract with linked sub-contract, loading the sub contract with provided LinkedContractResolver', () => {
+        const contract = `
+        name: todo
+        tags:
+          - tag: items
+            type: sub-contract
+            link: ./todo-item.contract.yaml
+        `
+
         const mockResolver: LinkedContractResolver = {
             loadContract: (link: string) => {
                 if (link === `./todo-item.contract.yaml`)
@@ -110,6 +133,7 @@ describe('parse contract', () => {
                 {
                     tag: 'items',
                     type: [ContractTagType.subContract],
+                    link: "./todo-item.contract.yaml",
                     tags: [
                         {tag: 'title', type: [ContractTagType.data], dataType: JayString},
                         {tag: 'completed', type: [ContractTagType.data], dataType: JayNumber}

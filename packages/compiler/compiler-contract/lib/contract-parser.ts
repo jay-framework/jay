@@ -105,15 +105,19 @@ function parseTag(tag: ParsedYamlTag, linkedContractResolver?: LinkedContractRes
     const required = tag.required;
 
     // Handle linked subcontract
-    if (tag.link && linkedContractResolver) {
-        const linkedContract = linkedContractResolver.loadContract(tag.link);
+    if (tag.link) {
+        const tags: ContractTag[] = linkedContractResolver?
+            linkedContractResolver.loadContract(tag.link).tags :
+            undefined;
+
         return new WithValidations<ContractTag>({
             tag: tag.tag,
             type: [ContractTagType.subContract],
-            ...(required && { required }),
-            ...(description && { description }),
-            tags: linkedContract.tags,
-            ...(tag.repeated && { repeated: tag.repeated })
+            ...(required && {required}),
+            ...(description && {description}),
+            ...(tags && {tags}),
+            ...(tag.repeated && {repeated: tag.repeated}),
+            link: tag.link
         }, validations);
     }
 
