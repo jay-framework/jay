@@ -22,7 +22,7 @@ interface ParsedYaml {
 }
 
 export interface LinkedContractResolver {
-    resolveContract(link: string): Contract;
+    loadContract(link: string): Contract;
 }
 
 function parseDataType(tag: string, dataType: string): JayType | undefined {
@@ -106,7 +106,7 @@ function parseTag(tag: ParsedYamlTag, linkedContractResolver?: LinkedContractRes
 
     // Handle linked subcontract
     if (tag.link && linkedContractResolver) {
-        const linkedContract = linkedContractResolver.resolveContract(tag.link);
+        const linkedContract = linkedContractResolver.loadContract(tag.link);
         return new WithValidations<ContractTag>({
             tag: tag.tag,
             type: [ContractTagType.subContract],

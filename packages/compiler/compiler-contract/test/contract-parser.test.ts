@@ -1,4 +1,4 @@
-import {parseContract} from "../lib";
+import {LinkedContractResolver, parseContract} from "../lib";
 import {ContractTagType} from "../lib";
 import {JayBoolean, JayEnumType, JayNumber, JayString} from "jay-compiler-shared";
 
@@ -90,8 +90,8 @@ describe('parse contract', () => {
             link: ./todo-item.contract.yaml
         `
 
-        const mockResolver = {
-            resolveContract: (link: string) => {
+        const mockResolver: LinkedContractResolver = {
+            loadContract: (link: string) => {
                 if (link === `./todo-item.contract.yaml`)
                     return ({
                         name: 'todo-item',
