@@ -34,6 +34,11 @@ describe('compile contract', () => {
         export interface CounterRefs {
             add: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
             subtract: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
+        }
+
+        export interface CounterRepeatedRefs {
+            add: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
+            subtract: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
         }`));
     });
 
@@ -67,6 +72,9 @@ describe('compile contract', () => {
         }
 
         export interface TodoRefs {
+        }
+
+        export interface TodoRepeatedRefs {
         }`));
     });
 
@@ -105,6 +113,11 @@ describe('compile contract', () => {
         }
 
         export interface TodoRefs {
+            title: HTMLElementCollectionProxy<Items, HTMLInputElement>;
+            completed: HTMLElementCollectionProxy<Items, HTMLInputElement>;
+        }
+
+        export interface TodoRepeatedRefs {
             title: HTMLElementCollectionProxy<Items, HTMLInputElement>;
             completed: HTMLElementCollectionProxy<Items, HTMLInputElement>;
         }`));
@@ -191,6 +204,14 @@ describe('compile contract', () => {
             lastName: HTMLElementProxy<NameFields, HTMLInputElement>;
             email: HTMLElementProxy<ContactFields, HTMLInputElement>;
             phone: HTMLElementProxy<ContactFields, HTMLInputElement>;
+        }
+
+        export interface UserFormRepeatedRefs {
+            submitButton: HTMLElementCollectionProxy<UserFormViewState, HTMLButtonElement>;
+            firstName: HTMLElementCollectionProxy<NameFields, HTMLInputElement>;
+            lastName: HTMLElementCollectionProxy<NameFields, HTMLInputElement>;
+            email: HTMLElementCollectionProxy<ContactFields, HTMLInputElement>;
+            phone: HTMLElementCollectionProxy<ContactFields, HTMLInputElement>;
         }`));
     });
 
@@ -235,6 +256,9 @@ describe('compile contract', () => {
         }
 
         export interface TodoRefs {
+        }
+
+        export interface TodoRepeatedRefs {
         }`));
     });
 
@@ -268,6 +292,11 @@ describe('compile contract', () => {
         export interface CounterRefs {
             add: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
             subtract: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
+        }
+
+        export interface CounterRepeatedRefs {
+            add: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
+            subtract: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
         }`));
     });
 
@@ -300,6 +329,10 @@ describe('compile contract', () => {
 
         export interface ChoicesRefs {
             select: HTMLElementProxy<ChoicesViewState, HTMLSelectElement | HTMLInputElement>;
+        }
+
+        export interface ChoicesRepeatedRefs {
+            select: HTMLElementCollectionProxy<ChoicesViewState, HTMLSelectElement | HTMLInputElement>;
         }`));
     });
 
@@ -331,8 +364,7 @@ describe('compile contract', () => {
               - tag: addButton
                 type: interactive
                 elementType: HTMLButtonElement
-        `
-
+            `
 
             const parsedContract = parseContract(contract, mockResolver);
             const result = compileContract(parsedContract);
@@ -351,6 +383,13 @@ describe('compile contract', () => {
                 item: {
                     toggleButton: TodoItemRefs;
                 };
+            }
+
+            export interface TodoRepeatedRefs {
+                addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
+                item: {
+                    toggleButton: TodoItemRepeatedRefs;
+                };
             }`));
         });
 
@@ -365,7 +404,7 @@ describe('compile contract', () => {
               - tag: addButton
                 type: interactive
                 elementType: HTMLButtonElement
-        `
+            `
 
             const parsedContract = parseContract(contract, mockResolver);
             const result = compileContract(parsedContract);
@@ -381,6 +420,13 @@ describe('compile contract', () => {
     
             export interface TodoRefs {
                 addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
+                items: {
+                    toggleButton: TodoItemRepeatedRefs;
+                };
+            }
+
+            export interface TodoRepeatedRefs {
+                addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
                 items: {
                     toggleButton: TodoItemRepeatedRefs;
                 };
