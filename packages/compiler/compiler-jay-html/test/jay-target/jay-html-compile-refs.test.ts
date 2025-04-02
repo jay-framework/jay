@@ -1,5 +1,12 @@
 import { renderRefsType } from '../../lib/jay-target/jay-html-compile-refs';
-import { JayType, JayComponentType, JayHTMLType, GenerateTarget, Ref, ImportsFor } from 'jay-compiler-shared';
+import {
+    JayComponentType,
+    JayHTMLType,
+    GenerateTarget,
+    Ref,
+    ImportsFor,
+    JayObjectType, JayImportedContract
+} from 'jay-compiler-shared';
 import { prettify } from 'jay-compiler-shared';
 
 describe('renderRefsType', () => {
@@ -16,8 +23,8 @@ describe('renderRefsType', () => {
             constName: '',
             dynamicRef: false,
             autoRef: false,
-            viewStateType: { name: 'TestViewState', kind: 0 } as JayType,
-            elementType: { name: 'HTMLInputElement', kind: 0 } as JayType
+            viewStateType: new JayObjectType('TestViewState', {}),
+            elementType: new JayHTMLType('HTMLInputElement')
         }];
 
         const { imports, renderedRefs } = renderRefsType(refs, 'TestRefs', GenerateTarget.jay);
@@ -25,9 +32,10 @@ describe('renderRefsType', () => {
             await prettify('import { HTMLElementProxy } from "jay-runtime";')
         );
         expect(await prettify(renderedRefs)).toBe(
-            await prettify(`export interface TestRefs {
-  input: HTMLElementProxy<TestViewState, HTMLInputElement>
-}`)
+            await prettify(`
+            export interface TestRefs {
+              input: HTMLElementProxy<TestViewState, HTMLInputElement>
+            }`)
         );
     });
 
@@ -37,8 +45,8 @@ describe('renderRefsType', () => {
             constName: '',
             dynamicRef: true,
             autoRef: false,
-            viewStateType: { name: 'TestViewState', kind: 0 } as JayType,
-            elementType: { name: 'HTMLInputElement', kind: 0 } as JayType
+            viewStateType: new JayObjectType('TestViewState', {}),
+            elementType: new JayHTMLType('HTMLInputElement')
         }];
 
         const { imports, renderedRefs } = renderRefsType(refs, 'TestRefs', GenerateTarget.jay);
@@ -46,9 +54,10 @@ describe('renderRefsType', () => {
             await prettify('import { HTMLElementCollectionProxy } from "jay-runtime";')
         );
         expect(await prettify(renderedRefs)).toBe(
-            await prettify(`export interface TestRefs {
-  inputs: HTMLElementCollectionProxy<TestViewState, HTMLInputElement>
-}`)
+            await prettify(`
+            export interface TestRefs {
+              inputs: HTMLElementCollectionProxy<TestViewState, HTMLInputElement>
+            }`)
         );
     });
 
@@ -58,7 +67,7 @@ describe('renderRefsType', () => {
             constName: '',
             dynamicRef: false,
             autoRef: false,
-            viewStateType: { name: 'TestViewState', kind: 0 } as JayType,
+            viewStateType: new JayObjectType('TestViewState', {}),
             elementType: new JayComponentType('Counter', [])
         }];
 
@@ -67,10 +76,11 @@ describe('renderRefsType', () => {
             await prettify('import { MapEventEmitterViewState } from "jay-runtime";')
         );
         expect(await prettify(renderedRefs)).toBe(
-            await prettify(`export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
-export interface TestRefs {
-  counter: CounterRef<TestViewState>
-}`)
+            await prettify(`
+            export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
+            export interface TestRefs {
+              counter: CounterRef<TestViewState>
+            }`)
         );
     });
 
@@ -80,7 +90,7 @@ export interface TestRefs {
             constName: '',
             dynamicRef: true,
             autoRef: false,
-            viewStateType: { name: 'TestViewState', kind: 0 } as JayType,
+            viewStateType: new JayObjectType('TestViewState', {}),
             elementType: new JayComponentType('Counter', [])
         }];
 
@@ -89,14 +99,15 @@ export interface TestRefs {
             await prettify('import { MapEventEmitterViewState, OnlyEventEmitters, ComponentCollectionProxy } from "jay-runtime";')
         );
         expect(await prettify(renderedRefs)).toBe(
-            await prettify(`export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
-export type CounterRefs<ParentVS> =
-    ComponentCollectionProxy<ParentVS, CounterRef<ParentVS>> &
-    OnlyEventEmitters<CounterRef<ParentVS>>
-
-export interface TestRefs {
-  counters: CounterRefs<TestViewState>
-}`)
+            await prettify(`
+            export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
+            export type CounterRefs<ParentVS> =
+                ComponentCollectionProxy<ParentVS, CounterRef<ParentVS>> &
+                OnlyEventEmitters<CounterRef<ParentVS>>
+            
+            export interface TestRefs {
+              counters: CounterRefs<TestViewState>
+            }`)
         );
     });
 
@@ -107,15 +118,15 @@ export interface TestRefs {
                 constName: '',
                 dynamicRef: false,
                 autoRef: false,
-                viewStateType: { name: 'TestViewState', kind: 0 } as JayType,
-                elementType: { name: 'HTMLInputElement', kind: 0 } as JayType
+                viewStateType: new JayObjectType('TestViewState', {}),
+                elementType: new JayHTMLType('HTMLInputElement')
             },
             {
                 ref: 'counter',
                 constName: '',
                 dynamicRef: false,
                 autoRef: false,
-                viewStateType: { name: 'TestViewState', kind: 0 } as JayType,
+                viewStateType: new JayObjectType('TestViewState', {}),
                 elementType: new JayComponentType('Counter', [])
             }
         ];
@@ -125,11 +136,12 @@ export interface TestRefs {
             await prettify('import { HTMLElementProxy, MapEventEmitterViewState } from "jay-runtime";')
         );
         expect(await prettify(renderedRefs)).toBe(
-            await prettify(`export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
-export interface TestRefs {
-  input: HTMLElementProxy<TestViewState, HTMLInputElement>,
-  counter: CounterRef<TestViewState>
-}`)
+            await prettify(`
+            export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
+            export interface TestRefs {
+              input: HTMLElementProxy<TestViewState, HTMLInputElement>,
+              counter: CounterRef<TestViewState>
+            }`)
         );
     });
 
@@ -139,7 +151,7 @@ export interface TestRefs {
             constName: '',
             dynamicRef: false,
             autoRef: false,
-            viewStateType: { name: 'TestViewState', kind: 0 } as JayType,
+            viewStateType: new JayObjectType('TestViewState', {}),
             elementType: new JayComponentType('Counter', [])
         }];
 
@@ -148,10 +160,55 @@ export interface TestRefs {
             await prettify('import { MapEventEmitterViewState } from "jay-runtime";')
         );
         expect(await prettify(renderedRefs)).toBe(
-            await prettify(`export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, any>;
-export interface TestRefs {
-  counter: CounterRef<TestViewState>
-}`)
+            await prettify(`
+            export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, any>;
+            export interface TestRefs {
+              counter: CounterRef<TestViewState>
+            }`)
         );
     });
-}); 
+
+    it('should render linked contract refs as refs sub property with the contract refs type', async () => {
+        const refs: Ref[] = [{
+            ref: 'subContract',
+            constName: '',
+            dynamicRef: false,
+            autoRef: false,
+            viewStateType: new JayObjectType('TestViewState', {}),
+            elementType: new JayImportedContract('SubContract', 'SubContractViewState', 'SubContractRefs', 'SubContractRepeatedRefs')
+        }];
+
+        const { imports, renderedRefs } = renderRefsType(refs, 'TestRefs');
+        expect(await prettify(imports.render(ImportsFor.definition))).toBe(
+            await prettify('')
+        );
+        expect(await prettify(renderedRefs)).toBe(
+            await prettify(`
+            export interface TestRefs {
+              subContract: SubContractRefs
+            }`)
+        );
+    });
+
+    it('should render linked contract refs for dynamic ref as refs sub property with the contract repeatedRefs type', async () => {
+        const refs: Ref[] = [{
+            ref: 'subContract',
+            constName: '',
+            dynamicRef: true,
+            autoRef: false,
+            viewStateType: new JayObjectType('TestViewState', {}),
+            elementType: new JayImportedContract('SubContract', 'SubContractViewState', 'SubContractRefs', 'SubContractRepeatedRefs')
+        }];
+
+        const { imports, renderedRefs } = renderRefsType(refs, 'TestRefs');
+        expect(await prettify(imports.render(ImportsFor.definition))).toBe(
+            await prettify('')
+        );
+        expect(await prettify(renderedRefs)).toBe(
+            await prettify(`
+            export interface TestRefs {
+              subContract: SubContractRepeatedRefs
+            }`)
+        );
+    });
+});
