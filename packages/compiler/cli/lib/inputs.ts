@@ -1,6 +1,6 @@
 import { globSync } from 'fast-glob';
 import path from 'node:path';
-import { JAY_EXTENSION } from './constants';
+import {JAY_EXTENSION} from "jay-compiler-shared";
 
 export function getJayHtmlFileInputs(source: string): { [file: string]: string } {
     return Object.fromEntries(
