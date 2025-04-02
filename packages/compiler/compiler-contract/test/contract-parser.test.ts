@@ -1,6 +1,6 @@
-import {LinkedContractResolver, parseContract} from "../lib";
-import {ContractTagType} from "../lib";
-import {JayBoolean, JayEnumType, JayNumber, JayString} from "jay-compiler-shared";
+import { LinkedContractResolver, parseContract } from '../lib';
+import { ContractTagType } from '../lib';
+import { JayBoolean, JayEnumType, JayNumber, JayString } from 'jay-compiler-shared';
 
 describe('parse contract', () => {
     it('should parse counter contract', () => {
@@ -16,19 +16,27 @@ describe('parse contract', () => {
           - tag: subtract
             type: interactive
             elementType: HTMLButtonElement  
-        `
+        `;
 
-        const result = parseContract(contract)
+        const result = parseContract(contract);
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'counter',
             tags: [
-                {tag: 'count', type: [ContractTagType.data], dataType: JayNumber},
-                {tag: 'add', type: [ContractTagType.interactive], elementType: ["HTMLButtonElement"]},
-                {tag: 'subtract', type: [ContractTagType.interactive], elementType: ["HTMLButtonElement"]}
-            ]
-        })
-    })
+                { tag: 'count', type: [ContractTagType.data], dataType: JayNumber },
+                {
+                    tag: 'add',
+                    type: [ContractTagType.interactive],
+                    elementType: ['HTMLButtonElement'],
+                },
+                {
+                    tag: 'subtract',
+                    type: [ContractTagType.interactive],
+                    elementType: ['HTMLButtonElement'],
+                },
+            ],
+        });
+    });
 
     it('should parse enum types', () => {
         const contract = `
@@ -37,17 +45,21 @@ describe('parse contract', () => {
           - tag: variant
             type: variant
             dataType: enum (one | two | three)
-        `
+        `;
 
-        const result = parseContract(contract)
+        const result = parseContract(contract);
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'counter',
             tags: [
-                {tag: 'variant', type: [ContractTagType.variant], dataType: new JayEnumType('Variant', ['one', 'two', 'three'])},
-            ]
-        })
-    })
+                {
+                    tag: 'variant',
+                    type: [ContractTagType.variant],
+                    dataType: new JayEnumType('Variant', ['one', 'two', 'three']),
+                },
+            ],
+        });
+    });
 
     it('should parse contract with sub-contract', () => {
         const contract = `
@@ -62,9 +74,9 @@ describe('parse contract', () => {
               - tag: completed
                 type: data
                 dataType: boolean
-        `
+        `;
 
-        const result = parseContract(contract)
+        const result = parseContract(contract);
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'todo',
@@ -73,13 +85,13 @@ describe('parse contract', () => {
                     tag: 'items',
                     type: [ContractTagType.subContract],
                     tags: [
-                        {tag: 'title', type: [ContractTagType.data], dataType: JayString},
-                        {tag: 'completed', type: [ContractTagType.data], dataType: JayBoolean}
-                    ]
-                }
-            ]
-        })
-    })
+                        { tag: 'title', type: [ContractTagType.data], dataType: JayString },
+                        { tag: 'completed', type: [ContractTagType.data], dataType: JayBoolean },
+                    ],
+                },
+            ],
+        });
+    });
 
     it('should parse contract with linked sub-contract', () => {
         const contract = `
@@ -88,9 +100,9 @@ describe('parse contract', () => {
           - tag: items
             type: sub-contract
             link: ./todo-item.contract.yaml
-        `
+        `;
 
-        const result = parseContract(contract)
+        const result = parseContract(contract);
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'todo',
@@ -98,11 +110,11 @@ describe('parse contract', () => {
                 {
                     tag: 'items',
                     type: [ContractTagType.subContract],
-                    link: "./todo-item.contract.yaml",
-                }
-            ]
-        })
-    })
+                    link: './todo-item.contract.yaml',
+                },
+            ],
+        });
+    });
 
     it('should parse contract with linked sub-contract, loading the sub contract with provided LinkedContractResolver', () => {
         const contract = `
@@ -111,21 +123,22 @@ describe('parse contract', () => {
           - tag: items
             type: sub-contract
             link: ./todo-item.contract.yaml
-        `
+        `;
 
         const mockResolver: LinkedContractResolver = {
             loadContract: (link: string) => {
                 if (link === `./todo-item.contract.yaml`)
-                    return ({
+                    return {
                         name: 'todo-item',
                         tags: [
-                            {tag: 'title', type: [ContractTagType.data], dataType: JayString},
-                            {tag: 'completed', type: [ContractTagType.data], dataType: JayNumber}
-                        ]
-                    })}
-        }
+                            { tag: 'title', type: [ContractTagType.data], dataType: JayString },
+                            { tag: 'completed', type: [ContractTagType.data], dataType: JayNumber },
+                        ],
+                    };
+            },
+        };
 
-        const result = parseContract(contract, mockResolver)
+        const result = parseContract(contract, mockResolver);
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'todo',
@@ -133,15 +146,15 @@ describe('parse contract', () => {
                 {
                     tag: 'items',
                     type: [ContractTagType.subContract],
-                    link: "./todo-item.contract.yaml",
+                    link: './todo-item.contract.yaml',
                     tags: [
-                        {tag: 'title', type: [ContractTagType.data], dataType: JayString},
-                        {tag: 'completed', type: [ContractTagType.data], dataType: JayNumber}
-                    ]
-                }
-            ]
-        })
-    })
+                        { tag: 'title', type: [ContractTagType.data], dataType: JayString },
+                        { tag: 'completed', type: [ContractTagType.data], dataType: JayNumber },
+                    ],
+                },
+            ],
+        });
+    });
 
     it('should parse contract with repeated sub-contract', () => {
         const contract = `
@@ -157,9 +170,9 @@ describe('parse contract', () => {
               - tag: completed
                 type: data
                 dataType: number
-        `
+        `;
 
-        const result = parseContract(contract)
+        const result = parseContract(contract);
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'todo',
@@ -169,13 +182,13 @@ describe('parse contract', () => {
                     type: [ContractTagType.subContract],
                     repeated: true,
                     tags: [
-                        {tag: 'title', type: [ContractTagType.data], dataType: JayString},
-                        {tag: 'completed', type: [ContractTagType.data], dataType: JayNumber}
-                    ]
-                }
-            ]
-        })
-    })
+                        { tag: 'title', type: [ContractTagType.data], dataType: JayString },
+                        { tag: 'completed', type: [ContractTagType.data], dataType: JayNumber },
+                    ],
+                },
+            ],
+        });
+    });
 
     it('should parse form contract with nested sections', () => {
         const contract = `
@@ -218,50 +231,73 @@ describe('parse contract', () => {
                     type: [data, interactive]
                     dataType: string
                     elementType: HTMLInputElement
-        `
+        `;
 
-        const result = parseContract(contract)
+        const result = parseContract(contract);
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'userForm',
             tags: [
-                {tag: 'submitButton', type: [ContractTagType.interactive], elementType: ["HTMLButtonElement"]},
+                {
+                    tag: 'submitButton',
+                    type: [ContractTagType.interactive],
+                    elementType: ['HTMLButtonElement'],
+                },
                 {
                     tag: 'personalInfo',
                     type: [ContractTagType.subContract],
                     tags: [
-                        {tag: 'sectionTitle', type: [ContractTagType.data], dataType: JayString},
+                        { tag: 'sectionTitle', type: [ContractTagType.data], dataType: JayString },
                         {
                             tag: 'nameFields',
                             type: [ContractTagType.subContract],
                             tags: [
-                                {tag: 'firstName', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]},
-                                {tag: 'lastName', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]}
+                                {
+                                    tag: 'firstName',
+                                    type: [ContractTagType.data, ContractTagType.interactive],
+                                    dataType: JayString,
+                                    elementType: ['HTMLInputElement'],
+                                },
+                                {
+                                    tag: 'lastName',
+                                    type: [ContractTagType.data, ContractTagType.interactive],
+                                    dataType: JayString,
+                                    elementType: ['HTMLInputElement'],
+                                },
                             ],
-                        }
+                        },
                     ],
                 },
                 {
                     tag: 'contactInfo',
                     type: [ContractTagType.subContract],
                     tags: [
-                        {tag: 'sectionTitle', type: [ContractTagType.data], dataType: JayString},
+                        { tag: 'sectionTitle', type: [ContractTagType.data], dataType: JayString },
                         {
                             tag: 'contactFields',
                             type: [ContractTagType.subContract],
                             tags: [
-                                {tag: 'email', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]},
-                                {tag: 'phone', type: [ContractTagType.data, ContractTagType.interactive], dataType: JayString, elementType: ["HTMLInputElement"]}
+                                {
+                                    tag: 'email',
+                                    type: [ContractTagType.data, ContractTagType.interactive],
+                                    dataType: JayString,
+                                    elementType: ['HTMLInputElement'],
+                                },
+                                {
+                                    tag: 'phone',
+                                    type: [ContractTagType.data, ContractTagType.interactive],
+                                    dataType: JayString,
+                                    elementType: ['HTMLInputElement'],
+                                },
                             ],
-                        }
-
+                        },
                     ],
-                }
+                },
             ],
-        })
-    })
+        });
+    });
 
-    it ('should parse contract with multiple interactive element types', () => {
+    it('should parse contract with multiple interactive element types', () => {
         const contract = `
         name: choices
         tags:
@@ -269,22 +305,21 @@ describe('parse contract', () => {
             type: [data, interactive]
             dataType: enum (one | two | three)
             elementType: HTMLSelectElement | HTMLInputElement
-        `
-        const result = parseContract(contract)
+        `;
+        const result = parseContract(contract);
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'choices',
             tags: [
-                {tag: 'select',
+                {
+                    tag: 'select',
                     type: [ContractTagType.data, ContractTagType.interactive],
                     dataType: new JayEnumType('Select', ['one', 'two', 'three']),
-                    elementType: ['HTMLSelectElement', 'HTMLInputElement']
-                    },
-            ]
-        })
-        
-    })
-
+                    elementType: ['HTMLSelectElement', 'HTMLInputElement'],
+                },
+            ],
+        });
+    });
 
     it('should parse contract with tags containing descriptions', () => {
         const contract = `
@@ -301,27 +336,29 @@ describe('parse contract', () => {
             description: 
               - The user's profile picture
               - Click to upload a new image
-        `
+        `;
 
-        const result = parseContract(contract)
+        const result = parseContract(contract);
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'profile',
             tags: [
-                {tag: 'username', type: [ContractTagType.data], dataType: JayString, description: ["The user's display name"]},
+                {
+                    tag: 'username',
+                    type: [ContractTagType.data],
+                    dataType: JayString,
+                    description: ["The user's display name"],
+                },
                 {
                     tag: 'avatar',
                     type: [ContractTagType.data, ContractTagType.interactive],
                     dataType: JayString,
-                    elementType: ["HTMLImageElement"],
-                    description: [
-                        "The user's profile picture",
-                        "Click to upload a new image"
-                    ]
-                }
-            ]
-        })
-    })
+                    elementType: ['HTMLImageElement'],
+                    description: ["The user's profile picture", 'Click to upload a new image'],
+                },
+            ],
+        });
+    });
 
     it('should parse required tags', () => {
         const contract = `
@@ -337,19 +374,27 @@ describe('parse contract', () => {
           - tag: subtract
             type: interactive
             elementType: HTMLButtonElement  
-        `
+        `;
 
-        const result = parseContract(contract)
+        const result = parseContract(contract);
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'counter',
             tags: [
-                {tag: 'count', required: true, type: [ContractTagType.data], dataType: JayNumber},
-                {tag: 'add', type: [ContractTagType.interactive], elementType: ["HTMLButtonElement"]},
-                {tag: 'subtract', type: [ContractTagType.interactive], elementType: ["HTMLButtonElement"]}
-            ]
-        })
-    })
+                { tag: 'count', required: true, type: [ContractTagType.data], dataType: JayNumber },
+                {
+                    tag: 'add',
+                    type: [ContractTagType.interactive],
+                    elementType: ['HTMLButtonElement'],
+                },
+                {
+                    tag: 'subtract',
+                    type: [ContractTagType.interactive],
+                    elementType: ['HTMLButtonElement'],
+                },
+            ],
+        });
+    });
 
     // parse variant enum
 
@@ -363,11 +408,11 @@ describe('parse contract', () => {
               - tag: name
                 type: data
                 dataType: string
-            `
+            `;
 
-            const result = parseContract(contract)
-            expect(result.validations).toEqual(["Tag [count] of type [data] must have a dataType"])
-        })
+            const result = parseContract(contract);
+            expect(result.validations).toEqual(['Tag [count] of type [data] must have a dataType']);
+        });
 
         it('should report validation error if type is variant and dataType is not provided', () => {
             const contract = `
@@ -378,11 +423,13 @@ describe('parse contract', () => {
               - tag: priority
                 type: variant
                 dataType: string
-            `
+            `;
 
-            const result = parseContract(contract)
-            expect(result.validations).toEqual(["Tag [status] of type [variant] must have a dataType"])
-        })
+            const result = parseContract(contract);
+            expect(result.validations).toEqual([
+                'Tag [status] of type [variant] must have a dataType',
+            ]);
+        });
 
         it('should report validation error if type is interactive and elementType is not provided', () => {
             const contract = `
@@ -393,11 +440,13 @@ describe('parse contract', () => {
               - tag: input
                 type: interactive
                 elementType: HTMLInputElement
-            `
+            `;
 
-            const result = parseContract(contract)
-            expect(result.validations).toEqual(["Tag [button] of type [interactive] must have an elementType"])
-        })
+            const result = parseContract(contract);
+            expect(result.validations).toEqual([
+                'Tag [button] of type [interactive] must have an elementType',
+            ]);
+        });
 
         it('should report validation error if the tag type an unknown type', () => {
             const contract = `
@@ -405,11 +454,11 @@ describe('parse contract', () => {
             tags:
               - tag: button
                 type: unknown
-            `
+            `;
 
-            const result = parseContract(contract)
-            expect(result.validations).toEqual(["Tag [button] has an unknown tag type [unknown]"])
-        })
+            const result = parseContract(contract);
+            expect(result.validations).toEqual(['Tag [button] has an unknown tag type [unknown]']);
+        });
 
         it('should report validation error if sub-contract is mixed with other types', () => {
             const contract = `
@@ -421,12 +470,14 @@ describe('parse contract', () => {
                   - tag: title
                     type: data
                     dataType: string
-            `
+            `;
 
-            const result = parseContract(contract)
-            expect(result.validations).toEqual(["Tag [items] cannot be both sub-contract and other types"
-            ,"Tag [items] of type [data] must have a dataType"])
-        })
+            const result = parseContract(contract);
+            expect(result.validations).toEqual([
+                'Tag [items] cannot be both sub-contract and other types',
+                'Tag [items] of type [data] must have a dataType',
+            ]);
+        });
 
         it('should report validation error if sub-contract has dataType', () => {
             const contract = `
@@ -439,11 +490,13 @@ describe('parse contract', () => {
                   - tag: title
                     type: data
                     dataType: string
-            `
+            `;
 
-            const result = parseContract(contract)
-            expect(result.validations).toEqual(["Tag [items] of type [sub-contract] cannot have a dataType"])
-        })
+            const result = parseContract(contract);
+            expect(result.validations).toEqual([
+                'Tag [items] of type [sub-contract] cannot have a dataType',
+            ]);
+        });
 
         it('should report validation error if sub-contract has elementType', () => {
             const contract = `
@@ -456,11 +509,13 @@ describe('parse contract', () => {
                   - tag: title
                     type: data
                     dataType: string
-            `
+            `;
 
-            const result = parseContract(contract)
-            expect(result.validations).toEqual(["Tag [items] of type [sub-contract] cannot have an elementType"])
-        })
+            const result = parseContract(contract);
+            expect(result.validations).toEqual([
+                'Tag [items] of type [sub-contract] cannot have an elementType',
+            ]);
+        });
 
         it('should report validation error if sub-contract has no tags or link', () => {
             const contract = `
@@ -468,10 +523,12 @@ describe('parse contract', () => {
             tags:
               - tag: items
                 type: sub-contract
-            `
+            `;
 
-            const result = parseContract(contract)
-            expect(result.validations).toEqual(["Tag [items] of type [sub-contract] must have either tags or a link"])
-        })
-    })
-})
+            const result = parseContract(contract);
+            expect(result.validations).toEqual([
+                'Tag [items] of type [sub-contract] must have either tags or a link',
+            ]);
+        });
+    });
+});

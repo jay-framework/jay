@@ -1,15 +1,14 @@
-import {LinkedContractResolver, parseContract} from "../lib";
-import {compileContract} from "../lib";
-import {prettify} from "jay-compiler-shared";
-import {ContractTagType} from "../lib";
-import {JayString, JayBoolean} from "jay-compiler-shared";
+import { LinkedContractResolver, parseContract } from '../lib';
+import { compileContract } from '../lib';
+import { prettify } from 'jay-compiler-shared';
+import { ContractTagType } from '../lib';
+import { JayString, JayBoolean } from 'jay-compiler-shared';
 
 describe('compile contract', () => {
-
     const noHopResolver: LinkedContractResolver = {
         loadContract: (link: string) => {
             throw new Error(`Unknown link: ${link}`);
-        }
+        },
     };
     it('should compile counter contract', async () => {
         const contract = `
@@ -24,14 +23,15 @@ describe('compile contract', () => {
           - tag: subtract
             type: interactive
             elementType: HTMLButtonElement  
-        `
+        `;
 
         const parsedContract = parseContract(contract);
         const result = compileContract(parsedContract, noHopResolver);
-        
+
         expect(result.validations).toEqual([]);
-        expect(await prettify(result.val)).toBe(await prettify(`
-        import { HTMLElementProxy } from 'jay-runtime';
+        expect(await prettify(result.val)).toBe(
+            await prettify(`
+        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
 
         export interface CounterViewState {
             count: number;
@@ -45,7 +45,8 @@ describe('compile contract', () => {
         export interface CounterRepeatedRefs {
             add: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
             subtract: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
-        }`));
+        }`),
+        );
     });
 
     it('should compile contract with sub-contract', async () => {
@@ -61,13 +62,14 @@ describe('compile contract', () => {
               - tag: completed
                 type: data
                 dataType: boolean
-        `
+        `;
 
         const parsedContract = parseContract(contract);
         const result = compileContract(parsedContract, noHopResolver);
-        
+
         expect(result.validations).toEqual([]);
-        expect(await prettify(result.val)).toBe(await prettify(`
+        expect(await prettify(result.val)).toBe(
+            await prettify(`
         export interface Item {
             title: string;
             completed: boolean;
@@ -81,7 +83,8 @@ describe('compile contract', () => {
         }
 
         export interface TodoRepeatedRefs {
-        }`));
+        }`),
+        );
     });
 
     it('should compile contract with repeated sub-contract', async () => {
@@ -100,13 +103,14 @@ describe('compile contract', () => {
                 type: [data, interactive]
                 dataType: boolean
                 elementType: HTMLInputElement
-        `
+        `;
 
         const parsedContract = parseContract(contract);
         const result = compileContract(parsedContract, noHopResolver);
-        
+
         expect(result.validations).toEqual([]);
-        expect(await prettify(result.val)).toBe(await prettify(`
+        expect(await prettify(result.val)).toBe(
+            await prettify(`
         import { HTMLElementCollectionProxy } from 'jay-runtime';
 
         export interface Items {
@@ -126,7 +130,8 @@ describe('compile contract', () => {
         export interface TodoRepeatedRefs {
             title: HTMLElementCollectionProxy<Items, HTMLInputElement>;
             completed: HTMLElementCollectionProxy<Items, HTMLInputElement>;
-        }`));
+        }`),
+        );
     });
 
     it('should compile form contract with nested sections', async () => {
@@ -170,14 +175,15 @@ describe('compile contract', () => {
                     type: [data, interactive]
                     dataType: string
                     elementType: HTMLInputElement
-        `
+        `;
 
         const parsedContract = parseContract(contract);
         const result = compileContract(parsedContract, noHopResolver);
-        
+
         expect(result.validations).toEqual([]);
-        expect(await prettify(result.val)).toBe(await prettify(`
-        import { HTMLElementProxy } from 'jay-runtime';
+        expect(await prettify(result.val)).toBe(
+            await prettify(`
+        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
 
         export interface NameFields {
             firstName: string;
@@ -218,7 +224,8 @@ describe('compile contract', () => {
             lastName: HTMLElementCollectionProxy<NameFields, HTMLInputElement>;
             email: HTMLElementCollectionProxy<ContactFields, HTMLInputElement>;
             phone: HTMLElementCollectionProxy<ContactFields, HTMLInputElement>;
-        }`));
+        }`),
+        );
     });
 
     it('should compile contract with variant tags', async () => {
@@ -238,13 +245,14 @@ describe('compile contract', () => {
               - tag: completed
                 type: data
                 dataType: boolean
-        `
+        `;
 
         const parsedContract = parseContract(contract);
         const result = compileContract(parsedContract, noHopResolver);
-        
+
         expect(result.validations).toEqual([]);
-        expect(await prettify(result.val)).toBe(await prettify(`
+        expect(await prettify(result.val)).toBe(
+            await prettify(`
         export enum Filter {
           all,
           active,
@@ -265,7 +273,8 @@ describe('compile contract', () => {
         }
 
         export interface TodoRepeatedRefs {
-        }`));
+        }`),
+        );
     });
 
     it('should compile contract with required fields', async () => {
@@ -282,14 +291,15 @@ describe('compile contract', () => {
           - tag: subtract
             type: interactive
             elementType: HTMLButtonElement  
-        `
+        `;
 
         const parsedContract = parseContract(contract);
         const result = compileContract(parsedContract, noHopResolver);
-        
+
         expect(result.validations).toEqual([]);
-        expect(await prettify(result.val)).toBe(await prettify(`
-        import { HTMLElementProxy } from 'jay-runtime';
+        expect(await prettify(result.val)).toBe(
+            await prettify(`
+        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
 
         export interface CounterViewState {
             count: number;
@@ -303,7 +313,8 @@ describe('compile contract', () => {
         export interface CounterRepeatedRefs {
             add: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
             subtract: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
-        }`));
+        }`),
+        );
     });
 
     it('should compile contract with multiple interactive element types', async () => {
@@ -314,14 +325,15 @@ describe('compile contract', () => {
             type: [data, interactive]
             dataType: enum (one | two | three)
             elementType: HTMLSelectElement | HTMLInputElement
-        `
+        `;
 
         const parsedContract = parseContract(contract);
         const result = compileContract(parsedContract, noHopResolver);
-        
+
         expect(result.validations.length).toBe(0);
-        expect(await prettify(result.val)).toBe(await prettify(`
-        import { HTMLElementProxy } from 'jay-runtime';
+        expect(await prettify(result.val)).toBe(
+            await prettify(`
+        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
 
         export enum Select {
             one,
@@ -339,11 +351,11 @@ describe('compile contract', () => {
 
         export interface ChoicesRepeatedRefs {
             select: HTMLElementCollectionProxy<ChoicesViewState, HTMLSelectElement | HTMLInputElement>;
-        }`));
+        }`),
+        );
     });
 
     describe('linked sub contracts', () => {
-
         const mockResolver: LinkedContractResolver = {
             loadContract: (link: string) => {
                 if (link === './todo-item.contract.yaml') {
@@ -351,13 +363,21 @@ describe('compile contract', () => {
                         name: 'todo-item',
                         tags: [
                             { tag: 'title', type: [ContractTagType.data], dataType: JayString },
-                            { tag: 'completed', type: [ContractTagType.data], dataType: JayBoolean },
-                            { tag: 'toggleButton', type: [ContractTagType.interactive], elementType: ['HTMLButtonElement'] }
-                        ]
+                            {
+                                tag: 'completed',
+                                type: [ContractTagType.data],
+                                dataType: JayBoolean,
+                            },
+                            {
+                                tag: 'toggleButton',
+                                type: [ContractTagType.interactive],
+                                elementType: ['HTMLButtonElement'],
+                            },
+                        ],
                     };
                 }
                 throw new Error(`Unknown link: ${link}`);
-            }
+            },
         };
 
         it('should compile contract with linked sub-contract', async () => {
@@ -370,29 +390,31 @@ describe('compile contract', () => {
               - tag: addButton
                 type: interactive
                 elementType: HTMLButtonElement
-            `
+            `;
 
             const parsedContract = parseContract(contract, mockResolver);
             const result = compileContract(parsedContract, mockResolver);
 
             expect(result.validations).toEqual([]);
-            expect(await prettify(result.val)).toBe(await prettify(`
-            import { HTMLElementProxy } from 'jay-runtime';
-            import { TodoItemViewState } from './todo-item';
-    
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+            import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+            import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item';
+        
             export interface TodoViewState {
                 item: TodoItemViewState;
             }
     
             export interface TodoRefs {
-                addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
                 item: TodoItemRefs;
+                addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
             }
 
             export interface TodoRepeatedRefs {
-                addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
                 item: TodoItemRepeatedRefs;
-            }`));
+                addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
+            }`),
+            );
         });
 
         it('should compile contract with repeated linked sub-contract', async () => {
@@ -406,29 +428,31 @@ describe('compile contract', () => {
               - tag: addButton
                 type: interactive
                 elementType: HTMLButtonElement
-            `
+            `;
 
             const parsedContract = parseContract(contract, mockResolver);
             const result = compileContract(parsedContract, mockResolver);
 
             expect(result.validations).toEqual([]);
-            expect(await prettify(result.val)).toBe(await prettify(`
-            import { HTMLElementProxy, HTMLElementCollectionProxy } from 'jay-runtime';
-            import { TodoItemViewState } from './todo-item.contract';
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+            import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+            import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item';
     
             export interface TodoViewState {
                 items: Array<TodoItemViewState>;
             }
     
             export interface TodoRefs {
-                addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
                 items: TodoItemRepeatedRefs;
+                addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
             }
 
             export interface TodoRepeatedRefs {
-                addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
                 items: TodoItemRepeatedRefs;
-            }`));
+                addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
+            }`),
+            );
         });
-    })
+    });
 });
