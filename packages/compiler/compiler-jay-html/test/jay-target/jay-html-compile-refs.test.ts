@@ -5,7 +5,8 @@ import {
     GenerateTarget,
     Ref,
     ImportsFor,
-    JayObjectType, JayImportedContract
+    JayObjectType,
+    JayImportedContract,
 } from 'jay-compiler-shared';
 import { prettify } from 'jay-compiler-shared';
 
@@ -18,85 +19,95 @@ describe('renderRefsType', () => {
     });
 
     it('should render HTMLElementProxy refs', async () => {
-        const refs: Ref[] = [{
-            ref: 'input',
-            constName: '',
-            dynamicRef: false,
-            autoRef: false,
-            viewStateType: new JayObjectType('TestViewState', {}),
-            elementType: new JayHTMLType('HTMLInputElement')
-        }];
+        const refs: Ref[] = [
+            {
+                ref: 'input',
+                constName: '',
+                dynamicRef: false,
+                autoRef: false,
+                viewStateType: new JayObjectType('TestViewState', {}),
+                elementType: new JayHTMLType('HTMLInputElement'),
+            },
+        ];
 
         const { imports, renderedRefs } = renderRefsType(refs, 'TestRefs', GenerateTarget.jay);
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
-            await prettify('import { HTMLElementProxy } from "jay-runtime";')
+            await prettify('import { HTMLElementProxy } from "jay-runtime";'),
         );
         expect(await prettify(renderedRefs)).toBe(
             await prettify(`
             export interface TestRefs {
               input: HTMLElementProxy<TestViewState, HTMLInputElement>
-            }`)
+            }`),
         );
     });
 
     it('should render HTMLElementCollectionProxy refs', async () => {
-        const refs: Ref[] = [{
-            ref: 'inputs',
-            constName: '',
-            dynamicRef: true,
-            autoRef: false,
-            viewStateType: new JayObjectType('TestViewState', {}),
-            elementType: new JayHTMLType('HTMLInputElement')
-        }];
+        const refs: Ref[] = [
+            {
+                ref: 'inputs',
+                constName: '',
+                dynamicRef: true,
+                autoRef: false,
+                viewStateType: new JayObjectType('TestViewState', {}),
+                elementType: new JayHTMLType('HTMLInputElement'),
+            },
+        ];
 
         const { imports, renderedRefs } = renderRefsType(refs, 'TestRefs', GenerateTarget.jay);
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
-            await prettify('import { HTMLElementCollectionProxy } from "jay-runtime";')
+            await prettify('import { HTMLElementCollectionProxy } from "jay-runtime";'),
         );
         expect(await prettify(renderedRefs)).toBe(
             await prettify(`
             export interface TestRefs {
               inputs: HTMLElementCollectionProxy<TestViewState, HTMLInputElement>
-            }`)
+            }`),
         );
     });
 
     it('should render component refs', async () => {
-        const refs: Ref[] = [{
-            ref: 'counter',
-            constName: '',
-            dynamicRef: false,
-            autoRef: false,
-            viewStateType: new JayObjectType('TestViewState', {}),
-            elementType: new JayComponentType('Counter', [])
-        }];
+        const refs: Ref[] = [
+            {
+                ref: 'counter',
+                constName: '',
+                dynamicRef: false,
+                autoRef: false,
+                viewStateType: new JayObjectType('TestViewState', {}),
+                elementType: new JayComponentType('Counter', []),
+            },
+        ];
 
         const { imports, renderedRefs } = renderRefsType(refs, 'TestRefs', GenerateTarget.jay);
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
-            await prettify('import { MapEventEmitterViewState } from "jay-runtime";')
+            await prettify('import { MapEventEmitterViewState } from "jay-runtime";'),
         );
         expect(await prettify(renderedRefs)).toBe(
             await prettify(`
             export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
             export interface TestRefs {
               counter: CounterRef<TestViewState>
-            }`)
+            }`),
         );
     });
 
     it('should render component collection refs', async () => {
-        const refs: Ref[] = [{
-            ref: 'counters',
-            constName: '',
-            dynamicRef: true,
-            autoRef: false,
-            viewStateType: new JayObjectType('TestViewState', {}),
-            elementType: new JayComponentType('Counter', [])
-        }];
+        const refs: Ref[] = [
+            {
+                ref: 'counters',
+                constName: '',
+                dynamicRef: true,
+                autoRef: false,
+                viewStateType: new JayObjectType('TestViewState', {}),
+                elementType: new JayComponentType('Counter', []),
+            },
+        ];
 
         const { imports, renderedRefs } = renderRefsType(refs, 'TestRefs', GenerateTarget.jay);
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
-            await prettify('import { MapEventEmitterViewState, OnlyEventEmitters, ComponentCollectionProxy } from "jay-runtime";')
+            await prettify(
+                'import { MapEventEmitterViewState, OnlyEventEmitters, ComponentCollectionProxy } from "jay-runtime";',
+            ),
         );
         expect(await prettify(renderedRefs)).toBe(
             await prettify(`
@@ -107,7 +118,7 @@ describe('renderRefsType', () => {
             
             export interface TestRefs {
               counters: CounterRefs<TestViewState>
-            }`)
+            }`),
         );
     });
 
@@ -119,7 +130,7 @@ describe('renderRefsType', () => {
                 dynamicRef: false,
                 autoRef: false,
                 viewStateType: new JayObjectType('TestViewState', {}),
-                elementType: new JayHTMLType('HTMLInputElement')
+                elementType: new JayHTMLType('HTMLInputElement'),
             },
             {
                 ref: 'counter',
@@ -127,13 +138,15 @@ describe('renderRefsType', () => {
                 dynamicRef: false,
                 autoRef: false,
                 viewStateType: new JayObjectType('TestViewState', {}),
-                elementType: new JayComponentType('Counter', [])
-            }
+                elementType: new JayComponentType('Counter', []),
+            },
         ];
 
         const { imports, renderedRefs } = renderRefsType(refs, 'TestRefs', GenerateTarget.jay);
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
-            await prettify('import { HTMLElementProxy, MapEventEmitterViewState } from "jay-runtime";')
+            await prettify(
+                'import { HTMLElementProxy, MapEventEmitterViewState } from "jay-runtime";',
+            ),
         );
         expect(await prettify(renderedRefs)).toBe(
             await prettify(`
@@ -141,74 +154,86 @@ describe('renderRefsType', () => {
             export interface TestRefs {
               input: HTMLElementProxy<TestViewState, HTMLInputElement>,
               counter: CounterRef<TestViewState>
-            }`)
+            }`),
         );
     });
 
     it('should render component refs for react target', async () => {
-        const refs: Ref[] = [{
-            ref: 'counter',
-            constName: '',
-            dynamicRef: false,
-            autoRef: false,
-            viewStateType: new JayObjectType('TestViewState', {}),
-            elementType: new JayComponentType('Counter', [])
-        }];
+        const refs: Ref[] = [
+            {
+                ref: 'counter',
+                constName: '',
+                dynamicRef: false,
+                autoRef: false,
+                viewStateType: new JayObjectType('TestViewState', {}),
+                elementType: new JayComponentType('Counter', []),
+            },
+        ];
 
         const { imports, renderedRefs } = renderRefsType(refs, 'TestRefs', GenerateTarget.react);
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
-            await prettify('import { MapEventEmitterViewState } from "jay-runtime";')
+            await prettify('import { MapEventEmitterViewState } from "jay-runtime";'),
         );
         expect(await prettify(renderedRefs)).toBe(
             await prettify(`
             export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, any>;
             export interface TestRefs {
               counter: CounterRef<TestViewState>
-            }`)
+            }`),
         );
     });
 
     it('should render linked contract refs as refs sub property with the contract refs type', async () => {
-        const refs: Ref[] = [{
-            ref: 'subContract',
-            constName: '',
-            dynamicRef: false,
-            autoRef: false,
-            viewStateType: new JayObjectType('TestViewState', {}),
-            elementType: new JayImportedContract('SubContract', 'SubContractViewState', 'SubContractRefs', 'SubContractRepeatedRefs')
-        }];
+        const refs: Ref[] = [
+            {
+                ref: 'subContract',
+                constName: '',
+                dynamicRef: false,
+                autoRef: false,
+                viewStateType: new JayObjectType('TestViewState', {}),
+                elementType: new JayImportedContract(
+                    'SubContract',
+                    'SubContractViewState',
+                    'SubContractRefs',
+                    'SubContractRepeatedRefs',
+                ),
+            },
+        ];
 
         const { imports, renderedRefs } = renderRefsType(refs, 'TestRefs');
-        expect(await prettify(imports.render(ImportsFor.definition))).toBe(
-            await prettify('')
-        );
+        expect(await prettify(imports.render(ImportsFor.definition))).toBe(await prettify(''));
         expect(await prettify(renderedRefs)).toBe(
             await prettify(`
             export interface TestRefs {
               subContract: SubContractRefs
-            }`)
+            }`),
         );
     });
 
     it('should render linked contract refs for dynamic ref as refs sub property with the contract repeatedRefs type', async () => {
-        const refs: Ref[] = [{
-            ref: 'subContract',
-            constName: '',
-            dynamicRef: true,
-            autoRef: false,
-            viewStateType: new JayObjectType('TestViewState', {}),
-            elementType: new JayImportedContract('SubContract', 'SubContractViewState', 'SubContractRefs', 'SubContractRepeatedRefs')
-        }];
+        const refs: Ref[] = [
+            {
+                ref: 'subContract',
+                constName: '',
+                dynamicRef: true,
+                autoRef: false,
+                viewStateType: new JayObjectType('TestViewState', {}),
+                elementType: new JayImportedContract(
+                    'SubContract',
+                    'SubContractViewState',
+                    'SubContractRefs',
+                    'SubContractRepeatedRefs',
+                ),
+            },
+        ];
 
         const { imports, renderedRefs } = renderRefsType(refs, 'TestRefs');
-        expect(await prettify(imports.render(ImportsFor.definition))).toBe(
-            await prettify('')
-        );
+        expect(await prettify(imports.render(ImportsFor.definition))).toBe(await prettify(''));
         expect(await prettify(renderedRefs)).toBe(
             await prettify(`
             export interface TestRefs {
               subContract: SubContractRepeatedRefs
-            }`)
+            }`),
         );
     });
 });

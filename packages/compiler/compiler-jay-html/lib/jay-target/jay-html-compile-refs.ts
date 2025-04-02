@@ -2,9 +2,11 @@ import {
     equalJayTypes,
     GenerateTarget,
     Import,
-    Imports, isImportedContractType,
+    Imports,
+    isImportedContractType,
     JayComponentType,
-    JayHTMLType, JayImportedContract,
+    JayHTMLType,
+    JayImportedContract,
     JayType,
     JayTypeAlias,
     JayUnionType,
@@ -14,10 +16,9 @@ import {
 import { HTMLElement } from 'node-html-parser';
 import { htmlElementTagNameMap } from './html-element-tag-name-map';
 
-const isLinkedContractRef = (ref: Ref) =>
-    isImportedContractType(ref.elementType)
+const isLinkedContractRef = (ref: Ref) => isImportedContractType(ref.elementType);
 const isLinkedContractCollectionRef = (ref: Ref) =>
-    isLinkedContractRef(ref) && isCollectionRef(ref)
+    isLinkedContractRef(ref) && isCollectionRef(ref);
 const isComponentRef = (ref: Ref) =>
     ref.elementType instanceof JayComponentType || ref.elementType instanceof JayTypeAlias;
 const isCollectionRef = (ref: Ref) => ref.dynamicRef;
@@ -44,12 +45,10 @@ export function renderRefsType(
             .map((ref) => {
                 let referenceType: string;
                 if (isLinkedContractCollectionRef(ref)) {
-                    referenceType = (ref.elementType as JayImportedContract).repeatedRefs
-                }
-                else if (isLinkedContractRef(ref)) {
-                    referenceType = (ref.elementType as JayImportedContract).refs
-                }
-                else if (isComponentCollectionRef(ref)) {
+                    referenceType = (ref.elementType as JayImportedContract).repeatedRefs;
+                } else if (isLinkedContractRef(ref)) {
+                    referenceType = (ref.elementType as JayImportedContract).refs;
+                } else if (isComponentCollectionRef(ref)) {
                     referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`;
                     componentRefs.set(ref.elementType.name, RefsNeeded.REF_AND_REFS);
                 } else if (isCollectionRef(ref)) {
