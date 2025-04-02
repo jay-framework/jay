@@ -5,7 +5,6 @@ import {
     isImportedContractType,
     isObjectType,
     JayImportedType,
-    JayObjectType,
     JayType,
 } from 'jay-compiler-shared';
 

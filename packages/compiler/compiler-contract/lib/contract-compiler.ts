@@ -2,27 +2,19 @@ import {
     JayArrayType,
     JayObjectType,
     WithValidations,
-    Import,
     Imports,
     JayType,
     Ref,
     JayEnumType,
     ImportsFor,
-    JayImportedType,
     JayUnknown,
-    JayImportLink,
-    JayUnionType,
-    getModeFileExtension,
-    JayImportName,
     JayImportedContract,
     JayHTMLType,
 } from 'jay-compiler-shared';
-import { HTMLElementProxy, HTMLElementCollectionProxy } from 'jay-runtime';
 import { Contract, ContractTag, ContractTagType } from './contract';
 import { renderRefsType } from '../../compiler-jay-html/lib/jay-target/jay-html-compile-refs';
 import { generateTypes } from '../../compiler-jay-html/lib/jay-target/jay-html-compile-types';
 import { pascalCase } from 'change-case';
-import path from 'path';
 import { LinkedContractResolver } from './contract-parser';
 
 interface JayContractImportLink {
@@ -123,18 +115,9 @@ function traverseContractTag(
     }
 }
 
-function dataVariantOrSubContract(tag: ContractTag) {
-    return (
-        tag.type.includes(ContractTagType.data) ||
-        tag.type.includes(ContractTagType.variant) ||
-        tag.type.includes(ContractTagType.subContract)
-    );
-}
-
 function generateRefsInterface(
     contract: Contract,
     allRefs: Ref[],
-    linkedContractResolver: LinkedContractResolver,
 ): {
     imports: Imports;
     renderedRefs: string;
@@ -195,8 +178,7 @@ export function compileContract(
         const rootType = new JayObjectType(`${pascalCase(contract.name)}ViewState`, props);
         const { imports, renderedRefs } = generateRefsInterface(
             contract,
-            allRefs,
-            linkedContractResolver,
+            allRefs
         );
         const types = generateTypes(rootType);
         const renderedImports = renderImports(imports, importedLinks);
