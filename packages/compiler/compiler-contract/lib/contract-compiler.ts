@@ -9,7 +9,7 @@ import {
     ImportsFor,
     JayUnknown,
     JayImportedContract,
-    JayHTMLType,
+    JayHTMLType, JAY_CONTRACT_EXTENSION,
 } from 'jay-compiler-shared';
 import { Contract, ContractTag, ContractTagType } from './contract';
 import { renderRefsType } from '../../compiler-jay-html/lib/jay-target/jay-html-compile-refs';
@@ -39,7 +39,7 @@ function traverseContractTag(
     if (tag.type.includes(ContractTagType.subContract)) {
         if (tag.link) {
             const subContract = linkedContractResolver.loadContract(tag.link);
-            const subContractFile = tag.link.replace('.contract.yaml', '');
+            const subContractFile = tag.link.replace(JAY_CONTRACT_EXTENSION, '');
             const contractName = subContract.name;
             const viewState = `${pascalCase(contractName)}ViewState`;
             const refs = `${pascalCase(contractName)}Refs`;

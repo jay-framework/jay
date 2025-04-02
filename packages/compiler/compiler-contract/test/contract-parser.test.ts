@@ -1,6 +1,6 @@
 import { LinkedContractResolver, parseContract } from '../lib';
 import { ContractTagType } from '../lib';
-import { JayBoolean, JayEnumType, JayNumber, JayString } from 'jay-compiler-shared';
+import {JAY_CONTRACT_EXTENSION, JayBoolean, JayEnumType, JayNumber, JayString} from 'jay-compiler-shared';
 
 describe('parse contract', () => {
     it('should parse counter contract', () => {
@@ -99,7 +99,7 @@ describe('parse contract', () => {
         tags:
           - tag: items
             type: sub-contract
-            link: ./todo-item.contract.yaml
+            link: ./todo-item${JAY_CONTRACT_EXTENSION}
         `;
 
         const result = parseContract(contract);
@@ -110,7 +110,7 @@ describe('parse contract', () => {
                 {
                     tag: 'items',
                     type: [ContractTagType.subContract],
-                    link: './todo-item.contract.yaml',
+                    link: './todo-item'+JAY_CONTRACT_EXTENSION,
                 },
             ],
         });
@@ -122,12 +122,12 @@ describe('parse contract', () => {
         tags:
           - tag: items
             type: sub-contract
-            link: ./todo-item.contract.yaml
+            link: ./todo-item${JAY_CONTRACT_EXTENSION}
         `;
 
         const mockResolver: LinkedContractResolver = {
             loadContract: (link: string) => {
-                if (link === `./todo-item.contract.yaml`)
+                if (link === `./todo-item${JAY_CONTRACT_EXTENSION}`)
                     return {
                         name: 'todo-item',
                         tags: [
@@ -146,7 +146,7 @@ describe('parse contract', () => {
                 {
                     tag: 'items',
                     type: [ContractTagType.subContract],
-                    link: './todo-item.contract.yaml',
+                    link: './todo-item'+JAY_CONTRACT_EXTENSION,
                     tags: [
                         { tag: 'title', type: [ContractTagType.data], dataType: JayString },
                         { tag: 'completed', type: [ContractTagType.data], dataType: JayNumber },

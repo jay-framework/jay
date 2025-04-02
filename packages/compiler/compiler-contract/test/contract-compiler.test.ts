@@ -1,6 +1,6 @@
 import { LinkedContractResolver, parseContract } from '../lib';
 import { compileContract } from '../lib';
-import { prettify } from 'jay-compiler-shared';
+import {JAY_CONTRACT_EXTENSION, prettify} from 'jay-compiler-shared';
 import { ContractTagType } from '../lib';
 import { JayString, JayBoolean } from 'jay-compiler-shared';
 
@@ -358,7 +358,7 @@ describe('compile contract', () => {
     describe('linked sub contracts', () => {
         const mockResolver: LinkedContractResolver = {
             loadContract: (link: string) => {
-                if (link === './todo-item.contract.yaml') {
+                if (link === `./todo-item${JAY_CONTRACT_EXTENSION}`) {
                     return {
                         name: 'todo-item',
                         tags: [
@@ -386,7 +386,7 @@ describe('compile contract', () => {
             tags:
               - tag: item
                 type: sub-contract
-                link: ./todo-item.contract.yaml
+                link: ./todo-item${JAY_CONTRACT_EXTENSION}
               - tag: addButton
                 type: interactive
                 elementType: HTMLButtonElement
@@ -424,7 +424,7 @@ describe('compile contract', () => {
               - tag: items
                 type: sub-contract
                 repeated: true
-                link: ./todo-item.contract.yaml
+                link: ./todo-item${JAY_CONTRACT_EXTENSION}
               - tag: addButton
                 type: interactive
                 elementType: HTMLButtonElement
