@@ -31,7 +31,7 @@ describe('compile contract', () => {
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+        import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
 
         export interface CounterViewState {
             count: number;
@@ -73,6 +73,8 @@ describe('compile contract', () => {
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
+        import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
+
         export interface CounterViewState {
             countOne: number;
             countTwo: number;
@@ -113,6 +115,8 @@ describe('compile contract', () => {
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
+        import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
+
         export interface Item {
             title: string;
             completed: boolean;
@@ -160,7 +164,7 @@ describe('compile contract', () => {
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { HTMLElementCollectionProxy } from 'jay-runtime';
+        import { JayElement, RenderElement, HTMLElementCollectionProxy, RenderElementOptions } from 'jay-runtime';
 
         export interface Items {
             title: string;
@@ -238,7 +242,7 @@ describe('compile contract', () => {
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+        import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
 
         export interface NameFields {
             firstName: string;
@@ -314,6 +318,8 @@ describe('compile contract', () => {
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
+        import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
+
         export enum Filter {
           all,
           active,
@@ -366,7 +372,7 @@ describe('compile contract', () => {
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+        import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
 
         export interface CounterViewState {
             count: number;
@@ -406,7 +412,7 @@ describe('compile contract', () => {
         expect(result.validations.length).toBe(0);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+        import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
 
         export enum Select {
             one,
@@ -477,7 +483,7 @@ describe('compile contract', () => {
             expect(result.validations).toEqual([]);
             expect(await prettify(result.val)).toBe(
                 await prettify(`
-            import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+            import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
             import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item';
         
             export interface TodoViewState {
@@ -521,7 +527,7 @@ describe('compile contract', () => {
             expect(result.validations).toEqual([]);
             expect(await prettify(result.val)).toBe(
                 await prettify(`
-            import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+            import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
             import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item';
     
             export interface TodoViewState {

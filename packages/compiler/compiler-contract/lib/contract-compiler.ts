@@ -10,7 +10,7 @@ import {
     JayUnknown,
     JayImportedContract,
     JayHTMLType,
-    JAY_CONTRACT_EXTENSION,
+    JAY_CONTRACT_EXTENSION, Import,
 } from 'jay-compiler-shared';
 import { Contract, ContractTag, ContractTagType } from './contract';
 import { renderRefsType } from 'jay-compiler-jay-html';
@@ -177,8 +177,12 @@ export function compileContract(
             });
 
         const rootType = new JayObjectType(`${pascalCase(contract.name)}ViewState`, props);
-        const { imports, renderedRefs } = generateRefsInterface(contract, allRefs);
+        let { imports, renderedRefs } = generateRefsInterface(contract, allRefs);
         const types = generateTypes(rootType);
+        imports = imports
+            .plus(Import.jayElement)
+            .plus(Import.RenderElement)
+            .plus(Import.RenderElementOptions)
         const renderedImports = renderImports(imports, importedLinks);
 
         const elementType = `export type ${pascalCase(contract.name)}Element = JayElement<${pascalCase(contract.name)}ViewState, ${pascalCase(contract.name)}Refs>`;
