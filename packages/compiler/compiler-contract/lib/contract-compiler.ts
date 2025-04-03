@@ -180,6 +180,12 @@ export function compileContract(
         const { imports, renderedRefs } = generateRefsInterface(contract, allRefs);
         const types = generateTypes(rootType);
         const renderedImports = renderImports(imports, importedLinks);
-        return `${renderedImports}\n\n${types}\n\n${renderedRefs}`;
+
+        const elementType = `export type ${pascalCase(contract.name)}Element = JayElement<${pascalCase(contract.name)}ViewState, ${pascalCase(contract.name)}Refs>`;
+        const elementRenderType = `export type ${pascalCase(contract.name)}ElementRender = RenderElement<${pascalCase(contract.name)}ViewState, ${pascalCase(contract.name)}Refs, ${pascalCase(contract.name)}Element>`;
+        const elementPreRenderType = `export type ${pascalCase(contract.name)}ElementPreRender = [${pascalCase(contract.name)}Refs, ${pascalCase(contract.name)}ElementRender]`;
+        const renderFunction = `export declare function render(options?: RenderElementOptions): ${pascalCase(contract.name)}ElementPreRender`;
+
+        return `${renderedImports}\n\n${types}\n\n${renderedRefs}\n\n${elementType}\n${elementRenderType}\n${elementPreRenderType}\n\n${renderFunction}`;
     });
 }

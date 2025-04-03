@@ -1,6 +1,6 @@
 import { LinkedContractResolver, parseContract } from '../lib';
 import { compileContract } from '../lib';
-import {JAY_CONTRACT_EXTENSION, prettify} from 'jay-compiler-shared';
+import { JAY_CONTRACT_EXTENSION, prettify } from 'jay-compiler-shared';
 import { ContractTagType } from '../lib';
 import { JayString, JayBoolean } from 'jay-compiler-shared';
 
@@ -45,7 +45,13 @@ describe('compile contract', () => {
         export interface CounterRepeatedRefs {
             add: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
             subtract: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
-        }`),
+        }
+
+        export type CounterElement = JayElement<CounterViewState, CounterRefs>
+        export type CounterElementRender = RenderElement<CounterViewState, CounterRefs, CounterElement>
+        export type CounterElementPreRender = [CounterRefs, CounterElementRender]     
+        
+        export declare function render(options?: RenderElementOptions): CounterElementPreRender`),
         );
     });
 
@@ -76,7 +82,13 @@ describe('compile contract', () => {
         }
 
         export interface CounterRepeatedRefs {
-        }`),
+        }
+
+        export type CounterElement = JayElement<CounterViewState, CounterRefs>
+        export type CounterElementRender = RenderElement<CounterViewState, CounterRefs, CounterElement>
+        export type CounterElementPreRender = [CounterRefs, CounterElementRender]     
+        
+        export declare function render(options?: RenderElementOptions): CounterElementPreRender`),
         );
     });
 
@@ -114,7 +126,13 @@ describe('compile contract', () => {
         }
 
         export interface TodoRepeatedRefs {
-        }`),
+        }
+
+        export type TodoElement = JayElement<TodoViewState, TodoRefs>
+        export type TodoElementRender = RenderElement<TodoViewState, TodoRefs, TodoElement>
+        export type TodoElementPreRender = [TodoRefs, TodoElementRender]     
+        
+        export declare function render(options?: RenderElementOptions): TodoElementPreRender`),
         );
     });
 
@@ -161,7 +179,13 @@ describe('compile contract', () => {
         export interface TodoRepeatedRefs {
             title: HTMLElementCollectionProxy<Items, HTMLInputElement>;
             completed: HTMLElementCollectionProxy<Items, HTMLInputElement>;
-        }`),
+        }
+
+        export type TodoElement = JayElement<TodoViewState, TodoRefs>
+        export type TodoElementRender = RenderElement<TodoViewState, TodoRefs, TodoElement>
+        export type TodoElementPreRender = [TodoRefs, TodoElementRender]     
+        
+        export declare function render(options?: RenderElementOptions): TodoElementPreRender`),
         );
     });
 
@@ -255,7 +279,13 @@ describe('compile contract', () => {
             lastName: HTMLElementCollectionProxy<NameFields, HTMLInputElement>;
             email: HTMLElementCollectionProxy<ContactFields, HTMLInputElement>;
             phone: HTMLElementCollectionProxy<ContactFields, HTMLInputElement>;
-        }`),
+        }
+
+        export type UserFormElement = JayElement<UserFormViewState, UserFormRefs>
+        export type UserFormElementRender = RenderElement<UserFormViewState, UserFormRefs, UserFormElement>
+        export type UserFormElementPreRender = [UserFormRefs, UserFormElementRender]     
+        
+        export declare function render(options?: RenderElementOptions): UserFormElementPreRender`),
         );
     });
 
@@ -304,7 +334,13 @@ describe('compile contract', () => {
         }
 
         export interface TodoRepeatedRefs {
-        }`),
+        }
+
+        export type TodoElement = JayElement<TodoViewState, TodoRefs>
+        export type TodoElementRender = RenderElement<TodoViewState, TodoRefs, TodoElement>
+        export type TodoElementPreRender = [TodoRefs, TodoElementRender]     
+        
+        export declare function render(options?: RenderElementOptions): TodoElementPreRender`),
         );
     });
 
@@ -344,7 +380,13 @@ describe('compile contract', () => {
         export interface CounterRepeatedRefs {
             add: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
             subtract: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
-        }`),
+        }
+
+        export type CounterElement = JayElement<CounterViewState, CounterRefs>
+        export type CounterElementRender = RenderElement<CounterViewState, CounterRefs, CounterElement>
+        export type CounterElementPreRender = [CounterRefs, CounterElementRender]     
+        
+        export declare function render(options?: RenderElementOptions): CounterElementPreRender`),
         );
     });
 
@@ -382,7 +424,13 @@ describe('compile contract', () => {
 
         export interface ChoicesRepeatedRefs {
             select: HTMLElementCollectionProxy<ChoicesViewState, HTMLSelectElement | HTMLInputElement>;
-        }`),
+        }
+
+        export type ChoicesElement = JayElement<ChoicesViewState, ChoicesRefs>
+        export type ChoicesElementRender = RenderElement<ChoicesViewState, ChoicesRefs, ChoicesElement>
+        export type ChoicesElementPreRender = [ChoicesRefs, ChoicesElementRender]     
+        
+        export declare function render(options?: RenderElementOptions): ChoicesElementPreRender`),
         );
     });
 
@@ -444,7 +492,13 @@ describe('compile contract', () => {
             export interface TodoRepeatedRefs {
                 item: TodoItemRepeatedRefs;
                 addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
-            }`),
+            }
+
+            export type TodoElement = JayElement<TodoViewState, TodoRefs>
+            export type TodoElementRender = RenderElement<TodoViewState, TodoRefs, TodoElement>
+            export type TodoElementPreRender = [TodoRefs, TodoElementRender]     
+            
+            export declare function render(options?: RenderElementOptions): TodoElementPreRender`),
             );
         });
 
@@ -482,7 +536,13 @@ describe('compile contract', () => {
             export interface TodoRepeatedRefs {
                 items: TodoItemRepeatedRefs;
                 addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
-            }`),
+            }
+
+            export type TodoElement = JayElement<TodoViewState, TodoRefs>
+            export type TodoElementRender = RenderElement<TodoViewState, TodoRefs, TodoElement>
+            export type TodoElementPreRender = [TodoRefs, TodoElementRender]     
+            
+            export declare function render(options?: RenderElementOptions): TodoElementPreRender`),
             );
         });
     });
