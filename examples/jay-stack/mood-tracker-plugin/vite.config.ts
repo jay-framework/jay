@@ -12,7 +12,7 @@ const jayOptions: JayRollupConfig = {
 
 export default defineConfig(({ mode }) => {
     const external =
-        mode === 'production' ? [] : ['jay-component', 'jay-reactive', 'jay-runtime', 'jay-secure'];
+        mode === 'production' ? [] : ['jay-component', 'jay-reactive', 'jay-runtime', 'jay-secure', 'jay-stack-runtime'];
     rimrafSync(resolve(root, 'build'));
 
     return {
