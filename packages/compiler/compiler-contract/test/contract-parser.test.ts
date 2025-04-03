@@ -1,6 +1,12 @@
 import { LinkedContractResolver, parseContract } from '../lib';
 import { ContractTagType } from '../lib';
-import {JAY_CONTRACT_EXTENSION, JayBoolean, JayEnumType, JayNumber, JayString} from 'jay-compiler-shared';
+import {
+    JAY_CONTRACT_EXTENSION,
+    JayBoolean,
+    JayEnumType,
+    JayNumber,
+    JayString,
+} from 'jay-compiler-shared';
 
 describe('parse contract', () => {
     it('should parse counter contract', () => {
@@ -110,7 +116,7 @@ describe('parse contract', () => {
                 {
                     tag: 'items',
                     type: [ContractTagType.subContract],
-                    link: './todo-item'+JAY_CONTRACT_EXTENSION,
+                    link: './todo-item' + JAY_CONTRACT_EXTENSION,
                 },
             ],
         });
@@ -146,7 +152,7 @@ describe('parse contract', () => {
                 {
                     tag: 'items',
                     type: [ContractTagType.subContract],
-                    link: './todo-item'+JAY_CONTRACT_EXTENSION,
+                    link: './todo-item' + JAY_CONTRACT_EXTENSION,
                     tags: [
                         { tag: 'title', type: [ContractTagType.data], dataType: JayString },
                         { tag: 'completed', type: [ContractTagType.data], dataType: JayNumber },

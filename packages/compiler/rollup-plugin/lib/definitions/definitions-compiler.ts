@@ -7,11 +7,12 @@ import {
     hasExtension,
     checkValidationErrors,
     JAY_CONTRACT_EXTENSION,
-    JAY_DTS_EXTENSION, JAY_CONTRACT_DTS_EXTENSION
+    JAY_DTS_EXTENSION,
+    JAY_CONTRACT_DTS_EXTENSION,
 } from 'jay-compiler-shared';
 import { parseJayFile, getJayHtmlImports } from 'jay-compiler-jay-html';
 import { checkCodeErrors } from '../common/errors';
-import {compileContract, parseContract} from "jay-compiler-contract";
+import { compileContract, parseContract } from 'jay-compiler-contract';
 
 export function jayDefinitions() {
     const generatedRefPaths: Set<string> = new Set();
@@ -27,9 +28,8 @@ export function jayDefinitions() {
         },
         async transform(code: string, id: string): Promise<TransformResult> {
             if (hasExtension(id, JAY_EXTENSION)) {
-
                 const context = this as PluginContext;
-                const {filename, dirname} = getFileContext(id);
+                const { filename, dirname } = getFileContext(id);
                 // make sure imported files are resolved first
                 const imports = getJayHtmlImports(code).filter((module) =>
                     module.endsWith('jay-html.d'),
@@ -44,22 +44,31 @@ export function jayDefinitions() {
                 );
                 const parsedFile = parseJayFile(code, filename, dirname, {});
                 const tsCode = checkValidationErrors(generateElementDefinitionFile(parsedFile));
-                const generatedFilename = await writeDefinitionFile(dirname, filename, tsCode, JAY_DTS_EXTENSION);
+                const generatedFilename = await writeDefinitionFile(
+                    dirname,
+                    filename,
+                    tsCode,
+                    JAY_DTS_EXTENSION,
+                );
                 context.info(`[transform] generated ${generatedFilename}`);
 
-                return {code: '', map: null};
-            }
-            else if (hasExtension(id, JAY_CONTRACT_EXTENSION)) {
+                return { code: '', map: null };
+            } else if (hasExtension(id, JAY_CONTRACT_EXTENSION)) {
                 const context = this as PluginContext;
-                const {filename, dirname} = getFileContext(id, JAY_CONTRACT_EXTENSION);
+                const { filename, dirname } = getFileContext(id, JAY_CONTRACT_EXTENSION);
 
                 const parsedFile = parseContract(code);
                 const tsCode = compileContract(parsedFile, null);
-                const generatedFilename = await writeDefinitionFile(dirname, filename, tsCode.val, JAY_CONTRACT_DTS_EXTENSION);
+                const generatedFilename = await writeDefinitionFile(
+                    dirname,
+                    filename,
+                    tsCode.val,
+                    JAY_CONTRACT_DTS_EXTENSION,
+                );
 
                 context.info(`[transform] generated ${generatedFilename}`);
 
-                return {code: '', map: null};
+                return { code: '', map: null };
             }
             return null;
         },
