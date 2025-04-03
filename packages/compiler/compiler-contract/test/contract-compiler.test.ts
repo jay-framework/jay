@@ -49,6 +49,37 @@ describe('compile contract', () => {
         );
     });
 
+    it('should format tag names as camelCase', async () => {
+        const contract = `
+        name: counter
+        tags: 
+          - tag: count-one
+            type: data
+            dataType: number
+          - tag: count two
+            type: data
+            dataType: number
+        `;
+
+        const parsedContract = parseContract(contract);
+        const result = compileContract(parsedContract, noHopResolver);
+
+        expect(result.validations).toEqual([]);
+        expect(await prettify(result.val)).toBe(
+            await prettify(`
+        export interface CounterViewState {
+            countOne: number;
+            countTwo: number;
+        }
+
+        export interface CounterRefs {
+        }
+
+        export interface CounterRepeatedRefs {
+        }`),
+        );
+    });
+
     it('should compile contract with sub-contract', async () => {
         const contract = `
         name: todo

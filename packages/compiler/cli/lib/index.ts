@@ -3,7 +3,7 @@ import { Command } from 'commander';
 import { generateElementFile } from 'jay-compiler';
 import { jayDefinitions } from 'rollup-plugin-jay';
 import { generateFiles } from './generate-files';
-import { getJayHtmlFileInputs } from './inputs';
+import { getJayHtmlOrContractFileInputs } from './find-all-jay-element-contract-files';
 
 const program = new Command();
 const noop = () => undefined;
@@ -14,7 +14,7 @@ program
     .description('generate definition files (.d.ts) for jay files')
     .action(async (source) => {
         await rollup({
-            input: getJayHtmlFileInputs(source),
+            input: getJayHtmlOrContractFileInputs(source),
             plugins: [jayDefinitions()],
         });
     });

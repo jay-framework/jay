@@ -4,7 +4,7 @@ import yaml from 'js-yaml';
 import {
     parseIsEnum,
     parseEnumValues,
-} from '../../compiler-jay-html/lib/expressions/expression-compiler';
+} from 'jay-compiler-jay-html';
 import { pascalCase } from 'change-case';
 
 interface ParsedYamlTag {

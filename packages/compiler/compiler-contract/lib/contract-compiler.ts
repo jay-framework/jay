@@ -12,9 +12,9 @@ import {
     JayHTMLType, JAY_CONTRACT_EXTENSION,
 } from 'jay-compiler-shared';
 import { Contract, ContractTag, ContractTagType } from './contract';
-import { renderRefsType } from '../../compiler-jay-html/lib/jay-target/jay-html-compile-refs';
-import { generateTypes } from '../../compiler-jay-html/lib/jay-target/jay-html-compile-types';
-import { pascalCase } from 'change-case';
+import { renderRefsType } from 'jay-compiler-jay-html';
+import { generateTypes } from 'jay-compiler-jay-html';
+import {camelCase, pascalCase} from 'change-case';
 import { LinkedContractResolver } from './contract-parser';
 
 interface JayContractImportLink {
@@ -90,7 +90,7 @@ function traverseContractTag(
                 );
                 importLinks = [...importLinks, ...result.importLinks];
                 refs = [...refs, ...result.refs];
-                result.type && (props[subTag.tag] = result.type);
+                result.type && (props[camelCase(subTag.tag)] = result.type);
             });
 
         const objectType = new JayObjectType(pascalCase(tag.tag), props);
@@ -172,7 +172,7 @@ export function compileContract(
                 const result = traverseContractTag(tag, viewStateType, linkedContractResolver);
                 importedLinks = [...importedLinks, ...result.importLinks];
                 allRefs = [...allRefs, ...result.refs];
-                result.type && (props[tag.tag] = result.type);
+                result.type && (props[camelCase(tag.tag)] = result.type);
             });
 
         const rootType = new JayObjectType(`${pascalCase(contract.name)}ViewState`, props);

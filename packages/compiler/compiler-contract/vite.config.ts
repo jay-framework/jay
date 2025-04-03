@@ -21,6 +21,7 @@ export default defineConfig({
                 'jay-runtime',
                 'jay-secure',
                 'jay-compiler-shared',
+                'jay-compiler-jay-html',
                 'jay-compiler-analyze-exported-types',
             ],
         },

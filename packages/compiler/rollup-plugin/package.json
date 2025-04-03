@@ -23,6 +23,7 @@
   "dependencies": {
     "fast-glob": "^3.3.2",
     "jay-compiler": "workspace:^",
+    "jay-compiler-contract": "workspace:^",
     "jay-compiler-jay-html": "workspace:^",
     "typescript": "^5.3.3"
   },
