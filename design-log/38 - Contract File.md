@@ -199,35 +199,59 @@ contract:
 
 ## Formal definition of a contract file
 
-We define a contract file as a `YAML` file, at which onw file holds one contract.
-A contract can be used as a component contract, as a page contract or reused as a sub contract of each.
+We define a contract file as a `YAML` file, where one file holds one contract.
+A contract can be used as a component contract, as a page contract, or reused as a sub-contract.
 
-The structure of a contract file includes
+The structure of a contract file includes:
 
-- top level `contact:`
 - `name` - the name of the contract
-- `tags` - a list of tags of the contract.
+- `tags` - a list of tags of the contract
 
-Each tag definition includes
+Each tag definition includes:
 
 - `tag` - the name of the tag
-- `type` - one or more of `data`, `interactive`, `variant`, as a value (one value) or a list (two or three values)
-- `required` - if the tag is required. defaults to `false`
-- `dataType` - the data type for `data` or `variant` tags
-  - for `data` tags - can be `string`, `number`, `boolean`, `enum`, `Currency`, `Date`, `DateWithTimezone` and `Promise<T>`
-  - for `variant` tags - can be `boolean` or `enum`
-  - `enum` requires a following key `values`
-  - `Promise<T>` requires a following key `resolveTo`
-- `values` - list of enum values
-- `resolvesTo` - the type a promise is resolved to, which can be any valid `dataType`
-- `elementType` - the interactive element type for `interactive` elements.
-  The element type can be any valid DOM element type, an imported Jay component, or a list of types.
-- `description` - description of the tag. Can be a text, or a list of texts if we want different description per tag type
-- `subContract` - defines an hierarchical structure of contracts, which is the equivalent of `Array<object>` or `object`.
-  sub contracts definition includes
-  - `cardinality` - optional, indicating if `one` or `many` are allowed. defaults to `many`
-  - `link` - link to a contract from another file
-  - `tags` - the tags of the sub contract
+- `type` - one or more of:
+  - `data` - for data-only tags
+  - `interactive` - for interactive elements
+  - `variant` - for variant tags
+  - `sub-contract` - for nested contract structures
+  Can be specified as a single value or an array of values (e.g. `[data, interactive]`)
+- `dataType` - the data type for `data` or `variant` tags:
+  - For `data` tags: `string`, `number`, `boolean`, or `enum`
+  - For `variant` tags: `boolean` or `enum`
+  - For `enum` types, the values are specified in the format: `enum(value1 | value2 | value3)`
+- `elementType` - the HTML element type for `interactive` elements:
+  - Can be a single element type (e.g. `HTMLButtonElement`)
+  - Can be multiple types separated by `|` (e.g. `HTMLAnchorElement | HTMLButtonElement`)
+- `required` - optional boolean flag indicating if the tag is required (defaults to false)
+- `repeated` - optional boolean flag for sub-contracts indicating if the sub-contract can be repeated (defaults to false)
+- `link` - optional path to an external contract file for sub-contracts
+
+For sub-contracts, the structure includes:
+- `tags` - a list of tags that make up the sub-contract
+- `repeated` - optional boolean flag indicating if the sub-contract can be repeated
+- `link` - optional path to an external contract file
+
+Example contract structure:
+```yaml
+name: todo
+tags:
+  - tag: filter
+    type: variant
+    dataType: enum(all | active | completed)
+  - tag: items
+    type: sub-contract
+    repeated: true
+    tags:
+      - tag: title
+        type: [data, interactive]
+        dataType: string
+        elementType: HTMLInputElement
+      - tag: completed
+        type: [data, interactive]
+        dataType: boolean
+        elementType: HTMLInputElement
+```
 
 application package
 
