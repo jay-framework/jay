@@ -100,16 +100,17 @@ Unlike regular script loading, the `src` is understood as a link to code, follow
 
 ```html
 <header>
-   <title>Todo element</title>
-  <script type="application/jay" src="stores/product-page" name="page" key="productPage"/> 
+  <title>Todo element</title>
+  <script type="application/jay" src="stores/product-page" name="page" key="productPage" />
 </header>
 ```
 
-where 
-* `type="application/jay"` tells us it is a Jay Page Component
-* `src` the location of the Jay Page Component to load, using the typescript `import` convention
-* `name` the name of the parameter to import
-* `key` the namespace used within the page, which is used as the key for the `ViewState`, `Refs` and `Props`.
+where
+
+- `type="application/jay"` tells us it is a Jay Page Component
+- `src` the location of the Jay Page Component to load, using the typescript `import` convention
+- `name` the name of the parameter to import
+- `key` the namespace used within the page, which is used as the key for the `ViewState`, `Refs` and `Props`.
 
 ### page Refs, Props and ViewState
 
@@ -118,27 +119,27 @@ When a jay-html imports a Page Component, the page component `ref`s and `data` a
 
 ```html
 <html>
-    <head>
-       <script type="application/jay" src="stores/product-page" name="page" key="productPage"/>
-       <script type="application/jay-yaml">
-          data:
-            title: string
-       </script>
-    </head>    
-    <body>
-        <div>
-           <div>{title}</div>
-           <div>{productPage.sku}</div>
-           <button ref="productPage.addToCart"></button>
-        </div>
-    </body>
+  <head>
+    <script type="application/jay" src="stores/product-page" name="page" key="productPage" />
+    <script type="application/jay-yaml">
+      data:
+        title: string
+    </script>
+  </head>
+  <body>
+    <div>
+      <div>{title}</div>
+      <div>{productPage.sku}</div>
+      <button ref="productPage.addToCart"></button>
+    </div>
+  </body>
 </html>
 ```
 
-In the above, the `productPage.sku` is using the `sku` data member from the product-page contract, 
-and using the `addToCart` interactive ref from the product-page contract. 
+In the above, the `productPage.sku` is using the `sku` data member from the product-page contract,
+and using the `addToCart` interactive ref from the product-page contract.
 
-The compilation of the `jay-html` is such that the `ViewState` and `Refs` compiled from the Page Component's Contract 
+The compilation of the `jay-html` is such that the `ViewState` and `Refs` compiled from the Page Component's Contract
 are added to the Page `ViewState` and `Refs` with the `key` from the import script tag.
 
 The page component `ViewState` is set as optional enabling the developer of the page to not specify it (in which case
@@ -146,10 +147,10 @@ we default to the value returned from the page component itself).
 
 ```typescript
 export interface ViewState {
-    productPage?: ProductPageViewState
-} 
+  productPage?: ProductPageViewState;
+}
 export interface Refs {
-    productPage: ProductPageRefs
+  productPage: ProductPageRefs;
 }
 ```
 
@@ -158,7 +159,6 @@ the `PageProps` is extended to include the Page Component `ViewState` as another
 
 ```typescript
 export interface ProductPageProps extends PageProps {
-    productPage: ProductPageViewState
+  productPage: ProductPageViewState;
 }
 ```
-

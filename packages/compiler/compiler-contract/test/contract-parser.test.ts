@@ -374,9 +374,7 @@ describe('parse contract', () => {
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'defaults',
-            tags: [
-                { tag: 'name', type: [ContractTagType.data], dataType: JayString },
-            ],
+            tags: [{ tag: 'name', type: [ContractTagType.data], dataType: JayString }],
         });
     });
 
@@ -392,9 +390,7 @@ describe('parse contract', () => {
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'defaults',
-            tags: [
-                { tag: 'name', type: [ContractTagType.data], dataType: JayString },
-            ],
+            tags: [{ tag: 'name', type: [ContractTagType.data], dataType: JayString }],
         });
     });
 

@@ -2,14 +2,14 @@ import { ProductPageViewState, ProductType } from './product-page.jay-contract';
 import { Type as DiscountType } from './discount.jay-contract';
 import { MediaType } from './media-item.jay-contract';
 
-export const products= [
+export const products = [
     {
         id: '1',
         brand: 'TechBrand',
         description: 'High-performance gaming laptop with latest graphics',
         discount: {
             type: DiscountType.percent,
-            value: 10
+            value: 10,
         },
         media: {
             items: [
@@ -21,7 +21,7 @@ export const products= [
                         format: 'jpg',
                         height: '400',
                         url: 'https://example.com/laptop1.jpg',
-                        width: '600'
+                        width: '600',
                     },
                     title: 'Gaming Laptop Front View',
                     image: {
@@ -29,13 +29,13 @@ export const products= [
                         format: 'jpg',
                         height: '800',
                         url: 'https://example.com/laptop1.jpg',
-                        width: '1200'
+                        width: '1200',
                     },
                     video: {
                         files: [],
-                        stillFrameMediaId: ''
-                    }
-                }
+                        stillFrameMediaId: '',
+                    },
+                },
             ],
             mainMedia: {
                 id: 'img-main',
@@ -45,7 +45,7 @@ export const products= [
                     format: 'jpg',
                     height: '400',
                     url: 'https://example.com/laptop-main.jpg',
-                    width: '600'
+                    width: '600',
                 },
                 title: 'Gaming Laptop Main View',
                 image: {
@@ -53,13 +53,13 @@ export const products= [
                     format: 'jpg',
                     height: '800',
                     url: 'https://example.com/laptop-main.jpg',
-                    width: '1200'
+                    width: '1200',
                 },
                 video: {
                     files: [],
-                    stillFrameMediaId: ''
-                }
-            }
+                    stillFrameMediaId: '',
+                },
+            },
         },
         name: 'Gaming Laptop',
         inventoryItemId: 'LAP-001',
@@ -69,14 +69,14 @@ export const products= [
             formatted: {
                 discountedPrice: '$1,169.99',
                 price: '$1,299.99',
-                pricePerUnit: '$1,299.99'
+                pricePerUnit: '$1,299.99',
             },
             price: 1299.99,
-            pricePerUnit: 1299.99
+            pricePerUnit: 1299.99,
         },
         productType: ProductType.physical,
         ribbon: 'Best Seller',
-        slug: 'gaming-laptop'
+        slug: 'gaming-laptop',
     },
     {
         id: '2',
@@ -84,7 +84,7 @@ export const products= [
         description: 'Premium smartphone with advanced features',
         discount: {
             type: DiscountType.amount,
-            value: 0
+            value: 0,
         },
         media: {
             items: [
@@ -96,7 +96,7 @@ export const products= [
                         format: 'jpg',
                         height: '400',
                         url: 'https://example.com/phone1.jpg',
-                        width: '600'
+                        width: '600',
                     },
                     title: 'Smartphone Front View',
                     image: {
@@ -104,13 +104,13 @@ export const products= [
                         format: 'jpg',
                         height: '800',
                         url: 'https://example.com/phone1.jpg',
-                        width: '1200'
+                        width: '1200',
                     },
                     video: {
                         files: [],
-                        stillFrameMediaId: ''
-                    }
-                }
+                        stillFrameMediaId: '',
+                    },
+                },
             ],
             mainMedia: {
                 id: 'img-main2',
@@ -120,7 +120,7 @@ export const products= [
                     format: 'jpg',
                     height: '400',
                     url: 'https://example.com/phone-main.jpg',
-                    width: '600'
+                    width: '600',
                 },
                 title: 'Smartphone Main View',
                 image: {
@@ -128,13 +128,13 @@ export const products= [
                     format: 'jpg',
                     height: '800',
                     url: 'https://example.com/phone-main.jpg',
-                    width: '1200'
+                    width: '1200',
                 },
                 video: {
                     files: [],
-                    stillFrameMediaId: ''
-                }
-            }
+                    stillFrameMediaId: '',
+                },
+            },
         },
         name: 'Smartphone Pro',
         inventoryItemId: 'PHN-002',
@@ -144,15 +144,15 @@ export const products= [
             formatted: {
                 discountedPrice: '$799.50',
                 price: '$799.50',
-                pricePerUnit: '$799.50'
+                pricePerUnit: '$799.50',
             },
             price: 799.5,
-            pricePerUnit: 799.5
+            pricePerUnit: 799.5,
         },
         productType: ProductType.physical,
         ribbon: 'New',
-        slug: 'smartphone-pro'
-    }
+        slug: 'smartphone-pro',
+    },
 ];
 
 export async function getProducts() {

@@ -60,9 +60,7 @@ function parseType(
     else return new WithValidations([], [`Tag [${tagName}] has an unknown tag type [${type}]`]);
 }
 
-function parseTag(
-    tag: ParsedYamlTag,
-): WithValidations<ContractTag> {
+function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
     // Default type to 'data' if not specified
     const types = parseType(tag.type || 'data', tag.tag);
     const validations = types.validations;
@@ -110,7 +108,6 @@ function parseTag(
 
     // Handle linked subcontract
     if (tag.link) {
-
         return new WithValidations<ContractTag>(
             {
                 tag: tag.tag,
@@ -171,9 +168,7 @@ function parseTag(
     return new WithValidations<ContractTag>(contractTag, validations);
 }
 
-export function parseContract(
-    contractYaml: string
-): WithValidations<Contract> {
+export function parseContract(contractYaml: string): WithValidations<Contract> {
     try {
         const parsedYaml = yaml.load(contractYaml) as ParsedYaml;
 

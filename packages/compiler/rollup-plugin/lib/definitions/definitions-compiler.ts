@@ -12,7 +12,7 @@ import {
 } from 'jay-compiler-shared';
 import { parseJayFile, getJayHtmlImports } from 'jay-compiler-jay-html';
 import { checkCodeErrors } from '../common/errors';
-import {compileContract, Contract, parseContract} from 'jay-compiler-contract';
+import { compileContract, Contract, parseContract } from 'jay-compiler-contract';
 
 export function jayDefinitions() {
     return {
@@ -60,9 +60,12 @@ export function jayDefinitions() {
                 const linkedContractResolver = {
                     async loadContract(link: string): Promise<Contract> {
                         const linkedContract = path.resolve(dirname, link);
-                        const contract = await readFileAsString(linkedContract + JAY_CONTRACT_EXTENSION)
+                        const contract = await readFileAsString(
+                            linkedContract + JAY_CONTRACT_EXTENSION,
+                        );
                         return checkValidationErrors(parseContract(contract));
-                    }};
+                    },
+                };
                 const tsCode = await compileContract(parsedFile, linkedContractResolver);
                 const generatedFilename = await writeDefinitionFile(
                     dirname,
