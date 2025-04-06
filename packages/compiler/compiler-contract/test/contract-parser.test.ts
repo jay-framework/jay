@@ -122,46 +122,6 @@ describe('parse contract', () => {
         });
     });
 
-    it('should parse contract with linked sub-contract, loading the sub contract with provided LinkedContractResolver', () => {
-        const contract = `
-        name: todo
-        tags:
-          - tag: items
-            type: sub-contract
-            link: ./todo-item${JAY_CONTRACT_EXTENSION}
-        `;
-
-        const mockResolver: LinkedContractResolver = {
-            loadContract: (link: string) => {
-                if (link === `./todo-item${JAY_CONTRACT_EXTENSION}`)
-                    return {
-                        name: 'todo-item',
-                        tags: [
-                            { tag: 'title', type: [ContractTagType.data], dataType: JayString },
-                            { tag: 'completed', type: [ContractTagType.data], dataType: JayNumber },
-                        ],
-                    };
-            },
-        };
-
-        const result = parseContract(contract, mockResolver);
-        expect(result.validations).toEqual([]);
-        expect(result.val).toEqual({
-            name: 'todo',
-            tags: [
-                {
-                    tag: 'items',
-                    type: [ContractTagType.subContract],
-                    link: './todo-item' + JAY_CONTRACT_EXTENSION,
-                    tags: [
-                        { tag: 'title', type: [ContractTagType.data], dataType: JayString },
-                        { tag: 'completed', type: [ContractTagType.data], dataType: JayNumber },
-                    ],
-                },
-            ],
-        });
-    });
-
     it('should parse contract with repeated sub-contract', () => {
         const contract = `
         name: todo

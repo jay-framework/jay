@@ -6,7 +6,7 @@ import { JayString, JayBoolean } from 'jay-compiler-shared';
 
 describe('compile contract', () => {
     const noHopResolver: LinkedContractResolver = {
-        loadContract: (link: string) => {
+        loadContract: async (link: string) => {
             throw new Error(`Unknown link: ${link}`);
         },
     };
@@ -26,7 +26,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
@@ -68,7 +68,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
@@ -110,7 +110,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
@@ -159,7 +159,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
@@ -237,7 +237,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
@@ -313,7 +313,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
@@ -367,7 +367,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
@@ -407,7 +407,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations.length).toBe(0);
         expect(await prettify(result.val)).toBe(
@@ -442,7 +442,7 @@ describe('compile contract', () => {
 
     describe('linked sub contracts', () => {
         const mockResolver: LinkedContractResolver = {
-            loadContract: (link: string) => {
+            loadContract: async (link: string) => {
                 if (link === `./todo-item${JAY_CONTRACT_EXTENSION}`) {
                     return {
                         name: 'todo-item',
@@ -477,8 +477,8 @@ describe('compile contract', () => {
                 elementType: HTMLButtonElement
             `;
 
-            const parsedContract = parseContract(contract, mockResolver);
-            const result = compileContract(parsedContract, mockResolver);
+            const parsedContract = parseContract(contract);
+            const result = await compileContract(parsedContract, mockResolver);
 
             expect(result.validations).toEqual([]);
             expect(await prettify(result.val)).toBe(
@@ -521,8 +521,8 @@ describe('compile contract', () => {
                 elementType: HTMLButtonElement
             `;
 
-            const parsedContract = parseContract(contract, mockResolver);
-            const result = compileContract(parsedContract, mockResolver);
+            const parsedContract = parseContract(contract);
+            const result = await compileContract(parsedContract, mockResolver);
 
             expect(result.validations).toEqual([]);
             expect(await prettify(result.val)).toBe(

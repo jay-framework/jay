@@ -22,7 +22,7 @@ interface ParsedYaml {
 }
 
 export interface LinkedContractResolver {
-    loadContract(link: string): Contract;
+    loadContract(link: string): Promise<Contract>;
 }
 
 function parseDataType(tag: string, dataType: string): JayType | undefined {
@@ -62,7 +62,6 @@ function parseType(
 
 function parseTag(
     tag: ParsedYamlTag,
-    linkedContractResolver?: LinkedContractResolver,
 ): WithValidations<ContractTag> {
     // Default type to 'data' if not specified
     const types = parseType(tag.type || 'data', tag.tag);
@@ -111,9 +110,6 @@ function parseTag(
 
     // Handle linked subcontract
     if (tag.link) {
-        const tags: ContractTag[] = linkedContractResolver
-            ? linkedContractResolver.loadContract(tag.link).tags
-            : undefined;
 
         return new WithValidations<ContractTag>(
             {
@@ -121,7 +117,6 @@ function parseTag(
                 type: [ContractTagType.subContract],
                 ...(required && { required }),
                 ...(description && { description }),
-                ...(tags && { tags }),
                 ...(tag.repeated && { repeated: tag.repeated }),
                 link: tag.link,
             },
@@ -131,7 +126,7 @@ function parseTag(
 
     // Handle inline subcontract
     if (tag.tags) {
-        const subTagResults = tag.tags.map((subTag) => parseTag(subTag, linkedContractResolver));
+        const subTagResults = tag.tags.map((subTag) => parseTag(subTag));
         const subTagValidations = subTagResults.flatMap((tr) => tr.validations);
         const parsedSubTags = subTagResults
             .map((tr) => tr.val)
@@ -177,13 +172,12 @@ function parseTag(
 }
 
 export function parseContract(
-    contractYaml: string,
-    linkedContractResolver?: LinkedContractResolver,
+    contractYaml: string
 ): WithValidations<Contract> {
     try {
         const parsedYaml = yaml.load(contractYaml) as ParsedYaml;
 
-        const tagResults = parsedYaml.tags.map((tag) => parseTag(tag, linkedContractResolver));
+        const tagResults = parsedYaml.tags.map((tag) => parseTag(tag));
         const tagValidations = tagResults.flatMap((tr) => tr.validations);
         const parsedTags = tagResults
             .map((tr) => tr.val)
