@@ -80,7 +80,9 @@ times in a page, including under `forEach`.
 
 The plugin package is assumed to define which is a page component and which is a sub-component.
 
-Sub-component in `jay-html`
+### jap-html representation
+
+Sub-component in `jay-html` (as defined in the `compiler` package)
 
 ```html
 <header>
@@ -93,11 +95,70 @@ Sub-component in `jay-html`
 </body>
 ```
 
-Page component in `jay-jyml`
+For a page component, we propose to use the `script` tag with `src` as it is more appropriate for a page code.
+Unlike regular script loading, the `src` is understood as a link to code, following Typescript `import` logic.
 
 ```html
 <header>
-  <title>Todo element</title>
-  <link rel="import" href="stores/product-page" />
+   <title>Todo element</title>
+  <script type="application/jay" src="stores/product-page" name="page" key="productPage"/> 
 </header>
 ```
+
+where 
+* `type="application/jay"` tells us it is a Jay Page Component
+* `src` the location of the Jay Page Component to load, using the typescript `import` convention
+* `name` the name of the parameter to import
+* `key` the namespace used within the page, which is used as the key for the `ViewState`, `Refs` and `Props`.
+
+### page Refs, Props and ViewState
+
+In the Page `jay-html`, the `data` section defines the `ViewState` type and the `ref`s defines the `Refs` type.
+When a jay-html imports a Page Component, the page component `ref`s and `data` are prefixed with the `key` from the script import.
+
+```html
+<html>
+    <head>
+       <script type="application/jay" src="stores/product-page" name="page" key="productPage"/>
+       <script type="application/jay-yaml">
+          data:
+            title: string
+       </script>
+    </head>    
+    <body>
+        <div>
+           <div>{title}</div>
+           <div>{productPage.sku}</div>
+           <button ref="productPage.addToCart"></button>
+        </div>
+    </body>
+</html>
+```
+
+In the above, the `productPage.sku` is using the `sku` data member from the product-page contract, 
+and using the `addToCart` interactive ref from the product-page contract. 
+
+The compilation of the `jay-html` is such that the `ViewState` and `Refs` compiled from the Page Component's Contract 
+are added to the Page `ViewState` and `Refs` with the `key` from the import script tag.
+
+The page component `ViewState` is set as optional enabling the developer of the page to not specify it (in which case
+we default to the value returned from the page component itself).
+
+```typescript
+export interface ViewState {
+    productPage?: ProductPageViewState
+} 
+export interface Refs {
+    productPage: ProductPageRefs
+}
+```
+
+Regarding `Props`, a page props always extends the `PageProps` from `stack-runtime`. If the page is also using a page component
+the `PageProps` is extended to include the Page Component `ViewState` as another prop, to enable overriding its values.
+
+```typescript
+export interface ProductPageProps extends PageProps {
+    productPage: ProductPageViewState
+}
+```
+
