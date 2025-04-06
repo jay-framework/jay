@@ -64,7 +64,8 @@ function parseTag(
     tag: ParsedYamlTag,
     linkedContractResolver?: LinkedContractResolver,
 ): WithValidations<ContractTag> {
-    const types = parseType(tag.type, tag.tag);
+    // Default type to 'data' if not specified
+    const types = parseType(tag.type || 'data', tag.tag);
     const validations = types.validations;
 
     // Validate that subcontract type is not mixed with other types
@@ -72,9 +73,10 @@ function parseTag(
         validations.push(`Tag [${tag.tag}] cannot be both sub-contract and other types`);
     }
 
-    // Validate data type tags
-    if (types.val.includes(ContractTagType.data) && !tag.dataType) {
-        validations.push(`Tag [${tag.tag}] of type [data] must have a dataType`);
+    // Default dataType to string for data tags if not specified
+    let dataType = tag.dataType;
+    if (types.val.includes(ContractTagType.data) && !dataType) {
+        dataType = 'string';
     }
 
     // Validate variant type tags
@@ -102,7 +104,7 @@ function parseTag(
         }
     }
 
-    const dataType = parseDataType(tag.tag, tag.dataType);
+    const parsedDataType = parseDataType(tag.tag, dataType);
     const description = parseDescription(tag.description);
     const elementType = parseElementType(tag.elementType);
     const required = tag.required;
@@ -166,7 +168,7 @@ function parseTag(
         tag: tag.tag,
         type: types.val,
         ...(required && { required }),
-        ...(dataType && { dataType }),
+        ...(parsedDataType && { dataType: parsedDataType }),
         ...(description && { description }),
         ...(elementType && { elementType }),
     };
