@@ -151,7 +151,7 @@ function renderImports(imports: Imports, importedLinks: JayContractImportLink[])
     const renderedImportedLinks = new Set<string>();
     for (const { module, refs, repeatedRefs, viewState } of importedLinks) {
         let symbols = `${viewState}, ${refs}, ${repeatedRefs}`;
-        renderedImportedLinks.add(`import {${symbols}} from "${module}";`);
+        renderedImportedLinks.add(`import {${symbols}} from "${module}${JAY_CONTRACT_EXTENSION}";`);
     }
 
     return renderedImports + '\n' + Array.from(renderedImportedLinks).join('\n');

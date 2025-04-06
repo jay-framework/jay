@@ -484,7 +484,7 @@ describe('compile contract', () => {
             expect(await prettify(result.val)).toBe(
                 await prettify(`
             import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
-            import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item';
+            import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item.jay-contract';
         
             export interface TodoViewState {
                 item: TodoItemViewState;
@@ -528,7 +528,7 @@ describe('compile contract', () => {
             expect(await prettify(result.val)).toBe(
                 await prettify(`
             import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
-            import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item';
+            import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item.jay-contract';
     
             export interface TodoViewState {
                 items: Array<TodoItemViewState>;
@@ -575,7 +575,7 @@ describe('compile contract', () => {
             expect(await prettify(result.val)).toBe(
                 await prettify(`
             import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
-            import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item';
+            import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item.jay-contract';
     
             export interface TodoViewState {
                 activeItem: TodoItemViewState;
