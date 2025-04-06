@@ -551,5 +551,55 @@ describe('compile contract', () => {
             export declare function render(options?: RenderElementOptions): TodoElementPreRender`),
             );
         });
+
+        it('should compile contract with both repeated and non-repeated instances of the same linked sub-contract', async () => {
+            const contract = `
+            name: todo
+            tags:
+              - tag: activeItem
+                type: sub-contract
+                link: ./todo-item${JAY_CONTRACT_EXTENSION}
+              - tag: completedItems
+                type: sub-contract
+                repeated: true
+                link: ./todo-item${JAY_CONTRACT_EXTENSION}
+              - tag: addButton
+                type: interactive
+                elementType: HTMLButtonElement
+            `;
+
+            const parsedContract = parseContract(contract);
+            const result = await compileContract(parsedContract, mockResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+            import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+            import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item';
+    
+            export interface TodoViewState {
+                activeItem: TodoItemViewState;
+                completedItems: Array<TodoItemViewState>;
+            }
+    
+            export interface TodoRefs {
+                activeItem: TodoItemRefs;
+                completedItems: TodoItemRepeatedRefs;
+                addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
+            }
+
+            export interface TodoRepeatedRefs {
+                activeItem: TodoItemRepeatedRefs;
+                completedItems: TodoItemRepeatedRefs;
+                addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
+            }
+
+            export type TodoElement = JayElement<TodoViewState, TodoRefs>
+            export type TodoElementRender = RenderElement<TodoViewState, TodoRefs, TodoElement>
+            export type TodoElementPreRender = [TodoRefs, TodoElementRender]     
+            
+            export declare function render(options?: RenderElementOptions): TodoElementPreRender`),
+            );
+        });
     });
 });

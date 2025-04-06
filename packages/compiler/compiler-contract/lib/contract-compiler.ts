@@ -147,13 +147,14 @@ function generateRefsInterface(
 function renderImports(imports: Imports, importedLinks: JayContractImportLink[]) {
     const renderedImports = imports.render(ImportsFor.definition);
 
-    const renderedImportedLinks = [];
+    // Use a Set to deduplicate import statements
+    const renderedImportedLinks = new Set<string>();
     for (const { module, refs, repeatedRefs, viewState } of importedLinks) {
         let symbols = `${viewState}, ${refs}, ${repeatedRefs}`;
-        renderedImportedLinks.push(`import {${symbols}} from "${module}";`);
+        renderedImportedLinks.add(`import {${symbols}} from "${module}";`);
     }
 
-    return renderedImports + '\n' + renderedImportedLinks.join('\n');
+    return renderedImports + '\n' + Array.from(renderedImportedLinks).join('\n');
 }
 
 export async function compileContract(
@@ -172,20 +173,6 @@ export async function compileContract(
             allRefs = [...allRefs, ...result.refs];
             result.type && (props[camelCase(tag.tag)] = result.type);
         }
-
-
-        // const results = await Promise.all(contract.tags.map(tag =>
-        //     traverseContractTag(tag, viewStateType, linkedContractResolver)
-        // ));
-        //
-        // for (const result of results) {
-        //     importedLinks = [...importedLinks, ...result.importLinks];
-        //     allRefs = [...allRefs, ...result.refs];
-        //     result.type && (props[camelCase(tag.tag)] = result.type);
-        //     // if (result.type && result.refs[0]) {
-        //     //     props[camelCase(result.refs[0].ref)] = result.type;
-        //     // }
-        // }
 
         const rootType = new JayObjectType(`${pascalCase(contract.name)}ViewState`, props);
         let { imports, renderedRefs } = generateRefsInterface(contract, allRefs);
