@@ -33,7 +33,8 @@ export interface ProductPageViewState {
   discount: DiscountViewState,
   media: Media,
   name: string,
-  inventoryItemId: string,
+  inStock: boolean,
+  slug: string,
   priceData: PriceData,
   productType: ProductType,
   ribbon: string

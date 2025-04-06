@@ -25,7 +25,10 @@ tags:
   - tag: name
     type: data
     dataType: string
-  - tag: inventoryItemId
+  - tag: inStock
+    type: data
+    dataType: boolean
+  - tag: slug
   - tag: priceData
     type: sub-contract
     tags:
