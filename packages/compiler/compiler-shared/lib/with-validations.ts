@@ -14,6 +14,15 @@ export class WithValidations<Value> {
         else return new WithValidations<R>(undefined, this.validations);
     }
 
+    async mapAsync<R>(func: (v: Value) => Promise<R>): Promise<WithValidations<R>> {
+        if (this.val) {
+            const result = await func(this.val);
+            return new WithValidations<R>(result, this.validations);
+        } else {
+            return new WithValidations<R>(undefined, this.validations);
+        }
+    }
+
     flatMap<R>(func: (v: Value) => WithValidations<R>): WithValidations<R> {
         if (this.val) {
             let that = func(this.val);
