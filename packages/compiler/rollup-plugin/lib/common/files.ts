@@ -23,8 +23,9 @@ export async function writeDefinitionFile(
     dirname: string,
     filename: string,
     source: string,
+    extension: string,
 ): Promise<string> {
-    const name = path.resolve(dirname, `${filename}${JAY_DTS_EXTENSION}`);
+    const name = path.resolve(dirname, `${filename}${extension}`);
     await writeFile(name, source, { encoding: 'utf8', flag: 'w' });
     return name;
 }

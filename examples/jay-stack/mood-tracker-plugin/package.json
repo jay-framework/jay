@@ -1,0 +1,36 @@
+{
+  "name": "jay-mood-tracker-plugin",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "scripts": {
+    "build": "npm run definitions && npm run build:js",
+    "definitions": "jay-cli definitions src",
+    "build:js": "# vite build --base ./",
+    "build:watch": "nodemon --watch '../../packages/rollup-plugin/dist/index.js' -x \"DEBUG=vite:hmr,jay:* vite --open\"",
+    "clean": "rimraf dist && rimraf build && (rimraf -g src/**/*.d.ts || :)",
+    "confirm": "npm run clean && npm run build && npm run test",
+    "test": ":"
+  },
+  "dependencies": {
+    "jay-component": "workspace:^",
+    "jay-reactive": "workspace:^",
+    "jay-runtime": "workspace:^",
+    "jay-secure": "workspace:^",
+    "jay-stack-runtime": "workspace:^"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.7",
+    "@babel/preset-env": "^7.23.8",
+    "@babel/preset-typescript": "^7.23.3",
+    "jay-cli": "workspace:^",
+    "jay-dev-environment": "workspace:^",
+    "nodemon": "^3.0.3",
+    "rimraf": "^5.0.5",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11",
+    "vite-plugin-inspect": "^0.8.1",
+    "vite-plugin-jay": "workspace:^"
+  }
+}

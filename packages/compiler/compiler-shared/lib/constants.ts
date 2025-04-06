@@ -1,6 +1,8 @@
 export const JAY_EXTENSION = '.jay-html';
+export const JAY_CONTRACT_EXTENSION = '.jay-contract';
 export const JAY_TS_EXTENSION = '.jay-html.ts';
 export const JAY_DTS_EXTENSION = '.jay-html.d.ts';
+export const JAY_CONTRACT_DTS_EXTENSION = '.jay-contract.d.ts';
 
 export const JAY_COMPONENT = 'jay-component';
 export const JAY_SECURE = 'jay-secure';
