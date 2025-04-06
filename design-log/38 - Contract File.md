@@ -1,4 +1,4 @@
-# Contract File & Application package
+# Contract File
 
 The Jay Contract file is needed to create library components and applications who specify a contract, but do not
 specify a specific UI. For instance, a service page component can specify the contract of the services page, without
@@ -252,12 +252,3 @@ tags:
         dataType: boolean
         elementType: HTMLInputElement
 ```
-
-application package
-
-- navigation map
-- pages
-- contracts
-- context
-- components (Jay Component)
-- figma assets
