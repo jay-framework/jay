@@ -1,0 +1,8 @@
+name: discount
+tags:
+  - tag: type
+    type: variant
+    dataType: enum (amount | percent )
+  - tag: value
+    type: data
+    dataType: number

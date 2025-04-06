@@ -1,0 +1,64 @@
+name: product-page
+tags:
+  - tag: _id
+    type: data
+    dataType: string
+  - tag: brand
+    type: data
+    dataType: string
+  - tag: description
+    type: data
+    dataType: string
+  - tag: discount
+    type: sub-contract
+    link: ./discount
+  - tag: media
+    type: sub-contract
+    tags:
+      - tag: items
+        type: sub-contract
+        link: ./media-item
+        repeated: true
+      - tag: mainMedia
+        type: sub-contract
+        link: ./media-item
+  - tag: name
+    type: data
+    dataType: string
+  - tag: inventoryItemId
+  - tag: priceData
+    type: sub-contract
+    tags:
+      - tag: currency
+        type: data
+        dataType: string
+      - tag: discountedPrice
+        type: data
+        dataType: number
+      - tag: formatted
+        type: sub-contract
+        tags:
+          - tag: discountedPrice
+            type: data
+            dataType: string
+          - tag: price
+            type: data
+            dataType: string
+          - tag: pricePerUnit
+            type: data
+            dataType: string
+      - tag: price
+        type: data
+        dataType: number
+      - tag: pricePerUnit
+        type: data
+        dataType: number
+  - tag: productType
+    type: [data, variant]
+    dataType: enum (digital | physical)
+  - tag: ribbon
+    type: data
+    dataType: string
+  - tag: addToCart
+    type: interactive
+    elementType: HTMLButtonElement

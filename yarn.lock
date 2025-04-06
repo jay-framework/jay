@@ -12401,6 +12401,7 @@ __metadata:
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
     jay-secure: "workspace:^"
+    jay-stack-runtime: "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -12519,6 +12520,7 @@ __metadata:
   resolution: "jay-stack-runtime@workspace:packages/jay-stack/stack-runtime"
   dependencies:
     "@types/node": ^20.11.5
+    jay-cli: "workspace:^"
     jay-component: "workspace:^"
     jay-dev-environment: "workspace:^"
     jay-runtime: "workspace:^"
