@@ -12,10 +12,9 @@ import {
 } from 'jay-compiler-shared';
 import { parseJayFile, getJayHtmlImports } from 'jay-compiler-jay-html';
 import { checkCodeErrors } from '../common/errors';
-import { compileContract, parseContract } from 'jay-compiler-contract';
+import {compileContract, Contract, parseContract} from 'jay-compiler-contract';
 
 export function jayDefinitions() {
-    const generatedRefPaths: Set<string> = new Set();
     return {
         name: 'jay:definitions', // this name will show up in warnings and errors
         async load(id: string): Promise<LoadResult> {
@@ -58,7 +57,13 @@ export function jayDefinitions() {
                 const { filename, dirname } = getFileContext(id, JAY_CONTRACT_EXTENSION);
 
                 const parsedFile = parseContract(code);
-                const tsCode = compileContract(parsedFile, null);
+                const linkedContractResolver = {
+                    async loadContract(link: string): Promise<Contract> {
+                        const linkedContract = path.resolve(dirname, link);
+                        const contract = await readFileAsString(linkedContract + JAY_CONTRACT_EXTENSION)
+                        return checkValidationErrors(parseContract(contract));
+                    }};
+                const tsCode = await compileContract(parsedFile, linkedContractResolver);
                 const generatedFilename = await writeDefinitionFile(
                     dirname,
                     filename,
