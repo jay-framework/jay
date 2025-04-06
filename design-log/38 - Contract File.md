@@ -215,7 +215,7 @@ Each tag definition includes:
   - `interactive` - for interactive elements
   - `variant` - for variant tags
   - `sub-contract` - for nested contract structures
-  Can be specified as a single value or an array of values (e.g. `[data, interactive]`)
+    Can be specified as a single value or an array of values (e.g. `[data, interactive]`)
 - `dataType` - the data type for `data` or `variant` tags:
   - For `data` tags: `string`, `number`, `boolean`, or `enum`
   - For `variant` tags: `boolean` or `enum`
@@ -228,11 +228,13 @@ Each tag definition includes:
 - `link` - optional path to an external contract file for sub-contracts
 
 For sub-contracts, the structure includes:
+
 - `tags` - a list of tags that make up the sub-contract
 - `repeated` - optional boolean flag indicating if the sub-contract can be repeated
 - `link` - optional path to an external contract file
 
 Example contract structure:
+
 ```yaml
 name: todo
 tags:
