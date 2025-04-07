@@ -23,7 +23,7 @@ describe('rendering a simple page', () => {
         expect(slowlyRenderResult).toEqual(
             partialRender(
                 {
-                    slowlyRender: 'static text',
+                    slowlyRendered: 'static text',
                 },
                 {
                     carryForwardSlowly: 'carry forward from slowly',
@@ -52,12 +52,12 @@ describe('rendering a simple page', () => {
         expect(fastRenderResult).toEqual(
             partialRender(
                 {
-                    fastDynamicRender:
+                    fastDynamicRendered:
                         "dynamic text from fast render. Slowly Carry forward is 'carry forward from slowly'",
                 },
                 {
                     carryForwardFast: 'carry forward from fast render',
-                    fastDynamicRender:
+                    fastDynamicRendered:
                         "dynamic text from fast render. Slowly Carry forward is 'carry forward from slowly'",
                 },
             ),

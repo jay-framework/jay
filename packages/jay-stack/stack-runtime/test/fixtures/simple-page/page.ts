@@ -1,6 +1,6 @@
 import { makeJayStackComponent, PageProps, partialRender } from 'jay-stack-runtime';
 // @ts-ignore
-import { render, PageElementRefs } from './page.jay-html';
+import { render, PageElementRefs } from './page.slowly-rendered.jay-html';
 import { createSignal, Props } from 'jay-component';
 
 interface SlowlyCarryForward {
