@@ -3,8 +3,6 @@ import {
     AnySlowlyRenderResult,
     JayStackComponentDefinition,
     PageProps,
-    PartialRender,
-    SlowlyRenderResult,
 } from './jay-stack-types';
 import { JayComponentCore } from 'jay-component';
 import { UrlParams } from './jay-stack-types';

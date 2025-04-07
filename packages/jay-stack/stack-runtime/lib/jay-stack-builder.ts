@@ -26,10 +26,11 @@ export type Builder<
     ServerContexts extends Array<any>,
     ClientContexts extends Array<any>,
     PropsT extends object,
+    Params extends UrlParams,
     CarryForward extends object,
     CompCore extends JayComponentCore<PropsT, ViewState>,
 > = State extends 'Props'
-    ? {
+    ? JayStackComponentDefinition<StaticViewState, ViewState, Refs, ServerContexts, ClientContexts, PropsT, Params, CarryForward, CompCore> & {
           withProps<NewPropsT extends object>(): Builder<
               'ServerContexts',
               StaticViewState,
@@ -38,12 +39,13 @@ export type Builder<
               ServerContexts,
               ClientContexts,
               NewPropsT,
+              Params,
               CarryForward,
               JayComponentCore<NewPropsT, ViewState>
           >;
       }
     : State extends 'ServerContexts'
-      ? {
+      ? JayStackComponentDefinition<StaticViewState, ViewState, Refs, ServerContexts, ClientContexts, PropsT, Params, CarryForward, CompCore> & {
             withServerContext<NewServerContexts extends Array<any>>(
                 ...contextMarkers: ContextMarkers<NewServerContexts>
             ): Builder<
@@ -54,6 +56,7 @@ export type Builder<
                 NewServerContexts,
                 ClientContexts,
                 PropsT,
+                Params,
                 CarryForward,
                 CompCore
             >;
@@ -67,6 +70,7 @@ export type Builder<
                 ServerContexts,
                 NewClientContexts,
                 PropsT,
+                Params,
                 CarryForward,
                 CompCore
             >;
@@ -81,6 +85,7 @@ export type Builder<
                 ServerContexts,
                 ClientContexts,
                 PropsT & NewParams,
+                NewParams,
                 CarryForward,
                 CompCore
             >;
@@ -106,6 +111,7 @@ export type Builder<
                 ServerContexts,
                 ClientContexts,
                 PropsT,
+                Params,
                 NewCarryForward,
                 NewCompCore
             >;
@@ -126,6 +132,7 @@ export type Builder<
                 ServerContexts,
                 ClientContexts,
                 PropsT,
+                Params,
                 NewCarryForward,
                 CompCore
             >;
@@ -146,12 +153,13 @@ export type Builder<
                 ServerContexts,
                 ClientContexts,
                 PropsT,
+                Params,
                 CarryForward,
                 CompCore
             >;
         }
       : State extends 'ClientContexts'
-        ? {
+        ? JayStackComponentDefinition<StaticViewState, ViewState, Refs, ServerContexts, ClientContexts, PropsT, Params, CarryForward, CompCore> & {
               withClientContext<NewClientContexts extends Array<any>>(
                   ...contextMarkers: ContextMarkers<NewClientContexts>
               ): Builder<
@@ -162,6 +170,7 @@ export type Builder<
                   ServerContexts,
                   NewClientContexts,
                   PropsT,
+                  Params,
                   CarryForward,
                   CompCore
               >;
@@ -176,6 +185,7 @@ export type Builder<
                   ServerContexts,
                   ClientContexts,
                   PropsT & NewParams,
+                  NewParams,
                   CarryForward,
                   CompCore
               >;
@@ -201,6 +211,7 @@ export type Builder<
                   ServerContexts,
                   ClientContexts,
                   PropsT,
+                  Params,
                   NewCarryForward,
                   NewCompCore
               >;
@@ -221,6 +232,7 @@ export type Builder<
                   ServerContexts,
                   ClientContexts,
                   PropsT,
+                  Params,
                   NewCarryForward,
                   CompCore
               >;
@@ -241,12 +253,13 @@ export type Builder<
                   ServerContexts,
                   ClientContexts,
                   PropsT,
+                  Params,
                   CarryForward,
                   CompCore
               >;
           }
         : State extends 'UrlLoader'
-          ? {
+          ? JayStackComponentDefinition<StaticViewState, ViewState, Refs, ServerContexts, ClientContexts, PropsT, Params, CarryForward, CompCore> & {
                 withLoadParams<NewParams extends UrlParams>(
                     loadParams: LoadParams<ServerContexts, NewParams>,
                 ): Builder<
@@ -257,6 +270,7 @@ export type Builder<
                     ServerContexts,
                     ClientContexts,
                     PropsT & NewParams,
+                    NewParams,
                     CarryForward,
                     CompCore
                 >;
@@ -282,6 +296,7 @@ export type Builder<
                     ServerContexts,
                     ClientContexts,
                     PropsT,
+                    Params,
                     NewCarryForward,
                     NewCompCore
                 >;
@@ -302,6 +317,7 @@ export type Builder<
                     ServerContexts,
                     ClientContexts,
                     PropsT,
+                    Params,
                     NewCarryForward,
                     CompCore
                 >;
@@ -322,12 +338,13 @@ export type Builder<
                     ServerContexts,
                     ClientContexts,
                     PropsT,
+                    Params,
                     CarryForward,
                     CompCore
                 >;
             }
           : State extends 'SlowlyRender'
-            ? {
+            ? JayStackComponentDefinition<StaticViewState, ViewState, Refs, ServerContexts, ClientContexts, PropsT, Params, CarryForward, CompCore> & {
                   withSlowlyRender<
                       NewStaticViewState extends Partial<ViewState>,
                       DynamicViewState extends Partial<ViewState> &
@@ -349,6 +366,7 @@ export type Builder<
                       ServerContexts,
                       ClientContexts,
                       PropsT,
+                      Params,
                       NewCarryForward,
                       NewCompCore
                   >;
@@ -369,6 +387,7 @@ export type Builder<
                       ServerContexts,
                       ClientContexts,
                       PropsT,
+                      Params,
                       NewCarryForward,
                       CompCore
                   >;
@@ -389,12 +408,13 @@ export type Builder<
                       ServerContexts,
                       ClientContexts,
                       PropsT,
+                      Params,
                       CarryForward,
                       CompCore
                   >;
               }
             : State extends 'FastRender'
-              ? {
+              ? JayStackComponentDefinition<StaticViewState, ViewState, Refs, ServerContexts, ClientContexts, PropsT, Params, CarryForward, CompCore> & {
                     withFastRender<NewCarryForward extends object>(
                         fastRender: RenderFast<
                             ServerContexts,
@@ -411,6 +431,7 @@ export type Builder<
                         ServerContexts,
                         ClientContexts,
                         PropsT,
+                        Params,
                         NewCarryForward,
                         CompCore
                     >;
@@ -431,12 +452,13 @@ export type Builder<
                         ServerContexts,
                         ClientContexts,
                         PropsT,
+                        Params,
                         CarryForward,
                         CompCore
                     >;
                 }
               : State extends 'InteractiveRender'
-                ? {
+                ? JayStackComponentDefinition<StaticViewState, ViewState, Refs, ServerContexts, ClientContexts, PropsT, Params, CarryForward, CompCore> & {
                       withInteractive(
                           comp: ComponentConstructor<
                               PropsT & CarryForward,
@@ -453,11 +475,12 @@ export type Builder<
                           ServerContexts,
                           ClientContexts,
                           PropsT,
+                          Params,
                           CarryForward,
                           CompCore
                       >;
                   }
-                : never;
+                : JayStackComponentDefinition<StaticViewState, ViewState, Refs, ServerContexts, ClientContexts, PropsT, Params, CarryForward, CompCore>;
 
 class BuilderImplementation<
     StaticViewState extends object,
@@ -505,6 +528,7 @@ class BuilderImplementation<
         ServerContexts,
         ClientContexts,
         NewPropsT,
+        Params,
         CarryForward,
         JayComponentCore<NewPropsT, ViewState>
     > {
@@ -516,6 +540,7 @@ class BuilderImplementation<
             ServerContexts,
             ClientContexts,
             NewPropsT,
+            Params,
             CarryForward,
             JayComponentCore<NewPropsT, ViewState>
         >;
@@ -531,6 +556,7 @@ class BuilderImplementation<
         NewServerContexts,
         ClientContexts,
         PropsT,
+        Params,
         CarryForward,
         CompCore
     > {
@@ -543,6 +569,7 @@ class BuilderImplementation<
             NewServerContexts,
             ClientContexts,
             PropsT,
+            Params,
             CarryForward,
             CompCore
         >;
@@ -558,6 +585,7 @@ class BuilderImplementation<
         ServerContexts,
         NewClientContexts,
         PropsT,
+        Params,
         CarryForward,
         CompCore
     > {
@@ -570,6 +598,7 @@ class BuilderImplementation<
             ServerContexts,
             NewClientContexts,
             PropsT,
+            Params,
             CarryForward,
             CompCore
         >;
@@ -585,6 +614,7 @@ class BuilderImplementation<
         ServerContexts,
         ClientContexts,
         PropsT & NewParams,
+        NewParams,
         CarryForward,
         CompCore
     > {
@@ -597,6 +627,7 @@ class BuilderImplementation<
             ServerContexts,
             ClientContexts,
             PropsT & NewParams,
+            NewParams,
             CarryForward,
             CompCore
         >;
@@ -617,6 +648,7 @@ class BuilderImplementation<
         ServerContexts,
         ClientContexts,
         PropsT,
+        Params,
         NewCarryForward,
         NewCompCore
     > {
@@ -634,6 +666,7 @@ class BuilderImplementation<
             ServerContexts,
             ClientContexts,
             PropsT,
+            Params,
             NewCarryForward,
             NewCompCore
         >;
@@ -655,6 +688,7 @@ class BuilderImplementation<
         ServerContexts,
         ClientContexts,
         PropsT,
+        Params,
         NewCarryForward,
         CompCore
     > {
@@ -673,6 +707,7 @@ class BuilderImplementation<
             ServerContexts,
             ClientContexts,
             PropsT,
+            Params,
             NewCarryForward,
             CompCore
         >;
@@ -694,6 +729,7 @@ class BuilderImplementation<
         ServerContexts,
         ClientContexts,
         PropsT,
+        Params,
         CarryForward,
         CompCore
     > {
@@ -706,6 +742,7 @@ class BuilderImplementation<
             ServerContexts,
             ClientContexts,
             PropsT,
+            Params,
             CarryForward,
             CompCore
         >;
@@ -724,6 +761,7 @@ export function makeJayStackComponent<
         Refs,
         [],
         [],
+        {},
         {},
         object,
         JayComponentCore<object, ViewState>
