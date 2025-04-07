@@ -2,14 +2,14 @@
   <head>
     <script type="application/yaml-jay">
       data:
-        slowlyRender: string
-        fastDynamicRender: string
+        slowlyRendered: string
+        fastDynamicRendered: string
     </script>
   </head>
   <body>
     <div>
-      <div>{slowlyRender}</div>
-      <div>{fastDynamicRender}</div>
+      <div>{slowlyRendered}</div>
+      <div>{fastDynamicRendered}</div>
       <button ref="button" data-id="button">click</button>
     </div>
   </body>

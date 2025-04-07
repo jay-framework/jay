@@ -10,8 +10,8 @@ import {
 } from 'jay-runtime';
 
 export interface PageViewState {
-    slowlyRender: string;
-    fastDynamicRender: string;
+    slowlyRendered: string;
+    fastDynamicRendered: string;
 }
 
 export interface PageElementRefs {
@@ -28,7 +28,7 @@ export function render(options?: RenderElementOptions): PageElementPreRender {
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('div', {}, ['static text']),
-                e('div', {}, [dt((vs) => vs.fastDynamicRender)]),
+                e('div', {}, [dt((vs) => vs.fastDynamicRendered)]),
                 e('button', { 'data-id': 'button' }, ['click'], refButton()),
             ]),
         ) as PageElement;

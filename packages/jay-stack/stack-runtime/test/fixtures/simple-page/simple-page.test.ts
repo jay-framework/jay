@@ -118,7 +118,7 @@ describe('rendering a simple page', () => {
         const comp = makeJayComponent(page.render, page.comp);
         const instance = comp({ ...PAGE_PROPS, ...fastRenderResult.carryForward } as any);
 
-        instance.element.refs.button.exec$((_) => _.click());
+        await instance.element.refs.button.exec$((_) => _.click());
 
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(
             await prettify(`

@@ -6,26 +6,26 @@ import { createSignal, Props } from 'jay-component';
 interface SlowlyCarryForward {
     carryForwardSlowly: string;
 }
-async function renderSlowlyChanging(props: PageProps) {
-    const slowlyRender = 'static text';
-    const carryForwardSlowly = 'carry forward from slowly';
-    return partialRender({ slowlyRender }, { carryForwardSlowly });
-}
-
 interface FastCarryForward {
     carryForwardFast: string;
-    fastDynamicRender: string;
+    fastDynamicRendered: string;
     carryForwardSlowly: string;
 }
 
+async function renderSlowlyChanging(props: PageProps) {
+    const slowlyRendered = 'static text';
+    const carryForwardSlowly = 'carry forward from slowly';
+    return partialRender({ slowlyRendered }, { carryForwardSlowly });
+}
+
 async function renderFastChanging(props: PageProps & SlowlyCarryForward) {
-    const fastDynamicRender = `dynamic text from fast render. Slowly Carry forward is '${props.carryForwardSlowly}'`;
+    const fastDynamicRendered = `dynamic text from fast render. Slowly Carry forward is '${props.carryForwardSlowly}'`;
     const carryForwardFast = 'carry forward from fast render';
     return partialRender(
         {
-            fastDynamicRender,
+            fastDynamicRendered,
         },
-        { carryForwardFast, fastDynamicRender },
+        { carryForwardFast, fastDynamicRendered },
     );
 }
 
@@ -33,17 +33,17 @@ function ProductsPageConstructor(
     props: Props<PageProps & FastCarryForward>,
     refs: PageElementRefs,
 ) {
-    const [fastDynamicRender, setFastDynamicRender] = createSignal(props.fastDynamicRender);
+    const [fastDynamicRendered, setFastDynamicRendered] = createSignal(props.fastDynamicRendered);
 
     refs.button.onclick(() => {
-        setFastDynamicRender(
+        setFastDynamicRendered(
             `dynamic value from client. Fast Carry forward is '${props.carryForwardFast()}'`,
         );
     });
 
     return {
         render: () => ({
-            fastDynamicRender,
+            fastDynamicRendered,
         }),
     };
 }

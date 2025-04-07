@@ -1,8 +1,8 @@
 import { JayElement, RenderElement, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
 
 export interface PageViewState {
-    slowlyRender: string;
-    fastDynamicRender: string;
+    slowlyRendered: string;
+    fastDynamicRendered: string;
 }
 
 export interface PageElementRefs {
