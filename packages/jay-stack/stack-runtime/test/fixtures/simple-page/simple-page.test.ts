@@ -1,93 +1,132 @@
-import {DevSlowlyChangingPhase, PageProps, partialRender} from "../../../lib";
-import {page} from "./page";
+import { DevSlowlyChangingPhase, PageProps, partialRender } from '../../../lib';
+import { page } from './page';
 
-import {renderFastChangingData} from "../../../dist";
-import {makeJayComponent} from "jay-component";
-import {prettify} from "jay-compiler-shared";
+import { renderFastChangingData } from '../../../dist';
+import { makeJayComponent } from 'jay-component';
+import { prettify } from 'jay-compiler-shared';
 
 const PAGE_PROPS: PageProps = {
-    language: 'en-us'
-}
-const PAGE_PARAMS = {}
+    language: 'en-us',
+};
+const PAGE_PARAMS = {};
 
 describe('rendering a simple page', () => {
     it('should run the slowly changing phase', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase()
+        const slowlyPhase = new DevSlowlyChangingPhase();
 
-        const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(page, PAGE_PARAMS, PAGE_PROPS)
+        const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
+            page,
+            PAGE_PARAMS,
+            PAGE_PROPS,
+        );
 
-        expect(slowlyRenderResult)
-            .toEqual(partialRender(
+        expect(slowlyRenderResult).toEqual(
+            partialRender(
                 {
-                    slowlyRender: "static text"
+                    slowlyRender: 'static text',
                 },
                 {
-                    carryForwardSlowly: "carry forward from slowly"
-                }))
-    })
+                    carryForwardSlowly: 'carry forward from slowly',
+                },
+            ),
+        );
+    });
 
     it('should run the fast changing phase, getting the carry forward from the slowly phase', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase()
-        const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(page, PAGE_PARAMS, PAGE_PROPS)
-        if (slowlyRenderResult.kind !== "PartialRender")
-            throw new Error('expecting partial render from slowly phase')
+        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
+            page,
+            PAGE_PARAMS,
+            PAGE_PROPS,
+        );
+        if (slowlyRenderResult.kind !== 'PartialRender')
+            throw new Error('expecting partial render from slowly phase');
 
-        const fastRenderResult = await renderFastChangingData(page, PAGE_PARAMS, PAGE_PROPS, slowlyRenderResult.carryForward)
+        const fastRenderResult = await renderFastChangingData(
+            page,
+            PAGE_PARAMS,
+            PAGE_PROPS,
+            slowlyRenderResult.carryForward,
+        );
 
-        expect(fastRenderResult)
-            .toEqual(partialRender(
+        expect(fastRenderResult).toEqual(
+            partialRender(
                 {
-                    fastDynamicRender: "dynamic text from fast render. Slowly Carry forward is 'carry forward from slowly'",
+                    fastDynamicRender:
+                        "dynamic text from fast render. Slowly Carry forward is 'carry forward from slowly'",
                 },
                 {
-                    carryForwardFast: "carry forward from fast render",
-                    fastDynamicRender: "dynamic text from fast render. Slowly Carry forward is 'carry forward from slowly'",
-                }))
-    })
+                    carryForwardFast: 'carry forward from fast render',
+                    fastDynamicRender:
+                        "dynamic text from fast render. Slowly Carry forward is 'carry forward from slowly'",
+                },
+            ),
+        );
+    });
 
     it('should run the interactive phase, getting the carry forward from the fast phase', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase()
-        const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(page, PAGE_PARAMS, PAGE_PROPS)
-        if (slowlyRenderResult.kind !== "PartialRender")
-            throw new Error('expecting partial render from slowly phase')
-        const fastRenderResult = await renderFastChangingData(page, PAGE_PARAMS, PAGE_PROPS, slowlyRenderResult.carryForward)
-        if (fastRenderResult.kind !== "PartialRender")
-            throw new Error('expecting partial render from fast phase')
+        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
+            page,
+            PAGE_PARAMS,
+            PAGE_PROPS,
+        );
+        if (slowlyRenderResult.kind !== 'PartialRender')
+            throw new Error('expecting partial render from slowly phase');
+        const fastRenderResult = await renderFastChangingData(
+            page,
+            PAGE_PARAMS,
+            PAGE_PROPS,
+            slowlyRenderResult.carryForward,
+        );
+        if (fastRenderResult.kind !== 'PartialRender')
+            throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
         const comp = makeJayComponent(page.render, page.comp);
-        const instance = comp({...PAGE_PROPS, ...fastRenderResult.carryForward} as any)
+        const instance = comp({ ...PAGE_PROPS, ...fastRenderResult.carryForward } as any);
 
-        expect(await prettify(instance.element.dom.outerHTML))
-            .toEqual(await prettify(`
+        expect(await prettify(instance.element.dom.outerHTML)).toEqual(
+            await prettify(`
             <div>
                 <div>static text</div>
                 <div>dynamic text from fast render. Slowly Carry forward is 'carry forward from slowly'</div>
                 <button data-id="button">click</button>
-            </div>;`))
-    })
+            </div>;`),
+        );
+    });
 
     it('interactive phase should function and react to events', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase()
-        const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(page, PAGE_PARAMS, PAGE_PROPS)
-        if (slowlyRenderResult.kind !== "PartialRender")
-            throw new Error('expecting partial render from slowly phase')
-        const fastRenderResult = await renderFastChangingData(page, PAGE_PARAMS, PAGE_PROPS, slowlyRenderResult.carryForward)
-        if (fastRenderResult.kind !== "PartialRender")
-            throw new Error('expecting partial render from fast phase')
+        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
+            page,
+            PAGE_PARAMS,
+            PAGE_PROPS,
+        );
+        if (slowlyRenderResult.kind !== 'PartialRender')
+            throw new Error('expecting partial render from slowly phase');
+        const fastRenderResult = await renderFastChangingData(
+            page,
+            PAGE_PARAMS,
+            PAGE_PROPS,
+            slowlyRenderResult.carryForward,
+        );
+        if (fastRenderResult.kind !== 'PartialRender')
+            throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
         const comp = makeJayComponent(page.render, page.comp);
-        const instance = comp({...PAGE_PROPS, ...fastRenderResult.carryForward} as any)
+        const instance = comp({ ...PAGE_PROPS, ...fastRenderResult.carryForward } as any);
 
-        instance.element.refs.button.exec$(_ => _.click());
+        instance.element.refs.button.exec$((_) => _.click());
 
-        expect(await prettify(instance.element.dom.outerHTML))
-            .toEqual(await prettify(`
+        expect(await prettify(instance.element.dom.outerHTML)).toEqual(
+            await prettify(`
             <div>
                 <div>static text</div>
                 <div>dynamic value from client. Fast Carry forward is 'carry forward from fast render'</div>
                 <button data-id="button">click</button>
-            </div>;`))
-    })
-})
+            </div>;`),
+        );
+    });
+});

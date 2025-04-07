@@ -1,5 +1,5 @@
 import { ComponentConstructor, ContextMarkers, JayComponentCore } from 'jay-component';
-import {JayElement, PreRenderElement} from "jay-runtime";
+import { JayElement, PreRenderElement } from 'jay-runtime';
 
 export interface PageProps {
     language: string;
@@ -77,7 +77,7 @@ export interface JayStackComponentDefinition<
     CarryForward extends object,
     CompCore extends JayComponentCore<PropsT, ViewState>,
 > {
-    render: PreRenderElement<ViewState, Refs, JayElement<ViewState, Refs>>
+    render: PreRenderElement<ViewState, Refs, JayElement<ViewState, Refs>>;
     serverContexts: ContextMarkers<ServerContexts>;
     clientContexts: ContextMarkers<ServerContexts>;
     loadParams: LoadParams<ServerContexts, Params>;
