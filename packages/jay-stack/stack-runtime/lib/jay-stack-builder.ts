@@ -112,10 +112,7 @@ export type Builder<
 
             withSlowlyRender<
                 NewStaticViewState extends Partial<ViewState>,
-                DynamicViewState extends Partial<ViewState> &
-                    Omit<ViewState, keyof NewStaticViewState>,
                 NewCarryForward extends object,
-                NewCompCore extends JayComponentCore<PropsT, DynamicViewState>,
             >(
                 slowlyRender: RenderSlowly<
                     ServerContexts,
@@ -126,14 +123,14 @@ export type Builder<
             ): Builder<
                 'FastRender',
                 NewStaticViewState,
-                DynamicViewState,
+                Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>,
                 Refs,
                 ServerContexts,
                 ClientContexts,
                 PropsT,
                 Params,
                 NewCarryForward,
-                NewCompCore
+                JayComponentCore<PropsT, Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>>
             >;
 
             withFastRender<NewCarryForward extends object>(
@@ -222,10 +219,7 @@ export type Builder<
 
               withSlowlyRender<
                   NewStaticViewState extends Partial<ViewState>,
-                  DynamicViewState extends Partial<ViewState> &
-                      Omit<ViewState, keyof NewStaticViewState>,
                   NewCarryForward extends object,
-                  NewCompCore extends JayComponentCore<PropsT, DynamicViewState>,
               >(
                   slowlyRender: RenderSlowly<
                       ServerContexts,
@@ -236,14 +230,14 @@ export type Builder<
               ): Builder<
                   'FastRender',
                   NewStaticViewState,
-                  DynamicViewState,
+                  Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>,
                   Refs,
                   ServerContexts,
                   ClientContexts,
                   PropsT,
                   Params,
                   NewCarryForward,
-                  NewCompCore
+                  JayComponentCore<PropsT, Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>>
               >;
 
               withFastRender<NewCarryForward extends object>(
@@ -317,10 +311,7 @@ export type Builder<
 
                 withSlowlyRender<
                     NewStaticViewState extends Partial<ViewState>,
-                    DynamicViewState extends Partial<ViewState> &
-                        Omit<ViewState, keyof NewStaticViewState>,
                     NewCarryForward extends object,
-                    NewCompCore extends JayComponentCore<PropsT, DynamicViewState>,
                 >(
                     slowlyRender: RenderSlowly<
                         ServerContexts,
@@ -331,14 +322,14 @@ export type Builder<
                 ): Builder<
                     'FastRender',
                     NewStaticViewState,
-                    DynamicViewState,
+                    Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>,
                     Refs,
                     ServerContexts,
                     ClientContexts,
                     PropsT,
                     Params,
                     NewCarryForward,
-                    NewCompCore
+                    JayComponentCore<PropsT, Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>>
                 >;
 
                 withFastRender<NewCarryForward extends object>(
@@ -397,10 +388,7 @@ export type Builder<
               > & {
                   withSlowlyRender<
                       NewStaticViewState extends Partial<ViewState>,
-                      DynamicViewState extends Partial<ViewState> &
-                          Omit<ViewState, keyof NewStaticViewState>,
                       NewCarryForward extends object,
-                      NewCompCore extends JayComponentCore<PropsT, DynamicViewState>,
                   >(
                       slowlyRender: RenderSlowly<
                           ServerContexts,
@@ -411,14 +399,14 @@ export type Builder<
                   ): Builder<
                       'FastRender',
                       NewStaticViewState,
-                      DynamicViewState,
+                      Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>,
                       Refs,
                       ServerContexts,
                       ClientContexts,
                       PropsT,
                       Params,
                       NewCarryForward,
-                      NewCompCore
+                      JayComponentCore<PropsT, Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>>
                   >;
 
                   withFastRender<NewCarryForward extends object>(
@@ -715,22 +703,25 @@ class BuilderImplementation<
 
     withSlowlyRender<
         NewStaticViewState extends Partial<ViewState>,
-        DynamicViewState extends Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>,
         NewCarryForward extends object,
-        NewCompCore extends JayComponentCore<PropsT, DynamicViewState>,
     >(
-        slowlyRender: RenderSlowly<ServerContexts, PropsT, NewStaticViewState, NewCarryForward>,
+        slowlyRender: RenderSlowly<
+            ServerContexts,
+            PropsT,
+            NewStaticViewState,
+            NewCarryForward
+        >,
     ): Builder<
         'FastRender',
         NewStaticViewState,
-        DynamicViewState,
+        Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>,
         Refs,
         ServerContexts,
         ClientContexts,
         PropsT,
         Params,
         NewCarryForward,
-        NewCompCore
+        JayComponentCore<PropsT, Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>>
     > {
         this.slowlyRender = slowlyRender as unknown as RenderSlowly<
             ServerContexts,
@@ -741,14 +732,14 @@ class BuilderImplementation<
         return this as unknown as Builder<
             'FastRender',
             NewStaticViewState,
-            DynamicViewState,
+            Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>,
             Refs,
             ServerContexts,
             ClientContexts,
             PropsT,
             Params,
             NewCarryForward,
-            NewCompCore
+            JayComponentCore<PropsT, Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>>
         >;
     }
 
