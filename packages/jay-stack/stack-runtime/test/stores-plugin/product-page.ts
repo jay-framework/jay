@@ -1,8 +1,8 @@
-import { makeJayStackComponent, PageProps, partialRender, UrlParams } from '../../../lib';
+import { makeJayStackComponent, PageProps, partialRender, UrlParams } from '../../lib';
 import { getProductBySlug, getProducts } from './products-database';
 import { getAvailableUnits } from './inventory-service';
 import { Props } from 'jay-component';
-import { ProductPageRefs, render } from './product-page.jay-contract';
+import { ProductPageRefs, render } from './compiled/product-page.jay-contract';
 
 interface ProductPageParams extends UrlParams {
     slug: string;

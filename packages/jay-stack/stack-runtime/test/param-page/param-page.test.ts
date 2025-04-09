@@ -1,9 +1,8 @@
-import { DevSlowlyChangingPhase, PageProps, partialRender } from '../../../lib';
+import { DevSlowlyChangingPhase, PageProps, partialRender, renderFastChangingData } from '../../lib';
 import { page } from './page';
-import { render as renderVariantA } from './page.slowly-rendered.variant-a.jay-html';
-import { render as renderVariantB } from './page.slowly-rendered.variant-b.jay-html';
+import { render as renderVariantA } from './compiled-slowly/page.slowly-rendered.variant-a.jay-html';
+import { render as renderVariantB } from './compiled-slowly/page.slowly-rendered.variant-b.jay-html';
 
-import { renderFastChangingData } from '../../../dist';
 import { makeJayComponent } from 'jay-component';
 import { prettify } from 'jay-compiler-shared';
 

@@ -1,7 +1,6 @@
 import { render } from './full-stack-component.jay-html';
-import { makeJayStackComponent } from '../../../lib';
+import { makeJayStackComponent, partialRender } from '../../lib';
 import { createJayContext } from 'jay-runtime';
-import { partialRender } from '../../../dist';
 
 interface FSCProps {}
 
