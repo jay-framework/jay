@@ -1,0 +1,5 @@
+name: simple-plugin
+tags:
+  - tag: pluginSlowlyRendered
+  - tag: pluginInteractiveRendered
+  - tag: pluginButton
