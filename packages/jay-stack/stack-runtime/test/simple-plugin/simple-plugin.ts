@@ -1,4 +1,4 @@
-import { makeJayStackComponent, PageProps, partialRender } from 'jay-stack-runtime';
+import { makeJayStackComponent, PageProps, partialRender } from '../../lib/';
 import { render, SimplePluginViewState, SimplePluginRefs } from './compiled/simple-plugin.jay-contract';
 import { createSignal, Props } from 'jay-component';
 import { PartialRender } from "../../lib";
@@ -54,7 +54,8 @@ function SimplePluginConstructor(
     };
 }
 
-export const plugin = makeJayStackComponent(render)
+export const plugin =
+    makeJayStackComponent<typeof render>()
     .withProps<PageProps>()
     .withSlowlyRender<StaticViewState, StaticCarryForward>(renderStaticContent)
     .withFastRender<DynamicCarryForward>(renderDynamicContent)

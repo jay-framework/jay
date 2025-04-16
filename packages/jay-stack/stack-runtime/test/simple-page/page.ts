@@ -1,4 +1,4 @@
-import { makeJayStackComponent, PageProps, partialRender } from 'jay-stack-runtime';
+import { makeJayStackComponent, PageProps, partialRender } from '../../lib';
 import {render, PageElementRefs, PageViewState} from './compiled/page.jay-html';
 import { createSignal, Props } from 'jay-component';
 import {PartialRender} from "../../lib";
@@ -25,7 +25,7 @@ async function renderFastChanging(props: PageProps & SlowlyCarryForward): Promis
     const carryForwardFast = 'carry forward from fast render';
     return partialRender(
         {
-            fastDynamicRendered,
+             fastDynamicRendered,
         },
         { carryForwardFast, fastDynamicRendered },
     );
@@ -50,7 +50,8 @@ function ProductsPageConstructor(
     };
 }
 
-export const page = makeJayStackComponent(render)
+export const page =
+    makeJayStackComponent<typeof render>()
     .withProps<PageProps>()
     .withSlowlyRender<SlowlyViewState, SlowlyCarryForward>(renderSlowlyChanging)
     .withFastRender<FastCarryForward>(renderFastChanging)

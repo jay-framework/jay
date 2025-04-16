@@ -1,31 +1,35 @@
 import { DevSlowlyChangingPhase, PageProps, partialRender, renderFastChangingData } from '../../lib';
-import { page } from './page';
 import { render } from './compiled-slowly/page.slowly-rendered.jay-html'
 import { makeJayComponent } from 'jay-component';
 import { prettify } from 'jay-compiler-shared';
+import { plugin } from '../simple-plugin/simple-plugin'
 
 const PAGE_PROPS: PageProps = {
     language: 'en-us',
 };
 const PAGE_PARAMS = {};
 
-describe('rendering a simple page', () => {
+describe('rendering a page with only a plugin', () => {
     it('should run the slowly changing phase', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
-            [{compDefinition: page, mainPart: true}]
+            [{compDefinition: plugin, viewStateKey: 'plugin'}]
         );
 
         expect(slowlyRenderResult).toEqual(
             partialRender(
                 {
-                    slowlyRendered: 'static text',
+                    plugin: {
+                        pluginSlowlyRendered: "This is static content from a plugin",
+                    },
                 },
                 {
-                    carryForwardSlowly: 'carry forward from slowly',
+                    plugin: {
+                        staticData: "Static plugin data to carry forward",
+                    },
                 },
             ),
         );
@@ -36,7 +40,7 @@ describe('rendering a simple page', () => {
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
-            [{compDefinition: page, mainPart: true}]
+            [{compDefinition: plugin, viewStateKey: 'plugin'}]
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
@@ -66,9 +70,9 @@ describe('rendering a simple page', () => {
     it('should run the interactive phase, getting the carry forward from the fast phase', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
+            page,
             PAGE_PARAMS,
             PAGE_PROPS,
-            [{compDefinition: page, mainPart: true}]
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
@@ -98,9 +102,9 @@ describe('rendering a simple page', () => {
     it('interactive phase should function and react to events', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
+            page,
             PAGE_PARAMS,
             PAGE_PROPS,
-            [{compDefinition: page, mainPart: true}]
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');

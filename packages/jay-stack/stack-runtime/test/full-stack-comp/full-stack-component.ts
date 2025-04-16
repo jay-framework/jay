@@ -7,7 +7,7 @@ interface FSCProps {}
 interface MyContext {}
 const MyContextMarker = createJayContext<MyContext>();
 
-makeJayStackComponent(render)
+makeJayStackComponent<typeof render>()
     .withProps<FSCProps>()
     .withServerContext(MyContextMarker)
     .withSlowlyRender(async (props, myContext) => {

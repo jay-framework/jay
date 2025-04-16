@@ -586,7 +586,7 @@ class BuilderImplementation<
         CarryForward
     >;
     comp: ComponentConstructor<PropsT & CarryForward, Refs, ViewState, ClientContexts, CompCore>;
-    constructor(public readonly render: PreRenderElement<ViewState, Refs, JayElementT>) {}
+    constructor() {}
 
     withProps<NewPropsT extends object>(): Builder<
         'ServerContexts',
@@ -820,21 +820,22 @@ class BuilderImplementation<
     }
 }
 
+type ExtractViewState<A> = A extends PreRenderElement<infer ViewState, any, any> ? ViewState : never;
+type ExtractRefs<A> = A extends PreRenderElement<any, infer Refs, any> ? Refs : never;
+
 export function makeJayStackComponent<
-    ViewState extends object,
-    Refs extends object,
-    JayElementT extends JayElement<ViewState, Refs>,
->(render: PreRenderElement<ViewState, Refs, JayElementT>) {
-    return new BuilderImplementation(render) as unknown as Builder<
+    Render extends PreRenderElement<any, any, any>
+>() {
+    return new BuilderImplementation() as unknown as Builder<
         'Props',
         object,
-        ViewState,
-        Refs,
+        ExtractViewState<Render>,
+        ExtractRefs<Render>,
         [],
         [],
         {},
         {},
         object,
-        JayComponentCore<object, ViewState>
+        JayComponentCore<object, ExtractViewState<Render>>
     >;
 }

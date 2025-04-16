@@ -1,4 +1,4 @@
-import { makeJayStackComponent, PageProps, partialRender } from 'jay-stack-runtime';
+import { makeJayStackComponent, PageProps, partialRender } from '../../lib';
 import {render, PageElementRefs, PageViewState} from './compiled/page.jay-html';
 import { createSignal, Props } from 'jay-component';
 import {PartialRender} from "../../lib";
@@ -56,14 +56,14 @@ function ProductsPageConstructor(
     };
 }
 
-export const page = makeJayStackComponent(render)
+export const page =
+    makeJayStackComponent<typeof render>()
     .withProps<PageProps>()
-    .withLoadParams<PageParams>(async () => {
-        const params: PageParams[] = [
+    .withLoadParams<PageParams>(async function*() {
+        yield [
             { variant: 'a' },
             { variant: 'b' }
-        ];
-        return params[Symbol.iterator]();
+        ]
     })
     .withSlowlyRender<SlowlyViewState, SlowlyCarryForward>(renderSlowlyChanging)
     .withFastRender<FastCarryForward>(renderFastChanging)

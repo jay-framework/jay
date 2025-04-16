@@ -43,7 +43,7 @@ export type AnyFastRenderResult = FastRenderResult<object, object>;
 
 export type LoadParams<ServerContexts, Params extends UrlParams> = (
     contexts: ServerContexts,
-) => Promise<IterableIterator<Params>>;
+) => AsyncIterable<Params[]>;
 
 export type RenderSlowly<
     ServerContexts extends Array<object>,
@@ -77,7 +77,7 @@ export interface JayStackComponentDefinition<
     CarryForward extends object,
     CompCore extends JayComponentCore<PropsT, ViewState>,
 > {
-    render: PreRenderElement<ViewState, Refs, JayElement<ViewState, Refs>>;
+    // render: PreRenderElement<ViewState, Refs, JayElement<ViewState, Refs>>;
     serverContexts: ContextMarkers<ServerContexts>;
     clientContexts: ContextMarkers<ServerContexts>;
     loadParams: LoadParams<ServerContexts, Params>;
@@ -100,6 +100,6 @@ export type AnyJayStackComponentDefinition = JayStackComponentDefinition<
     object[],
     object,
     UrlParams,
-    Object,
+    object,
     any
 >;

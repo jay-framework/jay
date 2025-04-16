@@ -15,9 +15,9 @@ describe('rendering a parameterized page', () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
-            page,
             { variant: 'a' },
             PAGE_PROPS,
+            [{compDefinition: page, mainPart: true}]
         );
 
         expect(slowlyRenderResult).toEqual(
@@ -36,9 +36,9 @@ describe('rendering a parameterized page', () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
-            page,
             { variant: 'b' },
             PAGE_PROPS,
+            [{compDefinition: page, mainPart: true}]
         );
 
         expect(slowlyRenderResult).toEqual(
@@ -56,9 +56,9 @@ describe('rendering a parameterized page', () => {
     it('should run the fast changing phase with variant A', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
-            page,
             { variant: 'a' },
             PAGE_PROPS,
+            [{compDefinition: page, mainPart: true}]
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
@@ -88,9 +88,9 @@ describe('rendering a parameterized page', () => {
     it('should run the fast changing phase with variant B', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
-            page,
             { variant: 'b' },
             PAGE_PROPS,
+            [{compDefinition: page, mainPart: true}]
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
@@ -120,9 +120,9 @@ describe('rendering a parameterized page', () => {
     it('should run the interactive phase with variant A', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
-            page,
             { variant: 'a' },
             PAGE_PROPS,
+            [{compDefinition: page, mainPart: true}]
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
@@ -151,9 +151,9 @@ describe('rendering a parameterized page', () => {
     it('should run the interactive phase with variant B', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
-            page,
             { variant: 'b' },
             PAGE_PROPS,
+            [{compDefinition: page, mainPart: true}]
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
