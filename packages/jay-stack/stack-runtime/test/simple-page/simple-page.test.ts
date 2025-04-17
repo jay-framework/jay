@@ -23,10 +23,10 @@ describe('rendering a simple page', () => {
         expect(slowlyRenderResult).toEqual(
             partialRender(
                 {
-                    slowlyRendered: 'static text',
+                    slowlyRendered: 'SLOWLY RENDERED',
                 },
                 {
-                    carryForwardSlowly: 'carry forward from slowly',
+                    carryForwardSlowly: 'SLOWLY -> FAST CARRY FORWARD',
                 },
             ),
         );
@@ -53,12 +53,12 @@ describe('rendering a simple page', () => {
             partialRender(
                 {
                     fastDynamicRendered:
-                        "dynamic text from fast render. Slowly Carry forward is 'carry forward from slowly'",
+                        "FAST RENDERED, using 'SLOWLY -> FAST CARRY FORWARD'",
                 },
                 {
-                    carryForwardFast: 'carry forward from fast render',
+                    carryForwardFast: 'FAST -> INTERACTIVE CARRY FORWARD',
                     fastDynamicRendered:
-                        "dynamic text from fast render. Slowly Carry forward is 'carry forward from slowly'",
+                        "FAST RENDERED, using 'SLOWLY -> FAST CARRY FORWARD'",
                 },
             ),
         );
@@ -89,8 +89,8 @@ describe('rendering a simple page', () => {
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(
             await prettify(`
             <div>
-                <div>static text</div>
-                <div>dynamic text from fast render. Slowly Carry forward is 'carry forward from slowly'</div>
+                <div>SLOWLY RENDERED</div>
+                <div>FAST RENDERED, using 'SLOWLY -&gt; FAST CARRY FORWARD'</div>
                 <button data-id="button">click</button>
             </div>;`),
         );
@@ -123,8 +123,8 @@ describe('rendering a simple page', () => {
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(
             await prettify(`
             <div>
-                <div>static text</div>
-                <div>dynamic value from client. Fast Carry forward is 'carry forward from fast render'</div>
+                <div>SLOWLY RENDERED</div>
+                <div>INTERACTIVE RENDERED, using 'FAST -&gt; INTERACTIVE CARRY FORWARD'</div>
                 <button data-id="button">click</button>
             </div>;`),
         );

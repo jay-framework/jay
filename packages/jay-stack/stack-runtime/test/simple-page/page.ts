@@ -15,14 +15,14 @@ interface FastCarryForward {
 }
 
 async function renderSlowlyChanging(props: PageProps): Promise<PartialRender<SlowlyViewState, SlowlyCarryForward>> {
-    const slowlyRendered = 'static text';
-    const carryForwardSlowly = 'carry forward from slowly';
+    const slowlyRendered = 'SLOWLY RENDERED';
+    const carryForwardSlowly = 'SLOWLY -> FAST CARRY FORWARD';
     return partialRender({ slowlyRendered }, { carryForwardSlowly });
 }
 
 async function renderFastChanging(props: PageProps & SlowlyCarryForward): Promise<PartialRender<FastViewState, FastCarryForward>> {
-    const fastDynamicRendered = `dynamic text from fast render. Slowly Carry forward is '${props.carryForwardSlowly}'`;
-    const carryForwardFast = 'carry forward from fast render';
+    const fastDynamicRendered = `FAST RENDERED, using '${props.carryForwardSlowly}'`;
+    const carryForwardFast = 'FAST -> INTERACTIVE CARRY FORWARD';
     return partialRender(
         {
              fastDynamicRendered,
@@ -39,7 +39,7 @@ function ProductsPageConstructor(
 
     refs.button.onclick(() => {
         setFastDynamicRendered(
-            `dynamic value from client. Fast Carry forward is '${props.carryForwardFast()}'`,
+            `INTERACTIVE RENDERED, using '${props.carryForwardFast()}'`,
         );
     });
 
