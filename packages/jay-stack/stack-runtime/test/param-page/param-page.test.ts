@@ -1,4 +1,10 @@
-import { DevSlowlyChangingPhase, PageProps, partialRender, renderFastChangingData } from '../../lib';
+import {
+    DevSlowlyChangingPhase,
+    makeCompositeJayComponent,
+    PageProps,
+    partialRender,
+    renderFastChangingData
+} from '../../lib';
 import { page } from './page';
 import { render as renderVariantA } from './compiled-slowly/page.slowly-rendered.variant-a.jay-html';
 import { render as renderVariantB } from './compiled-slowly/page.slowly-rendered.variant-b.jay-html';
@@ -169,7 +175,7 @@ describe('rendering a parameterized page', () => {
         if (fastRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from fast phase');
 
-        const comp = makeJayComponent(renderVariantB, page.comp);
+        const comp = makeCompositeJayComponent(renderVariantB, fastRenderResult.render, PAGE_PARTS);
         const instance = comp({ ...PAGE_PROPS, ...fastRenderResult.carryForward } as any);
 
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(

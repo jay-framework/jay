@@ -1,4 +1,10 @@
-import { DevSlowlyChangingPhase, PageProps, partialRender, renderFastChangingData } from '../../lib';
+import {
+    DevSlowlyChangingPhase,
+    makeCompositeJayComponent,
+    PageProps,
+    partialRender,
+    renderFastChangingData
+} from '../../lib';
 import { page } from './page';
 import { render } from './compiled-slowly/page.slowly-rendered.jay-html'
 import { makeJayComponent } from 'jay-component';
@@ -84,7 +90,7 @@ describe('rendering a simple page', () => {
         const fastCarryForward = fastRenderResult.carryForward;
 
         const comp = makeJayComponent(render, page.comp);
-        const instance = comp({ ...PAGE_PROPS, ...fastRenderResult.carryForward } as any);
+        const instance = comp({ ...PAGE_PROPS, ...fastCarryForward } as any);
 
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(
             await prettify(`
@@ -115,8 +121,8 @@ describe('rendering a simple page', () => {
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
-        const comp = makeJayComponent(render, page.comp);
-        const instance = comp({ ...PAGE_PROPS, ...fastRenderResult.carryForward } as any);
+        const comp = makeCompositeJayComponent(render, fastRenderResult.render, PAGE_PARTS);
+        const instance = comp({ ...PAGE_PROPS, ...fastCarryForward } as any);
 
         await instance.element.refs.button.exec$((_) => _.click());
 
