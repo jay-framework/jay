@@ -1,5 +1,5 @@
 import {JayElement, element as e, dynamicText as dt, RenderElement, ReferencesManager, ConstructContext, HTMLElementProxy, RenderElementOptions} from "jay-runtime";
-import {SimplePluginViewState} from "../../simple-plugin/compiled/simple-plugin.jay-contract";
+import {SimplePluginRefs, SimplePluginViewState} from "../../simple-plugin/compiled/simple-plugin.jay-contract";
 
 export interface PageViewState {
     plugin: SimplePluginViewState
@@ -7,7 +7,7 @@ export interface PageViewState {
 
 
 export interface PageElementRefs {
-    plugin: SimplePluginViewState
+    plugin: SimplePluginRefs
 }
 
 export type PageElement = JayElement<PageViewState, PageElementRefs>
@@ -17,7 +17,7 @@ export type PageElementPreRender = [PageElementRefs, PageElementRender]
 
 export function render(options?: RenderElementOptions): PageElementPreRender {
     const [pluginRefManager, [refButton]] =
-        ReferencesManager.for(options, ['button'], [], [], []);
+        ReferencesManager.for(options, ['pluginButton'], [], [], []);
     const [refManager, []] =
         ReferencesManager.for(options, [], [], [], [], {plugin: pluginRefManager});
     const render = (viewState: PageViewState) => ConstructContext.withRootContext(

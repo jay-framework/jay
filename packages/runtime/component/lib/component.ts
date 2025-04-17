@@ -50,7 +50,7 @@ export type ConcreteJayComponent<
     JayElementT extends JayElement<ViewState, Refs>,
 > = ConcreteJayComponent1<PropsT, ViewState, Refs, CompCore, JayElementT>;
 
-function materializeViewState<ViewState extends object>(
+export function materializeViewState<ViewState extends object>(
     vsValueOrGetter: ViewStateGetters<ViewState>,
 ): ViewState {
     let vs = {};
@@ -230,7 +230,7 @@ export function makeJayTsxComponent<PropsT extends object, CompT extends { rende
     return {} as JayComponent<PropsT, any, any>;
 }
 
-function makePropsProxy<PropsT extends object>(
+export function makePropsProxy<PropsT extends object>(
     reactive: Reactive,
     props: PropsT,
 ): UpdatableProps<PropsT> {

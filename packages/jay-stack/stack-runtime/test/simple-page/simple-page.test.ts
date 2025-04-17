@@ -8,6 +8,7 @@ const PAGE_PROPS: PageProps = {
     language: 'en-us',
 };
 const PAGE_PARAMS = {};
+const PAGE_PARTS = [{compDefinition: page}];
 
 describe('rendering a simple page', () => {
     it('should run the slowly changing phase', async () => {
@@ -16,7 +17,7 @@ describe('rendering a simple page', () => {
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
-            [{compDefinition: page, mainPart: true}]
+            PAGE_PARTS
         );
 
         expect(slowlyRenderResult).toEqual(
@@ -36,16 +37,16 @@ describe('rendering a simple page', () => {
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
-            [{compDefinition: page, mainPart: true}]
+            PAGE_PARTS
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
 
         const fastRenderResult = await renderFastChangingData(
-            page,
             PAGE_PARAMS,
             PAGE_PROPS,
             slowlyRenderResult.carryForward,
+            PAGE_PARTS
         );
 
         expect(fastRenderResult).toEqual(
@@ -68,15 +69,15 @@ describe('rendering a simple page', () => {
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
-            [{compDefinition: page, mainPart: true}]
+            PAGE_PARTS
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
         const fastRenderResult = await renderFastChangingData(
-            page,
             PAGE_PARAMS,
             PAGE_PROPS,
             slowlyRenderResult.carryForward,
+            PAGE_PARTS
         );
         if (fastRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from fast phase');
@@ -100,15 +101,15 @@ describe('rendering a simple page', () => {
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
-            [{compDefinition: page, mainPart: true}]
+            PAGE_PARTS
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
         const fastRenderResult = await renderFastChangingData(
-            page,
             PAGE_PARAMS,
             PAGE_PROPS,
             slowlyRenderResult.carryForward,
+            PAGE_PARTS
         );
         if (fastRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from fast phase');

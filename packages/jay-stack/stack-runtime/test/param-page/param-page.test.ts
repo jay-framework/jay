@@ -10,6 +10,8 @@ const PAGE_PROPS: PageProps = {
     language: 'en-us',
 };
 
+const PAGE_PARTS = [{compDefinition: page}];
+
 describe('rendering a parameterized page', () => {
     it('should run the slowly changing phase with variant A', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
@@ -17,7 +19,7 @@ describe('rendering a parameterized page', () => {
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             { variant: 'a' },
             PAGE_PROPS,
-            [{compDefinition: page, mainPart: true}]
+            PAGE_PARTS
         );
 
         expect(slowlyRenderResult).toEqual(
@@ -38,7 +40,7 @@ describe('rendering a parameterized page', () => {
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             { variant: 'b' },
             PAGE_PROPS,
-            [{compDefinition: page, mainPart: true}]
+            PAGE_PARTS
         );
 
         expect(slowlyRenderResult).toEqual(
@@ -58,16 +60,16 @@ describe('rendering a parameterized page', () => {
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             { variant: 'a' },
             PAGE_PROPS,
-            [{compDefinition: page, mainPart: true}]
+            PAGE_PARTS
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
 
         const fastRenderResult = await renderFastChangingData(
-            page,
             { variant: 'a' },
             PAGE_PROPS,
             slowlyRenderResult.carryForward,
+            PAGE_PARTS
         );
 
         expect(fastRenderResult).toEqual(
@@ -90,16 +92,16 @@ describe('rendering a parameterized page', () => {
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             { variant: 'b' },
             PAGE_PROPS,
-            [{compDefinition: page, mainPart: true}]
+            PAGE_PARTS
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
 
         const fastRenderResult = await renderFastChangingData(
-            page,
             { variant: 'b' },
             PAGE_PROPS,
             slowlyRenderResult.carryForward,
+            PAGE_PARTS
         );
 
         expect(fastRenderResult).toEqual(
@@ -122,15 +124,15 @@ describe('rendering a parameterized page', () => {
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             { variant: 'a' },
             PAGE_PROPS,
-            [{compDefinition: page, mainPart: true}]
+            PAGE_PARTS
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
         const fastRenderResult = await renderFastChangingData(
-            page,
             { variant: 'a' },
             PAGE_PROPS,
             slowlyRenderResult.carryForward,
+            PAGE_PARTS
         );
         if (fastRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from fast phase');
@@ -153,15 +155,15 @@ describe('rendering a parameterized page', () => {
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             { variant: 'b' },
             PAGE_PROPS,
-            [{compDefinition: page, mainPart: true}]
+            PAGE_PARTS
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
         const fastRenderResult = await renderFastChangingData(
-            page,
             { variant: 'b' },
             PAGE_PROPS,
             slowlyRenderResult.carryForward,
+            PAGE_PARTS
         );
         if (fastRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from fast phase');

@@ -574,8 +574,8 @@ class BuilderImplementation<
             CompCore
         >
 {
-    serverContexts: ContextMarkers<ServerContexts>;
-    clientContexts: ContextMarkers<ServerContexts>;
+    serverContexts: ContextMarkers<ServerContexts> = [] as ContextMarkers<ServerContexts>;
+    clientContexts: ContextMarkers<ClientContexts> = [] as ContextMarkers<ClientContexts>;
     loadParams: LoadParams<ServerContexts, Params>;
     slowlyRender: RenderSlowly<ServerContexts, PropsT, StaticViewState, CarryForward>;
     fastRender: RenderFast<
@@ -657,7 +657,7 @@ class BuilderImplementation<
         CarryForward,
         CompCore
     > {
-        this.clientContexts = contextMarkers as ContextMarkers<ServerContexts>;
+        this.clientContexts = contextMarkers as ContextMarkers<ClientContexts>;
         return this as unknown as Builder<
             'UrlLoader',
             StaticViewState,

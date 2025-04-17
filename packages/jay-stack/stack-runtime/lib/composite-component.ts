@@ -1,21 +1,37 @@
-import {JayComponentCore, makeJayComponent, Props,} from 'jay-component';
-import {PreRenderElement} from 'jay-runtime';
+import {
+    JayComponentCore,
+    makeJayComponent,
+    makePropsProxy,
+    materializeViewState,
+    Props,
+    useReactive,
+} from 'jay-component';
+import {JayElement, PreRenderElement} from 'jay-runtime';
 import {CompositePart} from "./composite-part";
 
 export function makeCompositeJayComponent<
     PropsT extends object,
     ViewState extends object,
+    Refs extends object,
+    JayElementT extends JayElement<ViewState, Refs>,
     CompCore extends JayComponentCore<PropsT, ViewState>,
 >(
-    preRender: PreRenderElement<any, any, any>,
+    preRender: PreRenderElement<ViewState, Refs, JayElementT>,
     defaultViewState: ViewState,
     parts: Array<CompositePart>,
 ) {
     const comp = (props: Props<any>, refs, ...contexts): CompCore => {
         const instances: Array<[string, JayComponentCore<any, any>]> = parts.map((part) => {
+            const partRefs = part.key? refs[part.key] : refs;
+            let partProps: Props<any>;
+            if (part.key) {
+                partProps = makePropsProxy(useReactive(), props[part.key]());
+            }
+            else
+                partProps = props;
             return [
-                part.viewStateKey,
-                part.compDefinition.comp(props, refs, contexts.splice(0, part.compDefinition.clientContexts.length)),
+                part.key,
+                part.compDefinition.comp(partProps, partRefs, contexts.splice(0, part.compDefinition.clientContexts.length)),
             ];
         });
 
@@ -23,7 +39,12 @@ export function makeCompositeJayComponent<
             render: () => {
                 let viewState = defaultViewState;
                 instances.forEach(
-                    ([key, instance]) => (viewState = { ...viewState, ...instance.render() }),
+                    ([key, instance]) => {
+                        if (key)
+                            viewState[key] = materializeViewState(instance.render())
+                        else
+                            viewState = {...viewState, ...instance.render()}
+                    }
                 );
                 return viewState;
             },
@@ -34,5 +55,5 @@ export function makeCompositeJayComponent<
         return [...cm, ...part.compDefinition.clientContexts];
     }, []);
 
-    return makeJayComponent(preRender, comp, ...contextMarkers);
+    return makeJayComponent<PropsT, ViewState, Refs, JayElementT, Array<any>, CompCore>(preRender, comp, ...contextMarkers);
 }

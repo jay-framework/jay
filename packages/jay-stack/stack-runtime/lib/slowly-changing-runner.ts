@@ -58,16 +58,16 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
         let slowlyViewState = {};
         let carryForward = {}
         for (const part of parts) {
-            const {compDefinition, mainPart, viewStateKey} = part;
+            const {compDefinition, key} = part;
             const slowlyRenderedPart = await compDefinition.slowlyRender({ ...pageProps, ...pageParams }, [])
             if (slowlyRenderedPart.kind === "PartialRender") {
-                if (mainPart) {
+                if (!key) {
                     slowlyViewState = {...slowlyViewState, ...slowlyRenderedPart.render}
                     carryForward = {...carryForward, ...slowlyRenderedPart.carryForward}
                 }
                 else {
-                    slowlyViewState[viewStateKey] = slowlyRenderedPart.render
-                    carryForward[viewStateKey] = slowlyRenderedPart.carryForward
+                    slowlyViewState[key] = slowlyRenderedPart.render
+                    carryForward[key] = slowlyRenderedPart.carryForward
                 }
             }
             else return slowlyRenderedPart

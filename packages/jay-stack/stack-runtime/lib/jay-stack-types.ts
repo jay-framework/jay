@@ -79,7 +79,7 @@ export interface JayStackComponentDefinition<
 > {
     // render: PreRenderElement<ViewState, Refs, JayElement<ViewState, Refs>>;
     serverContexts: ContextMarkers<ServerContexts>;
-    clientContexts: ContextMarkers<ServerContexts>;
+    clientContexts: ContextMarkers<ClientContexts>;
     loadParams: LoadParams<ServerContexts, Params>;
     slowlyRender: RenderSlowly<ServerContexts, PropsT, StaticViewState, CarryForward>;
     fastRender: RenderFast<
