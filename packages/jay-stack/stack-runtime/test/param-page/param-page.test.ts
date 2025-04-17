@@ -175,7 +175,7 @@ describe('rendering a parameterized page', () => {
         if (fastRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from fast phase');
 
-        const comp = makeCompositeJayComponent(renderVariantB, fastRenderResult.render, PAGE_PARTS);
+        const comp = makeCompositeJayComponent(renderVariantB, fastRenderResult.rendered, PAGE_PARTS);
         const instance = comp({ ...PAGE_PROPS, ...fastRenderResult.carryForward } as any);
 
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(

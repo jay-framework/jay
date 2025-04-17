@@ -94,7 +94,7 @@ describe('rendering a page with only a plugin', () => {
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
-        const comp = makeCompositeJayComponent(render, fastRenderResult.render, PAGE_PARTS)
+        const comp = makeCompositeJayComponent(render, fastRenderResult.rendered, PAGE_PARTS)
         const instance = comp({ ...PAGE_PROPS, ...fastCarryForward } as any);
 
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(
@@ -126,7 +126,7 @@ describe('rendering a page with only a plugin', () => {
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
-        const comp = makeCompositeJayComponent(render, fastRenderResult.render, PAGE_PARTS)
+        const comp = makeCompositeJayComponent(render, fastRenderResult.rendered, PAGE_PARTS)
         const instance = comp({ ...PAGE_PROPS, ...fastCarryForward });
 
         await instance.element.refs.plugin.pluginButton.exec$((_) => _.click());
