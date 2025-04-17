@@ -1,6 +1,6 @@
-import { ProductPageViewState, ProductType } from './product-page.jay-contract';
-import { Type as DiscountType } from './discount.jay-contract';
-import { MediaType } from './media-item.jay-contract';
+import { ProductType } from './compiled/product-page.jay-contract';
+import { Type as DiscountType } from './compiled/discount.jay-contract';
+import { MediaType } from './compiled/media-item.jay-contract';
 
 export const products = [
     {

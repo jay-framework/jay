@@ -4,4 +4,4 @@ export * from './slowly-changing-runner';
 export * from './fast-changing-runner';
 export * from './render-results';
 export * from './composite-component';
-export {CompositePart} from "./composite-part";
+export type {CompositePart} from "./composite-part";
