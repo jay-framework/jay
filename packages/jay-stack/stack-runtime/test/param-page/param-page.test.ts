@@ -9,7 +9,8 @@ import { prettify } from 'jay-compiler-shared';
 const PAGE_PROPS: PageProps = {
     language: 'en-us',
 };
-
+const PAGE_PARAMS_A = { variant: 'A' };
+const PAGE_PARAMS_B = { variant: 'B' };
 const PAGE_PARTS = [{compDefinition: page}];
 
 describe('rendering a parameterized page', () => {
@@ -17,7 +18,7 @@ describe('rendering a parameterized page', () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
-            { variant: 'a' },
+            PAGE_PARAMS_A,
             PAGE_PROPS,
             PAGE_PARTS
         );
@@ -25,10 +26,10 @@ describe('rendering a parameterized page', () => {
         expect(slowlyRenderResult).toEqual(
             partialRender(
                 {
-                    slowlyRendered: 'static text A',
+                    slowlyRendered: 'SLOWLY RENDERED A',
                 },
                 {
-                    carryForwardSlowly: 'carry forward A from slowly',
+                    carryForwardSlowly: 'SLOWLY -> FAST CARRY FORWARD A',
                 },
             ),
         );
@@ -38,7 +39,7 @@ describe('rendering a parameterized page', () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
-            { variant: 'b' },
+            PAGE_PARAMS_B,
             PAGE_PROPS,
             PAGE_PARTS
         );
@@ -46,10 +47,10 @@ describe('rendering a parameterized page', () => {
         expect(slowlyRenderResult).toEqual(
             partialRender(
                 {
-                    slowlyRendered: 'static text B',
+                    slowlyRendered: 'SLOWLY RENDERED B',
                 },
                 {
-                    carryForwardSlowly: 'carry forward B from slowly',
+                    carryForwardSlowly: 'SLOWLY -> FAST CARRY FORWARD B',
                 },
             ),
         );
@@ -58,7 +59,7 @@ describe('rendering a parameterized page', () => {
     it('should run the fast changing phase with variant A', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
-            { variant: 'a' },
+            PAGE_PARAMS_A,
             PAGE_PROPS,
             PAGE_PARTS
         );
@@ -66,7 +67,7 @@ describe('rendering a parameterized page', () => {
             throw new Error('expecting partial render from slowly phase');
 
         const fastRenderResult = await renderFastChangingData(
-            { variant: 'a' },
+            PAGE_PARAMS_A,
             PAGE_PROPS,
             slowlyRenderResult.carryForward,
             PAGE_PARTS
@@ -76,12 +77,12 @@ describe('rendering a parameterized page', () => {
             partialRender(
                 {
                     fastDynamicRendered:
-                        "dynamic text A from fast render. Slowly Carry forward is 'carry forward A from slowly'",
+                        "FAST RENDERED A, using SLOWLY -> FAST CARRY FORWARD A",
                 },
                 {
-                    carryForwardFast: 'carry forward A from fast render',
+                    carryForwardFast: 'FAST -> INTERACTIVE CARRY FORWARD A',
                     fastDynamicRendered:
-                        "dynamic text A from fast render. Slowly Carry forward is 'carry forward A from slowly'",
+                        "FAST RENDERED A, using SLOWLY -> FAST CARRY FORWARD A",
                 },
             ),
         );
@@ -90,7 +91,7 @@ describe('rendering a parameterized page', () => {
     it('should run the fast changing phase with variant B', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
-            { variant: 'b' },
+            PAGE_PARAMS_B,
             PAGE_PROPS,
             PAGE_PARTS
         );
@@ -98,7 +99,7 @@ describe('rendering a parameterized page', () => {
             throw new Error('expecting partial render from slowly phase');
 
         const fastRenderResult = await renderFastChangingData(
-            { variant: 'b' },
+            PAGE_PARAMS_B,
             PAGE_PROPS,
             slowlyRenderResult.carryForward,
             PAGE_PARTS
@@ -108,12 +109,12 @@ describe('rendering a parameterized page', () => {
             partialRender(
                 {
                     fastDynamicRendered:
-                        "dynamic text B from fast render. Slowly Carry forward is 'carry forward B from slowly'",
+                        "FAST RENDERED B, using SLOWLY -> FAST CARRY FORWARD B",
                 },
                 {
-                    carryForwardFast: 'carry forward B from fast render',
+                    carryForwardFast: 'FAST -> INTERACTIVE CARRY FORWARD B',
                     fastDynamicRendered:
-                        "dynamic text B from fast render. Slowly Carry forward is 'carry forward B from slowly'",
+                        "FAST RENDERED B, using SLOWLY -> FAST CARRY FORWARD B",
                 },
             ),
         );
@@ -122,14 +123,14 @@ describe('rendering a parameterized page', () => {
     it('should run the interactive phase with variant A', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
-            { variant: 'a' },
+            PAGE_PARAMS_A,
             PAGE_PROPS,
             PAGE_PARTS
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
         const fastRenderResult = await renderFastChangingData(
-            { variant: 'a' },
+            PAGE_PARAMS_A,
             PAGE_PROPS,
             slowlyRenderResult.carryForward,
             PAGE_PARTS
@@ -143,8 +144,8 @@ describe('rendering a parameterized page', () => {
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(
             await prettify(`
             <div>
-                <div>static text A</div>
-                <div>dynamic text A from fast render. Slowly Carry forward is 'carry forward A from slowly'</div>
+                <div>SLOWLY RENDERED A</div>
+                <div>FAST RENDERED A, using SLOWLY -&gt; FAST CARRY FORWARD A</div>
                 <button data-id="button">click</button>
             </div>;`),
         );
@@ -153,14 +154,14 @@ describe('rendering a parameterized page', () => {
     it('should run the interactive phase with variant B', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
-            { variant: 'b' },
+            PAGE_PARAMS_B,
             PAGE_PROPS,
             PAGE_PARTS
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
         const fastRenderResult = await renderFastChangingData(
-            { variant: 'b' },
+            PAGE_PARAMS_B,
             PAGE_PROPS,
             slowlyRenderResult.carryForward,
             PAGE_PARTS
@@ -174,8 +175,8 @@ describe('rendering a parameterized page', () => {
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(
             await prettify(`
             <div>
-                <div>static text B</div>
-                <div>dynamic text B from fast render. Slowly Carry forward is 'carry forward B from slowly'</div>
+                <div>SLOWLY RENDERED B</div>
+                <div>FAST RENDERED B, using SLOWLY -&gt; FAST CARRY FORWARD B</div>
                 <button data-id="button">click</button>
             </div>;`),
         );

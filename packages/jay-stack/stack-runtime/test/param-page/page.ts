@@ -16,19 +16,19 @@ interface FastCarryForward {
 }
 
 interface PageParams {
-    variant: 'a' | 'b';
+    variant: 'A' | 'B';
     [key: string]: string | undefined;
 }
 
 async function renderSlowlyChanging(props: PageProps & PageParams): Promise<PartialRender<SlowlyViewState, SlowlyCarryForward>> {
-    const slowlyRendered = props.variant === 'a' ? 'static text A' : 'static text B';
-    const carryForwardSlowly = props.variant === 'a' ? 'carry forward A from slowly' : 'carry forward B from slowly';
+    const slowlyRendered = `SLOWLY RENDERED ${props.variant}`;
+    const carryForwardSlowly = `SLOWLY -> FAST CARRY FORWARD ${props.variant}`;
     return partialRender({ slowlyRendered }, { carryForwardSlowly });
 }
 
 async function renderFastChanging(props: PageProps & PageParams & SlowlyCarryForward): Promise<PartialRender<FastViewState, FastCarryForward>> {
-    const fastDynamicRendered = `dynamic text ${props.variant.toUpperCase()} from fast render. Slowly Carry forward is '${props.carryForwardSlowly}'`;
-    const carryForwardFast = `carry forward ${props.variant.toUpperCase()} from fast render`;
+    const fastDynamicRendered = `FAST RENDERED ${props.variant}, using ${props.carryForwardSlowly}`;
+    const carryForwardFast = `FAST -> INTERACTIVE CARRY FORWARD ${props.variant}`;
     return partialRender(
         {
             fastDynamicRendered,
@@ -38,14 +38,14 @@ async function renderFastChanging(props: PageProps & PageParams & SlowlyCarryFor
 }
 
 function ProductsPageConstructor(
-    props: Props<PageProps & FastCarryForward>,
+    props: Props<PageProps & PageParams & FastCarryForward>,
     refs: PageElementRefs,
 ) {
     const [fastDynamicRendered, setFastDynamicRendered] = createSignal(props.fastDynamicRendered);
 
     refs.button.onclick(() => {
         setFastDynamicRendered(
-            `dynamic value from client. Fast Carry forward is '${props.carryForwardFast()}'`,
+            `INTERACTIVE RENDERED ${props.variant}, using ${props.carryForwardFast()}`,
         );
     });
 
@@ -61,8 +61,8 @@ export const page =
     .withProps<PageProps>()
     .withLoadParams<PageParams>(async function*() {
         yield [
-            { variant: 'a' },
-            { variant: 'b' }
+            { variant: 'A' },
+            { variant: 'B' }
         ]
     })
     .withSlowlyRender<SlowlyViewState, SlowlyCarryForward>(renderSlowlyChanging)

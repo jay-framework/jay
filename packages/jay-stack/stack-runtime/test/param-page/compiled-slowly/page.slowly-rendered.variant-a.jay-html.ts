@@ -27,7 +27,7 @@ export function render(options?: RenderElementOptions): PageElementPreRender {
     const render = (viewState: PageViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
-                e('div', {}, ['static text A']),
+                e('div', {}, ['SLOWLY RENDERED A']),
                 e('div', {}, [dt((vs) => vs.fastDynamicRendered)]),
                 e('button', { 'data-id': 'button' }, ['click'], refButton()),
             ]),
