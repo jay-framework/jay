@@ -29,12 +29,12 @@ describe('rendering a page with only a plugin', () => {
             partialRender(
                 {
                     plugin: {
-                        pluginSlowlyRendered: "This is static content from a plugin",
+                        pluginSlowlyRendered: "SLOWLY RENDERED",
                     },
                 },
                 {
                     plugin: {
-                        staticData: "Static plugin data to carry forward",
+                        staticData: "SLOWLY -> FAST CARRY FORWARD",
                     },
                 },
             ),
@@ -62,13 +62,13 @@ describe('rendering a page with only a plugin', () => {
             partialRender(
                 {
                     plugin: {
-                        pluginInteractiveRendered: "Dynamic content from plugin using carry forward: Static plugin data to carry forward",
+                        pluginInteractiveRendered: "FAST RENDERED, using SLOWLY -> FAST CARRY FORWARD",
                     },
                 },
                 {
                     plugin: {
-                        dynamicData: "Dynamic data to carry forward",
-                        pluginInteractiveRendered: "Dynamic content from plugin using carry forward: Static plugin data to carry forward",
+                        dynamicData: "FAST -> INTERACTIVE CARRY FORWARD",
+                        pluginInteractiveRendered: "FAST RENDERED, using SLOWLY -> FAST CARRY FORWARD",
                     },
                 },
             ),
@@ -101,7 +101,7 @@ describe('rendering a page with only a plugin', () => {
             await prettify(`
             <div>
                 <div>static text</div>
-                <div>Dynamic content from plugin using carry forward: Static plugin data to carry forward</div>
+                <div>FAST RENDERED, using SLOWLY -&gt; FAST CARRY FORWARD</div>
                 <button data-id="button">click</button>
             </div>;`),
         );
@@ -135,7 +135,7 @@ describe('rendering a page with only a plugin', () => {
             await prettify(`
             <div>
                 <div>static text</div>
-                <div>Updated dynamic content using dynamic data: Dynamic data to carry forward</div>
+                <div>INTERACTIVE RENDERED, using FAST -&gt; INTERACTIVE CARRY FORWARD</div>
                 <button data-id="button">click</button>
             </div>;`),
         );

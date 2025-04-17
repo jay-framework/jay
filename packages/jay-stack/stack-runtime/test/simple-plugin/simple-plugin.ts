@@ -19,15 +19,15 @@ interface DynamicCarryForward {
 
 // Static rendering function
 async function renderStaticContent(props: PageProps): Promise<PartialRender<StaticViewState, StaticCarryForward>> {
-    const pluginSlowlyRendered = 'This is static content from a plugin';
-    const staticData = 'Static plugin data to carry forward';
+    const pluginSlowlyRendered = 'SLOWLY RENDERED';
+    const staticData = 'SLOWLY -> FAST CARRY FORWARD';
     return partialRender({ pluginSlowlyRendered }, { staticData });
 }
 
 // Dynamic rendering function
 async function renderDynamicContent(props: PageProps & StaticCarryForward): Promise<PartialRender<DynamicViewState, DynamicCarryForward>> {
-    const pluginInteractiveRendered = `Dynamic content from plugin using carry forward: ${props.staticData}`;
-    const dynamicData = 'Dynamic data to carry forward';
+    const pluginInteractiveRendered = `FAST RENDERED, using ${props.staticData}`;
+    const dynamicData = 'FAST -> INTERACTIVE CARRY FORWARD';
     return partialRender(
         { pluginInteractiveRendered },
         { dynamicData, pluginInteractiveRendered }
@@ -43,7 +43,7 @@ function SimplePluginConstructor(
 
     refs.pluginButton.onclick(() => {
         setDynamicContent(
-            `Updated dynamic content using dynamic data: ${props.dynamicData()}`
+            `INTERACTIVE RENDERED, using ${props.dynamicData()}`
         );
     });
 
