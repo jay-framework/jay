@@ -6,6 +6,8 @@ import {
     renderFastChangingData
 } from '../../lib';
 import { render } from './compiled/page.jay-html'
+import { render as renderGamingLaptop} from './compiled-slowly/page.slowly-rendered.variant-gaming-laptop.jay-html'
+import { render as renderSmartphone} from './compiled-slowly/page.slowly-rendered.variant-smartphone.jay-html'
 import { prettify } from 'jay-compiler-shared';
 import { productPage } from '../stores-plugin/product-page';
 import {getProductBySlug, products} from "../stores-plugin/products-database";
@@ -19,7 +21,7 @@ const PAGE_PARAMS_NON_EXISTING = { slug: 'non-existing-slug' };
 const PAGE_PARTS = [{compDefinition: productPage, key: 'product'}];
 
 describe('rendering a product page', () => {
-    it('should run the slowly changing phase for the laptop', async () => {
+    it('slowly render for gaming laptop', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
@@ -46,7 +48,7 @@ describe('rendering a product page', () => {
         );
     })
 
-    it('should run the slowly changing phase for the smartphone', async () => {
+    it('slowly render for smartphone', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
@@ -73,7 +75,7 @@ describe('rendering a product page', () => {
         );
     });
 
-    it('should return 404 from slowly for non existing slug', async () => {
+    it('slowly render returns 404 for non existing slug', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
@@ -155,7 +157,7 @@ describe('rendering a product page', () => {
         );
     })
 
-    it('should run the interactive phase, getting the carry forward from the fast phase', async () => {
+    it('interactive render for gaming laptop', async () => {
         const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_GAMING_LAPTOP,
@@ -174,7 +176,7 @@ describe('rendering a product page', () => {
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
-        const comp = makeCompositeJayComponent(render, fastRenderResult.rendered, PAGE_PARTS)
+        const comp = makeCompositeJayComponent(renderGamingLaptop, fastRenderResult.rendered, PAGE_PARTS)
         const instance = comp({ ...PAGE_PROPS, ...fastCarryForward } as any);
 
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(
@@ -184,10 +186,47 @@ describe('rendering a product page', () => {
                 <div>TechBrand</div>
                 <div>High-performance gaming laptop with latest graphics</div>
                 <div>
-                    <span>$1,299.99</span>
-                    <span>$1,169.99</span>
+                    <span>$1,299.99</span><span>Discount: $1,169.99</span>
+                    
                 </div>
                 <div>Best Seller</div>
+                <button data-id="addToCart">Add to Cart</button>
+            </div>`),
+        );
+    });
+
+    it('interactive render for smartphone', async () => {
+        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
+            PAGE_PARAMS_GAMING_LAPTOP,
+            PAGE_PROPS,
+            PAGE_PARTS
+        );
+        if (slowlyRenderResult.kind !== 'PartialRender')
+            throw new Error('expecting partial render from slowly phase');
+        const fastRenderResult = await renderFastChangingData(
+            PAGE_PARAMS_GAMING_LAPTOP,
+            PAGE_PROPS,
+            slowlyRenderResult.carryForward,
+            PAGE_PARTS
+        );
+        if (fastRenderResult.kind !== 'PartialRender')
+            throw new Error('expecting partial render from fast phase');
+        const fastCarryForward = fastRenderResult.carryForward;
+
+        const comp = makeCompositeJayComponent(renderSmartphone, fastRenderResult.rendered, PAGE_PARTS)
+        const instance = comp({ ...PAGE_PROPS, ...fastCarryForward } as any);
+
+        expect(await prettify(instance.element.dom.outerHTML)).toEqual(
+            await prettify(`
+            <div>
+                <div>Smartphone Pro</div>
+                <div>TechBrand</div>
+                <div>Premium smartphone with advanced features</div>
+                <div>
+                    <span>$799.50</span>
+                </div>
+                <div>New</div>
                 <button data-id="addToCart">Add to Cart</button>
             </div>`),
         );
@@ -212,7 +251,7 @@ describe('rendering a product page', () => {
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
-        const comp = makeCompositeJayComponent(render, fastRenderResult.rendered, PAGE_PARTS)
+        const comp = makeCompositeJayComponent(renderGamingLaptop, fastRenderResult.rendered, PAGE_PARTS)
         const instance = comp({ ...PAGE_PROPS, ...fastCarryForward } as any);
 
         // Mock console.log to verify the add to cart action

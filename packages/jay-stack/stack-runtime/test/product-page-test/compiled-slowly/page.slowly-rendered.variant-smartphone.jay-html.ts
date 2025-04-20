@@ -31,19 +31,19 @@ export function render(options?: RenderElementOptions): PageElementPreRender {
     const [pluginRefManager, [addToCart]] =
         ReferencesManager.for(options, ['addToCart'], [], [], []);
     const [refManager, []] =
-        ReferencesManager.for(options, [], [], [], [], {plugin: pluginRefManager});
+        ReferencesManager.for(options, [], [], [], [], {product: pluginRefManager});
     const render = (viewState: PageViewState) => ConstructContext.withRootContext(
         viewState, refManager,
         () => e('div', {}, [
-            e('div', {}, [dt(vs => vs.product.name)]),
-            e('div', {}, [dt(vs => vs.product.brand)]),
-            e('div', {}, [dt(vs => vs.product.description)]),
+            e('div', {}, ['Smartphone Pro']),
+            e('div', {}, ['TechBrand']),
+            e('div', {}, ['Premium smartphone with advanced features']),
             de('div', {}, [
-                e('div', {}, [dt(vs => vs.product.priceData.formatted.price)]),
+                e('span', {}, ['$799.50']),
                 c((vs: PageViewState) => vs.product.hasDiscount, () =>
-                    e('span', {}, [dt(vs => `Discount: ${vs.product.priceData.formatted.discountedPrice}`)]))
+                    e('span', {}, ['Discount: $799.50']))
             ]),
-            e('div', {}, [dt(vs => vs.product.ribbon)]),
+            e('div', {}, ['New']),
             de('button', {"data-id": 'addToCart', disabled: ba(vs => !vs.product.inStock)}, [
                 c((vs: PageViewState) => vs.product.inStock, () => "Add to Cart"),
                 c((vs: PageViewState) => !vs.product.inStock, () => "Out of Stock")

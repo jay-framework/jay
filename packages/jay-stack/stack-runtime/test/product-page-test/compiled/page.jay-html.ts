@@ -31,7 +31,7 @@ export function render(options?: RenderElementOptions): PageElementPreRender {
     const [pluginRefManager, [addToCart]] =
         ReferencesManager.for(options, ['addToCart'], [], [], []);
     const [refManager, []] =
-        ReferencesManager.for(options, [], [], [], [], {plugin: pluginRefManager});
+        ReferencesManager.for(options, [], [], [], [], {product: pluginRefManager});
     const render = (viewState: PageViewState) => ConstructContext.withRootContext(
         viewState, refManager,
         () => e('div', {}, [
@@ -39,7 +39,7 @@ export function render(options?: RenderElementOptions): PageElementPreRender {
             e('div', {}, [dt(vs => vs.product.brand)]),
             e('div', {}, [dt(vs => vs.product.description)]),
             de('div', {}, [
-                e('div', {}, [dt(vs => vs.product.priceData.formatted.price)]),
+                e('span', {}, [dt(vs => vs.product.priceData.formatted.price)]),
                 c((vs: PageViewState) => vs.product.hasDiscount, () =>
                     e('span', {}, [dt(vs => `Discount: ${vs.product.priceData.formatted.discountedPrice}`)]))
             ]),
