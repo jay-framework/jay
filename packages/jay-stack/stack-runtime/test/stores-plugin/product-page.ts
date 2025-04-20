@@ -1,4 +1,4 @@
-import {makeJayStackComponent, notFound, PageProps, partialRender, SlowlyRenderResult, UrlParams} from '../../lib';
+import {makeJayStackComponent, notFound, PageProps, partialRender, SlowlyRenderResult, UrlParams, Signals, PartialRender} from '../../lib';
 import { getProductBySlug, getProducts } from './products-database';
 import { getAvailableUnits } from './inventory-service';
 import { Props } from 'jay-component';
@@ -19,6 +19,7 @@ interface ProductAndInventoryCarryForward {
 type SlowlyViewState = Omit<ProductPageViewState, 'inStock'> & {
     hasDiscount: boolean
 }
+type FastViewState = Pick<ProductPageViewState, 'inStock'>
 
 async function* urlLoader(): AsyncGenerator<ProductPageParams[]> {
     const products = await getProducts();
@@ -51,28 +52,29 @@ async function renderSlowlyChanging(props: PageProps & ProductPageParams): Promi
     );
 }
 
-async function renderFastChanging(props: PageProps & ProductPageParams & ProductsCarryForward) {
-    const availableProducts = await getAvailableUnits(props.inventoryItemId);
+async function renderFastChanging(props: PageProps & ProductPageParams, carryForward: ProductsCarryForward): Promise<PartialRender<FastViewState, ProductAndInventoryCarryForward>> {
+    const availableProducts = await getAvailableUnits(carryForward.inventoryItemId);
     const inStock = availableProducts > 0;
     return partialRender(
         { inStock },
         {
-            productId: props.productId,
+            productId: carryForward.productId,
             inStock,
         },
     );
 }
 
 function ProductsPageConstructor(
-    props: Props<PageProps & ProductPageParams & ProductAndInventoryCarryForward>,
+    props: Props<PageProps & ProductPageParams>,
     refs: ProductPageRefs,
+    carryForward: Signals<ProductAndInventoryCarryForward>,
 ) {
     refs.addToCart.onclick(() => {
-        console.log(`add ${props.productId()} to the cart`);
+        console.log(`add ${carryForward.productId[0]()} to the cart`);
     });
 
     return {
-        render: () => ({ inStock: props.inStock }),
+        render: () => ({ inStock: carryForward.inStock[0]() }),
     };
 }
 

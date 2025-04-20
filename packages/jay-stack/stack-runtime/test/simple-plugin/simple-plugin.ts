@@ -1,4 +1,4 @@
-import { makeJayStackComponent, PageProps, partialRender } from '../../lib/';
+import { makeJayStackComponent, PageProps, partialRender, Signals } from '../../lib/';
 import { render, SimplePluginViewState, SimplePluginRefs } from './compiled/simple-plugin.jay-contract';
 import { createSignal, Props } from 'jay-component';
 import { PartialRender } from "../../lib";
@@ -25,8 +25,8 @@ async function renderStaticContent(props: PageProps): Promise<PartialRender<Stat
 }
 
 // Dynamic rendering function
-async function renderDynamicContent(props: PageProps & StaticCarryForward): Promise<PartialRender<DynamicViewState, DynamicCarryForward>> {
-    const pluginInteractiveRendered = `FAST RENDERED, using ${props.staticData}`;
+async function renderDynamicContent(props: PageProps, carryForward: StaticCarryForward): Promise<PartialRender<DynamicViewState, DynamicCarryForward>> {
+    const pluginInteractiveRendered = `FAST RENDERED, using ${carryForward.staticData}`;
     const dynamicData = 'FAST -> INTERACTIVE CARRY FORWARD';
     return partialRender(
         { pluginInteractiveRendered },
@@ -36,14 +36,15 @@ async function renderDynamicContent(props: PageProps & StaticCarryForward): Prom
 
 // Interactive component constructor
 function SimplePluginConstructor(
-    props: Props<PageProps & DynamicCarryForward>,
+    props: Props<PageProps>,
     refs: SimplePluginRefs,
+    carryForward: Signals<DynamicCarryForward>,
 ) {
-    const [dynamicContent, setDynamicContent] = createSignal(props.pluginInteractiveRendered);
+    const [dynamicContent, setDynamicContent] = carryForward.pluginInteractiveRendered;
 
     refs.pluginButton.onclick(() => {
         setDynamicContent(
-            `INTERACTIVE RENDERED, using ${props.dynamicData()}`
+            `INTERACTIVE RENDERED, using ${carryForward.dynamicData[0]()}`
         );
     });
 

@@ -95,7 +95,7 @@ describe('rendering a page with only a plugin', () => {
         const fastCarryForward = fastRenderResult.carryForward;
 
         const comp = makeCompositeJayComponent(render, fastRenderResult.rendered, fastCarryForward, PAGE_PARTS)
-        const instance = comp({ ...PAGE_PROPS, ...fastCarryForward } as any);
+        const instance = comp({ ...PAGE_PROPS } as any);
 
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(
             await prettify(`
@@ -127,7 +127,7 @@ describe('rendering a page with only a plugin', () => {
         const fastCarryForward = fastRenderResult.carryForward;
 
         const comp = makeCompositeJayComponent(render, fastRenderResult.rendered, fastCarryForward, PAGE_PARTS)
-        const instance = comp({ ...PAGE_PROPS, ...fastCarryForward });
+        const instance = comp({ ...PAGE_PROPS } as any);
 
         await instance.element.refs.plugin.pluginButton.exec$((_) => _.click());
 

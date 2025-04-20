@@ -32,7 +32,6 @@ export function makeCompositeJayComponent<
     const comp = (props: Props<any>, refs, ...contexts): CompCore => {
         const instances: Array<[string, JayComponentCore<any, any>]> = parts.map((part) => {
             const partRefs = part.key? refs[part.key] : refs;
-            let partProps: Props<any>;
             let partCarryForward: object;
             if (fastCarryForward) {
                 if (part.key)
@@ -40,15 +39,10 @@ export function makeCompositeJayComponent<
                 else
                     partCarryForward = makeSignals(fastCarryForward)
             }
-            if (part.key) {
-                partProps = makePropsProxy(useReactive(), props[part.key]());
-            }
-            else
-                partProps = props;
             const partContexts = [partCarryForward, ...contexts.splice(0, part.compDefinition.clientContexts.length)]
             return [
                 part.key,
-                part.compDefinition.comp(partProps, partRefs, ...partContexts),
+                part.compDefinition.comp(props, partRefs, ...partContexts),
             ];
         });
 
