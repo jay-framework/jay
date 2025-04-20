@@ -176,7 +176,7 @@ describe('rendering a product page', () => {
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
-        const comp = makeCompositeJayComponent(renderGamingLaptop, fastRenderResult.rendered, PAGE_PARTS)
+        const comp = makeCompositeJayComponent(renderGamingLaptop, fastRenderResult.rendered, fastCarryForward, PAGE_PARTS)
         const instance = comp({ ...PAGE_PROPS, ...fastCarryForward } as any);
 
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(
@@ -214,7 +214,7 @@ describe('rendering a product page', () => {
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
-        const comp = makeCompositeJayComponent(renderSmartphone, fastRenderResult.rendered, PAGE_PARTS)
+        const comp = makeCompositeJayComponent(renderSmartphone, fastRenderResult.rendered, fastCarryForward, PAGE_PARTS)
         const instance = comp({ ...PAGE_PROPS, ...fastCarryForward } as any);
 
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(
@@ -251,7 +251,7 @@ describe('rendering a product page', () => {
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
-        const comp = makeCompositeJayComponent(renderGamingLaptop, fastRenderResult.rendered, PAGE_PARTS)
+        const comp = makeCompositeJayComponent(renderGamingLaptop, fastRenderResult.rendered, fastCarryForward, PAGE_PARTS)
         const instance = comp({ ...PAGE_PROPS, ...fastCarryForward } as any);
 
         // Mock console.log to verify the add to cart action

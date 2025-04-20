@@ -1,6 +1,6 @@
-import {Builder, JayStackComponentDefinition, makeJayStackComponent, PageProps, partialRender} from '../../lib';
+import {makeJayStackComponent, PageProps, partialRender, Signals} from '../../lib';
 import {render, PageElementRefs, PageViewState} from './compiled/page.jay-html';
-import {ComponentConstructor, createSignal, JayComponentCore, Props} from 'jay-component';
+import {Props} from 'jay-component';
 import {PartialRender} from "../../lib";
 
 type SlowlyViewState = Pick<PageViewState, "slowlyRendered">
@@ -20,8 +20,8 @@ async function renderSlowlyChanging(props: PageProps): Promise<PartialRender<Slo
     return partialRender({ slowlyRendered }, { carryForwardSlowly });
 }
 
-async function renderFastChanging(props: PageProps & SlowlyCarryForward): Promise<PartialRender<FastViewState, FastCarryForward>> {
-    const fastDynamicRendered = `FAST RENDERED, using '${props.carryForwardSlowly}'`;
+async function renderFastChanging(props: PageProps, carryForward: SlowlyCarryForward): Promise<PartialRender<FastViewState, FastCarryForward>> {
+    const fastDynamicRendered = `FAST RENDERED, using '${carryForward.carryForwardSlowly}'`;
     const fastRendered = "FAST RENDERED"
     const carryForwardFast = 'FAST -> INTERACTIVE CARRY FORWARD';
     return partialRender(
@@ -34,14 +34,15 @@ async function renderFastChanging(props: PageProps & SlowlyCarryForward): Promis
 }
 
 function ProductsPageConstructor(
-    props: Props<PageProps & FastCarryForward>,
+    props: Props<PageProps>,
     refs: PageElementRefs,
+    carryForward: Signals<FastCarryForward>
 ) {
-    const [fastDynamicRendered, setFastDynamicRendered] = createSignal(props.fastDynamicRendered);
+    const [fastDynamicRendered, setFastDynamicRendered] = carryForward.fastDynamicRendered;
 
     refs.button.onclick(() => {
         setFastDynamicRendered(
-            `INTERACTIVE RENDERED, using '${props.carryForwardFast()}'`,
+            `INTERACTIVE RENDERED, using '${carryForward.carryForwardFast[0]()}'`,
         );
     });
 

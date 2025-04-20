@@ -90,8 +90,8 @@ describe('rendering a simple page', () => {
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
-        const comp = makeCompositeJayComponent(renderSlowly, fastRenderResult.rendered, PAGE_PARTS);
-        const instance = comp({ ...PAGE_PROPS, ...fastCarryForward } as any);
+        const comp = makeCompositeJayComponent(renderSlowly, fastRenderResult.rendered, fastCarryForward, PAGE_PARTS);
+        const instance = comp({ ...PAGE_PROPS } as any);
 
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(
             await prettify(`
@@ -123,7 +123,7 @@ describe('rendering a simple page', () => {
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
-        const comp = makeCompositeJayComponent(renderSlowly, fastRenderResult.rendered, PAGE_PARTS);
+        const comp = makeCompositeJayComponent(renderSlowly, fastRenderResult.rendered, fastCarryForward, PAGE_PARTS);
         const instance = comp({ ...PAGE_PROPS, ...fastCarryForward } as any);
 
         await instance.element.refs.button.exec$((_) => _.click());

@@ -1,4 +1,5 @@
 import {
+    createSignal,
     JayComponentCore,
     makeJayComponent,
     makePropsProxy,
@@ -8,6 +9,14 @@ import {
 } from 'jay-component';
 import {JayElement, PreRenderElement} from 'jay-runtime';
 import {CompositePart} from "./composite-part";
+import {Signals} from "./jay-stack-builder";
+
+function makeSignals<T extends object>(carryForward: T): Signals<T> {
+    return Object.keys(carryForward).reduce((signals, key) => {
+        signals[key] = createSignal(carryForward[key]);
+        return signals;
+    }, {}) as Signals<T>
+}
 
 export function makeCompositeJayComponent<
     PropsT extends object,
@@ -18,20 +27,28 @@ export function makeCompositeJayComponent<
 >(
     preRender: PreRenderElement<ViewState, Refs, JayElementT>,
     defaultViewState: ViewState,
-    parts: Array<CompositePart>,
-) {
+    fastCarryForward: object,
+    parts: Array<CompositePart>) {
     const comp = (props: Props<any>, refs, ...contexts): CompCore => {
         const instances: Array<[string, JayComponentCore<any, any>]> = parts.map((part) => {
             const partRefs = part.key? refs[part.key] : refs;
             let partProps: Props<any>;
+            let partCarryForward: object;
+            if (fastCarryForward) {
+                if (part.key)
+                    partCarryForward = makeSignals(fastCarryForward[part.key])
+                else
+                    partCarryForward = makeSignals(fastCarryForward)
+            }
             if (part.key) {
                 partProps = makePropsProxy(useReactive(), props[part.key]());
             }
             else
                 partProps = props;
+            const partContexts = [partCarryForward, ...contexts.splice(0, part.compDefinition.clientContexts.length)]
             return [
                 part.key,
-                part.compDefinition.comp(partProps, partRefs, contexts.splice(0, part.compDefinition.clientContexts.length)),
+                part.compDefinition.comp(partProps, partRefs, ...partContexts),
             ];
         });
 

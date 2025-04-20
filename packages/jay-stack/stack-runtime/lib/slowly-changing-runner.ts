@@ -84,7 +84,6 @@ export async function runLoadParams<
     ClientContexts extends Array<any>,
     PropsT extends object,
     Params extends UrlParams,
-    CarryForward extends object,
     CompCore extends JayComponentCore<PropsT, ViewState>,
 >(
     compDefinition: JayStackComponentDefinition<
@@ -95,7 +94,6 @@ export async function runLoadParams<
         ClientContexts,
         PropsT,
         Params,
-        CarryForward,
         CompCore
     >,
     serverContexts: ServerContexts,
@@ -111,7 +109,6 @@ export function runSlowlyChangingRender<
     ClientContexts extends Array<any>,
     PropsT extends object,
     Params extends UrlParams,
-    CarryForward extends object,
     CompCore extends JayComponentCore<PropsT, ViewState>,
 >(
     compDefinition: JayStackComponentDefinition<
@@ -122,7 +119,6 @@ export function runSlowlyChangingRender<
         ClientContexts,
         PropsT,
         Params,
-        CarryForward,
         CompCore
     >,
 ) {}

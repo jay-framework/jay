@@ -13,7 +13,7 @@ export async function renderFastChangingData(
         const {compDefinition, key} = part;
         if (compDefinition.fastRender) {
             const partSlowlyCarryForward = key? carryForward[key] : carryForward;
-            const fastRenderedPart = await compDefinition.fastRender({ ...pageProps, ...pageParams, ...partSlowlyCarryForward}, [])
+            const fastRenderedPart = await compDefinition.fastRender({ ...pageProps, ...pageParams}, ...[partSlowlyCarryForward])
             if (fastRenderedPart.kind === "PartialRender") {
                 if (!key) {
                     fastViewState = {...fastViewState, ...fastRenderedPart.rendered}
