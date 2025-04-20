@@ -3,6 +3,7 @@
     <script type="application/yaml-jay">
         data:
           slowlyRendered: string
+          fastRendered: string
           fastDynamicRendered: string
     </script>
 </head>

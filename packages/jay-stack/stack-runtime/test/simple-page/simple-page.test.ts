@@ -6,7 +6,7 @@ import {
     renderFastChangingData
 } from '../../lib';
 import { page } from './page';
-import { render } from './compiled-slowly/page.slowly-rendered.jay-html'
+import { render as renderSlowly } from './compiled-slowly/page.slowly-rendered.jay-html'
 import { makeJayComponent } from 'jay-component';
 import { prettify } from 'jay-compiler-shared';
 
@@ -60,6 +60,7 @@ describe('rendering a simple page', () => {
                 {
                     fastDynamicRendered:
                         "FAST RENDERED, using 'SLOWLY -> FAST CARRY FORWARD'",
+                    fastRendered: "FAST RENDERED",
                 },
                 {
                     carryForwardFast: 'FAST -> INTERACTIVE CARRY FORWARD',
@@ -89,13 +90,14 @@ describe('rendering a simple page', () => {
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
-        const comp = makeJayComponent(render, page.comp);
+        const comp = makeCompositeJayComponent(renderSlowly, fastRenderResult.rendered, PAGE_PARTS);
         const instance = comp({ ...PAGE_PROPS, ...fastCarryForward } as any);
 
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(
             await prettify(`
             <div>
                 <div>SLOWLY RENDERED</div>
+                <div>FAST RENDERED</div>
                 <div>FAST RENDERED, using 'SLOWLY -&gt; FAST CARRY FORWARD'</div>
                 <button data-id="button">click</button>
             </div>;`),
@@ -121,7 +123,7 @@ describe('rendering a simple page', () => {
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
-        const comp = makeCompositeJayComponent(render, fastRenderResult.rendered, PAGE_PARTS);
+        const comp = makeCompositeJayComponent(renderSlowly, fastRenderResult.rendered, PAGE_PARTS);
         const instance = comp({ ...PAGE_PROPS, ...fastCarryForward } as any);
 
         await instance.element.refs.button.exec$((_) => _.click());
@@ -130,6 +132,7 @@ describe('rendering a simple page', () => {
             await prettify(`
             <div>
                 <div>SLOWLY RENDERED</div>
+                <div>FAST RENDERED</div>
                 <div>INTERACTIVE RENDERED, using 'FAST -&gt; INTERACTIVE CARRY FORWARD'</div>
                 <button data-id="button">click</button>
             </div>;`),

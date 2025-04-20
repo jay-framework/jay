@@ -1,6 +1,6 @@
-import { makeJayStackComponent, PageProps, partialRender } from '../../lib';
+import {Builder, JayStackComponentDefinition, makeJayStackComponent, PageProps, partialRender} from '../../lib';
 import {render, PageElementRefs, PageViewState} from './compiled/page.jay-html';
-import { createSignal, Props } from 'jay-component';
+import {ComponentConstructor, createSignal, JayComponentCore, Props} from 'jay-component';
 import {PartialRender} from "../../lib";
 
 type SlowlyViewState = Pick<PageViewState, "slowlyRendered">
@@ -22,10 +22,12 @@ async function renderSlowlyChanging(props: PageProps): Promise<PartialRender<Slo
 
 async function renderFastChanging(props: PageProps & SlowlyCarryForward): Promise<PartialRender<FastViewState, FastCarryForward>> {
     const fastDynamicRendered = `FAST RENDERED, using '${props.carryForwardSlowly}'`;
+    const fastRendered = "FAST RENDERED"
     const carryForwardFast = 'FAST -> INTERACTIVE CARRY FORWARD';
     return partialRender(
         {
-             fastDynamicRendered,
+            fastDynamicRendered,
+            fastRendered
         },
         { carryForwardFast, fastDynamicRendered },
     );

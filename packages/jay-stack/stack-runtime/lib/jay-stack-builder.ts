@@ -144,14 +144,14 @@ export type Builder<
             ): Builder<
                 'InteractiveRender',
                 StaticViewState,
-                ViewState,
+                Partial<ViewState>,
                 Refs,
                 ServerContexts,
                 ClientContexts,
                 PropsT,
                 Params,
                 NewCarryForward,
-                CompCore
+                JayComponentCore<PropsT, Partial<ViewState>>
             >;
 
             withInteractive(
@@ -251,14 +251,14 @@ export type Builder<
               ): Builder<
                   'InteractiveRender',
                   StaticViewState,
-                  ViewState,
+                  Partial<ViewState>,
                   Refs,
                   ServerContexts,
                   ClientContexts,
                   PropsT,
                   Params,
                   NewCarryForward,
-                  CompCore
+                  JayComponentCore<PropsT, Partial<ViewState>>
               >;
 
               withInteractive(
@@ -343,14 +343,14 @@ export type Builder<
                 ): Builder<
                     'InteractiveRender',
                     StaticViewState,
-                    ViewState,
+                    Partial<ViewState>,
                     Refs,
                     ServerContexts,
                     ClientContexts,
                     PropsT,
                     Params,
                     NewCarryForward,
-                    CompCore
+                    JayComponentCore<PropsT, Partial<ViewState>>
                 >;
 
                 withInteractive(
@@ -420,14 +420,14 @@ export type Builder<
                   ): Builder<
                       'InteractiveRender',
                       StaticViewState,
-                      ViewState,
+                      Partial<ViewState>,
                       Refs,
                       ServerContexts,
                       ClientContexts,
                       PropsT,
                       Params,
                       NewCarryForward,
-                      CompCore
+                      JayComponentCore<PropsT, Partial<ViewState>>
                   >;
 
                   withInteractive(
@@ -474,14 +474,14 @@ export type Builder<
                     ): Builder<
                         'InteractiveRender',
                         StaticViewState,
-                        ViewState,
+                        Partial<ViewState>,
                         Refs,
                         ServerContexts,
                         ClientContexts,
                         PropsT,
                         Params,
                         NewCarryForward,
-                        CompCore
+                        JayComponentCore<PropsT, Partial<ViewState>>
                     >;
 
                     withInteractive(
@@ -754,14 +754,14 @@ class BuilderImplementation<
     ): Builder<
         'InteractiveRender',
         StaticViewState,
-        ViewState,
+        Partial<ViewState>,
         Refs,
         ServerContexts,
         ClientContexts,
         PropsT,
         Params,
         NewCarryForward,
-        CompCore
+        JayComponentCore<PropsT, Partial<ViewState>>
     > {
         this.fastRender = fastRender as unknown as RenderFast<
             ServerContexts,

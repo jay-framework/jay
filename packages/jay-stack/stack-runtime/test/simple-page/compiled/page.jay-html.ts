@@ -2,6 +2,7 @@ import {JayElement, element as e, dynamicText as dt, RenderElement, ReferencesMa
 
 export interface PageViewState {
   slowlyRendered: string,
+  fastRendered: string,
   fastDynamicRendered: string
 }
 
@@ -22,6 +23,7 @@ export function render(options?: RenderElementOptions): PageElementPreRender {
         viewState, refManager,
         () => e('div', {}, [
       e('div', {}, [dt(vs => vs.slowlyRendered)]),
+      e('div', {}, [dt(vs => vs.fastRendered)]),
       e('div', {}, [dt(vs => vs.fastDynamicRendered)]),
       e('button', {"data-id": 'button'}, ['click'], refButton())
     ])
