@@ -12,6 +12,9 @@ tags:
   - tag: discount
     type: sub-contract
     link: ./discount
+  - tag: hasDiscount
+    type: [variant, data]
+    dataType: boolean
   - tag: media
     type: sub-contract
     tags:

@@ -1,8 +1,8 @@
-import { makeJayStackComponent, PageProps, partialRender, UrlParams } from '../../lib';
+import {makeJayStackComponent, notFound, PageProps, partialRender, SlowlyRenderResult, UrlParams} from '../../lib';
 import { getProductBySlug, getProducts } from './products-database';
 import { getAvailableUnits } from './inventory-service';
 import { Props } from 'jay-component';
-import { ProductPageRefs, render } from './compiled/product-page.jay-contract';
+import {ProductPageRefs, ProductPageViewState, render} from './compiled/product-page.jay-contract';
 
 interface ProductPageParams extends UrlParams {
     slug: string;
@@ -10,10 +10,14 @@ interface ProductPageParams extends UrlParams {
 
 interface ProductsCarryForward {
     productId: string;
+    inventoryItemId: string
 }
 interface ProductAndInventoryCarryForward {
     productId: string;
     inStock: boolean;
+}
+type SlowlyViewState = Omit<ProductPageViewState, 'inStock'> & {
+    hasDiscount: boolean
 }
 
 async function* urlLoader(): AsyncGenerator<ProductPageParams[]> {
@@ -23,7 +27,10 @@ async function* urlLoader(): AsyncGenerator<ProductPageParams[]> {
 
 }
 
-async function renderSlowlyChanging(props: PageProps & ProductPageParams) {
+async function renderSlowlyChanging(props: PageProps & ProductPageParams): Promise<SlowlyRenderResult<SlowlyViewState, ProductsCarryForward>> {
+    const product = await getProductBySlug(props.slug);
+    if (!product)
+        return notFound();
     const {
         id,
         brand,
@@ -36,9 +43,10 @@ async function renderSlowlyChanging(props: PageProps & ProductPageParams) {
         priceData,
         ribbon,
         productType,
-    } = await getProductBySlug(props.slug);
+    } = product;
     return partialRender(
-        { id, brand, description, discount, media, name, slug, priceData, ribbon, productType },
+        { id, brand, description, discount, media, name, slug, priceData, ribbon, productType,
+            hasDiscount: discount?.value > 0 },
         { productId: id, inventoryItemId },
     );
 }
@@ -68,7 +76,7 @@ function ProductsPageConstructor(
     };
 }
 
-export const page =
+export const productPage =
     makeJayStackComponent<typeof render>()
     .withProps<PageProps>()
     .withLoadParams(urlLoader)
