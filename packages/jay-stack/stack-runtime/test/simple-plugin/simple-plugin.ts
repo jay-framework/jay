@@ -41,10 +41,11 @@ function SimplePluginConstructor(
     carryForward: Signals<DynamicCarryForward>,
 ) {
     const [dynamicContent, setDynamicContent] = carryForward.pluginInteractiveRendered;
+    const [dynamicData] = carryForward.dynamicData;
 
     refs.pluginButton.onclick(() => {
         setDynamicContent(
-            `INTERACTIVE RENDERED, using ${carryForward.dynamicData[0]()}`
+            `INTERACTIVE RENDERED, using ${dynamicData()}`
         );
     });
 

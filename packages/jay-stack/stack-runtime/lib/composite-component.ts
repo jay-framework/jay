@@ -52,7 +52,7 @@ export function makeCompositeJayComponent<
                 instances.forEach(
                     ([key, instance]) => {
                         if (key)
-                            viewState[key] = materializeViewState(instance.render())
+                            viewState[key] = {...defaultViewState[key], ...materializeViewState(instance.render())}
                         else
                             viewState = {...viewState, ...instance.render()}
                     }

@@ -69,12 +69,13 @@ function ProductsPageConstructor(
     refs: ProductPageRefs,
     carryForward: Signals<ProductAndInventoryCarryForward>,
 ) {
+    const [inStock] = carryForward.inStock
     refs.addToCart.onclick(() => {
         console.log(`add ${carryForward.productId[0]()} to the cart`);
     });
 
     return {
-        render: () => ({ inStock: carryForward.inStock[0]() }),
+        render: () => ({ }),
     };
 }
 

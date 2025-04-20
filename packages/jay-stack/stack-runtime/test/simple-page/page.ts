@@ -39,10 +39,11 @@ function ProductsPageConstructor(
     carryForward: Signals<FastCarryForward>
 ) {
     const [fastDynamicRendered, setFastDynamicRendered] = carryForward.fastDynamicRendered;
+    const [carryForwardFast] = carryForward.carryForwardFast;
 
     refs.button.onclick(() => {
         setFastDynamicRendered(
-            `INTERACTIVE RENDERED, using '${carryForward.carryForwardFast[0]()}'`,
+            `INTERACTIVE RENDERED, using '${carryForwardFast()}'`,
         );
     });
 
