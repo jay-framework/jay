@@ -3,17 +3,17 @@ import {
     makeCompositeJayComponent,
     PageProps,
     partialRender,
-    renderFastChangingData
+    renderFastChangingData,
 } from '../../lib';
-import { render } from './compiled-slowly/page.slowly-rendered.jay-html'
+import { render } from './compiled-slowly/page.slowly-rendered.jay-html';
 import { prettify } from 'jay-compiler-shared';
-import { plugin } from '../simple-plugin/simple-plugin'
+import { plugin } from '../simple-plugin/simple-plugin';
 
 const PAGE_PROPS: PageProps = {
     language: 'en-us',
 };
 const PAGE_PARAMS = {};
-const PAGE_PARTS = [{compDefinition: plugin, key: 'plugin'}];
+const PAGE_PARTS = [{ compDefinition: plugin, key: 'plugin' }];
 
 describe('rendering a page with only a plugin', () => {
     it('should run the slowly changing phase', async () => {
@@ -22,19 +22,19 @@ describe('rendering a page with only a plugin', () => {
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
-            PAGE_PARTS
+            PAGE_PARTS,
         );
 
         expect(slowlyRenderResult).toEqual(
             partialRender(
                 {
                     plugin: {
-                        pluginSlowlyRendered: "SLOWLY RENDERED",
+                        pluginSlowlyRendered: 'SLOWLY RENDERED',
                     },
                 },
                 {
                     plugin: {
-                        staticData: "SLOWLY -> FAST CARRY FORWARD",
+                        staticData: 'SLOWLY -> FAST CARRY FORWARD',
                     },
                 },
             ),
@@ -46,7 +46,7 @@ describe('rendering a page with only a plugin', () => {
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
-            PAGE_PARTS
+            PAGE_PARTS,
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
@@ -55,20 +55,22 @@ describe('rendering a page with only a plugin', () => {
             PAGE_PARAMS,
             PAGE_PROPS,
             slowlyRenderResult.carryForward,
-            PAGE_PARTS
+            PAGE_PARTS,
         );
 
         expect(fastRenderResult).toEqual(
             partialRender(
                 {
                     plugin: {
-                        pluginInteractiveRendered: "FAST RENDERED, using SLOWLY -> FAST CARRY FORWARD",
+                        pluginInteractiveRendered:
+                            'FAST RENDERED, using SLOWLY -> FAST CARRY FORWARD',
                     },
                 },
                 {
                     plugin: {
-                        dynamicData: "FAST -> INTERACTIVE CARRY FORWARD",
-                        pluginInteractiveRendered: "FAST RENDERED, using SLOWLY -> FAST CARRY FORWARD",
+                        dynamicData: 'FAST -> INTERACTIVE CARRY FORWARD',
+                        pluginInteractiveRendered:
+                            'FAST RENDERED, using SLOWLY -> FAST CARRY FORWARD',
                     },
                 },
             ),
@@ -80,7 +82,7 @@ describe('rendering a page with only a plugin', () => {
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
-            PAGE_PARTS
+            PAGE_PARTS,
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
@@ -88,13 +90,18 @@ describe('rendering a page with only a plugin', () => {
             PAGE_PARAMS,
             PAGE_PROPS,
             slowlyRenderResult.carryForward,
-            PAGE_PARTS
+            PAGE_PARTS,
         );
         if (fastRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
-        const comp = makeCompositeJayComponent(render, fastRenderResult.rendered, fastCarryForward, PAGE_PARTS)
+        const comp = makeCompositeJayComponent(
+            render,
+            fastRenderResult.rendered,
+            fastCarryForward,
+            PAGE_PARTS,
+        );
         const instance = comp({ ...PAGE_PROPS } as any);
 
         expect(await prettify(instance.element.dom.outerHTML)).toEqual(
@@ -112,7 +119,7 @@ describe('rendering a page with only a plugin', () => {
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
-            PAGE_PARTS
+            PAGE_PARTS,
         );
         if (slowlyRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from slowly phase');
@@ -120,13 +127,18 @@ describe('rendering a page with only a plugin', () => {
             PAGE_PARAMS,
             PAGE_PROPS,
             slowlyRenderResult.carryForward,
-            PAGE_PARTS
+            PAGE_PARTS,
         );
         if (fastRenderResult.kind !== 'PartialRender')
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
-        const comp = makeCompositeJayComponent(render, fastRenderResult.rendered, fastCarryForward, PAGE_PARTS)
+        const comp = makeCompositeJayComponent(
+            render,
+            fastRenderResult.rendered,
+            fastCarryForward,
+            PAGE_PARTS,
+        );
         const instance = comp({ ...PAGE_PROPS } as any);
 
         await instance.element.refs.plugin.pluginButton.exec$((_) => _.click());

@@ -7,13 +7,13 @@ import {
 import { JayComponentCore } from 'jay-component';
 import { UrlParams } from './jay-stack-types';
 import { notFound, partialRender } from './render-results';
-import {CompositePart} from "./composite-part";
+import { CompositePart } from './composite-part';
 
 export interface SlowlyChangingPhase {
     runSlowlyForPage(
         pageParams: object,
         pageProps: PageProps,
-        parts: Array<CompositePart>
+        parts: Array<CompositePart>,
     ): Promise<AnySlowlyRenderResult>;
 }
 
@@ -28,13 +28,15 @@ function equalParams(aPageParams: UrlParams, pageParams: UrlParams) {
 }
 
 function isLeftSideParamsSubsetOfRightSideParams(left: UrlParams, right: UrlParams): boolean {
-    return Object.keys(left)
-        .reduce((prev, curr) => prev && left[curr] === right[curr], true)
+    return Object.keys(left).reduce((prev, curr) => prev && left[curr] === right[curr], true);
 }
 
-async function findMatchingParams(search: UrlParams, searchTarget: AsyncIterable<UrlParams[]>): Promise<boolean> {
+async function findMatchingParams(
+    search: UrlParams,
+    searchTarget: AsyncIterable<UrlParams[]>,
+): Promise<boolean> {
     for await (const paramsArray of searchTarget) {
-        if (paramsArray.find(params => isLeftSideParamsSubsetOfRightSideParams(search, params)))
+        if (paramsArray.find((params) => isLeftSideParamsSubsetOfRightSideParams(search, params)))
             return true;
     }
     return false;
@@ -47,30 +49,30 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
         parts: Array<CompositePart>,
     ): Promise<AnySlowlyRenderResult> {
         for (const part of parts) {
-            const {compDefinition} = part;
+            const { compDefinition } = part;
             if (compDefinition.loadParams) {
-                const compParams= compDefinition.loadParams([]);
-                if (!await findMatchingParams(pageParams, compParams))
-                    return notFound();
+                const compParams = compDefinition.loadParams([]);
+                if (!(await findMatchingParams(pageParams, compParams))) return notFound();
             }
         }
 
         let slowlyViewState = {};
-        let carryForward = {}
+        let carryForward = {};
         for (const part of parts) {
-            const {compDefinition, key} = part;
-            const slowlyRenderedPart = await compDefinition.slowlyRender({ ...pageProps, ...pageParams }, [])
-            if (slowlyRenderedPart.kind === "PartialRender") {
+            const { compDefinition, key } = part;
+            const slowlyRenderedPart = await compDefinition.slowlyRender(
+                { ...pageProps, ...pageParams },
+                [],
+            );
+            if (slowlyRenderedPart.kind === 'PartialRender') {
                 if (!key) {
-                    slowlyViewState = {...slowlyViewState, ...slowlyRenderedPart.rendered}
-                    carryForward = {...carryForward, ...slowlyRenderedPart.carryForward}
+                    slowlyViewState = { ...slowlyViewState, ...slowlyRenderedPart.rendered };
+                    carryForward = { ...carryForward, ...slowlyRenderedPart.carryForward };
+                } else {
+                    slowlyViewState[key] = slowlyRenderedPart.rendered;
+                    carryForward[key] = slowlyRenderedPart.carryForward;
                 }
-                else {
-                    slowlyViewState[key] = slowlyRenderedPart.rendered
-                    carryForward[key] = slowlyRenderedPart.carryForward
-                }
-            }
-            else return slowlyRenderedPart
+            } else return slowlyRenderedPart;
         }
         return partialRender(slowlyViewState, carryForward);
     }

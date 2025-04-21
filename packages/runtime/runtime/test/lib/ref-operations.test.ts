@@ -286,13 +286,15 @@ describe('ReferencesManager operations', () => {
             refName1: HTMLElementProxy<string, HTMLDivElement>;
         }
         interface RootRefs {
-            child: ChildRefs
+            child: ChildRefs;
         }
 
         function mkElement() {
             let jayElement1;
             let [childRefManager, [ref]] = ReferencesManager.for({}, [refName1], [], [], []);
-            let [refManager, []] = ReferencesManager.for({}, [refName1], [], [], [], {child: childRefManager});
+            let [refManager, []] = ReferencesManager.for({}, [refName1], [], [], [], {
+                child: childRefManager,
+            });
             let jayRootElement = ConstructContext.withRootContext<string, RootRefs>(
                 DATA_CONTEXT,
                 refManager,
@@ -310,6 +312,5 @@ describe('ReferencesManager operations', () => {
             expect(mockCallback.mock.calls.length).toBe(1);
             expect(mockCallback).toHaveBeenCalledWith(jayElement1.dom, DATA_CONTEXT);
         });
-    })
-
+    });
 });

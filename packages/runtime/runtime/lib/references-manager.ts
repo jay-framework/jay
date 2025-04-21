@@ -73,7 +73,7 @@ export abstract class BaseReferencesManager {
         elemCollection: string[],
         comp: string[],
         compCollection: string[],
-        childRefManagers: Record<string, ReferencesManager> = {}
+        childRefManagers: Record<string, ReferencesManager> = {},
     ): PrivateRefConstructor<ViewState>[] {
         this.refs = childRefManagers;
         return [
@@ -130,9 +130,12 @@ export class ReferencesManager extends BaseReferencesManager {
         elemCollection: string[],
         comp: string[],
         compCollection: string[],
-        childRefManagers?: Record<string, ReferencesManager>
+        childRefManagers?: Record<string, ReferencesManager>,
     ): [ReferencesManager, PrivateRefConstructor<any>[]] {
         const refManager = new ReferencesManager(options?.eventWrapper);
-        return [refManager, refManager.mkRefs(elem, elemCollection, comp, compCollection, childRefManagers)];
+        return [
+            refManager,
+            refManager.mkRefs(elem, elemCollection, comp, compCollection, childRefManagers),
+        ];
     }
 }

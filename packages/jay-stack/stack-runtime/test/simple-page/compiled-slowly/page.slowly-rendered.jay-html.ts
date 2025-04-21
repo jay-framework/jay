@@ -11,7 +11,7 @@ import {
 
 export interface PageViewState {
     slowlyRendered: string;
-    fastRendered: string,
+    fastRendered: string;
     fastDynamicRendered: string;
 }
 
@@ -29,7 +29,7 @@ export function render(options?: RenderElementOptions): PageElementPreRender {
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('div', {}, ['SLOWLY RENDERED']),
-                e('div', {}, [dt(vs => vs.fastRendered)]),
+                e('div', {}, [dt((vs) => vs.fastRendered)]),
                 e('div', {}, [dt((vs) => vs.fastDynamicRendered)]),
                 e('button', { 'data-id': 'button' }, ['click'], refButton()),
             ]),

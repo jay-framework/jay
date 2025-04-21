@@ -80,12 +80,7 @@ export interface JayStackComponentDefinition<
     clientContexts: ContextMarkers<ClientContexts>;
     loadParams: LoadParams<ServerContexts, Params>;
     slowlyRender: RenderSlowly<ServerContexts, PropsT, StaticViewState, any>;
-    fastRender: RenderFast<
-        ServerContexts,
-        PropsT,
-        ViewState,
-        any
-    >;
+    fastRender: RenderFast<ServerContexts, PropsT, ViewState, any>;
     comp: ComponentConstructor<PropsT, Refs, ViewState, ClientContexts, CompCore>;
 }
 

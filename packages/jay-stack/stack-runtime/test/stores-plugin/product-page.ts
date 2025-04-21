@@ -1,8 +1,21 @@
-import {makeJayStackComponent, notFound, PageProps, partialRender, SlowlyRenderResult, UrlParams, Signals, PartialRender} from '../../lib';
+import {
+    makeJayStackComponent,
+    notFound,
+    PageProps,
+    partialRender,
+    SlowlyRenderResult,
+    UrlParams,
+    Signals,
+    PartialRender,
+} from '../../lib';
 import { getProductBySlug, getProducts } from './products-database';
 import { getAvailableUnits } from './inventory-service';
 import { Props } from 'jay-component';
-import {ProductPageRefs, ProductPageViewState, render} from './compiled/product-page.jay-contract';
+import {
+    ProductPageRefs,
+    ProductPageViewState,
+    render,
+} from './compiled/product-page.jay-contract';
 
 interface ProductPageParams extends UrlParams {
     slug: string;
@@ -10,28 +23,28 @@ interface ProductPageParams extends UrlParams {
 
 interface ProductsCarryForward {
     productId: string;
-    inventoryItemId: string
+    inventoryItemId: string;
 }
 interface ProductAndInventoryCarryForward {
     productId: string;
     inStock: boolean;
 }
 type SlowlyViewState = Omit<ProductPageViewState, 'inStock'> & {
-    hasDiscount: boolean
-}
-type FastViewState = Pick<ProductPageViewState, 'inStock'>
+    hasDiscount: boolean;
+};
+type FastViewState = Pick<ProductPageViewState, 'inStock'>;
 
 async function* urlLoader(): AsyncGenerator<ProductPageParams[]> {
     const products = await getProducts();
     const productPageParams: ProductPageParams[] = products.map(({ slug }) => ({ slug }));
     yield productPageParams;
-
 }
 
-async function renderSlowlyChanging(props: PageProps & ProductPageParams): Promise<SlowlyRenderResult<SlowlyViewState, ProductsCarryForward>> {
+async function renderSlowlyChanging(
+    props: PageProps & ProductPageParams,
+): Promise<SlowlyRenderResult<SlowlyViewState, ProductsCarryForward>> {
     const product = await getProductBySlug(props.slug);
-    if (!product)
-        return notFound();
+    if (!product) return notFound();
     const {
         id,
         brand,
@@ -46,13 +59,27 @@ async function renderSlowlyChanging(props: PageProps & ProductPageParams): Promi
         productType,
     } = product;
     return partialRender(
-        { id, brand, description, discount, media, name, slug, priceData, ribbon, productType,
-            hasDiscount: discount?.value > 0 },
+        {
+            id,
+            brand,
+            description,
+            discount,
+            media,
+            name,
+            slug,
+            priceData,
+            ribbon,
+            productType,
+            hasDiscount: discount?.value > 0,
+        },
         { productId: id, inventoryItemId },
     );
 }
 
-async function renderFastChanging(props: PageProps & ProductPageParams, carryForward: ProductsCarryForward): Promise<PartialRender<FastViewState, ProductAndInventoryCarryForward>> {
+async function renderFastChanging(
+    props: PageProps & ProductPageParams,
+    carryForward: ProductsCarryForward,
+): Promise<PartialRender<FastViewState, ProductAndInventoryCarryForward>> {
     const availableProducts = await getAvailableUnits(carryForward.inventoryItemId);
     const inStock = availableProducts > 0;
     return partialRender(
@@ -69,18 +96,17 @@ function ProductsPageConstructor(
     refs: ProductPageRefs,
     carryForward: Signals<ProductAndInventoryCarryForward>,
 ) {
-    const [inStock] = carryForward.inStock
+    const [inStock] = carryForward.inStock;
     refs.addToCart.onclick(() => {
         console.log(`add ${carryForward.productId[0]()} to the cart`);
     });
 
     return {
-        render: () => ({ }),
+        render: () => ({}),
     };
 }
 
-export const productPage =
-    makeJayStackComponent<typeof render>()
+export const productPage = makeJayStackComponent<typeof render>()
     .withProps<PageProps>()
     .withLoadParams(urlLoader)
     .withSlowlyRender(renderSlowlyChanging)

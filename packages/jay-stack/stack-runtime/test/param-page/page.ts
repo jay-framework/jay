@@ -1,10 +1,10 @@
 import { makeJayStackComponent, PageProps, partialRender, Signals } from '../../lib';
-import {render, PageElementRefs, PageViewState} from './compiled/page.jay-html';
+import { render, PageElementRefs, PageViewState } from './compiled/page.jay-html';
 import { createSignal, Props } from 'jay-component';
-import {PartialRender} from "../../lib";
+import { PartialRender } from '../../lib';
 
-type SlowlyViewState = Pick<PageViewState, "slowlyRendered">
-type FastViewState = Omit<PageViewState, keyof SlowlyViewState>
+type SlowlyViewState = Pick<PageViewState, 'slowlyRendered'>;
+type FastViewState = Omit<PageViewState, keyof SlowlyViewState>;
 
 interface SlowlyCarryForward {
     carryForwardSlowly: string;
@@ -20,13 +20,18 @@ interface PageParams {
     [key: string]: string | undefined;
 }
 
-async function renderSlowlyChanging(props: PageProps & PageParams): Promise<PartialRender<SlowlyViewState, SlowlyCarryForward>> {
+async function renderSlowlyChanging(
+    props: PageProps & PageParams,
+): Promise<PartialRender<SlowlyViewState, SlowlyCarryForward>> {
     const slowlyRendered = `SLOWLY RENDERED ${props.variant}`;
     const carryForwardSlowly = `SLOWLY -> FAST CARRY FORWARD ${props.variant}`;
     return partialRender({ slowlyRendered }, { carryForwardSlowly });
 }
 
-async function renderFastChanging(props: PageProps & PageParams, carryForward: SlowlyCarryForward): Promise<PartialRender<FastViewState, FastCarryForward>> {
+async function renderFastChanging(
+    props: PageProps & PageParams,
+    carryForward: SlowlyCarryForward,
+): Promise<PartialRender<FastViewState, FastCarryForward>> {
     const fastDynamicRendered = `FAST RENDERED ${props.variant}, using ${carryForward.carryForwardSlowly}`;
     const carryForwardFast = `FAST -> INTERACTIVE CARRY FORWARD ${props.variant}`;
     return partialRender(
@@ -57,15 +62,11 @@ function ProductsPageConstructor(
     };
 }
 
-export const page =
-    makeJayStackComponent<typeof render>()
+export const page = makeJayStackComponent<typeof render>()
     .withProps<PageProps>()
-    .withLoadParams<PageParams>(async function*() {
-        yield [
-            { variant: 'A' },
-            { variant: 'B' }
-        ]
+    .withLoadParams<PageParams>(async function* () {
+        yield [{ variant: 'A' }, { variant: 'B' }];
     })
     .withSlowlyRender<SlowlyViewState, SlowlyCarryForward>(renderSlowlyChanging)
     .withFastRender<FastCarryForward>(renderFastChanging)
-    .withInteractive(ProductsPageConstructor); 
+    .withInteractive(ProductsPageConstructor);

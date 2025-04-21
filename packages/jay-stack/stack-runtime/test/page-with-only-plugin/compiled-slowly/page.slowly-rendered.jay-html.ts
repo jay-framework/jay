@@ -7,15 +7,17 @@ import {
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
-import {SimplePluginRefs, SimplePluginViewState} from "../../simple-plugin/compiled/simple-plugin.jay-contract";
+import {
+    SimplePluginRefs,
+    SimplePluginViewState,
+} from '../../simple-plugin/compiled/simple-plugin.jay-contract';
 
 export interface PageViewState {
-    plugin: SimplePluginViewState
+    plugin: SimplePluginViewState;
 }
 
-
 export interface PageElementRefs {
-    plugin: SimplePluginRefs
+    plugin: SimplePluginRefs;
 }
 
 export type PageElement = JayElement<PageViewState, PageElementRefs>;
@@ -23,10 +25,16 @@ export type PageElementRender = RenderElement<PageViewState, PageElementRefs, Pa
 export type PageElementPreRender = [PageElementRefs, PageElementRender];
 
 export function render(options?: RenderElementOptions): PageElementPreRender {
-    const [pluginRefManager, [refButton]] =
-        ReferencesManager.for(options, ['pluginButton'], [], [], []);
-    const [refManager, []] =
-        ReferencesManager.for(options, [], [], [], [], {plugin: pluginRefManager});
+    const [pluginRefManager, [refButton]] = ReferencesManager.for(
+        options,
+        ['pluginButton'],
+        [],
+        [],
+        [],
+    );
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
+        plugin: pluginRefManager,
+    });
     const render = (viewState: PageViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
