@@ -3,18 +3,17 @@ import {
     AnySlowlyRenderResult,
     JayStackComponentDefinition,
     PageProps,
-    PartialRender,
-    SlowlyRenderResult,
 } from './jay-stack-types';
 import { JayComponentCore } from 'jay-component';
 import { UrlParams } from './jay-stack-types';
 import { notFound, partialRender } from './render-results';
+import { CompositePart } from './composite-part';
 
 export interface SlowlyChangingPhase {
     runSlowlyForPage(
-        componentDefinition: AnyJayStackComponentDefinition,
         pageParams: object,
         pageProps: PageProps,
+        parts: Array<CompositePart>,
     ): Promise<AnySlowlyRenderResult>;
 }
 
@@ -28,28 +27,54 @@ function equalParams(aPageParams: UrlParams, pageParams: UrlParams) {
     return urlParamsKey(aPageParams) === urlParamsKey(pageParams);
 }
 
+function isLeftSideParamsSubsetOfRightSideParams(left: UrlParams, right: UrlParams): boolean {
+    return Object.keys(left).reduce((prev, curr) => prev && left[curr] === right[curr], true);
+}
+
+async function findMatchingParams(
+    search: UrlParams,
+    searchTarget: AsyncIterable<UrlParams[]>,
+): Promise<boolean> {
+    for await (const paramsArray of searchTarget) {
+        if (paramsArray.find((params) => isLeftSideParamsSubsetOfRightSideParams(search, params)))
+            return true;
+    }
+    return false;
+}
+
 export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
     async runSlowlyForPage(
-        componentDefinition: AnyJayStackComponentDefinition,
         pageParams: UrlParams,
         pageProps: PageProps,
+        parts: Array<CompositePart>,
     ): Promise<AnySlowlyRenderResult> {
-        if (componentDefinition.loadParams) {
-            const pagesParams = await componentDefinition.loadParams([]);
-            for (const aPageParams of pagesParams) {
-                if (equalParams(aPageParams, pageParams)) {
-                    if (componentDefinition.slowlyRender)
-                        return componentDefinition.slowlyRender(
-                            { ...pageProps, ...pageParams },
-                            [],
-                        );
-                    else return partialRender({}, {});
-                }
+        for (const part of parts) {
+            const { compDefinition } = part;
+            if (compDefinition.loadParams) {
+                const compParams = compDefinition.loadParams([]);
+                if (!(await findMatchingParams(pageParams, compParams))) return notFound();
             }
-            return notFound();
-        } else if (componentDefinition.slowlyRender)
-            return componentDefinition.slowlyRender({ ...pageProps, ...pageParams }, []);
-        else return partialRender({}, {});
+        }
+
+        let slowlyViewState = {};
+        let carryForward = {};
+        for (const part of parts) {
+            const { compDefinition, key } = part;
+            const slowlyRenderedPart = await compDefinition.slowlyRender(
+                { ...pageProps, ...pageParams },
+                [],
+            );
+            if (slowlyRenderedPart.kind === 'PartialRender') {
+                if (!key) {
+                    slowlyViewState = { ...slowlyViewState, ...slowlyRenderedPart.rendered };
+                    carryForward = { ...carryForward, ...slowlyRenderedPart.carryForward };
+                } else {
+                    slowlyViewState[key] = slowlyRenderedPart.rendered;
+                    carryForward[key] = slowlyRenderedPart.carryForward;
+                }
+            } else return slowlyRenderedPart;
+        }
+        return partialRender(slowlyViewState, carryForward);
     }
 }
 
@@ -61,7 +86,6 @@ export async function runLoadParams<
     ClientContexts extends Array<any>,
     PropsT extends object,
     Params extends UrlParams,
-    CarryForward extends object,
     CompCore extends JayComponentCore<PropsT, ViewState>,
 >(
     compDefinition: JayStackComponentDefinition<
@@ -72,7 +96,6 @@ export async function runLoadParams<
         ClientContexts,
         PropsT,
         Params,
-        CarryForward,
         CompCore
     >,
     serverContexts: ServerContexts,
@@ -88,7 +111,6 @@ export function runSlowlyChangingRender<
     ClientContexts extends Array<any>,
     PropsT extends object,
     Params extends UrlParams,
-    CarryForward extends object,
     CompCore extends JayComponentCore<PropsT, ViewState>,
 >(
     compDefinition: JayStackComponentDefinition<
@@ -99,7 +121,6 @@ export function runSlowlyChangingRender<
         ClientContexts,
         PropsT,
         Params,
-        CarryForward,
         CompCore
     >,
 ) {}

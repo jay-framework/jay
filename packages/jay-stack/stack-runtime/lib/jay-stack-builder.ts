@@ -7,6 +7,7 @@ import {
     RenderSlowly,
     UrlParams,
 } from './jay-stack-types';
+import { Getter, Setter } from 'jay-reactive';
 
 type BuilderStates =
     | 'Props' // requires setting the props type. Next allowed states are "ServerContexts", "ClientContexts", "UrlLoader", "Slowly", "Fast", "Interactive"
@@ -18,6 +19,10 @@ type BuilderStates =
     | 'InteractiveRender' // allowing to set the slowly render function. Next step is a placeholder for done
     | 'Done'; // does not allow setting anything more
 
+export type Signals<T extends object> = {
+    [K in keyof T]: K extends string ? [Getter<T[K]>, Setter<T[K]>] : T[K];
+};
+
 export type Builder<
     State extends BuilderStates,
     StaticViewState extends object,
@@ -26,10 +31,19 @@ export type Builder<
     ServerContexts extends Array<any>,
     ClientContexts extends Array<any>,
     PropsT extends object,
-    CarryForward extends object,
+    Params extends UrlParams,
     CompCore extends JayComponentCore<PropsT, ViewState>,
 > = State extends 'Props'
-    ? {
+    ? JayStackComponentDefinition<
+          StaticViewState,
+          ViewState,
+          Refs,
+          ServerContexts,
+          ClientContexts,
+          PropsT,
+          Params,
+          CompCore
+      > & {
           withProps<NewPropsT extends object>(): Builder<
               'ServerContexts',
               StaticViewState,
@@ -38,12 +52,21 @@ export type Builder<
               ServerContexts,
               ClientContexts,
               NewPropsT,
-              CarryForward,
+              Params,
               JayComponentCore<NewPropsT, ViewState>
           >;
       }
     : State extends 'ServerContexts'
-      ? {
+      ? JayStackComponentDefinition<
+            StaticViewState,
+            ViewState,
+            Refs,
+            ServerContexts,
+            ClientContexts,
+            PropsT,
+            Params,
+            CompCore
+        > & {
             withServerContext<NewServerContexts extends Array<any>>(
                 ...contextMarkers: ContextMarkers<NewServerContexts>
             ): Builder<
@@ -54,7 +77,7 @@ export type Builder<
                 NewServerContexts,
                 ClientContexts,
                 PropsT,
-                CarryForward,
+                Params,
                 CompCore
             >;
             withClientContext<NewClientContexts extends Array<any>>(
@@ -67,7 +90,7 @@ export type Builder<
                 ServerContexts,
                 NewClientContexts,
                 PropsT,
-                CarryForward,
+                Params,
                 CompCore
             >;
 
@@ -81,16 +104,13 @@ export type Builder<
                 ServerContexts,
                 ClientContexts,
                 PropsT & NewParams,
-                CarryForward,
+                NewParams,
                 CompCore
             >;
 
             withSlowlyRender<
                 NewStaticViewState extends Partial<ViewState>,
-                DynamicViewState extends Partial<ViewState> &
-                    Omit<ViewState, keyof NewStaticViewState>,
                 NewCarryForward extends object,
-                NewCompCore extends JayComponentCore<PropsT, DynamicViewState>,
             >(
                 slowlyRender: RenderSlowly<
                     ServerContexts,
@@ -101,43 +121,34 @@ export type Builder<
             ): Builder<
                 'FastRender',
                 NewStaticViewState,
-                DynamicViewState,
+                Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>,
                 Refs,
-                ServerContexts,
+                [NewCarryForward, ...ServerContexts],
                 ClientContexts,
                 PropsT,
-                NewCarryForward,
-                NewCompCore
+                Params,
+                JayComponentCore<
+                    PropsT,
+                    Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>
+                >
             >;
 
             withFastRender<NewCarryForward extends object>(
-                fastRender: RenderFast<
-                    ServerContexts,
-                    PropsT & CarryForward,
-                    CarryForward,
-                    ViewState,
-                    NewCarryForward
-                >,
+                fastRender: RenderFast<ServerContexts, PropsT, ViewState, NewCarryForward>,
             ): Builder<
                 'InteractiveRender',
                 StaticViewState,
-                ViewState,
+                Partial<ViewState>,
                 Refs,
                 ServerContexts,
-                ClientContexts,
+                [Signals<NewCarryForward>, ...ClientContexts],
                 PropsT,
-                NewCarryForward,
-                CompCore
+                Params,
+                JayComponentCore<PropsT, Partial<ViewState>>
             >;
 
             withInteractive(
-                comp: ComponentConstructor<
-                    PropsT & CarryForward,
-                    Refs,
-                    ViewState,
-                    ClientContexts,
-                    CompCore
-                >,
+                comp: ComponentConstructor<PropsT, Refs, ViewState, ClientContexts, CompCore>,
             ): Builder<
                 'Done',
                 StaticViewState,
@@ -146,12 +157,21 @@ export type Builder<
                 ServerContexts,
                 ClientContexts,
                 PropsT,
-                CarryForward,
+                Params,
                 CompCore
             >;
         }
       : State extends 'ClientContexts'
-        ? {
+        ? JayStackComponentDefinition<
+              StaticViewState,
+              ViewState,
+              Refs,
+              ServerContexts,
+              ClientContexts,
+              PropsT,
+              Params,
+              CompCore
+          > & {
               withClientContext<NewClientContexts extends Array<any>>(
                   ...contextMarkers: ContextMarkers<NewClientContexts>
               ): Builder<
@@ -162,7 +182,7 @@ export type Builder<
                   ServerContexts,
                   NewClientContexts,
                   PropsT,
-                  CarryForward,
+                  Params,
                   CompCore
               >;
 
@@ -176,16 +196,13 @@ export type Builder<
                   ServerContexts,
                   ClientContexts,
                   PropsT & NewParams,
-                  CarryForward,
+                  NewParams,
                   CompCore
               >;
 
               withSlowlyRender<
                   NewStaticViewState extends Partial<ViewState>,
-                  DynamicViewState extends Partial<ViewState> &
-                      Omit<ViewState, keyof NewStaticViewState>,
                   NewCarryForward extends object,
-                  NewCompCore extends JayComponentCore<PropsT, DynamicViewState>,
               >(
                   slowlyRender: RenderSlowly<
                       ServerContexts,
@@ -196,43 +213,34 @@ export type Builder<
               ): Builder<
                   'FastRender',
                   NewStaticViewState,
-                  DynamicViewState,
+                  Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>,
                   Refs,
-                  ServerContexts,
+                  [NewCarryForward, ...ServerContexts],
                   ClientContexts,
                   PropsT,
-                  NewCarryForward,
-                  NewCompCore
+                  Params,
+                  JayComponentCore<
+                      PropsT,
+                      Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>
+                  >
               >;
 
               withFastRender<NewCarryForward extends object>(
-                  fastRender: RenderFast<
-                      ServerContexts,
-                      PropsT & CarryForward,
-                      CarryForward,
-                      ViewState,
-                      NewCarryForward
-                  >,
+                  fastRender: RenderFast<ServerContexts, PropsT, ViewState, NewCarryForward>,
               ): Builder<
                   'InteractiveRender',
                   StaticViewState,
-                  ViewState,
+                  Partial<ViewState>,
                   Refs,
                   ServerContexts,
-                  ClientContexts,
+                  [Signals<NewCarryForward>, ...ClientContexts],
                   PropsT,
-                  NewCarryForward,
-                  CompCore
+                  Params,
+                  JayComponentCore<PropsT, Partial<ViewState>>
               >;
 
               withInteractive(
-                  comp: ComponentConstructor<
-                      PropsT & CarryForward,
-                      Refs,
-                      ViewState,
-                      ClientContexts,
-                      CompCore
-                  >,
+                  comp: ComponentConstructor<PropsT, Refs, ViewState, ClientContexts, CompCore>,
               ): Builder<
                   'Done',
                   StaticViewState,
@@ -241,12 +249,21 @@ export type Builder<
                   ServerContexts,
                   ClientContexts,
                   PropsT,
-                  CarryForward,
+                  Params,
                   CompCore
               >;
           }
         : State extends 'UrlLoader'
-          ? {
+          ? JayStackComponentDefinition<
+                StaticViewState,
+                ViewState,
+                Refs,
+                ServerContexts,
+                ClientContexts,
+                PropsT,
+                Params,
+                CompCore
+            > & {
                 withLoadParams<NewParams extends UrlParams>(
                     loadParams: LoadParams<ServerContexts, NewParams>,
                 ): Builder<
@@ -257,16 +274,13 @@ export type Builder<
                     ServerContexts,
                     ClientContexts,
                     PropsT & NewParams,
-                    CarryForward,
+                    NewParams,
                     CompCore
                 >;
 
                 withSlowlyRender<
                     NewStaticViewState extends Partial<ViewState>,
-                    DynamicViewState extends Partial<ViewState> &
-                        Omit<ViewState, keyof NewStaticViewState>,
                     NewCarryForward extends object,
-                    NewCompCore extends JayComponentCore<PropsT, DynamicViewState>,
                 >(
                     slowlyRender: RenderSlowly<
                         ServerContexts,
@@ -277,43 +291,34 @@ export type Builder<
                 ): Builder<
                     'FastRender',
                     NewStaticViewState,
-                    DynamicViewState,
+                    Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>,
                     Refs,
-                    ServerContexts,
+                    [NewCarryForward, ...ServerContexts],
                     ClientContexts,
                     PropsT,
-                    NewCarryForward,
-                    NewCompCore
+                    Params,
+                    JayComponentCore<
+                        PropsT,
+                        Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>
+                    >
                 >;
 
                 withFastRender<NewCarryForward extends object>(
-                    fastRender: RenderFast<
-                        ServerContexts,
-                        PropsT & CarryForward,
-                        CarryForward,
-                        ViewState,
-                        NewCarryForward
-                    >,
+                    fastRender: RenderFast<ServerContexts, PropsT, ViewState, NewCarryForward>,
                 ): Builder<
                     'InteractiveRender',
                     StaticViewState,
-                    ViewState,
+                    Partial<ViewState>,
                     Refs,
                     ServerContexts,
-                    ClientContexts,
+                    [Signals<NewCarryForward>, ...ClientContexts],
                     PropsT,
-                    NewCarryForward,
-                    CompCore
+                    Params,
+                    JayComponentCore<PropsT, Partial<ViewState>>
                 >;
 
                 withInteractive(
-                    comp: ComponentConstructor<
-                        PropsT & CarryForward,
-                        Refs,
-                        ViewState,
-                        ClientContexts,
-                        CompCore
-                    >,
+                    comp: ComponentConstructor<PropsT, Refs, ViewState, ClientContexts, CompCore>,
                 ): Builder<
                     'Done',
                     StaticViewState,
@@ -322,18 +327,24 @@ export type Builder<
                     ServerContexts,
                     ClientContexts,
                     PropsT,
-                    CarryForward,
+                    Params,
                     CompCore
                 >;
             }
           : State extends 'SlowlyRender'
-            ? {
+            ? JayStackComponentDefinition<
+                  StaticViewState,
+                  ViewState,
+                  Refs,
+                  ServerContexts,
+                  ClientContexts,
+                  PropsT,
+                  Params,
+                  CompCore
+              > & {
                   withSlowlyRender<
                       NewStaticViewState extends Partial<ViewState>,
-                      DynamicViewState extends Partial<ViewState> &
-                          Omit<ViewState, keyof NewStaticViewState>,
                       NewCarryForward extends object,
-                      NewCompCore extends JayComponentCore<PropsT, DynamicViewState>,
                   >(
                       slowlyRender: RenderSlowly<
                           ServerContexts,
@@ -344,43 +355,34 @@ export type Builder<
                   ): Builder<
                       'FastRender',
                       NewStaticViewState,
-                      DynamicViewState,
+                      Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>,
                       Refs,
-                      ServerContexts,
+                      [NewCarryForward, ...ServerContexts],
                       ClientContexts,
                       PropsT,
-                      NewCarryForward,
-                      NewCompCore
+                      Params,
+                      JayComponentCore<
+                          PropsT,
+                          Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>
+                      >
                   >;
 
                   withFastRender<NewCarryForward extends object>(
-                      fastRender: RenderFast<
-                          ServerContexts,
-                          PropsT & CarryForward,
-                          CarryForward,
-                          ViewState,
-                          NewCarryForward
-                      >,
+                      fastRender: RenderFast<ServerContexts, PropsT, ViewState, NewCarryForward>,
                   ): Builder<
                       'InteractiveRender',
                       StaticViewState,
-                      ViewState,
+                      Partial<ViewState>,
                       Refs,
                       ServerContexts,
-                      ClientContexts,
+                      [Signals<NewCarryForward>, ...ClientContexts],
                       PropsT,
-                      NewCarryForward,
-                      CompCore
+                      Params,
+                      JayComponentCore<PropsT, Partial<ViewState>>
                   >;
 
                   withInteractive(
-                      comp: ComponentConstructor<
-                          PropsT & CarryForward,
-                          Refs,
-                          ViewState,
-                          ClientContexts,
-                          CompCore
-                      >,
+                      comp: ComponentConstructor<PropsT, Refs, ViewState, ClientContexts, CompCore>,
                   ): Builder<
                       'Done',
                       StaticViewState,
@@ -389,35 +391,38 @@ export type Builder<
                       ServerContexts,
                       ClientContexts,
                       PropsT,
-                      CarryForward,
+                      Params,
                       CompCore
                   >;
               }
             : State extends 'FastRender'
-              ? {
+              ? JayStackComponentDefinition<
+                    StaticViewState,
+                    ViewState,
+                    Refs,
+                    ServerContexts,
+                    ClientContexts,
+                    PropsT,
+                    Params,
+                    CompCore
+                > & {
                     withFastRender<NewCarryForward extends object>(
-                        fastRender: RenderFast<
-                            ServerContexts,
-                            PropsT & CarryForward,
-                            CarryForward,
-                            ViewState,
-                            NewCarryForward
-                        >,
+                        fastRender: RenderFast<ServerContexts, PropsT, ViewState, NewCarryForward>,
                     ): Builder<
                         'InteractiveRender',
                         StaticViewState,
-                        ViewState,
+                        Partial<ViewState>,
                         Refs,
                         ServerContexts,
-                        ClientContexts,
+                        [Signals<NewCarryForward>, ...ClientContexts],
                         PropsT,
-                        NewCarryForward,
-                        CompCore
+                        Params,
+                        JayComponentCore<PropsT, Partial<ViewState>>
                     >;
 
                     withInteractive(
                         comp: ComponentConstructor<
-                            PropsT & CarryForward,
+                            PropsT,
                             Refs,
                             ViewState,
                             ClientContexts,
@@ -431,15 +436,24 @@ export type Builder<
                         ServerContexts,
                         ClientContexts,
                         PropsT,
-                        CarryForward,
+                        Params,
                         CompCore
                     >;
                 }
               : State extends 'InteractiveRender'
-                ? {
+                ? JayStackComponentDefinition<
+                      StaticViewState,
+                      ViewState,
+                      Refs,
+                      ServerContexts,
+                      ClientContexts,
+                      PropsT,
+                      Params,
+                      CompCore
+                  > & {
                       withInteractive(
                           comp: ComponentConstructor<
-                              PropsT & CarryForward,
+                              PropsT,
                               Refs,
                               ViewState,
                               ClientContexts,
@@ -453,11 +467,20 @@ export type Builder<
                           ServerContexts,
                           ClientContexts,
                           PropsT,
-                          CarryForward,
+                          Params,
                           CompCore
                       >;
                   }
-                : never;
+                : JayStackComponentDefinition<
+                      StaticViewState,
+                      ViewState,
+                      Refs,
+                      ServerContexts,
+                      ClientContexts,
+                      PropsT,
+                      Params,
+                      CompCore
+                  >;
 
 class BuilderImplementation<
     StaticViewState extends object,
@@ -479,23 +502,16 @@ class BuilderImplementation<
             ClientContexts,
             PropsT,
             Params,
-            CarryForward,
             CompCore
         >
 {
-    serverContexts: ContextMarkers<ServerContexts>;
-    clientContexts: ContextMarkers<ServerContexts>;
+    serverContexts: ContextMarkers<ServerContexts> = [] as ContextMarkers<ServerContexts>;
+    clientContexts: ContextMarkers<ClientContexts> = [] as ContextMarkers<ClientContexts>;
     loadParams: LoadParams<ServerContexts, Params>;
     slowlyRender: RenderSlowly<ServerContexts, PropsT, StaticViewState, CarryForward>;
-    fastRender: RenderFast<
-        ServerContexts,
-        PropsT & CarryForward,
-        CarryForward,
-        ViewState,
-        CarryForward
-    >;
+    fastRender: RenderFast<ServerContexts, PropsT, ViewState, CarryForward>;
     comp: ComponentConstructor<PropsT & CarryForward, Refs, ViewState, ClientContexts, CompCore>;
-    constructor(public readonly render: PreRenderElement<ViewState, Refs, JayElementT>) {}
+    constructor() {}
 
     withProps<NewPropsT extends object>(): Builder<
         'ServerContexts',
@@ -505,7 +521,7 @@ class BuilderImplementation<
         ServerContexts,
         ClientContexts,
         NewPropsT,
-        CarryForward,
+        Params,
         JayComponentCore<NewPropsT, ViewState>
     > {
         return this as unknown as Builder<
@@ -516,7 +532,7 @@ class BuilderImplementation<
             ServerContexts,
             ClientContexts,
             NewPropsT,
-            CarryForward,
+            Params,
             JayComponentCore<NewPropsT, ViewState>
         >;
     }
@@ -531,7 +547,7 @@ class BuilderImplementation<
         NewServerContexts,
         ClientContexts,
         PropsT,
-        CarryForward,
+        Params,
         CompCore
     > {
         this.serverContexts = contextMarkers as ContextMarkers<ServerContexts>;
@@ -543,7 +559,7 @@ class BuilderImplementation<
             NewServerContexts,
             ClientContexts,
             PropsT,
-            CarryForward,
+            Params,
             CompCore
         >;
     }
@@ -558,10 +574,10 @@ class BuilderImplementation<
         ServerContexts,
         NewClientContexts,
         PropsT,
-        CarryForward,
+        Params,
         CompCore
     > {
-        this.clientContexts = contextMarkers as ContextMarkers<ServerContexts>;
+        this.clientContexts = contextMarkers as ContextMarkers<ClientContexts>;
         return this as unknown as Builder<
             'UrlLoader',
             StaticViewState,
@@ -570,7 +586,7 @@ class BuilderImplementation<
             ServerContexts,
             NewClientContexts,
             PropsT,
-            CarryForward,
+            Params,
             CompCore
         >;
     }
@@ -585,7 +601,7 @@ class BuilderImplementation<
         ServerContexts,
         ClientContexts,
         PropsT & NewParams,
-        CarryForward,
+        NewParams,
         CompCore
     > {
         this.loadParams = loadParams as unknown as LoadParams<ServerContexts, Params>;
@@ -597,28 +613,23 @@ class BuilderImplementation<
             ServerContexts,
             ClientContexts,
             PropsT & NewParams,
-            CarryForward,
+            NewParams,
             CompCore
         >;
     }
 
-    withSlowlyRender<
-        NewStaticViewState extends Partial<ViewState>,
-        DynamicViewState extends Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>,
-        NewCarryForward extends object,
-        NewCompCore extends JayComponentCore<PropsT, DynamicViewState>,
-    >(
+    withSlowlyRender<NewStaticViewState extends Partial<ViewState>, NewCarryForward extends object>(
         slowlyRender: RenderSlowly<ServerContexts, PropsT, NewStaticViewState, NewCarryForward>,
     ): Builder<
         'FastRender',
         NewStaticViewState,
-        DynamicViewState,
+        Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>,
         Refs,
-        ServerContexts,
+        [NewCarryForward, ...ServerContexts],
         ClientContexts,
         PropsT,
-        NewCarryForward,
-        NewCompCore
+        Params,
+        JayComponentCore<PropsT, Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>>
     > {
         this.slowlyRender = slowlyRender as unknown as RenderSlowly<
             ServerContexts,
@@ -629,39 +640,32 @@ class BuilderImplementation<
         return this as unknown as Builder<
             'FastRender',
             NewStaticViewState,
-            DynamicViewState,
+            Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>,
             Refs,
-            ServerContexts,
+            [NewCarryForward, ...ServerContexts],
             ClientContexts,
             PropsT,
-            NewCarryForward,
-            NewCompCore
+            Params,
+            JayComponentCore<PropsT, Partial<ViewState> & Omit<ViewState, keyof NewStaticViewState>>
         >;
     }
 
     withFastRender<NewCarryForward extends object>(
-        fastRender: RenderFast<
-            ServerContexts,
-            PropsT & CarryForward,
-            CarryForward,
-            ViewState,
-            NewCarryForward
-        >,
+        fastRender: RenderFast<ServerContexts, PropsT, ViewState, NewCarryForward>,
     ): Builder<
         'InteractiveRender',
         StaticViewState,
-        ViewState,
+        Partial<ViewState>,
         Refs,
         ServerContexts,
-        ClientContexts,
+        [Signals<NewCarryForward>, ...ClientContexts],
         PropsT,
-        NewCarryForward,
-        CompCore
+        Params,
+        JayComponentCore<PropsT, Partial<ViewState>>
     > {
         this.fastRender = fastRender as unknown as RenderFast<
             ServerContexts,
-            PropsT & CarryForward,
-            CarryForward,
+            PropsT,
             ViewState,
             CarryForward
         >;
@@ -671,9 +675,9 @@ class BuilderImplementation<
             ViewState,
             Refs,
             ServerContexts,
-            ClientContexts,
+            [Signals<NewCarryForward>, ...ClientContexts],
             PropsT,
-            NewCarryForward,
+            Params,
             CompCore
         >;
     }
@@ -694,7 +698,7 @@ class BuilderImplementation<
         ServerContexts,
         ClientContexts,
         PropsT,
-        CarryForward,
+        Params,
         CompCore
     > {
         this.comp = comp;
@@ -706,26 +710,26 @@ class BuilderImplementation<
             ServerContexts,
             ClientContexts,
             PropsT,
-            CarryForward,
+            Params,
             CompCore
         >;
     }
 }
 
-export function makeJayStackComponent<
-    ViewState extends object,
-    Refs extends object,
-    JayElementT extends JayElement<ViewState, Refs>,
->(render: PreRenderElement<ViewState, Refs, JayElementT>) {
-    return new BuilderImplementation(render) as unknown as Builder<
+type ExtractViewState<A> =
+    A extends PreRenderElement<infer ViewState, any, any> ? ViewState : never;
+type ExtractRefs<A> = A extends PreRenderElement<any, infer Refs, any> ? Refs : never;
+
+export function makeJayStackComponent<Render extends PreRenderElement<any, any, any>>() {
+    return new BuilderImplementation() as unknown as Builder<
         'Props',
         object,
-        ViewState,
-        Refs,
+        ExtractViewState<Render>,
+        ExtractRefs<Render>,
         [],
         [],
         {},
-        object,
-        JayComponentCore<object, ViewState>
+        {},
+        JayComponentCore<object, ExtractViewState<Render>>
     >;
 }

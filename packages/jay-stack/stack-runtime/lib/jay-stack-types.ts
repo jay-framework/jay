@@ -1,4 +1,5 @@
 import { ComponentConstructor, ContextMarkers, JayComponentCore } from 'jay-component';
+import { JayElement, PreRenderElement } from 'jay-runtime';
 
 export interface PageProps {
     language: string;
@@ -24,7 +25,7 @@ export interface Redirect3xx {
 
 export interface PartialRender<ViewState extends object, CarryForward> {
     kind: 'PartialRender';
-    render: Partial<ViewState>;
+    rendered: Partial<ViewState>;
     carryForward: CarryForward;
 }
 
@@ -42,7 +43,7 @@ export type AnyFastRenderResult = FastRenderResult<object, object>;
 
 export type LoadParams<ServerContexts, Params extends UrlParams> = (
     contexts: ServerContexts,
-) => Promise<IterableIterator<Params>>;
+) => AsyncIterable<Params[]>;
 
 export type RenderSlowly<
     ServerContexts extends Array<object>,
@@ -57,11 +58,10 @@ export type RenderSlowly<
 export type RenderFast<
     ServerContexts extends Array<object>,
     PropsT extends object,
-    SlowlyCarryForward,
     DynamicViewState extends object,
     FastCarryForward,
 > = (
-    props: PropsT & SlowlyCarryForward,
+    props: PropsT,
     ...contexts: ServerContexts
 ) => Promise<FastRenderResult<DynamicViewState, FastCarryForward>>;
 
@@ -73,21 +73,15 @@ export interface JayStackComponentDefinition<
     ClientContexts extends Array<any>,
     PropsT extends object,
     Params extends UrlParams,
-    CarryForward extends object,
     CompCore extends JayComponentCore<PropsT, ViewState>,
 > {
+    // render: PreRenderElement<ViewState, Refs, JayElement<ViewState, Refs>>;
     serverContexts: ContextMarkers<ServerContexts>;
-    clientContexts: ContextMarkers<ServerContexts>;
+    clientContexts: ContextMarkers<ClientContexts>;
     loadParams: LoadParams<ServerContexts, Params>;
-    slowlyRender: RenderSlowly<ServerContexts, PropsT, StaticViewState, CarryForward>;
-    fastRender: RenderFast<
-        ServerContexts,
-        PropsT & CarryForward,
-        CarryForward,
-        ViewState,
-        CarryForward
-    >;
-    comp: ComponentConstructor<PropsT & CarryForward, Refs, ViewState, ClientContexts, CompCore>;
+    slowlyRender: RenderSlowly<ServerContexts, PropsT, StaticViewState, any>;
+    fastRender: RenderFast<ServerContexts, PropsT, ViewState, any>;
+    comp: ComponentConstructor<PropsT, Refs, ViewState, ClientContexts, CompCore>;
 }
 
 export type AnyJayStackComponentDefinition = JayStackComponentDefinition<
@@ -98,6 +92,5 @@ export type AnyJayStackComponentDefinition = JayStackComponentDefinition<
     object[],
     object,
     UrlParams,
-    Object,
     any
 >;

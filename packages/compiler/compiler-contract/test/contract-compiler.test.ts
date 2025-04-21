@@ -6,7 +6,7 @@ import { JayString, JayBoolean } from 'jay-compiler-shared';
 
 describe('compile contract', () => {
     const noHopResolver: LinkedContractResolver = {
-        loadContract: (link: string) => {
+        loadContract: async (link: string) => {
             throw new Error(`Unknown link: ${link}`);
         },
     };
@@ -26,7 +26,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
@@ -68,7 +68,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
@@ -110,7 +110,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
@@ -159,7 +159,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
@@ -237,7 +237,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
@@ -313,7 +313,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
@@ -367,7 +367,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
@@ -407,7 +407,7 @@ describe('compile contract', () => {
         `;
 
         const parsedContract = parseContract(contract);
-        const result = compileContract(parsedContract, noHopResolver);
+        const result = await compileContract(parsedContract, noHopResolver);
 
         expect(result.validations.length).toBe(0);
         expect(await prettify(result.val)).toBe(
@@ -442,7 +442,7 @@ describe('compile contract', () => {
 
     describe('linked sub contracts', () => {
         const mockResolver: LinkedContractResolver = {
-            loadContract: (link: string) => {
+            loadContract: async (link: string) => {
                 if (link === `./todo-item${JAY_CONTRACT_EXTENSION}`) {
                     return {
                         name: 'todo-item',
@@ -477,14 +477,14 @@ describe('compile contract', () => {
                 elementType: HTMLButtonElement
             `;
 
-            const parsedContract = parseContract(contract, mockResolver);
-            const result = compileContract(parsedContract, mockResolver);
+            const parsedContract = parseContract(contract);
+            const result = await compileContract(parsedContract, mockResolver);
 
             expect(result.validations).toEqual([]);
             expect(await prettify(result.val)).toBe(
                 await prettify(`
             import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
-            import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item';
+            import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item.jay-contract';
         
             export interface TodoViewState {
                 item: TodoItemViewState;
@@ -521,14 +521,14 @@ describe('compile contract', () => {
                 elementType: HTMLButtonElement
             `;
 
-            const parsedContract = parseContract(contract, mockResolver);
-            const result = compileContract(parsedContract, mockResolver);
+            const parsedContract = parseContract(contract);
+            const result = await compileContract(parsedContract, mockResolver);
 
             expect(result.validations).toEqual([]);
             expect(await prettify(result.val)).toBe(
                 await prettify(`
             import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
-            import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item';
+            import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item.jay-contract';
     
             export interface TodoViewState {
                 items: Array<TodoItemViewState>;
@@ -541,6 +541,56 @@ describe('compile contract', () => {
 
             export interface TodoRepeatedRefs {
                 items: TodoItemRepeatedRefs;
+                addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
+            }
+
+            export type TodoElement = JayElement<TodoViewState, TodoRefs>
+            export type TodoElementRender = RenderElement<TodoViewState, TodoRefs, TodoElement>
+            export type TodoElementPreRender = [TodoRefs, TodoElementRender]     
+            
+            export declare function render(options?: RenderElementOptions): TodoElementPreRender`),
+            );
+        });
+
+        it('should compile contract with both repeated and non-repeated instances of the same linked sub-contract', async () => {
+            const contract = `
+            name: todo
+            tags:
+              - tag: activeItem
+                type: sub-contract
+                link: ./todo-item${JAY_CONTRACT_EXTENSION}
+              - tag: completedItems
+                type: sub-contract
+                repeated: true
+                link: ./todo-item${JAY_CONTRACT_EXTENSION}
+              - tag: addButton
+                type: interactive
+                elementType: HTMLButtonElement
+            `;
+
+            const parsedContract = parseContract(contract);
+            const result = await compileContract(parsedContract, mockResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+            import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+            import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item.jay-contract';
+    
+            export interface TodoViewState {
+                activeItem: TodoItemViewState;
+                completedItems: Array<TodoItemViewState>;
+            }
+    
+            export interface TodoRefs {
+                activeItem: TodoItemRefs;
+                completedItems: TodoItemRepeatedRefs;
+                addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
+            }
+
+            export interface TodoRepeatedRefs {
+                activeItem: TodoItemRepeatedRefs;
+                completedItems: TodoItemRepeatedRefs;
                 addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
             }
 

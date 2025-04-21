@@ -1,0 +1,15 @@
+<html>
+<head>
+    <script type="application/jay" src="../../simple-plugin/simple-plugin.ts" name="plugin" key="plugin" />
+    <script type="application/yaml-jay">
+data:
+    </script>
+</head>
+<body>
+<div>
+    <div>{plugin.slowlyRendered}</div>
+    <div>{plugin.fastDynamicRendered}</div>
+    <button ref="plugin.pluginButton" data-id="button">click</button>
+</div>
+</body>
+</html>

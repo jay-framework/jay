@@ -32,15 +32,15 @@ interface TraverseResult {
     importLinks: JayContractImportLink[];
 }
 
-function traverseContractTag(
+async function traverseContractTag(
     tag: ContractTag,
     viewStateType: JayType,
     linkedContractResolver: LinkedContractResolver,
     isRepeated: boolean = false,
-): TraverseResult {
+): Promise<TraverseResult> {
     if (tag.type.includes(ContractTagType.subContract)) {
         if (tag.link) {
-            const subContract = linkedContractResolver.loadContract(tag.link);
+            const subContract = await linkedContractResolver.loadContract(tag.link);
             const subContractFile = tag.link.replace(JAY_CONTRACT_EXTENSION, '');
             const contractName = subContract.name;
             const viewState = `${pascalCase(contractName)}ViewState`;
@@ -81,19 +81,17 @@ function traverseContractTag(
         const subInterfaceName = tag.tag.charAt(0).toUpperCase() + tag.tag.slice(1);
         const subViewStateType = { name: subInterfaceName, kind: 0 };
 
-        tag.tags
-            // .filter(_ => dataVariantOrSubContract(_))
-            .forEach((subTag) => {
-                const result: TraverseResult = traverseContractTag(
-                    subTag,
-                    subViewStateType,
-                    linkedContractResolver,
-                    isRepeated || tag.repeated,
-                );
-                importLinks = [...importLinks, ...result.importLinks];
-                refs = [...refs, ...result.refs];
-                result.type && (props[camelCase(subTag.tag)] = result.type);
-            });
+        for (const subTag of tag.tags) {
+            const result: TraverseResult = await traverseContractTag(
+                subTag,
+                subViewStateType,
+                linkedContractResolver,
+                isRepeated || tag.repeated,
+            );
+            importLinks = [...importLinks, ...result.importLinks];
+            refs = [...refs, ...result.refs];
+            result.type && (props[camelCase(subTag.tag)] = result.type);
+        }
 
         const objectType = new JayObjectType(pascalCase(tag.tag), props);
         const type = tag.repeated ? new JayArrayType(objectType) : objectType;
@@ -149,33 +147,32 @@ function generateRefsInterface(
 function renderImports(imports: Imports, importedLinks: JayContractImportLink[]) {
     const renderedImports = imports.render(ImportsFor.definition);
 
-    const renderedImportedLinks = [];
+    // Use a Set to deduplicate import statements
+    const renderedImportedLinks = new Set<string>();
     for (const { module, refs, repeatedRefs, viewState } of importedLinks) {
         let symbols = `${viewState}, ${refs}, ${repeatedRefs}`;
-        renderedImportedLinks.push(`import {${symbols}} from "${module}";`);
+        renderedImportedLinks.add(`import {${symbols}} from "${module}${JAY_CONTRACT_EXTENSION}";`);
     }
 
-    return renderedImports + '\n' + renderedImportedLinks.join('\n');
+    return renderedImports + '\n' + Array.from(renderedImportedLinks).join('\n');
 }
 
-export function compileContract(
+export async function compileContract(
     contractWithValidations: WithValidations<Contract>,
     linkedContractResolver: LinkedContractResolver,
-): WithValidations<string> {
-    return contractWithValidations.map((contract) => {
+): Promise<WithValidations<string>> {
+    return contractWithValidations.mapAsync(async (contract) => {
         const props: Record<string, JayType> = {};
         let importedLinks: JayContractImportLink[] = [];
         let allRefs: Ref[] = [];
         const viewStateType = { name: pascalCase(contract.name) + 'ViewState', kind: 0 };
 
-        contract.tags
-            // .filter(_ => dataVariantOrSubContract(_))
-            .forEach((tag) => {
-                const result = traverseContractTag(tag, viewStateType, linkedContractResolver);
-                importedLinks = [...importedLinks, ...result.importLinks];
-                allRefs = [...allRefs, ...result.refs];
-                result.type && (props[camelCase(tag.tag)] = result.type);
-            });
+        for (const tag of contract.tags) {
+            const result = await traverseContractTag(tag, viewStateType, linkedContractResolver);
+            importedLinks = [...importedLinks, ...result.importLinks];
+            allRefs = [...allRefs, ...result.refs];
+            result.type && (props[camelCase(tag.tag)] = result.type);
+        }
 
         const rootType = new JayObjectType(`${pascalCase(contract.name)}ViewState`, props);
         let { imports, renderedRefs } = generateRefsInterface(contract, allRefs);

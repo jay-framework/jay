@@ -44,7 +44,7 @@ export enum ManagedRefType {
 }
 
 export abstract class BaseReferencesManager {
-    private refs: Record<string, ManagedRefs> = {};
+    private refs: Record<string, ManagedRefs | BaseReferencesManager> = {};
     private refsPublicAPI: object;
 
     constructor(
@@ -73,7 +73,9 @@ export abstract class BaseReferencesManager {
         elemCollection: string[],
         comp: string[],
         compCollection: string[],
+        childRefManagers: Record<string, ReferencesManager> = {},
     ): PrivateRefConstructor<ViewState>[] {
+        this.refs = childRefManagers;
         return [
             ...this.mkRefsOfType<ViewState>(ManagedRefType.element, elem),
             ...this.mkRefsOfType<ViewState>(ManagedRefType.elementCollection, elemCollection),
@@ -128,8 +130,12 @@ export class ReferencesManager extends BaseReferencesManager {
         elemCollection: string[],
         comp: string[],
         compCollection: string[],
+        childRefManagers?: Record<string, ReferencesManager>,
     ): [ReferencesManager, PrivateRefConstructor<any>[]] {
         const refManager = new ReferencesManager(options?.eventWrapper);
-        return [refManager, refManager.mkRefs(elem, elemCollection, comp, compCollection)];
+        return [
+            refManager,
+            refManager.mkRefs(elem, elemCollection, comp, compCollection, childRefManagers),
+        ];
     }
 }

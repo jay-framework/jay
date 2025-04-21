@@ -122,46 +122,6 @@ describe('parse contract', () => {
         });
     });
 
-    it('should parse contract with linked sub-contract, loading the sub contract with provided LinkedContractResolver', () => {
-        const contract = `
-        name: todo
-        tags:
-          - tag: items
-            type: sub-contract
-            link: ./todo-item${JAY_CONTRACT_EXTENSION}
-        `;
-
-        const mockResolver: LinkedContractResolver = {
-            loadContract: (link: string) => {
-                if (link === `./todo-item${JAY_CONTRACT_EXTENSION}`)
-                    return {
-                        name: 'todo-item',
-                        tags: [
-                            { tag: 'title', type: [ContractTagType.data], dataType: JayString },
-                            { tag: 'completed', type: [ContractTagType.data], dataType: JayNumber },
-                        ],
-                    };
-            },
-        };
-
-        const result = parseContract(contract, mockResolver);
-        expect(result.validations).toEqual([]);
-        expect(result.val).toEqual({
-            name: 'todo',
-            tags: [
-                {
-                    tag: 'items',
-                    type: [ContractTagType.subContract],
-                    link: './todo-item' + JAY_CONTRACT_EXTENSION,
-                    tags: [
-                        { tag: 'title', type: [ContractTagType.data], dataType: JayString },
-                        { tag: 'completed', type: [ContractTagType.data], dataType: JayNumber },
-                    ],
-                },
-            ],
-        });
-    });
-
     it('should parse contract with repeated sub-contract', () => {
         const contract = `
         name: todo
@@ -402,24 +362,41 @@ describe('parse contract', () => {
         });
     });
 
+    it('should default to string if dataType is not specified', () => {
+        const contract = `
+        name: defaults
+        tags:
+          - tag: name
+            type: data
+        `;
+
+        const result = parseContract(contract);
+        expect(result.validations).toEqual([]);
+        expect(result.val).toEqual({
+            name: 'defaults',
+            tags: [{ tag: 'name', type: [ContractTagType.data], dataType: JayString }],
+        });
+    });
+
+    it('should default to data type if type is not specified', () => {
+        const contract = `
+        name: defaults
+        tags:
+          - tag: name
+            dataType: string
+        `;
+
+        const result = parseContract(contract);
+        expect(result.validations).toEqual([]);
+        expect(result.val).toEqual({
+            name: 'defaults',
+            tags: [{ tag: 'name', type: [ContractTagType.data], dataType: JayString }],
+        });
+    });
+
     // parse variant enum
 
     describe('validations', () => {
-        it('should report validation error if type is data and dataType is not provided', () => {
-            const contract = `
-            name: invalid
-            tags:
-              - tag: count
-                type: data
-              - tag: name
-                type: data
-                dataType: string
-            `;
-
-            const result = parseContract(contract);
-            expect(result.validations).toEqual(['Tag [count] of type [data] must have a dataType']);
-        });
-
         it('should report validation error if type is variant and dataType is not provided', () => {
             const contract = `
             name: invalid
@@ -481,7 +458,6 @@ describe('parse contract', () => {
             const result = parseContract(contract);
             expect(result.validations).toEqual([
                 'Tag [items] cannot be both sub-contract and other types',
-                'Tag [items] of type [data] must have a dataType',
             ]);
         });
 
