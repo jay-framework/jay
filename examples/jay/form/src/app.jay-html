@@ -1,6 +1,6 @@
 <html>
   <head>
-    <link rel="import" href="./form" names="Form" sandbox="true" />
+    <script type="application/jay-headfull" src="./form" names="Form" sandbox="true"></script>
     <script type="application/jay-data">
       data:
     </script>
