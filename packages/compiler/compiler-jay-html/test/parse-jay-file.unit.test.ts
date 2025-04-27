@@ -2,7 +2,7 @@ import { parseJayFile } from '../lib';
 import {
     JayArrayType,
     JayBoolean,
-    JayEnumType,
+    JayEnumType, JayImportKind,
     JayNumber,
     JayObjectType,
     JayString,
@@ -11,11 +11,11 @@ import {
 import { stripMargin } from './test-utils/strip-margin';
 
 describe('compiler', () => {
-    function jayFileWith(jayYaml, body, links?) {
+    function jayFileWith(jayYaml, body, scripts?) {
         return stripMargin(
             ` <html>
-                |   <head>${links ? `\n | ${stripMargin(links)}` : ''}
-                |     <script type="application/yaml-jay">
+                |   <head>${scripts ? `\n | ${stripMargin(scripts)}` : ''}
+                |     <script type="application/jay-data">
                 |${stripMargin(jayYaml)}
                 |     </script>
                 |   </head>
@@ -134,18 +134,18 @@ describe('compiler', () => {
             );
         });
 
-        it('should parse import links', () => {
+        it('should parse import scripts', () => {
             let jayFile = parseJayFile(
                 jayFileWith(
                     ` data:
                         |   s1: string
                         |   n1: number`,
                     '<body></body>',
-                    `<link rel="import" href="./fixtures/components/imports/component1.ts" names="comp1"/>
-                      |<link rel="import" href="./fixtures/components/imports/component2.ts" names="comp2 as comp3"/>
-                      |<link rel="import" href="./fixtures/components/imports/component4.ts" names="comp4" sandbox/>
-                      |<link rel="import" href="./fixtures/components/imports/component5.ts" names="comp5" sandbox="true"/>
-                      |<link rel="import" href="./fixtures/components/imports/component6.ts" names="comp6" sandbox="false"/>`,
+                    `<script type="application/jay-headfull" src="./fixtures/components/imports/component1.ts" names="comp1"></script>
+                      |<script type="application/jay-headfull" src="./fixtures/components/imports/component2.ts" names="comp2 as comp3"></script>
+                      |<script type="application/jay-headfull" src="./fixtures/components/imports/component4.ts" names="comp4" sandbox></script>
+                      |<script type="application/jay-headfull" src="./fixtures/components/imports/component5.ts" names="comp5" sandbox="true"></script>
+                      |<script type="application/jay-headfull" src="./fixtures/components/imports/component6.ts" names="comp6" sandbox="false"></script>`,
                 ),
                 'Base',
                 './test',
@@ -172,6 +172,7 @@ describe('compiler', () => {
                             },
                         ],
                         sandbox: false,
+                        kind: JayImportKind.headfull
                     },
                     {
                         module: './fixtures/components/imports/component2.ts',
@@ -191,6 +192,7 @@ describe('compiler', () => {
                             },
                         ],
                         sandbox: false,
+                        kind: JayImportKind.headfull
                     },
                     {
                         module: './fixtures/components/imports/component4.ts',
@@ -209,6 +211,7 @@ describe('compiler', () => {
                             },
                         ],
                         sandbox: true,
+                        kind: JayImportKind.headfull
                     },
                     {
                         module: './fixtures/components/imports/component5.ts',
@@ -227,6 +230,7 @@ describe('compiler', () => {
                             },
                         ],
                         sandbox: true,
+                        kind: JayImportKind.headfull
                     },
                     {
                         module: './fixtures/components/imports/component6.ts',
@@ -245,6 +249,7 @@ describe('compiler', () => {
                             },
                         ],
                         sandbox: false,
+                        kind: JayImportKind.headfull
                     },
                 ]),
             );
@@ -255,7 +260,7 @@ describe('compiler', () => {
                 `
                     <html xmlns:svg="http://www.w3.org/2000/svg">
                         <head>
-                            <script type="application/yaml-jay">
+                            <script type="application/jay-data">
                     data:
                     </script>
                     </head>
@@ -274,16 +279,16 @@ describe('compiler', () => {
             ]);
         });
 
-        it('should report on a file with two yaml-jay', () => {
+        it('should report on a file with two jay-data scripts', () => {
             let jayFile = parseJayFile(
                 stripMargin(
                     `<html>
                 |    <head>
-                |        <script type="application/yaml-jay">
+                |        <script type="application/jay-data">
                 |data:
                 |  name: string
                 |        </script>
-                |        <script type="application/yaml-jay">
+                |        <script type="application/jay-data">
                 |data:
                 |  name: string
                 |        </script>
@@ -296,11 +301,11 @@ describe('compiler', () => {
                 {},
             );
             expect(jayFile.validations).toEqual([
-                'jay file should have exactly one yaml-jay script, found 2',
+                'jay file should have exactly one jay-data script, found 2',
             ]);
         });
 
-        it('should report on a file without yaml-jay', () => {
+        it('should report on a file without jay-data script', () => {
             let jayFile = parseJayFile(
                 stripMargin(
                     `<html>
@@ -314,14 +319,14 @@ describe('compiler', () => {
                 {},
             );
             expect(jayFile.validations).toEqual([
-                'jay file should have exactly one yaml-jay script, found none',
+                'jay file should have exactly one jay-data script, found none',
             ]);
         });
 
         it('should report on a non html file', () => {
             let jayFile = parseJayFile(`rrgargaergargaerg aergaegaraer aer erager`, 'Base', '', {});
             expect(jayFile.validations).toEqual([
-                'jay file should have exactly one yaml-jay script, found none',
+                'jay file should have exactly one jay-data script, found none',
             ]);
         });
 
@@ -330,7 +335,7 @@ describe('compiler', () => {
                 stripMargin(
                     `<html>
                 |    <head>
-                |        <script type="application/yaml-jay">
+                |        <script type="application/jay-data">
                 |data:
                 |  name: string
                 |        </script>
@@ -351,7 +356,7 @@ describe('compiler', () => {
                         |   s1: string
                         |   n1: number`,
                     '<body></body>',
-                    '<link rel="import" href="module" />',
+                    '<script type="application/jay-headfull" src="module"></script>',
                 ),
                 'Base',
                 '',
@@ -371,7 +376,7 @@ describe('compiler', () => {
                         |   s1: string
                         |   n1: number`,
                     '<body></body>',
-                    '<link rel="import" href="module" names=""/>',
+                    '<script type="application/jay-headfull" src="module" names=""></script>',
                 ),
                 'Base',
                 '',
@@ -391,7 +396,7 @@ describe('compiler', () => {
                         |   s1: string
                         |   n1: number`,
                     '<body></body>',
-                    '<link rel="import" href="./module" names="name"/>',
+                    '<script type="application/jay-headfull" src="./module" names="name"></script>',
                 ),
                 'Base',
                 '',
