@@ -1,8 +1,8 @@
 <html>
 <head>
-    <link rel="import" href="../counter/counter" names="Counter"/>
-    <link rel="import" href="../counter/generated-element-main-trusted" names="CounterViewState as CounterData"/>
-    <script type="application/yaml-jay">
+    <script type="application/jay-headfull" src="../counter/counter" names="Counter"></script>
+    <script type="application/jay-headfull" src="../counter/generated-element-main-trusted" names="CounterViewState as CounterData"></script>
+    <script type="application/jay-data">
 data:
   count1: number
   count2: number
