@@ -1,6 +1,6 @@
 <html>
 <head>
-    <script type="application/yaml-jay">
+    <script type="application/jay-data">
 data:
     minimumOrderReached: boolean
     total: number

@@ -2,7 +2,7 @@ import { JayType } from './jay-type';
 
 export enum JayImportKind {
     headfull,
-    headless
+    headless,
 }
 
 export interface JayImportName {

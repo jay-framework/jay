@@ -1,7 +1,7 @@
 <html>
   <head>
-    <link rel="import" href="./basic" names="Basic" />
-    <script type="application/yaml-jay">
+    <script type="application/jay-headfull" src="./basic" names="Basic"></script>
+    <script type="application/jay-data">
       data:
     </script>
   </head>

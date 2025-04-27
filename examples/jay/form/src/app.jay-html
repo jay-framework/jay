@@ -1,7 +1,7 @@
 <html>
   <head>
     <link rel="import" href="./form" names="Form" sandbox="true" />
-    <script type="application/yaml-jay">
+    <script type="application/jay-data">
       data:
     </script>
   </head>

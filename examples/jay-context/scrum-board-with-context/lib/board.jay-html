@@ -1,7 +1,7 @@
 <html>
   <head>
-    <link rel="import" href="./pillar" names="Pillar, PillarProps" />
-    <script type="application/yaml-jay">
+    <script type="application/jay-headfull" src="./pillar" names="Pillar, PillarProps"></script>
+    <script type="application/jay-data">
       data:
         title: string
         boardPillars:

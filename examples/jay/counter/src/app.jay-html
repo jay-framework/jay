@@ -1,7 +1,7 @@
 <html>
   <head>
     <link rel="import" href="./counter" names="Counter" sandbox="true" />
-    <script type="application/yaml-jay">
+    <script type="application/jay-data">
       data:
     </script>
   </head>

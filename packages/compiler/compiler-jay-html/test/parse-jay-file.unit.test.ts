@@ -2,7 +2,8 @@ import { parseJayFile } from '../lib';
 import {
     JayArrayType,
     JayBoolean,
-    JayEnumType, JayImportKind,
+    JayEnumType,
+    JayImportKind,
     JayNumber,
     JayObjectType,
     JayString,
@@ -172,7 +173,7 @@ describe('compiler', () => {
                             },
                         ],
                         sandbox: false,
-                        kind: JayImportKind.headfull
+                        kind: JayImportKind.headfull,
                     },
                     {
                         module: './fixtures/components/imports/component2.ts',
@@ -192,7 +193,7 @@ describe('compiler', () => {
                             },
                         ],
                         sandbox: false,
-                        kind: JayImportKind.headfull
+                        kind: JayImportKind.headfull,
                     },
                     {
                         module: './fixtures/components/imports/component4.ts',
@@ -211,7 +212,7 @@ describe('compiler', () => {
                             },
                         ],
                         sandbox: true,
-                        kind: JayImportKind.headfull
+                        kind: JayImportKind.headfull,
                     },
                     {
                         module: './fixtures/components/imports/component5.ts',
@@ -230,7 +231,7 @@ describe('compiler', () => {
                             },
                         ],
                         sandbox: true,
-                        kind: JayImportKind.headfull
+                        kind: JayImportKind.headfull,
                     },
                     {
                         module: './fixtures/components/imports/component6.ts',
@@ -249,7 +250,7 @@ describe('compiler', () => {
                             },
                         ],
                         sandbox: false,
-                        kind: JayImportKind.headfull
+                        kind: JayImportKind.headfull,
                     },
                 ]),
             );

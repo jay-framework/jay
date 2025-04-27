@@ -12,7 +12,7 @@
     h1.c {
         font-family: "Trirong", serif;
     }</style>
-    <script type="application/yaml-jay">
+    <script type="application/jay-data">
 data:
       screen: enum (done | welcome | set | play)
       start: enum (hover | regular)

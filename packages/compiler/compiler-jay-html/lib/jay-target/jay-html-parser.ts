@@ -119,7 +119,8 @@ function parseImports(
         const module = element.getAttribute('src');
         const rawNames = element.getAttribute('names');
         const sandboxAttribute = element.getAttribute('sandbox');
-        const kind = type === 'application/jay-headfull'?JayImportKind.headfull: JayImportKind.headless
+        const kind =
+            type === 'application/jay-headfull' ? JayImportKind.headfull : JayImportKind.headless;
         const sandbox =
             sandboxAttribute === '' || (Boolean(sandboxAttribute) && sandboxAttribute !== 'false');
         try {
@@ -144,7 +145,7 @@ function parseImports(
                     );
             }
 
-            return { module, names, sandbox, kind};
+            return { module, names, sandbox, kind };
         } catch (e) {
             validations.push(
                 `failed to parse import names for module ${module} - ${e.message}${e.stack}`,
@@ -173,7 +174,9 @@ export function parseJayFile(
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
     let imports = parseImports(
-        root.querySelectorAll('script[type="application/jay-headfull"], script[type="application/jay-headless"]'),
+        root.querySelectorAll(
+            'script[type="application/jay-headfull"], script[type="application/jay-headless"]',
+        ),
         validations,
         filePath,
         options,
@@ -203,6 +206,9 @@ export function parseJayFile(
 
 export function getJayHtmlImports(html: string): string[] {
     const root = parse(html);
-    return root.querySelectorAll('script[type="application/jay-headfull"], script[type="application/jay-headless"]')
+    return root
+        .querySelectorAll(
+            'script[type="application/jay-headfull"], script[type="application/jay-headless"]',
+        )
         .map((script) => script.getAttribute('src'));
 }

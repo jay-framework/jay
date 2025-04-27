@@ -1,7 +1,7 @@
 <html>
   <head>
-    <link rel="import" href="./board" names="Board" />
-    <script type="application/yaml-jay">
+    <script type="application/jay-headfull" src="./board" names="Board"></script>
+    <script type="application/jay-data">
       data:
     </script>
   </head>

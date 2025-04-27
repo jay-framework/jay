@@ -1,5 +1,5 @@
 import { parseGenericTypescriptFile } from '../../../lib';
-import { JayUnknown, SourceFileFormat, WithValidations } from 'jay-compiler-shared';
+import { JayImportKind, JayUnknown, SourceFileFormat, WithValidations } from 'jay-compiler-shared';
 
 describe('parseJayTypeScriptFile', () => {
     const filePath = '/root/source/app.jay-html.ts';
@@ -63,6 +63,7 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
                                 { name: 'RenderElementOptions', type: JayUnknown },
                             ],
                             sandbox: false,
+                            kind: JayImportKind.headfull,
                         },
                         {
                             module: 'jay-secure',
@@ -71,16 +72,19 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
                                 { name: 'secureChildComp', type: JayUnknown },
                             ],
                             sandbox: false,
+                            kind: JayImportKind.headfull,
                         },
                         {
                             module: './counter-refs',
                             names: [{ name: 'CounterRef', type: JayUnknown }],
                             sandbox: false,
+                            kind: JayImportKind.headfull,
                         },
                         {
                             module: './counter?jay-mainSandbox',
                             names: [{ name: 'Counter', type: JayUnknown }],
                             sandbox: true,
+                            kind: JayImportKind.headfull,
                         },
                     ],
                     baseElementName: 'App',
