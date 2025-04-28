@@ -1,7 +1,7 @@
 <html>
   <head>
-    <link rel="import" href="./child" names="Child, ChildProps" />
-    <script type="application/yaml-jay">
+    <script type="application/jay-headfull" src="./child" names="Child, ChildProps"></script>
+    <script type="application/jay-data">
       data:
         textFromChildEvent: string
         viewStateFromChildEvent: string

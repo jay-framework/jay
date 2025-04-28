@@ -11,6 +11,7 @@ import {
     TS_EXTENSION,
     prettify,
     removeComments,
+    JayImportKind,
 } from 'jay-compiler-shared';
 import { JayPluginContext } from '../../../lib';
 import { readTestFile } from '../../test-utils/file-utils';
@@ -93,6 +94,7 @@ describe('transformJayFile', () => {
                             { name: 'CounterElementRefs', type: JayUnknown },
                         ],
                         sandbox: false,
+                        kind: JayImportKind.headfull,
                     },
                     {
                         module: 'jay-component',
@@ -102,6 +104,7 @@ describe('transformJayFile', () => {
                             { name: 'Props', type: JayUnknown },
                         ],
                         sandbox: false,
+                        kind: JayImportKind.headfull,
                     },
                 ],
             });

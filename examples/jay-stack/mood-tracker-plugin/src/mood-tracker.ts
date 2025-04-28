@@ -30,6 +30,6 @@ function MoodTracker(props: MoodTrackerProps, refs: MoodTrackerRefs) {
     };
 }
 
-export const moodTracker = makeJayStackComponent(render)
+export const moodTracker = makeJayStackComponent<typeof render>()
     .withProps<MoodTrackerProps>()
     .withInteractive(MoodTracker);

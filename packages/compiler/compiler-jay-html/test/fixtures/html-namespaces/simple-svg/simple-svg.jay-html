@@ -1,6 +1,6 @@
 <html xmlns:svg="http://www.w3.org/2000/svg">
     <head>
-        <script type="application/yaml-jay">
+        <script type="application/jay-data">
     data:
         color: string
 </script>

@@ -14,9 +14,10 @@ import {
     JayType,
     JayUnknown,
     resolvePrimitiveType,
+    JayTypeKind,
 } from 'jay-compiler-shared';
 import { SourceFileFormat } from 'jay-compiler-shared';
-import { JayImportLink, JayImportName } from 'jay-compiler-shared';
+import { JayImportLink, JayImportName, JayImportKind } from 'jay-compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
 
 import { JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
@@ -93,10 +94,10 @@ function parseNamespaces(root: HTMLElement): JayHtmlNamespace[] {
 
 function parseYaml(root: HTMLElement): WithValidations<JayYamlStructure> {
     let validations = [];
-    let jayYamlElements = root.querySelectorAll('[type="application/yaml-jay"]');
+    let jayYamlElements = root.querySelectorAll('[type="application/jay-data"]');
     if (jayYamlElements.length !== 1) {
         validations.push(
-            `jay file should have exactly one yaml-jay script, found ${
+            `jay file should have exactly one jay-data script, found ${
                 jayYamlElements.length === 0 ? 'none' : jayYamlElements.length
             }`,
         );
@@ -108,15 +109,18 @@ function parseYaml(root: HTMLElement): WithValidations<JayYamlStructure> {
 }
 
 function parseImports(
-    importLinks: HTMLElement[],
+    elements: HTMLElement[],
     validations: JayValidations,
     filePath: string,
     options: ResolveTsConfigOptions,
 ): JayImportLink[] {
-    return importLinks.map<JayImportLink>((importLink) => {
-        const module = importLink.getAttribute('href');
-        const rawNames = importLink.getAttribute('names');
-        const sandboxAttribute = importLink.getAttribute('sandbox');
+    return elements.map((element) => {
+        const type = element.getAttribute('type');
+        const module = element.getAttribute('src');
+        const rawNames = element.getAttribute('names');
+        const sandboxAttribute = element.getAttribute('sandbox');
+        const kind =
+            type === 'application/jay-headfull' ? JayImportKind.headfull : JayImportKind.headless;
         const sandbox =
             sandboxAttribute === '' || (Boolean(sandboxAttribute) && sandboxAttribute !== 'false');
         try {
@@ -141,12 +145,12 @@ function parseImports(
                     );
             }
 
-            return { module, names, sandbox };
+            return { module, names, sandbox, kind };
         } catch (e) {
             validations.push(
                 `failed to parse import names for module ${module} - ${e.message}${e.stack}`,
             );
-            return { module, names: [] };
+            return { module, names: [], kind: JayImportKind.headfull };
         }
     });
 }
@@ -170,7 +174,9 @@ export function parseJayFile(
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
     let imports = parseImports(
-        root.querySelectorAll('link[rel="import"]'),
+        root.querySelectorAll(
+            'script[type="application/jay-headfull"], script[type="application/jay-headless"]',
+        ),
         validations,
         filePath,
         options,
@@ -200,5 +206,9 @@ export function parseJayFile(
 
 export function getJayHtmlImports(html: string): string[] {
     const root = parse(html);
-    return root.querySelectorAll('link[rel="import"]').map((link) => link.getAttribute('href'));
+    return root
+        .querySelectorAll(
+            'script[type="application/jay-headfull"], script[type="application/jay-headless"]',
+        )
+        .map((script) => script.getAttribute('src'));
 }

@@ -1,7 +1,7 @@
 <html>
 <head>
-    <link rel="import" href="../counter/counter" names="Counter"/>
-    <script type="application/yaml-jay">
+    <script type="application/jay-headfull" src="../counter/counter" names="Counter"></script>
+    <script type="application/jay-data">
 data:
   nestedCounters:
     - counter: number

@@ -3,14 +3,16 @@ import {
     hasExtension,
     JAY_QUERY_MAIN_SANDBOX,
     JAY_QUERY_WORKER_SANDBOX,
+    JayImportKind,
+    JayImportLink,
+    JayImportName,
+    JayUnknown,
 } from 'jay-compiler-shared';
-import { JayImportLink, JayImportName } from 'jay-compiler-shared';
 import {
     extractImportDeclarations,
     getImportName,
     getImportSpecifiers,
 } from '../ts-utils/extract-imports';
-import { JayUnknown } from 'jay-compiler-shared';
 
 export function parseImportLinks(sourceFile: ts.SourceFile): JayImportLink[] {
     const importDeclarations = extractImportDeclarations(sourceFile).filter((importDeclaration) =>
@@ -22,7 +24,7 @@ export function parseImportLinks(sourceFile: ts.SourceFile): JayImportLink[] {
             hasExtension(module, JAY_QUERY_MAIN_SANDBOX) ||
             hasExtension(module, JAY_QUERY_WORKER_SANDBOX);
         const names = getJayImportNames(importDeclaration);
-        return { module, names, sandbox };
+        return { module, names, sandbox, kind: JayImportKind.headfull };
     });
     return importLinks;
 }

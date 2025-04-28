@@ -1,7 +1,7 @@
 <html>
   <head>
-    <link rel="import" href="./svg-component.ts" names="SvgComponent"/>
-    <script type="application/yaml-jay">
+    <script type="application/jay-headfull" src="./svg-component.ts" names="SvgComponent"></script>
+    <script type="application/jay-data">
       data:
     </script>
   </head>
