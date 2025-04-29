@@ -15,13 +15,13 @@ import {
 } from 'jay-runtime';
 import { Counter } from '../counter/counter';
 
-export interface NestedCounter {
+export interface NestedCounterOfDynamicComponentInComponentViewState {
     counter: number;
     id: string;
 }
 
 export interface DynamicComponentInComponentViewState {
-    nestedCounters: Array<NestedCounter>;
+    nestedCounters: Array<NestedCounterOfDynamicComponentInComponentViewState>;
     condition: boolean;
     count1: number;
 }
@@ -31,7 +31,7 @@ export type CounterRefs<ParentVS> = ComponentCollectionProxy<ParentVS, CounterRe
     OnlyEventEmitters<CounterRef<ParentVS>>;
 
 export interface DynamicComponentInComponentElementRefs {
-    counter1: CounterRefs<NestedCounter>;
+    counter1: CounterRefs<NestedCounterOfDynamicComponentInComponentViewState>;
     counter2: CounterRef<DynamicComponentInComponentViewState>;
 }
 
@@ -64,10 +64,12 @@ export function render(
             de('div', {}, [
                 forEach(
                     (vs: DynamicComponentInComponentViewState) => vs.nestedCounters,
-                    (vs1: NestedCounter) => {
+                    (vs1: NestedCounterOfDynamicComponentInComponentViewState) => {
                         return childComp(
                             Counter,
-                            (vs1: NestedCounter) => ({ initialValue: vs1.counter }),
+                            (vs1: NestedCounterOfDynamicComponentInComponentViewState) => ({
+                                initialValue: vs1.counter,
+                            }),
                             refCounter1(),
                         );
                     },

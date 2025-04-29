@@ -14,13 +14,13 @@ import {
 // @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-workerSandbox';
 
-export interface NestedCounter {
+export interface NestedCounterOfDynamicComponentInComponentViewState {
     counter: number;
     id: string;
 }
 
 export interface DynamicComponentInComponentViewState {
-    nestedCounters: Array<NestedCounter>;
+    nestedCounters: Array<NestedCounterOfDynamicComponentInComponentViewState>;
     condition: boolean;
     count1: number;
 }
@@ -31,7 +31,7 @@ export type CounterRefs<ParentVS> = ComponentCollectionProxy<ParentVS, CounterRe
     OnlyEventEmitters<CounterRef<ParentVS>>;
 
 export interface DynamicComponentInComponentElementRefs {
-    counter1: CounterRefs<NestedCounter>;
+    counter1: CounterRefs<NestedCounterOfDynamicComponentInComponentViewState>;
     counter2: CounterRef<DynamicComponentInComponentViewState>;
 }
 
@@ -64,7 +64,9 @@ export function render(): DynamicComponentInComponentElementPreRender {
                 () => [
                     childComp(
                         Counter,
-                        (vs1: NestedCounter) => ({ initialValue: vs1.counter }),
+                        (vs1: NestedCounterOfDynamicComponentInComponentViewState) => ({
+                            initialValue: vs1.counter,
+                        }),
                         refCounter1(),
                     ),
                 ],

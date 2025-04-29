@@ -10,7 +10,7 @@ import {
     RenderElementOptions,
 } from 'jay-runtime';
 
-export enum Cond {
+export enum CondOfConditionsWithEnumViewState {
     one,
     two,
     three,
@@ -20,7 +20,7 @@ export interface ConditionsWithEnumViewState {
     text1: string;
     text2: string;
     text3: string;
-    cond: Cond;
+    cond: CondOfConditionsWithEnumViewState;
 }
 
 export interface ConditionsWithEnumElementRefs {}
@@ -45,15 +45,15 @@ export function render(options?: RenderElementOptions): ConditionsWithEnumElemen
         ConstructContext.withRootContext(viewState, refManager, () =>
             de('div', {}, [
                 c(
-                    (vs) => vs.cond === Cond.one,
+                    (vs) => vs.cond === CondOfConditionsWithEnumViewState.one,
                     () => e('div', { style: { cssText: 'color:red' } }, [dt((vs) => vs.text1)]),
                 ),
                 c(
-                    (vs) => vs.cond === Cond.two,
+                    (vs) => vs.cond === CondOfConditionsWithEnumViewState.two,
                     () => e('div', { style: { cssText: 'color:red' } }, [dt((vs) => vs.text2)]),
                 ),
                 c(
-                    (vs) => vs.cond !== Cond.one,
+                    (vs) => vs.cond !== CondOfConditionsWithEnumViewState.one,
                     () => e('div', { style: { cssText: 'color:green' } }, [dt((vs) => vs.text3)]),
                 ),
             ]),

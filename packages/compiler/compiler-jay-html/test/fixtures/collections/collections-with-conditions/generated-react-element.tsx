@@ -1,7 +1,7 @@
 import { ReactElement } from 'react';
 import { Jay4ReactElementProps, mimicJayElement } from 'jay-4-react';
 
-export interface Thing {
+export interface ThingOfCollectionsWithConditionsViewState {
     name: string;
     completed: boolean;
     cost: number;
@@ -10,7 +10,7 @@ export interface Thing {
 
 export interface CollectionsWithConditionsViewState {
     title: string;
-    things: Array<Thing>;
+    things: Array<ThingOfCollectionsWithConditionsViewState>;
 }
 
 export interface CollectionsWithConditionsElementRefs {}
@@ -29,7 +29,7 @@ export function reactRender({
         <div>
             <h1>{vs.title}</h1>
             <div>
-                {vs.things.map((vs1: Thing) => {
+                {vs.things.map((vs1: ThingOfCollectionsWithConditionsViewState) => {
                     const cx1 = context.child(vs1.id, vs1);
                     return (
                         <div key={vs1.id}>

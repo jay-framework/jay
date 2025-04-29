@@ -1,4 +1,10 @@
-import { Filter, render, ShownTodo, TodoElementRefs, TodoViewState } from './todo.jay-html';
+import {
+    FilterOfTodoViewState,
+    render,
+    ShownTodoOfTodoViewState,
+    TodoElementRefs,
+    TodoViewState,
+} from './todo.jay-html';
 import { createMemo, createSignal, makeJayComponent, Props } from 'jay-component';
 import { uuid } from './uuid';
 import { patch } from 'jay-json-patch';
@@ -24,7 +30,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     );
 
     const activeTodoCount = createMemo(() =>
-        todos().reduce(function (accum: number, todo: ShownTodo) {
+        todos().reduce(function (accum: number, todo: ShownTodoOfTodoViewState) {
             return todo.isCompleted ? accum : accum + 1;
         }, 0),
     );
@@ -33,20 +39,20 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     const activeTodoWord = createMemo(() => (activeTodoCount() > 1 ? 'todos' : 'todo'));
     const hasItems = createMemo(() => todos().length > 0);
     const showClearCompleted = createMemo(() => !!todos().find((_) => _.isCompleted));
-    const [filter, setFilter] = createSignal<Filter>(Filter.all);
+    const [filter, setFilter] = createSignal<FilterOfTodoViewState>(FilterOfTodoViewState.all);
     const [newTodo, setNewTodo] = createSignal('');
 
     const shownTodos = createMemo(() => [
         ...todos().filter((todo) => {
-            if (filter() === Filter.completed) return todo.isCompleted;
-            else if (filter() === Filter.active) return !todo.isCompleted;
+            if (filter() === FilterOfTodoViewState.completed) return todo.isCompleted;
+            else if (filter() === FilterOfTodoViewState.active) return !todo.isCompleted;
             else return true;
         }),
     ]);
 
-    refs.filterActive.onclick(() => setFilter(Filter.active));
-    refs.filterCompleted.onclick(() => setFilter(Filter.completed));
-    refs.filterAll.onclick(() => setFilter(Filter.all));
+    refs.filterActive.onclick(() => setFilter(FilterOfTodoViewState.active));
+    refs.filterCompleted.onclick(() => setFilter(FilterOfTodoViewState.completed));
+    refs.filterAll.onclick(() => setFilter(FilterOfTodoViewState.all));
 
     refs.newTodo.onkeydown(({ event }: JayEvent<KeyboardEvent, TodoViewState>) => {
         if (event.keyCode === ENTER_KEY) {

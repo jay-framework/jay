@@ -20,13 +20,13 @@ import { secureChildComp } from 'jay-secure';
 // @ts-expect-error Cannot find module
 import { Item } from './item?jay-mainSandbox';
 
-export enum Filter {
+export enum FilterOfTodoViewState {
     all,
     active,
     completed,
 }
 
-export interface ShownTodo {
+export interface ShownTodoOfTodoViewState {
     id: string;
     title: string;
     isCompleted: boolean;
@@ -37,10 +37,10 @@ export interface TodoViewState {
     activeTodoWord: string;
     hasItems: boolean;
     noActiveItems: boolean;
-    filter: Filter;
+    filter: FilterOfTodoViewState;
     showClearCompleted: boolean;
     newTodo: string;
-    shownTodos: Array<ShownTodo>;
+    shownTodos: Array<ShownTodoOfTodoViewState>;
 }
 
 export type ItemRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Item>>;
@@ -51,7 +51,7 @@ export type ItemRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ItemRef<Pare
 export interface TodoElementRefs {
     newTodo: HTMLElementProxy<TodoViewState, HTMLInputElement>;
     toggleAll: HTMLElementProxy<TodoViewState, HTMLInputElement>;
-    items: ItemRefs<ShownTodo>;
+    items: ItemRefs<ShownTodoOfTodoViewState>;
     filterAll: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     filterActive: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     filterCompleted: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
@@ -119,10 +119,10 @@ export function render(options?: RenderElementOptions): TodoElementPreRender {
                                     de('ul', { class: 'todo-list' }, [
                                         forEach(
                                             (vs: TodoViewState) => vs.shownTodos,
-                                            (vs1: ShownTodo) => {
+                                            (vs1: ShownTodoOfTodoViewState) => {
                                                 return secureChildComp(
                                                     Item,
-                                                    (vs1: ShownTodo) => ({
+                                                    (vs1: ShownTodoOfTodoViewState) => ({
                                                         title: vs1.title,
                                                         isCompleted: vs1.isCompleted,
                                                     }),
@@ -151,7 +151,7 @@ export function render(options?: RenderElementOptions): TodoElementPreRender {
                                                 {
                                                     class: da(
                                                         (vs) =>
-                                                            `${vs.filter === Filter.all ? 'selected' : ''}`,
+                                                            `${vs.filter === FilterOfTodoViewState.all ? 'selected' : ''}`,
                                                     ),
                                                 },
                                                 ['All'],
@@ -165,7 +165,7 @@ export function render(options?: RenderElementOptions): TodoElementPreRender {
                                                 {
                                                     class: da(
                                                         (vs) =>
-                                                            `${vs.filter === Filter.active ? 'selected' : ''}`,
+                                                            `${vs.filter === FilterOfTodoViewState.active ? 'selected' : ''}`,
                                                     ),
                                                 },
                                                 ['Active'],
@@ -179,7 +179,7 @@ export function render(options?: RenderElementOptions): TodoElementPreRender {
                                                 {
                                                     class: da(
                                                         (vs) =>
-                                                            `${vs.filter === Filter.completed ? 'selected' : ''}`,
+                                                            `${vs.filter === FilterOfTodoViewState.completed ? 'selected' : ''}`,
                                                     ),
                                                 },
                                                 ['Completed'],

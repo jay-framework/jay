@@ -1,7 +1,7 @@
 import { ReactElement } from 'react';
 import { Jay4ReactElementProps, mimicJayElement } from 'jay-4-react';
 
-export enum Cond {
+export enum CondOfConditionsWithEnumViewState {
     one,
     two,
     three,
@@ -11,7 +11,7 @@ export interface ConditionsWithEnumViewState {
     text1: string;
     text2: string;
     text3: string;
-    cond: Cond;
+    cond: CondOfConditionsWithEnumViewState;
 }
 
 export interface ConditionsWithEnumElementRefs {}
@@ -25,9 +25,15 @@ export function reactRender({
 }: ConditionsWithEnumElementProps): ReactElement<ConditionsWithEnumElementProps, any> {
     return (
         <div>
-            {vs.cond === Cond.one && <div style={{ color: 'red' }}>{vs.text1}</div>}
-            {vs.cond === Cond.two && <div style={{ color: 'red' }}>{vs.text2}</div>}
-            {vs.cond !== Cond.one && <div style={{ color: 'green' }}>{vs.text3}</div>}
+            {vs.cond === CondOfConditionsWithEnumViewState.one && (
+                <div style={{ color: 'red' }}>{vs.text1}</div>
+            )}
+            {vs.cond === CondOfConditionsWithEnumViewState.two && (
+                <div style={{ color: 'red' }}>{vs.text2}</div>
+            )}
+            {vs.cond !== CondOfConditionsWithEnumViewState.one && (
+                <div style={{ color: 'green' }}>{vs.text3}</div>
+            )}
         </div>
     );
 }

@@ -1,29 +1,43 @@
 import {
-    Down,
-    Pause,
-    Play,
+    DownOfTimerScreenViewState,
+    PauseOfTimerScreenViewState,
+    PlayOfTimerScreenViewState,
     render,
-    Restart,
-    Screen,
-    Start,
-    Stop,
+    RestartOfTimerScreenViewState,
+    ScreenOfTimerScreenViewState,
+    StartOfTimerScreenViewState,
+    StopOfTimerScreenViewState,
     TimerScreenElementRefs,
-    Up,
+    UpOfTimerScreenViewState,
 } from './timer-screen.jay-html';
 import { createSignal, makeJayComponent } from 'jay-component';
 
 function AppComponentConstructor(_, refs: TimerScreenElementRefs) {
-    const [screen, setScreen] = createSignal<Screen>(Screen.welcome);
+    const [screen, setScreen] = createSignal<ScreenOfTimerScreenViewState>(
+        ScreenOfTimerScreenViewState.welcome,
+    );
     const [seconds, setSeconds] = createSignal(3);
     const [timeLeft, setTimeLeft] = createSignal(3);
 
-    const [start, setStart] = createSignal<Start>(Start.regular);
-    const [play, setPlay] = createSignal<Play>(Play.regular);
-    const [stop, setStop] = createSignal<Stop>(Stop.regular);
-    const [pause, setPause] = createSignal<Pause>(Pause.regular);
-    const [restart, setRestart] = createSignal<Restart>(Restart.regular);
-    const [up, setUp] = createSignal<Up>(Up.regular);
-    const [down, setDown] = createSignal<Down>(Down.regular);
+    const [start, setStart] = createSignal<StartOfTimerScreenViewState>(
+        StartOfTimerScreenViewState.regular,
+    );
+    const [play, setPlay] = createSignal<PlayOfTimerScreenViewState>(
+        PlayOfTimerScreenViewState.regular,
+    );
+    const [stop, setStop] = createSignal<StopOfTimerScreenViewState>(
+        StopOfTimerScreenViewState.regular,
+    );
+    const [pause, setPause] = createSignal<PauseOfTimerScreenViewState>(
+        PauseOfTimerScreenViewState.regular,
+    );
+    const [restart, setRestart] = createSignal<RestartOfTimerScreenViewState>(
+        RestartOfTimerScreenViewState.regular,
+    );
+    const [up, setUp] = createSignal<UpOfTimerScreenViewState>(UpOfTimerScreenViewState.regular);
+    const [down, setDown] = createSignal<DownOfTimerScreenViewState>(
+        DownOfTimerScreenViewState.regular,
+    );
 
     const [intervalPointer, setIntervalPointer] = createSignal<any>(null);
 
@@ -34,12 +48,12 @@ function AppComponentConstructor(_, refs: TimerScreenElementRefs) {
 
     function stopTimer() {
         pauseTimer();
-        setScreen(Screen.set);
+        setScreen(ScreenOfTimerScreenViewState.set);
     }
 
     function endTimer() {
         pauseTimer();
-        setScreen(Screen.done);
+        setScreen(ScreenOfTimerScreenViewState.done);
     }
 
     function playTimer() {
@@ -59,94 +73,94 @@ function AppComponentConstructor(_, refs: TimerScreenElementRefs) {
      */
     //start
     refs.startWelcome.onmouseenter(() => {
-        setStart(Start.hover);
+        setStart(StartOfTimerScreenViewState.hover);
     });
 
     refs.startWelcome.onmouseleave(() => {
-        setStart(Start.regular);
+        setStart(StartOfTimerScreenViewState.regular);
     });
 
     //stop
     refs.stopPlay.onmouseenter(() => {
-        setStop(Stop.hover);
+        setStop(StopOfTimerScreenViewState.hover);
     });
 
     refs.stopPlay.onmouseleave(() => {
-        setStop(Stop.regular);
+        setStop(StopOfTimerScreenViewState.regular);
     });
 
     //pause
     refs.pausePlay.onmouseenter(() => {
-        setPause(Pause.hover);
+        setPause(PauseOfTimerScreenViewState.hover);
     });
 
     refs.pausePlay.onmouseleave(() => {
         if (intervalPointer() === null) {
-            setPause(Pause.hover);
+            setPause(PauseOfTimerScreenViewState.hover);
         } else {
-            setPause(Pause.regular);
+            setPause(PauseOfTimerScreenViewState.regular);
         }
     });
 
     //play
     refs.playSet.onmouseenter(() => {
-        setPlay(Play.hover);
+        setPlay(PlayOfTimerScreenViewState.hover);
     });
 
     refs.playSet.onmouseleave(() => {
-        setPlay(Play.regular);
+        setPlay(PlayOfTimerScreenViewState.regular);
     });
 
     //up
     refs.upSet.onmouseenter(() => {
-        setUp(Up.hover);
+        setUp(UpOfTimerScreenViewState.hover);
     });
 
     refs.upSet.onmouseleave(() => {
-        setUp(Up.regular);
+        setUp(UpOfTimerScreenViewState.regular);
     });
 
     //down
     refs.downSet.onmouseenter(() => {
-        setDown(Down.hover);
+        setDown(DownOfTimerScreenViewState.hover);
     });
 
     refs.downSet.onmouseleave(() => {
-        setDown(Down.regular);
+        setDown(DownOfTimerScreenViewState.regular);
     });
 
     //restart
     refs.restartDone.onmouseenter(() => {
-        setRestart(Restart.hover);
+        setRestart(RestartOfTimerScreenViewState.hover);
     });
 
     refs.restartDone.onmouseleave(() => {
-        setRestart(Restart.regular);
+        setRestart(RestartOfTimerScreenViewState.regular);
     });
 
     /**
      * Handle user actions
      */
     refs.startWelcome.onclick(() => {
-        setScreen(Screen.set);
+        setScreen(ScreenOfTimerScreenViewState.set);
     });
 
     refs.pausePlay.onclick(() => {
         if (intervalPointer() === null) {
             playTimer();
-            setPause(Pause.regular);
+            setPause(PauseOfTimerScreenViewState.regular);
         } else {
             pauseTimer();
-            setPause(Pause.hover);
+            setPause(PauseOfTimerScreenViewState.hover);
         }
     });
     refs.stopPlay.onclick(() => stopTimer());
 
     refs.restartDone.onclick(() => {
-        setScreen(Screen.set);
+        setScreen(ScreenOfTimerScreenViewState.set);
     });
 
-    refs.startWelcome.onclick(() => setScreen(Screen.set));
+    refs.startWelcome.onclick(() => setScreen(ScreenOfTimerScreenViewState.set));
 
     refs.upSet.onclick(() => {
         const newSeconds = seconds() + 1;
@@ -168,7 +182,7 @@ function AppComponentConstructor(_, refs: TimerScreenElementRefs) {
 
     refs.playSet.onclick(() => {
         setTimeLeft(seconds());
-        setScreen(Screen.play);
+        setScreen(ScreenOfTimerScreenViewState.play);
         playTimer();
     });
     /**

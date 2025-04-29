@@ -2,34 +2,34 @@ import { HTMLElementCollectionProxy } from 'jay-runtime';
 import { ReactElement } from 'react';
 import { Jay4ReactElementProps, eventsFor, mimicJayElement } from 'jay-4-react';
 
-export interface Item {
+export interface ItemOfCollectionWithRefsViewState {
     name: string;
     completed: boolean;
     cost: number;
     id: string;
 }
 
-export interface GroupItem {
+export interface GroupItemOfGroupOfCollectionWithRefsViewState {
     itemId: string;
     item: string;
 }
 
-export interface Group {
+export interface GroupOfCollectionWithRefsViewState {
     groupId: string;
-    groupItems: Array<GroupItem>;
+    groupItems: Array<GroupItemOfGroupOfCollectionWithRefsViewState>;
 }
 
 export interface CollectionWithRefsViewState {
     title: string;
-    items: Array<Item>;
-    groups: Array<Group>;
+    items: Array<ItemOfCollectionWithRefsViewState>;
+    groups: Array<GroupOfCollectionWithRefsViewState>;
 }
 
 export interface CollectionWithRefsElementRefs {
-    name: HTMLElementCollectionProxy<Item, HTMLSpanElement>;
-    completed: HTMLElementCollectionProxy<Item, HTMLSpanElement>;
-    cost: HTMLElementCollectionProxy<Item, HTMLSpanElement>;
-    done: HTMLElementCollectionProxy<Item, HTMLButtonElement>;
+    name: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+    completed: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+    cost: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+    done: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLButtonElement>;
 }
 
 export interface CollectionWithRefsElementProps
@@ -43,7 +43,7 @@ export function reactRender({
         <div>
             <h1>{vs.title}</h1>
             <div>
-                {vs.items.map((vs1: Item) => {
+                {vs.items.map((vs1: ItemOfCollectionWithRefsViewState) => {
                     const cx1 = context.child(vs1.id, vs1);
                     return (
                         <div key={vs1.id}>
@@ -79,18 +79,20 @@ export function reactRender({
                         </div>
                     );
                 })}
-                {vs.groups.map((vs1: Group) => {
+                {vs.groups.map((vs1: GroupOfCollectionWithRefsViewState) => {
                     const cx1 = context.child(vs1.groupId, vs1);
                     return (
                         <div key={vs1.groupId}>
-                            {vs1.groupItems.map((vs2: GroupItem) => {
-                                const cx2 = cx1.child(vs2.itemId, vs2);
-                                return (
-                                    <div key={vs2.itemId}>
-                                        <div>{vs2.item}</div>
-                                    </div>
-                                );
-                            })}
+                            {vs1.groupItems.map(
+                                (vs2: GroupItemOfGroupOfCollectionWithRefsViewState) => {
+                                    const cx2 = cx1.child(vs2.itemId, vs2);
+                                    return (
+                                        <div key={vs2.itemId}>
+                                            <div>{vs2.item}</div>
+                                        </div>
+                                    );
+                                },
+                            )}
                         </div>
                     );
                 })}

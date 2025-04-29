@@ -10,7 +10,7 @@ import {
     RenderElementOptions,
 } from 'jay-runtime';
 
-export interface Thing {
+export interface ThingOfCollectionsViewState {
     name: string;
     completed: boolean;
     cost: number;
@@ -19,7 +19,7 @@ export interface Thing {
 
 export interface CollectionsViewState {
     title: string;
-    things: Array<Thing>;
+    things: Array<ThingOfCollectionsViewState>;
 }
 
 export interface CollectionsElementRefs {}
@@ -41,7 +41,7 @@ export function render(options?: RenderElementOptions): CollectionsElementPreRen
                 de('div', {}, [
                     forEach(
                         (vs: CollectionsViewState) => vs.things,
-                        (vs1: Thing) => {
+                        (vs1: ThingOfCollectionsViewState) => {
                             return e('div', {}, [
                                 e(
                                     'span',
