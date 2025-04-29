@@ -44,6 +44,7 @@ import { tagToNamespace } from './tag-to-namespace';
 
 interface RenderContext {
     variables: Variables;
+    forEachAccessPath: string[];
     importedSymbols: Set<string>;
     indent: Indent;
     dynamicRef: boolean;
@@ -120,7 +121,7 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
 
 function renderElementRef(
     element: HTMLElement,
-    { dynamicRef, variables }: RenderContext,
+    { dynamicRef, variables, forEachAccessPath }: RenderContext,
 ): RenderFragment {
     if (element.attributes.ref) {
         let originalName = element.attributes.ref;
@@ -129,6 +130,7 @@ function renderElementRef(
         let refs = [
             {
                 ref: refName,
+                path: forEachAccessPath,
                 constName,
                 dynamicRef,
                 autoRef: false,
@@ -176,7 +178,7 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
 
 function renderChildCompRef(
     element: HTMLElement,
-    { dynamicRef, variables, nextAutoRefName }: RenderContext,
+    { dynamicRef, variables, nextAutoRefName, forEachAccessPath }: RenderContext,
 ): RenderFragment {
     let originalName = element.attributes.ref || nextAutoRefName();
     let refName = camelCase(originalName);
@@ -184,6 +186,7 @@ function renderChildCompRef(
     let refs = [
         {
             ref: refName,
+            path: forEachAccessPath,
             constName,
             dynamicRef,
             autoRef: !element.attributes.ref,
@@ -242,11 +245,12 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
 
     function renderHtmlElement(
         htmlElement: HTMLElement,
-        newVariables: Variables,
-        currIndent: Indent = indent,
+        newContext: RenderContext,
+        // newVariables: Variables,
+        // currIndent: Indent = indent,
     ) {
         if (importedSymbols.has(htmlElement.rawTagName))
-            return renderNestedComponent(htmlElement, newVariables, currIndent);
+            return renderNestedComponent(htmlElement, newContext);
 
         let childNodes =
             node.childNodes.length > 1
@@ -255,7 +259,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                   )
                 : node.childNodes;
 
-        let childIndent = currIndent.child();
+        let childIndent = newContext.indent.child();
         if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE)
             childIndent = childIndent.noFirstLineBreak();
 
@@ -263,29 +267,27 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
             .map((_) => isConditional(_) || isForEach(_))
             .reduce((prev, current) => prev || current, false);
 
-        let childContext = { ...context, variables: newVariables, indent: childIndent, dynamicRef };
-
         let childRenders =
             childNodes.length === 0
                 ? RenderFragment.empty()
                 : childNodes
-                      .map((_) => renderNode(_, childContext))
+                      .map((_) => renderNode(_, newContext))
                       .reduce(
                           (prev, current) => RenderFragment.merge(prev, current, ',\n'),
                           RenderFragment.empty(),
                       )
                       .map((children) =>
                           childIndent.firstLineBreak
-                              ? `\n${children}\n${currIndent.firstLine}`
+                              ? `\n${children}\n${newContext.indent.firstLine}`
                               : children,
                       );
 
-        let attributes = renderAttributes(htmlElement, childContext);
-        let renderedRef = renderElementRef(htmlElement, childContext);
+        let attributes = renderAttributes(htmlElement, newContext);
+        let renderedRef = renderElementRef(htmlElement, newContext);
 
         if (needDynamicElement)
-            return de(htmlElement.rawTagName, attributes, childRenders, renderedRef, currIndent);
-        else return e(htmlElement.rawTagName, attributes, childRenders, renderedRef, currIndent);
+            return de(htmlElement.rawTagName, attributes, childRenders, renderedRef, newContext.indent);
+        else return e(htmlElement.rawTagName, attributes, childRenders, renderedRef, newContext.indent);
     }
 
     function c(renderedCondition: RenderFragment, childElement: RenderFragment) {
@@ -314,27 +316,20 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
 
     function renderNestedComponent(
         htmlElement: HTMLElement,
-        newVariables: Variables,
-        currIndent: Indent = indent,
+        newContext: RenderContext
+        // newVariables: Variables,
+        // currIndent: Indent = indent,
     ): RenderFragment {
-        let propsGetterAndRefs = renderChildCompProps(htmlElement, {
-            ...context,
-            dynamicRef,
-            variables: newVariables,
-        });
-        let renderedRef = renderChildCompRef(htmlElement, {
-            ...context,
-            dynamicRef,
-            variables: newVariables,
-        });
+        let propsGetterAndRefs = renderChildCompProps(htmlElement, newContext);
+        let renderedRef = renderChildCompRef(htmlElement, newContext);
         if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
-        let getProps = `(${newVariables.currentVar}: ${newVariables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
+        let getProps = `(${newContext.variables.currentVar}: ${newContext.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
         if (
             importedSandboxedSymbols.has(htmlElement.rawTagName) ||
             importerMode === RuntimeMode.MainSandbox
         )
             return new RenderFragment(
-                `${currIndent.firstLine}secureChildComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
+                `${newContext.indent.firstLine}secureChildComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
                 Imports.for(Import.secureChildComp)
                     .plus(propsGetterAndRefs.imports)
                     .plus(renderedRef.imports),
@@ -343,7 +338,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             );
         else
             return new RenderFragment(
-                `${currIndent.firstLine}childComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
+                `${newContext.indent.firstLine}childComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
                 Imports.for(Import.childComp)
                     .plus(propsGetterAndRefs.imports)
                     .plus(renderedRef.imports),
@@ -358,11 +353,14 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             return renderTextNode(variables, text, indent); //.map(_ => ident + _);
         case NodeType.ELEMENT_NODE:
             let htmlElement = node as HTMLElement;
-            if (isForEach(htmlElement)) dynamicRef = true;
+            // if (isForEach(htmlElement)) dynamicRef = true;
 
             if (isConditional(htmlElement)) {
                 let condition = htmlElement.getAttribute('if');
-                let childElement = renderHtmlElement(htmlElement, variables, indent.child());
+                let childElement = renderHtmlElement(htmlElement, {
+                    ...context,
+                    indent: indent.child()
+                });
                 let renderedCondition = parseCondition(condition, variables);
                 return c(renderedCondition, childElement);
             } else if (isForEach(htmlElement)) {
@@ -370,6 +368,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 const trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
 
                 const forEachAccessor = parseAccessor(forEach, variables);
+                const forEachAccessPath = forEachAccessor.terms;
                 if (forEachAccessor.resolvedType === JayUnknown)
                     return new RenderFragment('', Imports.none(), [
                         `forEach directive - failed to resolve forEach type [forEach=${forEach}]`,
@@ -387,14 +386,20 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 let forEachVariables = variables.childVariableFor(
                     (forEachAccessor.resolvedType as JayArrayType).itemType,
                 );
+                let newContext = { ...context,
+                    variables: forEachVariables,
+                    indent: indent.child().noFirstLineBreak().withLastLineBreak(),
+                    dynamicRef: true,
+                    forEachAccessPath: [...context.forEachAccessPath, ...forEachAccessPath]
+                };
+
                 let childElement = renderHtmlElement(
                     htmlElement,
-                    forEachVariables,
-                    indent.child().noFirstLineBreak().withLastLineBreak(),
+                    newContext,
                 );
                 return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
             } else {
-                return renderHtmlElement(htmlElement, variables);
+                return renderHtmlElement(htmlElement, context);
             }
         case NodeType.COMMENT_NODE:
             break;
@@ -426,6 +431,7 @@ function renderFunctionImplementation(
         renderedRoot = renderNode(rootElement.val, {
             variables,
             importedSymbols,
+            forEachAccessPath: [],
             indent: new Indent('    '),
             dynamicRef: false,
             importedSandboxedSymbols,
@@ -637,6 +643,7 @@ function renderBridge(
     let renderedBridge = renderElementBridgeNode(rootBodyElement, {
         variables,
         importedSymbols,
+        forEachAccessPath: [],
         indent: new Indent('    '),
         dynamicRef: false,
         importedSandboxedSymbols,
@@ -681,6 +688,7 @@ function renderSandboxRoot(
     let renderedBridge = renderElementBridgeNode(rootBodyElement, {
         variables,
         importedSymbols,
+        forEachAccessPath: [],
         indent: new Indent('    '),
         dynamicRef: false,
         importedSandboxedSymbols,

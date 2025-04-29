@@ -4,6 +4,7 @@ import { JayType } from './jay-type';
 
 export interface Ref {
     ref: string;
+    path: string[];
     constName: string;
     dynamicRef: boolean;
     autoRef: boolean;
