@@ -32,8 +32,8 @@ and we remind that `jay-html` also has the data script defined as
 We want to transform all of the above into `script` tags with appropriate type
 
 ```html
-<script type="application/jay-headless" src="stores/product-page" name="page" key="productPage" />
-<script type="application/jay-headfull" src="./item" names="Item" />
+<script type="application/jay-headless" src="stores/product-page" name="page" key="productPage"></script>
+<script type="application/jay-headfull" src="./item" names="Item"></script>
 <script type="application/jay-data">
   data:
 </script>
