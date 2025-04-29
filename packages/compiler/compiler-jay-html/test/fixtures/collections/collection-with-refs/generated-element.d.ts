@@ -28,24 +28,18 @@ export interface CollectionWithRefsViewState {
     groups: Array<GroupOfCollectionWithRefsViewState>;
 }
 
-export interface ItemsOfCollectionWithRefsElementRefs {
-    name: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
-    completed: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
-    cost: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
-    done: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLButtonElement>;
-}
-
-export interface GroupItemsOfGroupsOfCollectionWithRefsElementRefs {
-    item: HTMLElementCollectionProxy<GroupItemOfGroupOfCollectionWithRefsViewState, HTMLSpanElement>;
-}
-
-export interface GroupsOfCollectionWithRefsElementRefs {
-    groupItems: GroupItemsOfGroupsOfCollectionWithRefsElementRefs
-}
-
 export interface CollectionWithRefsElementRefs {
-    items: ItemsOfCollectionWithRefsElementRefs
-    groups: GroupsOfCollectionWithRefsElementRefs
+    items: {
+        name: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        completed: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        cost: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        done: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLButtonElement>;
+    }
+    groups: {
+        groupItems: {
+            item: HTMLElementCollectionProxy<GroupItemOfGroupOfCollectionWithRefsViewState, HTMLDivElement>;
+        }
+    }
 }
 
 export type CollectionWithRefsElement = JayElement<

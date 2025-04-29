@@ -15,6 +15,7 @@ import {
 } from 'jay-compiler-shared';
 import { HTMLElement } from 'node-html-parser';
 import { htmlElementTagNameMap } from './html-element-tag-name-map';
+import { pascalCase } from 'change-case';
 
 const isLinkedContractRef = (ref: Ref) => isImportedContractType(ref.elementType);
 const isLinkedContractCollectionRef = (ref: Ref) =>
@@ -27,6 +28,21 @@ const isComponentCollectionRef = (ref: Ref) => isCollectionRef(ref) && isCompone
 enum RefsNeeded {
     REF,
     REF_AND_REFS,
+}
+class RefsTreeNode {
+    public readonly refs: Ref[] = [];
+    public readonly children: Record<string, RefsTreeNode> = {};
+
+    addRef(ref: Ref, level: number = 0) {
+        if (ref.path.length === level)
+            this.refs.push(ref);
+        else {
+            if (!this.children[ref.path[level]])
+                this.children[ref.path[level]] = new RefsTreeNode();
+            this.children[ref.path[level]].addRef(ref, level+1);
+        }
+
+    }
 }
 export function renderRefsType(
     refs: Ref[],
@@ -41,30 +57,53 @@ export function renderRefsType(
     const componentRefs = new Map<string, RefsNeeded>();
 
     if (refsToRender.length > 0) {
-        const renderedReferences = refsToRender
-            .map((ref) => {
-                let referenceType: string;
-                if (isLinkedContractCollectionRef(ref)) {
-                    referenceType = (ref.elementType as JayImportedContract).repeatedRefs;
-                } else if (isLinkedContractRef(ref)) {
-                    referenceType = (ref.elementType as JayImportedContract).refs;
-                } else if (isComponentCollectionRef(ref)) {
-                    referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`;
-                    componentRefs.set(ref.elementType.name, RefsNeeded.REF_AND_REFS);
-                } else if (isCollectionRef(ref)) {
-                    referenceType = `HTMLElementCollectionProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
-                    imports = imports.plus(Import.HTMLElementCollectionProxy);
-                } else if (isComponentRef(ref)) {
-                    referenceType = `${ref.elementType.name}Ref<${ref.viewStateType.name}>`;
-                    if (!componentRefs.has(ref.elementType.name))
-                        componentRefs.set(ref.elementType.name, RefsNeeded.REF);
-                } else {
-                    referenceType = `HTMLElementProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
-                    imports = imports.plus(Import.HTMLElementProxy);
-                }
-                return `  ${ref.ref}: ${referenceType}`;
-            })
-            .join(',\n');
+        const root = new RefsTreeNode();
+        refsToRender.forEach(ref => root.addRef(ref));
+
+        const generateTypeForPath = (refsTree: RefsTreeNode): string => {
+            const renderedRefs = refsTree.refs
+                .map((ref) => {
+                    let referenceType: string;
+                    if (isLinkedContractCollectionRef(ref)) {
+                        referenceType = (ref.elementType as JayImportedContract).repeatedRefs;
+                    } else if (isLinkedContractRef(ref)) {
+                        referenceType = (ref.elementType as JayImportedContract).refs;
+                    } else if (isComponentCollectionRef(ref)) {
+                        referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`;
+                        componentRefs.set(ref.elementType.name, RefsNeeded.REF_AND_REFS);
+                    } else if (isCollectionRef(ref)) {
+                        referenceType = `HTMLElementCollectionProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
+                        imports = imports.plus(Import.HTMLElementCollectionProxy);
+                    } else if (isComponentRef(ref)) {
+                        referenceType = `${ref.elementType.name}Ref<${ref.viewStateType.name}>`;
+                        if (!componentRefs.has(ref.elementType.name))
+                            componentRefs.set(ref.elementType.name, RefsNeeded.REF);
+                    } else {
+                        referenceType = `HTMLElementProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
+                        imports = imports.plus(Import.HTMLElementProxy);
+                    }
+                    return `  ${ref.ref}: ${referenceType}`;
+                })
+                .join(',\n');
+
+            const childTypes = Object
+                .entries(refsTree.children)
+                .map(([childName, childRefNode]) => {
+                    const childType = generateTypeForPath(childRefNode);
+                    return `  ${childName}: ${childType}`;
+                }).join(',\n');
+
+            // Combine refs and child types
+            const allTypes = [renderedRefs, childTypes]
+                .filter(Boolean)
+                .join(',\n');
+
+            return `{
+${allTypes}
+}`;
+        };
+
+        const mainType = generateTypeForPath(root);
 
         const renderedComponentRefs = [...componentRefs].map(([componentName, refsNeeded]) => {
             const elementType =
@@ -85,10 +124,9 @@ export type ${componentName}Refs<ParentVS> =
             }
             return refTypes;
         });
+
         renderedRefs = `${renderedComponentRefs.join('\n')}
-export interface ${refsType} {
-${renderedReferences}
-}`;
+export interface ${refsType} ${mainType}`;
     } else renderedRefs = `export interface ${refsType} {}`;
     return { imports, renderedRefs, refImportsInUse };
 }
