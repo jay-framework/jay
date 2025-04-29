@@ -3,3 +3,5 @@ tags:
   - tag: pluginSlowlyRendered
   - tag: pluginInteractiveRendered
   - tag: pluginButton
+    type: interactive
+    elementType: HTMLButtonElement

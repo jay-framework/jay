@@ -1,6 +1,6 @@
 <html>
 <head>
-    <script type="application/jay" src="../../simple-plugin/simple-plugin.ts" name="plugin" key="plugin" />
+    <script type="application/jay-headless" src="../../simple-plugin/simple-plugin.ts" name="plugin" key="plugin" ></script>
     <script type="application/jay-data">
 data:
     pageSlowlyRendered: string
