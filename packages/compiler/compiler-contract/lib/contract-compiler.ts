@@ -33,17 +33,17 @@ interface TraverseResult {
 }
 
 interface ContractTraversalContext {
-    tag: ContractTag,
-    viewStateType: JayType,
-    isRepeated: boolean,
-    path: string[]
+    tag: ContractTag;
+    viewStateType: JayType;
+    isRepeated: boolean;
+    path: string[];
 }
 
 async function traverseContractTag(
     context: ContractTraversalContext,
     linkedContractResolver: LinkedContractResolver,
 ): Promise<TraverseResult> {
-    const {tag, viewStateType, isRepeated, path} = context;
+    const { tag, viewStateType, isRepeated, path } = context;
     if (tag.type.includes(ContractTagType.subContract)) {
         if (tag.link) {
             const subContract = await linkedContractResolver.loadContract(tag.link);
@@ -89,12 +89,13 @@ async function traverseContractTag(
         const subViewStateType = { name: subInterfaceName, kind: 0 };
 
         for (const subTag of tag.tags) {
-            const result: TraverseResult = await traverseContractTag({
-                tag: subTag,
-                viewStateType: subViewStateType,
-                isRepeated: isRepeated || tag.repeated,
-                path: [...path, tag.tag],
-            },
+            const result: TraverseResult = await traverseContractTag(
+                {
+                    tag: subTag,
+                    viewStateType: subViewStateType,
+                    isRepeated: isRepeated || tag.repeated,
+                    path: [...path, tag.tag],
+                },
                 linkedContractResolver,
             );
             importLinks = [...importLinks, ...result.importLinks];
@@ -178,12 +179,15 @@ export async function compileContract(
         const viewStateType = { name: pascalCase(contract.name) + 'ViewState', kind: 0 };
 
         for (const tag of contract.tags) {
-            const result = await traverseContractTag({
-                tag,
-                viewStateType,
-                isRepeated: false,
-                path: []
-            }, linkedContractResolver);
+            const result = await traverseContractTag(
+                {
+                    tag,
+                    viewStateType,
+                    isRepeated: false,
+                    path: [],
+                },
+                linkedContractResolver,
+            );
             importedLinks = [...importedLinks, ...result.importLinks];
             allRefs = [...allRefs, ...result.refs];
             result.type && (props[camelCase(tag.tag)] = result.type);

@@ -35,7 +35,8 @@ import { Indent } from './indent';
 import {
     elementNameToJayType,
     newAutoRefNameGenerator,
-    optimizeRefs, ReferenceManagerTarget,
+    optimizeRefs,
+    ReferenceManagerTarget,
     renderReferenceManager,
     renderRefsType,
 } from './jay-html-compile-refs';
@@ -243,10 +244,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
         );
     }
 
-    function renderHtmlElement(
-        htmlElement: HTMLElement,
-        newContext: RenderContext,
-    ) {
+    function renderHtmlElement(htmlElement: HTMLElement, newContext: RenderContext) {
         if (importedSymbols.has(htmlElement.rawTagName))
             return renderNestedComponent(htmlElement, newContext);
 
@@ -284,8 +282,21 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
         let renderedRef = renderElementRef(htmlElement, newContext);
 
         if (needDynamicElement)
-            return de(htmlElement.rawTagName, attributes, childRenders, renderedRef, newContext.indent);
-        else return e(htmlElement.rawTagName, attributes, childRenders, renderedRef, newContext.indent);
+            return de(
+                htmlElement.rawTagName,
+                attributes,
+                childRenders,
+                renderedRef,
+                newContext.indent,
+            );
+        else
+            return e(
+                htmlElement.rawTagName,
+                attributes,
+                childRenders,
+                renderedRef,
+                newContext.indent,
+            );
     }
 
     function c(renderedCondition: RenderFragment, childElement: RenderFragment) {
@@ -314,7 +325,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
 
     function renderNestedComponent(
         htmlElement: HTMLElement,
-        newContext: RenderContext
+        newContext: RenderContext,
     ): RenderFragment {
         let propsGetterAndRefs = renderChildCompProps(htmlElement, newContext);
         let renderedRef = renderChildCompRef(htmlElement, newContext);
@@ -355,7 +366,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 let condition = htmlElement.getAttribute('if');
                 let childElement = renderHtmlElement(htmlElement, {
                     ...context,
-                    indent: indent.child()
+                    indent: indent.child(),
                 });
                 let renderedCondition = parseCondition(condition, variables);
                 return c(renderedCondition, childElement);
@@ -382,17 +393,15 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 let forEachVariables = variables.childVariableFor(
                     (forEachAccessor.resolvedType as JayArrayType).itemType,
                 );
-                let newContext = { ...context,
+                let newContext = {
+                    ...context,
                     variables: forEachVariables,
                     indent: indent.child().noFirstLineBreak().withLastLineBreak(),
                     dynamicRef: true,
-                    forEachAccessPath: [...context.forEachAccessPath, ...forEachAccessPath]
+                    forEachAccessPath: [...context.forEachAccessPath, ...forEachAccessPath],
                 };
 
-                let childElement = renderHtmlElement(
-                    htmlElement,
-                    newContext,
-                );
+                let childElement = renderHtmlElement(htmlElement, newContext);
                 return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
             } else {
                 return renderHtmlElement(htmlElement, context);
@@ -470,7 +479,10 @@ ${Indent.forceIndent(code, 4)},
         );
     }
 
-    const {renderedRefsManager, refsManagerImport} = renderReferenceManager(renderedRoot.refs, ReferenceManagerTarget.element);
+    const { renderedRefsManager, refsManagerImport } = renderReferenceManager(
+        renderedRoot.refs,
+        ReferenceManagerTarget.element,
+    );
 
     const body = `export function render(options?: RenderElementOptions): ${preRenderType} {
 ${renderedRefsManager}    
@@ -497,7 +509,7 @@ function renderElementBridgeNode(node: Node, context: RenderContext): RenderFrag
 
     function renderNestedComponent(
         htmlElement: HTMLElement,
-        newContext: RenderContext
+        newContext: RenderContext,
     ): RenderFragment {
         let propsGetterAndRefs = renderChildCompProps(htmlElement, newContext);
         let renderedRef = renderChildCompRef(htmlElement, newContext);
@@ -529,10 +541,7 @@ ${indent.firstLine}])`,
         );
     }
 
-    function renderHtmlElement(
-        htmlElement,
-        newContext: RenderContext
-    ) {
+    function renderHtmlElement(htmlElement, newContext: RenderContext) {
         let childNodes =
             node.childNodes.length > 1
                 ? node.childNodes.filter(
@@ -556,7 +565,7 @@ ${indent.firstLine}])`,
                           RenderFragment.empty(),
                       );
         if (importedSymbols.has(htmlElement.rawTagName)) {
-            return renderNestedComponent(htmlElement,  {...newContext, indent: childIndent});
+            return renderNestedComponent(htmlElement, { ...newContext, indent: childIndent });
         } else {
             let renderedRef = renderElementRef(htmlElement, context);
             if (renderedRef.refs.length > 0)
@@ -595,15 +604,13 @@ ${indent.firstLine}])`,
             let forEachVariables = variables.childVariableFor(
                 (forEachAccessor.resolvedType as JayArrayType).itemType,
             );
-            let childElement = renderHtmlElement(
-                htmlElement,
-                {...context,
-                    variables: forEachVariables,
-                    indent: indent.child().noFirstLineBreak().withLastLineBreak(),
-                    forEachAccessPath: [...context.forEachAccessPath, ...forEachAccessPath],
-                    dynamicRef: true
-                }
-            );
+            let childElement = renderHtmlElement(htmlElement, {
+                ...context,
+                variables: forEachVariables,
+                indent: indent.child().noFirstLineBreak().withLastLineBreak(),
+                forEachAccessPath: [...context.forEachAccessPath, ...forEachAccessPath],
+                dynamicRef: true,
+            });
             return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
         } else return renderHtmlElement(htmlElement, context);
     }
@@ -632,7 +639,10 @@ function renderBridge(
         namespaces: [],
     });
 
-    const {renderedRefsManager, refsManagerImport} = renderReferenceManager(renderedBridge.refs, ReferenceManagerTarget.elementBridge);
+    const { renderedRefsManager, refsManagerImport } = renderReferenceManager(
+        renderedBridge.refs,
+        ReferenceManagerTarget.elementBridge,
+    );
 
     return new RenderFragment(
         `export function render(): ${preRenderType} {
@@ -676,7 +686,10 @@ ${renderedBridge.rendered}
   `
             : '';
 
-    const {renderedRefsManager, refsManagerImport} = renderReferenceManager(renderedBridge.refs, ReferenceManagerTarget.sandboxRoot);
+    const { renderedRefsManager, refsManagerImport } = renderReferenceManager(
+        renderedBridge.refs,
+        ReferenceManagerTarget.sandboxRoot,
+    );
 
     return new RenderFragment(
         `() => {

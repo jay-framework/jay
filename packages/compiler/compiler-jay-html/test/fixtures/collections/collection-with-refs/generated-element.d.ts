@@ -34,12 +34,15 @@ export interface CollectionWithRefsElementRefs {
         completed: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
         cost: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
         done: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLButtonElement>;
-    }
+    };
     groups: {
         groupItems: {
-            item: HTMLElementCollectionProxy<GroupItemOfGroupOfCollectionWithRefsViewState, HTMLDivElement>;
-        }
-    }
+            item: HTMLElementCollectionProxy<
+                GroupItemOfGroupOfCollectionWithRefsViewState,
+                HTMLDivElement
+            >;
+        };
+    };
 }
 
 export type CollectionWithRefsElement = JayElement<

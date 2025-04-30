@@ -107,7 +107,10 @@ export class SecureReferencesManager extends BaseReferencesManager {
         childRefManagers?: Record<string, SecureReferencesManager>,
     ): [SecureReferencesManager, PrivateRefConstructor<any>[]] {
         const refManager = new SecureReferencesManager(endpoint, eventWrapper);
-        return [refManager, refManager.mkRefs(elem, elemCollection, comp, compCollection, childRefManagers)];
+        return [
+            refManager,
+            refManager.mkRefs(elem, elemCollection, comp, compCollection, childRefManagers),
+        ];
     }
 
     static forElement(
@@ -132,7 +135,7 @@ export class SecureReferencesManager extends BaseReferencesManager {
             elemCollection,
             comp,
             compCollection,
-            childRefManagers
+            childRefManagers,
         );
     }
 
@@ -151,7 +154,7 @@ export class SecureReferencesManager extends BaseReferencesManager {
             elemCollection,
             comp,
             compCollection,
-            childRefManagers
+            childRefManagers,
         );
     }
 }

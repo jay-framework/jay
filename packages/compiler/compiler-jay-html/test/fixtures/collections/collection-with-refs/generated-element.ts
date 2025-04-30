@@ -40,12 +40,15 @@ export interface CollectionWithRefsElementRefs {
         completed: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
         cost: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
         done: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLButtonElement>;
-    }
+    };
     groups: {
         groupItems: {
-            item: HTMLElementCollectionProxy<GroupItemOfGroupOfCollectionWithRefsViewState, HTMLDivElement>;
-        }
-    }
+            item: HTMLElementCollectionProxy<
+                GroupItemOfGroupOfCollectionWithRefsViewState,
+                HTMLDivElement
+            >;
+        };
+    };
 }
 
 export type CollectionWithRefsElement = JayElement<
@@ -63,17 +66,21 @@ export type CollectionWithRefsElementPreRender = [
 ];
 
 export function render(options?: RenderElementOptions): CollectionWithRefsElementPreRender {
-    const [itemsRefManager, [refName, refCompleted, refCost, refDone]] = ReferencesManager.for(options, [], ['name', 'completed', 'cost', 'done'], [], []);
+    const [itemsRefManager, [refName, refCompleted, refCost, refDone]] = ReferencesManager.for(
+        options,
+        [],
+        ['name', 'completed', 'cost', 'done'],
+        [],
+        [],
+    );
     const [groupItemsRefManager, [refItem]] = ReferencesManager.for(options, [], ['item'], [], []);
     const [groupsRefManager, []] = ReferencesManager.for(options, [], [], [], [], {
-        groupItems: groupItemsRefManager
-    })
-    const [refManager, []] = ReferencesManager.for(
-        options, [], [], [], [], {
-            items: itemsRefManager,
-            groups: groupsRefManager,
-        }
-    );
+        groupItems: groupItemsRefManager,
+    });
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
+        items: itemsRefManager,
+        groups: groupsRefManager,
+    });
     const render = (viewState: CollectionWithRefsViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [

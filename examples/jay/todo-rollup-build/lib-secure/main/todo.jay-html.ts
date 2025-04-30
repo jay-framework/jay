@@ -18,6 +18,7 @@ import {
 } from 'jay-runtime';
 import { secureChildComp as childComp } from 'jay-secure';
 import { Item } from './item';
+import { ShownTodoOfTodoViewState } from 'jay-example-todo-components/lib/todo.jay-html';
 
 export enum Filter {
     all,
@@ -48,7 +49,9 @@ export type ItemRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ItemRef<Pare
 export interface TodoElementRefs {
     newTodo: HTMLElementProxy<TodoViewState, HTMLInputElement>;
     toggleAll: HTMLElementProxy<TodoViewState, HTMLInputElement>;
-    items: ItemRefs<ShownTodo>;
+    shownTodos: {
+        items: ItemRefs<ShownTodoOfTodoViewState>;
+    };
     filterAll: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     filterActive: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     filterCompleted: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;

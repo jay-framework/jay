@@ -62,9 +62,11 @@ export function render(): DynamicComponentInComponentElementPreRender {
         [],
         [],
         ['counter2'],
-        [], {
+        [],
+        {
             nestedCounters: nestedCountersRefManager,
-        });
+        },
+    );
     const render = (viewState: DynamicComponentInComponentViewState) =>
         elementBridge(viewState, refManager, () => [
             forEach(

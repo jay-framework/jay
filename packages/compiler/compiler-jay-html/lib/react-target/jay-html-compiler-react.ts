@@ -298,7 +298,13 @@ ${indent.curr}return (${childElement.rendered})})}`,
             childNodes.length === 0
                 ? RenderFragment.empty()
                 : childNodes
-                      .map((_) => renderReactNode(_, {...newContext, indent: childIndent}, outReactChildComps))
+                      .map((_) =>
+                          renderReactNode(
+                              _,
+                              { ...newContext, indent: childIndent },
+                              outReactChildComps,
+                          ),
+                      )
                       .reduce(
                           (prev, current) => RenderFragment.merge(prev, current, '\n'),
                           RenderFragment.empty(),
@@ -326,7 +332,8 @@ ${indent.curr}return (${childElement.rendered})})}`,
             if (isConditional(htmlElement)) {
                 let condition = htmlElement.getAttribute('if');
                 let childElement = renderHtmlElement(htmlElement, {
-                    ...renderContext, indent: indent.child()
+                    ...renderContext,
+                    indent: indent.child(),
                 });
                 let renderedCondition = parseReactCondition(condition, variables);
                 return c(renderedCondition, childElement);
@@ -345,17 +352,15 @@ ${indent.curr}return (${childElement.rendered})})}`,
                 let forEachVariables = variables.childVariableFor(
                     (forEachAccessor.resolvedType as JayArrayType).itemType,
                 );
-                let newContext = { ...renderContext,
+                let newContext = {
+                    ...renderContext,
                     variables: forEachVariables,
                     indent: indent.child().noFirstLineBreak().withLastLineBreak(),
                     dynamicRef: true,
-                    forEachAccessPath: [...renderContext.forEachAccessPath, ...forEachAccessPath]
+                    forEachAccessPath: [...renderContext.forEachAccessPath, ...forEachAccessPath],
                 };
 
-                let childElement = renderHtmlElement(
-                    htmlElement,
-                    newContext,
-                );
+                let childElement = renderHtmlElement(htmlElement, newContext);
                 return renderForEach(
                     forEachFragment,
                     variables,

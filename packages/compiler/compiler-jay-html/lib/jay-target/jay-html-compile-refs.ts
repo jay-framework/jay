@@ -16,8 +16,8 @@ import {
 import { HTMLElement } from 'node-html-parser';
 import { htmlElementTagNameMap } from './html-element-tag-name-map';
 import { pascalCase } from 'change-case';
-import {camelCase} from "camel-case";
-import {Indent} from "./indent";
+import { camelCase } from 'camel-case';
+import { Indent } from './indent';
 
 const isLinkedContractRef = (ref: Ref) => isImportedContractType(ref.elementType);
 const isLinkedContractCollectionRef = (ref: Ref) =>
@@ -36,14 +36,12 @@ class RefsTreeNode {
     public readonly children: Record<string, RefsTreeNode> = {};
 
     addRef(ref: Ref, level: number = 0) {
-        if (ref.path.length === level)
-            this.refs.push(ref);
+        if (ref.path.length === level) this.refs.push(ref);
         else {
             if (!this.children[ref.path[level]])
                 this.children[ref.path[level]] = new RefsTreeNode();
-            this.children[ref.path[level]].addRef(ref, level+1);
+            this.children[ref.path[level]].addRef(ref, level + 1);
         }
-
     }
 }
 export function renderRefsType(
@@ -60,7 +58,7 @@ export function renderRefsType(
 
     if (refsToRender.length > 0) {
         const root = new RefsTreeNode();
-        refsToRender.forEach(ref => root.addRef(ref));
+        refsToRender.forEach((ref) => root.addRef(ref));
 
         const generateTypeForPath = (refsTree: RefsTreeNode, indent: Indent): string => {
             const renderedRefs = refsTree.refs
@@ -88,17 +86,15 @@ export function renderRefsType(
                 })
                 .join(',\n');
 
-            const childTypes = Object
-                .entries(refsTree.children)
+            const childTypes = Object.entries(refsTree.children)
                 .map(([childName, childRefNode]) => {
                     const childType = generateTypeForPath(childRefNode, indent.child(true, true));
                     return `${indent.curr}${childName}: ${childType}`;
-                }).join(',\n');
+                })
+                .join(',\n');
 
             // Combine refs and child types
-            const allTypes = [renderedRefs, childTypes]
-                .filter(Boolean)
-                .join(',\n');
+            const allTypes = [renderedRefs, childTypes].filter(Boolean).join(',\n');
 
             return `{
 ${allTypes}
@@ -189,29 +185,42 @@ export function optimizeRefs({
 export enum ReferenceManagerTarget {
     element,
     elementBridge,
-    sandboxRoot
+    sandboxRoot,
 }
 
-const REFERENCE_MANAGER_TYPES: Record<ReferenceManagerTarget, {referenceManagerInit: string, imports: Imports}> = {
+const REFERENCE_MANAGER_TYPES: Record<
+    ReferenceManagerTarget,
+    { referenceManagerInit: string; imports: Imports }
+> = {
     [ReferenceManagerTarget.element]: {
-        referenceManagerInit: "ReferencesManager.for",
-        imports: Imports.for(Import.ReferencesManager)},
+        referenceManagerInit: 'ReferencesManager.for',
+        imports: Imports.for(Import.ReferencesManager),
+    },
     [ReferenceManagerTarget.elementBridge]: {
-        referenceManagerInit: "SecureReferencesManager.forElement",
-        imports: Imports.for(Import.SecureReferencesManager)},
+        referenceManagerInit: 'SecureReferencesManager.forElement',
+        imports: Imports.for(Import.SecureReferencesManager),
+    },
     [ReferenceManagerTarget.sandboxRoot]: {
-        referenceManagerInit: "SecureReferencesManager.forSandboxRoot",
-        imports: Imports.for(Import.SecureReferencesManager)},
-}
+        referenceManagerInit: 'SecureReferencesManager.forSandboxRoot',
+        imports: Imports.for(Import.SecureReferencesManager),
+    },
+};
 
-export function renderReferenceManager(refs: Ref[], target: ReferenceManagerTarget): {renderedRefsManager: string, refsManagerImport:Imports} {
-    const {referenceManagerInit, imports} = REFERENCE_MANAGER_TYPES[target];
+export function renderReferenceManager(
+    refs: Ref[],
+    target: ReferenceManagerTarget,
+): { renderedRefsManager: string; refsManagerImport: Imports } {
+    const { referenceManagerInit, imports } = REFERENCE_MANAGER_TYPES[target];
 
     const renderRefManagerNode = (name: string, refsTree: RefsTreeNode) => {
         const elemRefs = refsTree.refs.filter((_) => !isComponentRef(_) && !isCollectionRef(_));
-        const elemCollectionRefs = refsTree.refs.filter((_) => !isComponentRef(_) && isCollectionRef(_));
+        const elemCollectionRefs = refsTree.refs.filter(
+            (_) => !isComponentRef(_) && isCollectionRef(_),
+        );
         const compRefs = refsTree.refs.filter((_) => isComponentRef(_) && !isCollectionRef(_));
-        const compCollectionRefs = refsTree.refs.filter((_) => isComponentRef(_) && isCollectionRef(_));
+        const compCollectionRefs = refsTree.refs.filter(
+            (_) => isComponentRef(_) && isCollectionRef(_),
+        );
 
         const elemRefsDeclarations = elemRefs.map((ref) => `'${ref.ref}'`).join(', ');
         const elemCollectionRefsDeclarations = elemCollectionRefs
@@ -228,28 +237,31 @@ export function renderReferenceManager(refs: Ref[], target: ReferenceManagerTarg
             ...compCollectionRefs.map((ref) => ref.constName),
         ].join(', ');
 
-        const childRenderedRefManagers: string[] = []
-        const childRefManagerMambers: string[] = []
+        const childRenderedRefManagers: string[] = [];
+        const childRefManagerMambers: string[] = [];
         Object.entries(refsTree.children).forEach(([childName, childRefNode]) => {
-            const name = camelCase(`${childName}RefManager`)
-            const rendered = renderRefManagerNode(name, childRefNode)
-            childRefManagerMambers.push(`    ${childName}: ${name}`)
+            const name = camelCase(`${childName}RefManager`);
+            const rendered = renderRefManagerNode(name, childRefNode);
+            childRefManagerMambers.push(`    ${childName}: ${name}`);
             childRenderedRefManagers.push(rendered);
-        })
+        });
 
-        const childRefManager = childRefManagerMambers.length > 0?`, {
+        const childRefManager =
+            childRefManagerMambers.length > 0
+                ? `, {
   ${childRefManagerMambers.join(',\n')}         
-}`:'';
+}`
+                : '';
 
-        const options = target === ReferenceManagerTarget.element?'options, ':"";
+        const options = target === ReferenceManagerTarget.element ? 'options, ' : '';
         const renderedRefManager = `    const [${name}, [${refVariables}]] =
-        ${referenceManagerInit}(${options}[${elemRefsDeclarations}], [${elemCollectionRefsDeclarations}], [${compRefsDeclarations}], [${compCollectionRefsDeclarations}]${childRefManager});`
+        ${referenceManagerInit}(${options}[${elemRefsDeclarations}], [${elemCollectionRefsDeclarations}], [${compRefsDeclarations}], [${compCollectionRefsDeclarations}]${childRefManager});`;
         return [...childRenderedRefManagers, renderedRefManager].join('\n');
-    }
+    };
 
     const root = new RefsTreeNode();
-    refs.forEach(ref => root.addRef(ref));
+    refs.forEach((ref) => root.addRef(ref));
     const renderedRefsManager = renderRefManagerNode('refManager', root);
 
-    return {renderedRefsManager, refsManagerImport: imports}
+    return { renderedRefsManager, refsManagerImport: imports };
 }

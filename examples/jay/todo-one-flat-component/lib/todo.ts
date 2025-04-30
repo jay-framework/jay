@@ -112,31 +112,31 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
         );
     });
 
-    refs.completed.onchange(({ viewState: todo }) => {
+    refs.shownTodos.completed.onchange(({ viewState: todo }) => {
         let itemIndex = todos().findIndex((_) => _.id === todo.id);
         patchTodos({ op: REPLACE, path: [itemIndex, 'isCompleted'], value: !todo.isCompleted });
         // todo.isCompleted = !todo.isCompleted
     });
-    refs.label.ondblclick(({ viewState: todo }) => {
+    refs.shownTodos.label.ondblclick(({ viewState: todo }) => {
         let itemIndex = todos().findIndex((_) => _.id === todo.id);
         patchTodos(
             { op: REPLACE, path: [itemIndex, 'editText'], value: todo.title },
             { op: REPLACE, path: [itemIndex, 'isEditing'], value: true },
         );
     });
-    refs.button.onclick(({ viewState: todo }) => {
+    refs.shownTodos.button.onclick(({ viewState: todo }) => {
         setTodos(todos().filter((_) => _ !== todo));
     });
-    refs.title.onblur(({ viewState: todo }) => {
+    refs.shownTodos.title.onblur(({ viewState: todo }) => {
         handleSubmit(todo);
     });
-    refs.title
+    refs.shownTodos.title
         .onchange$(({ event }) => (event.target as HTMLInputElement).value)
         .then(({ event: value, viewState: todo }) => {
             let itemIndex = todos().findIndex((_) => _.id === todo.id);
             patchTodos({ op: REPLACE, path: [itemIndex, 'editText'], value });
         });
-    refs.title
+    refs.shownTodos.title
         .onkeydown$(({ event }) => event.which)
         .then(({ event: which, viewState: todo }) => {
             if (which === ESCAPE_KEY) {
