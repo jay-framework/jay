@@ -39,11 +39,13 @@ export type ItemRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ItemRef<Pare
 export interface TodoElementRefs {
     newTodo: HTMLElementProxy<TodoViewState, HTMLInputElement>;
     toggleAll: HTMLElementProxy<TodoViewState, HTMLInputElement>;
-    items: ItemRefs<ShownTodoOfTodoViewState>;
     filterAll: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     filterActive: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     filterCompleted: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     clearCompleted: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
+    shownTodos: {
+        items: ItemRefs<ShownTodoOfTodoViewState>;
+    };
 }
 
 export type TodoElement = JayElement<TodoViewState, TodoElementRefs>;

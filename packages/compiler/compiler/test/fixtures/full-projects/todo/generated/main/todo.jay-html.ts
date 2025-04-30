@@ -51,11 +51,13 @@ export type ItemRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ItemRef<Pare
 export interface TodoElementRefs {
     newTodo: HTMLElementProxy<TodoViewState, HTMLInputElement>;
     toggleAll: HTMLElementProxy<TodoViewState, HTMLInputElement>;
-    items: ItemRefs<ShownTodoOfTodoViewState>;
     filterAll: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     filterActive: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     filterCompleted: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     clearCompleted: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
+    shownTodos: {
+        items: ItemRefs<ShownTodoOfTodoViewState>;
+    };
 }
 
 export type TodoElement = JayElement<TodoViewState, TodoElementRefs>;
@@ -63,6 +65,13 @@ export type TodoElementRender = RenderElement<TodoViewState, TodoElementRefs, To
 export type TodoElementPreRender = [TodoElementRefs, TodoElementRender];
 
 export function render(options?: RenderElementOptions): TodoElementPreRender {
+    const [shownTodosRefManager, [refItems]] = ReferencesManager.for(
+        options,
+        [],
+        [],
+        [],
+        ['items'],
+    );
     const [
         refManager,
         [
@@ -72,14 +81,16 @@ export function render(options?: RenderElementOptions): TodoElementPreRender {
             refFilterActive,
             refFilterCompleted,
             refClearCompleted,
-            refItems,
         ],
     ] = ReferencesManager.for(
         options,
         ['newTodo', 'toggleAll', 'filterAll', 'filterActive', 'filterCompleted', 'clearCompleted'],
         [],
         [],
-        ['items'],
+        [],
+        {
+            shownTodos: shownTodosRefManager,
+        },
     );
     const render = (viewState: TodoViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>

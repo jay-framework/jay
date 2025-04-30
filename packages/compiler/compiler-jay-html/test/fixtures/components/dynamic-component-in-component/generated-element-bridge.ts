@@ -52,12 +52,19 @@ export type DynamicComponentInComponentElementPreRender = [
 ];
 
 export function render(): DynamicComponentInComponentElementPreRender {
-    const [refManager, [refCounter2, refCounter1]] = SecureReferencesManager.forElement(
+    const [nestedCountersRefManager, [refCounter1]] = SecureReferencesManager.forElement(
+        [],
+        [],
+        [],
+        ['counter1'],
+    );
+    const [refManager, [refCounter2]] = SecureReferencesManager.forElement(
         [],
         [],
         ['counter2'],
-        ['counter1'],
-    );
+        [], {
+            nestedCounters: nestedCountersRefManager,
+        });
     const render = (viewState: DynamicComponentInComponentViewState) =>
         elementBridge(viewState, refManager, () => [
             forEach(

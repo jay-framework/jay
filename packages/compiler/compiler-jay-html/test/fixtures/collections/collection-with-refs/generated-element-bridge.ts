@@ -1,4 +1,4 @@
-import { JayElement, RenderElement, HTMLElementCollectionProxy } from 'jay-runtime';
+import {JayElement, RenderElement, HTMLElementCollectionProxy} from 'jay-runtime';
 import {
     SecureReferencesManager,
     elementBridge,
@@ -58,8 +58,17 @@ export type CollectionWithRefsElementPreRender = [
 ];
 
 export function render(): CollectionWithRefsElementPreRender {
-    const [refManager, [refName, refCompleted, refCost, refDone, refItem]] =
-        SecureReferencesManager.forElement([], ['name', 'completed', 'cost', 'done', 'item'], [], []);
+    const [itemsRefManager, [refName, refCompleted, refCost, refDone]] = SecureReferencesManager.forElement([], ['name', 'completed', 'cost', 'done'], [], []);
+    const [groupItemsRefManager, [refItem]] = SecureReferencesManager.forElement([], ['item'], [], []);
+    const [groupsRefManager, []] = SecureReferencesManager.forElement([], [], [], [], {
+        groupItems: groupItemsRefManager
+    })
+    const [refManager, []] = SecureReferencesManager.forElement(
+        [], [], [], [], {
+            items: itemsRefManager,
+            groups: groupsRefManager,
+        }
+    );
     const render = (viewState: CollectionWithRefsViewState) =>
         elementBridge(viewState, refManager, () => [
             forEach(

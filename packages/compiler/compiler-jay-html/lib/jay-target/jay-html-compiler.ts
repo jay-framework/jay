@@ -497,23 +497,14 @@ function renderElementBridgeNode(node: Node, context: RenderContext): RenderFrag
 
     function renderNestedComponent(
         htmlElement: HTMLElement,
-        newVariables: Variables,
-        currIndent: Indent,
+        newContext: RenderContext
     ): RenderFragment {
-        let propsGetterAndRefs = renderChildCompProps(htmlElement, {
-            ...context,
-            dynamicRef,
-            variables: newVariables,
-        });
-        let renderedRef = renderChildCompRef(htmlElement, {
-            ...context,
-            dynamicRef,
-            variables: newVariables,
-        });
+        let propsGetterAndRefs = renderChildCompProps(htmlElement, newContext);
+        let renderedRef = renderChildCompRef(htmlElement, newContext);
         if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
-        let getProps = `(${newVariables.currentVar}: ${newVariables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
+        let getProps = `(${newContext.variables.currentVar}: ${newContext.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
         return new RenderFragment(
-            `${currIndent.firstLine}childComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
+            `${newContext.indent.firstLine}childComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
             Imports.for(Import.sandboxChildComp)
                 .plus(propsGetterAndRefs.imports)
                 .plus(renderedRef.imports),
@@ -540,8 +531,7 @@ ${indent.firstLine}])`,
 
     function renderHtmlElement(
         htmlElement,
-        newVariables: Variables = variables,
-        currIndent: Indent = indent,
+        newContext: RenderContext
     ) {
         let childNodes =
             node.childNodes.length > 1
@@ -550,31 +540,28 @@ ${indent.firstLine}])`,
                   )
                 : node.childNodes;
 
-        let childIndent = currIndent.withFirstLineBreak();
+        let childIndent = newContext.indent.withFirstLineBreak();
         let childRenders =
             childNodes.length === 0
                 ? RenderFragment.empty()
                 : childNodes
                       .map((_) =>
                           renderElementBridgeNode(_, {
-                              ...context,
+                              ...newContext,
                               indent: childIndent,
-                              dynamicRef,
-                              variables: newVariables,
                           }),
                       )
                       .reduce(
                           (prev, current) => RenderFragment.merge(prev, current, ',\n'),
                           RenderFragment.empty(),
                       );
-        // .map(children => currIndent.firstLineBreak ? `\n${children}\n${currIndent.firstLine}` : children);
         if (importedSymbols.has(htmlElement.rawTagName)) {
-            return renderNestedComponent(htmlElement, newVariables, childIndent);
+            return renderNestedComponent(htmlElement,  {...newContext, indent: childIndent});
         } else {
             let renderedRef = renderElementRef(htmlElement, context);
             if (renderedRef.refs.length > 0)
                 return new RenderFragment(
-                    `${currIndent.firstLine}e(${renderedRef.rendered})`,
+                    `${newContext.indent.firstLine}e(${renderedRef.rendered})`,
                     childRenders.imports.plus(Import.sandboxElement),
                     [...childRenders.validations, ...renderedRef.validations],
                     [...childRenders.refs, ...renderedRef.refs],
@@ -586,10 +573,10 @@ ${indent.firstLine}])`,
     if (node.nodeType === NodeType.ELEMENT_NODE) {
         let htmlElement = node as HTMLElement;
         if (isForEach(htmlElement)) {
-            dynamicRef = true;
-            let forEach = htmlElement.getAttribute('forEach'); // todo extract type
-            let trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
-            let forEachAccessor = parseAccessor(forEach, variables);
+            const forEach = htmlElement.getAttribute('forEach'); // todo extract type
+            const trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
+            const forEachAccessor = parseAccessor(forEach, variables);
+            const forEachAccessPath = forEachAccessor.terms;
 
             if (forEachAccessor.resolvedType === JayUnknown)
                 return new RenderFragment('', Imports.none(), [
@@ -610,11 +597,15 @@ ${indent.firstLine}])`,
             );
             let childElement = renderHtmlElement(
                 htmlElement,
-                forEachVariables,
-                indent.child().noFirstLineBreak().withLastLineBreak(),
+                {...context,
+                    variables: forEachVariables,
+                    indent: indent.child().noFirstLineBreak().withLastLineBreak(),
+                    forEachAccessPath: [...context.forEachAccessPath, ...forEachAccessPath],
+                    dynamicRef: true
+                }
             );
             return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
-        } else return renderHtmlElement(htmlElement);
+        } else return renderHtmlElement(htmlElement, context);
     }
     return RenderFragment.empty();
 }

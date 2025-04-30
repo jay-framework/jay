@@ -15,7 +15,7 @@ export interface AppViewState {
 
 export function initializeWorker() {
     sandboxRoot(() => {
-        const [, [refA]] = SecureReferencesManager.forSandboxRoot([], [], ['a'], []);
+        const [refManager, [refA]] = SecureReferencesManager.forSandboxRoot([], [], ['a'], []);
         return [
             childComp(
                 Counter,
