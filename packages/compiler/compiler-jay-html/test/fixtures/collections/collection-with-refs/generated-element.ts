@@ -35,10 +35,17 @@ export interface CollectionWithRefsViewState {
 }
 
 export interface CollectionWithRefsElementRefs {
-    name: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
-    completed: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
-    cost: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
-    done: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLButtonElement>;
+    items: {
+        name: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        completed: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        cost: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        done: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLButtonElement>;
+    }
+    groups: {
+        groupItems: {
+            item: HTMLElementCollectionProxy<GroupItemOfGroupOfCollectionWithRefsViewState, HTMLDivElement>;
+        }
+    }
 }
 
 export type CollectionWithRefsElement = JayElement<
@@ -56,10 +63,10 @@ export type CollectionWithRefsElementPreRender = [
 ];
 
 export function render(options?: RenderElementOptions): CollectionWithRefsElementPreRender {
-    const [refManager, [refName, refCompleted, refCost, refDone]] = ReferencesManager.for(
+    const [refManager, [refName, refCompleted, refCost, refDone, refItem]] = ReferencesManager.for(
         options,
         [],
-        ['name', 'completed', 'cost', 'done'],
+        ['name', 'completed', 'cost', 'done', 'item'],
         [],
         [],
     );
@@ -128,7 +135,7 @@ export function render(options?: RenderElementOptions): CollectionWithRefsElemen
                                     (vs1: GroupOfCollectionWithRefsViewState) => vs1.groupItems,
                                     (vs2: GroupItemOfGroupOfCollectionWithRefsViewState) => {
                                         return e('div', {}, [
-                                            e('div', {}, [dt((vs2) => vs2.item)]),
+                                            e('div', {}, [dt((vs2) => vs2.item)], refItem()),
                                         ]);
                                     },
                                     'itemId',

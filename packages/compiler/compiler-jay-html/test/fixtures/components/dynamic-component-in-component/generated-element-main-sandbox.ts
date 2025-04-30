@@ -33,8 +33,10 @@ export type CounterRefs<ParentVS> = ComponentCollectionProxy<ParentVS, CounterRe
     OnlyEventEmitters<CounterRef<ParentVS>>;
 
 export interface DynamicComponentInComponentElementRefs {
-    counter1: CounterRefs<NestedCounterOfDynamicComponentInComponentViewState>;
     counter2: CounterRef<DynamicComponentInComponentViewState>;
+    nestedCounters: {
+        counter1: CounterRefs<NestedCounterOfDynamicComponentInComponentViewState>;
+    };
 }
 
 export type DynamicComponentInComponentElement = JayElement<

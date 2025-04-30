@@ -26,10 +26,17 @@ export interface CollectionWithRefsViewState {
 }
 
 export interface CollectionWithRefsElementRefs {
-    name: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
-    completed: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
-    cost: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
-    done: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLButtonElement>;
+    items: {
+        name: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        completed: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        cost: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        done: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLButtonElement>;
+    }
+    groups: {
+        groupItems: {
+            item: HTMLElementCollectionProxy<GroupItemOfGroupOfCollectionWithRefsViewState, HTMLDivElement>;
+        }
+    }
 }
 
 export interface CollectionWithRefsElementProps
@@ -88,7 +95,7 @@ export function reactRender({
                                     const cx2 = cx1.child(vs2.itemId, vs2);
                                     return (
                                         <div key={vs2.itemId}>
-                                            <div>{vs2.item}</div>
+                                            <div {...eventsFor(cx2, 'item')}>{vs2.item}</div>
                                         </div>
                                     );
                                 },

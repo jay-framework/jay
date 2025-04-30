@@ -246,8 +246,6 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
     function renderHtmlElement(
         htmlElement: HTMLElement,
         newContext: RenderContext,
-        // newVariables: Variables,
-        // currIndent: Indent = indent,
     ) {
         if (importedSymbols.has(htmlElement.rawTagName))
             return renderNestedComponent(htmlElement, newContext);
@@ -317,8 +315,6 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
     function renderNestedComponent(
         htmlElement: HTMLElement,
         newContext: RenderContext
-        // newVariables: Variables,
-        // currIndent: Indent = indent,
     ): RenderFragment {
         let propsGetterAndRefs = renderChildCompProps(htmlElement, newContext);
         let renderedRef = renderChildCompRef(htmlElement, newContext);

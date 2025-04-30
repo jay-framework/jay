@@ -30,10 +30,17 @@ export interface CollectionWithRefsViewState {
 }
 
 export interface CollectionWithRefsElementRefs {
-    name: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
-    completed: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
-    cost: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
-    done: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLButtonElement>;
+    items: {
+        name: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        completed: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        cost: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        done: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLButtonElement>;
+    }
+    groups: {
+        groupItems: {
+            item: HTMLElementCollectionProxy<GroupItemOfGroupOfCollectionWithRefsViewState, HTMLDivElement>;
+        }
+    }
 }
 
 export type CollectionWithRefsElement = JayElement<
@@ -51,8 +58,8 @@ export type CollectionWithRefsElementPreRender = [
 ];
 
 export function render(): CollectionWithRefsElementPreRender {
-    const [refManager, [refName, refCompleted, refCost, refDone]] =
-        SecureReferencesManager.forElement([], ['name', 'completed', 'cost', 'done'], [], []);
+    const [refManager, [refName, refCompleted, refCost, refDone, refItem]] =
+        SecureReferencesManager.forElement([], ['name', 'completed', 'cost', 'done', 'item'], [], []);
     const render = (viewState: CollectionWithRefsViewState) =>
         elementBridge(viewState, refManager, () => [
             forEach(
@@ -67,7 +74,7 @@ export function render(): CollectionWithRefsElementPreRender {
                     forEach(
                         (vs1: GroupOfCollectionWithRefsViewState) => vs1.groupItems,
                         'itemId',
-                        () => [],
+                        () => [e(refItem())],
                     ),
                 ],
             ),

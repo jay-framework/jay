@@ -22,8 +22,10 @@ export type TreeNodeRefs<ParentVS> = ComponentCollectionProxy<ParentVS, TreeNode
     OnlyEventEmitters<TreeNodeRef<ParentVS>>;
 
 export interface RecursiveComponentsElementRefs {
-    counter1: TreeNodeRefs<Node>;
-    counterTwo: TreeNodeRefs<Node>;
+    children: {
+        counter1: TreeNodeRefs<Node>;
+        counterTwo: TreeNodeRefs<Node>;
+    };
 }
 
 export type RecursiveComponentsElement = JayElement<Node, RecursiveComponentsElementRefs>;

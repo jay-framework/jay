@@ -1,4 +1,4 @@
-import { renderRefsType } from '../../lib/jay-target/jay-html-compile-refs';
+import { renderRefsType } from '../../lib';
 import {
     JayComponentType,
     JayHTMLType,
@@ -22,6 +22,7 @@ describe('renderRefsType', () => {
         const refs: Ref[] = [
             {
                 ref: 'input',
+                path: [],
                 constName: '',
                 dynamicRef: false,
                 autoRef: false,
@@ -46,6 +47,7 @@ describe('renderRefsType', () => {
         const refs: Ref[] = [
             {
                 ref: 'inputs',
+                path: [],
                 constName: '',
                 dynamicRef: true,
                 autoRef: false,
@@ -70,6 +72,7 @@ describe('renderRefsType', () => {
         const refs: Ref[] = [
             {
                 ref: 'counter',
+                path: [],
                 constName: '',
                 dynamicRef: false,
                 autoRef: false,
@@ -95,6 +98,7 @@ describe('renderRefsType', () => {
         const refs: Ref[] = [
             {
                 ref: 'counters',
+                path: [],
                 constName: '',
                 dynamicRef: true,
                 autoRef: false,
@@ -126,6 +130,7 @@ describe('renderRefsType', () => {
         const refs: Ref[] = [
             {
                 ref: 'input',
+                path: [],
                 constName: '',
                 dynamicRef: false,
                 autoRef: false,
@@ -134,6 +139,7 @@ describe('renderRefsType', () => {
             },
             {
                 ref: 'counter',
+                path: [],
                 constName: '',
                 dynamicRef: false,
                 autoRef: false,
@@ -162,6 +168,7 @@ describe('renderRefsType', () => {
         const refs: Ref[] = [
             {
                 ref: 'counter',
+                path: [],
                 constName: '',
                 dynamicRef: false,
                 autoRef: false,
@@ -187,6 +194,7 @@ describe('renderRefsType', () => {
         const refs: Ref[] = [
             {
                 ref: 'subContract',
+                path: [],
                 constName: '',
                 dynamicRef: false,
                 autoRef: false,
@@ -214,6 +222,7 @@ describe('renderRefsType', () => {
         const refs: Ref[] = [
             {
                 ref: 'subContract',
+                path: ['prop'],
                 constName: '',
                 dynamicRef: true,
                 autoRef: false,
@@ -232,7 +241,9 @@ describe('renderRefsType', () => {
         expect(await prettify(renderedRefs)).toBe(
             await prettify(`
             export interface TestRefs {
-              subContract: SubContractRepeatedRefs
+              prop: {
+                subContract: SubContractRepeatedRefs
+              }  
             }`),
         );
     });
