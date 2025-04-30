@@ -35,7 +35,13 @@ export type RecursiveComponents2ElementPreRender = [
 ];
 
 export function render(options?: RenderElementOptions): RecursiveComponents2ElementPreRender {
-    const [refManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);
+    const [childrenRefManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);
+    const [nodeRefManager, []] = ReferencesManager.for(options, [], [], [], [], {
+        children: childrenRefManager,
+    });
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
+        node: nodeRefManager,
+    });
     const render = (viewState: RecursiveComponents2ViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [

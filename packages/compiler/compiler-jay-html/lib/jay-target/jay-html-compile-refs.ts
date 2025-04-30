@@ -16,6 +16,7 @@ import {
 import { HTMLElement } from 'node-html-parser';
 import { htmlElementTagNameMap } from './html-element-tag-name-map';
 import { pascalCase } from 'change-case';
+import {camelCase} from "camel-case";
 
 const isLinkedContractRef = (ref: Ref) => isImportedContractType(ref.elementType);
 const isLinkedContractCollectionRef = (ref: Ref) =>
@@ -205,29 +206,49 @@ const REFERENCE_MANAGER_TYPES: Record<ReferenceManagerTarget, {referenceManagerI
 export function renderReferenceManager(refs: Ref[], target: ReferenceManagerTarget): {renderedRefsManager: string, refsManagerImport:Imports} {
     const {referenceManagerInit, imports} = REFERENCE_MANAGER_TYPES[target];
 
-    const elemRefs = refs.filter((_) => !isComponentRef(_) && !isCollectionRef(_));
-    const elemCollectionRefs = refs.filter((_) => !isComponentRef(_) && isCollectionRef(_));
-    const compRefs = refs.filter((_) => isComponentRef(_) && !isCollectionRef(_));
-    const compCollectionRefs = refs.filter((_) => isComponentRef(_) && isCollectionRef(_));
+    const renderRefManagerNode = (name: string, refsTree: RefsTreeNode) => {
+        const elemRefs = refsTree.refs.filter((_) => !isComponentRef(_) && !isCollectionRef(_));
+        const elemCollectionRefs = refsTree.refs.filter((_) => !isComponentRef(_) && isCollectionRef(_));
+        const compRefs = refsTree.refs.filter((_) => isComponentRef(_) && !isCollectionRef(_));
+        const compCollectionRefs = refsTree.refs.filter((_) => isComponentRef(_) && isCollectionRef(_));
 
-    const elemRefsDeclarations = elemRefs.map((ref) => `'${ref.ref}'`).join(', ');
-    const elemCollectionRefsDeclarations = elemCollectionRefs
-        .map((ref) => `'${ref.ref}'`)
-        .join(', ');
-    const compRefsDeclarations = compRefs.map((ref) => `'${ref.ref}'`).join(', ');
-    const compCollectionRefsDeclarations = compCollectionRefs
-        .map((ref) => `'${ref.ref}'`)
-        .join(', ');
-    const refVariables = [
-        ...elemRefs.map((ref) => ref.constName),
-        ...elemCollectionRefs.map((ref) => ref.constName),
-        ...compRefs.map((ref) => ref.constName),
-        ...compCollectionRefs.map((ref) => ref.constName),
-    ].join(', ');
+        const elemRefsDeclarations = elemRefs.map((ref) => `'${ref.ref}'`).join(', ');
+        const elemCollectionRefsDeclarations = elemCollectionRefs
+            .map((ref) => `'${ref.ref}'`)
+            .join(', ');
+        const compRefsDeclarations = compRefs.map((ref) => `'${ref.ref}'`).join(', ');
+        const compCollectionRefsDeclarations = compCollectionRefs
+            .map((ref) => `'${ref.ref}'`)
+            .join(', ');
+        const refVariables = [
+            ...elemRefs.map((ref) => ref.constName),
+            ...elemCollectionRefs.map((ref) => ref.constName),
+            ...compRefs.map((ref) => ref.constName),
+            ...compCollectionRefs.map((ref) => ref.constName),
+        ].join(', ');
 
-    const options = target === ReferenceManagerTarget.element?'options, ':"";
-    const renderedRefsManager =
-        `    const [refManager, [${refVariables}]] =
-        ${referenceManagerInit}(${options}[${elemRefsDeclarations}], [${elemCollectionRefsDeclarations}], [${compRefsDeclarations}], [${compCollectionRefsDeclarations}]);`
+        const childRenderedRefManagers: string[] = []
+        const childRefManagerMambers: string[] = []
+        Object.entries(refsTree.children).forEach(([childName, childRefNode]) => {
+            const name = camelCase(`${childName}RefManager`)
+            const rendered = renderRefManagerNode(name, childRefNode)
+            childRefManagerMambers.push(`    ${childName}: ${name}`)
+            childRenderedRefManagers.push(rendered);
+        })
+
+        const childRefManager = childRefManagerMambers.length > 0?`, {
+  ${childRefManagerMambers.join(',\n')}         
+}`:'';
+
+        const options = target === ReferenceManagerTarget.element?'options, ':"";
+        const renderedRefManager = `    const [${name}, [${refVariables}]] =
+        ${referenceManagerInit}(${options}[${elemRefsDeclarations}], [${elemCollectionRefsDeclarations}], [${compRefsDeclarations}], [${compCollectionRefsDeclarations}]${childRefManager});`
+        return [...childRenderedRefManagers, renderedRefManager].join('\n');
+    }
+
+    const root = new RefsTreeNode();
+    refs.forEach(ref => root.addRef(ref));
+    const renderedRefsManager = renderRefManagerNode('refManager', root);
+
     return {renderedRefsManager, refsManagerImport: imports}
 }

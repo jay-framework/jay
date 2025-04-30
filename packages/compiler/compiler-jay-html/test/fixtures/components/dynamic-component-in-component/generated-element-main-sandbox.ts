@@ -56,13 +56,16 @@ export type DynamicComponentInComponentElementPreRender = [
 export function render(
     options?: RenderElementOptions,
 ): DynamicComponentInComponentElementPreRender {
-    const [refManager, [refCounter2, refCounter1]] = ReferencesManager.for(
+    const [nestedCountersRefManager, [refCounter1]] = ReferencesManager.for(
         options,
         [],
         [],
-        ['counter2'],
+        [],
         ['counter1'],
     );
+    const [refManager, [refCounter2]] = ReferencesManager.for(options, [], [], ['counter2'], [], {
+        nestedCounters: nestedCountersRefManager,
+    });
     const render = (viewState: DynamicComponentInComponentViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             de('div', {}, [

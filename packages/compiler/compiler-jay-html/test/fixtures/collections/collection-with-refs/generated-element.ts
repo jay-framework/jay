@@ -65,13 +65,13 @@ export type CollectionWithRefsElementPreRender = [
 export function render(options?: RenderElementOptions): CollectionWithRefsElementPreRender {
     const [itemsRefManager, [refName, refCompleted, refCost, refDone]] = ReferencesManager.for(options, [], ['name', 'completed', 'cost', 'done'], [], []);
     const [groupItemsRefManager, [refItem]] = ReferencesManager.for(options, [], ['item'], [], []);
-    const [groupRefManager] = ReferencesManager.for(options, [], [], [], [], {
+    const [groupsRefManager, []] = ReferencesManager.for(options, [], [], [], [], {
         groupItems: groupItemsRefManager
     })
-    const [refManager] = ReferencesManager.for(
+    const [refManager, []] = ReferencesManager.for(
         options, [], [], [], [], {
-            groups: groupRefManager,
-            items: itemsRefManager
+            items: itemsRefManager,
+            groups: groupsRefManager,
         }
     );
     const render = (viewState: CollectionWithRefsViewState) =>

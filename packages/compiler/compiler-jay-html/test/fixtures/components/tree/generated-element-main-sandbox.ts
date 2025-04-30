@@ -34,13 +34,13 @@ export type TreeNodeElementRender = RenderElement<
 export type TreeNodeElementPreRender = [TreeNodeElementRefs, TreeNodeElementRender];
 
 export function render(options?: RenderElementOptions): TreeNodeElementPreRender {
-    const [refManager, [refHead, refAR1]] = ReferencesManager.for(
-        options,
-        ['head'],
-        [],
-        [],
-        ['aR1'],
-    );
+    const [childrenRefManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);
+    const [nodeRefManager, []] = ReferencesManager.for(options, [], [], [], [], {
+        children: childrenRefManager,
+    });
+    const [refManager, [refHead]] = ReferencesManager.for(options, ['head'], [], [], [], {
+        node: nodeRefManager,
+    });
     const render = (viewState: TreeNodeViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             de('div', {}, [
