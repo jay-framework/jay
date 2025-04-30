@@ -63,12 +63,16 @@ export type CollectionWithRefsElementPreRender = [
 ];
 
 export function render(options?: RenderElementOptions): CollectionWithRefsElementPreRender {
-    const [refManager, [refName, refCompleted, refCost, refDone, refItem]] = ReferencesManager.for(
-        options,
-        [],
-        ['name', 'completed', 'cost', 'done', 'item'],
-        [],
-        [],
+    const [itemsRefManager, [refName, refCompleted, refCost, refDone]] = ReferencesManager.for(options, [], ['name', 'completed', 'cost', 'done'], [], []);
+    const [groupItemsRefManager, [refItem]] = ReferencesManager.for(options, [], ['item'], [], []);
+    const [groupRefManager] = ReferencesManager.for(options, [], [], [], [], {
+        groupItems: groupItemsRefManager
+    })
+    const [refManager] = ReferencesManager.for(
+        options, [], [], [], [], {
+            groups: groupRefManager,
+            items: itemsRefManager
+        }
     );
     const render = (viewState: CollectionWithRefsViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>

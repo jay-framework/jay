@@ -184,7 +184,27 @@ export function optimizeRefs({
     return new RenderFragment(rendered, imports, validations, mergedRefs);
 }
 
-export function renderRefsForReferenceManager(refs: Ref[]) {
+export enum ReferenceManagerTarget {
+    element,
+    elementBridge,
+    sandboxRoot
+}
+
+const REFERENCE_MANAGER_TYPES: Record<ReferenceManagerTarget, {referenceManagerInit: string, imports: Imports}> = {
+    [ReferenceManagerTarget.element]: {
+        referenceManagerInit: "ReferencesManager.for",
+        imports: Imports.for(Import.ReferencesManager)},
+    [ReferenceManagerTarget.elementBridge]: {
+        referenceManagerInit: "SecureReferencesManager.forElement",
+        imports: Imports.for(Import.SecureReferencesManager)},
+    [ReferenceManagerTarget.sandboxRoot]: {
+        referenceManagerInit: "SecureReferencesManager.forSandboxRoot",
+        imports: Imports.for(Import.SecureReferencesManager)},
+}
+
+export function renderReferenceManager(refs: Ref[], target: ReferenceManagerTarget): {renderedRefsManager: string, refsManagerImport:Imports} {
+    const {referenceManagerInit, imports} = REFERENCE_MANAGER_TYPES[target];
+
     const elemRefs = refs.filter((_) => !isComponentRef(_) && !isCollectionRef(_));
     const elemCollectionRefs = refs.filter((_) => !isComponentRef(_) && isCollectionRef(_));
     const compRefs = refs.filter((_) => isComponentRef(_) && !isCollectionRef(_));
@@ -204,11 +224,10 @@ export function renderRefsForReferenceManager(refs: Ref[]) {
         ...compRefs.map((ref) => ref.constName),
         ...compCollectionRefs.map((ref) => ref.constName),
     ].join(', ');
-    return {
-        elemRefsDeclarations,
-        elemCollectionRefsDeclarations,
-        compRefsDeclarations,
-        compCollectionRefsDeclarations,
-        refVariables,
-    };
+
+    const options = target === ReferenceManagerTarget.element?'options, ':"";
+    const renderedRefsManager =
+        `    const [refManager, [${refVariables}]] =
+        ${referenceManagerInit}(${options}[${elemRefsDeclarations}], [${elemCollectionRefsDeclarations}], [${compRefsDeclarations}], [${compCollectionRefsDeclarations}]);`
+    return {renderedRefsManager, refsManagerImport: imports}
 }

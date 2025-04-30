@@ -35,8 +35,8 @@ import { Indent } from './indent';
 import {
     elementNameToJayType,
     newAutoRefNameGenerator,
-    optimizeRefs,
-    renderRefsForReferenceManager,
+    optimizeRefs, ReferenceManagerTarget,
+    renderReferenceManager,
     renderRefsType,
 } from './jay-html-compile-refs';
 import { processImportedComponents, renderImports } from './jay-html-compile-imports';
@@ -470,17 +470,10 @@ ${Indent.forceIndent(code, 4)},
         );
     }
 
-    const {
-        elemRefsDeclarations,
-        elemCollectionRefsDeclarations,
-        compRefsDeclarations,
-        compCollectionRefsDeclarations,
-        refVariables,
-    } = renderRefsForReferenceManager(renderedRoot.refs);
+    const {renderedRefsManager, refsManagerImport} = renderReferenceManager(renderedRoot.refs, ReferenceManagerTarget.element);
 
     const body = `export function render(options?: RenderElementOptions): ${preRenderType} {
-    const [refManager, [${refVariables}]] =
-        ReferencesManager.for(options, [${elemRefsDeclarations}], [${elemCollectionRefsDeclarations}], [${compRefsDeclarations}], [${compCollectionRefsDeclarations}]);
+${renderedRefsManager}    
     const render = (viewState: ${viewStateType}) => ConstructContext.withRootContext(
         viewState, refManager,
         () => ${renderedRoot.rendered.trim()}
@@ -648,18 +641,11 @@ function renderBridge(
         namespaces: [],
     });
 
-    const {
-        elemRefsDeclarations,
-        elemCollectionRefsDeclarations,
-        compRefsDeclarations,
-        compCollectionRefsDeclarations,
-        refVariables,
-    } = renderRefsForReferenceManager(renderedBridge.refs);
+    const {renderedRefsManager, refsManagerImport} = renderReferenceManager(renderedBridge.refs, ReferenceManagerTarget.elementBridge);
 
     return new RenderFragment(
         `export function render(): ${preRenderType} {
-    const [refManager, [${refVariables}]] =
-        SecureReferencesManager.forElement([${elemRefsDeclarations}], [${elemCollectionRefsDeclarations}], [${compRefsDeclarations}], [${compCollectionRefsDeclarations}]);
+${renderedRefsManager}        
     const render = (viewState: ${types.name}) => 
         elementBridge(viewState, refManager, () => [${renderedBridge.rendered}
             ]) as ${elementType};
@@ -668,7 +654,7 @@ function renderBridge(
         Imports.for(Import.sandboxElementBridge)
             .plus(renderedBridge.imports)
             .plus(Import.RenderElement)
-            .plus(Import.SecureReferencesManager),
+            .plus(refsManagerImport),
         renderedBridge.validations,
         renderedBridge.refs,
     );
@@ -699,21 +685,14 @@ ${renderedBridge.rendered}
   `
             : '';
 
-    const {
-        elemRefsDeclarations,
-        elemCollectionRefsDeclarations,
-        compRefsDeclarations,
-        compCollectionRefsDeclarations,
-        refVariables,
-    } = renderRefsForReferenceManager(renderedBridge.refs);
+    const {renderedRefsManager, refsManagerImport} = renderReferenceManager(renderedBridge.refs, ReferenceManagerTarget.sandboxRoot);
 
     return new RenderFragment(
         `() => {
-        const [, [${refVariables}]] =
-            SecureReferencesManager.forSandboxRoot([${elemRefsDeclarations}], [${elemCollectionRefsDeclarations}], [${compRefsDeclarations}], [${compCollectionRefsDeclarations}])
+${renderedRefsManager}
         return [${refsPart}]
     }`,
-        renderedBridge.imports.plus(Import.SecureReferencesManager),
+        renderedBridge.imports.plus(refsManagerImport),
         renderedBridge.validations,
         renderedBridge.refs,
     );
