@@ -17,6 +17,7 @@ import { HTMLElement } from 'node-html-parser';
 import { htmlElementTagNameMap } from './html-element-tag-name-map';
 import { pascalCase } from 'change-case';
 import {camelCase} from "camel-case";
+import {Indent} from "./indent";
 
 const isLinkedContractRef = (ref: Ref) => isImportedContractType(ref.elementType);
 const isLinkedContractCollectionRef = (ref: Ref) =>
@@ -61,7 +62,7 @@ export function renderRefsType(
         const root = new RefsTreeNode();
         refsToRender.forEach(ref => root.addRef(ref));
 
-        const generateTypeForPath = (refsTree: RefsTreeNode): string => {
+        const generateTypeForPath = (refsTree: RefsTreeNode, indent: Indent): string => {
             const renderedRefs = refsTree.refs
                 .map((ref) => {
                     let referenceType: string;
@@ -83,15 +84,15 @@ export function renderRefsType(
                         referenceType = `HTMLElementProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
                         imports = imports.plus(Import.HTMLElementProxy);
                     }
-                    return `  ${ref.ref}: ${referenceType}`;
+                    return `${indent.curr}${ref.ref}: ${referenceType}`;
                 })
                 .join(',\n');
 
             const childTypes = Object
                 .entries(refsTree.children)
                 .map(([childName, childRefNode]) => {
-                    const childType = generateTypeForPath(childRefNode);
-                    return `  ${childName}: ${childType}`;
+                    const childType = generateTypeForPath(childRefNode, indent.child(true, true));
+                    return `${indent.curr}${childName}: ${childType}`;
                 }).join(',\n');
 
             // Combine refs and child types
@@ -101,10 +102,10 @@ export function renderRefsType(
 
             return `{
 ${allTypes}
-}`;
+${indent.lastLine}}`;
         };
 
-        const mainType = generateTypeForPath(root);
+        const mainType = generateTypeForPath(root, new Indent('', true, true));
 
         const renderedComponentRefs = [...componentRefs].map(([componentName, refsNeeded]) => {
             const elementType =
