@@ -32,12 +32,18 @@ interface TraverseResult {
     importLinks: JayContractImportLink[];
 }
 
-async function traverseContractTag(
+interface ContractTraversalContext {
     tag: ContractTag,
     viewStateType: JayType,
+    isRepeated: boolean,
+    path: string[]
+}
+
+async function traverseContractTag(
+    context: ContractTraversalContext,
     linkedContractResolver: LinkedContractResolver,
-    isRepeated: boolean = false,
 ): Promise<TraverseResult> {
+    const {tag, viewStateType, isRepeated, path} = context;
     if (tag.type.includes(ContractTagType.subContract)) {
         if (tag.link) {
             const subContract = await linkedContractResolver.loadContract(tag.link);
@@ -64,6 +70,7 @@ async function traverseContractTag(
                 refs: [
                     {
                         ref: tag.tag,
+                        path,
                         constName: '',
                         dynamicRef: isRepeated || tag.repeated,
                         autoRef: false,
@@ -82,11 +89,13 @@ async function traverseContractTag(
         const subViewStateType = { name: subInterfaceName, kind: 0 };
 
         for (const subTag of tag.tags) {
-            const result: TraverseResult = await traverseContractTag(
-                subTag,
-                subViewStateType,
+            const result: TraverseResult = await traverseContractTag({
+                tag: subTag,
+                viewStateType: subViewStateType,
+                isRepeated: isRepeated || tag.repeated,
+                path: [...path, tag.tag],
+            },
                 linkedContractResolver,
-                isRepeated || tag.repeated,
             );
             importLinks = [...importLinks, ...result.importLinks];
             refs = [...refs, ...result.refs];
@@ -101,6 +110,7 @@ async function traverseContractTag(
         const elementType = tag.elementType?.join(' | ') || 'HTMLElement';
         const ref: Ref = {
             ref: tag.tag,
+            path,
             constName: '',
             dynamicRef: isRepeated,
             autoRef: false,
@@ -168,7 +178,12 @@ export async function compileContract(
         const viewStateType = { name: pascalCase(contract.name) + 'ViewState', kind: 0 };
 
         for (const tag of contract.tags) {
-            const result = await traverseContractTag(tag, viewStateType, linkedContractResolver);
+            const result = await traverseContractTag({
+                tag,
+                viewStateType,
+                isRepeated: false,
+                path: []
+            }, linkedContractResolver);
             importedLinks = [...importedLinks, ...result.importLinks];
             allRefs = [...allRefs, ...result.refs];
             result.type && (props[camelCase(tag.tag)] = result.type);
