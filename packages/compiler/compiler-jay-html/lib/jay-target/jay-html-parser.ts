@@ -14,7 +14,6 @@ import {
     JayType,
     JayUnknown,
     resolvePrimitiveType,
-    JayTypeKind,
 } from 'jay-compiler-shared';
 import { SourceFileFormat } from 'jay-compiler-shared';
 import { JayImportLink, JayImportName, JayImportKind } from 'jay-compiler-shared';

@@ -56,7 +56,7 @@ async function traverseContractTag(
             let contractType = new JayImportedContract(contractName, viewState, refs, repeatedRefs);
             const type = tag.repeated ? new JayArrayType(contractType) : contractType;
 
-            const importLinks = [
+            const importLinks: JayContractImportLink[] = [
                 {
                     module: subContractFile,
                     viewState,
