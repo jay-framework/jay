@@ -73,7 +73,7 @@ export abstract class BaseReferencesManager {
         elemCollection: string[],
         comp: string[],
         compCollection: string[],
-        childRefManagers: Record<string, ReferencesManager> = {},
+        childRefManagers: Record<string, BaseReferencesManager> = {},
     ): PrivateRefConstructor<ViewState>[] {
         this.refs = childRefManagers;
         return [

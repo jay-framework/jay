@@ -14,6 +14,7 @@ import {
     sandboxChildComp as childComp,
 } from 'jay-secure';
 import { Item, ItemProps } from './item';
+import { ShownTodoOfTodoViewState } from 'jay-example-todo-components/lib/todo.jay-html';
 
 export enum Filter {
     all,
@@ -44,7 +45,9 @@ export type ItemRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ItemRef<Pare
 export interface TodoElementRefs {
     newTodo: HTMLElementProxy<TodoViewState, HTMLInputElement>;
     toggleAll: HTMLElementProxy<TodoViewState, HTMLInputElement>;
-    items: ItemRefs<ShownTodo>;
+    shownTodos: {
+        items: ItemRefs<ShownTodoOfTodoViewState>;
+    };
     filterAll: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     filterActive: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     filterCompleted: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
@@ -56,27 +59,35 @@ export type TodoElementRender = RenderElement<TodoViewState, TodoElementRefs, To
 export type TodoElementPreRender = [TodoElementRefs, TodoElementRender];
 
 export function render(): TodoElementPreRender {
+    const [shownTodosRefManager, [refItems]] = SecureReferencesManager.forElement(
+        [],
+        [],
+        [],
+        ['items'],
+    );
     const [
         refManager,
         [
-            refNwTodo,
+            refNewTodo,
             refToggleAll,
             refFilterAll,
             refFilterActive,
             refFilterCompleted,
             refClearCompleted,
-            refItems,
         ],
     ] = SecureReferencesManager.forElement(
         ['newTodo', 'toggleAll', 'filterAll', 'filterActive', 'filterCompleted', 'clearCompleted'],
         [],
         [],
-        ['items'],
+        [],
+        {
+            shownTodos: shownTodosRefManager,
+        },
     );
     const render = (viewState: TodoViewState) =>
         elementBridge(viewState, refManager, () => {
             return [
-                e(refNwTodo()),
+                e(refNewTodo()),
                 c(
                     (vs) => vs.hasItems,
                     [

@@ -176,13 +176,17 @@ describe('compile contract', () => {
         }
 
         export interface TodoRefs {
-            title: HTMLElementCollectionProxy<Items, HTMLInputElement>;
-            completed: HTMLElementCollectionProxy<Items, HTMLInputElement>;
+            items: {
+                title: HTMLElementCollectionProxy<Items, HTMLInputElement>;
+                completed: HTMLElementCollectionProxy<Items, HTMLInputElement>;
+            };
         }
-
+        
         export interface TodoRepeatedRefs {
-            title: HTMLElementCollectionProxy<Items, HTMLInputElement>;
-            completed: HTMLElementCollectionProxy<Items, HTMLInputElement>;
+            items: {
+                title: HTMLElementCollectionProxy<Items, HTMLInputElement>;
+                completed: HTMLElementCollectionProxy<Items, HTMLInputElement>;
+            };
         }
 
         export type TodoElement = JayElement<TodoViewState, TodoRefs>
@@ -271,18 +275,34 @@ describe('compile contract', () => {
 
         export interface UserFormRefs {
             submitButton: HTMLElementProxy<UserFormViewState, HTMLButtonElement>;
-            firstName: HTMLElementProxy<NameFields, HTMLInputElement>;
-            lastName: HTMLElementProxy<NameFields, HTMLInputElement>;
-            email: HTMLElementProxy<ContactFields, HTMLInputElement>;
-            phone: HTMLElementProxy<ContactFields, HTMLInputElement>;
+            personalInfo: {
+                nameFields: {
+                    firstName: HTMLElementProxy<NameFields, HTMLInputElement>;
+                    lastName: HTMLElementProxy<NameFields, HTMLInputElement>;
+                };
+            };
+            contactInfo: {
+                contactFields: {
+                    email: HTMLElementProxy<ContactFields, HTMLInputElement>;
+                    phone: HTMLElementProxy<ContactFields, HTMLInputElement>;
+                };
+            };
         }
-
+        
         export interface UserFormRepeatedRefs {
             submitButton: HTMLElementCollectionProxy<UserFormViewState, HTMLButtonElement>;
-            firstName: HTMLElementCollectionProxy<NameFields, HTMLInputElement>;
-            lastName: HTMLElementCollectionProxy<NameFields, HTMLInputElement>;
-            email: HTMLElementCollectionProxy<ContactFields, HTMLInputElement>;
-            phone: HTMLElementCollectionProxy<ContactFields, HTMLInputElement>;
+            personalInfo: {
+                nameFields: {
+                    firstName: HTMLElementCollectionProxy<NameFields, HTMLInputElement>;
+                    lastName: HTMLElementCollectionProxy<NameFields, HTMLInputElement>;
+                };
+            };
+            contactInfo: {
+                contactFields: {
+                    email: HTMLElementCollectionProxy<ContactFields, HTMLInputElement>;
+                    phone: HTMLElementCollectionProxy<ContactFields, HTMLInputElement>;
+                };
+            };
         }
 
         export type UserFormElement = JayElement<UserFormViewState, UserFormRefs>

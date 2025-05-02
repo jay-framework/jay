@@ -87,7 +87,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
         );
     });
 
-    refs.items.onCompletedToggle(({ event: newCompleted, viewState: item }) => {
+    refs.shownTodos.items.onCompletedToggle(({ event: newCompleted, viewState: item }) => {
         let itemIndex = todos().findIndex((_) => _.id === item.id);
         setTodos(
             patch(todos(), [
@@ -100,7 +100,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
         );
     });
 
-    refs.items.onTitleChanged(({ event: newTitle, viewState: item }) => {
+    refs.shownTodos.items.onTitleChanged(({ event: newTitle, viewState: item }) => {
         let itemIndex = todos().findIndex((_) => _.id === item.id);
         setTodos(
             patch(todos(), [
@@ -113,7 +113,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
         );
     });
 
-    refs.items.onRemove(({ viewState: item }) => {
+    refs.shownTodos.items.onRemove(({ viewState: item }) => {
         setTodos(todos().filter((_) => _ !== item));
     });
 

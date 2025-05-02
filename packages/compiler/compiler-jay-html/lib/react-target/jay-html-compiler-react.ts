@@ -40,6 +40,7 @@ import { processImportedComponents, renderImports } from '../jay-target/jay-html
 
 interface RenderContext {
     variables: Variables;
+    forEachAccessPath: string[];
     importedSymbols: Set<string>;
     indent: Indent;
     dynamicRef: boolean;
@@ -102,7 +103,7 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
 
 function renderElementRef(
     element: HTMLElement,
-    { dynamicRef, variables }: RenderContext,
+    { dynamicRef, variables, forEachAccessPath }: RenderContext,
 ): RenderFragment {
     if (element.attributes.ref) {
         let originalName = element.attributes.ref;
@@ -110,6 +111,7 @@ function renderElementRef(
         let refs = [
             {
                 ref: refName,
+                path: forEachAccessPath,
                 constName: null,
                 dynamicRef,
                 autoRef: false,
@@ -160,7 +162,7 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
 
 function renderChildCompRef(
     element: HTMLElement,
-    { dynamicRef, variables, nextAutoRefName }: RenderContext,
+    { dynamicRef, variables, nextAutoRefName, forEachAccessPath }: RenderContext,
 ): RenderFragment {
     let originalName = element.attributes.ref || nextAutoRefName();
     let refName = camelCase(originalName);
@@ -168,6 +170,7 @@ function renderChildCompRef(
     let refs = [
         {
             ref: refName,
+            path: forEachAccessPath,
             constName,
             dynamicRef,
             autoRef: !element.attributes.ref,
@@ -254,46 +257,31 @@ ${indent.curr}return (${childElement.rendered})})}`,
 
     function renderNestedComponent(
         htmlElement: HTMLElement,
-        newVariables: Variables,
-        currIndent: Indent = indent,
+        newContext: RenderContext,
     ): RenderFragment {
         let props = renderChildCompProps(htmlElement, {
             ...renderContext,
             dynamicRef,
-            variables: newVariables,
+            variables: newContext.variables,
         });
         let refs = renderChildCompRef(htmlElement, {
             ...renderContext,
             dynamicRef,
-            variables: newVariables,
+            variables: newContext.variables,
         });
-        // let getProps = `(${newVariables.currentVar}: ${newVariables.currentType.name}) => ${props.rendered}`;
-        // if (
-        //     importedSandboxedSymbols.has(htmlElement.rawTagName) ||
-        //     importerMode === RuntimeMode.MainSandbox
-        // )
-        //     return new RenderFragment(
-        //         `${currIndent.firstLine}secureChildComp(${htmlElement.rawTagName}, ${getProps}${refs.rendered})`,
-        //         Imports.for(Import.secureChildComp)
-        //             .plus(props.imports)
-        //             .plus(refs.imports),
-        //         props.validations,
-        //         refs.refs,
-        //     );
-        // else
         const reactChildComp = 'React' + htmlElement.rawTagName;
         outReactChildComps.set(htmlElement.rawTagName, reactChildComp);
         return new RenderFragment(
-            `${currIndent.firstLine}<${reactChildComp} ${props.rendered} ${refs.rendered}/>`,
+            `${newContext.indent.firstLine}<${reactChildComp} ${props.rendered} ${refs.rendered}/>`,
             Imports.none().plus(props.imports).plus(refs.imports),
             props.validations,
             refs.refs,
         );
     }
 
-    function renderHtmlElement(htmlElement, newVariables: Variables, currIndent: Indent = indent) {
+    function renderHtmlElement(htmlElement, newContext: RenderContext) {
         if (importedSymbols.has(htmlElement.rawTagName))
-            return renderNestedComponent(htmlElement, newVariables, currIndent);
+            return renderNestedComponent(htmlElement, newContext);
 
         let childNodes =
             node.childNodes.length > 1
@@ -302,36 +290,35 @@ ${indent.curr}return (${childElement.rendered})})}`,
                   )
                 : node.childNodes;
 
-        let childIndent = currIndent.child();
+        let childIndent = newContext.indent.child();
         if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE)
             childIndent = childIndent.noFirstLineBreak();
-
-        let childContext = {
-            ...renderContext,
-            variables: newVariables,
-            indent: childIndent,
-            dynamicRef,
-        };
 
         let childRenders =
             childNodes.length === 0
                 ? RenderFragment.empty()
                 : childNodes
-                      .map((_) => renderReactNode(_, childContext, outReactChildComps))
+                      .map((_) =>
+                          renderReactNode(
+                              _,
+                              { ...newContext, indent: childIndent },
+                              outReactChildComps,
+                          ),
+                      )
                       .reduce(
                           (prev, current) => RenderFragment.merge(prev, current, '\n'),
                           RenderFragment.empty(),
                       )
                       .map((children) =>
                           childIndent.firstLineBreak
-                              ? `\n${children}\n${currIndent.firstLine}`
+                              ? `\n${children}\n${newContext.indent.firstLine}`
                               : children,
                       );
 
-        let attributes = renderAttributes(htmlElement, childContext);
-        let renderedRef = renderElementRef(htmlElement, childContext);
+        let attributes = renderAttributes(htmlElement, newContext);
+        let renderedRef = renderElementRef(htmlElement, newContext);
 
-        return e(htmlElement.rawTagName, attributes, childRenders, renderedRef, currIndent);
+        return e(htmlElement.rawTagName, attributes, childRenders, renderedRef, newContext.indent);
     }
 
     switch (node.nodeType) {
@@ -344,14 +331,18 @@ ${indent.curr}return (${childElement.rendered})})}`,
 
             if (isConditional(htmlElement)) {
                 let condition = htmlElement.getAttribute('if');
-                let childElement = renderHtmlElement(htmlElement, variables, indent.child());
+                let childElement = renderHtmlElement(htmlElement, {
+                    ...renderContext,
+                    indent: indent.child(),
+                });
                 let renderedCondition = parseReactCondition(condition, variables);
                 return c(renderedCondition, childElement);
             } else if (isForEach(htmlElement)) {
-                let forEach = htmlElement.getAttribute('forEach'); // todo extract type
-                let trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
+                const forEach = htmlElement.getAttribute('forEach'); // todo extract type
+                const trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
 
-                let forEachAccessor = parseAccessor(forEach, variables);
+                const forEachAccessor = parseAccessor(forEach, variables);
+                const forEachAccessPath = forEachAccessor.terms;
                 // Todo check if type unknown throw exception
                 let forEachFragment = forEachAccessor.render();
                 if (forEachAccessor.resolvedType === JayUnknown)
@@ -361,11 +352,15 @@ ${indent.curr}return (${childElement.rendered})})}`,
                 let forEachVariables = variables.childVariableFor(
                     (forEachAccessor.resolvedType as JayArrayType).itemType,
                 );
-                let childElement = renderHtmlElement(
-                    htmlElement,
-                    forEachVariables,
-                    indent.child().noFirstLineBreak().withLastLineBreak(),
-                );
+                let newContext = {
+                    ...renderContext,
+                    variables: forEachVariables,
+                    indent: indent.child().noFirstLineBreak().withLastLineBreak(),
+                    dynamicRef: true,
+                    forEachAccessPath: [...renderContext.forEachAccessPath, ...forEachAccessPath],
+                };
+
+                let childElement = renderHtmlElement(htmlElement, newContext);
                 return renderForEach(
                     forEachFragment,
                     variables,
@@ -373,7 +368,7 @@ ${indent.curr}return (${childElement.rendered})})}`,
                     trackBy,
                     childElement,
                 );
-            } else return renderHtmlElement(htmlElement, variables);
+            } else return renderHtmlElement(htmlElement, renderContext);
         case NodeType.COMMENT_NODE:
             break;
     }
@@ -407,6 +402,7 @@ function renderFunctionImplementation(
             rootElement.val,
             {
                 variables,
+                forEachAccessPath: [],
                 importedSymbols,
                 indent: new Indent('    '),
                 dynamicRef: false,

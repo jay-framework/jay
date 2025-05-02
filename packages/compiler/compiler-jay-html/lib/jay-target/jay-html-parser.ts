@@ -30,9 +30,11 @@ export function isArrayType(obj: any) {
     return Array.isArray(obj);
 }
 
-function toInterfaceName(name) {
-    if (name === 'data') return 'ViewState';
-    else return pascalCase(pluralize.singular(name));
+function toInterfaceName(name: string[]) {
+    return name
+        .reverse()
+        .map((segment) => pascalCase(pluralize.singular(segment)))
+        .join('Of');
 }
 
 function resolveImportedType(imports: JayImportName[], type: string): JayType {
@@ -61,7 +63,10 @@ function resolveType(
         } else if (resolveImportedType(imports, data[prop]) !== JayUnknown) {
             types[prop] = resolveImportedType(imports, data[prop]);
         } else if (parseIsEnum(data[prop])) {
-            types[prop] = new JayEnumType(toInterfaceName(prop), parseEnumValues(data[prop]));
+            types[prop] = new JayEnumType(
+                toInterfaceName([...path, prop]),
+                parseEnumValues(data[prop]),
+            );
         } else {
             let [, ...pathTail] = path;
             validations.push(
@@ -69,7 +74,7 @@ function resolveType(
             );
         }
     }
-    return new JayObjectType(toInterfaceName(path.slice(-1)[0]), types);
+    return new JayObjectType(toInterfaceName(path), types);
 }
 
 function parseTypes(

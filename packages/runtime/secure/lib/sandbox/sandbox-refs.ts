@@ -104,9 +104,13 @@ export class SecureReferencesManager extends BaseReferencesManager {
         elemCollection: string[],
         comp: string[],
         compCollection: string[],
+        childRefManagers?: Record<string, SecureReferencesManager>,
     ): [SecureReferencesManager, PrivateRefConstructor<any>[]] {
         const refManager = new SecureReferencesManager(endpoint, eventWrapper);
-        return [refManager, refManager.mkRefs(elem, elemCollection, comp, compCollection)];
+        return [
+            refManager,
+            refManager.mkRefs(elem, elemCollection, comp, compCollection, childRefManagers),
+        ];
     }
 
     static forElement(
@@ -114,6 +118,7 @@ export class SecureReferencesManager extends BaseReferencesManager {
         elemCollection: string[],
         comp: string[],
         compCollection: string[],
+        childRefManagers?: Record<string, SecureReferencesManager>,
     ) {
         const parentComponentContext = useContext(SANDBOX_BRIDGE_CONTEXT);
         const { reactive, getComponentInstance } = useContext(COMPONENT_CONTEXT);
@@ -130,6 +135,7 @@ export class SecureReferencesManager extends BaseReferencesManager {
             elemCollection,
             comp,
             compCollection,
+            childRefManagers,
         );
     }
 
@@ -138,6 +144,7 @@ export class SecureReferencesManager extends BaseReferencesManager {
         elemCollection: string[],
         comp: string[],
         compCollection: string[],
+        childRefManagers?: Record<string, SecureReferencesManager>,
     ) {
         const { endpoint } = useContext(SANDBOX_CREATION_CONTEXT);
         return SecureReferencesManager.for(
@@ -147,6 +154,7 @@ export class SecureReferencesManager extends BaseReferencesManager {
             elemCollection,
             comp,
             compCollection,
+            childRefManagers,
         );
     }
 }

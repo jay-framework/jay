@@ -9,13 +9,13 @@ import {
 } from 'jay-runtime';
 import { Item } from './item';
 
-export enum Filter {
+export enum FilterOfTodoViewState {
     all,
     active,
     completed,
 }
 
-export interface ShownTodo {
+export interface ShownTodoOfTodoViewState {
     id: string;
     title: string;
     isCompleted: boolean;
@@ -26,10 +26,10 @@ export interface TodoViewState {
     activeTodoWord: string;
     hasItems: boolean;
     noActiveItems: boolean;
-    filter: Filter;
+    filter: FilterOfTodoViewState;
     showClearCompleted: boolean;
     newTodo: string;
-    shownTodos: Array<ShownTodo>;
+    shownTodos: Array<ShownTodoOfTodoViewState>;
 }
 
 export type ItemRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Item>>;
@@ -39,11 +39,13 @@ export type ItemRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ItemRef<Pare
 export interface TodoElementRefs {
     newTodo: HTMLElementProxy<TodoViewState, HTMLInputElement>;
     toggleAll: HTMLElementProxy<TodoViewState, HTMLInputElement>;
-    items: ItemRefs<ShownTodo>;
     filterAll: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     filterActive: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     filterCompleted: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     clearCompleted: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
+    shownTodos: {
+        items: ItemRefs<ShownTodoOfTodoViewState>;
+    };
 }
 
 export type TodoElement = JayElement<TodoViewState, TodoElementRefs>;

@@ -5,34 +5,44 @@ import {
     RenderElementOptions,
 } from 'jay-runtime';
 
-export interface Item {
+export interface ItemOfCollectionWithRefsViewState {
     name: string;
     completed: boolean;
     cost: number;
     id: string;
 }
 
-export interface GroupItem {
+export interface GroupItemOfGroupOfCollectionWithRefsViewState {
     itemId: string;
     item: string;
 }
 
-export interface Group {
+export interface GroupOfCollectionWithRefsViewState {
     groupId: string;
-    groupItems: Array<GroupItem>;
+    groupItems: Array<GroupItemOfGroupOfCollectionWithRefsViewState>;
 }
 
 export interface CollectionWithRefsViewState {
     title: string;
-    items: Array<Item>;
-    groups: Array<Group>;
+    items: Array<ItemOfCollectionWithRefsViewState>;
+    groups: Array<GroupOfCollectionWithRefsViewState>;
 }
 
 export interface CollectionWithRefsElementRefs {
-    name: HTMLElementCollectionProxy<Item, HTMLSpanElement>;
-    completed: HTMLElementCollectionProxy<Item, HTMLSpanElement>;
-    cost: HTMLElementCollectionProxy<Item, HTMLSpanElement>;
-    done: HTMLElementCollectionProxy<Item, HTMLButtonElement>;
+    items: {
+        name: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        completed: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        cost: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        done: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLButtonElement>;
+    };
+    groups: {
+        groupItems: {
+            item: HTMLElementCollectionProxy<
+                GroupItemOfGroupOfCollectionWithRefsViewState,
+                HTMLDivElement
+            >;
+        };
+    };
 }
 
 export type CollectionWithRefsElement = JayElement<

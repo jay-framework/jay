@@ -1,16 +1,21 @@
 import { createSignal, makeJayComponent, Props } from 'jay-component';
-import { MainElementRefs, MainViewState, render, SelectedExample } from './main.jay-html';
+import {
+    MainElementRefs,
+    MainViewState,
+    render,
+    SelectedExampleOfMainViewState,
+} from './main.jay-html';
 import { JayEvent } from 'jay-runtime';
 
 interface MainProps {}
 
-const examples = Object.keys(SelectedExample)
+const examples = Object.keys(SelectedExampleOfMainViewState)
     .filter((_) => !isNaN(Number(_)))
-    .map((_) => ({ value: _, name: SelectedExample[_] }));
+    .map((_) => ({ value: _, name: SelectedExampleOfMainViewState[_] }));
 
 function MainConstructor({}: Props<MainProps>, refs: MainElementRefs) {
-    let [selectedExample, setSelectedExample] = createSignal<SelectedExample>(
-        SelectedExample.basic,
+    let [selectedExample, setSelectedExample] = createSignal<SelectedExampleOfMainViewState>(
+        SelectedExampleOfMainViewState.basic,
     );
     let [cycles, setCycles] = createSignal(1000);
     let [progress, setProgress] = createSignal('');
@@ -26,12 +31,15 @@ function MainConstructor({}: Props<MainProps>, refs: MainElementRefs) {
     });
 
     refs.run.onclick(() => {
-        if (selectedExample() === SelectedExample.basic) refs.basic.run(setProgress);
-        else if (selectedExample() === SelectedExample.collections)
+        if (selectedExample() === SelectedExampleOfMainViewState.basic) refs.basic.run(setProgress);
+        else if (selectedExample() === SelectedExampleOfMainViewState.collections)
             refs.collections.run(setProgress);
-        else if (selectedExample() === SelectedExample.conditions) refs.conditions.run(setProgress);
-        else if (selectedExample() === SelectedExample.composite) refs.composite.run(setProgress);
-        else if (selectedExample() === SelectedExample.table) refs.table.run(setProgress);
+        else if (selectedExample() === SelectedExampleOfMainViewState.conditions)
+            refs.conditions.run(setProgress);
+        else if (selectedExample() === SelectedExampleOfMainViewState.composite)
+            refs.composite.run(setProgress);
+        else if (selectedExample() === SelectedExampleOfMainViewState.table)
+            refs.table.run(setProgress);
     });
 
     return {

@@ -14,13 +14,13 @@ import {
 // @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-workerSandbox';
 
-export interface NestedCounter {
+export interface NestedCounterOfDynamicComponentInComponentViewState {
     counter: number;
     id: string;
 }
 
 export interface DynamicComponentInComponentViewState {
-    nestedCounters: Array<NestedCounter>;
+    nestedCounters: Array<NestedCounterOfDynamicComponentInComponentViewState>;
     condition: boolean;
     count1: number;
 }
@@ -31,8 +31,10 @@ export type CounterRefs<ParentVS> = ComponentCollectionProxy<ParentVS, CounterRe
     OnlyEventEmitters<CounterRef<ParentVS>>;
 
 export interface DynamicComponentInComponentElementRefs {
-    counter1: CounterRefs<NestedCounter>;
     counter2: CounterRef<DynamicComponentInComponentViewState>;
+    nestedCounters: {
+        counter1: CounterRefs<NestedCounterOfDynamicComponentInComponentViewState>;
+    };
 }
 
 export type DynamicComponentInComponentElement = JayElement<
@@ -50,11 +52,20 @@ export type DynamicComponentInComponentElementPreRender = [
 ];
 
 export function render(): DynamicComponentInComponentElementPreRender {
-    const [refManager, [refCounter2, refCounter1]] = SecureReferencesManager.forElement(
+    const [nestedCountersRefManager, [refCounter1]] = SecureReferencesManager.forElement(
+        [],
+        [],
+        [],
+        ['counter1'],
+    );
+    const [refManager, [refCounter2]] = SecureReferencesManager.forElement(
         [],
         [],
         ['counter2'],
-        ['counter1'],
+        [],
+        {
+            nestedCounters: nestedCountersRefManager,
+        },
     );
     const render = (viewState: DynamicComponentInComponentViewState) =>
         elementBridge(viewState, refManager, () => [
@@ -64,7 +75,9 @@ export function render(): DynamicComponentInComponentElementPreRender {
                 () => [
                     childComp(
                         Counter,
-                        (vs1: NestedCounter) => ({ initialValue: vs1.counter }),
+                        (vs1: NestedCounterOfDynamicComponentInComponentViewState) => ({
+                            initialValue: vs1.counter,
+                        }),
                         refCounter1(),
                     ),
                 ],

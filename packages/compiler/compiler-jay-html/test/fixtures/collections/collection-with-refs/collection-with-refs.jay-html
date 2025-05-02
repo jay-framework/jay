@@ -27,7 +27,7 @@ data:
         </div>
         <div forEach="groups" trackBy="groupId">
             <div forEach="groupItems" trackBy="itemId">
-                <div>{item}</div>
+                <div ref="item">{item}</div>
             </div>
         </div>
     </div>

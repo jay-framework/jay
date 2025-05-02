@@ -38,7 +38,12 @@ import in jay-html is very similar to typescript import, adapted for an html for
 Normally, we only import components and data types from a jay-html file.
 
 ```html
-<script type="application/jay-headfull" src="{path}" names="{names to import}" sandbox="{boolean}"></script>
+<script
+  type="application/jay-headfull"
+  src="{path}"
+  names="{names to import}"
+  sandbox="{boolean}"
+></script>
 ```
 
 - `path` - a relative or absolute path to the file from which to import
@@ -49,8 +54,18 @@ Normally, we only import components and data types from a jay-html file.
 examples:
 
 ```html
-<script type="application/jay-headfull" src="./component1.ts" names="comp1" sandbox="false"></script>
-<script type="application/jay-headfull" src="./component2.ts" names="comp2 as Main, Comp2Props" sandbox="true"></script>
+<script
+  type="application/jay-headfull"
+  src="./component1.ts"
+  names="comp1"
+  sandbox="false"
+></script>
+<script
+  type="application/jay-headfull"
+  src="./component2.ts"
+  names="comp2 as Main, Comp2Props"
+  sandbox="true"
+></script>
 ```
 
 ## The `application/yaml-jay` Data Contract
@@ -101,7 +116,12 @@ Jay html files allows to use sub-components as part of the html tree.
 To use a sub-component, it has to first be imported as a link tag
 
 ```html
-<script type="application/jay-headfull" src="./component1.ts" names="comp1" sandbox="false"></script>
+<script
+  type="application/jay-headfull"
+  src="./component1.ts"
+  names="comp1"
+  sandbox="false"
+></script>
 ```
 
 and then used as any other HTML element

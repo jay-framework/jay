@@ -1,7 +1,7 @@
 import {
-    Filter,
+    FilterOfTodoViewState,
     render,
-    ShownTodo,
+    ShownTodoOfTodoViewState,
     TodoElementRefs,
     TodoViewState,
     // @ts-expect-error Cannot find module
@@ -27,7 +27,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
         initialTodos().map((_) => ({ ..._, isEditing: false, editText: '' })),
     );
     const activeTodoCount = createMemo(() =>
-        todos().reduce(function (accum: number, todo: ShownTodo) {
+        todos().reduce(function (accum: number, todo: ShownTodoOfTodoViewState) {
             return todo.isCompleted ? accum : accum + 1;
         }, 0),
     );
@@ -35,18 +35,18 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     const activeTodoWord = createMemo(() => (activeTodoCount() > 1 ? 'todos' : 'todo'));
     const hasItems = createMemo(() => todos().length > 0);
     const showClearCompleted = createMemo(() => !!todos().find((_) => _.isCompleted));
-    const [filter, setFilter] = createSignal<Filter>(Filter.all);
+    const [filter, setFilter] = createSignal<FilterOfTodoViewState>(FilterOfTodoViewState.all);
     const [newTodo, setNewTodo] = createSignal('');
     const shownTodos = createMemo(() => [
         ...todos().filter((todo) => {
-            if (filter() === Filter.completed) return todo.isCompleted;
-            else if (filter() === Filter.active) return !todo.isCompleted;
+            if (filter() === FilterOfTodoViewState.completed) return todo.isCompleted;
+            else if (filter() === FilterOfTodoViewState.active) return !todo.isCompleted;
             else return true;
         }),
     ]);
-    refs.filterActive.onclick(() => setFilter(Filter.active));
-    refs.filterCompleted.onclick(() => setFilter(Filter.completed));
-    refs.filterAll.onclick(() => setFilter(Filter.all));
+    refs.filterActive.onclick(() => setFilter(FilterOfTodoViewState.active));
+    refs.filterCompleted.onclick(() => setFilter(FilterOfTodoViewState.completed));
+    refs.filterAll.onclick(() => setFilter(FilterOfTodoViewState.all));
     refs.newTodo.onkeydown$(handler$('0')).then(({ event }: JayEvent<any, TodoViewState>) => {
         if (event.$0 === ENTER_KEY) {
             let newValue = newTodo();
@@ -81,7 +81,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
             }),
         );
     });
-    refs.items.onCompletedToggle(({ event: newCompleted, viewState: item }) => {
+    refs.shownTodos.items.onCompletedToggle(({ event: newCompleted, viewState: item }) => {
         let itemIndex = todos().findIndex((_) => _.id === item.id);
         setTodos(
             patch(todos(), [
@@ -93,7 +93,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
             ]),
         );
     });
-    refs.items.onTitleChanged(({ event: newTitle, viewState: item }) => {
+    refs.shownTodos.items.onTitleChanged(({ event: newTitle, viewState: item }) => {
         let itemIndex = todos().findIndex((_) => _.id === item.id);
         setTodos(
             patch(todos(), [
@@ -105,7 +105,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
             ]),
         );
     });
-    refs.items.onRemove(({ viewState: item }) => {
+    refs.shownTodos.items.onRemove(({ viewState: item }) => {
         setTodos(todos().filter((_) => _ !== item));
     });
     refs.toggleAll.onchange(({ event }: JayEvent<Event, TodoViewState>) =>

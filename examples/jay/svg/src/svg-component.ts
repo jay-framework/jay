@@ -1,17 +1,23 @@
-import { render, SvgComponentElementRefs, Shape } from './svg-component.jay-html';
+import {
+    render,
+    SvgComponentElementRefs,
+    ShapeOfSvgComponentViewState,
+} from './svg-component.jay-html';
 import { createMemo, createSignal, makeJayComponent, Props } from 'jay-component';
 
 export interface SvgComponentProps {}
 
 const colors = ['red', 'blue', 'green', 'yellow', 'black'];
 function SvgComponentConstructor({}: Props<SvgComponentProps>, refs: SvgComponentElementRefs) {
-    const [shape, setShape] = createSignal(Shape.circle);
+    const [shape, setShape] = createSignal(ShapeOfSvgComponentViewState.circle);
     const [colorIndex, setColorIndex] = createSignal(0);
     const color = createMemo(() => colors[colorIndex() % colors.length]);
     const [clickMessage, setClickMessage] = createSignal('Click me!');
 
     function doClick() {
-        shape() === Shape.circle ? setShape(Shape.square) : setShape(Shape.circle);
+        shape() === ShapeOfSvgComponentViewState.circle
+            ? setShape(ShapeOfSvgComponentViewState.square)
+            : setShape(ShapeOfSvgComponentViewState.circle);
         setColorIndex((_) => _ + 1);
         if (colorIndex() === 1) setClickMessage('click me\nagain!');
         else setClickMessage(`click\nanother\ntime`);

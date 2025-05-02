@@ -21,8 +21,8 @@ export class Indent {
         return this.lastLineIndent ? this.base : '';
     }
 
-    child(): Indent {
-        return new Indent(this.base + '  ');
+    child(firstLineBreak = true, lastLineIndent = false): Indent {
+        return new Indent(this.base + '  ', firstLineBreak, lastLineIndent);
     }
 
     noFirstLineBreak() {

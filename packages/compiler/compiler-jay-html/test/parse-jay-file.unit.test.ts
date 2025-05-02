@@ -102,12 +102,12 @@ describe('compiler', () => {
                     s1: JayString,
                     n1: JayNumber,
                     b1: JayBoolean,
-                    o1: new JayObjectType('O1', {
+                    o1: new JayObjectType('O1OfBaseViewState', {
                         s2: JayString,
                         n2: JayNumber,
                     }),
                     a1: new JayArrayType(
-                        new JayObjectType('A1', {
+                        new JayObjectType('A1OfBaseViewState', {
                             s3: JayString,
                             n3: JayNumber,
                         }),
@@ -130,7 +130,7 @@ describe('compiler', () => {
 
             expect(jayFile.val.types).toEqual(
                 new JayObjectType('BaseViewState', {
-                    an_enum: new JayEnumType('AnEnum', ['one', 'two', 'three']),
+                    an_enum: new JayEnumType('AnEnumOfBaseViewState', ['one', 'two', 'three']),
                 }),
             );
         });

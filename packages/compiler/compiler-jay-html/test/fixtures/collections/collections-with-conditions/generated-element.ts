@@ -11,7 +11,7 @@ import {
     RenderElementOptions,
 } from 'jay-runtime';
 
-export interface Thing {
+export interface ThingOfCollectionsWithConditionsViewState {
     name: string;
     completed: boolean;
     cost: number;
@@ -20,7 +20,7 @@ export interface Thing {
 
 export interface CollectionsWithConditionsViewState {
     title: string;
-    things: Array<Thing>;
+    things: Array<ThingOfCollectionsWithConditionsViewState>;
 }
 
 export interface CollectionsWithConditionsElementRefs {}
@@ -48,7 +48,7 @@ export function render(options?: RenderElementOptions): CollectionsWithCondition
                 de('div', {}, [
                     forEach(
                         (vs: CollectionsWithConditionsViewState) => vs.things,
-                        (vs1: Thing) => {
+                        (vs1: ThingOfCollectionsWithConditionsViewState) => {
                             return de('div', {}, [
                                 e(
                                     'span',
