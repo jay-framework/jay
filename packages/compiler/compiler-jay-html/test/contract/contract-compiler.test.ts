@@ -1,7 +1,5 @@
-import { LinkedContractResolver, parseContract } from '../lib';
-import { compileContract } from '../lib';
+import { LinkedContractResolver, parseContract, compileContract, ContractTagType } from '../../lib';
 import { JAY_CONTRACT_EXTENSION, prettify } from 'jay-compiler-shared';
-import { ContractTagType } from '../lib';
 import { JayString, JayBoolean } from 'jay-compiler-shared';
 
 describe('compile contract', () => {

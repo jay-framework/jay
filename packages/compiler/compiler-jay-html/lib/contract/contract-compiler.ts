@@ -14,8 +14,7 @@ import {
     Import,
 } from 'jay-compiler-shared';
 import { Contract, ContractTag, ContractTagType } from './contract';
-import { renderRefsType } from 'jay-compiler-jay-html';
-import { generateTypes } from 'jay-compiler-jay-html';
+import { renderRefsType, generateTypes } from '../';
 import { camelCase, pascalCase } from 'change-case';
 import { LinkedContractResolver } from './contract-parser';
 
