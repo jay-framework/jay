@@ -8,4 +8,4 @@ export { renderRefsType } from './jay-target/jay-html-compile-refs';
 export { generateTypes } from './jay-target/jay-html-compile-types';
 export { parseIsEnum, parseEnumValues } from './expressions/expression-compiler';
 export * from './contract'
-export {JayImportResolver} from "./jay-target/jay-import-resolver";
+export { type JayImportResolver, JAY_IMPORT_RESOLVER} from "./jay-target/jay-import-resolver";
