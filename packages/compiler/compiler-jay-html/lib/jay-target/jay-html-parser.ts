@@ -21,7 +21,7 @@ import { JayYamlStructure } from './jay-yaml-structure';
 
 import { JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
 
-import {JayImportResolver} from "./jay-import-resolver";
+import { JayImportResolver } from './jay-import-resolver';
 
 export function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj);
@@ -119,7 +119,7 @@ function parseHeadfullImports(
     validations: JayValidations,
     filePath: string,
     options: ResolveTsConfigOptions,
-    importResolver: JayImportResolver
+    importResolver: JayImportResolver,
 ): JayImportLink[] {
     return elements.map((element) => {
         const module = element.getAttribute('src');
@@ -162,25 +162,22 @@ async function parseHeadlessImports(
     elements: HTMLElement[],
     validations: Array<string>,
     filePath: string,
-    linkedContractResolver: JayImportResolver) {
-
+    linkedContractResolver: JayImportResolver,
+) {
     for await (const element of elements) {
-
     }
-
 }
 
 function normalizeFilename(filename: string): string {
     return filename.replace('.jay-html', '');
 }
 
-
 export async function parseJayFile(
     html: string,
     filename: string,
     filePath: string,
     options: ResolveTsConfigOptions,
-    linkedContractResolver: JayImportResolver
+    linkedContractResolver: JayImportResolver,
 ): Promise<WithValidations<JayHtmlSourceFile>> {
     const normalizedFileName = normalizeFilename(filename);
     const baseElementName = capitalCase(normalizedFileName, { delimiter: '' });
@@ -191,20 +188,18 @@ export async function parseJayFile(
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
     const headfullImports = parseHeadfullImports(
-        root.querySelectorAll(
-            'script[type="application/jay-headfull"]',
-        ),
+        root.querySelectorAll('script[type="application/jay-headfull"]'),
         validations,
         filePath,
         options,
-        linkedContractResolver
+        linkedContractResolver,
     );
     const headlessImports = await parseHeadlessImports(
         root.querySelectorAll('script[type="application/jay-headless"]'),
         validations,
         filePath,
-        linkedContractResolver
-    )
+        linkedContractResolver,
+    );
     const importNames = headfullImports.flatMap((_) => _.names);
     const types = parseTypes(jayYaml, validations, baseElementName, importNames);
 

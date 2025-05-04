@@ -7,5 +7,5 @@ export { parseJayFile, getJayHtmlImports } from './jay-target/jay-html-parser';
 export { renderRefsType } from './jay-target/jay-html-compile-refs';
 export { generateTypes } from './jay-target/jay-html-compile-types';
 export { parseIsEnum, parseEnumValues } from './expressions/expression-compiler';
-export * from './contract'
-export { type JayImportResolver, JAY_IMPORT_RESOLVER} from "./jay-target/jay-import-resolver";
+export * from './contract';
+export { type JayImportResolver, JAY_IMPORT_RESOLVER } from './jay-target/jay-import-resolver';

@@ -1,6 +1,8 @@
 import {
     checkValidationErrors,
-    GenerateTarget, JAY_CONTRACT_EXTENSION, JayType,
+    GenerateTarget,
+    JAY_CONTRACT_EXTENSION,
+    JayType,
     MainRuntimeModes,
     prettify,
     removeComments,
@@ -10,13 +12,10 @@ import {
 import { promises } from 'node:fs';
 import { parseJayFile } from '../../lib';
 import { JayHtmlSourceFile } from '../../lib';
-import {
-    generateElementBridgeFile,
-    generateElementFileReactTarget,
-} from '../../lib';
+import { generateElementBridgeFile, generateElementFileReactTarget } from '../../lib';
 import { generateElementFile } from '../../lib';
-import path from "path";
-import {JAY_IMPORT_RESOLVER} from "../../lib/jay-target/jay-import-resolver";
+import path from 'path';
+import { JAY_IMPORT_RESOLVER } from '../../lib/jay-target/jay-import-resolver';
 
 const { readFile } = promises;
 

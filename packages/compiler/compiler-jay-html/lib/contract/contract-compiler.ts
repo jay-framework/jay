@@ -13,10 +13,10 @@ import {
     Ref,
     WithValidations,
 } from 'jay-compiler-shared';
-import {Contract, ContractTag, ContractTagType} from './contract';
-import {generateTypes, JayImportResolver, parseContract, renderRefsType} from '../';
-import {camelCase, pascalCase} from 'change-case';
-import fs from "node:fs/promises";
+import { Contract, ContractTag, ContractTagType } from './contract';
+import { generateTypes, JayImportResolver, parseContract, renderRefsType } from '../';
+import { camelCase, pascalCase } from 'change-case';
+import fs from 'node:fs/promises';
 
 interface JayContractImportLink {
     module: string;
@@ -46,9 +46,13 @@ async function traverseContractTag(
     const { tag, viewStateType, isRepeated, path } = context;
     if (tag.type.includes(ContractTagType.subContract)) {
         if (tag.link) {
-            const linkWithExtension = tag.link.endsWith(JAY_CONTRACT_EXTENSION)?
-                tag.link: tag.link + JAY_CONTRACT_EXTENSION;
-            const subContractPath = importResolver.resolveLink(context.contractFilePath, linkWithExtension);
+            const linkWithExtension = tag.link.endsWith(JAY_CONTRACT_EXTENSION)
+                ? tag.link
+                : tag.link + JAY_CONTRACT_EXTENSION;
+            const subContractPath = importResolver.resolveLink(
+                context.contractFilePath,
+                linkWithExtension,
+            );
             const subContract = importResolver.loadContract(subContractPath);
             const subContractFile = tag.link.replace(JAY_CONTRACT_EXTENSION, '');
             // todo handle invalid contract
@@ -99,7 +103,7 @@ async function traverseContractTag(
                     viewStateType: subViewStateType,
                     isRepeated: isRepeated || tag.repeated,
                     path: [...path, tag.tag],
-                    contractFilePath: context.contractFilePath
+                    contractFilePath: context.contractFilePath,
                 },
                 importResolver,
             );
@@ -191,7 +195,7 @@ export async function compileContract(
                     viewStateType,
                     isRepeated: false,
                     path: [],
-                    contractFilePath
+                    contractFilePath,
                 },
                 linkedContractResolver,
             );

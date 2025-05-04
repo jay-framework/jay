@@ -15,7 +15,7 @@ import { JayImportResolver } from '../lib';
 import { Contract } from '../lib';
 import { ResolveTsConfigOptions } from 'jay-compiler-analyze-exported-types';
 import { JayType } from 'jay-compiler-shared';
-import {JAY_IMPORT_RESOLVER} from "../lib/jay-target/jay-import-resolver";
+import { JAY_IMPORT_RESOLVER } from '../lib/jay-target/jay-import-resolver';
 
 describe('compiler', () => {
     const defaultImportResolver: JayImportResolver = {
@@ -27,7 +27,7 @@ describe('compiler', () => {
         },
         analyzeExportedTypes(fullPath: string, options: ResolveTsConfigOptions): JayType[] {
             throw new Error('Not implemented');
-        }
+        },
     };
 
     function jayFileWith(jayYaml, body, scripts?) {
@@ -55,7 +55,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
-                defaultImportResolver
+                defaultImportResolver,
             );
 
             expect(jayFile.val.types).toEqual(
@@ -74,7 +74,7 @@ describe('compiler', () => {
                 'BaseElementName',
                 '',
                 {},
-                defaultImportResolver
+                defaultImportResolver,
             );
 
             expect(jayFile.val.types).toEqual(
@@ -92,7 +92,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
-                defaultImportResolver
+                defaultImportResolver,
             );
 
             expect(jayFile.validations).toEqual(['invalid type [bla] found at [data.text]']);
@@ -116,7 +116,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
-                defaultImportResolver
+                defaultImportResolver,
             );
 
             expect(jayFile.val.types).toEqual(
@@ -148,7 +148,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
-                defaultImportResolver
+                defaultImportResolver,
             );
 
             expect(jayFile.val.types).toEqual(
@@ -174,7 +174,7 @@ describe('compiler', () => {
                 'Base',
                 './test',
                 {},
-                JAY_IMPORT_RESOLVER
+                JAY_IMPORT_RESOLVER,
             );
 
             expect(jayFile.validations).toEqual([]);
@@ -297,7 +297,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
-                defaultImportResolver
+                defaultImportResolver,
             );
 
             expect(jayFile.val.namespaces).toEqual([
@@ -325,7 +325,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
-                defaultImportResolver
+                defaultImportResolver,
             );
             expect(jayFile.validations).toEqual([
                 'jay file should have exactly one jay-data script, found 2',
@@ -344,7 +344,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
-                defaultImportResolver
+                defaultImportResolver,
             );
             expect(jayFile.validations).toEqual([
                 'jay file should have exactly one jay-data script, found none',
@@ -357,7 +357,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
-                defaultImportResolver
+                defaultImportResolver,
             );
             expect(jayFile.validations).toEqual([
                 'jay file should have exactly one jay-data script, found none',
@@ -379,7 +379,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
-                defaultImportResolver
+                defaultImportResolver,
             );
             expect(jayFile.validations).toEqual(['jay file must have exactly a body tag']);
         });
@@ -396,7 +396,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
-                JAY_IMPORT_RESOLVER
+                JAY_IMPORT_RESOLVER,
             );
 
             expect(jayFile.validations.length).toEqual(1);
@@ -417,7 +417,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
-                JAY_IMPORT_RESOLVER
+                JAY_IMPORT_RESOLVER,
             );
 
             expect(jayFile.validations.length).toEqual(1);
@@ -438,7 +438,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
-                JAY_IMPORT_RESOLVER
+                JAY_IMPORT_RESOLVER,
             );
 
             expect(jayFile.validations[0]).toContain(

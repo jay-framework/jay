@@ -10,7 +10,7 @@ import {
     RuntimeMode,
     WithValidations,
 } from 'jay-compiler-shared';
-import { parseJayFile } from 'jay-compiler-jay-html';
+import { JAY_IMPORT_RESOLVER, parseJayFile } from 'jay-compiler-jay-html';
 
 function checkFileExists(filepath): Promise<Boolean> {
     return new Promise((resolve, reject) => {
@@ -39,11 +39,12 @@ export async function generateFiles(
     for (const jayFile of jayFiles) {
         const content = await fsp.readFile(jayFile, 'utf-8');
         const parsedFile = checkValidationErrors(
-            parseJayFile(
+            await parseJayFile(
                 content,
                 path.basename(jayFile.replace('.jay-html', '')),
                 path.dirname(jayFile),
                 {},
+                JAY_IMPORT_RESOLVER,
             ),
         );
         const generateTarget: GenerateTarget =

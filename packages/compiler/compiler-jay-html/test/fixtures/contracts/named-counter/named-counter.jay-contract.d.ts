@@ -1,6 +1,8 @@
 import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
 import {
-    CounterViewState, CounterRefs, CounterRepeatedRefs
+    CounterViewState,
+    CounterRefs,
+    CounterRepeatedRefs,
 } from '../counter/counter.jay-contract';
 
 export interface NamedContractViewState {

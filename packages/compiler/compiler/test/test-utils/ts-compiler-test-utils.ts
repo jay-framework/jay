@@ -13,15 +13,13 @@ import {
     readFixtureSourceJayFile,
 } from './file-utils';
 import { astToCode } from '../../lib/components-files/ts-utils/ts-compiler-utils';
+import { checkValidationErrors, prettify, RuntimeMode, WithValidations } from 'jay-compiler-shared';
 import {
-    checkValidationErrors,
-    GenerateTarget,
-    MainRuntimeModes,
-    prettify,
-    RuntimeMode,
-    WithValidations,
-} from 'jay-compiler-shared';
-import { generateElementBridgeFile, JayHtmlSourceFile, parseJayFile } from 'jay-compiler-jay-html';
+    generateElementBridgeFile,
+    JAY_IMPORT_RESOLVER,
+    JayHtmlSourceFile,
+    parseJayFile,
+} from 'jay-compiler-jay-html';
 
 export async function readAndParseJayFile(
     folder: string,
@@ -31,7 +29,7 @@ export async function readAndParseJayFile(
     const dirname = fixtureDir(folder);
     const filename = `${file}.jay-html`;
     const code = await readFixtureSourceJayFile(folder, file);
-    return parseJayFile(code, filename, dirname, {});
+    return await parseJayFile(code, filename, dirname, {}, JAY_IMPORT_RESOLVER);
 }
 
 export async function readFileAndGenerateElementBridgeFile(folder: string, givenFile?: string) {
@@ -39,32 +37,10 @@ export async function readFileAndGenerateElementBridgeFile(folder: string, given
     const file = givenFile || getFileFromFolder(folder);
     const jayFile = await readFixtureSourceJayFile(folder, file);
     const parsedFile = checkValidationErrors(
-        parseJayFile(jayFile, `${file}.jay-html`, dirname, {}),
+        await parseJayFile(jayFile, `${file}.jay-html`, dirname, {}, JAY_IMPORT_RESOLVER),
     );
     return generateElementBridgeFile(parsedFile);
 }
-
-// export interface ReadFileAndGenerateElementFileOptions {
-//     importerMode?: MainRuntimeModes;
-//     givenFile?: string;
-//     generateTarget?: GenerateTarget;
-// }
-//
-// export async function readFileAndGenerateElementFile(
-//     folder: string,
-//     options?: ReadFileAndGenerateElementFileOptions,
-// ) {
-//     const givenFile = options?.givenFile || null;
-//     const importerMode = options?.importerMode || RuntimeMode.MainTrusted;
-//     const generateTarget = options?.generateTarget || GenerateTarget.jay;
-//     const dirname = path.resolve(__dirname, '../fixtures', folder);
-//     const file = givenFile || getFileFromFolder(folder);
-//     const jayFile = await readFixtureSourceJayFile(folder, file);
-//     const parsedFile = checkValidationErrors(
-//         parseJayFile(jayFile, `${file}.jay-html`, dirname, {}),
-//     );
-//     return generateElementFile(parsedFile, importerMode, generateTarget);
-// }
 
 export async function readTsSourceFile(filePath: string, fileName: string) {
     const code = await readFixtureFile(filePath, fileName);
@@ -126,7 +102,9 @@ export async function readFileAndGenerateImportsFileFromJayFile(
     const dirname = path.resolve(__dirname, '../fixtures', folder);
     const file = givenFile ?? `${getFileFromFolder(folder)}`;
     const sourceFile = await readFixtureSourceJayFile(folder, file);
-    const parsedFile = checkValidationErrors(parseJayFile(sourceFile, file, dirname, {}));
+    const parsedFile = checkValidationErrors(
+        await parseJayFile(sourceFile, file, dirname, {}, JAY_IMPORT_RESOLVER),
+    );
     const output = generateImportsFileFromJayFile(parsedFile);
     return await prettify(output);
 }

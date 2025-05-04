@@ -9,7 +9,10 @@ import {
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
-import {NamedContractViewState, NamedContractRefs} from '../named-counter/named-counter.jay-contract'
+import {
+    NamedContractViewState,
+    NamedContractRefs,
+} from '../named-counter/named-counter.jay-contract';
 
 export interface PageViewState {
     namedCounter: NamedContractViewState;
@@ -19,23 +22,18 @@ export interface PageElementRefs {
     namedCounter: NamedContractRefs;
 }
 
-export type PageElement = JayElement<
-    PageViewState,
-    PageElementRefs
->;
-export type PageElementRender = RenderElement<
-    PageViewState,
-    PageElementRefs,
-    PageElement
->;
-export type PageElementPreRender = [
-    PageElementRefs,
-    PageElementRender,
-];
+export type PageElement = JayElement<PageViewState, PageElementRefs>;
+export type PageElementRender = RenderElement<PageViewState, PageElementRefs, PageElement>;
+export type PageElementPreRender = [PageElementRefs, PageElementRender];
 
 export function render(options?: RenderElementOptions): PageElementPreRender {
-    const [counterRefManager, [add, subtract]] =
-        ReferencesManager.for(options, ['add', 'subtract'], [], [], []);
+    const [counterRefManager, [add, subtract]] = ReferencesManager.for(
+        options,
+        ['add', 'subtract'],
+        [],
+        [],
+        [],
+    );
     const [namedCounterRefManager, []] = ReferencesManager.for(options, [], [], [], [], {
         counter: counterRefManager,
     });

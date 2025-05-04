@@ -1,7 +1,20 @@
-import {parseContract, compileContract, ContractTagType, Contract, JayImportResolver} from '../../lib';
-import {JAY_CONTRACT_EXTENSION, JayBoolean, JayString, JayType, prettify, WithValidations} from 'jay-compiler-shared';
-import path from "path";
-import {ResolveTsConfigOptions} from "jay-compiler-analyze-exported-types";
+import {
+    parseContract,
+    compileContract,
+    ContractTagType,
+    Contract,
+    JayImportResolver,
+} from '../../lib';
+import {
+    JAY_CONTRACT_EXTENSION,
+    JayBoolean,
+    JayString,
+    JayType,
+    prettify,
+    WithValidations,
+} from 'jay-compiler-shared';
+import path from 'path';
+import { ResolveTsConfigOptions } from 'jay-compiler-analyze-exported-types';
 
 describe('compile contract', () => {
     const noHopResolver: JayImportResolver = {
@@ -13,7 +26,7 @@ describe('compile contract', () => {
         },
         resolveLink: (link: string, importingModule: string) => {
             throw new Error(`Unknown link: ${link}`);
-        }
+        },
     };
     it('should compile counter contract', async () => {
         const contract = `
@@ -492,8 +505,8 @@ describe('compile contract', () => {
                 throw new Error(`Unknown link: ${path}`);
             },
             resolveLink: (importingModule: string, link: string) => {
-                return path.relative(importingModule, link)
-            }
+                return path.relative(importingModule, link);
+            },
         };
 
         it('should compile contract with linked sub-contract', async () => {
