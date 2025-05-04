@@ -1,6 +1,6 @@
 import {
     checkValidationErrors,
-    GenerateTarget,
+    GenerateTarget, JAY_CONTRACT_EXTENSION, JayType,
     MainRuntimeModes,
     prettify,
     removeComments,
@@ -8,11 +8,15 @@ import {
     WithValidations,
 } from 'jay-compiler-shared';
 import { promises } from 'node:fs';
-import path from 'node:path';
-import { parseJayFile } from '../../lib/jay-target/jay-html-parser';
-import { JayHtmlSourceFile } from '../../lib/jay-target/jay-html-source-file';
-import { generateElementBridgeFile, generateElementFileReactTarget } from '../../lib';
-import { generateElementFile } from '../../lib/jay-target/jay-html-compiler';
+import { parseJayFile } from '../../lib';
+import { JayHtmlSourceFile } from '../../lib';
+import {
+    generateElementBridgeFile,
+    generateElementFileReactTarget,
+} from '../../lib';
+import { generateElementFile } from '../../lib';
+import path from "path";
+import {JAY_IMPORT_RESOLVER} from "../../lib/jay-target/jay-import-resolver";
 
 const { readFile } = promises;
 
@@ -38,6 +42,10 @@ export async function readFixtureFileRaw(folder, filename): Promise<string> {
 
 export async function readFixtureSourceJayFile(folder, file) {
     return readFixtureFileRaw(folder, `${file}.jay-html`);
+}
+
+export async function readFixtureJayContractFile(folder, file) {
+    return readFixtureFileRaw(folder, `${file}${JAY_CONTRACT_EXTENSION}`);
 }
 
 export async function readFixtureElementBridgeFile(folder) {
@@ -70,7 +78,7 @@ export async function readFileAndGenerateElementBridgeFile(folder: string, given
     const file = givenFile || getFileFromFolder(folder);
     const jayFile = await readFixtureSourceJayFile(folder, file);
     const parsedFile = checkValidationErrors(
-        parseJayFile(jayFile, `${file}.jay-html`, dirname, {}),
+        await parseJayFile(jayFile, `${file}.jay-html`, dirname, {}, JAY_IMPORT_RESOLVER),
     );
     return generateElementBridgeFile(parsedFile);
 }
@@ -83,7 +91,7 @@ export async function readAndParseJayFile(
     const dirname = fixtureDir(folder);
     const filename = `${file}.jay-html`;
     const code = await readFixtureSourceJayFile(folder, file);
-    return parseJayFile(code, filename, dirname, {});
+    return await parseJayFile(code, filename, dirname, {}, JAY_IMPORT_RESOLVER);
 }
 
 export interface ReadFileAndGenerateElementFileOptions {
@@ -103,7 +111,7 @@ export async function readFileAndGenerateElementFile(
     const file = givenFile || getFileFromFolder(folder);
     const jayFile = await readFixtureSourceJayFile(folder, file);
     const parsedFile = checkValidationErrors(
-        parseJayFile(jayFile, `${file}.jay-html`, dirname, {}),
+        await parseJayFile(jayFile, `${file}.jay-html`, dirname, {}, JAY_IMPORT_RESOLVER),
     );
     if (options?.generateTarget === GenerateTarget.react)
         return generateElementFileReactTarget(parsedFile, importerMode);

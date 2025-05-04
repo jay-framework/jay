@@ -8,10 +8,28 @@ import {
     JayObjectType,
     JayString,
     JayTypeKind,
+    WithValidations,
 } from 'jay-compiler-shared';
 import { stripMargin } from './test-utils/strip-margin';
+import { JayImportResolver } from '../lib';
+import { Contract } from '../lib';
+import { ResolveTsConfigOptions } from 'jay-compiler-analyze-exported-types';
+import { JayType } from 'jay-compiler-shared';
+import {JAY_IMPORT_RESOLVER} from "../lib/jay-target/jay-import-resolver";
 
 describe('compiler', () => {
+    const defaultImportResolver: JayImportResolver = {
+        resolveLink(importingModule: string, link: string): string {
+            throw new Error('Not implemented');
+        },
+        loadContract(fullPath: string): WithValidations<Contract> {
+            throw new Error('Not implemented');
+        },
+        analyzeExportedTypes(fullPath: string, options: ResolveTsConfigOptions): JayType[] {
+            throw new Error('Not implemented');
+        }
+    };
+
     function jayFileWith(jayYaml, body, scripts?) {
         return stripMargin(
             ` <html>
@@ -26,8 +44,8 @@ describe('compiler', () => {
     }
 
     describe('parse jay file', () => {
-        it('should parse simple string type with no examples', () => {
-            let jayFile = parseJayFile(
+        it('should parse simple string type with no examples', async () => {
+            let jayFile = await parseJayFile(
                 jayFileWith(
                     `data:
                         |   text: string
@@ -37,6 +55,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
+                defaultImportResolver
             );
 
             expect(jayFile.val.types).toEqual(
@@ -44,8 +63,8 @@ describe('compiler', () => {
             );
         });
 
-        it('should append the base name to the view state type', () => {
-            let jayFile = parseJayFile(
+        it('should append the base name to the view state type', async () => {
+            let jayFile = await parseJayFile(
                 jayFileWith(
                     `data:
                         |   text: string
@@ -55,6 +74,7 @@ describe('compiler', () => {
                 'BaseElementName',
                 '',
                 {},
+                defaultImportResolver
             );
 
             expect(jayFile.val.types).toEqual(
@@ -62,8 +82,8 @@ describe('compiler', () => {
             );
         });
 
-        it('should parse invalid type', () => {
-            let jayFile = parseJayFile(
+        it('should parse invalid type', async () => {
+            let jayFile = await parseJayFile(
                 jayFileWith(
                     ` data:
                         |   text: bla`,
@@ -72,13 +92,14 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
+                defaultImportResolver
             );
 
             expect(jayFile.validations).toEqual(['invalid type [bla] found at [data.text]']);
         });
 
-        it('should parse complex types', () => {
-            let jayFile = parseJayFile(
+        it('should parse complex types', async () => {
+            let jayFile = await parseJayFile(
                 jayFileWith(
                     ` data:
                         |   s1: string
@@ -95,6 +116,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
+                defaultImportResolver
             );
 
             expect(jayFile.val.types).toEqual(
@@ -116,8 +138,8 @@ describe('compiler', () => {
             );
         });
 
-        it('should parse enum types', () => {
-            let jayFile = parseJayFile(
+        it('should parse enum types', async () => {
+            let jayFile = await parseJayFile(
                 jayFileWith(
                     ` data:
                         |   an_enum: enum(one | two | three)`,
@@ -126,6 +148,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
+                defaultImportResolver
             );
 
             expect(jayFile.val.types).toEqual(
@@ -135,8 +158,8 @@ describe('compiler', () => {
             );
         });
 
-        it('should parse import scripts', () => {
-            let jayFile = parseJayFile(
+        it('should parse import scripts', async () => {
+            let jayFile = await parseJayFile(
                 jayFileWith(
                     ` data:
                         |   s1: string
@@ -151,6 +174,7 @@ describe('compiler', () => {
                 'Base',
                 './test',
                 {},
+                JAY_IMPORT_RESOLVER
             );
 
             expect(jayFile.validations).toEqual([]);
@@ -256,8 +280,8 @@ describe('compiler', () => {
             );
         });
 
-        it('should parse namespaces types', () => {
-            let jayFile = parseJayFile(
+        it('should parse namespaces types', async () => {
+            let jayFile = await parseJayFile(
                 `
                     <html xmlns:svg="http://www.w3.org/2000/svg">
                         <head>
@@ -273,6 +297,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
+                defaultImportResolver
             );
 
             expect(jayFile.val.namespaces).toEqual([
@@ -280,8 +305,8 @@ describe('compiler', () => {
             ]);
         });
 
-        it('should report on a file with two jay-data scripts', () => {
-            let jayFile = parseJayFile(
+        it('should report on a file with two jay-data scripts', async () => {
+            let jayFile = await parseJayFile(
                 stripMargin(
                     `<html>
                 |    <head>
@@ -300,14 +325,15 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
+                defaultImportResolver
             );
             expect(jayFile.validations).toEqual([
                 'jay file should have exactly one jay-data script, found 2',
             ]);
         });
 
-        it('should report on a file without jay-data script', () => {
-            let jayFile = parseJayFile(
+        it('should report on a file without jay-data script', async () => {
+            let jayFile = await parseJayFile(
                 stripMargin(
                     `<html>
                 |    <head>
@@ -318,21 +344,28 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
+                defaultImportResolver
             );
             expect(jayFile.validations).toEqual([
                 'jay file should have exactly one jay-data script, found none',
             ]);
         });
 
-        it('should report on a non html file', () => {
-            let jayFile = parseJayFile(`rrgargaergargaerg aergaegaraer aer erager`, 'Base', '', {});
+        it('should report on a non html file', async () => {
+            let jayFile = await parseJayFile(
+                `rrgargaergargaerg aergaegaraer aer erager`,
+                'Base',
+                '',
+                {},
+                defaultImportResolver
+            );
             expect(jayFile.validations).toEqual([
                 'jay file should have exactly one jay-data script, found none',
             ]);
         });
 
-        it('should report on a file without a body', () => {
-            let jayFile = parseJayFile(
+        it('should report on a file without a body', async () => {
+            let jayFile = await parseJayFile(
                 stripMargin(
                     `<html>
                 |    <head>
@@ -346,12 +379,13 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
+                defaultImportResolver
             );
             expect(jayFile.validations).toEqual(['jay file must have exactly a body tag']);
         });
 
-        it('should report on import missing names property', () => {
-            let jayFile = parseJayFile(
+        it('should report on import missing names property', async () => {
+            let jayFile = await parseJayFile(
                 jayFileWith(
                     `data:
                         |   s1: string
@@ -362,6 +396,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
+                JAY_IMPORT_RESOLVER
             );
 
             expect(jayFile.validations.length).toEqual(1);
@@ -370,8 +405,8 @@ describe('compiler', () => {
             );
         });
 
-        it('should report on import empty names property', () => {
-            let jayFile = parseJayFile(
+        it('should report on import empty names property', async () => {
+            let jayFile = await parseJayFile(
                 jayFileWith(
                     `data:
                         |   s1: string
@@ -382,6 +417,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
+                JAY_IMPORT_RESOLVER
             );
 
             expect(jayFile.validations.length).toEqual(1);
@@ -390,8 +426,8 @@ describe('compiler', () => {
             );
         });
 
-        it('should report on import file not found', () => {
-            let jayFile = parseJayFile(
+        it('should report on import file not found', async () => {
+            let jayFile = await parseJayFile(
                 jayFileWith(
                     `data:
                         |   s1: string
@@ -402,6 +438,7 @@ describe('compiler', () => {
                 'Base',
                 '',
                 {},
+                JAY_IMPORT_RESOLVER
             );
 
             expect(jayFile.validations[0]).toContain(

@@ -21,10 +21,6 @@ interface ParsedYaml {
     tags: Array<ParsedYamlTag>;
 }
 
-export interface LinkedContractResolver {
-    loadContract(link: string): Promise<Contract>;
-}
-
 function parseDataType(tag: string, dataType: string): JayType | undefined {
     if (!dataType) return undefined;
     if (parseIsEnum(dataType)) {

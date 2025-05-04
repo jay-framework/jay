@@ -1,0 +1,6 @@
+name: named contract
+tags:
+  - tag: title
+  - tag: counter
+    type: sub-contract
+    link: ../counter/counter.jay-contract

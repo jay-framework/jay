@@ -21,6 +21,8 @@ import { JayYamlStructure } from './jay-yaml-structure';
 
 import { JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
 
+import {JayImportResolver} from "./jay-import-resolver";
+
 export function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj);
 }
@@ -112,28 +114,26 @@ function parseYaml(root: HTMLElement): WithValidations<JayYamlStructure> {
     return new WithValidations(jayYamlParsed, validations);
 }
 
-function parseImports(
+function parseHeadfullImports(
     elements: HTMLElement[],
     validations: JayValidations,
     filePath: string,
     options: ResolveTsConfigOptions,
+    importResolver: JayImportResolver
 ): JayImportLink[] {
     return elements.map((element) => {
-        const type = element.getAttribute('type');
         const module = element.getAttribute('src');
         const rawNames = element.getAttribute('names');
         const sandboxAttribute = element.getAttribute('sandbox');
-        const kind =
-            type === 'application/jay-headfull' ? JayImportKind.headfull : JayImportKind.headless;
         const sandbox =
             sandboxAttribute === '' || (Boolean(sandboxAttribute) && sandboxAttribute !== 'false');
         try {
+            const importedFile = importResolver.resolveLink(filePath, module);
             const names = parseImportNames(rawNames);
             if (names.length === 0)
                 validations.push(`import for module ${module} does not specify what to import`);
 
-            const importedFile = path.resolve(filePath, module);
-            const exportedTypes = analyzeExportedTypes(importedFile, options);
+            const exportedTypes = importResolver.analyzeExportedTypes(importedFile, options);
 
             for (const name of names) {
                 const exportedType = exportedTypes.find((_) => _.name === name.name);
@@ -148,8 +148,7 @@ function parseImports(
                         `failed to find exported member ${name.name} type in module ${module}`,
                     );
             }
-
-            return { module, names, sandbox, kind };
+            return { module, names, sandbox, kind: JayImportKind.headfull };
         } catch (e) {
             validations.push(
                 `failed to parse import names for module ${module} - ${e.message}${e.stack}`,
@@ -159,16 +158,30 @@ function parseImports(
     });
 }
 
+async function parseHeadlessImports(
+    elements: HTMLElement[],
+    validations: Array<string>,
+    filePath: string,
+    linkedContractResolver: JayImportResolver) {
+
+    for await (const element of elements) {
+
+    }
+
+}
+
 function normalizeFilename(filename: string): string {
     return filename.replace('.jay-html', '');
 }
 
-export function parseJayFile(
+
+export async function parseJayFile(
     html: string,
     filename: string,
     filePath: string,
     options: ResolveTsConfigOptions,
-): WithValidations<JayHtmlSourceFile> {
+    linkedContractResolver: JayImportResolver
+): Promise<WithValidations<JayHtmlSourceFile>> {
     const normalizedFileName = normalizeFilename(filename);
     const baseElementName = capitalCase(normalizedFileName, { delimiter: '' });
     const root = parse(html);
@@ -177,15 +190,22 @@ export function parseJayFile(
     const { val: jayYaml, validations } = parseYaml(root);
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
-    let imports = parseImports(
+    const headfullImports = parseHeadfullImports(
         root.querySelectorAll(
-            'script[type="application/jay-headfull"], script[type="application/jay-headless"]',
+            'script[type="application/jay-headfull"]',
         ),
         validations,
         filePath,
         options,
+        linkedContractResolver
     );
-    const importNames = imports.flatMap((_) => _.names);
+    const headlessImports = await parseHeadlessImports(
+        root.querySelectorAll('script[type="application/jay-headless"]'),
+        validations,
+        filePath,
+        linkedContractResolver
+    )
+    const importNames = headfullImports.flatMap((_) => _.names);
     const types = parseTypes(jayYaml, validations, baseElementName, importNames);
 
     if (validations.length > 0) return new WithValidations(undefined, validations);
@@ -199,7 +219,7 @@ export function parseJayFile(
         {
             format: SourceFileFormat.JayHtml,
             types,
-            imports,
+            imports: headfullImports,
             body,
             baseElementName,
             namespaces,

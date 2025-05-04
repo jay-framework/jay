@@ -1,22 +1,22 @@
 import {
-    JayArrayType,
-    JayObjectType,
-    WithValidations,
-    Imports,
-    JayType,
-    Ref,
-    JayEnumType,
-    ImportsFor,
-    JayUnknown,
-    JayImportedContract,
-    JayHTMLType,
-    JAY_CONTRACT_EXTENSION,
     Import,
+    Imports,
+    ImportsFor,
+    JAY_CONTRACT_EXTENSION,
+    JayArrayType,
+    JayEnumType,
+    JayHTMLType,
+    JayImportedContract,
+    JayObjectType,
+    JayType,
+    JayUnknown,
+    Ref,
+    WithValidations,
 } from 'jay-compiler-shared';
-import { Contract, ContractTag, ContractTagType } from './contract';
-import { renderRefsType, generateTypes } from '../';
-import { camelCase, pascalCase } from 'change-case';
-import { LinkedContractResolver } from './contract-parser';
+import {Contract, ContractTag, ContractTagType} from './contract';
+import {generateTypes, JayImportResolver, parseContract, renderRefsType} from '../';
+import {camelCase, pascalCase} from 'change-case';
+import fs from "node:fs/promises";
 
 interface JayContractImportLink {
     module: string;
@@ -36,18 +36,23 @@ interface ContractTraversalContext {
     viewStateType: JayType;
     isRepeated: boolean;
     path: string[];
+    contractFilePath: string;
 }
 
 async function traverseContractTag(
     context: ContractTraversalContext,
-    linkedContractResolver: LinkedContractResolver,
+    importResolver: JayImportResolver,
 ): Promise<TraverseResult> {
     const { tag, viewStateType, isRepeated, path } = context;
     if (tag.type.includes(ContractTagType.subContract)) {
         if (tag.link) {
-            const subContract = await linkedContractResolver.loadContract(tag.link);
+            const linkWithExtension = tag.link.endsWith(JAY_CONTRACT_EXTENSION)?
+                tag.link: tag.link + JAY_CONTRACT_EXTENSION;
+            const subContractPath = importResolver.resolveLink(context.contractFilePath, linkWithExtension);
+            const subContract = importResolver.loadContract(subContractPath);
             const subContractFile = tag.link.replace(JAY_CONTRACT_EXTENSION, '');
-            const contractName = subContract.name;
+            // todo handle invalid contract
+            const contractName = subContract.val.name;
             const viewState = `${pascalCase(contractName)}ViewState`;
             const refs = `${pascalCase(contractName)}Refs`;
             const repeatedRefs = `${pascalCase(contractName)}RepeatedRefs`;
@@ -94,8 +99,9 @@ async function traverseContractTag(
                     viewStateType: subViewStateType,
                     isRepeated: isRepeated || tag.repeated,
                     path: [...path, tag.tag],
+                    contractFilePath: context.contractFilePath
                 },
-                linkedContractResolver,
+                importResolver,
             );
             importLinks = [...importLinks, ...result.importLinks];
             refs = [...refs, ...result.refs];
@@ -169,7 +175,8 @@ function renderImports(imports: Imports, importedLinks: JayContractImportLink[])
 
 export async function compileContract(
     contractWithValidations: WithValidations<Contract>,
-    linkedContractResolver: LinkedContractResolver,
+    contractFilePath: string,
+    linkedContractResolver: JayImportResolver,
 ): Promise<WithValidations<string>> {
     return contractWithValidations.mapAsync(async (contract) => {
         const props: Record<string, JayType> = {};
@@ -184,6 +191,7 @@ export async function compileContract(
                     viewStateType,
                     isRepeated: false,
                     path: [],
+                    contractFilePath
                 },
                 linkedContractResolver,
             );

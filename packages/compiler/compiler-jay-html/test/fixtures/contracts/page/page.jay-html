@@ -1,0 +1,17 @@
+<html>
+<head>
+    <script type="application/jay-headless" src="../named-counter/named-counter.jay-contract"
+            key="namedCounter"></script>
+    <script type="application/jay-data">
+data:
+    </script>
+</head>
+<body>
+<div>
+    <h1>{namedCounter.title}</h1>
+    <div>value: {namedCounter.counter.count}</div>
+    <button ref="namedCounter.counter.add">add</button>
+    <button ref="namedCounter.counter.subtract">subtract</button>
+</div>
+</body>
+</html>
