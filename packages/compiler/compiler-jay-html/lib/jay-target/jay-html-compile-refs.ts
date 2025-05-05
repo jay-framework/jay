@@ -15,7 +15,6 @@ import {
 } from 'jay-compiler-shared';
 import { HTMLElement } from 'node-html-parser';
 import { htmlElementTagNameMap } from './html-element-tag-name-map';
-import { pascalCase } from 'change-case';
 import { camelCase } from 'camel-case';
 import { Indent } from './indent';
 

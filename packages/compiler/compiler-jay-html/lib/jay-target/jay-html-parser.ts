@@ -1,5 +1,5 @@
 import { HTMLElement, parse } from 'node-html-parser';
-import { JayValidations, WithValidations } from 'jay-compiler-shared';
+import {JayImportedContract, JayValidations, Ref, WithValidations} from 'jay-compiler-shared';
 import yaml from 'js-yaml';
 import { capitalCase, pascalCase } from 'change-case';
 import pluralize from 'pluralize';
@@ -22,6 +22,7 @@ import { JayYamlStructure } from './jay-yaml-structure';
 import { JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
 
 import { JayImportResolver } from './jay-import-resolver';
+import {contractToImportsViewStateAndRefs} from "../contract";
 
 export function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj);
@@ -158,14 +159,43 @@ function parseHeadfullImports(
     });
 }
 
+interface JayHeadlessImports {
+    key: string,
+    allRefs: Ref[],
+    rootType: JayType
+}
 async function parseHeadlessImports(
     elements: HTMLElement[],
     validations: Array<string>,
     filePath: string,
-    linkedContractResolver: JayImportResolver,
-) {
+    importResolver: JayImportResolver,
+): Promise<JayHeadlessImports[]> {
+    const result: JayHeadlessImports[] = [];
     for await (const element of elements) {
+        const module = element.getAttribute('src');
+        const key = element.getAttribute('key');
+        const importedFile = importResolver.resolveLink(filePath, module);
+        try {
+            const subContract = importResolver.loadContract(importedFile);
+            validations.push(...subContract.validations)
+            await subContract.mapAsync(async contract => {
+                const contractName = subContract.val.name;
+                const {type, refs} = await contractToImportsViewStateAndRefs(contract, path.dirname(importedFile), importResolver)
+                result.push({key, allRefs: refs, rootType:type})
+                // const viewState = `${pascalCase(contractName)}ViewState`;
+                // const refs = `${pascalCase(contractName)}Refs`;
+                // const repeatedRefs = `${pascalCase(contractName)}RepeatedRefs`;
+                // const contractType = new JayImportedContract(contractName, viewState, refs, repeatedRefs);
+            })
+        }
+        catch (e) {
+            validations.push(
+                `failed to parse linked contract ${module} - ${e.message}${e.stack}`,
+            );
+        }
+
     }
+    return result;
 }
 
 function normalizeFilename(filename: string): string {
@@ -200,6 +230,7 @@ export async function parseJayFile(
         filePath,
         linkedContractResolver,
     );
+    console.log(headlessImports);
     const importNames = headfullImports.flatMap((_) => _.names);
     const types = parseTypes(jayYaml, validations, baseElementName, importNames);
 
