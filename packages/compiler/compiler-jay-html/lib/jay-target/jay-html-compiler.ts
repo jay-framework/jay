@@ -13,6 +13,7 @@ import {
     RenderFragment,
     RuntimeMode,
     WithValidations,
+    nestRefs
 } from 'jay-compiler-shared';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
@@ -169,18 +170,6 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
     }
 }
 
-function nestRefs(path: string[], renderFragment: RenderFragment): RenderFragment {
-    let refs = renderFragment.refs;
-    for (let index = path.length - 1; index >= 0; --index) {
-        refs = mkRefsTree([], {[path[index]]:refs}, refs.repeated)
-    }
-    return new RenderFragment(
-        renderFragment.rendered,
-        renderFragment.imports,
-        renderFragment.validations,
-        refs
-    );
-}
 
 function renderChildCompRef(
     element: HTMLElement,

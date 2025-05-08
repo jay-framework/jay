@@ -42,6 +42,20 @@ export function hasRefs(refs: RefsTree, includingAutoRefs: boolean) {
             .reduce((prev, curr) => prev || curr, false);
 }
 
+export function nestRefs(path: string[], renderFragment: RenderFragment): RenderFragment {
+    let refs = renderFragment.refs;
+    for (let index = path.length - 1; index >= 0; --index) {
+        refs = mkRefsTree([], {[path[index]]:refs}, refs.repeated)
+    }
+    return new RenderFragment(
+        renderFragment.rendered,
+        renderFragment.imports,
+        renderFragment.validations,
+        refs
+    );
+}
+
+
 export function mkRefsTree(refs: Ref[], children: Record<string, RefsTree>, repeated: boolean = false, refsTypeName?: string, repeatedRefsTypeName?: string): RefsTree {
     if (refsTypeName)
         return {kind: 'refTree', refs, children, repeated, imported: {refsTypeName, repeatedRefsTypeName}};
