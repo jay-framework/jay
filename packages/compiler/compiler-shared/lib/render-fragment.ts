@@ -2,14 +2,23 @@ import { JayValidations } from './with-validations';
 import { Imports } from './imports';
 import { JayType } from './jay-type';
 
+export interface ImportedRefsTree {
+    readonly refsTypeName: string;
+    readonly repeatedRefsTypeName: string;
+}
+
 export interface RefsTree {
     readonly kind: 'refTree',
     readonly refs: Ref[];
     readonly children: Record<string, RefsTree>;
+    readonly imported?: ImportedRefsTree
 }
 
-export function refsTree(refs: Ref[], children: Record<string, RefsTree>): RefsTree {
-    return {kind: 'refTree', refs, children};
+export function refsTree(refs: Ref[], children: Record<string, RefsTree>, refsTypeName?: string, repeatedRefsTypeName?: string): RefsTree {
+    if (refsTypeName)
+        return {kind: 'refTree', refs, children, imported: {refsTypeName, repeatedRefsTypeName}};
+    else
+        return {kind: 'refTree', refs, children};
 }
 
 export interface Ref {

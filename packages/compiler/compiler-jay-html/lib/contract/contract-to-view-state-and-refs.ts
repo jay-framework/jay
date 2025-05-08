@@ -102,7 +102,7 @@ async function traverseLinkedSubContract(tag: ContractTag, context: ContractTrav
         const contractName = subContract.val.name;
         const viewState = `${pascalCase(contractName)}ViewState`;
         const refsTypeName = `${pascalCase(contractName)}Refs`;
-        const repeatedRefs = `${pascalCase(contractName)}RepeatedRefs`;
+        const repeatedRefsTypeName = `${pascalCase(contractName)}RepeatedRefs`;
 
         const subContractTypes = await contractToImportsViewStateAndRefs(subContract.val, path.dirname(subContractPath), importResolver)
         if (subContractTypes.val) {
@@ -121,12 +121,12 @@ async function traverseLinkedSubContract(tag: ContractTag, context: ContractTrav
                     module: subContractFile,
                     viewState,
                     refs: refsTypeName,
-                    repeatedRefs,
+                    repeatedRefs: repeatedRefsTypeName,
                 },
             ];
 
             const refs = refsTree([], {
-                [tag.tag]: subContractRefsTree
+                [tag.tag]: refsTree(subContractRefsTree.refs, subContractRefsTree.children, refsTypeName, repeatedRefsTypeName)
             })
 
             return new WithValidations<SubContractTraverseResult>({
