@@ -8,7 +8,7 @@ import {
     JayImportLink,
     JayType,
     JayUnknown,
-    MainRuntimeModes,
+    MainRuntimeModes, mkRef, mkRefsTree,
     RenderFragment,
     RuntimeMode,
     WithValidations,
@@ -128,17 +128,9 @@ function renderElementRef(
         let originalName = element.attributes.ref;
         let refName = camelCase(originalName);
         let constName = camelCase(`ref ${refName}`);
-        let refs = [
-            {
-                ref: refName,
-                path: forEachAccessPath,
-                constName,
-                dynamicRef,
-                autoRef: false,
-                elementType: elementNameToJayType(element),
-                viewStateType: variables.currentType,
-            },
-        ];
+        let refs = mkRefsTree([
+            mkRef(refName, constName, dynamicRef, false, variables.currentType, elementNameToJayType(element))
+        ], {});
         return new RenderFragment(`${constName}()`, Imports.none(), [], refs);
     } else return RenderFragment.empty();
 }
@@ -166,7 +158,7 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
 
     if (isPropsDirectAssignment) {
         let prop = parseComponentPropExpression(attributes.props, variables);
-        return RenderFragment.merge(prop, new RenderFragment('', imports, [], []));
+        return RenderFragment.merge(prop, new RenderFragment('', imports, []));
     } else {
         return props
             .reduce(
@@ -184,17 +176,9 @@ function renderChildCompRef(
     let originalName = element.attributes.ref || nextAutoRefName();
     let refName = camelCase(originalName);
     let constName = camelCase(`ref ${refName}`);
-    let refs = [
-        {
-            ref: refName,
-            path: forEachAccessPath,
-            constName,
-            dynamicRef,
-            autoRef: !element.attributes.ref,
-            elementType: new JayComponentType(element.rawTagName, []),
-            viewStateType: variables.currentType,
-        },
-    ];
+    let refs = mkRefsTree([
+        mkRef(refName, constName, dynamicRef, !element.attributes.ref, variables.currentType, new JayComponentType(element.rawTagName, []))
+    ], {});
     return new RenderFragment(`${constName}()`, Imports.for(), [], refs);
 }
 

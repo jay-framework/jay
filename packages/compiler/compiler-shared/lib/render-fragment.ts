@@ -15,7 +15,7 @@ export interface RefsTree {
     readonly repeated: boolean
 }
 
-export function refsTree(refs: Ref[], children: Record<string, RefsTree>, repeated: boolean = false, refsTypeName?: string, repeatedRefsTypeName?: string): RefsTree {
+export function mkRefsTree(refs: Ref[], children: Record<string, RefsTree>, repeated: boolean = false, refsTypeName?: string, repeatedRefsTypeName?: string): RefsTree {
     if (refsTypeName)
         return {kind: 'refTree', refs, children, repeated, imported: {refsTypeName, repeatedRefsTypeName}};
     else
@@ -25,7 +25,6 @@ export function refsTree(refs: Ref[], children: Record<string, RefsTree>, repeat
 export interface Ref {
     readonly kind: 'ref',
     ref: string;
-    path: string[];
     constName: string;
     dynamicRef: boolean;
     autoRef: boolean;
@@ -33,8 +32,7 @@ export interface Ref {
     elementType: JayType;
 }
 
-export function ref(ref: string,
-                    path: string[],
+export function mkRef(ref: string,
                     constName: string,
                     dynamicRef: boolean,
                     autoRef: boolean,
@@ -42,7 +40,7 @@ export function ref(ref: string,
                     elementType: JayType
 ): Ref {
     return {
-       kind: "ref", ref, path, constName, dynamicRef, autoRef, viewStateType, elementType
+       kind: "ref", ref, constName, dynamicRef, autoRef, viewStateType, elementType
     }
 }
 
@@ -50,13 +48,13 @@ export class RenderFragment {
     rendered: string;
     imports: Imports;
     validations: JayValidations;
-    refs: Array<Ref>;
+    refs: RefsTree;
 
     constructor(
         rendered: string,
         imports: Imports = Imports.none(),
         validations: JayValidations = [],
-        refs: Array<Ref> = [],
+        refs: RefsTree = mkRefsTree([], {}),
     ) {
         this.rendered = rendered;
         this.imports = imports;
@@ -86,17 +84,22 @@ export class RenderFragment {
         fragment2: RenderFragment,
         combinator: string = '',
     ): RenderFragment {
-        let rendered =
+        const rendered =
             !!fragment1.rendered && !!fragment2.rendered
                 ? `${fragment1.rendered}${combinator}${fragment2.rendered}`
                 : !!fragment1.rendered
                   ? fragment1.rendered
                   : fragment2.rendered;
+        const newRefsTree = mkRefsTree(
+            [...fragment1.refs.refs, ...fragment2.refs.refs],
+            {...fragment1.refs.children, ...fragment2.refs.children},
+            fragment1.refs.repeated
+            )
         return new RenderFragment(
             rendered,
             Imports.merge(fragment1.imports, fragment2.imports),
             [...fragment1.validations, ...fragment2.validations],
-            [...fragment1.refs, ...fragment2.refs],
+            newRefsTree,
         );
     }
 }

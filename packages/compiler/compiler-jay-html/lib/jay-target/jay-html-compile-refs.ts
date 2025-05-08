@@ -7,7 +7,7 @@ import {
     JayHTMLType,
     JayType,
     JayTypeAlias,
-    JayUnionType,
+    JayUnionType, mkRefsTree,
     Ref, RefsTree,
     RenderFragment,
 } from 'jay-compiler-shared';
@@ -136,38 +136,49 @@ export function optimizeRefs({
     validations,
     refs,
 }: RenderFragment): RenderFragment {
-    const mergedRefsMap = refs.reduce((refsMap, ref) => {
-        if (refsMap[ref.ref] === ref.ref) {
-            const firstRef: Ref = refsMap[ref.ref];
-            if (!equalJayTypes(firstRef.viewStateType, ref.viewStateType))
-                validations.push(
-                    `invalid usage of refs: the ref [${ref.ref}] is used with two different view types [${firstRef.viewStateType.name}, ${ref.viewStateType.name}]`,
-                );
-            else if (firstRef.dynamicRef !== ref.dynamicRef)
-                validations.push(
-                    `invalid usage of refs: the ref [${ref.ref}] is used once with forEach and second time without`,
-                );
-            else {
-                if (!equalJayTypes(firstRef.elementType, ref.elementType)) {
-                    if (firstRef.elementType instanceof JayUnionType) {
-                        if (!firstRef.elementType.hasType(ref.elementType))
+    // todo handle full tree
+    const optimizeRefsTree = (refs: RefsTree): RefsTree => {
+        const mergedRefsMap = refs.refs.reduce((refsMap, ref) => {
+            if (refsMap[ref.ref] === ref.ref) {
+                const firstRef: Ref = refsMap[ref.ref];
+                if (!equalJayTypes(firstRef.viewStateType, ref.viewStateType))
+                    validations.push(
+                        `invalid usage of refs: the ref [${ref.ref}] is used with two different view types [${firstRef.viewStateType.name}, ${ref.viewStateType.name}]`,
+                    );
+                else if (firstRef.dynamicRef !== ref.dynamicRef)
+                    validations.push(
+                        `invalid usage of refs: the ref [${ref.ref}] is used once with forEach and second time without`,
+                    );
+                else {
+                    if (!equalJayTypes(firstRef.elementType, ref.elementType)) {
+                        if (firstRef.elementType instanceof JayUnionType) {
+                            if (!firstRef.elementType.hasType(ref.elementType))
+                                firstRef.elementType = new JayUnionType([
+                                    ...firstRef.elementType.ofTypes,
+                                    ref.elementType,
+                                ]);
+                        } else
                             firstRef.elementType = new JayUnionType([
-                                ...firstRef.elementType.ofTypes,
+                                firstRef.elementType,
                                 ref.elementType,
                             ]);
-                    } else
-                        firstRef.elementType = new JayUnionType([
-                            firstRef.elementType,
-                            ref.elementType,
-                        ]);
+                    }
                 }
-            }
-        } else refsMap[ref.ref] = ref;
-        return refsMap;
-    }, {});
+            } else refsMap[ref.ref] = ref;
+            return refsMap;
+        }, {});
+        const mergedRefs: Ref[] = Object.values(mergedRefsMap);
+        const optimizedChildren =
+        Object.fromEntries(
+            Object
+            .entries(refs.children)
+            .map(([key, child]) => [key, optimizeRefsTree(child)]));
 
-    const mergedRefs: Ref[] = Object.values(mergedRefsMap);
-    return new RenderFragment(rendered, imports, validations, mergedRefs);
+        return mkRefsTree(mergedRefs, optimizedChildren, refs.repeated, refs?.imported?.refsTypeName,
+            refs?.imported?.repeatedRefsTypeName)
+    }
+
+    return new RenderFragment(rendered, imports, validations, optimizeRefsTree(refs));
 }
 
 export enum ReferenceManagerTarget {

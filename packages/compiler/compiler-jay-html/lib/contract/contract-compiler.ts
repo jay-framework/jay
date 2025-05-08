@@ -3,7 +3,7 @@ import {
     Imports,
     ImportsFor,
     JAY_CONTRACT_EXTENSION,
-    refsTree,
+    mkRefsTree,
     RefsTree,
     WithValidations,
 } from 'jay-compiler-shared';
@@ -14,7 +14,7 @@ import {contractToImportsViewStateAndRefs, JayContractImportLink} from "./contra
 
 function refsToRepeated(refsTreeNode: RefsTree): RefsTree {
     const {refs, children, imported} = refsTreeNode;
-    return refsTree(
+    return mkRefsTree(
         refs.map((ref) => ({
             ...ref,
             dynamicRef: true,

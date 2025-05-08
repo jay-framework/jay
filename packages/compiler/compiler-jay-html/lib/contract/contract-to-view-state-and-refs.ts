@@ -10,7 +10,7 @@ import {
     JayObjectType,
     JayType,
     JayUnknown, JayValidations,
-    Ref, refsTree, RefsTree, WithValidations
+    Ref, mkRefsTree, RefsTree, WithValidations
 } from "jay-compiler-shared";
 import {camelCase, pascalCase} from "change-case";
 import path from "path";
@@ -37,13 +37,12 @@ interface TagTraverseResult {
 interface ContractTraversalContext {
     viewStateType: JayType;
     isRepeated: boolean;
-    contractNesting: string[];
     contractFilePath: string;
     importResolver: JayImportResolver
 }
 
 async function traverseTags(tags: ContractTag[], typeName: string, context: ContractTraversalContext) {
-    const {isRepeated, contractNesting} = context;
+    const {isRepeated} = context;
     const objectTypeMembers: Record<string, JayType> = {};
     let importLinks: JayContractImportLink[] = [];
     const refs: Ref[] = [];
@@ -58,7 +57,6 @@ async function traverseTags(tags: ContractTag[], typeName: string, context: Cont
                     ...context,
                     viewStateType: objectType,
                     isRepeated: isRepeated || subTag.repeated,
-                    contractNesting: [...contractNesting, subTag.tag],
                 }
             );
             if (subContractTypes.val) {
@@ -84,7 +82,7 @@ async function traverseTags(tags: ContractTag[], typeName: string, context: Cont
     const type = isRepeated ? new JayArrayType(objectType) : objectType;
 
     return new WithValidations<SubContractTraverseResult>(
-        {type, refs: refsTree(refs, childRefs, context.isRepeated), importLinks}, validations);
+        {type, refs: mkRefsTree(refs, childRefs, context.isRepeated), importLinks}, validations);
 }
 
 async function traverseLinkedSubContract(tag: ContractTag, context: ContractTraversalContext) {
@@ -111,16 +109,11 @@ async function traverseLinkedSubContract(tag: ContractTag, context: ContractTrav
             const {
                 type: subContractType,
                 refs: subContractRefsTree,
-                importLinks: subContractImportLinks
             } = subContractTypes.val;
 
             const type = isArrayType(subContractType)?
                 new JayArrayType(new JayImportedType(viewState, subContractType.itemType)):
                 new JayImportedType(viewState, subContractType)
-
-            // const type = tag.repeated || isRepeated ?
-            //     new JayImportedType(viewState, new JayArrayType(subContractType)) :
-            //     new JayImportedType(viewState, subContractType);
 
             const importLinks: JayContractImportLink[] = [
                 {
@@ -131,7 +124,7 @@ async function traverseLinkedSubContract(tag: ContractTag, context: ContractTrav
                 },
             ];
 
-            const refs = refsTree(subContractRefsTree.refs,
+            const refs = mkRefsTree(subContractRefsTree.refs,
                 subContractRefsTree.children,
                 subContractRefsTree.repeated, refsTypeName, repeatedRefsTypeName);
 
@@ -152,7 +145,6 @@ async function traverseSubContractTag(
     tag: ContractTag,
     context: ContractTraversalContext,
 ): Promise<WithValidations<SubContractTraverseResult>> {
-    const {isRepeated, contractNesting} = context;
     if (tag.link) {
         return await traverseLinkedSubContract(tag, context);
     }
@@ -163,13 +155,12 @@ async function traverseTag(
     tag: ContractTag,
     context: ContractTraversalContext,
 ): Promise<TagTraverseResult> {
-    const {viewStateType, isRepeated, contractNesting} = context;
+    const {viewStateType, isRepeated} = context;
     if (tag.type.includes(ContractTagType.interactive)) {
         const elementType = tag.elementType?.join(' | ') || 'HTMLElement';
         const ref: Ref = {
             kind: "ref",
             ref: tag.tag,
-            path: contractNesting,
             constName: '',
             dynamicRef: isRepeated,
             autoRef: false,
@@ -191,7 +182,6 @@ export async function contractToImportsViewStateAndRefs(contract: Contract,
     return await traverseTags(contract.tags, pascalCase(contract.name + 'ViewState'),{
         viewStateType: undefined,
         isRepeated,
-        contractNesting: [],
         contractFilePath,
         importResolver: jayImportResolver,
     })
