@@ -563,7 +563,7 @@ ${indent.firstLine}])`,
             return renderNestedComponent(htmlElement, { ...newContext, indent: childIndent });
         } else {
             let renderedRef = renderElementRef(htmlElement, context);
-            if (hasRefs(renderedRef.refs))
+            if (hasRefs(renderedRef.refs, false))
                 return new RenderFragment(
                     `${newContext.indent.firstLine}e(${renderedRef.rendered})`,
                     childRenders.imports.plus(Import.sandboxElement),

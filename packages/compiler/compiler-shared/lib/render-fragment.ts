@@ -33,10 +33,12 @@ export function mergeRefsTrees(...trees: RefsTree[]): RefsTree {
     return mkRefsTree(allRefs, allChildren, isRepeated);
 }
 
-export function hasRefs(refs: RefsTree) {
-    return refs.refs.length > 0 ||
+export function hasRefs(refs: RefsTree, includingAutoRefs: boolean) {
+    const onlyNonAutoRefs = (ref: Ref) => !ref.autoRef
+    const allRefs = (ref: Ref) => true
+    return refs.refs.filter(includingAutoRefs?allRefs:onlyNonAutoRefs).length > 0 ||
         refs.imported ||
-        Object.entries(refs.children).map(([ref, refs]) => hasRefs(refs))
+        Object.entries(refs.children).map(([ref, refs]) => hasRefs(refs, includingAutoRefs))
             .reduce((prev, curr) => prev || curr, false);
 }
 

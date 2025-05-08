@@ -36,7 +36,7 @@ export function renderRefsType(
 
     const componentRefs = new Map<string, RefsNeeded>();
 
-    if (hasRefs(refs)) {
+    if (hasRefs(refs, false)) {
         const generateTypeForPath = (refsTree: RefsTree, indent: Indent): string => {
             const renderedRefs = refsTree.refs
                 .filter((_) => !_.autoRef)
@@ -68,7 +68,7 @@ export function renderRefsType(
                             childRefNode.imported.refsTypeName;
                         return `${indent.curr}${childName}: ${importedTypeName}`
                     }
-                    else {
+                    else if (hasRefs(childRefNode, false)) {
                         const childType = generateTypeForPath(childRefNode, indent.child(true, true));
                         return `${indent.curr}${childName}: ${childType}`;
                     }
@@ -252,7 +252,7 @@ export function renderReferenceManager(
         return [...childRenderedRefManagers, renderedRefManager].join('\n');
     };
 
-    if (hasRefs(refs)) {
+    if (hasRefs(refs, true)) {
         const renderedRefsManager = renderRefManagerNode('refManager', refs);
         return {renderedRefsManager, refsManagerImport: imports};
     }
