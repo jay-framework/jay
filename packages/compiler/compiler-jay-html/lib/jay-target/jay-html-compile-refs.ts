@@ -69,7 +69,10 @@ export function renderRefsType(
             const childTypes = Object.entries(refsTree.children)
                 .map(([childName, childRefNode]) => {
                     if (childRefNode.imported) {
-                        return `${indent.curr}${childName}: ${childRefNode.imported.refsTypeName}`
+                        const importedTypeName = childRefNode.repeated?
+                            childRefNode.imported.repeatedRefsTypeName :
+                            childRefNode.imported.refsTypeName;
+                        return `${indent.curr}${childName}: ${importedTypeName}`
                     }
                     else {
                         const childType = generateTypeForPath(childRefNode, indent.child(true, true));
@@ -79,7 +82,7 @@ export function renderRefsType(
                 .join(',\n');
 
             // Combine refs and child types
-            const allTypes = [childTypes, renderedRefs].filter(Boolean).join(',\n');
+            const allTypes = [renderedRefs, childTypes].filter(Boolean).join(',\n');
 
             return `{
 ${allTypes}

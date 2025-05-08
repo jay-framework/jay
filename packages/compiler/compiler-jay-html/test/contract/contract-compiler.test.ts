@@ -535,13 +535,13 @@ describe('compile contract', () => {
             }
     
             export interface TodoRefs {
-                item: TodoItemRefs;
                 addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
+                item: TodoItemRefs;
             }
 
             export interface TodoRepeatedRefs {
-                item: TodoItemRepeatedRefs;
                 addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
+                item: TodoItemRepeatedRefs;
             }
 
             export type TodoElement = JayElement<TodoViewState, TodoRefs>
@@ -579,13 +579,13 @@ describe('compile contract', () => {
             }
     
             export interface TodoRefs {
-                items: TodoItemRepeatedRefs;
                 addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
+                items: TodoItemRepeatedRefs;
             }
 
             export interface TodoRepeatedRefs {
-                items: TodoItemRepeatedRefs;
                 addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
+                items: TodoItemRepeatedRefs;
             }
 
             export type TodoElement = JayElement<TodoViewState, TodoRefs>
@@ -627,15 +627,15 @@ describe('compile contract', () => {
             }
     
             export interface TodoRefs {
+                addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
                 activeItem: TodoItemRefs;
                 completedItems: TodoItemRepeatedRefs;
-                addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
             }
 
             export interface TodoRepeatedRefs {
+                addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
                 activeItem: TodoItemRepeatedRefs;
                 completedItems: TodoItemRepeatedRefs;
-                addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
             }
 
             export type TodoElement = JayElement<TodoViewState, TodoRefs>

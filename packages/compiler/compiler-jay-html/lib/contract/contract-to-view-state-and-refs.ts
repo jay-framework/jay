@@ -1,6 +1,7 @@
 import {JayImportResolver} from "../jay-target/jay-import-resolver";
 import {Contract, ContractTag, ContractTagType} from "./contract";
 import {
+    isArrayType,
     JAY_CONTRACT_EXTENSION,
     JayArrayType,
     JayEnumType,
@@ -83,11 +84,11 @@ async function traverseTags(tags: ContractTag[], typeName: string, context: Cont
     const type = isRepeated ? new JayArrayType(objectType) : objectType;
 
     return new WithValidations<SubContractTraverseResult>(
-        {type, refs: refsTree(refs, childRefs), importLinks}, validations);
+        {type, refs: refsTree(refs, childRefs, context.isRepeated), importLinks}, validations);
 }
 
 async function traverseLinkedSubContract(tag: ContractTag, context: ContractTraversalContext) {
-    const {importResolver} = context;
+    const {importResolver, isRepeated} = context;
     const linkWithExtension = tag.link.endsWith(JAY_CONTRACT_EXTENSION)
         ? tag.link
         : tag.link + JAY_CONTRACT_EXTENSION;
@@ -104,7 +105,8 @@ async function traverseLinkedSubContract(tag: ContractTag, context: ContractTrav
         const refsTypeName = `${pascalCase(contractName)}Refs`;
         const repeatedRefsTypeName = `${pascalCase(contractName)}RepeatedRefs`;
 
-        const subContractTypes = await contractToImportsViewStateAndRefs(subContract.val, path.dirname(subContractPath), importResolver)
+        const subContractTypes =
+            await contractToImportsViewStateAndRefs(subContract.val, path.dirname(subContractPath), importResolver, isRepeated)
         if (subContractTypes.val) {
             const {
                 type: subContractType,
@@ -112,9 +114,13 @@ async function traverseLinkedSubContract(tag: ContractTag, context: ContractTrav
                 importLinks: subContractImportLinks
             } = subContractTypes.val;
 
-            const type = tag.repeated ?
-                new JayImportedType(viewState, new JayArrayType(subContractType)) :
-                new JayImportedType(viewState, subContractType);
+            const type = isArrayType(subContractType)?
+                new JayArrayType(new JayImportedType(viewState, subContractType.itemType)):
+                new JayImportedType(viewState, subContractType)
+
+            // const type = tag.repeated || isRepeated ?
+            //     new JayImportedType(viewState, new JayArrayType(subContractType)) :
+            //     new JayImportedType(viewState, subContractType);
 
             const importLinks: JayContractImportLink[] = [
                 {
@@ -125,7 +131,9 @@ async function traverseLinkedSubContract(tag: ContractTag, context: ContractTrav
                 },
             ];
 
-            const refs = refsTree(subContractRefsTree.refs, subContractRefsTree.children, refsTypeName, repeatedRefsTypeName);
+            const refs = refsTree(subContractRefsTree.refs,
+                subContractRefsTree.children,
+                subContractRefsTree.repeated, refsTypeName, repeatedRefsTypeName);
 
             return new WithValidations<SubContractTraverseResult>({
                 type,
@@ -178,10 +186,11 @@ async function traverseTag(
 
 export async function contractToImportsViewStateAndRefs(contract: Contract,
                                                         contractFilePath: string,
-                                                        jayImportResolver: JayImportResolver): Promise<WithValidations<SubContractTraverseResult>> {
+                                                        jayImportResolver: JayImportResolver,
+                                                        isRepeated: boolean = false): Promise<WithValidations<SubContractTraverseResult>> {
     return await traverseTags(contract.tags, pascalCase(contract.name + 'ViewState'),{
         viewStateType: undefined,
-        isRepeated: false,
+        isRepeated,
         contractNesting: [],
         contractFilePath,
         importResolver: jayImportResolver,

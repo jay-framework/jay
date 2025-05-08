@@ -12,13 +12,14 @@ export interface RefsTree {
     readonly refs: Ref[];
     readonly children: Record<string, RefsTree>;
     readonly imported?: ImportedRefsTree
+    readonly repeated: boolean
 }
 
-export function refsTree(refs: Ref[], children: Record<string, RefsTree>, refsTypeName?: string, repeatedRefsTypeName?: string): RefsTree {
+export function refsTree(refs: Ref[], children: Record<string, RefsTree>, repeated: boolean = false, refsTypeName?: string, repeatedRefsTypeName?: string): RefsTree {
     if (refsTypeName)
-        return {kind: 'refTree', refs, children, imported: {refsTypeName, repeatedRefsTypeName}};
+        return {kind: 'refTree', refs, children, repeated, imported: {refsTypeName, repeatedRefsTypeName}};
     else
-        return {kind: 'refTree', refs, children};
+        return {kind: 'refTree', refs, children, repeated};
 }
 
 export interface Ref {

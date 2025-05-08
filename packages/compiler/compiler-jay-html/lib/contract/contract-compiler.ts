@@ -21,6 +21,7 @@ function refsToRepeated(refsTreeNode: RefsTree): RefsTree {
         })),
         Object.fromEntries(
             Object.entries(children).map(([key, value]) => [key, refsToRepeated(value)])),
+        true,
         imported?.refsTypeName,
         imported?.repeatedRefsTypeName
     )
