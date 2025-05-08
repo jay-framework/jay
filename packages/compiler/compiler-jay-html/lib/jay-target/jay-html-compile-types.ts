@@ -30,8 +30,8 @@ function renderInterface(aType: JayType): string {
                         if (isObjectType(arrayItemType)) {
                             childInterfaces.push(renderInterface(arrayItemType));
                             return `  ${prop}: Array<${arrayItemType.name}>`;
-                        } else if (isImportedContractType(arrayItemType)) {
-                            return `  ${prop}: Array<${arrayItemType.viewState}>`;
+                        } if (arrayItemType instanceof JayImportedType) {
+                            return `  ${prop}: Array<${arrayItemType.name}>`;
                         } else {
                             throw new Error('not implemented yet');
                             // todo implement array of array or array of primitive
@@ -43,8 +43,6 @@ function renderInterface(aType: JayType): string {
                             .join(',\n')}\n}`;
                         childInterfaces.push(genEnum);
                         return `  ${prop}: ${childType.name}`;
-                    } else if (isImportedContractType(childType)) {
-                        return `  ${prop}: ${childType.viewState}`;
                     } else throw new Error(`unknown type ${childType.name}, ${childType.kind}`);
                 })
                 .join(',\n');

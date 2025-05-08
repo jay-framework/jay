@@ -30,15 +30,15 @@ enum RefsNeeded {
     REF,
     REF_AND_REFS,
 }
-class RefsTreeNode {
+export class RefsTree {
     public readonly refs: Ref[] = [];
-    public readonly children: Record<string, RefsTreeNode> = {};
+    public readonly children: Record<string, RefsTree> = {};
 
     addRef(ref: Ref, level: number = 0) {
         if (ref.path.length === level) this.refs.push(ref);
         else {
             if (!this.children[ref.path[level]])
-                this.children[ref.path[level]] = new RefsTreeNode();
+                this.children[ref.path[level]] = new RefsTree();
             this.children[ref.path[level]].addRef(ref, level + 1);
         }
     }
@@ -56,10 +56,10 @@ export function renderRefsType(
     const componentRefs = new Map<string, RefsNeeded>();
 
     if (refsToRender.length > 0) {
-        const root = new RefsTreeNode();
+        const root = new RefsTree();
         refsToRender.forEach((ref) => root.addRef(ref));
 
-        const generateTypeForPath = (refsTree: RefsTreeNode, indent: Indent): string => {
+        const generateTypeForPath = (refsTree: RefsTree, indent: Indent): string => {
             const renderedRefs = refsTree.refs
                 .map((ref) => {
                     let referenceType: string;
@@ -211,7 +211,7 @@ export function renderReferenceManager(
 ): { renderedRefsManager: string; refsManagerImport: Imports } {
     const { referenceManagerInit, imports } = REFERENCE_MANAGER_TYPES[target];
 
-    const renderRefManagerNode = (name: string, refsTree: RefsTreeNode) => {
+    const renderRefManagerNode = (name: string, refsTree: RefsTree) => {
         const elemRefs = refsTree.refs.filter((_) => !isComponentRef(_) && !isCollectionRef(_));
         const elemCollectionRefs = refsTree.refs.filter(
             (_) => !isComponentRef(_) && isCollectionRef(_),
@@ -258,7 +258,7 @@ export function renderReferenceManager(
         return [...childRenderedRefManagers, renderedRefManager].join('\n');
     };
 
-    const root = new RefsTreeNode();
+    const root = new RefsTree();
     refs.forEach((ref) => root.addRef(ref));
     const renderedRefsManager = renderRefManagerNode('refManager', root);
 

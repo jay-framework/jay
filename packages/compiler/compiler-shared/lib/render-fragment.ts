@@ -2,7 +2,18 @@ import { JayValidations } from './with-validations';
 import { Imports } from './imports';
 import { JayType } from './jay-type';
 
+export interface RefsTree {
+    readonly kind: 'refTree',
+    readonly refs: Ref[];
+    readonly children: Record<string, RefsTree>;
+}
+
+export function refsTree(refs: Ref[], children: Record<string, RefsTree>): RefsTree {
+    return {kind: 'refTree', refs, children};
+}
+
 export interface Ref {
+    readonly kind: 'ref',
     ref: string;
     path: string[];
     constName: string;
@@ -10,6 +21,19 @@ export interface Ref {
     autoRef: boolean;
     viewStateType: JayType;
     elementType: JayType;
+}
+
+export function ref(ref: string,
+                    path: string[],
+                    constName: string,
+                    dynamicRef: boolean,
+                    autoRef: boolean,
+                    viewStateType: JayType,
+                    elementType: JayType
+): Ref {
+    return {
+       kind: "ref", ref, path, constName, dynamicRef, autoRef, viewStateType, elementType
+    }
 }
 
 export class RenderFragment {
