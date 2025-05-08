@@ -125,9 +125,7 @@ async function traverseLinkedSubContract(tag: ContractTag, context: ContractTrav
                 },
             ];
 
-            const refs = refsTree([], {
-                [tag.tag]: refsTree(subContractRefsTree.refs, subContractRefsTree.children, refsTypeName, repeatedRefsTypeName)
-            })
+            const refs = refsTree(subContractRefsTree.refs, subContractRefsTree.children, refsTypeName, repeatedRefsTypeName);
 
             return new WithValidations<SubContractTraverseResult>({
                 type,

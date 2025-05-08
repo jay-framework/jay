@@ -3,7 +3,7 @@ import {
     Imports,
     ImportsFor,
     JAY_CONTRACT_EXTENSION,
-    Ref,
+    refsTree,
     RefsTree,
     WithValidations,
 } from 'jay-compiler-shared';
@@ -12,9 +12,23 @@ import {generateTypes, JayImportResolver, renderRefsType} from '../';
 import {pascalCase} from 'change-case';
 import {contractToImportsViewStateAndRefs, JayContractImportLink} from "./contract-to-view-state-and-refs";
 
+function refsToRepeated(refsTreeNode: RefsTree): RefsTree {
+    const {refs, children, imported} = refsTreeNode;
+    return refsTree(
+        refs.map((ref) => ({
+            ...ref,
+            dynamicRef: true,
+        })),
+        Object.fromEntries(
+            Object.entries(children).map(([key, value]) => [key, refsToRepeated(value)])),
+        imported?.refsTypeName,
+        imported?.repeatedRefsTypeName
+    )
+}
+
 function generateRefsInterface(
     contract: Contract,
-    allRefs: RefsTree,
+    refs: RefsTree,
 ): {
     imports: Imports;
     renderedRefs: string;
@@ -23,13 +37,10 @@ function generateRefsInterface(
     const repeatedRefsType = pascalCase(contract.name) + 'RepeatedRefs';
 
     // Generate regular refs interface
-    const { imports, renderedRefs: regularRefs } = renderRefsType(allRefs.refs, refsType);
+    const { imports, renderedRefs: regularRefs } = renderRefsType(refs, refsType);
 
     // Generate repeated refs interface by replacing HTMLElementProxy with HTMLElementCollectionProxy
-    const repeatedRefs = allRefs.refs.map((ref) => ({
-        ...ref,
-        dynamicRef: true,
-    }));
+    const repeatedRefs = refsToRepeated(refs);
     const { imports: imports2, renderedRefs: repeatedRefsRendered } = renderRefsType(
         repeatedRefs,
         repeatedRefsType,

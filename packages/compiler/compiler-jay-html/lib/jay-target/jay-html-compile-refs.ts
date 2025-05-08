@@ -3,14 +3,12 @@ import {
     GenerateTarget,
     Import,
     Imports,
-    isImportedContractType,
     JayComponentType,
     JayHTMLType,
-    JayImportedContract,
     JayType,
     JayTypeAlias,
     JayUnionType,
-    Ref,
+    Ref, RefsTree,
     RenderFragment,
 } from 'jay-compiler-shared';
 import { HTMLElement } from 'node-html-parser';
@@ -18,56 +16,39 @@ import { htmlElementTagNameMap } from './html-element-tag-name-map';
 import { camelCase } from 'camel-case';
 import { Indent } from './indent';
 
-const isLinkedContractRef = (ref: Ref) => isImportedContractType(ref.elementType);
-const isLinkedContractCollectionRef = (ref: Ref) =>
-    isLinkedContractRef(ref) && isCollectionRef(ref);
 const isComponentRef = (ref: Ref) =>
     ref.elementType instanceof JayComponentType || ref.elementType instanceof JayTypeAlias;
 const isCollectionRef = (ref: Ref) => ref.dynamicRef;
 const isComponentCollectionRef = (ref: Ref) => isCollectionRef(ref) && isComponentRef(ref);
 
+function hasRefs(refs: RefsTree) {
+    return refs.refs.length > 0 ||
+        Object.entries(refs.children).map(([ref, refs]) => hasRefs(refs))
+            .reduce((prev, curr) => prev || curr, false);
+}
+
 enum RefsNeeded {
     REF,
     REF_AND_REFS,
 }
-export class RefsTree {
-    public readonly refs: Ref[] = [];
-    public readonly children: Record<string, RefsTree> = {};
-
-    addRef(ref: Ref, level: number = 0) {
-        if (ref.path.length === level) this.refs.push(ref);
-        else {
-            if (!this.children[ref.path[level]])
-                this.children[ref.path[level]] = new RefsTree();
-            this.children[ref.path[level]].addRef(ref, level + 1);
-        }
-    }
-}
 export function renderRefsType(
-    refs: Ref[],
+    refs: RefsTree,
     refsType: string,
     generateTarget: GenerateTarget = GenerateTarget.jay,
 ) {
     let renderedRefs: string;
     let imports = Imports.none();
     const refImportsInUse = new Set<string>();
-    const refsToRender = refs.filter((_) => !_.autoRef);
 
     const componentRefs = new Map<string, RefsNeeded>();
 
-    if (refsToRender.length > 0) {
-        const root = new RefsTree();
-        refsToRender.forEach((ref) => root.addRef(ref));
-
+    if (hasRefs(refs)) {
         const generateTypeForPath = (refsTree: RefsTree, indent: Indent): string => {
             const renderedRefs = refsTree.refs
+                .filter((_) => !_.autoRef)
                 .map((ref) => {
                     let referenceType: string;
-                    if (isLinkedContractCollectionRef(ref)) {
-                        referenceType = (ref.elementType as JayImportedContract).repeatedRefs;
-                    } else if (isLinkedContractRef(ref)) {
-                        referenceType = (ref.elementType as JayImportedContract).refs;
-                    } else if (isComponentCollectionRef(ref)) {
+                    if (isComponentCollectionRef(ref)) {
                         referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`;
                         componentRefs.set(ref.elementType.name, RefsNeeded.REF_AND_REFS);
                     } else if (isCollectionRef(ref)) {
@@ -87,20 +68,25 @@ export function renderRefsType(
 
             const childTypes = Object.entries(refsTree.children)
                 .map(([childName, childRefNode]) => {
-                    const childType = generateTypeForPath(childRefNode, indent.child(true, true));
-                    return `${indent.curr}${childName}: ${childType}`;
+                    if (childRefNode.imported) {
+                        return `${indent.curr}${childName}: ${childRefNode.imported.refsTypeName}`
+                    }
+                    else {
+                        const childType = generateTypeForPath(childRefNode, indent.child(true, true));
+                        return `${indent.curr}${childName}: ${childType}`;
+                    }
                 })
                 .join(',\n');
 
             // Combine refs and child types
-            const allTypes = [renderedRefs, childTypes].filter(Boolean).join(',\n');
+            const allTypes = [childTypes, renderedRefs].filter(Boolean).join(',\n');
 
             return `{
 ${allTypes}
 ${indent.lastLine}}`;
         };
 
-        const mainType = generateTypeForPath(root, new Indent('', true, true));
+        const mainType = generateTypeForPath(refs, new Indent('', true, true));
 
         const renderedComponentRefs = [...componentRefs].map(([componentName, refsNeeded]) => {
             const elementType =
@@ -206,7 +192,7 @@ const REFERENCE_MANAGER_TYPES: Record<
 };
 
 export function renderReferenceManager(
-    refs: Ref[],
+    refs: RefsTree,
     target: ReferenceManagerTarget,
 ): { renderedRefsManager: string; refsManagerImport: Imports } {
     const { referenceManagerInit, imports } = REFERENCE_MANAGER_TYPES[target];
@@ -258,9 +244,7 @@ export function renderReferenceManager(
         return [...childRenderedRefManagers, renderedRefManager].join('\n');
     };
 
-    const root = new RefsTree();
-    refs.forEach((ref) => root.addRef(ref));
-    const renderedRefsManager = renderRefManagerNode('refManager', root);
+    const renderedRefsManager = renderRefManagerNode('refManager', refs);
 
     return { renderedRefsManager, refsManagerImport: imports };
 }
