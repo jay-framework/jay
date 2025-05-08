@@ -1,4 +1,5 @@
 import {
+    hasRefs,
     Import,
     Imports,
     ImportsFor,
@@ -8,7 +9,7 @@ import {
     JayImportLink,
     JayType,
     JayUnknown,
-    MainRuntimeModes, mkRef, mkRefsTree,
+    MainRuntimeModes, mergeRefsTrees, mkRef, mkRefsTree, RefsTree,
     RenderFragment,
     RuntimeMode,
     WithValidations,
@@ -45,7 +46,6 @@ import { tagToNamespace } from './tag-to-namespace';
 
 interface RenderContext {
     variables: Variables;
-    forEachAccessPath: string[];
     importedSymbols: Set<string>;
     indent: Indent;
     dynamicRef: boolean;
@@ -122,7 +122,7 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
 
 function renderElementRef(
     element: HTMLElement,
-    { dynamicRef, variables, forEachAccessPath }: RenderContext,
+    { dynamicRef, variables }: RenderContext,
 ): RenderFragment {
     if (element.attributes.ref) {
         let originalName = element.attributes.ref;
@@ -169,9 +169,22 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
     }
 }
 
+function nestRefs(path: string[], renderFragment: RenderFragment): RenderFragment {
+    let refs = renderFragment.refs;
+    for (let index = path.length - 1; index >= 0; --index) {
+        refs = mkRefsTree([], {[path[index]]:refs}, refs.repeated)
+    }
+    return new RenderFragment(
+        renderFragment.rendered,
+        renderFragment.imports,
+        renderFragment.validations,
+        refs
+    );
+}
+
 function renderChildCompRef(
     element: HTMLElement,
-    { dynamicRef, variables, nextAutoRefName, forEachAccessPath }: RenderContext,
+    { dynamicRef, variables, nextAutoRefName }: RenderContext,
 ): RenderFragment {
     let originalName = element.attributes.ref || nextAutoRefName();
     let refName = camelCase(originalName);
@@ -203,7 +216,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                 .plus(ref.imports)
                 .plus(tagFunc.import),
             [...attributes.validations, ...children.validations, ...ref.validations],
-            [...attributes.refs, ...children.refs, ...ref.refs],
+            mergeRefsTrees(attributes.refs, children.refs, ref.refs),
         );
     }
 
@@ -224,7 +237,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                 .plus(ref.imports)
                 .plus(tagFunc.import),
             [...attributes.validations, ...children.validations, ...ref.validations],
-            [...attributes.refs, ...children.refs, ...ref.refs],
+            mergeRefsTrees(attributes.refs, children.refs, ref.refs),
         );
     }
 
@@ -288,7 +301,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
             `${indent.firstLine}c(${renderedCondition.rendered},\n() => ${childElement.rendered}\n${indent.firstLine})`,
             Imports.merge(childElement.imports, renderedCondition.imports).plus(Import.conditional),
             [...renderedCondition.validations, ...childElement.validations],
-            [...renderedCondition.refs, ...childElement.refs],
+            mergeRefsTrees(renderedCondition.refs, childElement.refs),
         );
     }
 
@@ -382,11 +395,10 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                     variables: forEachVariables,
                     indent: indent.child().noFirstLineBreak().withLastLineBreak(),
                     dynamicRef: true,
-                    forEachAccessPath: [...context.forEachAccessPath, ...forEachAccessPath],
                 };
 
                 let childElement = renderHtmlElement(htmlElement, newContext);
-                return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
+                return nestRefs(forEachAccessPath, renderForEach(forEachFragment, forEachVariables, trackBy, childElement));
             } else {
                 return renderHtmlElement(htmlElement, context);
             }
@@ -420,7 +432,6 @@ function renderFunctionImplementation(
         renderedRoot = renderNode(rootElement.val, {
             variables,
             importedSymbols,
-            forEachAccessPath: [],
             indent: new Indent('    '),
             dynamicRef: false,
             importedSandboxedSymbols,
@@ -552,12 +563,12 @@ ${indent.firstLine}])`,
             return renderNestedComponent(htmlElement, { ...newContext, indent: childIndent });
         } else {
             let renderedRef = renderElementRef(htmlElement, context);
-            if (renderedRef.refs.length > 0)
+            if (hasRefs(renderedRef.refs))
                 return new RenderFragment(
                     `${newContext.indent.firstLine}e(${renderedRef.rendered})`,
                     childRenders.imports.plus(Import.sandboxElement),
                     [...childRenders.validations, ...renderedRef.validations],
-                    [...childRenders.refs, ...renderedRef.refs],
+                    mergeRefsTrees(childRenders.refs, renderedRef.refs),
                 );
             else return childRenders;
         }
@@ -592,10 +603,9 @@ ${indent.firstLine}])`,
                 ...context,
                 variables: forEachVariables,
                 indent: indent.child().noFirstLineBreak().withLastLineBreak(),
-                forEachAccessPath: [...context.forEachAccessPath, ...forEachAccessPath],
                 dynamicRef: true,
             });
-            return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
+            return nestRefs(forEachAccessPath, renderForEach(forEachFragment, forEachVariables, trackBy, childElement));
         } else return renderHtmlElement(htmlElement, context);
     }
     return RenderFragment.empty();
@@ -614,7 +624,6 @@ function renderBridge(
     let renderedBridge = renderElementBridgeNode(rootBodyElement, {
         variables,
         importedSymbols,
-        forEachAccessPath: [],
         indent: new Indent('    '),
         dynamicRef: false,
         importedSandboxedSymbols,
@@ -655,7 +664,6 @@ function renderSandboxRoot(
     let renderedBridge = renderElementBridgeNode(rootBodyElement, {
         variables,
         importedSymbols,
-        forEachAccessPath: [],
         indent: new Indent('    '),
         dynamicRef: false,
         importedSandboxedSymbols,

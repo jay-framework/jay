@@ -9,7 +9,7 @@ import {
     JayTypeAlias,
     JayUnionType, mkRefsTree,
     Ref, RefsTree,
-    RenderFragment,
+    RenderFragment, hasRefs,
 } from 'jay-compiler-shared';
 import { HTMLElement } from 'node-html-parser';
 import { htmlElementTagNameMap } from './html-element-tag-name-map';
@@ -20,12 +20,6 @@ const isComponentRef = (ref: Ref) =>
     ref.elementType instanceof JayComponentType || ref.elementType instanceof JayTypeAlias;
 const isCollectionRef = (ref: Ref) => ref.dynamicRef;
 const isComponentCollectionRef = (ref: Ref) => isCollectionRef(ref) && isComponentRef(ref);
-
-function hasRefs(refs: RefsTree) {
-    return refs.refs.length > 0 ||
-        Object.entries(refs.children).map(([ref, refs]) => hasRefs(refs))
-            .reduce((prev, curr) => prev || curr, false);
-}
 
 enum RefsNeeded {
     REF,
@@ -210,6 +204,7 @@ export function renderReferenceManager(
     target: ReferenceManagerTarget,
 ): { renderedRefsManager: string; refsManagerImport: Imports } {
     const { referenceManagerInit, imports } = REFERENCE_MANAGER_TYPES[target];
+    const options = target === ReferenceManagerTarget.element ? 'options, ' : '';
 
     const renderRefManagerNode = (name: string, refsTree: RefsTree) => {
         const elemRefs = refsTree.refs.filter((_) => !isComponentRef(_) && !isCollectionRef(_));
@@ -252,13 +247,18 @@ export function renderReferenceManager(
 }`
                 : '';
 
-        const options = target === ReferenceManagerTarget.element ? 'options, ' : '';
         const renderedRefManager = `    const [${name}, [${refVariables}]] =
         ${referenceManagerInit}(${options}[${elemRefsDeclarations}], [${elemCollectionRefsDeclarations}], [${compRefsDeclarations}], [${compCollectionRefsDeclarations}]${childRefManager});`;
         return [...childRenderedRefManagers, renderedRefManager].join('\n');
     };
 
-    const renderedRefsManager = renderRefManagerNode('refManager', refs);
-
-    return { renderedRefsManager, refsManagerImport: imports };
+    if (hasRefs(refs)) {
+        const renderedRefsManager = renderRefManagerNode('refManager', refs);
+        return {renderedRefsManager, refsManagerImport: imports};
+    }
+    else {
+        const renderedRefsManager =
+            `const [refManager, []] = ${referenceManagerInit}(${options}[], [], [], []);`
+        return {renderedRefsManager, refsManagerImport: imports}
+    }
 }

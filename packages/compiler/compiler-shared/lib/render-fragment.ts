@@ -15,6 +15,31 @@ export interface RefsTree {
     readonly repeated: boolean
 }
 
+export function mergeRefsTrees(...trees: RefsTree[]): RefsTree {
+    const allRefs = trees.flatMap(tree => tree.refs);
+    const allChildren: Record<string, RefsTree> = {};
+    const allKeys = new Set(trees.flatMap(tree => Object.keys(tree.children)));
+
+    for (const key of allKeys) {
+        const childTrees = trees
+            .filter(tree => tree.children[key] !== undefined)
+            .map(tree => tree.children[key]);
+
+        if (childTrees.length > 0) {
+            allChildren[key] = mergeRefsTrees(...childTrees);
+        }
+    }
+    const isRepeated = trees.some(tree => tree.repeated);
+    return mkRefsTree(allRefs, allChildren, isRepeated);
+}
+
+export function hasRefs(refs: RefsTree) {
+    return refs.refs.length > 0 ||
+        refs.imported ||
+        Object.entries(refs.children).map(([ref, refs]) => hasRefs(refs))
+            .reduce((prev, curr) => prev || curr, false);
+}
+
 export function mkRefsTree(refs: Ref[], children: Record<string, RefsTree>, repeated: boolean = false, refsTypeName?: string, repeatedRefsTypeName?: string): RefsTree {
     if (refsTypeName)
         return {kind: 'refTree', refs, children, repeated, imported: {refsTypeName, repeatedRefsTypeName}};
@@ -90,11 +115,7 @@ export class RenderFragment {
                 : !!fragment1.rendered
                   ? fragment1.rendered
                   : fragment2.rendered;
-        const newRefsTree = mkRefsTree(
-            [...fragment1.refs.refs, ...fragment2.refs.refs],
-            {...fragment1.refs.children, ...fragment2.refs.children},
-            fragment1.refs.repeated
-            )
+        const newRefsTree = mergeRefsTrees(fragment1.refs, fragment2.refs);
         return new RenderFragment(
             rendered,
             Imports.merge(fragment1.imports, fragment2.imports),
