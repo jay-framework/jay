@@ -19,7 +19,7 @@ describe('renderRefsType', () => {
 
     it('should render HTMLElementProxy refs', async () => {
         const refs: Ref[] = [
-            mkRef('input','',false, false,
+            mkRef('input', 'input','',false, false,
                 new JayObjectType('TestViewState', {}), new JayHTMLType('HTMLInputElement'))
         ];
 
@@ -37,7 +37,7 @@ describe('renderRefsType', () => {
 
     it('should render HTMLElementCollectionProxy refs', async () => {
         const refs: Ref[] = [
-            mkRef('inputs', '', true, false, new JayObjectType('TestViewState', {}), new JayHTMLType('HTMLInputElement'),),
+            mkRef('inputs', 'input', '', true, false, new JayObjectType('TestViewState', {}), new JayHTMLType('HTMLInputElement'),),
         ];
 
         const { imports, renderedRefs } = renderRefsType(mkRefsTree(refs, {}), 'TestRefs', GenerateTarget.jay);
@@ -54,7 +54,7 @@ describe('renderRefsType', () => {
 
     it('should render component refs', async () => {
         const refs: Ref[] = [
-            mkRef('counter', '', false, false,
+            mkRef('counter', 'counter', '', false, false,
                 new JayObjectType('TestViewState', {}),
                 new JayComponentType('Counter', [])),
         ];
@@ -74,7 +74,7 @@ describe('renderRefsType', () => {
 
     it('should render component collection refs', async () => {
         const refs: Ref[] = [
-            mkRef('counters', '', true, false,
+            mkRef('counters', 'counters', '', true, false,
                 new JayObjectType('TestViewState', {}),
                 new JayComponentType('Counter', [])),
         ];
@@ -100,10 +100,10 @@ describe('renderRefsType', () => {
 
     it('should render mixed refs', async () => {
         const refs: Ref[] = [
-            mkRef('input', '', false, false,
+            mkRef('input', 'input', '', false, false,
                 new JayObjectType('TestViewState', {}),
                 new JayHTMLType('HTMLInputElement')),
-            mkRef('counter', '', false, false,
+            mkRef('counter', 'counter', '', false, false,
                 new JayObjectType('TestViewState', {}),
                 new JayComponentType('Counter', [])),
         ];
@@ -126,7 +126,7 @@ describe('renderRefsType', () => {
 
     it('should render component refs for react target', async () => {
         const refs: Ref[] = [
-            mkRef('counter', '', false, false,
+            mkRef('counter', 'counter', '', false, false,
                 new JayObjectType('TestViewState', {}),
                 new JayComponentType('Counter', [])),
         ];

@@ -3,7 +3,6 @@ import {
     JayArrayType,
     JayBoolean,
     JayEnumType,
-    JayImportKind,
     JayNumber,
     JayObjectType,
     JayString,
@@ -15,7 +14,7 @@ import { JayImportResolver } from '../lib';
 import { Contract } from '../lib';
 import { ResolveTsConfigOptions } from 'jay-compiler-analyze-exported-types';
 import { JayType } from 'jay-compiler-shared';
-import { JAY_IMPORT_RESOLVER } from '../lib/jay-target/jay-import-resolver';
+import { JAY_IMPORT_RESOLVER } from '../lib';
 
 describe('compiler', () => {
     const defaultImportResolver: JayImportResolver = {
@@ -197,7 +196,6 @@ describe('compiler', () => {
                             },
                         ],
                         sandbox: false,
-                        kind: JayImportKind.headfull,
                     },
                     {
                         module: './fixtures/components/imports/component2.ts',
@@ -217,7 +215,6 @@ describe('compiler', () => {
                             },
                         ],
                         sandbox: false,
-                        kind: JayImportKind.headfull,
                     },
                     {
                         module: './fixtures/components/imports/component4.ts',
@@ -236,7 +233,6 @@ describe('compiler', () => {
                             },
                         ],
                         sandbox: true,
-                        kind: JayImportKind.headfull,
                     },
                     {
                         module: './fixtures/components/imports/component5.ts',
@@ -255,7 +251,6 @@ describe('compiler', () => {
                             },
                         ],
                         sandbox: true,
-                        kind: JayImportKind.headfull,
                     },
                     {
                         module: './fixtures/components/imports/component6.ts',
@@ -274,7 +269,6 @@ describe('compiler', () => {
                             },
                         ],
                         sandbox: false,
-                        kind: JayImportKind.headfull,
                     },
                 ]),
             );

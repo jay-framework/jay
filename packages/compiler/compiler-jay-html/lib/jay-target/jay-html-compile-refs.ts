@@ -149,7 +149,7 @@ export function optimizeRefs({
                                  validations,
                                  refs,
                              }: RenderFragment,
-                             headlessImports: JayHeadlessImports[]): RenderFragment {
+                             headlessImports: JayHeadlessImports[] = []): RenderFragment {
     const deDuplicateRefsTree = (refs: RefsTree): RefsTree => {
         const mergedRefsMap = refs.refs.reduce((refsMap, ref) => {
             if (refsMap[ref.ref] === ref.ref) {

@@ -17,7 +17,7 @@ function refsToRepeated(refsTreeNode: RefsTree): RefsTree {
     return mkRefsTree(
         refs.map((ref) => ({
             ...ref,
-            dynamicRef: true,
+            repeated: true,
         })),
         Object.fromEntries(
             Object.entries(children).map(([key, value]) => [key, refsToRepeated(value)])),
@@ -37,10 +37,8 @@ function generateRefsInterface(
     const refsType = pascalCase(contract.name) + 'Refs';
     const repeatedRefsType = pascalCase(contract.name) + 'RepeatedRefs';
 
-    // Generate regular refs interface
     const { imports, renderedRefs: regularRefs } = renderRefsType(refs, refsType);
 
-    // Generate repeated refs interface by replacing HTMLElementProxy with HTMLElementCollectionProxy
     const repeatedRefs = refsToRepeated(refs);
     const { imports: imports2, renderedRefs: repeatedRefsRendered } = renderRefsType(
         repeatedRefs,

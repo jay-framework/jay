@@ -109,7 +109,7 @@ function renderElementRef(
         let originalName = element.attributes.ref;
         let refName = camelCase(originalName);
         let refs = [
-            mkRef(refName,  null, dynamicRef, false, variables.currentType, elementNameToJayType(element))
+            mkRef(refName,  originalName, null, dynamicRef, false, variables.currentType, elementNameToJayType(element))
         ];
         return new RenderFragment(
             `{...eventsFor(${variables.currentContext}, '${refName}')}`,
@@ -160,7 +160,7 @@ function renderChildCompRef(
     let refName = camelCase(originalName);
     let constName = camelCase(`ref ${refName}`);
     let refs = [
-        mkRef(refName, constName, dynamicRef, !element.attributes.ref,
+        mkRef(refName, element.attributes.ref, constName, dynamicRef, !element.attributes.ref,
             variables.currentType, new JayComponentType(element.rawTagName, []))
     ];
     if (!refs[0].autoRef)
