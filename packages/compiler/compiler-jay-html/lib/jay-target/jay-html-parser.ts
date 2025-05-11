@@ -88,7 +88,8 @@ function parseTypes(
     headlessImports: JayHeadlessImports[]): JayType {
     if (typeof jayYaml.data === 'object') {
         const resolvedType = resolveType(jayYaml.data, validations, [baseElementName + 'ViewState'], imports);
-        const headlessImportedTypes = Object.fromEntries(headlessImports.map(_ => [_.key, _.rootType]));
+        const headlessImportedTypes =
+            Object.fromEntries(headlessImports.map(_ => [_.key, new JayImportedType(_.rootType.name, _.rootType)]));
         return new JayObjectType(resolvedType.name, {...headlessImportedTypes, ...resolvedType.props})
     }
     else if (typeof jayYaml.data === 'string') return resolveImportedType(imports, jayYaml.data);
