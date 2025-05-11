@@ -2,7 +2,6 @@ import {
     isArrayType,
     isAtomicType,
     isEnumType,
-    isImportedContractType,
     isObjectType,
     JayImportedType,
     JayType,

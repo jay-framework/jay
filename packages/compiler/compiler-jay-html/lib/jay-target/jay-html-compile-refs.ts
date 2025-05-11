@@ -9,16 +9,17 @@ import {
     JayTypeAlias,
     JayUnionType, mkRefsTree,
     Ref, RefsTree,
-    RenderFragment, hasRefs,
+    RenderFragment, hasRefs, mkRef,
 } from 'jay-compiler-shared';
 import { HTMLElement } from 'node-html-parser';
 import { htmlElementTagNameMap } from './html-element-tag-name-map';
 import { camelCase } from 'camel-case';
 import { Indent } from './indent';
+import {JayHeadlessImports} from "./jay-html-source-file";
 
 const isComponentRef = (ref: Ref) =>
     ref.elementType instanceof JayComponentType || ref.elementType instanceof JayTypeAlias;
-const isCollectionRef = (ref: Ref) => ref.dynamicRef;
+const isCollectionRef = (ref: Ref) => ref.repeated;
 const isComponentCollectionRef = (ref: Ref) => isCollectionRef(ref) && isComponentRef(ref);
 
 enum RefsNeeded {
@@ -124,14 +125,32 @@ export function newAutoRefNameGenerator() {
     };
 }
 
+function markAutoOnImportedRefs(deDuplicated: RefsTree, headlessImports: JayHeadlessImports[]): RefsTree {
+    const importKeys = headlessImports.map(_ => _.key);
+    const mappedRefs = deDuplicated.refs.map(ref => {
+        const isRefOfImportedHeadlessContract = !!importKeys.find(key => ref.originalName.startsWith(`${key}.`))
+        if (isRefOfImportedHeadlessContract)
+            return mkRef(ref.ref, ref.originalName, ref.constName, ref.repeated, true, ref.viewStateType, ref.elementType)
+        else
+            return ref;
+    })
+    const mappedChildren =
+        Object.fromEntries(
+            Object.entries(deDuplicated.children)
+                .map(([key, value]) => [key, markAutoOnImportedRefs(value, headlessImports)])
+        )
+    return mkRefsTree(mappedRefs, mappedChildren, deDuplicated.repeated, deDuplicated?.imported?.refsTypeName,
+        deDuplicated?.imported?.repeatedRefsTypeName)
+}
+
 export function optimizeRefs({
-    rendered,
-    imports,
-    validations,
-    refs,
-}: RenderFragment): RenderFragment {
-    // todo handle full tree
-    const optimizeRefsTree = (refs: RefsTree): RefsTree => {
+                                 rendered,
+                                 imports,
+                                 validations,
+                                 refs,
+                             }: RenderFragment,
+                             headlessImports: JayHeadlessImports[]): RenderFragment {
+    const deDuplicateRefsTree = (refs: RefsTree): RefsTree => {
         const mergedRefsMap = refs.refs.reduce((refsMap, ref) => {
             if (refsMap[ref.ref] === ref.ref) {
                 const firstRef: Ref = refsMap[ref.ref];
@@ -139,7 +158,7 @@ export function optimizeRefs({
                     validations.push(
                         `invalid usage of refs: the ref [${ref.ref}] is used with two different view types [${firstRef.viewStateType.name}, ${ref.viewStateType.name}]`,
                     );
-                else if (firstRef.dynamicRef !== ref.dynamicRef)
+                else if (firstRef.repeated !== ref.repeated)
                     validations.push(
                         `invalid usage of refs: the ref [${ref.ref}] is used once with forEach and second time without`,
                     );
@@ -166,13 +185,20 @@ export function optimizeRefs({
         Object.fromEntries(
             Object
             .entries(refs.children)
-            .map(([key, child]) => [key, optimizeRefsTree(child)]));
+            .map(([key, child]) => [key, deDuplicateRefsTree(child)]));
 
         return mkRefsTree(mergedRefs, optimizedChildren, refs.repeated, refs?.imported?.refsTypeName,
             refs?.imported?.repeatedRefsTypeName)
     }
 
-    return new RenderFragment(rendered, imports, validations, optimizeRefsTree(refs));
+    const deDuplicated = deDuplicateRefsTree(refs);
+    const markedAutoOnImported = markAutoOnImportedRefs(deDuplicated, headlessImports);
+    const importedRefs = Object.fromEntries(headlessImports.map(_ => [_.key, _.refs]))
+    const combined = mkRefsTree(markedAutoOnImported.refs,
+        {...markedAutoOnImported.children, ...importedRefs},
+        markedAutoOnImported.repeated
+    )
+    return new RenderFragment(rendered, imports, validations, combined);
 }
 
 export enum ReferenceManagerTarget {

@@ -9,7 +9,7 @@ import {
     JayImportLink,
     JayType,
     JayUnknown,
-    MainRuntimeModes, mergeRefsTrees, mkRef, mkRefsTree, RefsTree,
+    MainRuntimeModes, mergeRefsTrees, mkRef, mkRefsTree,
     RenderFragment,
     RuntimeMode,
     WithValidations,
@@ -30,7 +30,7 @@ import {
 } from '../expressions/expression-compiler';
 import { camelCase } from 'camel-case';
 
-import { JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
+import {JayHeadlessImports, JayHtmlNamespace, JayHtmlSourceFile} from './jay-html-source-file';
 import { ensureSingleChildElement, isConditional, isForEach } from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
@@ -130,7 +130,7 @@ function renderElementRef(
         let refName = camelCase(originalName);
         let constName = camelCase(`ref ${refName}`);
         let refs = mkRefsTree([
-            mkRef(refName, constName, dynamicRef, false, variables.currentType, elementNameToJayType(element))
+            mkRef(refName, originalName, constName, dynamicRef, false, variables.currentType, elementNameToJayType(element))
         ], {});
         return new RenderFragment(`${constName}()`, Imports.none(), [], refs);
     } else return RenderFragment.empty();
@@ -179,7 +179,7 @@ function renderChildCompRef(
     let refName = camelCase(originalName);
     let constName = camelCase(`ref ${refName}`);
     let refs = mkRefsTree([
-        mkRef(refName, constName, dynamicRef, !element.attributes.ref, variables.currentType, new JayComponentType(element.rawTagName, []))
+        mkRef(refName, originalName, constName, dynamicRef, !element.attributes.ref, variables.currentType, new JayComponentType(element.rawTagName, []))
     ], {});
     return new RenderFragment(`${constName}()`, Imports.for(), [], refs);
 }
@@ -402,6 +402,7 @@ function renderFunctionImplementation(
     importStatements: JayImportLink[],
     baseElementName: string,
     namespaces: JayHtmlNamespace[],
+    headlessImports: JayHeadlessImports[],
     importerMode: RuntimeMode,
 ): {
     renderedRefs: string;
@@ -428,7 +429,7 @@ function renderFunctionImplementation(
             importerMode,
             namespaces,
         });
-        renderedRoot = optimizeRefs(renderedRoot);
+        renderedRoot = optimizeRefs(renderedRoot, headlessImports);
     } else renderedRoot = new RenderFragment('', Imports.none(), rootElement.validations);
     const elementType = baseElementName + 'Element';
     const refsType = baseElementName + 'ElementRefs';
@@ -700,6 +701,7 @@ export function generateElementDefinitionFile(
             jayFile.imports,
             jayFile.baseElementName,
             jayFile.namespaces,
+            jayFile.headlessImports,
             RuntimeMode.WorkerTrusted,
         );
         return [
@@ -732,6 +734,7 @@ export function generateElementFile(
             jayFile.imports,
             jayFile.baseElementName,
             jayFile.namespaces,
+            jayFile.headlessImports,
             importerMode,
         );
     const renderedFile = [
@@ -768,6 +771,7 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
         jayFile.imports,
         jayFile.baseElementName,
         jayFile.namespaces,
+        jayFile.headlessImports,
         RuntimeMode.WorkerSandbox,
     );
     let renderedBridge = renderBridge(

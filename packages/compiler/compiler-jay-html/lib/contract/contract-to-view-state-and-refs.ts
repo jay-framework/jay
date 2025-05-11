@@ -10,7 +10,7 @@ import {
     JayObjectType,
     JayType,
     JayUnknown, JayValidations,
-    Ref, mkRefsTree, RefsTree, WithValidations
+    Ref, mkRefsTree, RefsTree, WithValidations, mkRef
 } from "jay-compiler-shared";
 import {camelCase, pascalCase} from "change-case";
 import path from "path";
@@ -158,15 +158,10 @@ async function traverseTag(
     const {viewStateType, isRepeated} = context;
     if (tag.type.includes(ContractTagType.interactive)) {
         const elementType = tag.elementType?.join(' | ') || 'HTMLElement';
-        const ref: Ref = {
-            kind: "ref",
-            ref: tag.tag,
-            constName: '',
-            dynamicRef: isRepeated,
-            autoRef: false,
+        const ref = mkRef(tag.tag, tag.tag, '', isRepeated,  false,
             viewStateType,
-            elementType: new JayHTMLType(elementType),
-        };
+            new JayHTMLType(elementType),
+        );
         return {ref, ...(tag.dataType ? {type: tag.dataType} : {})};
     } else if (tag.type.includes(ContractTagType.variant) && tag.dataType instanceof JayEnumType) {
         return {type: tag.dataType};

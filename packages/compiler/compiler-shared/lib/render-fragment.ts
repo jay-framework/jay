@@ -65,23 +65,25 @@ export function mkRefsTree(refs: Ref[], children: Record<string, RefsTree>, repe
 
 export interface Ref {
     readonly kind: 'ref',
+    originalName: string,
     ref: string;
     constName: string;
-    dynamicRef: boolean;
+    repeated: boolean;
     autoRef: boolean;
     viewStateType: JayType;
     elementType: JayType;
 }
 
 export function mkRef(ref: string,
-                    constName: string,
-                    dynamicRef: boolean,
-                    autoRef: boolean,
-                    viewStateType: JayType,
-                    elementType: JayType
+                      originalName: string,
+                      constName: string,
+                      repeated: boolean,
+                      autoRef: boolean,
+                      viewStateType: JayType,
+                      elementType: JayType
 ): Ref {
     return {
-       kind: "ref", ref, constName, dynamicRef, autoRef, viewStateType, elementType
+       kind: "ref", originalName, ref, constName, repeated, autoRef, viewStateType, elementType
     }
 }
 

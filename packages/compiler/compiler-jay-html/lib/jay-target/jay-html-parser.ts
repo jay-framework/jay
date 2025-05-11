@@ -1,10 +1,10 @@
 import { HTMLElement, parse } from 'node-html-parser';
-import {JayImportedContract, JayValidations, Ref, WithValidations} from 'jay-compiler-shared';
+import {JayValidations, mkRefsTree, Ref, RefsTree, WithValidations} from 'jay-compiler-shared';
 import yaml from 'js-yaml';
 import { capitalCase, pascalCase } from 'change-case';
 import pluralize from 'pluralize';
 import { parseEnumValues, parseImportNames, parseIsEnum } from '../expressions/expression-compiler';
-import { analyzeExportedTypes, ResolveTsConfigOptions } from 'jay-compiler-analyze-exported-types';
+import { ResolveTsConfigOptions } from 'jay-compiler-analyze-exported-types';
 import path from 'path';
 import {
     JayArrayType,
@@ -19,7 +19,7 @@ import { SourceFileFormat } from 'jay-compiler-shared';
 import { JayImportLink, JayImportName, JayImportKind } from 'jay-compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
 
-import { JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
+import {JayHeadlessImports, JayHtmlNamespace, JayHtmlSourceFile} from './jay-html-source-file';
 
 import { JayImportResolver } from './jay-import-resolver';
 import {contractToImportsViewStateAndRefs, JayContractImportLink} from "../contract";
@@ -85,9 +85,12 @@ function parseTypes(
     validations: JayValidations,
     baseElementName: string,
     imports: JayImportName[],
-): JayType {
-    if (typeof jayYaml.data === 'object')
-        return resolveType(jayYaml.data, validations, [baseElementName + 'ViewState'], imports);
+    headlessImports: JayHeadlessImports[]): JayType {
+    if (typeof jayYaml.data === 'object') {
+        const resolvedType = resolveType(jayYaml.data, validations, [baseElementName + 'ViewState'], imports);
+        const headlessImportedTypes = Object.fromEntries(headlessImports.map(_ => [_.key, _.rootType]));
+        return new JayObjectType(resolvedType.name, {...headlessImportedTypes, ...resolvedType.props})
+    }
     else if (typeof jayYaml.data === 'string') return resolveImportedType(imports, jayYaml.data);
 }
 
@@ -160,12 +163,6 @@ function parseHeadfullImports(
     });
 }
 
-interface JayHeadlessImports {
-    key: string,
-    allRefs: Ref[],
-    rootType: JayType,
-    importLinks: JayContractImportLink[]
-}
 async function parseHeadlessImports(
     elements: HTMLElement[],
     validations: Array<string>,
@@ -181,15 +178,19 @@ async function parseHeadlessImports(
             const subContract = importResolver.loadContract(importedFile);
             validations.push(...subContract.validations)
             await subContract.mapAsync(async contract => {
-                const contractName = subContract.val.name;
                 const contractTypes = await contractToImportsViewStateAndRefs(contract, path.dirname(importedFile), importResolver)
-                contractTypes.map(({type, refs, importLinks}) =>
-                    result.push({key, allRefs: refs.refs, rootType:type, importLinks})
-                )
-                // const viewState = `${pascalCase(contractName)}ViewState`;
-                // const refs = `${pascalCase(contractName)}Refs`;
-                // const repeatedRefs = `${pascalCase(contractName)}RepeatedRefs`;
-                // const contractType = new JayImportedContract(contractName, viewState, refs, repeatedRefs);
+                contractTypes.map(({type, refs: subContractRefsTree, importLinks}) => {
+                    const contractName = subContract.val.name;
+                    const refsTypeName = `${pascalCase(contractName)}Refs`;
+                    const repeatedRefsTypeName = `${pascalCase(contractName)}RepeatedRefs`;
+                    const refs = mkRefsTree(subContractRefsTree.refs,
+                        subContractRefsTree.children,
+                        subContractRefsTree.repeated,
+                        refsTypeName,
+                        repeatedRefsTypeName)
+
+                    result.push({key, refs, rootType: type, importLinks})
+                })
             })
         }
         catch (e) {
@@ -234,9 +235,8 @@ export async function parseJayFile(
         filePath,
         linkedContractResolver,
     );
-    console.log(util.inspect(headlessImports, { depth: null }));
     const importNames = headfullImports.flatMap((_) => _.names);
-    const types = parseTypes(jayYaml, validations, baseElementName, importNames);
+    const types = parseTypes(jayYaml, validations, baseElementName, importNames, headlessImports);
 
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
@@ -253,6 +253,7 @@ export async function parseJayFile(
             body,
             baseElementName,
             namespaces,
+            headlessImports
         } as JayHtmlSourceFile,
         validations,
     );
