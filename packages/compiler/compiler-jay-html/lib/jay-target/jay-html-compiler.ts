@@ -605,14 +605,15 @@ ${indent.firstLine}])`,
         if (importedSymbols.has(htmlElement.rawTagName)) {
             return renderNestedComponent(htmlElement, { ...newContext, indent: childIndent });
         } else {
-            let renderedRef = renderElementRef(htmlElement, context);
-            if (hasRefs(renderedRef.refs, false))
+            const renderedRef = renderElementRef(htmlElement, context);
+            if (renderedRef.rendered !== '') {
                 return new RenderFragment(
                     `${newContext.indent.firstLine}e(${renderedRef.rendered})`,
                     childRenders.imports.plus(Import.sandboxElement),
                     [...childRenders.validations, ...renderedRef.validations],
                     mergeRefsTrees(childRenders.refs, renderedRef.refs),
                 );
+            }
             else return childRenders;
         }
     }
@@ -680,6 +681,7 @@ function renderBridge(
         namespaces: [],
         importedRefNameToRef,
     });
+    renderedBridge = optimizeRefs(renderedBridge, headlessImports);
 
     const { renderedRefsManager, refsManagerImport } = renderReferenceManager(
         renderedBridge.refs,

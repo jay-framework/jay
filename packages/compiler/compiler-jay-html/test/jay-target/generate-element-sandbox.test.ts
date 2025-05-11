@@ -1,4 +1,8 @@
-import { readFixtureElementBridgeFile } from '../test-utils/file-utils';
+import {
+    readFileAndGenerateElementFile,
+    readFixtureElementBridgeFile,
+    readFixtureFileRaw
+} from '../test-utils/file-utils';
 import { readFileAndGenerateElementBridgeFile } from '../test-utils/file-utils';
 import { prettify } from 'jay-compiler-shared';
 
@@ -65,5 +69,16 @@ describe('generate jay-html element for sandbox', () => {
                 );
             });
         });
+
+        describe('linked contract', () => {
+            it('generate element file with linked contract', async () => {
+                const folder = 'contracts/page';
+                const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
+                expect(await prettify(runtimeFile)).toEqual(
+                    await prettify(await readFixtureFileRaw(folder, 'generated-element-bridge.ts')),
+                );
+            });
+        });
+
     });
 });
