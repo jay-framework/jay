@@ -164,10 +164,12 @@ async function traverseTag(
     const { viewStateType, isRepeated } = context;
     if (tag.type.includes(ContractTagType.interactive)) {
         const elementType = tag.elementType?.join(' | ') || 'HTMLElement';
+        let refName = camelCase(tag.tag);
+        let constName = camelCase(`ref ${refName}`);
         const ref = mkRef(
+            refName,
             tag.tag,
-            tag.tag,
-            '',
+            constName,
             isRepeated,
             false,
             viewStateType,

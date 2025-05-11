@@ -4,8 +4,6 @@ import {
     dynamicText as dt,
     RenderElement,
     ReferencesManager,
-    dynamicElement as de,
-    forEach,
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
@@ -27,7 +25,7 @@ export type PageElementRender = RenderElement<PageViewState, PageElementRefs, Pa
 export type PageElementPreRender = [PageElementRefs, PageElementRender];
 
 export function render(options?: RenderElementOptions): PageElementPreRender {
-    const [counterRefManager, [add, subtract]] = ReferencesManager.for(
+    const [counterRefManager, [refAdd, refSubtract]] = ReferencesManager.for(
         options,
         ['add', 'subtract'],
         [],
@@ -43,10 +41,10 @@ export function render(options?: RenderElementOptions): PageElementPreRender {
     const render = (viewState: PageViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
-                e('h1', {}, [dt((vs) => vs.namedCounter.title)]),
-                e('div', {}, [dt((vs) => `value: ${vs.namedCounter.counter.count}`)]),
-                e('button', {}, ['add'], add()),
-                e('button', {}, ['subtract'], subtract()),
+                e('h1', {}, [dt((vs) => vs.namedCounter?.title)]),
+                e('div', {}, [dt((vs) => `value: ${vs.namedCounter?.counter?.count}`)]),
+                e('button', {}, ['add'], refAdd()),
+                e('button', {}, ['subtract'], refSubtract()),
             ]),
         ) as PageElement;
     return [refManager.getPublicAPI() as PageElementRefs, render];
