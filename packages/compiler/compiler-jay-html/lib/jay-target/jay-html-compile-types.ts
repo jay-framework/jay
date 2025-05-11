@@ -29,7 +29,8 @@ function renderInterface(aType: JayType): string {
                         if (isObjectType(arrayItemType)) {
                             childInterfaces.push(renderInterface(arrayItemType));
                             return `  ${prop}: Array<${arrayItemType.name}>`;
-                        } if (arrayItemType instanceof JayImportedType) {
+                        }
+                        if (arrayItemType instanceof JayImportedType) {
                             return `  ${prop}: Array<${arrayItemType.name}>`;
                         } else {
                             throw new Error('not implemented yet');

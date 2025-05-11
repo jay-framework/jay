@@ -1,8 +1,4 @@
-import {
-    JayElement,
-    RenderElement,
-    RenderElementOptions,
-} from 'jay-runtime';
+import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
 import {
     NamedContractViewState,
     NamedContractRefs,
@@ -20,4 +16,4 @@ export type PageElement = JayElement<PageViewState, PageElementRefs>;
 export type PageElementRender = RenderElement<PageViewState, PageElementRefs, PageElement>;
 export type PageElementPreRender = [PageElementRefs, PageElementRender];
 
-export declare function render(options?: RenderElementOptions): PageElementPreRender
+export declare function render(options?: RenderElementOptions): PageElementPreRender;

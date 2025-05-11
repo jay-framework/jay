@@ -9,11 +9,14 @@ import {
     JayImportLink,
     JayType,
     JayUnknown,
-    MainRuntimeModes, mergeRefsTrees, mkRef, mkRefsTree,
+    MainRuntimeModes,
+    mergeRefsTrees,
+    mkRef,
+    mkRefsTree,
     RenderFragment,
     RuntimeMode,
     WithValidations,
-    nestRefs
+    nestRefs,
 } from 'jay-compiler-shared';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
@@ -30,7 +33,7 @@ import {
 } from '../expressions/expression-compiler';
 import { camelCase } from 'camel-case';
 
-import {JayHeadlessImports, JayHtmlNamespace, JayHtmlSourceFile} from './jay-html-source-file';
+import { JayHeadlessImports, JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
 import { ensureSingleChildElement, isConditional, isForEach } from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
@@ -129,9 +132,20 @@ function renderElementRef(
         let originalName = element.attributes.ref;
         let refName = camelCase(originalName);
         let constName = camelCase(`ref ${refName}`);
-        let refs = mkRefsTree([
-            mkRef(refName, originalName, constName, dynamicRef, false, variables.currentType, elementNameToJayType(element))
-        ], {});
+        let refs = mkRefsTree(
+            [
+                mkRef(
+                    refName,
+                    originalName,
+                    constName,
+                    dynamicRef,
+                    false,
+                    variables.currentType,
+                    elementNameToJayType(element),
+                ),
+            ],
+            {},
+        );
         return new RenderFragment(`${constName}()`, Imports.none(), [], refs);
     } else return RenderFragment.empty();
 }
@@ -170,7 +184,6 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
     }
 }
 
-
 function renderChildCompRef(
     element: HTMLElement,
     { dynamicRef, variables, nextAutoRefName }: RenderContext,
@@ -178,9 +191,20 @@ function renderChildCompRef(
     let originalName = element.attributes.ref || nextAutoRefName();
     let refName = camelCase(originalName);
     let constName = camelCase(`ref ${refName}`);
-    let refs = mkRefsTree([
-        mkRef(refName, originalName, constName, dynamicRef, !element.attributes.ref, variables.currentType, new JayComponentType(element.rawTagName, []))
-    ], {});
+    let refs = mkRefsTree(
+        [
+            mkRef(
+                refName,
+                originalName,
+                constName,
+                dynamicRef,
+                !element.attributes.ref,
+                variables.currentType,
+                new JayComponentType(element.rawTagName, []),
+            ),
+        ],
+        {},
+    );
     return new RenderFragment(`${constName}()`, Imports.for(), [], refs);
 }
 
@@ -387,7 +411,10 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 };
 
                 let childElement = renderHtmlElement(htmlElement, newContext);
-                return nestRefs(forEachAccessPath, renderForEach(forEachFragment, forEachVariables, trackBy, childElement));
+                return nestRefs(
+                    forEachAccessPath,
+                    renderForEach(forEachFragment, forEachVariables, trackBy, childElement),
+                );
             } else {
                 return renderHtmlElement(htmlElement, context);
             }
@@ -595,7 +622,10 @@ ${indent.firstLine}])`,
                 indent: indent.child().noFirstLineBreak().withLastLineBreak(),
                 dynamicRef: true,
             });
-            return nestRefs(forEachAccessPath, renderForEach(forEachFragment, forEachVariables, trackBy, childElement));
+            return nestRefs(
+                forEachAccessPath,
+                renderForEach(forEachFragment, forEachVariables, trackBy, childElement),
+            );
         } else return renderHtmlElement(htmlElement, context);
     }
     return RenderFragment.empty();

@@ -8,11 +8,14 @@ import {
     JayImportLink,
     JayType,
     JayUnknown,
-    MainRuntimeModes, mergeRefsTrees, mkRef, mkRefsTree,
+    MainRuntimeModes,
+    mergeRefsTrees,
+    mkRef,
+    mkRefsTree,
     RenderFragment,
     RuntimeMode,
     WithValidations,
-    nestRefs
+    nestRefs,
 } from 'jay-compiler-shared';
 import { JayHtmlSourceFile } from '../jay-target/jay-html-source-file';
 import { HTMLElement, NodeType } from 'node-html-parser';
@@ -109,7 +112,15 @@ function renderElementRef(
         let originalName = element.attributes.ref;
         let refName = camelCase(originalName);
         let refs = [
-            mkRef(refName,  originalName, null, dynamicRef, false, variables.currentType, elementNameToJayType(element))
+            mkRef(
+                refName,
+                originalName,
+                null,
+                dynamicRef,
+                false,
+                variables.currentType,
+                elementNameToJayType(element),
+            ),
         ];
         return new RenderFragment(
             `{...eventsFor(${variables.currentContext}, '${refName}')}`,
@@ -160,15 +171,22 @@ function renderChildCompRef(
     let refName = camelCase(originalName);
     let constName = camelCase(`ref ${refName}`);
     let refs = [
-        mkRef(refName, element.attributes.ref, constName, dynamicRef, !element.attributes.ref,
-            variables.currentType, new JayComponentType(element.rawTagName, []))
+        mkRef(
+            refName,
+            element.attributes.ref,
+            constName,
+            dynamicRef,
+            !element.attributes.ref,
+            variables.currentType,
+            new JayComponentType(element.rawTagName, []),
+        ),
     ];
     if (!refs[0].autoRef)
         return new RenderFragment(
             `{...eventsFor(${variables.currentContext}, '${refName}')}`,
             Imports.for(Import.eventsFor),
             [],
-            mkRefsTree(refs, {})
+            mkRefsTree(refs, {}),
         );
     else return new RenderFragment('', Imports.for(Import.eventsFor), [], mkRefsTree(refs, {}));
 }
@@ -345,13 +363,16 @@ ${indent.curr}return (${childElement.rendered})})}`,
                 };
 
                 let childElement = renderHtmlElement(htmlElement, newContext);
-                return nestRefs(forEachAccessPath, renderForEach(
-                    forEachFragment,
-                    variables,
-                    forEachVariables,
-                    trackBy,
-                    childElement,
-                ));
+                return nestRefs(
+                    forEachAccessPath,
+                    renderForEach(
+                        forEachFragment,
+                        variables,
+                        forEachVariables,
+                        trackBy,
+                        childElement,
+                    ),
+                );
             } else return renderHtmlElement(htmlElement, renderContext);
         case NodeType.COMMENT_NODE:
             break;

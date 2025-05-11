@@ -7,15 +7,19 @@ import {
     JayHTMLType,
     JayType,
     JayTypeAlias,
-    JayUnionType, mkRefsTree,
-    Ref, RefsTree,
-    RenderFragment, hasRefs, mkRef,
+    JayUnionType,
+    mkRefsTree,
+    Ref,
+    RefsTree,
+    RenderFragment,
+    hasRefs,
+    mkRef,
 } from 'jay-compiler-shared';
 import { HTMLElement } from 'node-html-parser';
 import { htmlElementTagNameMap } from './html-element-tag-name-map';
 import { camelCase } from 'camel-case';
 import { Indent } from './indent';
-import {JayHeadlessImports} from "./jay-html-source-file";
+import { JayHeadlessImports } from './jay-html-source-file';
 
 const isComponentRef = (ref: Ref) =>
     ref.elementType instanceof JayComponentType || ref.elementType instanceof JayTypeAlias;
@@ -64,13 +68,15 @@ export function renderRefsType(
             const childTypes = Object.entries(refsTree.children)
                 .map(([childName, childRefNode]) => {
                     if (childRefNode.imported) {
-                        const importedTypeName = childRefNode.repeated?
-                            childRefNode.imported.repeatedRefsTypeName :
-                            childRefNode.imported.refsTypeName;
-                        return `${indent.curr}${childName}: ${importedTypeName}`
-                    }
-                    else if (hasRefs(childRefNode, false)) {
-                        const childType = generateTypeForPath(childRefNode, indent.child(true, true));
+                        const importedTypeName = childRefNode.repeated
+                            ? childRefNode.imported.repeatedRefsTypeName
+                            : childRefNode.imported.refsTypeName;
+                        return `${indent.curr}${childName}: ${importedTypeName}`;
+                    } else if (hasRefs(childRefNode, false)) {
+                        const childType = generateTypeForPath(
+                            childRefNode,
+                            indent.child(true, true),
+                        );
                         return `${indent.curr}${childName}: ${childType}`;
                     }
                 })
@@ -125,31 +131,46 @@ export function newAutoRefNameGenerator() {
     };
 }
 
-function markAutoOnImportedRefs(deDuplicated: RefsTree, headlessImports: JayHeadlessImports[]): RefsTree {
-    const importKeys = headlessImports.map(_ => _.key);
-    const mappedRefs = deDuplicated.refs.map(ref => {
-        const isRefOfImportedHeadlessContract = !!importKeys.find(key => ref.originalName.startsWith(`${key}.`))
+function markAutoOnImportedRefs(
+    deDuplicated: RefsTree,
+    headlessImports: JayHeadlessImports[],
+): RefsTree {
+    const importKeys = headlessImports.map((_) => _.key);
+    const mappedRefs = deDuplicated.refs.map((ref) => {
+        const isRefOfImportedHeadlessContract = !!importKeys.find((key) =>
+            ref.originalName.startsWith(`${key}.`),
+        );
         if (isRefOfImportedHeadlessContract)
-            return mkRef(ref.ref, ref.originalName, ref.constName, ref.repeated, true, ref.viewStateType, ref.elementType)
-        else
-            return ref;
-    })
-    const mappedChildren =
-        Object.fromEntries(
-            Object.entries(deDuplicated.children)
-                .map(([key, value]) => [key, markAutoOnImportedRefs(value, headlessImports)])
-        )
-    return mkRefsTree(mappedRefs, mappedChildren, deDuplicated.repeated, deDuplicated?.imported?.refsTypeName,
-        deDuplicated?.imported?.repeatedRefsTypeName)
+            return mkRef(
+                ref.ref,
+                ref.originalName,
+                ref.constName,
+                ref.repeated,
+                true,
+                ref.viewStateType,
+                ref.elementType,
+            );
+        else return ref;
+    });
+    const mappedChildren = Object.fromEntries(
+        Object.entries(deDuplicated.children).map(([key, value]) => [
+            key,
+            markAutoOnImportedRefs(value, headlessImports),
+        ]),
+    );
+    return mkRefsTree(
+        mappedRefs,
+        mappedChildren,
+        deDuplicated.repeated,
+        deDuplicated?.imported?.refsTypeName,
+        deDuplicated?.imported?.repeatedRefsTypeName,
+    );
 }
 
-export function optimizeRefs({
-                                 rendered,
-                                 imports,
-                                 validations,
-                                 refs,
-                             }: RenderFragment,
-                             headlessImports: JayHeadlessImports[] = []): RenderFragment {
+export function optimizeRefs(
+    { rendered, imports, validations, refs }: RenderFragment,
+    headlessImports: JayHeadlessImports[] = [],
+): RenderFragment {
     const deDuplicateRefsTree = (refs: RefsTree): RefsTree => {
         const mergedRefsMap = refs.refs.reduce((refsMap, ref) => {
             if (refsMap[ref.ref] === ref.ref) {
@@ -181,23 +202,27 @@ export function optimizeRefs({
             return refsMap;
         }, {});
         const mergedRefs: Ref[] = Object.values(mergedRefsMap);
-        const optimizedChildren =
-        Object.fromEntries(
-            Object
-            .entries(refs.children)
-            .map(([key, child]) => [key, deDuplicateRefsTree(child)]));
+        const optimizedChildren = Object.fromEntries(
+            Object.entries(refs.children).map(([key, child]) => [key, deDuplicateRefsTree(child)]),
+        );
 
-        return mkRefsTree(mergedRefs, optimizedChildren, refs.repeated, refs?.imported?.refsTypeName,
-            refs?.imported?.repeatedRefsTypeName)
-    }
+        return mkRefsTree(
+            mergedRefs,
+            optimizedChildren,
+            refs.repeated,
+            refs?.imported?.refsTypeName,
+            refs?.imported?.repeatedRefsTypeName,
+        );
+    };
 
     const deDuplicated = deDuplicateRefsTree(refs);
     const markedAutoOnImported = markAutoOnImportedRefs(deDuplicated, headlessImports);
-    const importedRefs = Object.fromEntries(headlessImports.map(_ => [_.key, _.refs]))
-    const combined = mkRefsTree(markedAutoOnImported.refs,
-        {...markedAutoOnImported.children, ...importedRefs},
-        markedAutoOnImported.repeated
-    )
+    const importedRefs = Object.fromEntries(headlessImports.map((_) => [_.key, _.refs]));
+    const combined = mkRefsTree(
+        markedAutoOnImported.refs,
+        { ...markedAutoOnImported.children, ...importedRefs },
+        markedAutoOnImported.repeated,
+    );
     return new RenderFragment(rendered, imports, validations, combined);
 }
 
@@ -280,11 +305,9 @@ export function renderReferenceManager(
 
     if (hasRefs(refs, true)) {
         const renderedRefsManager = renderRefManagerNode('refManager', refs);
-        return {renderedRefsManager, refsManagerImport: imports};
-    }
-    else {
-        const renderedRefsManager =
-            `const [refManager, []] = ${referenceManagerInit}(${options}[], [], [], []);`
-        return {renderedRefsManager, refsManagerImport: imports}
+        return { renderedRefsManager, refsManagerImport: imports };
+    } else {
+        const renderedRefsManager = `const [refManager, []] = ${referenceManagerInit}(${options}[], [], [], []);`;
+        return { renderedRefsManager, refsManagerImport: imports };
     }
 }

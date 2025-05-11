@@ -8,64 +8,77 @@ export interface ImportedRefsTree {
 }
 
 export interface RefsTree {
-    readonly kind: 'refTree',
+    readonly kind: 'refTree';
     readonly refs: Ref[];
     readonly children: Record<string, RefsTree>;
-    readonly imported?: ImportedRefsTree
-    readonly repeated: boolean
+    readonly imported?: ImportedRefsTree;
+    readonly repeated: boolean;
 }
 
 export function mergeRefsTrees(...trees: RefsTree[]): RefsTree {
-    const allRefs = trees.flatMap(tree => tree.refs);
+    const allRefs = trees.flatMap((tree) => tree.refs);
     const allChildren: Record<string, RefsTree> = {};
-    const allKeys = new Set(trees.flatMap(tree => Object.keys(tree.children)));
+    const allKeys = new Set(trees.flatMap((tree) => Object.keys(tree.children)));
 
     for (const key of allKeys) {
         const childTrees = trees
-            .filter(tree => tree.children[key] !== undefined)
-            .map(tree => tree.children[key]);
+            .filter((tree) => tree.children[key] !== undefined)
+            .map((tree) => tree.children[key]);
 
         if (childTrees.length > 0) {
             allChildren[key] = mergeRefsTrees(...childTrees);
         }
     }
-    const isRepeated = trees.some(tree => tree.repeated);
+    const isRepeated = trees.some((tree) => tree.repeated);
     return mkRefsTree(allRefs, allChildren, isRepeated);
 }
 
 export function hasRefs(refs: RefsTree, includingAutoRefs: boolean) {
-    const onlyNonAutoRefs = (ref: Ref) => !ref.autoRef
-    const allRefs = (ref: Ref) => true
-    return refs.refs.filter(includingAutoRefs?allRefs:onlyNonAutoRefs).length > 0 ||
+    const onlyNonAutoRefs = (ref: Ref) => !ref.autoRef;
+    const allRefs = (ref: Ref) => true;
+    return (
+        refs.refs.filter(includingAutoRefs ? allRefs : onlyNonAutoRefs).length > 0 ||
         refs.imported ||
-        Object.entries(refs.children).map(([ref, refs]) => hasRefs(refs, includingAutoRefs))
-            .reduce((prev, curr) => prev || curr, false);
+        Object.entries(refs.children)
+            .map(([ref, refs]) => hasRefs(refs, includingAutoRefs))
+            .reduce((prev, curr) => prev || curr, false)
+    );
 }
 
 export function nestRefs(path: string[], renderFragment: RenderFragment): RenderFragment {
     let refs = renderFragment.refs;
     for (let index = path.length - 1; index >= 0; --index) {
-        refs = mkRefsTree([], {[path[index]]:refs}, refs.repeated)
+        refs = mkRefsTree([], { [path[index]]: refs }, refs.repeated);
     }
     return new RenderFragment(
         renderFragment.rendered,
         renderFragment.imports,
         renderFragment.validations,
-        refs
+        refs,
     );
 }
 
-
-export function mkRefsTree(refs: Ref[], children: Record<string, RefsTree>, repeated: boolean = false, refsTypeName?: string, repeatedRefsTypeName?: string): RefsTree {
+export function mkRefsTree(
+    refs: Ref[],
+    children: Record<string, RefsTree>,
+    repeated: boolean = false,
+    refsTypeName?: string,
+    repeatedRefsTypeName?: string,
+): RefsTree {
     if (refsTypeName)
-        return {kind: 'refTree', refs, children, repeated, imported: {refsTypeName, repeatedRefsTypeName}};
-    else
-        return {kind: 'refTree', refs, children, repeated};
+        return {
+            kind: 'refTree',
+            refs,
+            children,
+            repeated,
+            imported: { refsTypeName, repeatedRefsTypeName },
+        };
+    else return { kind: 'refTree', refs, children, repeated };
 }
 
 export interface Ref {
-    readonly kind: 'ref',
-    originalName: string,
+    readonly kind: 'ref';
+    originalName: string;
     ref: string;
     constName: string;
     repeated: boolean;
@@ -74,17 +87,25 @@ export interface Ref {
     elementType: JayType;
 }
 
-export function mkRef(ref: string,
-                      originalName: string,
-                      constName: string,
-                      repeated: boolean,
-                      autoRef: boolean,
-                      viewStateType: JayType,
-                      elementType: JayType
+export function mkRef(
+    ref: string,
+    originalName: string,
+    constName: string,
+    repeated: boolean,
+    autoRef: boolean,
+    viewStateType: JayType,
+    elementType: JayType,
 ): Ref {
     return {
-       kind: "ref", originalName, ref, constName, repeated, autoRef, viewStateType, elementType
-    }
+        kind: 'ref',
+        originalName,
+        ref,
+        constName,
+        repeated,
+        autoRef,
+        viewStateType,
+        elementType,
+    };
 }
 
 export class RenderFragment {

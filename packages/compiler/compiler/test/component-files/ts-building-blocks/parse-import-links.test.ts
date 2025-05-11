@@ -4,7 +4,7 @@ import {
     parseImportLinks,
 } from '../../../lib/components-files/building-blocks/parse-import-links';
 import { fixtureFilePath, readFixtureFile } from '../../test-utils/file-utils';
-import { JayImportKind, JayImportLink, JayUnknown } from 'jay-compiler-shared';
+import { JayImportLink, JayUnknown } from 'jay-compiler-shared';
 
 describe('parseImportLinks', () => {
     const fixturePath = 'full-projects/counter/generated/main';
@@ -49,7 +49,6 @@ describe('parseImportLinks', () => {
                     },
                 ],
                 sandbox: false,
-                kind: JayImportKind.headfull,
             },
             {
                 module: 'jay-secure',
@@ -65,7 +64,6 @@ describe('parseImportLinks', () => {
                     },
                 ],
                 sandbox: false,
-                kind: JayImportKind.headfull,
             },
             {
                 module: './function-repository',
@@ -76,7 +74,6 @@ describe('parseImportLinks', () => {
                     },
                 ],
                 sandbox: false,
-                kind: JayImportKind.headfull,
             },
             {
                 module: './counter?jay-mainSandbox',
@@ -87,7 +84,6 @@ describe('parseImportLinks', () => {
                     },
                 ],
                 sandbox: true,
-                kind: JayImportKind.headfull,
             },
         ]);
     });
@@ -109,7 +105,6 @@ describe('getImportByName', () => {
                 },
             ],
             sandbox: false,
-            kind: JayImportKind.headfull,
         },
         {
             module: 'jay-secure',
@@ -125,7 +120,6 @@ describe('getImportByName', () => {
                 },
             ],
             sandbox: false,
-            kind: JayImportKind.headfull,
         },
     ];
     const component = 'jay-runtime';

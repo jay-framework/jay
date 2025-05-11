@@ -7,24 +7,28 @@ import {
     RefsTree,
     WithValidations,
 } from 'jay-compiler-shared';
-import {Contract} from './contract';
-import {generateTypes, JayImportResolver, renderRefsType} from '../';
-import {pascalCase} from 'change-case';
-import {contractToImportsViewStateAndRefs, JayContractImportLink} from "./contract-to-view-state-and-refs";
+import { Contract } from './contract';
+import { generateTypes, JayImportResolver, renderRefsType } from '../';
+import { pascalCase } from 'change-case';
+import {
+    contractToImportsViewStateAndRefs,
+    JayContractImportLink,
+} from './contract-to-view-state-and-refs';
 
 function refsToRepeated(refsTreeNode: RefsTree): RefsTree {
-    const {refs, children, imported} = refsTreeNode;
+    const { refs, children, imported } = refsTreeNode;
     return mkRefsTree(
         refs.map((ref) => ({
             ...ref,
             repeated: true,
         })),
         Object.fromEntries(
-            Object.entries(children).map(([key, value]) => [key, refsToRepeated(value)])),
+            Object.entries(children).map(([key, value]) => [key, refsToRepeated(value)]),
+        ),
         true,
         imported?.refsTypeName,
-        imported?.repeatedRefsTypeName
-    )
+        imported?.repeatedRefsTypeName,
+    );
 }
 
 function generateRefsInterface(
@@ -70,12 +74,14 @@ export async function compileContract(
     jayImportResolver: JayImportResolver,
 ): Promise<WithValidations<string>> {
     return contractWithValidations.flatMapAsync(async (contract) => {
+        const contractTypes = await contractToImportsViewStateAndRefs(
+            contract,
+            contractFilePath,
+            jayImportResolver,
+        );
 
-        const contractTypes =
-            await contractToImportsViewStateAndRefs(contract, contractFilePath, jayImportResolver);
-
-        return contractTypes.map(contractTypesResult => {
-            const {type, refs, importLinks} = contractTypesResult;
+        return contractTypes.map((contractTypesResult) => {
+            const { type, refs, importLinks } = contractTypesResult;
             const types = generateTypes(type);
             let { imports, renderedRefs } = generateRefsInterface(contract, refs);
             imports = imports
@@ -90,6 +96,6 @@ export async function compileContract(
             const renderFunction = `export declare function render(options?: RenderElementOptions): ${pascalCase(contract.name)}ElementPreRender`;
 
             return `${renderedImports}\n\n${types}\n\n${renderedRefs}\n\n${elementType}\n${elementRenderType}\n${elementPreRenderType}\n\n${renderFunction}`;
-        })
+        });
     });
 }

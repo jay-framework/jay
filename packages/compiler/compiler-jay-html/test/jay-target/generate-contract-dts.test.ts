@@ -1,15 +1,16 @@
 import {
     fixtureDir,
-    getFileFromFolder, readAndParseJayFile, readFixtureElementDefinitionFile,
+    getFileFromFolder,
+    readAndParseJayFile,
+    readFixtureElementDefinitionFile,
     readFixtureFileRaw,
     readFixtureJayContractFile,
 } from '../test-utils/file-utils';
-import {compileContract, generateElementDefinitionFile, parseContract} from '../../lib';
+import { compileContract, generateElementDefinitionFile, parseContract } from '../../lib';
 import { JAY_CONTRACT_EXTENSION, prettify } from 'jay-compiler-shared';
 import { JAY_IMPORT_RESOLVER } from '../../lib';
 
 describe('contract definitions', () => {
-
     describe('generate definition', () => {
         async function testContractDefinitionFile(folder: string) {
             const dirName = fixtureDir(folder);
@@ -33,7 +34,7 @@ describe('contract definitions', () => {
             const folder = 'contracts/named-counter';
             await testContractDefinitionFile(folder);
         });
-    })
+    });
 
     describe('generate jay-html definition linked to contract', () => {
         async function testJayHtmlDefinitionFile(folder: string, expectedFile: string) {
@@ -48,7 +49,6 @@ describe('contract definitions', () => {
         it('jay-html linked to contract', async () => {
             const folder = 'contracts/page';
             await testJayHtmlDefinitionFile(folder, 'page.jay-html.d.ts');
-        })
-
-    })
+        });
+    });
 });

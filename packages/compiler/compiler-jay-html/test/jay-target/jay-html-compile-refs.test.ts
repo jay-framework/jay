@@ -5,7 +5,10 @@ import {
     GenerateTarget,
     Ref,
     ImportsFor,
-    JayObjectType, RefsTree, mkRefsTree, mkRef,
+    JayObjectType,
+    RefsTree,
+    mkRefsTree,
+    mkRef,
 } from 'jay-compiler-shared';
 import { prettify } from 'jay-compiler-shared';
 
@@ -19,11 +22,22 @@ describe('renderRefsType', () => {
 
     it('should render HTMLElementProxy refs', async () => {
         const refs: Ref[] = [
-            mkRef('input', 'input','',false, false,
-                new JayObjectType('TestViewState', {}), new JayHTMLType('HTMLInputElement'))
+            mkRef(
+                'input',
+                'input',
+                '',
+                false,
+                false,
+                new JayObjectType('TestViewState', {}),
+                new JayHTMLType('HTMLInputElement'),
+            ),
         ];
 
-        const { imports, renderedRefs } = renderRefsType(mkRefsTree(refs, {}), 'TestRefs', GenerateTarget.jay);
+        const { imports, renderedRefs } = renderRefsType(
+            mkRefsTree(refs, {}),
+            'TestRefs',
+            GenerateTarget.jay,
+        );
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
             await prettify('import { HTMLElementProxy } from "jay-runtime";'),
         );
@@ -37,10 +51,22 @@ describe('renderRefsType', () => {
 
     it('should render HTMLElementCollectionProxy refs', async () => {
         const refs: Ref[] = [
-            mkRef('inputs', 'input', '', true, false, new JayObjectType('TestViewState', {}), new JayHTMLType('HTMLInputElement'),),
+            mkRef(
+                'inputs',
+                'input',
+                '',
+                true,
+                false,
+                new JayObjectType('TestViewState', {}),
+                new JayHTMLType('HTMLInputElement'),
+            ),
         ];
 
-        const { imports, renderedRefs } = renderRefsType(mkRefsTree(refs, {}), 'TestRefs', GenerateTarget.jay);
+        const { imports, renderedRefs } = renderRefsType(
+            mkRefsTree(refs, {}),
+            'TestRefs',
+            GenerateTarget.jay,
+        );
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
             await prettify('import { HTMLElementCollectionProxy } from "jay-runtime";'),
         );
@@ -54,12 +80,22 @@ describe('renderRefsType', () => {
 
     it('should render component refs', async () => {
         const refs: Ref[] = [
-            mkRef('counter', 'counter', '', false, false,
+            mkRef(
+                'counter',
+                'counter',
+                '',
+                false,
+                false,
                 new JayObjectType('TestViewState', {}),
-                new JayComponentType('Counter', [])),
+                new JayComponentType('Counter', []),
+            ),
         ];
 
-        const { imports, renderedRefs } = renderRefsType(mkRefsTree(refs, {}), 'TestRefs', GenerateTarget.jay);
+        const { imports, renderedRefs } = renderRefsType(
+            mkRefsTree(refs, {}),
+            'TestRefs',
+            GenerateTarget.jay,
+        );
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
             await prettify('import { MapEventEmitterViewState } from "jay-runtime";'),
         );
@@ -74,12 +110,22 @@ describe('renderRefsType', () => {
 
     it('should render component collection refs', async () => {
         const refs: Ref[] = [
-            mkRef('counters', 'counters', '', true, false,
+            mkRef(
+                'counters',
+                'counters',
+                '',
+                true,
+                false,
                 new JayObjectType('TestViewState', {}),
-                new JayComponentType('Counter', [])),
+                new JayComponentType('Counter', []),
+            ),
         ];
 
-        const { imports, renderedRefs } = renderRefsType(mkRefsTree(refs, {}), 'TestRefs', GenerateTarget.jay);
+        const { imports, renderedRefs } = renderRefsType(
+            mkRefsTree(refs, {}),
+            'TestRefs',
+            GenerateTarget.jay,
+        );
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
             await prettify(
                 'import { MapEventEmitterViewState, OnlyEventEmitters, ComponentCollectionProxy } from "jay-runtime";',
@@ -100,15 +146,31 @@ describe('renderRefsType', () => {
 
     it('should render mixed refs', async () => {
         const refs: Ref[] = [
-            mkRef('input', 'input', '', false, false,
+            mkRef(
+                'input',
+                'input',
+                '',
+                false,
+                false,
                 new JayObjectType('TestViewState', {}),
-                new JayHTMLType('HTMLInputElement')),
-            mkRef('counter', 'counter', '', false, false,
+                new JayHTMLType('HTMLInputElement'),
+            ),
+            mkRef(
+                'counter',
+                'counter',
+                '',
+                false,
+                false,
                 new JayObjectType('TestViewState', {}),
-                new JayComponentType('Counter', [])),
+                new JayComponentType('Counter', []),
+            ),
         ];
 
-        const { imports, renderedRefs } = renderRefsType(mkRefsTree(refs, {}), 'TestRefs', GenerateTarget.jay);
+        const { imports, renderedRefs } = renderRefsType(
+            mkRefsTree(refs, {}),
+            'TestRefs',
+            GenerateTarget.jay,
+        );
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
             await prettify(
                 'import { HTMLElementProxy, MapEventEmitterViewState } from "jay-runtime";',
@@ -126,12 +188,22 @@ describe('renderRefsType', () => {
 
     it('should render component refs for react target', async () => {
         const refs: Ref[] = [
-            mkRef('counter', 'counter', '', false, false,
+            mkRef(
+                'counter',
+                'counter',
+                '',
+                false,
+                false,
                 new JayObjectType('TestViewState', {}),
-                new JayComponentType('Counter', [])),
+                new JayComponentType('Counter', []),
+            ),
         ];
 
-        const { imports, renderedRefs } = renderRefsType(mkRefsTree(refs, {}), 'TestRefs', GenerateTarget.react);
+        const { imports, renderedRefs } = renderRefsType(
+            mkRefsTree(refs, {}),
+            'TestRefs',
+            GenerateTarget.react,
+        );
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
             await prettify('import { MapEventEmitterViewState } from "jay-runtime";'),
         );
@@ -146,8 +218,8 @@ describe('renderRefsType', () => {
 
     it('should render linked contract refs as refs sub property with the contract refs type', async () => {
         const refsTree = mkRefsTree([], {
-            subContract: mkRefsTree([], {}, false, 'SubContractRefs', 'SubContractRepeatedRefs')
-        })
+            subContract: mkRefsTree([], {}, false, 'SubContractRefs', 'SubContractRepeatedRefs'),
+        });
 
         const { imports, renderedRefs } = renderRefsType(refsTree, 'TestRefs');
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(await prettify(''));
@@ -160,12 +232,11 @@ describe('renderRefsType', () => {
     });
 
     it('should render linked contract refs for dynamic ref as refs sub property with the contract repeatedRefs type', async () => {
-        const refsTree =
-            mkRefsTree([], {
-                prop: mkRefsTree([], {
-                    subContract: mkRefsTree([], {}, true, 'SubContractRefs', 'SubContractRepeatedRefs')
-                })
-            })
+        const refsTree = mkRefsTree([], {
+            prop: mkRefsTree([], {
+                subContract: mkRefsTree([], {}, true, 'SubContractRefs', 'SubContractRepeatedRefs'),
+            }),
+        });
 
         const { imports, renderedRefs } = renderRefsType(refsTree, 'TestRefs');
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(await prettify(''));
