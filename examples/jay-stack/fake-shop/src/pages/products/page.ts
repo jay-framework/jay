@@ -1,5 +1,5 @@
 import { makeJayStackComponent, PageProps, partialRender } from 'jay-stack-runtime';
-import { render, PageElementRefs, Product } from './page.jay-html';
+import { render, PageElementRefs, ProductOfPageViewState } from './page.jay-html';
 import { Props } from 'jay-component';
 import { getProducts } from '../../products-database';
 
@@ -23,7 +23,7 @@ function ProductsPageConstructor(
     };
 }
 
-export const page = makeJayStackComponent(render)
+export const page = makeJayStackComponent<typeof render>()
     .withProps<PageProps>()
     .withSlowlyRender(renderSlowlyChanging)
     .withFastRender(renderFastChanging)
