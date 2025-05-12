@@ -2,7 +2,7 @@
   "name": "jay-runtime",
   "version": "1.0.0",
   "type": "module",
-  "main": "dist/index",
+  "main": "dist/index.js",
   "scripts": {
     "build": "npm run build:js && npm run build:types && npm run build:fix-dts",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch & npm run build:watch:fix-dts",

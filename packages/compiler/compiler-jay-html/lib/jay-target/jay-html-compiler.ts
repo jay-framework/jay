@@ -9,9 +9,15 @@ import {
     JayType,
     JayUnknown,
     MainRuntimeModes,
+    mergeRefsTrees,
+    mkRef,
+    mkRefsTree,
     RenderFragment,
     RuntimeMode,
     WithValidations,
+    nestRefs,
+    Ref,
+    RefsTree,
 } from 'jay-compiler-shared';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
@@ -28,7 +34,7 @@ import {
 } from '../expressions/expression-compiler';
 import { camelCase } from 'camel-case';
 
-import { JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
+import { JayHeadlessImports, JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
 import { ensureSingleChildElement, isConditional, isForEach } from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
@@ -45,7 +51,6 @@ import { tagToNamespace } from './tag-to-namespace';
 
 interface RenderContext {
     variables: Variables;
-    forEachAccessPath: string[];
     importedSymbols: Set<string>;
     indent: Indent;
     dynamicRef: boolean;
@@ -53,6 +58,7 @@ interface RenderContext {
     nextAutoRefName: () => string;
     importerMode: RuntimeMode;
     namespaces: JayHtmlNamespace[];
+    importedRefNameToRef: Map<string, Ref>;
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -122,23 +128,30 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
 
 function renderElementRef(
     element: HTMLElement,
-    { dynamicRef, variables, forEachAccessPath }: RenderContext,
+    { dynamicRef, variables, importedRefNameToRef }: RenderContext,
 ): RenderFragment {
     if (element.attributes.ref) {
+        if (importedRefNameToRef.has(element.attributes.ref)) {
+            const ref = importedRefNameToRef.get(element.attributes.ref);
+            return new RenderFragment(`${ref.constName}()`);
+        }
         let originalName = element.attributes.ref;
         let refName = camelCase(originalName);
         let constName = camelCase(`ref ${refName}`);
-        let refs = [
-            {
-                ref: refName,
-                path: forEachAccessPath,
-                constName,
-                dynamicRef,
-                autoRef: false,
-                elementType: elementNameToJayType(element),
-                viewStateType: variables.currentType,
-            },
-        ];
+        let refs = mkRefsTree(
+            [
+                mkRef(
+                    refName,
+                    originalName,
+                    constName,
+                    dynamicRef,
+                    false,
+                    variables.currentType,
+                    elementNameToJayType(element),
+                ),
+            ],
+            {},
+        );
         return new RenderFragment(`${constName}()`, Imports.none(), [], refs);
     } else return RenderFragment.empty();
 }
@@ -166,7 +179,7 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
 
     if (isPropsDirectAssignment) {
         let prop = parseComponentPropExpression(attributes.props, variables);
-        return RenderFragment.merge(prop, new RenderFragment('', imports, [], []));
+        return RenderFragment.merge(prop, new RenderFragment('', imports, []));
     } else {
         return props
             .reduce(
@@ -179,28 +192,34 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
 
 function renderChildCompRef(
     element: HTMLElement,
-    { dynamicRef, variables, nextAutoRefName, forEachAccessPath }: RenderContext,
+    { dynamicRef, variables, nextAutoRefName, importedRefNameToRef }: RenderContext,
 ): RenderFragment {
+    if (importedRefNameToRef.has(element.attributes.ref)) {
+        const ref = importedRefNameToRef.get(element.attributes.ref);
+        return new RenderFragment(`${ref.constName}()`, Imports.none(), [], mkRefsTree([ref], {}));
+    }
     let originalName = element.attributes.ref || nextAutoRefName();
     let refName = camelCase(originalName);
     let constName = camelCase(`ref ${refName}`);
-    let refs = [
-        {
-            ref: refName,
-            path: forEachAccessPath,
-            constName,
-            dynamicRef,
-            autoRef: !element.attributes.ref,
-            elementType: new JayComponentType(element.rawTagName, []),
-            viewStateType: variables.currentType,
-        },
-    ];
+    let refs = mkRefsTree(
+        [
+            mkRef(
+                refName,
+                originalName,
+                constName,
+                dynamicRef,
+                !element.attributes.ref,
+                variables.currentType,
+                new JayComponentType(element.rawTagName, []),
+            ),
+        ],
+        {},
+    );
     return new RenderFragment(`${constName}()`, Imports.for(), [], refs);
 }
 
 function renderNode(node: Node, context: RenderContext): RenderFragment {
-    let { variables, importedSymbols, importedSandboxedSymbols, indent, dynamicRef, importerMode } =
-        context;
+    let { variables, importedSymbols, importedSandboxedSymbols, indent, importerMode } = context;
 
     function de(
         tagName: string,
@@ -219,7 +238,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                 .plus(ref.imports)
                 .plus(tagFunc.import),
             [...attributes.validations, ...children.validations, ...ref.validations],
-            [...attributes.refs, ...children.refs, ...ref.refs],
+            mergeRefsTrees(attributes.refs, children.refs, ref.refs),
         );
     }
 
@@ -240,7 +259,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                 .plus(ref.imports)
                 .plus(tagFunc.import),
             [...attributes.validations, ...children.validations, ...ref.validations],
-            [...attributes.refs, ...children.refs, ...ref.refs],
+            mergeRefsTrees(attributes.refs, children.refs, ref.refs),
         );
     }
 
@@ -304,7 +323,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
             `${indent.firstLine}c(${renderedCondition.rendered},\n() => ${childElement.rendered}\n${indent.firstLine})`,
             Imports.merge(childElement.imports, renderedCondition.imports).plus(Import.conditional),
             [...renderedCondition.validations, ...childElement.validations],
-            [...renderedCondition.refs, ...childElement.refs],
+            mergeRefsTrees(renderedCondition.refs, childElement.refs),
         );
     }
 
@@ -398,11 +417,13 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                     variables: forEachVariables,
                     indent: indent.child().noFirstLineBreak().withLastLineBreak(),
                     dynamicRef: true,
-                    forEachAccessPath: [...context.forEachAccessPath, ...forEachAccessPath],
                 };
 
                 let childElement = renderHtmlElement(htmlElement, newContext);
-                return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
+                return nestRefs(
+                    forEachAccessPath,
+                    renderForEach(forEachFragment, forEachVariables, trackBy, childElement),
+                );
             } else {
                 return renderHtmlElement(htmlElement, context);
             }
@@ -411,12 +432,27 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
     }
 }
 
+function processImportedHeadless(headlessImports: JayHeadlessImports[]): Map<string, Ref> {
+    const result = new Map<string, Ref>();
+    function processTreeNode(key: string, refsTree: RefsTree) {
+        refsTree.refs.forEach((ref) => result.set(`${key}.${ref.ref}`, ref));
+        Object.entries(refsTree.children).forEach(([key2, childTree]) => {
+            processTreeNode(`${key}.${key2}`, childTree);
+        });
+    }
+    headlessImports.forEach(({ key, refs }) => {
+        processTreeNode(key, refs);
+    });
+    return result;
+}
+
 function renderFunctionImplementation(
     types: JayType,
     rootBodyElement: HTMLElement,
     importStatements: JayImportLink[],
     baseElementName: string,
     namespaces: JayHtmlNamespace[],
+    headlessImports: JayHeadlessImports[],
     importerMode: RuntimeMode,
 ): {
     renderedRefs: string;
@@ -430,21 +466,22 @@ function renderFunctionImplementation(
     const variables = new Variables(types);
     const { importedSymbols, importedSandboxedSymbols } =
         processImportedComponents(importStatements);
+    const importedRefNameToRef = processImportedHeadless(headlessImports);
     const rootElement = ensureSingleChildElement(rootBodyElement);
     let renderedRoot: RenderFragment;
     if (rootElement.val) {
         renderedRoot = renderNode(rootElement.val, {
             variables,
             importedSymbols,
-            forEachAccessPath: [],
             indent: new Indent('    '),
             dynamicRef: false,
             importedSandboxedSymbols,
             nextAutoRefName: newAutoRefNameGenerator(),
             importerMode,
             namespaces,
+            importedRefNameToRef,
         });
-        renderedRoot = optimizeRefs(renderedRoot);
+        renderedRoot = optimizeRefs(renderedRoot, headlessImports);
     } else renderedRoot = new RenderFragment('', Imports.none(), rootElement.validations);
     const elementType = baseElementName + 'Element';
     const refsType = baseElementName + 'ElementRefs';
@@ -505,7 +542,7 @@ ${renderedRefsManager}
 }
 
 function renderElementBridgeNode(node: Node, context: RenderContext): RenderFragment {
-    let { variables, importedSymbols, indent, dynamicRef } = context;
+    let { variables, importedSymbols, indent } = context;
 
     function renderNestedComponent(
         htmlElement: HTMLElement,
@@ -567,15 +604,15 @@ ${indent.firstLine}])`,
         if (importedSymbols.has(htmlElement.rawTagName)) {
             return renderNestedComponent(htmlElement, { ...newContext, indent: childIndent });
         } else {
-            let renderedRef = renderElementRef(htmlElement, context);
-            if (renderedRef.refs.length > 0)
+            const renderedRef = renderElementRef(htmlElement, context);
+            if (renderedRef.rendered !== '') {
                 return new RenderFragment(
                     `${newContext.indent.firstLine}e(${renderedRef.rendered})`,
                     childRenders.imports.plus(Import.sandboxElement),
                     [...childRenders.validations, ...renderedRef.validations],
-                    [...childRenders.refs, ...renderedRef.refs],
+                    mergeRefsTrees(childRenders.refs, renderedRef.refs),
                 );
-            else return childRenders;
+            } else return childRenders;
         }
     }
 
@@ -608,10 +645,12 @@ ${indent.firstLine}])`,
                 ...context,
                 variables: forEachVariables,
                 indent: indent.child().noFirstLineBreak().withLastLineBreak(),
-                forEachAccessPath: [...context.forEachAccessPath, ...forEachAccessPath],
                 dynamicRef: true,
             });
-            return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
+            return nestRefs(
+                forEachAccessPath,
+                renderForEach(forEachFragment, forEachVariables, trackBy, childElement),
+            );
         } else return renderHtmlElement(htmlElement, context);
     }
     return RenderFragment.empty();
@@ -624,20 +663,23 @@ function renderBridge(
     elementType: string,
     preRenderType: string,
     refsType: string,
+    headlessImports: JayHeadlessImports[],
 ) {
     let variables = new Variables(types);
     let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(importStatements);
+    const importedRefNameToRef = processImportedHeadless(headlessImports);
     let renderedBridge = renderElementBridgeNode(rootBodyElement, {
         variables,
         importedSymbols,
-        forEachAccessPath: [],
         indent: new Indent('    '),
         dynamicRef: false,
         importedSandboxedSymbols,
         nextAutoRefName: newAutoRefNameGenerator(),
         importerMode: RuntimeMode.WorkerSandbox,
         namespaces: [],
+        importedRefNameToRef,
     });
+    renderedBridge = optimizeRefs(renderedBridge, headlessImports);
 
     const { renderedRefsManager, refsManagerImport } = renderReferenceManager(
         renderedBridge.refs,
@@ -665,19 +707,21 @@ function renderSandboxRoot(
     types: JayType,
     rootBodyElement: HTMLElement,
     importStatements: JayImportLink[],
+    headlessImports: JayHeadlessImports[],
 ) {
     let variables = new Variables(types);
     let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(importStatements);
+    const importedRefNameToRef = processImportedHeadless(headlessImports);
     let renderedBridge = renderElementBridgeNode(rootBodyElement, {
         variables,
         importedSymbols,
-        forEachAccessPath: [],
         indent: new Indent('    '),
         dynamicRef: false,
         importedSandboxedSymbols,
         nextAutoRefName: newAutoRefNameGenerator(),
         importerMode: RuntimeMode.WorkerSandbox,
         namespaces: [],
+        importedRefNameToRef,
     });
     let refsPart =
         renderedBridge.rendered.length > 0
@@ -719,6 +763,7 @@ export function generateElementDefinitionFile(
             jayFile.imports,
             jayFile.baseElementName,
             jayFile.namespaces,
+            jayFile.headlessImports,
             RuntimeMode.WorkerTrusted,
         );
         return [
@@ -751,6 +796,7 @@ export function generateElementFile(
             jayFile.imports,
             jayFile.baseElementName,
             jayFile.namespaces,
+            jayFile.headlessImports,
             importerMode,
         );
     const renderedFile = [
@@ -787,6 +833,7 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
         jayFile.imports,
         jayFile.baseElementName,
         jayFile.namespaces,
+        jayFile.headlessImports,
         RuntimeMode.WorkerSandbox,
     );
     let renderedBridge = renderBridge(
@@ -796,6 +843,7 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
         elementType,
         preRenderType,
         refsType,
+        jayFile.headlessImports,
     );
     return [
         renderImports(
@@ -821,11 +869,13 @@ const CALL_INITIALIZE_WORKER = `setWorkerPort(new JayPort(new HandshakeMessageJa
 initializeWorker();`;
 
 export function generateSandboxRootFile(jayFile: JayHtmlSourceFile): string {
-    // let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(
-    //     jayFile.imports,
-    // );
     let types = generateTypes(jayFile.types);
-    let renderedSandboxRoot = renderSandboxRoot(jayFile.types, jayFile.body, jayFile.imports);
+    let renderedSandboxRoot = renderSandboxRoot(
+        jayFile.types,
+        jayFile.body,
+        jayFile.imports,
+        jayFile.headlessImports,
+    );
     let renderedImports = renderImports(
         Imports.for(
             Import.sandboxRoot,

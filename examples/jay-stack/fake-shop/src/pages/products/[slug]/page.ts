@@ -16,8 +16,9 @@ interface ProductAndInventoryCarryForward {
     inStock: boolean;
 }
 
-async function urlLoader(): Promise<IterableIterator<ProductPageParams>> {
-    return (await getProducts()).map(({ slug }) => ({ slug })).values();
+async function* urlLoader(): AsyncIterable<ProductPageParams[]> {
+    const products = await getProducts();
+    yield products.map(({ slug }) => ({ slug }));
 }
 
 async function renderSlowlyChanging(props: PageProps & ProductPageParams) {
@@ -46,7 +47,7 @@ function ProductsPageConstructor(
     };
 }
 
-export const page = makeJayStackComponent(render)
+export const page = makeJayStackComponent<typeof render>()
     .withProps<PageProps>()
     .withLoadParams(urlLoader)
     .withSlowlyRender(renderSlowlyChanging)

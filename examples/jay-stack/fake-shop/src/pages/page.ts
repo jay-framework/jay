@@ -10,6 +10,6 @@ function homePageConstructor(props: Props<HomePageProps>, refs: PageElementRefs)
     };
 }
 
-export const page = makeJayStackComponent(render)
+export const page = makeJayStackComponent<typeof render>()
     .withProps<PageProps>()
     .withInteractive(homePageConstructor);

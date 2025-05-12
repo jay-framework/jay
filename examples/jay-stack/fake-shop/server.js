@@ -3,7 +3,6 @@ import express from 'express';
 import { routeToExpressRoute, scanRoutes } from 'jay-stack-route-scanner';
 import { jayRuntime } from 'vite-plugin-jay';
 import { DevSlowlyChangingPhase, renderFastChangingData } from 'jay-stack-runtime';
-import path from 'node:path';
 
 // Constants
 const isProduction = process.env.NODE_ENV === 'production';
@@ -71,9 +70,9 @@ async function initApp() {
                     const pageComponent = (await vite.ssrLoadModule(route.compPath)).page;
 
                     const renderedSlowly = await slowlyPhase.runSlowlyForPage(
-                        pageComponent,
                         params,
                         pageProps,
+                        pageComponent,
                     );
 
                     if (renderedSlowly.kind === 'PartialRender') {

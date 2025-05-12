@@ -3,7 +3,6 @@ import {
     hasExtension,
     JAY_QUERY_MAIN_SANDBOX,
     JAY_QUERY_WORKER_SANDBOX,
-    JayImportKind,
     JayImportLink,
     JayImportName,
     JayUnknown,
@@ -24,7 +23,7 @@ export function parseImportLinks(sourceFile: ts.SourceFile): JayImportLink[] {
             hasExtension(module, JAY_QUERY_MAIN_SANDBOX) ||
             hasExtension(module, JAY_QUERY_WORKER_SANDBOX);
         const names = getJayImportNames(importDeclaration);
-        return { module, names, sandbox, kind: JayImportKind.headfull };
+        return { module, names, sandbox };
     });
     return importLinks;
 }

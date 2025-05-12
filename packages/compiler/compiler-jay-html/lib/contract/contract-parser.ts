@@ -1,7 +1,7 @@
 import { WithValidations, JayType, resolvePrimitiveType, JayEnumType } from 'jay-compiler-shared';
 import { Contract, ContractTag, ContractTagType } from './contract';
 import yaml from 'js-yaml';
-import { parseIsEnum, parseEnumValues } from 'jay-compiler-jay-html';
+import { parseIsEnum, parseEnumValues } from '../';
 import { pascalCase } from 'change-case';
 
 interface ParsedYamlTag {
@@ -19,10 +19,6 @@ interface ParsedYamlTag {
 interface ParsedYaml {
     name: string;
     tags: Array<ParsedYamlTag>;
-}
-
-export interface LinkedContractResolver {
-    loadContract(link: string): Promise<Contract>;
 }
 
 function parseDataType(tag: string, dataType: string): JayType | undefined {

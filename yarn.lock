@@ -11823,41 +11823,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"jay-compiler-contract@workspace:^, jay-compiler-contract@workspace:packages/compiler/compiler-contract":
-  version: 0.0.0-use.local
-  resolution: "jay-compiler-contract@workspace:packages/compiler/compiler-contract"
-  dependencies:
-    "@caiogondim/strip-margin": ^1.0.0
-    "@testing-library/jest-dom": ^6.2.0
-    "@types/js-beautify": ^1
-    "@types/js-yaml": ^4.0.9
-    "@types/node": ^20.11.5
-    "@types/react": ^18.2.0
-    change-case: ^4.1.2
-    jay-4-react: "workspace:^"
-    jay-compiler-jay-html: "workspace:^"
-    jay-compiler-shared: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jest-diff: ^29.7.0
-    jest-matcher-utils: ^29.7.0
-    js-beautify: ^1.14.11
-    js-yaml: ^4.1.0
-    node-html-parser: ^6.1.12
-    pluralize: ^8.0.0
-    react: ^18.2.0
-    react-dom: ^18.2.0
-    rimraf: ^5.0.5
-    style-to-object: ^1.0.8
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
 "jay-compiler-jay-html@workspace:^, jay-compiler-jay-html@workspace:packages/compiler/compiler-jay-html":
   version: 0.0.0-use.local
   resolution: "jay-compiler-jay-html@workspace:packages/compiler/compiler-jay-html"
@@ -16969,7 +16934,6 @@ __metadata:
     "@types/node": ^20.11.5
     fast-glob: ^3.3.2
     jay-compiler: "workspace:^"
-    jay-compiler-contract: "workspace:^"
     jay-compiler-jay-html: "workspace:^"
     jay-component: "workspace:^"
     jay-dev-environment: "workspace:^"

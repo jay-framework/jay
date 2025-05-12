@@ -4,7 +4,6 @@ export enum JayTypeKind {
     enum,
     html,
     imported,
-    importedContract,
     element,
     elementConstructor,
     component,
@@ -62,16 +61,6 @@ export class JayImportedType implements JayType {
         public readonly type: JayType,
     ) {}
     readonly kind = JayTypeKind.imported;
-}
-
-export class JayImportedContract implements JayType {
-    constructor(
-        public readonly name: string,
-        public readonly viewState: string,
-        public readonly refs: string,
-        public readonly repeatedRefs: string,
-    ) {}
-    readonly kind = JayTypeKind.importedContract;
 }
 
 export class JayElementType implements JayType {
@@ -146,9 +135,6 @@ export function isHTMLType(aType: JayType): aType is JayHTMLType {
 }
 export function isImportedType(aType: JayType): aType is JayImportedType {
     return aType.kind === JayTypeKind.imported;
-}
-export function isImportedContractType(aType: JayType): aType is JayImportedContract {
-    return aType.kind === JayTypeKind.importedContract;
 }
 export function isElementConstructorType(aType: JayType): aType is JayElementConstructorType {
     return aType.kind === JayTypeKind.elementConstructor;

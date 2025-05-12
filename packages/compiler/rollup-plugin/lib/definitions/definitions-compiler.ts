@@ -10,9 +10,14 @@ import {
     JAY_DTS_EXTENSION,
     JAY_CONTRACT_DTS_EXTENSION,
 } from 'jay-compiler-shared';
-import { parseJayFile, getJayHtmlImports } from 'jay-compiler-jay-html';
+import {
+    parseJayFile,
+    getJayHtmlImports,
+    JAY_IMPORT_RESOLVER,
+    parseContract,
+    compileContract,
+} from 'jay-compiler-jay-html';
 import { checkCodeErrors } from '../common/errors';
-import { compileContract, Contract, parseContract } from 'jay-compiler-contract';
 
 export function jayDefinitions() {
     return {
@@ -41,7 +46,13 @@ export function jayDefinitions() {
                         }),
                     ),
                 );
-                const parsedFile = parseJayFile(code, filename, dirname, {});
+                const parsedFile = await parseJayFile(
+                    code,
+                    filename,
+                    dirname,
+                    {},
+                    JAY_IMPORT_RESOLVER,
+                );
                 const tsCode = checkValidationErrors(generateElementDefinitionFile(parsedFile));
                 const generatedFilename = await writeDefinitionFile(
                     dirname,
@@ -57,16 +68,11 @@ export function jayDefinitions() {
                 const { filename, dirname } = getFileContext(id, JAY_CONTRACT_EXTENSION);
 
                 const parsedFile = parseContract(code);
-                const linkedContractResolver = {
-                    async loadContract(link: string): Promise<Contract> {
-                        const linkedContract = path.resolve(dirname, link);
-                        const contract = await readFileAsString(
-                            linkedContract + JAY_CONTRACT_EXTENSION,
-                        );
-                        return checkValidationErrors(parseContract(contract));
-                    },
-                };
-                const tsCode = await compileContract(parsedFile, linkedContractResolver);
+                const tsCode = await compileContract(
+                    parsedFile,
+                    `${dirname}/${filename}`,
+                    JAY_IMPORT_RESOLVER,
+                );
                 const generatedFilename = await writeDefinitionFile(
                     dirname,
                     filename,

@@ -30,6 +30,16 @@ export class WithValidations<Value> {
         } else return new WithValidations<R>(undefined, this.validations);
     }
 
+    async flatMapAsync<R>(
+        func: (v: Value) => Promise<WithValidations<R>>,
+    ): Promise<WithValidations<R>> {
+        if (this.val) {
+            const result = await func(this.val);
+            return new WithValidations<R>(result.val, [...this.validations, ...result.validations]);
+        } else {
+            return new WithValidations<R>(undefined, this.validations);
+        }
+    }
     merge(other: WithValidations<Value>, merge: (t1: Value, t2: Value) => Value) {
         return new WithValidations(merge(this.val, other.val), [
             ...this.validations,

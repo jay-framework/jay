@@ -1,5 +1,4 @@
-import { LinkedContractResolver, parseContract } from '../lib';
-import { ContractTagType } from '../lib';
+import { parseContract, ContractTagType } from '../../lib';
 import {
     JAY_CONTRACT_EXTENSION,
     JayBoolean,
