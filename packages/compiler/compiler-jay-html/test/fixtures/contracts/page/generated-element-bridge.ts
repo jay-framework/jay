@@ -1,14 +1,9 @@
-import {
-    JayElement,
-    RenderElement,
-} from 'jay-runtime';
-import { SecureReferencesManager,
-    elementBridge,
-    sandboxElement as e,} from 'jay-secure';
+import { JayElement, RenderElement } from 'jay-runtime';
+import { SecureReferencesManager, elementBridge, sandboxElement as e } from 'jay-secure';
 import {
     NamedContractViewState,
     NamedContractRefs,
-// @ts-ignore
+    // @ts-ignore
 } from '../named-counter/named-counter.jay-contract?jay-workerSandbox';
 
 export interface PageViewState {
@@ -37,9 +32,6 @@ export function render(): PageElementPreRender {
         namedCounter: namedCounterRefManager,
     });
     const render = (viewState: PageViewState) =>
-        elementBridge(viewState, refManager, () => [
-            e(refAdd()),
-            e(refSubtract()),
-        ]) as PageElement;
+        elementBridge(viewState, refManager, () => [e(refAdd()), e(refSubtract())]) as PageElement;
     return [refManager.getPublicAPI() as PageElementRefs, render];
 }

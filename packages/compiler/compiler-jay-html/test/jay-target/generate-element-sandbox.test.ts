@@ -1,7 +1,6 @@
 import {
-    readFileAndGenerateElementFile,
     readFixtureElementBridgeFile,
-    readFixtureFileRaw
+    readFixtureFileRaw,
 } from '../test-utils/file-utils';
 import { readFileAndGenerateElementBridgeFile } from '../test-utils/file-utils';
 import { prettify } from 'jay-compiler-shared';
@@ -79,6 +78,5 @@ describe('generate jay-html element for sandbox', () => {
                 );
             });
         });
-
     });
 });

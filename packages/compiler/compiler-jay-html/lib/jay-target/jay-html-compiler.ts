@@ -1,5 +1,4 @@
 import {
-    hasRefs,
     Import,
     Imports,
     ImportsFor,
@@ -613,8 +612,7 @@ ${indent.firstLine}])`,
                     [...childRenders.validations, ...renderedRef.validations],
                     mergeRefsTrees(childRenders.refs, renderedRef.refs),
                 );
-            }
-            else return childRenders;
+            } else return childRenders;
         }
     }
 
