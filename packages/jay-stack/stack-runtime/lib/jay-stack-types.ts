@@ -1,8 +1,8 @@
 import { ComponentConstructor, ContextMarkers, JayComponentCore } from 'jay-component';
-import { JayElement, PreRenderElement } from 'jay-runtime';
 
 export interface PageProps {
     language: string;
+    url: string;
 }
 
 export type UrlParams = Record<string, string>;

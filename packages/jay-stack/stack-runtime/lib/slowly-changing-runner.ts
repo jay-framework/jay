@@ -43,6 +43,10 @@ async function findMatchingParams(
 }
 
 export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
+
+    constructor(private dontCacheSlowly: boolean) {
+    }
+
     async runSlowlyForPage(
         pageParams: UrlParams,
         pageProps: PageProps,
