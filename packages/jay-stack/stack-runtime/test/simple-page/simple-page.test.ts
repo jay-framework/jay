@@ -12,13 +12,14 @@ import { prettify } from 'jay-compiler-shared';
 
 const PAGE_PROPS: PageProps = {
     language: 'en-us',
+    url: '/'
 };
 const PAGE_PARAMS = {};
 const PAGE_PARTS = [{ compDefinition: page }];
 
 describe('rendering a simple page', () => {
     it('should run the slowly changing phase', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyPhase = new DevSlowlyChangingPhase(false);
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
@@ -39,7 +40,7 @@ describe('rendering a simple page', () => {
     });
 
     it('should run the fast changing phase, getting the carry forward from the slowly phase', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyPhase = new DevSlowlyChangingPhase(false);
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
@@ -70,7 +71,7 @@ describe('rendering a simple page', () => {
     });
 
     it('should run the interactive phase, getting the carry forward from the fast phase', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyPhase = new DevSlowlyChangingPhase(false);
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
@@ -108,7 +109,7 @@ describe('rendering a simple page', () => {
     });
 
     it('interactive phase should function and react to events', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyPhase = new DevSlowlyChangingPhase(false);
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,

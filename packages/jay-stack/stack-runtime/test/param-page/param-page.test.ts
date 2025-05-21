@@ -14,6 +14,7 @@ import { prettify } from 'jay-compiler-shared';
 
 const PAGE_PROPS: PageProps = {
     language: 'en-us',
+    url: '/'
 };
 const PAGE_PARAMS_A = { variant: 'A' };
 const PAGE_PARAMS_B = { variant: 'B' };
@@ -21,7 +22,7 @@ const PAGE_PARTS = [{ compDefinition: page }];
 
 describe('rendering a parameterized page', () => {
     it('should run the slowly changing phase with variant A', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyPhase = new DevSlowlyChangingPhase(false);
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_A,
@@ -42,7 +43,7 @@ describe('rendering a parameterized page', () => {
     });
 
     it('should run the slowly changing phase with variant B', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyPhase = new DevSlowlyChangingPhase(false);
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_B,
@@ -63,7 +64,7 @@ describe('rendering a parameterized page', () => {
     });
 
     it('should run the fast changing phase with variant A', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyPhase = new DevSlowlyChangingPhase(false);
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_A,
             PAGE_PROPS,
@@ -93,7 +94,7 @@ describe('rendering a parameterized page', () => {
     });
 
     it('should run the fast changing phase with variant B', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyPhase = new DevSlowlyChangingPhase(false);
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_B,
             PAGE_PROPS,
@@ -123,7 +124,7 @@ describe('rendering a parameterized page', () => {
     });
 
     it('should run the interactive phase with variant A', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyPhase = new DevSlowlyChangingPhase(false);
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_A,
             PAGE_PROPS,
@@ -159,7 +160,7 @@ describe('rendering a parameterized page', () => {
     });
 
     it('should run the interactive phase with variant B', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyPhase = new DevSlowlyChangingPhase(false);
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_B,
             PAGE_PROPS,

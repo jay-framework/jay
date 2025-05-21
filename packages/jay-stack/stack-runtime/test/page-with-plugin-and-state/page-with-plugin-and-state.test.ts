@@ -12,13 +12,14 @@ import { page } from './page';
 
 const PAGE_PROPS: PageProps = {
     language: 'en-us',
+    url: '/'
 };
 const PAGE_PARAMS = {};
 const PAGE_PARTS = [{ compDefinition: plugin, key: 'plugin' }, { compDefinition: page }];
 
 describe('rendering a page with plugin and state', () => {
     it('should run the slowly changing phase', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyPhase = new DevSlowlyChangingPhase(false);
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
@@ -45,7 +46,7 @@ describe('rendering a page with plugin and state', () => {
     });
 
     it('should run the fast changing phase, getting the carry forward from the slowly phase', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyPhase = new DevSlowlyChangingPhase(false);
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
@@ -84,7 +85,7 @@ describe('rendering a page with plugin and state', () => {
     });
 
     it('should run the interactive phase, getting the carry forward from the fast phase', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyPhase = new DevSlowlyChangingPhase(false);
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
@@ -126,7 +127,7 @@ describe('rendering a page with plugin and state', () => {
     });
 
     it('interactive phase should function and react to events for both plugin and page', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase();
+        const slowlyPhase = new DevSlowlyChangingPhase(false);
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
