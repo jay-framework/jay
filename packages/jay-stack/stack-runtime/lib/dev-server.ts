@@ -50,6 +50,7 @@ export interface DevServerRoute {
 
 export interface DevServer {
     server: Server;
+    viteServer: ViteDevServer;
     routes: DevServerRoute[]
 }
 
@@ -200,6 +201,7 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
 
     return {
         server: vite.middlewares,
+        viteServer: vite,
         routes: devServerRoutes
     };
 }

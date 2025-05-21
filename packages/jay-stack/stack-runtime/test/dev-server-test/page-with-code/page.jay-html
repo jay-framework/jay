@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Page with Code</title>
+    <script type="application/jay-data">
+        data:
+          title: string
+          content: string
+    </script>
+</head>
+<body>
+    <h1>{{title}}</h1>
+    <p>{{content}}</p>
+</body>
+</html> 

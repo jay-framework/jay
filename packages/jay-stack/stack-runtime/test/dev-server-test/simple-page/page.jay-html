@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple Page</title>
+    <script type="application/jay-data">
+        data:
+    </script>
+</head>
+<body>
+    <h1>Hello World</h1>
+    <p>This is a simple page without any code file</p>
+</body>
+</html> 
