@@ -22,7 +22,8 @@
     "jay-stack-route-scanner": "workspace:^"
   },
   "devDependencies": {
-    "@types/node": "^20.11.5",
+    "@types/express": "^5.0.2",
+    "@types/node": "^22.15.21",
     "jay-cli": "workspace:^",
     "jay-dev-environment": "workspace:^",
     "nodemon": "^3.0.3",

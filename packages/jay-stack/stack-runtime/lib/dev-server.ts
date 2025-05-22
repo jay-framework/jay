@@ -161,7 +161,7 @@ function mkRoute(route: JayRoute,
                 }
 
                 const appScript = `
-import {page} from '/src/pages${route.rawRoute}/page.ts';
+// import {page} from '/src/pages${route.rawRoute}/page.ts';
 const viewState = ${JSON.stringify(viewState)}
 const carryForward = ${JSON.stringify(carryForward)}
         `;
