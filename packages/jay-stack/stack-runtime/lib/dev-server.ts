@@ -1,17 +1,15 @@
-import {Connect, ViteDevServer} from 'vite';
-import {JayRoute, JayRoutes, Route, routeToExpressRoute, scanRoutes} from 'jay-stack-route-scanner';
+import {Connect, createServer, ViteDevServer} from 'vite';
+import {JayRoute, JayRoutes, routeToExpressRoute, scanRoutes} from 'jay-stack-route-scanner';
 import {DevSlowlyChangingPhase, SlowlyChangingPhase} from './slowly-changing-runner';
-import type { PageProps, AnyJayStackComponentDefinition, PartialRender } from './jay-stack-types';
-import { CompositePart, MAIN_PART } from './composite-part';
-import fs from 'node:fs/promises';
-import { createServer} from 'vite';
+import type {ClientError4xx, PageProps, PartialRender, Redirect3xx, ServerError5xx} from './jay-stack-types';
 import {JayRollupConfig, jayRuntime} from "vite-plugin-jay";
-import Server = Connect.Server;
 import path from "node:path";
 import {RequestHandler} from "express-serve-static-core";
 import {renderFastChangingData} from "../dist";
-import {JAY_IMPORT_RESOLVER, parseJayFile} from "jay-compiler-jay-html";
-import {WithValidations} from "jay-compiler-shared";
+import {loadPageParts} from "./load-page-parts";
+import Server = Connect.Server;
+import {generateClientScript} from "./generate-client-script";
+import {Request, Response} from "express";
 
 export interface DevServerOptions {
     serverBase?: string;
@@ -54,65 +52,13 @@ export interface DevServer {
     routes: DevServerRoute[]
 }
 
-const PAGE_HTML = `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + TS</title>
-  </head>
-  <body>
-    <div id="target"></div>
-    <script type="module">
-      import {makeJayComponent} from 'jay-component';
-      import {makeCompositeJayComponent} from "jay-stack-runtime";
-      <!--app-script-->
-
-      const target = document.getElementById('target');
-      const pageComp = makeCompositeJayComponent(page.render, viewState, [
-        {comp: page.comp, contextMarkers: [], viewStateKey: 'a'}
-      ])
-      // const pageComp = makeJayComponent(page.render, page.comp);
-
-      const instance = pageComp({...viewState, ...carryForward})
-      target.appendChild(instance.element.dom);
-    </script>
-  </body>
-</html>`
-
-async function loadPageParts(vite: ViteDevServer, route: JayRoute, options: DevServerOptions): Promise<WithValidations<CompositePart[]>> {
-    const exists = await fs.access(route.compPath, fs.constants.F_OK)
-        .then(() => true)
-        .catch(() => false);
-
-    const parts: CompositePart[] = [];
-    if (exists) {
-        const pageComponent = (await vite.ssrLoadModule(route.compPath)).page;
-        parts.push({
-            compDefinition: pageComponent,
-            key: MAIN_PART
-        })
-    }
-
-    const jayHtmlSource = (await fs.readFile(route.jayHtmlPath)).toString();
-    const fileName = path.basename(route.jayHtmlPath);
-    const dirName = path.dirname(route.jayHtmlPath);
-    const jayHtmlWithValidations = await parseJayFile(jayHtmlSource, fileName, dirName, {
-        relativePath: options.jayRollupConfig.tsConfigFilePath
-    }, JAY_IMPORT_RESOLVER)
-
-    return jayHtmlWithValidations.mapAsync(async jayHtml => {
-        for await (const headlessImport of jayHtml.headlessImports) {
-            const modulePath = path.resolve(dirName, headlessImport.importLink.module)
-            const pageComponent = (await vite.ssrLoadModule(modulePath)).page;
-            const part: CompositePart = {
-                key: headlessImport.key,
-                compDefinition: pageComponent
-            }
-            parts.push(part)
-        }
-        return parts;
-    })
+function handleOtherResponseCodes(res: Response, renderedResult: ServerError5xx | ClientError4xx | Redirect3xx) {
+    if (renderedResult.kind === `ServerError`)
+        res.status(renderedResult.status).end('server error');
+    else if (renderedResult.kind === `ClientError`)
+        res.status(renderedResult.status).end('client error');
+    else
+        res.status(renderedResult.status).end('redirect to ' + renderedResult.location);
 }
 
 function mkRoute(route: JayRoute,
@@ -120,7 +66,7 @@ function mkRoute(route: JayRoute,
                  slowlyPhase: SlowlyChangingPhase,
                  options: DevServerOptions): DevServerRoute {
     const path = routeToExpressRoute(route);
-    const handler = async (req, res) => {
+    const handler = async (req: Request, res: Response) => {
         try {
             const url = req.originalUrl.replace(options.serverBase, '');
             const pageParams = req.params;
@@ -129,12 +75,7 @@ function mkRoute(route: JayRoute,
                 url
             };
 
-            /** @type {string} */
-            let template = PAGE_HTML;
-            /** @type {object} */
-            let viewState, carryForward;
-            // Always read fresh template in development
-
+            let viewState: object, carryForward: object;
             const pageParts = await loadPageParts(vite, route, options);
 
             if (pageParts.val) {
@@ -154,22 +95,22 @@ function mkRoute(route: JayRoute,
                     if (renderedFast.kind === 'PartialRender') {
                         viewState = {...renderedSlowly.rendered, ...renderedFast.rendered};
                         carryForward = renderedFast.carryForward;
+
+                        const pageHtml = generateClientScript(
+                            viewState,
+                            carryForward,
+                            pageParts.val,
+                            options.pagesBase);
+
+                        const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);
+                        res.status(200).set({'Content-Type': 'text/html'}).send(compiledPageHtml);
                     }
-                    console.log(renderedSlowly, renderedFast);
+                    else {
+                        handleOtherResponseCodes(res, renderedFast);
+                    }
                 } else if (renderedSlowly.kind === 'ClientError') {
-                    console.warn('client error', renderedSlowly.status);
+                    handleOtherResponseCodes(res, renderedSlowly);
                 }
-
-                const appScript = `
-// import {page} from '/src/pages${route.rawRoute}/page.ts';
-const viewState = ${JSON.stringify(viewState)}
-const carryForward = ${JSON.stringify(carryForward)}
-        `;
-
-                template = template.replace(`<!--app-script-->`, appScript ?? '');
-                template = await vite.transformIndexHtml(!!url ? url : '/', template);
-
-                res.status(200).set({'Content-Type': 'text/html'}).send(template);
             }
             else {
                 console.log(pageParts.validations.join('\n'));
@@ -191,6 +132,7 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
         plugins: [jayRuntime(jayRollupConfig)],
         appType: 'custom',
         base: serverBase,
+        root: pagesBase
     });
 
     const routes: JayRoutes = await initRoutes(pagesBase);

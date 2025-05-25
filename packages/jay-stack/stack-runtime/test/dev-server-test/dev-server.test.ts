@@ -2,6 +2,7 @@ import {DevServerOptions, mkDevServer} from '../../lib';
 import { JayRollupConfig } from 'vite-plugin-jay';
 import path from 'path';
 import { Request, Response } from 'express';
+import {prettify} from "jay-compiler-shared";
 
 // this statement is required to tell vitest to load the right encodeUTF8("") instanceof Uint8Array
 // @see https://github.com/vitest-dev/vitest/issues/4043
@@ -25,14 +26,26 @@ describe('dev server', () => {
     }
 
     async function makeRequest(handler: any, path: string): Promise<[string, Record<string, string>]> {
-
         return new Promise((resolve, reject) => {
             const req = {
+                method: 'GET',
                 originalUrl: path,
                 params: {},
                 url: path,
-                headers: {}
-            } as Request;
+                headers: {},
+                pipe: () => req,
+                on: () => req,
+                once: () => req,
+                listeners: () => [],
+                removeListener: () => req,
+                removeAllListeners: () => req,
+                emit: () => true,
+                readable: true,
+                read: () => null,
+                unpipe: () => req,
+                resume: () => req,
+                pause: () => req
+            } as unknown as Request;
 
             const resHeaders = {};
             const res = {
@@ -48,8 +61,19 @@ describe('dev server', () => {
                 },
                 setHeader: (key: string, value: string) => {
                     resHeaders[key] = value;
-                }
-            } as Response;
+                },
+                pipe: () => res,
+                on: () => res,
+                once: () => res,
+                listeners: () => [],
+                removeListener: () => res,
+                removeAllListeners: () => res,
+                emit: () => true,
+                writable: true,
+                write: () => true,
+                cork: () => {},
+                uncork: () => {}
+            } as unknown as Response;
 
             handler(req, res);
         });
@@ -78,11 +102,28 @@ describe('dev server', () => {
 
         const [script, scriptHeaders] = await makeRequest(devServer.server, '/@id/__x00__/index.html?html-proxy&index=0.js');
 
-        expect(script).toEqual(`<!doctype html>`)
+        const scriptForMatching = await prettify(script
+            .replace(/\/@fs[\/\w\-\.]+/, 'file-import')
+            .replace(/\/\/\#.*/, '// source-map'))
+
+        expect(scriptForMatching).toEqual(`import { makeCompositeJayComponent } from 'file-import';
+import { render } from '/page.jay-html.ts';
+
+const viewState = {};
+const fastCarryForward = {};
+
+const target = document.getElementById('target');
+const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, []);
+
+const instance = pageComp({ ...viewState, ...carryForward });
+target.appendChild(instance.element.dom);
+
+// source-map
+`)
 
 
         await devServer.viteServer.close();
-    });
+    }, 1000000);
 
     it('should handle a jay-html file with code', async () => {
         const devServer = await mkDevServer(optionsForDir('./page-with-code'))
