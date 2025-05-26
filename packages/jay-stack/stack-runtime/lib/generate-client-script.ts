@@ -5,8 +5,12 @@ export function generateClientScript(defaultViewState: object,
                                      fastCarryForward: object,
                                      parts: DevServerPagePart[],
                                      pagesBase: string) {
-    const imports = parts.map(part => part.clientImport).join('\n')
-    const compositeParts = parts.map(part => part.clientPart).join(',\n')
+    const imports = parts.length > 1 ?
+        parts.map(part => part.clientImport).join('\n') + '\n' :
+        '';
+    const compositeParts = parts.length > 1 ? `[
+${parts.map(part => '        ' + part.clientPart).join(',\n')}
+        ]` : '[]';
     const jayHtmlPath = path.resolve(pagesBase, './page.jay-html');
 
     return `<!doctype html>
@@ -22,14 +26,11 @@ export function generateClientScript(defaultViewState: object,
       import {makeCompositeJayComponent} from "jay-stack-runtime";
       import { render } from '${jayHtmlPath}';
       ${imports}
-      
       const viewState = ${JSON.stringify(defaultViewState)};
       const fastCarryForward = ${JSON.stringify(fastCarryForward)};
 
       const target = document.getElementById('target');
-      const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [
-        ${compositeParts}
-      ])
+      const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, ${compositeParts})
 
       const instance = pageComp({...viewState, ...carryForward})
       target.appendChild(instance.element.dom);
