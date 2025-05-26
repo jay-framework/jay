@@ -23,7 +23,7 @@ describe('parse contract', () => {
             elementType: HTMLButtonElement  
         `;
 
-        const result = parseContract(contract);
+        const result = parseContract(contract, 'contract.jay-contract');
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'counter',
@@ -52,7 +52,7 @@ describe('parse contract', () => {
             dataType: enum (one | two | three)
         `;
 
-        const result = parseContract(contract);
+        const result = parseContract(contract, 'contract.jay-contract');
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'counter',
@@ -81,7 +81,7 @@ describe('parse contract', () => {
                 dataType: boolean
         `;
 
-        const result = parseContract(contract);
+        const result = parseContract(contract, 'contract.jay-contract');
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'todo',
@@ -107,7 +107,7 @@ describe('parse contract', () => {
             link: ./todo-item${JAY_CONTRACT_EXTENSION}
         `;
 
-        const result = parseContract(contract);
+        const result = parseContract(contract, 'contract.jay-contract');
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'todo',
@@ -137,7 +137,7 @@ describe('parse contract', () => {
                 dataType: number
         `;
 
-        const result = parseContract(contract);
+        const result = parseContract(contract, 'contract.jay-contract');
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'todo',
@@ -198,7 +198,7 @@ describe('parse contract', () => {
                     elementType: HTMLInputElement
         `;
 
-        const result = parseContract(contract);
+        const result = parseContract(contract, 'contract.jay-contract');
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'userForm',
@@ -271,7 +271,7 @@ describe('parse contract', () => {
             dataType: enum (one | two | three)
             elementType: HTMLSelectElement | HTMLInputElement
         `;
-        const result = parseContract(contract);
+        const result = parseContract(contract, 'contract.jay-contract');
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'choices',
@@ -303,7 +303,7 @@ describe('parse contract', () => {
               - Click to upload a new image
         `;
 
-        const result = parseContract(contract);
+        const result = parseContract(contract, 'contract.jay-contract');
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'profile',
@@ -341,7 +341,7 @@ describe('parse contract', () => {
             elementType: HTMLButtonElement  
         `;
 
-        const result = parseContract(contract);
+        const result = parseContract(contract, 'contract.jay-contract');
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'counter',
@@ -369,7 +369,7 @@ describe('parse contract', () => {
             type: data
         `;
 
-        const result = parseContract(contract);
+        const result = parseContract(contract, 'contract.jay-contract');
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'defaults',
@@ -385,7 +385,7 @@ describe('parse contract', () => {
             dataType: string
         `;
 
-        const result = parseContract(contract);
+        const result = parseContract(contract, 'contract.jay-contract');
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'defaults',
@@ -407,7 +407,7 @@ describe('parse contract', () => {
                 dataType: string
             `;
 
-            const result = parseContract(contract);
+            const result = parseContract(contract, 'contract.jay-contract');
             expect(result.validations).toEqual([
                 'Tag [status] of type [variant] must have a dataType',
             ]);
@@ -424,7 +424,7 @@ describe('parse contract', () => {
                 elementType: HTMLInputElement
             `;
 
-            const result = parseContract(contract);
+            const result = parseContract(contract, 'contract.jay-contract');
             expect(result.validations).toEqual([
                 'Tag [button] of type [interactive] must have an elementType',
             ]);
@@ -438,7 +438,7 @@ describe('parse contract', () => {
                 type: unknown
             `;
 
-            const result = parseContract(contract);
+            const result = parseContract(contract, 'contract.jay-contract');
             expect(result.validations).toEqual(['Tag [button] has an unknown tag type [unknown]']);
         });
 
@@ -454,7 +454,7 @@ describe('parse contract', () => {
                     dataType: string
             `;
 
-            const result = parseContract(contract);
+            const result = parseContract(contract, 'contract.jay-contract');
             expect(result.validations).toEqual([
                 'Tag [items] cannot be both sub-contract and other types',
             ]);
@@ -473,7 +473,7 @@ describe('parse contract', () => {
                     dataType: string
             `;
 
-            const result = parseContract(contract);
+            const result = parseContract(contract, 'contract.jay-contract');
             expect(result.validations).toEqual([
                 'Tag [items] of type [sub-contract] cannot have a dataType',
             ]);
@@ -492,7 +492,7 @@ describe('parse contract', () => {
                     dataType: string
             `;
 
-            const result = parseContract(contract);
+            const result = parseContract(contract, 'contract.jay-contract');
             expect(result.validations).toEqual([
                 'Tag [items] of type [sub-contract] cannot have an elementType',
             ]);
@@ -506,7 +506,7 @@ describe('parse contract', () => {
                 type: sub-contract
             `;
 
-            const result = parseContract(contract);
+            const result = parseContract(contract, 'contract.jay-contract');
             expect(result.validations).toEqual([
                 'Tag [items] of type [sub-contract] must have either tags or a link',
             ]);

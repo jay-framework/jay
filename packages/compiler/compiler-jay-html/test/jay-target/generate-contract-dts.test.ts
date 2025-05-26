@@ -16,7 +16,7 @@ describe('contract definitions', () => {
             const dirName = fixtureDir(folder);
             const filename = getFileFromFolder(folder);
             const contractContext = await readFixtureJayContractFile(folder, filename);
-            const parsedContract = parseContract(contractContext);
+            const parsedContract = parseContract(contractContext, 'contract.jay-contract');
             const result = await compileContract(parsedContract, dirName, JAY_IMPORT_RESOLVER);
             expect(await prettify(result.val)).toEqual(
                 await prettify(

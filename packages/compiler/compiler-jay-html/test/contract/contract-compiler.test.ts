@@ -43,7 +43,7 @@ describe('compile contract', () => {
             elementType: HTMLButtonElement  
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations).toEqual([]);
@@ -85,7 +85,7 @@ describe('compile contract', () => {
             dataType: number
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations).toEqual([]);
@@ -127,7 +127,7 @@ describe('compile contract', () => {
                 dataType: boolean
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations).toEqual([]);
@@ -176,7 +176,7 @@ describe('compile contract', () => {
                 elementType: HTMLInputElement
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations).toEqual([]);
@@ -258,7 +258,7 @@ describe('compile contract', () => {
                     elementType: HTMLInputElement
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations).toEqual([]);
@@ -350,7 +350,7 @@ describe('compile contract', () => {
                 dataType: boolean
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations).toEqual([]);
@@ -404,7 +404,7 @@ describe('compile contract', () => {
             elementType: HTMLButtonElement  
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations).toEqual([]);
@@ -444,7 +444,7 @@ describe('compile contract', () => {
             elementType: HTMLSelectElement | HTMLInputElement
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations.length).toBe(0);
@@ -521,7 +521,7 @@ describe('compile contract', () => {
                 elementType: HTMLButtonElement
             `;
 
-            const parsedContract = parseContract(contract);
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
             const result = await compileContract(parsedContract, './contract', mockResolver);
 
             expect(result.validations).toEqual([]);
@@ -565,7 +565,7 @@ describe('compile contract', () => {
                 elementType: HTMLButtonElement
             `;
 
-            const parsedContract = parseContract(contract);
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
             const result = await compileContract(parsedContract, './contract', mockResolver);
 
             expect(result.validations).toEqual([]);
@@ -612,7 +612,7 @@ describe('compile contract', () => {
                 elementType: HTMLButtonElement
             `;
 
-            const parsedContract = parseContract(contract);
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
             const result = await compileContract(parsedContract, './contract', mockResolver);
 
             expect(result.validations).toEqual([]);
