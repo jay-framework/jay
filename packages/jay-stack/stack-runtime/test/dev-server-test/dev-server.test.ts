@@ -29,7 +29,7 @@ describe('dev server', () => {
         expect(devServer.routes).toHaveLength(1);
         expect(devServer.routes[0].path).toBe('/');
 
-        const [html, headers] = await makeRequest(devServer.routes[0].handler, '/');
+        const [html] = await makeRequest(devServer.routes[0].handler, '/');
         expect(html).toEqual(`<!doctype html>
 <html lang="en">
   <head>
@@ -45,7 +45,7 @@ describe('dev server', () => {
   </body>
 </html>`);
 
-        const [script, scriptHeaders] = await makeRequest(devServer.server, '/@id/__x00__/index.html?html-proxy&index=0.js');
+        const [script] = await makeRequest(devServer.server, '/@id/__x00__/index.html?html-proxy&index=0.js');
 
         const scriptForMatching = clearScriptForTest(script)
 
@@ -73,9 +73,39 @@ target.appendChild(instance.element.dom);
         expect(devServer.routes[0].path).toBe('/');
 
         const [html, headers] = await makeRequest(devServer.routes[0].handler, '/');
-        expect(html).toContain('Page with Code');
-        expect(html).toContain('This page has both a jay-html file and a code file');
-        expect(html).toContain('<!doctype html>');
+        expect(html).toEqual(`<!doctype html>
+<html lang="en">
+  <head>
+    <script type="module" src="/@vite/client"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + TS</title>
+  </head>
+  <body>
+    <div id="target"></div>
+    <script type="module" src="/@id/__x00__/index.html?html-proxy&index=0.js"></script>
+  </body>
+</html>`);
+
+        const [script] = await makeRequest(devServer.server, '/@id/__x00__/index.html?html-proxy&index=0.js');
+
+        const scriptForMatching = clearScriptForTest(script)
+
+        expect(scriptForMatching).toEqual(`
+import {makeCompositeJayComponent} from "/@fs/dist/index.js";
+import { render } from "/page.jay-html.ts";
+
+const viewState = {};
+const fastCarryForward = {};
+
+const target = document.getElementById('target');
+const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [])
+
+const instance = pageComp({...viewState, ...carryForward})
+target.appendChild(instance.element.dom);
+
+// source-map`)
 
         await devServer.viteServer.close();
     });
@@ -86,10 +116,39 @@ target.appendChild(instance.element.dom);
         expect(devServer.routes[0].path).toBe('/');
 
         const [html, headers] = await makeRequest(devServer.routes[0].handler, '/');
-        expect(html).toContain('Page with Headless');
-        expect(html).toContain('This page has a headless component');
-        expect(html).toContain('This is from the headless component');
-        expect(html).toContain('<!doctype html>');
+        expect(html).toEqual(`<!doctype html>
+<html lang="en">
+  <head>
+    <script type="module" src="/@vite/client"></script>
+
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + TS</title>
+  </head>
+  <body>
+    <div id="target"></div>
+    <script type="module" src="/@id/__x00__/index.html?html-proxy&index=0.js"></script>
+  </body>
+</html>`);
+
+        const [script] = await makeRequest(devServer.server, '/@id/__x00__/index.html?html-proxy&index=0.js');
+
+        const scriptForMatching = clearScriptForTest(script)
+
+        expect(scriptForMatching).toEqual(`
+import {makeCompositeJayComponent} from "/@fs/dist/index.js";
+import { render } from "/page.jay-html.ts";
+
+const viewState = {};
+const fastCarryForward = {};
+
+const target = document.getElementById('target');
+const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [])
+
+const instance = pageComp({...viewState, ...carryForward})
+target.appendChild(instance.element.dom);
+
+// source-map`)
 
         await devServer.viteServer.close();
     });
