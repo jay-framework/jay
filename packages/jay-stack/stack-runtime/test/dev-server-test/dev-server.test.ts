@@ -30,6 +30,9 @@ describe('dev server', () => {
         expect(devServer.routes[0].path).toBe('/');
 
         const [html] = await makeRequest(devServer.routes[0].handler, '/');
+        const [script] = await makeRequest(devServer.server, '/@id/__x00__/index.html?html-proxy&index=0.js');
+        await devServer.viteServer.close();
+
         expect(html).toEqual(`<!doctype html>
 <html lang="en">
   <head>
@@ -45,7 +48,6 @@ describe('dev server', () => {
   </body>
 </html>`);
 
-        const [script] = await makeRequest(devServer.server, '/@id/__x00__/index.html?html-proxy&index=0.js');
 
         const scriptForMatching = clearScriptForTest(script)
 
@@ -64,7 +66,6 @@ target.appendChild(instance.element.dom);
 
 // source-map`)
 
-        await devServer.viteServer.close();
     });
 
     it('should handle a jay-html file with code', async () => {
@@ -73,6 +74,9 @@ target.appendChild(instance.element.dom);
         expect(devServer.routes[0].path).toBe('/');
 
         const [html, headers] = await makeRequest(devServer.routes[0].handler, '/');
+        const [script] = await makeRequest(devServer.server, '/@id/__x00__/index.html?html-proxy&index=0.js');
+        await devServer.viteServer.close();
+
         expect(html).toEqual(`<!doctype html>
 <html lang="en">
   <head>
@@ -88,7 +92,6 @@ target.appendChild(instance.element.dom);
   </body>
 </html>`);
 
-        const [script] = await makeRequest(devServer.server, '/@id/__x00__/index.html?html-proxy&index=0.js');
 
         const scriptForMatching = clearScriptForTest(script)
 
@@ -96,7 +99,7 @@ target.appendChild(instance.element.dom);
 import {makeCompositeJayComponent} from "/@fs/dist/index.js";
 import { render } from "/page.jay-html.ts";
 
-const viewState = {};
+const viewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file"};
 const fastCarryForward = {};
 
 const target = document.getElementById('target');
@@ -107,7 +110,6 @@ target.appendChild(instance.element.dom);
 
 // source-map`)
 
-        await devServer.viteServer.close();
     });
 
     it('should handle a jay-html file with headless component', async () => {
@@ -116,6 +118,9 @@ target.appendChild(instance.element.dom);
         expect(devServer.routes[0].path).toBe('/');
 
         const [html, headers] = await makeRequest(devServer.routes[0].handler, '/');
+        const [script] = await makeRequest(devServer.server, '/@id/__x00__/index.html?html-proxy&index=0.js');
+        await devServer.viteServer.close();
+
         expect(html).toEqual(`<!doctype html>
 <html lang="en">
   <head>
@@ -131,7 +136,6 @@ target.appendChild(instance.element.dom);
   </body>
 </html>`);
 
-        const [script] = await makeRequest(devServer.server, '/@id/__x00__/index.html?html-proxy&index=0.js');
 
         const scriptForMatching = clearScriptForTest(script)
 
@@ -150,7 +154,6 @@ target.appendChild(instance.element.dom);
 
 // source-map`)
 
-        await devServer.viteServer.close();
     });
 });
 
