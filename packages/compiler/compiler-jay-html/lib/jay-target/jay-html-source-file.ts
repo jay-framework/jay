@@ -12,7 +12,8 @@ export interface JayHeadlessImports {
     key: string;
     refs: RefsTree;
     rootType: JayType;
-    importLink: JayImportLink;
+    contractLink: JayImportLink;
+    codeLink: JayImportLink;
 }
 
 export interface JayHtmlSourceFile extends CompilerSourceFile {

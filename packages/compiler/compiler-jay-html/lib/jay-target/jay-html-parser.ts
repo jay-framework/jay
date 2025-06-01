@@ -1,5 +1,5 @@
 import { HTMLElement, parse } from 'node-html-parser';
-import { JayValidations, mkRefsTree, WithValidations } from 'jay-compiler-shared';
+import {JayComponentType, JayValidations, mkRefsTree, WithValidations} from 'jay-compiler-shared';
 import yaml from 'js-yaml';
 import { capitalCase, pascalCase } from 'change-case';
 import pluralize from 'pluralize';
@@ -181,15 +181,36 @@ async function parseHeadlessImports(
     const result: JayHeadlessImports[] = [];
     for await (const element of elements) {
         const module = element.getAttribute('src');
+        const name = element.getAttribute('name');
+        const contractPath = element.getAttribute('contract');
         const key = element.getAttribute('key');
-        const importedFile = importResolver.resolveLink(filePath, module);
+        
+        if (!module) {
+            validations.push('headless import must specify src attribute, module path to headless component implementation');
+            continue;
+        }
+        if (!name) {
+            validations.push(`headless import must specify name of the constant to import from ${module}`);
+            continue;
+        }
+        if (!contractPath) {
+            validations.push('headless import must specify contract attribute, module path to headless component contract');
+            continue;
+        }
+        if (!key) {
+            validations.push('headless import must specify key attribute, used for this component ViewState and Refs member for the contract');
+            continue;
+        }
+
+        const contractFile = importResolver.resolveLink(filePath, contractPath);
+        
         try {
-            const subContract = importResolver.loadContract(importedFile);
+            const subContract = importResolver.loadContract(contractFile);
             validations.push(...subContract.validations);
             await subContract.mapAsync(async (contract) => {
                 const contractTypes = await contractToImportsViewStateAndRefs(
                     contract,
-                    path.dirname(importedFile),
+                    path.dirname(contractFile),
                     importResolver,
                 );
                 contractTypes.map(({ type, refs: subContractRefsTree }) => {
@@ -203,18 +224,24 @@ async function parseHeadlessImports(
                         refsTypeName,
                         repeatedRefsTypeName,
                     );
-                    const importLink: JayImportLink = {
-                        module,
+                    const contractLink: JayImportLink = {
+                        module: contractPath,
                         names: [
                             { name: type.name, type },
                             { name: refsTypeName, type: JayUnknown },
                         ],
                     };
-                    result.push({ key, refs, rootType: type, importLink });
+                    const codeLink: JayImportLink = {
+                        module,
+                        names: [
+                            { name, type: new JayComponentType(name, []) }
+                        ]
+                    }
+                    result.push({ key, refs, rootType: type, contractLink, codeLink });
                 });
             });
         } catch (e) {
-            validations.push(`failed to parse linked contract ${module} - ${e.message}${e.stack}`);
+            validations.push(`failed to parse linked contract ${contractPath} - ${e.message}${e.stack}`);
         }
     }
     return result;
@@ -256,7 +283,7 @@ export async function parseJayFile(
     const types = parseTypes(jayYaml, validations, baseElementName, importNames, headlessImports);
     const imports: JayImportLink[] = [
         ...headfullImports,
-        ...headlessImports.map((_) => _.importLink),
+        ...headlessImports.flatMap((_) => [_.contractLink, _.codeLink]),
     ];
 
     if (validations.length > 0) return new WithValidations(undefined, validations);

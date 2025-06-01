@@ -5,6 +5,8 @@ import {
     NamedContractRefs,
     // @ts-ignore
 } from '../named-counter/named-counter.jay-contract?jay-workerSandbox';
+// @ts-ignore
+import { namedCounter } from '../named-counter/named-counter?jay-workerSandbox';
 
 export interface PageViewState {
     namedCounter: NamedContractViewState;

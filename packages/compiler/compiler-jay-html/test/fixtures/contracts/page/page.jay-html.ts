@@ -11,6 +11,8 @@ import {
     NamedContractViewState,
     NamedContractRefs,
 } from '../named-counter/named-counter.jay-contract';
+// @ts-ignore
+import { namedCounter } from '../named-counter/named-counter';
 
 export interface PageViewState {
     namedCounter: NamedContractViewState;
