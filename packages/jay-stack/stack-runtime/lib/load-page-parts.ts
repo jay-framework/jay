@@ -39,12 +39,13 @@ export async function loadPageParts(vite: ViteDevServer, route: JayRoute, option
 
     return jayHtmlWithValidations.mapAsync(async jayHtml => {
         for await (const headlessImport of jayHtml.headlessImports) {
-            const modulePath = path.resolve(dirName, headlessImport.importLink.module)
-            const name = headlessImport.importLink.names[0].name;
+            const module = headlessImport.codeLink.module;
+            const name = headlessImport.codeLink.names[0].name
+            const modulePath = path.resolve(dirName, module)
             const compDefinition = (await vite.ssrLoadModule(modulePath))[name];
-            const moduleImport = headlessImport.importLink.module.startsWith('./')?
-                path.resolve(options.pagesBase, headlessImport.importLink.module):
-                headlessImport.importLink.module
+            const moduleImport = module.startsWith('./')?
+                path.resolve(options.pagesBase, module):
+                module
             const key = headlessImport.key;
             const part: DevServerPagePart = {
                 key,

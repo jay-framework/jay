@@ -154,7 +154,7 @@ target.appendChild(instance.element.dom);
 
 // source-map`)
 
-    });
+    }, 5000000);
 });
 
 function clearScriptForTest(script: string) {

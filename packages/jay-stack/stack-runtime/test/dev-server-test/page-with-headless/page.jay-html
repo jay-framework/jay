@@ -2,7 +2,11 @@
 <html>
 <head>
     <title>Page with Headless</title>
-    <script type="application/jay-headless" src="./headless-component.ts" name="headless" key="headless" ></script>
+    <script type="application/jay-headless"
+            src="./headless-component.ts"
+            name="headless"
+            contract="./headless-component.jay-contract"
+            key="headless" ></script>
     <script type="application/jay-data">
         data:
           title: string
