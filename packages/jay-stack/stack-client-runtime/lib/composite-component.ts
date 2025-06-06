@@ -2,14 +2,12 @@ import {
     createSignal,
     JayComponentCore,
     makeJayComponent,
-    makePropsProxy,
     materializeViewState,
     Props,
-    useReactive,
 } from 'jay-component';
 import { JayElement, PreRenderElement } from 'jay-runtime';
 import { CompositePart } from './composite-part';
-import { Signals } from './jay-stack-builder';
+import { Signals } from 'jay-fullstack-component';
 
 function makeSignals<T extends object>(carryForward: T): Signals<T> {
     return Object.keys(carryForward).reduce((signals, key) => {

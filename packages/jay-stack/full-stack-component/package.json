@@ -1,5 +1,5 @@
 {
-  "name": "jay-stack-server-runtime",
+  "name": "jay-fullstack-component",
   "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
@@ -18,16 +18,13 @@
   },
   "dependencies": {
     "jay-component": "workspace:^",
-    "jay-fullstack-component": "workspace:^",
-    "jay-runtime": "workspace:^",
-    "jay-stack-route-scanner": "workspace:^"
+    "jay-runtime": "workspace:^"
   },
   "devDependencies": {
     "@types/express": "^5.0.2",
     "@types/node": "^22.15.21",
     "jay-cli": "workspace:^",
     "jay-dev-environment": "workspace:^",
-    "jay-stack-client-runtime": "workspace:^",
     "nodemon": "^3.0.3",
     "replace-in-file": "^7.1.0",
     "rimraf": "^5.0.5",

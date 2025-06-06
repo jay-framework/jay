@@ -1,11 +1,11 @@
 import {Connect, createServer, ViteDevServer} from 'vite';
 import {JayRoute, JayRoutes, routeToExpressRoute, scanRoutes} from 'jay-stack-route-scanner';
 import {DevSlowlyChangingPhase, SlowlyChangingPhase} from './slowly-changing-runner';
-import type {ClientError4xx, PageProps, PartialRender, Redirect3xx, ServerError5xx} from './jay-stack-types';
+import type {ClientError4xx, PageProps, Redirect3xx, ServerError5xx} from 'jay-fullstack-component';
 import {JayRollupConfig, jayRuntime} from "vite-plugin-jay";
 import path from "node:path";
 import {RequestHandler} from "express-serve-static-core";
-import {renderFastChangingData} from "../dist";
+import {renderFastChangingData} from "./fast-changing-runner";
 import {loadPageParts} from "./load-page-parts";
 import Server = Connect.Server;
 import {generateClientScript} from "./generate-client-script";

@@ -1,17 +1,15 @@
 import {
     DevSlowlyChangingPhase,
-    makeCompositeJayComponent,
-    notFound,
-    PageProps,
-    partialRender,
     renderFastChangingData,
 } from '../../lib';
-import { render } from './compiled/page.jay-html';
 import { render as renderGamingLaptop } from './compiled-slowly/page.slowly-rendered.variant-gaming-laptop.jay-html';
 import { render as renderSmartphone } from './compiled-slowly/page.slowly-rendered.variant-smartphone.jay-html';
 import { prettify } from 'jay-compiler-shared';
 import { productPage } from '../stores-plugin/product-page';
-import { getProductBySlug, products } from '../stores-plugin/products-database';
+import { getProductBySlug } from '../stores-plugin/products-database';
+import {notFound, PageProps, partialRender} from "jay-fullstack-component";
+import {makeCompositeJayComponent} from "jay-stack-client-runtime";
+import {DevServerPagePart} from "../../lib/load-page-parts";
 
 const PAGE_PROPS: PageProps = {
     language: 'en-us',
@@ -20,7 +18,12 @@ const PAGE_PROPS: PageProps = {
 const PAGE_PARAMS_GAMING_LAPTOP = { slug: 'gaming-laptop' };
 const PAGE_PARAMS_SMARTPHONE = { slug: 'smartphone-pro' };
 const PAGE_PARAMS_NON_EXISTING = { slug: 'non-existing-slug' };
-const PAGE_PARTS = [{ compDefinition: productPage, key: 'product' }];
+const PAGE_PARTS: DevServerPagePart[] = [{
+    compDefinition: productPage,
+    key: 'product',
+    clientPart: 'not important for this test',
+    clientImport: 'not important for this test'
+}];
 
 describe('rendering a product page', () => {
     it('slowly render for gaming laptop', async () => {
@@ -270,7 +273,7 @@ describe('rendering a product page', () => {
         const comp = makeCompositeJayComponent(
             renderGamingLaptop,
             fastRenderResult.rendered,
-            fastRenderResult.carryForward,
+            fastCarryForward,
             PAGE_PARTS,
         );
         const instance = comp(PAGE_PROPS);

@@ -1,4 +1,4 @@
-import { makeJayStackComponent } from 'jay-stack-runtime';
+import { makeJayStackComponent } from 'jay-fullstack-component';
 import { CurrentMood, MoodTrackerRefs, render } from './mood-tracker.jay-contract';
 import { createSignal } from 'jay-component';
 

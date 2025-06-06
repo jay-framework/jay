@@ -1,11 +1,10 @@
-import { makeJayStackComponent, PageProps, partialRender, Signals } from '../../lib/';
 import {
     render,
     SimplePluginViewState,
     SimplePluginRefs,
 } from './compiled/simple-plugin.jay-contract';
-import { createSignal, Props } from 'jay-component';
-import { PartialRender } from '../../lib';
+import { Props } from 'jay-component';
+import {makeJayStackComponent, PageProps, PartialRender, partialRender, Signals} from "jay-fullstack-component";
 
 // Define view states
 type StaticViewState = Pick<SimplePluginViewState, 'pluginSlowlyRendered'>;

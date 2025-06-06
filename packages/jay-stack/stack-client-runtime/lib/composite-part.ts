@@ -1,4 +1,4 @@
-import { AnyJayStackComponentDefinition } from './jay-stack-types';
+import { AnyJayStackComponentDefinition } from 'jay-fullstack-component';
 
 export interface CompositePart {
     compDefinition: AnyJayStackComponentDefinition;

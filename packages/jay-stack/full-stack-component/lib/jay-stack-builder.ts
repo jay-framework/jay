@@ -1,6 +1,8 @@
 import { ComponentConstructor, ContextMarkers, JayComponentCore } from 'jay-component';
 import { JayElement, PreRenderElement } from 'jay-runtime';
 import {
+    ExtractRefs,
+    ExtractViewState,
     JayStackComponentDefinition,
     LoadParams,
     RenderFast,
@@ -715,10 +717,6 @@ class BuilderImplementation<
         >;
     }
 }
-
-type ExtractViewState<A> =
-    A extends PreRenderElement<infer ViewState, any, any> ? ViewState : never;
-type ExtractRefs<A> = A extends PreRenderElement<any, infer Refs, any> ? Refs : never;
 
 export function makeJayStackComponent<Render extends PreRenderElement<any, any, any>>() {
     return new BuilderImplementation() as unknown as Builder<

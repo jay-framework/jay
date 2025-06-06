@@ -5,7 +5,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import {JAY_IMPORT_RESOLVER, parseJayFile} from "jay-compiler-jay-html";
 import {DevServerOptions} from "./dev-server";
-import {AnyJayStackComponentDefinition} from "./jay-stack-types";
+import {AnyJayStackComponentDefinition} from "jay-fullstack-component";
 
 export interface DevServerPagePart {
     compDefinition: AnyJayStackComponentDefinition;

@@ -1,12 +1,11 @@
-import { AnyFastRenderResult, PageProps } from './jay-stack-types';
-import { partialRender } from './render-results';
-import { CompositePart } from './composite-part';
+import { AnyFastRenderResult, PageProps, partialRender } from 'jay-fullstack-component';
+import {DevServerPagePart} from "./load-page-parts";
 
 export async function renderFastChangingData(
     pageParams: object,
     pageProps: PageProps,
     carryForward: object,
-    parts: Array<CompositePart>,
+    parts: Array<DevServerPagePart>,
 ): Promise<AnyFastRenderResult> {
     let fastViewState = {};
     let fastCarryForward = {};

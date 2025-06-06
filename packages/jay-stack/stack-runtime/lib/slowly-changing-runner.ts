@@ -1,19 +1,18 @@
 import {
-    AnyJayStackComponentDefinition,
     AnySlowlyRenderResult,
     JayStackComponentDefinition,
     PageProps,
-} from './jay-stack-types';
+    UrlParams,
+    notFound, partialRender
+} from 'jay-fullstack-component';
 import { JayComponentCore } from 'jay-component';
-import { UrlParams } from './jay-stack-types';
-import { notFound, partialRender } from './render-results';
-import { CompositePart } from './composite-part';
+import {DevServerPagePart} from "./load-page-parts";
 
 export interface SlowlyChangingPhase {
     runSlowlyForPage(
         pageParams: object,
         pageProps: PageProps,
-        parts: Array<CompositePart>,
+        parts: Array<DevServerPagePart>,
     ): Promise<AnySlowlyRenderResult>;
 }
 
@@ -50,7 +49,7 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
     async runSlowlyForPage(
         pageParams: UrlParams,
         pageProps: PageProps,
-        parts: Array<CompositePart>,
+        parts: Array<DevServerPagePart>,
     ): Promise<AnySlowlyRenderResult> {
         for (const part of parts) {
             const { compDefinition } = part;

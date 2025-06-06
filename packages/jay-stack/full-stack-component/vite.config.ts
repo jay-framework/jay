@@ -12,7 +12,7 @@ export default defineConfig({
             formats: ['es'],
         },
         rollupOptions: {
-            external: ['jay-component', 'jay-json-patch', 'jay-reactive', 'jay-runtime','jay-fullstack-component', 'jay-stack-route-scanner'],
+            external: ['jay-component', 'jay-json-patch', 'jay-reactive', 'jay-runtime'],
         },
     },
     test: {

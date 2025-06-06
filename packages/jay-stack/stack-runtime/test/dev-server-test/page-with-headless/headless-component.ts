@@ -1,6 +1,5 @@
 import { render } from './headless-component.jay-contract';
-import {makeJayStackComponent} from "../../../lib";
-import {partialRender} from "../../../lib";
+import {makeJayStackComponent, partialRender} from "jay-fullstack-component";
 
 export const headless = makeJayStackComponent<typeof render>().withProps()
     .withSlowlyRender(async () => partialRender({

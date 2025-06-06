@@ -1,13 +1,3 @@
-import {
-    makeJayStackComponent,
-    notFound,
-    PageProps,
-    partialRender,
-    SlowlyRenderResult,
-    UrlParams,
-    Signals,
-    PartialRender,
-} from '../../lib';
 import { getProductBySlug, getProducts } from './products-database';
 import { getAvailableUnits } from './inventory-service';
 import { Props } from 'jay-component';
@@ -16,6 +6,15 @@ import {
     ProductPageViewState,
     render,
 } from './compiled/product-page.jay-contract';
+import {
+    makeJayStackComponent,
+    notFound,
+    PageProps,
+    PartialRender,
+    partialRender, Signals,
+    SlowlyRenderResult,
+    UrlParams
+} from "jay-fullstack-component";
 
 interface ProductPageParams extends UrlParams {
     slug: string;

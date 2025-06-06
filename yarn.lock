@@ -12335,12 +12335,33 @@ __metadata:
     express: ^5.0.1
     jay-cli: "workspace:^"
     jay-dev-environment: "workspace:^"
+    jay-stack-client-runtime: "workspace:^"
     jay-stack-route-scanner: "workspace:^"
-    jay-stack-runtime: "workspace:^"
+    jay-stack-server-runtime: "workspace:^"
     sirv: ^3.0.0
     typescript: ~5.7.2
     vite: ^6.0.1
     vite-plugin-jay: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
+"jay-fullstack-component@workspace:^, jay-fullstack-component@workspace:packages/jay-stack/full-stack-component":
+  version: 0.0.0-use.local
+  resolution: "jay-fullstack-component@workspace:packages/jay-stack/full-stack-component"
+  dependencies:
+    "@types/express": ^5.0.2
+    "@types/node": ^22.15.21
+    jay-cli: "workspace:^"
+    jay-component: "workspace:^"
+    jay-dev-environment: "workspace:^"
+    jay-runtime: "workspace:^"
+    nodemon: ^3.0.3
+    replace-in-file: ^7.1.0
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
   languageName: unknown
   linkType: soft
 
@@ -12386,7 +12407,8 @@ __metadata:
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
     jay-secure: "workspace:^"
-    jay-stack-runtime: "workspace:^"
+    jay-stack-client-runtime: "workspace:^"
+    jay-stack-server-runtime: "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -12484,6 +12506,27 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"jay-stack-client-runtime@workspace:^, jay-stack-client-runtime@workspace:packages/jay-stack/stack-client-runtime":
+  version: 0.0.0-use.local
+  resolution: "jay-stack-client-runtime@workspace:packages/jay-stack/stack-client-runtime"
+  dependencies:
+    "@types/express": ^5.0.2
+    "@types/node": ^22.15.21
+    jay-cli: "workspace:^"
+    jay-component: "workspace:^"
+    jay-dev-environment: "workspace:^"
+    jay-fullstack-component: "workspace:^"
+    jay-runtime: "workspace:^"
+    nodemon: ^3.0.3
+    replace-in-file: ^7.1.0
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
 "jay-stack-route-scanner@workspace:^, jay-stack-route-scanner@workspace:packages/jay-stack/route-scanner":
   version: 0.0.0-use.local
   resolution: "jay-stack-route-scanner@workspace:packages/jay-stack/route-scanner"
@@ -12500,15 +12543,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"jay-stack-runtime@workspace:^, jay-stack-runtime@workspace:packages/jay-stack/stack-runtime":
+"jay-stack-server-runtime@workspace:^, jay-stack-server-runtime@workspace:packages/jay-stack/stack-runtime":
   version: 0.0.0-use.local
-  resolution: "jay-stack-runtime@workspace:packages/jay-stack/stack-runtime"
+  resolution: "jay-stack-server-runtime@workspace:packages/jay-stack/stack-runtime"
   dependencies:
     "@types/express": ^5.0.2
     "@types/node": ^22.15.21
     jay-cli: "workspace:^"
     jay-component: "workspace:^"
     jay-dev-environment: "workspace:^"
+    jay-fullstack-component: "workspace:^"
     jay-runtime: "workspace:^"
     jay-stack-route-scanner: "workspace:^"
     nodemon: ^3.0.3

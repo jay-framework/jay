@@ -17,8 +17,9 @@
   "dependencies": {
     "compression": "^1.7.5",
     "express": "^5.0.1",
+    "jay-stack-client-runtime": "workspace:^",
     "jay-stack-route-scanner": "workspace:^",
-    "jay-stack-runtime": "workspace:^",
+    "jay-stack-server-runtime": "workspace:^",
     "sirv": "^3.0.0",
     "vite-plugin-jay": "workspace:^"
   },
