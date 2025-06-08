@@ -10,7 +10,6 @@ import {loadPageParts} from "jay-stack-server-runtime";
 import {generateClientScript} from "jay-stack-server-runtime";
 import {Request, Response} from "express";
 import {DevServerOptions} from "./dev-server-options";
-import Server = Connect.Server;
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
     return await scanRoutes(pagesBaseFolder, {
@@ -41,7 +40,7 @@ export interface DevServerRoute {
 }
 
 export interface DevServer {
-    server: Server;
+    server: Connect.Server;
     viteServer: ViteDevServer;
     routes: DevServerRoute[]
 }
