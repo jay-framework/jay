@@ -17,8 +17,7 @@
     "jay-reactive": "workspace:^",
     "jay-runtime": "workspace:^",
     "jay-secure": "workspace:^",
-    "jay-stack-client-runtime": "workspace:^",
-    "jay-stack-server-runtime": "workspace:^"
+    "jay-full-stack-component": "workspace:^"
   },
   "devDependencies": {
     "@babel/core": "^7.23.7",
