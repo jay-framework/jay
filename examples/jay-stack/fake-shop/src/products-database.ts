@@ -1,4 +1,10 @@
-import { Product } from './pages/products/page.jay-html';
+interface Product {
+    id: string,
+    sku: string,
+    name: string,
+    slug: string,
+    price: number,
+}
 
 export const products = [
     {
