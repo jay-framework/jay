@@ -67,7 +67,7 @@ export function jayDefinitions() {
                 const context = this as PluginContext;
                 const { filename, dirname } = getFileContext(id, JAY_CONTRACT_EXTENSION);
 
-                const parsedFile = parseContract(code);
+                const parsedFile = parseContract(code, filename);
                 const tsCode = await compileContract(
                     parsedFile,
                     `${dirname}/${filename}`,
