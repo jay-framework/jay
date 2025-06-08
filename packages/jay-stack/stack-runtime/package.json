@@ -1,8 +1,11 @@
 {
   "name": "jay-stack-server-runtime",
   "version": "1.0.0",
-  "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.mts",
+  "directories": {
+    "lib": "lib"
+  },
   "scripts": {
     "build": "npm run build:js && npm run build:types",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
@@ -20,7 +23,8 @@
     "jay-component": "workspace:^",
     "jay-fullstack-component": "workspace:^",
     "jay-runtime": "workspace:^",
-    "jay-stack-route-scanner": "workspace:^"
+    "jay-stack-route-scanner": "workspace:^",
+    "jay-compiler-jay-html": "workspace:^"
   },
   "devDependencies": {
     "@types/express": "^5.0.2",

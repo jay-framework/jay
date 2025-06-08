@@ -3,9 +3,9 @@ import {JayRoute} from "jay-stack-route-scanner";
 import {WithValidations} from "jay-compiler-shared";
 import fs from "node:fs/promises";
 import path from "node:path";
-import {JAY_IMPORT_RESOLVER, parseJayFile} from "jay-compiler-jay-html";
-import {DevServerOptions} from "./dev-server";
+import {parseJayFile} from "jay-compiler-jay-html";
 import {AnyJayStackComponentDefinition} from "jay-fullstack-component";
+import {JayRollupConfig} from "rollup-plugin-jay";
 
 export interface DevServerPagePart {
     compDefinition: AnyJayStackComponentDefinition;
@@ -14,13 +14,13 @@ export interface DevServerPagePart {
     clientPart: string
 }
 
-export async function loadPageParts(vite: ViteDevServer, route: JayRoute, options: DevServerOptions): Promise<WithValidations<DevServerPagePart[]>> {
+export async function loadPageParts(vite: ViteDevServer, route: JayRoute, pagesBase: string, jayRollupConfig: JayRollupConfig): Promise<WithValidations<DevServerPagePart[]>> {
     const exists = await fs.access(route.compPath, fs.constants.F_OK)
         .then(() => true)
         .catch(() => false);
 
     const parts: DevServerPagePart[] = [];
-    const pageCode = path.resolve(options.pagesBase, './page.ts')
+    const pageCode = path.resolve(pagesBase, './page.ts')
     if (exists) {
         const pageComponent = (await vite.ssrLoadModule(route.compPath)).page;
         parts.push({
@@ -33,8 +33,10 @@ export async function loadPageParts(vite: ViteDevServer, route: JayRoute, option
     const jayHtmlSource = (await fs.readFile(route.jayHtmlPath)).toString();
     const fileName = path.basename(route.jayHtmlPath);
     const dirName = path.dirname(route.jayHtmlPath);
+    const module = await import('jay-compiler-jay-html');
+    const JAY_IMPORT_RESOLVER = module.JAY_IMPORT_RESOLVER;
     const jayHtmlWithValidations = await parseJayFile(jayHtmlSource, fileName, dirName, {
-        relativePath: options.jayRollupConfig.tsConfigFilePath
+        relativePath: jayRollupConfig.tsConfigFilePath
     }, JAY_IMPORT_RESOLVER)
 
     return jayHtmlWithValidations.mapAsync(async jayHtml => {
@@ -44,7 +46,7 @@ export async function loadPageParts(vite: ViteDevServer, route: JayRoute, option
             const modulePath = path.resolve(dirName, module)
             const compDefinition = (await vite.ssrLoadModule(modulePath))[name];
             const moduleImport = module.startsWith('./')?
-                path.resolve(options.pagesBase, module):
+                path.resolve(pagesBase, module):
                 module
             const key = headlessImport.key;
             const part: DevServerPagePart = {

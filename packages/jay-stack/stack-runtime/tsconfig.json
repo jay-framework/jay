@@ -3,8 +3,11 @@
   "compilerOptions": {
     "outDir": "dist",
     "paths": {
-      "jay-list-compare": ["../list-compare/lib"],
-      "jay-reactive": ["../reactive/lib"],
+      "jay-component": ["../../runtime/component/lib"],
+      "jay-fullstack-component": ["../full-stack-component/lib"],
+      "jay-runtime": ["../../runtime/runtime/lib"],
+      "jay-stack-route-scanner": ["../route-scanner/lib"],
+      "jay-compiler-jay-html": ["../../compiler/compiler-jay-html/lib"],
     },
   },
 }

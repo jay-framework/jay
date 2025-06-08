@@ -1,4 +1,4 @@
-import {DevServerOptions, mkDevServer} from '../../lib';
+import {DevServerOptions, mkDevServer} from '../lib';
 import { JayRollupConfig } from 'vite-plugin-jay';
 import path from 'path';
 import { Request, Response } from 'express';
@@ -162,6 +162,7 @@ function clearScriptForTest(script: string) {
     return script
         .replace(cmd, '')
         .replace(/\/\/\#.*/, '// source-map')
+        .replace(/from "(\/@fs\/.*?\/dist\/index\.js)"/g, 'from "/@fs/dist/index.js"')
         .split('\n')
         .map((line) => line.trim())
         .join('\n')

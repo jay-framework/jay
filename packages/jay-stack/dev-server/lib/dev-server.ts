@@ -1,22 +1,16 @@
 import {Connect, createServer, ViteDevServer} from 'vite';
 import {JayRoute, JayRoutes, routeToExpressRoute, scanRoutes} from 'jay-stack-route-scanner';
-import {DevSlowlyChangingPhase, SlowlyChangingPhase} from './slowly-changing-runner';
+import {DevSlowlyChangingPhase, SlowlyChangingPhase} from 'jay-stack-server-runtime';
 import type {ClientError4xx, PageProps, Redirect3xx, ServerError5xx} from 'jay-fullstack-component';
-import {JayRollupConfig, jayRuntime} from "vite-plugin-jay";
+import {jayRuntime} from "vite-plugin-jay";
 import path from "node:path";
 import {RequestHandler} from "express-serve-static-core";
-import {renderFastChangingData} from "./fast-changing-runner";
-import {loadPageParts} from "./load-page-parts";
-import Server = Connect.Server;
-import {generateClientScript} from "./generate-client-script";
+import {renderFastChangingData} from "jay-stack-server-runtime";
+import {loadPageParts} from "jay-stack-server-runtime";
+import {generateClientScript} from "jay-stack-server-runtime";
 import {Request, Response} from "express";
-
-export interface DevServerOptions {
-    serverBase?: string;
-    pagesBase?: string;
-    jayRollupConfig: JayRollupConfig;
-    dontCacheSlowly: boolean;
-}
+import {DevServerOptions} from "./dev-server-options";
+import Server = Connect.Server;
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
     return await scanRoutes(pagesBaseFolder, {
@@ -76,7 +70,7 @@ function mkRoute(route: JayRoute,
             };
 
             let viewState: object, carryForward: object;
-            const pageParts = await loadPageParts(vite, route, options);
+            const pageParts = await loadPageParts(vite, route, options.pagesBase, options.jayRollupConfig);
 
             if (pageParts.val) {
                 const renderedSlowly = await slowlyPhase.runSlowlyForPage(

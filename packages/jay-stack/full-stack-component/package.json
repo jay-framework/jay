@@ -1,8 +1,8 @@
 {
   "name": "jay-fullstack-component",
   "version": "1.0.0",
-  "type": "module",
   "main": "dist/index.js",
+  "types": "dist/index.d.mts",
   "scripts": {
     "build": "npm run build:js && npm run build:types",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
