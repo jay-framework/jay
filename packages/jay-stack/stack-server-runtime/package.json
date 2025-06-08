@@ -20,11 +20,11 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "jay-compiler-jay-html": "workspace:^",
     "jay-component": "workspace:^",
     "jay-fullstack-component": "workspace:^",
     "jay-runtime": "workspace:^",
-    "jay-stack-route-scanner": "workspace:^",
-    "jay-compiler-jay-html": "workspace:^"
+    "jay-stack-route-scanner": "workspace:^"
   },
   "devDependencies": {
     "@types/express": "^5.0.2",
