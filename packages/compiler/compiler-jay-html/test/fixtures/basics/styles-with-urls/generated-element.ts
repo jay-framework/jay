@@ -54,4 +54,4 @@ export function render(options?: RenderElementOptions): StylesWithUrlsElementPre
             ]),
         ) as StylesWithUrlsElement;
     return [refManager.getPublicAPI() as StylesWithUrlsElementRefs, render];
-} 
+}
