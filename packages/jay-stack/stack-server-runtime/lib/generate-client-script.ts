@@ -36,7 +36,7 @@ ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
       const target = document.getElementById('target');
       const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, ${compositeParts})
 
-      const instance = pageComp({...viewState, ...carryForward})
+      const instance = pageComp({...viewState, ...fastCarryForward})
       target.appendChild(instance.element.dom);
     </script>
   </body>

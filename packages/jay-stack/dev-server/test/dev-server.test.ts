@@ -63,7 +63,7 @@ const fastCarryForward = {};
 const target = document.getElementById('target');
 const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [])
 
-const instance = pageComp({...viewState, ...carryForward})
+const instance = pageComp({...viewState, ...fastCarryForward})
 target.appendChild(instance.element.dom);
 
 // source-map`);
@@ -108,7 +108,7 @@ const fastCarryForward = {};
 const target = document.getElementById('target');
 const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [])
 
-const instance = pageComp({...viewState, ...carryForward})
+const instance = pageComp({...viewState, ...fastCarryForward})
 target.appendChild(instance.element.dom);
 
 // source-map`);
@@ -158,7 +158,7 @@ const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, 
 {comp: headless.comp, contextMarkers: [], viewStateKey: 'headless'}
 ])
 
-const instance = pageComp({...viewState, ...carryForward})
+const instance = pageComp({...viewState, ...fastCarryForward})
 target.appendChild(instance.element.dom);
 
 // source-map`);
