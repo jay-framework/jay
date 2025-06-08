@@ -1,16 +1,20 @@
-import {DevServerPagePart} from "./load-page-parts";
-import path from "node:path";
+import { DevServerPagePart } from './load-page-parts';
+import path from 'node:path';
 
-export function generateClientScript(defaultViewState: object,
-                                     fastCarryForward: object,
-                                     parts: DevServerPagePart[],
-                                     pagesBase: string) {
-    const imports = parts.length > 1 ?
-        parts.map(part => part.clientImport).join('\n') + '\n' :
-        '';
-    const compositeParts = parts.length > 1 ? `[
-${parts.map(part => '        ' + part.clientPart).join(',\n')}
-        ]` : '[]';
+export function generateClientScript(
+    defaultViewState: object,
+    fastCarryForward: object,
+    parts: DevServerPagePart[],
+    pagesBase: string,
+) {
+    const imports =
+        parts.length > 1 ? parts.map((part) => part.clientImport).join('\n') + '\n' : '';
+    const compositeParts =
+        parts.length > 1
+            ? `[
+${parts.map((part) => '        ' + part.clientPart).join(',\n')}
+        ]`
+            : '[]';
     const jayHtmlPath = path.resolve(pagesBase, './page.jay-html');
 
     return `<!doctype html>
@@ -36,5 +40,5 @@ ${parts.map(part => '        ' + part.clientPart).join(',\n')}
       target.appendChild(instance.element.dom);
     </script>
   </body>
-</html>`
+</html>`;
 }

@@ -1,5 +1,5 @@
 import { HTMLElement, parse } from 'node-html-parser';
-import {JayComponentType, JayValidations, mkRefsTree, WithValidations} from 'jay-compiler-shared';
+import { JayComponentType, JayValidations, mkRefsTree, WithValidations } from 'jay-compiler-shared';
 import yaml from 'js-yaml';
 import { capitalCase, pascalCase } from 'change-case';
 import pluralize from 'pluralize';
@@ -184,26 +184,34 @@ async function parseHeadlessImports(
         const name = element.getAttribute('name');
         const contractPath = element.getAttribute('contract');
         const key = element.getAttribute('key');
-        
+
         if (!module) {
-            validations.push('headless import must specify src attribute, module path to headless component implementation');
+            validations.push(
+                'headless import must specify src attribute, module path to headless component implementation',
+            );
             continue;
         }
         if (!name) {
-            validations.push(`headless import must specify name of the constant to import from ${module}`);
+            validations.push(
+                `headless import must specify name of the constant to import from ${module}`,
+            );
             continue;
         }
         if (!contractPath) {
-            validations.push('headless import must specify contract attribute, module path to headless component contract');
+            validations.push(
+                'headless import must specify contract attribute, module path to headless component contract',
+            );
             continue;
         }
         if (!key) {
-            validations.push('headless import must specify key attribute, used for this component ViewState and Refs member for the contract');
+            validations.push(
+                'headless import must specify key attribute, used for this component ViewState and Refs member for the contract',
+            );
             continue;
         }
 
         const contractFile = importResolver.resolveLink(filePath, contractPath);
-        
+
         try {
             const subContract = importResolver.loadContract(contractFile);
             validations.push(...subContract.validations);
@@ -233,15 +241,15 @@ async function parseHeadlessImports(
                     };
                     const codeLink: JayImportLink = {
                         module,
-                        names: [
-                            { name, type: new JayComponentType(name, []) }
-                        ]
-                    }
+                        names: [{ name, type: new JayComponentType(name, []) }],
+                    };
                     result.push({ key, refs, rootType: type, contractLink, codeLink });
                 });
             });
         } catch (e) {
-            validations.push(`failed to parse linked contract ${contractPath} - ${e.message}${e.stack}`);
+            validations.push(
+                `failed to parse linked contract ${contractPath} - ${e.message}${e.stack}`,
+            );
         }
     }
     return result;

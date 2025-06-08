@@ -9,9 +9,9 @@ export default defineConfig({
             entry: resolve(__dirname, 'lib/index.ts'),
             name: 'jayStackRuntime',
             fileName: (format) => {
-                if (format === 'es') return 'index.js'
-                if (format === 'cjs') return 'index.cjs'
-                return `index.${format}.js`
+                if (format === 'es') return 'index.js';
+                if (format === 'cjs') return 'index.cjs';
+                return `index.${format}.js`;
             },
             formats: ['es', 'cjs'],
         },
@@ -19,7 +19,13 @@ export default defineConfig({
             transformMixedEsModules: true,
         },
         rollupOptions: {
-            external: ['jay-component', 'jay-json-patch', 'jay-reactive', 'jay-runtime', 'jay-fullstack-component'],
+            external: [
+                'jay-component',
+                'jay-json-patch',
+                'jay-reactive',
+                'jay-runtime',
+                'jay-fullstack-component',
+            ],
         },
     },
     test: {

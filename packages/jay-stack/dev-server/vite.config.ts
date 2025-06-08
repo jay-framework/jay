@@ -12,9 +12,20 @@ export default defineConfig({
             formats: ['es'],
         },
         rollupOptions: {
-            external: [/^node:/, 'jay-component', 'jay-json-patch', 'jay-reactive', 'jay-runtime',
-                'jay-fullstack-component', 'jay-stack-route-scanner', 'jay-stack-client-runtime', 'jay-stack-server-runtime',
-                'vite', 'rollup-plugin-jay', 'vite-plugin-jay'],
+            external: [
+                /^node:/,
+                'jay-component',
+                'jay-json-patch',
+                'jay-reactive',
+                'jay-runtime',
+                'jay-fullstack-component',
+                'jay-stack-route-scanner',
+                'jay-stack-client-runtime',
+                'jay-stack-server-runtime',
+                'vite',
+                'rollup-plugin-jay',
+                'vite-plugin-jay',
+            ],
         },
     },
     test: {

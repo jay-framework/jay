@@ -16,8 +16,16 @@ export default defineConfig({
             transformMixedEsModules: true,
         },
         rollupOptions: {
-            external: ['jay-component', 'jay-json-patch', 'jay-reactive', 'jay-runtime','jay-fullstack-component',
-                'jay-stack-route-scanner', 'jay-stack-client-runtime', 'jay-compiler-jay-html'],
+            external: [
+                'jay-component',
+                'jay-json-patch',
+                'jay-reactive',
+                'jay-runtime',
+                'jay-fullstack-component',
+                'jay-stack-route-scanner',
+                'jay-stack-client-runtime',
+                'jay-compiler-jay-html',
+            ],
         },
     },
     test: {

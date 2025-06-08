@@ -1,4 +1,4 @@
-import {DevServerOptions, mkDevServer} from '../lib';
+import { DevServerOptions, mkDevServer } from '../lib';
 import { JayRollupConfig } from 'vite-plugin-jay';
 import path from 'path';
 import { Request, Response } from 'express';
@@ -12,25 +12,28 @@ describe('dev server', () => {
         serverBase: '/',
         pagesBase: path.resolve(__dirname, './'),
         jayRollupConfig: {
-            tsConfigFilePath: path.resolve(__dirname, '../../../tsconfig.json')
+            tsConfigFilePath: path.resolve(__dirname, '../../../tsconfig.json'),
         } as JayRollupConfig,
-        dontCacheSlowly: true
+        dontCacheSlowly: true,
     };
 
     function optionsForDir(directory: string): DevServerOptions {
         return {
             ...baseOptions,
-            pagesBase: path.resolve(__dirname, directory)
-        }
+            pagesBase: path.resolve(__dirname, directory),
+        };
     }
 
     it('should handle a simple jay-html file without code', async () => {
-        const devServer = await mkDevServer(optionsForDir('./simple-page'))
+        const devServer = await mkDevServer(optionsForDir('./simple-page'));
         expect(devServer.routes).toHaveLength(1);
         expect(devServer.routes[0].path).toBe('/');
 
         const [html] = await makeRequest(devServer.routes[0].handler, '/');
-        const [script] = await makeRequest(devServer.server, '/@id/__x00__/index.html?html-proxy&index=0.js');
+        const [script] = await makeRequest(
+            devServer.server,
+            '/@id/__x00__/index.html?html-proxy&index=0.js',
+        );
         await devServer.viteServer.close();
 
         expect(html).toEqual(`<!doctype html>
@@ -48,8 +51,7 @@ describe('dev server', () => {
   </body>
 </html>`);
 
-
-        const scriptForMatching = clearScriptForTest(script)
+        const scriptForMatching = clearScriptForTest(script);
 
         expect(scriptForMatching).toEqual(`
 import {makeCompositeJayComponent} from "jay-stack-client-runtime";
@@ -64,17 +66,19 @@ const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, 
 const instance = pageComp({...viewState, ...carryForward})
 target.appendChild(instance.element.dom);
 
-// source-map`)
-
+// source-map`);
     });
 
     it('should handle a jay-html file with code', async () => {
-        const devServer = await mkDevServer(optionsForDir('./page-with-code'))
+        const devServer = await mkDevServer(optionsForDir('./page-with-code'));
         expect(devServer.routes).toHaveLength(1);
         expect(devServer.routes[0].path).toBe('/');
 
         const [html, headers] = await makeRequest(devServer.routes[0].handler, '/');
-        const [script] = await makeRequest(devServer.server, '/@id/__x00__/index.html?html-proxy&index=0.js');
+        const [script] = await makeRequest(
+            devServer.server,
+            '/@id/__x00__/index.html?html-proxy&index=0.js',
+        );
         await devServer.viteServer.close();
 
         expect(html).toEqual(`<!doctype html>
@@ -92,8 +96,7 @@ target.appendChild(instance.element.dom);
   </body>
 </html>`);
 
-
-        const scriptForMatching = clearScriptForTest(script)
+        const scriptForMatching = clearScriptForTest(script);
 
         expect(scriptForMatching).toEqual(`
 import {makeCompositeJayComponent} from "jay-stack-client-runtime";
@@ -108,17 +111,19 @@ const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, 
 const instance = pageComp({...viewState, ...carryForward})
 target.appendChild(instance.element.dom);
 
-// source-map`)
-
+// source-map`);
     });
 
     it('should handle a jay-html file with headless component', async () => {
-        const devServer = await mkDevServer(optionsForDir('./page-with-headless'))
+        const devServer = await mkDevServer(optionsForDir('./page-with-headless'));
         expect(devServer.routes).toHaveLength(1);
         expect(devServer.routes[0].path).toBe('/');
 
         const [html, headers] = await makeRequest(devServer.routes[0].handler, '/');
-        const [script] = await makeRequest(devServer.server, '/@id/__x00__/index.html?html-proxy&index=0.js');
+        const [script] = await makeRequest(
+            devServer.server,
+            '/@id/__x00__/index.html?html-proxy&index=0.js',
+        );
         await devServer.viteServer.close();
 
         expect(html).toEqual(`<!doctype html>
@@ -136,8 +141,7 @@ target.appendChild(instance.element.dom);
   </body>
 </html>`);
 
-
-        const scriptForMatching = clearScriptForTest(script)
+        const scriptForMatching = clearScriptForTest(script);
 
         expect(scriptForMatching).toEqual(`
 import {makeCompositeJayComponent} from "jay-stack-client-runtime";
@@ -157,8 +161,7 @@ const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, 
 const instance = pageComp({...viewState, ...carryForward})
 target.appendChild(instance.element.dom);
 
-// source-map`)
-
+// source-map`);
     }, 5000000);
 });
 
@@ -170,7 +173,7 @@ function clearScriptForTest(script: string) {
         .replace(/from "(\/@fs\/.*?stack-client-runtime.*?)"/g, 'from "jay-stack-client-runtime"')
         .split('\n')
         .map((line) => line.trim())
-        .join('\n')
+        .join('\n');
 }
 
 async function makeRequest(handler: any, path: string): Promise<[string, Record<string, string>]> {
@@ -192,7 +195,7 @@ async function makeRequest(handler: any, path: string): Promise<[string, Record<
             read: () => null,
             unpipe: () => req,
             resume: () => req,
-            pause: () => req
+            pause: () => req,
         } as unknown as Request;
 
         const resHeaders = {};
@@ -220,7 +223,7 @@ async function makeRequest(handler: any, path: string): Promise<[string, Record<
             writable: true,
             write: () => true,
             cork: () => {},
-            uncork: () => {}
+            uncork: () => {},
         } as unknown as Response;
 
         handler(req, res);

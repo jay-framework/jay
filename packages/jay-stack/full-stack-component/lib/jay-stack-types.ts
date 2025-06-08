@@ -1,5 +1,5 @@
 import { ComponentConstructor, ContextMarkers, JayComponentCore } from 'jay-component';
-import {PreRenderElement} from "jay-runtime";
+import { PreRenderElement } from 'jay-runtime';
 
 export interface PageProps {
     language: string;
@@ -99,4 +99,3 @@ export type AnyJayStackComponentDefinition = JayStackComponentDefinition<
 export type ExtractViewState<A> =
     A extends PreRenderElement<infer ViewState, any, any> ? ViewState : never;
 export type ExtractRefs<A> = A extends PreRenderElement<any, infer Refs, any> ? Refs : never;
-

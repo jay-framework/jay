@@ -1,9 +1,9 @@
 interface Product {
-    id: string,
-    sku: string,
-    name: string,
-    slug: string,
-    price: number,
+    id: string;
+    sku: string;
+    name: string;
+    slug: string;
+    price: number;
 }
 
 export const products = [

@@ -5,8 +5,7 @@ export interface PageViewState {
     content: string;
 }
 
-export interface PageElementRefs {
-}
+export interface PageElementRefs {}
 
 export type PageElement = JayElement<PageViewState, PageElementRefs>;
 export type PageElementRender = RenderElement<PageViewState, PageElementRefs, PageElement>;

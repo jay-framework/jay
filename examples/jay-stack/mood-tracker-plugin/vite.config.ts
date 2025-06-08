@@ -14,7 +14,14 @@ export default defineConfig(({ mode }) => {
     const external =
         mode === 'production'
             ? []
-            : ['jay-component', 'jay-reactive', 'jay-runtime', 'jay-secure', 'jay-stack-client-runtime', 'jay-stack-server-runtime'];
+            : [
+                  'jay-component',
+                  'jay-reactive',
+                  'jay-runtime',
+                  'jay-secure',
+                  'jay-stack-client-runtime',
+                  'jay-stack-server-runtime',
+              ];
     rimrafSync(resolve(root, 'build'));
 
     return {

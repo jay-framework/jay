@@ -1,6 +1,12 @@
 import { render, PageElementRefs, PageViewState } from './compiled/page.jay-html';
 import { Props } from 'jay-component';
-import {makeJayStackComponent, PageProps, partialRender, PartialRender, Signals} from "jay-fullstack-component";
+import {
+    makeJayStackComponent,
+    PageProps,
+    partialRender,
+    PartialRender,
+    Signals,
+} from 'jay-fullstack-component';
 
 type SlowlyViewState = Pick<PageViewState, 'slowlyRendered'>;
 type FastViewState = Omit<PageViewState, keyof SlowlyViewState>;

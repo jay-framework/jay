@@ -11,10 +11,11 @@ import {
     notFound,
     PageProps,
     PartialRender,
-    partialRender, Signals,
+    partialRender,
+    Signals,
     SlowlyRenderResult,
-    UrlParams
-} from "jay-fullstack-component";
+    UrlParams,
+} from 'jay-fullstack-component';
 
 interface ProductPageParams extends UrlParams {
     slug: string;

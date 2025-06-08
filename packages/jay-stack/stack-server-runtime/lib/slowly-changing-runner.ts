@@ -3,10 +3,11 @@ import {
     JayStackComponentDefinition,
     PageProps,
     UrlParams,
-    notFound, partialRender
+    notFound,
+    partialRender,
 } from 'jay-fullstack-component';
 import { JayComponentCore } from 'jay-component';
-import {DevServerPagePart} from "./load-page-parts";
+import { DevServerPagePart } from './load-page-parts';
 
 export interface SlowlyChangingPhase {
     runSlowlyForPage(
@@ -42,9 +43,7 @@ async function findMatchingParams(
 }
 
 export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
-
-    constructor(private dontCacheSlowly: boolean) {
-    }
+    constructor(private dontCacheSlowly: boolean) {}
 
     async runSlowlyForPage(
         pageParams: UrlParams,

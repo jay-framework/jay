@@ -1,30 +1,30 @@
-import {
-    DevSlowlyChangingPhase,
-    renderFastChangingData,
-} from '../../lib';
+import { DevSlowlyChangingPhase, renderFastChangingData } from '../../lib';
 import { render } from './compiled-slowly/page.slowly-rendered.jay-html';
 import { prettify } from 'jay-compiler-shared';
 import { plugin } from '../simple-plugin/simple-plugin';
 import { page } from './page';
-import {PageProps, partialRender} from "jay-fullstack-component";
-import {makeCompositeJayComponent} from "jay-stack-client-runtime";
-import {DevServerPagePart} from "../../lib/load-page-parts";
+import { PageProps, partialRender } from 'jay-fullstack-component';
+import { makeCompositeJayComponent } from 'jay-stack-client-runtime';
+import { DevServerPagePart } from '../../lib/load-page-parts';
 
 const PAGE_PROPS: PageProps = {
     language: 'en-us',
-    url: '/'
+    url: '/',
 };
 const PAGE_PARAMS = {};
-const PAGE_PARTS: DevServerPagePart[] = [{
-    compDefinition: plugin,
-    key: 'plugin',
-    clientPart: 'not important for this test',
-    clientImport: 'not important for this test'
-}, {
-    compDefinition: page,
-    clientPart: 'not important for this test',
-    clientImport: 'not important for this test'
-}];
+const PAGE_PARTS: DevServerPagePart[] = [
+    {
+        compDefinition: plugin,
+        key: 'plugin',
+        clientPart: 'not important for this test',
+        clientImport: 'not important for this test',
+    },
+    {
+        compDefinition: page,
+        clientPart: 'not important for this test',
+        clientImport: 'not important for this test',
+    },
+];
 
 describe('rendering a page with plugin and state', () => {
     it('should run the slowly changing phase', async () => {

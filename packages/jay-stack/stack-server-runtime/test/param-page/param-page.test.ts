@@ -1,28 +1,26 @@
-import {
-    DevSlowlyChangingPhase,
-    renderFastChangingData,
-} from '../../lib';
+import { DevSlowlyChangingPhase, renderFastChangingData } from '../../lib';
 import { page } from './page';
 import { render as renderVariantA } from './compiled-slowly/page.slowly-rendered.variant-a.jay-html';
 import { render as renderVariantB } from './compiled-slowly/page.slowly-rendered.variant-b.jay-html';
-import {PageProps, partialRender} from "jay-fullstack-component";
-import {makeCompositeJayComponent} from "jay-stack-client-runtime";
-import {DevServerPagePart} from "../../lib/load-page-parts";
+import { PageProps, partialRender } from 'jay-fullstack-component';
+import { makeCompositeJayComponent } from 'jay-stack-client-runtime';
+import { DevServerPagePart } from '../../lib/load-page-parts';
 
 import { prettify } from 'jay-compiler-shared';
 
 const PAGE_PROPS: PageProps = {
     language: 'en-us',
-    url: '/'
+    url: '/',
 };
 const PAGE_PARAMS_A = { variant: 'A' };
 const PAGE_PARAMS_B = { variant: 'B' };
-const PAGE_PARTS: DevServerPagePart[] = [{
-    compDefinition: page,
-    clientPart: 'not important for this test',
-    clientImport: 'not important for this test'
-
-}];
+const PAGE_PARTS: DevServerPagePart[] = [
+    {
+        compDefinition: page,
+        clientPart: 'not important for this test',
+        clientImport: 'not important for this test',
+    },
+];
 
 describe('rendering a parameterized page', () => {
     it('should run the slowly changing phase with variant A', async () => {

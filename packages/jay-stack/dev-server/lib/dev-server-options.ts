@@ -1,4 +1,4 @@
-import {JayRollupConfig} from "rollup-plugin-jay";
+import { JayRollupConfig } from 'rollup-plugin-jay';
 
 export interface DevServerOptions {
     serverBase?: string;
