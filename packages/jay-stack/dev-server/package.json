@@ -1,7 +1,6 @@
 {
   "name": "jay-dev-server",
   "version": "1.0.0",
-  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "build": "npm run build:js && npm run build:types",
@@ -20,6 +19,7 @@
     "jay-component": "workspace:^",
     "jay-fullstack-component": "workspace:^",
     "jay-runtime": "workspace:^",
+    "jay-stack-client-runtime": "workspace:^",
     "jay-stack-route-scanner": "workspace:^",
     "jay-stack-server-runtime": "workspace:^"
   },

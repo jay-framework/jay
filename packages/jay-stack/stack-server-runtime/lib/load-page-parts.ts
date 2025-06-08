@@ -25,7 +25,7 @@ export async function loadPageParts(vite: ViteDevServer, route: JayRoute, pagesB
         const pageComponent = (await vite.ssrLoadModule(route.compPath)).page;
         parts.push({
             compDefinition: pageComponent,
-            clientImport: `import {page} from '${pageCode}`,
+            clientImport: `import {page} from '${pageCode}'`,
             clientPart: `{comp: page.comp, contextMarkers: []}`
         })
     }

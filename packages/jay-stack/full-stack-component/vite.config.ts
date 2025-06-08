@@ -5,12 +5,15 @@ export default defineConfig({
     build: {
         minify: false,
         target: 'es2020',
-        ssr: resolve(__dirname, 'lib/index.ts'),
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
             name: 'jayStackRuntime',
-            fileName: 'index',
-            formats: ['cjs'],
+            fileName: (format) => {
+                if (format === 'es') return 'index.js'
+                if (format === 'cjs') return 'index.cjs'
+                return `index.${format}.js`
+            },
+            formats: ['es', 'cjs'],
         },
         commonjsOptions: {
             transformMixedEsModules: true,

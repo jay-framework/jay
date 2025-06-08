@@ -12567,13 +12567,14 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"jay-stack-server-runtime@workspace:^, jay-stack-server-runtime@workspace:packages/jay-stack/stack-runtime":
+"jay-stack-server-runtime@workspace:^, jay-stack-server-runtime@workspace:packages/jay-stack/stack-server-runtime":
   version: 0.0.0-use.local
-  resolution: "jay-stack-server-runtime@workspace:packages/jay-stack/stack-runtime"
+  resolution: "jay-stack-server-runtime@workspace:packages/jay-stack/stack-server-runtime"
   dependencies:
     "@types/express": ^5.0.2
     "@types/node": ^22.15.21
     jay-cli: "workspace:^"
+    jay-compiler-jay-html: "workspace:^"
     jay-component: "workspace:^"
     jay-dev-environment: "workspace:^"
     jay-fullstack-component: "workspace:^"

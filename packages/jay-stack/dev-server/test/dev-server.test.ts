@@ -52,7 +52,7 @@ describe('dev server', () => {
         const scriptForMatching = clearScriptForTest(script)
 
         expect(scriptForMatching).toEqual(`
-import {makeCompositeJayComponent} from "/@fs/dist/index.js";
+import {makeCompositeJayComponent} from "jay-stack-client-runtime";
 import { render } from "/page.jay-html.ts";
 
 const viewState = {};
@@ -96,7 +96,7 @@ target.appendChild(instance.element.dom);
         const scriptForMatching = clearScriptForTest(script)
 
         expect(scriptForMatching).toEqual(`
-import {makeCompositeJayComponent} from "/@fs/dist/index.js";
+import {makeCompositeJayComponent} from "jay-stack-client-runtime";
 import { render } from "/page.jay-html.ts";
 
 const viewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file"};
@@ -140,14 +140,19 @@ target.appendChild(instance.element.dom);
         const scriptForMatching = clearScriptForTest(script)
 
         expect(scriptForMatching).toEqual(`
-import {makeCompositeJayComponent} from "/@fs/dist/index.js";
+import {makeCompositeJayComponent} from "jay-stack-client-runtime";
 import { render } from "/page.jay-html.ts";
+import {page} from "/page.ts"
+import {headless} from "/headless-component.ts"
 
-const viewState = {};
+const viewState = {"title":"Page with Headless","content":"This page has a headless component","headless":{"content":"This is from the headless component"}};
 const fastCarryForward = {};
 
 const target = document.getElementById('target');
-const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [])
+const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [
+{comp: page.comp, contextMarkers: []},
+{comp: headless.comp, contextMarkers: [], viewStateKey: 'headless'}
+])
 
 const instance = pageComp({...viewState, ...carryForward})
 target.appendChild(instance.element.dom);
@@ -162,7 +167,7 @@ function clearScriptForTest(script: string) {
     return script
         .replace(cmd, '')
         .replace(/\/\/\#.*/, '// source-map')
-        .replace(/from "(\/@fs\/.*?\/dist\/index\.js)"/g, 'from "/@fs/dist/index.js"')
+        .replace(/from "(\/@fs\/.*?stack-client-runtime.*?)"/g, 'from "jay-stack-client-runtime"')
         .split('\n')
         .map((line) => line.trim())
         .join('\n')
