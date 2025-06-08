@@ -64,6 +64,13 @@ describe('generate jay-html element', () => {
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
+        it('for styles with URLs containing single quotes', async () => {
+            const folder = 'basics/styles-with-urls';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
         it('refs', async () => {
             const folder = 'basics/refs';
             const elementFile = await readFileAndGenerateElementFile(folder);

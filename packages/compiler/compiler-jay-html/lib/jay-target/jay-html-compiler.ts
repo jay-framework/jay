@@ -98,7 +98,9 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             return;
         if (attrCanonical === 'style')
             renderedAttributes.push(
-                new RenderFragment(`style: {cssText: '${attributes[attrName]}'}`),
+                new RenderFragment(
+                    `style: {cssText: '${attributes[attrName].replace(/'/g, "\\'")}'}`,
+                ),
             );
         else if (attrCanonical === 'class') {
             let classExpression = parseClassExpression(attributes[attrName], variables);

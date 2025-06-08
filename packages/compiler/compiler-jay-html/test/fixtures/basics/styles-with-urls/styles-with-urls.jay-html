@@ -1,0 +1,15 @@
+<html>
+<head>
+    <script type="application/yaml-jay">
+data:
+    text1: string
+    text2: string
+    </script>
+</head>
+<body>
+<div>
+    <div style="background: url('http://localhost:5173/src/components/portal/sites/build_ui/images/18017:3629_FILL.png'); color: red">{text1}</div>
+    <div style="background: url('https://example.com/image.png'); color: green">{text2}</div>
+</div>
+</body>
+</html> 
