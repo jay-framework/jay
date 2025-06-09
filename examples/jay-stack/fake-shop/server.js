@@ -24,12 +24,12 @@ async function initApp() {
 
     })
 
+    app.use(server);
+
     // Serve HTML
     routes.forEach((route) => {
         app.get(route.path, route.handler);
     });
-
-    app.use(server);
 
     // Start http server
     app.listen(port, () => {
