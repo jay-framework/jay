@@ -5,7 +5,7 @@ export function generateClientScript(
     defaultViewState: object,
     fastCarryForward: object,
     parts: DevServerPagePart[],
-    pagesBase: string,
+    jayHtmlPath: string
 ) {
     const imports =
         parts.length > 1 ? parts.map((part) => part.clientImport).join('\n') + '\n' : '';
@@ -15,7 +15,6 @@ export function generateClientScript(
 ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
         ]`
             : '[]';
-    const jayHtmlPath = path.resolve(pagesBase, './page.jay-html');
 
     return `<!doctype html>
 <html lang="en">
