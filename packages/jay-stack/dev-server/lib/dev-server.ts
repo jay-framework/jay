@@ -107,7 +107,7 @@ function mkRoute(
                             viewState,
                             carryForward,
                             pageParts.val,
-                            route.jayHtmlPath
+                            route.jayHtmlPath,
                         );
 
                         const compiledPageHtml = await vite.transformIndexHtml(

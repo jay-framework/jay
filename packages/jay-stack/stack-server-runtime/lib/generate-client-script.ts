@@ -5,7 +5,7 @@ export function generateClientScript(
     defaultViewState: object,
     fastCarryForward: object,
     parts: DevServerPagePart[],
-    jayHtmlPath: string
+    jayHtmlPath: string,
 ) {
     const imports =
         parts.length > 1 ? parts.map((part) => part.clientImport).join('\n') + '\n' : '';

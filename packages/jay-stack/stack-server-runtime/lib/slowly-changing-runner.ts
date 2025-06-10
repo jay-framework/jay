@@ -64,13 +64,13 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
             const { compDefinition, key } = part;
             if (compDefinition.slowlyRender) {
                 const slowlyRenderedPart = await compDefinition.slowlyRender(
-                    {...pageProps, ...pageParams},
+                    { ...pageProps, ...pageParams },
                     [],
                 );
                 if (slowlyRenderedPart.kind === 'PartialRender') {
                     if (!key) {
-                        slowlyViewState = {...slowlyViewState, ...slowlyRenderedPart.rendered};
-                        carryForward = {...carryForward, ...slowlyRenderedPart.carryForward};
+                        slowlyViewState = { ...slowlyViewState, ...slowlyRenderedPart.rendered };
+                        carryForward = { ...carryForward, ...slowlyRenderedPart.carryForward };
                     } else {
                         slowlyViewState[key] = slowlyRenderedPart.rendered;
                         carryForward[key] = slowlyRenderedPart.carryForward;
