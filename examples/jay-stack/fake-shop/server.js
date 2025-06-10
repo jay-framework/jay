@@ -1,6 +1,6 @@
 import express from 'express';
-import {mkDevServer} from "jay-dev-server";
-import path from "path";
+import { mkDevServer } from 'jay-dev-server';
+import path from 'path';
 
 // Constants
 const port = process.env.PORT || 5173;
@@ -15,14 +15,12 @@ const jayOptions = {
 const app = express();
 
 async function initApp() {
-
-    const {server, viteServer, routes} = await mkDevServer({
+    const { server, viteServer, routes } = await mkDevServer({
         pagesBase: path.resolve('./src/pages'),
         serverBase: base,
         dontCacheSlowly: false,
-        jayRollupConfig: jayOptions
-
-    })
+        jayRollupConfig: jayOptions,
+    });
 
     app.use(server);
 
