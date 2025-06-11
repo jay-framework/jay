@@ -12359,6 +12359,8 @@ __metadata:
     express: ^5.0.1
     jay-cli: "workspace:^"
     jay-dev-environment: "workspace:^"
+    jay-fullstack-component: "workspace:^"
+    jay-mood-tracker-plugin: "workspace:^"
     jay-stack-client-runtime: "workspace:^"
     jay-stack-route-scanner: "workspace:^"
     jay-stack-server-runtime: "workspace:^"
@@ -12418,7 +12420,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"jay-mood-tracker-plugin@workspace:examples/jay-stack/mood-tracker-plugin":
+"jay-mood-tracker-plugin@workspace:^, jay-mood-tracker-plugin@workspace:examples/jay-stack/mood-tracker-plugin":
   version: 0.0.0-use.local
   resolution: "jay-mood-tracker-plugin@workspace:examples/jay-stack/mood-tracker-plugin"
   dependencies:
@@ -12428,11 +12430,10 @@ __metadata:
     jay-cli: "workspace:^"
     jay-component: "workspace:^"
     jay-dev-environment: "workspace:^"
+    jay-fullstack-component: "workspace:^"
     jay-reactive: "workspace:^"
     jay-runtime: "workspace:^"
     jay-secure: "workspace:^"
-    jay-stack-client-runtime: "workspace:^"
-    jay-stack-server-runtime: "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
