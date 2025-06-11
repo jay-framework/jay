@@ -513,7 +513,8 @@ ${Indent.forceIndent(code, 4)},
     const body = `export function render(options?: RenderElementOptions): ${preRenderType} {
     const [refManager, [${refVariables}]] =
         ReferencesManager.for(options, [${elemRefsDeclarations}], [${elemCollectionRefsDeclarations}], [${compRefsDeclarations}], [${compCollectionRefsDeclarations}]);
-    ${headLinksInjection}const render = (viewState: ${viewStateType}) => ConstructContext.withRootContext(
+    ${headLinksInjection}
+    const render = (viewState: ${viewStateType}) => ConstructContext.withRootContext(
         viewState, refManager,
         () => ${renderedRoot.rendered.trim()}
     ) as ${elementType};
