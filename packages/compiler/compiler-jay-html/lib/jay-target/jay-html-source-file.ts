@@ -8,10 +8,17 @@ export interface JayHtmlNamespace {
     namespace: string;
 }
 
+export interface JayHtmlHeadLink {
+    rel: string;
+    href: string;
+    attributes: Record<string, string>;
+}
+
 export interface JayHtmlSourceFile extends CompilerSourceFile {
     format: SourceFileFormat.JayHtml;
     baseElementName: string;
     types: JayType;
     body: HTMLElement;
     namespaces: JayHtmlNamespace[];
+    headLinks: JayHtmlHeadLink[];
 }

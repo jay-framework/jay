@@ -19,7 +19,7 @@ import { SourceFileFormat } from 'jay-compiler-shared';
 import { JayImportLink, JayImportName } from 'jay-compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
 
-import { JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
+import { JayHtmlNamespace, JayHtmlSourceFile, JayHtmlHeadLink } from './jay-html-source-file';
 
 export function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj);
@@ -155,6 +155,27 @@ function normalizeFilename(filename: string): string {
     return filename.replace('.jay-html', '');
 }
 
+function parseHeadLinks(root: HTMLElement): JayHtmlHeadLink[] {
+    const allLinks = root.querySelectorAll('head link');
+    return allLinks
+        .filter((link) => link.getAttribute('rel') !== 'import')
+        .map((link) => {
+            const attributes = { ...link.attributes };
+            const rel = attributes.rel || '';
+            const href = attributes.href || '';
+
+            // Remove rel and href from attributes since they're stored separately
+            delete attributes.rel;
+            delete attributes.href;
+
+            return {
+                rel,
+                href,
+                attributes,
+            };
+        });
+}
+
 export function parseJayFile(
     html: string,
     filename: string,
@@ -178,6 +199,8 @@ export function parseJayFile(
     const importNames = imports.flatMap((_) => _.names);
     const types = parseTypes(jayYaml, validations, baseElementName, importNames);
 
+    const headLinks = parseHeadLinks(root);
+
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
     let body = root.querySelector('body');
@@ -193,6 +216,7 @@ export function parseJayFile(
             body,
             baseElementName,
             namespaces,
+            headLinks,
         } as JayHtmlSourceFile,
         validations,
     );

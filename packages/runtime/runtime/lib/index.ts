@@ -29,3 +29,4 @@ export {
     type PrivateRefConstructor,
     defaultEventWrapper,
 } from './references-manager';
+export { type HeadLink, injectHeadLinks } from './element';

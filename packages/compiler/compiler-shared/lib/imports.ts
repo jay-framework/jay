@@ -249,6 +249,11 @@ export const Import = {
         ImportsFor.implementation,
         ImportsFor.definition,
     ),
+    injectHeadLinks: importStatementFragment(
+        JAY_RUNTIME,
+        'injectHeadLinks',
+        ImportsFor.implementation,
+    ),
 };
 
 export class Imports {
