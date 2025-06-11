@@ -2,7 +2,7 @@
   <head>
     <script type="application/jay-headless"
             contract="../../../mood-tracker-plugin/src/mood-tracker.jay-contract"
-            src="../../../mood-tracker-plugin/src/mood-tracker.ts"
+            src="../../../mood-tracker-plugin/lib/mood-tracker.ts"
             name="moodTracker"
             key="mt"
     ></script>
