@@ -116,11 +116,11 @@ describe('head links integration', () => {
         );
 
         expect(jayFile.validations).toEqual([]);
-        
+
         // Should have 0 imports and 2 head links
         expect(jayFile.val.imports).toHaveLength(0);
         expect(jayFile.val.headLinks).toHaveLength(2);
-        
+
         // Verify head links
         expect(jayFile.val.headLinks[0].rel).toBe('stylesheet');
         expect(jayFile.val.headLinks[1].rel).toBe('icon');
@@ -128,7 +128,7 @@ describe('head links integration', () => {
         // Step 2: Generate code should only inject head links
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generated.validations).toEqual([]);
-        
+
         expect(generated.val).toContain('injectHeadLinks([');
         expect(generated.val).toContain('{ rel: "stylesheet", href: "styles/main.css" }');
         expect(generated.val).toContain('{ rel: "icon", href: "/favicon.ico" }');
@@ -154,7 +154,7 @@ describe('head links integration', () => {
         // Step 2: Generate code should not include injectHeadLinks
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generated.validations).toEqual([]);
-        
+
         expect(generated.val).not.toContain('injectHeadLinks');
     });
-}); 
+});
