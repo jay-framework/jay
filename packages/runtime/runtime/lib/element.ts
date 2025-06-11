@@ -498,8 +498,8 @@ export function injectHeadLinks(headLinks: HeadLink[]): void {
     if (!head) return;
 
     headLinks.forEach((linkData) => {
-        // Check if a link with the same href already exists to avoid duplicates
-        const existingLink = head.querySelector(`link[href="${linkData.href}"]`);
+        // Check if a link with the same href and rel already exists to avoid duplicates
+        const existingLink = head.querySelector(`link[href="${linkData.href}"][rel="${linkData.rel}"]`);
         if (existingLink) return;
 
         const link = document.createElement('link');
