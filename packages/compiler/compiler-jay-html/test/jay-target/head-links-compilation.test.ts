@@ -31,13 +31,15 @@ describe('head links compilation', () => {
         );
 
         expect(jayFile.validations).toEqual([]);
-        
+
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generated.validations).toEqual([]);
-        
+
         // Should import injectHeadLinks
-        expect(generated.val).toMatch(/import\s+\{[^}]*injectHeadLinks[^}]*\}\s+from\s+"jay-runtime"/);
-        
+        expect(generated.val).toMatch(
+            /import\s+\{[^}]*injectHeadLinks[^}]*\}\s+from\s+"jay-runtime"/,
+        );
+
         // Should call injectHeadLinks in render function
         const callMatch = generated.val.match(/injectHeadLinks\(\[[\s\S]*?\]\)/);
         expect(callMatch).not.toBeNull();
@@ -59,13 +61,13 @@ describe('head links compilation', () => {
         );
 
         expect(jayFile.validations).toEqual([]);
-        
+
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generated.validations).toEqual([]);
-        
+
         // Should not import injectHeadLinks
         expect(generated.val).not.toContain('injectHeadLinks');
-        
+
         // Should not call injectHeadLinks
         expect(generated.val).not.toContain('injectHeadLinks([');
     });
@@ -88,19 +90,25 @@ describe('head links compilation', () => {
         );
 
         expect(jayFile.validations).toEqual([]);
-        
+
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generated.validations).toEqual([]);
-        
+
         // Check for proper JSON serialization of head links
         const callMatch = generated.val.match(/injectHeadLinks\(\[[\s\S]*?\]\)/);
         expect(callMatch).not.toBeNull();
         const callString = callMatch![0];
         expect(callString).toContain('{ rel: "stylesheet", href: "styles/main.css" }');
         expect(callString).toContain('{ rel: "preconnect", href: "https://fonts.googleapis.com" }');
-        expect(callString).toContain('{ rel: "preconnect", href: "https://fonts.gstatic.com", attributes: {"crossorigin":""} }');
-        expect(callString).toContain('{ rel: "icon", href: "/favicon.ico", attributes: {"type":"image/x-icon"} }');
-        expect(callString).toContain('{ rel: "alternate", href: "/feed.xml", attributes: {"type":"application/rss+xml","title":"RSS Feed"} }');
+        expect(callString).toContain(
+            '{ rel: "preconnect", href: "https://fonts.gstatic.com", attributes: {"crossorigin":""} }',
+        );
+        expect(callString).toContain(
+            '{ rel: "icon", href: "/favicon.ico", attributes: {"type":"image/x-icon"} }',
+        );
+        expect(callString).toContain(
+            '{ rel: "alternate", href: "/feed.xml", attributes: {"type":"application/rss+xml","title":"RSS Feed"} }',
+        );
     });
 
     it('should exclude import links from head links injection', () => {
@@ -110,19 +118,19 @@ describe('head links compilation', () => {
                     |   title: string`,
                 '<body><div>{title}</div></body>',
                 `<link rel="stylesheet" href="styles/main.css">
-                  |<link rel="import" href="/my-component.html">
+                  |<link rel="import" href="./fixtures/components/imports/component1.ts" names="comp1"/>
                   |<link rel="icon" href="/favicon.ico">`,
             ),
             'TestWithImports',
-            '',
+            './test',
             {},
         );
 
         expect(jayFile.validations).toEqual([]);
-        
+
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generated.validations).toEqual([]);
-        
+
         // Should inject non-import links
         const callMatch = generated.val.match(/injectHeadLinks\(\[[\s\S]*?\]\)/);
         expect(callMatch).not.toBeNull();
@@ -146,10 +154,10 @@ describe('head links compilation', () => {
         );
 
         expect(jayFile.validations).toEqual([]);
-        
+
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generated.validations).toEqual([]);
-        
+
         // Should not import or call injectHeadLinks
         expect(generated.val).not.toContain('injectHeadLinks');
     });
@@ -168,20 +176,24 @@ describe('head links compilation', () => {
         );
 
         expect(jayFile.validations).toEqual([]);
-        
+
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generated.validations).toEqual([]);
-        
+
         // Check that injectHeadLinks is called after ReferencesManager setup but before render function definition
         const lines = generated.val.split('\n');
-        const referencesManagerLine = lines.findIndex(line => line.includes('ReferencesManager.for'));
-        const injectHeadLinksLine = lines.findIndex(line => line.includes('injectHeadLinks(['));
-        const renderFunctionLine = lines.findIndex(line => line.includes('const render = (viewState:'));
-        
+        const referencesManagerLine = lines.findIndex((line) =>
+            line.includes('ReferencesManager.for'),
+        );
+        const injectHeadLinksLine = lines.findIndex((line) => line.includes('injectHeadLinks(['));
+        const renderFunctionLine = lines.findIndex((line) =>
+            line.includes('const render = (viewState:'),
+        );
+
         expect(referencesManagerLine).toBeGreaterThan(-1);
         expect(injectHeadLinksLine).toBeGreaterThan(-1);
         expect(renderFunctionLine).toBeGreaterThan(-1);
-        
+
         expect(injectHeadLinksLine).toBeGreaterThan(referencesManagerLine);
         expect(renderFunctionLine).toBeGreaterThan(injectHeadLinksLine);
     });
@@ -200,15 +212,15 @@ describe('head links compilation', () => {
         );
 
         expect(jayFile.validations).toEqual([]);
-        
+
         // Test MainTrusted mode
         const generatedTrusted = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generatedTrusted.validations).toEqual([]);
         let callMatchTrusted = generatedTrusted.val.match(/injectHeadLinks\(\[[\s\S]*?\]\)/);
         expect(callMatchTrusted).not.toBeNull();
         expect(callMatchTrusted![0]).toContain('{ rel: "stylesheet", href: "styles/main.css" }');
-        
-        // Test MainSandbox mode  
+
+        // Test MainSandbox mode
         const generatedSandbox = generateElementFile(jayFile.val, RuntimeMode.MainSandbox);
         expect(generatedSandbox.validations).toEqual([]);
         let callMatchSandbox = generatedSandbox.val.match(/injectHeadLinks\(\[[\s\S]*?\]\)/);
@@ -231,16 +243,18 @@ describe('head links compilation', () => {
         );
 
         expect(jayFile.validations).toEqual([]);
-        
+
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generated.validations).toEqual([]);
-        
+
         // Should properly escape special characters in JSON
         const callMatch = generated.val.match(/injectHeadLinks\(\[[\s\S]*?\]\)/);
         expect(callMatch).not.toBeNull();
         const callString = callMatch![0];
-        expect(callString).toContain('https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap');
+        expect(callString).toContain(
+            'https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap',
+        );
         expect(callString).toContain('/page with spaces.html');
         expect(callString).toContain('Site \\"Main\\" Page');
     });
-}); 
+});
