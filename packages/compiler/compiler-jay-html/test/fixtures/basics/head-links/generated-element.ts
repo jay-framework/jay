@@ -34,14 +34,11 @@ export function render(options?: RenderElementOptions): HeadLinksElementPreRende
         { rel: 'manifest', href: '/manifest.json' },
     ]);
     const render = (viewState: HeadLinksViewState) =>
-        ConstructContext.withRootContext(
-            viewState,
-            refManager,
-            () =>
-                e('div', {}, [
-                    e('h1', {}, [dt((vs) => vs.title)]),
-                    e('p', {}, ['This tests head links injection']),
-                ]),
+        ConstructContext.withRootContext(viewState, refManager, () =>
+            e('div', {}, [
+                e('h1', {}, [dt((vs) => vs.title)]),
+                e('p', {}, ['This tests head links injection']),
+            ]),
         ) as HeadLinksElement;
     return [refManager.getPublicAPI() as HeadLinksElementRefs, render];
-} 
+}

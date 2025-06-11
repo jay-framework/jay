@@ -426,33 +426,33 @@ describe('compiler', () => {
 
                 expect(jayFile.validations).toEqual([]);
                 expect(jayFile.val.headLinks).toHaveLength(8);
-                
+
                 // Test stylesheet link
                 expect(jayFile.val.headLinks[0]).toEqual({
                     rel: 'stylesheet',
                     href: 'styles/main.css',
-                    attributes: {}
+                    attributes: {},
                 });
-                
+
                 // Test preconnect with crossorigin
                 expect(jayFile.val.headLinks[2]).toEqual({
                     rel: 'preconnect',
                     href: 'https://fonts.gstatic.com',
-                    attributes: { crossorigin: '' }
+                    attributes: { crossorigin: '' },
                 });
-                
+
                 // Test icon with type
                 expect(jayFile.val.headLinks[4]).toEqual({
                     rel: 'icon',
                     href: '/favicon.ico',
-                    attributes: { type: 'image/x-icon' }
+                    attributes: { type: 'image/x-icon' },
                 });
-                
+
                 // Test alternate with multiple attributes
                 expect(jayFile.val.headLinks[6]).toEqual({
                     rel: 'alternate',
                     href: '/feed.xml',
-                    attributes: { type: 'application/rss+xml', title: 'RSS Feed' }
+                    attributes: { type: 'application/rss+xml', title: 'RSS Feed' },
                 });
             });
 
@@ -473,7 +473,7 @@ describe('compiler', () => {
                 expect(jayFile.validations).toEqual([]);
                 expect(jayFile.val.headLinks).toHaveLength(2);
                 expect(jayFile.val.imports).toHaveLength(0);
-                
+
                 // Only non-import links should be in headLinks
                 expect(jayFile.val.headLinks[0].rel).toBe('stylesheet');
                 expect(jayFile.val.headLinks[1].rel).toBe('icon');
@@ -512,17 +512,17 @@ describe('compiler', () => {
 
                 expect(jayFile.validations).toEqual([]);
                 expect(jayFile.val.headLinks).toHaveLength(2);
-                
+
                 expect(jayFile.val.headLinks[0]).toEqual({
                     rel: 'stylesheet',
                     href: 'styles/main.css',
-                    attributes: {}
+                    attributes: {},
                 });
-                
+
                 expect(jayFile.val.headLinks[1]).toEqual({
                     rel: 'preconnect',
                     href: 'https://fonts.googleapis.com',
-                    attributes: {}
+                    attributes: {},
                 });
             });
 
@@ -543,26 +543,26 @@ describe('compiler', () => {
 
                 expect(jayFile.validations).toEqual([]);
                 expect(jayFile.val.headLinks).toHaveLength(3);
-                
+
                 // Missing rel should default to empty string
                 expect(jayFile.val.headLinks[0]).toEqual({
                     rel: '',
                     href: 'styles/main.css',
-                    attributes: {}
+                    attributes: {},
                 });
-                
+
                 // Missing href should default to empty string
                 expect(jayFile.val.headLinks[1]).toEqual({
                     rel: 'stylesheet',
                     href: '',
-                    attributes: {}
+                    attributes: {},
                 });
-                
+
                 // Missing both should default to empty strings
                 expect(jayFile.val.headLinks[2]).toEqual({
                     rel: '',
                     href: '',
-                    attributes: {}
+                    attributes: {},
                 });
             });
 
@@ -582,25 +582,25 @@ describe('compiler', () => {
 
                 expect(jayFile.validations).toEqual([]);
                 expect(jayFile.val.headLinks).toHaveLength(2);
-                
+
                 expect(jayFile.val.headLinks[0]).toEqual({
                     rel: 'alternate',
                     href: 'https://example.com/es/',
                     attributes: {
                         hreflang: 'es',
                         title: 'Spanish Version',
-                        type: 'text/html'
-                    }
+                        type: 'text/html',
+                    },
                 });
-                
+
                 expect(jayFile.val.headLinks[1]).toEqual({
                     rel: 'icon',
                     href: '/favicon-32x32.png',
                     attributes: {
                         sizes: '32x32',
                         type: 'image/png',
-                        id: 'favicon32'
-                    }
+                        id: 'favicon32',
+                    },
                 });
             });
         });
