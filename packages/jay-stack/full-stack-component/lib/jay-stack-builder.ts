@@ -1,8 +1,8 @@
 import { ComponentConstructor, ContextMarkers, JayComponentCore } from 'jay-component';
-import { JayElement, PreRenderElement } from 'jay-runtime';
+import { JayElement } from 'jay-runtime';
 import {
     ExtractRefs,
-    ExtractViewState,
+    ExtractViewState, JayContract,
     JayStackComponentDefinition,
     LoadParams,
     RenderFast,
@@ -718,7 +718,7 @@ class BuilderImplementation<
     }
 }
 
-export function makeJayStackComponent<Render extends PreRenderElement<any, any, any>>() {
+export function makeJayStackComponent<Render extends JayContract<any, any>>() {
     return new BuilderImplementation() as unknown as Builder<
         'Props',
         object,

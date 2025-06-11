@@ -1,4 +1,4 @@
-import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
+import {JayContract} from "../../lib";
 
 export interface FSComponentViewState {
     id: string;
@@ -11,12 +11,5 @@ export interface FSComponentViewState {
 
 export interface FSComponentElementRefs {}
 
-export type FSComponentElement = JayElement<FSComponentViewState, FSComponentElementRefs>;
-export type FSComponentElementRender = RenderElement<
-    FSComponentViewState,
-    FSComponentElementRefs,
-    FSComponentElement
->;
-export type FSComponentElementPreRender = [FSComponentElementRefs, FSComponentElementRender];
 
-export declare function render(options?: RenderElementOptions): FSComponentElementPreRender;
+export type FSComponentContract = JayContract<FSComponentViewState, FSComponentElementRefs>

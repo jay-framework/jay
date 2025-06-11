@@ -1,16 +1,19 @@
-import { hasExtension, hasJayModeExtension, Import, JAY_EXTENSION } from 'jay-compiler-shared';
-import { LoadResult, ResolveIdResult, TransformResult } from 'rollup';
+import {hasExtension, hasJayModeExtension, Import, JAY_CONTRACT_EXTENSION, JAY_EXTENSION} from 'jay-compiler-shared';
+import {LoadResult, PluginContext, ResolveIdResult, TransformResult} from 'rollup';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
 import { transformJayFile } from './transform';
 import {
-    addTsExtensionForJayFile,
+    resolveJayHtml,
     removeSandboxPrefixForWorkerRoot,
     ResolveIdOptions,
-    resolveJayModeFile,
+    resolveJayModeFile, resolveJayContract,
 } from './resolve-id';
-import { loadJayFile } from './load';
+import {loadContractFile, loadJayFile} from './load';
 import { JayRollupConfig } from '../common/types';
 import { JayPluginContext } from './jay-plugin-context';
+import {getFileContext, readFileAsString} from "../common/files";
+import {checkCodeErrors} from "../common/errors";
+import {compileContract, JAY_IMPORT_RESOLVER, parseContract} from "jay-compiler-jay-html";
 
 const GLOBAL_FUNC_REPOSITORY = 'GLOBAL_FUNC_REPOSITORY.ts';
 
@@ -25,13 +28,15 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             options: ResolveIdOptions,
         ): Promise<ResolveIdResult> {
             if (hasExtension(source, JAY_EXTENSION))
-                return await addTsExtensionForJayFile(
+                return await resolveJayHtml(
                     this,
                     source,
                     importer,
                     options,
                     jayOptions.generationTarget,
                 );
+            if (hasExtension(source, JAY_CONTRACT_EXTENSION))
+                return await resolveJayContract(this, source, importer, options);
             if (hasJayModeExtension(source))
                 return await resolveJayModeFile(this, source, importer, options);
             if (
@@ -49,6 +54,9 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
                 hasJayModeExtension(id, { withTs: true })
             )
                 return await loadJayFile(this, id);
+            else if (hasExtension(id, JAY_CONTRACT_EXTENSION, { withTs: true })) {
+                return await loadContractFile(this, id);
+            }
             else if (id === GLOBAL_FUNC_REPOSITORY) {
                 const { functionRepository } =
                     jayContext.globalFunctionsRepository.generateGlobalFile();
@@ -62,6 +70,21 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
                 hasJayModeExtension(id, { withTs: true })
             )
                 return await transformJayFile(jayContext, this, code, id);
+            else if (hasExtension(id, JAY_CONTRACT_EXTENSION, { withTs: true })) {
+                const { filename, dirname } = getFileContext(id, JAY_CONTRACT_EXTENSION);
+
+                const parsedFile = parseContract(code, filename);
+                const tsCode = await compileContract(
+                    parsedFile,
+                    `${dirname}/${filename}`,
+                    JAY_IMPORT_RESOLVER,
+                );
+                if (tsCode.val)
+                    return Promise.resolve({
+                        code: tsCode.val
+                    })
+                else return Promise.reject(tsCode.validations)
+            }
             return null;
         },
         watchChange(id: string, change: { event: 'create' | 'update' | 'delete' }): void {

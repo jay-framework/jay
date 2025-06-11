@@ -1,5 +1,5 @@
 import { makeJayStackComponent } from 'jay-fullstack-component';
-import { CurrentMood, MoodTrackerRefs, render } from './mood-tracker.jay-contract';
+import { CurrentMood, MoodTrackerRefs, MoodTrackerContract } from './mood-tracker.jay-contract';
 import { createSignal } from 'jay-component';
 
 export interface MoodTrackerProps {}
@@ -30,6 +30,6 @@ function MoodTracker(props: MoodTrackerProps, refs: MoodTrackerRefs) {
     };
 }
 
-export const moodTracker = makeJayStackComponent<typeof render>()
+export const moodTracker = makeJayStackComponent<MoodTrackerContract>()
     .withProps<MoodTrackerProps>()
     .withInteractive(MoodTracker);

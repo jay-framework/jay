@@ -1,5 +1,11 @@
 <html>
   <head>
+    <script type="application/jay-headless"
+            contract="../../../mood-tracker-plugin/src/mood-tracker.jay-contract"
+            src="../../../mood-tracker-plugin/src/mood-tracker.ts"
+            name="moodTracker"
+            key="mt"
+    ></script>
     <script type="application/jay-data">
       data:
     </script>

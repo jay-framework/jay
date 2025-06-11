@@ -1,4 +1,4 @@
-import { render } from './full-stack-component.jay-html';
+import { FSComponentContract } from './full-stack-component.jay-html';
 import { makeJayStackComponent, partialRender } from '../../lib';
 import { createJayContext } from 'jay-runtime';
 
@@ -7,7 +7,7 @@ interface FSCProps {}
 interface MyContext {}
 const MyContextMarker = createJayContext<MyContext>();
 
-export const comp = makeJayStackComponent<typeof render>()
+export const comp = makeJayStackComponent<FSComponentContract>()
     .withProps<FSCProps>()
     .withServerContext(MyContextMarker)
     .withSlowlyRender(async (props, myContext) => {
