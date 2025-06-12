@@ -5,6 +5,7 @@ import { prettify } from 'jay-compiler-shared';
 import { PageProps, partialRender } from 'jay-fullstack-component';
 import { makeCompositeJayComponent } from 'jay-stack-client-runtime';
 import { DevServerPagePart } from '../../lib/load-page-parts';
+import {toCompositePart} from "../utils/to-composite.part";
 
 const PAGE_PROPS: PageProps = {
     language: 'en-us',
@@ -95,7 +96,7 @@ describe('rendering a simple page', () => {
             renderSlowly,
             fastRenderResult.rendered,
             fastCarryForward,
-            PAGE_PARTS,
+            toCompositePart(PAGE_PARTS),
         );
         const instance = comp({ ...PAGE_PROPS } as any);
 
@@ -133,7 +134,7 @@ describe('rendering a simple page', () => {
             renderSlowly,
             fastRenderResult.rendered,
             fastCarryForward,
-            PAGE_PARTS,
+            toCompositePart(PAGE_PARTS),
         );
         const instance = comp({ ...PAGE_PROPS, ...fastCarryForward } as any);
 

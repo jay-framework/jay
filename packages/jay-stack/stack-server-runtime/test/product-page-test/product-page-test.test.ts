@@ -1,12 +1,13 @@
-import { DevSlowlyChangingPhase, renderFastChangingData } from '../../lib';
-import { render as renderGamingLaptop } from './compiled-slowly/page.slowly-rendered.variant-gaming-laptop.jay-html';
-import { render as renderSmartphone } from './compiled-slowly/page.slowly-rendered.variant-smartphone.jay-html';
-import { prettify } from 'jay-compiler-shared';
-import { productPage } from '../stores-plugin/product-page';
-import { getProductBySlug } from '../stores-plugin/products-database';
-import { notFound, PageProps, partialRender } from 'jay-fullstack-component';
-import { makeCompositeJayComponent } from 'jay-stack-client-runtime';
-import { DevServerPagePart } from '../../lib/load-page-parts';
+import {DevSlowlyChangingPhase, renderFastChangingData} from '../../lib';
+import {render as renderGamingLaptop} from './compiled-slowly/page.slowly-rendered.variant-gaming-laptop.jay-html';
+import {render as renderSmartphone} from './compiled-slowly/page.slowly-rendered.variant-smartphone.jay-html';
+import {prettify} from 'jay-compiler-shared';
+import {productPage} from '../stores-plugin/product-page';
+import {getProductBySlug} from '../stores-plugin/products-database';
+import {notFound, PageProps, partialRender} from 'jay-fullstack-component';
+import {makeCompositeJayComponent} from 'jay-stack-client-runtime';
+import {DevServerPagePart} from '../../lib/load-page-parts';
+import {toCompositePart} from "../utils/to-composite.part";
 
 const PAGE_PROPS: PageProps = {
     language: 'en-us',
@@ -188,7 +189,7 @@ describe('rendering a product page', () => {
             renderGamingLaptop,
             fastRenderResult.rendered,
             fastCarryForward,
-            PAGE_PARTS,
+            toCompositePart(PAGE_PARTS),
         );
         const instance = comp(PAGE_PROPS);
 
@@ -231,7 +232,7 @@ describe('rendering a product page', () => {
             renderSmartphone,
             fastRenderResult.rendered,
             fastCarryForward,
-            PAGE_PARTS,
+            toCompositePart(PAGE_PARTS),
         );
         const instance = comp(PAGE_PROPS);
 
@@ -273,7 +274,7 @@ describe('rendering a product page', () => {
             renderGamingLaptop,
             fastRenderResult.rendered,
             fastCarryForward,
-            PAGE_PARTS,
+            toCompositePart(PAGE_PARTS),
         );
         const instance = comp(PAGE_PROPS);
 

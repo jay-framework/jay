@@ -5,6 +5,7 @@ import { plugin } from '../simple-plugin/simple-plugin';
 import { PageProps, partialRender } from 'jay-fullstack-component';
 import { makeCompositeJayComponent } from 'jay-stack-client-runtime';
 import { DevServerPagePart } from '../../lib/load-page-parts';
+import {toCompositePart} from "../utils/to-composite.part";
 
 const PAGE_PROPS: PageProps = {
     language: 'en-us',
@@ -105,7 +106,7 @@ describe('rendering a page with only a plugin', () => {
             render,
             fastRenderResult.rendered,
             fastCarryForward,
-            PAGE_PARTS,
+            toCompositePart(PAGE_PARTS),
         );
         const instance = comp({ ...PAGE_PROPS } as any);
 
@@ -142,7 +143,7 @@ describe('rendering a page with only a plugin', () => {
             render,
             fastRenderResult.rendered,
             fastCarryForward,
-            PAGE_PARTS,
+            toCompositePart(PAGE_PARTS),
         );
         const instance = comp({ ...PAGE_PROPS } as any);
 
