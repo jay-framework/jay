@@ -3,6 +3,11 @@
   "version": "1.0.0",
   "type": "module",
   "main": "dist/index.js",
+  "files": ["dist"],
+  "exports": {
+    ".": "./dist/index.js",
+    "./mood-tracker.jay-contract": "./dist/mood-tracker.jay-contract"
+  },
   "description": "",
   "scripts": {
     "build": "npm run definitions && npm run build:js && npm run build:copy-contract",
