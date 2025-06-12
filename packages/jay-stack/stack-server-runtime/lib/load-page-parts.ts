@@ -63,7 +63,7 @@ export async function loadPageParts(
                 key,
                 compDefinition,
                 clientImport: `import {${name}} from '${moduleImport}'`,
-                clientPart: `{comp: ${name}.comp, contextMarkers: [], viewStateKey: '${headlessImport.key}'}`,
+                clientPart: `{comp: ${name}.comp, contextMarkers: [], key: '${headlessImport.key}'}`,
             };
             parts.push(part);
         }

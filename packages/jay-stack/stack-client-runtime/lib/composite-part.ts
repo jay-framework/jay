@@ -1,6 +1,7 @@
-import { AnyJayStackComponentDefinition } from 'jay-fullstack-component';
+import {ComponentConstructor, ContextMarkers} from "jay-component";
 
 export interface CompositePart {
-    compDefinition: AnyJayStackComponentDefinition;
+    comp: ComponentConstructor<any, any, any, any, any>,
+    contextMarkers: ContextMarkers<any>;
     key?: string;
 }

@@ -38,9 +38,9 @@ export function makeCompositeJayComponent<
             }
             const partContexts = [
                 partCarryForward,
-                ...contexts.splice(0, part.compDefinition.clientContexts.length),
+                ...contexts.splice(0, part.contextMarkers.length),
             ];
-            return [part.key, part.compDefinition.comp(props, partRefs, ...partContexts)];
+            return [part.key, part.comp(props, partRefs, ...partContexts)];
         });
 
         return {
@@ -60,7 +60,7 @@ export function makeCompositeJayComponent<
     };
 
     const contextMarkers = parts.reduce((cm, part) => {
-        return [...cm, ...part.compDefinition.clientContexts];
+        return [...cm, ...part.contextMarkers];
     }, []);
 
     return makeJayComponent<PropsT, ViewState, Refs, JayElementT, Array<any>, CompCore>(
