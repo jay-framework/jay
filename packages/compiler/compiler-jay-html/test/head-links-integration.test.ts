@@ -116,7 +116,8 @@ describe('head links integration', () => {
         expect(links[0].href).toBe('styles/main.css');
 
         expect(links[1].rel).toBe('preconnect');
-        expect(links[1].href).toBe('https://fonts.googleapis.com');
+        // Browser normalizes URLs and adds trailing slash to domain-only URLs
+        expect(links[1].href).toBe('https://fonts.googleapis.com/');
 
         expect(links[2].rel).toBe('icon');
         expect(links[2].href).toBe('/favicon.ico');
@@ -133,17 +134,17 @@ describe('head links integration', () => {
                 SIMPLE_BODY,
                 `<link rel="stylesheet" href="styles/main.css">
                   |<link rel="icon" href="/favicon.ico">
-                  |<link rel="import" href="../counter/counter" names="Counter"/>`,
+                  |<link rel="import" href="./fixtures/components/imports/component1.ts" names="comp1"/>`,
             ),
             'HeadLinksOnlyTest',
-            '',
+            './test',
             {},
         );
 
         expect(jayFile.validations).toEqual([]);
 
-        // Should have 0 imports and 2 head links
-        expect(jayFile.val.imports).toHaveLength(0);
+        // Should have 1 imports and 2 head links
+        expect(jayFile.val.imports).toHaveLength(1);
         expect(jayFile.val.headLinks).toHaveLength(2);
 
         // Verify head links
