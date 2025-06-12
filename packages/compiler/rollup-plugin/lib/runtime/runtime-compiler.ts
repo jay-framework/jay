@@ -1,19 +1,26 @@
-import {hasExtension, hasJayModeExtension, Import, JAY_CONTRACT_EXTENSION, JAY_EXTENSION} from 'jay-compiler-shared';
-import {LoadResult, PluginContext, ResolveIdResult, TransformResult} from 'rollup';
+import {
+    hasExtension,
+    hasJayModeExtension,
+    Import,
+    JAY_CONTRACT_EXTENSION,
+    JAY_EXTENSION,
+} from 'jay-compiler-shared';
+import { LoadResult, PluginContext, ResolveIdResult, TransformResult } from 'rollup';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
 import { transformJayFile } from './transform';
 import {
     resolveJayHtml,
     removeSandboxPrefixForWorkerRoot,
     ResolveIdOptions,
-    resolveJayModeFile, resolveJayContract,
+    resolveJayModeFile,
+    resolveJayContract,
 } from './resolve-id';
-import {loadContractFile, loadJayFile} from './load';
+import { loadContractFile, loadJayFile } from './load';
 import { JayRollupConfig } from '../common/types';
 import { JayPluginContext } from './jay-plugin-context';
-import {getFileContext, readFileAsString} from "../common/files";
-import {checkCodeErrors} from "../common/errors";
-import {compileContract, JAY_IMPORT_RESOLVER, parseContract} from "jay-compiler-jay-html";
+import { getFileContext, readFileAsString } from '../common/files';
+import { checkCodeErrors } from '../common/errors';
+import { compileContract, JAY_IMPORT_RESOLVER, parseContract } from 'jay-compiler-jay-html';
 
 const GLOBAL_FUNC_REPOSITORY = 'GLOBAL_FUNC_REPOSITORY.ts';
 
@@ -56,8 +63,7 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
                 return await loadJayFile(this, id);
             else if (hasExtension(id, JAY_CONTRACT_EXTENSION, { withTs: true })) {
                 return await loadContractFile(this, id);
-            }
-            else if (id === GLOBAL_FUNC_REPOSITORY) {
+            } else if (id === GLOBAL_FUNC_REPOSITORY) {
                 const { functionRepository } =
                     jayContext.globalFunctionsRepository.generateGlobalFile();
                 return functionRepository;
@@ -81,9 +87,9 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
                 );
                 if (tsCode.val)
                     return Promise.resolve({
-                        code: tsCode.val
-                    })
-                else return Promise.reject(tsCode.validations)
+                        code: tsCode.val,
+                    });
+                else return Promise.reject(tsCode.validations);
             }
             return null;
         },

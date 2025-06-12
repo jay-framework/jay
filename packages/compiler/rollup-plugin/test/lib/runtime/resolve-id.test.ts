@@ -52,9 +52,7 @@ describe('resolve-id', () => {
 
             it('returns null', async () => {
                 const context = getContext({ resolvedId });
-                expect(
-                    await resolveJayHtml(context, source, importer, options),
-                ).toBeNull();
+                expect(await resolveJayHtml(context, source, importer, options)).toBeNull();
             });
         });
 
@@ -83,9 +81,7 @@ describe('resolve-id', () => {
 
             it('returns null', async () => {
                 const context = getContext({ resolvedId });
-                expect(
-                    await resolveJayHtml(context, source, importer, options),
-                ).toBeNull();
+                expect(await resolveJayHtml(context, source, importer, options)).toBeNull();
             });
         });
     });

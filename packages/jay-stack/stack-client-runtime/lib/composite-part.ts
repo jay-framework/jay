@@ -1,7 +1,7 @@
-import {ComponentConstructor, ContextMarkers} from "jay-component";
+import { ComponentConstructor, ContextMarkers } from 'jay-component';
 
 export interface CompositePart {
-    comp: ComponentConstructor<any, any, any, any, any>,
+    comp: ComponentConstructor<any, any, any, any, any>;
     contextMarkers: ContextMarkers<any>;
     key?: string;
 }

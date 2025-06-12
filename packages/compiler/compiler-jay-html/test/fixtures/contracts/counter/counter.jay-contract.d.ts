@@ -1,7 +1,4 @@
-import {
-    HTMLElementCollectionProxy,
-    HTMLElementProxy,
-} from 'jay-runtime';
+import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
 import { JayContract } from 'jay-fullstack-component';
 
 export interface CounterViewState {

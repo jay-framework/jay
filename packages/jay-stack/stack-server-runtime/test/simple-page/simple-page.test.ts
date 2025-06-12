@@ -5,7 +5,7 @@ import { prettify } from 'jay-compiler-shared';
 import { PageProps, partialRender } from 'jay-fullstack-component';
 import { makeCompositeJayComponent } from 'jay-stack-client-runtime';
 import { DevServerPagePart } from '../../lib/load-page-parts';
-import {toCompositePart} from "../utils/to-composite.part";
+import { toCompositePart } from '../utils/to-composite.part';
 
 const PAGE_PROPS: PageProps = {
     language: 'en-us',

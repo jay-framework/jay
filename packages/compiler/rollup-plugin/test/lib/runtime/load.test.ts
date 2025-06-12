@@ -27,7 +27,7 @@ describe('load', () => {
 
             it('try loading the file by stripping the .ts extension', async () => {
                 const context = getContext({ meta });
-                expect(await loadJayFile(context, id)).toEqual( {code });
+                expect(await loadJayFile(context, id)).toEqual({ code });
             });
         });
     });

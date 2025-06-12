@@ -84,13 +84,12 @@ export async function compileContract(
             const { type, refs, importLinks } = contractTypesResult;
             const types = generateTypes(type);
             let { imports, renderedRefs } = generateRefsInterface(contract, refs);
-            imports = imports
-                .plus(Import.jayContract)
+            imports = imports.plus(Import.jayContract);
             const renderedImports = renderImports(imports, importLinks);
 
             const viewStateTypeName = `${pascalCase(contract.name)}ViewState`;
-            const refsTypeName = `${pascalCase(contract.name)}Refs` ;
-            const contractType = `export type ${pascalCase(contract.name)}Contract = JayContract<${viewStateTypeName}, ${refsTypeName}>`
+            const refsTypeName = `${pascalCase(contract.name)}Refs`;
+            const contractType = `export type ${pascalCase(contract.name)}Contract = JayContract<${viewStateTypeName}, ${refsTypeName}>`;
 
             return `${renderedImports}\n\n${types}\n\n${renderedRefs}\n\n${contractType}`;
         });

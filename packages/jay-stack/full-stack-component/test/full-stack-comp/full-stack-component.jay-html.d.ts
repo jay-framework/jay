@@ -1,4 +1,4 @@
-import {JayContract} from "../../lib";
+import { JayContract } from '../../lib';
 
 export interface FSComponentViewState {
     id: string;
@@ -11,5 +11,4 @@ export interface FSComponentViewState {
 
 export interface FSComponentElementRefs {}
 
-
-export type FSComponentContract = JayContract<FSComponentViewState, FSComponentElementRefs>
+export type FSComponentContract = JayContract<FSComponentViewState, FSComponentElementRefs>;

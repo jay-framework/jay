@@ -2,7 +2,8 @@ import { ComponentConstructor, ContextMarkers, JayComponentCore } from 'jay-comp
 import { JayElement } from 'jay-runtime';
 import {
     ExtractRefs,
-    ExtractViewState, JayContract,
+    ExtractViewState,
+    JayContract,
     JayStackComponentDefinition,
     LoadParams,
     RenderFast,

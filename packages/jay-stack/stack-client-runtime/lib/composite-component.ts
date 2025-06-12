@@ -34,8 +34,7 @@ export function makeCompositeJayComponent<
             let partCarryForward: object;
             if (part.key && fastCarryForward?.[part.key])
                 partCarryForward = makeSignals(fastCarryForward[part.key]);
-            else if (fastCarryForward)
-                partCarryForward = makeSignals(fastCarryForward);
+            else if (fastCarryForward) partCarryForward = makeSignals(fastCarryForward);
             const partContexts = [
                 partCarryForward,
                 ...contexts.splice(0, part.contextMarkers.length),

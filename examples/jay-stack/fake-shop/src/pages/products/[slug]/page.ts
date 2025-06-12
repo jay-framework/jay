@@ -48,7 +48,7 @@ function ProductsPageConstructor(
     refs: PageElementRefs,
 ) {
     return {
-        render: () => ({ inStock: props.inStock }),
+        render: () => ({}),
     };
 }
 

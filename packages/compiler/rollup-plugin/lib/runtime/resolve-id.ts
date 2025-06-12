@@ -1,7 +1,7 @@
-import {CustomPluginOptions, PluginContext, ResolvedId, ResolveIdResult} from 'rollup';
-import {watchChangesFor} from './watch';
-import {SANDBOX_ROOT_PREFIX} from './sandbox';
-import {appendJayMetadata, jayMetadataFromModuleMetadata} from './metadata';
+import { CustomPluginOptions, PluginContext, ResolvedId, ResolveIdResult } from 'rollup';
+import { watchChangesFor } from './watch';
+import { SANDBOX_ROOT_PREFIX } from './sandbox';
+import { appendJayMetadata, jayMetadataFromModuleMetadata } from './metadata';
 import {
     GenerateTarget,
     hasExtension,
@@ -55,12 +55,17 @@ export async function resolveJayContract(
     source: string,
     importer: string | undefined,
     options: ResolveIdOptions,
-
 ) {
     const resolved = await context.resolve(source, importer, { ...options, skipSelf: true });
     const id = `${resolved.id}${TS_EXTENSION}`;
     console.info(`[resolveId] resolved ${id}`);
-    return { id, meta: appendJayMetadata(context, id, { format: SourceFileFormat.JayContract, originId: resolved.id }) };
+    return {
+        id,
+        meta: appendJayMetadata(context, id, {
+            format: SourceFileFormat.JayContract,
+            originId: resolved.id,
+        }),
+    };
 }
 
 export async function resolveJayModeFile(

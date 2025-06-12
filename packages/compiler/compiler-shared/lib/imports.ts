@@ -1,4 +1,4 @@
-import {JAY_4_REACT, JAY_FULLSTACK_COMPONENTS, JAY_RUNTIME, JAY_SECURE} from './constants';
+import { JAY_4_REACT, JAY_FULLSTACK_COMPONENTS, JAY_RUNTIME, JAY_SECURE } from './constants';
 
 export enum ImportsFor {
     definition,

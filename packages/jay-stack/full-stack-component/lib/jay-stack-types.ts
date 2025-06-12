@@ -95,7 +95,6 @@ export type AnyJayStackComponentDefinition = JayStackComponentDefinition<
     any
 >;
 
-export type JayContract<ViewState, Refs> = {}
-export type ExtractViewState<A> =
-    A extends JayContract<infer ViewState, any> ? ViewState : never;
+export type JayContract<ViewState, Refs> = {};
+export type ExtractViewState<A> = A extends JayContract<infer ViewState, any> ? ViewState : never;
 export type ExtractRefs<A> = A extends JayContract<any, infer Refs> ? Refs : never;
