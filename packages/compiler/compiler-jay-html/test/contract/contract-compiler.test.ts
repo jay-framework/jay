@@ -43,14 +43,15 @@ describe('compile contract', () => {
             elementType: HTMLButtonElement  
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
-
+        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+        import { JayContract } from 'jay-fullstack-component';
+        
         export interface CounterViewState {
             count: number;
         }
@@ -64,12 +65,8 @@ describe('compile contract', () => {
             add: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
             subtract: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
         }
-
-        export type CounterElement = JayElement<CounterViewState, CounterRefs>
-        export type CounterElementRender = RenderElement<CounterViewState, CounterRefs, CounterElement>
-        export type CounterElementPreRender = [CounterRefs, CounterElementRender]     
         
-        export declare function render(options?: RenderElementOptions): CounterElementPreRender`),
+        export type CounterContract = JayContract<CounterViewState, CounterRefs>`),
         );
     });
 
@@ -85,13 +82,13 @@ describe('compile contract', () => {
             dataType: number
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
+        import { JayContract } from 'jay-fullstack-component';
 
         export interface CounterViewState {
             countOne: number;
@@ -103,12 +100,8 @@ describe('compile contract', () => {
 
         export interface CounterRepeatedRefs {
         }
-
-        export type CounterElement = JayElement<CounterViewState, CounterRefs>
-        export type CounterElementRender = RenderElement<CounterViewState, CounterRefs, CounterElement>
-        export type CounterElementPreRender = [CounterRefs, CounterElementRender]     
         
-        export declare function render(options?: RenderElementOptions): CounterElementPreRender`),
+        export type CounterContract = JayContract<CounterViewState, CounterRefs>`),
         );
     });
 
@@ -127,14 +120,14 @@ describe('compile contract', () => {
                 dataType: boolean
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
-
+        import { JayContract } from 'jay-fullstack-component';
+        
         export interface Item {
             title: string;
             completed: boolean;
@@ -149,12 +142,8 @@ describe('compile contract', () => {
 
         export interface TodoRepeatedRefs {
         }
-
-        export type TodoElement = JayElement<TodoViewState, TodoRefs>
-        export type TodoElementRender = RenderElement<TodoViewState, TodoRefs, TodoElement>
-        export type TodoElementPreRender = [TodoRefs, TodoElementRender]     
         
-        export declare function render(options?: RenderElementOptions): TodoElementPreRender`),
+        export type TodoContract = JayContract<TodoViewState, TodoRefs>`),
         );
     });
 
@@ -176,13 +165,14 @@ describe('compile contract', () => {
                 elementType: HTMLInputElement
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { JayElement, RenderElement, HTMLElementCollectionProxy, RenderElementOptions } from 'jay-runtime';
+        import { HTMLElementCollectionProxy } from 'jay-runtime';
+        import { JayContract } from 'jay-fullstack-component';
 
         export interface Items {
             title: string;
@@ -207,11 +197,7 @@ describe('compile contract', () => {
             };
         }
 
-        export type TodoElement = JayElement<TodoViewState, TodoRefs>
-        export type TodoElementRender = RenderElement<TodoViewState, TodoRefs, TodoElement>
-        export type TodoElementPreRender = [TodoRefs, TodoElementRender]     
-        
-        export declare function render(options?: RenderElementOptions): TodoElementPreRender`),
+        export type TodoContract = JayContract<TodoViewState, TodoRefs>`),
         );
     });
 
@@ -258,13 +244,14 @@ describe('compile contract', () => {
                     elementType: HTMLInputElement
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+        import { JayContract } from 'jay-fullstack-component';
 
         export interface NameFields {
             firstName: string;
@@ -323,11 +310,7 @@ describe('compile contract', () => {
             };
         }
 
-        export type UserFormElement = JayElement<UserFormViewState, UserFormRefs>
-        export type UserFormElementRender = RenderElement<UserFormViewState, UserFormRefs, UserFormElement>
-        export type UserFormElementPreRender = [UserFormRefs, UserFormElementRender]     
-        
-        export declare function render(options?: RenderElementOptions): UserFormElementPreRender`),
+        export type UserFormContract = JayContract<UserFormViewState, UserFormRefs>`),
         );
     });
 
@@ -350,13 +333,13 @@ describe('compile contract', () => {
                 dataType: boolean
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
+        import { JayContract } from 'jay-fullstack-component';
 
         export enum Filter {
           all,
@@ -380,11 +363,7 @@ describe('compile contract', () => {
         export interface TodoRepeatedRefs {
         }
 
-        export type TodoElement = JayElement<TodoViewState, TodoRefs>
-        export type TodoElementRender = RenderElement<TodoViewState, TodoRefs, TodoElement>
-        export type TodoElementPreRender = [TodoRefs, TodoElementRender]     
-        
-        export declare function render(options?: RenderElementOptions): TodoElementPreRender`),
+        export type TodoContract = JayContract<TodoViewState, TodoRefs>`),
         );
     });
 
@@ -404,13 +383,14 @@ describe('compile contract', () => {
             elementType: HTMLButtonElement  
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+        import { JayContract } from 'jay-fullstack-component';
 
         export interface CounterViewState {
             count: number;
@@ -426,11 +406,7 @@ describe('compile contract', () => {
             subtract: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
         }
 
-        export type CounterElement = JayElement<CounterViewState, CounterRefs>
-        export type CounterElementRender = RenderElement<CounterViewState, CounterRefs, CounterElement>
-        export type CounterElementPreRender = [CounterRefs, CounterElementRender]     
-        
-        export declare function render(options?: RenderElementOptions): CounterElementPreRender`),
+        export type CounterContract = JayContract<CounterViewState, CounterRefs>`),
         );
     });
 
@@ -444,13 +420,14 @@ describe('compile contract', () => {
             elementType: HTMLSelectElement | HTMLInputElement
         `;
 
-        const parsedContract = parseContract(contract);
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
         const result = await compileContract(parsedContract, './contract', noHopResolver);
 
         expect(result.validations.length).toBe(0);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+        import { JayContract } from 'jay-fullstack-component';
 
         export enum Select {
             one,
@@ -470,11 +447,7 @@ describe('compile contract', () => {
             select: HTMLElementCollectionProxy<ChoicesViewState, HTMLSelectElement | HTMLInputElement>;
         }
 
-        export type ChoicesElement = JayElement<ChoicesViewState, ChoicesRefs>
-        export type ChoicesElementRender = RenderElement<ChoicesViewState, ChoicesRefs, ChoicesElement>
-        export type ChoicesElementPreRender = [ChoicesRefs, ChoicesElementRender]     
-        
-        export declare function render(options?: RenderElementOptions): ChoicesElementPreRender`),
+        export type ChoicesContract = JayContract<ChoicesViewState, ChoicesRefs>`),
         );
     });
 
@@ -521,13 +494,14 @@ describe('compile contract', () => {
                 elementType: HTMLButtonElement
             `;
 
-            const parsedContract = parseContract(contract);
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
             const result = await compileContract(parsedContract, './contract', mockResolver);
 
             expect(result.validations).toEqual([]);
             expect(await prettify(result.val)).toBe(
                 await prettify(`
-            import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+            import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+            import { JayContract } from 'jay-fullstack-component';
             import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item.jay-contract';
         
             export interface TodoViewState {
@@ -544,11 +518,7 @@ describe('compile contract', () => {
                 item: TodoItemRepeatedRefs;
             }
 
-            export type TodoElement = JayElement<TodoViewState, TodoRefs>
-            export type TodoElementRender = RenderElement<TodoViewState, TodoRefs, TodoElement>
-            export type TodoElementPreRender = [TodoRefs, TodoElementRender]     
-            
-            export declare function render(options?: RenderElementOptions): TodoElementPreRender`),
+            export type TodoContract = JayContract<TodoViewState, TodoRefs>`),
             );
         });
 
@@ -565,13 +535,14 @@ describe('compile contract', () => {
                 elementType: HTMLButtonElement
             `;
 
-            const parsedContract = parseContract(contract);
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
             const result = await compileContract(parsedContract, './contract', mockResolver);
 
             expect(result.validations).toEqual([]);
             expect(await prettify(result.val)).toBe(
                 await prettify(`
-            import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+            import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+            import { JayContract } from 'jay-fullstack-component';
             import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item.jay-contract';
     
             export interface TodoViewState {
@@ -588,11 +559,7 @@ describe('compile contract', () => {
                 items: TodoItemRepeatedRefs;
             }
 
-            export type TodoElement = JayElement<TodoViewState, TodoRefs>
-            export type TodoElementRender = RenderElement<TodoViewState, TodoRefs, TodoElement>
-            export type TodoElementPreRender = [TodoRefs, TodoElementRender]     
-            
-            export declare function render(options?: RenderElementOptions): TodoElementPreRender`),
+            export type TodoContract = JayContract<TodoViewState, TodoRefs>`),
             );
         });
 
@@ -612,13 +579,14 @@ describe('compile contract', () => {
                 elementType: HTMLButtonElement
             `;
 
-            const parsedContract = parseContract(contract);
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
             const result = await compileContract(parsedContract, './contract', mockResolver);
 
             expect(result.validations).toEqual([]);
             expect(await prettify(result.val)).toBe(
                 await prettify(`
-            import { JayElement, RenderElement, HTMLElementCollectionProxy, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+            import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+            import { JayContract } from 'jay-fullstack-component';
             import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item.jay-contract';
     
             export interface TodoViewState {
@@ -638,11 +606,7 @@ describe('compile contract', () => {
                 completedItems: TodoItemRepeatedRefs;
             }
 
-            export type TodoElement = JayElement<TodoViewState, TodoRefs>
-            export type TodoElementRender = RenderElement<TodoViewState, TodoRefs, TodoElement>
-            export type TodoElementPreRender = [TodoRefs, TodoElementRender]     
-            
-            export declare function render(options?: RenderElementOptions): TodoElementPreRender`),
+            export type TodoContract = JayContract<TodoViewState, TodoRefs>`),
             );
         });
     });

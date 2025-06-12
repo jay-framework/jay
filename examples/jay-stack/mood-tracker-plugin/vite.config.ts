@@ -1,8 +1,6 @@
 import { resolve } from 'path';
-import Inspect from 'vite-plugin-inspect';
 import { defineConfig } from 'vitest/config';
 import { JayRollupConfig, jayRuntime } from 'vite-plugin-jay';
-import { rimrafSync } from 'rimraf';
 
 const root = resolve(__dirname);
 const jayOptions: JayRollupConfig = {
@@ -10,25 +8,30 @@ const jayOptions: JayRollupConfig = {
     outputDir: 'build/jay-runtime',
 };
 
-export default defineConfig(({ mode }) => {
-    const external =
-        mode === 'production'
-            ? []
-            : ['jay-component', 'jay-reactive', 'jay-runtime', 'jay-secure', 'jay-stack-runtime'];
-    rimrafSync(resolve(root, 'build'));
-
-    return {
-        plugins: [Inspect(), jayRuntime(jayOptions)],
-        worker: {
-            plugins: () => [jayRuntime(jayOptions)],
+export default defineConfig({
+    plugins: [jayRuntime(jayOptions)],
+    build: {
+        minify: false,
+        target: 'es2020',
+        lib: {
+            entry: resolve(__dirname, 'lib/index.ts'),
+            name: 'jayComponent',
+            fileName: 'index',
+            formats: ['es'],
         },
-        root,
-        optimizeDeps: { entries: [] },
-        build: {
-            emptyOutDir: true,
-            minify: false,
-            target: 'es2020',
-            rollupOptions: { external },
+        rollupOptions: {
+            external: [
+                'jay-component',
+                'jay-fullstack-component',
+                'jay-reactive',
+                'jay-runtime',
+                'jay-secure',
+            ],
         },
-    };
+    },
+    test: {
+        globals: true,
+        setupFiles: 'jay-dev-environment/library-dom/vitest.setup.ts',
+        environment: 'jsdom',
+    },
 });

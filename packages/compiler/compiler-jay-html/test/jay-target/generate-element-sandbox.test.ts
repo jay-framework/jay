@@ -1,7 +1,4 @@
-import {
-    readFixtureElementBridgeFile,
-    readFixtureFileRaw,
-} from '../test-utils/file-utils';
+import { readFixtureElementBridgeFile, readFixtureFileRaw } from '../test-utils/file-utils';
 import { readFileAndGenerateElementBridgeFile } from '../test-utils/file-utils';
 import { prettify } from 'jay-compiler-shared';
 

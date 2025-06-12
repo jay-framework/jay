@@ -1,4 +1,9 @@
-import { makeJayStackComponent, PageProps, partialRender, UrlParams } from 'jay-stack-runtime';
+import {
+    makeJayStackComponent,
+    PageProps,
+    partialRender,
+    UrlParams,
+} from 'jay-fullstack-component';
 import { render, PageElementRefs } from './page.jay-html';
 import { Props } from 'jay-component';
 import { getProductBySlug, getProducts } from '../../../products-database';
@@ -43,7 +48,7 @@ function ProductsPageConstructor(
     refs: PageElementRefs,
 ) {
     return {
-        render: () => ({ inStock: props.inStock }),
+        render: () => ({}),
     };
 }
 

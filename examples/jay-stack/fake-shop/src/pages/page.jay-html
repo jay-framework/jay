@@ -1,5 +1,11 @@
 <html>
   <head>
+    <script type="application/jay-headless"
+            contract="jay-mood-tracker-plugin/mood-tracker.jay-contract"
+            src="jay-mood-tracker-plugin"
+            name="moodTracker"
+            key="mt"
+    ></script>
     <script type="application/jay-data">
       data:
     </script>
@@ -7,6 +13,14 @@
   <body>
     <div>
       <h1>homepage</h1>
+      <div>
+        <div>Happy: {mt.happy} <button ref="mt.happy">more happy</button></div>
+        <div>sad: {mt.sad} <button ref="mt.sad">more sad</button></div>
+        <div>neutral: {mt.neutral} <button ref="mt.neutral">more neutral</button></div>
+      </div>
+      <div>
+        <!--<span if="mt.currentMood === happy">:)</span>-->
+      </div>
     </div>
   </body>
 </html>

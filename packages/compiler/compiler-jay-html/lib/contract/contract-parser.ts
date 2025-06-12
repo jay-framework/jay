@@ -164,7 +164,7 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
     return new WithValidations<ContractTag>(contractTag, validations);
 }
 
-export function parseContract(contractYaml: string): WithValidations<Contract> {
+export function parseContract(contractYaml: string, fileName: string): WithValidations<Contract> {
     try {
         const parsedYaml = yaml.load(contractYaml) as ParsedYaml;
 
@@ -202,6 +202,6 @@ export function parseContract(contractYaml: string): WithValidations<Contract> {
             ...nameValidations,
         ]);
     } catch (e) {
-        throw new Error(`failed to parse contract YAML, ${e.message}.`);
+        throw new Error(`failed to parse contract YAML for ${fileName}, ${e.message}.`);
     }
 }

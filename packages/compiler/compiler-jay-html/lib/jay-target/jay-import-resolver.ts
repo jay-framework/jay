@@ -16,9 +16,10 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
     },
     loadContract(fullPath: string): WithValidations<Contract> {
         const content = fs.readFileSync(fullPath).toString();
-        return parseContract(content);
+        return parseContract(content, fullPath);
     },
     resolveLink(importingModule: string, link: string): string {
-        return path.resolve(importingModule, link);
+        if (link?.[0] === '.') return path.resolve(importingModule, link);
+        else return require.resolve(link, { paths: require.resolve.paths(importingModule) });
     },
 };

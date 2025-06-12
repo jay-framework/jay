@@ -8,6 +8,7 @@ export const JAY_COMPONENT = 'jay-component';
 export const JAY_SECURE = 'jay-secure';
 export const JAY_RUNTIME = 'jay-runtime';
 export const JAY_4_REACT = 'jay-4-react';
+export const JAY_FULLSTACK_COMPONENTS = 'jay-fullstack-component';
 export const REACT = 'react';
 
 export const MAKE_JAY_COMPONENT = 'makeJayComponent';

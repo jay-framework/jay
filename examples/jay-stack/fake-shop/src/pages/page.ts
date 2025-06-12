@@ -1,4 +1,4 @@
-import { makeJayStackComponent, PageProps } from 'jay-stack-runtime';
+import { makeJayStackComponent, PageProps } from 'jay-fullstack-component';
 import { render, PageElementRefs } from './page.jay-html';
 import { Props } from 'jay-component';
 

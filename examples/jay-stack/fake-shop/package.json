@@ -11,14 +11,18 @@
     "build:disabled": "npm run build:client && # npm run build:server",
     "build:client": "vite build --outDir dist/client",
     "build:server": "vite build --ssr src/entry-server.ts --outDir dist/server",
+    "build:check-types": "tsc",
     "test": ":",
     "preview": "cross-env NODE_ENV=production node server"
   },
   "dependencies": {
     "compression": "^1.7.5",
     "express": "^5.0.1",
+    "jay-fullstack-component": "workspace:^",
+    "jay-mood-tracker-plugin": "workspace:^",
+    "jay-stack-client-runtime": "workspace:^",
     "jay-stack-route-scanner": "workspace:^",
-    "jay-stack-runtime": "workspace:^",
+    "jay-stack-server-runtime": "workspace:^",
     "sirv": "^3.0.0",
     "vite-plugin-jay": "workspace:^"
   },

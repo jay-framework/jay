@@ -2,7 +2,6 @@ import { JayImportLink, RefsTree, SourceFileFormat } from 'jay-compiler-shared';
 import { JayType } from 'jay-compiler-shared';
 import { HTMLElement } from 'node-html-parser';
 import { CompilerSourceFile } from 'jay-compiler-shared';
-import { JayContractImportLink } from '../contract';
 
 export interface JayHtmlNamespace {
     prefix: string;
@@ -13,7 +12,8 @@ export interface JayHeadlessImports {
     key: string;
     refs: RefsTree;
     rootType: JayType;
-    importLink: JayImportLink;
+    contractLink: JayImportLink;
+    codeLink: JayImportLink;
 }
 
 export interface JayHtmlSourceFile extends CompilerSourceFile {

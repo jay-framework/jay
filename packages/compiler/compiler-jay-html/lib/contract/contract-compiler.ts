@@ -84,18 +84,14 @@ export async function compileContract(
             const { type, refs, importLinks } = contractTypesResult;
             const types = generateTypes(type);
             let { imports, renderedRefs } = generateRefsInterface(contract, refs);
-            imports = imports
-                .plus(Import.jayElement)
-                .plus(Import.RenderElement)
-                .plus(Import.RenderElementOptions);
+            imports = imports.plus(Import.jayContract);
             const renderedImports = renderImports(imports, importLinks);
 
-            const elementType = `export type ${pascalCase(contract.name)}Element = JayElement<${pascalCase(contract.name)}ViewState, ${pascalCase(contract.name)}Refs>`;
-            const elementRenderType = `export type ${pascalCase(contract.name)}ElementRender = RenderElement<${pascalCase(contract.name)}ViewState, ${pascalCase(contract.name)}Refs, ${pascalCase(contract.name)}Element>`;
-            const elementPreRenderType = `export type ${pascalCase(contract.name)}ElementPreRender = [${pascalCase(contract.name)}Refs, ${pascalCase(contract.name)}ElementRender]`;
-            const renderFunction = `export declare function render(options?: RenderElementOptions): ${pascalCase(contract.name)}ElementPreRender`;
+            const viewStateTypeName = `${pascalCase(contract.name)}ViewState`;
+            const refsTypeName = `${pascalCase(contract.name)}Refs`;
+            const contractType = `export type ${pascalCase(contract.name)}Contract = JayContract<${viewStateTypeName}, ${refsTypeName}>`;
 
-            return `${renderedImports}\n\n${types}\n\n${renderedRefs}\n\n${elementType}\n${elementRenderType}\n${elementPreRenderType}\n\n${renderFunction}`;
+            return `${renderedImports}\n\n${types}\n\n${renderedRefs}\n\n${contractType}`;
         });
     });
 }
