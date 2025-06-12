@@ -19,6 +19,6 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
         return parseContract(content, fullPath);
     },
     resolveLink(importingModule: string, link: string): string {
-        return path.resolve(importingModule, link);
+        return require.resolve(link, { paths: require.resolve.paths(importingModule) });
     },
 };
