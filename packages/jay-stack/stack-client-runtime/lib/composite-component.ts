@@ -32,10 +32,10 @@ export function makeCompositeJayComponent<
         const instances: Array<[string, JayComponentCore<any, any>]> = parts.map((part) => {
             const partRefs = part.key ? refs[part.key] : refs;
             let partCarryForward: object;
-            if (fastCarryForward) {
-                if (part.key) partCarryForward = makeSignals(fastCarryForward[part.key]);
-                else partCarryForward = makeSignals(fastCarryForward);
-            }
+            if (part.key && fastCarryForward?.[part.key])
+                partCarryForward = makeSignals(fastCarryForward[part.key]);
+            else if (fastCarryForward)
+                partCarryForward = makeSignals(fastCarryForward);
             const partContexts = [
                 partCarryForward,
                 ...contexts.splice(0, part.contextMarkers.length),
