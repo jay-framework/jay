@@ -155,7 +155,7 @@ const fastCarryForward = {};
 const target = document.getElementById('target');
 const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [
 {comp: page.comp, contextMarkers: []},
-{comp: headless.comp, contextMarkers: [], viewStateKey: 'headless'}
+{comp: headless.comp, contextMarkers: [], key: 'headless'}
 ])
 
 const instance = pageComp({...viewState, ...fastCarryForward})
