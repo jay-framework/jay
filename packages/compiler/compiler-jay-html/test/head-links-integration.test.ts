@@ -2,8 +2,30 @@ import { parseJayFile, generateElementFile } from '../lib';
 import { stripMargin } from './test-utils/strip-margin';
 import { RuntimeMode } from 'jay-compiler-shared';
 import { JSDOM } from 'jsdom';
+import { injectHeadLinks, HeadLink } from '../../../runtime/runtime/lib/element';
 
 describe('head links integration', () => {
+    let dom: JSDOM;
+    let document: Document;
+    
+    // Test constants
+    const TEST_YAML = `data:
+                    |   title: string`;
+    const TEST_BODY = '<body><div><h1>{title}</h1><p>Test page</p></div></body>';
+    const SIMPLE_BODY = '<body><div>{title}</div></body>';
+    
+    beforeEach(() => {
+        // Set up a fresh DOM environment for each test
+        dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>');
+        document = dom.window.document;
+        global.document = document;
+    });
+    
+    afterEach(() => {
+        // Clean up global document
+        delete (global as any).document;
+    });
+
     function jayFileWith(jayYaml: string, body: string, links?: string) {
         return stripMargin(
             ` <html>
@@ -16,14 +38,12 @@ describe('head links integration', () => {
                 | </html>`,
         );
     }
-
-    it('should complete the full pipeline: parse -> compile -> execute', async () => {
-        // Step 1: Parse the JAY file
+    
+    it('should parse jay file with head links correctly', async () => {
         const jayFile = parseJayFile(
             jayFileWith(
-                `data:
-                    |   title: string`,
-                '<body><div><h1>{title}</h1><p>Test page</p></div></body>',
+                TEST_YAML,
+                TEST_BODY,
                 `<link rel="stylesheet" href="styles/main.css">
                   |<link rel="preconnect" href="https://fonts.googleapis.com">
                   |<link rel="icon" type="image/x-icon" href="/favicon.ico">
@@ -36,50 +56,59 @@ describe('head links integration', () => {
 
         expect(jayFile.validations).toEqual([]);
         expect(jayFile.val.headLinks).toHaveLength(4);
+        
+        // Verify parsed head links structure
+        expect(jayFile.val.headLinks[0].rel).toBe('stylesheet');
+        expect(jayFile.val.headLinks[0].href).toBe('styles/main.css');
+        expect(jayFile.val.headLinks[1].rel).toBe('preconnect');
+        expect(jayFile.val.headLinks[1].href).toBe('https://fonts.googleapis.com');
+        expect(jayFile.val.headLinks[2].rel).toBe('icon');
+        expect(jayFile.val.headLinks[2].href).toBe('/favicon.ico');
+        expect(jayFile.val.headLinks[3].rel).toBe('manifest');
+        expect(jayFile.val.headLinks[3].href).toBe('/manifest.json');
+    });
 
-        // Step 2: Generate TypeScript code
+    it('should generate typescript code with head links injection', async () => {
+        const jayFile = parseJayFile(
+            jayFileWith(
+                TEST_YAML,
+                TEST_BODY,
+                `<link rel="stylesheet" href="styles/main.css">
+                  |<link rel="icon" href="/favicon.ico">`,
+            ),
+            'CodeGenTest',
+            '',
+            {},
+        );
+
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generated.validations).toEqual([]);
-        expect(generated.val).toContain('injectHeadLinks');
 
-        // Step 3: Set up a mock browser environment
-        const dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>');
-        const document = dom.window.document;
-        global.document = document;
+        // Should import injectHeadLinks from jay-runtime
+        expect(generated.val).toMatch(
+            /import\s+\{[^}]*injectHeadLinks[^}]*\}\s+from\s+"jay-runtime"/,
+        );
 
-        // Step 4: Mock the generated render function
-        // In a real scenario, this would be the compiled output
-        const mockInjectHeadLinks = (headLinks: any[]) => {
-            const head = document.head;
-            headLinks.forEach((linkData) => {
-                const existingLink = head.querySelector(`link[href="${linkData.href}"]`);
-                if (existingLink) return;
+        // Should call injectHeadLinks with correct parameters
+        const callMatch = generated.val.match(/injectHeadLinks\(\[[\s\S]*?\]\)/);
+        expect(callMatch).not.toBeNull();
+        
+        const callString = callMatch![0];
+        expect(callString).toContain('{ rel: "stylesheet", href: "styles/main.css" }');
+        expect(callString).toContain('{ rel: "icon", href: "/favicon.ico" }');
+    });
 
-                const link = document.createElement('link');
-                link.rel = linkData.rel;
-                link.href = linkData.href;
-
-                if (linkData.attributes) {
-                    Object.entries(linkData.attributes).forEach(([key, value]) => {
-                        link.setAttribute(key, value as string);
-                    });
-                }
-
-                head.appendChild(link);
-            });
-        };
-
-        // Step 5: Execute the head links injection (simulating the generated code)
-        const headLinksToInject = [
+    it('should inject head links into DOM using runtime function', async () => {
+        const headLinksToInject: HeadLink[] = [
             { rel: 'stylesheet', href: 'styles/main.css' },
             { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
             { rel: 'icon', href: '/favicon.ico', attributes: { type: 'image/x-icon' } },
             { rel: 'manifest', href: '/manifest.json' },
         ];
 
-        mockInjectHeadLinks(headLinksToInject);
+        // Use the actual runtime function
+        injectHeadLinks(headLinksToInject);
 
-        // Step 6: Verify the results
         const links = document.head.querySelectorAll('link');
         expect(links).toHaveLength(4);
 
@@ -87,7 +116,7 @@ describe('head links integration', () => {
         expect(links[0].href).toBe('styles/main.css');
 
         expect(links[1].rel).toBe('preconnect');
-        expect(links[1].href).toBe('https://fonts.googleapis.com/');
+        expect(links[1].href).toBe('https://fonts.googleapis.com');
 
         expect(links[2].rel).toBe('icon');
         expect(links[2].href).toBe('/favicon.ico');
@@ -95,22 +124,18 @@ describe('head links integration', () => {
 
         expect(links[3].rel).toBe('manifest');
         expect(links[3].href).toBe('/manifest.json');
-
-        // Clean up
-        delete (global as any).document;
     });
 
-    it('should handle the complete pipeline with mixed import and head links', async () => {
-        // Step 1: Parse with head links only (no imports for this test)
+    it('should handle head links only (no imports)', async () => {
         const jayFile = parseJayFile(
             jayFileWith(
-                `data:
-                    |   title: string`,
-                '<body><div>{title}</div></body>',
+                TEST_YAML,
+                SIMPLE_BODY,
                 `<link rel="stylesheet" href="styles/main.css">
-                  |<link rel="icon" href="/favicon.ico">`,
+                  |<link rel="icon" href="/favicon.ico">
+                  |<link rel="import" href="../counter/counter" names="Counter"/>`,
             ),
-            'MixedLinksTest',
+            'HeadLinksOnlyTest',
             '',
             {},
         );
@@ -125,7 +150,7 @@ describe('head links integration', () => {
         expect(jayFile.val.headLinks[0].rel).toBe('stylesheet');
         expect(jayFile.val.headLinks[1].rel).toBe('icon');
 
-        // Step 2: Generate code should only inject head links
+        // Generate code should only inject head links
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generated.validations).toEqual([]);
 
@@ -134,14 +159,9 @@ describe('head links integration', () => {
         expect(generated.val).toContain('{ rel: "icon", href: "/favicon.ico" }');
     });
 
-    it('should handle empty head links correctly in the full pipeline', async () => {
-        // Step 1: Parse with no head links
+    it('should handle empty head links correctly', async () => {
         const jayFile = parseJayFile(
-            jayFileWith(
-                `data:
-                    |   title: string`,
-                '<body><div>{title}</div></body>',
-            ),
+            jayFileWith(TEST_YAML, SIMPLE_BODY),
             'NoHeadLinksTest',
             '',
             {},
@@ -151,10 +171,52 @@ describe('head links integration', () => {
         expect(jayFile.val.headLinks).toHaveLength(0);
         expect(jayFile.val.imports).toHaveLength(0);
 
-        // Step 2: Generate code should not include injectHeadLinks
+        // Generate code should not include injectHeadLinks
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generated.validations).toEqual([]);
 
         expect(generated.val).not.toContain('injectHeadLinks');
+    });
+    
+    it('should prevent duplicate head links injection using runtime function', async () => {
+        const headLinkData: HeadLink = { rel: 'stylesheet', href: 'styles/main.css' };
+        
+        // Inject the same link twice using the actual runtime function
+        injectHeadLinks([headLinkData]);
+        injectHeadLinks([headLinkData]);
+        
+        const links = document.head.querySelectorAll('link[href="styles/main.css"]');
+        expect(links).toHaveLength(1); // Should only have one link, not two
+    });
+
+    it('should handle missing document.head gracefully', async () => {
+        // Temporarily remove document.head
+        const originalHead = document.head;
+        Object.defineProperty(document, 'head', { value: null, configurable: true });
+        
+        const headLinkData: HeadLink = { rel: 'stylesheet', href: 'styles/main.css' };
+        
+        // Should not throw an error
+        expect(() => injectHeadLinks([headLinkData])).not.toThrow();
+        
+        // Restore document.head
+        Object.defineProperty(document, 'head', { value: originalHead, configurable: true });
+    });
+
+    it('should check for duplicates by both href and rel attributes', async () => {
+        // Add a link with same href but different rel
+        injectHeadLinks([{ rel: 'stylesheet', href: 'styles/main.css' }]);
+        injectHeadLinks([{ rel: 'preload', href: 'styles/main.css' }]); // Same href, different rel
+        
+        const stylesheetLinks = document.head.querySelectorAll('link[href="styles/main.css"][rel="stylesheet"]');
+        const preloadLinks = document.head.querySelectorAll('link[href="styles/main.css"][rel="preload"]');
+        
+        expect(stylesheetLinks).toHaveLength(1);
+        expect(preloadLinks).toHaveLength(1);
+        
+        // Now try to add the same stylesheet link again - should be prevented
+        injectHeadLinks([{ rel: 'stylesheet', href: 'styles/main.css' }]);
+        const stylesheetLinksAfter = document.head.querySelectorAll('link[href="styles/main.css"][rel="stylesheet"]');
+        expect(stylesheetLinksAfter).toHaveLength(1); // Still only one
     });
 });
