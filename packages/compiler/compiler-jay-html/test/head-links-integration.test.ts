@@ -7,20 +7,20 @@ import { injectHeadLinks, HeadLink } from '../../../runtime/runtime/lib/element'
 describe('head links integration', () => {
     let dom: JSDOM;
     let document: Document;
-    
+
     // Test constants
     const TEST_YAML = `data:
                     |   title: string`;
     const TEST_BODY = '<body><div><h1>{title}</h1><p>Test page</p></div></body>';
     const SIMPLE_BODY = '<body><div>{title}</div></body>';
-    
+
     beforeEach(() => {
         // Set up a fresh DOM environment for each test
         dom = new JSDOM('<!DOCTYPE html><html><head></head><body></body></html>');
         document = dom.window.document;
         global.document = document;
     });
-    
+
     afterEach(() => {
         // Clean up global document
         delete (global as any).document;
@@ -38,7 +38,7 @@ describe('head links integration', () => {
                 | </html>`,
         );
     }
-    
+
     it('should parse jay file with head links correctly', async () => {
         const jayFile = parseJayFile(
             jayFileWith(
@@ -56,7 +56,7 @@ describe('head links integration', () => {
 
         expect(jayFile.validations).toEqual([]);
         expect(jayFile.val.headLinks).toHaveLength(4);
-        
+
         // Verify parsed head links structure
         expect(jayFile.val.headLinks[0].rel).toBe('stylesheet');
         expect(jayFile.val.headLinks[0].href).toBe('styles/main.css');
@@ -92,7 +92,7 @@ describe('head links integration', () => {
         // Should call injectHeadLinks with correct parameters
         const callMatch = generated.val.match(/injectHeadLinks\(\[[\s\S]*?\]\)/);
         expect(callMatch).not.toBeNull();
-        
+
         const callString = callMatch![0];
         expect(callString).toContain('{ rel: "stylesheet", href: "styles/main.css" }');
         expect(callString).toContain('{ rel: "icon", href: "/favicon.ico" }');
@@ -178,14 +178,14 @@ describe('head links integration', () => {
 
         expect(generated.val).not.toContain('injectHeadLinks');
     });
-    
+
     it('should prevent duplicate head links injection using runtime function', async () => {
         const headLinkData: HeadLink = { rel: 'stylesheet', href: 'styles/main.css' };
-        
+
         // Inject the same link twice using the actual runtime function
         injectHeadLinks([headLinkData]);
         injectHeadLinks([headLinkData]);
-        
+
         const links = document.head.querySelectorAll('link[href="styles/main.css"]');
         expect(links).toHaveLength(1); // Should only have one link, not two
     });
@@ -194,12 +194,12 @@ describe('head links integration', () => {
         // Temporarily remove document.head
         const originalHead = document.head;
         Object.defineProperty(document, 'head', { value: null, configurable: true });
-        
+
         const headLinkData: HeadLink = { rel: 'stylesheet', href: 'styles/main.css' };
-        
+
         // Should not throw an error
         expect(() => injectHeadLinks([headLinkData])).not.toThrow();
-        
+
         // Restore document.head
         Object.defineProperty(document, 'head', { value: originalHead, configurable: true });
     });
@@ -208,16 +208,22 @@ describe('head links integration', () => {
         // Add a link with same href but different rel
         injectHeadLinks([{ rel: 'stylesheet', href: 'styles/main.css' }]);
         injectHeadLinks([{ rel: 'preload', href: 'styles/main.css' }]); // Same href, different rel
-        
-        const stylesheetLinks = document.head.querySelectorAll('link[href="styles/main.css"][rel="stylesheet"]');
-        const preloadLinks = document.head.querySelectorAll('link[href="styles/main.css"][rel="preload"]');
-        
+
+        const stylesheetLinks = document.head.querySelectorAll(
+            'link[href="styles/main.css"][rel="stylesheet"]',
+        );
+        const preloadLinks = document.head.querySelectorAll(
+            'link[href="styles/main.css"][rel="preload"]',
+        );
+
         expect(stylesheetLinks).toHaveLength(1);
         expect(preloadLinks).toHaveLength(1);
-        
+
         // Now try to add the same stylesheet link again - should be prevented
         injectHeadLinks([{ rel: 'stylesheet', href: 'styles/main.css' }]);
-        const stylesheetLinksAfter = document.head.querySelectorAll('link[href="styles/main.css"][rel="stylesheet"]');
+        const stylesheetLinksAfter = document.head.querySelectorAll(
+            'link[href="styles/main.css"][rel="stylesheet"]',
+        );
         expect(stylesheetLinksAfter).toHaveLength(1); // Still only one
     });
 });
