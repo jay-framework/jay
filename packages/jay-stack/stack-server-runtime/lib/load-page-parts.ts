@@ -55,7 +55,10 @@ export async function loadPageParts(
         for await (const headlessImport of jayHtml.headlessImports) {
             const module = headlessImport.codeLink.module;
             const name = headlessImport.codeLink.names[0].name;
-            const modulePath = require.resolve(module, { paths: require.resolve.paths(dirName) });
+            const modulePath =
+                module[0] === '.'
+                    ? path.resolve(dirName, module)
+                    : require.resolve(module, { paths: require.resolve.paths(dirName) });
             const compDefinition = (await vite.ssrLoadModule(modulePath))[name];
             const moduleImport = module.startsWith('./') ? path.resolve(pagesBase, module) : module;
             const key = headlessImport.key;
