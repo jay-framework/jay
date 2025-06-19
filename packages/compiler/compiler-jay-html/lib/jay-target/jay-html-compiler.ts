@@ -463,7 +463,6 @@ function renderFunctionImplementation(
     preRenderType: string;
     refsType: string;
     renderedImplementation: RenderFragment;
-    refImportsInUse: Set<string>;
 } {
     const variables = new Variables(types);
     const { importedSymbols, importedSandboxedSymbols } =
@@ -498,7 +497,6 @@ function renderFunctionImplementation(
     const {
         imports: refImports,
         renderedRefs,
-        refImportsInUse,
     } = renderRefsType(renderedRoot.refs, refsType);
     imports = imports.plus(refImports);
 
@@ -538,7 +536,6 @@ ${renderedRefsManager}
         elementType,
         preRenderType,
         refsType,
-        refImportsInUse,
         renderedImplementation: new RenderFragment(body, imports, renderedRoot.validations),
     };
 }
@@ -758,7 +755,6 @@ export function generateElementDefinitionFile(
             renderedElement,
             preRenderType,
             renderedImplementation,
-            refImportsInUse,
         } = renderFunctionImplementation(
             jayFile.types,
             jayFile.body,
@@ -773,7 +769,6 @@ export function generateElementDefinitionFile(
                 renderedImplementation.imports.plus(Import.jayElement),
                 ImportsFor.definition,
                 jayFile.imports,
-                refImportsInUse,
                 RuntimeMode.MainTrusted,
             ),
             types,
@@ -791,7 +786,7 @@ export function generateElementFile(
     importerMode: MainRuntimeModes,
 ): WithValidations<string> {
     const types = generateTypes(jayFile.types);
-    const { renderedRefs, renderedElement, renderedImplementation, refImportsInUse } =
+    const { renderedRefs, renderedElement, renderedImplementation } =
         renderFunctionImplementation(
             jayFile.types,
             jayFile.body,
@@ -806,7 +801,6 @@ export function generateElementFile(
             renderedImplementation.imports.plus(Import.element).plus(Import.jayElement),
             ImportsFor.implementation,
             jayFile.imports,
-            refImportsInUse,
             importerMode,
         ),
         types,
@@ -828,7 +822,6 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
         preRenderType,
         refsType,
         renderedImplementation,
-        refImportsInUse,
     } = renderFunctionImplementation(
         jayFile.types,
         jayFile.body,
@@ -855,7 +848,6 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
                 .plus(renderedBridge.imports),
             ImportsFor.elementSandbox,
             jayFile.imports,
-            refImportsInUse,
             RuntimeMode.WorkerSandbox,
         ),
         types,
@@ -888,7 +880,6 @@ export function generateSandboxRootFile(jayFile: JayHtmlSourceFile): string {
         ).plus(renderedSandboxRoot.imports),
         ImportsFor.elementSandbox,
         jayFile.imports,
-        new Set(),
         RuntimeMode.WorkerSandbox,
     );
 

@@ -393,7 +393,6 @@ function renderFunctionImplementation(
     preRenderType: string;
     refsType: string;
     renderedImplementation: RenderFragment;
-    refImportsInUse: Set<string>;
 } {
     const variables = new Variables(types);
     const { importedSymbols, importedSandboxedSymbols } =
@@ -430,7 +429,6 @@ function renderFunctionImplementation(
     const {
         imports: refImports,
         renderedRefs,
-        refImportsInUse,
     } = renderRefsType(renderedRoot.refs, refsType, GenerateTarget.react);
     imports = imports.plus(refImports);
 
@@ -463,7 +461,6 @@ export const render = mimicJayElement(reactRender)`,
         preRenderType,
         refsType,
         renderedImplementation: renderedImplementation.plusImport(imports),
-        refImportsInUse,
     };
 }
 
@@ -472,7 +469,7 @@ export function generateElementFileReactTarget(
     importerMode: MainRuntimeModes,
 ): WithValidations<string> {
     const types = generateTypes(jayFile.types);
-    const { renderedRefs, renderedReactProps, renderedImplementation, refImportsInUse } =
+    const { renderedRefs, renderedReactProps, renderedImplementation } =
         renderFunctionImplementation(
             jayFile.types,
             jayFile.body,
@@ -485,7 +482,6 @@ export function generateElementFileReactTarget(
             renderedImplementation.imports,
             ImportsFor.implementation,
             jayFile.imports,
-            refImportsInUse,
             importerMode,
         ),
         types,

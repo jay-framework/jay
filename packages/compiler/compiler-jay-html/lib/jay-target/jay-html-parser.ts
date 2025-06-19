@@ -67,7 +67,7 @@ function resolveType(
         } else if (parseIsEnum(data[prop])) {
             types[prop] = new JayEnumType(
                 toInterfaceName([...path, prop]),
-                parseEnumValues(data[prop]),
+                parseEnumValues(data[prop])
             );
         } else {
             let [, ...pathTail] = path;
@@ -91,7 +91,7 @@ function parseTypes(
             jayYaml.data,
             validations,
             [baseElementName + 'ViewState'],
-            imports,
+            imports
         );
         const headlessImportedTypes = Object.fromEntries(
             headlessImports.map((_) => [_.key, new JayImportedType(_.rootType.name, _.rootType)]),
