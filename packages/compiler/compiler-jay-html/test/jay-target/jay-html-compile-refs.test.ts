@@ -6,7 +6,6 @@ import {
     Ref,
     ImportsFor,
     JayObjectType,
-    RefsTree,
     mkRefsTree,
     mkRef,
 } from 'jay-compiler-shared';
