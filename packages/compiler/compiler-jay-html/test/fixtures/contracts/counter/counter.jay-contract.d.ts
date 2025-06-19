@@ -1,8 +1,14 @@
 import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
 import { JayContract } from 'jay-fullstack-component';
 
+export enum IsPositive {
+    positive,
+    negative,
+}
+
 export interface CounterViewState {
     count: number;
+    isPositive: IsPositive;
 }
 
 export interface CounterRefs {

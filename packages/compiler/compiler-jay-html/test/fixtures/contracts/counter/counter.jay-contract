@@ -9,3 +9,6 @@ tags:
   - tag: subtract
     type: interactive
     elementType: HTMLButtonElement
+  - tag: is positive
+    type: variant
+    dataType: enum (positive | negative)

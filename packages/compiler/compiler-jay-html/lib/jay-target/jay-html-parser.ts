@@ -221,7 +221,7 @@ async function parseHeadlessImports(
                     path.dirname(contractFile),
                     importResolver,
                 );
-                contractTypes.map(({ type, refs: subContractRefsTree }) => {
+                contractTypes.map(({ type, refs: subContractRefsTree, enumsToImport }) => {
                     const contractName = subContract.val.name;
                     const refsTypeName = `${pascalCase(contractName)}Refs`;
                     const repeatedRefsTypeName = `${pascalCase(contractName)}RepeatedRefs`;
@@ -232,11 +232,13 @@ async function parseHeadlessImports(
                         refsTypeName,
                         repeatedRefsTypeName,
                     );
+
                     const contractLink: JayImportLink = {
                         module: contractPath,
                         names: [
                             { name: type.name, type },
                             { name: refsTypeName, type: JayUnknown },
+                            ...enumsToImport.map(type => ({name: type.name, type}))
                         ],
                     };
                     const codeLink: JayImportLink = {
@@ -291,7 +293,7 @@ export async function parseJayFile(
     const types = parseTypes(jayYaml, validations, baseElementName, importNames, headlessImports);
     const imports: JayImportLink[] = [
         ...headfullImports,
-        ...headlessImports.flatMap((_) => [_.contractLink, _.codeLink]),
+        ...headlessImports.flatMap((_) => [_.contractLink]),
     ];
 
     if (validations.length > 0) return new WithValidations(undefined, validations);

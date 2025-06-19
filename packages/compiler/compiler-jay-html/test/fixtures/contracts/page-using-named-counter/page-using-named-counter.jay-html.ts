@@ -4,6 +4,8 @@ import {
     dynamicText as dt,
     RenderElement,
     ReferencesManager,
+    conditional as c,
+    dynamicElement as de,
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
@@ -11,8 +13,7 @@ import {
     NamedContractViewState,
     NamedContractRefs,
 } from '../named-counter/named-counter.jay-contract';
-// @ts-ignore
-import { namedCounter } from '../named-counter/named-counter';
+import { IsPositive } from "../counter/counter.jay-contract";
 
 export interface PageViewState {
     namedCounter: NamedContractViewState;
@@ -47,6 +48,16 @@ export function render(options?: RenderElementOptions): PageElementPreRender {
                 e('div', {}, [dt((vs) => `value: ${vs.namedCounter?.counter?.count}`)]),
                 e('button', {}, ['add'], refAdd()),
                 e('button', {}, ['subtract'], refSubtract()),
+                de('div', {}, [
+                    c(
+                        (vs) => vs.namedCounter?.counter?.isPositive === IsPositive.positive,
+                        () => e('img', { src: 'positive.jpg', alt: 'positive' }, []),
+                    ),
+                    c(
+                        (vs) => vs.namedCounter?.counter?.isPositive === IsPositive.negative,
+                        () => e('img', { src: 'negative.jpg', alt: 'negative' }, []),
+                    ),
+                ]),
             ]),
         ) as PageElement;
     return [refManager.getPublicAPI() as PageElementRefs, render];

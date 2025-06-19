@@ -15,7 +15,7 @@ import {
     mkRefsTree,
     RefsTree,
     WithValidations,
-    mkRef,
+    mkRef, isEnumType,
 } from 'jay-compiler-shared';
 import { camelCase, pascalCase } from 'change-case';
 import path from 'path';
@@ -31,6 +31,7 @@ interface SubContractTraverseResult {
     type?: JayType;
     refs: RefsTree;
     importLinks: JayContractImportLink[];
+    enumsToImport: JayEnumType[];
 }
 
 interface TagTraverseResult {
@@ -56,6 +57,7 @@ async function traverseTags(
     const refs: Ref[] = [];
     const childRefs: Record<string, RefsTree> = {};
     const objectType = new JayObjectType(typeName, objectTypeMembers);
+    const enumsToImport: JayEnumType[] = [];
     let validations: JayValidations = [];
 
     for (const subTag of tags) {
@@ -78,6 +80,8 @@ async function traverseTags(
                 viewStateType: objectType,
                 isRepeated: isRepeated || subTag.repeated,
             });
+            if (result.type && isEnumType(result.type))
+                enumsToImport.push(result.type);
             result.ref && refs.push(result.ref);
             result.type && (objectTypeMembers[camelCase(subTag.tag)] = result.type);
         }
@@ -86,7 +90,7 @@ async function traverseTags(
     const type = isRepeated ? new JayArrayType(objectType) : objectType;
 
     return new WithValidations<SubContractTraverseResult>(
-        { type, refs: mkRefsTree(refs, childRefs, context.isRepeated), importLinks },
+        { type, refs: mkRefsTree(refs, childRefs, context.isRepeated), importLinks, enumsToImport },
         validations,
     );
 }
@@ -140,6 +144,7 @@ async function traverseLinkedSubContract(tag: ContractTag, context: ContractTrav
                 type,
                 refs,
                 importLinks,
+                enumsToImport: []
             });
         } else return new WithValidations(undefined, subContractTypes.validations);
     } else {
