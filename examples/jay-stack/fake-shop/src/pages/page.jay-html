@@ -18,8 +18,10 @@
         <div>sad: {mt.sad} <button ref="mt.sad">more sad</button></div>
         <div>neutral: {mt.neutral} <button ref="mt.neutral">more neutral</button></div>
       </div>
-      <div>
-        <!--<span if="mt.currentMood === happy">:)</span>-->
+      <div style="font-size: 20px">
+        <span if="mt.currentMood === happy">:)</span>
+        <span if="mt.currentMood === sad">:(</span>
+        <span if="mt.currentMood === neutral">/)</span>
       </div>
     </div>
   </body>
