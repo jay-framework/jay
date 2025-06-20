@@ -5,6 +5,8 @@ import {
     NamedContractRefs,
     // @ts-ignore
 } from '../named-counter/named-counter.jay-contract?jay-workerSandbox';
+// @ts-ignore
+import { IsPositive } from '../counter/counter.jay-contract?jay-workerSandbox';
 
 export interface PageUsingNamedCounterViewState {
     namedCounter: NamedContractViewState;
