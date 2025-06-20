@@ -44,6 +44,9 @@ export function render(): PageUsingNamedCounterElementPreRender {
         namedCounter: namedCounterRefManager,
     });
     const render = (viewState: PageUsingNamedCounterViewState) =>
-        elementBridge(viewState, refManager, () => [e(refAdd()), e(refSubtract())]) as PageUsingNamedCounterElement;
+        elementBridge(viewState, refManager, () => [
+            e(refAdd()),
+            e(refSubtract()),
+        ]) as PageUsingNamedCounterElement;
     return [refManager.getPublicAPI() as PageUsingNamedCounterElementRefs, render];
 }

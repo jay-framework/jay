@@ -22,7 +22,7 @@ import { JayYamlStructure } from './jay-yaml-structure';
 import { JayHeadlessImports, JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
 
 import { JayImportResolver } from './jay-import-resolver';
-import {contractToImportsViewStateAndRefs, EnumToImport} from '../contract';
+import { contractToImportsViewStateAndRefs, EnumToImport } from '../contract';
 
 export function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj);
@@ -67,7 +67,7 @@ function resolveType(
         } else if (parseIsEnum(data[prop])) {
             types[prop] = new JayEnumType(
                 toInterfaceName([...path, prop]),
-                parseEnumValues(data[prop])
+                parseEnumValues(data[prop]),
             );
         } else {
             let [, ...pathTail] = path;
@@ -91,7 +91,7 @@ function parseTypes(
             jayYaml.data,
             validations,
             [baseElementName + 'ViewState'],
-            imports
+            imports,
         );
         const headlessImportedTypes = Object.fromEntries(
             headlessImports.map((_) => [_.key, new JayImportedType(_.rootType.name, _.rootType)]),
@@ -234,45 +234,50 @@ async function parseHeadlessImports(
                     );
 
                     const enumsToImportRelativeToJayHtml: EnumToImport[] = enumsToImport.map(
-                        enumsToImport => ({
+                        (enumsToImport) => ({
                             type: enumsToImport.type,
-                            declaringModule: path.relative(filePath, enumsToImport.declaringModule)})
-                    )
+                            declaringModule: path.relative(filePath, enumsToImport.declaringModule),
+                        }),
+                    );
 
                     const enumsFromContract = enumsToImportRelativeToJayHtml
-                        .filter(_ => _.declaringModule === contractPath)
-                        .map(_ => _.type);
+                        .filter((_) => _.declaringModule === contractPath)
+                        .map((_) => _.type);
 
                     const contractLink: JayImportLink = {
                         module: contractPath,
                         names: [
                             { name: type.name, type },
                             { name: refsTypeName, type: JayUnknown },
-                            ...enumsFromContract.map(_ => ({name: _.name, type: _}))
+                            ...enumsFromContract.map((_) => ({ name: _.name, type: _ })),
                         ],
                     };
 
-                    const enumsFromOtherContracts = enumsToImportRelativeToJayHtml
-                        .filter(_ => _.declaringModule !== contractPath)
+                    const enumsFromOtherContracts = enumsToImportRelativeToJayHtml.filter(
+                        (_) => _.declaringModule !== contractPath,
+                    );
 
                     const enumImportLinks: JayImportLink[] = Object.entries(
-                        enumsFromOtherContracts.reduce((acc, enumToImport) => {
-                            const module = enumToImport.declaringModule;
-                            if (!acc[module]) {
-                                acc[module] = [];
-                            }
-                            acc[module].push(enumToImport);
-                            return acc;
-                        }, {} as Record<string, EnumToImport[]>)
+                        enumsFromOtherContracts.reduce(
+                            (acc, enumToImport) => {
+                                const module = enumToImport.declaringModule;
+                                if (!acc[module]) {
+                                    acc[module] = [];
+                                }
+                                acc[module].push(enumToImport);
+                                return acc;
+                            },
+                            {} as Record<string, EnumToImport[]>,
+                        ),
                     ).map(([module, enums]) => ({
                         module,
-                        names: enums.map(enumToImport => ({
+                        names: enums.map((enumToImport) => ({
                             name: enumToImport.type.name,
-                            type: enumToImport.type
-                        }))
+                            type: enumToImport.type,
+                        })),
                     }));
 
-                    const contractLinks = [contractLink, ...enumImportLinks]
+                    const contractLinks = [contractLink, ...enumImportLinks];
                     const codeLink: JayImportLink = {
                         module,
                         names: [{ name, type: new JayComponentType(name, []) }],

@@ -9,11 +9,7 @@ import {
     ConstructContext,
     RenderElementOptions,
 } from 'jay-runtime';
-import {
-    CounterViewState,
-    CounterRefs,
-    IsPositive
-} from '../counter/counter.jay-contract';
+import { CounterViewState, CounterRefs, IsPositive } from '../counter/counter.jay-contract';
 
 export interface PageUsingCounterViewState {
     counter: CounterViewState;

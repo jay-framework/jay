@@ -1,13 +1,5 @@
-import {
-    JayElement,
-    RenderElement,
-    RenderElementOptions,
-} from 'jay-runtime';
-import {
-    CounterViewState,
-    CounterRefs,
-    IsPositive
-} from '../counter/counter.jay-contract';
+import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
+import { CounterViewState, CounterRefs, IsPositive } from '../counter/counter.jay-contract';
 
 export interface PageUsingCounterViewState {
     counter: CounterViewState;

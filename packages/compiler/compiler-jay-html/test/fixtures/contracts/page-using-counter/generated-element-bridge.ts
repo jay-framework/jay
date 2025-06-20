@@ -3,7 +3,7 @@ import { SecureReferencesManager, elementBridge, sandboxElement as e } from 'jay
 import {
     CounterViewState,
     CounterRefs,
-    IsPositive
+    IsPositive,
     // @ts-ignore
 } from '../counter/counter.jay-contract?jay-workerSandbox';
 
@@ -40,6 +40,9 @@ export function render(): PageUsingCounterElementPreRender {
         counter: counterRefManager,
     });
     const render = (viewState: PageUsingCounterViewState) =>
-        elementBridge(viewState, refManager, () => [e(refAdd()), e(refSubtract())]) as PageUsingCounterElement;
+        elementBridge(viewState, refManager, () => [
+            e(refAdd()),
+            e(refSubtract()),
+        ]) as PageUsingCounterElement;
     return [refManager.getPublicAPI() as PageUsingCounterElementRefs, render];
 }

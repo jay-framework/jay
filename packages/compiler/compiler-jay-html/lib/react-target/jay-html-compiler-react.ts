@@ -426,10 +426,11 @@ function renderFunctionImplementation(
         .plus(Import.Jay4ReactElementProps)
         .plus(Import.ReactElement)
         .plus(Import.mimicJayElement);
-    const {
-        imports: refImports,
-        renderedRefs,
-    } = renderRefsType(renderedRoot.refs, refsType, GenerateTarget.react);
+    const { imports: refImports, renderedRefs } = renderRefsType(
+        renderedRoot.refs,
+        refsType,
+        GenerateTarget.react,
+    );
     imports = imports.plus(refImports);
 
     const renderedReactProps = `export interface ${reactPropsType} extends Jay4ReactElementProps<${viewStateType}> {}`;

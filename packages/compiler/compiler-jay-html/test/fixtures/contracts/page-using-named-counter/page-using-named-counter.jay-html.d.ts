@@ -27,4 +27,6 @@ export type PageUsingNamedCounterElementPreRender = [
     PageUsingNamedCounterElementRender,
 ];
 
-export declare function render(options?: RenderElementOptions): PageUsingNamedCounterElementPreRender;
+export declare function render(
+    options?: RenderElementOptions,
+): PageUsingNamedCounterElementPreRender;

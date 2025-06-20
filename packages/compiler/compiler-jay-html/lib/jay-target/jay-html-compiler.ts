@@ -494,10 +494,7 @@ function renderFunctionImplementation(
         .plus(Import.RenderElementOptions)
         .plus(Import.RenderElement)
         .plus(Import.ReferencesManager);
-    const {
-        imports: refImports,
-        renderedRefs,
-    } = renderRefsType(renderedRoot.refs, refsType);
+    const { imports: refImports, renderedRefs } = renderRefsType(renderedRoot.refs, refsType);
     imports = imports.plus(refImports);
 
     let renderedElement = `export type ${elementType} = JayElement<${viewStateType}, ${refsType}>
@@ -750,20 +747,16 @@ export function generateElementDefinitionFile(
 ): WithValidations<string> {
     return parsedFile.map((jayFile) => {
         let types = generateTypes(jayFile.types);
-        let {
-            renderedRefs,
-            renderedElement,
-            preRenderType,
-            renderedImplementation,
-        } = renderFunctionImplementation(
-            jayFile.types,
-            jayFile.body,
-            jayFile.imports,
-            jayFile.baseElementName,
-            jayFile.namespaces,
-            jayFile.headlessImports,
-            RuntimeMode.WorkerTrusted,
-        );
+        let { renderedRefs, renderedElement, preRenderType, renderedImplementation } =
+            renderFunctionImplementation(
+                jayFile.types,
+                jayFile.body,
+                jayFile.imports,
+                jayFile.baseElementName,
+                jayFile.namespaces,
+                jayFile.headlessImports,
+                RuntimeMode.WorkerTrusted,
+            );
         return [
             renderImports(
                 renderedImplementation.imports.plus(Import.jayElement),
@@ -786,16 +779,15 @@ export function generateElementFile(
     importerMode: MainRuntimeModes,
 ): WithValidations<string> {
     const types = generateTypes(jayFile.types);
-    const { renderedRefs, renderedElement, renderedImplementation } =
-        renderFunctionImplementation(
-            jayFile.types,
-            jayFile.body,
-            jayFile.imports,
-            jayFile.baseElementName,
-            jayFile.namespaces,
-            jayFile.headlessImports,
-            importerMode,
-        );
+    const { renderedRefs, renderedElement, renderedImplementation } = renderFunctionImplementation(
+        jayFile.types,
+        jayFile.body,
+        jayFile.imports,
+        jayFile.baseElementName,
+        jayFile.namespaces,
+        jayFile.headlessImports,
+        importerMode,
+    );
     const renderedFile = [
         renderImports(
             renderedImplementation.imports.plus(Import.element).plus(Import.jayElement),

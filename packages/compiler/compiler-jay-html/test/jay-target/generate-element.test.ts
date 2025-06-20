@@ -306,7 +306,9 @@ describe('generate jay-html element', () => {
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(
-                await prettify(await readFixtureFileRaw(folder, 'page-using-named-counter.jay-html.ts')),
+                await prettify(
+                    await readFixtureFileRaw(folder, 'page-using-named-counter.jay-html.ts'),
+                ),
             );
         });
     });

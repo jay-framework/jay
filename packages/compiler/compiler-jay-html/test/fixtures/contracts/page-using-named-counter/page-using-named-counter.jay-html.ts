@@ -13,7 +13,7 @@ import {
     NamedContractViewState,
     NamedContractRefs,
 } from '../named-counter/named-counter.jay-contract';
-import { IsPositive } from "../counter/counter.jay-contract";
+import { IsPositive } from '../counter/counter.jay-contract';
 
 export interface PageUsingNamedCounterViewState {
     namedCounter: NamedContractViewState;
