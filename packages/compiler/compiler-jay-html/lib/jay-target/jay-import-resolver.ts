@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'path';
 
 export interface JayImportResolver {
-    resolveLink(importingModule: string, link: string): string;
+    resolveLink(importingModuleDir: string, link: string): string;
     loadContract(fullPath: string): WithValidations<Contract>;
     analyzeExportedTypes(fullPath: string, options: ResolveTsConfigOptions): JayType[];
 }
@@ -18,8 +18,8 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
         const content = fs.readFileSync(fullPath).toString();
         return parseContract(content, fullPath);
     },
-    resolveLink(importingModule: string, link: string): string {
-        if (link?.[0] === '.') return path.resolve(importingModule, link);
-        else return require.resolve(link, { paths: require.resolve.paths(importingModule) });
+    resolveLink(importingModuleDir: string, link: string): string {
+        if (link?.[0] === '.') return path.resolve(importingModuleDir, link);
+        else return require.resolve(link, { paths: require.resolve.paths(importingModuleDir) });
     },
 };

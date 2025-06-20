@@ -22,7 +22,7 @@ import { JayYamlStructure } from './jay-yaml-structure';
 import { JayHeadlessImports, JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
 
 import { JayImportResolver } from './jay-import-resolver';
-import { contractToImportsViewStateAndRefs } from '../contract';
+import {contractToImportsViewStateAndRefs, EnumToImport} from '../contract';
 
 export function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj);
@@ -218,7 +218,7 @@ async function parseHeadlessImports(
             await subContract.mapAsync(async (contract) => {
                 const contractTypes = await contractToImportsViewStateAndRefs(
                     contract,
-                    path.dirname(contractFile),
+                    contractFile,
                     importResolver,
                 );
                 contractTypes.map(({ type, refs: subContractRefsTree, enumsToImport }) => {
@@ -233,12 +233,26 @@ async function parseHeadlessImports(
                         repeatedRefsTypeName,
                     );
 
+                    const enumsToImportRelativeToJayHtml: EnumToImport[] = enumsToImport.map(
+                        enumsToImport => ({
+                            type: enumsToImport.type,
+                            declaringModule: path.relative(filePath, enumsToImport.declaringModule)})
+                    )
+
+                    const enumsFromContract = enumsToImportRelativeToJayHtml
+                        .filter(_ => _.declaringModule === contractPath)
+                        .map(_ => _.type);
+
+                    const enumsFromOtherContracts = enumsToImportRelativeToJayHtml
+                        .filter(_ => _.declaringModule !== contractPath)
+                        .map(_ => _.type);
+
                     const contractLink: JayImportLink = {
                         module: contractPath,
                         names: [
                             { name: type.name, type },
                             { name: refsTypeName, type: JayUnknown },
-                            ...enumsToImport.map(type => ({name: type.name, type}))
+                            ...enumsFromContract.map(_ => ({name: _.name, type: _}))
                         ],
                     };
                     const codeLink: JayImportLink = {

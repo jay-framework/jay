@@ -15,19 +15,29 @@ import {
 } from '../named-counter/named-counter.jay-contract';
 import { IsPositive } from "../counter/counter.jay-contract";
 
-export interface PageViewState {
+export interface PageUsingNamedCounterViewState {
     namedCounter: NamedContractViewState;
 }
 
-export interface PageElementRefs {
+export interface PageUsingNamedCounterElementRefs {
     namedCounter: NamedContractRefs;
 }
 
-export type PageElement = JayElement<PageViewState, PageElementRefs>;
-export type PageElementRender = RenderElement<PageViewState, PageElementRefs, PageElement>;
-export type PageElementPreRender = [PageElementRefs, PageElementRender];
+export type PageUsingNamedCounterElement = JayElement<
+    PageUsingNamedCounterViewState,
+    PageUsingNamedCounterElementRefs
+>;
+export type PageUsingNamedCounterElementRender = RenderElement<
+    PageUsingNamedCounterViewState,
+    PageUsingNamedCounterElementRefs,
+    PageUsingNamedCounterElement
+>;
+export type PageUsingNamedCounterElementPreRender = [
+    PageUsingNamedCounterElementRefs,
+    PageUsingNamedCounterElementRender,
+];
 
-export function render(options?: RenderElementOptions): PageElementPreRender {
+export function render(options?: RenderElementOptions): PageUsingNamedCounterElementPreRender {
     const [counterRefManager, [refAdd, refSubtract]] = ReferencesManager.for(
         options,
         ['add', 'subtract'],
@@ -41,7 +51,7 @@ export function render(options?: RenderElementOptions): PageElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
         namedCounter: namedCounterRefManager,
     });
-    const render = (viewState: PageViewState) =>
+    const render = (viewState: PageUsingNamedCounterViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('h1', {}, [dt((vs) => vs.namedCounter?.title)]),
@@ -59,6 +69,6 @@ export function render(options?: RenderElementOptions): PageElementPreRender {
                     ),
                 ]),
             ]),
-        ) as PageElement;
-    return [refManager.getPublicAPI() as PageElementRefs, render];
+        ) as PageUsingNamedCounterElement;
+    return [refManager.getPublicAPI() as PageUsingNamedCounterElementRefs, render];
 }

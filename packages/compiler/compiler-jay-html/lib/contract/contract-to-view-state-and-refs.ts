@@ -27,11 +27,16 @@ export interface JayContractImportLink {
     repeatedRefs: string;
 }
 
+export interface EnumToImport {
+    declaringModule: string,
+    type: JayEnumType
+}
+
 interface SubContractTraverseResult {
     type?: JayType;
     refs: RefsTree;
     importLinks: JayContractImportLink[];
-    enumsToImport: JayEnumType[];
+    enumsToImport: EnumToImport[];
 }
 
 interface TagTraverseResult {
@@ -57,7 +62,7 @@ async function traverseTags(
     const refs: Ref[] = [];
     const childRefs: Record<string, RefsTree> = {};
     const objectType = new JayObjectType(typeName, objectTypeMembers);
-    const enumsToImport: JayEnumType[] = [];
+    const enumsToImport: EnumToImport[] = [];
     let validations: JayValidations = [];
 
     for (const subTag of tags) {
@@ -72,6 +77,7 @@ async function traverseTags(
                 importLinks = [...importLinks, ...result.importLinks];
                 childRefs[subTag.tag] = result.refs;
                 result.type && (objectTypeMembers[camelCase(subTag.tag)] = result.type);
+                enumsToImport.push(...subContractTypes.val.enumsToImport)
             }
             validations = [...validations, ...subContractTypes.validations];
         } else {
@@ -81,7 +87,7 @@ async function traverseTags(
                 isRepeated: isRepeated || subTag.repeated,
             });
             if (result.type && isEnumType(result.type))
-                enumsToImport.push(result.type);
+                enumsToImport.push({type: result.type, declaringModule: context.contractFilePath});
             result.ref && refs.push(result.ref);
             result.type && (objectTypeMembers[camelCase(subTag.tag)] = result.type);
         }
@@ -100,7 +106,7 @@ async function traverseLinkedSubContract(tag: ContractTag, context: ContractTrav
     const linkWithExtension = tag.link.endsWith(JAY_CONTRACT_EXTENSION)
         ? tag.link
         : tag.link + JAY_CONTRACT_EXTENSION;
-    const subContractPath = importResolver.resolveLink(context.contractFilePath, linkWithExtension);
+    const subContractPath = importResolver.resolveLink(path.dirname(context.contractFilePath), linkWithExtension);
     const subContractFile = tag.link.replace(JAY_CONTRACT_EXTENSION, '');
 
     const subContract = importResolver.loadContract(subContractPath);
@@ -117,7 +123,7 @@ async function traverseLinkedSubContract(tag: ContractTag, context: ContractTrav
             isRepeated,
         );
         if (subContractTypes.val) {
-            const { type: subContractType, refs: subContractRefsTree } = subContractTypes.val;
+            const { type: subContractType, refs: subContractRefsTree, enumsToImport } = subContractTypes.val;
 
             const type = isArrayType(subContractType)
                 ? new JayArrayType(new JayImportedType(viewState, subContractType.itemType))
@@ -144,7 +150,7 @@ async function traverseLinkedSubContract(tag: ContractTag, context: ContractTrav
                 type,
                 refs,
                 importLinks,
-                enumsToImport: []
+                enumsToImport
             });
         } else return new WithValidations(undefined, subContractTypes.validations);
     } else {

@@ -5,22 +5,30 @@ import {
     NamedContractRefs,
     // @ts-ignore
 } from '../named-counter/named-counter.jay-contract?jay-workerSandbox';
-// @ts-ignore
-import { namedCounter } from '../named-counter/named-counter?jay-workerSandbox';
 
-export interface PageViewState {
+export interface PageUsingNamedCounterViewState {
     namedCounter: NamedContractViewState;
 }
 
-export interface PageElementRefs {
+export interface PageUsingNamedCounterElementRefs {
     namedCounter: NamedContractRefs;
 }
 
-export type PageElement = JayElement<PageViewState, PageElementRefs>;
-export type PageElementRender = RenderElement<PageViewState, PageElementRefs, PageElement>;
-export type PageElementPreRender = [PageElementRefs, PageElementRender];
+export type PageUsingNamedCounterElement = JayElement<
+    PageUsingNamedCounterViewState,
+    PageUsingNamedCounterElementRefs
+>;
+export type PageUsingNamedCounterElementRender = RenderElement<
+    PageUsingNamedCounterViewState,
+    PageUsingNamedCounterElementRefs,
+    PageUsingNamedCounterElement
+>;
+export type PageUsingNamedCounterElementPreRender = [
+    PageUsingNamedCounterElementRefs,
+    PageUsingNamedCounterElementRender,
+];
 
-export function render(): PageElementPreRender {
+export function render(): PageUsingNamedCounterElementPreRender {
     const [counterRefManager, [refAdd, refSubtract]] = SecureReferencesManager.forElement(
         ['add', 'subtract'],
         [],
@@ -33,7 +41,7 @@ export function render(): PageElementPreRender {
     const [refManager, []] = SecureReferencesManager.forElement([], [], [], [], {
         namedCounter: namedCounterRefManager,
     });
-    const render = (viewState: PageViewState) =>
-        elementBridge(viewState, refManager, () => [e(refAdd()), e(refSubtract())]) as PageElement;
-    return [refManager.getPublicAPI() as PageElementRefs, render];
+    const render = (viewState: PageUsingNamedCounterViewState) =>
+        elementBridge(viewState, refManager, () => [e(refAdd()), e(refSubtract())]) as PageUsingNamedCounterElement;
+    return [refManager.getPublicAPI() as PageUsingNamedCounterElementRefs, render];
 }
