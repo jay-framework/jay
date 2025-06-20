@@ -118,7 +118,7 @@ async function traverseLinkedSubContract(tag: ContractTag, context: ContractTrav
 
         const subContractTypes = await contractToImportsViewStateAndRefs(
             subContract.val,
-            path.dirname(subContractPath),
+            subContractPath,
             importResolver,
             isRepeated,
         );

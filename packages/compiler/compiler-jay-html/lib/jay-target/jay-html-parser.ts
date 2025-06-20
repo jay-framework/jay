@@ -243,10 +243,6 @@ async function parseHeadlessImports(
                         .filter(_ => _.declaringModule === contractPath)
                         .map(_ => _.type);
 
-                    const enumsFromOtherContracts = enumsToImportRelativeToJayHtml
-                        .filter(_ => _.declaringModule !== contractPath)
-                        .map(_ => _.type);
-
                     const contractLink: JayImportLink = {
                         module: contractPath,
                         names: [
@@ -255,11 +251,33 @@ async function parseHeadlessImports(
                             ...enumsFromContract.map(_ => ({name: _.name, type: _}))
                         ],
                     };
+
+                    const enumsFromOtherContracts = enumsToImportRelativeToJayHtml
+                        .filter(_ => _.declaringModule !== contractPath)
+
+                    const enumImportLinks: JayImportLink[] = Object.entries(
+                        enumsFromOtherContracts.reduce((acc, enumToImport) => {
+                            const module = enumToImport.declaringModule;
+                            if (!acc[module]) {
+                                acc[module] = [];
+                            }
+                            acc[module].push(enumToImport);
+                            return acc;
+                        }, {} as Record<string, EnumToImport[]>)
+                    ).map(([module, enums]) => ({
+                        module,
+                        names: enums.map(enumToImport => ({
+                            name: enumToImport.type.name,
+                            type: enumToImport.type
+                        }))
+                    }));
+
+                    const contractLinks = [contractLink, ...enumImportLinks]
                     const codeLink: JayImportLink = {
                         module,
                         names: [{ name, type: new JayComponentType(name, []) }],
                     };
-                    result.push({ key, refs, rootType: type, contractLink, codeLink });
+                    result.push({ key, refs, rootType: type, contractLinks, codeLink });
                 });
             });
         } catch (e) {
@@ -307,7 +325,7 @@ export async function parseJayFile(
     const types = parseTypes(jayYaml, validations, baseElementName, importNames, headlessImports);
     const imports: JayImportLink[] = [
         ...headfullImports,
-        ...headlessImports.flatMap((_) => [_.contractLink]),
+        ...headlessImports.flatMap((_) => _.contractLinks),
     ];
 
     if (validations.length > 0) return new WithValidations(undefined, validations);
