@@ -15,9 +15,14 @@ describe('contract definitions', () => {
         async function testContractDefinitionFile(folder: string) {
             const dirName = fixtureDir(folder);
             const filename = getFileFromFolder(folder);
+            const contractFilePath = `${dirName}/${filename}.jay-contract`;
             const contractContext = await readFixtureJayContractFile(folder, filename);
-            const parsedContract = parseContract(contractContext, 'contract.jay-contract');
-            const result = await compileContract(parsedContract, dirName, JAY_IMPORT_RESOLVER);
+            const parsedContract = parseContract(contractContext, `${filename}.jay-contract`);
+            const result = await compileContract(
+                parsedContract,
+                contractFilePath,
+                JAY_IMPORT_RESOLVER,
+            );
             expect(await prettify(result.val)).toEqual(
                 await prettify(
                     await readFixtureFileRaw(folder, `${filename}${JAY_CONTRACT_EXTENSION}.d.ts`),
@@ -47,8 +52,13 @@ describe('contract definitions', () => {
         }
 
         it('jay-html linked to contract', async () => {
-            const folder = 'contracts/page';
-            await testJayHtmlDefinitionFile(folder, 'page.jay-html.d.ts');
+            const folder = 'contracts/page-using-counter';
+            await testJayHtmlDefinitionFile(folder, 'page-using-counter.jay-html.d.ts');
+        });
+
+        it('jay-html linked to contract with transitive enum imports', async () => {
+            const folder = 'contracts/page-using-named-counter';
+            await testJayHtmlDefinitionFile(folder, 'page-using-named-counter.jay-html.d.ts');
         });
     });
 });

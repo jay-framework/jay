@@ -22,7 +22,7 @@ import { JayYamlStructure } from './jay-yaml-structure';
 import { JayHeadlessImports, JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
 
 import { JayImportResolver } from './jay-import-resolver';
-import { contractToImportsViewStateAndRefs } from '../contract';
+import { contractToImportsViewStateAndRefs, EnumToImport } from '../contract';
 
 export function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj);
@@ -218,10 +218,10 @@ async function parseHeadlessImports(
             await subContract.mapAsync(async (contract) => {
                 const contractTypes = await contractToImportsViewStateAndRefs(
                     contract,
-                    path.dirname(contractFile),
+                    contractFile,
                     importResolver,
                 );
-                contractTypes.map(({ type, refs: subContractRefsTree }) => {
+                contractTypes.map(({ type, refs: subContractRefsTree, enumsToImport }) => {
                     const contractName = subContract.val.name;
                     const refsTypeName = `${pascalCase(contractName)}Refs`;
                     const repeatedRefsTypeName = `${pascalCase(contractName)}RepeatedRefs`;
@@ -232,18 +232,57 @@ async function parseHeadlessImports(
                         refsTypeName,
                         repeatedRefsTypeName,
                     );
+
+                    const enumsToImportRelativeToJayHtml: EnumToImport[] = enumsToImport.map(
+                        (enumsToImport) => ({
+                            type: enumsToImport.type,
+                            declaringModule: path.relative(filePath, enumsToImport.declaringModule),
+                        }),
+                    );
+
+                    const enumsFromContract = enumsToImportRelativeToJayHtml
+                        .filter((_) => _.declaringModule === contractPath)
+                        .map((_) => _.type);
+
                     const contractLink: JayImportLink = {
                         module: contractPath,
                         names: [
                             { name: type.name, type },
                             { name: refsTypeName, type: JayUnknown },
+                            ...enumsFromContract.map((_) => ({ name: _.name, type: _ })),
                         ],
                     };
+
+                    const enumsFromOtherContracts = enumsToImportRelativeToJayHtml.filter(
+                        (_) => _.declaringModule !== contractPath,
+                    );
+
+                    const enumImportLinks: JayImportLink[] = Object.entries(
+                        enumsFromOtherContracts.reduce(
+                            (acc, enumToImport) => {
+                                const module = enumToImport.declaringModule;
+                                if (!acc[module]) {
+                                    acc[module] = [];
+                                }
+                                acc[module].push(enumToImport);
+                                return acc;
+                            },
+                            {} as Record<string, EnumToImport[]>,
+                        ),
+                    ).map(([module, enums]) => ({
+                        module,
+                        names: enums.map((enumToImport) => ({
+                            name: enumToImport.type.name,
+                            type: enumToImport.type,
+                        })),
+                    }));
+
+                    const contractLinks = [contractLink, ...enumImportLinks];
                     const codeLink: JayImportLink = {
                         module,
                         names: [{ name, type: new JayComponentType(name, []) }],
                     };
-                    result.push({ key, refs, rootType: type, contractLink, codeLink });
+                    result.push({ key, refs, rootType: type, contractLinks, codeLink });
                 });
             });
         } catch (e) {
@@ -291,7 +330,7 @@ export async function parseJayFile(
     const types = parseTypes(jayYaml, validations, baseElementName, importNames, headlessImports);
     const imports: JayImportLink[] = [
         ...headfullImports,
-        ...headlessImports.flatMap((_) => [_.contractLink, _.codeLink]),
+        ...headlessImports.flatMap((_) => _.contractLinks),
     ];
 
     if (validations.length > 0) return new WithValidations(undefined, validations);

@@ -293,11 +293,22 @@ describe('generate jay-html element', () => {
 
     describe('linked contract', () => {
         it('generate element file with linked contract', async () => {
-            const folder = 'contracts/page';
+            const folder = 'contracts/page-using-counter';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(
-                await prettify(await readFixtureFileRaw(folder, 'page.jay-html.ts')),
+                await prettify(await readFixtureFileRaw(folder, 'page-using-counter.jay-html.ts')),
+            );
+        });
+
+        it('generate element file with linked contract with sub-contracts', async () => {
+            const folder = 'contracts/page-using-named-counter';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(
+                await prettify(
+                    await readFixtureFileRaw(folder, 'page-using-named-counter.jay-html.ts'),
+                ),
             );
         });
     });

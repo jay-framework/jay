@@ -15,6 +15,10 @@ data:
     <div>value: {namedCounter.counter.count}</div>
     <button ref="namedCounter.counter.add">add</button>
     <button ref="namedCounter.counter.subtract">subtract</button>
+    <div>
+        <img if="namedCounter.counter.isPositive === positive" src="positive.jpg" alt="positive"/>
+        <img if="namedCounter.counter.isPositive === negative" src="negative.jpg" alt="negative"/>
+    </div>
 </div>
 </body>
 </html>

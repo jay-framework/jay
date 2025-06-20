@@ -1,0 +1,23 @@
+<html>
+<head>
+    <script type="application/jay-headless" 
+            src="../counter/counter"
+            name="counter"
+            contract="../counter/counter.jay-contract"
+            key="counter"></script>
+    <script type="application/jay-data">
+data:
+    </script>
+</head>
+<body>
+<div>
+    <div>value: {counter.count}</div>
+    <button ref="counter.add">add</button>
+    <button ref="counter.subtract">subtract</button>
+    <div>
+        <img if="counter.isPositive === positive" src="positive.jpg" alt="positive"/>
+        <img if="counter.isPositive === negative" src="negative.jpg" alt="negative"/>
+    </div>
+</div>
+</body>
+</html>

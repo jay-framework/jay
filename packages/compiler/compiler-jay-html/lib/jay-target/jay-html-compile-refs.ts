@@ -37,7 +37,6 @@ export function renderRefsType(
 ) {
     let renderedRefs: string;
     let imports = Imports.none();
-    const refImportsInUse = new Set<string>();
 
     const componentRefs = new Map<string, RefsNeeded>();
 
@@ -115,7 +114,7 @@ export type ${componentName}Refs<ParentVS> =
         renderedRefs = `${renderedComponentRefs.join('\n')}
 export interface ${refsType} ${mainType}`;
     } else renderedRefs = `export interface ${refsType} {}`;
-    return { imports, renderedRefs, refImportsInUse };
+    return { imports, renderedRefs };
 }
 
 export function elementNameToJayType(element: HTMLElement): JayType {

@@ -12,7 +12,7 @@ export interface JayHeadlessImports {
     key: string;
     refs: RefsTree;
     rootType: JayType;
-    contractLink: JayImportLink;
+    contractLinks: JayImportLink[];
     codeLink: JayImportLink;
 }
 

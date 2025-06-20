@@ -457,7 +457,7 @@ describe('compile contract', () => {
                 throw new Error('not implemented');
             },
             loadContract(path: string): WithValidations<Contract> {
-                if (path === `../todo-item${JAY_CONTRACT_EXTENSION}`) {
+                if (path === `todo-item${JAY_CONTRACT_EXTENSION}`) {
                     return new WithValidations<Contract>({
                         name: 'todo-item',
                         tags: [
