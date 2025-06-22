@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "",
+  "private": true,
   "scripts": {
     "definitions": "jay-cli definitions ./lib",
     "runtime": "jay-cli runtime ./lib",

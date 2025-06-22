@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "",
+  "private": true,
   "scripts": {
     "serve": "node_modules/.bin/vite",
     "definitions": "jay-cli definitions ./lib",

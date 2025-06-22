@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "",
+  "private": true,
   "scripts": {
     "build": "npm run definitions && npm run build:js",
     "definitions": "jay-cli definitions src",

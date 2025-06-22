@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "description": "",
+  "private": true,
   "scripts": {
     "definitions": "jay-cli definitions ./lib && jay-cli definitions ./lib-secure",
     "build:js": "vite build --base ./",
