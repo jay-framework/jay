@@ -1,6 +1,7 @@
 {
   "name": "jay-exploration-rfc-6902",
   "version": "1.0.0",
+  "private": true,
   "scripts": {
     "build": ":",
     "clean": ":",

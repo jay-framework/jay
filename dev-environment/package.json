@@ -1,6 +1,7 @@
 {
   "name": "jay-dev-environment",
   "version": "1.0.0",
+  "private": true,
   "files": [
     "*.ts",
     "*.json"

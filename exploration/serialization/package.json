@@ -1,6 +1,7 @@
 {
   "name": "serialization-exploration",
   "version": "1.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "build": "npm run rollup && npm run copy",

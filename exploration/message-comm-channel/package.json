@@ -1,6 +1,7 @@
 {
   "name": "message-comm-channel",
   "version": "1.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "rollup": "rollup --config ./rollup.config.js",
