@@ -5,11 +5,9 @@ import { JayRollupConfig, jayRuntime } from 'vite-plugin-jay';
 import { rimrafSync } from 'rimraf';
 
 const root = resolve(__dirname);
-const compilerPatternFiles = [];
 const jayOptions: JayRollupConfig = {
     tsConfigFilePath: resolve(root, 'tsconfig.json'),
     outputDir: 'build/jay-runtime',
-    compilerPatternFiles,
 };
 
 export default defineConfig(({ mode }) => {
@@ -28,13 +26,7 @@ export default defineConfig(({ mode }) => {
             emptyOutDir: true,
             minify: false,
             target: 'es2020',
-            rollupOptions: {
-                external,
-                input: {
-                    trusted: resolve(root, 'index.html'),
-                    secure: resolve(root, 'secure.html'),
-                },
-            },
+            rollupOptions: { external },
         },
     };
 });
