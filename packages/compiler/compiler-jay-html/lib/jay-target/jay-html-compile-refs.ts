@@ -65,6 +65,9 @@ export function renderRefsType(
                 .join(',\n');
 
             const childTypes = Object.entries(refsTree.children)
+                .filter(([_, childRefNode]) => {
+                    return childRefNode.imported || hasRefs(childRefNode, false);
+                })
                 .map(([childName, childRefNode]) => {
                     if (childRefNode.imported) {
                         const importedTypeName = childRefNode.repeated
