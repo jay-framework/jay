@@ -4,7 +4,7 @@
   "type": "module",
   "description": "",
   "scripts": {
-    "definitions": "jay-cli definitions ./lib && jay-cli definitions ./lib-secure",
+    "definitions": "jay-cli definitions ./lib",
     "build:js": "vite build --base ./",
     "build:watch": "nodemon --watch '../../packages/rollup-plugin/dist/index.js' -x \"DEBUG=vite:hmr,jay:* vite --open\"",
     "build": "npm run definitions && npm run build:js",
