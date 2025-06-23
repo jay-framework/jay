@@ -1,12 +1,6 @@
 import {
     JayElement,
-    element as e,
-    dynamicText as dt,
     RenderElement,
-    ReferencesManager,
-    dynamicElement as de,
-    forEach,
-    ConstructContext,
     HTMLElementCollectionProxy,
     RenderElementOptions,
 } from 'jay-runtime';
@@ -31,7 +25,14 @@ export interface RefsCommaIssueElementRefs {
 }
 
 export type RefsCommaIssueElement = JayElement<RefsCommaIssueViewState, RefsCommaIssueElementRefs>;
-export type RefsCommaIssueElementRender = RenderElement<RefsCommaIssueViewState, RefsCommaIssueElementRefs, RefsCommaIssueElement>;
-export type RefsCommaIssueElementPreRender = [RefsCommaIssueElementRefs, RefsCommaIssueElementRender];
+export type RefsCommaIssueElementRender = RenderElement<
+    RefsCommaIssueViewState,
+    RefsCommaIssueElementRefs,
+    RefsCommaIssueElement
+>;
+export type RefsCommaIssueElementPreRender = [
+    RefsCommaIssueElementRefs,
+    RefsCommaIssueElementRender,
+];
 
-export declare function render(options?: RenderElementOptions): RefsCommaIssueElementPreRender; 
+export declare function render(options?: RenderElementOptions): RefsCommaIssueElementPreRender;

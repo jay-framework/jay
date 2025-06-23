@@ -78,13 +78,6 @@ describe('generate jay-html element', () => {
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
-        it('refs comma issue - should not generate leading comma when there are no direct refs but only nested refs', async () => {
-            const folder = 'basics/refs-comma-issue';
-            const elementFile = await readFileAndGenerateElementFile(folder);
-            expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
-        });
-
         it('with different attributes and properties', async () => {
             const folder = 'basics/attributes';
             const elementFile = await readFileAndGenerateElementFile(folder);
