@@ -1,0 +1,25 @@
+<html>
+  <head>
+    <script type="application/jay-data">
+        data:
+          contractPath:
+          -     id: string
+          bindItems:
+          -     id: string
+    </script>
+  </head>
+  <body>
+    <div>
+        <div forEach="contractPath" trackBy="id">
+          <div>
+            {id}
+          </div>
+        </div>
+        <div forEach="bindItems" trackBy="id">
+          <div ref="bli">
+            {id}
+          </div>
+        </div>
+    </div>
+  </body>
+</html> 

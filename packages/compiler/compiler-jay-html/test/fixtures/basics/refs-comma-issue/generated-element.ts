@@ -1,0 +1,37 @@
+import {
+    JayElement,
+    element as e,
+    dynamicText as dt,
+    RenderElement,
+    ReferencesManager,
+    dynamicElement as de,
+    forEach,
+    ConstructContext,
+    HTMLElementCollectionProxy,
+    RenderElementOptions,
+} from 'jay-runtime';
+
+export interface ContractPathOfRefsCommaIssueViewState {
+    id: string;
+}
+
+export interface BindItemOfRefsCommaIssueViewState {
+    id: string;
+}
+
+export interface RefsCommaIssueViewState {
+    contractPath: Array<ContractPathOfRefsCommaIssueViewState>;
+    bindItems: Array<BindItemOfRefsCommaIssueViewState>;
+}
+
+export interface RefsCommaIssueElementRefs {
+    bindItems: {
+        bli: HTMLElementCollectionProxy<BindItemOfRefsCommaIssueViewState, HTMLDivElement>;
+    };
+}
+
+export type RefsCommaIssueElement = JayElement<RefsCommaIssueViewState, RefsCommaIssueElementRefs>;
+export type RefsCommaIssueElementRender = RenderElement<RefsCommaIssueViewState, RefsCommaIssueElementRefs, RefsCommaIssueElement>;
+export type RefsCommaIssueElementPreRender = [RefsCommaIssueElementRefs, RefsCommaIssueElementRender];
+
+export declare function render(options?: RenderElementOptions): RefsCommaIssueElementPreRender; 
