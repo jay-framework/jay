@@ -36,8 +36,8 @@ import { generateTypes } from '../jay-target/jay-html-compile-types';
 import { Indent } from '../jay-target/indent';
 import {
     elementNameToJayType,
-    newAutoRefNameGenerator,
     optimizeRefs,
+    RefNameGenerator,
     renderRefsType,
 } from '../jay-target/jay-html-compile-refs';
 import { processImportedComponents, renderImports } from '../jay-target/jay-html-compile-imports';
@@ -48,7 +48,7 @@ interface RenderContext {
     indent: Indent;
     dynamicRef: boolean;
     importedSandboxedSymbols: Set<string>;
-    nextAutoRefName: () => string;
+    nextAutoRefName: RefNameGenerator;
     importerMode: RuntimeMode;
 }
 
@@ -167,9 +167,9 @@ function renderChildCompRef(
     element: HTMLElement,
     { dynamicRef, variables, nextAutoRefName }: RenderContext,
 ): RenderFragment {
-    let originalName = element.attributes.ref || nextAutoRefName();
+    let originalName = element.attributes.ref || nextAutoRefName.newAutoRefNameGenerator();
     let refName = camelCase(originalName);
-    let constName = camelCase(`ref ${refName}`);
+    let constName = nextAutoRefName.newConstantName(refName, variables);
     let refs = [
         mkRef(
             refName,
@@ -410,7 +410,7 @@ function renderFunctionImplementation(
                 indent: new Indent('    '),
                 dynamicRef: false,
                 importedSandboxedSymbols,
-                nextAutoRefName: newAutoRefNameGenerator(),
+                nextAutoRefName: new RefNameGenerator(),
                 importerMode,
             },
             reactChildComps,

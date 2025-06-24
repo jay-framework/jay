@@ -40,9 +40,9 @@ import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
 import {
     elementNameToJayType,
-    newAutoRefNameGenerator,
     optimizeRefs,
     ReferenceManagerTarget,
+    RefNameGenerator,
     renderReferenceManager,
     renderRefsType,
 } from './jay-html-compile-refs';
@@ -55,7 +55,7 @@ interface RenderContext {
     indent: Indent;
     dynamicRef: boolean;
     importedSandboxedSymbols: Set<string>;
-    nextAutoRefName: () => string;
+    refNameGenerator: RefNameGenerator;
     importerMode: RuntimeMode;
     namespaces: JayHtmlNamespace[];
     importedRefNameToRef: Map<string, Ref>;
@@ -130,7 +130,7 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
 
 function renderElementRef(
     element: HTMLElement,
-    { dynamicRef, variables, importedRefNameToRef }: RenderContext,
+    { dynamicRef, variables, importedRefNameToRef, refNameGenerator }: RenderContext,
 ): RenderFragment {
     if (element.attributes.ref) {
         if (importedRefNameToRef.has(element.attributes.ref)) {
@@ -139,7 +139,7 @@ function renderElementRef(
         }
         let originalName = element.attributes.ref;
         let refName = camelCase(originalName);
-        let constName = camelCase(`ref ${refName}`);
+        let constName = refNameGenerator.newConstantName(refName, variables);
         let refs = mkRefsTree(
             [
                 mkRef(
@@ -194,15 +194,15 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
 
 function renderChildCompRef(
     element: HTMLElement,
-    { dynamicRef, variables, nextAutoRefName, importedRefNameToRef }: RenderContext,
+    { dynamicRef, variables, refNameGenerator, importedRefNameToRef }: RenderContext,
 ): RenderFragment {
     if (importedRefNameToRef.has(element.attributes.ref)) {
         const ref = importedRefNameToRef.get(element.attributes.ref);
         return new RenderFragment(`${ref.constName}()`, Imports.none(), [], mkRefsTree([ref], {}));
     }
-    let originalName = element.attributes.ref || nextAutoRefName();
+    let originalName = element.attributes.ref || refNameGenerator.newAutoRefNameGenerator();
     let refName = camelCase(originalName);
-    let constName = camelCase(`ref ${refName}`);
+    let constName = refNameGenerator.newConstantName(refName, variables);
     let refs = mkRefsTree(
         [
             mkRef(
@@ -477,7 +477,7 @@ function renderFunctionImplementation(
             indent: new Indent('    '),
             dynamicRef: false,
             importedSandboxedSymbols,
-            nextAutoRefName: newAutoRefNameGenerator(),
+            refNameGenerator: new RefNameGenerator(),
             importerMode,
             namespaces,
             importedRefNameToRef,
@@ -670,7 +670,7 @@ function renderBridge(
         indent: new Indent('    '),
         dynamicRef: false,
         importedSandboxedSymbols,
-        nextAutoRefName: newAutoRefNameGenerator(),
+        refNameGenerator: new RefNameGenerator(),
         importerMode: RuntimeMode.WorkerSandbox,
         namespaces: [],
         importedRefNameToRef,
@@ -714,7 +714,7 @@ function renderSandboxRoot(
         indent: new Indent('    '),
         dynamicRef: false,
         importedSandboxedSymbols,
-        nextAutoRefName: newAutoRefNameGenerator(),
+        refNameGenerator: new RefNameGenerator(),
         importerMode: RuntimeMode.WorkerSandbox,
         namespaces: [],
         importedRefNameToRef,

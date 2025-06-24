@@ -20,6 +20,7 @@ import { htmlElementTagNameMap } from './html-element-tag-name-map';
 import { camelCase } from 'camel-case';
 import { Indent } from './indent';
 import { JayHeadlessImports } from './jay-html-source-file';
+import { Variables } from '../expressions/expression-compiler';
 
 const isComponentRef = (ref: Ref) =>
     ref.elementType instanceof JayComponentType || ref.elementType instanceof JayTypeAlias;
@@ -126,11 +127,26 @@ export function elementNameToJayType(element: HTMLElement): JayType {
         : new JayHTMLType('HTMLElement');
 }
 
-export function newAutoRefNameGenerator() {
-    let nextId = 1;
-    return function (): string {
-        return 'aR' + nextId++;
-    };
+export class RefNameGenerator {
+    private nextId: number = 1;
+    private constNamesToVariables: Map<string, Variables> = new Map();
+
+    newAutoRefNameGenerator() {
+        return 'aR' + this.nextId++;
+    }
+
+    newConstantName(refName: string, variables: Variables): string {
+        let suffix = 2;
+        let constName = camelCase(`ref ${refName}`);
+        while (this.constNamesToVariables.has(constName)) {
+            if (this.constNamesToVariables.get(constName) === variables) {
+                return constName;
+            }
+            constName = camelCase(`ref ${refName}${suffix++}`);
+        }
+        this.constNamesToVariables.set(constName, variables);
+        return constName;
+    }
 }
 
 function markAutoOnImportedRefs(
