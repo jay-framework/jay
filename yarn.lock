@@ -16709,6 +16709,32 @@ __metadata:
   languageName: node
   linkType: hard
 
+"refs-comma-issue@workspace:examples/jay/refsConflict":
+  version: 0.0.0-use.local
+  resolution: "refs-comma-issue@workspace:examples/jay/refsConflict"
+  dependencies:
+    "@babel/core": ^7.23.7
+    "@babel/preset-env": ^7.23.8
+    "@babel/preset-typescript": ^7.23.3
+    "@rollup/plugin-node-resolve": ^15.2.3
+    jay-cli: "workspace:^"
+    jay-component: "workspace:^"
+    jay-dev-environment: "workspace:^"
+    jay-json-patch: "workspace:^"
+    jay-reactive: "workspace:^"
+    jay-runtime: "workspace:^"
+    jay-secure: "workspace:^"
+    jay-serialization: "workspace:^"
+    nodemon: ^3.0.3
+    rimraf: ^5.0.5
+    tslib: ^2.6.2
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vite-plugin-inspect: ^0.8.1
+    vite-plugin-jay: "workspace:^"
+  languageName: unknown
+  linkType: soft
+
 "regenerate-unicode-properties@npm:^10.1.0":
   version: 10.1.1
   resolution: "regenerate-unicode-properties@npm:10.1.1"
