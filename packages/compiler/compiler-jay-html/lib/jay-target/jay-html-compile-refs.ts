@@ -285,18 +285,18 @@ export function renderReferenceManager(
         ].join(', ');
 
         const childRenderedRefManagers: string[] = [];
-        const childRefManagerMambers: string[] = [];
+        const childRefManagerMembers: string[] = [];
         Object.entries(refsTree.children).forEach(([childName, childRefNode]) => {
             const name = camelCase(`${childName}RefManager`);
             const rendered = renderRefManagerNode(name, childRefNode);
-            childRefManagerMambers.push(`    ${childName}: ${name}`);
+            childRefManagerMembers.push(`    ${childName}: ${name}`);
             childRenderedRefManagers.push(rendered);
         });
 
         const childRefManager =
-            childRefManagerMambers.length > 0
+            childRefManagerMembers.length > 0
                 ? `, {
-  ${childRefManagerMambers.join(',\n')}         
+  ${childRefManagerMembers.join(',\n')}         
 }`
                 : '';
 
