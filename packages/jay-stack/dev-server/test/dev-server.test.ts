@@ -1,5 +1,5 @@
 import { DevServerOptions, mkDevServer } from '../lib';
-import { JayRollupConfig } from 'vite-plugin-jay';
+import { JayRollupConfig } from 'jay-vite-plugin';
 import path from 'path';
 import { Request, Response } from 'express';
 

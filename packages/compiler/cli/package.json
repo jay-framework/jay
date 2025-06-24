@@ -1,6 +1,6 @@
 {
   "name": "jay-cli",
-  "version": "1.0.0",
+  "version": "0.5.0",
   "main": "dist/index.js",
   "bin": "dist/index.js",
   "scripts": {
@@ -18,8 +18,8 @@
     "chalk": "^4.1.2",
     "commander": "^14.0.0",
     "jay-compiler": "workspace:^",
-    "rollup": "^4.9.5",
-    "rollup-plugin-jay": "workspace:^"
+    "jay-rollup-plugin": "workspace:^",
+    "rollup": "^4.9.5"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",

@@ -1,5 +1,5 @@
 {
-  "name": "jay-fake-shop",
+  "name": "example-jay-fake-shop",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -17,14 +17,14 @@
   },
   "dependencies": {
     "compression": "^1.7.5",
+    "example-jay-mood-tracker-plugin": "workspace:^",
     "express": "^5.0.1",
     "jay-fullstack-component": "workspace:^",
-    "jay-mood-tracker-plugin": "workspace:^",
     "jay-stack-client-runtime": "workspace:^",
     "jay-stack-route-scanner": "workspace:^",
     "jay-stack-server-runtime": "workspace:^",
-    "sirv": "^3.0.0",
-    "vite-plugin-jay": "workspace:^"
+    "jay-vite-plugin": "workspace:^",
+    "sirv": "^3.0.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

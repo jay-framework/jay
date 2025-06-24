@@ -1,6 +1,6 @@
 {
   "name": "jay-dev-server",
-  "version": "1.0.0",
+  "version": "0.5.0",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {

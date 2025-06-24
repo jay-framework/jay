@@ -6,7 +6,7 @@
       "jay-component": ["../../packages/component/lib"],
       "jay-reactive": ["../../packages/reactive/lib"],
       "jay-runtime": ["../../packages/runtime/lib"],
-      "rollup-plugin-jay": ["../../packages/rollup-plugin-jay/lib"],
+      "jay-rollup-plugin": ["../../packages/rollup-plugin/lib"],
     },
   },
 }

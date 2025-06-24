@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { parseJayFile } from 'jay-compiler-jay-html';
 import { AnyJayStackComponentDefinition } from 'jay-fullstack-component';
-import { JayRollupConfig } from 'rollup-plugin-jay';
+import { JayRollupConfig } from 'jay-rollup-plugin';
 
 export interface DevServerPagePart {
     compDefinition: AnyJayStackComponentDefinition;

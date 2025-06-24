@@ -1,6 +1,6 @@
 {
-  "name": "vite-plugin-jay",
-  "version": "1.0.0",
+  "name": "jay-vite-plugin",
+  "version": "0.5.0",
   "main": "dist/index.js",
   "keywords": [
     "jay",
@@ -19,7 +19,7 @@
     "test:watch": ":"
   },
   "dependencies": {
-    "rollup-plugin-jay": "workspace:^"
+    "jay-rollup-plugin": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",

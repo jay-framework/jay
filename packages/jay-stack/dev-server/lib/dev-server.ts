@@ -7,7 +7,7 @@ import type {
     Redirect3xx,
     ServerError5xx,
 } from 'jay-fullstack-component';
-import { jayRuntime } from 'vite-plugin-jay';
+import { jayRuntime } from 'jay-vite-plugin';
 import path from 'node:path';
 import { RequestHandler } from 'express-serve-static-core';
 import { renderFastChangingData } from 'jay-stack-server-runtime';

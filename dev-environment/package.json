@@ -10,7 +10,8 @@
     "build": ":",
     "clean": ":",
     "test": ":",
-    "confirm": ":"
+    "confirm": ":",
+    "build:check-types": ":"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",

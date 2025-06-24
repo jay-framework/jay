@@ -1,6 +1,6 @@
 {
-  "name": "rollup-plugin-jay",
-  "version": "1.0.0",
+  "name": "jay-rollup-plugin",
+  "version": "0.5.0",
   "main": "dist/index.js",
   "keywords": [
     "jay",

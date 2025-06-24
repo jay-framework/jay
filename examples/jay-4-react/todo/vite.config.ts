@@ -1,7 +1,7 @@
 import { resolve } from 'path';
 import Inspect from 'vite-plugin-inspect';
 import { defineConfig } from 'vitest/config';
-import { JayRollupConfig, jayRuntime } from 'vite-plugin-jay';
+import { JayRollupConfig, jayRuntime } from 'jay-vite-plugin';
 import { rimrafSync } from 'rimraf';
 import react from '@vitejs/plugin-react';
 import { GenerateTarget } from 'jay-compiler-shared';

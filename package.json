@@ -1,9 +1,10 @@
 {
   "name": "jay",
+  "private": true,
   "scripts": {
     "build": "wsrun -te --report build",
-    "build:check-types": "wsrun -p 'jay-@(cli|compiler|compiler-shared|compiler-analyze-exported-types|compiler-jay-html|component|json-patch|list-compare|reactive|runtime|secure|serialization|fake-shop)' -p '@(rollup|vite)-plugin-jay' -e --prefix build:check-types",
-    "build:watch": "wsrun -p 'jay-@(cli|compiler|compiler-shared|compiler-analyze-exported-types|compiler-jay-html|component|json-patch|list-compare|reactive|runtime|secure|serialization)' -p '@(rollup|vite)-plugin-jay' --prefix build:watch",
+    "build:check-types": "wsrun -p 'jay-*' -e --prefix build:check-types",
+    "build:watch": "wsrun -p 'jay-*' --prefix build:watch",
     "clean": "wsrun clean",
     "clean:node_modules": "rimraf node_modules && rimraf packages/*/node_modules && rimraf examples/*/node_modules && rimraf exploration/*/node_modules",
     "clean:node_modules:with-cache": "npm run clean:node_modules && yarn cache clean",
@@ -16,7 +17,10 @@
     "rebuild": "yarn run clean && yarn run build",
     "reinstall": "npm run clean:node_modules && yarn install && yarn run rebuild",
     "test": "wsrun -te --report test",
-    "release": "echo \"======= Lerna Releasing jay =======\" && npm run test && lerna publish"
+    "release": "echo \"======= Lerna Releasing jay =======\" && npm run test && lerna publish",
+    "version:packages:patch": "node scripts/version-packages.js patch",
+    "version:packages:minor": "node scripts/version-packages.js minor",
+    "version:packages:major": "node scripts/version-packages.js major"
   },
   "packageManager": "yarn@3.6.4",
   "workspaces": {
@@ -31,6 +35,7 @@
     ]
   },
   "devDependencies": {
+    "commander": "^14.0.0",
     "prettier": "^3.2.4",
     "replace-in-file": "^7.1.0",
     "wsrun": "^5.2.4"

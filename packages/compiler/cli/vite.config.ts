@@ -16,7 +16,7 @@ export default defineConfig({
         rollupOptions: {
             external: [
                 'jay-compiler',
-                'rollup-plugin-jay',
+                'jay-rollup-plugin',
                 'jay-compiler-shared',
                 'jay-compiler-jay-html',
             ],

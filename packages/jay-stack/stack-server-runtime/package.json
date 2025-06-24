@@ -1,6 +1,6 @@
 {
   "name": "jay-stack-server-runtime",
-  "version": "1.0.0",
+  "version": "0.5.0",
   "main": "dist/index.js",
   "types": "dist/index.d.mts",
   "directories": {

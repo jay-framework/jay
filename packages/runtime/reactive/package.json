@@ -1,6 +1,6 @@
 {
   "name": "jay-reactive",
-  "version": "1.0.4",
+  "version": "0.5.0",
   "type": "module",
   "main": "dist/index.js",
   "exports": {

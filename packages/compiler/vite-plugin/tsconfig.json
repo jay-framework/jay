@@ -4,7 +4,7 @@
     "outDir": "dist",
     "paths": {
       "jay-compiler": ["../compiler/lib"],
-      "rollup-plugin-jay": ["../rollup-plugin/lib"],
+      "jay-rollup-plugin": ["../rollup-plugin/lib"],
     },
   },
 }
