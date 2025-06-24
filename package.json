@@ -18,9 +18,9 @@
     "reinstall": "npm run clean:node_modules && yarn install && yarn run rebuild",
     "test": "wsrun -te --report test",
     "release": "echo \"======= Lerna Releasing jay =======\" && npm run test && lerna publish",
-    "version:packages:patch": "node scripts/version-packages.js patch",
-    "version:packages:minor": "node scripts/version-packages.js minor",
-    "version:packages:major": "node scripts/version-packages.js major"
+    "version:packages:patch": "wsrun -p 'jay-*' -s -e --report --prefix version patch --deferred && yarn version apply --all",
+    "version:packages:minor": "wsrun -p 'jay-*' -s -e --report --prefix version minor --deferred && yarn version apply --all",
+    "version:packages:major": "wsrun -p 'jay-*' -s -e --report --prefix version major --deferred && yarn version apply --all"
   },
   "packageManager": "yarn@3.6.4",
   "workspaces": {
