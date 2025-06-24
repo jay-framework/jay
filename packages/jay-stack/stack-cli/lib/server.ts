@@ -1,4 +1,4 @@
-import express, {Express} from 'express';
+import express, { Express } from 'express';
 import { mkDevServer } from 'jay-dev-server';
 import path from 'path';
 

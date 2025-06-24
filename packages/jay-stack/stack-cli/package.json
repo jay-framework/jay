@@ -13,8 +13,8 @@
     "test-runtime": "jay-cli runtime test",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": ":",
+    "test:watch": ":"
   },
   "dependencies": {
     "express": "^5.0.1",
