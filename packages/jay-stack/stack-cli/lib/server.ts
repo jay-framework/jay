@@ -1,4 +1,4 @@
-import express from 'express';
+import express, {Express} from 'express';
 import { mkDevServer } from 'jay-dev-server';
 import path from 'path';
 
@@ -12,7 +12,7 @@ const jayOptions = {
 };
 
 // Create http server
-const app = express();
+const app: Express = express();
 
 async function initApp() {
     const { server, viteServer, routes } = await mkDevServer({

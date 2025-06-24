@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node server",
+    "dev": "jay-stack-cli",
     "clean": "rimraf dist && rimraf build && rimraf -g 'src/**/*.d.ts'",
     "definitions": "jay-cli definitions src",
     "build": "npm run definitions & echo 'build not implemented yet'",
@@ -20,10 +20,7 @@
     "example-jay-mood-tracker-plugin": "workspace:^",
     "express": "^5.0.1",
     "jay-fullstack-component": "workspace:^",
-    "jay-stack-client-runtime": "workspace:^",
-    "jay-stack-route-scanner": "workspace:^",
-    "jay-stack-server-runtime": "workspace:^",
-    "jay-vite-plugin": "workspace:^",
+    "jay-stack-cli": "workspace:^",
     "sirv": "^3.0.0"
   },
   "devDependencies": {

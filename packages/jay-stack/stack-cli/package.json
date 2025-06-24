@@ -1,8 +1,8 @@
 {
-  "name": "jay-dev-server",
+  "name": "jay-stack-cli",
   "version": "0.5.0",
-  "main": "dist/index.cjs",
-  "type": "module",
+  "main": "dist/index.js",
+  "bin": "dist/index.js",
   "scripts": {
     "build": "npm run build:js && npm run build:types",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
@@ -17,20 +17,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "jay-component": "workspace:^",
-    "jay-fullstack-component": "workspace:^",
-    "jay-runtime": "workspace:^",
-    "jay-stack-client-runtime": "workspace:^",
-    "jay-stack-route-scanner": "workspace:^",
-    "jay-stack-server-runtime": "workspace:^",
+    "express": "^5.0.1",
+    "jay-dev-server": "workspace:^",
     "vite": "^5.0.11"
   },
   "devDependencies": {
     "@types/express": "^5.0.2",
     "@types/node": "^22.15.21",
-    "jay-cli": "workspace:^",
     "jay-dev-environment": "workspace:^",
-    "jay-stack-client-runtime": "workspace:^",
     "nodemon": "^3.0.3",
     "replace-in-file": "^7.1.0",
     "rimraf": "^5.0.5",

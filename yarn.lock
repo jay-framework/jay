@@ -9945,10 +9945,7 @@ __metadata:
     jay-cli: "workspace:^"
     jay-dev-environment: "workspace:^"
     jay-fullstack-component: "workspace:^"
-    jay-stack-client-runtime: "workspace:^"
-    jay-stack-route-scanner: "workspace:^"
-    jay-stack-server-runtime: "workspace:^"
-    jay-vite-plugin: "workspace:^"
+    jay-stack-cli: "workspace:^"
     sirv: ^3.0.0
     typescript: ~5.7.2
     vite: ^6.0.1
@@ -12617,7 +12614,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"jay-dev-server@workspace:packages/jay-stack/dev-server":
+"jay-dev-server@workspace:^, jay-dev-server@workspace:packages/jay-stack/dev-server":
   version: 0.0.0-use.local
   resolution: "jay-dev-server@workspace:packages/jay-stack/dev-server"
   dependencies:
@@ -12797,6 +12794,27 @@ __metadata:
     typescript: ^5.3.3
     vite: ^5.0.11
     vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"jay-stack-cli@workspace:^, jay-stack-cli@workspace:packages/jay-stack/stack-cli":
+  version: 0.0.0-use.local
+  resolution: "jay-stack-cli@workspace:packages/jay-stack/stack-cli"
+  dependencies:
+    "@types/express": ^5.0.2
+    "@types/node": ^22.15.21
+    express: ^5.0.1
+    jay-dev-environment: "workspace:^"
+    jay-dev-server: "workspace:^"
+    nodemon: ^3.0.3
+    replace-in-file: ^7.1.0
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  bin:
+    jay-stack-cli: dist/index.js
   languageName: unknown
   linkType: soft
 
