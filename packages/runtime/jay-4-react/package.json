@@ -15,6 +15,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@testing-library/dom": "^10.4.0",
     "jay-component": "workspace:^",
     "jay-json-patch": "workspace:^",
     "jay-reactive": "workspace:^",
