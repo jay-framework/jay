@@ -29,11 +29,11 @@ The `jay-fullstack-component` package provides a fluent builder API for creating
 - **Partial Renders**: Only update the parts of the view state that change
 - **Carry Forward**: Pass data between render phases to avoid recomputation
 
-| Rendering Phase        | rendered where | When rendered                  | Carry Forward       |
+| Rendering Phase        | Rendered Where | When Rendered                  | Carry Forward       |
 |------------------------|----------------|--------------------------------|---------------------|
-| Slowly Changing Render | SSR            | build time or data change time | Slowly -> Fast      |
-| Fast Changing Render   | SSR            | Page Serving                   | Fast -> Interactive |
-| Interactive Render     | CSR            | User Interaction               | -                   |
+| Slowly Changing Render | SSR            | Build time or data change time | Slowly → Fast       |
+| Fast Changing Render   | SSR            | Page serving                   | Fast → Interactive  |
+| Interactive Render     | CSR            | User interaction               | -                   |
 
 ## Installation
 
@@ -45,8 +45,8 @@ npm install jay-fullstack-component
 
 ### 1. Define Your Component Contract
 
-For Headfull components, create a Jay HTML file (`my-component.jay-html`)
-For Headless components, create a Jay Contract File (`my-contract.jay-contract`).
+For headfull components, create a Jay HTML file (`my-component.jay-html`).
+For headless components, create a Jay Contract file (`my-contract.jay-contract`).
 
 #### Headfull Jay-HTML Component
 ```html
@@ -94,9 +94,10 @@ tags:
     dataType: number
 ```
 
-### 2. Create definition files from the jay-html or contract file
+### 2. Generate Definition Files
 
-run 
+Run the Jay CLI to generate TypeScript definition files from your Jay HTML or contract files:
+
 ```shell
 jay-cli definitions <path to your sources>
 ```
@@ -172,7 +173,7 @@ const component = makeJayStackComponent<MyComponentContract>()
 #### `.withProps<PropsType>()`
 
 Defines the component's props type.
-Full Stack Components who are Jay Stack Pages use `PageProps` as the props.
+Full-stack components that are Jay Stack pages use `PageProps` as the props.
 
 ```typescript
 makeJayStackComponent<MyComponentContract>()
@@ -202,9 +203,9 @@ makeJayStackComponent<MyComponentContract>()
 Defines how URL parameters are loaded and converted to additional props,
 on top of the props defined in `withProps`.
 
-The function gets the server contexts declared using `withServerContext`.
+The function receives the server contexts declared using `withServerContext`.
 
-The function should return a generator of an array of a subtype of `UrlParams`
+The function should return a generator that yields arrays of a subtype of `UrlParams`.
 
 ```typescript
 interface IdParams extends UrlParams {
@@ -221,12 +222,12 @@ makeJayStackComponent<MyComponentContract>()
 
 Defines the slow rendering function for semi-static data.
 
-The function props is a composition of the props from `.withProps`, 
+The function's `props` parameter is a composition of the props from `.withProps`, 
 with the subtype of `UrlParams` if using `.withLoadParams`.
 
-The function should return one of  
+The function should return one of:
 * `PartialRender<ViewState, CarryForward>` - for partial rendering
-* `ServerError5xx` - for errors
+* `ServerError5xx` - for server errors
 * `Redirect3xx` - for semi-static redirects
 
 ```typescript
@@ -243,15 +244,15 @@ makeJayStackComponent<MyComponentContract>()
 
 Defines the fast rendering function for dynamic data.
 
-The function props is a composition of the props from `.withProps`,
+The function's `props` parameter is a composition of the props from `.withProps`,
 with the subtype of `UrlParams` if using `.withLoadParams`,
 with the `carryForward` from `.withSlowlyRender` if used.
 
-The function should return one of 
+The function should return one of:
 * `PartialRender<ViewState, CarryForward>` - for partial rendering
-* `ServerError5xx` - for errors
-* `ClientError4xx` - for errors
-* `Redirect3xx` - for semi-static redirects
+* `ServerError5xx` - for server errors
+* `ClientError4xx` - for client errors
+* `Redirect3xx` - for dynamic redirects
 
 ```typescript
 makeJayStackComponent<MyComponentContract>()    
@@ -268,7 +269,7 @@ makeJayStackComponent<MyComponentContract>()
 Defines the client-side interactive component. 
 The callback is a Jay component constructor function with `props` and `refs`.
 
-The function props is a composition of the props from `.withProps`,
+The function's `props` parameter is a composition of the props from `.withProps`,
 with the subtype of `UrlParams` if using `.withLoadParams`,
 with the `carryForward` from `.withFastRender` if used.
 
@@ -287,7 +288,7 @@ makeJayStackComponent<MyComponentContract>()
 
 ### `partialRender<ViewState, CarryForward>`
 
-Represents a successful partial render with data to carry forward.
+Creates a successful partial render result with data to carry forward.
 
 ```typescript
 return partialRender(            
@@ -296,35 +297,35 @@ return partialRender(
 )
 ```
 
-### `ServerError5xx`
+### `serverError5xx(status)`
 
-Represents a server error (5xx status codes).
+Creates a server error response (5xx status codes).
 
 ```typescript
 return serverError5xx(503);
 ```
 
-### `ClientError4xx`
+### `clientError4xx(status)`
 
-Represents a client error (4xx status codes).
+Creates a client error response (4xx status codes).
 
 ```typescript
-return clientError4xx(403)
-//
-return notFound()
+return clientError4xx(403);
+// or
+return notFound();
 ```
 
-### `Redirect3xx`
+### `redirect3xx(status, location)`
 
-Represents a redirect response.
+Creates a redirect response.
 
 ```typescript
-return redirect3xx(301, 'http://some.domain.dom')
+return redirect3xx(301, 'http://some.domain.com');
 ```
 
 ## Advanced Examples
 
-### A Product Page with Params
+### A Product Page with URL Parameters
 
 ```typescript
 import {
@@ -345,6 +346,7 @@ interface ProductPageParams extends UrlParams {
 interface ProductsCarryForward {
   productId: string;
 }
+
 interface ProductAndInventoryCarryForward {
   productId: string;
   inStock: boolean;
