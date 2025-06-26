@@ -1,8 +1,10 @@
-# Jay File Format & Parsing
+# Jay-HTML Format & Compiler
 
-The Jay format is based on standard HTML with minimal additions.
+Jay-HTML extends standard HTML with minimal additions to support component-based development. It provides a declarative way to define component interfaces and data contracts.
 
-An example Jay HTML file is
+## Basic Example
+
+Here's a simple Jay-HTML file:
 
 ```html
 <html>
@@ -22,22 +24,25 @@ An example Jay HTML file is
 </html>
 ```
 
-The Jay HTML file differs from a regular HTML file with 5 aspects:
+## Key Differences from Standard HTML
 
-1. Import component and types
-2. The `application/yaml-jay` for data contract definition
-3. Sub-components
-4. The `ref`s attribute
-5. The `{}` binding
-6. Special directive `if`
-7. Special directive `forEach` and `trackBy`
+Jay-HTML extends HTML with seven main features:
 
-## Importing Components and Types
+1. **Component and type imports** - Import reusable components and type definitions
+2. **Data contract definition** - Define component interfaces using YAML
+3. **Component composition** - Use imported components as HTML elements
+4. **Element references** - Create programmatic references to DOM elements
+5. **Data binding** - Bind component data to HTML using `{}` syntax
+6. **Conditional rendering** - Show/hide elements based on conditions
+7. **List rendering** - Iterate over arrays with `forEach` and `trackBy`
 
-Import in jay-html is very similar to typescript import, adapted for an html format.
-Normally, we only import components and data types from a jay-html file.
+## Component Import System
+
+Jay-HTML provides a TypeScript-like import system adapted for HTML. You can import both headfull and headless components.
 
 ### Importing Headfull Components
+
+Headfull components include both the contract and UI design:
 
 ```html
 <script
@@ -48,12 +53,14 @@ Normally, we only import components and data types from a jay-html file.
 ></script>
 ```
 
-- `path` - a relative or absolute path to the file from which to import
-- `names to import` - list of exported members to import. Names can be renamed using the `name as anotherName` syntax.
-  multiple names can be imported separated by a comma `name1, name2, name3`.
-- `sandbox` - (defaults to false) should the file be imported as a sandboxed component.
+**Parameters:**
+- `path` - Relative or absolute path to the component file
+- `names` - Comma-separated list of exported members. Supports renaming with `name as alias` syntax
+- `sandbox` - (Optional, defaults to false) Enable sandboxed component execution
 
 ### Importing Headless Components
+
+Headless components provide only the contract and logic:
 
 ```html
 <script
@@ -65,39 +72,41 @@ Normally, we only import components and data types from a jay-html file.
 ></script>
 ```
 
-- `contract` - the location of the contract file (`.jay-contract`) to import
-- `src` - the location of the component implementation
-- `name` - the name of the exported component definition
-- `key` - the attribute name under which the component's Contract ViewState and Refs are nested
+**Parameters:**
+- `contract` - Path to the contract file (`.jay-contract`)
+- `src` - Path to the component implementation
+- `name` - Name of the exported component definition
+- `key` - Attribute name for nesting the component's ViewState and Refs
 
-examples:
+### Import Examples
 
 ```html
+<!-- Import a headfull component -->
 <script
   type="application/jay-headfull"
-  src="./component1.ts"
-  names="comp1"
+  src="./counter.ts"
+  names="Counter"
   sandbox="false"
 ></script>
+
+<!-- Import multiple components with aliases -->
 <script
   type="application/jay-headfull"
-  src="./component2.ts"
-  names="comp2 as Main, Comp2Props"
+  src="./ui-components.ts"
+  names="Button as PrimaryButton, Card as ProductCard"
   sandbox="true"
 ></script>
+
+<!-- Import a headless component -->
 <script
   type="application/jay-headless"
-  contract="../named-counter/named-counter.jay-contract"
-  src="../named-counter/named-counter"
-  name="namedCounter"
-  key="namedCounter"
+  contract="../data-store/store.jay-contract"
+  src="../data-store/store"
+  name="dataStore"
+  key="store"
 ></script>
 ```
 
-## The `application/yaml-jay` Data Contract
+## Jay-HTML Documentation
 
-Read more about the data contract format in [data-contract.md](docs/data-contract.md).
-
-## Jay-HTML Syntax
-
-Read more about Jay-HTML syntax including sub-components, references, bindings, and directives in [jay-html-syntax.md](docs/jay-html-syntax.md). 
+Read the complete Jay-HTML documentation including data contracts, syntax, components, and directives in [jay-html-docs.md](docs/jay-html-docs.md). 

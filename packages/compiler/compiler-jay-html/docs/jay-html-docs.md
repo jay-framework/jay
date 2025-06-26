@@ -1,7 +1,51 @@
-# Jay-HTML Syntax
+# Jay-HTML docs
 
 Jay-HTML extends standard HTML with several features for component-based development. This document covers the syntax elements that make Jay-HTML different from regular HTML.
 
+A Jay-HTML file has to have one `jay-data` script, and has several unique Jay directives. 
+
+# The `application/jay-data` Script
+
+The data contract defines the `ViewState` - the input data for the element.
+The ViewState is defined as a `YAML` script, which root is `data:`.
+Each property of the yaml is a property of the element view state, including nested objects and arrays.
+
+## Supported Data Types
+
+| type          | example                                                                 |
+| ------------- | ----------------------------------------------------------------------- |
+| string        | `text: string`                                                          |
+| number        | `n1: number`                                                            |
+| boolean       | `b1: boolean`                                                           |
+| object        | <code>o1: </br>&nbsp;&nbsp;s2: string</br>&nbsp;&nbsp;n2: number</code> |
+| array         | <code>a1: </br>-&nbsp;s3: string</br>&nbsp;&nbsp;n3: number</code>      |
+| enum          | `an_enum: enum(one \| two \| three)`                                    |
+| imported type | `name: imported-type-name`                                              |
+| -----------   | ----------------                                                        |
+
+## Current View State
+
+The jay html file considers the view state as the **current view state** to be bound  
+into components and elements.
+
+The `forEach` directive changes the **current view state** from an object to the items of
+a child array.
+
+### Example
+
+```yaml
+data:
+  a1:
+    - b1: string
+    - key: string
+```
+
+```html
+<!-- here the current view state is a1 -->
+<div forEach="a1" trackBy="kay">
+  <!-- here the current view state is elements of the array a1 -->
+</div>
+``` 
 ## Sub Components
 
 Jay html files allows to use sub-components as part of the html tree.
