@@ -1,4 +1,10 @@
-import { JayElement, RenderElement, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+import {
+    JayElement,
+    RenderElement,
+    HTMLElementProxy,
+    RenderElementOptions,
+    JayContract,
+} from 'jay-runtime';
 
 export interface AutoCounterViewState {
     count: number;
@@ -16,5 +22,6 @@ export type AutoCounterElementRender = RenderElement<
     AutoCounterElement
 >;
 export type AutoCounterElementPreRender = [AutoCounterElementRefs, AutoCounterElementRender];
+export type AutoCounterContract = JayContract<AutoCounterViewState, AutoCounterElementRefs>;
 
 export declare function render(options?: RenderElementOptions): AutoCounterElementPreRender;
