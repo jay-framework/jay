@@ -37,6 +37,8 @@ The Jay HTML file differs from a regular HTML file with 5 aspects:
 import in jay-html is very similar to typescript import, adapted for an html format.
 Normally, we only import components and data types from a jay-html file.
 
+### Importing Headfull Components
+
 ```html
 <script
   type="application/jay-headfull"
@@ -50,6 +52,23 @@ Normally, we only import components and data types from a jay-html file.
 - `names to import` - list of exported members to import. Names can be renamed using the `name as anotherName` syntax.
   multiple names can be imported separated by a comma `name1, name2, name3`.
 - `sandbox` - (defaults to false) should the file be imported as a sandboxed component.
+
+### Importing Headless Components
+
+```html
+<script
+  type="application/jay-headless"
+  contract="{contract-path}"
+  src="{component-path}"
+  name="{component-name}"
+  key="{nested-key}"
+></script>
+```
+
+- `contract` - the location of the contract file (`.jay-contract`) to import
+- `src` - the location of the component implementation
+- `name` - the name of the exported component definition
+- `key` - the attribute name under which the component's Contract ViewState and Refs are nested
 
 examples:
 
@@ -65,6 +84,13 @@ examples:
   src="./component2.ts"
   names="comp2 as Main, Comp2Props"
   sandbox="true"
+></script>
+<script
+  type="application/jay-headless"
+  contract="../named-counter/named-counter.jay-contract"
+  src="../named-counter/named-counter"
+  name="namedCounter"
+  key="namedCounter"
 ></script>
 ```
 

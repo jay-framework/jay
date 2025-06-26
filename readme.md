@@ -27,33 +27,73 @@ build the UI with**.
 
 # Component Types in Jay
 
-Jay supports three types of components, each serving different use cases:
+Jay supports different types of components across two setups:
 
-## Headless Components
+## Jay Setup (Client-Only)
 
-- **Definition**: Components that define only the contract (data structure and behavior) without any UI
-- **Created with**: `makeJayComponent` + contract files (`.jay-contract`)
-- **Use case**: Reusable logic that can be used across different UI designs
-- **Example**: A counter component that provides count state and increment/decrement functions
+Jay itself only supports **Headfull Components** for client-only applications.
 
-## Headfull Components
+### Headfull Components (Client-Only)
 
 - **Definition**: Components that include both the contract and the UI design
 - **Created with**: `makeJayComponent` + jay-html files (`.jay-html`)
-- **Use case**: Complete components with specific UI design that can be reused
+- **Use case**: Complete components with specific UI design that can be reused in client-only applications
 - **Example**: A counter component with specific styling and layout
 
-## Fullstack Components
+## Jay-Stack Setup (Fullstack)
 
-- **Definition**: Components that support server-side rendering with client-side interactivity
-- **Created with**: `makeJayStackComponent` + either jay-html files or contract files
-- **Use case**: Web applications that need SEO, performance, and interactivity
+Jay-Stack supports both **Headfull** and **Headless** components for fullstack applications with pages and routing.
+
+### Headfull Components (Fullstack)
+
+- **Definition**: Fullstack components that include both the contract and the UI design
+- **Created with**: `makeJayStackComponent` + jay-html files (`.jay-html`)
+- **Use case**: Complete fullstack components with specific UI design
 - **Features**:
-  - Slow rendering (semi-static data)
-  - Fast rendering (dynamic data)
+  - Server-side rendering (slow and fast rendering)
   - Client-side interactivity
   - URL parameter handling
   - Context injection
+
+### Headless Components (Fullstack)
+
+- **Definition**: Fullstack components that define only the contract (data structure and behavior) without any UI
+- **Created with**: `makeJayStackComponent` + contract files (`.jay-contract`)
+- **Use case**: Reusable fullstack logic that can be used across different UI designs
+- **Features**:
+  - Server-side rendering (slow and fast rendering)
+  - Client-side interactivity
+  - URL parameter handling
+  - Context injection
+- **Example**: A counter component that provides count state and increment/decrement functions
+
+## Component Import in Jay-HTML
+
+Jay-HTML files can import both headfull and headless components using different script types:
+
+### Importing Headfull Components
+
+```html
+<script type="application/jay-headfull" src="./item" names="Item"></script>
+```
+
+### Importing Headless Components
+
+```html
+<script
+  type="application/jay-headless"
+  contract="../named-counter/named-counter.jay-contract"
+  src="../named-counter/named-counter"
+  name="namedCounter"
+  key="namedCounter"
+></script>
+```
+
+The headless import format includes:
+- `contract` - the location of the contract to import
+- `key` - the attribute name under which the component's Contract ViewState and Refs are nested
+- `src` - the location of the component implementation
+- `name` - the name of the exported component definition
 
 # Why Jay?
 
@@ -127,7 +167,7 @@ Read more about Jay Components in [readme.md](packages%2Fruntime%2Fcomponent%2Fr
 
 ## Jay Stack Component / the fullstack component
 
-Jay Stack Components provide server-side rendering with client-side interactivity using the fluent builder API.
+Jay Stack Components provide server-side rendering with client-side interactivity using the fluent builder API. They can be either **headfull** (with jay-html) or **headless** (with contract files).
 
 ### Headfull Fullstack Component (with jay-html)
 
