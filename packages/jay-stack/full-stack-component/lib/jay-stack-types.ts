@@ -32,6 +32,7 @@ export interface PartialRender<ViewState extends object, CarryForward> {
 export type SlowlyRenderResult<ViewState extends object, CarryForward> =
     | PartialRender<ViewState, CarryForward>
     | ServerError5xx
+    | ClientError4xx
     | Redirect3xx;
 export type AnySlowlyRenderResult = SlowlyRenderResult<object, object>;
 export type FastRenderResult<ViewState extends object, CarryForward> =
