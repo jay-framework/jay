@@ -3,6 +3,7 @@ import {
     RenderElement,
     RenderElementOptions,
     MapEventEmitterViewState,
+    JayContract,
 } from 'jay-runtime';
 import { Counter } from '../counter/counter';
 import { CounterViewState as CounterData } from '../counter/generated-element-main-trusted';
@@ -33,6 +34,7 @@ export type ComponentInComponentElementPreRender = [
     ComponentInComponentElementRefs,
     ComponentInComponentElementRender,
 ];
+export type ComponentInComponentContract = JayContract<ComponentInComponentViewState, ComponentInComponentElementRefs>;
 
 export declare function render(
     options?: RenderElementOptions,

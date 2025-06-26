@@ -1,4 +1,4 @@
-import { JayElement, RenderElement } from 'jay-runtime';
+import { JayElement, RenderElement, JayContract } from 'jay-runtime';
 import { SecureReferencesManager, elementBridge, sandboxElement as e } from 'jay-secure';
 import {
     CounterViewState,
@@ -28,6 +28,10 @@ export type PageUsingCounterElementPreRender = [
     PageUsingCounterElementRefs,
     PageUsingCounterElementRender,
 ];
+export type PageUsingCounterContract = JayContract<
+    PageUsingCounterViewState,
+    PageUsingCounterElementRefs
+>;
 
 export function render(): PageUsingCounterElementPreRender {
     const [counterRefManager, [refAdd, refSubtract]] = SecureReferencesManager.forElement(

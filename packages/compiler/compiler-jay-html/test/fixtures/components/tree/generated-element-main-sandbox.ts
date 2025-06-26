@@ -10,6 +10,7 @@ import {
     ConstructContext,
     HTMLElementProxy,
     RenderElementOptions,
+    JayContract,
 } from 'jay-runtime';
 import { secureChildComp } from 'jay-secure';
 // @ts-expect-error Cannot find module
@@ -32,6 +33,7 @@ export type TreeNodeElementRender = RenderElement<
     TreeNodeElement
 >;
 export type TreeNodeElementPreRender = [TreeNodeElementRefs, TreeNodeElementRender];
+export type TreeNodeContract = JayContract<TreeNodeViewState, TreeNodeElementRefs>;
 
 export function render(options?: RenderElementOptions): TreeNodeElementPreRender {
     const [childrenRefManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);

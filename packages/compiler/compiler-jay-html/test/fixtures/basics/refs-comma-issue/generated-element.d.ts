@@ -3,6 +3,7 @@ import {
     RenderElement,
     HTMLElementCollectionProxy,
     RenderElementOptions,
+    JayContract,
 } from 'jay-runtime';
 
 export interface ContractPathOfRefsCommaIssueViewState {
@@ -34,5 +35,6 @@ export type RefsCommaIssueElementPreRender = [
     RefsCommaIssueElementRefs,
     RefsCommaIssueElementRender,
 ];
+export type RefsCommaIssueContract = JayContract<RefsCommaIssueViewState, RefsCommaIssueElementRefs>;
 
 export declare function render(options?: RenderElementOptions): RefsCommaIssueElementPreRender;

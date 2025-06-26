@@ -6,6 +6,7 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
+    JayContract,
 } from 'jay-runtime';
 
 export interface O1OfDataTypesViewState {
@@ -35,6 +36,7 @@ export type DataTypesElementRender = RenderElement<
     DataTypesElement
 >;
 export type DataTypesElementPreRender = [DataTypesElementRefs, DataTypesElementRender];
+export type DataTypesContract = JayContract<DataTypesViewState, DataTypesElementRefs>;
 
 export function render(options?: RenderElementOptions): DataTypesElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

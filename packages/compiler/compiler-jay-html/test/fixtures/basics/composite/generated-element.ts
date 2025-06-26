@@ -6,6 +6,7 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
+    JayContract,
 } from 'jay-runtime';
 
 export interface CompositeViewState {
@@ -22,6 +23,7 @@ export type CompositeElementRender = RenderElement<
     CompositeElement
 >;
 export type CompositeElementPreRender = [CompositeElementRefs, CompositeElementRender];
+export type CompositeContract = JayContract<CompositeViewState, CompositeElementRefs>;
 
 export function render(options?: RenderElementOptions): CompositeElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

@@ -4,6 +4,7 @@ import {
     MapEventEmitterViewState,
     OnlyEventEmitters,
     ComponentCollectionProxy,
+    JayContract,
 } from 'jay-runtime';
 import {
     SecureReferencesManager,
@@ -50,6 +51,10 @@ export type DynamicComponentInComponentElementPreRender = [
     DynamicComponentInComponentElementRefs,
     DynamicComponentInComponentElementRender,
 ];
+export type DynamicComponentInComponentContract = JayContract<
+    DynamicComponentInComponentViewState,
+    DynamicComponentInComponentElementRefs
+>;
 
 export function render(): DynamicComponentInComponentElementPreRender {
     const [nestedCountersRefManager, [refCounter1]] = SecureReferencesManager.forElement(

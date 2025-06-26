@@ -1,4 +1,4 @@
-import { JayElement, RenderElement, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+import { JayElement, RenderElement, HTMLElementProxy, RenderElementOptions, JayContract } from 'jay-runtime';
 
 export interface ConditionsWithRepeatedRefViewState {
     text1: string;
@@ -23,6 +23,7 @@ export type ConditionsWithRepeatedRefElementPreRender = [
     ConditionsWithRepeatedRefElementRefs,
     ConditionsWithRepeatedRefElementRender,
 ];
+export type ConditionsWithRepeatedRefContract = JayContract<ConditionsWithRepeatedRefViewState, ConditionsWithRepeatedRefElementRefs>;
 
 export declare function render(
     options?: RenderElementOptions,

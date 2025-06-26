@@ -8,6 +8,7 @@ import {
     forEach,
     ConstructContext,
     RenderElementOptions,
+    JayContract,
 } from 'jay-runtime';
 
 export interface ThingOfCollectionsViewState {
@@ -31,6 +32,7 @@ export type CollectionsElementRender = RenderElement<
     CollectionsElement
 >;
 export type CollectionsElementPreRender = [CollectionsElementRefs, CollectionsElementRender];
+export type CollectionsContract = JayContract<CollectionsViewState, CollectionsElementRefs>;
 
 export function render(options?: RenderElementOptions): CollectionsElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

@@ -6,6 +6,7 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
+    JayContract,
 } from 'jay-runtime';
 
 export interface StylesViewState {
@@ -18,6 +19,7 @@ export interface StylesElementRefs {}
 export type StylesElement = JayElement<StylesViewState, StylesElementRefs>;
 export type StylesElementRender = RenderElement<StylesViewState, StylesElementRefs, StylesElement>;
 export type StylesElementPreRender = [StylesElementRefs, StylesElementRender];
+export type StylesContract = JayContract<StylesViewState, StylesElementRefs>;
 
 export function render(options?: RenderElementOptions): StylesElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

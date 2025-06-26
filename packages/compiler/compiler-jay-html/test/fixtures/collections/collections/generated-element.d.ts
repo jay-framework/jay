@@ -1,4 +1,4 @@
-import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
+import { JayElement, RenderElement, RenderElementOptions, JayContract } from 'jay-runtime';
 
 export interface ThingOfCollectionsViewState {
     name: string;
@@ -21,5 +21,6 @@ export type CollectionsElementRender = RenderElement<
     CollectionsElement
 >;
 export type CollectionsElementPreRender = [CollectionsElementRefs, CollectionsElementRender];
+export type CollectionsContract = JayContract<CollectionsViewState, CollectionsElementRefs>;
 
 export declare function render(options?: RenderElementOptions): CollectionsElementPreRender;

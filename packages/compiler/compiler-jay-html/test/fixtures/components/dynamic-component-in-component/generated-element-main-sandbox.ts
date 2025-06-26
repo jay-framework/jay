@@ -11,6 +11,7 @@ import {
     MapEventEmitterViewState,
     OnlyEventEmitters,
     ComponentCollectionProxy,
+    JayContract,
 } from 'jay-runtime';
 import { secureChildComp } from 'jay-secure';
 // @ts-expect-error Cannot find module
@@ -52,6 +53,7 @@ export type DynamicComponentInComponentElementPreRender = [
     DynamicComponentInComponentElementRefs,
     DynamicComponentInComponentElementRender,
 ];
+export type DynamicComponentInComponentContract = JayContract<DynamicComponentInComponentViewState, DynamicComponentInComponentElementRefs>;
 
 export function render(
     options?: RenderElementOptions,

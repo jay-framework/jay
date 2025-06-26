@@ -8,6 +8,7 @@ import {
     dynamicElement as de,
     ConstructContext,
     RenderElementOptions,
+    JayContract,
 } from 'jay-runtime';
 
 export interface ConditionsViewState {
@@ -25,6 +26,7 @@ export type ConditionsElementRender = RenderElement<
     ConditionsElement
 >;
 export type ConditionsElementPreRender = [ConditionsElementRefs, ConditionsElementRender];
+export type ConditionsContract = JayContract<ConditionsViewState, ConditionsElementRefs>;
 
 export function render(options?: RenderElementOptions): ConditionsElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

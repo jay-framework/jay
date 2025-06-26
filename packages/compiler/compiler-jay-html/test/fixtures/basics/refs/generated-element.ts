@@ -7,6 +7,7 @@ import {
     ConstructContext,
     HTMLElementProxy,
     RenderElementOptions,
+    JayContract,
 } from 'jay-runtime';
 
 export interface RefsViewState {
@@ -22,6 +23,7 @@ export interface RefsElementRefs {
 export type RefsElement = JayElement<RefsViewState, RefsElementRefs>;
 export type RefsElementRender = RenderElement<RefsViewState, RefsElementRefs, RefsElement>;
 export type RefsElementPreRender = [RefsElementRefs, RefsElementRender];
+export type RefsContract = JayContract<RefsViewState, RefsElementRefs>;
 
 export function render(options?: RenderElementOptions): RefsElementPreRender {
     const [refManager, [refRef1, refRef, refRef3]] = ReferencesManager.for(

@@ -6,6 +6,7 @@ import {
     ConstructContext,
     RenderElementOptions,
     MapEventEmitterViewState,
+    JayContract,
 } from 'jay-runtime';
 import { secureChildComp } from 'jay-secure';
 // @ts-expect-error Cannot find module
@@ -39,6 +40,7 @@ export type ComponentInComponentElementPreRender = [
     ComponentInComponentElementRefs,
     ComponentInComponentElementRender,
 ];
+export type ComponentInComponentContract = JayContract<ComponentInComponentViewState, ComponentInComponentElementRefs>;
 
 export function render(options?: RenderElementOptions): ComponentInComponentElementPreRender {
     const [refManager, [refCounter1, refCounterTwo, refAR1, refAR2, refAR3]] =

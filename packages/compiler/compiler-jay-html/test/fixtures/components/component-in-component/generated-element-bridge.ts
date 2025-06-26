@@ -1,4 +1,4 @@
-import { JayElement, RenderElement, MapEventEmitterViewState } from 'jay-runtime';
+import { JayElement, RenderElement, MapEventEmitterViewState, JayContract } from 'jay-runtime';
 import { SecureReferencesManager, elementBridge, sandboxChildComp as childComp } from 'jay-secure';
 // @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-workerSandbox';
@@ -31,6 +31,10 @@ export type ComponentInComponentElementPreRender = [
     ComponentInComponentElementRefs,
     ComponentInComponentElementRender,
 ];
+export type ComponentInComponentContract = JayContract<
+    ComponentInComponentViewState,
+    ComponentInComponentElementRefs
+>;
 
 export function render(): ComponentInComponentElementPreRender {
     const [refManager, [refCounter1, refCounterTwo, refAR1, refAR2, refAR3]] =

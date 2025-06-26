@@ -11,6 +11,7 @@ import {
     HTMLElementProxy,
     childComp,
     RenderElementOptions,
+    JayContract,
 } from 'jay-runtime';
 import { TreeNode, Node } from './tree-node';
 
@@ -31,6 +32,7 @@ export type TreeNodeElementRender = RenderElement<
     TreeNodeElement
 >;
 export type TreeNodeElementPreRender = [TreeNodeElementRefs, TreeNodeElementRender];
+export type TreeNodeContract = JayContract<TreeNodeViewState, TreeNodeElementRefs>;
 
 export function render(options?: RenderElementOptions): TreeNodeElementPreRender {
     const [childrenRefManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);

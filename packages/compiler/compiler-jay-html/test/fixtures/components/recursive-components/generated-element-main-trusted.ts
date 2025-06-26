@@ -12,6 +12,7 @@ import {
     MapEventEmitterViewState,
     OnlyEventEmitters,
     ComponentCollectionProxy,
+    JayContract,
 } from 'jay-runtime';
 import { TreeNode, Node } from './tree-node';
 
@@ -36,6 +37,7 @@ export type RecursiveComponentsElementPreRender = [
     RecursiveComponentsElementRefs,
     RecursiveComponentsElementRender,
 ];
+export type RecursiveComponentsContract = JayContract<Node, RecursiveComponentsElementRefs>;
 
 export function render(options?: RenderElementOptions): RecursiveComponentsElementPreRender {
     const [childrenRefManager, [refCounter1, refCounterTwo]] = ReferencesManager.for(

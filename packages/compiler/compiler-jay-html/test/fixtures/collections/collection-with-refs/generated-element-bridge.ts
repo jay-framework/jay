@@ -1,4 +1,4 @@
-import { JayElement, RenderElement, HTMLElementCollectionProxy } from 'jay-runtime';
+import { JayElement, RenderElement, HTMLElementCollectionProxy, JayContract } from 'jay-runtime';
 import {
     SecureReferencesManager,
     elementBridge,
@@ -59,6 +59,10 @@ export type CollectionWithRefsElementPreRender = [
     CollectionWithRefsElementRefs,
     CollectionWithRefsElementRender,
 ];
+export type CollectionWithRefsContract = JayContract<
+    CollectionWithRefsViewState,
+    CollectionWithRefsElementRefs
+>;
 
 export function render(): CollectionWithRefsElementPreRender {
     const [itemsRefManager, [refName, refCompleted, refCost, refDone]] =

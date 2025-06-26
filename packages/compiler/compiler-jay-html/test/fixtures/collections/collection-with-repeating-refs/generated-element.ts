@@ -9,6 +9,7 @@ import {
     ConstructContext,
     HTMLElementCollectionProxy,
     RenderElementOptions,
+    JayContract,
 } from 'jay-runtime';
 
 export interface ItemOfCollectionWithRepeatingRefsViewState {
@@ -52,6 +53,7 @@ export type CollectionWithRepeatingRefsElementPreRender = [
     CollectionWithRepeatingRefsElementRefs,
     CollectionWithRepeatingRefsElementRender,
 ];
+export type CollectionWithRepeatingRefsContract = JayContract<CollectionWithRepeatingRefsViewState, CollectionWithRepeatingRefsElementRefs>;
 
 export function render(
     options?: RenderElementOptions,

@@ -8,6 +8,7 @@ import {
     dynamicElement as de,
     ConstructContext,
     RenderElementOptions,
+    JayContract,
 } from 'jay-runtime';
 import {
     NamedContractViewState,
@@ -36,6 +37,10 @@ export type PageUsingNamedCounterElementPreRender = [
     PageUsingNamedCounterElementRefs,
     PageUsingNamedCounterElementRender,
 ];
+export type PageUsingNamedCounterContract = JayContract<
+    PageUsingNamedCounterViewState,
+    PageUsingNamedCounterElementRefs
+>;
 
 export function render(options?: RenderElementOptions): PageUsingNamedCounterElementPreRender {
     const [counterRefManager, [refAdd, refSubtract]] = ReferencesManager.for(

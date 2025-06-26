@@ -1,4 +1,4 @@
-import { JayElement, RenderElement, HTMLElementProxy } from 'jay-runtime';
+import { JayElement, RenderElement, HTMLElementProxy, JayContract } from 'jay-runtime';
 import { SecureReferencesManager, elementBridge, sandboxElement as e } from 'jay-secure';
 
 export interface RefsViewState {
@@ -14,6 +14,7 @@ export interface RefsElementRefs {
 export type RefsElement = JayElement<RefsViewState, RefsElementRefs>;
 export type RefsElementRender = RenderElement<RefsViewState, RefsElementRefs, RefsElement>;
 export type RefsElementPreRender = [RefsElementRefs, RefsElementRender];
+export type RefsContract = JayContract<RefsViewState, RefsElementRefs>;
 
 export function render(): RefsElementPreRender {
     const [refManager, [refRef1, refRef, refRef3]] = SecureReferencesManager.forElement(

@@ -12,6 +12,7 @@ import {
     MapEventEmitterViewState,
     OnlyEventEmitters,
     ComponentCollectionProxy,
+    JayContract,
 } from 'jay-runtime';
 import { Counter } from '../counter/counter';
 
@@ -50,6 +51,7 @@ export type DynamicComponentInComponentElementPreRender = [
     DynamicComponentInComponentElementRefs,
     DynamicComponentInComponentElementRender,
 ];
+export type DynamicComponentInComponentContract = JayContract<DynamicComponentInComponentViewState, DynamicComponentInComponentElementRefs>;
 
 export function render(
     options?: RenderElementOptions,

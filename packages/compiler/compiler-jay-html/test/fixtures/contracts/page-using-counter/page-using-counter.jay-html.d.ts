@@ -1,4 +1,4 @@
-import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
+import { JayElement, RenderElement, RenderElementOptions, JayContract } from 'jay-runtime';
 import { CounterViewState, CounterRefs, IsPositive } from '../counter/counter.jay-contract';
 
 export interface PageUsingCounterViewState {
@@ -22,5 +22,9 @@ export type PageUsingCounterElementPreRender = [
     PageUsingCounterElementRefs,
     PageUsingCounterElementRender,
 ];
+export type PageUsingCounterContract = JayContract<
+    PageUsingCounterViewState,
+    PageUsingCounterElementRefs
+>;
 
 export declare function render(options?: RenderElementOptions): PageUsingCounterElementPreRender;
