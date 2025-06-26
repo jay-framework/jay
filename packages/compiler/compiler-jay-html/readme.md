@@ -107,10 +107,12 @@ Headless components provide only the contract and logic:
 ></script>
 ```
 
-## Jay-HTML Documentation
+## Documentation
 
-Read the complete Jay-HTML documentation including data contracts, syntax, components, and directives in [jay-html-docs.md](docs/jay-html-docs.md).
+### Jay-HTML Syntax
 
-## Contract File Format
+Read the complete Jay-HTML syntax reference including data contracts, component usage, data binding, and directives in [jay-html-docs.md](docs/jay-html-docs.md).
+
+### Contract File Format
 
 Learn about the structure and format of `.jay-contract` files used for headless components in [contract-file-format.md](docs/contract-file-format.md). 

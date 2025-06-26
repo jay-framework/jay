@@ -1,165 +1,178 @@
-# Jay-HTML docs
+# Jay-HTML Syntax Reference
 
-Jay-HTML extends standard HTML with several features for component-based development. This document covers the syntax elements that make Jay-HTML different from regular HTML.
+Jay-HTML extends standard HTML with several features for component-based development. This document covers the syntax elements that distinguish Jay-HTML from regular HTML.
 
-A Jay-HTML file has to have one `jay-data` script, and has several unique Jay directives. 
+A Jay-HTML file must contain one `application/jay-data` script and can include several unique Jay directives.
 
-# The `application/jay-data` Script
+## Data Contract Definition
 
-The data contract defines the `ViewState` - the input data for the element.
-The ViewState is defined as a `YAML` script, which root is `data:`.
-Each property of the yaml is a property of the element view state, including nested objects and arrays.
+The data contract defines the `ViewState` - the input data structure for the component.
+The ViewState is defined as a YAML script with `data:` as the root element.
+Each property in the YAML becomes a property of the component's view state, supporting nested objects and arrays.
 
-## Supported Data Types
+### Supported Data Types
 
-| type          | example                                                                 |
-| ------------- | ----------------------------------------------------------------------- |
-| string        | `text: string`                                                          |
-| number        | `n1: number`                                                            |
-| boolean       | `b1: boolean`                                                           |
-| object        | <code>o1: </br>&nbsp;&nbsp;s2: string</br>&nbsp;&nbsp;n2: number</code> |
-| array         | <code>a1: </br>-&nbsp;s3: string</br>&nbsp;&nbsp;n3: number</code>      |
-| enum          | `an_enum: enum(one \| two \| three)`                                    |
-| imported type | `name: imported-type-name`                                              |
-| -----------   | ----------------                                                        |
+| Type | Example | Description |
+|------|---------|-------------|
+| `string` | `text: string` | Text values |
+| `number` | `count: number` | Numeric values |
+| `boolean` | `isVisible: boolean` | True/false values |
+| `object` | <code>user: </br>&nbsp;&nbsp;name: string</br>&nbsp;&nbsp;age: number</code> | Nested object structures |
+| `array` | <code>items: </br>-&nbsp;name: string</br>&nbsp;&nbsp;value: number</code> | Collections of items |
+| `enum` | `status: enum(active \| inactive \| pending)` | Enumerated values |
+| `imported type` | `config: ImportedConfig` | Types imported from other components |
 
-## Current View State
+### View State Context
 
-The jay html file considers the view state as the **current view state** to be bound  
-into components and elements.
+Jay-HTML treats the view state as the **current context** that gets bound to components and elements. The `forEach` directive changes this context from an object to individual array items.
 
-The `forEach` directive changes the **current view state** from an object to the items of
-a child array.
-
-### Example
+#### Example: Context Switching with forEach
 
 ```yaml
 data:
-  a1:
-    - b1: string
-    - key: string
+  users:
+    - id: string
+    - name: string
+    - email: string
 ```
 
 ```html
-<!-- here the current view state is a1 -->
-<div forEach="a1" trackBy="kay">
-  <!-- here the current view state is elements of the array a1 -->
+<!-- Current context: users array -->
+<div forEach="users" trackBy="id">
+  <!-- Current context: individual user object -->
+  <span>{name}</span>
+  <span>{email}</span>
 </div>
-``` 
-## Sub Components
+```
 
-Jay html files allows to use sub-components as part of the html tree.
+In this example, the context switches from the `users` array to individual `user` objects within the forEach loop.
 
-To use a sub-component, it has to first be imported as a link tag
+## Component Usage
+
+Jay-HTML allows you to use components as part of the HTML structure. Components must be imported before they can be used.
+
+### Importing Components
 
 ```html
 <script
   type="application/jay-headfull"
-  src="./component1.ts"
-  names="comp1"
+  src="./my-component.ts"
+  names="MyComponent"
   sandbox="false"
 ></script>
 ```
 
-and then used as any other HTML element
+### Using Components
 
 ```html
-<comp1 prop1="value1" prop2="{value2}"></comp1>
+<MyComponent title="Welcome" count="{itemCount}"></MyComponent>
 ```
 
-Component properties can be supplied as
+### Property Binding Options
 
-1. static values - `prop1="value1"`
-2. bindings to the current view state named property - `prop2="{value2}"`
-3. bindings to the current view state itself - `prop3: "{.}"`
+Components accept properties in three ways:
 
-> note: currently Jay does not support sub-component children as a children property or similar
-> This is a pending issue to support.
+1. **Static values**: `title="Welcome"`
+2. **View state bindings**: `count="{itemCount}"` - binds to a specific property
+3. **Context binding**: `data="{.}"` - binds the entire current context
 
-## References - `ref` attribute
+> **Note**: Jay currently doesn't support passing children as properties to components. This feature is planned for future releases.
 
-References are declaration of elements or sub-components that the component code can reference.
+## Element References
 
-For each html element or component with a `ref` attribute, a member is created in the Jay element refs type to represent how
-that html element or component can be interacted with.
+The `ref` attribute creates references to HTML elements or components that your component code can interact with.
 
-examples:
+### Creating References
 
 ```html
-<div ref="ref1">{text}</div>
-<Counter ref="counter1" initialValue="{count1}" />
+<div ref="mainContainer">{content}</div>
+<Counter ref="counterComponent" initialValue="{startCount}" />
 ```
 
-The `jay-runtime` library defines the reference types - see [refs.md](../../../runtime/runtime/docs/refs.md).
+For each element with a `ref` attribute, Jay generates a corresponding member in the component's refs type, enabling programmatic interaction.
 
-## The `{}` binding
+Reference types are defined in the `jay-runtime` library - see [refs.md](../../../runtime/runtime/docs/refs.md) for details.
 
-The `{}` binding to the current view state allows to render values into HTML text, attributes, styles or component properties.
+## Data Binding
 
-The `{}` syntax supports the `.` notation to access sub-elements, embedding within strings and simple expressions.
+The `{}` syntax enables dynamic data binding to the current view state context. This syntax supports property access, conditional expressions, and simple operations.
 
-examples:
+### Basic Binding
 
 ```html
-<div>{text}</div>
-<div>this is the name: {name}</div>
-<div>this is a sub property: {obj.member.sub}</div>
-<div>conditional: {hasName?name}</div>
-<!-- renders name if hasName is true, else empty string -->
-<div>conditional: {hasName?name:otherProp}</div>
-<!-- renders name if hasName is true, else otherProperty of view state -->
-<div>not: {!hasName}</div>
-<div>enum equals: {enumProperty === EnumMember}</div>
-<div>enum not equals: {enumProperty !== EnumMember}</div>
+<div>{title}</div>
+<div>Hello, {user.name}!</div>
+<div>Count: {items.length}</div>
 ```
 
-### Class bindings
-
-HTML Class bindings allows using expressions for dynamic and optional class inclusion
-
-examples:
+### Conditional Expressions
 
 ```html
-<div class="{viewStateProp}"></div>
-<!-- will add a class name per the value of the viewStateProp -->
-<div class="{isOne? class1} tree"></div>
-<!-- will include class1 if isOne is true -->
-<div class="{isOne? class1:class2} tree"></div>
-<!-- will include class1 if isOne is true, else class2 -->
+<div>{isVisible ? 'Visible' : 'Hidden'}</div>
+<div>{hasName ? name : 'Anonymous'}</div>
+<div>{!isLoading ? 'Ready' : 'Loading...'}</div>
 ```
 
-## Special Directives
-
-### `if` directive
-
-The `if` directive is an attribute which can appear on any HTML element or sub-component.
-It indicates conditional rendering based on the given expression.
+### Enum Comparisons
 
 ```html
-<div if="open">
-  <div>an open item</div>
+<div>{status === 'active' ? 'Online' : 'Offline'}</div>
+<div>{role !== 'admin' ? 'User' : 'Administrator'}</div>
+```
+
+### Class Binding
+
+Class bindings support dynamic and conditional class inclusion:
+
+```html
+<div class="{status}">Status indicator</div>
+<div class="{isActive ? 'active' : 'inactive'}">Toggle state</div>
+<div class="{isPrimary ? 'primary' : 'secondary'} button">Button</div>
+```
+
+## Conditional Rendering
+
+The `if` directive conditionally renders elements based on expressions.
+
+### Basic Conditional Rendering
+
+```html
+<div if="isVisible">
+  <p>This content is only shown when isVisible is true</p>
 </div>
 ```
 
-In the above example, the `an open item` div will be rendered if `open` is true.
+> **Note**: The `if` directive automatically evaluates expressions, so `{}` binding syntax is not needed.
 
-> Note: it is not needed to add `{}` binding as it is clear the `if` accepts an expression.
+## List Rendering
 
-### `forEach` and `trackBy` directives
+The `forEach` and `trackBy` directives enable rendering lists of items.
 
-The `forEach` and `trackBy` directives are attributes which can appear on any HTML element or sub-component.
-It indicates repeated rendering based on the given expressions.
-
-The `forEach` takes an expression that resolves to an array of items.
-Once resolved, the rendered item view state are the items of the array.
-
-The `trackBy` is an attribute of type `string` of the array items, the forEach item view state, used as a key
-for tracking items to DOM elements (note that in Jay, view state is immutable, requiring a key to track by instances).
+### Basic List Rendering
 
 ```html
-<li forEach="node.children" trackBy="id">
-  <TreeNode props="{.}" />
-</li>
+<ul>
+  <li forEach="users" trackBy="id">
+    <span>{name}</span>
+    <span>{email}</span>
+  </li>
+</ul>
 ```
 
-in the above example, the `TreeNode` will render for each item in the `node.children` array, tracked by the item `id` property. 
+### How It Works
+
+- `forEach="users"` - iterates over the `users` array
+- `trackBy="id"` - uses the `id` property to track items for efficient DOM updates
+- Within the loop, the context becomes individual array items
+
+Since Jay uses immutable view state, the `trackBy` attribute is essential for proper item tracking and DOM optimization.
+
+### Example with Component
+
+```html
+<div forEach="products" trackBy="sku">
+  <ProductCard product="{.}" />
+</div>
+```
+
+In this example, each `ProductCard` component receives the entire product object as its context. 
