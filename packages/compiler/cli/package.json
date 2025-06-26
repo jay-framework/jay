@@ -1,6 +1,7 @@
 {
   "name": "jay-cli",
   "version": "0.5.0",
+  "license": "Apache-2.0",
   "main": "dist/index.js",
   "bin": "dist/index.js",
   "scripts": {

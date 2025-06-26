@@ -1,8 +1,9 @@
 {
   "name": "example-jay-fake-shop",
-  "private": true,
   "version": "0.0.0",
   "type": "module",
+  "private": true,
+  "license": "Apache-2.0",
   "scripts": {
     "dev": "jay-stack-cli",
     "clean": "rimraf dist && rimraf build && rimraf -g 'src/**/*.d.ts'",

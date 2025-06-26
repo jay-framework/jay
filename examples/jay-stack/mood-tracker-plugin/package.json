@@ -2,8 +2,10 @@
   "name": "example-jay-mood-tracker-plugin",
   "version": "1.0.0",
   "type": "module",
-  "main": "dist/index.js",
+  "description": "",
   "private": true,
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
   "files": [
     "dist"
   ],
@@ -11,7 +13,6 @@
     ".": "./dist/index.js",
     "./mood-tracker.jay-contract": "./dist/mood-tracker.jay-contract"
   },
-  "description": "",
   "scripts": {
     "build": "npm run definitions && npm run build:js && npm run build:copy-contract",
     "definitions": "jay-cli definitions lib",

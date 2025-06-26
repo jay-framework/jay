@@ -1,8 +1,9 @@
 {
   "name": "jay-dev-server",
   "version": "0.5.0",
-  "main": "dist/index.cjs",
   "type": "module",
+  "license": "Apache-2.0",
+  "main": "dist/index.cjs",
   "scripts": {
     "build": "npm run build:js && npm run build:types",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",

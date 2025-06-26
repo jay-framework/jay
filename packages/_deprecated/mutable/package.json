@@ -1,8 +1,9 @@
 {
   "name": "jay-mutable",
   "version": "0.5.0",
-  "private": true,
   "type": "module",
+  "private": true,
+  "license": "Apache-2.0",
   "main": "dist/index.js",
   "scripts": {
     "build": "npm run build:js && npm run build:types",

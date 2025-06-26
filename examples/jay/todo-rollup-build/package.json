@@ -4,6 +4,7 @@
   "type": "module",
   "description": "",
   "private": true,
+  "license": "Apache-2.0",
   "scripts": {
     "definitions": "jay-cli definitions ./lib",
     "build:js": "rollup -c rollup.config.js --no-watch.clearScreen",

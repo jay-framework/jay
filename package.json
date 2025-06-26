@@ -1,6 +1,7 @@
 {
   "name": "jay",
   "private": true,
+  "license": "Apache-2.0",
   "scripts": {
     "build": "wsrun -te --report build",
     "build:check-types": "wsrun -p 'jay-*' -e --prefix build:check-types",
