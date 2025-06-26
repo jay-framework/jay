@@ -254,6 +254,7 @@ export const Import = {
         'JayContract',
         ImportsFor.implementation,
         ImportsFor.definition,
+        ImportsFor.elementSandbox
     ),
 };
 
