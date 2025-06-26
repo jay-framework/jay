@@ -1,4 +1,4 @@
-import { render, PageElementRefs, PageViewState } from './compiled/page.jay-html';
+import {render, PageElementRefs, PageViewState, PageContract} from './compiled/page.jay-html';
 import { Props } from 'jay-component';
 import {
     makeJayStackComponent,
@@ -62,7 +62,7 @@ function ProductsPageConstructor(
     };
 }
 
-export const page = makeJayStackComponent<typeof render>()
+export const page = makeJayStackComponent<PageContract>()
     .withProps<PageProps>()
     .withSlowlyRender<SlowlyViewState, SlowlyCarryForward>(renderSlowlyChanging)
     .withFastRender<FastCarryForward>(renderFastChanging)

@@ -1,7 +1,6 @@
 import {
-    render,
     SimplePluginViewState,
-    SimplePluginRefs,
+    SimplePluginRefs, SimplePluginContract,
 } from './compiled/simple-plugin.jay-contract';
 import { Props } from 'jay-component';
 import {
@@ -65,7 +64,7 @@ function SimplePluginConstructor(
     };
 }
 
-export const plugin = makeJayStackComponent<typeof render>()
+export const plugin = makeJayStackComponent<SimplePluginContract>()
     .withProps<PageProps>()
     .withSlowlyRender<StaticViewState, StaticCarryForward>(renderStaticContent)
     .withFastRender<DynamicCarryForward>(renderDynamicContent)

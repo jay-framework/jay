@@ -2,6 +2,7 @@ import { getProductBySlug, getProducts } from './products-database';
 import { getAvailableUnits } from './inventory-service';
 import { Props } from 'jay-component';
 import {
+    ProductPageContract,
     ProductPageRefs,
     ProductPageViewState,
     render,
@@ -106,7 +107,7 @@ function ProductsPageConstructor(
     };
 }
 
-export const productPage = makeJayStackComponent<typeof render>()
+export const productPage = makeJayStackComponent<ProductPageContract>()
     .withProps<PageProps>()
     .withLoadParams(urlLoader)
     .withSlowlyRender(renderSlowlyChanging)

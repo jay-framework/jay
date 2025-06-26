@@ -1,7 +1,7 @@
 import { makeJayStackComponent, partialRender } from 'jay-fullstack-component';
-import { render } from './page.jay-html';
+import {PageContract, render} from './page.jay-html';
 
-export const page = makeJayStackComponent<typeof render>()
+export const page = makeJayStackComponent<PageContract>()
     .withProps<{}>()
     .withSlowlyRender(async () =>
         partialRender(

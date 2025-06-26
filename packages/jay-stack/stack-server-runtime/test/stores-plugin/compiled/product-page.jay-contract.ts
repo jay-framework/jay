@@ -3,7 +3,7 @@ import {
     RenderElement,
     HTMLElementCollectionProxy,
     HTMLElementProxy,
-    RenderElementOptions,
+    RenderElementOptions, JayContract,
 } from 'jay-runtime';
 import { DiscountViewState, DiscountRefs, DiscountRepeatedRefs } from './discount.jay-contract';
 import {
@@ -72,5 +72,6 @@ export type ProductPageElementRender = RenderElement<
     ProductPageElement
 >;
 export type ProductPageElementPreRender = [ProductPageRefs, ProductPageElementRender];
+export type ProductPageContract = JayContract<ProductPageViewState, ProductPageRefs>
 
 export declare function render(options?: RenderElementOptions): ProductPageElementPreRender;

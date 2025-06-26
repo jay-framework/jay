@@ -1,4 +1,4 @@
-import { HTMLElementProxy, JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
+import {HTMLElementProxy, JayContract, JayElement, RenderElement, RenderElementOptions} from 'jay-runtime';
 
 export interface SimplePluginViewState {
     pluginSlowlyRendered: string;
@@ -18,5 +18,6 @@ export type SimplePluginElementRender = RenderElement<
     SimplePluginElement
 >;
 export type SimplePluginElementPreRender = [SimplePluginRefs, SimplePluginElementRender];
+export type SimplePluginContract = JayContract<SimplePluginViewState, SimplePluginElementRefs>
 
 export declare function render(options?: RenderElementOptions): SimplePluginElementPreRender;

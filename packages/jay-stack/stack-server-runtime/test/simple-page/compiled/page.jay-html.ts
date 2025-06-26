@@ -6,7 +6,7 @@ import {
     ReferencesManager,
     ConstructContext,
     HTMLElementProxy,
-    RenderElementOptions,
+    RenderElementOptions, JayContract,
 } from 'jay-runtime';
 
 export interface PageViewState {
@@ -22,6 +22,7 @@ export interface PageElementRefs {
 export type PageElement = JayElement<PageViewState, PageElementRefs>;
 export type PageElementRender = RenderElement<PageViewState, PageElementRefs, PageElement>;
 export type PageElementPreRender = [PageElementRefs, PageElementRender];
+export type PageContract = JayContract<PageViewState, PageElementRefs>
 
 export function render(options?: RenderElementOptions): PageElementPreRender {
     const [refManager, [refButton]] = ReferencesManager.for(options, ['button'], [], [], []);
