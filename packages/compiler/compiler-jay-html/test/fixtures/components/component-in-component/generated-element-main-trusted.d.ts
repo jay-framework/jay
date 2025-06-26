@@ -34,7 +34,10 @@ export type ComponentInComponentElementPreRender = [
     ComponentInComponentElementRefs,
     ComponentInComponentElementRender,
 ];
-export type ComponentInComponentContract = JayContract<ComponentInComponentViewState, ComponentInComponentElementRefs>;
+export type ComponentInComponentContract = JayContract<
+    ComponentInComponentViewState,
+    ComponentInComponentElementRefs
+>;
 
 export declare function render(
     options?: RenderElementOptions,

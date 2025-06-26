@@ -8,7 +8,8 @@ import {
     RenderElement,
     ReferencesManager,
     ConstructContext,
-    RenderElementOptions, JayContract,
+    RenderElementOptions,
+    JayContract,
 } from 'jay-runtime';
 
 export interface AttributesViewState {

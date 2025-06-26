@@ -27,7 +27,10 @@ export type SimpleStaticTextElementPreRender = [
     SimpleStaticTextElementRefs,
     SimpleStaticTextElementRender,
 ];
-export type SimpleStaticTextContract = JayContract<SimpleStaticTextViewState, SimpleStaticTextElementRefs>;
+export type SimpleStaticTextContract = JayContract<
+    SimpleStaticTextViewState,
+    SimpleStaticTextElementRefs
+>;
 
 export function render(options?: RenderElementOptions): SimpleStaticTextElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

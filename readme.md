@@ -30,22 +30,25 @@ build the UI with**.
 Jay supports three types of components, each serving different use cases:
 
 ## Headless Components
+
 - **Definition**: Components that define only the contract (data structure and behavior) without any UI
 - **Created with**: `makeJayComponent` + contract files (`.jay-contract`)
 - **Use case**: Reusable logic that can be used across different UI designs
 - **Example**: A counter component that provides count state and increment/decrement functions
 
-## Headfull Components  
+## Headfull Components
+
 - **Definition**: Components that include both the contract and the UI design
 - **Created with**: `makeJayComponent` + jay-html files (`.jay-html`)
 - **Use case**: Complete components with specific UI design that can be reused
 - **Example**: A counter component with specific styling and layout
 
 ## Fullstack Components
+
 - **Definition**: Components that support server-side rendering with client-side interactivity
 - **Created with**: `makeJayStackComponent` + either jay-html files or contract files
 - **Use case**: Web applications that need SEO, performance, and interactivity
-- **Features**: 
+- **Features**:
   - Slow rendering (semi-static data)
   - Fast rendering (dynamic data)
   - Client-side interactivity
@@ -127,44 +130,37 @@ Read more about Jay Components in [readme.md](packages%2Fruntime%2Fcomponent%2Fr
 Jay Stack Components provide server-side rendering with client-side interactivity using the fluent builder API.
 
 ### Headfull Fullstack Component (with jay-html)
+
 ```typescript
 import { PageContract, PageElementRefs } from './page.jay-html';
 import { makeJayStackComponent, partialRender } from 'jay-fullstack-component';
 
 export const page = makeJayStackComponent<PageContract>()
-    .withProps<PageProps>()
-    .withSlowlyRender(async (props) => {
-        return partialRender(
-            { title: 'My Page', content: 'Static content' },
-            { pageId: '1' }
-        );
-    })
-    .withFastRender(async (props) => {
-        return partialRender(
-            { dynamicData: 'Fast changing data' },
-            { pageId: '1' }
-        );
-    })
-    .withInteractive((props, refs) => {
-        return {
-            render: () => ({ interactiveData: 'Client-side data' }),
-        };
-    });
+  .withProps<PageProps>()
+  .withSlowlyRender(async (props) => {
+    return partialRender({ title: 'My Page', content: 'Static content' }, { pageId: '1' });
+  })
+  .withFastRender(async (props) => {
+    return partialRender({ dynamicData: 'Fast changing data' }, { pageId: '1' });
+  })
+  .withInteractive((props, refs) => {
+    return {
+      render: () => ({ interactiveData: 'Client-side data' }),
+    };
+  });
 ```
 
 ### Headless Fullstack Component (with contract)
+
 ```typescript
 import { ComponentContract } from './component.jay-contract';
 import { makeJayStackComponent, partialRender } from 'jay-fullstack-component';
 
 export const component = makeJayStackComponent<ComponentContract>()
-    .withProps()
-    .withSlowlyRender(async () => {
-        return partialRender(
-            { content: 'This is from the headless component' },
-            {}
-        );
-    });
+  .withProps()
+  .withSlowlyRender(async () => {
+    return partialRender({ content: 'This is from the headless component' }, {});
+  });
 ```
 
 Read more about Jay Stack Components in [readme.md](packages%2Fjay-stack%2Ffull-stack-component%2FREADME.md)

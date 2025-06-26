@@ -1,4 +1,4 @@
-import {HeadlessComponentContract, render} from './headless-component.jay-contract';
+import { HeadlessComponentContract, render } from './headless-component.jay-contract';
 import { makeJayStackComponent, partialRender } from 'jay-fullstack-component';
 
 export const headless = makeJayStackComponent<HeadlessComponentContract>()

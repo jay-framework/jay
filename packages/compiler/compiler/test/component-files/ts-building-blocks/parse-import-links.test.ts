@@ -48,7 +48,7 @@ describe('parseImportLinks', () => {
                         type: JayUnknown,
                     },
                     {
-                        name: "JayContract",
+                        name: 'JayContract',
                         type: JayUnknown,
                     },
                 ],

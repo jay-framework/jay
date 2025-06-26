@@ -26,7 +26,10 @@ export type StylesWithUrlsElementPreRender = [
     StylesWithUrlsElementRefs,
     StylesWithUrlsElementRender,
 ];
-export type StylesWithUrlsContract = JayContract<StylesWithUrlsViewState, StylesWithUrlsElementRefs>;
+export type StylesWithUrlsContract = JayContract<
+    StylesWithUrlsViewState,
+    StylesWithUrlsElementRefs
+>;
 
 export function render(options?: RenderElementOptions): StylesWithUrlsElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

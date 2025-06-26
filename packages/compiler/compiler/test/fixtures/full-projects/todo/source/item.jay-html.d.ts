@@ -1,4 +1,10 @@
-import { JayElement, RenderElement, HTMLElementProxy, RenderElementOptions, JayContract } from 'jay-runtime';
+import {
+    JayElement,
+    RenderElement,
+    HTMLElementProxy,
+    RenderElementOptions,
+    JayContract,
+} from 'jay-runtime';
 
 export interface ItemViewState {
     title: string;

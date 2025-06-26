@@ -1,4 +1,10 @@
-import { JayElement, RenderElement, HTMLElementProxy, RenderElementOptions, JayContract } from 'jay-runtime';
+import {
+    JayElement,
+    RenderElement,
+    HTMLElementProxy,
+    RenderElementOptions,
+    JayContract,
+} from 'jay-runtime';
 
 export interface ConditionsWithRefsViewState {
     text1: string;
@@ -24,6 +30,9 @@ export type ConditionsWithRefsElementPreRender = [
     ConditionsWithRefsElementRefs,
     ConditionsWithRefsElementRender,
 ];
-export type ConditionsWithRefsContract = JayContract<ConditionsWithRefsViewState, ConditionsWithRefsElementRefs>;
+export type ConditionsWithRefsContract = JayContract<
+    ConditionsWithRefsViewState,
+    ConditionsWithRefsElementRefs
+>;
 
 export declare function render(options?: RenderElementOptions): ConditionsWithRefsElementPreRender;

@@ -1,6 +1,7 @@
 import {
     SimplePluginViewState,
-    SimplePluginRefs, SimplePluginContract,
+    SimplePluginRefs,
+    SimplePluginContract,
 } from './compiled/simple-plugin.jay-contract';
 import { Props } from 'jay-component';
 import {

@@ -59,6 +59,9 @@ export type CollectionWithRefsElementPreRender = [
     CollectionWithRefsElementRefs,
     CollectionWithRefsElementRender,
 ];
-export type CollectionWithRefsContract = JayContract<CollectionWithRefsViewState, CollectionWithRefsElementRefs>;
+export type CollectionWithRefsContract = JayContract<
+    CollectionWithRefsViewState,
+    CollectionWithRefsElementRefs
+>;
 
 export declare function render(options?: RenderElementOptions): CollectionWithRefsElementPreRender;

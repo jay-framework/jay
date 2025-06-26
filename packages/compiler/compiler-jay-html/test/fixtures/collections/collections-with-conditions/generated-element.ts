@@ -39,7 +39,10 @@ export type CollectionsWithConditionsElementPreRender = [
     CollectionsWithConditionsElementRefs,
     CollectionsWithConditionsElementRender,
 ];
-export type CollectionsWithConditionsContract = JayContract<CollectionsWithConditionsViewState, CollectionsWithConditionsElementRefs>;
+export type CollectionsWithConditionsContract = JayContract<
+    CollectionsWithConditionsViewState,
+    CollectionsWithConditionsElementRefs
+>;
 
 export function render(options?: RenderElementOptions): CollectionsWithConditionsElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

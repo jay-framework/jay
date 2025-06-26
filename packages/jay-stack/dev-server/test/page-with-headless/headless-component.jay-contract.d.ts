@@ -1,4 +1,4 @@
-import {JayContract, JayElement, RenderElement, RenderElementOptions} from 'jay-runtime';
+import { JayContract, JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
 
 export interface HeadlessComponentViewState {
     content: string;
@@ -21,7 +21,9 @@ export type HeadlessComponentElementPreRender = [
     HeadlessComponentRefs,
     HeadlessComponentElementRender,
 ];
-export type HeadlessComponentContract = JayContract<HeadlessComponentViewState, HeadlessComponentRefs>
-
+export type HeadlessComponentContract = JayContract<
+    HeadlessComponentViewState,
+    HeadlessComponentRefs
+>;
 
 export declare function render(options?: RenderElementOptions): HeadlessComponentElementPreRender;

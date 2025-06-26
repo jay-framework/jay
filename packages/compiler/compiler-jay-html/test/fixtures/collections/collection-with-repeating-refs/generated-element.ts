@@ -53,7 +53,10 @@ export type CollectionWithRepeatingRefsElementPreRender = [
     CollectionWithRepeatingRefsElementRefs,
     CollectionWithRepeatingRefsElementRender,
 ];
-export type CollectionWithRepeatingRefsContract = JayContract<CollectionWithRepeatingRefsViewState, CollectionWithRepeatingRefsElementRefs>;
+export type CollectionWithRepeatingRefsContract = JayContract<
+    CollectionWithRepeatingRefsViewState,
+    CollectionWithRepeatingRefsElementRefs
+>;
 
 export function render(
     options?: RenderElementOptions,

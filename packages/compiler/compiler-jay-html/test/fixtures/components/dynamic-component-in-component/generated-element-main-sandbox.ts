@@ -53,7 +53,10 @@ export type DynamicComponentInComponentElementPreRender = [
     DynamicComponentInComponentElementRefs,
     DynamicComponentInComponentElementRender,
 ];
-export type DynamicComponentInComponentContract = JayContract<DynamicComponentInComponentViewState, DynamicComponentInComponentElementRefs>;
+export type DynamicComponentInComponentContract = JayContract<
+    DynamicComponentInComponentViewState,
+    DynamicComponentInComponentElementRefs
+>;
 
 export function render(
     options?: RenderElementOptions,

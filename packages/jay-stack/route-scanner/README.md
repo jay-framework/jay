@@ -26,7 +26,7 @@ const routes = await scanRoutes('./src/pages', {
   compFilename: 'page.ts',
 });
 
-routes.forEach(route => {
+routes.forEach((route) => {
   console.log('Route:', route.rawRoute, 'Express:', routeToExpressRoute(route));
 });
 ```
@@ -69,7 +69,7 @@ For the above structure, `scanRoutes` will produce route objects like:
   { rawRoute: '/user/[id]', segments: ['user', { name: 'id', type: 'single' }] },
   { rawRoute: '/blog/[[slug]]', segments: ['blog', { name: 'slug', type: 'optional' }] },
   { rawRoute: '/files/[...path]', segments: ['files', { name: 'path', type: 'catchAll' }] },
-]
+];
 ```
 
 And `routeToExpressRoute(route)` will convert these to:
@@ -83,10 +83,12 @@ And `routeToExpressRoute(route)` will convert these to:
 ## API
 
 ### `scanRoutes(rootDir, options)`
+
 - `rootDir`: Path to the pages directory
 - `options.jayHtmlFilename`: Name of the HTML file to look for (default: `page.jay-html`)
 - `options.compFilename`: Name of the component file to look for (default: `page.ts`)
 - Returns: Array of route objects with `compPath`, `jayHtmlPath`, `rawRoute`, and `segments`
 
 ### `routeToExpressRoute(route)`
+
 - Converts a route object to an Express-compatible route string

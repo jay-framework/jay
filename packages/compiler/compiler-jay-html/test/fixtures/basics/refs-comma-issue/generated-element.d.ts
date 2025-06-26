@@ -35,6 +35,9 @@ export type RefsCommaIssueElementPreRender = [
     RefsCommaIssueElementRefs,
     RefsCommaIssueElementRender,
 ];
-export type RefsCommaIssueContract = JayContract<RefsCommaIssueViewState, RefsCommaIssueElementRefs>;
+export type RefsCommaIssueContract = JayContract<
+    RefsCommaIssueViewState,
+    RefsCommaIssueElementRefs
+>;
 
 export declare function render(options?: RenderElementOptions): RefsCommaIssueElementPreRender;

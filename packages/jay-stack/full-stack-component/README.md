@@ -22,18 +22,18 @@ The `jay-fullstack-component` package provides a fluent builder API for creating
 - 📦 **URL Parameter Loading**: Built-in support for dynamic URL parameter handling
 - 🚀 **Performance Optimized**: Efficient rendering with partial state updates
 
-## Rendering Phases 
+## Rendering Phases
 
 - **Slow Rendering**: Use for static data that doesn't change often
 - **Fast Rendering**: Use for dynamic data that can be cached
 - **Partial Renders**: Only update the parts of the view state that change
 - **Carry Forward**: Pass data between render phases to avoid recomputation
 
-| Rendering Phase        | Rendered Where | When Rendered                  | Carry Forward       |
-|------------------------|----------------|--------------------------------|---------------------|
-| Slowly Changing Render | SSR            | Build time or data change time | Slowly → Fast       |
-| Fast Changing Render   | SSR            | Page serving                   | Fast → Interactive  |
-| Interactive Render     | CSR            | User interaction               | -                   |
+| Rendering Phase        | Rendered Where | When Rendered                  | Carry Forward      |
+| ---------------------- | -------------- | ------------------------------ | ------------------ |
+| Slowly Changing Render | SSR            | Build time or data change time | Slowly → Fast      |
+| Fast Changing Render   | SSR            | Page serving                   | Fast → Interactive |
+| Interactive Render     | CSR            | User interaction               | -                  |
 
 ## Installation
 
@@ -49,6 +49,7 @@ For headfull components, create a Jay HTML file (`my-component.jay-html`).
 For headless components, create a Jay Contract file (`my-contract.jay-contract`).
 
 #### Headfull Jay-HTML Component
+
 ```html
 <html>
   <head>
@@ -77,6 +78,7 @@ For headless components, create a Jay Contract file (`my-contract.jay-contract`)
 ```
 
 #### Headless Jay-Contract
+
 ```yaml
 name: my-contract
 tags:
@@ -121,39 +123,39 @@ const MyContextMarker = createJayContext<MyContext>();
 
 // Create the full-stack component
 export const myComponent = makeJayStackComponent<MyComponentContract>()
-    .withProps<MyComponentProps>()
-    .withServerContext(MyContextMarker)
-    .withSlowlyRender(async (props, myContext) => {
-        // Slow rendering - static data that doesn't change often
-        return partialRender(
-            {
-                id: '1',
-                name: 'John Doe',
-                age: 30,
-                address: '123 Main St, City, State',
-            },
-            { id: '1' }, // Carry forward data to fast render
-        );
-    })
-    .withFastRender(async (props, myContext) => {
-        // Fast rendering - dynamic data that can change
-        return partialRender(
-            {
-                stars: 4.5,
-                rating: 92,
-            },
-            { id: '1' }, // Carry forward data to interactive
-        );
-    })
-    .withInteractive((props, refs) => {
-        // Client-side interactivity
-        return {
-            render: () => ({
-                stars: 4.5,
-                rating: 92,
-            }),
-        };
-    });
+  .withProps<MyComponentProps>()
+  .withServerContext(MyContextMarker)
+  .withSlowlyRender(async (props, myContext) => {
+    // Slow rendering - static data that doesn't change often
+    return partialRender(
+      {
+        id: '1',
+        name: 'John Doe',
+        age: 30,
+        address: '123 Main St, City, State',
+      },
+      { id: '1' }, // Carry forward data to fast render
+    );
+  })
+  .withFastRender(async (props, myContext) => {
+    // Fast rendering - dynamic data that can change
+    return partialRender(
+      {
+        stars: 4.5,
+        rating: 92,
+      },
+      { id: '1' }, // Carry forward data to interactive
+    );
+  })
+  .withInteractive((props, refs) => {
+    // Client-side interactivity
+    return {
+      render: () => ({
+        stars: 4.5,
+        rating: 92,
+      }),
+    };
+  });
 ```
 
 ## API Reference
@@ -165,7 +167,7 @@ export const myComponent = makeJayStackComponent<MyComponentContract>()
 Creates a new full-stack component builder with the specified contract type.
 
 ```typescript
-const component = makeJayStackComponent<MyComponentContract>()
+const component = makeJayStackComponent<MyComponentContract>();
 ```
 
 ### Full-Stack Component Builder Methods
@@ -176,8 +178,7 @@ Defines the component's props type.
 Full-stack components that are Jay Stack pages use `PageProps` as the props.
 
 ```typescript
-makeJayStackComponent<MyComponentContract>()
-    .withProps<{ userId: string }>()
+makeJayStackComponent<MyComponentContract>().withProps<{ userId: string }>();
 ```
 
 #### `.withServerContext(...contextMarkers)`
@@ -185,8 +186,7 @@ makeJayStackComponent<MyComponentContract>()
 Adds server-side context markers for dependency injection.
 
 ```typescript
-makeJayStackComponent<MyComponentContract>()    
-    .withServerContext(DatabaseContext, AuthContext)
+makeJayStackComponent<MyComponentContract>().withServerContext(DatabaseContext, AuthContext);
 ```
 
 #### `.withClientContext(...contextMarkers)`
@@ -194,8 +194,7 @@ makeJayStackComponent<MyComponentContract>()
 Adds client-side context markers for dependency injection.
 
 ```typescript
-makeJayStackComponent<MyComponentContract>()
-    .withClientContext(ThemeContext, UserContext)
+makeJayStackComponent<MyComponentContract>().withClientContext(ThemeContext, UserContext);
 ```
 
 #### `.withLoadParams(loadParams)`
@@ -209,35 +208,33 @@ The function should return a generator that yields arrays of a subtype of `UrlPa
 
 ```typescript
 interface IdParams extends UrlParams {
-    id: string;
+  id: string;
 }
 
-makeJayStackComponent<MyComponentContract>()
-    .withLoadParams(async function* (contexts): AsyncIterable<IdParams[]> {
-        yield [{ id: '1' }, { id: '2' }];
-    })
+makeJayStackComponent<MyComponentContract>().withLoadParams(
+  async function* (contexts): AsyncIterable<IdParams[]> {
+    yield [{ id: '1' }, { id: '2' }];
+  },
+);
 ```
 
 #### `.withSlowlyRender(slowlyRender)`
 
 Defines the slow rendering function for semi-static data.
 
-The function's `props` parameter is a composition of the props from `.withProps`, 
+The function's `props` parameter is a composition of the props from `.withProps`,
 with the subtype of `UrlParams` if using `.withLoadParams`.
 
 The function should return one of:
-* `PartialRender<ViewState, CarryForward>` - for partial rendering
-* `ServerError5xx` - for server errors
-* `Redirect3xx` - for semi-static redirects
+
+- `PartialRender<ViewState, CarryForward>` - for partial rendering
+- `ServerError5xx` - for server errors
+- `Redirect3xx` - for semi-static redirects
 
 ```typescript
-makeJayStackComponent<MyComponentContract>()
-    .withSlowlyRender(async (props, ...contexts) => {
-        return partialRender(
-            { someKey: 'value' },
-            { carryForwardKey: 'data' }
-        );
-    })
+makeJayStackComponent<MyComponentContract>().withSlowlyRender(async (props, ...contexts) => {
+  return partialRender({ someKey: 'value' }, { carryForwardKey: 'data' });
+});
 ```
 
 #### `.withFastRender(fastRender)`
@@ -249,24 +246,21 @@ with the subtype of `UrlParams` if using `.withLoadParams`,
 with the `carryForward` from `.withSlowlyRender` if used.
 
 The function should return one of:
-* `PartialRender<ViewState, CarryForward>` - for partial rendering
-* `ServerError5xx` - for server errors
-* `ClientError4xx` - for client errors
-* `Redirect3xx` - for dynamic redirects
+
+- `PartialRender<ViewState, CarryForward>` - for partial rendering
+- `ServerError5xx` - for server errors
+- `ClientError4xx` - for client errors
+- `Redirect3xx` - for dynamic redirects
 
 ```typescript
-makeJayStackComponent<MyComponentContract>()    
-    .withFastRender(async (props, ...contexts) => {
-        return partialRender(
-            { anotherKey: 'value' },
-            { carryForwardKey: 'data' }
-        );
-    })
+makeJayStackComponent<MyComponentContract>().withFastRender(async (props, ...contexts) => {
+  return partialRender({ anotherKey: 'value' }, { carryForwardKey: 'data' });
+});
 ```
 
 #### `.withInteractive(componentConstructor)`
 
-Defines the client-side interactive component. 
+Defines the client-side interactive component.
 The callback is a Jay component constructor function with `props` and `refs`.
 
 The function's `props` parameter is a composition of the props from `.withProps`,
@@ -276,12 +270,11 @@ with the `carryForward` from `.withFastRender` if used.
 The function is expected to return an object with a reactive `render` function as well as the client component API.
 
 ```typescript
-makeJayStackComponent<MyComponentContract>()
-    .withInteractive((props, refs) => {
-        return {
-            render: () => ({ interactiveData: 'value' }),
-        };
-    })
+makeJayStackComponent<MyComponentContract>().withInteractive((props, refs) => {
+  return {
+    render: () => ({ interactiveData: 'value' }),
+  };
+});
 ```
 
 ## Render Response Builders
@@ -291,10 +284,7 @@ makeJayStackComponent<MyComponentContract>()
 Creates a successful partial render result with data to carry forward.
 
 ```typescript
-return partialRender(            
-        { anotherKey: 'value' },
-        { carryForwardKey: 'data' }
-)
+return partialRender({ anotherKey: 'value' }, { carryForwardKey: 'data' });
 ```
 
 ### `serverError5xx(status)`
@@ -366,17 +356,17 @@ async function renderFastChanging(props: PageProps & ProductPageParams & Product
   const availableProducts = await getAvailableUnits(props.productId);
   const inStock = availableProducts > 0;
   return partialRender(
-          { inStock },
-          {
-            productId: props.productId,
-            inStock,
-          },
+    { inStock },
+    {
+      productId: props.productId,
+      inStock,
+    },
   );
 }
 
 function ProductsPageConstructor(
-        props: Props<PageProps & ProductPageParams & ProductAndInventoryCarryForward>,
-        refs: PageElementRefs,
+  props: Props<PageProps & ProductPageParams & ProductAndInventoryCarryForward>,
+  refs: PageElementRefs,
 ) {
   return {
     render: () => ({}),
@@ -384,9 +374,9 @@ function ProductsPageConstructor(
 }
 
 export const page = makeJayStackComponent<typeof render>()
-        .withProps<PageProps>()
-        .withLoadParams(urlLoader)
-        .withSlowlyRender(renderSlowlyChanging)
-        .withFastRender(renderFastChanging)
-        .withInteractive(ProductsPageConstructor);
+  .withProps<PageProps>()
+  .withLoadParams(urlLoader)
+  .withSlowlyRender(renderSlowlyChanging)
+  .withFastRender(renderFastChanging)
+  .withInteractive(ProductsPageConstructor);
 ```

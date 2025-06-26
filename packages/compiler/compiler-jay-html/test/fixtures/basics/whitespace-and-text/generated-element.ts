@@ -29,7 +29,10 @@ export type WhitespaceAndTextElementPreRender = [
     WhitespaceAndTextElementRefs,
     WhitespaceAndTextElementRender,
 ];
-export type WhitespaceAndTextContract = JayContract<WhitespaceAndTextViewState, WhitespaceAndTextElementRefs>;
+export type WhitespaceAndTextContract = JayContract<
+    WhitespaceAndTextViewState,
+    WhitespaceAndTextElementRefs
+>;
 
 export function render(options?: RenderElementOptions): WhitespaceAndTextElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

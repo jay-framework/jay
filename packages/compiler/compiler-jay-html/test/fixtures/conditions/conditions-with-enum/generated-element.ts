@@ -39,7 +39,10 @@ export type ConditionsWithEnumElementPreRender = [
     ConditionsWithEnumElementRefs,
     ConditionsWithEnumElementRender,
 ];
-export type ConditionsWithEnumContract = JayContract<ConditionsWithEnumViewState, ConditionsWithEnumElementRefs>;
+export type ConditionsWithEnumContract = JayContract<
+    ConditionsWithEnumViewState,
+    ConditionsWithEnumElementRefs
+>;
 
 export function render(options?: RenderElementOptions): ConditionsWithEnumElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

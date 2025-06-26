@@ -1,4 +1,4 @@
-import {render, PageElementRefs, PageViewState, PageContract} from './compiled/page.jay-html';
+import { render, PageElementRefs, PageViewState, PageContract } from './compiled/page.jay-html';
 import { Props } from 'jay-component';
 import {
     makeJayStackComponent,
