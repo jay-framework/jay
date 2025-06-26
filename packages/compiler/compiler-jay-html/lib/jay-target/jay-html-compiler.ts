@@ -489,17 +489,20 @@ function renderFunctionImplementation(
     const viewStateType = types.name;
     const renderType = `${elementType}Render`;
     const preRenderType = `${elementType}PreRender`;
+    const contractType = `${baseElementName}Contract`;
     let imports = renderedRoot.imports
         .plus(Import.ConstructContext)
         .plus(Import.RenderElementOptions)
         .plus(Import.RenderElement)
-        .plus(Import.ReferencesManager);
+        .plus(Import.ReferencesManager)
+        .plus(Import.jayContract);
     const { imports: refImports, renderedRefs } = renderRefsType(renderedRoot.refs, refsType);
     imports = imports.plus(refImports);
 
     let renderedElement = `export type ${elementType} = JayElement<${viewStateType}, ${refsType}>
 export type ${renderType} = RenderElement<${viewStateType}, ${refsType}, ${elementType}>
 export type ${preRenderType} = [${refsType}, ${renderType}]
+export type ${contractType} = JayContract<${viewStateType}, ${refsType}>;
 `;
 
     if (importedSandboxedSymbols.size > 0) {

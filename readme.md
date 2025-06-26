@@ -23,6 +23,34 @@ build the UI with**.
 - Jay can generate Jay native applications, which enables way more aggressive optimizations
 - Jay can generate safe 3rd party applications, allowing to incorporate 3rd party components and plugins in isolation,
   with next to zero performance and DevEx impact.
+- **Jay can have headless components in packages and build a website without coding, just reusing headless components from packages, providing only the design in the website.**
+
+# Component Types in Jay
+
+Jay supports three types of components, each serving different use cases:
+
+## Headless Components
+- **Definition**: Components that define only the contract (data structure and behavior) without any UI
+- **Created with**: `makeJayComponent` + contract files (`.jay-contract`)
+- **Use case**: Reusable logic that can be used across different UI designs
+- **Example**: A counter component that provides count state and increment/decrement functions
+
+## Headfull Components  
+- **Definition**: Components that include both the contract and the UI design
+- **Created with**: `makeJayComponent` + jay-html files (`.jay-html`)
+- **Use case**: Complete components with specific UI design that can be reused
+- **Example**: A counter component with specific styling and layout
+
+## Fullstack Components
+- **Definition**: Components that support server-side rendering with client-side interactivity
+- **Created with**: `makeJayStackComponent` + either jay-html files or contract files
+- **Use case**: Web applications that need SEO, performance, and interactivity
+- **Features**: 
+  - Slow rendering (semi-static data)
+  - Fast rendering (dynamic data)
+  - Client-side interactivity
+  - URL parameter handling
+  - Context injection
 
 # Why Jay?
 
@@ -94,6 +122,53 @@ export const Counter = makeJayComponent(render, CounterConstructor);
 
 Read more about Jay Components in [readme.md](packages%2Fruntime%2Fcomponent%2Freadme.md)
 
+## Jay Stack Component / the fullstack component
+
+Jay Stack Components provide server-side rendering with client-side interactivity using the fluent builder API.
+
+### Headfull Fullstack Component (with jay-html)
+```typescript
+import { PageContract, PageElementRefs } from './page.jay-html';
+import { makeJayStackComponent, partialRender } from 'jay-fullstack-component';
+
+export const page = makeJayStackComponent<PageContract>()
+    .withProps<PageProps>()
+    .withSlowlyRender(async (props) => {
+        return partialRender(
+            { title: 'My Page', content: 'Static content' },
+            { pageId: '1' }
+        );
+    })
+    .withFastRender(async (props) => {
+        return partialRender(
+            { dynamicData: 'Fast changing data' },
+            { pageId: '1' }
+        );
+    })
+    .withInteractive((props, refs) => {
+        return {
+            render: () => ({ interactiveData: 'Client-side data' }),
+        };
+    });
+```
+
+### Headless Fullstack Component (with contract)
+```typescript
+import { ComponentContract } from './component.jay-contract';
+import { makeJayStackComponent, partialRender } from 'jay-fullstack-component';
+
+export const component = makeJayStackComponent<ComponentContract>()
+    .withProps()
+    .withSlowlyRender(async () => {
+        return partialRender(
+            { content: 'This is from the headless component' },
+            {}
+        );
+    });
+```
+
+Read more about Jay Stack Components in [readme.md](packages%2Fjay-stack%2Ffull-stack-component%2FREADME.md)
+
 # Examples
 
 Jay example projects can be found at the examples folder.
@@ -107,7 +182,7 @@ yarn build
 
 Then, under each example open the `html` files under the `dist` folder.
 
-The examples are organized into 4 categories
+The examples are organized into 5 categories
 
 - Jay examples
   - [counter](examples%2Fjay%2Fcounter) - simple counter
@@ -124,6 +199,9 @@ The examples are organized into 4 categories
 - Jay Low Leven APIs
   - [counter-raw](examples%2Fjay-low-level-apis%2Fcounter-raw) - counter example not using the Jay Component APIs. Only using jay-runtime.
   - [todo-raw](examples%2Fjay-low-level-apis%2Ftodo-raw) - todo list not using the Jay Component APIs. Only using jay-runtime.
+- Jay Stack
+  - [fake-shop](examples%2Fjay-stack%2Ffake-shop) - fullstack e-commerce example
+  - [mood-tracker-plugin](examples%2Fjay-stack%2Fmood-tracker-plugin) - plugin system example
 - React
   - [mini-benchmark-react](examples%2Freact%2Fmini-benchmark-react) - the same mini benchmark implemented as a React application for comparison.
 

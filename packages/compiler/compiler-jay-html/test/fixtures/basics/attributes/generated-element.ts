@@ -8,7 +8,7 @@ import {
     RenderElement,
     ReferencesManager,
     ConstructContext,
-    RenderElementOptions,
+    RenderElementOptions, JayContract,
 } from 'jay-runtime';
 
 export interface AttributesViewState {
@@ -28,6 +28,7 @@ export type AttributesElementRender = RenderElement<
     AttributesElement
 >;
 export type AttributesElementPreRender = [AttributesElementRefs, AttributesElementRender];
+export type AttributesContract = JayContract<AttributesViewState, AttributesElementRefs>;
 
 export function render(options?: RenderElementOptions): AttributesElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
