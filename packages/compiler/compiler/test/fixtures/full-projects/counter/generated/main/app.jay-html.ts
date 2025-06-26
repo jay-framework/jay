@@ -6,6 +6,7 @@ import {
     ConstructContext,
     RenderElementOptions,
     MapEventEmitterViewState,
+    JayContract,
 } from 'jay-runtime';
 import { mainRoot as mr, secureChildComp } from 'jay-secure';
 import { funcRepository } from './function-repository';
@@ -24,6 +25,7 @@ export interface AppElementRefs {
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
 export type AppElementPreRender = [AppElementRefs, AppElementRender];
+export type AppContract = JayContract<AppViewState, AppElementRefs>;
 
 export function render(options?: RenderElementOptions): AppElementPreRender {
     const [refManager, [refA]] = ReferencesManager.for(options, [], [], ['a'], []);

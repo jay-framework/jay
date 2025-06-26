@@ -1,4 +1,4 @@
-import { JayElement, RenderElement, HTMLElementProxy } from 'jay-runtime';
+import { JayElement, RenderElement, HTMLElementProxy, JayContract } from 'jay-runtime';
 import { SecureReferencesManager, elementBridge, sandboxElement as e } from 'jay-secure';
 
 export interface AutoCounterViewState {
@@ -17,6 +17,7 @@ export type AutoCounterElementRender = RenderElement<
     AutoCounterElement
 >;
 export type AutoCounterElementPreRender = [AutoCounterElementRefs, AutoCounterElementRender];
+export type AutoCounterContract = JayContract<AutoCounterViewState, AutoCounterElementRefs>;
 
 export function render(): AutoCounterElementPreRender {
     const [refManager, [refAutoCount1, refAutoCount2]] = SecureReferencesManager.forElement(

@@ -7,6 +7,7 @@ import {
     ConstructContext,
     HTMLElementProxy,
     RenderElementOptions,
+    JayContract,
 } from 'jay-runtime';
 
 export interface CounterViewState {
@@ -25,6 +26,7 @@ export type CounterElementRender = RenderElement<
     CounterElement
 >;
 export type CounterElementPreRender = [CounterElementRefs, CounterElementRender];
+export type CounterContract = JayContract<CounterViewState, CounterElementRefs>;
 
 export function render(options?: RenderElementOptions): CounterElementPreRender {
     const [refManager, [refSubtracter, refAdderButton]] = ReferencesManager.for(

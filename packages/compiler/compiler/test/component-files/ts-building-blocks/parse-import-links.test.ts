@@ -47,6 +47,10 @@ describe('parseImportLinks', () => {
                         name: 'MapEventEmitterViewState',
                         type: JayUnknown,
                     },
+                    {
+                        name: "JayContract",
+                        type: JayUnknown,
+                    },
                 ],
                 sandbox: false,
             },

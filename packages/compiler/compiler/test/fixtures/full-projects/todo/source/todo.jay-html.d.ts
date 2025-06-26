@@ -6,6 +6,7 @@ import {
     MapEventEmitterViewState,
     OnlyEventEmitters,
     ComponentCollectionProxy,
+    JayContract,
 } from 'jay-runtime';
 import { Item } from './item';
 
@@ -51,5 +52,6 @@ export interface TodoElementRefs {
 export type TodoElement = JayElement<TodoViewState, TodoElementRefs>;
 export type TodoElementRender = RenderElement<TodoViewState, TodoElementRefs, TodoElement>;
 export type TodoElementPreRender = [TodoElementRefs, TodoElementRender];
+export type TodoContract = JayContract<TodoViewState, TodoElementRefs>;
 
 export declare function render(options?: RenderElementOptions): TodoElementPreRender;
