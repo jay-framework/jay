@@ -33,21 +33,27 @@ Jay supports different types of components across two setups:
 
 Jay itself only supports **Headfull Components** for client-only applications.
 
+![Jay Components.png](docs%2Fmedia%2FJay%20Components.png)
+
 ### Headfull Components (Client-Only)
 
 - **Definition**: Components that include both the contract and the UI design
-- **Created with**: `makeJayComponent` + jay-html files (`.jay-html`)
-- **Use case**: Complete components with specific UI design that can be reused in client-only applications
-- **Example**: A counter component with specific styling and layout
+- **Created with**: `makeJayComponent`, component constructor + jay-html files (`.jay-html`)
+- **Use case**: Complete components with specific UI design that can be reused in client-only applications.
+- **Examples**: 
+  - Design Library. 
+  - A counter component with specific styling and layout
 
 ## Jay-Stack Setup (Fullstack)
 
 Jay-Stack supports both **Headfull** and **Headless** components for fullstack applications with pages and routing.
 
+![Jay Stack Components.png](docs%2Fmedia%2FJay%20Stack%20Components.png)
+
 ### Headfull Components (Fullstack)
 
 - **Definition**: Fullstack components that include both the contract and the UI design
-- **Created with**: `makeJayStackComponent` + jay-html files (`.jay-html`)
+- **Created with**: `makeJayStackComponent`, component constructor, server rendering and jay-html files (`.jay-html`)
 - **Use case**: Complete fullstack components with specific UI design
 - **Features**:
   - Server-side rendering (slow and fast rendering)
