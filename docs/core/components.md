@@ -338,51 +338,56 @@ import {
   createSignal, 
   createMemo, 
   createEffect,
-  createResource, // incorrect
-  createRoot, // incorrect
-  onCleanup, // incorrect
-  onMount, // incorrect
-  untrack, // incorrect
-  batch, // incorrect
-  createPatchableSignal, // missing
-  provideContext, // missing
-  provideReactiveContext, // missing
-  useReactive // missing  
+  createPatchableSignal,
+  provideContext,
+  provideReactiveContext,
+  useReactive
 } from 'jay-component';
 
 function AdvancedComponent(props, refs) {
-  // Resource for async data
-  const [user, { mutate, refetch }] = createResource(
-    () => props.userId,
-    fetchUser
-  );
-  
-  // Root for independent reactivity
-  const root = createRoot((dispose) => {
-    const [count, setCount] = createSignal(0);
-    return { count, setCount, dispose };
+  // Patchable signal for complex state updates
+  const [user, setUser, patchUser] = createPatchableSignal({
+    name: '',
+    email: '',
+    preferences: { theme: 'light', notifications: true }
   });
   
-  // Lifecycle hooks
-  onMount(() => {
-    console.log('Component mounted');
+  // Patch specific properties
+  refs.updateName.onclick(() => {
+    patchUser({ op: REPLACE, path: ['name'], value: 'New Name' });
   });
   
-  onCleanup(() => {
-    console.log('Component cleaning up');
+  // Provide context to child components
+  provideContext(UserContext, {
+    user: user(),
+    updateUser: setUser,
   });
   
-  // Batch updates for performance
-  refs.batchButton.onclick(() => {
-    batch(() => {
-      setCount(count() + 1);
-      setCount(count() + 1);
-      setCount(count() + 1);
+  // Provide reactive context that updates when dependencies change
+  const {theme, toggleTheme} = provideReactiveContext(ThemeContext, () => {
+      // create signal for the context, which components can listen to signal changes
+      const [theme, setTheme] = createSignal(user().preferences.theme)
+      // return the context API
+      return ({
+          theme: theme,
+          toggleTheme: () => setTheme(theme() === 'light' ? 'dark' : 'light')
+      })
+  });
+
+    refs.updatePreferences.onclick(() => {
+        patchUser({ op: REPLACE, path: ['preferences', 'theme'], value: 'dark'});
+        toggleTheme();        
     });
-  });
+
+    // Use reactive context from parent
+  const themeContext = useReactive(ThemeContext);
   
-  // Untrack for non-reactive reads
-  const currentCount = untrack(() => count());
+  return {
+    render: () => ({ 
+      user: user(),
+      currentTheme: themeContext.theme 
+    }),
+  };
 }
 ```
 
@@ -537,39 +542,109 @@ function TodoListConstructor(props, refs) {
 
 ### Using Headfull Child Components
 
-// todo write that using child components is done via the 
-// jay-html childComp and importing a headfull component.
+Child components are used via the Jay-HTML template by importing headfull components and using them as elements:
 
-### using headless child components
+```html
+<html>
+  <head>
+    <!-- Import the child component -->
+    <script type="application/jay-headfull" src="./todo-item" names="TodoItem"></script>
+    <script type="application/jay-data">
+      data:
+        todos: array
+    </script>
+  </head>
+  <body>
+    <div>
+      <!-- Use the child component in the template -->
+      <TodoItem 
+        todo="{todo}" 
+        forEach="todos" 
+        trackBy="id" 
+      />
+    </div>
+  </body>
+</html>
+```
 
-// explain it is only supported with Jay Stack, by importing 
-// the child headless component and using it's view state and 
-// refs in the jay-html of the parent component
+The parent component provides data to child components indirectly, through the render function
+and the jay-html mapping of ViewState to child component props:
+
+```typescript
+function TodoListConstructor(props, refs) {
+  const [todos, setTodos] = createSignal([]);
+  
+  return {
+    render: () => ({ todos: todos() }),
+  };
+}
+```
+
+### Using Headless Child Components
+
+Headless child components are only supported with Jay Stack. 
+You import the child headless component and use its view state and refs in the Jay-HTML of the parent component:
+
+```html
+<html>
+  <head>
+    <!-- Import the headless child component -->
+    <script 
+      type="application/jay-headless"
+      contract="./todo-item.jay-contract"
+      src="./todo-item"
+      name="todoItem"
+      key="todoItem"
+    ></script>
+    <script type="application/jay-data">
+      data:
+        todos: array
+    </script>
+  </head>
+  <body>
+    <div>
+      <!-- Use the child component's view state and refs -->
+      <div forEach="todos" trackBy="id">
+        <span>{todoItem.title}</span>
+        <button ref="todoItem.toggle">Toggle</button>
+        <button ref="todoItem.delete">Delete</button>
+      </div>
+    </div>
+  </body>
+</html>
+```
 
 ### Context and Communication
 
 Use context for component communication. Contexts are provided using `provideContext` or 
-`provideReactiveContext` and accessed through constructor parameters:
-
-// need to add about the declaration in `makeJayComponent` of the context marker
+`provideReactiveContext` and accessed through constructor parameters. You must declare context markers in the `makeJayComponent` call:
 
 ```typescript
-import { createJayContext, provideContext } from 'jay-runtime';
+import { createJayContext, provideContext, provideReactiveContext } from 'jay-runtime';
 import { makeJayComponent } from 'jay-component';
 
 const UserContext = createJayContext<{ user: User; updateUser: (user: User) => void }>();
+const ThemeContext = createJayContext<{ theme: string; toggleTheme: () => void }>();
 
-function ProfileConstructor(props, refs, userContext) {
+function ProfileConstructor(props, refs, userContext, themeContext) {
   refs.editButton.onclick(() => {
     userContext.updateUser({ ...userContext.user, name: 'New Name' });
   });
   
+  refs.themeToggle.onclick(() => {
+    themeContext.toggleTheme();
+  });
+  
   return {
-    render: () => ({ user: userContext.user }),
+    render: () => ({ 
+      user: userContext.user,
+      theme: themeContext.theme 
+    }),
   };
 }
 
-export const Profile = makeJayComponent(render, ProfileConstructor, UserContext);
+// Declare context markers in makeJayComponent
+export const Profile = makeJayComponent(render, ProfileConstructor, UserContext, ThemeContext);
 ```
 
 Then use the Profile component in your Jay-HTML:
@@ -596,20 +671,31 @@ And provide context in the parent component:
 ```typescript
 function AppConstructor(props, refs) {
   const [user, setUser] = createSignal(null);
+  const [theme, setTheme] = createSignal('light');
   
-  // Provide context to child components
+  // Provide static context (doesn't update when context changes)
   provideContext(UserContext, {
     user: user(),
     updateUser: setUser,
   });
   
+  // Provide reactive context (updates when dependencies change)
+  provideReactiveContext(ThemeContext, () => ({
+    theme: theme(),
+    toggleTheme: () => setTheme(theme() === 'light' ? 'dark' : 'light'),
+  }));
+  
   return {
-    render: () => ({ user: user() }),
+    render: () => ({ user: user(), theme: theme() }),
   };
 }
 ```
 
-// need to explain the difference between `provideContext` and `provideReactiveContext`
+### Context Types
+
+**`provideContext`** provides a static context value that doesn't trigger updates when the context changes. This is useful for dependency injection and values that don't change often.
+
+**`provideReactiveContext`** provides a reactive context that automatically updates child components when the context's reactive dependencies change. This is useful for values that change frequently and should trigger re-renders.
 
 ## Component Lifecycle
 
@@ -788,8 +874,6 @@ function ListConstructor(props, refs) {
   };
 }
 ```
-
-// no need for the best practices section
 
 ## Next Steps
 
