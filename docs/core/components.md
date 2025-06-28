@@ -88,7 +88,7 @@ function MyComponentConstructor(
 }
 ```
 
-The constructor function
+The constructor function:
 * receives props
 * receives contexts requested with `makeJayComponent` or `makeJayStackComponent.withClientContexts`
 * must return an object with a `render` function
@@ -96,6 +96,17 @@ The constructor function
 
 The constructor function is called once during the lifecycle of a component, and defines
 a reactive scope which allows using jay state management and hooks.
+
+### Reactive Scope
+
+Jay components operate within a reactive scope that enables fine-grained reactivity:
+
+- **Props are reactive getters** - They update automatically when parent components change them
+- **The render function is a reactive getter** - It re-runs when its dependencies change
+- **Signals and other hooks are reactive** - They trigger updates when their values change
+- **Constructor function is called once** - But render is called any time its reactive dependencies change
+
+A **reactive dependency** is created when you read a signal getter (e.g., `count()`) or call a reactive function within the render function or effects.
 
 ### Props
 
@@ -106,7 +117,7 @@ export interface TodoProps {
   initialTodos: TodoItem[];
 }
 
-function TodoConstructor({ initialTodos, onComplete }: Props<TodoProps>, refs) {
+function TodoConstructor({ initialTodos }: Props<TodoProps>, refs) {
   // Props are reactive - they update when parent changes them
   const [todos, setTodos] = createSignal(initialTodos());
   
@@ -114,7 +125,7 @@ function TodoConstructor({ initialTodos, onComplete }: Props<TodoProps>, refs) {
 }
 ```
 
-Unlike other frameworks, events in Jay are not passed as part of the Props.
+Unlike other frameworks, events in Jay are not passed as part of the Props. Instead, they are handled through the component's event system.
 
 ### References
 
@@ -133,16 +144,69 @@ function FormConstructor(props, refs: FormElementRefs) {
 }
 ```
 
-// todo need to add about ref APIs, see the runtime package docs
+### Reference APIs
+
+References provide different APIs depending on whether they reference single elements or collections:
+
+#### Single Element References
+
+For single element references, use the `exec$` function to access the underlying DOM element:
+
+```typescript
+function FormConstructor(props, refs: FormElementRefs) {
+  // Event handling
+  refs.submitButton.onclick(() => handleSubmit());
+  refs.emailInput.oninput((event) => setEmail(event.target.value));
+  
+  // DOM manipulation using exec$
+  refs.emailInput.exec$((element) => {
+    element.focus();
+    element.select();
+  });
+  
+  refs.submitButton.exec$((element) => {
+    element.disabled = true;
+  });
+  
+  // Property access using exec$
+  refs.emailInput.exec$((element) => {
+    const emailValue = element.value;
+    console.log('Email value:', emailValue);
+  });
+}
+```
+
+#### Collection References
+
+For collection references (elements under `forEach`), use `find` and `map` functions:
+
+```typescript
+function TodoListConstructor(props, refs: TodoListElementRefs) {
+  // Find specific element by predicate
+  const firstCompletedTodo = refs.todoItems.find((viewState) => viewState.completed);
+  if (firstCompletedTodo) {
+    firstCompletedTodo.exec$((element) => {
+      element.style.backgroundColor = 'green';
+    });
+  }
+  
+  // Map over all elements
+  const todoElements = refs.todoItems.map((element, viewState, coordinate) => {
+    return {
+      id: viewState.id,
+      element: element,
+      coordinate: coordinate
+    };
+  });
+  
+  // Event handling for all elements
+  refs.todoItems.onclick((event) => {
+    console.log('Todo clicked:', event.viewState);
+  });
+}
+```
 
 ## State Management
-
-// todo need to explain about jay reactive scope for a component, 
-// that props are reactive getters, the render function is a reactive getter
-// and that and signal or other hooks are also reactive.
-// also that the constructor function is only called once, but render
-// is called any time it's reactive dependencies change.
-// need to define reactive dependency (reading a signal getter)
 
 ### Creating Signals
 
@@ -230,12 +294,10 @@ function TodoConstructor(props, refs) {
 
 ### Effects
 
-Use `createEffect` for side effects:
+Use `createEffect` for side effects. Effects return a shutdown function that is called automatically when:
 
-// todo need to explain event hand return a shutdown function
-// that is called automatically when needed
-// 1. when the component unmounds
-// 2. when a reactive dependency of the event changes, we first call the shutdown, then rerun the event
+1. The component unmounts
+2. A reactive dependency of the effect changes (shutdown is called first, then the effect re-runs)
 
 ```typescript
 function FormConstructor(props, refs) {
@@ -257,12 +319,72 @@ function FormConstructor(props, refs) {
   // Save to localStorage when data changes
   createEffect(() => {
     localStorage.setItem('formData', JSON.stringify(formData()));
+    
+    // Return cleanup function
+    return () => {
+      // This runs when the effect is cleaned up
+      console.log('Form data effect cleaned up');
+    };
   });
 }
 ```
 
-// todo jay state management has more hooks that at the very least 
-// we should list here. See the component package.
+### Additional State Management Hooks
+
+Jay provides several additional hooks for state management:
+
+```typescript
+import { 
+  createSignal, 
+  createMemo, 
+  createEffect,
+  createResource, // incorrect
+  createRoot, // incorrect
+  onCleanup, // incorrect
+  onMount, // incorrect
+  untrack, // incorrect
+  batch, // incorrect
+  createPatchableSignal, // missing
+  provideContext, // missing
+  provideReactiveContext, // missing
+  useReactive // missing  
+} from 'jay-component';
+
+function AdvancedComponent(props, refs) {
+  // Resource for async data
+  const [user, { mutate, refetch }] = createResource(
+    () => props.userId,
+    fetchUser
+  );
+  
+  // Root for independent reactivity
+  const root = createRoot((dispose) => {
+    const [count, setCount] = createSignal(0);
+    return { count, setCount, dispose };
+  });
+  
+  // Lifecycle hooks
+  onMount(() => {
+    console.log('Component mounted');
+  });
+  
+  onCleanup(() => {
+    console.log('Component cleaning up');
+  });
+  
+  // Batch updates for performance
+  refs.batchButton.onclick(() => {
+    batch(() => {
+      setCount(count() + 1);
+      setCount(count() + 1);
+      setCount(count() + 1);
+    });
+  });
+  
+  // Untrack for non-reactive reads
+  const currentCount = untrack(() => count());
+}
+```
 
 ## Event Handling
 
@@ -274,7 +396,6 @@ Attach event handlers to referenced elements:
 function ButtonConstructor(props, refs) {
   refs.button.onclick(() => {
     console.log('Button clicked!');
-    props.onClick?.();
   });
   
   refs.button.onmouseenter(() => {
@@ -289,12 +410,18 @@ function ButtonConstructor(props, refs) {
 
 ### Form Event Handling
 
-Handle form events with proper typing:
+Handle form events with proper typing using `createEvent`:
 
 ```typescript
+import { createEvent } from 'jay-component';
+
 function FormConstructor(props, refs) {
   const [email, setEmail] = createSignal('');
   const [password, setPassword] = createSignal('');
+  
+  // Create event emitters
+  const onSubmit = createEvent();
+  const onValidationError = createEvent();
   
   // Input events
   refs.emailInput.oninput((event) => {
@@ -308,8 +435,16 @@ function FormConstructor(props, refs) {
   // Form submission
   refs.submitButton.onclick(async () => {
     try {
-// todo this is not how events are working in jay - see the runtime package docs        
-      await props.onSubmit?.({ email: email(), password: password() });
+      const formData = { email: email(), password: password() };
+      
+      // Validate form
+      if (!formData.email || !formData.password) {
+        onValidationError.emit({ message: 'All fields are required' });
+        return;
+      }
+      
+      // Emit submit event
+      onSubmit.emit(formData);
     } catch (error) {
       console.error('Form submission failed:', error);
     }
@@ -318,15 +453,62 @@ function FormConstructor(props, refs) {
   // Keyboard events
   refs.emailInput.onkeydown((event) => {
     if (event.key === 'Enter') {
-      refs.passwordInput.focus();
+      refs.passwordInput.exec$((element) => element.focus());
     }
   });
+  
+  return {
+    render: () => ({ email: email(), password: password() }),
+    onSubmit,
+    onValidationError,
+  };
 }
 ```
 
-### Custom Events
+### Component Events
 
-Handle custom events from child components:
+Components can define and emit custom events using `createEvent`. Events are returned as part of the component's return object:
+
+```typescript
+import { createEvent } from 'jay-component';
+
+function TodoItemConstructor(props, refs) {
+  const [isEditing, setIsEditing] = createSignal(false);
+  const [title, setTitle] = createSignal(props.todo.title);
+  
+  // Create event emitters
+  const onTodoUpdated = createEvent();
+  const onTodoDeleted = createEvent();
+  
+  refs.editButton.onclick(() => {
+    setIsEditing(true);
+  });
+  
+  refs.saveButton.onclick(() => {
+    setIsEditing(false);
+    // Emit custom event
+    onTodoUpdated.emit({ id: props.todo.id, title: title() });
+  });
+  
+  refs.deleteButton.onclick(() => {
+    // Emit custom event
+    onTodoDeleted.emit({ id: props.todo.id });
+  });
+  
+  return {
+    render: () => ({ 
+      isEditing: isEditing(), 
+      title: title() 
+    }),
+    onTodoUpdated,
+    onTodoDeleted,
+  };
+}
+```
+
+### Handling Child Component Events
+
+Handle events from child components:
 
 ```typescript
 function TodoListConstructor(props, refs) {
@@ -351,45 +533,67 @@ function TodoListConstructor(props, refs) {
 }
 ```
 
-// todo missing a section on how to define component events.
-// see the runtime package
-
 ## Component Composition
 
-### Using Child Components
+### Using Headfull Child Components
 
-Compose components by using child components:
+// todo write that using child components is done via the 
+// jay-html childComp and importing a headfull component.
 
-```typescript
-function DashboardConstructor(props, refs) {
-  const [user, setUser] = createSignal(null);
-  const [posts, setPosts] = createSignal([]);
-  
-  // Pass data to child components
-  return {
-    render: () => ({
-      user: user(),
-      posts: posts(),
-      // Child components will receive their props automatically
-    }),
-  };
-}
-```
+### using headless child components
+
+// explain it is only supported with Jay Stack, by importing 
+// the child headless component and using it's view state and 
+// refs in the jay-html of the parent component
 
 ### Context and Communication
 
-Use context for component communication:
+Use context for component communication. Contexts are provided using `provideContext` or 
+`provideReactiveContext` and accessed through constructor parameters:
 
-// todo this section is missing the `makeJayComponent` for Profile 
-// with the declaration of UserContext.
-// the consumption api is wrong - see the runtime package docs
-// it also has to explain that in the jay-html of the app, the profile is used as a child component.
+// need to add about the declaration in `makeJayComponent` of the context marker
 
 ```typescript
 import { createJayContext, provideContext } from 'jay-runtime';
+import { makeJayComponent } from 'jay-component';
 
 const UserContext = createJayContext<{ user: User; updateUser: (user: User) => void }>();
 
+function ProfileConstructor(props, refs, userContext) {
+  refs.editButton.onclick(() => {
+    userContext.updateUser({ ...userContext.user, name: 'New Name' });
+  });
+  
+  return {
+    render: () => ({ user: userContext.user }),
+  };
+}
+
+export const Profile = makeJayComponent(render, ProfileConstructor, UserContext);
+```
+
+Then use the Profile component in your Jay-HTML:
+
+```html
+<html>
+  <head>
+    <script type="application/jay-headfull" src="./profile" names="Profile"></script>
+    <script type="application/jay-data">
+      data:
+        user: object
+    </script>
+  </head>
+  <body>
+    <div>
+      <Profile user="{user}" />
+    </div>
+  </body>
+</html>
+```
+
+And provide context in the parent component:
+
+```typescript
 function AppConstructor(props, refs) {
   const [user, setUser] = createSignal(null);
   
@@ -403,27 +607,15 @@ function AppConstructor(props, refs) {
     render: () => ({ user: user() }),
   };
 }
-
-function ProfileConstructor(props, refs) {
-  // Consume context from parent
-  const userContext = useContext(UserContext);
-  
-  refs.editButton.onclick(() => {
-    userContext.updateUser({ ...userContext.user, name: 'New Name' });
-  });
-  
-  return {
-    render: () => ({ user: userContext.user }),
-  };
-}
 ```
 
-## Lifecycle Management
+// need to explain the difference between `provideContext` and `provideReactiveContext`
 
-### Component Initialization
-// todo this looks like a good example, but not a section under lifecycle
+## Component Lifecycle
 
-Initialize components with proper setup:
+### Initialization and Cleanup
+
+Components can perform initialization and cleanup using effects:
 
 ```typescript
 function TodoConstructor(props, refs) {
@@ -458,9 +650,8 @@ function TodoConstructor(props, refs) {
 ```
 
 ### Resource Management
-// todo again - this looks like a good example, but not a section under lifecycle
 
-Manage resources properly:
+Manage resources properly with cleanup functions:
 
 ```typescript
 function TimerConstructor(props, refs) {
@@ -513,10 +704,12 @@ function FormConstructor(props, refs) {
       setIsSubmitting(true);
       setError('');
       
-      await props.onSubmit?.();
+      // Handle form submission
+      const formData = { email: email(), password: password() };
+      await submitForm(formData);
       
       // Success handling
-      props.onSuccess?.();
+      console.log('Form submitted successfully');
     } catch (error) {
       // Error handling
       setError(error.message);
@@ -595,6 +788,8 @@ function ListConstructor(props, refs) {
   };
 }
 ```
+
+// no need for the best practices section
 
 ## Next Steps
 
