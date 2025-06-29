@@ -2,7 +2,7 @@
 
 **Experimental Framework!!**
 
-![Jay head image](./assets/jay-head.gif)
+![jay-head.gif](docs%2Fmedia%2Fjay-head.gif)
 
 **Experimental Framework!!**
 
