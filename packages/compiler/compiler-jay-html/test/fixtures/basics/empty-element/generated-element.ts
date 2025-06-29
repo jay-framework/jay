@@ -5,7 +5,8 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface EmptyElementViewState {}
 
@@ -18,6 +19,7 @@ export type EmptyElementElementRender = RenderElement<
     EmptyElementElement
 >;
 export type EmptyElementElementPreRender = [EmptyElementElementRefs, EmptyElementElementRender];
+export type EmptyElementContract = JayContract<EmptyElementViewState, EmptyElementElementRefs>;
 
 export function render(options?: RenderElementOptions): EmptyElementElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

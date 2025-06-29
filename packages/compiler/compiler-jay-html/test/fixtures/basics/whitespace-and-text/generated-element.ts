@@ -5,7 +5,8 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface WhitespaceAndTextViewState {
     text: string;
@@ -28,6 +29,10 @@ export type WhitespaceAndTextElementPreRender = [
     WhitespaceAndTextElementRefs,
     WhitespaceAndTextElementRender,
 ];
+export type WhitespaceAndTextContract = JayContract<
+    WhitespaceAndTextViewState,
+    WhitespaceAndTextElementRefs
+>;
 
 export function render(options?: RenderElementOptions): WhitespaceAndTextElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

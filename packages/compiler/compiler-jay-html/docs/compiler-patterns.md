@@ -18,7 +18,7 @@ the code above will break unless is running in the main context `(event.target a
 Given the compiler pattern
 
 ```typescript
-import { JayEvent } from 'jay-runtime';
+import { JayEvent } from '@jay-framework/runtime';
 function inputValuePattern({ event }: JayEvent<any, any>) {
   return event.target.value;
 }
@@ -68,7 +68,7 @@ A return pattern is a pattern that returns a value, which can be used by the com
 A return pattern is written as a function that returns a value.
 
 ```typescript
-import { JayEvent } from 'jay-runtime';
+import { JayEvent } from '@jay-framework/runtime';
 
 function inputValuePattern(handler: JayEvent<any, any>): string {
   return handler.event.target.value;
@@ -86,7 +86,7 @@ function inputValuePattern(handler: JayEvent<any, any>): string {
 A call pattern is a pattern that matches a call to a function.
 
 ```typescript
-import {JayEvent} from 'jay-runtime';
+import {JayEvent} from '@jay-framework/runtime';
 
 @JayPattern(JayTargetEnv.main)
 function eventPreventDefault(handler: JayEvent<any, any>) {
@@ -119,7 +119,7 @@ Assignment pattern allows to support assignment of values directly in the main c
 An example is the assignment of a string value to an input.
 
 ```typescript
-import {JayEvent} from 'jay-runtime';
+import {JayEvent} from '@jay-framework/runtime';
 
 @JayPattern(JayTargetEnv.main)
 function setInputValue(handler: JayEvent<any, any>, value: string) {

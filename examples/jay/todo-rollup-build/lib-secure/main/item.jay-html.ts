@@ -9,7 +9,7 @@ import {
     RenderElementOptions,
     RenderElement,
     ReferencesManager,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface ItemViewState {
     title: string;

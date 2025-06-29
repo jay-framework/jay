@@ -1,6 +1,6 @@
 import { mkBridgeElement, SecureReferencesManager } from '../../lib/';
 import { IJayEndpoint, IJayPort, JayPortInMessageHandler } from '../../lib';
-import { Reactive } from 'jay-reactive';
+import { Reactive } from '@jay-framework/reactive';
 import { func$, handler$ } from '../../lib';
 import {
     ComponentCollectionProxy,
@@ -8,7 +8,7 @@ import {
     defaultEventWrapper,
     HTMLElementCollectionProxy,
     HTMLElementProxy,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import {
     sandboxCondition as c,
     sandboxElement as e,

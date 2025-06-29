@@ -1,5 +1,5 @@
-import { GetterMark, mkReactive, Reactive, SetterMark } from 'jay-reactive';
-import { withContext } from 'jay-runtime';
+import { GetterMark, mkReactive, Reactive, SetterMark } from '@jay-framework/reactive';
+import { withContext } from '@jay-framework/runtime';
 import { CONTEXT_CREATION_CONTEXT } from './component-contexts';
 
 export const CONTEXT_REACTIVE_SYMBOL_CONTEXT = Symbol('context-reactive');

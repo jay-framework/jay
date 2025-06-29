@@ -7,7 +7,7 @@ import {
     JayNumber,
     JayObjectType,
     JayString,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 
 import { generateTypes } from '../../lib';
 

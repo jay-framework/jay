@@ -1,4 +1,4 @@
-import { JayComponent, EventEmitter, ComponentCollectionProxy } from 'jay-runtime';
+import { JayComponent, EventEmitter, ComponentCollectionProxy } from '@jay-framework/runtime';
 import { TreeNodeElement, TreeNodeViewState } from './generated-element';
 import { Node } from './tree-node';
 

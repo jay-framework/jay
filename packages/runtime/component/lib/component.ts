@@ -8,9 +8,9 @@ import {
     PreRenderElement,
     RenderElement,
     MountFunc,
-} from 'jay-runtime';
-import { Getter, mkReactive, Reactive } from 'jay-reactive';
-import { JSONPatch } from 'jay-json-patch';
+} from '@jay-framework/runtime';
+import { Getter, mkReactive, Reactive } from '@jay-framework/reactive';
+import { JSONPatch } from '@jay-framework/json-patch';
 import { HTMLElement } from 'node-html-parser';
 import { createSignal } from './hooks';
 import { COMPONENT_CONTEXT, ComponentContext } from './component-contexts';

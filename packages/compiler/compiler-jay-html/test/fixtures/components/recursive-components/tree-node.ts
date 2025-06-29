@@ -1,6 +1,6 @@
 // @ts-expect-error it's an expected generated file, the import does not exist
 import { RecursiveComponentsRefs, render } from './generated';
-import { makeJayComponent, Props } from 'jay-component';
+import { makeJayComponent, Props } from '@jay-framework/component';
 
 export interface Node {
     id: string;

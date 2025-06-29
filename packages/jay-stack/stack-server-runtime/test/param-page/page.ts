@@ -1,12 +1,12 @@
-import { render, PageElementRefs, PageViewState } from './compiled/page.jay-html';
-import { Props } from 'jay-component';
+import { render, PageElementRefs, PageViewState, PageContract } from './compiled/page.jay-html';
+import { Props } from '@jay-framework/component';
 import {
     makeJayStackComponent,
     PageProps,
     partialRender,
     PartialRender,
     Signals,
-} from 'jay-fullstack-component';
+} from '@jay-framework/fullstack-component';
 
 type SlowlyViewState = Pick<PageViewState, 'slowlyRendered'>;
 type FastViewState = Omit<PageViewState, keyof SlowlyViewState>;
@@ -67,7 +67,7 @@ function ProductsPageConstructor(
     };
 }
 
-export const page = makeJayStackComponent<typeof render>()
+export const page = makeJayStackComponent<PageContract>()
     .withProps<PageProps>()
     .withLoadParams<PageParams>(async function* () {
         yield [{ variant: 'A' }, { variant: 'B' }];

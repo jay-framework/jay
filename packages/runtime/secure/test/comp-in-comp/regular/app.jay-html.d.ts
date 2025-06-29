@@ -3,7 +3,7 @@ import {
     MapEventEmitterViewState,
     RenderElement,
     RenderElementOptions,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { Parent } from './parent';
 
 export interface AppViewState {}

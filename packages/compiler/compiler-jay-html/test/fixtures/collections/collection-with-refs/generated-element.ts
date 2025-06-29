@@ -9,7 +9,8 @@ import {
     ConstructContext,
     HTMLElementCollectionProxy,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface ItemOfCollectionWithRefsViewState {
     name: string;
@@ -64,6 +65,10 @@ export type CollectionWithRefsElementPreRender = [
     CollectionWithRefsElementRefs,
     CollectionWithRefsElementRender,
 ];
+export type CollectionWithRefsContract = JayContract<
+    CollectionWithRefsViewState,
+    CollectionWithRefsElementRefs
+>;
 
 export function render(options?: RenderElementOptions): CollectionWithRefsElementPreRender {
     const [itemsRefManager, [refName, refCompleted, refCost, refDone]] = ReferencesManager.for(

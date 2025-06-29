@@ -1,7 +1,7 @@
 # Mutable Module
 
 The mutable module is a simple proxy over an object which tracks changes to the object and implements the
-`jay-reactive` `MutableContract` interface. The changes are indicated using both an update of the revision and the change listeners.
+`@jay-framework/reactive` `MutableContract` interface. The changes are indicated using both an update of the revision and the change listeners.
 
 The package consists of a single function -
 

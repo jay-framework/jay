@@ -16,7 +16,7 @@ import {
     Variables,
 } from '../../lib/expressions/expression-compiler';
 
-import { Import } from 'jay-compiler-shared';
+import { Import } from '@jay-framework/compiler-shared';
 import {
     JayBoolean,
     JayEnumType,
@@ -25,7 +25,7 @@ import {
     JayObjectType,
     JayString,
     JayUnknown,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 
 describe('expression-compiler', () => {
     describe('variables', () => {

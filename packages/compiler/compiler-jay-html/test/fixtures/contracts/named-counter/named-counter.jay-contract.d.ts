@@ -1,4 +1,4 @@
-import { JayContract } from 'jay-fullstack-component';
+import { JayContract } from '@jay-framework/runtime';
 import {
     CounterViewState,
     CounterRefs,

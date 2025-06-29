@@ -1,8 +1,14 @@
 import { CollectionsElementRefs, render } from './collections.jay-html';
-import { createMemo, createSignal, makeJayComponent, Props, useReactive } from 'jay-component';
+import {
+    createMemo,
+    createSignal,
+    makeJayComponent,
+    Props,
+    useReactive,
+} from '@jay-framework/component';
 import benchmark from '../benchmark';
-import { ADD, JSONPatch, MOVE, REMOVE, REPLACE } from 'jay-json-patch';
-import { patch } from 'jay-json-patch';
+import { ADD, JSONPatch, MOVE, REMOVE, REPLACE } from '@jay-framework/json-patch';
+import { patch } from '@jay-framework/json-patch';
 
 interface CollectionsProps {
     cycles: number;

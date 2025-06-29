@@ -3,9 +3,9 @@ import {
     PageProps,
     partialRender,
     UrlParams,
-} from 'jay-fullstack-component';
+} from '@jay-framework/fullstack-component';
 import { render, PageElementRefs } from './page.jay-html';
-import { Props } from 'jay-component';
+import { Props } from '@jay-framework/component';
 import { getProductBySlug, getProducts } from '../../../products-database';
 import { getAvailableUnits } from '../../../inventory-service';
 

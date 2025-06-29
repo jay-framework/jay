@@ -5,10 +5,10 @@ import {
     createTsSourceFileFromSource,
     compileFunctionSplitPatternsBlock,
     FunctionRepositoryBuilder,
-} from 'jay-compiler';
-import { CompiledPattern } from 'jay-compiler';
+} from '@jay-framework/compiler';
+import { CompiledPattern } from '@jay-framework/compiler';
 import fs from 'fs';
-import { CompilerSourceFile } from 'jay-compiler-shared';
+import { CompilerSourceFile } from '@jay-framework/compiler-shared';
 
 export class JayPluginContext {
     readonly projectRoot: string;

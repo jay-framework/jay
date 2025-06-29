@@ -12,11 +12,11 @@ export default defineConfig({
             formats: ['es'],
         },
         rollupOptions: {
-            external: ['jay-json-patch', 'jay-reactive'],
+            external: ['@jay-framework/json-patch', '@jay-framework/reactive'],
         },
     },
     test: {
         globals: true,
-        setupFiles: 'jay-dev-environment/library/vitest.setup.ts',
+        setupFiles: '@jay-framework/dev-environment/library/vitest.setup.ts',
     },
 });

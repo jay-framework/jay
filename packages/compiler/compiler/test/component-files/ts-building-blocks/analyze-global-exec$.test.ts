@@ -49,7 +49,7 @@ function testTransformer(compiledPatterns: CompiledPattern[]) {
 describe('transform global exec$ and generate function repository fragment', () => {
     it('transform simple console.log', async () => {
         const code = `
-            import {exec$} from "jay-secure";
+            import {exec$} from "@jay-framework/secure";
             export function bla() {
                 exec$(() => console.log('hi'));
             }
@@ -71,7 +71,7 @@ describe('transform global exec$ and generate function repository fragment', () 
 
     it('transform new Promise((resolve) => requestAnimationFrame(resolve))', async () => {
         const code = `
-            import {exec$} from "jay-secure";
+            import {exec$} from "@jay-framework/secure";
             export function bla() {
                 exec$(() => new Promise((resolve) => requestAnimationFrame(resolve)));
             }
@@ -94,7 +94,7 @@ describe('transform global exec$ and generate function repository fragment', () 
 
     it('should not transform new Promise((resolve) => requestAnimationFrame(resolve)) if not given requestAnimationFrame pattern', async () => {
         const code = `
-            import {exec$} from "jay-secure";
+            import {exec$} from "@jay-framework/secure";
             export function bla() {
                 exec$(() => new Promise((resolve) => requestAnimationFrame(resolve)));
             }

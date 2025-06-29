@@ -8,7 +8,7 @@ import {
     JayImportedType,
     JayImportLink,
     RuntimeMode,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 
 export function renderImports(
     imports: Imports,

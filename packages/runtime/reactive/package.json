@@ -1,7 +1,8 @@
 {
-  "name": "jay-reactive",
-  "version": "1.0.4",
+  "name": "@jay-framework/reactive",
+  "version": "0.5.0",
   "type": "module",
+  "license": "Apache-2.0",
   "main": "dist/index.js",
   "exports": {
     ".": "./dist/index.js",
@@ -22,8 +23,8 @@
     "dist"
   ],
   "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
     "@types/node": "^20.11.5",
-    "jay-dev-environment": "workspace:^",
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",

@@ -5,7 +5,8 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface TextWithApostropheViewState {
     s1: string;
@@ -26,6 +27,10 @@ export type TextWithApostropheElementPreRender = [
     TextWithApostropheElementRefs,
     TextWithApostropheElementRender,
 ];
+export type TextWithApostropheContract = JayContract<
+    TextWithApostropheViewState,
+    TextWithApostropheElementRefs
+>;
 
 export function render(options?: RenderElementOptions): TextWithApostropheElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

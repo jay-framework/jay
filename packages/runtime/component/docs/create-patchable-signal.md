@@ -4,7 +4,7 @@ Creates a reactive signal that also supports update using `JSONPatch`.
 
 As Jay is using immutable state objects, when we need to update a deep structure of objects, we have to replace
 the updated object and all parent objects. `createPatchableSignal` is a utility that is using the same `patch` from
-`jay-json-patch` to simplify this update.
+`@jay-framework/json-patch` to simplify this update.
 
 ```typescript
 declare function createPatchableSignal<T>(

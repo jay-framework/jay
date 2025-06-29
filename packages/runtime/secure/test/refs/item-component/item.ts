@@ -1,4 +1,4 @@
-import { EventEmitter, JayEventHandler } from 'jay-runtime';
+import { EventEmitter, JayEventHandler } from '@jay-framework/runtime';
 import { mkComponentEventHandler } from './make-component-event-handler';
 
 export interface ItemProps {

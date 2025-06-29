@@ -1,5 +1,10 @@
 import { BoardElementRefs, render } from './board.jay-html';
-import { createDerivedArray, createEffect, makeJayComponent, Props } from 'jay-component';
+import {
+    createDerivedArray,
+    createEffect,
+    makeJayComponent,
+    Props,
+} from '@jay-framework/component';
 import { provideScrumContext } from './scrum-context';
 
 export interface BoardProps {

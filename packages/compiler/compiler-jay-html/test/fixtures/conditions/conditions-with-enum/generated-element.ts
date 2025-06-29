@@ -8,7 +8,8 @@ import {
     dynamicElement as de,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export enum CondOfConditionsWithEnumViewState {
     one,
@@ -38,6 +39,10 @@ export type ConditionsWithEnumElementPreRender = [
     ConditionsWithEnumElementRefs,
     ConditionsWithEnumElementRender,
 ];
+export type ConditionsWithEnumContract = JayContract<
+    ConditionsWithEnumViewState,
+    ConditionsWithEnumElementRefs
+>;
 
 export function render(options?: RenderElementOptions): ConditionsWithEnumElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

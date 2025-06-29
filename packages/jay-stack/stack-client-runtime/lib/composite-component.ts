@@ -4,10 +4,10 @@ import {
     makeJayComponent,
     materializeViewState,
     Props,
-} from 'jay-component';
-import { JayElement, PreRenderElement } from 'jay-runtime';
+} from '@jay-framework/component';
+import { JayElement, PreRenderElement } from '@jay-framework/runtime';
 import { CompositePart } from './composite-part';
-import { Signals } from 'jay-fullstack-component';
+import { Signals } from '@jay-framework/fullstack-component';
 
 function makeSignals<T extends object>(carryForward: T): Signals<T> {
     return Object.keys(carryForward).reduce((signals, key) => {

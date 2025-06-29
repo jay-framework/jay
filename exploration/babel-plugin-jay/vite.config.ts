@@ -15,6 +15,6 @@ export default defineConfig({
     },
     test: {
         globals: true,
-        setupFiles: 'jay-dev-environment/library/vitest.setup.ts',
+        setupFiles: '@jay-framework/dev-environment/library/vitest.setup.ts',
     },
 });

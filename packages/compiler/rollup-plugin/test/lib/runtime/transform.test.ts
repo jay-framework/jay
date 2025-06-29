@@ -11,7 +11,7 @@ import {
     TS_EXTENSION,
     prettify,
     removeComments,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 import { JayPluginContext } from '../../../lib';
 import { readTestFile } from '../../test-utils/file-utils';
 import { JayMetadata } from '../../../lib/runtime/metadata';
@@ -95,7 +95,7 @@ describe('transformJayFile', () => {
                         sandbox: false,
                     },
                     {
-                        module: 'jay-component',
+                        module: '@jay-framework/component',
                         names: [
                             { name: 'createSignal', type: JayUnknown },
                             { name: 'makeJayComponent', type: JayUnknown },

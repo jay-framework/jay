@@ -1,6 +1,6 @@
 import { render } from './app.jay-html';
-import { JayPort, setMainPort } from 'jay-secure';
-import { HandshakeMessageJayChannel } from 'jay-secure';
+import { JayPort, setMainPort } from '@jay-framework/secure';
+import { HandshakeMessageJayChannel } from '@jay-framework/secure';
 
 const initialTodos = [
     {

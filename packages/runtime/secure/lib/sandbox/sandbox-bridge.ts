@@ -1,10 +1,10 @@
 import { mkBridgeElement, SecureReferencesManager } from './sandbox-refs';
 import { SandboxElement } from './sandbox-element';
-import { JayElement, useContext } from 'jay-runtime';
+import { JayElement, useContext } from '@jay-framework/runtime';
 import { SANDBOX_BRIDGE_CONTEXT } from './sandbox-context';
-import { COMPONENT_CONTEXT } from 'jay-component';
-import { Reactive } from 'jay-reactive';
-import { ArrayContexts } from 'jay-json-patch';
+import { COMPONENT_CONTEXT } from '@jay-framework/component';
+import { Reactive } from '@jay-framework/reactive';
+import { ArrayContexts } from '@jay-framework/json-patch';
 
 export function elementBridge<ElementViewState, ElementRef>(
     viewState: ElementViewState,

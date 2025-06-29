@@ -1,6 +1,6 @@
 import { render } from './item.jay-html';
-import { FunctionsRepository, makeJayComponentBridge } from 'jay-secure';
-import { JayEvent } from 'jay-runtime';
+import { FunctionsRepository, makeJayComponentBridge } from '@jay-framework/secure';
+import { JayEvent } from '@jay-framework/runtime';
 
 export interface ItemProps {
     title: string;

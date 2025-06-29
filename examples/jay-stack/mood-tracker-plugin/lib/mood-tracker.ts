@@ -1,6 +1,6 @@
-import { makeJayStackComponent } from 'jay-fullstack-component';
+import { makeJayStackComponent } from '@jay-framework/fullstack-component';
 import { CurrentMood, MoodTrackerRefs, MoodTrackerContract } from './mood-tracker.jay-contract';
-import { createSignal } from 'jay-component';
+import { createSignal } from '@jay-framework/component';
 
 export interface MoodTrackerProps {}
 

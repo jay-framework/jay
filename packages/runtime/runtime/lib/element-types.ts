@@ -66,3 +66,13 @@ export type JayEventHandlerWrapper<EventType, ViewState, Returns> = (
 ) => Returns;
 
 export interface ContextMarker<ContextType> {}
+
+declare const _jayContractBrand: unique symbol;
+export type JayContract<ViewState extends object, Refs extends object> = {
+    readonly [_jayContractBrand]: {
+        viewState: ViewState;
+        refs: Refs;
+    };
+};
+export type ExtractViewState<A> = A extends JayContract<infer ViewState, any> ? ViewState : never;
+export type ExtractRefs<A> = A extends JayContract<any, infer Refs> ? Refs : never;

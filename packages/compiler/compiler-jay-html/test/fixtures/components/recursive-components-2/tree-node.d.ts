@@ -1,4 +1,4 @@
-import { JayComponent } from 'jay-runtime';
+import { JayComponent } from '@jay-framework/runtime';
 // @ts-expect-error
 import { RecursiveComponents2Element, RecursiveComponents2ViewState } from './generated';
 

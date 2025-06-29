@@ -7,7 +7,8 @@ import {
     ConstructContext,
     HTMLElementProxy,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface AutoCounterViewState {
     count: number;
@@ -25,6 +26,7 @@ export type AutoCounterElementRender = RenderElement<
     AutoCounterElement
 >;
 export type AutoCounterElementPreRender = [AutoCounterElementRefs, AutoCounterElementRender];
+export type AutoCounterContract = JayContract<AutoCounterViewState, AutoCounterElementRefs>;
 
 export function render(options?: RenderElementOptions): AutoCounterElementPreRender {
     const [refManager, [refAutoCount1, refAutoCount2]] = ReferencesManager.for(

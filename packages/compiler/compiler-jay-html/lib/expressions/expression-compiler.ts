@@ -9,7 +9,7 @@ import {
     JayUnknown,
     JayValidations,
     RenderFragment,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 import { parse } from './expression-parser.cjs';
 
 export class Accessor {

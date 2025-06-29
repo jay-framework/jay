@@ -1,4 +1,10 @@
-import { JayElement, RenderElement, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+import {
+    JayElement,
+    RenderElement,
+    HTMLElementProxy,
+    RenderElementOptions,
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface ItemViewState {
     title: string;
@@ -17,5 +23,6 @@ export interface ItemElementRefs {
 export type ItemElement = JayElement<ItemViewState, ItemElementRefs>;
 export type ItemElementRender = RenderElement<ItemViewState, ItemElementRefs, ItemElement>;
 export type ItemElementPreRender = [ItemElementRefs, ItemElementRender];
+export type ItemContract = JayContract<ItemViewState, ItemElementRefs>;
 
 export declare function render(options?: RenderElementOptions): ItemElementPreRender;

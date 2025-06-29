@@ -1,5 +1,5 @@
 import { CompElementRefs, CompViewState, Item, render as CompRender } from './comp.jay-html';
-import { makeJayComponent, Props, createSignal } from 'jay-component';
+import { makeJayComponent, Props, createSignal } from '@jay-framework/component';
 import { handler$ } from '../../../../lib/';
 
 export interface CompProps {}

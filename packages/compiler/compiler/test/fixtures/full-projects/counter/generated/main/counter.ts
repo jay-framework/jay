@@ -1,6 +1,6 @@
 // @ts-expect-error Cannot find module
 import { render } from './counter.jay-html?jay-mainSandbox';
-import { makeJayComponentBridge } from 'jay-secure';
+import { makeJayComponentBridge } from '@jay-framework/secure';
 export interface CounterProps {
     initialValue: number;
     incrementBy: number;

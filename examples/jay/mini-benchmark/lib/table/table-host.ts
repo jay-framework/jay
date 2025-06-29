@@ -1,5 +1,5 @@
 import benchmark from '../benchmark';
-import { createSignal, makeJayComponent, Props } from 'jay-component';
+import { createSignal, makeJayComponent, Props } from '@jay-framework/component';
 import { render as TableHostRender, TableHostElementRefs } from './table-host.jay-html';
 
 interface TableHostProps {

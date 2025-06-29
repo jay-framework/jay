@@ -1,5 +1,5 @@
-import { mutableObject } from 'jay-mutable';
-import { REPLACE } from 'jay-json-patch';
+import { mutableObject } from '@jay-framework/mutable';
+import { REPLACE } from '@jay-framework/json-patch';
 import { patchMutable } from './patch-mutable';
 import { patchImmutable } from './patch-immutable';
 

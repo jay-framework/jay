@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { getModeFileExtension, RuntimeMode } from 'jay-compiler-shared';
+import { getModeFileExtension, RuntimeMode } from '@jay-framework/compiler-shared';
 import { isRelativeImport } from '../ts-utils/extract-imports';
 
 export function transformImportModeFileExtension(

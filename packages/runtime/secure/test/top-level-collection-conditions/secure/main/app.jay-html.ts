@@ -11,7 +11,7 @@ import {
     MapEventEmitterViewState,
     ComponentCollectionProxy,
     OnlyEventEmitters,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { Counter as CounterComponentType } from '../../regular/counter';
 import { Counter } from './counter';
 import { mainRoot as mr } from '../../../../lib/';

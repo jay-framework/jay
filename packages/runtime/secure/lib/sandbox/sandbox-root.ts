@@ -1,4 +1,4 @@
-import { withContext } from 'jay-runtime';
+import { withContext } from '@jay-framework/runtime';
 import { IJayPort, useWorkerPort } from '../comm-channel/comm-channel';
 import { SANDBOX_CREATION_CONTEXT, SandboxCreationContext } from './sandbox-context';
 import { SandboxElement } from './sandbox-element';
@@ -7,7 +7,7 @@ import {
     JPMNativeExecResult,
     JPMRootComponentViewState,
 } from '../comm-channel/messages';
-import { deserialize, Deserialize } from 'jay-serialization';
+import { deserialize, Deserialize } from '@jay-framework/serialization';
 import { completeCorrelatedPromise } from '../$func';
 
 export function sandboxRoot<ViewState extends object>(

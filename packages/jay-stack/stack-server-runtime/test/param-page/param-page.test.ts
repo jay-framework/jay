@@ -2,11 +2,11 @@ import { DevSlowlyChangingPhase, renderFastChangingData } from '../../lib';
 import { page } from './page';
 import { render as renderVariantA } from './compiled-slowly/page.slowly-rendered.variant-a.jay-html';
 import { render as renderVariantB } from './compiled-slowly/page.slowly-rendered.variant-b.jay-html';
-import { PageProps, partialRender } from 'jay-fullstack-component';
-import { makeCompositeJayComponent } from 'jay-stack-client-runtime';
+import { PageProps, partialRender } from '@jay-framework/fullstack-component';
+import { makeCompositeJayComponent } from '@jay-framework/stack-client-runtime';
 import { DevServerPagePart } from '../../lib/load-page-parts';
 
-import { prettify } from 'jay-compiler-shared';
+import { prettify } from '@jay-framework/compiler-shared';
 import { toCompositePart } from '../utils/to-composite.part';
 
 const PAGE_PROPS: PageProps = {

@@ -14,15 +14,15 @@ export default defineConfig({
         },
         rollupOptions: {
             external: [
-                'jay-compiler',
-                'jay-compiler-shared',
-                'jay-compiler-jay-html',
+                '@jay-framework/compiler',
+                '@jay-framework/compiler-shared',
+                '@jay-framework/compiler-jay-html',
                 'jay-compiler-contract',
             ],
         },
     },
     test: {
         globals: true,
-        setupFiles: 'jay-dev-environment/library-dom/vitest.setup.ts',
+        setupFiles: '@jay-framework/dev-environment/library-dom/vitest.setup.ts',
     },
 });

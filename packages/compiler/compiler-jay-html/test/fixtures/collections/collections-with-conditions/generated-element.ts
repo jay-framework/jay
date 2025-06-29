@@ -9,7 +9,8 @@ import {
     forEach,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface ThingOfCollectionsWithConditionsViewState {
     name: string;
@@ -38,6 +39,10 @@ export type CollectionsWithConditionsElementPreRender = [
     CollectionsWithConditionsElementRefs,
     CollectionsWithConditionsElementRender,
 ];
+export type CollectionsWithConditionsContract = JayContract<
+    CollectionsWithConditionsViewState,
+    CollectionsWithConditionsElementRefs
+>;
 
 export function render(options?: RenderElementOptions): CollectionsWithConditionsElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

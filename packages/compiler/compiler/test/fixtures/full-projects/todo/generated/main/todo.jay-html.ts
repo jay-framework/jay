@@ -15,8 +15,9 @@ import {
     MapEventEmitterViewState,
     OnlyEventEmitters,
     ComponentCollectionProxy,
-} from 'jay-runtime';
-import { secureChildComp } from 'jay-secure';
+    JayContract,
+} from '@jay-framework/runtime';
+import { secureChildComp } from '@jay-framework/secure';
 // @ts-expect-error Cannot find module
 import { Item } from './item?jay-mainSandbox';
 
@@ -63,6 +64,7 @@ export interface TodoElementRefs {
 export type TodoElement = JayElement<TodoViewState, TodoElementRefs>;
 export type TodoElementRender = RenderElement<TodoViewState, TodoElementRefs, TodoElement>;
 export type TodoElementPreRender = [TodoElementRefs, TodoElementRender];
+export type TodoContract = JayContract<TodoViewState, TodoElementRefs>;
 
 export function render(options?: RenderElementOptions): TodoElementPreRender {
     const [shownTodosRefManager, [refItems]] = ReferencesManager.for(

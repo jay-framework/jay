@@ -1,5 +1,5 @@
 import { render, ConditionsElementRefs } from './conditions.jay-html';
-import { createSignal, makeJayComponent, useReactive, Props } from 'jay-component';
+import { createSignal, makeJayComponent, useReactive, Props } from '@jay-framework/component';
 import benchmark from '../benchmark';
 
 interface ConditionsProps {

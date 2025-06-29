@@ -7,7 +7,7 @@ import {
     MapEventEmitterViewState,
     ComponentCollectionProxy,
     OnlyEventEmitters,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { mainRoot as mr } from '../../../../lib/';
 import { secureChildComp } from '../../../../lib/';
 import { TreeNode, Node } from './tree-node';

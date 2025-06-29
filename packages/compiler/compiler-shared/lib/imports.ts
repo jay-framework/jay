@@ -250,9 +250,11 @@ export const Import = {
         ImportsFor.definition,
     ),
     jayContract: importStatementFragment(
-        JAY_FULLSTACK_COMPONENTS,
+        JAY_RUNTIME,
         'JayContract',
+        ImportsFor.implementation,
         ImportsFor.definition,
+        ImportsFor.elementSandbox,
     ),
 };
 

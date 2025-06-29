@@ -4,7 +4,7 @@ import {
     Import,
     JAY_CONTRACT_EXTENSION,
     JAY_EXTENSION,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 import { LoadResult, PluginContext, ResolveIdResult, TransformResult } from 'rollup';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
 import { transformJayFile } from './transform';
@@ -20,7 +20,11 @@ import { JayRollupConfig } from '../common/types';
 import { JayPluginContext } from './jay-plugin-context';
 import { getFileContext, readFileAsString } from '../common/files';
 import { checkCodeErrors } from '../common/errors';
-import { compileContract, JAY_IMPORT_RESOLVER, parseContract } from 'jay-compiler-jay-html';
+import {
+    compileContract,
+    JAY_IMPORT_RESOLVER,
+    parseContract,
+} from '@jay-framework/compiler-jay-html';
 
 const GLOBAL_FUNC_REPOSITORY = 'GLOBAL_FUNC_REPOSITORY.ts';
 

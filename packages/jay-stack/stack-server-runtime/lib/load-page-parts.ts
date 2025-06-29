@@ -1,11 +1,11 @@
 import { ViteDevServer } from 'vite';
-import { JayRoute } from 'jay-stack-route-scanner';
-import { WithValidations } from 'jay-compiler-shared';
+import { JayRoute } from '@jay-framework/stack-route-scanner';
+import { WithValidations } from '@jay-framework/compiler-shared';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { parseJayFile } from 'jay-compiler-jay-html';
-import { AnyJayStackComponentDefinition } from 'jay-fullstack-component';
-import { JayRollupConfig } from 'rollup-plugin-jay';
+import { parseJayFile } from '@jay-framework/compiler-jay-html';
+import { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
+import { JayRollupConfig } from '@jay-framework/rollup-plugin';
 
 export interface DevServerPagePart {
     compDefinition: AnyJayStackComponentDefinition;
@@ -39,7 +39,7 @@ export async function loadPageParts(
     const jayHtmlSource = (await fs.readFile(route.jayHtmlPath)).toString();
     const fileName = path.basename(route.jayHtmlPath);
     const dirName = path.dirname(route.jayHtmlPath);
-    const module = await import('jay-compiler-jay-html');
+    const module = await import('@jay-framework/compiler-jay-html');
     const JAY_IMPORT_RESOLVER = module.JAY_IMPORT_RESOLVER;
     const jayHtmlWithValidations = await parseJayFile(
         jayHtmlSource,

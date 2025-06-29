@@ -13,7 +13,7 @@ import {
     MapEventEmitterViewState,
     ComponentCollectionProxy,
     OnlyEventEmitters,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { Child, ChildProps } from './child';
 
 export interface DynamicChild {

@@ -4,7 +4,7 @@ import {
     HTMLElementProxy,
     RenderElementOptions,
     HTMLElementCollectionProxy,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface CartLineItem {
     id: string;

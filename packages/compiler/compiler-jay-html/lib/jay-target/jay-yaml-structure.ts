@@ -1,4 +1,4 @@
-import { JayImportName } from 'jay-compiler-shared';
+import { JayImportName } from '@jay-framework/compiler-shared';
 
 export interface JayYamlStructure {
     data: any;

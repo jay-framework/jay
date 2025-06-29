@@ -6,7 +6,7 @@ import {
     RenderElement,
     ReferencesManager,
     MapEventEmitterViewState,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { Counter } from './counter';
 import { mainRoot as mr } from '../../../../lib/';
 import { secureChildComp } from '../../../../lib';

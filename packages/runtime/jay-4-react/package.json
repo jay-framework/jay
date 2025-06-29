@@ -1,7 +1,8 @@
 {
-  "name": "jay-4-react",
-  "version": "1.0.0",
+  "name": "@jay-framework/4-react",
+  "version": "0.5.0",
   "type": "module",
+  "license": "Apache-2.0",
   "main": "dist/index.js",
   "scripts": {
     "build": "npm run build:js && npm run build:types",
@@ -15,16 +16,18 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "jay-component": "workspace:^",
-    "jay-json-patch": "workspace:^",
-    "jay-reactive": "workspace:^",
-    "jay-runtime": "workspace:^",
-    "jay-secure": "workspace:^",
-    "jay-serialization": "workspace:^",
+    "@jay-framework/component": "workspace:^",
+    "@jay-framework/json-patch": "workspace:^",
+    "@jay-framework/reactive": "workspace:^",
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/secure": "workspace:^",
+    "@jay-framework/serialization": "workspace:^",
+    "@testing-library/dom": "^10.4.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
     "@testing-library/jest-dom": "^6.4.2",
     "@testing-library/react": "^14.2.2",
     "@testing-library/user-event": "^14.5.2",
@@ -33,7 +36,6 @@
     "@types/react-dom": "^18",
     "@vitejs/plugin-react": "^4.2.1",
     "caniuse-lite": "^1.0.30001579",
-    "jay-dev-environment": "workspace:^",
     "npm-run-all2": "^6.1.1",
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",

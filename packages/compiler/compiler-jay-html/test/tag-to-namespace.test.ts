@@ -1,5 +1,5 @@
 import { tagToNamespace } from '../lib/jay-target/tag-to-namespace';
-import { Import } from 'jay-compiler-shared';
+import { Import } from '@jay-framework/compiler-shared';
 
 describe('TagToNamespace', () => {
     it('should map svg to svg namespace', () => {

@@ -5,7 +5,7 @@ import {
     HandshakeMessageJayChannel,
     JayPort,
     setWorkerPort,
-} from 'jay-secure';
+} from '@jay-framework/secure';
 // @ts-expect-error Cannot find module
 import { TodoComponent, TodoProps } from './todo?jay-workerSandbox';
 

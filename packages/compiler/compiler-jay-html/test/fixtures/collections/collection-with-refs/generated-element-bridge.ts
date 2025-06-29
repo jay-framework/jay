@@ -1,10 +1,15 @@
-import { JayElement, RenderElement, HTMLElementCollectionProxy } from 'jay-runtime';
+import {
+    JayElement,
+    RenderElement,
+    HTMLElementCollectionProxy,
+    JayContract,
+} from '@jay-framework/runtime';
 import {
     SecureReferencesManager,
     elementBridge,
     sandboxElement as e,
     sandboxForEach as forEach,
-} from 'jay-secure';
+} from '@jay-framework/secure';
 
 export interface ItemOfCollectionWithRefsViewState {
     name: string;
@@ -59,6 +64,10 @@ export type CollectionWithRefsElementPreRender = [
     CollectionWithRefsElementRefs,
     CollectionWithRefsElementRender,
 ];
+export type CollectionWithRefsContract = JayContract<
+    CollectionWithRefsViewState,
+    CollectionWithRefsElementRefs
+>;
 
 export function render(): CollectionWithRefsElementPreRender {
     const [itemsRefManager, [refName, refCompleted, refCost, refDone]] =

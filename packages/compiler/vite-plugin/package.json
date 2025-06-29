@@ -1,6 +1,7 @@
 {
-  "name": "vite-plugin-jay",
-  "version": "1.0.0",
+  "name": "@jay-framework/vite-plugin",
+  "version": "0.5.0",
+  "license": "Apache-2.0",
   "main": "dist/index.js",
   "keywords": [
     "jay",
@@ -19,14 +20,14 @@
     "test:watch": ":"
   },
   "dependencies": {
-    "rollup-plugin-jay": "workspace:^"
+    "@jay-framework/rollup-plugin": "workspace:^"
   },
   "devDependencies": {
+    "@jay-framework/component": "workspace:^",
+    "@jay-framework/dev-environment": "workspace:^",
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/secure": "workspace:^",
     "@types/node": "^20.11.5",
-    "jay-component": "workspace:^",
-    "jay-dev-environment": "workspace:^",
-    "jay-runtime": "workspace:^",
-    "jay-secure": "workspace:^",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
     "vite": "^5.0.11",

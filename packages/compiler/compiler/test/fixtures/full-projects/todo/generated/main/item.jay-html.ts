@@ -9,7 +9,8 @@ import {
     ConstructContext,
     HTMLElementProxy,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface ItemViewState {
     title: string;
@@ -28,6 +29,7 @@ export interface ItemElementRefs {
 export type ItemElement = JayElement<ItemViewState, ItemElementRefs>;
 export type ItemElementRender = RenderElement<ItemViewState, ItemElementRefs, ItemElement>;
 export type ItemElementPreRender = [ItemElementRefs, ItemElementRender];
+export type ItemContract = JayContract<ItemViewState, ItemElementRefs>;
 
 export function render(options?: RenderElementOptions): ItemElementPreRender {
     const [refManager, [refCompleted, refLabel, refButton, refTitle]] = ReferencesManager.for(

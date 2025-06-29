@@ -4,13 +4,14 @@ import {
     MapEventEmitterViewState,
     OnlyEventEmitters,
     ComponentCollectionProxy,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 import {
     SecureReferencesManager,
     elementBridge,
     sandboxChildComp as childComp,
     sandboxForEach as forEach,
-} from 'jay-secure';
+} from '@jay-framework/secure';
 // @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-workerSandbox';
 
@@ -50,6 +51,10 @@ export type DynamicComponentInComponentElementPreRender = [
     DynamicComponentInComponentElementRefs,
     DynamicComponentInComponentElementRender,
 ];
+export type DynamicComponentInComponentContract = JayContract<
+    DynamicComponentInComponentViewState,
+    DynamicComponentInComponentElementRefs
+>;
 
 export function render(): DynamicComponentInComponentElementPreRender {
     const [nestedCountersRefManager, [refCounter1]] = SecureReferencesManager.forElement(

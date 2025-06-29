@@ -1,7 +1,7 @@
 import { rollup } from 'rollup';
 import { Command } from 'commander';
-import { generateElementFile } from 'jay-compiler';
-import { jayDefinitions } from 'rollup-plugin-jay';
+import { generateElementFile } from '@jay-framework/compiler';
+import { jayDefinitions } from '@jay-framework/rollup-plugin';
 import { generateFiles } from './generate-files';
 import { getJayHtmlOrContractFileInputs } from './find-all-jay-element-contract-files';
 

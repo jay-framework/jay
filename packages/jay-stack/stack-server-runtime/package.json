@@ -1,6 +1,7 @@
 {
-  "name": "jay-stack-server-runtime",
-  "version": "1.0.0",
+  "name": "@jay-framework/stack-server-runtime",
+  "version": "0.5.0",
+  "license": "Apache-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.mts",
   "directories": {
@@ -20,18 +21,18 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "jay-compiler-jay-html": "workspace:^",
-    "jay-component": "workspace:^",
-    "jay-fullstack-component": "workspace:^",
-    "jay-runtime": "workspace:^",
-    "jay-stack-route-scanner": "workspace:^"
+    "@jay-framework/compiler-jay-html": "workspace:^",
+    "@jay-framework/component": "workspace:^",
+    "@jay-framework/fullstack-component": "workspace:^",
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/stack-route-scanner": "workspace:^"
   },
   "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
+    "@jay-framework/jay-cli": "workspace:^",
+    "@jay-framework/stack-client-runtime": "workspace:^",
     "@types/express": "^5.0.2",
     "@types/node": "^22.15.21",
-    "jay-cli": "workspace:^",
-    "jay-dev-environment": "workspace:^",
-    "jay-stack-client-runtime": "workspace:^",
     "nodemon": "^3.0.3",
     "replace-in-file": "^7.1.0",
     "rimraf": "^5.0.5",

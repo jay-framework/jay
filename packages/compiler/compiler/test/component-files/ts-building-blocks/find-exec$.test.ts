@@ -11,7 +11,7 @@ describe('find exec$', (): void => {
 
     it('should find exec$ function call with no return', () => {
         const { sourceFile, bindingResolver } = prepare(`
-            import {exec$} from "jay-secure";
+            import {exec$} from "@jay-framework/secure";
             export function bla() {
                 exec$(() => console.log('hi'));
             }
@@ -23,7 +23,7 @@ describe('find exec$', (): void => {
 
     it('should find exec$ function call and return', () => {
         const { sourceFile, bindingResolver } = prepare(`
-            import {exec$} from "jay-secure";
+            import {exec$} from "@jay-framework/secure";
             export async function bla() {
                 const res = await exec$(() => {
                     console.log('hi'); 

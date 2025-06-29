@@ -6,8 +6,9 @@ import {
     ConstructContext,
     RenderElementOptions,
     MapEventEmitterViewState,
-} from 'jay-runtime';
-import { mainRoot as mr, secureChildComp } from 'jay-secure';
+    JayContract,
+} from '@jay-framework/runtime';
+import { mainRoot as mr, secureChildComp } from '@jay-framework/secure';
 import { funcRepository } from './function-repository';
 // @ts-expect-error Cannot find module
 import { Counter } from './counter?jay-mainSandbox';
@@ -24,6 +25,7 @@ export interface AppElementRefs {
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
 export type AppElementPreRender = [AppElementRefs, AppElementRender];
+export type AppContract = JayContract<AppViewState, AppElementRefs>;
 
 export function render(options?: RenderElementOptions): AppElementPreRender {
     const [refManager, [refA]] = ReferencesManager.for(options, [], [], ['a'], []);

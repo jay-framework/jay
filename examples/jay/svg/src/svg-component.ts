@@ -3,7 +3,7 @@ import {
     SvgComponentElementRefs,
     ShapeOfSvgComponentViewState,
 } from './svg-component.jay-html';
-import { createMemo, createSignal, makeJayComponent, Props } from 'jay-component';
+import { createMemo, createSignal, makeJayComponent, Props } from '@jay-framework/component';
 
 export interface SvgComponentProps {}
 

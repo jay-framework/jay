@@ -17,7 +17,7 @@ import {
     WithValidations,
     mkRef,
     isEnumType,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 import { camelCase, pascalCase } from 'change-case';
 import path from 'path';
 

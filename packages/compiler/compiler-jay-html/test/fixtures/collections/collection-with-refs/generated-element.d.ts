@@ -3,7 +3,8 @@ import {
     RenderElement,
     HTMLElementCollectionProxy,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface ItemOfCollectionWithRefsViewState {
     name: string;
@@ -58,5 +59,9 @@ export type CollectionWithRefsElementPreRender = [
     CollectionWithRefsElementRefs,
     CollectionWithRefsElementRender,
 ];
+export type CollectionWithRefsContract = JayContract<
+    CollectionWithRefsViewState,
+    CollectionWithRefsElementRefs
+>;
 
 export declare function render(options?: RenderElementOptions): CollectionWithRefsElementPreRender;

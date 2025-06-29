@@ -1,5 +1,5 @@
 import './index.css';
-import { HandshakeMessageJayChannel, JayPort, setMainPort } from 'jay-secure';
+import { HandshakeMessageJayChannel, JayPort, setMainPort } from '@jay-framework/secure';
 import { render } from './app.jay-html';
 
 const jayWorker = new Worker(new URL('jay-sandbox:./sandbox-root', import.meta.url), {

@@ -1,4 +1,4 @@
-import { Coordinate, JayEventHandler, JayEventHandlerWrapper } from 'jay-runtime';
+import { Coordinate, JayEventHandler, JayEventHandlerWrapper } from '@jay-framework/runtime';
 import * as React from 'react';
 
 type eventType = string;

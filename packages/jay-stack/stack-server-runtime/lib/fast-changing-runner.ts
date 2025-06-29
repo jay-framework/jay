@@ -1,4 +1,4 @@
-import { AnyFastRenderResult, PageProps, partialRender } from 'jay-fullstack-component';
+import { AnyFastRenderResult, PageProps, partialRender } from '@jay-framework/fullstack-component';
 import { DevServerPagePart } from './load-page-parts';
 
 export async function renderFastChangingData(

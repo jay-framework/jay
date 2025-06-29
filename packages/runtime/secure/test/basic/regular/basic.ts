@@ -1,5 +1,5 @@
 import { BasicElementRefs, render as BasicRender } from './basic.jay-html';
-import { makeJayComponent, Props, createMemo } from 'jay-component';
+import { makeJayComponent, Props, createMemo } from '@jay-framework/component';
 
 export interface BasicProps {
     firstName: string;

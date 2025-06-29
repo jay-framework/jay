@@ -12,9 +12,9 @@ import {
     JayType,
     prettify,
     WithValidations,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 import path from 'path';
-import { ResolveTsConfigOptions } from 'jay-compiler-analyze-exported-types';
+import { ResolveTsConfigOptions } from '@jay-framework/compiler-analyze-exported-types';
 
 describe('compile contract', () => {
     const noHopResolver: JayImportResolver = {
@@ -49,8 +49,7 @@ describe('compile contract', () => {
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
-        import { JayContract } from 'jay-fullstack-component';
+        import { HTMLElementCollectionProxy, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
         
         export interface CounterViewState {
             count: number;
@@ -88,7 +87,7 @@ describe('compile contract', () => {
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { JayContract } from 'jay-fullstack-component';
+        import { JayContract } from '@jay-framework/runtime';
 
         export interface CounterViewState {
             countOne: number;
@@ -126,7 +125,7 @@ describe('compile contract', () => {
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { JayContract } from 'jay-fullstack-component';
+        import { JayContract } from '@jay-framework/runtime';
         
         export interface Item {
             title: string;
@@ -171,8 +170,7 @@ describe('compile contract', () => {
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { HTMLElementCollectionProxy } from 'jay-runtime';
-        import { JayContract } from 'jay-fullstack-component';
+        import { HTMLElementCollectionProxy, JayContract } from '@jay-framework/runtime';
 
         export interface Items {
             title: string;
@@ -250,8 +248,7 @@ describe('compile contract', () => {
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
-        import { JayContract } from 'jay-fullstack-component';
+        import { HTMLElementCollectionProxy, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
 
         export interface NameFields {
             firstName: string;
@@ -339,7 +336,7 @@ describe('compile contract', () => {
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { JayContract } from 'jay-fullstack-component';
+        import { JayContract } from '@jay-framework/runtime';
 
         export enum Filter {
           all,
@@ -389,8 +386,7 @@ describe('compile contract', () => {
         expect(result.validations).toEqual([]);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
-        import { JayContract } from 'jay-fullstack-component';
+        import { HTMLElementCollectionProxy, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
 
         export interface CounterViewState {
             count: number;
@@ -426,8 +422,7 @@ describe('compile contract', () => {
         expect(result.validations.length).toBe(0);
         expect(await prettify(result.val)).toBe(
             await prettify(`
-        import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
-        import { JayContract } from 'jay-fullstack-component';
+        import { HTMLElementCollectionProxy, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
 
         export enum Select {
             one,
@@ -500,8 +495,7 @@ describe('compile contract', () => {
             expect(result.validations).toEqual([]);
             expect(await prettify(result.val)).toBe(
                 await prettify(`
-            import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
-            import { JayContract } from 'jay-fullstack-component';
+            import { HTMLElementCollectionProxy, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
             import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item.jay-contract';
         
             export interface TodoViewState {
@@ -541,8 +535,7 @@ describe('compile contract', () => {
             expect(result.validations).toEqual([]);
             expect(await prettify(result.val)).toBe(
                 await prettify(`
-            import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
-            import { JayContract } from 'jay-fullstack-component';
+            import { HTMLElementCollectionProxy, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
             import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item.jay-contract';
     
             export interface TodoViewState {
@@ -585,8 +578,7 @@ describe('compile contract', () => {
             expect(result.validations).toEqual([]);
             expect(await prettify(result.val)).toBe(
                 await prettify(`
-            import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
-            import { JayContract } from 'jay-fullstack-component';
+            import { HTMLElementCollectionProxy, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
             import { TodoItemViewState, TodoItemRefs, TodoItemRepeatedRefs } from './todo-item.jay-contract';
     
             export interface TodoViewState {

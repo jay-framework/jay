@@ -8,8 +8,9 @@ import {
     forEach,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
-import { secureChildComp } from 'jay-secure';
+    JayContract,
+} from '@jay-framework/runtime';
+import { secureChildComp } from '@jay-framework/secure';
 // @ts-expect-error Cannot find module
 import { treeNode, Node } from './tree-node?jay-mainSandbox';
 
@@ -33,6 +34,10 @@ export type RecursiveComponents2ElementPreRender = [
     RecursiveComponents2ElementRefs,
     RecursiveComponents2ElementRender,
 ];
+export type RecursiveComponents2Contract = JayContract<
+    RecursiveComponents2ViewState,
+    RecursiveComponents2ElementRefs
+>;
 
 export function render(options?: RenderElementOptions): RecursiveComponents2ElementPreRender {
     const [childrenRefManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);

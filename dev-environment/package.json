@@ -1,6 +1,7 @@
 {
-  "name": "jay-dev-environment",
-  "version": "1.0.0",
+  "name": "@jay-framework/dev-environment",
+  "version": "0.5.0",
+  "private": true,
   "files": [
     "*.ts",
     "*.json"
@@ -9,7 +10,8 @@
     "build": ":",
     "clean": ":",
     "test": ":",
-    "confirm": ":"
+    "confirm": ":",
+    "build:check-types": ":"
   },
   "devDependencies": {
     "@types/node": "^20.11.5",

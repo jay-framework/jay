@@ -11,8 +11,9 @@ import {
     MapEventEmitterViewState,
     OnlyEventEmitters,
     ComponentCollectionProxy,
-} from 'jay-runtime';
-import { secureChildComp } from 'jay-secure';
+    JayContract,
+} from '@jay-framework/runtime';
+import { secureChildComp } from '@jay-framework/secure';
 // @ts-expect-error Cannot find module
 import { TreeNode, Node } from './tree-node?jay-mainSandbox';
 
@@ -38,6 +39,7 @@ export type RecursiveComponentsElementPreRender = [
     RecursiveComponentsElementRefs,
     RecursiveComponentsElementRender,
 ];
+export type RecursiveComponentsContract = JayContract<Node, RecursiveComponentsElementRefs>;
 
 export function render(options?: RenderElementOptions): RecursiveComponentsElementPreRender {
     const [childrenRefManager, [refCounter1, refCounterTwo]] = ReferencesManager.for(

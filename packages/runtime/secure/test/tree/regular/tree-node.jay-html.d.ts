@@ -6,7 +6,7 @@ import {
     MapEventEmitterViewState,
     ComponentCollectionProxy,
     OnlyEventEmitters,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { TreeNode, Node } from './tree-node';
 
 export interface TreeNodeViewState {

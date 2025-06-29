@@ -1,18 +1,23 @@
 import { Connect, createServer, ViteDevServer } from 'vite';
-import { JayRoute, JayRoutes, routeToExpressRoute, scanRoutes } from 'jay-stack-route-scanner';
-import { DevSlowlyChangingPhase, SlowlyChangingPhase } from 'jay-stack-server-runtime';
+import {
+    JayRoute,
+    JayRoutes,
+    routeToExpressRoute,
+    scanRoutes,
+} from '@jay-framework/stack-route-scanner';
+import { DevSlowlyChangingPhase, SlowlyChangingPhase } from '@jay-framework/stack-server-runtime';
 import type {
     ClientError4xx,
     PageProps,
     Redirect3xx,
     ServerError5xx,
-} from 'jay-fullstack-component';
-import { jayRuntime } from 'vite-plugin-jay';
+} from '@jay-framework/fullstack-component';
+import { jayRuntime } from '@jay-framework/vite-plugin';
 import path from 'node:path';
 import { RequestHandler } from 'express-serve-static-core';
-import { renderFastChangingData } from 'jay-stack-server-runtime';
-import { loadPageParts } from 'jay-stack-server-runtime';
-import { generateClientScript } from 'jay-stack-server-runtime';
+import { renderFastChangingData } from '@jay-framework/stack-server-runtime';
+import { loadPageParts } from '@jay-framework/stack-server-runtime';
+import { generateClientScript } from '@jay-framework/stack-server-runtime';
 import { Request, Response } from 'express';
 import { DevServerOptions } from './dev-server-options';
 

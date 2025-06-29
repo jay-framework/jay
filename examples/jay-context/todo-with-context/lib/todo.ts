@@ -5,9 +5,9 @@ import {
     TodoElementRefs,
     TodoViewState,
 } from './todo.jay-html';
-import { createMemo, createSignal, makeJayComponent, Props } from 'jay-component';
+import { createMemo, createSignal, makeJayComponent, Props } from '@jay-framework/component';
 import './todo.css';
-import { JayEvent } from 'jay-runtime';
+import { JayEvent } from '@jay-framework/runtime';
 import { provideTodoContext } from './todo-context';
 
 const ENTER_KEY = 13;

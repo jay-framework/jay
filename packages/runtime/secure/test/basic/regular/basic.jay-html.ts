@@ -6,7 +6,7 @@ import {
     RenderElementOptions,
     RenderElement,
     ReferencesManager,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface BasicViewState {
     text: string;

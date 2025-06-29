@@ -5,7 +5,7 @@ import {
     isObjectType,
     JayImportedType,
     JayType,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 
 function renderInterface(aType: JayType): string {
     let childInterfaces = [];

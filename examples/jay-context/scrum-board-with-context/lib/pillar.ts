@@ -5,7 +5,7 @@ import {
     createDerivedArray,
     createMemo,
     createEffect,
-} from 'jay-component';
+} from '@jay-framework/component';
 import { SCRUM_CONTEXT, ScrumContext } from './scrum-context';
 
 export interface PillarProps {

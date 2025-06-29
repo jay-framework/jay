@@ -5,14 +5,15 @@ import {
     MapEventEmitterViewState,
     OnlyEventEmitters,
     ComponentCollectionProxy,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 import {
     SecureReferencesManager,
     elementBridge,
     sandboxElement as e,
     sandboxChildComp as childComp,
     sandboxForEach as forEach,
-} from 'jay-secure';
+} from '@jay-framework/secure';
 // @ts-expect-error Cannot find module
 import { Item } from './item?jay-workerSandbox';
 
@@ -59,6 +60,7 @@ export interface TodoElementRefs {
 export type TodoElement = JayElement<TodoViewState, TodoElementRefs>;
 export type TodoElementRender = RenderElement<TodoViewState, TodoElementRefs, TodoElement>;
 export type TodoElementPreRender = [TodoElementRefs, TodoElementRender];
+export type TodoContract = JayContract<TodoViewState, TodoElementRefs>;
 
 export function render(): TodoElementPreRender {
     const [shownTodosRefManager, [refItems]] = SecureReferencesManager.forElement(

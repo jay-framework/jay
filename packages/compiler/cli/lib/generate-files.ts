@@ -9,8 +9,8 @@ import {
     GenerateTarget,
     RuntimeMode,
     WithValidations,
-} from 'jay-compiler-shared';
-import { JAY_IMPORT_RESOLVER, parseJayFile } from 'jay-compiler-jay-html';
+} from '@jay-framework/compiler-shared';
+import { JAY_IMPORT_RESOLVER, parseJayFile } from '@jay-framework/compiler-jay-html';
 
 function checkFileExists(filepath): Promise<Boolean> {
     return new Promise((resolve, reject) => {

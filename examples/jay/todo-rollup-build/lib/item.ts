@@ -1,5 +1,5 @@
 import { render, ItemElementRefs } from './item.jay-html';
-import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
 
 interface ItemProps {
     title: string;

@@ -1,5 +1,5 @@
 import { render, PillarElementRefs } from './pillar.jay-html';
-import { createEvent, makeJayComponent, Props, createDerivedArray } from 'jay-component';
+import { createEvent, makeJayComponent, Props, createDerivedArray } from '@jay-framework/component';
 
 export interface PillarTask {
     id: string;

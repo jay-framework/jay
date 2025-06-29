@@ -1,4 +1,9 @@
-import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
+import {
+    JayElement,
+    RenderElement,
+    RenderElementOptions,
+    JayContract,
+} from '@jay-framework/runtime';
 import {
     NamedContractViewState,
     NamedContractRefs,
@@ -26,6 +31,10 @@ export type PageUsingNamedCounterElementPreRender = [
     PageUsingNamedCounterElementRefs,
     PageUsingNamedCounterElementRender,
 ];
+export type PageUsingNamedCounterContract = JayContract<
+    PageUsingNamedCounterViewState,
+    PageUsingNamedCounterElementRefs
+>;
 
 export declare function render(
     options?: RenderElementOptions,

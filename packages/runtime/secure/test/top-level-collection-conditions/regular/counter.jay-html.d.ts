@@ -1,4 +1,9 @@
-import { JayElement, HTMLElementProxy, RenderElementOptions, RenderElement } from 'jay-runtime';
+import {
+    JayElement,
+    HTMLElementProxy,
+    RenderElementOptions,
+    RenderElement,
+} from '@jay-framework/runtime';
 
 export interface CounterViewState {
     title: string;

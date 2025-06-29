@@ -1,4 +1,4 @@
-import { JayEventHandler, JayNativeFunction } from 'jay-runtime';
+import { JayEventHandler, JayNativeFunction } from '@jay-framework/runtime';
 
 export type FunctionsRepository = Record<
     string,

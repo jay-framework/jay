@@ -16,7 +16,7 @@ import {
     RuntimeMode,
     WithValidations,
     nestRefs,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 import { JayHtmlSourceFile } from '../jay-target/jay-html-source-file';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import {

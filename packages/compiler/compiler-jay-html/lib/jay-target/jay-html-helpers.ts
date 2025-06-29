@@ -1,6 +1,6 @@
 import Node from 'node-html-parser/dist/nodes/node';
 import { HTMLElement, NodeType } from 'node-html-parser';
-import { WithValidations } from 'jay-compiler-shared';
+import { WithValidations } from '@jay-framework/compiler-shared';
 
 export function isConditional(node: Node): boolean {
     return node.nodeType !== NodeType.TEXT_NODE && (node as HTMLElement).hasAttribute('if');

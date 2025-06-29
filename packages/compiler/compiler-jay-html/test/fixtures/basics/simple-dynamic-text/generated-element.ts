@@ -6,7 +6,8 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface SimpleDynamicTextViewState {
     s1: string;
@@ -27,6 +28,10 @@ export type SimpleDynamicTextElementPreRender = [
     SimpleDynamicTextElementRefs,
     SimpleDynamicTextElementRender,
 ];
+export type SimpleDynamicTextContract = JayContract<
+    SimpleDynamicTextViewState,
+    SimpleDynamicTextElementRefs
+>;
 
 export function render(options?: RenderElementOptions): SimpleDynamicTextElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

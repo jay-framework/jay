@@ -1,6 +1,6 @@
 import { render, ItemElementRefs, ItemViewState } from './item.jay-html';
-import { createMemo, createSignal, makeJayComponent, Props } from 'jay-component';
-import { JayEvent } from 'jay-runtime';
+import { createMemo, createSignal, makeJayComponent, Props } from '@jay-framework/component';
+import { JayEvent } from '@jay-framework/runtime';
 import { TODO_CONTEXT, TodoContext } from './todo-context';
 
 interface ItemProps {

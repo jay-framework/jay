@@ -1,5 +1,5 @@
 import { CounterElementRefs, render } from './generated-element-main-trusted';
-import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
 
 export interface CounterProps {
     initialValue: number;

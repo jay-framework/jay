@@ -1,6 +1,6 @@
 import { resolve } from 'path';
 import { defineConfig } from 'vitest/config';
-import { JayRollupConfig, jayRuntime } from 'vite-plugin-jay';
+import { JayRollupConfig, jayRuntime } from '@jay-framework/vite-plugin';
 
 const root = resolve(__dirname);
 const jayOptions: JayRollupConfig = {
@@ -21,17 +21,17 @@ export default defineConfig({
         },
         rollupOptions: {
             external: [
-                'jay-component',
-                'jay-fullstack-component',
-                'jay-reactive',
-                'jay-runtime',
-                'jay-secure',
+                '@jay-framework/component',
+                '@jay-framework/fullstack-component',
+                '@jay-framework/reactive',
+                '@jay-framework/runtime',
+                '@jay-framework/secure',
             ],
         },
     },
     test: {
         globals: true,
-        setupFiles: 'jay-dev-environment/library-dom/vitest.setup.ts',
+        setupFiles: '@jay-framework/dev-environment/library-dom/vitest.setup.ts',
         environment: 'jsdom',
     },
 });

@@ -6,13 +6,13 @@ import {
     TodoViewState,
     // @ts-expect-error Cannot find module
 } from './todo.jay-html?jay-workerSandbox';
-import { createMemo, createSignal, makeJayComponent, Props } from 'jay-component';
+import { createMemo, createSignal, makeJayComponent, Props } from '@jay-framework/component';
 // @ts-expect-error Cannot find module
 import { uuid } from './uuid?jay-workerSandbox';
-import { patch } from 'jay-json-patch';
-import { ADD, REPLACE } from 'jay-json-patch';
-import { JayEvent } from 'jay-runtime';
-import { handler$ } from 'jay-secure';
+import { patch } from '@jay-framework/json-patch';
+import { ADD, REPLACE } from '@jay-framework/json-patch';
+import { JayEvent } from '@jay-framework/runtime';
+import { handler$ } from '@jay-framework/secure';
 const ENTER_KEY = 13;
 export interface TodoItem {
     id: string;

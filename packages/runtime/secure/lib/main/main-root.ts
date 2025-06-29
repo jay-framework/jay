@@ -1,4 +1,4 @@
-import { BaseJayElement, withContext } from 'jay-runtime';
+import { BaseJayElement, withContext } from '@jay-framework/runtime';
 import { useMainPort } from '../comm-channel/comm-channel';
 import { SECURE_COMPONENT_MARKER } from './main-contexts';
 import {
@@ -6,9 +6,9 @@ import {
     nativeExecResult,
     rootComponentViewState,
 } from '../comm-channel/messages';
-import { serialize } from 'jay-serialization';
+import { serialize } from '@jay-framework/serialization';
 import { FunctionsRepository, JayGlobalNativeFunction } from './function-repository-types';
-import { JSONPatch } from 'jay-json-patch';
+import { JSONPatch } from '@jay-framework/json-patch';
 
 export function mainRoot<ViewState>(
     viewState: ViewState,

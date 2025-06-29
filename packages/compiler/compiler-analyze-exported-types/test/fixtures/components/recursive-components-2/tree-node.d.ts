@@ -1,4 +1,4 @@
-import { JayComponent } from 'jay-runtime';
+import { JayComponent } from '@jay-framework/runtime';
 import { TreeElement, TreeViewState } from './tree-element.jay-html';
 
 export interface Node {

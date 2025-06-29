@@ -26,7 +26,7 @@ ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
   <body>
     <div id="target"></div>
     <script type="module">
-      import {makeCompositeJayComponent} from "jay-stack-client-runtime";
+      import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
       import { render } from '${jayHtmlPath}';
       ${imports}
       const viewState = ${JSON.stringify(defaultViewState)};

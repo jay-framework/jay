@@ -1,4 +1,4 @@
-import { JayType } from 'jay-compiler-shared';
+import { JayType } from '@jay-framework/compiler-shared';
 
 export enum ContractTagType {
     data,

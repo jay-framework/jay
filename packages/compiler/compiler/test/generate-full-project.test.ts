@@ -22,8 +22,12 @@ import {
     requestAnimationFramePattern,
 } from './component-files/ts-basic-analyzers/compiler-patterns-for-testing';
 import { FunctionRepositoryBuilder } from '../lib';
-import { checkValidationErrors, prettify, RuntimeMode } from 'jay-compiler-shared';
-import { generateSandboxRootFile, parseJayFile, JAY_IMPORT_RESOLVER } from 'jay-compiler-jay-html';
+import { checkValidationErrors, prettify, RuntimeMode } from '@jay-framework/compiler-shared';
+import {
+    generateSandboxRootFile,
+    parseJayFile,
+    JAY_IMPORT_RESOLVER,
+} from '@jay-framework/compiler-jay-html';
 
 describe('generate full project', () => {
     const relativePath = './test/fixtures/tsconfig.json';

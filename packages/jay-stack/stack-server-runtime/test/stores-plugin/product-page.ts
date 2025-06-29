@@ -1,7 +1,8 @@
 import { getProductBySlug, getProducts } from './products-database';
 import { getAvailableUnits } from './inventory-service';
-import { Props } from 'jay-component';
+import { Props } from '@jay-framework/component';
 import {
+    ProductPageContract,
     ProductPageRefs,
     ProductPageViewState,
     render,
@@ -15,7 +16,7 @@ import {
     Signals,
     SlowlyRenderResult,
     UrlParams,
-} from 'jay-fullstack-component';
+} from '@jay-framework/fullstack-component';
 
 interface ProductPageParams extends UrlParams {
     slug: string;
@@ -106,7 +107,7 @@ function ProductsPageConstructor(
     };
 }
 
-export const productPage = makeJayStackComponent<typeof render>()
+export const productPage = makeJayStackComponent<ProductPageContract>()
     .withProps<PageProps>()
     .withLoadParams(urlLoader)
     .withSlowlyRender(renderSlowlyChanging)

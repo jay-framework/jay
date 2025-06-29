@@ -7,7 +7,8 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface SimpleSvgViewState {
     color: string;
@@ -22,6 +23,7 @@ export type SimpleSvgElementRender = RenderElement<
     SimpleSvgElement
 >;
 export type SimpleSvgElementPreRender = [SimpleSvgElementRefs, SimpleSvgElementRender];
+export type SimpleSvgContract = JayContract<SimpleSvgViewState, SimpleSvgElementRefs>;
 
 export function render(options?: RenderElementOptions): SimpleSvgElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

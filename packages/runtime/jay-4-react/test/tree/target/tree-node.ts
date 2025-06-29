@@ -1,5 +1,5 @@
 import { render, render2, TreeNodeElementRefs } from './tree-node.jay-html';
-import { createSignal, createMemo, makeJayComponent, Props } from 'jay-component';
+import { createSignal, createMemo, makeJayComponent, Props } from '@jay-framework/component';
 
 export interface Node {
     id: string;

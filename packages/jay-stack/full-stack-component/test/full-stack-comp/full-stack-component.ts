@@ -1,6 +1,6 @@
 import { FSComponentContract } from './full-stack-component.jay-html';
 import { makeJayStackComponent, partialRender } from '../../lib';
-import { createJayContext } from 'jay-runtime';
+import { createJayContext } from '@jay-framework/runtime';
 
 interface FSCProps {}
 

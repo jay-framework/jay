@@ -1,4 +1,4 @@
-import { ComponentConstructor, ContextMarkers, JayComponentCore } from 'jay-component';
+import { ComponentConstructor, ContextMarkers, JayComponentCore } from '@jay-framework/component';
 
 export interface PageProps {
     language: string;
@@ -32,7 +32,8 @@ export interface PartialRender<ViewState extends object, CarryForward> {
 export type SlowlyRenderResult<ViewState extends object, CarryForward> =
     | PartialRender<ViewState, CarryForward>
     | ServerError5xx
-    | ClientError4xx;
+    | ClientError4xx
+    | Redirect3xx;
 export type AnySlowlyRenderResult = SlowlyRenderResult<object, object>;
 export type FastRenderResult<ViewState extends object, CarryForward> =
     | PartialRender<ViewState, CarryForward>
@@ -94,7 +95,3 @@ export type AnyJayStackComponentDefinition = JayStackComponentDefinition<
     UrlParams,
     any
 >;
-
-export type JayContract<ViewState, Refs> = {};
-export type ExtractViewState<A> = A extends JayContract<infer ViewState, any> ? ViewState : never;
-export type ExtractRefs<A> = A extends JayContract<any, infer Refs> ? Refs : never;

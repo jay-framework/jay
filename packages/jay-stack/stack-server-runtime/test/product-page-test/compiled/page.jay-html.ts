@@ -10,7 +10,8 @@ import {
     RenderElementOptions,
     dynamicAttribute as da,
     booleanAttribute as ba,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 import {
     ProductPageViewState,
     ProductPageRefs,
@@ -27,6 +28,7 @@ export interface PageElementRefs {
 export type PageElement = JayElement<PageViewState, PageElementRefs>;
 export type PageElementRender = RenderElement<PageViewState, PageElementRefs, PageElement>;
 export type PageElementPreRender = [PageElementRefs, PageElementRender];
+export type PageContract = JayContract<PageViewState, PageElementRefs>;
 
 export function render(options?: RenderElementOptions): PageElementPreRender {
     const [pluginRefManager, [addToCart]] = ReferencesManager.for(

@@ -6,7 +6,8 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface StylesWithUrlsViewState {
     text1: string;
@@ -25,6 +26,10 @@ export type StylesWithUrlsElementPreRender = [
     StylesWithUrlsElementRefs,
     StylesWithUrlsElementRender,
 ];
+export type StylesWithUrlsContract = JayContract<
+    StylesWithUrlsViewState,
+    StylesWithUrlsElementRefs
+>;
 
 export function render(options?: RenderElementOptions): StylesWithUrlsElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
