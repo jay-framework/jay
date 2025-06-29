@@ -62,8 +62,8 @@ npm install --save-dev @types/node typescript
 
 ### Core Packages
 
-| Package             | Description                  | When to Use                     |
-| ------------------- | ---------------------------- | ------------------------------- |
+| Package                        | Description                  | When to Use                     |
+| ------------------------------ | ---------------------------- | ------------------------------- |
 | `@jay-framework/component`     | Core component library       | All Jay projects                |
 | `@jay-framework/runtime`       | Runtime utilities and types  | All Jay projects                |
 | `@jay-framework/reactive`      | Reactive state management    | When using signals and effects  |
@@ -71,16 +71,16 @@ npm install --save-dev @types/node typescript
 
 ### Full-Stack Packages
 
-| Package                   | Description                  | When to Use            |
-| ------------------------- | ---------------------------- | ---------------------- |
+| Package                              | Description                  | When to Use            |
+| ------------------------------------ | ---------------------------- | ---------------------- |
 | `@jay-framework/fullstack-component` | Full-stack component builder | Server-side rendering  |
-| `jay-stack-dev-server`    | Development server           | Full-stack development |
+| `jay-stack-dev-server`               | Development server           | Full-stack development |
 | `@jay-framework/stack-route-scanner` | Route discovery              | File-based routing     |
 
 ### Build Tools
 
-| Package                       | Description        | When to Use           |
-| ----------------------------- | ------------------ | --------------------- |
+| Package                                  | Description        | When to Use           |
+| ---------------------------------------- | ------------------ | --------------------- |
 | `@@jay-framework/compiler/vite-plugin`   | Vite integration   | Vite-based projects   |
 | `@@jay-framework/compiler/rollup-plugin` | Rollup integration | Rollup-based projects |
 | `@@jay-framework/compiler/cli`           | Command-line tools | All projects          |
