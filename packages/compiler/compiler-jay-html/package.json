@@ -8,6 +8,11 @@
   "directories": {
     "lib": "lib"
   },
+  "files": [
+    "dist",
+    "docs",
+    "readme.md"
+  ],
   "scripts": {
     "build": "npm run build:pegjs && npm run build:js && npm run build:types",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
