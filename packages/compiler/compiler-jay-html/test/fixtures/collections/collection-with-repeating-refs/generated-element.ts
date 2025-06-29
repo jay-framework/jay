@@ -56,7 +56,6 @@ export type CollectionWithRepeatingRefsElementPreRender = [
 export type CollectionWithRepeatingRefsContract = JayContract<
     CollectionWithRepeatingRefsViewState,
     CollectionWithRepeatingRefsElementRefs
->;
 
 export function render(
     options?: RenderElementOptions,
