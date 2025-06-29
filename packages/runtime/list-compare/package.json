@@ -4,6 +4,10 @@
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "readme.md"
+  ],
   "scripts": {
     "build": "npm run build:js && npm run build:types",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
@@ -15,9 +19,6 @@
     "test": "vitest run",
     "test:watch": "vitest"
   },
-  "files": [
-    "dist"
-  ],
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
     "@types/node": "^20.11.5",

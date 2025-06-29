@@ -4,6 +4,10 @@
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "readme.md"
+  ],
   "scripts": {
     "build": "npm run build:js && npm run build:types",
     "build:watch": "npm run build:cli-link && npm run build:js -- --watch",

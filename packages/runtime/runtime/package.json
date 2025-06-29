@@ -4,6 +4,11 @@
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "docs",
+    "readme.md"
+  ],
   "scripts": {
     "build": "npm run build:js && npm run build:types && npm run build:fix-dts",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch & npm run build:watch:fix-dts",

@@ -4,6 +4,10 @@
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/index.cjs",
+  "files": [
+    "dist",
+    "readme.md"
+  ],
   "scripts": {
     "build": "npm run build:js && npm run build:types",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
