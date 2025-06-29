@@ -57,7 +57,7 @@ Interactive tags define elements that can be interacted with programmatically.
 **Properties**:
 - `type: interactive` - Identifies this as an interactive element
 - `elementType` - The HTML element type or a headfull Jay component type (required)
-  interactive tags can have multiple types set as an array, which means the designer has to choose one of those types. 
+  Interactive tags can have multiple types set as an array, which means the designer must choose one of those types.
 - `description` - (Optional) Documentation for the element
 
 ### Variant Tags
@@ -99,27 +99,24 @@ Sub-contract tags define nested component structures.
 - `tags` - Nested tag definitions
 - `link` - (Alternative to tags) Reference to another contract file
 
-### Multi-Typed tags
+### Multi-Typed Tags
 
-Jay Contract allows a tag to be of one or more of the `data`, `interactive` and `variant` types. 
-Such tag types are defined as an array of tag types. 
-`sub-contract` tag cannot have additional tag types.
+Jay Contract allows a tag to be of one or more of the `data`, `interactive`, and `variant` types. Such tag types are defined as an array of tag types. `sub-contract` tags cannot have additional tag types.
 
 ```yaml
-      - tag: title
-        type: [data, interactive]
-        dataType: string
-        elementType: HTMLInputElement
+- tag: title
+  type: [data, interactive]
+  dataType: string
+  elementType: HTMLInputElement
 ```
 
-### Tag metadata
-any tag can have additional metadata to be used by design tools. 
+### Tag Metadata
 
-The additional metadata supported are
-* `description` - a textual description of the tag.
-  description can be an array, for multi-typed tags, providing a different description for each usage of the tag as different types.
-* `required` - is the tag required? tells a design tool to give feedback to the designer if this tag is not used. For instance, the **checkout** button may be required in ecomm product pages
-* `repeated` - is this tag a repeated data entity, or an array when transformed to coding types
+Any tag can have additional metadata to be used by design tools. The supported metadata includes:
+
+- `description` - A textual description of the tag. For multi-typed tags, this can be an array providing different descriptions for each usage of the tag as different types.
+- `required` - Whether the tag is required. This tells a design tool to give feedback to the designer if this tag is not used. For instance, a checkout button may be required in e-commerce product pages.
+- `repeated` - Whether this tag is a repeated data entity, or an array when transformed to coding types.
 
 ## Data Types
 
