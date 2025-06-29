@@ -31,7 +31,7 @@ The primary use case for Jay-HTML is integration with design tools:
 3. **Developers implement components** that satisfy the generated contracts
 4. **Applications use the components** with the generated UI
 
-// review language
+// todo review language
 This workflow eliminates the manual translation of designs to code,
 allows fine grained updates of design with no impact on the code as long as the contract does not change 
 and ensures that the implemented components match the design specifications exactly.

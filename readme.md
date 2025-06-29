@@ -112,13 +112,26 @@ The solution for the handover problem, introducing a contract, is actually a sol
 
 ## Jay Contract
 
-A Jay Contract includes 3 elements
+// todo review this section
 
-1. The `view state` - data that a headless Jay Component hands over to the view or Jay Element to render
-2. The `refs` - named html elements or components in the view (Jay Element) to interact with
-3. The `variants` - design variations or states that appear in the contract as booleans or enumerations.
+A Jay Contract includes 4 building blocks
 
-## Jay Element / the view
+1. The `Data` to display in the user interface
+2. The `Interactive Elements` that interact with the user
+3. The `Variants` - design variations or states that control what and how data and interactive elements are visualized
+4. `Linked Contracts` - contract composition
+
+// todo need to add example contract
+
+The contract is used by design tools to create the actual user interface, such as HTML and CSS, 
+with Jay specific directives such as `if`, `forEach` and `{data}` binding.
+
+The contract is compiled into programmatic types that are used to code the headless or headfull components
+1. The `view state` - data and selected variants (which appear as boolean or enumerations) that a 
+   Jay Component hands over to the view or Jay Element to render
+2. The `refs` - named html elements or sub-components in the view (Jay Element) to interact with
+
+## Jay Element / jay-html
 
 The jay element is a `jay-html` file is **expected to be generated from design tools** of an extended HTML format.
 **No developers should write HTML / CSS / JSX anymore!**
