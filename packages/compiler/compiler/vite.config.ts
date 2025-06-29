@@ -17,18 +17,18 @@ export default defineConfig({
         },
         rollupOptions: {
             external: [
-                'jay-component',
-                'jay-runtime',
-                'jay-secure',
-                'jay-compiler-shared',
-                'jay-compiler-analyze-exported-types',
-                'jay-compiler-jay-html',
+                '@jay-framework/component',
+                '@jay-framework/runtime',
+                '@jay-framework/secure',
+                '@jay-framework/compiler-shared',
+                '@jay-framework/compiler-analyze-exported-types',
+                '@jay-framework/compiler-jay-html',
             ],
         },
     },
     test: {
         globals: true,
-        setupFiles: 'jay-dev-environment/library-dom/vitest.setup.ts',
+        setupFiles: '@jay-framework/dev-environment/library-dom/vitest.setup.ts',
         environment: 'jsdom',
     },
 });

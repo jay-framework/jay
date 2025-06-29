@@ -38,6 +38,7 @@ Data tags define the component's view state properties.
 ```
 
 **Properties**:
+
 - `type: data` - Identifies this as a data property
 - `dataType` - The data type (string, number, boolean, enum)
 - `required` - (Optional) Whether this property is required
@@ -55,6 +56,7 @@ Interactive tags define elements that can be interacted with programmatically.
 ```
 
 **Properties**:
+
 - `type: interactive` - Identifies this as an interactive element
 - `elementType` - The HTML element type or a headfull Jay component type (required)
   Interactive tags can have multiple types set as an array, which means the designer must choose one of those types.
@@ -72,6 +74,7 @@ Variant tags define design variations or states.
 ```
 
 **Properties**:
+
 - `type: variant` - Identifies this as a variant
 - `dataType` - Can be an enum or boolean type (required)
 - `description` - (Optional) Documentation for the variant
@@ -94,6 +97,7 @@ Sub-contract tags define nested component structures.
 ```
 
 **Properties**:
+
 - `type: sub-contract` - Identifies this as a nested contract
 - `repeated` - (Optional) Whether this represents an array of items
 - `tags` - Nested tag definitions
@@ -122,10 +126,10 @@ Any tag can have additional metadata to be used by design tools. The supported m
 
 ### Basic Types
 
-| Type | Example | Description |
-|------|---------|-------------|
-| `string` | `dataType: string` | Text values |
-| `number` | `dataType: number` | Numeric values |
+| Type      | Example             | Description       |
+| --------- | ------------------- | ----------------- |
+| `string`  | `dataType: string`  | Text values       |
+| `number`  | `dataType: number`  | Numeric values    |
 | `boolean` | `dataType: boolean` | True/false values |
 
 ### Enum Types
@@ -384,18 +388,18 @@ Jay automatically generates TypeScript types from contract files. The generated 
 ```typescript
 // Generated from counter.jay-contract
 export enum IsPositive {
-    positive,
-    negative,
+  positive,
+  negative,
 }
 
 export interface CounterViewState {
-    count: number;
-    isPositive: IsPositive;
+  count: number;
+  isPositive: IsPositive;
 }
 
 export interface CounterRefs {
-    add: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
-    subtract: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
+  add: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
+  subtract: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
 }
 
 export type CounterContract = JayContract<CounterViewState, CounterRefs>;
@@ -435,4 +439,4 @@ Now that you understand contract files:
 
 ---
 
-Ready to build your first headless component? Check out the [Component Development](./components.md) guide! 
+Ready to build your first headless component? Check out the [Component Development](./components.md) guide!

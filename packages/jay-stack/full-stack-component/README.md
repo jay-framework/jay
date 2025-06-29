@@ -109,8 +109,8 @@ jay-cli definitions <path to your sources>
 ```typescript
 import { MyComponentContract } from './my-component.jay-html';
 // or import { MyComponentContract } from './my-component.jay-contract';
-import { makeJayStackComponent, partialRender } from 'jay-fullstack-component';
-import { createJayContext } from 'jay-runtime';
+import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
+import { createJayContext } from '@jay-framework/runtime';
 
 // Define your props and contexts
 interface MyComponentProps {}
@@ -323,9 +323,9 @@ import {
   PageProps,
   partialRender,
   UrlParams,
-} from 'jay-fullstack-component';
+} from '@jay-framework/fullstack-component';
 import { render, PageElementRefs } from './page.jay-html';
-import { Props } from 'jay-component';
+import { Props } from '@jay-framework/component';
 import { getProductBySlug, getProducts } from '../../../products-database';
 import { getAvailableUnits } from '../../../inventory-service';
 

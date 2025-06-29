@@ -5,8 +5,8 @@ import {
     sandboxRoot,
     SecureReferencesManager,
     setWorkerPort,
-} from 'jay-secure';
-import { sandboxChildComp } from 'jay-secure';
+} from '@jay-framework/secure';
+import { sandboxChildComp } from '@jay-framework/secure';
 
 export function initializeWorker() {
     sandboxRoot(() => {

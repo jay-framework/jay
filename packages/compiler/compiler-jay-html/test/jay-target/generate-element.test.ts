@@ -4,7 +4,7 @@ import {
     readFixtureFileRaw,
 } from '../test-utils/file-utils';
 import { readFileAndGenerateElementFile } from '../test-utils/file-utils';
-import { prettify, RuntimeMode } from 'jay-compiler-shared';
+import { prettify, RuntimeMode } from '@jay-framework/compiler-shared';
 
 describe('generate jay-html element', () => {
     describe('basics', () => {

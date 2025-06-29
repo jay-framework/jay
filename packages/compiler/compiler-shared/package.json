@@ -1,5 +1,5 @@
 {
-  "name": "jay-compiler-shared",
+  "name": "@jay-framework/compiler-shared",
   "version": "0.5.0",
   "description": "",
   "license": "Apache-2.0",
@@ -20,11 +20,11 @@
   },
   "author": "",
   "dependencies": {
+    "@jay-framework/component": "workspace:^",
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/secure": "workspace:^",
     "@types/js-yaml": "^4.0.9",
     "change-case": "^4.1.2",
-    "jay-component": "workspace:^",
-    "jay-runtime": "workspace:^",
-    "jay-secure": "workspace:^",
     "js-beautify": "^1.14.11",
     "js-yaml": "^4.1.0",
     "node-html-parser": "^6.1.12",
@@ -34,10 +34,10 @@
   },
   "devDependencies": {
     "@caiogondim/strip-margin": "^1.0.0",
+    "@jay-framework/dev-environment": "workspace:^",
     "@testing-library/jest-dom": "^6.2.0",
     "@types/js-beautify": "^1",
     "@types/node": "^20.11.5",
-    "jay-dev-environment": "workspace:^",
     "jest-diff": "^29.7.0",
     "jest-matcher-utils": "^29.7.0",
     "rimraf": "^5.0.5",

@@ -1,6 +1,9 @@
 import { Contract, parseContract } from '../contract';
-import { analyzeExportedTypes, ResolveTsConfigOptions } from 'jay-compiler-analyze-exported-types';
-import { JayType, WithValidations } from 'jay-compiler-shared';
+import {
+    analyzeExportedTypes,
+    ResolveTsConfigOptions,
+} from '@jay-framework/compiler-analyze-exported-types';
+import { JayType, WithValidations } from '@jay-framework/compiler-shared';
 import fs from 'node:fs';
 import path from 'path';
 

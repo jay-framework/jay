@@ -1,11 +1,11 @@
-import { GenerateTarget, MainRuntimeModes, WithValidations } from 'jay-compiler-shared';
+import { GenerateTarget, MainRuntimeModes, WithValidations } from '@jay-framework/compiler-shared';
 import {
     generateElementFile as generateElementFileJayTarget,
     generateElementFileReactTarget,
     JayHtmlSourceFile,
-} from 'jay-compiler-jay-html';
+} from '@jay-framework/compiler-jay-html';
 
-export { generateElementDefinitionFile } from 'jay-compiler-jay-html';
+export { generateElementDefinitionFile } from '@jay-framework/compiler-jay-html';
 
 export function generateElementFile(
     jayFile: JayHtmlSourceFile,

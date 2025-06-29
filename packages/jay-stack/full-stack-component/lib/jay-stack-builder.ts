@@ -1,6 +1,6 @@
-import { ComponentConstructor, ContextMarkers, JayComponentCore } from 'jay-component';
-import { JayContract, ExtractRefs, ExtractViewState } from 'jay-runtime';
-import { JayElement } from 'jay-runtime';
+import { ComponentConstructor, ContextMarkers, JayComponentCore } from '@jay-framework/component';
+import { JayContract, ExtractRefs, ExtractViewState } from '@jay-framework/runtime';
+import { JayElement } from '@jay-framework/runtime';
 import {
     JayStackComponentDefinition,
     LoadParams,
@@ -8,7 +8,7 @@ import {
     RenderSlowly,
     UrlParams,
 } from './jay-stack-types';
-import { Getter, Setter } from 'jay-reactive';
+import { Getter, Setter } from '@jay-framework/reactive';
 
 type BuilderStates =
     | 'Props' // requires setting the props type. Next allowed states are "ServerContexts", "ClientContexts", "UrlLoader", "Slowly", "Fast", "Interactive"

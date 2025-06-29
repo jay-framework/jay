@@ -2,7 +2,7 @@ import {
     JayPluginContext,
     JayRollupConfig,
     jayRuntime as rollupJayRuntime,
-} from 'jay-rollup-plugin';
+} from '@jay-framework/rollup-plugin';
 import { Plugin } from 'vite';
 
 export function jayRuntime(jayOptions: JayRollupConfig = {}): Plugin {

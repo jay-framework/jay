@@ -8,7 +8,7 @@ import {
     removeComments,
     RuntimeMode,
     WithValidations,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 import { promises } from 'node:fs';
 import { parseJayFile } from '../../lib';
 import { JayHtmlSourceFile } from '../../lib';

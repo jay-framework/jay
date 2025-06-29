@@ -6,14 +6,14 @@ import {
     OnlyEventEmitters,
     ComponentCollectionProxy,
     JayContract,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import {
     SecureReferencesManager,
     elementBridge,
     sandboxElement as e,
     sandboxChildComp as childComp,
     sandboxForEach as forEach,
-} from 'jay-secure';
+} from '@jay-framework/secure';
 // @ts-expect-error Cannot find module
 import { Item } from './item?jay-workerSandbox';
 

@@ -6,7 +6,7 @@ describe('findMakeJayComponentImportTransformerBlock', () => {
 
     it('find import makeJayComponent', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { makeJayComponent } from 'jay-component';
+        | import { makeJayComponent } from '@jay-framework/component';
         `);
         const name = findMakeJayComponentImportTransformerBlock(makeJayComponentName, sourceFile);
         expect(name).toEqual('makeJayComponent');
@@ -14,7 +14,7 @@ describe('findMakeJayComponentImportTransformerBlock', () => {
 
     it('find import makeJayComponent with other imports', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { makeJayComponent, two, three } from 'jay-component';
+        | import { makeJayComponent, two, three } from '@jay-framework/component';
         `);
         const name = findMakeJayComponentImportTransformerBlock(makeJayComponentName, sourceFile);
         expect(name).toEqual('makeJayComponent');
@@ -22,7 +22,7 @@ describe('findMakeJayComponentImportTransformerBlock', () => {
 
     it('find import makeJayComponent with rename', async () => {
         const sourceFile = createTsSourceFile(`
-        | import { makeJayComponent as two } from 'jay-component';
+        | import { makeJayComponent as two } from '@jay-framework/component';
         `);
         const name = findMakeJayComponentImportTransformerBlock(makeJayComponentName, sourceFile);
         expect(name).toEqual('two');
@@ -39,7 +39,7 @@ describe('findMakeJayComponentImportTransformerBlock', () => {
     it('should find import makeJayComponent given multiple imports', async () => {
         const sourceFile = createTsSourceFile(`
         | import { CounterElementRefs, render } from './generated-element';
-        | import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+        | import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
         `);
         const name = findMakeJayComponentImportTransformerBlock(makeJayComponentName, sourceFile);
         expect(name).toEqual('makeJayComponent');

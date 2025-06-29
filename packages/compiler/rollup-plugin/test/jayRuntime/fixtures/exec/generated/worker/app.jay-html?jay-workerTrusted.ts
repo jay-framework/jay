@@ -5,7 +5,7 @@ import {
     HandshakeMessageJayChannel,
     JayPort,
     setWorkerPort,
-} from 'jay-secure';
+} from '@jay-framework/secure';
 import { AutoCounter } from './auto-counter?jay-workerSandbox';
 
 export interface AppViewState {

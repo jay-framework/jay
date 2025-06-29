@@ -1,5 +1,5 @@
 import ts from 'typescript';
-import { WithValidations } from 'jay-compiler-shared';
+import { WithValidations } from '@jay-framework/compiler-shared';
 
 export function getBaseElementName<T extends { name: ts.BindingName }>(
     makeJayComponentName: string,

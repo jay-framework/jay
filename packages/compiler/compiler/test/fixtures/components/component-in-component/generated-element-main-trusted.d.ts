@@ -1,4 +1,9 @@
-import { JayElement, RenderElement, RenderElementOptions, JayContract } from 'jay-runtime';
+import {
+    JayElement,
+    RenderElement,
+    RenderElementOptions,
+    JayContract,
+} from '@jay-framework/runtime';
 import { CounterComponentType } from '../counter/counter-refs';
 import { Counter } from '../counter/counter';
 import { CounterViewState as CounterData } from '../counter/generated-element-main-trusted';

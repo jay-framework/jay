@@ -12,8 +12,8 @@ import {
     OnlyEventEmitters,
     ComponentCollectionProxy,
     JayContract,
-} from 'jay-runtime';
-import { secureChildComp } from 'jay-secure';
+} from '@jay-framework/runtime';
+import { secureChildComp } from '@jay-framework/secure';
 // @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-mainSandbox';
 

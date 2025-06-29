@@ -28,7 +28,12 @@ For example, a simple a jay-html is
 which is then compiled into
 
 ```typescript
-import { JayElement, RenderElement, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+import {
+  JayElement,
+  RenderElement,
+  HTMLElementProxy,
+  RenderElementOptions,
+} from '@jay-framework/runtime';
 
 export interface CounterViewState {
   count: number;

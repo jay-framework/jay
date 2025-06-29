@@ -3,14 +3,14 @@ import {
     SimplePluginRefs,
     SimplePluginContract,
 } from './compiled/simple-plugin.jay-contract';
-import { Props } from 'jay-component';
+import { Props } from '@jay-framework/component';
 import {
     makeJayStackComponent,
     PageProps,
     PartialRender,
     partialRender,
     Signals,
-} from 'jay-fullstack-component';
+} from '@jay-framework/fullstack-component';
 
 // Define view states
 type StaticViewState = Pick<SimplePluginViewState, 'pluginSlowlyRendered'>;

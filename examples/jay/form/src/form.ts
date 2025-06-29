@@ -1,6 +1,6 @@
 import { render, FormElementRefs } from './form.jay-html';
-import { createSignal, makeJayComponent, Props } from 'jay-component';
-import { JayEvent } from 'jay-runtime';
+import { createSignal, makeJayComponent, Props } from '@jay-framework/component';
+import { JayEvent } from '@jay-framework/runtime';
 
 export interface CounterProps {
     initialValue: number;

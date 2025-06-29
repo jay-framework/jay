@@ -7,7 +7,7 @@ import {
     ConstructContext,
     RenderElementOptions,
     JayContract,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface O1OfDataTypesViewState {
     s2: string;

@@ -15,21 +15,21 @@
     "test": ":"
   },
   "dependencies": {
-    "jay-component": "workspace:^",
-    "jay-json-patch": "workspace:^",
-    "jay-reactive": "workspace:^",
-    "jay-runtime": "workspace:^",
-    "jay-secure": "workspace:^",
-    "jay-serialization": "workspace:^"
+    "@jay-framework/component": "workspace:^",
+    "@jay-framework/json-patch": "workspace:^",
+    "@jay-framework/reactive": "workspace:^",
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/secure": "workspace:^",
+    "@jay-framework/serialization": "workspace:^"
   },
   "devDependencies": {
     "@babel/core": "^7.23.7",
     "@babel/preset-env": "^7.23.8",
     "@babel/preset-typescript": "^7.23.3",
+    "@jay-framework/dev-environment": "workspace:^",
+    "@jay-framework/jay-cli": "workspace:^",
+    "@jay-framework/vite-plugin": "workspace:^",
     "@rollup/plugin-node-resolve": "^15.2.3",
-    "jay-cli": "workspace:^",
-    "jay-dev-environment": "workspace:^",
-    "jay-vite-plugin": "workspace:^",
     "nodemon": "^3.0.3",
     "rimraf": "^5.0.5",
     "tslib": "^2.6.2",

@@ -1,5 +1,5 @@
-import { exec$ } from 'jay-secure';
-import { funcGlobal$ } from 'jay-secure';
+import { exec$ } from '@jay-framework/secure';
+import { funcGlobal$ } from '@jay-framework/secure';
 let cycles = 0;
 export async function moduleDoCount(callback: () => void) {
     cycles = 0;

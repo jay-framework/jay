@@ -1,10 +1,10 @@
 {
-  "extends": "jay-dev-environment/examples/tsconfig.json",
+  "extends": "@jay-framework/dev-environment/examples/tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
     "paths": {
-      "jay-json-patch": ["../../packages/json-patch/lib"],
-      "jay-mutable": ["../../packages/mutable/lib"],
+      "@jay-framework/json-patch": ["../../packages/json-patch/lib"],
+      "@jay-framework/mutable": ["../../packages/mutable/lib"],
     },
   },
 }

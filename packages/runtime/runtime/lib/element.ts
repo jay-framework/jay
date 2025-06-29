@@ -1,6 +1,6 @@
 import { Kindergarten, KindergartenGroup } from './kindergarden';
-import { ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult } from 'jay-list-compare';
-import { RandomAccessLinkedList as List } from 'jay-list-compare';
+import { ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult } from '@jay-framework/list-compare';
+import { RandomAccessLinkedList as List } from '@jay-framework/list-compare';
 import {
     BaseJayElement,
     JayComponent,

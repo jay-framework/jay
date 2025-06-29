@@ -7,7 +7,7 @@ import {
     readFixtureJayContractFile,
 } from '../test-utils/file-utils';
 import { compileContract, generateElementDefinitionFile, parseContract } from '../../lib';
-import { JAY_CONTRACT_EXTENSION, prettify } from 'jay-compiler-shared';
+import { JAY_CONTRACT_EXTENSION, prettify } from '@jay-framework/compiler-shared';
 import { JAY_IMPORT_RESOLVER } from '../../lib';
 
 describe('contract definitions', () => {

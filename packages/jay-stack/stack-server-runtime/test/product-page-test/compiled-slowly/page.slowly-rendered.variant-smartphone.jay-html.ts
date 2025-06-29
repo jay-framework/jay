@@ -11,7 +11,7 @@ import {
     dynamicAttribute as da,
     booleanAttribute as ba,
     JayContract,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import {
     ProductPageViewState,
     ProductPageRefs,

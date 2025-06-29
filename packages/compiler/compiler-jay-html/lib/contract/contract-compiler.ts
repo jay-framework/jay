@@ -6,7 +6,7 @@ import {
     mkRefsTree,
     RefsTree,
     WithValidations,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 import { Contract } from './contract';
 import { generateTypes, JayImportResolver, renderRefsType } from '../';
 import { pascalCase } from 'change-case';

@@ -1,5 +1,5 @@
 import { render, CounterElementRefs } from './counter.jay-html?jay-workerSandbox';
-import { createSignal, makeJayComponent, Props } from 'jay-component';
+import { createSignal, makeJayComponent, Props } from '@jay-framework/component';
 export interface CounterProps {
     initialValue: number;
     incrementBy: number;

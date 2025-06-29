@@ -1,5 +1,14 @@
-import { JayElement, RenderElement, MapEventEmitterViewState, JayContract } from 'jay-runtime';
-import { SecureReferencesManager, elementBridge, sandboxChildComp as childComp } from 'jay-secure';
+import {
+    JayElement,
+    RenderElement,
+    MapEventEmitterViewState,
+    JayContract,
+} from '@jay-framework/runtime';
+import {
+    SecureReferencesManager,
+    elementBridge,
+    sandboxChildComp as childComp,
+} from '@jay-framework/secure';
 // @ts-expect-error Cannot find module
 import { Counter } from '../counter/counter?jay-workerSandbox';
 // @ts-expect-error Cannot find module

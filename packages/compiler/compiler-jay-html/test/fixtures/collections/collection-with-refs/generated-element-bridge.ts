@@ -1,10 +1,15 @@
-import { JayElement, RenderElement, HTMLElementCollectionProxy, JayContract } from 'jay-runtime';
+import {
+    JayElement,
+    RenderElement,
+    HTMLElementCollectionProxy,
+    JayContract,
+} from '@jay-framework/runtime';
 import {
     SecureReferencesManager,
     elementBridge,
     sandboxElement as e,
     sandboxForEach as forEach,
-} from 'jay-secure';
+} from '@jay-framework/secure';
 
 export interface ItemOfCollectionWithRefsViewState {
     name: string;

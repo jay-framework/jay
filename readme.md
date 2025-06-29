@@ -40,8 +40,8 @@ Jay itself only supports **Headfull Components** for client-only applications.
 - **Definition**: Components that include both the contract and the UI design
 - **Created with**: `makeJayComponent`, component constructor + jay-html files (`.jay-html`)
 - **Use case**: Complete components with specific UI design that can be reused in client-only applications.
-- **Examples**: 
-  - Design Library. 
+- **Examples**:
+  - Design Library.
   - A counter component with specific styling and layout
 
 ## Jay-Stack Setup (Fullstack)
@@ -96,6 +96,7 @@ Jay-HTML files can import both headfull and headless components using different 
 ```
 
 The headless import format includes:
+
 - `contract` - the location of the contract to import
 - `key` - the attribute name under which the component's Contract ViewState and Refs are nested
 - `src` - the location of the component implementation
@@ -127,7 +128,7 @@ Here is an example Jay Contract (YAML format):
 # todo-list.jay-contract
 name: todo
 tags:
-  - tag: activeTodoWord 
+  - tag: activeTodoWord
   - tag: activeTodoCount
     dataType: number
   - tag: hasItems
@@ -157,6 +158,7 @@ tags:
 The contract is used by design tools to create the actual user interface, such as HTML and CSS, with Jay-specific directives such as `if`, `forEach`, and `{data}` binding.
 
 The contract is compiled into programmatic types that are used to code the headless or headfull components:
+
 1. The **view state**: Data and selected variants (which appear as boolean or enumerations) that a Jay Component hands over to the view or Jay Element to render
 2. The **refs**: Named HTML elements or sub-components in the view (Jay Element) to interact with
 

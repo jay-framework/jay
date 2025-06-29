@@ -1,4 +1,9 @@
-import { JayContract, JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
+import {
+    JayContract,
+    JayElement,
+    RenderElement,
+    RenderElementOptions,
+} from '@jay-framework/runtime';
 
 export interface PageViewState {
     title: string;

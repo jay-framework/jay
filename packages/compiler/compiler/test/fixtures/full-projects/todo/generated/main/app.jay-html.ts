@@ -6,8 +6,8 @@ import {
     ConstructContext,
     RenderElementOptions,
     JayContract,
-} from 'jay-runtime';
-import { mainRoot as mr, secureChildComp } from 'jay-secure';
+} from '@jay-framework/runtime';
+import { mainRoot as mr, secureChildComp } from '@jay-framework/secure';
 import { funcRepository } from './function-repository';
 // @ts-expect-error Cannot find module
 import { TodoComponent, TodoProps } from './todo?jay-mainSandbox';

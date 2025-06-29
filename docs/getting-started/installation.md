@@ -62,28 +62,28 @@ npm install --save-dev @types/node typescript
 
 ### Core Packages
 
-| Package | Description | When to Use |
-|---------|-------------|-------------|
-| `jay-component` | Core component library | All Jay projects |
-| `jay-runtime` | Runtime utilities and types | All Jay projects |
-| `jay-reactive` | Reactive state management | When using signals and effects |
+| Package             | Description                  | When to Use                     |
+| ------------------- | ---------------------------- | ------------------------------- |
+| `jay-component`     | Core component library       | All Jay projects                |
+| `jay-runtime`       | Runtime utilities and types  | All Jay projects                |
+| `jay-reactive`      | Reactive state management    | When using signals and effects  |
 | `jay-serialization` | Data serialization utilities | When working with external data |
 
 ### Full-Stack Packages
 
-| Package | Description | When to Use |
-|---------|-------------|-------------|
-| `jay-fullstack-component` | Full-stack component builder | Server-side rendering |
-| `jay-stack-dev-server` | Development server | Full-stack development |
-| `jay-stack-route-scanner` | Route discovery | File-based routing |
+| Package                   | Description                  | When to Use            |
+| ------------------------- | ---------------------------- | ---------------------- |
+| `jay-fullstack-component` | Full-stack component builder | Server-side rendering  |
+| `jay-stack-dev-server`    | Development server           | Full-stack development |
+| `jay-stack-route-scanner` | Route discovery              | File-based routing     |
 
 ### Build Tools
 
-| Package | Description | When to Use |
-|---------|-------------|-------------|
-| `@jay-compiler/vite-plugin` | Vite integration | Vite-based projects |
+| Package                       | Description        | When to Use           |
+| ----------------------------- | ------------------ | --------------------- |
+| `@jay-compiler/vite-plugin`   | Vite integration   | Vite-based projects   |
 | `@jay-compiler/rollup-plugin` | Rollup integration | Rollup-based projects |
-| `@jay-compiler/cli` | Command-line tools | All projects |
+| `@jay-compiler/cli`           | Command-line tools | All projects          |
 
 ## Configuration
 
@@ -106,14 +106,8 @@ Create a `tsconfig.json` file in your project root:
     "allowSyntheticDefaultImports": true,
     "resolveJsonModule": true
   },
-  "include": [
-    "src/**/*",
-    "**/*.jay-html"
-  ],
-  "exclude": [
-    "node_modules",
-    "dist"
-  ]
+  "include": ["src/**/*", "**/*.jay-html"],
+  "exclude": ["node_modules", "dist"]
 }
 ```
 
@@ -130,12 +124,12 @@ export default defineConfig({
     jay({
       // Plugin options
       include: ['**/*.jay-html'],
-      exclude: ['node_modules/**']
-    })
+      exclude: ['node_modules/**'],
+    }),
   ],
   resolve: {
-    extensions: ['.ts', '.js', '.jay-html']
-  }
+    extensions: ['.ts', '.js', '.jay-html'],
+  },
 });
 ```
 
@@ -150,13 +144,13 @@ export default {
   input: 'src/main.ts',
   output: {
     file: 'dist/bundle.js',
-    format: 'es'
+    format: 'es',
   },
   plugins: [
     jay({
-      include: ['**/*.jay-html']
-    })
-  ]
+      include: ['**/*.jay-html'],
+    }),
+  ],
 };
 ```
 
@@ -247,6 +241,7 @@ JAY_DEBUG=false
 ### Common Installation Issues
 
 #### TypeScript Errors
+
 If you see TypeScript errors about missing types:
 
 ```bash
@@ -259,6 +254,7 @@ npm list typescript
 ```
 
 #### Build Tool Integration
+
 If build tools aren't recognizing Jay files:
 
 1. Ensure the appropriate plugin is installed
@@ -266,6 +262,7 @@ If build tools aren't recognizing Jay files:
 3. Verify file extensions are included in the build process
 
 #### Module Resolution
+
 If modules can't be resolved:
 
 ```json
@@ -294,11 +291,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          jay: ['jay-component', 'jay-runtime']
-        }
-      }
-    }
-  }
+          jay: ['jay-component', 'jay-runtime'],
+        },
+      },
+    },
+  },
 });
 ```
 
@@ -322,4 +319,4 @@ If you encounter issues during installation:
 
 ---
 
-Ready to start building? Head to the [Quick Start Guide](./quick-start.md) to create your first Jay component! 
+Ready to start building? Head to the [Quick Start Guide](./quick-start.md) to create your first Jay component!

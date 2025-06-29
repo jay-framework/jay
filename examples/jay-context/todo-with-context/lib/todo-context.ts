@@ -1,8 +1,8 @@
-import { Getter } from 'jay-reactive';
-import { createJayContext } from 'jay-runtime';
-import { createMemo, createSignal, provideReactiveContext } from 'jay-component';
+import { Getter } from '@jay-framework/reactive';
+import { createJayContext } from '@jay-framework/runtime';
+import { createMemo, createSignal, provideReactiveContext } from '@jay-framework/component';
 import { ShownTodo } from './todo.jay-html';
-import { ADD, patch, REPLACE } from 'jay-json-patch';
+import { ADD, patch, REPLACE } from '@jay-framework/json-patch';
 import { uuid } from './uuid';
 
 export interface TodoItem {

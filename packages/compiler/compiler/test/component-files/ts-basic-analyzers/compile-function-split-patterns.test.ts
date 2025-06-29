@@ -16,7 +16,7 @@ import {
 describe('compile secure function split patterns', () => {
     it('should compile a return pattern', () => {
         const patternFile = createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
+            import {JayEvent} from '@jay-framework/runtime';
     
             function inputValuePattern(handler: JayEvent<any, any>) {
                 return handler.event.target.value;
@@ -31,7 +31,7 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.RETURN,
             leftSidePath: ['event', 'target', 'value'],
-            leftSideType: new ImportFromModuleResolvedType('jay-runtime', ['JayEvent']),
+            leftSideType: new ImportFromModuleResolvedType('@jay-framework/runtime', ['JayEvent']),
             returnType: new BuiltInResolvedType('void'),
             callArgumentTypes: [],
             targetEnvForStatement: JayTargetEnv.any,
@@ -41,7 +41,7 @@ describe('compile secure function split patterns', () => {
 
     it('should compile a return pattern with a return type', () => {
         const patternFile = createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
+            import {JayEvent} from '@jay-framework/runtime';
     
             @JayPattern(JayTargetEnv.main)
             function inputValuePattern(handler: JayEvent<any, any>): string {
@@ -57,7 +57,7 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.RETURN,
             leftSidePath: ['event', 'target', 'value'],
-            leftSideType: new ImportFromModuleResolvedType('jay-runtime', ['JayEvent']),
+            leftSideType: new ImportFromModuleResolvedType('@jay-framework/runtime', ['JayEvent']),
             returnType: new BuiltInResolvedType('string'),
             callArgumentTypes: [],
             targetEnvForStatement: JayTargetEnv.any,
@@ -67,7 +67,7 @@ describe('compile secure function split patterns', () => {
 
     it('should compile a call expression on param pattern', () => {
         const patternFile = createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
+            import {JayEvent} from '@jay-framework/runtime';
     
             @JayPattern(JayTargetEnv.main)
             function eventPreventDefault(handler: JayEvent<any, any>) {
@@ -83,7 +83,7 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.CALL,
             leftSidePath: ['event', 'preventDefault'],
-            leftSideType: new ImportFromModuleResolvedType('jay-runtime', ['JayEvent']),
+            leftSideType: new ImportFromModuleResolvedType('@jay-framework/runtime', ['JayEvent']),
             returnType: new BuiltInResolvedType('void'),
             callArgumentTypes: [],
             targetEnvForStatement: JayTargetEnv.main,
@@ -200,7 +200,7 @@ describe('compile secure function split patterns', () => {
 
     it('should compile an assignment pattern', () => {
         const patternFile = createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
+            import {JayEvent} from '@jay-framework/runtime';
     
             @JayPattern(JayTargetEnv.main)
             function setInputValue(handler: JayEvent<any, any>, value: string) {
@@ -216,7 +216,7 @@ describe('compile secure function split patterns', () => {
         expect(compiledPattern).toEqual({
             patternType: CompilePatternType.ASSIGNMENT_LEFT_SIDE,
             leftSidePath: ['event', 'target', 'value'],
-            leftSideType: new ImportFromModuleResolvedType('jay-runtime', ['JayEvent']),
+            leftSideType: new ImportFromModuleResolvedType('@jay-framework/runtime', ['JayEvent']),
             returnType: new BuiltInResolvedType('void'),
             callArgumentTypes: [new BuiltInResolvedType('string')],
             targetEnvForStatement: JayTargetEnv.main,

@@ -1,4 +1,4 @@
-import { makeJayStackComponent, partialRender } from 'jay-fullstack-component';
+import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
 import { PageContract, render } from './page.jay-html';
 
 export const page = makeJayStackComponent<PageContract>()

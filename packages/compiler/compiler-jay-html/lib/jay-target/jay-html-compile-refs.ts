@@ -14,7 +14,7 @@ import {
     RenderFragment,
     hasRefs,
     mkRef,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 import { HTMLElement } from 'node-html-parser';
 import { htmlElementTagNameMap } from './html-element-tag-name-map';
 import { camelCase } from 'camel-case';

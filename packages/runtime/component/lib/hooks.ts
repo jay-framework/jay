@@ -1,6 +1,13 @@
-import { Getter, MeasureOfChange, mkReactive, Reactive, Setter, ValueOrGetter } from 'jay-reactive';
-import { JSONPatch, patch } from 'jay-json-patch';
-import { ContextMarker, EventEmitter, findContext } from 'jay-runtime';
+import {
+    Getter,
+    MeasureOfChange,
+    mkReactive,
+    Reactive,
+    Setter,
+    ValueOrGetter,
+} from '@jay-framework/reactive';
+import { JSONPatch, patch } from '@jay-framework/json-patch';
+import { ContextMarker, EventEmitter, findContext } from '@jay-framework/runtime';
 import { Patcher } from './component';
 import { COMPONENT_CONTEXT, CONTEXT_CREATION_CONTEXT, HookContext } from './component-contexts';
 import { CONTEXT_REACTIVE_SYMBOL_CONTEXT, createReactiveContext } from './context-api';

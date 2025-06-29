@@ -1,5 +1,5 @@
-import { ADD, JSONPatch, REPLACE } from 'jay-json-patch';
-import { patch } from 'jay-json-patch';
+import { ADD, JSONPatch, REPLACE } from '@jay-framework/json-patch';
+import { patch } from '@jay-framework/json-patch';
 
 export type Deserialize<T extends object> = (jsonPatch: JSONPatch) => [T, Deserialize<T>];
 export function deserialize<T extends object>(jsonPatch: JSONPatch): [T, Deserialize<T>] {

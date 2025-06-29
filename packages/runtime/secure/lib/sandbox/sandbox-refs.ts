@@ -21,14 +21,14 @@ import {
     JayEventHandlerWrapper,
     ManagedRefType,
     PrivateRefConstructor,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { IJayEndpoint, JPMMessage } from '../comm-channel/comm-channel';
 import { JayNativeFunction$ } from '../main/function-repository-types';
 import { completeCorrelatedPromise, correlatedPromise, NativeIdMarker } from '../$func';
 import { Refs, SANDBOX_BRIDGE_CONTEXT, SANDBOX_CREATION_CONTEXT } from './sandbox-context';
 import { SandboxElement } from './sandbox-element';
-import { Reactive } from 'jay-reactive';
-import { serialize } from 'jay-serialization';
+import { Reactive } from '@jay-framework/reactive';
+import { serialize } from '@jay-framework/serialization';
 import {
     addEventListenerMessage,
     eventInvocationMessage,
@@ -39,9 +39,9 @@ import {
     renderMessage,
     rootApiReturns,
 } from '../comm-channel/messages';
-import { JSONPatch, ArrayContexts } from 'jay-json-patch';
-import { EVENT_TRAP, GetTrapProxy } from 'jay-runtime';
-import { COMPONENT_CONTEXT } from 'jay-component';
+import { JSONPatch, ArrayContexts } from '@jay-framework/json-patch';
+import { EVENT_TRAP, GetTrapProxy } from '@jay-framework/runtime';
+import { COMPONENT_CONTEXT } from '@jay-framework/component';
 
 export interface SandboxBridgeElement<ViewState> {
     update: updateFunc<ViewState>;

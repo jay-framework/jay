@@ -5,7 +5,7 @@ import {
     HTMLElementProxy,
     RenderElementOptions,
     JayContract,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { DiscountViewState, DiscountRefs, DiscountRepeatedRefs } from './discount.jay-contract';
 import {
     MediaItemViewState,

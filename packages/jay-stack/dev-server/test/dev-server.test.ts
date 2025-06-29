@@ -1,5 +1,5 @@
 import { DevServerOptions, mkDevServer } from '../lib';
-import { JayRollupConfig } from 'jay-vite-plugin';
+import { JayRollupConfig } from '@jay-framework/vite-plugin';
 import path from 'path';
 import { Request, Response } from 'express';
 
@@ -54,7 +54,7 @@ describe('dev server', () => {
         const scriptForMatching = clearScriptForTest(script);
 
         expect(scriptForMatching).toEqual(`
-import {makeCompositeJayComponent} from "jay-stack-client-runtime";
+import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
 import { render } from "/page.jay-html.ts";
 
 const viewState = {};
@@ -99,7 +99,7 @@ target.appendChild(instance.element.dom);
         const scriptForMatching = clearScriptForTest(script);
 
         expect(scriptForMatching).toEqual(`
-import {makeCompositeJayComponent} from "jay-stack-client-runtime";
+import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
 import { render } from "/page.jay-html.ts";
 
 const viewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file"};
@@ -144,7 +144,7 @@ target.appendChild(instance.element.dom);
         const scriptForMatching = clearScriptForTest(script);
 
         expect(scriptForMatching).toEqual(`
-import {makeCompositeJayComponent} from "jay-stack-client-runtime";
+import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
 import { render } from "/page.jay-html.ts";
 import {page} from "/page.ts"
 import {headless} from "/headless-component.ts"
@@ -170,7 +170,10 @@ function clearScriptForTest(script: string) {
     return script
         .replace(cmd, '')
         .replace(/\/\/\#.*/, '// source-map')
-        .replace(/from "(\/@fs\/.*?stack-client-runtime.*?)"/g, 'from "jay-stack-client-runtime"')
+        .replace(
+            /from "(\/@fs\/.*?stack-client-runtime.*?)"/g,
+            'from "@jay-framework/stack-client-runtime"',
+        )
         .split('\n')
         .map((line) => line.trim())
         .join('\n');

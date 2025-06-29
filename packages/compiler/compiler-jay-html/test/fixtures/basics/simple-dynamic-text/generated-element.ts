@@ -7,7 +7,7 @@ import {
     ConstructContext,
     RenderElementOptions,
     JayContract,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface SimpleDynamicTextViewState {
     s1: string;

@@ -17,7 +17,7 @@ export function findExec$(bindingResolver: SourceFileBindingResolver, sourceFile
                 accessChain.path[0] === 'exec$' &&
                 isImportModuleVariableRoot(accessChain.root) &&
                 ts.isStringLiteral(accessChain.root.module) &&
-                accessChain.root.module.text === 'jay-secure'
+                accessChain.root.module.text === '@jay-framework/secure'
             )
                 foundExec$.push(node);
         }

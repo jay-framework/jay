@@ -4,10 +4,10 @@ import {
     ShownTodoOfTodoViewState,
     TodoElementRefs,
 } from './todo.jay-html';
-import { createMemo, createSignal, makeJayComponent, Props } from 'jay-component';
+import { createMemo, createSignal, makeJayComponent, Props } from '@jay-framework/component';
 import { uuid } from './uuid';
-import { patch } from 'jay-json-patch';
-import { ADD, REPLACE } from 'jay-json-patch';
+import { patch } from '@jay-framework/json-patch';
+import { ADD, REPLACE } from '@jay-framework/json-patch';
 
 const ENTER_KEY = 13;
 

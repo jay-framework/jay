@@ -4,7 +4,7 @@ import {
     RenderElementOptions,
     MapEventEmitterViewState,
     JayContract,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { Counter } from '../counter/counter';
 import { CounterViewState as CounterData } from '../counter/generated-element-main-trusted';
 

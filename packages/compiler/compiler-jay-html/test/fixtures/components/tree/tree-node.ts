@@ -1,5 +1,5 @@
 import { render, TreeNodeElementRefs } from './generated-element-main-trusted';
-import { createSignal, createMemo, makeJayComponent, Props } from 'jay-component';
+import { createSignal, createMemo, makeJayComponent, Props } from '@jay-framework/component';
 
 export interface Node {
     id: string;

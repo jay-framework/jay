@@ -29,9 +29,9 @@ describe('findEventHandlersBlock', () => {
 
     it('should filter out any event handler not defined with JayEvent param type', () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
             import { Refs, render } from './generated-element';
-            import { JayEvent } from 'jay-runtime';
+            import { JayEvent } from '@jay-framework/runtime';
             
             function AComponent({ initialValue }: Props<CounterProps>, refs: Refs) {
               refs.one.onclick(() => setCount(count() - 1));
@@ -46,9 +46,9 @@ describe('findEventHandlersBlock', () => {
 
     it('should retain event handler with JayEvent param type', () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
             import { Refs, render } from './generated-element';
-            import { JayEvent } from 'jay-runtime';
+            import { JayEvent } from '@jay-framework/runtime';
             
             function AComponent({ initialValue }: Props<CounterProps>, refs: Refs) {
               refs.one.onclick(({ event }: JayEvent<ClickEvent, TodoViewState>) => setCount(count() - 1));
@@ -62,7 +62,7 @@ describe('findEventHandlersBlock', () => {
 
     it('should filter out event handler with JayEvent param type if imported from another module', () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
             import { Refs, render } from './generated-element';
             import { JayEvent } from 'some-other-module';
             
@@ -77,9 +77,9 @@ describe('findEventHandlersBlock', () => {
 
     it('should filter out event handler with JayEvent not having two generic type arguments', () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
             import { Refs, render } from './generated-element';
-            import { JayEvent } from 'jay-runtime';
+            import { JayEvent } from '@jay-framework/runtime';
             
             function AComponent({ initialValue }: Props<CounterProps>, refs: Refs) {
               refs.one.onclick(({ event }: JayEvent) => setCount(count() - 1));

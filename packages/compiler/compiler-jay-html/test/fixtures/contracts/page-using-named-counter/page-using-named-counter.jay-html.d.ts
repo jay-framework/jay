@@ -1,4 +1,9 @@
-import { JayElement, RenderElement, RenderElementOptions, JayContract } from 'jay-runtime';
+import {
+    JayElement,
+    RenderElement,
+    RenderElementOptions,
+    JayContract,
+} from '@jay-framework/runtime';
 import {
     NamedContractViewState,
     NamedContractRefs,

@@ -10,9 +10,9 @@ import {
     createSignal,
     makeJayComponent,
     Props,
-} from 'jay-component';
+} from '@jay-framework/component';
 import { uuid } from './uuid';
-import { ADD, REPLACE } from 'jay-json-patch';
+import { ADD, REPLACE } from '@jay-framework/json-patch';
 import './todo.css';
 
 const ENTER_KEY = 13;

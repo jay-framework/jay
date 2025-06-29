@@ -1,5 +1,5 @@
 import { render, TaskElementRefs } from './task.jay-html';
-import { createEffect, createMemo, makeJayComponent, Props } from 'jay-component';
+import { createEffect, createMemo, makeJayComponent, Props } from '@jay-framework/component';
 import { SCRUM_CONTEXT, ScrumContext } from './scrum-context';
 
 export interface TaskProps {

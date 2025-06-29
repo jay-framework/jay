@@ -10,7 +10,7 @@ import {
     ConstructContext,
     RenderElementOptions,
     JayContract,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface AttributesViewState {
     text: string;

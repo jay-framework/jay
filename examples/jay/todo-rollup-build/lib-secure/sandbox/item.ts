@@ -1,6 +1,6 @@
 import { render, ItemElementRefs, ItemViewState } from './item.jay-html';
-import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
-import { handler$ } from 'jay-secure';
+import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
+import { handler$ } from '@jay-framework/secure';
 
 export interface ItemProps {
     title: string;

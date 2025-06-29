@@ -19,7 +19,7 @@ The route-scanner walks your pages directory and produces a list of route defini
 ## Usage
 
 ```ts
-import { scanRoutes, routeToExpressRoute } from 'jay-stack-route-scanner';
+import { scanRoutes, routeToExpressRoute } from '@jay-framework/stack-route-scanner';
 
 const routes = await scanRoutes('./src/pages', {
   jayHtmlFilename: 'page.jay-html',

@@ -9,7 +9,7 @@ import {
     SourceFileFormat,
     TS_EXTENSION,
     TSX_EXTENSION,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 
 export interface ResolveIdOptions {
     attributes: Record<string, string>;

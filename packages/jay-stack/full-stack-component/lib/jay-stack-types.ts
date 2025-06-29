@@ -1,4 +1,4 @@
-import { ComponentConstructor, ContextMarkers, JayComponentCore } from 'jay-component';
+import { ComponentConstructor, ContextMarkers, JayComponentCore } from '@jay-framework/component';
 
 export interface PageProps {
     language: string;

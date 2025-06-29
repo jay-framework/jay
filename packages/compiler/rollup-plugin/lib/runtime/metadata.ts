@@ -1,5 +1,5 @@
 import { CustomPluginOptions, PluginContext } from 'rollup';
-import { SourceFileFormat } from 'jay-compiler-shared';
+import { SourceFileFormat } from '@jay-framework/compiler-shared';
 
 export interface JayMetadata {
     originId?: string;

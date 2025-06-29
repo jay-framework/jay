@@ -9,8 +9,8 @@ import {
     ConstructContext,
     RenderElementOptions,
     JayContract,
-} from 'jay-runtime';
-import { secureChildComp } from 'jay-secure';
+} from '@jay-framework/runtime';
+import { secureChildComp } from '@jay-framework/secure';
 // @ts-expect-error Cannot find module
 import { treeNode, Node } from './tree-node?jay-mainSandbox';
 

@@ -1,11 +1,11 @@
 import { parseTsxFile } from '../../../lib/tsx-file/parse/parse-tsx-file';
-import { JayUnknown, MAKE_JAY_TSX_COMPONENT, prettifyHtml } from 'jay-compiler-shared';
+import { JayUnknown, MAKE_JAY_TSX_COMPONENT, prettifyHtml } from '@jay-framework/compiler-shared';
 import { JayTsxSourceFile } from '../../../lib/tsx-file/jsx-block';
 
 describe('parseTsxFile', () => {
     const filename = 'dummy.tsx';
     const code = `
-import { createSignal, makeJayTsxComponent, Props } from 'jay-component';
+import { createSignal, makeJayTsxComponent, Props } from '@jay-framework/component';
 
 export interface CounterProps {
     initialValue: number;
@@ -35,7 +35,7 @@ export const Counter = makeJayTsxComponent(CounterConstructor);
         expect(jayFile).toMatchObject({
             imports: [
                 {
-                    module: 'jay-component',
+                    module: '@jay-framework/component',
                     names: [
                         { name: 'createSignal', type: JayUnknown },
                         { name: 'makeJayTsxComponent', type: JayUnknown },
@@ -59,7 +59,7 @@ export const Counter = makeJayTsxComponent(CounterConstructor);
 
     describe('on no component constructor', () => {
         const code = `
-        | import { createSignal, makeJayTsxComponent, Props } from 'jay-component';
+        | import { createSignal, makeJayTsxComponent, Props } from '@jay-framework/component';
         | function CounterConstructor({ initialValue }: Props<CounterProps>) {}
         `;
 
@@ -72,7 +72,7 @@ export const Counter = makeJayTsxComponent(CounterConstructor);
 
     describe('on no makeJayTsxComponent import', () => {
         const code = `
-        | import { Props } from 'jay-component';
+        | import { Props } from '@jay-framework/component';
         | function CounterConstructor({ initialValue }: Props<CounterProps>) {}
         `;
 

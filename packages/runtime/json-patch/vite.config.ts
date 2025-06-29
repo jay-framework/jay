@@ -12,11 +12,11 @@ export default defineConfig({
             formats: ['es'],
         },
         rollupOptions: {
-            external: ['jay-list-compare'],
+            external: ['@jay-framework/list-compare'],
         },
     },
     test: {
         globals: true,
-        setupFiles: 'jay-dev-environment/library/vitest.setup.ts',
+        setupFiles: '@jay-framework/dev-environment/library/vitest.setup.ts',
     },
 });

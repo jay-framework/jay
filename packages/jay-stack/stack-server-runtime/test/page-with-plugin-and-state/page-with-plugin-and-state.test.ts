@@ -1,10 +1,10 @@
 import { DevSlowlyChangingPhase, renderFastChangingData } from '../../lib';
 import { render } from './compiled-slowly/page.slowly-rendered.jay-html';
-import { prettify } from 'jay-compiler-shared';
+import { prettify } from '@jay-framework/compiler-shared';
 import { plugin } from '../simple-plugin/simple-plugin';
 import { page } from './page';
-import { PageProps, partialRender } from 'jay-fullstack-component';
-import { makeCompositeJayComponent } from 'jay-stack-client-runtime';
+import { PageProps, partialRender } from '@jay-framework/fullstack-component';
+import { makeCompositeJayComponent } from '@jay-framework/stack-client-runtime';
 import { DevServerPagePart } from '../../lib/load-page-parts';
 import { toCompositePart } from '../utils/to-composite.part';
 

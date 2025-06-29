@@ -5,7 +5,7 @@ import {
     readEventTargetValuePattern,
 } from './ts-basic-analyzers/compiler-patterns-for-testing';
 import { FunctionRepositoryBuilder } from '../../lib';
-import { prettify } from 'jay-compiler-shared';
+import { prettify } from '@jay-framework/compiler-shared';
 
 function globalFunctionRepo(): FunctionRepositoryBuilder {
     return new FunctionRepositoryBuilder();
@@ -15,8 +15,8 @@ describe('transform event handlers with secure code split', () => {
     describe('remove main scope imports', () => {
         it('remove css import', async () => {
             const code = `
-                import {JayEvent} from 'jay-runtime';
-                import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                import {JayEvent} from '@jay-framework/runtime';
+                import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element';
                 import 'bla.css';
                 
@@ -33,8 +33,8 @@ describe('transform event handlers with secure code split', () => {
 
             expect(outputCode).toEqual(
                 await prettify(`
-                import {JayEvent} from 'jay-runtime';
-                import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                import {JayEvent} from '@jay-framework/runtime';
+                import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
                     let [text, setText] = createSignal('');
@@ -49,8 +49,8 @@ describe('transform event handlers with secure code split', () => {
         const input_value_pattern = readEventTargetValuePattern();
         it('replace event.target.value for a single event handler', async () => {
             const code = `
-                import {JayEvent} from 'jay-runtime';
-                import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                import {JayEvent} from '@jay-framework/runtime';
+                import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element';
                 
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
@@ -66,10 +66,10 @@ describe('transform event handlers with secure code split', () => {
 
             expect(outputCode).toEqual(
                 await prettify(`
-                import {JayEvent} from 'jay-runtime';
-                import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                import {JayEvent} from '@jay-framework/runtime';
+                import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
-                import { handler$} from 'jay-secure';
+                import { handler$} from '@jay-framework/secure';
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
                     let [text, setText] = createSignal('');
                     refs.input
@@ -82,8 +82,8 @@ describe('transform event handlers with secure code split', () => {
 
         it('replace event.target.value for two event handlers', async () => {
             const code = `
-                import {JayEvent} from 'jay-runtime';
-                import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                import {JayEvent} from '@jay-framework/runtime';
+                import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element';
                 
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
@@ -100,10 +100,10 @@ describe('transform event handlers with secure code split', () => {
 
             expect(outputCode).toEqual(
                 await prettify(`
-                import {JayEvent} from 'jay-runtime';
-                import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                import {JayEvent} from '@jay-framework/runtime';
+                import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
-                import { handler$} from 'jay-secure';
+                import { handler$} from '@jay-framework/secure';
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
                     let [text, setText] = createSignal('');
                     refs.input
@@ -119,8 +119,8 @@ describe('transform event handlers with secure code split', () => {
 
         it('replace event.target.value for two event handler reusing the handler', async () => {
             const code = `
-                import {JayEvent} from 'jay-runtime';
-                import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                import {JayEvent} from '@jay-framework/runtime';
+                import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element';
                 
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
@@ -140,10 +140,10 @@ describe('transform event handlers with secure code split', () => {
 
             expect(outputCode).toEqual(
                 await prettify(`
-                import {JayEvent} from 'jay-runtime';
-                import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                import {JayEvent} from '@jay-framework/runtime';
+                import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
-                import { handler$} from 'jay-secure';
+                import { handler$} from '@jay-framework/secure';
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
                     let [text, setText] = createSignal('');
                     function updateText({event}: JayEvent<any, ViewState>) {
@@ -162,7 +162,7 @@ describe('transform event handlers with secure code split', () => {
 
         it('should not transform an event handler that does not match any pattern', async () => {
             const code = `
-                import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element';
                 
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
@@ -178,7 +178,7 @@ describe('transform event handlers with secure code split', () => {
 
             expect(outputCode).toEqual(
                 await prettify(`
-                import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
                     let [count, setCount] = createSignal('');
@@ -194,8 +194,8 @@ describe('transform event handlers with secure code split', () => {
 
         it('extract event.preventDefault()', async () => {
             const code = `
-                import {JayEvent} from 'jay-runtime';
-                import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                import {JayEvent} from '@jay-framework/runtime';
+                import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element';
                 
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
@@ -214,10 +214,10 @@ describe('transform event handlers with secure code split', () => {
 
             expect(outputCode).toEqual(
                 await prettify(`
-                import {JayEvent} from 'jay-runtime';
-                import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                import {JayEvent} from '@jay-framework/runtime';
+                import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
-                import { handler$} from 'jay-secure';
+                import { handler$} from '@jay-framework/secure';
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
                     let [text, setText] = createSignal('');
                     refs.input
@@ -232,8 +232,8 @@ describe('transform event handlers with secure code split', () => {
 
         it('extract event.preventDefault()', async () => {
             const code = `
-                import {JayEvent} from 'jay-runtime';
-                import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                import {JayEvent} from '@jay-framework/runtime';
+                import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element';
                 
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
@@ -252,10 +252,10 @@ describe('transform event handlers with secure code split', () => {
 
             expect(outputCode).toEqual(
                 await prettify(`
-                import {JayEvent} from 'jay-runtime';
-                import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                import {JayEvent} from '@jay-framework/runtime';
+                import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element?jay-workerSandbox';
-                import { handler$} from 'jay-secure';
+                import { handler$} from '@jay-framework/secure';
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
                     let [text, setText] = createSignal('');
                     refs.input

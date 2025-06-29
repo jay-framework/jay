@@ -28,7 +28,7 @@ describe('findEventHandlersBlock', () => {
 
     it('defined as inline arrow functions based on ref object', async () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
             import { CounterElementRefs, render } from './generated-element';
             
             function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
@@ -52,7 +52,7 @@ describe('findEventHandlersBlock', () => {
 
     it('defined as inline arrow functions based on ref object and variable bindings', async () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
             import { CounterElementRefs, render } from './generated-element';
            
             function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
@@ -79,7 +79,7 @@ describe('findEventHandlersBlock', () => {
 
     it('defined as inline arrow functions based on refs object property binding', async () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
             import { CounterElementRefs, render } from './generated-element';
            
             function CounterComponent({ initialValue }: Props<CounterProps>, {subtracter, adderButton}: CounterElementRefs) {
@@ -104,7 +104,7 @@ describe('findEventHandlersBlock', () => {
 
     it('defined as regular function', async () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
             import { CounterElementRefs, render } from './generated-element';
            
             function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
@@ -139,7 +139,7 @@ describe('findEventHandlersBlock', () => {
 
     it('defined as const arrow function', async () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
             import { CounterElementRefs, render } from './generated-element';
            
             function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
@@ -166,7 +166,7 @@ describe('findEventHandlersBlock', () => {
 
     it('defined as const anonymous function', async () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
             import { CounterElementRefs, render } from './generated-element';
            
             function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
@@ -195,7 +195,7 @@ describe('findEventHandlersBlock', () => {
 
     it('both events are using the same function (a bug in the component logic, valid in other cases)', async () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
             import { CounterElementRefs, render } from './generated-element';
            
             function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
@@ -225,7 +225,7 @@ describe('findEventHandlersBlock', () => {
 
     it('defined as nested object function', async () => {
         const sourceFile = createTsSourceFile(`
-            import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+            import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
             import { CounterElementRefs, render } from './generated-element';
            
             function CounterComponent({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {

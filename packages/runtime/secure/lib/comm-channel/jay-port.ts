@@ -5,7 +5,7 @@ import {
     JayPortInMessageHandler,
     JPMMessage,
 } from './comm-channel';
-import { Coordinate } from 'jay-runtime';
+import { Coordinate } from '@jay-framework/runtime';
 import { JayPortLogger } from './jay-port-logger';
 
 export class JayPort implements IJayPort {

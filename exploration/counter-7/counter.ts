@@ -1,4 +1,4 @@
-import { JayElement } from 'jay-runtime';
+import { JayElement } from '@jay-framework/runtime';
 import { render, ViewState, eventsFor } from './counter.jay';
 
 export function Counter(initial: number): JayElement<ViewState> {

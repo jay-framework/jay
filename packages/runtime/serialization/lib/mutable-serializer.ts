@@ -1,5 +1,5 @@
-import { ArrayContexts, diff } from 'jay-json-patch';
-import { JSONPatch } from 'jay-json-patch';
+import { ArrayContexts, diff } from '@jay-framework/json-patch';
+import { JSONPatch } from '@jay-framework/json-patch';
 
 export type Serialize<T extends object> = (
     entity: any,

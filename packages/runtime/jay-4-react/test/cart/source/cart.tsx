@@ -1,5 +1,5 @@
 import { render, CartElementRefs, CartLineItem } from './cart.jay-html';
-import { Props, createEvent, createMemo, makeJayComponent } from 'jay-component';
+import { Props, createEvent, createMemo, makeJayComponent } from '@jay-framework/component';
 
 export interface CartProps {
     lineItems: CartLineItem[];

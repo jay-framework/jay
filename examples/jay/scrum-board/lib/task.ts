@@ -1,5 +1,5 @@
 import { render, TaskElementRefs, TaskViewState } from './task.jay-html';
-import { createEvent, makeJayComponent, Props } from 'jay-component';
+import { createEvent, makeJayComponent, Props } from '@jay-framework/component';
 
 export interface TaskProps extends TaskViewState {}
 

@@ -1,7 +1,7 @@
-import { JayImportLink, RefsTree, SourceFileFormat } from 'jay-compiler-shared';
-import { JayType } from 'jay-compiler-shared';
+import { JayImportLink, RefsTree, SourceFileFormat } from '@jay-framework/compiler-shared';
+import { JayType } from '@jay-framework/compiler-shared';
 import { HTMLElement } from 'node-html-parser';
-import { CompilerSourceFile } from 'jay-compiler-shared';
+import { CompilerSourceFile } from '@jay-framework/compiler-shared';
 
 export interface JayHtmlNamespace {
     prefix: string;

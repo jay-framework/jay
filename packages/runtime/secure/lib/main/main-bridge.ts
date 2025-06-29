@@ -8,14 +8,14 @@ import {
     RenderElement,
     useContext,
     PreRenderElement,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import {
     createSignal,
     JayComponentCore,
     makeJayComponent,
     Props,
     useReactive,
-} from 'jay-component';
+} from '@jay-framework/component';
 import { IJayEndpoint, JPMMessage } from '../comm-channel/comm-channel';
 import { SECURE_COMPONENT_MARKER } from './main-contexts';
 import { SECURE_COORDINATE_MARKER } from './main-child-comp';
@@ -27,7 +27,7 @@ import {
     nativeExecResult,
     rootApiInvoke,
 } from '../comm-channel/messages';
-import { deserialize, Deserialize } from 'jay-serialization';
+import { deserialize, Deserialize } from '@jay-framework/serialization';
 
 interface CompBridgeOptions {
     events?: Array<string>;

@@ -1,11 +1,11 @@
 {
-  "extends": "jay-dev-environment/library-dom/tsconfig.json",
+  "extends": "@jay-framework/dev-environment/library-dom/tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
     "paths": {
-      "jay-json-patch": ["../json-patch/lib"],
-      "jay-reactive": ["../reactive/lib"],
-      "jay-runtime": ["../runtime/lib"],
+      "@jay-framework/json-patch": ["../json-patch/lib"],
+      "@jay-framework/reactive": ["../reactive/lib"],
+      "@jay-framework/runtime": ["../runtime/lib"],
     },
   },
 }

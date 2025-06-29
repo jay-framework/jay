@@ -12,7 +12,7 @@ import {
     MapEventEmitterViewState,
     ComponentCollectionProxy,
     OnlyEventEmitters,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { Child } from './child';
 import { secureChildComp } from '../../../../lib/';
 

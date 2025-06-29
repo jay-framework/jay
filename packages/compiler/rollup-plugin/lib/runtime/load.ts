@@ -2,7 +2,7 @@ import { LoadResult, PluginContext } from 'rollup';
 import { getJayMetadata } from './metadata';
 import { readFileAsString } from '../common/files';
 import { checkCodeErrors } from '../common/errors';
-import { TS_EXTENSION, TSX_EXTENSION } from 'jay-compiler-shared';
+import { TS_EXTENSION, TSX_EXTENSION } from '@jay-framework/compiler-shared';
 
 function stripTSExtension(id: string) {
     return id.replace(TS_EXTENSION, '').replace(TSX_EXTENSION, '');

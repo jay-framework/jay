@@ -1,4 +1,4 @@
-import { HandshakeMessageJayChannel } from 'jay-secure';
+import { HandshakeMessageJayChannel } from '@jay-framework/secure';
 
 var myWorker = new Worker('./worker');
 

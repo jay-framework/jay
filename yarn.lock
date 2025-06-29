@@ -3854,6 +3854,494 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@jay-framework/4-react@workspace:^, @jay-framework/4-react@workspace:packages/runtime/jay-4-react":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/4-react@workspace:packages/runtime/jay-4-react"
+  dependencies:
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/json-patch": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@jay-framework/serialization": "workspace:^"
+    "@testing-library/dom": ^10.4.0
+    "@testing-library/jest-dom": ^6.4.2
+    "@testing-library/react": ^14.2.2
+    "@testing-library/user-event": ^14.5.2
+    "@types/node": ^20.11.5
+    "@types/react": ^18
+    "@types/react-dom": ^18
+    "@vitejs/plugin-react": ^4.2.1
+    caniuse-lite: ^1.0.30001579
+    npm-run-all2: ^6.1.1
+    react: ^18.2.0
+    react-dom: ^18.2.0
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/compiler-analyze-exported-types@workspace:^, @jay-framework/compiler-analyze-exported-types@workspace:packages/compiler/compiler-analyze-exported-types":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/compiler-analyze-exported-types@workspace:packages/compiler/compiler-analyze-exported-types"
+  dependencies:
+    "@caiogondim/strip-margin": ^1.0.0
+    "@jay-framework/compiler-shared": "workspace:^"
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@testing-library/jest-dom": ^6.2.0
+    "@types/js-beautify": ^1
+    "@types/js-yaml": ^4.0.9
+    "@types/node": ^20.11.5
+    change-case: ^4.1.2
+    jest-diff: ^29.7.0
+    jest-matcher-utils: ^29.7.0
+    js-beautify: ^1.14.11
+    js-yaml: ^4.1.0
+    node-html-parser: ^6.1.12
+    pluralize: ^8.0.0
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/compiler-jay-html@workspace:^, @jay-framework/compiler-jay-html@workspace:packages/compiler/compiler-jay-html":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/compiler-jay-html@workspace:packages/compiler/compiler-jay-html"
+  dependencies:
+    "@caiogondim/strip-margin": ^1.0.0
+    "@jay-framework/4-react": "workspace:^"
+    "@jay-framework/compiler-analyze-exported-types": "workspace:^"
+    "@jay-framework/compiler-shared": "workspace:^"
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@testing-library/jest-dom": ^6.2.0
+    "@types/js-beautify": ^1
+    "@types/js-yaml": ^4.0.9
+    "@types/node": ^20.11.5
+    "@types/react": ^18.2.0
+    change-case: ^4.1.2
+    jest-diff: ^29.7.0
+    jest-matcher-utils: ^29.7.0
+    js-beautify: ^1.14.11
+    js-yaml: ^4.1.0
+    node-html-parser: ^6.1.12
+    pegjs: ^0.10.0
+    pluralize: ^8.0.0
+    react: ^18.2.0
+    react-dom: ^18.2.0
+    rimraf: ^5.0.5
+    style-to-object: ^1.0.8
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/compiler-shared@workspace:^, @jay-framework/compiler-shared@workspace:packages/compiler/compiler-shared":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/compiler-shared@workspace:packages/compiler/compiler-shared"
+  dependencies:
+    "@caiogondim/strip-margin": ^1.0.0
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@testing-library/jest-dom": ^6.2.0
+    "@types/js-beautify": ^1
+    "@types/js-yaml": ^4.0.9
+    "@types/node": ^20.11.5
+    change-case: ^4.1.2
+    jest-diff: ^29.7.0
+    jest-matcher-utils: ^29.7.0
+    js-beautify: ^1.14.11
+    js-yaml: ^4.1.0
+    node-html-parser: ^6.1.12
+    pegjs: ^0.10.0
+    pluralize: ^8.0.0
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/compiler@workspace:^, @jay-framework/compiler@workspace:packages/compiler/compiler":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/compiler@workspace:packages/compiler/compiler"
+  dependencies:
+    "@caiogondim/strip-margin": ^1.0.0
+    "@jay-framework/compiler-analyze-exported-types": "workspace:^"
+    "@jay-framework/compiler-jay-html": "workspace:^"
+    "@jay-framework/compiler-shared": "workspace:^"
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@testing-library/jest-dom": ^6.2.0
+    "@types/js-beautify": ^1
+    "@types/js-yaml": ^4.0.9
+    "@types/node": ^20.11.5
+    change-case: ^4.1.2
+    jest-diff: ^29.7.0
+    jest-matcher-utils: ^29.7.0
+    js-beautify: ^1.14.11
+    js-yaml: ^4.1.0
+    node-html-parser: ^6.1.12
+    pluralize: ^8.0.0
+    rimraf: ^5.0.5
+    style-to-object: ^1.0.8
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/component@workspace:^, @jay-framework/component@workspace:packages/runtime/component":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/component@workspace:packages/runtime/component"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/json-patch": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@testing-library/jest-dom": ^6.2.0
+    "@types/node": ^20.11.5
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/dev-environment@workspace:^, @jay-framework/dev-environment@workspace:dev-environment":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/dev-environment@workspace:dev-environment"
+  dependencies:
+    "@types/node": ^20.11.5
+    typescript: ^5.3.3
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/dev-server@workspace:^, @jay-framework/dev-server@workspace:packages/jay-stack/dev-server":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/dev-server@workspace:packages/jay-stack/dev-server"
+  dependencies:
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/fullstack-component": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/stack-client-runtime": "workspace:^"
+    "@jay-framework/stack-route-scanner": "workspace:^"
+    "@jay-framework/stack-server-runtime": "workspace:^"
+    "@types/express": ^5.0.2
+    "@types/node": ^22.15.21
+    nodemon: ^3.0.3
+    replace-in-file: ^7.1.0
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/fullstack-component@workspace:^, @jay-framework/fullstack-component@workspace:packages/jay-stack/full-stack-component":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/fullstack-component@workspace:packages/jay-stack/full-stack-component"
+  dependencies:
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@types/express": ^5.0.2
+    "@types/node": ^22.15.21
+    nodemon: ^3.0.3
+    replace-in-file: ^7.1.0
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/jay-cli@workspace:^, @jay-framework/jay-cli@workspace:packages/compiler/cli":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/jay-cli@workspace:packages/compiler/cli"
+  dependencies:
+    "@jay-framework/compiler": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/rollup-plugin": "workspace:^"
+    "@types/node": ^20.11.5
+    "@types/shelljs": ^0.8.15
+    chalk: ^4.1.2
+    commander: ^14.0.0
+    rimraf: ^5.0.5
+    rollup: ^4.9.5
+    shelljs: ^0.8.5
+    typescript: ^5.3.3
+    vite: ^5.0.11
+  bin:
+    jay-cli: dist/index.js
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/jay-stack-cli@workspace:^, @jay-framework/jay-stack-cli@workspace:packages/jay-stack/stack-cli":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/jay-stack-cli@workspace:packages/jay-stack/stack-cli"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/dev-server": "workspace:^"
+    "@types/express": ^5.0.2
+    "@types/node": ^22.15.21
+    express: ^5.0.1
+    nodemon: ^3.0.3
+    replace-in-file: ^7.1.0
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  bin:
+    jay-stack-cli: dist/index.js
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/json-patch@workspace:^, @jay-framework/json-patch@workspace:packages/runtime/json-patch":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/json-patch@workspace:packages/runtime/json-patch"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/list-compare": "workspace:^"
+    "@types/node": ^20.11.5
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/list-compare@workspace:^, @jay-framework/list-compare@workspace:packages/runtime/list-compare":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/list-compare@workspace:packages/runtime/list-compare"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@types/node": ^20.11.5
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/mutable@workspace:^, @jay-framework/mutable@workspace:packages/_deprecated/mutable":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/mutable@workspace:packages/_deprecated/mutable"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@types/node": ^20.11.5
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/reactive@workspace:^, @jay-framework/reactive@workspace:packages/runtime/reactive":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/reactive@workspace:packages/runtime/reactive"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@types/node": ^20.11.5
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/rollup-plugin@workspace:^, @jay-framework/rollup-plugin@workspace:packages/compiler/rollup-plugin":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/rollup-plugin@workspace:packages/compiler/rollup-plugin"
+  dependencies:
+    "@jay-framework/compiler": "workspace:^"
+    "@jay-framework/compiler-jay-html": "workspace:^"
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@types/node": ^20.11.5
+    fast-glob: ^3.3.2
+    rimraf: ^5.0.5
+    rollup: ^4.9.5
+    rollup-plugin-typescript2: ^0.36.0
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+    vitest-mock-extended: ^1.3.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/runtime@workspace:^, @jay-framework/runtime@workspace:packages/runtime/runtime":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/runtime@workspace:packages/runtime/runtime"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/list-compare": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@testing-library/jest-dom": ^6.2.0
+    "@types/jsdom": ^21.1.6
+    "@types/node": ^20.11.5
+    jsdom: ^23.2.0
+    nodemon: ^3.0.3
+    replace-in-file: ^7.1.0
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/secure@workspace:^, @jay-framework/secure@workspace:packages/runtime/secure":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/secure@workspace:packages/runtime/secure"
+  dependencies:
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/json-patch": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/serialization": "workspace:^"
+    "@testing-library/jest-dom": ^6.2.0
+    "@types/node": ^20.11.5
+    caniuse-lite: ^1.0.30001579
+    npm-run-all2: ^6.1.1
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/serialization@workspace:^, @jay-framework/serialization@workspace:packages/runtime/serialization":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/serialization@workspace:packages/runtime/serialization"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/json-patch": "workspace:^"
+    "@types/node": ^20.11.5
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/stack-client-runtime@workspace:^, @jay-framework/stack-client-runtime@workspace:packages/jay-stack/stack-client-runtime":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/stack-client-runtime@workspace:packages/jay-stack/stack-client-runtime"
+  dependencies:
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/fullstack-component": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@types/express": ^5.0.2
+    "@types/node": ^22.15.21
+    nodemon: ^3.0.3
+    replace-in-file: ^7.1.0
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/stack-route-scanner@workspace:^, @jay-framework/stack-route-scanner@workspace:packages/jay-stack/route-scanner":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/stack-route-scanner@workspace:packages/jay-stack/route-scanner"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@types/node": ^20.11.5
+    nodemon: ^3.0.3
+    replace-in-file: ^7.1.0
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/stack-server-runtime@workspace:^, @jay-framework/stack-server-runtime@workspace:packages/jay-stack/stack-server-runtime":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/stack-server-runtime@workspace:packages/jay-stack/stack-server-runtime"
+  dependencies:
+    "@jay-framework/compiler-jay-html": "workspace:^"
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/fullstack-component": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/stack-client-runtime": "workspace:^"
+    "@jay-framework/stack-route-scanner": "workspace:^"
+    "@types/express": ^5.0.2
+    "@types/node": ^22.15.21
+    nodemon: ^3.0.3
+    replace-in-file: ^7.1.0
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/vite-plugin@workspace:^, @jay-framework/vite-plugin@workspace:packages/compiler/vite-plugin":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/vite-plugin@workspace:packages/compiler/vite-plugin"
+  dependencies:
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/rollup-plugin": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@types/node": ^20.11.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
 "@jest/console@npm:^27.5.1":
   version: 27.5.1
   resolution: "@jest/console@npm:27.5.1"
@@ -6693,8 +7181,8 @@ __metadata:
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
     "@babel/types": ^7.23.6
+    "@jay-framework/dev-environment": "workspace:^"
     "@types/node": ^20.11.5
-    jay-dev-environment: "workspace:^"
     rimraf: ^5.0.5
     rollup: ^4.9.5
     tslib: ^2.6.2
@@ -8564,12 +9052,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "deserialization-benchmark@workspace:exploration/deserialization-benchmark"
   dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/json-patch": "workspace:^"
+    "@jay-framework/mutable": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
     browser-hrtime: ^1.1.8
     immer: ^10.0.3
-    jay-dev-environment: "workspace:^"
-    jay-json-patch: "workspace:^"
-    jay-mutable: "workspace:^"
     rimraf: ^5.0.5
     rollup: ^4.9.5
     rollup-plugin-typescript2: ^0.36.0
@@ -9863,18 +10351,18 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/json-patch": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/serialization": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
     "@types/react": ^18.3.18
     "@types/react-dom": ^18.3.5
     "@vitejs/plugin-react": ^4.3.4
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-json-patch: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-serialization: "workspace:^"
-    jay-vite-plugin: "workspace:^"
     nodemon: ^3.0.3
     react: ^18.3.1
     react-dom: ^18.3.1
@@ -9893,13 +10381,13 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-vite-plugin: "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -9916,13 +10404,13 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jay-vite-plugin: "workspace:^"
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -9936,16 +10424,16 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "example-jay-fake-shop@workspace:examples/jay-stack/fake-shop"
   dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/fullstack-component": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/jay-stack-cli": "workspace:^"
     "@types/express": ^5.0.0
     "@types/node": ^22.10.0
     compression: ^1.7.5
     cross-env: ^7.0.3
     example-jay-mood-tracker-plugin: "workspace:^"
     express: ^5.0.1
-    jay-cli: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-fullstack-component: "workspace:^"
-    jay-stack-cli: "workspace:^"
     sirv: ^3.0.0
     typescript: ~5.7.2
     vite: ^6.0.1
@@ -9959,13 +10447,13 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jay-vite-plugin: "workspace:^"
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -9982,13 +10470,13 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jay-vite-plugin: "workspace:^"
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -10005,18 +10493,18 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/json-patch": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@jay-framework/serialization": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
     "@types/shelljs": ^0.8.15
     immer: ^10.0.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-json-patch: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jay-serialization: "workspace:^"
-    jay-vite-plugin: "workspace:^"
     nodemon: ^3.0.3
     npm-run-all2: ^6.1.1
     rimraf: ^5.0.5
@@ -10034,14 +10522,14 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-fullstack-component: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jay-vite-plugin: "workspace:^"
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/fullstack-component": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -10058,15 +10546,15 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/json-patch": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-json-patch: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jay-vite-plugin: "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -10083,15 +10571,15 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/json-patch": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-json-patch: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jay-vite-plugin: "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -10108,13 +10596,13 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jay-vite-plugin: "workspace:^"
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -10131,11 +10619,11 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-runtime: "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -10153,16 +10641,16 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/json-patch": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/rollup-plugin": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@jay-framework/serialization": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-json-patch: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-rollup-plugin: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jay-serialization: "workspace:^"
     rimraf: ^5.0.5
     rollup: ^4.9.5
     rollup-plugin-copy: ^3.5.0
@@ -10182,16 +10670,16 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/json-patch": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@jay-framework/serialization": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-json-patch: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jay-serialization: "workspace:^"
-    jay-vite-plugin: "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -10208,13 +10696,13 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-vite-plugin: "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -10231,16 +10719,16 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/json-patch": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@jay-framework/serialization": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-json-patch: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jay-serialization: "workspace:^"
-    jay-vite-plugin: "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -10257,15 +10745,15 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/json-patch": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/serialization": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-json-patch: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-serialization: "workspace:^"
-    jay-vite-plugin: "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -10282,13 +10770,13 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-vite-plugin: "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
@@ -12408,494 +12896,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jay-4-react@workspace:^, jay-4-react@workspace:packages/runtime/jay-4-react":
-  version: 0.0.0-use.local
-  resolution: "jay-4-react@workspace:packages/runtime/jay-4-react"
-  dependencies:
-    "@testing-library/dom": ^10.4.0
-    "@testing-library/jest-dom": ^6.4.2
-    "@testing-library/react": ^14.2.2
-    "@testing-library/user-event": ^14.5.2
-    "@types/node": ^20.11.5
-    "@types/react": ^18
-    "@types/react-dom": ^18
-    "@vitejs/plugin-react": ^4.2.1
-    caniuse-lite: ^1.0.30001579
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-json-patch: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jay-serialization: "workspace:^"
-    npm-run-all2: ^6.1.1
-    react: ^18.2.0
-    react-dom: ^18.2.0
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-cli@workspace:^, jay-cli@workspace:packages/compiler/cli":
-  version: 0.0.0-use.local
-  resolution: "jay-cli@workspace:packages/compiler/cli"
-  dependencies:
-    "@types/node": ^20.11.5
-    "@types/shelljs": ^0.8.15
-    chalk: ^4.1.2
-    commander: ^14.0.0
-    jay-compiler: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-rollup-plugin: "workspace:^"
-    rimraf: ^5.0.5
-    rollup: ^4.9.5
-    shelljs: ^0.8.5
-    typescript: ^5.3.3
-    vite: ^5.0.11
-  bin:
-    jay-cli: dist/index.js
-  languageName: unknown
-  linkType: soft
-
-"jay-compiler-analyze-exported-types@workspace:^, jay-compiler-analyze-exported-types@workspace:packages/compiler/compiler-analyze-exported-types":
-  version: 0.0.0-use.local
-  resolution: "jay-compiler-analyze-exported-types@workspace:packages/compiler/compiler-analyze-exported-types"
-  dependencies:
-    "@caiogondim/strip-margin": ^1.0.0
-    "@testing-library/jest-dom": ^6.2.0
-    "@types/js-beautify": ^1
-    "@types/js-yaml": ^4.0.9
-    "@types/node": ^20.11.5
-    change-case: ^4.1.2
-    jay-compiler-shared: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jest-diff: ^29.7.0
-    jest-matcher-utils: ^29.7.0
-    js-beautify: ^1.14.11
-    js-yaml: ^4.1.0
-    node-html-parser: ^6.1.12
-    pluralize: ^8.0.0
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-compiler-jay-html@workspace:^, jay-compiler-jay-html@workspace:packages/compiler/compiler-jay-html":
-  version: 0.0.0-use.local
-  resolution: "jay-compiler-jay-html@workspace:packages/compiler/compiler-jay-html"
-  dependencies:
-    "@caiogondim/strip-margin": ^1.0.0
-    "@testing-library/jest-dom": ^6.2.0
-    "@types/js-beautify": ^1
-    "@types/js-yaml": ^4.0.9
-    "@types/node": ^20.11.5
-    "@types/react": ^18.2.0
-    change-case: ^4.1.2
-    jay-4-react: "workspace:^"
-    jay-compiler-analyze-exported-types: "workspace:^"
-    jay-compiler-shared: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jest-diff: ^29.7.0
-    jest-matcher-utils: ^29.7.0
-    js-beautify: ^1.14.11
-    js-yaml: ^4.1.0
-    node-html-parser: ^6.1.12
-    pegjs: ^0.10.0
-    pluralize: ^8.0.0
-    react: ^18.2.0
-    react-dom: ^18.2.0
-    rimraf: ^5.0.5
-    style-to-object: ^1.0.8
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-compiler-shared@workspace:^, jay-compiler-shared@workspace:packages/compiler/compiler-shared":
-  version: 0.0.0-use.local
-  resolution: "jay-compiler-shared@workspace:packages/compiler/compiler-shared"
-  dependencies:
-    "@caiogondim/strip-margin": ^1.0.0
-    "@testing-library/jest-dom": ^6.2.0
-    "@types/js-beautify": ^1
-    "@types/js-yaml": ^4.0.9
-    "@types/node": ^20.11.5
-    change-case: ^4.1.2
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jest-diff: ^29.7.0
-    jest-matcher-utils: ^29.7.0
-    js-beautify: ^1.14.11
-    js-yaml: ^4.1.0
-    node-html-parser: ^6.1.12
-    pegjs: ^0.10.0
-    pluralize: ^8.0.0
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-compiler@workspace:^, jay-compiler@workspace:packages/compiler/compiler":
-  version: 0.0.0-use.local
-  resolution: "jay-compiler@workspace:packages/compiler/compiler"
-  dependencies:
-    "@caiogondim/strip-margin": ^1.0.0
-    "@testing-library/jest-dom": ^6.2.0
-    "@types/js-beautify": ^1
-    "@types/js-yaml": ^4.0.9
-    "@types/node": ^20.11.5
-    change-case: ^4.1.2
-    jay-compiler-analyze-exported-types: "workspace:^"
-    jay-compiler-jay-html: "workspace:^"
-    jay-compiler-shared: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jest-diff: ^29.7.0
-    jest-matcher-utils: ^29.7.0
-    js-beautify: ^1.14.11
-    js-yaml: ^4.1.0
-    node-html-parser: ^6.1.12
-    pluralize: ^8.0.0
-    rimraf: ^5.0.5
-    style-to-object: ^1.0.8
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-component@workspace:^, jay-component@workspace:packages/runtime/component":
-  version: 0.0.0-use.local
-  resolution: "jay-component@workspace:packages/runtime/component"
-  dependencies:
-    "@testing-library/jest-dom": ^6.2.0
-    "@types/node": ^20.11.5
-    jay-dev-environment: "workspace:^"
-    jay-json-patch: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-dev-environment@workspace:^, jay-dev-environment@workspace:dev-environment":
-  version: 0.0.0-use.local
-  resolution: "jay-dev-environment@workspace:dev-environment"
-  dependencies:
-    "@types/node": ^20.11.5
-    typescript: ^5.3.3
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-dev-server@workspace:^, jay-dev-server@workspace:packages/jay-stack/dev-server":
-  version: 0.0.0-use.local
-  resolution: "jay-dev-server@workspace:packages/jay-stack/dev-server"
-  dependencies:
-    "@types/express": ^5.0.2
-    "@types/node": ^22.15.21
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-fullstack-component: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-stack-client-runtime: "workspace:^"
-    jay-stack-route-scanner: "workspace:^"
-    jay-stack-server-runtime: "workspace:^"
-    nodemon: ^3.0.3
-    replace-in-file: ^7.1.0
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-fullstack-component@workspace:^, jay-fullstack-component@workspace:packages/jay-stack/full-stack-component":
-  version: 0.0.0-use.local
-  resolution: "jay-fullstack-component@workspace:packages/jay-stack/full-stack-component"
-  dependencies:
-    "@types/express": ^5.0.2
-    "@types/node": ^22.15.21
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-runtime: "workspace:^"
-    nodemon: ^3.0.3
-    replace-in-file: ^7.1.0
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-json-patch@workspace:^, jay-json-patch@workspace:packages/runtime/json-patch":
-  version: 0.0.0-use.local
-  resolution: "jay-json-patch@workspace:packages/runtime/json-patch"
-  dependencies:
-    "@types/node": ^20.11.5
-    jay-dev-environment: "workspace:^"
-    jay-list-compare: "workspace:^"
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-list-compare@workspace:^, jay-list-compare@workspace:packages/runtime/list-compare":
-  version: 0.0.0-use.local
-  resolution: "jay-list-compare@workspace:packages/runtime/list-compare"
-  dependencies:
-    "@types/node": ^20.11.5
-    jay-dev-environment: "workspace:^"
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-mutable@workspace:^, jay-mutable@workspace:packages/_deprecated/mutable":
-  version: 0.0.0-use.local
-  resolution: "jay-mutable@workspace:packages/_deprecated/mutable"
-  dependencies:
-    "@types/node": ^20.11.5
-    jay-dev-environment: "workspace:^"
-    jay-reactive: "workspace:^"
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-reactive@workspace:^, jay-reactive@workspace:packages/runtime/reactive":
-  version: 0.0.0-use.local
-  resolution: "jay-reactive@workspace:packages/runtime/reactive"
-  dependencies:
-    "@types/node": ^20.11.5
-    jay-dev-environment: "workspace:^"
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-rollup-plugin@workspace:^, jay-rollup-plugin@workspace:packages/compiler/rollup-plugin":
-  version: 0.0.0-use.local
-  resolution: "jay-rollup-plugin@workspace:packages/compiler/rollup-plugin"
-  dependencies:
-    "@types/node": ^20.11.5
-    fast-glob: ^3.3.2
-    jay-compiler: "workspace:^"
-    jay-compiler-jay-html: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    rimraf: ^5.0.5
-    rollup: ^4.9.5
-    rollup-plugin-typescript2: ^0.36.0
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-    vitest-mock-extended: ^1.3.1
-  languageName: unknown
-  linkType: soft
-
-"jay-runtime@workspace:^, jay-runtime@workspace:packages/runtime/runtime":
-  version: 0.0.0-use.local
-  resolution: "jay-runtime@workspace:packages/runtime/runtime"
-  dependencies:
-    "@testing-library/jest-dom": ^6.2.0
-    "@types/jsdom": ^21.1.6
-    "@types/node": ^20.11.5
-    jay-dev-environment: "workspace:^"
-    jay-list-compare: "workspace:^"
-    jay-reactive: "workspace:^"
-    jsdom: ^23.2.0
-    nodemon: ^3.0.3
-    replace-in-file: ^7.1.0
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-secure@workspace:^, jay-secure@workspace:packages/runtime/secure":
-  version: 0.0.0-use.local
-  resolution: "jay-secure@workspace:packages/runtime/secure"
-  dependencies:
-    "@testing-library/jest-dom": ^6.2.0
-    "@types/node": ^20.11.5
-    caniuse-lite: ^1.0.30001579
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-json-patch: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-serialization: "workspace:^"
-    npm-run-all2: ^6.1.1
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-serialization@workspace:^, jay-serialization@workspace:packages/runtime/serialization":
-  version: 0.0.0-use.local
-  resolution: "jay-serialization@workspace:packages/runtime/serialization"
-  dependencies:
-    "@types/node": ^20.11.5
-    jay-dev-environment: "workspace:^"
-    jay-json-patch: "workspace:^"
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-stack-cli@workspace:^, jay-stack-cli@workspace:packages/jay-stack/stack-cli":
-  version: 0.0.0-use.local
-  resolution: "jay-stack-cli@workspace:packages/jay-stack/stack-cli"
-  dependencies:
-    "@types/express": ^5.0.2
-    "@types/node": ^22.15.21
-    express: ^5.0.1
-    jay-dev-environment: "workspace:^"
-    jay-dev-server: "workspace:^"
-    nodemon: ^3.0.3
-    replace-in-file: ^7.1.0
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  bin:
-    jay-stack-cli: dist/index.js
-  languageName: unknown
-  linkType: soft
-
-"jay-stack-client-runtime@workspace:^, jay-stack-client-runtime@workspace:packages/jay-stack/stack-client-runtime":
-  version: 0.0.0-use.local
-  resolution: "jay-stack-client-runtime@workspace:packages/jay-stack/stack-client-runtime"
-  dependencies:
-    "@types/express": ^5.0.2
-    "@types/node": ^22.15.21
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-fullstack-component: "workspace:^"
-    jay-runtime: "workspace:^"
-    nodemon: ^3.0.3
-    replace-in-file: ^7.1.0
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-stack-route-scanner@workspace:^, jay-stack-route-scanner@workspace:packages/jay-stack/route-scanner":
-  version: 0.0.0-use.local
-  resolution: "jay-stack-route-scanner@workspace:packages/jay-stack/route-scanner"
-  dependencies:
-    "@types/node": ^20.11.5
-    jay-dev-environment: "workspace:^"
-    nodemon: ^3.0.3
-    replace-in-file: ^7.1.0
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-stack-server-runtime@workspace:^, jay-stack-server-runtime@workspace:packages/jay-stack/stack-server-runtime":
-  version: 0.0.0-use.local
-  resolution: "jay-stack-server-runtime@workspace:packages/jay-stack/stack-server-runtime"
-  dependencies:
-    "@types/express": ^5.0.2
-    "@types/node": ^22.15.21
-    jay-cli: "workspace:^"
-    jay-compiler-jay-html: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-fullstack-component: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-stack-client-runtime: "workspace:^"
-    jay-stack-route-scanner: "workspace:^"
-    nodemon: ^3.0.3
-    replace-in-file: ^7.1.0
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"jay-vite-plugin@workspace:^, jay-vite-plugin@workspace:packages/compiler/vite-plugin":
-  version: 0.0.0-use.local
-  resolution: "jay-vite-plugin@workspace:packages/compiler/vite-plugin"
-  dependencies:
-    "@types/node": ^20.11.5
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-rollup-plugin: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
 "jay@workspace:.":
   version: 0.0.0-use.local
   resolution: "jay@workspace:."
@@ -14296,12 +14296,12 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "message-comm-channel@workspace:exploration/message-comm-channel"
   dependencies:
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
     rimraf: ^5.0.5
     rollup: ^4.9.5
     rollup-plugin-typescript2: ^0.36.0
@@ -17822,9 +17822,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "serialization-exploration@workspace:exploration/serialization"
   dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
     immer: ^10.0.3
-    jay-dev-environment: "workspace:^"
     rimraf: ^5.0.5
     rollup: ^4.9.5
     rollup-plugin-typescript2: ^0.36.0

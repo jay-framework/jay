@@ -1,5 +1,5 @@
-import { JayElement, RenderElement, HTMLElementProxy, JayContract } from 'jay-runtime';
-import { SecureReferencesManager, elementBridge, sandboxElement as e } from 'jay-secure';
+import { JayElement, RenderElement, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
+import { SecureReferencesManager, elementBridge, sandboxElement as e } from '@jay-framework/secure';
 
 export interface RefsViewState {
     text: string;

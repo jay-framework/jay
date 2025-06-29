@@ -1,7 +1,7 @@
 import ts from 'typescript';
 import { createTsxSourceFile } from '../../test-utils/ts-source-utils';
 import { parseJsx } from '../../../lib/tsx-file/parse/parse-jsx';
-import { prettifyHtml } from 'jay-compiler-shared';
+import { prettifyHtml } from '@jay-framework/compiler-shared';
 
 describe('parseJsx', () => {
     function parse(sourceFile: ts.SourceFile) {

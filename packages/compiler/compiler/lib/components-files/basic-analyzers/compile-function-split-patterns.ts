@@ -21,7 +21,7 @@ import {
     isParamVariableRoot,
 } from './name-binding-resolver';
 import { mkTransformer } from '../ts-utils/mk-transformer';
-import { JayValidations, WithValidations } from 'jay-compiler-shared';
+import { JayValidations, WithValidations } from '@jay-framework/compiler-shared';
 import { astToCode } from '../ts-utils/ts-compiler-utils';
 import {
     ResolvedType,

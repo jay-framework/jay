@@ -15,10 +15,10 @@ export default defineConfig({
         },
         rollupOptions: {
             external: [
-                'jay-compiler',
-                'jay-rollup-plugin',
-                'jay-compiler-shared',
-                'jay-compiler-jay-html',
+                '@jay-framework/compiler',
+                '@jay-framework/rollup-plugin',
+                '@jay-framework/compiler-shared',
+                '@jay-framework/compiler-jay-html',
             ],
             output: {
                 banner: '#!/usr/bin/env node',
@@ -33,6 +33,6 @@ export default defineConfig({
     ],
     test: {
         globals: true,
-        setupFiles: 'jay-dev-environment/library/vitest.setup.ts',
+        setupFiles: '@jay-framework/dev-environment/library/vitest.setup.ts',
     },
 });

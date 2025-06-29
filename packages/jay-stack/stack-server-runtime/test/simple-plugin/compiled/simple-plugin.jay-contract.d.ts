@@ -4,7 +4,7 @@ import {
     JayElement,
     RenderElement,
     RenderElementOptions,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface SimplePluginViewState {
     pluginSlowlyRendered: string;

@@ -7,7 +7,7 @@ export function readEventTargetValuePattern() {
         'compile pattern readEventTargetValuePattern',
         compileFunctionSplitPatternsBlock([
             createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
+            import {JayEvent} from '@jay-framework/runtime';
             function inputValuePattern({event}: JayEvent<any, any>): string {
                 return event.target.value;
             }`),
@@ -20,7 +20,7 @@ export function readEventTargetSelectedIndexPattern() {
         'compile pattern readEventTargetSelectedIndexPattern',
         compileFunctionSplitPatternsBlock([
             createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
+            import {JayEvent} from '@jay-framework/runtime';
             function inputSelectedIndexPattern({ event }: JayEvent<any, any>): number {
                 return event.target.selectedIndex;
             }`),
@@ -33,7 +33,7 @@ export function readCheckedPattern() {
         'compile pattern readCheckedPattern',
         compileFunctionSplitPatternsBlock([
             createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
+            import {JayEvent} from '@jay-framework/runtime';
             function inputCheckedPattern({ event }: JayEvent<any, any>) {
                 return event.target.checked;
             }`),
@@ -46,7 +46,7 @@ export function readEventKeyCodePattern() {
         'compile pattern readEventKeyCodePattern',
         compileFunctionSplitPatternsBlock([
             createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
+            import {JayEvent} from '@jay-framework/runtime';
             function eventKeyCode({event}: JayEvent<any, any>): number {
                 return event.keyCode;
             }`),
@@ -59,7 +59,7 @@ export function readEventWhichPattern() {
         'compile pattern readEventKeyCodePattern',
         compileFunctionSplitPatternsBlock([
             createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
+            import {JayEvent} from '@jay-framework/runtime';
             function eventWhich({event}: JayEvent<any, any>): number {
                 return event.which;
             }`),
@@ -98,7 +98,7 @@ export function eventPreventDefaultPattern() {
         'compile pattern eventPreventDefaultPattern',
         compileFunctionSplitPatternsBlock([
             createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
+            import {JayEvent} from '@jay-framework/runtime';
             function eventPreventDefault({event}: JayEvent<any, any>) {
                 event.preventDefault();
             }`),
@@ -111,7 +111,7 @@ export function setEventTargetValuePattern() {
         'compile pattern setEventTargetValuePattern',
         compileFunctionSplitPatternsBlock([
             createTsSourceFile(`
-            import {JayEvent} from 'jay-runtime';
+            import {JayEvent} from '@jay-framework/runtime';
             function setEventTargetValue({event}: JayEvent<any, any>, value: string) {
                 event.target.value = value
             }`),

@@ -19,7 +19,7 @@ the `jay-component` library defines a reactive and elegant way to create headles
 
 ```typescript
 import { render, CounterElementRefs } from './counter.jay-html';
-import { createSignal, makeJayComponent, Props } from 'jay-component';
+import { createSignal, makeJayComponent, Props } from '@jay-framework/component';
 
 export interface CounterProps {
   initialValue: number;

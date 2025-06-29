@@ -67,6 +67,7 @@ Create a file called `counter.jay-html` in your `src` directory:
 ```
 
 This Jay-HTML file defines:
+
 - **Data contract**: A `count` property of type `number`
 - **UI structure**: Two buttons and a display span
 - **References**: Named elements (`subtracter`, `adder`) that your component can interact with
@@ -98,6 +99,7 @@ export const Counter = makeJayComponent(render, CounterConstructor);
 ```
 
 This component:
+
 - **Imports the generated types** from your Jay-HTML file
 - **Creates reactive state** using `createSignal`
 - **Handles user interactions** by attaching event listeners to the referenced elements
@@ -122,17 +124,17 @@ counter.mount(document.getElementById('app')!);
 Create an `index.html` file in your project root:
 
 ```html
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My First Jay App</title>
-</head>
-<body>
+  </head>
+  <body>
     <div id="app"></div>
     <script type="module" src="./dist/app.js"></script>
-</body>
+  </body>
 </html>
 ```
 
@@ -170,16 +172,19 @@ Congratulations! You've created your first Jay component. Here's what happened:
 ## Key Concepts Demonstrated
 
 ### Jay-HTML Format
+
 - **Data scripts** define the component's view state
 - **References** (`ref` attributes) create named elements for interaction
 - **Template syntax** (`{count}`) displays reactive data
 
 ### Component Architecture
+
 - **Headfull components** include both contract and UI design
 - **Type-safe contracts** ensure design and code stay in sync
 - **Reactive rendering** updates only what changes
 
 ### Event Handling
+
 - **Reference-based interaction** connects UI elements to component logic
 - **Type-safe events** with full IntelliSense support
 
@@ -195,23 +200,29 @@ Now that you have a working component, explore:
 ## Troubleshooting
 
 ### TypeScript Errors
+
 If you see TypeScript errors about missing types, make sure:
+
 - Your Jay-HTML file is properly formatted
 - The file extension is `.jay-html`
 - You're importing from the correct generated file
 
 ### Build Issues
+
 If the build fails:
+
 - Check that all dependencies are installed
 - Verify your `tsconfig.json` configuration
 - Ensure all import paths are correct
 
 ### Runtime Errors
+
 If the component doesn't work in the browser:
+
 - Check the browser console for errors
 - Verify the component is properly mounted
 - Ensure all referenced elements exist in the Jay-HTML
 
 ---
 
-Ready to build more complex components? Check out the [examples](../examples/basic.md) for patterns like forms, lists, and nested components! 
+Ready to build more complex components? Check out the [examples](../examples/basic.md) for patterns like forms, lists, and nested components!

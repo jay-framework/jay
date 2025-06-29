@@ -9,7 +9,7 @@ import {
     ConstructContext,
     RenderElementOptions,
     JayContract,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface ConditionsViewState {
     text1: string;

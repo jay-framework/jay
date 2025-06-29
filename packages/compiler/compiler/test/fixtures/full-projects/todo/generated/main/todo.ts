@@ -2,9 +2,9 @@ import {
     render,
     // @ts-expect-error Cannot find module
 } from './todo.jay-html?jay-mainSandbox';
-import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
+import { makeJayComponentBridge, FunctionsRepository } from '@jay-framework/secure';
 import './todo.css';
-import { JayEvent } from 'jay-runtime';
+import { JayEvent } from '@jay-framework/runtime';
 export interface TodoItem {
     id: string;
     title: string;

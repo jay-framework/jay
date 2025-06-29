@@ -10,7 +10,7 @@ import {
     TimerScreenElementRefs,
     UpOfTimerScreenViewState,
 } from './timer-screen.jay-html';
-import { createSignal, makeJayComponent } from 'jay-component';
+import { createSignal, makeJayComponent } from '@jay-framework/component';
 
 function AppComponentConstructor(_, refs: TimerScreenElementRefs) {
     const [screen, setScreen] = createSignal<ScreenOfTimerScreenViewState>(

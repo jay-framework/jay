@@ -1,7 +1,7 @@
 import { extractImportedModules, isRelativeImport } from './ts-utils/extract-imports';
-import { JAY_QUERY_WORKER_TRUSTED } from 'jay-compiler-shared';
+import { JAY_QUERY_WORKER_TRUSTED } from '@jay-framework/compiler-shared';
 import { createTsSourceFileFromSource } from './building-blocks/create-ts-source-file-from-source';
-import { CompilerSourceFile } from 'jay-compiler-shared';
+import { CompilerSourceFile } from '@jay-framework/compiler-shared';
 
 export function generateImportsFileFromTsSource(filename: string, source: string): string {
     const sourceFile = createTsSourceFileFromSource(filename, source);

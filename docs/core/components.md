@@ -4,7 +4,7 @@ Learn how to build Jay components that implement the contracts defined in your J
 
 ## Overview
 
-Jay components are the logic layer that implements the contracts defined in your design files. 
+Jay components are the logic layer that implements the contracts defined in your design files.
 Jay components are frontend only, and are used as part of Jay-Stack full stack components as the interactive part.
 They handle:
 
@@ -51,8 +51,8 @@ They're created using `makeJayStackComponent` with contract files.
 import { ComponentContract } from './component.jay-contract';
 import { makeJayStackComponent } from 'jay-fullstack-component';
 
-export const component = makeJayStackComponent<ComponentContract>()
-  .withInteractive((props, refs) => {
+export const component = makeJayStackComponent<ComponentContract>().withInteractive(
+  (props, refs) => {
     const [count, setCount] = createSignal(0);
 
     refs.add.onclick(() => setCount(count() + 1));
@@ -61,7 +61,8 @@ export const component = makeJayStackComponent<ComponentContract>()
     return {
       render: () => ({ count }),
     };
-  });
+  },
+);
 ```
 
 ## Component Structure
@@ -71,10 +72,7 @@ export const component = makeJayStackComponent<ComponentContract>()
 The constructor function is the heart of your component:
 
 ```typescript
-function MyComponentConstructor(
-  props: Props<MyComponentProps>, 
-  refs: MyComponentElementRefs
-) {
+function MyComponentConstructor(props: Props<MyComponentProps>, refs: MyComponentElementRefs) {
   // 1. Initialize state
   const [state, setState] = createSignal(initialState);
 
@@ -83,16 +81,19 @@ function MyComponentConstructor(
 
   // 3. Return render function
   return {
-    render: () => ({ /* view state */ }),
+    render: () => ({
+      /* view state */
+    }),
   };
 }
 ```
 
 The constructor function:
-* receives props
-* receives contexts requested with `makeJayComponent` or `makeJayStackComponent.withClientContexts`
-* must return an object with a `render` function
-* can also return component API as part of the returned object - functions and events.
+
+- receives props
+- receives contexts requested with `makeJayComponent` or `makeJayStackComponent.withClientContexts`
+- must return an object with a `render` function
+- can also return component API as part of the returned object - functions and events.
 
 The constructor function is called once during the lifecycle of a component, and defines
 a reactive scope which allows using jay state management and hooks.
@@ -120,7 +121,7 @@ export interface TodoProps {
 function TodoConstructor({ initialTodos }: Props<TodoProps>, refs) {
   // Props are reactive - they update when parent changes them
   const [todos, setTodos] = createSignal(initialTodos());
-  
+
   // ...
 }
 ```
@@ -137,7 +138,7 @@ function FormConstructor(props, refs: FormElementRefs) {
   refs.submitButton.onclick(() => handleSubmit());
   refs.emailInput.oninput((event) => setEmail(event.target.value));
   refs.passwordInput.oninput((event) => setPassword(event.target.value));
-  
+
   // Nested references
   refs.form.username.onfocus(() => clearError());
   refs.modal.close.onclick(() => closeModal());
@@ -157,17 +158,17 @@ function FormConstructor(props, refs: FormElementRefs) {
   // Event handling
   refs.submitButton.onclick(() => handleSubmit());
   refs.emailInput.oninput((event) => setEmail(event.target.value));
-  
+
   // DOM manipulation using exec$
   refs.emailInput.exec$((element) => {
     element.focus();
     element.select();
   });
-  
+
   refs.submitButton.exec$((element) => {
     element.disabled = true;
   });
-  
+
   // Property access using exec$
   refs.emailInput.exec$((element) => {
     const emailValue = element.value;
@@ -189,16 +190,16 @@ function TodoListConstructor(props, refs: TodoListElementRefs) {
       element.style.backgroundColor = 'green';
     });
   }
-  
+
   // Map over all elements
   const todoElements = refs.todoItems.map((element, viewState, coordinate) => {
     return {
       id: viewState.id,
       element: element,
-      coordinate: coordinate
+      coordinate: coordinate,
     };
   });
-  
+
   // Event handling for all elements
   refs.todoItems.onclick((event) => {
     console.log('Todo clicked:', event.viewState);
@@ -216,10 +217,10 @@ Use `createSignal` for reactive state:
 function CounterConstructor(props, refs) {
   // Basic signal
   const [count, setCount] = createSignal(0);
-  
+
   // Signal with initial value from props
   const [todos, setTodos] = createSignal(props.initialTodos());
-  
+
   // Signal with complex initial state
   const [formState, setFormState] = createSignal({
     email: '',
@@ -236,27 +237,25 @@ Update signals using the setter function:
 ```typescript
 function TodoConstructor(props, refs) {
   const [todos, setTodos] = createSignal([]);
-  
+
   // Simple update
   refs.addButton.onclick(() => {
     const newTodo = { id: uuid(), title: 'New Todo', completed: false };
     setTodos([...todos(), newTodo]);
   });
-  
+
   // Update specific item
   refs.toggleButton.onclick((event) => {
     const todoId = event.target.dataset.id;
-    setTodos(todos().map(todo => 
-      todo.id === todoId 
-        ? { ...todo, completed: !todo.completed }
-        : todo
-    ));
+    setTodos(
+      todos().map((todo) => (todo.id === todoId ? { ...todo, completed: !todo.completed } : todo)),
+    );
   });
-  
+
   // Remove item
   refs.deleteButton.onclick((event) => {
     const todoId = event.target.dataset.id;
-    setTodos(todos().filter(todo => todo.id !== todoId));
+    setTodos(todos().filter((todo) => todo.id !== todoId));
   });
 }
 ```
@@ -269,24 +268,23 @@ Use `createMemo` for derived state:
 function TodoConstructor(props, refs) {
   const [todos, setTodos] = createSignal([]);
   const [filter, setFilter] = createSignal('all');
-  
+
   // Computed values
-  const activeTodos = createMemo(() => 
-    todos().filter(todo => !todo.completed)
-  );
-  
-  const completedTodos = createMemo(() => 
-    todos().filter(todo => todo.completed)
-  );
-  
+  const activeTodos = createMemo(() => todos().filter((todo) => !todo.completed));
+
+  const completedTodos = createMemo(() => todos().filter((todo) => todo.completed));
+
   const filteredTodos = createMemo(() => {
     switch (filter()) {
-      case 'active': return activeTodos();
-      case 'completed': return completedTodos();
-      default: return todos();
+      case 'active':
+        return activeTodos();
+      case 'completed':
+        return completedTodos();
+      default:
+        return todos();
     }
   });
-  
+
   const activeCount = createMemo(() => activeTodos().length);
   const completedCount = createMemo(() => completedTodos().length);
 }
@@ -303,23 +301,23 @@ Use `createEffect` for side effects. Effects return a shutdown function that is 
 function FormConstructor(props, refs) {
   const [formData, setFormData] = createSignal({ email: '', password: '' });
   const [errors, setErrors] = createSignal({});
-  
+
   // Validate form when data changes
   createEffect(() => {
     const data = formData();
     const newErrors = {};
-    
+
     if (!data.email) newErrors.email = 'Email is required';
     if (!data.password) newErrors.password = 'Password is required';
     else if (data.password.length < 6) newErrors.password = 'Password too short';
-    
+
     setErrors(newErrors);
   });
-  
+
   // Save to localStorage when data changes
   createEffect(() => {
     localStorage.setItem('formData', JSON.stringify(formData()));
-    
+
     // Return cleanup function
     return () => {
       // This runs when the effect is cleaned up
@@ -334,14 +332,14 @@ function FormConstructor(props, refs) {
 Jay provides several additional hooks for state management:
 
 ```typescript
-import { 
-  createSignal, 
-  createMemo, 
+import {
+  createSignal,
+  createMemo,
   createEffect,
   createPatchableSignal,
   provideContext,
   provideReactiveContext,
-  useReactive
+  useReactive,
 } from 'jay-component';
 
 function AdvancedComponent(props, refs) {
@@ -349,43 +347,43 @@ function AdvancedComponent(props, refs) {
   const [user, setUser, patchUser] = createPatchableSignal({
     name: '',
     email: '',
-    preferences: { theme: 'light', notifications: true }
+    preferences: { theme: 'light', notifications: true },
   });
-  
+
   // Patch specific properties
   refs.updateName.onclick(() => {
     patchUser({ op: REPLACE, path: ['name'], value: 'New Name' });
   });
-  
+
   // Provide context to child components
   provideContext(UserContext, {
     user: user(),
     updateUser: setUser,
   });
-  
+
   // Provide reactive context that updates when dependencies change
-  const {theme, toggleTheme} = provideReactiveContext(ThemeContext, () => {
-      // create signal for the context, which components can listen to signal changes
-      const [theme, setTheme] = createSignal(user().preferences.theme)
-      // return the context API
-      return ({
-          theme: theme,
-          toggleTheme: () => setTheme(theme() === 'light' ? 'dark' : 'light')
-      })
+  const { theme, toggleTheme } = provideReactiveContext(ThemeContext, () => {
+    // create signal for the context, which components can listen to signal changes
+    const [theme, setTheme] = createSignal(user().preferences.theme);
+    // return the context API
+    return {
+      theme: theme,
+      toggleTheme: () => setTheme(theme() === 'light' ? 'dark' : 'light'),
+    };
   });
 
-    refs.updatePreferences.onclick(() => {
-        patchUser({ op: REPLACE, path: ['preferences', 'theme'], value: 'dark'});
-        toggleTheme();        
-    });
+  refs.updatePreferences.onclick(() => {
+    patchUser({ op: REPLACE, path: ['preferences', 'theme'], value: 'dark' });
+    toggleTheme();
+  });
 
-    // Use reactive context from parent
+  // Use reactive context from parent
   const themeContext = useReactive(ThemeContext);
-  
+
   return {
-    render: () => ({ 
+    render: () => ({
       user: user(),
-      currentTheme: themeContext.theme 
+      currentTheme: themeContext.theme,
     }),
   };
 }
@@ -402,11 +400,11 @@ function ButtonConstructor(props, refs) {
   refs.button.onclick(() => {
     console.log('Button clicked!');
   });
-  
+
   refs.button.onmouseenter(() => {
     console.log('Mouse entered button');
   });
-  
+
   refs.button.onmouseleave(() => {
     console.log('Mouse left button');
   });
@@ -423,45 +421,45 @@ import { createEvent } from 'jay-component';
 function FormConstructor(props, refs) {
   const [email, setEmail] = createSignal('');
   const [password, setPassword] = createSignal('');
-  
+
   // Create event emitters
   const onSubmit = createEvent();
   const onValidationError = createEvent();
-  
+
   // Input events
   refs.emailInput.oninput((event) => {
     setEmail((event.target as HTMLInputElement).value);
   });
-  
+
   refs.passwordInput.oninput((event) => {
     setPassword((event.target as HTMLInputElement).value);
   });
-  
+
   // Form submission
   refs.submitButton.onclick(async () => {
     try {
       const formData = { email: email(), password: password() };
-      
+
       // Validate form
       if (!formData.email || !formData.password) {
         onValidationError.emit({ message: 'All fields are required' });
         return;
       }
-      
+
       // Emit submit event
       onSubmit.emit(formData);
     } catch (error) {
       console.error('Form submission failed:', error);
     }
   });
-  
+
   // Keyboard events
   refs.emailInput.onkeydown((event) => {
     if (event.key === 'Enter') {
       refs.passwordInput.exec$((element) => element.focus());
     }
   });
-  
+
   return {
     render: () => ({ email: email(), password: password() }),
     onSubmit,
@@ -480,30 +478,30 @@ import { createEvent } from 'jay-component';
 function TodoItemConstructor(props, refs) {
   const [isEditing, setIsEditing] = createSignal(false);
   const [title, setTitle] = createSignal(props.todo.title);
-  
+
   // Create event emitters
   const onTodoUpdated = createEvent();
   const onTodoDeleted = createEvent();
-  
+
   refs.editButton.onclick(() => {
     setIsEditing(true);
   });
-  
+
   refs.saveButton.onclick(() => {
     setIsEditing(false);
     // Emit custom event
     onTodoUpdated.emit({ id: props.todo.id, title: title() });
   });
-  
+
   refs.deleteButton.onclick(() => {
     // Emit custom event
     onTodoDeleted.emit({ id: props.todo.id });
   });
-  
+
   return {
-    render: () => ({ 
-      isEditing: isEditing(), 
-      title: title() 
+    render: () => ({
+      isEditing: isEditing(),
+      title: title(),
     }),
     onTodoUpdated,
     onTodoDeleted,
@@ -518,22 +516,18 @@ Handle events from child components:
 ```typescript
 function TodoListConstructor(props, refs) {
   const [todos, setTodos] = createSignal([]);
-  
+
   // Handle events from child components
   refs.todoItems.onCompletedToggle(({ event: completed, viewState: todo }) => {
-    setTodos(todos().map(t => 
-      t.id === todo.id ? { ...t, completed } : t
-    ));
+    setTodos(todos().map((t) => (t.id === todo.id ? { ...t, completed } : t)));
   });
-  
+
   refs.todoItems.onDelete(({ viewState: todo }) => {
-    setTodos(todos().filter(t => t.id !== todo.id));
+    setTodos(todos().filter((t) => t.id !== todo.id));
   });
-  
+
   refs.todoItems.onEdit(({ event: newTitle, viewState: todo }) => {
-    setTodos(todos().map(t => 
-      t.id === todo.id ? { ...t, title: newTitle } : t
-    ));
+    setTodos(todos().map((t) => (t.id === todo.id ? { ...t, title: newTitle } : t)));
   });
 }
 ```
@@ -557,11 +551,7 @@ Child components are used via the Jay-HTML template by importing headfull compon
   <body>
     <div>
       <!-- Use the child component in the template -->
-      <TodoItem 
-        todo="{todo}" 
-        forEach="todos" 
-        trackBy="id" 
-      />
+      <TodoItem todo="{todo}" forEach="todos" trackBy="id" />
     </div>
   </body>
 </html>
@@ -573,7 +563,7 @@ and the jay-html mapping of ViewState to child component props:
 ```typescript
 function TodoListConstructor(props, refs) {
   const [todos, setTodos] = createSignal([]);
-  
+
   return {
     render: () => ({ todos: todos() }),
   };
@@ -582,14 +572,14 @@ function TodoListConstructor(props, refs) {
 
 ### Using Headless Child Components
 
-Headless child components are only supported with Jay Stack. 
+Headless child components are only supported with Jay Stack.
 You import the child headless component and use its view state and refs in the Jay-HTML of the parent component:
 
 ```html
 <html>
   <head>
     <!-- Import the headless child component -->
-    <script 
+    <script
       type="application/jay-headless"
       contract="./todo-item.jay-contract"
       src="./todo-item"
@@ -616,7 +606,7 @@ You import the child headless component and use its view state and refs in the J
 
 ### Context and Communication
 
-Use context for component communication. Contexts are provided using `provideContext` or 
+Use context for component communication. Contexts are provided using `provideContext` or
 `provideReactiveContext` and accessed through constructor parameters. You must declare context markers in the `makeJayComponent` call:
 
 ```typescript
@@ -630,15 +620,15 @@ function ProfileConstructor(props, refs, userContext, themeContext) {
   refs.editButton.onclick(() => {
     userContext.updateUser({ ...userContext.user, name: 'New Name' });
   });
-  
+
   refs.themeToggle.onclick(() => {
     themeContext.toggleTheme();
   });
-  
+
   return {
-    render: () => ({ 
+    render: () => ({
       user: userContext.user,
-      theme: themeContext.theme 
+      theme: themeContext.theme,
     }),
   };
 }
@@ -672,19 +662,19 @@ And provide context in the parent component:
 function AppConstructor(props, refs) {
   const [user, setUser] = createSignal(null);
   const [theme, setTheme] = createSignal('light');
-  
+
   // Provide static context (doesn't update when context changes)
   provideContext(UserContext, {
     user: user(),
     updateUser: setUser,
   });
-  
+
   // Provide reactive context (updates when dependencies change)
   provideReactiveContext(ThemeContext, () => ({
     theme: theme(),
     toggleTheme: () => setTheme(theme() === 'light' ? 'dark' : 'light'),
   }));
-  
+
   return {
     render: () => ({ user: user(), theme: theme() }),
   };
@@ -707,12 +697,12 @@ Components can perform initialization and cleanup using effects:
 function TodoConstructor(props, refs) {
   const [todos, setTodos] = createSignal([]);
   const [isLoading, setIsLoading] = createSignal(true);
-  
+
   // Initialize component
   createEffect(async () => {
     try {
       setIsLoading(true);
-      const initialTodos = await props.loadTodos?.() || [];
+      const initialTodos = (await props.loadTodos?.()) || [];
       setTodos(initialTodos);
     } catch (error) {
       console.error('Failed to load todos:', error);
@@ -720,7 +710,7 @@ function TodoConstructor(props, refs) {
       setIsLoading(false);
     }
   });
-  
+
   // Cleanup on unmount
   createEffect(() => {
     return () => {
@@ -728,7 +718,7 @@ function TodoConstructor(props, refs) {
       console.log('Component unmounting');
     };
   });
-  
+
   return {
     render: () => ({ todos: todos(), isLoading: isLoading() }),
   };
@@ -743,14 +733,14 @@ Manage resources properly with cleanup functions:
 function TimerConstructor(props, refs) {
   const [time, setTime] = createSignal(0);
   let intervalId: number;
-  
+
   // Start timer
   refs.startButton.onclick(() => {
     intervalId = setInterval(() => {
       setTime(time() + 1);
     }, 1000);
   });
-  
+
   // Stop timer
   refs.stopButton.onclick(() => {
     if (intervalId) {
@@ -758,7 +748,7 @@ function TimerConstructor(props, refs) {
       intervalId = 0;
     }
   });
-  
+
   // Cleanup on unmount
   createEffect(() => {
     return () => {
@@ -767,7 +757,7 @@ function TimerConstructor(props, refs) {
       }
     };
   });
-  
+
   return {
     render: () => ({ time: time() }),
   };
@@ -784,16 +774,16 @@ Handle errors in event handlers:
 function FormConstructor(props, refs) {
   const [isSubmitting, setIsSubmitting] = createSignal(false);
   const [error, setError] = createSignal('');
-  
+
   refs.submitButton.onclick(async () => {
     try {
       setIsSubmitting(true);
       setError('');
-      
+
       // Handle form submission
       const formData = { email: email(), password: password() };
       await submitForm(formData);
-      
+
       // Success handling
       console.log('Form submitted successfully');
     } catch (error) {
@@ -804,11 +794,11 @@ function FormConstructor(props, refs) {
       setIsSubmitting(false);
     }
   });
-  
+
   return {
-    render: () => ({ 
-      isSubmitting: isSubmitting(), 
-      error: error() 
+    render: () => ({
+      isSubmitting: isSubmitting(),
+      error: error(),
     }),
   };
 }
@@ -825,7 +815,7 @@ function DataGridConstructor(props, refs) {
   const [data, setData] = createSignal([]);
   const [sortBy, setSortBy] = createSignal('name');
   const [filter, setFilter] = createSignal('');
-  
+
   // Memoize expensive operations
   const sortedData = createMemo(() => {
     const sorted = [...data()].sort((a, b) => {
@@ -835,14 +825,12 @@ function DataGridConstructor(props, refs) {
     });
     return sorted;
   });
-  
+
   const filteredData = createMemo(() => {
     if (!filter()) return sortedData();
-    return sortedData().filter(item => 
-      item.name.toLowerCase().includes(filter().toLowerCase())
-    );
+    return sortedData().filter((item) => item.name.toLowerCase().includes(filter().toLowerCase()));
   });
-  
+
   return {
     render: () => ({ data: filteredData() }),
   };
@@ -857,19 +845,19 @@ Optimize rendering with conditional logic:
 function ListConstructor(props, refs) {
   const [items, setItems] = createSignal([]);
   const [showDetails, setShowDetails] = createSignal(false);
-  
+
   // Only render details when needed
   const itemsWithDetails = createMemo(() => {
     if (!showDetails()) {
-      return items().map(item => ({ id: item.id, title: item.title }));
+      return items().map((item) => ({ id: item.id, title: item.title }));
     }
     return items();
   });
-  
+
   return {
-    render: () => ({ 
+    render: () => ({
       items: itemsWithDetails(),
-      showDetails: showDetails() 
+      showDetails: showDetails(),
     }),
   };
 }
@@ -886,4 +874,4 @@ Now that you understand component development:
 
 ---
 
-Ready to build full-stack applications? Check out the [Jay Stack Components](./jay-stack.md) guide! 
+Ready to build full-stack applications? Check out the [Jay Stack Components](./jay-stack.md) guide!

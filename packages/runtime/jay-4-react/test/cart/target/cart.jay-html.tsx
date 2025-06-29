@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { eventsFor, mimicJayElement } from '../../../lib';
 import { Jay4ReactElementProps } from '../../../lib';
-import { HTMLElementCollectionProxy, HTMLElementProxy } from 'jay-runtime';
+import { HTMLElementCollectionProxy, HTMLElementProxy } from '@jay-framework/runtime';
 
 export interface CartLineItem {
     id: string;

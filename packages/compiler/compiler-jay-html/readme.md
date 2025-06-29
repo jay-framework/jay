@@ -54,6 +54,7 @@ Headfull components include both the contract and UI design:
 ```
 
 **Parameters:**
+
 - `path` - Relative or absolute path to the component file
 - `names` - Comma-separated list of exported members. Supports renaming with `name as alias` syntax
 - `sandbox` - (Optional, defaults to false) Enable sandboxed component execution
@@ -73,6 +74,7 @@ Headless components provide only the contract and logic:
 ```
 
 **Parameters:**
+
 - `contract` - Path to the contract file (`.jay-contract`)
 - `src` - Path to the component implementation
 - `name` - Name of the exported component definition
@@ -82,12 +84,7 @@ Headless components provide only the contract and logic:
 
 ```html
 <!-- Import a headfull component -->
-<script
-  type="application/jay-headfull"
-  src="./counter.ts"
-  names="Counter"
-  sandbox="false"
-></script>
+<script type="application/jay-headfull" src="./counter.ts" names="Counter" sandbox="false"></script>
 
 <!-- Import multiple components with aliases -->
 <script
@@ -115,4 +112,4 @@ Read the complete Jay-HTML syntax reference including data contracts, component 
 
 ### Contract File Format
 
-Learn about the structure and format of `.jay-contract` files used for headless components in [contract-file-format.md](docs/contract-file-format.md). 
+Learn about the structure and format of `.jay-contract` files used for headless components in [contract-file-format.md](docs/contract-file-format.md).

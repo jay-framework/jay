@@ -4,7 +4,7 @@ import {
     JAY_QUERY_WORKER_SANDBOX_TS,
     JAY_QUERY_WORKER_TRUSTED_TS,
     TS_EXTENSION,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 import { generateProject } from '../test-utils/rollup';
 
 describe('jayRuntime plugin - counter', () => {

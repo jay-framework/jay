@@ -1,7 +1,7 @@
 import { resolve } from 'path';
 import Inspect from 'vite-plugin-inspect';
 import { defineConfig } from 'vitest/config';
-import { JayRollupConfig, jayRuntime } from 'jay-vite-plugin';
+import { JayRollupConfig, jayRuntime } from '@jay-framework/vite-plugin';
 
 const root = resolve(__dirname);
 const jayOptions: JayRollupConfig = {
@@ -11,7 +11,14 @@ const jayOptions: JayRollupConfig = {
 
 export default defineConfig(({ mode }) => {
     const external =
-        mode === 'production' ? [] : ['jay-component', 'jay-reactive', 'jay-runtime', 'jay-secure'];
+        mode === 'production'
+            ? []
+            : [
+                  '@jay-framework/component',
+                  '@jay-framework/reactive',
+                  '@jay-framework/runtime',
+                  '@jay-framework/secure',
+              ];
 
     return {
         plugins: [Inspect(), jayRuntime(jayOptions)],

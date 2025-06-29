@@ -1,5 +1,5 @@
 {
-  "name": "jay-stack-client-runtime",
+  "name": "@jay-framework/stack-client-runtime",
   "version": "0.5.0",
   "type": "module",
   "license": "Apache-2.0",
@@ -23,15 +23,15 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "jay-component": "workspace:^",
-    "jay-fullstack-component": "workspace:^",
-    "jay-runtime": "workspace:^"
+    "@jay-framework/component": "workspace:^",
+    "@jay-framework/fullstack-component": "workspace:^",
+    "@jay-framework/runtime": "workspace:^"
   },
   "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
+    "@jay-framework/jay-cli": "workspace:^",
     "@types/express": "^5.0.2",
     "@types/node": "^22.15.21",
-    "jay-cli": "workspace:^",
-    "jay-dev-environment": "workspace:^",
     "nodemon": "^3.0.3",
     "replace-in-file": "^7.1.0",
     "rimraf": "^5.0.5",

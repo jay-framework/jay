@@ -1,6 +1,6 @@
-import { HTMLElementCollectionProxy } from 'jay-runtime';
+import { HTMLElementCollectionProxy } from '@jay-framework/runtime';
 import { ReactElement } from 'react';
-import { Jay4ReactElementProps, eventsFor, mimicJayElement } from 'jay-4-react';
+import { Jay4ReactElementProps, eventsFor, mimicJayElement } from '@jay-framework/4-react';
 
 export interface ItemOfCollectionWithRefsViewState {
     name: string;

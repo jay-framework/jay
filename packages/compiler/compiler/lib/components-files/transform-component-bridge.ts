@@ -1,10 +1,10 @@
 import ts from 'typescript';
-import { getModeFileExtension, RuntimeMode } from 'jay-compiler-shared';
+import { getModeFileExtension, RuntimeMode } from '@jay-framework/compiler-shared';
 import { astToCode, codeToAst } from './ts-utils/ts-compiler-utils';
 import { mkTransformer, SourceFileTransformerContext } from './ts-utils/mk-transformer';
 import { findMakeJayComponentImport } from './building-blocks/find-make-jay-component-import';
 import { getImportName } from './ts-utils/extract-imports';
-import { MAKE_JAY_COMPONENT } from 'jay-compiler-shared';
+import { MAKE_JAY_COMPONENT } from '@jay-framework/compiler-shared';
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
 import { CompiledPattern } from './basic-analyzers/compile-function-split-patterns';
@@ -57,8 +57,8 @@ function transformImport(
     if (ts.isStringLiteral(node.moduleSpecifier)) {
         if (findMakeJayComponentImport(MAKE_JAY_COMPONENT, node)) {
             const code = hasFunctionRepository
-                ? `import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';`
-                : `import { makeJayComponentBridge } from 'jay-secure';`;
+                ? `import { makeJayComponentBridge, FunctionsRepository } from '@jay-framework/secure';`
+                : `import { makeJayComponentBridge } from '@jay-framework/secure';`;
             return codeToAst(code, context)[0] as ts.Statement;
         }
         const renderImportSpecifier = getRenderImportSpecifier(node);
@@ -72,7 +72,7 @@ function transformImport(
                 context,
             )[0] as ts.Statement;
         }
-        if (node.moduleSpecifier.text === 'jay-runtime') return node;
+        if (node.moduleSpecifier.text === '@jay-framework/runtime') return node;
         if (node.moduleSpecifier.text.endsWith('.css') && !node.importClause) return node;
         return undefined;
     }

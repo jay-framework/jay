@@ -20,17 +20,17 @@ export default defineConfig({
         },
         rollupOptions: {
             external: [
-                'jay-component',
-                'jay-json-patch',
-                'jay-reactive',
-                'jay-runtime',
-                'jay-fullstack-component',
+                '@jay-framework/component',
+                '@jay-framework/json-patch',
+                '@jay-framework/reactive',
+                '@jay-framework/runtime',
+                '@jay-framework/fullstack-component',
             ],
         },
     },
     test: {
         globals: true,
-        setupFiles: 'jay-dev-environment/library-dom/vitest.setup.ts',
+        setupFiles: '@jay-framework/dev-environment/library-dom/vitest.setup.ts',
         environment: 'jsdom',
     },
 });

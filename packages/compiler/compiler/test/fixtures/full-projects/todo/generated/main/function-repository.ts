@@ -1,3 +1,3 @@
-import { FunctionsRepository } from 'jay-secure';
+import { FunctionsRepository } from '@jay-framework/secure';
 
 export const funcRepository: FunctionsRepository = {};

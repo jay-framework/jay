@@ -1,5 +1,5 @@
 import { JayHtmlNamespace } from './jay-html-source-file';
-import { Import, ImportName, Imports } from 'jay-compiler-shared';
+import { Import, ImportName, Imports } from '@jay-framework/compiler-shared';
 
 const SVG_TAGS = new Set([
     'animate',

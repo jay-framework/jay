@@ -1,4 +1,9 @@
-import { JayElement, RenderElement, RenderElementOptions, JayContract } from 'jay-runtime';
+import {
+    JayElement,
+    RenderElement,
+    RenderElementOptions,
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface O1OfDataTypesViewState {
     s2: string;

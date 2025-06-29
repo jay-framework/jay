@@ -1,8 +1,8 @@
-import { createSignal, provideReactiveContext } from 'jay-component';
-import { Getter, Setter } from 'jay-reactive';
-import { createJayContext } from 'jay-runtime';
+import { createSignal, provideReactiveContext } from '@jay-framework/component';
+import { Getter, Setter } from '@jay-framework/reactive';
+import { createJayContext } from '@jay-framework/runtime';
 import { DEFAULT_PILLARS } from './DEFAULT_PILLARS';
-import { ADD, JSONPatch, patch, REMOVE } from 'jay-json-patch';
+import { ADD, JSONPatch, patch, REMOVE } from '@jay-framework/json-patch';
 
 export interface BoardPillarTask {
     taskId: string;

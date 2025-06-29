@@ -5,7 +5,7 @@ import {
     RenderElementOptions,
     RenderElement,
     ReferencesManager,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { Parent } from './parent';
 import { mainRoot as mr, secureChildComp } from '../../../../lib/';
 

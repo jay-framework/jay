@@ -1,5 +1,5 @@
 import { ReactElement } from 'react';
-import { Jay4ReactElementProps, mimicJayElement } from 'jay-4-react';
+import { Jay4ReactElementProps, mimicJayElement } from '@jay-framework/4-react';
 
 export interface WhitespaceAndTextViewState {
     text: string;

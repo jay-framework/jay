@@ -15,7 +15,7 @@ describe('findComponentConstructorCallsBlock', () => {
 
     it('finds exported const', async () => {
         const sourceFile = createTsSourceFile(`
-            import {makeJayComponent} from 'jay-component';
+            import {makeJayComponent} from '@jay-framework/component';
             export const Counter = makeJayComponent(render, CounterComponent);`);
         const bindingResolver = new SourceFileBindingResolver(sourceFile);
         const foundCalls = findComponentConstructorCallsBlock(
@@ -32,7 +32,7 @@ describe('findComponentConstructorCallsBlock', () => {
 
     it('finds exported with renamed makeJayComponent', async () => {
         const sourceFile = createTsSourceFile(`
-            import {makeJayComponent as renamed} from 'jay-component';
+            import {makeJayComponent as renamed} from '@jay-framework/component';
             export const Counter = renamed(render, CounterComponent);`);
         const bindingResolver = new SourceFileBindingResolver(sourceFile);
         const foundCalls = findComponentConstructorCallsBlock(
@@ -49,7 +49,7 @@ describe('findComponentConstructorCallsBlock', () => {
 
     it('finds makeJayComponent when importing jayComponent itself', async () => {
         const sourceFile = createTsSourceFile(`
-            import jayComponent from 'jay-component';
+            import jayComponent from '@jay-framework/component';
             export const Counter = jayComponent.makeJayComponent(render, CounterComponent);`);
         const bindingResolver = new SourceFileBindingResolver(sourceFile);
         const foundCalls = findComponentConstructorCallsBlock(
@@ -66,7 +66,7 @@ describe('findComponentConstructorCallsBlock', () => {
 
     it('finds exported var', async () => {
         const sourceFile = createTsSourceFile(`
-            import {makeJayComponent} from 'jay-component';
+            import {makeJayComponent} from '@jay-framework/component';
             export var Counter = makeJayComponent(render, CounterComponent);`);
         const bindingResolver = new SourceFileBindingResolver(sourceFile);
         const foundCalls = findComponentConstructorCallsBlock(
@@ -82,7 +82,7 @@ describe('findComponentConstructorCallsBlock', () => {
 
     it('finds separate define const and export', async () => {
         const sourceFile = createTsSourceFile(`
-            import {makeJayComponent} from 'jay-component';
+            import {makeJayComponent} from '@jay-framework/component';
             const Counter = makeJayComponent(render, CounterComponent);
             export Counter`);
         const bindingResolver = new SourceFileBindingResolver(sourceFile);
@@ -99,7 +99,7 @@ describe('findComponentConstructorCallsBlock', () => {
 
     it('finds multiple components, with multiple names', async () => {
         const sourceFile = createTsSourceFile(`
-            import {makeJayComponent} from 'jay-component';
+            import {makeJayComponent} from '@jay-framework/component';
             export const Counter = makeJayComponent(render, CounterComponent);
             export const Counter2 = makeJayComponent(render2, CounterComponent2);
             export const Counter3 = makeJayComponent(render3, CounterComponent3);`);
@@ -122,7 +122,7 @@ describe('findComponentConstructorCallsBlock', () => {
     describe('for makeJayTsxComponent', () => {
         it('finds exported const', async () => {
             const sourceFile = createTsSourceFile(`
-                import {makeJayTsxComponent} from 'jay-component';
+                import {makeJayTsxComponent} from '@jay-framework/component';
                 export const Counter = makeJayTsxComponent(CounterComponent);`);
             const bindingResolver = new SourceFileBindingResolver(sourceFile);
             const foundCalls = findComponentConstructorCallsBlock(

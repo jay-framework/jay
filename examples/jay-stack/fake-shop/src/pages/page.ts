@@ -1,6 +1,6 @@
-import { makeJayStackComponent, PageProps } from 'jay-fullstack-component';
+import { makeJayStackComponent, PageProps } from '@jay-framework/fullstack-component';
 import { render, PageElementRefs } from './page.jay-html';
-import { Props } from 'jay-component';
+import { Props } from '@jay-framework/component';
 
 interface HomePageProps {}
 

@@ -1,11 +1,11 @@
-import { createSignal, makeJayComponent, Props } from 'jay-component';
+import { createSignal, makeJayComponent, Props } from '@jay-framework/component';
 import {
     MainElementRefs,
     MainViewState,
     render,
     SelectedExampleOfMainViewState,
 } from './main.jay-html';
-import { JayEvent } from 'jay-runtime';
+import { JayEvent } from '@jay-framework/runtime';
 
 interface MainProps {}
 

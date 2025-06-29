@@ -8,7 +8,7 @@ import {
     HTMLElementProxy,
     RenderElementOptions,
     JayContract,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface CounterViewState {
     count: number;

@@ -2,7 +2,7 @@ import { createTsSourceFile } from '../../test-utils/ts-source-utils';
 import { printStatementWithoutChildStatements } from '../../test-utils/ts-compiler-test-utils';
 import { SourceFileStatementDependencies } from '../../../lib/components-files/basic-analyzers/source-file-statement-dependencies';
 import { SourceFileBindingResolver } from '../../../lib/components-files/basic-analyzers/source-file-binding-resolver';
-import { prettify } from 'jay-compiler-shared';
+import { prettify } from '@jay-framework/compiler-shared';
 
 interface PrintedStatement {
     id: number;

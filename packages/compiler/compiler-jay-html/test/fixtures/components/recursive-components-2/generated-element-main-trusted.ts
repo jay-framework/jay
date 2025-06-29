@@ -10,7 +10,7 @@ import {
     childComp,
     RenderElementOptions,
     JayContract,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { treeNode, Node } from './tree-node';
 
 export interface RecursiveComponents2ViewState {

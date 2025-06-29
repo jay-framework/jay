@@ -3,7 +3,7 @@ import {
     readFileAndGenerateImportsFileFromTsFile,
 } from '../test-utils/ts-compiler-test-utils';
 import { readFixtureFile } from '../test-utils/file-utils';
-import { prettify } from 'jay-compiler-shared';
+import { prettify } from '@jay-framework/compiler-shared';
 
 describe('generateImportsFileFromTsFile', () => {
     describe('counter', () => {

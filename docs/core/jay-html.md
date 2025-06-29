@@ -32,6 +32,7 @@ This workflow eliminates the manual translation of designs to code, allows fine-
 ## Manual Authoring
 
 While Jay-HTML can be written manually for prototyping or learning purposes, this approach:
+
 - **Loses the design-to-code benefits** that Jay is designed to provide
 - **Requires manual maintenance** of both design and code
 - **May lead to inconsistencies** between design and implementation
@@ -48,7 +49,7 @@ A Jay-HTML file follows standard HTML structure with special script tags:
   <head>
     <!-- Component imports -->
     <script type="application/jay-headfull" src="./item" names="Item"></script>
-    
+
     <!-- Data and variants contract definition -->
     <script type="application/jay-data">
       data:
@@ -76,11 +77,11 @@ The `application/jay-data` script defines the component's view state contract.
 
 ```html
 <script type="application/jay-data">
-data:
-  name: string
-  age: number
-  isActive: boolean
-  score: number
+  data:
+    name: string
+    age: number
+    isActive: boolean
+    score: number
 </script>
 ```
 
@@ -88,33 +89,33 @@ data:
 
 ```html
 <script type="application/jay-data">
-data:
-  user:
-    name: string
-    email: string
-    preferences:
-      theme: string
-      language: string
-  items:
-  - id: string
-    title: string
-    completed: boolean
-  settings:
-    notifications: boolean
-    autoSave: boolean
+  data:
+    user:
+      name: string
+      email: string
+      preferences:
+        theme: string
+        language: string
+    items:
+    - id: string
+      title: string
+      completed: boolean
+    settings:
+      notifications: boolean
+      autoSave: boolean
 </script>
 ```
 
 ### Enum Types
 
-Enum types are are commonly used for variants, to capture which of a set of variations to render 
+Enum types are are commonly used for variants, to capture which of a set of variations to render
 
 ```html
 <script type="application/jay-data">
-data:
-  status: enum (active | inactive | pending)
-  priority: enum (low | medium | high | urgent)
-  theme: enum (light | dark | auto)
+  data:
+    status: enum (active | inactive | pending)
+    priority: enum (low | medium | high | urgent)
+    theme: enum (light | dark | auto)
 </script>
 ```
 
@@ -122,14 +123,14 @@ data:
 
 ```html
 <script type="application/jay-data">
-data:
-  todos:
-  - id: string
-    title: string
-    completed: boolean
-    priority: enum (low | medium | high)
-  tags: array
-  scores: number[]
+  data:
+    todos:
+    - id: string
+      title: string
+      completed: boolean
+      priority: enum (low | medium | high)
+    tags: array
+    scores: number[]
 </script>
 ```
 
@@ -144,6 +145,7 @@ Jay-HTML files can import other components using special script tags.
 ```
 
 **Attributes**:
+
 - `type="application/jay-headfull"` - Identifies this as a headfull component import
 - `src="./item"` - Path to the component (without extension)
 - `names="Item"` - Name of the component `const` to import, created using `makeJayComponent`
@@ -162,6 +164,7 @@ Jay-HTML files can import other components using special script tags.
 ```
 
 **Attributes**:
+
 - `type="application/jay-headless"` - Identifies this as a headless component import
 - `contract` - Path to the contract file
 - `src` - Path to the component implementation
@@ -191,15 +194,15 @@ Use `if="condition"` for conditional elements:
 ```html
 <div>
   <h1>{title}</h1>
-  
+
   <!-- Simple condition -->
   <p if="isVisible">This is visible</p>
-  
+
   <!-- Complex condition -->
   <div if="user.isLoggedIn && user.hasPermission">
     <button>Admin Action</button>
   </div>
-  
+
   <!-- Multiple conditions -->
   <div if="status == active">Active</div>
   <div if="status == inactive">Inactive</div>
@@ -227,16 +230,11 @@ Render imported components:
 ```html
 <div>
   <!-- Simple component -->
-  <Button text="Click me" />
-  
+  <button text="Click me" />
+
   <!-- Component with props -->
-  <Item 
-    title="{item.title}" 
-    completed={item.completed} 
-    forEach="items" 
-    trackBy="id" 
-  />
-  
+  <Item title="{item.title}" completed="{item.completed}" forEach="items" trackBy="id" />
+
   <!-- Headless component -->
   <div>
     <span>Count: {namedCounter.count}</span>
@@ -259,17 +257,17 @@ Use `ref="name"` to create named references for component interaction:
 
 ### References for Imported Headless Components
 
-For a headless component imported with a certain key, references are prefixed with that key. 
+For a headless component imported with a certain key, references are prefixed with that key.
 
 ```html
 <div>
-  <form >
+  <form>
     <input ref="form.username" />
     <input ref="form.password" />
     <button ref="form.submit">Login</button>
   </form>
-  
-  <div >
+
+  <div>
     <button ref="modal.close">Close</button>
     <div ref="modal.content">{modalContent}</div>
   </div>
@@ -284,25 +282,25 @@ Organize data logically:
 
 ```html
 <script type="application/jay-data">
-data:
-  # User information
-  user:
-    name: string
-    email: string
-    avatar: string
-  
-  # Application state
-  state:
-    isLoading: boolean
-    error: string
-    currentView: enum (list | detail | edit)
-  
-  # Data collections
-  items:
-  - id: string
-    title: string
-    description: string
-    createdAt: string
+  data:
+    # User information
+    user:
+      name: string
+      email: string
+      avatar: string
+
+    # Application state
+    state:
+      isLoading: boolean
+      error: string
+      currentView: enum (list | detail | edit)
+
+    # Data collections
+    items:
+    - id: string
+      title: string
+      description: string
+      createdAt: string
 </script>
 ```
 
@@ -333,7 +331,7 @@ Use proper indentation and structure:
     <h1 class="name">{user.name}</h1>
     <p class="email">{user.email}</p>
   </header>
-  
+
   <section class="profile-content" if="!state.isLoading">
     <div class="stats">
       <div class="stat">
@@ -352,43 +350,42 @@ Jay automatically generates TypeScript types from Jay-HTML files:
 ```typescript
 // Generated from todo.jay-html
 export enum FilterOfTodoViewState {
-    all,
-    active,
-    completed
+  all,
+  active,
+  completed,
 }
 
 export interface ShownTodoOfTodoViewState {
-    id: string,
-    title: string,
-    isCompleted: boolean
+  id: string;
+  title: string;
+  isCompleted: boolean;
 }
 
 export interface TodoViewState {
-    activeTodoCount: number,
-    activeTodoWord: string,
-    hasItems: boolean,
-    noActiveItems: boolean,
-    filter: FilterOfTodoViewState,
-    showClearCompleted: boolean,
-    newTodo: string,
-    shownTodos: Array<ShownTodoOfTodoViewState>
+  activeTodoCount: number;
+  activeTodoWord: string;
+  hasItems: boolean;
+  noActiveItems: boolean;
+  filter: FilterOfTodoViewState;
+  showClearCompleted: boolean;
+  newTodo: string;
+  shownTodos: Array<ShownTodoOfTodoViewState>;
 }
 
 export type ItemRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Item>>;
-export type ItemRefs<ParentVS> =
-    ComponentCollectionProxy<ParentVS, ItemRef<ParentVS>> &
-    OnlyEventEmitters<ItemRef<ParentVS>>
+export type ItemRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ItemRef<ParentVS>> &
+  OnlyEventEmitters<ItemRef<ParentVS>>;
 
 export interface TodoElementRefs {
-    newTodo: HTMLElementProxy<TodoViewState, HTMLInputElement>,
-    toggleAll: HTMLElementProxy<TodoViewState, HTMLInputElement>,
-    filterAll: HTMLElementProxy<TodoViewState, HTMLAnchorElement>,
-    filterActive: HTMLElementProxy<TodoViewState, HTMLAnchorElement>,
-    filterCompleted: HTMLElementProxy<TodoViewState, HTMLAnchorElement>,
-    clearCompleted: HTMLElementProxy<TodoViewState, HTMLButtonElement>,
-    shownTodos: {
-        items: ItemRefs<ShownTodoOfTodoViewState>
-    }
+  newTodo: HTMLElementProxy<TodoViewState, HTMLInputElement>;
+  toggleAll: HTMLElementProxy<TodoViewState, HTMLInputElement>;
+  filterAll: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
+  filterActive: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
+  filterCompleted: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
+  clearCompleted: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
+  shownTodos: {
+    items: ItemRefs<ShownTodoOfTodoViewState>;
+  };
 }
 ```
 

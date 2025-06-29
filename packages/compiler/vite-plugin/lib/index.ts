@@ -1,2 +1,2 @@
-export { type JayRollupConfig } from 'jay-rollup-plugin';
+export { type JayRollupConfig } from '@jay-framework/rollup-plugin';
 export * from './runtime-compiler';

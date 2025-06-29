@@ -6,7 +6,7 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface O1 {
     s2: string;

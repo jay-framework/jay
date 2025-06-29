@@ -7,7 +7,7 @@ import {
     OnlyEventEmitters,
     ComponentCollectionProxy,
     JayContract,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { Item } from './item';
 
 export enum FilterOfTodoViewState {

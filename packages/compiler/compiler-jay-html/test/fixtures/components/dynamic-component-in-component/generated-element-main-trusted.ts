@@ -13,7 +13,7 @@ import {
     OnlyEventEmitters,
     ComponentCollectionProxy,
     JayContract,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { Counter } from '../counter/counter';
 
 export interface NestedCounterOfDynamicComponentInComponentViewState {

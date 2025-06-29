@@ -16,7 +16,7 @@ import {
     MapEventEmitterViewState,
     ComponentCollectionProxy,
     OnlyEventEmitters,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { secureChildComp as childComp } from '../../../../lib/';
 import { TreeNode, Node } from './tree-node';
 import { SECURE_COMPONENT_MARKER } from '../../../../lib/main/main-contexts';

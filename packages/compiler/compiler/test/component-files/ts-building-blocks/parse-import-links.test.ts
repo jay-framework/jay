@@ -4,7 +4,7 @@ import {
     parseImportLinks,
 } from '../../../lib/components-files/building-blocks/parse-import-links';
 import { fixtureFilePath, readFixtureFile } from '../../test-utils/file-utils';
-import { JayImportLink, JayUnknown } from 'jay-compiler-shared';
+import { JayImportLink, JayUnknown } from '@jay-framework/compiler-shared';
 
 describe('parseImportLinks', () => {
     const fixturePath = 'full-projects/counter/generated/main';
@@ -16,7 +16,7 @@ describe('parseImportLinks', () => {
         const sourceFile = createTsSourceFileFromSource(filePath, code);
         expect(parseImportLinks(sourceFile)).toEqual([
             {
-                module: 'jay-runtime',
+                module: '@jay-framework/runtime',
                 names: [
                     {
                         name: 'JayElement',
@@ -55,7 +55,7 @@ describe('parseImportLinks', () => {
                 sandbox: false,
             },
             {
-                module: 'jay-secure',
+                module: '@jay-framework/secure',
                 names: [
                     {
                         as: 'mr',
@@ -96,7 +96,7 @@ describe('parseImportLinks', () => {
 describe('getImportByName', () => {
     const importLinks: JayImportLink[] = [
         {
-            module: 'jay-runtime',
+            module: '@jay-framework/runtime',
             names: [
                 {
                     name: 'JayElement',
@@ -111,7 +111,7 @@ describe('getImportByName', () => {
             sandbox: false,
         },
         {
-            module: 'jay-secure',
+            module: '@jay-framework/secure',
             names: [
                 {
                     as: 'mr',
@@ -126,7 +126,7 @@ describe('getImportByName', () => {
             sandbox: false,
         },
     ];
-    const component = 'jay-runtime';
+    const component = '@jay-framework/runtime';
     const name = 'element';
 
     it('returns import by name', () => {

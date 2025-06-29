@@ -1,6 +1,10 @@
-import { makeJayStackComponent, PageProps, partialRender } from 'jay-fullstack-component';
+import {
+    makeJayStackComponent,
+    PageProps,
+    partialRender,
+} from '@jay-framework/fullstack-component';
 import { render, PageElementRefs, ProductOfPageViewState } from './page.jay-html';
-import { Props } from 'jay-component';
+import { Props } from '@jay-framework/component';
 import { getProducts } from '../../products-database';
 
 interface ProductsCarryForward {}

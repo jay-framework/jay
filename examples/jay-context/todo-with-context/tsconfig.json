@@ -1,15 +1,15 @@
 {
-  "extends": "jay-dev-environment/examples/tsconfig.json",
+  "extends": "@jay-framework/dev-environment/examples/tsconfig.json",
   "compilerOptions": {
     "outDir": "dist",
     "paths": {
-      "jay-component": ["../../packages/component/lib"],
-      "jay-json-patch": ["../../packages/json-patch/lib"],
-      "jay-reactive": ["../../packages/reactive/lib"],
-      "jay-runtime": ["../../packages/runtime/lib"],
-      "jay-secure": ["../../packages/secure/lib"],
-      "jay-serialization": ["../../packages/serialization/lib"],
-      "jay-rollup-plugin": ["../../packages/rollup-plugin/lib"],
+      "@jay-framework/component": ["../../packages/component/lib"],
+      "@jay-framework/json-patch": ["../../packages/json-patch/lib"],
+      "@jay-framework/reactive": ["../../packages/reactive/lib"],
+      "@jay-framework/runtime": ["../../packages/runtime/lib"],
+      "@jay-framework/secure": ["../../packages/secure/lib"],
+      "@jay-framework/serialization": ["../../packages/serialization/lib"],
+      "@jay-framework/rollup-plugin": ["../../packages/rollup-plugin/lib"],
     },
   },
 }

@@ -1,5 +1,5 @@
-import { JayElement, RenderElement, JayContract } from 'jay-runtime';
-import { SecureReferencesManager, elementBridge } from 'jay-secure';
+import { JayElement, RenderElement, JayContract } from '@jay-framework/runtime';
+import { SecureReferencesManager, elementBridge } from '@jay-framework/secure';
 
 export interface EmptyElementViewState {}
 

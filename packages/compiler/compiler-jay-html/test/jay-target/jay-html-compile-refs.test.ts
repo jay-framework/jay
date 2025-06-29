@@ -8,8 +8,8 @@ import {
     JayObjectType,
     mkRefsTree,
     mkRef,
-} from 'jay-compiler-shared';
-import { prettify } from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
+import { prettify } from '@jay-framework/compiler-shared';
 
 describe('renderRefsType', () => {
     it('should render empty refs interface', async () => {
@@ -38,7 +38,7 @@ describe('renderRefsType', () => {
             GenerateTarget.jay,
         );
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
-            await prettify('import { HTMLElementProxy } from "jay-runtime";'),
+            await prettify('import { HTMLElementProxy } from "@jay-framework/runtime";'),
         );
         expect(await prettify(renderedRefs)).toBe(
             await prettify(`
@@ -67,7 +67,7 @@ describe('renderRefsType', () => {
             GenerateTarget.jay,
         );
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
-            await prettify('import { HTMLElementCollectionProxy } from "jay-runtime";'),
+            await prettify('import { HTMLElementCollectionProxy } from "@jay-framework/runtime";'),
         );
         expect(await prettify(renderedRefs)).toBe(
             await prettify(`
@@ -96,7 +96,7 @@ describe('renderRefsType', () => {
             GenerateTarget.jay,
         );
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
-            await prettify('import { MapEventEmitterViewState } from "jay-runtime";'),
+            await prettify('import { MapEventEmitterViewState } from "@jay-framework/runtime";'),
         );
         expect(await prettify(renderedRefs)).toBe(
             await prettify(`
@@ -127,7 +127,7 @@ describe('renderRefsType', () => {
         );
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
             await prettify(
-                'import { MapEventEmitterViewState, OnlyEventEmitters, ComponentCollectionProxy } from "jay-runtime";',
+                'import { MapEventEmitterViewState, OnlyEventEmitters, ComponentCollectionProxy } from "@jay-framework/runtime";',
             ),
         );
         expect(await prettify(renderedRefs)).toBe(
@@ -172,7 +172,7 @@ describe('renderRefsType', () => {
         );
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
             await prettify(
-                'import { HTMLElementProxy, MapEventEmitterViewState } from "jay-runtime";',
+                'import { HTMLElementProxy, MapEventEmitterViewState } from "@jay-framework/runtime";',
             ),
         );
         expect(await prettify(renderedRefs)).toBe(
@@ -204,7 +204,7 @@ describe('renderRefsType', () => {
             GenerateTarget.react,
         );
         expect(await prettify(imports.render(ImportsFor.definition))).toBe(
-            await prettify('import { MapEventEmitterViewState } from "jay-runtime";'),
+            await prettify('import { MapEventEmitterViewState } from "@jay-framework/runtime";'),
         );
         expect(await prettify(renderedRefs)).toBe(
             await prettify(`

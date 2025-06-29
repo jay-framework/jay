@@ -5,7 +5,7 @@ import {
     JayEnumType,
     JayNumber,
     JayString,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 
 describe('parse contract', () => {
     it('should parse counter contract', () => {

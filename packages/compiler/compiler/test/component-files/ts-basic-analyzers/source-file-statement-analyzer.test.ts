@@ -26,7 +26,7 @@ describe('SourceFileStatementAnalyzer', () => {
         describe('statements that require code running in sandbox', () => {
             it('mandate for statement in sandbox', async () => {
                 const sourceFile = createTsSourceFile(`
-                import {JayEvent} from 'jay-runtime';
+                import {JayEvent} from '@jay-framework/runtime';
                 ({event}: JayEvent) => {
                     for (let i=0; i < (event.target as HTMLInputElement).value.length; i++)
                         console.log(i);
@@ -56,7 +56,7 @@ describe('SourceFileStatementAnalyzer', () => {
 
             it('mandate for in statement in sandbox', async () => {
                 const sourceFile = createTsSourceFile(`
-                import {JayEvent} from 'jay-runtime';
+                import {JayEvent} from '@jay-framework/runtime';
                 ({event}: JayEvent) => {
                     for (let i in (event.target as HTMLInputElement).value)
                         console.log(i);
@@ -82,7 +82,7 @@ describe('SourceFileStatementAnalyzer', () => {
 
             it('mandate for of statement in sandbox', async () => {
                 const sourceFile = createTsSourceFile(`
-                import {JayEvent} from 'jay-runtime';
+                import {JayEvent} from '@jay-framework/runtime';
                 ({event}: JayEvent) => {
                     for (let i of (event.target as HTMLInputElement).value)
                         console.log(i);
@@ -108,7 +108,7 @@ describe('SourceFileStatementAnalyzer', () => {
 
             it('mandate do while statement in sandbox', async () => {
                 const sourceFile = createTsSourceFile(`
-                import {JayEvent} from 'jay-runtime';
+                import {JayEvent} from '@jay-framework/runtime';
                 ({event}: JayEvent) => {
                     do {
                         console.log((event.target as HTMLInputElement).value);
@@ -140,7 +140,7 @@ describe('SourceFileStatementAnalyzer', () => {
 
             it('mandate while statement in sandbox', async () => {
                 const sourceFile = createTsSourceFile(`
-                import {JayEvent} from 'jay-runtime';
+                import {JayEvent} from '@jay-framework/runtime';
                 ({event}: JayEvent) => {
                     while((event.target as HTMLInputElement).value != 'ok') {
                         console.log((event.target as HTMLInputElement).value);
@@ -174,7 +174,7 @@ describe('SourceFileStatementAnalyzer', () => {
         describe('analyze assignment patterns', () => {
             it('should support setting event.target.value to a constant', async () => {
                 const sourceFile = createTsSourceFile(`
-                import {JayEvent} from 'jay-runtime';
+                import {JayEvent} from '@jay-framework/runtime';
                 ({event}: JayEvent) => {
                     (event.target as HTMLInputElement).value = '12';
                 }`);
@@ -204,7 +204,7 @@ describe('SourceFileStatementAnalyzer', () => {
         describe('analyze function calls', () => {
             it('should support call patterns', async () => {
                 const sourceFile = createTsSourceFile(`
-                import {JayEvent} from 'jay-runtime';
+                import {JayEvent} from '@jay-framework/runtime';
                 ({event}: JayEvent) => {
                     event.preventDefault();
                 }`);
@@ -228,7 +228,7 @@ describe('SourceFileStatementAnalyzer', () => {
 
             it('should support value replace on input', async () => {
                 const sourceFile = createTsSourceFile(`
-                import {JayEvent} from 'jay-runtime';
+                import {JayEvent} from '@jay-framework/runtime';
                 ({event}: JayEvent) => {
                     event.target.value = event.target.value.replace(/[^A-Za-z0-9]+/g, '');
                 }`);
@@ -261,7 +261,7 @@ describe('SourceFileStatementAnalyzer', () => {
 
             it('should support value replace on input with intermediate variables', async () => {
                 const sourceFile = createTsSourceFile(`
-                import {JayEvent} from 'jay-runtime';
+                import {JayEvent} from '@jay-framework/runtime';
                 ({event}: JayEvent) => {
                     const inputValue = event.target.value;
                     const validValue = inputValue.replace(/[^A-Za-z0-9]+/g, '');
@@ -303,7 +303,7 @@ describe('SourceFileStatementAnalyzer', () => {
     describe('exec$', () => {
         it('analyze exec$ single line arrow function', async () => {
             const sourceFile = createTsSourceFile(`
-                import {exec$} from "jay-secure";
+                import {exec$} from "@jay-framework/secure";
                 export function bla() {
                     exec$(() => console.log('hi'));
                 }`);
@@ -330,7 +330,7 @@ describe('SourceFileStatementAnalyzer', () => {
 
         it('should match if sub-pattern does matches', async () => {
             const sourceFile = createTsSourceFile(`
-                import {exec$} from "jay-secure";
+                import {exec$} from "@jay-framework/secure";
                 import {foo} from 'foo';
                 export function bla() {
                     exec$(() => console.log(foo()));
@@ -361,7 +361,7 @@ describe('SourceFileStatementAnalyzer', () => {
 
         it('should not match if sub-pattern does not match', async () => {
             const sourceFile = createTsSourceFile(`
-                import {exec$} from "jay-secure";
+                import {exec$} from "@jay-framework/secure";
                 import {foo} from 'foo';
                 export function bla() {
                     exec$(() => console.log(foo()));
@@ -388,7 +388,7 @@ describe('SourceFileStatementAnalyzer', () => {
 
         it('analyze exec$ with console log varargs', async () => {
             const sourceFile = createTsSourceFile(`
-                import {exec$} from "jay-secure";
+                import {exec$} from "@jay-framework/secure";
                 export function bla() {
                     exec$(() => console.log('hi', 'jay'));
                 }`);
@@ -417,7 +417,7 @@ describe('SourceFileStatementAnalyzer', () => {
 
         it('analyze exec$ with new Promise', async () => {
             const sourceFile = createTsSourceFile(`
-                import {exec$} from "jay-secure";
+                import {exec$} from "@jay-framework/secure";
                 export function bla() {
                     exec$(() => new Promise((resolve) => requestAnimationFrame(resolve)));
                 }`);

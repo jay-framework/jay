@@ -1,4 +1,4 @@
-import { HTMLElementCollectionProxy, HTMLElementProxy, JayContract } from 'jay-runtime';
+import { HTMLElementCollectionProxy, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
 
 export enum IsPositive {
     positive,

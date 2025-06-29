@@ -36,7 +36,7 @@ import {
   ConstructContext,
   HTMLElementProxy,
   RenderElementOptions,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface CounterViewState {
   count: number;

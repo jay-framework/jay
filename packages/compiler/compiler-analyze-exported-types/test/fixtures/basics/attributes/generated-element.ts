@@ -9,7 +9,7 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface AttributesViewState {
     text: string;

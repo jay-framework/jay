@@ -5,7 +5,7 @@
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
-    "dev": "jay-stack-cli",
+    "dev": "@jay-framework/jay-stack-cli",
     "clean": "rimraf dist && rimraf build && rimraf -g 'src/**/*.d.ts'",
     "definitions": "jay-cli definitions src",
     "build": "npm run definitions & echo 'build not implemented yet'",
@@ -17,19 +17,19 @@
     "preview": "cross-env NODE_ENV=production node server"
   },
   "dependencies": {
+    "@jay-framework/fullstack-component": "workspace:^",
+    "@jay-framework/jay-stack-cli": "workspace:^",
     "compression": "^1.7.5",
     "example-jay-mood-tracker-plugin": "workspace:^",
     "express": "^5.0.1",
-    "jay-fullstack-component": "workspace:^",
-    "jay-stack-cli": "workspace:^",
     "sirv": "^3.0.0"
   },
   "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
+    "@jay-framework/jay-cli": "workspace:^",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.0",
     "cross-env": "^7.0.3",
-    "jay-cli": "workspace:^",
-    "jay-dev-environment": "workspace:^",
     "typescript": "~5.7.2",
     "vite": "^6.0.1"
   }

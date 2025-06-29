@@ -24,7 +24,7 @@ a generated `component-refs.ts` file.
 The generated `component-refs.ts` file, for example for the `items` property above is
 
 ```typescript
-import { EventEmitter, ComponentCollectionProxy, EventTypeFrom } from 'jay-runtime';
+import { EventEmitter, ComponentCollectionProxy, EventTypeFrom } from '@jay-framework/runtime';
 import { Item } from './item';
 
 export type ItemComponentType<ParentVS> = ReturnType<typeof Item<ParentVS>>;

@@ -10,7 +10,7 @@ import {
     HTMLElementProxy,
     RenderElementOptions,
     JayContract,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface ConditionsWithRepeatedRefViewState {
     text1: string;

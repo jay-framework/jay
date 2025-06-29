@@ -5,11 +5,11 @@ import {
     OnlyEventEmitters,
     PreRenderElement,
     RenderElementOptions,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { Dispatch, ReactElement, SetStateAction, useRef, useState } from 'react';
 import { EventsContext, refsRecorder } from './jay4react-events';
 import * as React from 'react';
-import { Getter } from 'jay-reactive';
+import { Getter } from '@jay-framework/reactive';
 
 export interface Jay4ReactElementProps<ViewState> {
     vs: ViewState;

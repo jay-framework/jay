@@ -10,7 +10,7 @@ import {
     withContext,
     ReferencesManager,
     RenderElement,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import {
     COMPONENT_CONTEXT,
     ComponentContext,
@@ -25,8 +25,8 @@ import {
     Props,
     useReactive,
 } from '../lib/';
-import { MeasureOfChange, Reactive } from 'jay-reactive';
-import { REPLACE } from 'jay-json-patch';
+import { MeasureOfChange, Reactive } from '@jay-framework/reactive';
+import { REPLACE } from '@jay-framework/json-patch';
 const { makePropsProxy } = forTesting;
 
 describe('state management', () => {

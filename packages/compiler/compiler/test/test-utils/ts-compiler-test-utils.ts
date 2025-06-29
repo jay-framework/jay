@@ -13,13 +13,18 @@ import {
     readFixtureSourceJayFile,
 } from './file-utils';
 import { astToCode } from '../../lib/components-files/ts-utils/ts-compiler-utils';
-import { checkValidationErrors, prettify, RuntimeMode, WithValidations } from 'jay-compiler-shared';
+import {
+    checkValidationErrors,
+    prettify,
+    RuntimeMode,
+    WithValidations,
+} from '@jay-framework/compiler-shared';
 import {
     generateElementBridgeFile,
     JAY_IMPORT_RESOLVER,
     JayHtmlSourceFile,
     parseJayFile,
-} from 'jay-compiler-jay-html';
+} from '@jay-framework/compiler-jay-html';
 
 export async function readAndParseJayFile(
     folder: string,

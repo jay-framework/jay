@@ -6,7 +6,7 @@ import {
     JayImportLink,
     JayImportName,
     JayUnknown,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 import {
     extractImportDeclarations,
     getImportName,

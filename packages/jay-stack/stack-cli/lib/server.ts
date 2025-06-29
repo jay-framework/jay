@@ -1,5 +1,5 @@
 import express, { Express } from 'express';
-import { mkDevServer } from 'jay-dev-server';
+import { mkDevServer } from '@jay-framework/dev-server';
 import path from 'path';
 
 // Constants

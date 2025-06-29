@@ -1,5 +1,5 @@
 import { TreeElementRefs, render } from './tree.jay-html';
-import { makeJayComponent, Props } from 'jay-component';
+import { makeJayComponent, Props } from '@jay-framework/component';
 
 export interface Node {
     id: string;

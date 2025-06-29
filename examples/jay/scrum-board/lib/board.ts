@@ -1,6 +1,11 @@
 import { BoardElementRefs, render } from './board.jay-html';
-import { createDerivedArray, createSignal, makeJayComponent, Props } from 'jay-component';
-import { ADD, JSONPatch, patch, REMOVE } from 'jay-json-patch';
+import {
+    createDerivedArray,
+    createSignal,
+    makeJayComponent,
+    Props,
+} from '@jay-framework/component';
+import { ADD, JSONPatch, patch, REMOVE } from '@jay-framework/json-patch';
 import { DEFAULT_PILLARS } from './DEFAULT_PILLARS';
 
 export interface BoardProps {

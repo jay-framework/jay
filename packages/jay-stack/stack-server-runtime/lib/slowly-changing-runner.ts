@@ -5,8 +5,8 @@ import {
     UrlParams,
     notFound,
     partialRender,
-} from 'jay-fullstack-component';
-import { JayComponentCore } from 'jay-component';
+} from '@jay-framework/fullstack-component';
+import { JayComponentCore } from '@jay-framework/component';
 import { DevServerPagePart } from './load-page-parts';
 
 export interface SlowlyChangingPhase {

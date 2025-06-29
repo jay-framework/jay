@@ -1,4 +1,9 @@
-import { WithValidations, JayType, resolvePrimitiveType, JayEnumType } from 'jay-compiler-shared';
+import {
+    WithValidations,
+    JayType,
+    resolvePrimitiveType,
+    JayEnumType,
+} from '@jay-framework/compiler-shared';
 import { Contract, ContractTag, ContractTagType } from './contract';
 import yaml from 'js-yaml';
 import { parseIsEnum, parseEnumValues } from '../';

@@ -6,9 +6,9 @@ import {
     createSignal,
     makeJayComponent,
     Props,
-} from 'jay-component';
-import { patch, REPLACE } from 'jay-json-patch';
-import { JayEvent } from 'jay-runtime';
+} from '@jay-framework/component';
+import { patch, REPLACE } from '@jay-framework/json-patch';
+import { JayEvent } from '@jay-framework/runtime';
 import { CounterEvent } from './counter';
 
 export interface HostProps {}

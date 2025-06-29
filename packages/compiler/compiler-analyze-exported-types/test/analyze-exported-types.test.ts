@@ -11,7 +11,7 @@ import {
     JayObjectType,
     JayString,
     JayUnknown,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 
 describe('typescript-compiler', () => {
     const O1 = new JayObjectType('O1', {

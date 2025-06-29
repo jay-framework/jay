@@ -1,8 +1,8 @@
 // @ts-expect-error Cannot find module
 import { render, ItemElementRefs, ItemViewState } from './item.jay-html?jay-workerSandbox';
-import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
-import { JayEvent } from 'jay-runtime';
-import { handler$ } from 'jay-secure';
+import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
+import { JayEvent } from '@jay-framework/runtime';
+import { handler$ } from '@jay-framework/secure';
 interface ItemProps {
     title: string;
     isCompleted: boolean;

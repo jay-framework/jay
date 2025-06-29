@@ -29,6 +29,7 @@ Data tags define the component's view state properties.
 ```
 
 **Properties:**
+
 - `type: data` - Identifies this as a data property
 - `dataType` - The data type (string, number, boolean, enum)
 - `required` - (Optional) Whether this property is required
@@ -46,6 +47,7 @@ Interactive tags define elements that can be interacted with programmatically.
 ```
 
 **Properties:**
+
 - `type: interactive` - Identifies this as an interactive element
 - `elementType` - The HTML element type (required)
 - `description` - (Optional) Documentation for the element
@@ -62,6 +64,7 @@ Variant tags define design variations or states.
 ```
 
 **Properties:**
+
 - `type: variant` - Identifies this as a variant
 - `dataType` - Must be an enum type (required)
 - `description` - (Optional) Documentation for the variant
@@ -84,6 +87,7 @@ Sub-contract tags define nested component structures.
 ```
 
 **Properties:**
+
 - `type: sub-contract` - Identifies this as a nested contract
 - `repeated` - (Optional) Whether this represents an array of items
 - `tags` - Nested tag definitions
@@ -161,6 +165,7 @@ tags:
 ```
 
 In this example:
+
 - `discount` links to a reusable discount contract
 - `media.items` creates an array of media items using the linked contract
 - `media.mainMedia` uses the same contract for a single item
@@ -177,10 +182,10 @@ In this example:
 
 ### Basic Types
 
-| Type | Example | Description |
-|------|---------|-------------|
-| `string` | `dataType: string` | Text values |
-| `number` | `dataType: number` | Numeric values |
+| Type      | Example             | Description       |
+| --------- | ------------------- | ----------------- |
+| `string`  | `dataType: string`  | Text values       |
+| `number`  | `dataType: number`  | Numeric values    |
 | `boolean` | `dataType: boolean` | True/false values |
 
 ### Enum Types
@@ -289,4 +294,4 @@ tags:
 3. **Use enums** for variant tags to ensure type safety
 4. **Structure nested contracts** logically to match your component hierarchy
 5. **Reference external contracts** for reusable sub-components
-6. **Mark required properties** explicitly for better validation 
+6. **Mark required properties** explicitly for better validation

@@ -1,5 +1,5 @@
 import { DevServerPagePart } from '../../lib/load-page-parts';
-import { CompositePart } from 'jay-stack-client-runtime';
+import { CompositePart } from '@jay-framework/stack-client-runtime';
 
 export function toCompositePart(parts: DevServerPagePart[]): CompositePart[] {
     return parts.map((_) => ({

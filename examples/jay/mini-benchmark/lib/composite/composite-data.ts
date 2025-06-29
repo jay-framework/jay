@@ -1,5 +1,5 @@
 import { render, CompositeElementRefs } from './composite.jay-html';
-import { createSignal, makeJayComponent, useReactive, Props } from 'jay-component';
+import { createSignal, makeJayComponent, useReactive, Props } from '@jay-framework/component';
 import benchmark from '../benchmark';
 
 interface CompositeProps {

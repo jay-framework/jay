@@ -12,14 +12,14 @@
     "test": ":"
   },
   "dependencies": {
-    "jay-component": "workspace:^",
-    "jay-reactive": "workspace:^",
-    "jay-runtime": "workspace:^",
-    "jay-secure": "workspace:^"
+    "@jay-framework/component": "workspace:^",
+    "@jay-framework/reactive": "workspace:^",
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/secure": "workspace:^"
   },
   "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
     "@rollup/plugin-node-resolve": "^15.2.3",
-    "jay-dev-environment": "workspace:^",
     "rimraf": "^5.0.5",
     "rollup": "^4.9.5",
     "rollup-plugin-typescript2": "^0.36.0",

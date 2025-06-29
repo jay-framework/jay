@@ -12,15 +12,15 @@ Each property in the YAML becomes a property of the component's view state, supp
 
 ### Supported Data Types
 
-| Type | Example | Description |
-|------|---------|-------------|
-| `string` | `text: string` | Text values |
-| `number` | `count: number` | Numeric values |
-| `boolean` | `isVisible: boolean` | True/false values |
-| `object` | <code>user: </br>&nbsp;&nbsp;name: string</br>&nbsp;&nbsp;age: number</code> | Nested object structures |
-| `array` | <code>items: </br>-&nbsp;name: string</br>&nbsp;&nbsp;value: number</code> | Collections of items |
-| `enum` | `status: enum(active \| inactive \| pending)` | Enumerated values |
-| `imported type` | `config: ImportedConfig` | Types imported from other components |
+| Type            | Example                                                                      | Description                          |
+| --------------- | ---------------------------------------------------------------------------- | ------------------------------------ |
+| `string`        | `text: string`                                                               | Text values                          |
+| `number`        | `count: number`                                                              | Numeric values                       |
+| `boolean`       | `isVisible: boolean`                                                         | True/false values                    |
+| `object`        | <code>user: </br>&nbsp;&nbsp;name: string</br>&nbsp;&nbsp;age: number</code> | Nested object structures             |
+| `array`         | <code>items: </br>-&nbsp;name: string</br>&nbsp;&nbsp;value: number</code>   | Collections of items                 |
+| `enum`          | `status: enum(active \| inactive \| pending)`                                | Enumerated values                    |
+| `imported type` | `config: ImportedConfig`                                                     | Types imported from other components |
 
 ### View State Context
 
@@ -175,4 +175,4 @@ Since Jay uses immutable view state, the `trackBy` attribute is essential for pr
 </div>
 ```
 
-In this example, each `ProductCard` component receives the entire product object as its context. 
+In this example, each `ProductCard` component receives the entire product object as its context.

@@ -27,12 +27,12 @@ Jay Stack implements three distinct rendering phases for optimal performance:
 .withSlowlyRender(async (props, ...contexts) => {
   // Load static data that doesn't change often
   const product = await getProductBySlug(props.slug);
-  
+
   return partialRender(
-    { 
-      name: product.name, 
-      sku: product.sku, 
-      price: product.price 
+    {
+      name: product.name,
+      sku: product.sku,
+      price: product.price
     },
     { productId: product.id } // Carry forward to fast render
   );
@@ -49,7 +49,7 @@ Jay Stack implements three distinct rendering phases for optimal performance:
 .withFastRender(async (props, ...contexts) => {
   // Load dynamic data that can change
   const inventory = await getInventoryStatus(props.productId);
-  
+
   return partialRender(
     { inStock: inventory.available > 0 },
     { productId: props.productId, inStock: inventory.available > 0 }
@@ -66,11 +66,11 @@ Jay Stack implements three distinct rendering phases for optimal performance:
 ```typescript
 .withInteractive((props, refs) => {
   const [quantity, setQuantity] = createSignal(1);
-  
+
   refs.addToCart.onclick(() => {
     addToCart({ productId: props.productId, quantity: quantity() });
   });
-  
+
   return {
     render: () => ({ quantity: quantity() }),
   };
@@ -106,8 +106,7 @@ interface ProductPageProps {
   preferences: UserPreferences;
 }
 
-makeJayStackComponent<ProductContract>()
-  .withProps<ProductPageProps>()
+makeJayStackComponent<ProductContract>().withProps<ProductPageProps>();
 ```
 
 #### `.withServerContext(...contextMarkers)`
@@ -118,8 +117,7 @@ Adds server-side context markers for dependency injection:
 const DatabaseContext = createJayContext<Database>();
 const AuthContext = createJayContext<AuthService>();
 
-makeJayStackComponent<ProductContract>()
-  .withServerContext(DatabaseContext, AuthContext)
+makeJayStackComponent<ProductContract>().withServerContext(DatabaseContext, AuthContext);
 ```
 
 #### `.withClientContext(...contextMarkers)`
@@ -130,8 +128,7 @@ Adds client-side context markers for dependency injection:
 const ThemeContext = createJayContext<Theme>();
 const UserContext = createJayContext<User>();
 
-makeJayStackComponent<ProductContract>()
-  .withClientContext(ThemeContext, UserContext)
+makeJayStackComponent<ProductContract>().withClientContext(ThemeContext, UserContext);
 ```
 
 #### `.withLoadParams(loadParams)`
@@ -148,8 +145,7 @@ async function* urlLoader(): AsyncIterable<ProductParams[]> {
   yield products.map(({ slug }) => ({ slug }));
 }
 
-makeJayStackComponent<ProductContract>()
-  .withLoadParams(urlLoader)
+makeJayStackComponent<ProductContract>().withLoadParams(urlLoader);
 ```
 
 #### `.withSlowlyRender(slowlyRender)`
@@ -159,19 +155,18 @@ Defines the slow rendering function for semi-static data:
 ```typescript
 async function slowlyRender(props: ProductPageProps & ProductParams) {
   const product = await getProductBySlug(props.slug);
-  
+
   return partialRender(
-    { 
-      name: product.name, 
-      sku: product.sku, 
-      price: product.price 
+    {
+      name: product.name,
+      sku: product.sku,
+      price: product.price,
     },
-    { productId: product.id }
+    { productId: product.id },
   );
 }
 
-makeJayStackComponent<ProductContract>()
-  .withSlowlyRender(slowlyRender)
+makeJayStackComponent<ProductContract>().withSlowlyRender(slowlyRender);
 ```
 
 #### `.withFastRender(fastRender)`
@@ -181,15 +176,14 @@ Defines the fast rendering function for dynamic data:
 ```typescript
 async function fastRender(props: ProductPageProps & ProductParams & { productId: string }) {
   const inventory = await getInventoryStatus(props.productId);
-  
+
   return partialRender(
     { inStock: inventory.available > 0 },
-    { productId: props.productId, inStock: inventory.available > 0 }
+    { productId: props.productId, inStock: inventory.available > 0 },
   );
 }
 
-makeJayStackComponent<ProductContract>()
-  .withFastRender(fastRender)
+makeJayStackComponent<ProductContract>().withFastRender(fastRender);
 ```
 
 #### `.withInteractive(componentConstructor)`
@@ -197,20 +191,22 @@ makeJayStackComponent<ProductContract>()
 Defines the client-side interactive component:
 
 ```typescript
-function interactiveConstructor(props: ProductPageProps & ProductParams & { productId: string, inStock: boolean }, refs) {
+function interactiveConstructor(
+  props: ProductPageProps & ProductParams & { productId: string; inStock: boolean },
+  refs,
+) {
   const [quantity, setQuantity] = createSignal(1);
-  
+
   refs.addToCart.onclick(() => {
     addToCart({ productId: props.productId, quantity: quantity() });
   });
-  
+
   return {
     render: () => ({ quantity: quantity() }),
   };
 }
 
-makeJayStackComponent<ProductContract>()
-  .withInteractive(interactiveConstructor)
+makeJayStackComponent<ProductContract>().withInteractive(interactiveConstructor);
 ```
 
 ## Render Response Builders
@@ -222,7 +218,7 @@ Creates a successful partial render result with data to carry forward:
 ```typescript
 return partialRender(
   { name: 'Product Name', price: 99.99 }, // View state
-  { productId: '123' } // Carry forward data
+  { productId: '123' }, // Carry forward data
 );
 ```
 
@@ -260,13 +256,13 @@ Props are composed across rendering phases:
 
 ```typescript
 // Phase 1: Slow Render
-props: PageProps & ProductParams
+props: PageProps & ProductParams;
 
-// Phase 2: Fast Render  
-props: PageProps & ProductParams & SlowRenderCarryForward
+// Phase 2: Fast Render
+props: PageProps & ProductParams & SlowRenderCarryForward;
 
 // Phase 3: Interactive
-props: PageProps & ProductParams & FastRenderCarryForward
+props: PageProps & ProductParams & FastRenderCarryForward;
 ```
 
 ### Context Injection
@@ -285,7 +281,7 @@ async function slowlyRender(props, database, auth) {
 function interactiveConstructor(props, refs, theme, user) {
   const isDarkMode = theme.isDarkMode();
   const userPreferences = user.getPreferences();
-  
+
   return {
     render: () => ({ isDarkMode, userPreferences }),
   };
@@ -320,7 +316,7 @@ interface LocalizedParams extends UrlParams {
 
 async function* urlLoader(): AsyncIterable<LocalizedParams[]> {
   const languages = await getSupportedLanguages();
-  yield languages.map(lang => ({ lang }));
+  yield languages.map((lang) => ({ lang }));
 }
 ```
 
@@ -336,10 +332,10 @@ interface ProductParams extends UrlParams {
 
 async function* urlLoader(): AsyncIterable<ProductParams[]> {
   const categories = await getCategories();
-  
+
   for (const category of categories) {
     const products = await getProductsByCategory(category.id);
-    yield products.map(product => ({
+    yield products.map((product) => ({
       category: category.slug,
       productId: product.id,
     }));
@@ -362,7 +358,7 @@ const AuthContext = createJayContext<AuthService>();
 async function slowlyRender(props, database, auth) {
   const user = await auth.getUser(props.userId);
   const data = await database.getUserData(user.id);
-  
+
   return partialRender({ data }, { userId: user.id });
 }
 ```
@@ -379,13 +375,13 @@ const CartContext = createJayContext<Cart>();
 // Use in interactive component
 function interactiveConstructor(props, refs, theme, cart) {
   const [quantity, setQuantity] = createSignal(1);
-  
+
   refs.addToCart.onclick(() => {
     cart.addItem({ productId: props.productId, quantity: quantity() });
   });
-  
+
   return {
-    render: () => ({ 
+    render: () => ({
       quantity: quantity(),
       isDarkMode: theme.isDarkMode(),
       cartItemCount: cart.getItemCount(),
@@ -404,11 +400,11 @@ Handle server-side errors gracefully:
 async function slowlyRender(props) {
   try {
     const product = await getProductBySlug(props.slug);
-    
+
     if (!product) {
       return notFound();
     }
-    
+
     return partialRender({ product }, { productId: product.id });
   } catch (error) {
     console.error('Failed to load product:', error);
@@ -442,12 +438,12 @@ Create error boundaries for interactive components:
 ```typescript
 function interactiveConstructor(props, refs) {
   const [hasError, setHasError] = createSignal(false);
-  
+
   refs.retryButton.onclick(() => {
     setHasError(false);
     // Retry logic
   });
-  
+
   return {
     render: () => ({ hasError: hasError() }),
   };
@@ -462,15 +458,12 @@ Only update the parts of the view state that change:
 
 ```typescript
 // Slow render - static data
-return partialRender(
-  { name: product.name, sku: product.sku },
-  { productId: product.id }
-);
+return partialRender({ name: product.name, sku: product.sku }, { productId: product.id });
 
 // Fast render - only dynamic data
 return partialRender(
   { inStock: inventory.available > 0 },
-  { productId: props.productId, inStock: inventory.available > 0 }
+  { productId: props.productId, inStock: inventory.available > 0 },
 );
 
 // Interactive - only interactive data
@@ -488,14 +481,14 @@ Pass data between phases to avoid recomputation:
 const product = await getProductBySlug(props.slug);
 return partialRender(
   { name: product.name, price: product.price },
-  { productId: product.id, category: product.category }
+  { productId: product.id, category: product.category },
 );
 
 // Fast render - use carried forward data
 const inventory = await getInventoryStatus(props.productId);
 return partialRender(
   { inStock: inventory.available > 0 },
-  { productId: props.productId, category: props.category }
+  { productId: props.productId, category: props.category },
 );
 ```
 
@@ -508,23 +501,23 @@ const productCache = new Map();
 
 async function slowlyRender(props) {
   const cacheKey = `product:${props.slug}`;
-  
+
   if (productCache.has(cacheKey)) {
     const cached = productCache.get(cacheKey);
     return partialRender(cached.data, cached.carryForward);
   }
-  
+
   const product = await getProductBySlug(props.slug);
   const result = partialRender(
     { name: product.name, price: product.price },
-    { productId: product.id }
+    { productId: product.id },
   );
-  
+
   productCache.set(cacheKey, {
     data: result.viewState,
     carryForward: result.carryForward,
   });
-  
+
   return result;
 }
 ```
@@ -541,19 +534,13 @@ async function slowlyRender(props) {
     // Authenticated user
     const user = await getUser(props.userId);
     const personalizedData = await getPersonalizedData(user.id);
-    
-    return partialRender(
-      { user, personalizedData },
-      { userId: user.id, isAuthenticated: true }
-    );
+
+    return partialRender({ user, personalizedData }, { userId: user.id, isAuthenticated: true });
   } else {
     // Anonymous user
     const publicData = await getPublicData();
-    
-    return partialRender(
-      { publicData },
-      { isAuthenticated: false }
-    );
+
+    return partialRender({ publicData }, { isAuthenticated: false });
   }
 }
 ```
@@ -565,16 +552,16 @@ Load components dynamically based on data:
 ```typescript
 async function fastRender(props) {
   const componentType = await getComponentType(props.productId);
-  
+
   if (componentType === 'video') {
     return partialRender(
       { componentType, videoUrl: await getVideoUrl(props.productId) },
-      { componentType }
+      { componentType },
     );
   } else {
     return partialRender(
       { componentType, imageUrl: await getImageUrl(props.productId) },
-      { componentType }
+      { componentType },
     );
   }
 }
@@ -588,20 +575,20 @@ Enhance functionality progressively:
 function interactiveConstructor(props, refs) {
   // Basic functionality
   const [quantity, setQuantity] = createSignal(1);
-  
+
   // Enhanced functionality (if supported)
   if (typeof IntersectionObserver !== 'undefined') {
     const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
+      entries.forEach((entry) => {
         if (entry.isIntersecting) {
           // Load additional data
         }
       });
     });
-    
+
     observer.observe(refs.container);
   }
-  
+
   return {
     render: () => ({ quantity: quantity() }),
   };
@@ -621,15 +608,15 @@ describe('Product Page', () => {
   it('should render product data', async () => {
     const props = { slug: 'test-product' };
     const result = await slowlyRender(props);
-    
+
     expect(result.viewState.name).toBe('Test Product');
     expect(result.carryForward.productId).toBe('123');
   });
-  
+
   it('should handle missing product', async () => {
     const props = { slug: 'missing-product' };
     const result = await slowlyRender(props);
-    
+
     expect(result.status).toBe(404);
   });
 });
@@ -647,15 +634,15 @@ describe('Product Page Component', () => {
       .withSlowlyRender(slowlyRender)
       .withFastRender(fastRender)
       .withInteractive(interactive);
-    
+
     // Test slow render
     const slowResult = await component.slowlyRender({ slug: 'test' });
     expect(slowResult.viewState.name).toBe('Test Product');
-    
+
     // Test fast render
-    const fastResult = await component.fastRender({ 
-      slug: 'test', 
-      productId: '123' 
+    const fastResult = await component.fastRender({
+      slug: 'test',
+      productId: '123',
     });
     expect(fastResult.viewState.inStock).toBe(true);
   });
@@ -686,7 +673,7 @@ async function renderEverything(props) {
   const inventory = await getInventory(product.id);
   const reviews = await getReviews(product.id);
   const recommendations = await getRecommendations(product.id);
-  
+
   return partialRender({ product, inventory, reviews, recommendations });
 }
 ```
@@ -698,19 +685,19 @@ Provide loading states for better UX:
 ```typescript
 async function fastRender(props) {
   const inventory = await getInventory(props.productId);
-  
+
   return partialRender(
-    { 
+    {
       inStock: inventory.available > 0,
-      isLoading: false 
+      isLoading: false,
     },
-    { productId: props.productId }
+    { productId: props.productId },
   );
 }
 
 function interactiveConstructor(props, refs) {
   const [isAddingToCart, setIsAddingToCart] = createSignal(false);
-  
+
   refs.addToCart.onclick(async () => {
     setIsAddingToCart(true);
     try {
@@ -719,7 +706,7 @@ function interactiveConstructor(props, refs) {
       setIsAddingToCart(false);
     }
   });
-  
+
   return {
     render: () => ({ isAddingToCart: isAddingToCart() }),
   };
@@ -741,13 +728,10 @@ async function slowlyRender(props) {
 async function fastRender(props) {
   const [inventory, price] = await Promise.all([
     getInventory(props.productId),
-    getCurrentPrice(props.productId)
+    getCurrentPrice(props.productId),
   ]);
-  
-  return partialRender(
-    { inventory, price },
-    { productId: props.productId }
-  );
+
+  return partialRender({ inventory, price }, { productId: props.productId });
 }
 ```
 
@@ -774,7 +758,7 @@ interface FastRenderCarryForward {
 }
 
 async function slowlyRender(
-  props: ProductPageProps & ProductParams
+  props: ProductPageProps & ProductParams,
 ): Promise<PartialRender<ProductViewState, SlowRenderCarryForward> | ServerError5xx> {
   // TypeScript ensures type safety
 }
@@ -791,4 +775,4 @@ Now that you understand Jay Stack components:
 
 ---
 
-Ready to build your first full-stack application? Check out the [Examples](../examples/) section for working patterns! 
+Ready to build your first full-stack application? Check out the [Examples](../examples/) section for working patterns!

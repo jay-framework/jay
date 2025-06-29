@@ -4,7 +4,7 @@ import {
     ITEM_REMOVED,
     listCompare,
     RandomAccessLinkedList as List,
-} from 'jay-list-compare';
+} from '@jay-framework/list-compare';
 import { ADD, JSONPatch, JSONPointer, MOVE, REMOVE, REPLACE } from '../json-patch-contract';
 
 type MeasureOfChange = number;

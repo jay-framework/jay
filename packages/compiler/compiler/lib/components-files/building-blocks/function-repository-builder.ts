@@ -57,7 +57,7 @@ export class FunctionRepositoryBuilder {
 
     generateGlobalFile(): GeneratedFunctionRepository {
         return this.generate().map(
-            (_) => `import {FunctionsRepository} from "jay-secure";
+            (_) => `import {FunctionsRepository} from "@jay-framework/secure";
 
 export ${_}`,
         );

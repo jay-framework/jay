@@ -1,5 +1,5 @@
 {
-  "name": "jay-stack-route-scanner",
+  "name": "@jay-framework/stack-route-scanner",
   "version": "0.5.0",
   "license": "Apache-2.0",
   "main": "dist/index.js",
@@ -16,8 +16,8 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
     "@types/node": "^20.11.5",
-    "jay-dev-environment": "workspace:^",
     "nodemon": "^3.0.3",
     "replace-in-file": "^7.1.0",
     "rimraf": "^5.0.5",

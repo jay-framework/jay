@@ -1,5 +1,5 @@
 import { CompElementRefs, render as CompRender } from './comp.jay-html';
-import { makeJayComponent, Props, createSignal } from 'jay-component';
+import { makeJayComponent, Props, createSignal } from '@jay-framework/component';
 import { exec$ } from '../../../lib/sandbox/exec';
 
 export interface CompProps {}

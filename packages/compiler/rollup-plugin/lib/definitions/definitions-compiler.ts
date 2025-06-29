@@ -1,4 +1,4 @@
-import { generateElementDefinitionFile } from 'jay-compiler';
+import { generateElementDefinitionFile } from '@jay-framework/compiler';
 import { LoadResult, PluginContext, TransformResult } from 'rollup';
 import { getFileContext, readFileAsString, writeDefinitionFile } from '../common/files';
 import path from 'node:path';
@@ -9,14 +9,14 @@ import {
     JAY_CONTRACT_EXTENSION,
     JAY_DTS_EXTENSION,
     JAY_CONTRACT_DTS_EXTENSION,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 import {
     parseJayFile,
     getJayHtmlImports,
     JAY_IMPORT_RESOLVER,
     parseContract,
     compileContract,
-} from 'jay-compiler-jay-html';
+} from '@jay-framework/compiler-jay-html';
 import { checkCodeErrors } from '../common/errors';
 
 export function jayDefinitions() {

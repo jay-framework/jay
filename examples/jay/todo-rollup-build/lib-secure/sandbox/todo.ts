@@ -1,9 +1,15 @@
-import { Filter, render, ShownTodo, TodoElementRefs, TodoViewState } from './todo.jay-html';
-import { createMemo, createSignal, makeJayComponent, Props } from 'jay-component';
+import {
+    Filter,
+    render,
+    ShownTodoOfTodoViewState,
+    TodoElementRefs,
+    TodoViewState,
+} from './todo.jay-html';
+import { createMemo, createSignal, makeJayComponent, Props } from '@jay-framework/component';
 import { uuid } from './uuid';
-import { patch } from 'jay-json-patch';
-import { ADD, REPLACE } from 'jay-json-patch';
-import { handler$ } from 'jay-secure';
+import { patch } from '@jay-framework/json-patch';
+import { ADD, REPLACE } from '@jay-framework/json-patch';
+import { handler$ } from '@jay-framework/secure';
 
 const ENTER_KEY = 13;
 
@@ -23,7 +29,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     );
 
     const activeTodoCount = createMemo(() =>
-        todos().reduce(function (accum: number, todo: ShownTodo) {
+        todos().reduce(function (accum: number, todo: ShownTodoOfTodoViewState) {
             return todo.isCompleted ? accum : accum + 1;
         }, 0),
     );

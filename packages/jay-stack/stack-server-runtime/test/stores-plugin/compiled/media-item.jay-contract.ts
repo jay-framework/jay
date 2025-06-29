@@ -1,4 +1,4 @@
-import { JayElement, RenderElement, RenderElementOptions } from 'jay-runtime';
+import { JayElement, RenderElement, RenderElementOptions } from '@jay-framework/runtime';
 
 export enum MediaType {
     audio,

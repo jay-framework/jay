@@ -1,4 +1,9 @@
-import { JayElement, RenderElement, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+import {
+    JayElement,
+    RenderElement,
+    HTMLElementProxy,
+    RenderElementOptions,
+} from '@jay-framework/runtime';
 import {
     SimplePluginRefs,
     SimplePluginViewState,
