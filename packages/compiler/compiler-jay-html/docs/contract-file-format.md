@@ -191,17 +191,6 @@ dataType: enum (option1 | option2 | option3)
 
 Enums define a set of allowed values separated by `|`.
 
-### Complex Types
-
-You can combine multiple types for tags that serve multiple purposes:
-
-```yaml
-- tag: email
-  type: [data, interactive]
-  dataType: string
-  elementType: HTMLInputElement
-```
-
 ## Examples
 
 ### Simple Counter Component

@@ -1,6 +1,6 @@
 # Contract Files
 
-Contract files (`.jay-contract`) define reusable component interfaces using a YAML-based format. They enable you to create headless components that can be used across different UI designs.
+Contract files (`.jay-contract`) define the interface between design tools and component implementations using a YAML-based format. Contracts are a core principle of Jay, enabling collaborative workflows between designers and developers where each can work independently, interacting only through the contract definitions.
 
 ## Overview
 
@@ -56,7 +56,8 @@ Interactive tags define elements that can be interacted with programmatically.
 
 **Properties**:
 - `type: interactive` - Identifies this as an interactive element
-- `elementType` - The HTML element type (required)
+- `elementType` - The HTML element type or a headfull Jay component type (required)
+  interactive tags can have multiple types set as an array, which means the designer has to choose one of those types. 
 - `description` - (Optional) Documentation for the element
 
 ### Variant Tags
@@ -72,7 +73,7 @@ Variant tags define design variations or states.
 
 **Properties**:
 - `type: variant` - Identifies this as a variant
-- `dataType` - Must be an enum type (required)
+- `dataType` - Can be an enum or boolean type (required)
 - `description` - (Optional) Documentation for the variant
 
 ### Sub-Contract Tags
@@ -98,6 +99,28 @@ Sub-contract tags define nested component structures.
 - `tags` - Nested tag definitions
 - `link` - (Alternative to tags) Reference to another contract file
 
+### Multi-Typed tags
+
+Jay Contract allows a tag to be of one or more of the `data`, `interactive` and `variant` types. 
+Such tag types are defined as an array of tag types. 
+`sub-contract` tag cannot have additional tag types.
+
+```yaml
+      - tag: title
+        type: [data, interactive]
+        dataType: string
+        elementType: HTMLInputElement
+```
+
+### Tag metadata
+any tag can have additional metadata to be used by design tools. 
+
+The additional metadata supported are
+* `description` - a textual description of the tag.
+  description can be an array, for multi-typed tags, providing a different description for each usage of the tag as different types.
+* `required` - is the tag required? tells a design tool to give feedback to the designer if this tag is not used. For instance, the **checkout** button may be required in ecomm product pages
+* `repeated` - is this tag a repeated data entity, or an array when transformed to coding types
+
 ## Data Types
 
 ### Basic Types
@@ -115,17 +138,6 @@ dataType: enum (option1 | option2 | option3)
 ```
 
 Enums define a set of allowed values separated by `|`.
-
-### Complex Types
-
-You can combine multiple types for tags that serve multiple purposes:
-
-```yaml
-- tag: email
-  type: [data, interactive]
-  dataType: string
-  elementType: HTMLInputElement
-```
 
 ## Linked Contracts
 
@@ -257,25 +269,6 @@ tags:
     description: Add to cart button
 ```
 
-## Validation Rules
-
-### Required Properties
-
-- **Variant tags** must have a `dataType` (enum)
-- **Interactive tags** must have an `elementType`
-- **Sub-contract tags** must have either `tags` or `link`
-
-### Type Restrictions
-
-- **Sub-contract tags** cannot be combined with other types
-- **Sub-contract tags** cannot have `dataType` or `elementType`
-- **Unknown tag types** will cause validation errors
-
-### Defaults
-
-- If `type` is not specified, defaults to `data`
-- If `dataType` is not specified for data tags, defaults to `string`
-
 ## Best Practices
 
 ### 1. Use Descriptive Names
@@ -384,132 +377,54 @@ contracts/
 
 ## Type Generation
 
-Jay automatically generates TypeScript types from contract files:
+Jay automatically generates TypeScript types from contract files. The generated types include:
+
+1. **ViewState interfaces** - For data and interactive elements
+2. **Ref interfaces** - For interactive elements with proper HTML element types
+3. **Enum types** - For variant definitions
+4. **Contract types** - For the complete component contract
 
 ```typescript
 // Generated from counter.jay-contract
-export interface CounterContract {
-  count: number;
-  add: HTMLButtonElement;
-  subtract: HTMLButtonElement;
+export enum IsPositive {
+    positive,
+    negative,
 }
 
-// Generated from user-form.jay-contract
-export interface UserFormContract {
-  submitButton: HTMLButtonElement;
-  personalInfo: {
-    sectionTitle: string;
-    nameFields: {
-      firstName: string & HTMLInputElement;
-      lastName: string & HTMLInputElement;
+export interface CounterViewState {
+    count: number;
+    isPositive: IsPositive;
+}
+
+export interface CounterRefs {
+    add: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
+    subtract: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
+}
+
+export type CounterContract = JayContract<CounterViewState, CounterRefs>;
+```
+
+For repeated elements (arrays), collection proxies are generated:
+
+```typescript
+// Generated from todo-list.jay-contract
+export interface TodoItemViewState {
+    title: string;
+    completed: boolean;
+}
+
+export interface TodoListViewState {
+    items: Array<TodoItemViewState>;
+    filter: enum (all | active | completed);
+}
+
+export interface TodoListRefs {
+    addButton: HTMLElementProxy<TodoListViewState, HTMLButtonElement>;
+    items: {
+        title: HTMLElementCollectionProxy<TodoItemViewState, HTMLInputElement>;
+        completed: HTMLElementCollectionProxy<TodoItemViewState, HTMLInputElement>;
     };
-  };
 }
-```
-
-## Integration with Jay-HTML
-
-Contract files can be imported into Jay-HTML files:
-
-```html
-<html>
-  <head>
-    <script
-      type="application/jay-headless"
-      contract="./counter.jay-contract"
-      src="./counter"
-      name="counter"
-      key="counter"
-    ></script>
-    <script type="application/jay-data">
-      data:
-        pageTitle: string
-    </script>
-  </head>
-  <body>
-    <div>
-      <h1>{pageTitle}</h1>
-      <div>
-        <span>Count: {counter.count}</span>
-        <button ref="counter.add">+</button>
-        <button ref="counter.subtract">-</button>
-      </div>
-    </div>
-  </body>
-</html>
-```
-
-## Common Patterns
-
-### Form Contracts
-
-```yaml
-name: form
-tags:
-  - tag: fields
-    type: sub-contract
-    tags:
-      - tag: email
-        type: [data, interactive]
-        dataType: string
-        elementType: HTMLInputElement
-      - tag: password
-        type: [data, interactive]
-        dataType: string
-        elementType: HTMLInputElement
-  - tag: submit
-    type: interactive
-    elementType: HTMLButtonElement
-  - tag: errors
-    type: data
-    dataType: string
-```
-
-### List Item Contracts
-
-```yaml
-name: list-item
-tags:
-  - tag: title
-    type: data
-    dataType: string
-  - tag: description
-    type: data
-    dataType: string
-  - tag: status
-    type: variant
-    dataType: enum (active | inactive | pending)
-  - tag: actions
-    type: sub-contract
-    tags:
-      - tag: edit
-        type: interactive
-        elementType: HTMLButtonElement
-      - tag: delete
-        type: interactive
-        elementType: HTMLButtonElement
-```
-
-### Modal Contracts
-
-```yaml
-name: modal
-tags:
-  - tag: isOpen
-    type: data
-    dataType: boolean
-  - tag: title
-    type: data
-    dataType: string
-  - tag: content
-    type: data
-    dataType: string
-  - tag: close
-    type: interactive
-    elementType: HTMLButtonElement
-  - tag: confirm
-    type: interactive
-    elementType: HTMLButtonElement
 ```
 
 ## Next Steps
