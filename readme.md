@@ -112,24 +112,53 @@ The solution for the handover problem, introducing a contract, is actually a sol
 
 ## Jay Contract
 
-// todo review this section
+Jay Contracts define the interface between design and code. They specify the data, interactive elements, variants (states), and linked contracts that a component must support. This contract is the source of truth for both the design tool and the developer, ensuring that the UI and logic remain in sync.
 
-A Jay Contract includes 4 building blocks
+A Jay Contract includes 4 building blocks:
 
-1. The `Data` to display in the user interface
-2. The `Interactive Elements` that interact with the user
-3. The `Variants` - design variations or states that control what and how data and interactive elements are visualized
-4. `Linked Contracts` - contract composition
+1. **Data**: The data to display in the user interface
+2. **Interactive Elements**: Elements that interact with the user (e.g., buttons, inputs)
+3. **Variants**: Design variations or states that control what and how data and interactive elements are visualized
+4. **Linked Contracts**: Contract composition for modularity and reuse
 
-// todo need to add example contract
+Here is an example Jay Contract (YAML format):
 
-The contract is used by design tools to create the actual user interface, such as HTML and CSS, 
-with Jay specific directives such as `if`, `forEach` and `{data}` binding.
+```yaml
+# todo-list.jay-contract
+name: todo
+tags:
+  - tag: activeTodoWord 
+  - tag: activeTodoCount
+    dataType: number
+  - tag: hasItems
+    dataType: boolean
+  - tag: filter
+    dataType: enum (all | active | completed)
+  - tag: filterAll
+    type: interactive
+    elementType: [HTMLAnchorType, HTMLButtonElement]
+  - tag: filterActive
+    type: interactive
+    elementType: [HTMLAnchorType, HTMLButtonElement]
+  - tag: items
+    type: sub-contract
+    repeated: true
+    tags:
+      - tag: title
+        type: [data, interactive]
+        dataType: string
+        elementType: HTMLInputElement
+      - tag: completed
+        type: [data, interactive]
+        dataType: boolean
+        elementType: HTMLInputElement
+```
 
-The contract is compiled into programmatic types that are used to code the headless or headfull components
-1. The `view state` - data and selected variants (which appear as boolean or enumerations) that a 
-   Jay Component hands over to the view or Jay Element to render
-2. The `refs` - named html elements or sub-components in the view (Jay Element) to interact with
+The contract is used by design tools to create the actual user interface, such as HTML and CSS, with Jay-specific directives such as `if`, `forEach`, and `{data}` binding.
+
+The contract is compiled into programmatic types that are used to code the headless or headfull components:
+1. The **view state**: Data and selected variants (which appear as boolean or enumerations) that a Jay Component hands over to the view or Jay Element to render
+2. The **refs**: Named HTML elements or sub-components in the view (Jay Element) to interact with
 
 ## Jay Element / jay-html
 

@@ -2,13 +2,9 @@
 
 Jay-HTML is an extended HTML format that serves as the bridge between design tools and code. It defines both the UI design and the contract that components must implement.
 
-// review language
-A Design tool may start by uploading a Jay Contract (`.jay-contract` file), or by creating a contract
-directly at the design tool. Once the design tool creates the `jay-html` it contains the contract information
-and any original `.jay-contract` files are not required anymore.
+A design tool may start by uploading a Jay Contract (`.jay-contract` file), or by creating a contract directly within the design tool. Once the design tool generates the `jay-html`, it contains all the contract information, and any original `.jay-contract` files are no longer required for the UI.
 
-`jay-html` is designed to allow the design tool to rewrite and update the file with no impact 
-on the component code.
+Jay-HTML is designed to allow the design tool to rewrite and update the file with no impact on the component code, as long as the contract remains unchanged. This enables seamless iteration on design without breaking the connection to the implementation.
 
 ## Overview
 
@@ -25,16 +21,13 @@ Jay-HTML files contain:
 
 The primary use case for Jay-HTML is integration with design tools:
 
-1. **Designers create UI designs** in their preferred design tool
-2. **Designers connect the design to Jay Contract** using plugins 
-2. **Design tools export Jay-HTML** using plugins or built-in exporters
-3. **Developers implement components** that satisfy the generated contracts
-4. **Applications use the components** with the generated UI
+1. **Designers create UI designs** in their preferred design tool.
+2. **Designers connect the design to a Jay Contract** using plugins or built-in integrations.
+3. **Design tools export Jay-HTML** using plugins or built-in exporters, embedding the contract and UI structure.
+4. **Developers implement components** that satisfy the generated contracts, focusing on logic and state management.
+5. **Applications use the components** with the generated UI, ensuring design and implementation remain in sync.
 
-// todo review language
-This workflow eliminates the manual translation of designs to code,
-allows fine grained updates of design with no impact on the code as long as the contract does not change 
-and ensures that the implemented components match the design specifications exactly.
+This workflow eliminates the manual translation of designs to code, allows fine-grained updates of design with no impact on the code as long as the contract does not change, and ensures that the implemented components match the design specifications exactly.
 
 ## Manual Authoring
 
