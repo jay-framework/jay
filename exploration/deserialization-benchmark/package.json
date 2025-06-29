@@ -21,8 +21,8 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "@jay-framework-deprecated/mutable": "workspace:^",
     "@jay-framework/json-patch": "workspace:^",
-    "@jay-framework/mutable": "workspace:^",
     "browser-hrtime": "^1.1.8",
     "immer": "^10.0.3"
   }

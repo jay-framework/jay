@@ -1,5 +1,5 @@
 {
-  "name": "@jay-framework/mutable",
+  "name": "@jay-framework-deprecated/mutable",
   "version": "0.5.0",
   "type": "module",
   "private": true,

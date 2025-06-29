@@ -3854,6 +3854,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@jay-framework-deprecated/mutable@workspace:^, @jay-framework-deprecated/mutable@workspace:packages/_deprecated/mutable":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework-deprecated/mutable@workspace:packages/_deprecated/mutable"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@types/node": ^20.11.5
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
 "@jay-framework/4-react@workspace:^, @jay-framework/4-react@workspace:packages/runtime/jay-4-react":
   version: 0.0.0-use.local
   resolution: "@jay-framework/4-react@workspace:packages/runtime/jay-4-react"
@@ -4145,21 +4160,6 @@ __metadata:
   resolution: "@jay-framework/list-compare@workspace:packages/runtime/list-compare"
   dependencies:
     "@jay-framework/dev-environment": "workspace:^"
-    "@types/node": ^20.11.5
-    rimraf: ^5.0.5
-    tsup: ^8.0.1
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vitest: ^1.2.1
-  languageName: unknown
-  linkType: soft
-
-"@jay-framework/mutable@workspace:^, @jay-framework/mutable@workspace:packages/_deprecated/mutable":
-  version: 0.0.0-use.local
-  resolution: "@jay-framework/mutable@workspace:packages/_deprecated/mutable"
-  dependencies:
-    "@jay-framework/dev-environment": "workspace:^"
-    "@jay-framework/reactive": "workspace:^"
     "@types/node": ^20.11.5
     rimraf: ^5.0.5
     tsup: ^8.0.1
@@ -9052,9 +9052,9 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "deserialization-benchmark@workspace:exploration/deserialization-benchmark"
   dependencies:
+    "@jay-framework-deprecated/mutable": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/json-patch": "workspace:^"
-    "@jay-framework/mutable": "workspace:^"
     "@rollup/plugin-node-resolve": ^15.2.3
     browser-hrtime: ^1.1.8
     immer: ^10.0.3
@@ -17010,32 +17010,6 @@ __metadata:
   checksum: 88e9e65a7eaa0bf8e9a8bbf8ac07571363bc333ba8b6769ed5e013e0042ed7c385e97fae9049510b3b5fe4b42472d8f32de9ce8ce84902bc4297d4bbe3777dba
   languageName: node
   linkType: hard
-
-"refs-comma-issue@workspace:examples/jay/refsConflict":
-  version: 0.0.0-use.local
-  resolution: "refs-comma-issue@workspace:examples/jay/refsConflict"
-  dependencies:
-    "@babel/core": ^7.23.7
-    "@babel/preset-env": ^7.23.8
-    "@babel/preset-typescript": ^7.23.3
-    "@rollup/plugin-node-resolve": ^15.2.3
-    jay-cli: "workspace:^"
-    jay-component: "workspace:^"
-    jay-dev-environment: "workspace:^"
-    jay-json-patch: "workspace:^"
-    jay-reactive: "workspace:^"
-    jay-runtime: "workspace:^"
-    jay-secure: "workspace:^"
-    jay-serialization: "workspace:^"
-    nodemon: ^3.0.3
-    rimraf: ^5.0.5
-    tslib: ^2.6.2
-    typescript: ^5.3.3
-    vite: ^5.0.11
-    vite-plugin-inspect: ^0.8.1
-    vite-plugin-jay: "workspace:^"
-  languageName: unknown
-  linkType: soft
 
 "regenerate-unicode-properties@npm:^10.1.0":
   version: 10.1.1

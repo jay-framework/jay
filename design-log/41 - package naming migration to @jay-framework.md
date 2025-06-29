@@ -56,7 +56,7 @@ All package names have been migrated from `jay-something` to `@jay-framework/som
 #### Other Packages
 
 - `jay-dev-environment` → `@jay-framework/dev-environment`
-- `jay-mutable` → `@jay-framework/mutable` (deprecated)
+- `jay-mutable` → `@jay-framework-deprecated/mutable` (deprecated)
 
 ### Files Updated
 

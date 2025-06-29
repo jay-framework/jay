@@ -4,7 +4,7 @@
     "outDir": "dist",
     "paths": {
       "@jay-framework/json-patch": ["../../packages/json-patch/lib"],
-      "@jay-framework/mutable": ["../../packages/mutable/lib"],
+      "@jay-framework-deprecated/mutable": ["../../packages/mutable/lib"],
     },
   },
 }

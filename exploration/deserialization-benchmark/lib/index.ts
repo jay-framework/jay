@@ -1,4 +1,4 @@
-import { mutableObject } from '@jay-framework/mutable';
+import { mutableObject } from '@jay-framework-deprecated/mutable';
 import { REPLACE } from '@jay-framework/json-patch';
 import { patchMutable } from './patch-mutable';
 import { patchImmutable } from './patch-immutable';
