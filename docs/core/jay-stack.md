@@ -82,7 +82,7 @@ Jay Stack implements three distinct rendering phases for optimal performance:
 Jay Stack uses a fluent builder API for creating full-stack components:
 
 ```typescript
-import { makeJayStackComponent, partialRender } from 'jay-fullstack-component';
+import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
 
 export const page = makeJayStackComponent<PageContract>()
   .withProps<PageProps>()

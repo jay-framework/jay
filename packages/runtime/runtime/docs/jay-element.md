@@ -2,7 +2,7 @@
 
 > note: this is an "how it works doc"
 
-The `jay-compiler` compiles `jay-html` into `JayElement<ViewState, Refs>` implementation code files, discussed here.
+The `@jay-framework/compiler` compiles `jay-html` into `JayElement<ViewState, Refs>` implementation code files, discussed here.
 
 Taking the example from the [readme.md](../readme.md), the `jay-html` is
 

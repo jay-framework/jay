@@ -25,7 +25,7 @@ cd my-jay-project
 npm init -y
 
 # Install Jay core packages
-npm install jay-component jay-runtime
+npm install @jay-framework/component @jay-framework/runtime
 
 # Install development dependencies
 npm install --save-dev typescript @types/node
@@ -40,7 +40,7 @@ To add Jay to an existing project:
 cd your-existing-project
 
 # Install Jay packages
-npm install jay-component jay-runtime
+npm install @jay-framework/component @jay-framework/runtime
 
 # Install TypeScript if not already present
 npm install --save-dev typescript @types/node
@@ -52,7 +52,7 @@ For full-stack applications with server-side rendering:
 
 ```bash
 # Install Jay Stack packages
-npm install jay-fullstack-component jay-stack-dev-server
+npm install @jay-framework/fullstack-component jay-stack-dev-server
 
 # Install additional dependencies for full-stack development
 npm install --save-dev @types/node typescript
@@ -64,26 +64,26 @@ npm install --save-dev @types/node typescript
 
 | Package             | Description                  | When to Use                     |
 | ------------------- | ---------------------------- | ------------------------------- |
-| `jay-component`     | Core component library       | All Jay projects                |
-| `jay-runtime`       | Runtime utilities and types  | All Jay projects                |
-| `jay-reactive`      | Reactive state management    | When using signals and effects  |
-| `jay-serialization` | Data serialization utilities | When working with external data |
+| `@jay-framework/component`     | Core component library       | All Jay projects                |
+| `@jay-framework/runtime`       | Runtime utilities and types  | All Jay projects                |
+| `@jay-framework/reactive`      | Reactive state management    | When using signals and effects  |
+| `@jay-framework/serialization` | Data serialization utilities | When working with external data |
 
 ### Full-Stack Packages
 
 | Package                   | Description                  | When to Use            |
 | ------------------------- | ---------------------------- | ---------------------- |
-| `jay-fullstack-component` | Full-stack component builder | Server-side rendering  |
+| `@jay-framework/fullstack-component` | Full-stack component builder | Server-side rendering  |
 | `jay-stack-dev-server`    | Development server           | Full-stack development |
-| `jay-stack-route-scanner` | Route discovery              | File-based routing     |
+| `@jay-framework/stack-route-scanner` | Route discovery              | File-based routing     |
 
 ### Build Tools
 
 | Package                       | Description        | When to Use           |
 | ----------------------------- | ------------------ | --------------------- |
-| `@jay-compiler/vite-plugin`   | Vite integration   | Vite-based projects   |
-| `@jay-compiler/rollup-plugin` | Rollup integration | Rollup-based projects |
-| `@jay-compiler/cli`           | Command-line tools | All projects          |
+| `@@jay-framework/compiler/vite-plugin`   | Vite integration   | Vite-based projects   |
+| `@@jay-framework/compiler/rollup-plugin` | Rollup integration | Rollup-based projects |
+| `@@jay-framework/compiler/cli`           | Command-line tools | All projects          |
 
 ## Configuration
 
@@ -117,7 +117,7 @@ For Vite-based projects, create a `vite.config.ts`:
 
 ```typescript
 import { defineConfig } from 'vite';
-import jay from '@jay-compiler/vite-plugin';
+import jay from '@@jay-framework/compiler/vite-plugin';
 
 export default defineConfig({
   plugins: [
@@ -138,7 +138,7 @@ export default defineConfig({
 For Rollup-based projects, create a `rollup.config.js`:
 
 ```javascript
-import jay from '@jay-compiler/rollup-plugin';
+import jay from '@@jay-framework/compiler/rollup-plugin';
 
 export default {
   input: 'src/main.ts',
@@ -217,7 +217,7 @@ Add these scripts to your `package.json`:
     "build": "vite build",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
-    "jay:definitions": "jay-cli definitions src"
+    "jay:definitions": "@jay-framework/@jay-framework/jay-cli definitions src"
   }
 }
 ```
@@ -291,7 +291,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          jay: ['jay-component', 'jay-runtime'],
+          jay: ['@jay-framework/component', '@jay-framework/runtime'],
         },
       },
     },

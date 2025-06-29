@@ -32,7 +32,7 @@ In default mode, it only supports `add`, `replace` and `remove` operations.
 In order to support `move` a `contexts: ArrayContexts` 3rd parameter has to be provided.
 The `ArrayContexts` is an array of tuples including `JSONPointer` and `ArrayContext` which instruct the algorithm
 how to compare the array at the `JSONPointer` location. The `ArrayContext` has the name of an attribute to match object by,
-the same `id` used by `jay-list-compare`.
+the same `id` used by `@jay-framework/list-compare`.
 
 The `path` parameter is internal for the function working recursively.
 
@@ -56,7 +56,7 @@ If the replacement value is the same by the `===` operator, the operation is ign
 
 ## Algorithm notes
 
-- This algorithm is using the `jay-list-compare` package to compute array mutations.
+- This algorithm is using the `@jay-framework/list-compare` package to compute array mutations.
 - This algorithm is using the `MeasureOfChange` and `DataFields` at each level to decide if to
   use detailed patch of sub-objects, or to just replace the whole object.
   The threshold is `measureOfChange / dataFields > 0.5` (not configurable for now).

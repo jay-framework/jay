@@ -4,7 +4,7 @@ The Jay API for building full-stack components that seamlessly integrate server-
 
 ## Overview
 
-The `jay-fullstack-component` package provides a fluent builder API for creating components that can:
+The `@jay-framework/fullstack-component` package provides a fluent builder API for creating components that can:
 
 - **Slow Changing Server-side render** with semi-static data
 - **Fast Changing Server-side render** with dynamic data on the server
@@ -38,7 +38,7 @@ The `jay-fullstack-component` package provides a fluent builder API for creating
 ## Installation
 
 ```bash
-npm install jay-fullstack-component
+npm install @jay-framework/fullstack-component
 ```
 
 ## Quick Start

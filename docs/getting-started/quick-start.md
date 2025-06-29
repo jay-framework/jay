@@ -21,7 +21,7 @@ npm init -y
 Install the necessary Jay dependencies:
 
 ```bash
-npm install jay-component jay-runtime
+npm install @jay-framework/component @jay-framework/runtime
 npm install --save-dev typescript @types/node
 ```
 
@@ -78,7 +78,7 @@ Create a file called `counter.ts` in your `src` directory:
 
 ```typescript
 import { render, CounterElementRefs } from './counter.jay-html';
-import { createSignal, makeJayComponent, Props } from 'jay-component';
+import { createSignal, makeJayComponent, Props } from '@jay-framework/component';
 
 export interface CounterProps {
   initialValue: number;

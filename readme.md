@@ -193,7 +193,7 @@ Jay Components are headless component working with the contract TS `.d.ts` files
 
 ```typescript
 import { render, CounterElementRefs } from './counter.jay-html';
-import { createSignal, makeJayComponent, Props } from 'jay-component';
+import { createSignal, makeJayComponent, Props } from '@jay-framework/component';
 
 export interface CounterProps {
   initialValue: number;
@@ -223,7 +223,7 @@ Jay Stack Components provide server-side rendering with client-side interactivit
 
 ```typescript
 import { PageContract, PageElementRefs } from './page.jay-html';
-import { makeJayStackComponent, partialRender } from 'jay-fullstack-component';
+import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
 
 export const page = makeJayStackComponent<PageContract>()
   .withProps<PageProps>()
@@ -244,7 +244,7 @@ export const page = makeJayStackComponent<PageContract>()
 
 ```typescript
 import { ComponentContract } from './component.jay-contract';
-import { makeJayStackComponent, partialRender } from 'jay-fullstack-component';
+import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
 
 export const component = makeJayStackComponent<ComponentContract>()
   .withProps()
@@ -283,8 +283,8 @@ The examples are organized into 5 categories
   - [scrum-board-with-context](examples%2Fjay-context%2Fscrum-board-with-context) - the same scrum board example using jay context
   - [todo-with-context](examples%2Fjay-context%2Ftodo-with-context) - the same todo list example using jay context
 - Jay Low Leven APIs
-  - [counter-raw](examples%2Fjay-low-level-apis%2Fcounter-raw) - counter example not using the Jay Component APIs. Only using jay-runtime.
-  - [todo-raw](examples%2Fjay-low-level-apis%2Ftodo-raw) - todo list not using the Jay Component APIs. Only using jay-runtime.
+  - [counter-raw](examples%2Fjay-low-level-apis%2Fcounter-raw) - counter example not using the Jay Component APIs. Only using @jay-framework/runtime.
+  - [todo-raw](examples%2Fjay-low-level-apis%2Ftodo-raw) - todo list not using the Jay Component APIs. Only using @jay-framework/runtime.
 - Jay Stack
   - [fake-shop](examples%2Fjay-stack%2Ffake-shop) - fullstack e-commerce example
   - [mood-tracker-plugin](examples%2Fjay-stack%2Fmood-tracker-plugin) - plugin system example

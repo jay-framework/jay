@@ -21,7 +21,7 @@ Headfull components include both the contract and UI design. They're created usi
 
 ```typescript
 import { render, CounterElementRefs } from './counter.jay-html';
-import { createSignal, makeJayComponent, Props } from 'jay-component';
+import { createSignal, makeJayComponent, Props } from '@jay-framework/component';
 
 export interface CounterProps {
   initialValue: number;
@@ -49,7 +49,7 @@ They're created using `makeJayStackComponent` with contract files.
 
 ```typescript
 import { ComponentContract } from './component.jay-contract';
-import { makeJayStackComponent } from 'jay-fullstack-component';
+import { makeJayStackComponent } from '@jay-framework/fullstack-component';
 
 export const component = makeJayStackComponent<ComponentContract>().withInteractive(
   (props, refs) => {
@@ -340,7 +340,7 @@ import {
   provideContext,
   provideReactiveContext,
   useReactive,
-} from 'jay-component';
+} from '@jay-framework/component';
 
 function AdvancedComponent(props, refs) {
   // Patchable signal for complex state updates
@@ -416,7 +416,7 @@ function ButtonConstructor(props, refs) {
 Handle form events with proper typing using `createEvent`:
 
 ```typescript
-import { createEvent } from 'jay-component';
+import { createEvent } from '@jay-framework/component';
 
 function FormConstructor(props, refs) {
   const [email, setEmail] = createSignal('');
@@ -473,7 +473,7 @@ function FormConstructor(props, refs) {
 Components can define and emit custom events using `createEvent`. Events are returned as part of the component's return object:
 
 ```typescript
-import { createEvent } from 'jay-component';
+import { createEvent } from '@jay-framework/component';
 
 function TodoItemConstructor(props, refs) {
   const [isEditing, setIsEditing] = createSignal(false);
@@ -610,8 +610,8 @@ Use context for component communication. Contexts are provided using `provideCon
 `provideReactiveContext` and accessed through constructor parameters. You must declare context markers in the `makeJayComponent` call:
 
 ```typescript
-import { createJayContext, provideContext, provideReactiveContext } from 'jay-runtime';
-import { makeJayComponent } from 'jay-component';
+import { createJayContext, provideContext, provideReactiveContext } from '@jay-framework/runtime';
+import { makeJayComponent } from '@jay-framework/component';
 
 const UserContext = createJayContext<{ user: User; updateUser: (user: User) => void }>();
 const ThemeContext = createJayContext<{ theme: string; toggleTheme: () => void }>();

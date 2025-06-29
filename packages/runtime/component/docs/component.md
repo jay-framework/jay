@@ -1,6 +1,6 @@
 # Creating Jay Components
 
-Jay Component is defined in the `jay-runtime` library as anything that implements the interface
+Jay Component is defined in the `@jay-framework/runtime` library as anything that implements the interface
 
 ```typescript
 interface JayComponent<Props, ViewState, jayElement extends BaseJayElement<ViewState>> {
@@ -13,7 +13,7 @@ interface JayComponent<Props, ViewState, jayElement extends BaseJayElement<ViewS
 }
 ```
 
-the `jay-component` library defines a reactive and elegant way to create headless Jay-Components.
+the `@jay-framework/component` library defines a reactive and elegant way to create headless Jay-Components.
 
 ## Simple Example
 
@@ -43,7 +43,7 @@ The full example can be found at [counter.ts](../../../../examples/jay/counter/s
 
 ## The Component Constructor
 
-The `jay-component` library offers constructing jay components using a component constructor function of the form
+The `@jay-framework/component` library offers constructing jay components using a component constructor function of the form
 
 ```typescript
 interface JayComponentCore<PropsT, ViewState> {

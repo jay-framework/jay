@@ -32,9 +32,9 @@ declare function deserialize<T extends object>(jsonPatch: JSONPatch): [T, Deseri
   It always creates new instances in deserialization.
 - The library serialization always serializes the first object in full on the path `[]`,
   which is then deserialized as is.
-- It is using the `jay-json-patch` library to compute and apply the `JSONPatch`es.
-- The `ArrayContexts` parameter is the same from the `jay-json-patch` library.
-- The library is used by `jay-secure` for the worker - main context communication.
+- It is using the `@jay-framework/json-patch` library to compute and apply the `JSONPatch`es.
+- The `ArrayContexts` parameter is the same from the `@jay-framework/json-patch` library.
+- The library is used by `@jay-framework/secure` for the worker - main context communication.
 - The library can also be used for server - client communication if also using global object version management,
   such as optimistic locking.
 

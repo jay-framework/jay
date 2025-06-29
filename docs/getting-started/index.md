@@ -135,7 +135,7 @@ Jay is designed to solve different problems:
 
 ### Can I use Jay components in React?
 
-Yes! Jay provides React integration through the `jay-4-react` package. See the [React Integration](../integration/react.md) guide.
+Yes! Jay provides React integration through the `@jay-framework/4-react` package. See the [React Integration](../integration/react.md) guide.
 
 ### What design tools does Jay support?
 

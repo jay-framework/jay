@@ -91,7 +91,7 @@ The `ref` attribute creates references to HTML elements or components that your 
 
 For each element with a `ref` attribute, Jay generates a corresponding member in the component's refs type, enabling programmatic interaction.
 
-Reference types are defined in the `jay-runtime` library - see [refs.md](../../../runtime/runtime/docs/refs.md) for details.
+Reference types are defined in the `@jay-framework/runtime` library - see [refs.md](../../../runtime/runtime/docs/refs.md) for details.
 
 ## Data Binding
 

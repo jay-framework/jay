@@ -3,8 +3,8 @@
 These functions provide a mechanism for managing and sharing context within a hierarchical structure,
 used with `JayElement`s.
 
-> The functions are intended to be an internal API for `jay-runtime` and `jay-component`.
-> The `jay-component` library defines the public Jay context API in [provide-context.md](../../component/docs/provide-context.md)
+> The functions are intended to be an internal API for `@jay-framework/runtime` and `@jay-framework/component`.
+> The `@jay-framework/component` library defines the public Jay context API in [provide-context.md](../../component/docs/provide-context.md)
 > and [provide-reactive-context.md](../../component/docs/provide-reactive-context.md).
 
 ## `createJayContext`
