@@ -1,4 +1,4 @@
-import {parseJayFile, generateElementFile, JAY_IMPORT_RESOLVER} from '../../lib';
+import { parseJayFile, generateElementFile, JAY_IMPORT_RESOLVER } from '../../lib';
 import { stripMargin } from '../test-utils/strip-margin';
 import { prettify, RuntimeMode } from '@jay-framework/compiler-shared';
 
@@ -28,7 +28,7 @@ describe('head links compilation', () => {
             'TestHeadLinks',
             '',
             {},
-            JAY_IMPORT_RESOLVER
+            JAY_IMPORT_RESOLVER,
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -59,7 +59,7 @@ describe('head links compilation', () => {
             'TestNoHeadLinks',
             '',
             {},
-            JAY_IMPORT_RESOLVER
+            JAY_IMPORT_RESOLVER,
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -89,7 +89,7 @@ describe('head links compilation', () => {
             'TestComplexHeadLinks',
             '',
             {},
-            JAY_IMPORT_RESOLVER
+            JAY_IMPORT_RESOLVER,
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -114,7 +114,7 @@ describe('head links compilation', () => {
         );
     });
 
-    it('should exclude import links from head links injection',async () => {
+    it('should exclude import links from head links injection', async () => {
         const jayFile = await parseJayFile(
             jayFileWith(
                 `data:
@@ -127,7 +127,7 @@ describe('head links compilation', () => {
             'TestWithImports',
             './test',
             {},
-            JAY_IMPORT_RESOLVER
+            JAY_IMPORT_RESOLVER,
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -155,7 +155,7 @@ describe('head links compilation', () => {
             'TestEmptyHeadLinks',
             '',
             {},
-            JAY_IMPORT_RESOLVER
+            JAY_IMPORT_RESOLVER,
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -178,7 +178,7 @@ describe('head links compilation', () => {
             'TestPosition',
             '',
             {},
-            JAY_IMPORT_RESOLVER
+            JAY_IMPORT_RESOLVER,
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -215,7 +215,7 @@ describe('head links compilation', () => {
             'TestRuntimeMode',
             '',
             {},
-            JAY_IMPORT_RESOLVER
+            JAY_IMPORT_RESOLVER,
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -247,7 +247,7 @@ describe('head links compilation', () => {
             'TestSpecialChars',
             '',
             {},
-            JAY_IMPORT_RESOLVER
+            JAY_IMPORT_RESOLVER,
         );
 
         expect(jayFile.validations).toEqual([]);

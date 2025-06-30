@@ -1,4 +1,4 @@
-import {parseJayFile, generateElementFile, JAY_IMPORT_RESOLVER} from '../lib';
+import { parseJayFile, generateElementFile, JAY_IMPORT_RESOLVER } from '../lib';
 import { stripMargin } from './test-utils/strip-margin';
 import { RuntimeMode } from '@jay-framework/compiler-shared';
 import { JSDOM } from 'jsdom';
@@ -52,7 +52,7 @@ describe('head links integration', () => {
             'IntegrationTest',
             '',
             {},
-            JAY_IMPORT_RESOLVER
+            JAY_IMPORT_RESOLVER,
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -80,7 +80,7 @@ describe('head links integration', () => {
             'CodeGenTest',
             '',
             {},
-            JAY_IMPORT_RESOLVER
+            JAY_IMPORT_RESOLVER,
         );
 
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
@@ -141,7 +141,7 @@ describe('head links integration', () => {
             'HeadLinksOnlyTest',
             './test',
             {},
-            JAY_IMPORT_RESOLVER
+            JAY_IMPORT_RESOLVER,
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -169,7 +169,7 @@ describe('head links integration', () => {
             'NoHeadLinksTest',
             '',
             {},
-            JAY_IMPORT_RESOLVER
+            JAY_IMPORT_RESOLVER,
         );
 
         expect(jayFile.validations).toEqual([]);

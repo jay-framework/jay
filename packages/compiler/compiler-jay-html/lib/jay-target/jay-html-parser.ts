@@ -24,7 +24,12 @@ import { SourceFileFormat } from '@jay-framework/compiler-shared';
 import { JayImportLink, JayImportName } from '@jay-framework/compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
 
-import { JayHeadlessImports, JayHtmlNamespace, JayHtmlSourceFile, JayHtmlHeadLink } from './jay-html-source-file';
+import {
+    JayHeadlessImports,
+    JayHtmlNamespace,
+    JayHtmlSourceFile,
+    JayHtmlHeadLink,
+} from './jay-html-source-file';
 
 import { JayImportResolver } from './jay-import-resolver';
 import { contractToImportsViewStateAndRefs, EnumToImport } from '../contract';

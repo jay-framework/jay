@@ -459,7 +459,7 @@ describe('compiler', () => {
                     'Base',
                     '',
                     {},
-                    JAY_IMPORT_RESOLVER
+                    JAY_IMPORT_RESOLVER,
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -506,7 +506,7 @@ describe('compiler', () => {
                     'Base',
                     '',
                     {},
-                    JAY_IMPORT_RESOLVER
+                    JAY_IMPORT_RESOLVER,
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -528,7 +528,7 @@ describe('compiler', () => {
                     'Base',
                     '',
                     {},
-                    JAY_IMPORT_RESOLVER
+                    JAY_IMPORT_RESOLVER,
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -548,7 +548,7 @@ describe('compiler', () => {
                     'Base',
                     '',
                     {},
-                    JAY_IMPORT_RESOLVER
+                    JAY_IMPORT_RESOLVER,
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -580,7 +580,7 @@ describe('compiler', () => {
                     'Base',
                     '',
                     {},
-                    JAY_IMPORT_RESOLVER
+                    JAY_IMPORT_RESOLVER,
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -620,7 +620,7 @@ describe('compiler', () => {
                     'Base',
                     '',
                     {},
-                    JAY_IMPORT_RESOLVER
+                    JAY_IMPORT_RESOLVER,
                 );
 
                 expect(jayFile.validations).toEqual([]);

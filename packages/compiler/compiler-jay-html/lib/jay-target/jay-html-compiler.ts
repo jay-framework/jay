@@ -34,7 +34,12 @@ import {
 } from '../expressions/expression-compiler';
 import { camelCase } from 'camel-case';
 
-import { JayHeadlessImports, JayHtmlNamespace, JayHtmlSourceFile, JayHtmlHeadLink } from './jay-html-source-file';
+import {
+    JayHeadlessImports,
+    JayHtmlNamespace,
+    JayHtmlSourceFile,
+    JayHtmlHeadLink,
+} from './jay-html-source-file';
 import { ensureSingleChildElement, isConditional, isForEach } from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
@@ -520,10 +525,7 @@ function renderFunctionImplementation(
         imports = imports.plus(Import.injectHeadLinks);
     }
 
-    const {
-        imports: refImports,
-        renderedRefs,
-    } = renderRefsType(renderedRoot.refs, refsType);
+    const { imports: refImports, renderedRefs } = renderRefsType(renderedRoot.refs, refsType);
     imports = imports.plus(refImports);
 
     let renderedElement = `export type ${elementType} = JayElement<${viewStateType}, ${refsType}>
@@ -784,21 +786,17 @@ export function generateElementDefinitionFile(
 ): WithValidations<string> {
     return parsedFile.map((jayFile) => {
         let types = generateTypes(jayFile.types);
-        let {
-            renderedRefs,
-            renderedElement,
-            preRenderType,
-            renderedImplementation,
-        } = renderFunctionImplementation(
-            jayFile.types,
-            jayFile.body,
-            jayFile.imports,
-            jayFile.baseElementName,
-            jayFile.namespaces,
-            jayFile.headlessImports,
-            RuntimeMode.WorkerTrusted,
-            jayFile.headLinks,
-        );
+        let { renderedRefs, renderedElement, preRenderType, renderedImplementation } =
+            renderFunctionImplementation(
+                jayFile.types,
+                jayFile.body,
+                jayFile.imports,
+                jayFile.baseElementName,
+                jayFile.namespaces,
+                jayFile.headlessImports,
+                RuntimeMode.WorkerTrusted,
+                jayFile.headLinks,
+            );
         return [
             renderImports(
                 renderedImplementation.imports.plus(Import.jayElement),
@@ -821,17 +819,16 @@ export function generateElementFile(
     importerMode: MainRuntimeModes,
 ): WithValidations<string> {
     const types = generateTypes(jayFile.types);
-    const { renderedRefs, renderedElement, renderedImplementation } =
-        renderFunctionImplementation(
-            jayFile.types,
-            jayFile.body,
-            jayFile.imports,
-            jayFile.baseElementName,
-            jayFile.namespaces,
-            jayFile.headlessImports,
-            importerMode,
-            jayFile.headLinks,
-        );
+    const { renderedRefs, renderedElement, renderedImplementation } = renderFunctionImplementation(
+        jayFile.types,
+        jayFile.body,
+        jayFile.imports,
+        jayFile.baseElementName,
+        jayFile.namespaces,
+        jayFile.headlessImports,
+        importerMode,
+        jayFile.headLinks,
+    );
     const renderedFile = [
         renderImports(
             renderedImplementation.imports.plus(Import.element).plus(Import.jayElement),
