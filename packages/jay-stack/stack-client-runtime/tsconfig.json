@@ -1,0 +1,11 @@
+{
+  "extends": "@jay-framework/dev-environment/library-dom/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "paths": {
+      "@jay-framework/list-compare": ["../list-compare/lib"],
+      "@jay-framework/reactive": ["../reactive/lib"],
+      "@jay-framework/fullstack-component": ["../full-stack-component/lib"],
+    },
+  },
+}

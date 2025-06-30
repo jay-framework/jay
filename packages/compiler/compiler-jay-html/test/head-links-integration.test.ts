@@ -1,8 +1,8 @@
-import { parseJayFile, generateElementFile } from '../lib';
+import {parseJayFile, generateElementFile, JAY_IMPORT_RESOLVER} from '../lib';
 import { stripMargin } from './test-utils/strip-margin';
-import { RuntimeMode } from 'jay-compiler-shared';
+import { RuntimeMode } from '@jay-framework/compiler-shared';
 import { JSDOM } from 'jsdom';
-import { injectHeadLinks, HeadLink } from '../../../runtime/runtime/lib/element';
+import { injectHeadLinks, HeadLink } from '@jay-framework/runtime';
 
 describe('head links integration', () => {
     let dom: JSDOM;
@@ -30,7 +30,7 @@ describe('head links integration', () => {
         return stripMargin(
             ` <html>
                 |   <head>${links ? `\n | ${stripMargin(links)}` : ''}
-                |     <script type="application/yaml-jay">
+                |     <script type="application/jay-data">
                 |${stripMargin(jayYaml)}
                 |     </script>
                 |   </head>
@@ -40,7 +40,7 @@ describe('head links integration', () => {
     }
 
     it('should parse jay file with head links correctly', async () => {
-        const jayFile = parseJayFile(
+        const jayFile = await parseJayFile(
             jayFileWith(
                 TEST_YAML,
                 TEST_BODY,
@@ -52,6 +52,7 @@ describe('head links integration', () => {
             'IntegrationTest',
             '',
             {},
+            JAY_IMPORT_RESOLVER
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -69,7 +70,7 @@ describe('head links integration', () => {
     });
 
     it('should generate typescript code with head links injection', async () => {
-        const jayFile = parseJayFile(
+        const jayFile = await parseJayFile(
             jayFileWith(
                 TEST_YAML,
                 TEST_BODY,
@@ -79,6 +80,7 @@ describe('head links integration', () => {
             'CodeGenTest',
             '',
             {},
+            JAY_IMPORT_RESOLVER
         );
 
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
@@ -86,7 +88,7 @@ describe('head links integration', () => {
 
         // Should import injectHeadLinks from jay-runtime
         expect(generated.val).toMatch(
-            /import\s+\{[^}]*injectHeadLinks[^}]*\}\s+from\s+"jay-runtime"/,
+            /import\s+\{[^}]*injectHeadLinks[^}]*\}\s+from\s+"@jay-framework\/runtime"/,
         );
 
         // Should call injectHeadLinks with correct parameters
@@ -128,17 +130,18 @@ describe('head links integration', () => {
     });
 
     it('should handle head links only (no imports)', async () => {
-        const jayFile = parseJayFile(
+        const jayFile = await parseJayFile(
             jayFileWith(
                 TEST_YAML,
                 SIMPLE_BODY,
                 `<link rel="stylesheet" href="styles/main.css">
                   |<link rel="icon" href="/favicon.ico">
-                  |<link rel="import" href="./fixtures/components/imports/component1.ts" names="comp1"/>`,
+                  |<script type="application/jay-headfull" src="./fixtures/components/imports/component1.ts" names="comp1"></script>`,
             ),
             'HeadLinksOnlyTest',
             './test',
             {},
+            JAY_IMPORT_RESOLVER
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -161,11 +164,12 @@ describe('head links integration', () => {
     });
 
     it('should handle empty head links correctly', async () => {
-        const jayFile = parseJayFile(
+        const jayFile = await parseJayFile(
             jayFileWith(TEST_YAML, SIMPLE_BODY),
             'NoHeadLinksTest',
             '',
             {},
+            JAY_IMPORT_RESOLVER
         );
 
         expect(jayFile.validations).toEqual([]);

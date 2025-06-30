@@ -22,8 +22,12 @@ import {
     requestAnimationFramePattern,
 } from './component-files/ts-basic-analyzers/compiler-patterns-for-testing';
 import { FunctionRepositoryBuilder } from '../lib';
-import { checkValidationErrors, prettify, RuntimeMode } from 'jay-compiler-shared';
-import { generateSandboxRootFile, parseJayFile } from 'jay-compiler-jay-html';
+import { checkValidationErrors, prettify, RuntimeMode } from '@jay-framework/compiler-shared';
+import {
+    generateSandboxRootFile,
+    parseJayFile,
+    JAY_IMPORT_RESOLVER,
+} from '@jay-framework/compiler-jay-html';
 
 describe('generate full project', () => {
     const relativePath = './test/fixtures/tsconfig.json';
@@ -39,7 +43,7 @@ describe('generate full project', () => {
             it('generates sandbox root', async () => {
                 const jayFile = await readFixtureSourceJayFile(FIXTURE_SOURCE, 'app');
                 const parsedFile = checkValidationErrors(
-                    parseJayFile(jayFile, 'app.jay-html', SOURCE, {}),
+                    await parseJayFile(jayFile, 'app.jay-html', SOURCE, {}, JAY_IMPORT_RESOLVER),
                 );
                 let sandboxRootFile = generateSandboxRootFile(parsedFile);
                 expect(await prettify(sandboxRootFile)).toEqual(
@@ -73,7 +77,15 @@ describe('generate full project', () => {
             it('generates app element file', async () => {
                 const jayFile = await readFixtureSourceJayFile(FIXTURE_SOURCE, 'app');
                 let runtimeFile = generateElementFile(
-                    checkValidationErrors(parseJayFile(jayFile, 'app.jay-html', SOURCE, {})),
+                    checkValidationErrors(
+                        await parseJayFile(
+                            jayFile,
+                            'app.jay-html',
+                            SOURCE,
+                            {},
+                            JAY_IMPORT_RESOLVER,
+                        ),
+                    ),
                     RuntimeMode.MainSandbox,
                 );
                 expect(await prettify(runtimeFile.val)).toEqual(
@@ -93,7 +105,15 @@ describe('generate full project', () => {
             it('generates counter element file', async () => {
                 const jayFile = await readFixtureSourceJayFile(FIXTURE_SOURCE, 'counter');
                 let runtimeFile = generateElementFile(
-                    checkValidationErrors(parseJayFile(jayFile, 'counter.jay-html', SOURCE, {})),
+                    checkValidationErrors(
+                        await parseJayFile(
+                            jayFile,
+                            'counter.jay-html',
+                            SOURCE,
+                            {},
+                            JAY_IMPORT_RESOLVER,
+                        ),
+                    ),
                     RuntimeMode.MainSandbox,
                 );
                 expect(await prettify(runtimeFile.val)).toEqual(
@@ -127,7 +147,7 @@ describe('generate full project', () => {
             it('generates sandbox root', async () => {
                 const jayFile = await readFixtureSourceJayFile(FIXTURE_SOURCE, 'app');
                 const parsedFile = checkValidationErrors(
-                    parseJayFile(jayFile, 'app.jay-html', SOURCE, {}),
+                    await parseJayFile(jayFile, 'app.jay-html', SOURCE, {}, JAY_IMPORT_RESOLVER),
                 );
                 let sandboxRootFile = generateSandboxRootFile(parsedFile);
                 expect(await prettify(sandboxRootFile)).toEqual(
@@ -197,7 +217,15 @@ describe('generate full project', () => {
             it('generates app element file', async () => {
                 const jayFile = await readFixtureSourceJayFile(FIXTURE_SOURCE, 'app');
                 let runtimeFile = generateElementFile(
-                    checkValidationErrors(parseJayFile(jayFile, 'app.jay-html', SOURCE, {})),
+                    checkValidationErrors(
+                        await parseJayFile(
+                            jayFile,
+                            'app.jay-html',
+                            SOURCE,
+                            {},
+                            JAY_IMPORT_RESOLVER,
+                        ),
+                    ),
                     RuntimeMode.MainSandbox,
                 );
                 expect(await prettify(runtimeFile.val)).toEqual(
@@ -224,7 +252,13 @@ describe('generate full project', () => {
                 const jayFile = await readFixtureSourceJayFile(FIXTURE_SOURCE, 'auto-counter');
                 let runtimeFile = generateElementFile(
                     checkValidationErrors(
-                        parseJayFile(jayFile, 'auto-counter.jay-html', SOURCE, {}),
+                        await parseJayFile(
+                            jayFile,
+                            'auto-counter.jay-html',
+                            SOURCE,
+                            {},
+                            JAY_IMPORT_RESOLVER,
+                        ),
                     ),
                     RuntimeMode.MainSandbox,
                 );
@@ -267,7 +301,7 @@ describe('generate full project', () => {
             it('generates sandbox root', async () => {
                 const jayFile = await readFixtureSourceJayFile(FIXTURE_SOURCE, 'app');
                 const parsedFile = checkValidationErrors(
-                    parseJayFile(jayFile, 'app.jay-html', SOURCE, {}),
+                    await parseJayFile(jayFile, 'app.jay-html', SOURCE, {}, JAY_IMPORT_RESOLVER),
                 );
                 let sandboxRootFile = generateSandboxRootFile(parsedFile);
                 expect(await prettify(sandboxRootFile)).toEqual(
@@ -350,7 +384,15 @@ describe('generate full project', () => {
             it('generates app element file', async () => {
                 const jayFile = await readFixtureSourceJayFile(FIXTURE_SOURCE, 'app');
                 let runtimeFile = generateElementFile(
-                    checkValidationErrors(parseJayFile(jayFile, 'app.jay-html', SOURCE, {})),
+                    checkValidationErrors(
+                        await parseJayFile(
+                            jayFile,
+                            'app.jay-html',
+                            SOURCE,
+                            {},
+                            JAY_IMPORT_RESOLVER,
+                        ),
+                    ),
                     RuntimeMode.MainSandbox,
                 );
                 expect(await prettify(runtimeFile.val)).toEqual(
@@ -370,7 +412,15 @@ describe('generate full project', () => {
             it('generates todo element file', async () => {
                 const jayFile = await readFixtureSourceJayFile(FIXTURE_SOURCE, 'todo');
                 let runtimeFile = generateElementFile(
-                    checkValidationErrors(parseJayFile(jayFile, 'todo.jay-html', SOURCE, {})),
+                    checkValidationErrors(
+                        await parseJayFile(
+                            jayFile,
+                            'todo.jay-html',
+                            SOURCE,
+                            {},
+                            JAY_IMPORT_RESOLVER,
+                        ),
+                    ),
                     RuntimeMode.MainSandbox,
                 );
                 expect(await prettify(runtimeFile.val)).toEqual(
@@ -395,7 +445,15 @@ describe('generate full project', () => {
             it('generates item element file', async () => {
                 const jayFile = await readFixtureSourceJayFile(FIXTURE_SOURCE, 'item');
                 let runtimeFile = generateElementFile(
-                    checkValidationErrors(parseJayFile(jayFile, 'item.jay-html', SOURCE, {})),
+                    checkValidationErrors(
+                        await parseJayFile(
+                            jayFile,
+                            'item.jay-html',
+                            SOURCE,
+                            {},
+                            JAY_IMPORT_RESOLVER,
+                        ),
+                    ),
                     RuntimeMode.MainSandbox,
                 );
                 expect(await prettify(runtimeFile.val)).toEqual(

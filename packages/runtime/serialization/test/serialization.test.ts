@@ -1,6 +1,6 @@
 import { deserialize, serialize } from '../lib';
-import { ArrayContexts } from 'jay-json-patch';
-import { ADD, JSONPatch, REPLACE } from 'jay-json-patch';
+import { ArrayContexts } from '@jay-framework/json-patch';
+import { ADD, JSONPatch, REPLACE } from '@jay-framework/json-patch';
 
 describe('mutable serialization', () => {
     describe('serialize', () => {

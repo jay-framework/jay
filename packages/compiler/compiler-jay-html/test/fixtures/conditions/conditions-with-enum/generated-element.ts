@@ -8,9 +8,10 @@ import {
     dynamicElement as de,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
-export enum Cond {
+export enum CondOfConditionsWithEnumViewState {
     one,
     two,
     three,
@@ -20,7 +21,7 @@ export interface ConditionsWithEnumViewState {
     text1: string;
     text2: string;
     text3: string;
-    cond: Cond;
+    cond: CondOfConditionsWithEnumViewState;
 }
 
 export interface ConditionsWithEnumElementRefs {}
@@ -38,6 +39,10 @@ export type ConditionsWithEnumElementPreRender = [
     ConditionsWithEnumElementRefs,
     ConditionsWithEnumElementRender,
 ];
+export type ConditionsWithEnumContract = JayContract<
+    ConditionsWithEnumViewState,
+    ConditionsWithEnumElementRefs
+>;
 
 export function render(options?: RenderElementOptions): ConditionsWithEnumElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
@@ -45,15 +50,15 @@ export function render(options?: RenderElementOptions): ConditionsWithEnumElemen
         ConstructContext.withRootContext(viewState, refManager, () =>
             de('div', {}, [
                 c(
-                    (vs) => vs.cond === Cond.one,
+                    (vs) => vs.cond === CondOfConditionsWithEnumViewState.one,
                     () => e('div', { style: { cssText: 'color:red' } }, [dt((vs) => vs.text1)]),
                 ),
                 c(
-                    (vs) => vs.cond === Cond.two,
+                    (vs) => vs.cond === CondOfConditionsWithEnumViewState.two,
                     () => e('div', { style: { cssText: 'color:red' } }, [dt((vs) => vs.text2)]),
                 ),
                 c(
-                    (vs) => vs.cond !== Cond.one,
+                    (vs) => vs.cond !== CondOfConditionsWithEnumViewState.one,
                     () => e('div', { style: { cssText: 'color:green' } }, [dt((vs) => vs.text3)]),
                 ),
             ]),

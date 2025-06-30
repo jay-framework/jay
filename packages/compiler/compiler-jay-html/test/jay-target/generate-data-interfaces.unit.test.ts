@@ -7,9 +7,9 @@ import {
     JayNumber,
     JayObjectType,
     JayString,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 
-import { generateTypes } from '../../lib/jay-target/jay-html-compile-types';
+import { generateTypes } from '../../lib';
 
 describe('generate data interfaces', () => {
     it('should generate simple interface', () => {

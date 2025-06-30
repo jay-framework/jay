@@ -1,6 +1,7 @@
 {
   "name": "deserialization-benchmark",
   "version": "1.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "rollup": "rollup --config ./rollup.config.js",
@@ -11,8 +12,8 @@
     "test": ":"
   },
   "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
     "@rollup/plugin-node-resolve": "^15.2.3",
-    "jay-dev-environment": "workspace:^",
     "rimraf": "^5.0.5",
     "rollup": "^4.9.5",
     "rollup-plugin-typescript2": "^0.36.0",
@@ -20,9 +21,9 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
+    "@jay-framework-deprecated/mutable": "workspace:^",
+    "@jay-framework/json-patch": "workspace:^",
     "browser-hrtime": "^1.1.8",
-    "immer": "^10.0.3",
-    "jay-json-patch": "workspace:^",
-    "jay-mutable": "workspace:^"
+    "immer": "^10.0.3"
   }
 }

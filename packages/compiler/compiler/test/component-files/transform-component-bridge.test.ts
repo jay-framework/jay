@@ -6,7 +6,7 @@ import {
     readEventTargetValuePattern,
 } from './ts-basic-analyzers/compiler-patterns-for-testing';
 import { FunctionRepositoryBuilder } from '../../lib';
-import { prettify, RuntimeMode } from 'jay-compiler-shared';
+import { prettify, RuntimeMode } from '@jay-framework/compiler-shared';
 
 function globalFunctionRepo(): FunctionRepositoryBuilder {
     return new FunctionRepositoryBuilder();
@@ -16,7 +16,7 @@ describe('transform component bridge', () => {
     describe('generate component bridge', () => {
         it('replace makeJayComponent with makeJayComponentBridge and remove all unneeded code', async () => {
             const code = `
-                import { makeJayComponent, Props } from 'jay-component';
+                import { makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element';
                 
                 function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
@@ -33,7 +33,7 @@ describe('transform component bridge', () => {
 
             expect(outputCode).toEqual(
                 await prettify(`
-                import { makeJayComponentBridge } from 'jay-secure';
+                import { makeJayComponentBridge } from '@jay-framework/secure';
                 import { render } from './generated-element?jay-mainSandbox';
                 export const Comp = makeJayComponentBridge(render);
                 `),
@@ -42,7 +42,7 @@ describe('transform component bridge', () => {
 
         it('preserve css imports', async () => {
             const code = `
-                import { makeJayComponent, Props } from 'jay-component';
+                import { makeJayComponent, Props } from '@jay-framework/component';
                 import { CompElementRefs, render } from './generated-element';
                 import 'bla.css';
                 
@@ -60,7 +60,7 @@ describe('transform component bridge', () => {
 
             expect(outputCode).toEqual(
                 await prettify(`
-                import { makeJayComponentBridge } from 'jay-secure';
+                import { makeJayComponentBridge } from '@jay-framework/secure';
                 import { render } from './generated-element?jay-mainSandbox';
                 import 'bla.css';
                 export const Comp = makeJayComponentBridge(render);
@@ -74,8 +74,8 @@ describe('transform component bridge', () => {
         describe('for return patterns', () => {
             it('create event.target.value in function repository', async () => {
                 const code = `
-                    import {JayEvent} from 'jay-runtime';
-                    import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                    import {JayEvent} from '@jay-framework/runtime';
+                    import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                     import { CompElementRefs, render, ViewState } from './generated-element';
                     
                     function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
@@ -95,8 +95,8 @@ describe('transform component bridge', () => {
 
                 expect(outputCode).toEqual(
                     await prettify(`
-                    import {JayEvent} from 'jay-runtime';
-                    import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
+                    import {JayEvent} from '@jay-framework/runtime';
+                    import { makeJayComponentBridge, FunctionsRepository } from '@jay-framework/secure';
                     import { render } from './generated-element?jay-mainSandbox';
                     const funcRepository: FunctionsRepository = {
                         '0': ({ event }: JayEvent<any, any>) => ({ $0: event.target.value }),
@@ -108,8 +108,8 @@ describe('transform component bridge', () => {
 
             it('replace event.target.value for two event handlers', async () => {
                 const code = `
-                    import {JayEvent} from 'jay-runtime';
-                    import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                    import {JayEvent} from '@jay-framework/runtime';
+                    import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                     import { render } from './generated-element';
                     
                     function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
@@ -130,8 +130,8 @@ describe('transform component bridge', () => {
 
                 expect(outputCode).toEqual(
                     await prettify(`
-                    import {JayEvent} from 'jay-runtime';
-                    import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
+                    import {JayEvent} from '@jay-framework/runtime';
+                    import { makeJayComponentBridge, FunctionsRepository } from '@jay-framework/secure';
                     import { render } from './generated-element?jay-mainSandbox';
                     const funcRepository: FunctionsRepository = {
                         '0': ({ event }: JayEvent<any, any>) => ({ $0: event.target.value }),
@@ -144,8 +144,8 @@ describe('transform component bridge', () => {
 
             it('replace event.target.value for two event handler reusing the handler', async () => {
                 const code = `
-                    import {JayEvent} from 'jay-runtime';
-                    import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                    import {JayEvent} from '@jay-framework/runtime';
+                    import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                     import { CompElementRefs, render, ViewState } from './generated-element';
                     
                     function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
@@ -169,8 +169,8 @@ describe('transform component bridge', () => {
 
                 expect(outputCode).toEqual(
                     await prettify(`
-                    import {JayEvent} from 'jay-runtime';
-                    import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
+                    import {JayEvent} from '@jay-framework/runtime';
+                    import { makeJayComponentBridge, FunctionsRepository } from '@jay-framework/secure';
                     import { render } from './generated-element?jay-mainSandbox';
                     const funcRepository: FunctionsRepository = {
                         '0': ({ event }: JayEvent<any, any>) => ({ $0: event.target.value }),
@@ -181,7 +181,7 @@ describe('transform component bridge', () => {
 
             it('should not transform an event handler that does not match any pattern', async () => {
                 const code = `
-                    import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                    import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                     import { CompElementRefs, render } from './generated-element';
                     
                     function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
@@ -201,7 +201,7 @@ describe('transform component bridge', () => {
 
                 expect(outputCode).toEqual(
                     await prettify(`
-                    import { makeJayComponentBridge } from 'jay-secure';
+                    import { makeJayComponentBridge } from '@jay-framework/secure';
                     import { render } from './generated-element?jay-mainSandbox';
                     export const Comp = makeJayComponentBridge(render);`),
                 );
@@ -213,8 +213,8 @@ describe('transform component bridge', () => {
 
             it('extract event.preventDefault()', async () => {
                 const code = `
-                    import {JayEvent} from 'jay-runtime';
-                    import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                    import {JayEvent} from '@jay-framework/runtime';
+                    import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                     import { CompElementRefs, render, ViewState } from './generated-element';
                     
                     function CompComponent({  }: Props<CompProps>, refs: CompElementRefs) {
@@ -237,8 +237,8 @@ describe('transform component bridge', () => {
 
                 expect(outputCode).toEqual(
                     await prettify(`
-                    import {JayEvent} from 'jay-runtime';
-                    import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
+                    import {JayEvent} from '@jay-framework/runtime';
+                    import { makeJayComponentBridge, FunctionsRepository } from '@jay-framework/secure';
                     import { render } from './generated-element?jay-mainSandbox';
                     const funcRepository: FunctionsRepository = {
                         '0': ({ event }: JayEvent<any, any>) => {
@@ -256,8 +256,8 @@ describe('transform component bridge', () => {
 
             it('create constant in functions repository', async () => {
                 const code = `
-                    import {JayEvent} from 'jay-runtime';
-                    import { createEvent, createSignal, makeJayComponent, Props } from 'jay-component';
+                    import {JayEvent} from '@jay-framework/runtime';
+                    import { createEvent, createSignal, makeJayComponent, Props } from '@jay-framework/component';
                     import { CompElementRefs, render, ViewState } from './generated-element';
                     
                     const KEY_CODE = 13;
@@ -284,8 +284,8 @@ describe('transform component bridge', () => {
 
                 expect(outputCode).toEqual(
                     await prettify(`
-                    import {JayEvent} from 'jay-runtime';
-                    import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
+                    import {JayEvent} from '@jay-framework/runtime';
+                    import { makeJayComponentBridge, FunctionsRepository } from '@jay-framework/secure';
                     import { render } from './generated-element?jay-mainSandbox';
                     const KEY_CODE = 13;
                     const funcRepository: FunctionsRepository = {

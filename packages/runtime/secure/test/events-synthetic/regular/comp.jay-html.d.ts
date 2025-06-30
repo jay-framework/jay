@@ -4,7 +4,7 @@ import {
     HTMLElementProxy,
     RenderElementOptions,
     RenderElement,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface Item {
     id: string;

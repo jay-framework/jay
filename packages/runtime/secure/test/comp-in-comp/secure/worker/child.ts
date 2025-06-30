@@ -1,5 +1,11 @@
 import { ChildElementRefs, render as ChildRender } from './child.jay-html';
-import { makeJayComponent, Props, createMemo, createEvent, createSignal } from 'jay-component';
+import {
+    makeJayComponent,
+    Props,
+    createMemo,
+    createEvent,
+    createSignal,
+} from '@jay-framework/component';
 
 export interface ChildProps {
     textFromParent: string;

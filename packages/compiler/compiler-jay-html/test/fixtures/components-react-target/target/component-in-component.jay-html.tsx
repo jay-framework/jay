@@ -1,6 +1,11 @@
-import { MapEventEmitterViewState } from 'jay-runtime';
+import { MapEventEmitterViewState } from '@jay-framework/runtime';
 import { ReactElement } from 'react';
-import { Jay4ReactElementProps, eventsFor, jay2React, mimicJayElement } from 'jay-4-react';
+import {
+    Jay4ReactElementProps,
+    eventsFor,
+    jay2React,
+    mimicJayElement,
+} from '@jay-framework/4-react';
 import { Counter } from './counter';
 import { CounterViewState as CounterData } from './counter.jay-html';
 

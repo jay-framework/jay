@@ -1,8 +1,14 @@
 {
-  "name": "jay-runtime",
-  "version": "1.0.0",
+  "name": "@jay-framework/runtime",
+  "version": "0.5.0",
   "type": "module",
-  "main": "dist/index",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "files": [
+    "dist",
+    "docs",
+    "readme.md"
+  ],
   "scripts": {
     "build": "npm run build:js && npm run build:types && npm run build:fix-dts",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch & npm run build:watch:fix-dts",
@@ -17,15 +23,15 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "jay-list-compare": "workspace:^",
-    "jay-reactive": "workspace:^",
+    "@jay-framework/list-compare": "workspace:^",
+    "@jay-framework/reactive": "workspace:^",
     "jsdom": "^23.2.0"
   },
   "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
     "@testing-library/jest-dom": "^6.2.0",
     "@types/jsdom": "^21.1.6",
     "@types/node": "^20.11.5",
-    "jay-dev-environment": "workspace:^",
     "nodemon": "^3.0.3",
     "replace-in-file": "^7.1.0",
     "rimraf": "^5.0.5",

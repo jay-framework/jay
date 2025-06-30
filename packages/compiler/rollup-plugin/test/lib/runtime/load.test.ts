@@ -1,4 +1,4 @@
-import { TS_EXTENSION } from 'jay-compiler-shared';
+import { TS_EXTENSION } from '@jay-framework/compiler-shared';
 import { PluginContext } from 'rollup';
 import { mock } from 'vitest-mock-extended';
 import { readTestFile } from '../../test-utils/file-utils';
@@ -25,9 +25,9 @@ describe('load', () => {
         describe('when originId is not defined', () => {
             const meta = {};
 
-            it('returns null', async () => {
+            it('try loading the file by stripping the .ts extension', async () => {
                 const context = getContext({ meta });
-                expect(await loadJayFile(context, id)).toBeNull();
+                expect(await loadJayFile(context, id)).toEqual({ code });
             });
         });
     });

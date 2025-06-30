@@ -1,5 +1,5 @@
-import { JayElement, RenderElement } from 'jay-runtime';
-import { SecureReferencesManager, elementBridge } from 'jay-secure';
+import { JayElement, RenderElement, JayContract } from '@jay-framework/runtime';
+import { SecureReferencesManager, elementBridge } from '@jay-framework/secure';
 
 export interface EmptyElementViewState {}
 
@@ -12,6 +12,7 @@ export type EmptyElementElementRender = RenderElement<
     EmptyElementElement
 >;
 export type EmptyElementElementPreRender = [EmptyElementElementRefs, EmptyElementElementRender];
+export type EmptyElementContract = JayContract<EmptyElementViewState, EmptyElementElementRefs>;
 
 export function render(): EmptyElementElementPreRender {
     const [refManager, []] = SecureReferencesManager.forElement([], [], [], []);

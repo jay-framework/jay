@@ -1,0 +1,14 @@
+name: counter
+tags:
+  - tag: count
+    type: data
+    dataType: number
+  - tag: add
+    type: interactive
+    elementType: HTMLButtonElement
+  - tag: subtract
+    type: interactive
+    elementType: HTMLButtonElement
+  - tag: is positive
+    type: variant
+    dataType: enum (positive | negative)

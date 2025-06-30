@@ -1,4 +1,4 @@
-import { parseGenericTypescriptFile } from 'jay-compiler';
+import { parseGenericTypescriptFile } from '@jay-framework/compiler';
 import { PluginContext } from 'rollup';
 import { JayPluginContext } from './jay-plugin-context';
 import { getSourceJayMetadata, JayMetadata } from './metadata';
@@ -8,8 +8,8 @@ import {
     CompilerSourceFile,
     SourceFileFormat,
     WithValidations,
-} from 'jay-compiler-shared';
-import { parseJayFile } from 'jay-compiler-jay-html';
+} from '@jay-framework/compiler-shared';
+import { JAY_IMPORT_RESOLVER, parseJayFile } from '@jay-framework/compiler-jay-html';
 
 export async function getJayFileStructure(
     jayContext: JayPluginContext,
@@ -48,9 +48,15 @@ async function getJayStructureFromJayHtmlSource(
     id: string,
 ): Promise<WithValidations<CompilerSourceFile>> {
     const { filename, dirname } = getFileContext(id);
-    return await parseJayFile(code, filename, dirname, {
-        relativePath: jayContext.jayOptions.tsConfigFilePath,
-    });
+    return await parseJayFile(
+        code,
+        filename,
+        dirname,
+        {
+            relativePath: jayContext.jayOptions.tsConfigFilePath,
+        },
+        JAY_IMPORT_RESOLVER,
+    );
 }
 
 async function getJayStructureFromTypeScriptSource(

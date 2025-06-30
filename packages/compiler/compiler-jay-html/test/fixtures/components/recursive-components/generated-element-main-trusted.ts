@@ -12,7 +12,8 @@ import {
     MapEventEmitterViewState,
     OnlyEventEmitters,
     ComponentCollectionProxy,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 import { TreeNode, Node } from './tree-node';
 
 export type TreeNodeRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof TreeNode>>;
@@ -20,8 +21,10 @@ export type TreeNodeRefs<ParentVS> = ComponentCollectionProxy<ParentVS, TreeNode
     OnlyEventEmitters<TreeNodeRef<ParentVS>>;
 
 export interface RecursiveComponentsElementRefs {
-    counter1: TreeNodeRefs<Node>;
-    counterTwo: TreeNodeRefs<Node>;
+    children: {
+        counter1: TreeNodeRefs<Node>;
+        counterTwo: TreeNodeRefs<Node>;
+    };
 }
 
 export type RecursiveComponentsElement = JayElement<Node, RecursiveComponentsElementRefs>;
@@ -34,15 +37,19 @@ export type RecursiveComponentsElementPreRender = [
     RecursiveComponentsElementRefs,
     RecursiveComponentsElementRender,
 ];
+export type RecursiveComponentsContract = JayContract<Node, RecursiveComponentsElementRefs>;
 
 export function render(options?: RenderElementOptions): RecursiveComponentsElementPreRender {
-    const [refManager, [refAR1, refCounter1, refCounterTwo]] = ReferencesManager.for(
+    const [childrenRefManager, [refCounter1, refCounterTwo]] = ReferencesManager.for(
         options,
         [],
         [],
-        ['aR1'],
+        [],
         ['counter1', 'counterTwo'],
     );
+    const [refManager, [refAR1]] = ReferencesManager.for(options, [], [], ['aR1'], [], {
+        children: childrenRefManager,
+    });
     const render = (viewState: Node) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [

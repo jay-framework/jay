@@ -8,9 +8,10 @@ import {
     forEach,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
-export interface Thing {
+export interface ThingOfCollectionsViewState {
     name: string;
     completed: boolean;
     cost: number;
@@ -19,7 +20,7 @@ export interface Thing {
 
 export interface CollectionsViewState {
     title: string;
-    things: Array<Thing>;
+    things: Array<ThingOfCollectionsViewState>;
 }
 
 export interface CollectionsElementRefs {}
@@ -31,6 +32,7 @@ export type CollectionsElementRender = RenderElement<
     CollectionsElement
 >;
 export type CollectionsElementPreRender = [CollectionsElementRefs, CollectionsElementRender];
+export type CollectionsContract = JayContract<CollectionsViewState, CollectionsElementRefs>;
 
 export function render(options?: RenderElementOptions): CollectionsElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
@@ -41,7 +43,7 @@ export function render(options?: RenderElementOptions): CollectionsElementPreRen
                 de('div', {}, [
                     forEach(
                         (vs: CollectionsViewState) => vs.things,
-                        (vs1: Thing) => {
+                        (vs1: ThingOfCollectionsViewState) => {
                             return e('div', {}, [
                                 e(
                                     'span',

@@ -9,7 +9,8 @@ import {
     ConstructContext,
     childComp,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 import { treeNode, Node } from './tree-node';
 
 export interface RecursiveComponents2ViewState {
@@ -32,9 +33,19 @@ export type RecursiveComponents2ElementPreRender = [
     RecursiveComponents2ElementRefs,
     RecursiveComponents2ElementRender,
 ];
+export type RecursiveComponents2Contract = JayContract<
+    RecursiveComponents2ViewState,
+    RecursiveComponents2ElementRefs
+>;
 
 export function render(options?: RenderElementOptions): RecursiveComponents2ElementPreRender {
-    const [refManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);
+    const [childrenRefManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);
+    const [nodeRefManager, []] = ReferencesManager.for(options, [], [], [], [], {
+        children: childrenRefManager,
+    });
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
+        node: nodeRefManager,
+    });
     const render = (viewState: RecursiveComponents2ViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [

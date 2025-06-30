@@ -1,0 +1,24 @@
+<html>
+<head>
+    <script type="application/jay" src="../../stores-plugin/product-page.ts" name="productPage" key="product" />
+    <script type="application/jay-data">
+data:
+    </script>
+</head>
+<body>
+<div>
+    <div>{product.name}</div>
+    <div>{product.brand}</div>
+    <div>{product.description}</div>
+    <div>
+        <span>{product.priceData.formatted.price}</span>
+        <span if="product.discount.hasDiscount">Discount: {product.priceData.formatted.discountedPrice}</span>
+    </div>
+    <div>{product.ribbon}</div>
+    <button ref="product.addToCart" data-id="addToCart" disabled={!product.inStock}>
+        <span if="product.inStock">Add to Cart</span>
+        <span if="!product.inStock">Out of Stock</span>
+    </button>
+</div>
+</body>
+</html> 

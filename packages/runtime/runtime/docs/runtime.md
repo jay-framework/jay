@@ -6,7 +6,7 @@ While in Jay the Jay compiler generates the code for `JayElement` from `jay-html
 code Jay elements directly. In most cases, it is not to be coded directly.
 
 ```typescript
-import { element as e, dynamicText as dt, ConstructContext } from 'jay-runtime';
+import { element as e, dynamicText as dt, ConstructContext } from '@jay-framework/runtime';
 
 interface ViewState {
   text: string;
@@ -59,7 +59,7 @@ Given the Jay HTML
 It is compiled into
 
 ```javascript
-import { element as e } from 'jay-runtime';
+import { element as e } from '@jay-framework/runtime';
 e('button', {}, ['-']);
 ```
 
@@ -138,7 +138,7 @@ Dynamic Text creates a text element that is dynamic and can be updated as data c
 Dynamic text looks like
 
 ```typescript
-import { dynamicText as dt } from 'jay-runtime';
+import { dynamicText as dt } from '@jay-framework/runtime';
 dt((vs) => vs.text);
 dt((vs) => `${vs.firstName} ${vs.lastName}`);
 ```

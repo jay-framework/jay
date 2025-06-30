@@ -6,8 +6,8 @@ import {
     JayComponent,
     JayComponentConstructor,
     withContext,
-} from 'jay-runtime';
-import { currentConstructionContext, PrivateRef } from 'jay-runtime';
+} from '@jay-framework/runtime';
+import { currentConstructionContext, PrivateRef } from '@jay-framework/runtime';
 
 export interface SecureCoordinateContext {
     coordinate: Coordinate;

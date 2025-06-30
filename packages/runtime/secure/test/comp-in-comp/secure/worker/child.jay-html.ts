@@ -1,4 +1,9 @@
-import { JayElement, HTMLElementProxy, RenderElement, RenderElementOptions } from 'jay-runtime';
+import {
+    JayElement,
+    HTMLElementProxy,
+    RenderElement,
+    RenderElementOptions,
+} from '@jay-framework/runtime';
 import { elementBridge, SecureReferencesManager } from '../../../../lib';
 import { sandboxElement as e } from '../../../../lib/';
 

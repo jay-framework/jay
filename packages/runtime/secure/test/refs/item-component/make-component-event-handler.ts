@@ -1,4 +1,4 @@
-import { EventEmitter, JayEventHandler } from 'jay-runtime';
+import { EventEmitter, JayEventHandler } from '@jay-framework/runtime';
 
 export function mkComponentEventHandler<EventType, PropsType>(): EventEmitter<
     EventType,

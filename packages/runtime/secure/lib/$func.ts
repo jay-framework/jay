@@ -1,4 +1,4 @@
-import { JayEventHandler, JayNativeFunction } from 'jay-runtime';
+import { JayEventHandler, JayNativeFunction } from '@jay-framework/runtime';
 import { JayGlobalNativeFunction } from './main/function-repository-types';
 import { JPMNativeExecResult } from './comm-channel/messages';
 

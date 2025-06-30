@@ -1,4 +1,4 @@
-import { CustomPluginOptions, PluginContext, ResolveIdResult, ResolvedId } from 'rollup';
+import { CustomPluginOptions, PluginContext, ResolvedId, ResolveIdResult } from 'rollup';
 import { watchChangesFor } from './watch';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
 import { appendJayMetadata, jayMetadataFromModuleMetadata } from './metadata';
@@ -9,7 +9,7 @@ import {
     SourceFileFormat,
     TS_EXTENSION,
     TSX_EXTENSION,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 
 export interface ResolveIdOptions {
     attributes: Record<string, string>;
@@ -18,7 +18,7 @@ export interface ResolveIdOptions {
     skipSelf?: boolean;
 }
 
-export async function addTsExtensionForJayFile(
+export async function resolveJayHtml(
     context: PluginContext,
     source: string,
     importer: string | undefined,
@@ -48,6 +48,24 @@ export async function addTsExtensionForJayFile(
         console.info(`[resolveId] resolved ${id} as ${format}`);
         return { id, meta: appendJayMetadata(context, id, { format, originId }) };
     }
+}
+
+export async function resolveJayContract(
+    context: PluginContext,
+    source: string,
+    importer: string | undefined,
+    options: ResolveIdOptions,
+) {
+    const resolved = await context.resolve(source, importer, { ...options, skipSelf: true });
+    const id = `${resolved.id}${TS_EXTENSION}`;
+    console.info(`[resolveId] resolved ${id}`);
+    return {
+        id,
+        meta: appendJayMetadata(context, id, {
+            format: SourceFileFormat.JayContract,
+            originId: resolved.id,
+        }),
+    };
 }
 
 export async function resolveJayModeFile(

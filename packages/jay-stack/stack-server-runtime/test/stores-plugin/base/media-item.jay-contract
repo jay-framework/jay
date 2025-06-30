@@ -1,0 +1,72 @@
+name: media-item
+tags:
+  - tag: _id
+    type: data
+    dataType: string
+  - tag: mediaType
+    type: [data, variant]
+    dataType: enum (audio | document | image | video | zip )
+  - tag: thumbnail
+    type: sub-contract
+    tags:
+      - tag: altText
+        type: data
+        dataType: string
+      - tag: format
+        type: data
+        dataType: string
+      - tag: height
+        type: data
+        dataType: string
+      - tag: url
+        type: data
+        dataType: string
+      - tag: width
+        type: data
+        dataType: string
+  - tag: title
+    type: data
+    dataType: string
+  - tag: image
+    type: sub-contract
+    tags:
+      - tag: altText
+        type: data
+        dataType: string
+      - tag: format
+        type: data
+        dataType: string
+      - tag: height
+        type: data
+        dataType: string
+      - tag: url
+        type: data
+        dataType: string
+      - tag: width
+        type: data
+        dataType: string
+  - tag: video
+    type: sub-contract
+    tags:
+      - tag: files
+        type: sub-contract
+        repeated: true
+        tags:
+          - tag: altText
+            type: data
+            dataType: string
+          - tag: format
+            type: data
+            dataType: string
+          - tag: height
+            type: data
+            dataType: string
+          - tag: url
+            type: data
+            dataType: string
+          - tag: width
+            type: data
+            dataType: string
+      - tag: stillFrameMediaId
+        type: data
+        dataType: string

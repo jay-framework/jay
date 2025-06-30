@@ -1,7 +1,7 @@
 <html>
   <head>
-    <link rel="import" href="./todo" names="TodoComponent, TodoProps"/>
-    <script type="application/yaml-jay">
+    <script type="application/jay-headfull" src="./todo" names="TodoComponent, TodoProps"></script>
+    <script type="application/jay-data">
 data:
     todoProps: TodoProps
     </script>

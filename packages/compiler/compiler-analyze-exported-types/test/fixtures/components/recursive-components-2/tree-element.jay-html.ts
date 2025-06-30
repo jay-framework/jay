@@ -9,7 +9,7 @@ import {
     forEach,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { treeNode, Node } from './tree-node';
 
 export interface TreeViewState {

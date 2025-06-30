@@ -12,16 +12,17 @@ import {
     MapEventEmitterViewState,
     OnlyEventEmitters,
     ComponentCollectionProxy,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 import { Counter } from '../counter/counter';
 
-export interface NestedCounter {
+export interface NestedCounterOfDynamicComponentInComponentViewState {
     counter: number;
     id: string;
 }
 
 export interface DynamicComponentInComponentViewState {
-    nestedCounters: Array<NestedCounter>;
+    nestedCounters: Array<NestedCounterOfDynamicComponentInComponentViewState>;
     condition: boolean;
     count1: number;
 }
@@ -31,8 +32,10 @@ export type CounterRefs<ParentVS> = ComponentCollectionProxy<ParentVS, CounterRe
     OnlyEventEmitters<CounterRef<ParentVS>>;
 
 export interface DynamicComponentInComponentElementRefs {
-    counter1: CounterRefs<NestedCounter>;
     counter2: CounterRef<DynamicComponentInComponentViewState>;
+    nestedCounters: {
+        counter1: CounterRefs<NestedCounterOfDynamicComponentInComponentViewState>;
+    };
 }
 
 export type DynamicComponentInComponentElement = JayElement<
@@ -48,26 +51,35 @@ export type DynamicComponentInComponentElementPreRender = [
     DynamicComponentInComponentElementRefs,
     DynamicComponentInComponentElementRender,
 ];
+export type DynamicComponentInComponentContract = JayContract<
+    DynamicComponentInComponentViewState,
+    DynamicComponentInComponentElementRefs
+>;
 
 export function render(
     options?: RenderElementOptions,
 ): DynamicComponentInComponentElementPreRender {
-    const [refManager, [refCounter2, refCounter1]] = ReferencesManager.for(
+    const [nestedCountersRefManager, [refCounter1]] = ReferencesManager.for(
         options,
         [],
         [],
-        ['counter2'],
+        [],
         ['counter1'],
     );
+    const [refManager, [refCounter2]] = ReferencesManager.for(options, [], [], ['counter2'], [], {
+        nestedCounters: nestedCountersRefManager,
+    });
     const render = (viewState: DynamicComponentInComponentViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             de('div', {}, [
                 forEach(
                     (vs: DynamicComponentInComponentViewState) => vs.nestedCounters,
-                    (vs1: NestedCounter) => {
+                    (vs1: NestedCounterOfDynamicComponentInComponentViewState) => {
                         return childComp(
                             Counter,
-                            (vs1: NestedCounter) => ({ initialValue: vs1.counter }),
+                            (vs1: NestedCounterOfDynamicComponentInComponentViewState) => ({
+                                initialValue: vs1.counter,
+                            }),
                             refCounter1(),
                         );
                     },

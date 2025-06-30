@@ -1,6 +1,7 @@
 {
   "name": "serialization-exploration",
   "version": "1.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "build": "npm run rollup && npm run copy",
@@ -11,8 +12,8 @@
     "test": ":"
   },
   "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
     "@rollup/plugin-node-resolve": "^15.2.3",
-    "jay-dev-environment": "workspace:^",
     "rimraf": "^5.0.5",
     "rollup": "^4.9.5",
     "rollup-plugin-typescript2": "^0.36.0",

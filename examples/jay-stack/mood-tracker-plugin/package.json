@@ -1,0 +1,49 @@
+{
+  "name": "example-jay-mood-tracker-plugin",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "",
+  "private": true,
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/index.js",
+    "./mood-tracker.jay-contract": "./dist/mood-tracker.jay-contract"
+  },
+  "scripts": {
+    "build": "npm run definitions && npm run build:js && npm run build:copy-contract",
+    "definitions": "jay-cli definitions lib",
+    "build:js": "vite build",
+    "build:copy-contract": "cp lib/*.jay-contract* dist/",
+    "build:types": "tsup lib/index.ts --dts-only --format esm",
+    "build:check-types": "tsc",
+    "build:watch": "nodemon --watch '../../packages/rollup-plugin/dist/index.js' -x \"DEBUG=vite:hmr,jay:* vite --open\"",
+    "clean": "rimraf dist",
+    "confirm": "npm run clean && npm run build && npm run test",
+    "test": ":"
+  },
+  "dependencies": {
+    "@jay-framework/component": "workspace:^",
+    "@jay-framework/fullstack-component": "workspace:^",
+    "@jay-framework/reactive": "workspace:^",
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/secure": "workspace:^"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.23.7",
+    "@babel/preset-env": "^7.23.8",
+    "@babel/preset-typescript": "^7.23.3",
+    "@jay-framework/dev-environment": "workspace:^",
+    "@jay-framework/jay-cli": "workspace:^",
+    "@jay-framework/vite-plugin": "workspace:^",
+    "nodemon": "^3.0.3",
+    "rimraf": "^5.0.5",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11",
+    "vite-plugin-inspect": "^0.8.1"
+  }
+}

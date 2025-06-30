@@ -16,7 +16,7 @@ import {
     MAKE_JAY_4_REACT_COMPONENT,
     MAKE_JAY_COMPONENT,
     resolvePrimitiveType,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 import ts, {
     convertCompilerOptionsFromJson,
     createProgram,

@@ -1,11 +1,11 @@
 import benchmark from '../benchmark';
-import { createSignal, makeJayComponent, Props } from 'jay-component';
+import { createSignal, makeJayComponent, Props } from '@jay-framework/component';
 import {
     render as TableHostRender,
     TableHostElementRefs,
     TableHostViewState,
 } from './table-host.jay-html';
-import { JayEvent } from 'jay-runtime';
+import { JayEvent } from '@jay-framework/runtime';
 
 interface TableHostProps {
     cycles: number;

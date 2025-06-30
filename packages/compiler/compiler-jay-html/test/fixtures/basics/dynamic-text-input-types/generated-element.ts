@@ -6,7 +6,8 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface DynamicTextInputTypesViewState {
     n1: number;
@@ -28,6 +29,10 @@ export type DynamicTextInputTypesElementPreRender = [
     DynamicTextInputTypesElementRefs,
     DynamicTextInputTypesElementRender,
 ];
+export type DynamicTextInputTypesContract = JayContract<
+    DynamicTextInputTypesViewState,
+    DynamicTextInputTypesElementRefs
+>;
 
 export function render(options?: RenderElementOptions): DynamicTextInputTypesElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

@@ -1,12 +1,13 @@
 <html>
   <head>
-    <script type="application/yaml-jay">
+    <script type="application/jay-data">
       data:
         products:
           - name: string
             price: number
             sku: string
             id: string
+            slug: string
     </script>
   </head>
   <body>
@@ -14,9 +15,11 @@
       products
       <ul>
         <li foreach="products" trackby="id">
-          <div>{name}</div>
-          <div>{price}</div>
-          <div>{sku}</div>
+          <a href="/products/{slug}">
+            <div>{name}</div>
+            <div>{price}</div>
+            <div>{sku}</div>
+          </a>
         </li>
       </ul>
     </div>

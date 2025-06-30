@@ -1,5 +1,5 @@
 import * as ts from 'typescript';
-import { withOriginalTrace } from 'jay-compiler-shared';
+import { withOriginalTrace } from '@jay-framework/compiler-shared';
 
 export function createTsSourceFileFromSource(
     filePath: string,

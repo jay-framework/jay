@@ -50,13 +50,13 @@ Each `MatchResult` object has the following properties:
 
 - The algorithm **mutates the `oldArray` into `newArray`** as part of the algorithm.
 - The algorithm efficiency is `O(N log(N))`.
-- The algorithm is used by the `jay-json-patch` to compute the JSON diff with support for item movement,
-- The algorithm is used by the `jay-runtime` to compute how to update the DOM for repeated items in the most efficient way.
+- The algorithm is used by the `@jay-framework/json-patch` to compute the JSON diff with support for item movement,
+- The algorithm is used by the `@jay-framework/runtime` to compute how to update the DOM for repeated items in the most efficient way.
 - The algorithm is using the `RandomAccessLinkedList<T, S>` to optimize performance
 - The algorithm assumes items `T` have an `id` which is used to match the same item between `oldArray` into `newArray`.
 - The algorithm assumes an item `T` may have an attached item `S`.
   - The attachment `S` is moved with the original item `T`.
-  - The attachment is used by the `jay-runtime` package when ordering `ViewState` items, while the attachment is the DOM
+  - The attachment is used by the `@jay-framework/runtime` package when ordering `ViewState` items, while the attachment is the DOM
     element associated with the `ViewState` item. This allows the algorithm instructions to be used for moving DOM elements.
   - The algorithm, when using attachments, also receives a `mkElement` function that is used for creating the attachment
     for new items (items that appear in `newArray` but not in `oldArray` by `id` matching).

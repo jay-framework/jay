@@ -1,8 +1,8 @@
 <html>
   <head>
-    <link rel="import" href="./task" names="TaskProps, Task" />
-    <link rel="import" href="./task.jay-html.d" names="TaskViewState" />
-    <script type="application/yaml-jay">
+    <script type="application/jay-headfull" src="./task" names="TaskProps, Task"></script>
+    <script type="application/jay-headfull" src="./task.jay-html.d" names="TaskViewState"></script>
+    <script type="application/jay-data">
       data:
         title: string
         taskData:

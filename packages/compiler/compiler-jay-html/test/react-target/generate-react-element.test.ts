@@ -3,7 +3,7 @@ import {
     ReadFileAndGenerateElementFileOptions,
 } from '../test-utils/file-utils';
 import { readFixtureReactElementFile, readFixtureReactFile } from '../test-utils/file-utils';
-import { GenerateTarget, prettify, RuntimeMode } from 'jay-compiler-shared';
+import { GenerateTarget, prettify, RuntimeMode } from '@jay-framework/compiler-shared';
 
 describe('generate jay-html element for react target', () => {
     const options: ReadFileAndGenerateElementFileOptions = { generateTarget: GenerateTarget.react };

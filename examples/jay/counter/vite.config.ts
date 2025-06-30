@@ -1,7 +1,7 @@
 import { resolve } from 'path';
 import Inspect from 'vite-plugin-inspect';
 import { defineConfig } from 'vitest/config';
-import { JayRollupConfig, jayRuntime } from 'vite-plugin-jay';
+import { JayRollupConfig, jayRuntime } from '@jay-framework/vite-plugin';
 import { rimrafSync } from 'rimraf';
 
 const root = resolve(__dirname);
@@ -12,7 +12,14 @@ const jayOptions: JayRollupConfig = {
 
 export default defineConfig(({ mode }) => {
     const external =
-        mode === 'production' ? [] : ['jay-component', 'jay-reactive', 'jay-runtime', 'jay-secure'];
+        mode === 'production'
+            ? []
+            : [
+                  '@jay-framework/component',
+                  '@jay-framework/reactive',
+                  '@jay-framework/runtime',
+                  '@jay-framework/secure',
+              ];
     rimrafSync(resolve(root, 'build'));
 
     return {

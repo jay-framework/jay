@@ -1,33 +1,35 @@
 {
-  "name": "fake-shop",
-  "private": true,
+  "name": "example-jay-fake-shop",
   "version": "0.0.0",
   "type": "module",
+  "private": true,
+  "license": "Apache-2.0",
   "scripts": {
-    "dev": "node server",
+    "dev": "@jay-framework/jay-stack-cli",
     "clean": "rimraf dist && rimraf build && rimraf -g 'src/**/*.d.ts'",
     "definitions": "jay-cli definitions src",
-    "build": "echo 'not implemented yet'",
+    "build": "npm run definitions & echo 'build not implemented yet'",
     "build:disabled": "npm run build:client && # npm run build:server",
     "build:client": "vite build --outDir dist/client",
     "build:server": "vite build --ssr src/entry-server.ts --outDir dist/server",
+    "build:check-types": "tsc",
     "test": ":",
     "preview": "cross-env NODE_ENV=production node server"
   },
   "dependencies": {
+    "@jay-framework/fullstack-component": "workspace:^",
+    "@jay-framework/jay-stack-cli": "workspace:^",
     "compression": "^1.7.5",
+    "example-jay-mood-tracker-plugin": "workspace:^",
     "express": "^5.0.1",
-    "jay-stack-route-scanner": "workspace:^",
-    "jay-stack-runtime": "workspace:^",
-    "sirv": "^3.0.0",
-    "vite-plugin-jay": "workspace:^"
+    "sirv": "^3.0.0"
   },
   "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
+    "@jay-framework/jay-cli": "workspace:^",
     "@types/express": "^5.0.0",
     "@types/node": "^22.10.0",
     "cross-env": "^7.0.3",
-    "jay-cli": "workspace:^",
-    "jay-dev-environment": "workspace:^",
     "typescript": "~5.7.2",
     "vite": "^6.0.1"
   }

@@ -1,7 +1,7 @@
 // @ts-expect-error Cannot find module
 import { render } from './item.jay-html?jay-mainSandbox';
-import { makeJayComponentBridge, FunctionsRepository } from 'jay-secure';
-import { JayEvent } from 'jay-runtime';
+import { makeJayComponentBridge, FunctionsRepository } from '@jay-framework/secure';
+import { JayEvent } from '@jay-framework/runtime';
 interface ItemProps {
     title: string;
     isCompleted: boolean;

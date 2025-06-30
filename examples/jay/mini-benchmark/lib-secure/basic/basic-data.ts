@@ -1,5 +1,5 @@
 import { BasicElementRefs, render as BasicRender } from './basic.jay-html';
-import { createSignal, makeJayComponent, useReactive, Props } from 'jay-component';
+import { createSignal, makeJayComponent, useReactive, Props } from '@jay-framework/component';
 import benchmark from '../benchmark';
 
 interface BasicProps {

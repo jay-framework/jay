@@ -1,7 +1,7 @@
 import { promises, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { rimraf } from 'rimraf';
-import { prettify, removeComments } from 'jay-compiler-shared';
+import { prettify, removeComments } from '@jay-framework/compiler-shared';
 
 const { readFile } = promises;
 

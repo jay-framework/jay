@@ -5,7 +5,7 @@ import {
     transformComponent,
     generateElementFile,
     generateImportsFileFromJayFile,
-} from 'jay-compiler';
+} from '@jay-framework/compiler';
 import { PluginContext } from 'rollup';
 import { JayPluginContext } from './jay-plugin-context';
 import { JayMetadata } from './metadata';
@@ -17,12 +17,12 @@ import {
     getModeFromExtension,
     RuntimeMode,
     SourceFileFormat,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 import {
     generateElementBridgeFile,
     generateSandboxRootFile,
     JayHtmlSourceFile,
-} from 'jay-compiler-jay-html';
+} from '@jay-framework/compiler-jay-html';
 
 export function checkDiagnosticsErrors(tsCode: ts.TransformationResult<ts.SourceFile>) {
     if (tsCode.diagnostics.length > 0) {

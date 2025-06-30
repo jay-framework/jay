@@ -15,7 +15,7 @@ export function isFirstParamJayEvent(
             ts.isTypeReferenceNode(eventHandler.parameters[0].type) &&
             eventHandler.parameters[0].type.typeArguments?.length === 2 &&
             explainedType instanceof ImportFromModuleResolvedType &&
-            explainedType.module === 'jay-runtime' &&
+            explainedType.module === '@jay-framework/runtime' &&
             explainedType.path.length === 1 &&
             explainedType.path[0] === 'JayEvent'
         )

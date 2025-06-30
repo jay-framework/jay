@@ -6,7 +6,8 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface SimpleMathmlViewState {
     color: string;
@@ -21,6 +22,7 @@ export type SimpleMathmlElementRender = RenderElement<
     SimpleMathmlElement
 >;
 export type SimpleMathmlElementPreRender = [SimpleMathmlElementRefs, SimpleMathmlElementRender];
+export type SimpleMathmlContract = JayContract<SimpleMathmlViewState, SimpleMathmlElementRefs>;
 
 export function render(options?: RenderElementOptions): SimpleMathmlElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

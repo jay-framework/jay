@@ -1,6 +1,11 @@
-import { makeJayStackComponent, PageProps, partialRender, UrlParams } from 'jay-stack-runtime';
+import {
+    makeJayStackComponent,
+    PageProps,
+    partialRender,
+    UrlParams,
+} from '@jay-framework/fullstack-component';
 import { render, PageElementRefs } from './page.jay-html';
-import { Props } from 'jay-component';
+import { Props } from '@jay-framework/component';
 import { getProductBySlug, getProducts } from '../../../products-database';
 import { getAvailableUnits } from '../../../inventory-service';
 
@@ -16,8 +21,9 @@ interface ProductAndInventoryCarryForward {
     inStock: boolean;
 }
 
-async function urlLoader(): Promise<IterableIterator<ProductPageParams>> {
-    return (await getProducts()).map(({ slug }) => ({ slug })).values();
+async function* urlLoader(): AsyncIterable<ProductPageParams[]> {
+    const products = await getProducts();
+    yield products.map(({ slug }) => ({ slug }));
 }
 
 async function renderSlowlyChanging(props: PageProps & ProductPageParams) {
@@ -42,11 +48,11 @@ function ProductsPageConstructor(
     refs: PageElementRefs,
 ) {
     return {
-        render: () => ({ inStock: props.inStock }),
+        render: () => ({}),
     };
 }
 
-export const page = makeJayStackComponent(render)
+export const page = makeJayStackComponent<typeof render>()
     .withProps<PageProps>()
     .withLoadParams(urlLoader)
     .withSlowlyRender(renderSlowlyChanging)

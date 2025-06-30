@@ -15,12 +15,12 @@ export default defineConfig({
         },
         rollupOptions: {
             external: [
-                'jay-component',
-                'jay-json-patch',
-                'jay-reactive',
-                'jay-runtime',
-                'jay-serialization',
-                'jay-secure',
+                '@jay-framework/component',
+                '@jay-framework/json-patch',
+                '@jay-framework/reactive',
+                '@jay-framework/runtime',
+                '@jay-framework/serialization',
+                '@jay-framework/secure',
                 'react',
                 'react-dom',
             ],
@@ -28,7 +28,10 @@ export default defineConfig({
     },
     test: {
         globals: true,
-        setupFiles: ['jay-dev-environment/library-dom/vitest.setup.ts', './test/setup.ts'],
+        setupFiles: [
+            '@jay-framework/dev-environment/library-dom/vitest.setup.ts',
+            './test/setup.ts',
+        ],
         environment: 'jsdom',
     },
 });

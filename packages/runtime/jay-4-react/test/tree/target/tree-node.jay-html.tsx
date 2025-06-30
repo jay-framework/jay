@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { ReactElement } from 'react';
-import { HTMLElementProxy } from 'jay-runtime';
+import { HTMLElementProxy } from '@jay-framework/runtime';
 import { jay2React, Jay4ReactElementProps, mimicJayElement } from '../../../lib';
 import { eventsFor } from '../../../lib';
 import { Node } from '../source/tree-node';

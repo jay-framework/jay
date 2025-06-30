@@ -1,39 +1,54 @@
-import { JayElement, RenderElement, HTMLElementCollectionProxy } from 'jay-runtime';
+import {
+    JayElement,
+    RenderElement,
+    HTMLElementCollectionProxy,
+    JayContract,
+} from '@jay-framework/runtime';
 import {
     SecureReferencesManager,
     elementBridge,
     sandboxElement as e,
     sandboxForEach as forEach,
-} from 'jay-secure';
+} from '@jay-framework/secure';
 
-export interface Item {
+export interface ItemOfCollectionWithRefsViewState {
     name: string;
     completed: boolean;
     cost: number;
     id: string;
 }
 
-export interface GroupItem {
+export interface GroupItemOfGroupOfCollectionWithRefsViewState {
     itemId: string;
     item: string;
 }
 
-export interface Group {
+export interface GroupOfCollectionWithRefsViewState {
     groupId: string;
-    groupItems: Array<GroupItem>;
+    groupItems: Array<GroupItemOfGroupOfCollectionWithRefsViewState>;
 }
 
 export interface CollectionWithRefsViewState {
     title: string;
-    items: Array<Item>;
-    groups: Array<Group>;
+    items: Array<ItemOfCollectionWithRefsViewState>;
+    groups: Array<GroupOfCollectionWithRefsViewState>;
 }
 
 export interface CollectionWithRefsElementRefs {
-    name: HTMLElementCollectionProxy<Item, HTMLSpanElement>;
-    completed: HTMLElementCollectionProxy<Item, HTMLSpanElement>;
-    cost: HTMLElementCollectionProxy<Item, HTMLSpanElement>;
-    done: HTMLElementCollectionProxy<Item, HTMLButtonElement>;
+    items: {
+        name: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        completed: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        cost: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLSpanElement>;
+        done: HTMLElementCollectionProxy<ItemOfCollectionWithRefsViewState, HTMLButtonElement>;
+    };
+    groups: {
+        groupItems: {
+            item: HTMLElementCollectionProxy<
+                GroupItemOfGroupOfCollectionWithRefsViewState,
+                HTMLDivElement
+            >;
+        };
+    };
 }
 
 export type CollectionWithRefsElement = JayElement<
@@ -49,10 +64,27 @@ export type CollectionWithRefsElementPreRender = [
     CollectionWithRefsElementRefs,
     CollectionWithRefsElementRender,
 ];
+export type CollectionWithRefsContract = JayContract<
+    CollectionWithRefsViewState,
+    CollectionWithRefsElementRefs
+>;
 
 export function render(): CollectionWithRefsElementPreRender {
-    const [refManager, [refName, refCompleted, refCost, refDone]] =
+    const [itemsRefManager, [refName, refCompleted, refCost, refDone]] =
         SecureReferencesManager.forElement([], ['name', 'completed', 'cost', 'done'], [], []);
+    const [groupItemsRefManager, [refItem]] = SecureReferencesManager.forElement(
+        [],
+        ['item'],
+        [],
+        [],
+    );
+    const [groupsRefManager, []] = SecureReferencesManager.forElement([], [], [], [], {
+        groupItems: groupItemsRefManager,
+    });
+    const [refManager, []] = SecureReferencesManager.forElement([], [], [], [], {
+        items: itemsRefManager,
+        groups: groupsRefManager,
+    });
     const render = (viewState: CollectionWithRefsViewState) =>
         elementBridge(viewState, refManager, () => [
             forEach(
@@ -65,9 +97,9 @@ export function render(): CollectionWithRefsElementPreRender {
                 'groupId',
                 () => [
                     forEach(
-                        (vs1: Group) => vs1.groupItems,
+                        (vs1: GroupOfCollectionWithRefsViewState) => vs1.groupItems,
                         'itemId',
-                        () => [],
+                        () => [e(refItem())],
                     ),
                 ],
             ),

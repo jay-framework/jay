@@ -1,7 +1,7 @@
-import { generateElementDefinitionFile } from '../../lib/jay-target/jay-html-compiler';
+import { generateElementDefinitionFile } from '../../lib';
 import { readFixtureElementDefinitionFile } from '../test-utils/file-utils';
 import { readAndParseJayFile } from '../test-utils/file-utils';
-import { prettify } from 'jay-compiler-shared';
+import { prettify } from '@jay-framework/compiler-shared';
 
 describe('generate jay-html definition', () => {
     it('should generate definition file for simple file', async () => {
@@ -71,6 +71,16 @@ describe('generate jay-html definition', () => {
         expect(runtimeFile.validations).toEqual([]);
         expect(await prettify(runtimeFile.val)).toEqual(
             await readFixtureElementDefinitionFile(folder, 'generated-element-main-trusted.d.ts'),
+        );
+    });
+
+    it('for refs with children node that are not imported and have no refs (should not generate leading comma)', async () => {
+        const folder = 'basics/refs-comma-issue';
+        const parsedFile = await readAndParseJayFile(folder);
+        let definitionFile = generateElementDefinitionFile(parsedFile);
+        expect(definitionFile.validations).toEqual([]);
+        expect(await prettify(definitionFile.val)).toEqual(
+            await readFixtureElementDefinitionFile(folder),
         );
     });
 });

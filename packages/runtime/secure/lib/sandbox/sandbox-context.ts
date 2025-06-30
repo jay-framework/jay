@@ -5,10 +5,10 @@ import {
     HTMLElementCollectionProxy,
     HTMLElementProxy,
     JayComponent,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { IJayEndpoint, IJayPort } from '../comm-channel/comm-channel';
-import { Reactive } from 'jay-reactive';
-// import { ReferencesManager } from 'jay-runtime';
+import { Reactive } from '@jay-framework/reactive';
+// import { ReferencesManager } from '@jay-framework/runtime';
 
 export interface SandboxContext {
     port: IJayPort;

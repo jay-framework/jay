@@ -21,14 +21,14 @@ import {
     JayEventHandlerWrapper,
     ManagedRefType,
     PrivateRefConstructor,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { IJayEndpoint, JPMMessage } from '../comm-channel/comm-channel';
 import { JayNativeFunction$ } from '../main/function-repository-types';
 import { completeCorrelatedPromise, correlatedPromise, NativeIdMarker } from '../$func';
 import { Refs, SANDBOX_BRIDGE_CONTEXT, SANDBOX_CREATION_CONTEXT } from './sandbox-context';
 import { SandboxElement } from './sandbox-element';
-import { Reactive } from 'jay-reactive';
-import { serialize } from 'jay-serialization';
+import { Reactive } from '@jay-framework/reactive';
+import { serialize } from '@jay-framework/serialization';
 import {
     addEventListenerMessage,
     eventInvocationMessage,
@@ -39,9 +39,9 @@ import {
     renderMessage,
     rootApiReturns,
 } from '../comm-channel/messages';
-import { JSONPatch, ArrayContexts } from 'jay-json-patch';
-import { EVENT_TRAP, GetTrapProxy } from 'jay-runtime';
-import { COMPONENT_CONTEXT } from 'jay-component';
+import { JSONPatch, ArrayContexts } from '@jay-framework/json-patch';
+import { EVENT_TRAP, GetTrapProxy } from '@jay-framework/runtime';
+import { COMPONENT_CONTEXT } from '@jay-framework/component';
 
 export interface SandboxBridgeElement<ViewState> {
     update: updateFunc<ViewState>;
@@ -104,9 +104,13 @@ export class SecureReferencesManager extends BaseReferencesManager {
         elemCollection: string[],
         comp: string[],
         compCollection: string[],
+        childRefManagers?: Record<string, SecureReferencesManager>,
     ): [SecureReferencesManager, PrivateRefConstructor<any>[]] {
         const refManager = new SecureReferencesManager(endpoint, eventWrapper);
-        return [refManager, refManager.mkRefs(elem, elemCollection, comp, compCollection)];
+        return [
+            refManager,
+            refManager.mkRefs(elem, elemCollection, comp, compCollection, childRefManagers),
+        ];
     }
 
     static forElement(
@@ -114,6 +118,7 @@ export class SecureReferencesManager extends BaseReferencesManager {
         elemCollection: string[],
         comp: string[],
         compCollection: string[],
+        childRefManagers?: Record<string, SecureReferencesManager>,
     ) {
         const parentComponentContext = useContext(SANDBOX_BRIDGE_CONTEXT);
         const { reactive, getComponentInstance } = useContext(COMPONENT_CONTEXT);
@@ -130,6 +135,7 @@ export class SecureReferencesManager extends BaseReferencesManager {
             elemCollection,
             comp,
             compCollection,
+            childRefManagers,
         );
     }
 
@@ -138,6 +144,7 @@ export class SecureReferencesManager extends BaseReferencesManager {
         elemCollection: string[],
         comp: string[],
         compCollection: string[],
+        childRefManagers?: Record<string, SecureReferencesManager>,
     ) {
         const { endpoint } = useContext(SANDBOX_CREATION_CONTEXT);
         return SecureReferencesManager.for(
@@ -147,6 +154,7 @@ export class SecureReferencesManager extends BaseReferencesManager {
             elemCollection,
             comp,
             compCollection,
+            childRefManagers,
         );
     }
 }

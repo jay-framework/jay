@@ -1,4 +1,4 @@
-import { Coordinate } from 'jay-runtime';
+import { Coordinate } from '@jay-framework/runtime';
 import {
     JPMAddEventListener,
     JPMDomEvent,

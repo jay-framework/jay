@@ -8,10 +8,10 @@ import {
     useContext,
     saveContext,
     restoreContext,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { SANDBOX_CREATION_CONTEXT, SANDBOX_BRIDGE_CONTEXT } from './sandbox-context';
 import { SecureElementRef } from './sandbox-refs';
-import { PrivateRef } from 'jay-runtime';
+import { PrivateRef } from '@jay-framework/runtime';
 
 export interface SandboxElement<ViewState> {
     update: updateFunc<ViewState>;

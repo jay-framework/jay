@@ -9,10 +9,14 @@ import {
     JayType,
     JayUnknown,
     MainRuntimeModes,
+    mergeRefsTrees,
+    mkRef,
+    mkRefsTree,
     RenderFragment,
     RuntimeMode,
     WithValidations,
-} from 'jay-compiler-shared';
+    nestRefs,
+} from '@jay-framework/compiler-shared';
 import { JayHtmlSourceFile } from '../jay-target/jay-html-source-file';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import {
@@ -32,8 +36,8 @@ import { generateTypes } from '../jay-target/jay-html-compile-types';
 import { Indent } from '../jay-target/indent';
 import {
     elementNameToJayType,
-    newAutoRefNameGenerator,
     optimizeRefs,
+    RefNameGenerator,
     renderRefsType,
 } from '../jay-target/jay-html-compile-refs';
 import { processImportedComponents, renderImports } from '../jay-target/jay-html-compile-imports';
@@ -44,7 +48,7 @@ interface RenderContext {
     indent: Indent;
     dynamicRef: boolean;
     importedSandboxedSymbols: Set<string>;
-    nextAutoRefName: () => string;
+    nextAutoRefName: RefNameGenerator;
     importerMode: RuntimeMode;
 }
 
@@ -108,20 +112,21 @@ function renderElementRef(
         let originalName = element.attributes.ref;
         let refName = camelCase(originalName);
         let refs = [
-            {
-                ref: refName,
-                constName: null,
+            mkRef(
+                refName,
+                originalName,
+                null,
                 dynamicRef,
-                autoRef: false,
-                elementType: elementNameToJayType(element),
-                viewStateType: variables.currentType,
-            },
+                false,
+                variables.currentType,
+                elementNameToJayType(element),
+            ),
         ];
         return new RenderFragment(
             `{...eventsFor(${variables.currentContext}, '${refName}')}`,
             Imports.for(Import.eventsFor),
             [],
-            refs,
+            mkRefsTree(refs, {}),
         );
     } else return RenderFragment.empty();
 }
@@ -149,7 +154,7 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
 
     if (isPropsDirectAssignment) {
         let prop = parseComponentPropExpression(attributes.props, variables);
-        return RenderFragment.merge(prop, new RenderFragment('', imports, [], []));
+        return RenderFragment.merge(prop, new RenderFragment('', imports, [], mkRefsTree([], {})));
     } else {
         return props.reduce(
             (prev, current) => RenderFragment.merge(prev, current, ' '),
@@ -162,27 +167,28 @@ function renderChildCompRef(
     element: HTMLElement,
     { dynamicRef, variables, nextAutoRefName }: RenderContext,
 ): RenderFragment {
-    let originalName = element.attributes.ref || nextAutoRefName();
+    let originalName = element.attributes.ref || nextAutoRefName.newAutoRefNameGenerator();
     let refName = camelCase(originalName);
-    let constName = camelCase(`ref ${refName}`);
+    let constName = nextAutoRefName.newConstantName(refName, variables);
     let refs = [
-        {
-            ref: refName,
+        mkRef(
+            refName,
+            element.attributes.ref,
             constName,
             dynamicRef,
-            autoRef: !element.attributes.ref,
-            elementType: new JayComponentType(element.rawTagName, []),
-            viewStateType: variables.currentType,
-        },
+            !element.attributes.ref,
+            variables.currentType,
+            new JayComponentType(element.rawTagName, []),
+        ),
     ];
     if (!refs[0].autoRef)
         return new RenderFragment(
             `{...eventsFor(${variables.currentContext}, '${refName}')}`,
             Imports.for(Import.eventsFor),
             [],
-            refs,
+            mkRefsTree(refs, {}),
         );
-    else return new RenderFragment('', Imports.for(Import.eventsFor), [], refs);
+    else return new RenderFragment('', Imports.for(Import.eventsFor), [], mkRefsTree(refs, {}));
 }
 
 function renderReactNode(
@@ -215,14 +221,14 @@ function renderReactNode(
                 `${currIndent.firstLine}<${tagName}${ref.rendered} ${attributes.rendered}/>`,
                 children.imports.plus(attributes.imports).plus(ref.imports),
                 [...attributes.validations, ...children.validations, ...ref.validations],
-                [...attributes.refs, ...children.refs, ...ref.refs],
+                mergeRefsTrees(attributes.refs, children.refs, ref.refs),
             );
         else
             return new RenderFragment(
                 `${currIndent.firstLine}<${tagName}${ref.rendered} ${attributes.rendered}>${children.rendered}${currIndent.lastLine}</${tagName}>`,
                 children.imports.plus(attributes.imports).plus(ref.imports),
                 [...attributes.validations, ...children.validations, ...ref.validations],
-                [...attributes.refs, ...children.refs, ...ref.refs],
+                mergeRefsTrees(attributes.refs, children.refs, ref.refs),
             );
     }
 
@@ -231,7 +237,7 @@ function renderReactNode(
             `${indent.firstLine}{(${renderedCondition.rendered}) && (${childElement.rendered})}`,
             Imports.merge(childElement.imports, renderedCondition.imports),
             [...renderedCondition.validations, ...childElement.validations],
-            [...renderedCondition.refs, ...childElement.refs],
+            mergeRefsTrees(renderedCondition.refs, childElement.refs),
         );
     }
 
@@ -254,46 +260,31 @@ ${indent.curr}return (${childElement.rendered})})}`,
 
     function renderNestedComponent(
         htmlElement: HTMLElement,
-        newVariables: Variables,
-        currIndent: Indent = indent,
+        newContext: RenderContext,
     ): RenderFragment {
         let props = renderChildCompProps(htmlElement, {
             ...renderContext,
             dynamicRef,
-            variables: newVariables,
+            variables: newContext.variables,
         });
         let refs = renderChildCompRef(htmlElement, {
             ...renderContext,
             dynamicRef,
-            variables: newVariables,
+            variables: newContext.variables,
         });
-        // let getProps = `(${newVariables.currentVar}: ${newVariables.currentType.name}) => ${props.rendered}`;
-        // if (
-        //     importedSandboxedSymbols.has(htmlElement.rawTagName) ||
-        //     importerMode === RuntimeMode.MainSandbox
-        // )
-        //     return new RenderFragment(
-        //         `${currIndent.firstLine}secureChildComp(${htmlElement.rawTagName}, ${getProps}${refs.rendered})`,
-        //         Imports.for(Import.secureChildComp)
-        //             .plus(props.imports)
-        //             .plus(refs.imports),
-        //         props.validations,
-        //         refs.refs,
-        //     );
-        // else
         const reactChildComp = 'React' + htmlElement.rawTagName;
         outReactChildComps.set(htmlElement.rawTagName, reactChildComp);
         return new RenderFragment(
-            `${currIndent.firstLine}<${reactChildComp} ${props.rendered} ${refs.rendered}/>`,
+            `${newContext.indent.firstLine}<${reactChildComp} ${props.rendered} ${refs.rendered}/>`,
             Imports.none().plus(props.imports).plus(refs.imports),
             props.validations,
             refs.refs,
         );
     }
 
-    function renderHtmlElement(htmlElement, newVariables: Variables, currIndent: Indent = indent) {
+    function renderHtmlElement(htmlElement, newContext: RenderContext) {
         if (importedSymbols.has(htmlElement.rawTagName))
-            return renderNestedComponent(htmlElement, newVariables, currIndent);
+            return renderNestedComponent(htmlElement, newContext);
 
         let childNodes =
             node.childNodes.length > 1
@@ -302,36 +293,35 @@ ${indent.curr}return (${childElement.rendered})})}`,
                   )
                 : node.childNodes;
 
-        let childIndent = currIndent.child();
+        let childIndent = newContext.indent.child();
         if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE)
             childIndent = childIndent.noFirstLineBreak();
-
-        let childContext = {
-            ...renderContext,
-            variables: newVariables,
-            indent: childIndent,
-            dynamicRef,
-        };
 
         let childRenders =
             childNodes.length === 0
                 ? RenderFragment.empty()
                 : childNodes
-                      .map((_) => renderReactNode(_, childContext, outReactChildComps))
+                      .map((_) =>
+                          renderReactNode(
+                              _,
+                              { ...newContext, indent: childIndent },
+                              outReactChildComps,
+                          ),
+                      )
                       .reduce(
                           (prev, current) => RenderFragment.merge(prev, current, '\n'),
                           RenderFragment.empty(),
                       )
                       .map((children) =>
                           childIndent.firstLineBreak
-                              ? `\n${children}\n${currIndent.firstLine}`
+                              ? `\n${children}\n${newContext.indent.firstLine}`
                               : children,
                       );
 
-        let attributes = renderAttributes(htmlElement, childContext);
-        let renderedRef = renderElementRef(htmlElement, childContext);
+        let attributes = renderAttributes(htmlElement, newContext);
+        let renderedRef = renderElementRef(htmlElement, newContext);
 
-        return e(htmlElement.rawTagName, attributes, childRenders, renderedRef, currIndent);
+        return e(htmlElement.rawTagName, attributes, childRenders, renderedRef, newContext.indent);
     }
 
     switch (node.nodeType) {
@@ -344,14 +334,18 @@ ${indent.curr}return (${childElement.rendered})})}`,
 
             if (isConditional(htmlElement)) {
                 let condition = htmlElement.getAttribute('if');
-                let childElement = renderHtmlElement(htmlElement, variables, indent.child());
+                let childElement = renderHtmlElement(htmlElement, {
+                    ...renderContext,
+                    indent: indent.child(),
+                });
                 let renderedCondition = parseReactCondition(condition, variables);
                 return c(renderedCondition, childElement);
             } else if (isForEach(htmlElement)) {
-                let forEach = htmlElement.getAttribute('forEach'); // todo extract type
-                let trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
+                const forEach = htmlElement.getAttribute('forEach'); // todo extract type
+                const trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
 
-                let forEachAccessor = parseAccessor(forEach, variables);
+                const forEachAccessor = parseAccessor(forEach, variables);
+                const forEachAccessPath = forEachAccessor.terms;
                 // Todo check if type unknown throw exception
                 let forEachFragment = forEachAccessor.render();
                 if (forEachAccessor.resolvedType === JayUnknown)
@@ -361,19 +355,25 @@ ${indent.curr}return (${childElement.rendered})})}`,
                 let forEachVariables = variables.childVariableFor(
                     (forEachAccessor.resolvedType as JayArrayType).itemType,
                 );
-                let childElement = renderHtmlElement(
-                    htmlElement,
-                    forEachVariables,
-                    indent.child().noFirstLineBreak().withLastLineBreak(),
+                let newContext = {
+                    ...renderContext,
+                    variables: forEachVariables,
+                    indent: indent.child().noFirstLineBreak().withLastLineBreak(),
+                    dynamicRef: true,
+                };
+
+                let childElement = renderHtmlElement(htmlElement, newContext);
+                return nestRefs(
+                    forEachAccessPath,
+                    renderForEach(
+                        forEachFragment,
+                        variables,
+                        forEachVariables,
+                        trackBy,
+                        childElement,
+                    ),
                 );
-                return renderForEach(
-                    forEachFragment,
-                    variables,
-                    forEachVariables,
-                    trackBy,
-                    childElement,
-                );
-            } else return renderHtmlElement(htmlElement, variables);
+            } else return renderHtmlElement(htmlElement, renderContext);
         case NodeType.COMMENT_NODE:
             break;
     }
@@ -393,7 +393,6 @@ function renderFunctionImplementation(
     preRenderType: string;
     refsType: string;
     renderedImplementation: RenderFragment;
-    refImportsInUse: Set<string>;
 } {
     const variables = new Variables(types);
     const { importedSymbols, importedSandboxedSymbols } =
@@ -411,7 +410,7 @@ function renderFunctionImplementation(
                 indent: new Indent('    '),
                 dynamicRef: false,
                 importedSandboxedSymbols,
-                nextAutoRefName: newAutoRefNameGenerator(),
+                nextAutoRefName: new RefNameGenerator(),
                 importerMode,
             },
             reactChildComps,
@@ -427,11 +426,11 @@ function renderFunctionImplementation(
         .plus(Import.Jay4ReactElementProps)
         .plus(Import.ReactElement)
         .plus(Import.mimicJayElement);
-    const {
-        imports: refImports,
-        renderedRefs,
-        refImportsInUse,
-    } = renderRefsType(renderedRoot.refs, refsType, GenerateTarget.react);
+    const { imports: refImports, renderedRefs } = renderRefsType(
+        renderedRoot.refs,
+        refsType,
+        GenerateTarget.react,
+    );
     imports = imports.plus(refImports);
 
     const renderedReactProps = `export interface ${reactPropsType} extends Jay4ReactElementProps<${viewStateType}> {}`;
@@ -463,7 +462,6 @@ export const render = mimicJayElement(reactRender)`,
         preRenderType,
         refsType,
         renderedImplementation: renderedImplementation.plusImport(imports),
-        refImportsInUse,
     };
 }
 
@@ -472,7 +470,7 @@ export function generateElementFileReactTarget(
     importerMode: MainRuntimeModes,
 ): WithValidations<string> {
     const types = generateTypes(jayFile.types);
-    const { renderedRefs, renderedReactProps, renderedImplementation, refImportsInUse } =
+    const { renderedRefs, renderedReactProps, renderedImplementation } =
         renderFunctionImplementation(
             jayFile.types,
             jayFile.body,
@@ -485,7 +483,6 @@ export function generateElementFileReactTarget(
             renderedImplementation.imports,
             ImportsFor.implementation,
             jayFile.imports,
-            refImportsInUse,
             importerMode,
         ),
         types,

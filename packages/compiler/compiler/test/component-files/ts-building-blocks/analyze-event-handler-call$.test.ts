@@ -3,7 +3,7 @@ import ts from 'typescript';
 import { transformCode } from '../../test-utils/ts-compiler-test-utils';
 import { analyzeEventHandlerCallStatement$Block } from '../../../lib/components-files/building-blocks/analyze-event-handler-call$';
 import { FoundEventHandler } from '../../../lib/components-files/building-blocks/find-event-handler-functions';
-import { prettify } from 'jay-compiler-shared';
+import { prettify } from '@jay-framework/compiler-shared';
 
 describe('add event handler call$ to call chain', () => {
     function testTransformer() {

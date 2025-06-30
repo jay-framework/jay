@@ -1,6 +1,6 @@
 import ts, { isImportDeclaration } from 'typescript';
 import { codeToAst } from '../ts-utils/ts-compiler-utils';
-import { JAY_SECURE } from 'jay-compiler-shared';
+import { JAY_SECURE } from '@jay-framework/compiler-shared';
 
 function findAfterImportStatementIndex(statements: ts.Node[]) {
     let lastIndex = 0;

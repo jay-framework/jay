@@ -1,7 +1,7 @@
 import { getJayMetadata, isWorkerRoot, JayMetadata } from '../../../lib/runtime/metadata';
 import { mock } from 'vitest-mock-extended';
 import { PluginContext } from 'rollup';
-import { SourceFileFormat } from 'jay-compiler-shared';
+import { SourceFileFormat } from '@jay-framework/compiler-shared';
 
 describe('metadata', () => {
     const originId = 'origin/id';

@@ -5,7 +5,7 @@ import {
     HandshakeMessageJayChannel,
     JayPort,
     setWorkerPort,
-} from 'jay-secure';
+} from '@jay-framework/secure';
 // @ts-expect-error Cannot find module
 import { Counter } from './counter?jay-workerSandbox';
 
@@ -15,7 +15,7 @@ export interface AppViewState {
 
 export function initializeWorker() {
     sandboxRoot(() => {
-        const [, [refA]] = SecureReferencesManager.forSandboxRoot([], [], ['a'], []);
+        const [refManager, [refA]] = SecureReferencesManager.forSandboxRoot([], [], ['a'], []);
         return [
             childComp(
                 Counter,

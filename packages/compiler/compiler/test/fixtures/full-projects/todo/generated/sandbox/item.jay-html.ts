@@ -1,5 +1,5 @@
-import { JayElement, RenderElement, HTMLElementProxy } from 'jay-runtime';
-import { SecureReferencesManager, elementBridge, sandboxElement as e } from 'jay-secure';
+import { JayElement, RenderElement, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
+import { SecureReferencesManager, elementBridge, sandboxElement as e } from '@jay-framework/secure';
 
 export interface ItemViewState {
     title: string;
@@ -18,6 +18,7 @@ export interface ItemElementRefs {
 export type ItemElement = JayElement<ItemViewState, ItemElementRefs>;
 export type ItemElementRender = RenderElement<ItemViewState, ItemElementRefs, ItemElement>;
 export type ItemElementPreRender = [ItemElementRefs, ItemElementRender];
+export type ItemContract = JayContract<ItemViewState, ItemElementRefs>;
 
 export function render(): ItemElementPreRender {
     const [refManager, [refCompleted, refLabel, refButton, refTitle]] =

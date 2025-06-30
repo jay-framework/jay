@@ -1,7 +1,7 @@
 # Jay Runtime
 
-The Jay Runtime library is an efficient dom manipulation library, built to be the output of code generation (`jay-compiler`).
-See the `jay-compiler` docs for the format of the `jay-html` file that compiles to `jay-runtime` types.
+The Jay Runtime library is an efficient dom manipulation library, built to be the output of code generation (`@jay-framework/compiler`).
+See the `@jay-framework/compiler` docs for the format of the `jay-html` file that compiles to `@jay-framework/runtime` types.
 
 # Usage
 
@@ -28,7 +28,12 @@ For example, a simple a jay-html is
 which is then compiled into
 
 ```typescript
-import { JayElement, RenderElement, HTMLElementProxy, RenderElementOptions } from 'jay-runtime';
+import {
+  JayElement,
+  RenderElement,
+  HTMLElementProxy,
+  RenderElementOptions,
+} from '@jay-framework/runtime';
 
 export interface CounterViewState {
   count: number;

@@ -48,7 +48,7 @@ describe('ReferencesManager operations', () => {
             return { jayRootElement, jayElement1, mockCallback };
         }
 
-        it('$exec should run for with the native html element', () => {
+        it('exec$ should run with the native html element', () => {
             let { jayRootElement, jayElement1, mockCallback } = mkElement();
             jayRootElement.refs.refName1.exec$(mockCallback);
             expect(mockCallback.mock.calls.length).toBe(1);
@@ -278,6 +278,39 @@ describe('ReferencesManager operations', () => {
                 (vs) => vs.id === viewState.items[1].id,
             );
             expect(foundComp.getItemSummary()).toEqual('item hi - false');
+        });
+    });
+
+    describe('compose reference manager (for composite jay-html in jay stack, checking using exec$)', () => {
+        interface ChildRefs {
+            refName1: HTMLElementProxy<string, HTMLDivElement>;
+        }
+        interface RootRefs {
+            child: ChildRefs;
+        }
+
+        function mkElement() {
+            let jayElement1;
+            let [childRefManager, [ref]] = ReferencesManager.for({}, [refName1], [], [], []);
+            let [refManager, []] = ReferencesManager.for({}, [refName1], [], [], [], {
+                child: childRefManager,
+            });
+            let jayRootElement = ConstructContext.withRootContext<string, RootRefs>(
+                DATA_CONTEXT,
+                refManager,
+                () => {
+                    return e('div', {}, [(jayElement1 = e('div', {}, [SOME_VALUE], ref()))]);
+                },
+            );
+            let mockCallback = vi.fn(() => undefined);
+            return { jayRootElement, jayElement1, mockCallback };
+        }
+
+        it('exec$ should run for child reference manager', () => {
+            let { jayRootElement, jayElement1, mockCallback } = mkElement();
+            jayRootElement.refs.child.refName1.exec$(mockCallback);
+            expect(mockCallback.mock.calls.length).toBe(1);
+            expect(mockCallback).toHaveBeenCalledWith(jayElement1.dom, DATA_CONTEXT);
         });
     });
 });

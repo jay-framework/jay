@@ -1,9 +1,15 @@
-import { Filter, render, ShownTodo, TodoElementRefs, TodoViewState } from './todo.jay-html';
-import { createMemo, createSignal, makeJayComponent, Props } from 'jay-component';
+import {
+    Filter,
+    render,
+    ShownTodoOfTodoViewState,
+    TodoElementRefs,
+    TodoViewState,
+} from './todo.jay-html';
+import { createMemo, createSignal, makeJayComponent, Props } from '@jay-framework/component';
 import { uuid } from './uuid';
-import { patch } from 'jay-json-patch';
-import { ADD, REPLACE } from 'jay-json-patch';
-import { handler$ } from 'jay-secure';
+import { patch } from '@jay-framework/json-patch';
+import { ADD, REPLACE } from '@jay-framework/json-patch';
+import { handler$ } from '@jay-framework/secure';
 
 const ENTER_KEY = 13;
 
@@ -23,7 +29,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     );
 
     const activeTodoCount = createMemo(() =>
-        todos().reduce(function (accum: number, todo: ShownTodo) {
+        todos().reduce(function (accum: number, todo: ShownTodoOfTodoViewState) {
             return todo.isCompleted ? accum : accum + 1;
         }, 0),
     );
@@ -87,7 +93,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
         );
     });
 
-    refs.items.onCompletedToggle(({ event: newCompleted, viewState: item }) => {
+    refs.shownTodos.items.onCompletedToggle(({ event: newCompleted, viewState: item }) => {
         let itemIndex = todos().findIndex((_) => _.id === item.id);
         setTodos(
             patch(todos(), [
@@ -100,7 +106,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
         );
     });
 
-    refs.items.onTitleChanged(({ event: newTitle, viewState: item }) => {
+    refs.shownTodos.items.onTitleChanged(({ event: newTitle, viewState: item }) => {
         let itemIndex = todos().findIndex((_) => _.id === item.id);
         setTodos(
             patch(todos(), [
@@ -113,7 +119,7 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
         );
     });
 
-    refs.items.onRemove(({ viewState: item }) => {
+    refs.shownTodos.items.onRemove(({ viewState: item }) => {
         setTodos(todos().filter((_) => _ !== item));
     });
 

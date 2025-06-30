@@ -1,7 +1,7 @@
 import { ReactElement } from 'react';
-import { Jay4ReactElementProps, mimicJayElement } from 'jay-4-react';
+import { Jay4ReactElementProps, mimicJayElement } from '@jay-framework/4-react';
 
-export interface Thing {
+export interface ThingOfCollectionsViewState {
     name: string;
     completed: boolean;
     cost: number;
@@ -10,7 +10,7 @@ export interface Thing {
 
 export interface CollectionsViewState {
     title: string;
-    things: Array<Thing>;
+    things: Array<ThingOfCollectionsViewState>;
 }
 
 export interface CollectionsElementRefs {}
@@ -25,7 +25,7 @@ export function reactRender({
         <div>
             <h1>{vs.title}</h1>
             <div>
-                {vs.things.map((vs1: Thing) => {
+                {vs.things.map((vs1: ThingOfCollectionsViewState) => {
                     const cx1 = context.child(vs1.id, vs1);
                     return (
                         <div key={vs1.id}>

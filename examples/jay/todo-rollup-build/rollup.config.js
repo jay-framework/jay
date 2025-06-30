@@ -2,7 +2,7 @@
 import { defineConfig } from 'rollup';
 import typescript from 'rollup-plugin-typescript2';
 import { terser } from 'rollup-plugin-terser';
-import { jayRuntime } from 'rollup-plugin-jay';
+import { jayRuntime } from '@jay-framework/rollup-plugin';
 import copy from 'rollup-plugin-copy';
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import path from 'node:path';

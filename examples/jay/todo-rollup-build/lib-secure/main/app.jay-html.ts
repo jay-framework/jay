@@ -4,10 +4,10 @@ import {
     RenderElementOptions,
     RenderElement,
     ReferencesManager,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { Todo, TodoProps } from './todo';
-import { mainRoot as mr } from 'jay-secure';
-import { secureChildComp } from 'jay-secure';
+import { mainRoot as mr } from '@jay-framework/secure';
+import { secureChildComp } from '@jay-framework/secure';
 
 export interface AppViewState {
     todos: TodoProps;

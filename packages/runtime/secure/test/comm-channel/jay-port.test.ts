@@ -6,7 +6,7 @@ import {
     renderMessage,
 } from '../../lib/comm-channel/messages';
 import { eventually10ms } from '../util/eventually';
-import { REPLACE } from 'jay-json-patch';
+import { REPLACE } from '@jay-framework/json-patch';
 
 const MESSAGE_RENDER_1 = renderMessage([{ op: REPLACE, path: ['a'], value: { foo: 'bar' } }]);
 const MESSAGE_RENDER_2 = renderMessage([{ op: REPLACE, path: ['a'], value: { foo: 'goo' } }]);

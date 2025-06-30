@@ -1,4 +1,4 @@
-import { createJayContext } from 'jay-runtime';
+import { createJayContext } from '@jay-framework/runtime';
 import { IJayEndpoint, IJayPort } from '../comm-channel/comm-channel';
 import { FunctionsRepository } from './function-repository-types';
 

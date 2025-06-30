@@ -1,6 +1,6 @@
 import ts from 'typescript';
 import { astToCode } from '../components-files/ts-utils/ts-compiler-utils';
-import { CompilerSourceFile, SourceFileFormat, prettifyHtml } from 'jay-compiler-shared';
+import { CompilerSourceFile, SourceFileFormat, prettifyHtml } from '@jay-framework/compiler-shared';
 
 export interface JayTsxSourceFile extends CompilerSourceFile {
     format: SourceFileFormat.JayTsx;

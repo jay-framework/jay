@@ -7,7 +7,7 @@ import {
     RenderElement,
     ReferencesManager,
     MapEventEmitterViewState,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { Parent } from './parent';
 
 export interface AppViewState {}

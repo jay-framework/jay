@@ -6,8 +6,9 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
+    JayContract,
     injectHeadLinks,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface HeadLinksViewState {
     title: string;
@@ -22,6 +23,7 @@ export type HeadLinksElementRender = RenderElement<
     HeadLinksElement
 >;
 export type HeadLinksElementPreRender = [HeadLinksElementRefs, HeadLinksElementRender];
+export type HeadLinksContract = JayContract<HeadLinksViewState, HeadLinksElementRefs>;
 
 export function render(options?: RenderElementOptions): HeadLinksElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

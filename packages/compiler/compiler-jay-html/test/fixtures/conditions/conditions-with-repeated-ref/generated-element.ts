@@ -9,7 +9,8 @@ import {
     ConstructContext,
     HTMLElementProxy,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface ConditionsWithRepeatedRefViewState {
     text1: string;
@@ -34,6 +35,10 @@ export type ConditionsWithRepeatedRefElementPreRender = [
     ConditionsWithRepeatedRefElementRefs,
     ConditionsWithRepeatedRefElementRender,
 ];
+export type ConditionsWithRepeatedRefContract = JayContract<
+    ConditionsWithRepeatedRefViewState,
+    ConditionsWithRepeatedRefElementRefs
+>;
 
 export function render(options?: RenderElementOptions): ConditionsWithRepeatedRefElementPreRender {
     const [refManager, [refText1]] = ReferencesManager.for(options, ['text1'], [], [], []);

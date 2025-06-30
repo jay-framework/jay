@@ -1,4 +1,4 @@
-import { JayElement, RenderElement } from 'jay-runtime';
+import { JayElement, RenderElement } from '@jay-framework/runtime';
 import { elementBridge, SecureReferencesManager } from '../../../../lib/';
 
 export interface BasicViewState {

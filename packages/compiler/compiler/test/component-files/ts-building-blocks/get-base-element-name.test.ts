@@ -6,7 +6,7 @@ import {
     FindComponentConstructorType,
 } from '../../../lib/components-files/building-blocks/find-component-constructor-calls';
 import { SourceFileBindingResolver } from '../../../lib/components-files/basic-analyzers/source-file-binding-resolver';
-import { MAKE_JAY_TSX_COMPONENT } from 'jay-compiler-shared';
+import { MAKE_JAY_TSX_COMPONENT } from '@jay-framework/compiler-shared';
 
 describe('getBaseElementName', () => {
     const makeJayTsxComponentName = MAKE_JAY_TSX_COMPONENT;
@@ -21,7 +21,7 @@ describe('getBaseElementName', () => {
     }
 
     const sourceFile = createTsSourceFile(`
-        | import { createEvent, createSignal, makeJayTsxComponent, Props } from 'jay-component';
+        | import { createEvent, createSignal, makeJayTsxComponent, Props } from '@jay-framework/component';
         | function CounterConstructor({ initialValue }: Props<CounterProps>) {}
         | export const Counter = makeJayTsxComponent(CounterConstructor);
         `);
@@ -34,7 +34,7 @@ describe('getBaseElementName', () => {
 
     describe('on no component constructor', () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createSignal, makeJayTsxComponent, Props } from 'jay-component';
+        | import { createEvent, createSignal, makeJayTsxComponent, Props } from '@jay-framework/component';
         | export function CounterConstructor({ initialValue }: Props<CounterProps>) {}
         `);
 
@@ -47,7 +47,7 @@ describe('getBaseElementName', () => {
 
     describe('on more than one component constructor', () => {
         const sourceFile = createTsSourceFile(`
-        | import { createEvent, createSignal, makeJayTsxComponent, Props } from 'jay-component';
+        | import { createEvent, createSignal, makeJayTsxComponent, Props } from '@jay-framework/component';
         | function CounterConstructor({ initialValue }: Props<CounterProps>) {}
         | export const Counter = makeJayTsxComponent(CounterConstructor);
         | export const Counter2 = makeJayTsxComponent(CounterConstructor);

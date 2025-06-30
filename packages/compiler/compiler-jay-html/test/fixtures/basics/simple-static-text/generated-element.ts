@@ -5,7 +5,8 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
-} from 'jay-runtime';
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface SimpleStaticTextViewState {
     s1: string;
@@ -26,6 +27,10 @@ export type SimpleStaticTextElementPreRender = [
     SimpleStaticTextElementRefs,
     SimpleStaticTextElementRender,
 ];
+export type SimpleStaticTextContract = JayContract<
+    SimpleStaticTextViewState,
+    SimpleStaticTextElementRefs
+>;
 
 export function render(options?: RenderElementOptions): SimpleStaticTextElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

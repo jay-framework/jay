@@ -1,0 +1,13 @@
+{
+  "extends": "@jay-framework/dev-environment/library-dom/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "paths": {
+      "@jay-framework/component": ["../../runtime/component/lib"],
+      "@jay-framework/fullstack-component": ["../full-stack-component/lib"],
+      "@jay-framework/runtime": ["../../runtime/runtime/lib"],
+      "@jay-framework/stack-route-scanner": ["../route-scanner/lib"],
+      "@jay-framework/compiler-jay-html": ["../../compiler/compiler-jay-html/lib"],
+    },
+  },
+}

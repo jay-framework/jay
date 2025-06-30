@@ -1,4 +1,4 @@
-import { JAY_4_REACT, JAY_RUNTIME, JAY_SECURE } from './constants';
+import { JAY_4_REACT, JAY_FULLSTACK_COMPONENTS, JAY_RUNTIME, JAY_SECURE } from './constants';
 
 export enum ImportsFor {
     definition,
@@ -248,6 +248,13 @@ export const Import = {
         'mimicJayElement',
         ImportsFor.implementation,
         ImportsFor.definition,
+    ),
+    jayContract: importStatementFragment(
+        JAY_RUNTIME,
+        'JayContract',
+        ImportsFor.implementation,
+        ImportsFor.definition,
+        ImportsFor.elementSandbox,
     ),
     injectHeadLinks: importStatementFragment(
         JAY_RUNTIME,

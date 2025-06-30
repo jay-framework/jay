@@ -1,6 +1,6 @@
 import { Kindergarten, KindergartenGroup } from './kindergarden';
-import { ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult } from 'jay-list-compare';
-import { RandomAccessLinkedList as List } from 'jay-list-compare';
+import { ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult } from '@jay-framework/list-compare';
+import { RandomAccessLinkedList as List } from '@jay-framework/list-compare';
 import {
     BaseJayElement,
     JayComponent,
@@ -493,6 +493,7 @@ export interface HeadLink {
     attributes?: Record<string, string>;
 }
 
+// Todo for jay-stack, this needs to be part of the SSR / slowly / fast rendering flows
 export function injectHeadLinks(headLinks: HeadLink[]): void {
     const head = document.head;
     if (!head) return;

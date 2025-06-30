@@ -16,12 +16,17 @@ export default defineConfig({
             transformMixedEsModules: true,
         },
         rollupOptions: {
-            external: ['jay-component', 'jay-runtime', 'jay-secure', 'jay-compiler-shared'],
+            external: [
+                '@jay-framework/component',
+                '@jay-framework/runtime',
+                '@jay-framework/secure',
+                '@jay-framework/compiler-shared',
+            ],
         },
     },
     test: {
         globals: true,
-        setupFiles: 'jay-dev-environment/library-dom/vitest.setup.ts',
+        setupFiles: '@jay-framework/dev-environment/library-dom/vitest.setup.ts',
         environment: 'jsdom',
     },
 });

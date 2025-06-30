@@ -1,10 +1,15 @@
 import { HTMLElement, parse } from 'node-html-parser';
-import { JayValidations, WithValidations } from 'jay-compiler-shared';
+import {
+    JayComponentType,
+    JayValidations,
+    mkRefsTree,
+    WithValidations,
+} from '@jay-framework/compiler-shared';
 import yaml from 'js-yaml';
 import { capitalCase, pascalCase } from 'change-case';
 import pluralize from 'pluralize';
 import { parseEnumValues, parseImportNames, parseIsEnum } from '../expressions/expression-compiler';
-import { analyzeExportedTypes, ResolveTsConfigOptions } from 'jay-compiler-analyze-exported-types';
+import { ResolveTsConfigOptions } from '@jay-framework/compiler-analyze-exported-types';
 import path from 'path';
 import {
     JayArrayType,
@@ -14,12 +19,15 @@ import {
     JayType,
     JayUnknown,
     resolvePrimitiveType,
-} from 'jay-compiler-shared';
-import { SourceFileFormat } from 'jay-compiler-shared';
-import { JayImportLink, JayImportName } from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
+import { SourceFileFormat } from '@jay-framework/compiler-shared';
+import { JayImportLink, JayImportName } from '@jay-framework/compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
 
-import { JayHtmlNamespace, JayHtmlSourceFile, JayHtmlHeadLink } from './jay-html-source-file';
+import { JayHeadlessImports, JayHtmlNamespace, JayHtmlSourceFile, JayHtmlHeadLink } from './jay-html-source-file';
+
+import { JayImportResolver } from './jay-import-resolver';
+import { contractToImportsViewStateAndRefs, EnumToImport } from '../contract';
 
 export function isObjectType(obj) {
     return typeof obj === 'object' && !Array.isArray(obj);
@@ -29,9 +37,11 @@ export function isArrayType(obj: any) {
     return Array.isArray(obj);
 }
 
-function toInterfaceName(name) {
-    if (name === 'data') return 'ViewState';
-    else return pascalCase(pluralize.singular(name));
+function toInterfaceName(name: string[]) {
+    return name
+        .reverse()
+        .map((segment) => pascalCase(pluralize.singular(segment)))
+        .join('Of');
 }
 
 function resolveImportedType(imports: JayImportName[], type: string): JayType {
@@ -60,7 +70,10 @@ function resolveType(
         } else if (resolveImportedType(imports, data[prop]) !== JayUnknown) {
             types[prop] = resolveImportedType(imports, data[prop]);
         } else if (parseIsEnum(data[prop])) {
-            types[prop] = new JayEnumType(toInterfaceName(prop), parseEnumValues(data[prop]));
+            types[prop] = new JayEnumType(
+                toInterfaceName([...path, prop]),
+                parseEnumValues(data[prop]),
+            );
         } else {
             let [, ...pathTail] = path;
             validations.push(
@@ -68,7 +81,7 @@ function resolveType(
             );
         }
     }
-    return new JayObjectType(toInterfaceName(path.slice(-1)[0]), types);
+    return new JayObjectType(toInterfaceName(path), types);
 }
 
 function parseTypes(
@@ -76,10 +89,23 @@ function parseTypes(
     validations: JayValidations,
     baseElementName: string,
     imports: JayImportName[],
+    headlessImports: JayHeadlessImports[],
 ): JayType {
-    if (typeof jayYaml.data === 'object')
-        return resolveType(jayYaml.data, validations, [baseElementName + 'ViewState'], imports);
-    else if (typeof jayYaml.data === 'string') return resolveImportedType(imports, jayYaml.data);
+    if (typeof jayYaml.data === 'object') {
+        const resolvedType = resolveType(
+            jayYaml.data,
+            validations,
+            [baseElementName + 'ViewState'],
+            imports,
+        );
+        const headlessImportedTypes = Object.fromEntries(
+            headlessImports.map((_) => [_.key, new JayImportedType(_.rootType.name, _.rootType)]),
+        );
+        return new JayObjectType(resolvedType.name, {
+            ...headlessImportedTypes,
+            ...resolvedType.props,
+        });
+    } else if (typeof jayYaml.data === 'string') return resolveImportedType(imports, jayYaml.data);
 }
 
 function parseNamespaces(root: HTMLElement): JayHtmlNamespace[] {
@@ -93,10 +119,10 @@ function parseNamespaces(root: HTMLElement): JayHtmlNamespace[] {
 
 function parseYaml(root: HTMLElement): WithValidations<JayYamlStructure> {
     let validations = [];
-    let jayYamlElements = root.querySelectorAll('[type="application/yaml-jay"]');
+    let jayYamlElements = root.querySelectorAll('[type="application/jay-data"]');
     if (jayYamlElements.length !== 1) {
         validations.push(
-            `jay file should have exactly one yaml-jay script, found ${
+            `jay file should have exactly one jay-data script, found ${
                 jayYamlElements.length === 0 ? 'none' : jayYamlElements.length
             }`,
         );
@@ -107,25 +133,26 @@ function parseYaml(root: HTMLElement): WithValidations<JayYamlStructure> {
     return new WithValidations(jayYamlParsed, validations);
 }
 
-function parseImports(
-    importLinks: HTMLElement[],
+function parseHeadfullImports(
+    elements: HTMLElement[],
     validations: JayValidations,
     filePath: string,
     options: ResolveTsConfigOptions,
+    importResolver: JayImportResolver,
 ): JayImportLink[] {
-    return importLinks.map<JayImportLink>((importLink) => {
-        const module = importLink.getAttribute('href');
-        const rawNames = importLink.getAttribute('names');
-        const sandboxAttribute = importLink.getAttribute('sandbox');
+    return elements.map((element) => {
+        const module = element.getAttribute('src');
+        const rawNames = element.getAttribute('names');
+        const sandboxAttribute = element.getAttribute('sandbox');
         const sandbox =
             sandboxAttribute === '' || (Boolean(sandboxAttribute) && sandboxAttribute !== 'false');
         try {
+            const importedFile = importResolver.resolveLink(filePath, module);
             const names = parseImportNames(rawNames);
             if (names.length === 0)
                 validations.push(`import for module ${module} does not specify what to import`);
 
-            const importedFile = path.resolve(filePath, module);
-            const exportedTypes = analyzeExportedTypes(importedFile, options);
+            const exportedTypes = importResolver.analyzeExportedTypes(importedFile, options);
 
             for (const name of names) {
                 const exportedType = exportedTypes.find((_) => _.name === name.name);
@@ -140,7 +167,6 @@ function parseImports(
                         `failed to find exported member ${name.name} type in module ${module}`,
                     );
             }
-
             return { module, names, sandbox };
         } catch (e) {
             validations.push(
@@ -149,6 +175,128 @@ function parseImports(
             return { module, names: [] };
         }
     });
+}
+
+async function parseHeadlessImports(
+    elements: HTMLElement[],
+    validations: Array<string>,
+    filePath: string,
+    importResolver: JayImportResolver,
+): Promise<JayHeadlessImports[]> {
+    const result: JayHeadlessImports[] = [];
+    for await (const element of elements) {
+        const module = element.getAttribute('src');
+        const name = element.getAttribute('name');
+        const contractPath = element.getAttribute('contract');
+        const key = element.getAttribute('key');
+
+        if (!module) {
+            validations.push(
+                'headless import must specify src attribute, module path to headless component implementation',
+            );
+            continue;
+        }
+        if (!name) {
+            validations.push(
+                `headless import must specify name of the constant to import from ${module}`,
+            );
+            continue;
+        }
+        if (!contractPath) {
+            validations.push(
+                'headless import must specify contract attribute, module path to headless component contract',
+            );
+            continue;
+        }
+        if (!key) {
+            validations.push(
+                'headless import must specify key attribute, used for this component ViewState and Refs member for the contract',
+            );
+            continue;
+        }
+
+        const contractFile = importResolver.resolveLink(filePath, contractPath);
+
+        try {
+            const subContract = importResolver.loadContract(contractFile);
+            validations.push(...subContract.validations);
+            await subContract.mapAsync(async (contract) => {
+                const contractTypes = await contractToImportsViewStateAndRefs(
+                    contract,
+                    contractFile,
+                    importResolver,
+                );
+                contractTypes.map(({ type, refs: subContractRefsTree, enumsToImport }) => {
+                    const contractName = subContract.val.name;
+                    const refsTypeName = `${pascalCase(contractName)}Refs`;
+                    const repeatedRefsTypeName = `${pascalCase(contractName)}RepeatedRefs`;
+                    const refs = mkRefsTree(
+                        subContractRefsTree.refs,
+                        subContractRefsTree.children,
+                        subContractRefsTree.repeated,
+                        refsTypeName,
+                        repeatedRefsTypeName,
+                    );
+
+                    const enumsToImportRelativeToJayHtml: EnumToImport[] = enumsToImport.map(
+                        (enumsToImport) => ({
+                            type: enumsToImport.type,
+                            declaringModule: path.relative(filePath, enumsToImport.declaringModule),
+                        }),
+                    );
+
+                    const enumsFromContract = enumsToImportRelativeToJayHtml
+                        .filter((_) => _.declaringModule === contractPath)
+                        .map((_) => _.type);
+
+                    const contractLink: JayImportLink = {
+                        module: contractPath,
+                        names: [
+                            { name: type.name, type },
+                            { name: refsTypeName, type: JayUnknown },
+                            ...enumsFromContract.map((_) => ({ name: _.name, type: _ })),
+                        ],
+                    };
+
+                    const enumsFromOtherContracts = enumsToImportRelativeToJayHtml.filter(
+                        (_) => _.declaringModule !== contractPath,
+                    );
+
+                    const enumImportLinks: JayImportLink[] = Object.entries(
+                        enumsFromOtherContracts.reduce(
+                            (acc, enumToImport) => {
+                                const module = enumToImport.declaringModule;
+                                if (!acc[module]) {
+                                    acc[module] = [];
+                                }
+                                acc[module].push(enumToImport);
+                                return acc;
+                            },
+                            {} as Record<string, EnumToImport[]>,
+                        ),
+                    ).map(([module, enums]) => ({
+                        module,
+                        names: enums.map((enumToImport) => ({
+                            name: enumToImport.type.name,
+                            type: enumToImport.type,
+                        })),
+                    }));
+
+                    const contractLinks = [contractLink, ...enumImportLinks];
+                    const codeLink: JayImportLink = {
+                        module,
+                        names: [{ name, type: new JayComponentType(name, []) }],
+                    };
+                    result.push({ key, refs, rootType: type, contractLinks, codeLink });
+                });
+            });
+        } catch (e) {
+            validations.push(
+                `failed to parse linked contract ${contractPath} - ${e.message}${e.stack}`,
+            );
+        }
+    }
+    return result;
 }
 
 function normalizeFilename(filename: string): string {
@@ -176,12 +324,13 @@ function parseHeadLinks(root: HTMLElement): JayHtmlHeadLink[] {
         });
 }
 
-export function parseJayFile(
+export async function parseJayFile(
     html: string,
     filename: string,
     filePath: string,
     options: ResolveTsConfigOptions,
-): WithValidations<JayHtmlSourceFile> {
+    linkedContractResolver: JayImportResolver,
+): Promise<WithValidations<JayHtmlSourceFile>> {
     const normalizedFileName = normalizeFilename(filename);
     const baseElementName = capitalCase(normalizedFileName, { delimiter: '' });
     const root = parse(html);
@@ -190,14 +339,25 @@ export function parseJayFile(
     const { val: jayYaml, validations } = parseYaml(root);
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
-    let imports = parseImports(
-        root.querySelectorAll('link[rel="import"]'),
+    const headfullImports = parseHeadfullImports(
+        root.querySelectorAll('script[type="application/jay-headfull"]'),
         validations,
         filePath,
         options,
+        linkedContractResolver,
     );
-    const importNames = imports.flatMap((_) => _.names);
-    const types = parseTypes(jayYaml, validations, baseElementName, importNames);
+    const headlessImports = await parseHeadlessImports(
+        root.querySelectorAll('script[type="application/jay-headless"]'),
+        validations,
+        filePath,
+        linkedContractResolver,
+    );
+    const importNames = headfullImports.flatMap((_) => _.names);
+    const types = parseTypes(jayYaml, validations, baseElementName, importNames, headlessImports);
+    const imports: JayImportLink[] = [
+        ...headfullImports,
+        ...headlessImports.flatMap((_) => _.contractLinks),
+    ];
 
     const headLinks = parseHeadLinks(root);
 
@@ -216,6 +376,7 @@ export function parseJayFile(
             body,
             baseElementName,
             namespaces,
+            headlessImports,
             headLinks,
         } as JayHtmlSourceFile,
         validations,
@@ -224,5 +385,9 @@ export function parseJayFile(
 
 export function getJayHtmlImports(html: string): string[] {
     const root = parse(html);
-    return root.querySelectorAll('link[rel="import"]').map((link) => link.getAttribute('href'));
+    return root
+        .querySelectorAll(
+            'script[type="application/jay-headfull"], script[type="application/jay-headless"]',
+        )
+        .map((script) => script.getAttribute('src'));
 }

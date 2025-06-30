@@ -1,6 +1,11 @@
-import { HTMLElementProxy, JayElement, ReferencesManager, RenderElement } from 'jay-runtime';
-import { elementBridge, SecureReferencesManager } from 'jay-secure';
-import { sandboxElement as e } from 'jay-secure';
+import {
+    HTMLElementProxy,
+    JayElement,
+    ReferencesManager,
+    RenderElement,
+} from '@jay-framework/runtime';
+import { elementBridge, SecureReferencesManager } from '@jay-framework/secure';
+import { sandboxElement as e } from '@jay-framework/secure';
 
 export interface ItemViewState {
     title: string;

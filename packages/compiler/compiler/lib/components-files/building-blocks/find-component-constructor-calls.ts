@@ -5,7 +5,7 @@ import {
     isImportModuleVariableRoot,
 } from '../basic-analyzers/name-binding-resolver';
 import { isIdentifierOrPropertyAccessExpression } from '../basic-analyzers/typescript-extras';
-import { JAY_COMPONENT } from 'jay-compiler-shared';
+import { JAY_COMPONENT } from '@jay-framework/compiler-shared';
 
 export enum FindComponentConstructorType {
     makeJayComponent = 'makeJayComponent',

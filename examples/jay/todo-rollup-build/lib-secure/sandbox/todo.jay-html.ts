@@ -5,14 +5,14 @@ import {
     MapEventEmitterViewState,
     OnlyEventEmitters,
     RenderElement,
-} from 'jay-runtime';
-import { elementBridge, SecureReferencesManager } from 'jay-secure';
+} from '@jay-framework/runtime';
+import { elementBridge, SecureReferencesManager } from '@jay-framework/secure';
 import {
     sandboxElement as e,
     sandboxCondition as c,
     sandboxForEach as forEach,
     sandboxChildComp as childComp,
-} from 'jay-secure';
+} from '@jay-framework/secure';
 import { Item, ItemProps } from './item';
 
 export enum Filter {
@@ -21,7 +21,7 @@ export enum Filter {
     completed,
 }
 
-export interface ShownTodo {
+export interface ShownTodoOfTodoViewState {
     id: string;
     title: string;
     isCompleted: boolean;
@@ -35,7 +35,7 @@ export interface TodoViewState {
     filter: Filter;
     showClearCompleted: boolean;
     newTodo: string;
-    shownTodos: Array<ShownTodo>;
+    shownTodos: Array<ShownTodoOfTodoViewState>;
 }
 
 export type ItemRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Item>>;
@@ -44,7 +44,9 @@ export type ItemRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ItemRef<Pare
 export interface TodoElementRefs {
     newTodo: HTMLElementProxy<TodoViewState, HTMLInputElement>;
     toggleAll: HTMLElementProxy<TodoViewState, HTMLInputElement>;
-    items: ItemRefs<ShownTodo>;
+    shownTodos: {
+        items: ItemRefs<ShownTodoOfTodoViewState>;
+    };
     filterAll: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     filterActive: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
     filterCompleted: HTMLElementProxy<TodoViewState, HTMLAnchorElement>;
@@ -56,27 +58,35 @@ export type TodoElementRender = RenderElement<TodoViewState, TodoElementRefs, To
 export type TodoElementPreRender = [TodoElementRefs, TodoElementRender];
 
 export function render(): TodoElementPreRender {
+    const [shownTodosRefManager, [refItems]] = SecureReferencesManager.forElement(
+        [],
+        [],
+        [],
+        ['items'],
+    );
     const [
         refManager,
         [
-            refNwTodo,
+            refNewTodo,
             refToggleAll,
             refFilterAll,
             refFilterActive,
             refFilterCompleted,
             refClearCompleted,
-            refItems,
         ],
     ] = SecureReferencesManager.forElement(
         ['newTodo', 'toggleAll', 'filterAll', 'filterActive', 'filterCompleted', 'clearCompleted'],
         [],
         [],
-        ['items'],
+        [],
+        {
+            shownTodos: shownTodosRefManager,
+        },
     );
     const render = (viewState: TodoViewState) =>
         elementBridge(viewState, refManager, () => {
             return [
-                e(refNwTodo()),
+                e(refNewTodo()),
                 c(
                     (vs) => vs.hasItems,
                     [
@@ -87,7 +97,7 @@ export function render(): TodoElementPreRender {
                             () => [
                                 childComp(
                                     Item,
-                                    (vs: ShownTodo) => ({
+                                    (vs: ShownTodoOfTodoViewState) => ({
                                         title: vs.title,
                                         isCompleted: vs.isCompleted,
                                     }),

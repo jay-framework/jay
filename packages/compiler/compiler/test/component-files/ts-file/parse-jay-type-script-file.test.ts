@@ -1,5 +1,5 @@
 import { parseGenericTypescriptFile } from '../../../lib';
-import { JayUnknown, SourceFileFormat, WithValidations } from 'jay-compiler-shared';
+import { JayUnknown, SourceFileFormat, WithValidations } from '@jay-framework/compiler-shared';
 
 describe('parseJayTypeScriptFile', () => {
     const filePath = '/root/source/app.jay-html.ts';
@@ -10,8 +10,8 @@ import {
     ConstructContext,
     compRef as cr,
     RenderElementOptions,
-} from 'jay-runtime';
-import { mainRoot as mr, secureChildComp } from 'jay-secure';
+} from '@jay-framework/runtime';
+import { mainRoot as mr, secureChildComp } from '@jay-framework/secure';
 import { CounterRef } from './counter-refs';
 import { Counter } from './counter?jay-mainSandbox';
 
@@ -54,7 +54,7 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
                     format: SourceFileFormat.TypeScript,
                     imports: [
                         {
-                            module: 'jay-runtime',
+                            module: '@jay-framework/runtime',
                             names: [
                                 { name: 'JayElement', type: JayUnknown },
                                 { as: 'e', name: 'element', type: JayUnknown },
@@ -65,7 +65,7 @@ export function render(viewState: AppViewState, options?: RenderElementOptions):
                             sandbox: false,
                         },
                         {
-                            module: 'jay-secure',
+                            module: '@jay-framework/secure',
                             names: [
                                 { as: 'mr', name: 'mainRoot', type: JayUnknown },
                                 { name: 'secureChildComp', type: JayUnknown },

@@ -13,7 +13,11 @@ export default defineConfig({
             formats: ['cjs'],
         },
         rollupOptions: {
-            external: ['jay-compiler', 'rollup-plugin-jay', 'jay-compiler-shared'],
+            external: [
+                '@jay-framework/compiler',
+                '@jay-framework/rollup-plugin',
+                '@jay-framework/compiler-shared',
+            ],
         },
     },
 });

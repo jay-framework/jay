@@ -2,7 +2,7 @@ import { mkTransformer } from '../../../lib/components-files/ts-utils/mk-transfo
 import ts, { isImportDeclaration } from 'typescript';
 import { transformCode } from '../../test-utils/ts-compiler-test-utils';
 import { transformImportModeFileExtension } from '../../../lib/components-files/building-blocks/transform-import-mode-file-extension';
-import { prettify, RuntimeMode } from 'jay-compiler-shared';
+import { prettify, RuntimeMode } from '@jay-framework/compiler-shared';
 
 describe('add event handler call$ to call chain', () => {
     function testTransformer(importerMode: RuntimeMode) {

@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <header>
     <title>Todo element</title>
-    <link rel="import" href="./item" names="Item"/>
-    <script type="application/yaml-jay">
+    <script type="application/jay-headfull" src="./item" names="Item"></script>
+    <script type="application/jay-data">
 data:
     activeTodoCount: number
     activeTodoWord: string

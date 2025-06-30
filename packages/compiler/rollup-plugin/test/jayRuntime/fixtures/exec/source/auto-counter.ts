@@ -1,6 +1,6 @@
 import { render, AutoCounterElementRefs } from './auto-counter.jay-html';
-import { createSignal, makeJayComponent, Props } from 'jay-component';
-import { exec$ } from 'jay-secure';
+import { createSignal, makeJayComponent, Props } from '@jay-framework/component';
+import { exec$ } from '@jay-framework/secure';
 import { moduleDoCount } from './a-module';
 
 export interface AutoCounterProps {

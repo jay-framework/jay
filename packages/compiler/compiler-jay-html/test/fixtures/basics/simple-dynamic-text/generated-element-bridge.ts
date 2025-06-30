@@ -1,5 +1,5 @@
-import { JayElement, RenderElement } from 'jay-runtime';
-import { SecureReferencesManager, elementBridge } from 'jay-secure';
+import { JayElement, RenderElement, JayContract } from '@jay-framework/runtime';
+import { SecureReferencesManager, elementBridge } from '@jay-framework/secure';
 
 export interface SimpleDynamicTextViewState {
     s1: string;
@@ -20,6 +20,10 @@ export type SimpleDynamicTextElementPreRender = [
     SimpleDynamicTextElementRefs,
     SimpleDynamicTextElementRender,
 ];
+export type SimpleDynamicTextContract = JayContract<
+    SimpleDynamicTextViewState,
+    SimpleDynamicTextElementRefs
+>;
 
 export function render(): SimpleDynamicTextElementPreRender {
     const [refManager, []] = SecureReferencesManager.forElement([], [], [], []);

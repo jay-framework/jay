@@ -2,7 +2,7 @@
 
 **Experimental Framework!!**
 
-![Jay head image](./assets/jay-head.gif)
+![jay-head.gif](docs%2Fmedia%2Fjay-head.gif)
 
 **Experimental Framework!!**
 
@@ -23,6 +23,84 @@ build the UI with**.
 - Jay can generate Jay native applications, which enables way more aggressive optimizations
 - Jay can generate safe 3rd party applications, allowing to incorporate 3rd party components and plugins in isolation,
   with next to zero performance and DevEx impact.
+- **Jay can have headless components in packages and build a website without coding, just reusing headless components from packages, providing only the design in the website.**
+
+# Component Types in Jay
+
+Jay supports different types of components across two setups:
+
+## Jay Setup (Client-Only)
+
+Jay itself only supports **Headfull Components** for client-only applications.
+
+![Jay Components.png](docs%2Fmedia%2FJay%20Components.png)
+
+### Headfull Components (Client-Only)
+
+- **Definition**: Components that include both the contract and the UI design
+- **Created with**: `makeJayComponent`, component constructor + jay-html files (`.jay-html`)
+- **Use case**: Complete components with specific UI design that can be reused in client-only applications.
+- **Examples**:
+  - Design Library.
+  - A counter component with specific styling and layout
+
+## Jay-Stack Setup (Fullstack)
+
+Jay-Stack supports both **Headfull** and **Headless** components for fullstack applications with pages and routing.
+
+![Jay Stack Components.png](docs%2Fmedia%2FJay%20Stack%20Components.png)
+
+### Headfull Components (Fullstack)
+
+- **Definition**: Fullstack components that include both the contract and the UI design
+- **Created with**: `makeJayStackComponent`, component constructor, server rendering and jay-html files (`.jay-html`)
+- **Use case**: Complete fullstack components with specific UI design
+- **Features**:
+  - Server-side rendering (slow and fast rendering)
+  - Client-side interactivity
+  - URL parameter handling
+  - Context injection
+
+### Headless Components (Fullstack)
+
+- **Definition**: Fullstack components that define only the contract (data structure and behavior) without any UI
+- **Created with**: `makeJayStackComponent` + contract files (`.jay-contract`)
+- **Use case**: Reusable fullstack logic that can be used across different UI designs
+- **Features**:
+  - Server-side rendering (slow and fast rendering)
+  - Client-side interactivity
+  - URL parameter handling
+  - Context injection
+- **Example**: A counter component that provides count state and increment/decrement functions
+
+## Component Import in Jay-HTML
+
+Jay-HTML files can import both headfull and headless components using different script types:
+
+### Importing Headfull Components
+
+```html
+<script type="application/jay-headfull" src="./item" names="Item"></script>
+```
+
+### Importing Headless Components
+
+```html
+<script
+  type="application/jay-headless"
+  contract="../named-counter/named-counter.jay-contract"
+  src="../named-counter/named-counter"
+  name="namedCounter"
+  key="namedCounter"
+></script>
+```
+
+The headless import format includes:
+
+- `contract` - the location of the contract to import
+- `key` - the attribute name under which the component's Contract ViewState and Refs are nested
+- `src` - the location of the component implementation
+- `name` - the name of the exported component definition
 
 # Why Jay?
 
@@ -35,13 +113,56 @@ The solution for the handover problem, introducing a contract, is actually a sol
 
 ## Jay Contract
 
-A Jay Contract includes 3 elements
+Jay Contracts define the interface between design and code. They specify the data, interactive elements, variants (states), and linked contracts that a component must support. This contract is the source of truth for both the design tool and the developer, ensuring that the UI and logic remain in sync.
 
-1. The `view state` - data that a headless Jay Component hands over to the view or Jay Element to render
-2. The `refs` - named html elements or components in the view (Jay Element) to interact with
-3. The `variants` - design variations or states that appear in the contract as booleans or enumerations.
+A Jay Contract includes 4 building blocks:
 
-## Jay Element / the view
+1. **Data**: The data to display in the user interface
+2. **Interactive Elements**: Elements that interact with the user (e.g., buttons, inputs)
+3. **Variants**: Design variations or states that control what and how data and interactive elements are visualized
+4. **Linked Contracts**: Contract composition for modularity and reuse
+
+Here is an example Jay Contract (YAML format):
+
+```yaml
+# todo-list.jay-contract
+name: todo
+tags:
+  - tag: activeTodoWord
+  - tag: activeTodoCount
+    dataType: number
+  - tag: hasItems
+    dataType: boolean
+  - tag: filter
+    dataType: enum (all | active | completed)
+  - tag: filterAll
+    type: interactive
+    elementType: [HTMLAnchorType, HTMLButtonElement]
+  - tag: filterActive
+    type: interactive
+    elementType: [HTMLAnchorType, HTMLButtonElement]
+  - tag: items
+    type: sub-contract
+    repeated: true
+    tags:
+      - tag: title
+        type: [data, interactive]
+        dataType: string
+        elementType: HTMLInputElement
+      - tag: completed
+        type: [data, interactive]
+        dataType: boolean
+        elementType: HTMLInputElement
+```
+
+The contract is used by design tools to create the actual user interface, such as HTML and CSS, with Jay-specific directives such as `if`, `forEach`, and `{data}` binding.
+
+The contract is compiled into programmatic types that are used to code the headless or headfull components:
+
+1. The **view state**: Data and selected variants (which appear as boolean or enumerations) that a Jay Component hands over to the view or Jay Element to render
+2. The **refs**: Named HTML elements or sub-components in the view (Jay Element) to interact with
+
+## Jay Element / jay-html
 
 The jay element is a `jay-html` file is **expected to be generated from design tools** of an extended HTML format.
 **No developers should write HTML / CSS / JSX anymore!**
@@ -72,7 +193,7 @@ Jay Components are headless component working with the contract TS `.d.ts` files
 
 ```typescript
 import { render, CounterElementRefs } from './counter.jay-html';
-import { createSignal, makeJayComponent, Props } from 'jay-component';
+import { createSignal, makeJayComponent, Props } from '@jay-framework/component';
 
 export interface CounterProps {
   initialValue: number;
@@ -94,6 +215,46 @@ export const Counter = makeJayComponent(render, CounterConstructor);
 
 Read more about Jay Components in [readme.md](packages%2Fruntime%2Fcomponent%2Freadme.md)
 
+## Jay Stack Component / the fullstack component
+
+Jay Stack Components provide server-side rendering with client-side interactivity using the fluent builder API. They can be either **headfull** (with jay-html) or **headless** (with contract files).
+
+### Headfull Fullstack Component (with jay-html)
+
+```typescript
+import { PageContract, PageElementRefs } from './page.jay-html';
+import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
+
+export const page = makeJayStackComponent<PageContract>()
+  .withProps<PageProps>()
+  .withSlowlyRender(async (props) => {
+    return partialRender({ title: 'My Page', content: 'Static content' }, { pageId: '1' });
+  })
+  .withFastRender(async (props) => {
+    return partialRender({ dynamicData: 'Fast changing data' }, { pageId: '1' });
+  })
+  .withInteractive((props, refs) => {
+    return {
+      render: () => ({ interactiveData: 'Client-side data' }),
+    };
+  });
+```
+
+### Headless Fullstack Component (with contract)
+
+```typescript
+import { ComponentContract } from './component.jay-contract';
+import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
+
+export const component = makeJayStackComponent<ComponentContract>()
+  .withProps()
+  .withSlowlyRender(async () => {
+    return partialRender({ content: 'This is from the headless component' }, {});
+  });
+```
+
+Read more about Jay Stack Components in [readme.md](packages%2Fjay-stack%2Ffull-stack-component%2FREADME.md)
+
 # Examples
 
 Jay example projects can be found at the examples folder.
@@ -107,7 +268,7 @@ yarn build
 
 Then, under each example open the `html` files under the `dist` folder.
 
-The examples are organized into 4 categories
+The examples are organized into 5 categories
 
 - Jay examples
   - [counter](examples%2Fjay%2Fcounter) - simple counter
@@ -122,8 +283,11 @@ The examples are organized into 4 categories
   - [scrum-board-with-context](examples%2Fjay-context%2Fscrum-board-with-context) - the same scrum board example using jay context
   - [todo-with-context](examples%2Fjay-context%2Ftodo-with-context) - the same todo list example using jay context
 - Jay Low Leven APIs
-  - [counter-raw](examples%2Fjay-low-level-apis%2Fcounter-raw) - counter example not using the Jay Component APIs. Only using jay-runtime.
-  - [todo-raw](examples%2Fjay-low-level-apis%2Ftodo-raw) - todo list not using the Jay Component APIs. Only using jay-runtime.
+  - [counter-raw](examples%2Fjay-low-level-apis%2Fcounter-raw) - counter example not using the Jay Component APIs. Only using @jay-framework/runtime.
+  - [todo-raw](examples%2Fjay-low-level-apis%2Ftodo-raw) - todo list not using the Jay Component APIs. Only using @jay-framework/runtime.
+- Jay Stack
+  - [fake-shop](examples%2Fjay-stack%2Ffake-shop) - fullstack e-commerce example
+  - [mood-tracker-plugin](examples%2Fjay-stack%2Fmood-tracker-plugin) - plugin system example
 - React
   - [mini-benchmark-react](examples%2Freact%2Fmini-benchmark-react) - the same mini benchmark implemented as a React application for comparison.
 

@@ -1,12 +1,28 @@
 <html>
   <head>
-    <script type="application/yaml-jay">
+    <script type="application/jay-headless"
+            contract="example-jay-mood-tracker-plugin/mood-tracker.jay-contract"
+            src="example-jay-mood-tracker-plugin"
+            name="moodTracker"
+            key="mt"
+    ></script>
+    <script type="application/jay-data">
       data:
     </script>
   </head>
   <body>
     <div>
       <h1>homepage</h1>
+      <div>
+        <div>Happy: {mt.happy} <button ref="mt.happy">more happy</button></div>
+        <div>sad: {mt.sad} <button ref="mt.sad">more sad</button></div>
+        <div>neutral: {mt.neutral} <button ref="mt.neutral">more neutral</button></div>
+      </div>
+      <div style="font-size: 20px">
+        <span if="mt.currentMood === happy">:)</span>
+        <span if="mt.currentMood === sad">:(</span>
+        <span if="mt.currentMood === neutral">/)</span>
+      </div>
     </div>
   </body>
 </html>

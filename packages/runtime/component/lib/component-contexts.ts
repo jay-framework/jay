@@ -1,5 +1,5 @@
-import { Getter, Reactive, Setter } from 'jay-reactive';
-import { ContextMarker, createJayContext, JayComponent, MountFunc } from 'jay-runtime';
+import { Getter, Reactive, Setter } from '@jay-framework/reactive';
+import { ContextMarker, createJayContext, JayComponent, MountFunc } from '@jay-framework/runtime';
 
 export interface HookContext {
     reactive: Reactive;

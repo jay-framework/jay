@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <header>
     <title>Todo element</title>
-    <script type="application/yaml-jay">
+    <script type="application/jay-data">
 data:
     activeTodoCount: number
     activeTodoWord: string

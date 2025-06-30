@@ -12,12 +12,12 @@ export default defineConfig({
             formats: ['es'],
         },
         rollupOptions: {
-            external: ['jay-list-compare', 'jay-reactive'],
+            external: ['@jay-framework/list-compare', '@jay-framework/reactive'],
         },
     },
     test: {
         globals: true,
-        setupFiles: 'jay-dev-environment/library-dom/vitest.setup.ts',
+        setupFiles: '@jay-framework/dev-environment/library-dom/vitest.setup.ts',
         environment: 'jsdom',
     },
 });

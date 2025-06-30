@@ -20,12 +20,12 @@ Reactive can also pair, creating dependencies between multiple Reactive instance
 ## Notes:
 
 - `Reactive` is intended to be an internal core implementation for state management and not a user facing API.
-- `Reactive` is used by `jay-component` as state management for components, at which each component has it's own independent
+- `Reactive` is used by `@jay-framework/component` as state management for components, at which each component has it's own independent
   instance of `Reactive`.
-- `jay-component` also defines reactive context which is also using an independent `Reactive` instance.
+- `@jay-framework/component` also defines reactive context which is also using an independent `Reactive` instance.
 - one `Reactive` can depend on a signal from another `Reactive` creating `Reactive` pairing discussed below.
-- `jay-reactive` is inspired by [solid.js](https://www.solidjs.com/) state management (amazing framework, BTW).
-- `Reactive.enable` and `Reactive.disable` are used by `jay-component` to disable and enable reactive as a component unmounts and mounts.
+- `@jay-framework/reactive` is inspired by [solid.js](https://www.solidjs.com/) state management (amazing framework, BTW).
+- `Reactive.enable` and `Reactive.disable` are used by `@jay-framework/component` to disable and enable reactive as a component unmounts and mounts.
 
 ## createSignal
 
@@ -208,7 +208,7 @@ At which
 - `PARTIAL` - triggers reactions with the `PARTIAL` measure of change, unless other signals are updated with a higher measure of change
 - `FULL` - triggers reactions with the `FULL` measure of change
 
-see the `jay-component` library, the `createDerivedArray` function for an example use case.
+see the `@jay-framework/component` library, the `createDerivedArray` function for an example use case.
 
 ## enablePairing
 
@@ -237,10 +237,10 @@ B.enablePairing(A);
 
 The reactive library includes the facility to trace how Reactive signals and reactions are running.
 
-To enable reactive tracing, import the `jay-reactive/tracing` module before starting jay.
+To enable reactive tracing, import the `@jay-framework/reactive/tracing` module before starting jay.
 
 ```typescript
-import 'jay-reactive/tracing';
+import '@jay-framework/reactive/tracing';
 ```
 
 Reactive tracing outputs tracing similar to the following:

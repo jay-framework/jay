@@ -5,7 +5,7 @@ import {
     HandshakeMessageJayChannel,
     JayPort,
     setWorkerPort,
-} from 'jay-secure';
+} from '@jay-framework/secure';
 // @ts-expect-error Cannot find module
 import { TodoComponent, TodoProps } from './todo?jay-workerSandbox';
 
@@ -15,7 +15,7 @@ export interface AppViewState {
 
 export function initializeWorker() {
     sandboxRoot(() => {
-        const [, [refAR1]] = SecureReferencesManager.forSandboxRoot([], [], ['aR1'], []);
+        const [refManager, [refAR1]] = SecureReferencesManager.forSandboxRoot([], [], ['aR1'], []);
         return [childComp(TodoComponent, (vs: AppViewState) => vs.todoProps, refAR1())];
     });
 }

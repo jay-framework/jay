@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { PluginContext } from 'rollup';
-import { JAY_DTS_EXTENSION, JAY_EXTENSION } from 'jay-compiler-shared';
+import { JAY_DTS_EXTENSION, JAY_EXTENSION } from '@jay-framework/compiler-shared';
 import { mkdir, readFile } from 'node:fs/promises';
 import { writeFile } from 'fs/promises';
 import { JayPluginContext } from '../runtime/jay-plugin-context';
@@ -23,8 +23,9 @@ export async function writeDefinitionFile(
     dirname: string,
     filename: string,
     source: string,
+    extension: string,
 ): Promise<string> {
-    const name = path.resolve(dirname, `${filename}${JAY_DTS_EXTENSION}`);
+    const name = path.resolve(dirname, `${filename}${extension}`);
     await writeFile(name, source, { encoding: 'utf8', flag: 'w' });
     return name;
 }

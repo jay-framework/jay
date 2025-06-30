@@ -1,5 +1,5 @@
 import { CompilerOptions } from 'typescript';
-import { GenerateTarget } from 'jay-compiler-shared';
+import { GenerateTarget } from '@jay-framework/compiler-shared';
 
 export interface JayRollupConfig {
     tsConfigFilePath?: string;

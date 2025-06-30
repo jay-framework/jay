@@ -1,6 +1,6 @@
 <html xmlns:ml="http://www.w3.org/1998/Math/MathML">
     <head>
-        <script type="application/yaml-jay">
+        <script type="application/jay-data">
     data:
         color: string
 </script>

@@ -1,7 +1,7 @@
 <html>
   <head>
-    <link rel="import" href="./main" names="Main, MainProps" sandbox="true" />
-    <script type="application/yaml-jay">
+    <script type="application/jay-headfull" src="./main" names="Main, MainProps" sandbox="true"></script>
+    <script type="application/jay-data">
 data:
     </script>
   </head>

@@ -1,8 +1,13 @@
 {
-  "name": "jay-stack-route-scanner",
-  "version": "1.0.0",
-  "type": "module",
-  "main": "dist/index.cjs",
+  "name": "@jay-framework/stack-route-scanner",
+  "version": "0.5.0",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.mts",
+  "files": [
+    "dist",
+    "readme.md"
+  ],
   "scripts": {
     "build": "npm run build:js && npm run build:types",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
@@ -15,8 +20,8 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
     "@types/node": "^20.11.5",
-    "jay-dev-environment": "workspace:^",
     "nodemon": "^3.0.3",
     "replace-in-file": "^7.1.0",
     "rimraf": "^5.0.5",

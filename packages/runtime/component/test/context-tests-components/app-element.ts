@@ -9,7 +9,7 @@ import {
     ReferencesManager,
     RenderElement,
     RenderElementOptions,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 
 export interface AppViewState {
     parentCount: number;

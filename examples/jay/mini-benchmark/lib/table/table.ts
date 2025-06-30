@@ -1,7 +1,7 @@
-import { Line, render, TableElementRefs } from './table.jay-html';
-import { createSignal, makeJayComponent, Props } from 'jay-component';
+import { LineOfTableViewState, render, TableElementRefs } from './table.jay-html';
+import { createSignal, makeJayComponent, Props } from '@jay-framework/component';
 import { produce } from 'immer';
-import { JSONPatch, patch, REPLACE } from 'jay-json-patch';
+import { JSONPatch, patch, REPLACE } from '@jay-framework/json-patch';
 
 interface TableProps {
     tableSize: number;
@@ -9,7 +9,7 @@ interface TableProps {
     stateManagement: 'immutable' | 'immer';
 }
 
-function initTable(tableSize: number): Line[] {
+function initTable(tableSize: number): LineOfTableViewState[] {
     let tableLines = [];
     for (let x = 0; x < tableSize; x++) {
         tableLines[x] = { id: x, cell: [] };

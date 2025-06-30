@@ -1,0 +1,17 @@
+name: mood-tracker
+tags:
+  - tag: happy
+    type: [data, interactive]
+    dataType: number
+    elementType: HTMLButtonElement
+  - tag: sad
+    type: [data, interactive]
+    dataType: number
+    elementType: HTMLButtonElement
+  - tag: neutral
+    type: [data, interactive]
+    dataType: number
+    elementType: HTMLButtonElement
+  - tag: current-mood
+    type: variant
+    dataType: enum (happy | sad | neutral)

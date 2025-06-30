@@ -1,4 +1,4 @@
-import { JayElement } from 'jay-runtime';
+import { JayElement } from '@jay-framework/runtime';
 import { render, ViewState } from './counter.jay';
 import { events } from './ElementEvents';
 

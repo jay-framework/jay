@@ -1,13 +1,13 @@
-import { parseJayFile, generateElementFile } from '../../lib';
+import {parseJayFile, generateElementFile, JAY_IMPORT_RESOLVER} from '../../lib';
 import { stripMargin } from '../test-utils/strip-margin';
-import { prettify, RuntimeMode } from 'jay-compiler-shared';
+import { prettify, RuntimeMode } from '@jay-framework/compiler-shared';
 
 describe('head links compilation', () => {
     function jayFileWith(jayYaml: string, body: string, links?: string) {
         return stripMargin(
             ` <html>
                 |   <head>${links ? `\n | ${stripMargin(links)}` : ''}
-                |     <script type="application/yaml-jay">
+                |     <script type="application/jay-data">
                 |${stripMargin(jayYaml)}
                 |     </script>
                 |   </head>
@@ -16,8 +16,8 @@ describe('head links compilation', () => {
         );
     }
 
-    it('should generate injectHeadLinks import when head links are present', () => {
-        const jayFile = parseJayFile(
+    it('should generate injectHeadLinks import when head links are present', async () => {
+        const jayFile = await parseJayFile(
             jayFileWith(
                 `data:
                     |   title: string`,
@@ -28,6 +28,7 @@ describe('head links compilation', () => {
             'TestHeadLinks',
             '',
             {},
+            JAY_IMPORT_RESOLVER
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -37,7 +38,7 @@ describe('head links compilation', () => {
 
         // Should import injectHeadLinks
         expect(generated.val).toMatch(
-            /import\s+\{[^}]*injectHeadLinks[^}]*\}\s+from\s+"jay-runtime"/,
+            /import\s+\{[^}]*injectHeadLinks[^}]*\}\s+from\s+"@jay-framework\/runtime"/,
         );
 
         // Should call injectHeadLinks in render function
@@ -48,8 +49,8 @@ describe('head links compilation', () => {
         expect(callString).toContain('{ rel: "icon", href: "/favicon.ico" }');
     });
 
-    it('should not generate injectHeadLinks call when no head links are present', () => {
-        const jayFile = parseJayFile(
+    it('should not generate injectHeadLinks call when no head links are present', async () => {
+        const jayFile = await parseJayFile(
             jayFileWith(
                 `data:
                     |   title: string`,
@@ -58,6 +59,7 @@ describe('head links compilation', () => {
             'TestNoHeadLinks',
             '',
             {},
+            JAY_IMPORT_RESOLVER
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -72,8 +74,8 @@ describe('head links compilation', () => {
         expect(generated.val).not.toContain('injectHeadLinks([');
     });
 
-    it('should generate correct head links array with attributes', () => {
-        const jayFile = parseJayFile(
+    it('should generate correct head links array with attributes', async () => {
+        const jayFile = await parseJayFile(
             jayFileWith(
                 `data:
                     |   title: string`,
@@ -87,6 +89,7 @@ describe('head links compilation', () => {
             'TestComplexHeadLinks',
             '',
             {},
+            JAY_IMPORT_RESOLVER
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -111,8 +114,8 @@ describe('head links compilation', () => {
         );
     });
 
-    it('should exclude import links from head links injection', () => {
-        const jayFile = parseJayFile(
+    it('should exclude import links from head links injection',async () => {
+        const jayFile = await parseJayFile(
             jayFileWith(
                 `data:
                     |   title: string`,
@@ -124,6 +127,7 @@ describe('head links compilation', () => {
             'TestWithImports',
             './test',
             {},
+            JAY_IMPORT_RESOLVER
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -141,8 +145,8 @@ describe('head links compilation', () => {
         expect(callString).not.toContain('my-component.html');
     });
 
-    it('should handle empty head links array correctly', () => {
-        const jayFile = parseJayFile(
+    it('should handle empty head links array correctly', async () => {
+        const jayFile = await parseJayFile(
             jayFileWith(
                 `data:
                     |   title: string`,
@@ -151,6 +155,7 @@ describe('head links compilation', () => {
             'TestEmptyHeadLinks',
             '',
             {},
+            JAY_IMPORT_RESOLVER
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -162,8 +167,8 @@ describe('head links compilation', () => {
         expect(generated.val).not.toContain('injectHeadLinks');
     });
 
-    it('should position injectHeadLinks call correctly in render function', () => {
-        const jayFile = parseJayFile(
+    it('should position injectHeadLinks call correctly in render function', async () => {
+        const jayFile = await parseJayFile(
             jayFileWith(
                 `data:
                     |   title: string`,
@@ -173,6 +178,7 @@ describe('head links compilation', () => {
             'TestPosition',
             '',
             {},
+            JAY_IMPORT_RESOLVER
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -198,8 +204,8 @@ describe('head links compilation', () => {
         expect(renderFunctionLine).toBeGreaterThan(injectHeadLinksLine);
     });
 
-    it('should work with different runtime modes', () => {
-        const jayFile = parseJayFile(
+    it('should work with different runtime modes', async () => {
+        const jayFile = await parseJayFile(
             jayFileWith(
                 `data:
                     |   title: string`,
@@ -209,6 +215,7 @@ describe('head links compilation', () => {
             'TestRuntimeMode',
             '',
             {},
+            JAY_IMPORT_RESOLVER
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -228,8 +235,8 @@ describe('head links compilation', () => {
         expect(callMatchSandbox![0]).toContain('{ rel: "stylesheet", href: "styles/main.css" }');
     });
 
-    it('should handle special characters in href and attributes', () => {
-        const jayFile = parseJayFile(
+    it('should handle special characters in href and attributes', async () => {
+        const jayFile = await parseJayFile(
             jayFileWith(
                 `data:
                     |   title: string`,
@@ -240,6 +247,7 @@ describe('head links compilation', () => {
             'TestSpecialChars',
             '',
             {},
+            JAY_IMPORT_RESOLVER
         );
 
         expect(jayFile.validations).toEqual([]);

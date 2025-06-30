@@ -1,9 +1,11 @@
 {
   "name": "jay",
+  "private": true,
+  "license": "Apache-2.0",
   "scripts": {
     "build": "wsrun -te --report build",
-    "build:check-types": "wsrun -p 'jay-@(cli|compiler|compiler-shared|compiler-analyze-exported-types|compiler-jay-html|component|json-patch|list-compare|reactive|runtime|secure|serialization)' -p '@(rollup|vite)-plugin-jay' -e --prefix build:check-types",
-    "build:watch": "wsrun -p 'jay-@(cli|compiler|compiler-shared|compiler-analyze-exported-types|compiler-jay-html|component|json-patch|list-compare|reactive|runtime|secure|serialization)' -p '@(rollup|vite)-plugin-jay' --prefix build:watch",
+    "build:check-types": "wsrun -p '@jay-framework/*' -e --prefix build:check-types",
+    "build:watch": "wsrun -p '@jay-framework/*' --prefix build:watch",
     "clean": "wsrun clean",
     "clean:node_modules": "rimraf node_modules && rimraf packages/*/node_modules && rimraf examples/*/node_modules && rimraf exploration/*/node_modules",
     "clean:node_modules:with-cache": "npm run clean:node_modules && yarn cache clean",
@@ -16,7 +18,10 @@
     "rebuild": "yarn run clean && yarn run build",
     "reinstall": "npm run clean:node_modules && yarn install && yarn run rebuild",
     "test": "wsrun -te --report test",
-    "release": "echo \"======= Lerna Releasing jay =======\" && npm run test && lerna publish"
+    "publish": "yarn workspaces foreach --no-private exec \"npm publish --access public\"",
+    "version:packages:patch": "wsrun -p 'jay-*' -s -e --report --prefix version patch --deferred && yarn version apply --all",
+    "version:packages:minor": "wsrun -p 'jay-*' -s -e --report --prefix version minor --deferred && yarn version apply --all",
+    "version:packages:major": "wsrun -p 'jay-*' -s -e --report --prefix version major --deferred && yarn version apply --all"
   },
   "packageManager": "yarn@3.6.4",
   "workspaces": {
@@ -31,6 +36,7 @@
     ]
   },
   "devDependencies": {
+    "commander": "^14.0.0",
     "prettier": "^3.2.4",
     "replace-in-file": "^7.1.0",
     "wsrun": "^5.2.4"

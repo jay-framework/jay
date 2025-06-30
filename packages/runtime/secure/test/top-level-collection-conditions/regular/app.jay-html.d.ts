@@ -5,7 +5,7 @@ import {
     OnlyEventEmitters,
     RenderElement,
     RenderElementOptions,
-} from 'jay-runtime';
+} from '@jay-framework/runtime';
 import { Counter } from './counter';
 
 export interface Counter {

@@ -1,0 +1,5 @@
+name: headless-component
+tags:
+  - tag: content
+    type: data
+    dataType: string

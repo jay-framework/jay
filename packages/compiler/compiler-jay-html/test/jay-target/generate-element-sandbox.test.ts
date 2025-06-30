@@ -1,6 +1,6 @@
-import { readFixtureElementBridgeFile } from '../test-utils/file-utils';
+import { readFixtureElementBridgeFile, readFixtureFileRaw } from '../test-utils/file-utils';
 import { readFileAndGenerateElementBridgeFile } from '../test-utils/file-utils';
-import { prettify } from 'jay-compiler-shared';
+import { prettify } from '@jay-framework/compiler-shared';
 
 describe('generate jay-html element for sandbox', () => {
     describe('generate element bridges', () => {
@@ -62,6 +62,24 @@ describe('generate jay-html element for sandbox', () => {
                 const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
                 expect(await prettify(runtimeFile)).toEqual(
                     await readFixtureElementBridgeFile(folder),
+                );
+            });
+        });
+
+        describe('linked contract', () => {
+            it('generate element file with linked contract', async () => {
+                const folder = 'contracts/page-using-counter';
+                const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
+                expect(await prettify(runtimeFile)).toEqual(
+                    await prettify(await readFixtureFileRaw(folder, 'generated-element-bridge.ts')),
+                );
+            });
+
+            it('generate element file with linked contract with transitive enum imports', async () => {
+                const folder = 'contracts/page-using-named-counter';
+                const runtimeFile = await readFileAndGenerateElementBridgeFile(folder);
+                expect(await prettify(runtimeFile)).toEqual(
+                    await prettify(await readFixtureFileRaw(folder, 'generated-element-bridge.ts')),
                 );
             });
         });

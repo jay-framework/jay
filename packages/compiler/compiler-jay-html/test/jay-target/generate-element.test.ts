@@ -1,6 +1,10 @@
-import { readFixtureElementFile, readFixtureFile } from '../test-utils/file-utils';
+import {
+    readFixtureElementFile,
+    readFixtureFile,
+    readFixtureFileRaw,
+} from '../test-utils/file-utils';
 import { readFileAndGenerateElementFile } from '../test-utils/file-utils';
-import { prettify, RuntimeMode } from 'jay-compiler-shared';
+import { prettify, RuntimeMode } from '@jay-framework/compiler-shared';
 
 describe('generate jay-html element', () => {
     describe('basics', () => {
@@ -143,6 +147,13 @@ describe('generate jay-html element', () => {
 
         it('for collections with refs', async () => {
             const folder = 'collections/collection-with-refs';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        it('for collections with repeated refs', async () => {
+            const folder = 'collections/collection-with-repeating-refs';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
@@ -291,6 +302,28 @@ describe('generate jay-html element', () => {
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+    });
+
+    describe('linked contract', () => {
+        it('generate element file with linked contract', async () => {
+            const folder = 'contracts/page-using-counter';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(
+                await prettify(await readFixtureFileRaw(folder, 'page-using-counter.jay-html.ts')),
+            );
+        });
+
+        it('generate element file with linked contract with sub-contracts', async () => {
+            const folder = 'contracts/page-using-named-counter';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(
+                await prettify(
+                    await readFixtureFileRaw(folder, 'page-using-named-counter.jay-html.ts'),
+                ),
+            );
         });
     });
 });

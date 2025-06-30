@@ -8,15 +8,23 @@ import {
     JayType,
     JayTypeAlias,
     JayUnionType,
+    mkRefsTree,
     Ref,
+    RefsTree,
     RenderFragment,
-} from 'jay-compiler-shared';
+    hasRefs,
+    mkRef,
+} from '@jay-framework/compiler-shared';
 import { HTMLElement } from 'node-html-parser';
 import { htmlElementTagNameMap } from './html-element-tag-name-map';
+import { camelCase } from 'camel-case';
+import { Indent } from './indent';
+import { JayHeadlessImports } from './jay-html-source-file';
+import { Variables } from '../expressions/expression-compiler';
 
 const isComponentRef = (ref: Ref) =>
     ref.elementType instanceof JayComponentType || ref.elementType instanceof JayTypeAlias;
-const isCollectionRef = (ref: Ref) => ref.dynamicRef;
+const isCollectionRef = (ref: Ref) => ref.repeated;
 const isComponentCollectionRef = (ref: Ref) => isCollectionRef(ref) && isComponentRef(ref);
 
 enum RefsNeeded {
@@ -24,38 +32,68 @@ enum RefsNeeded {
     REF_AND_REFS,
 }
 export function renderRefsType(
-    refs: Ref[],
+    refs: RefsTree,
     refsType: string,
     generateTarget: GenerateTarget = GenerateTarget.jay,
 ) {
     let renderedRefs: string;
     let imports = Imports.none();
-    const refImportsInUse = new Set<string>();
-    const refsToRender = refs.filter((_) => !_.autoRef);
 
     const componentRefs = new Map<string, RefsNeeded>();
 
-    if (refsToRender.length > 0) {
-        const renderedReferences = refsToRender
-            .map((ref) => {
-                let referenceType: string;
-                if (isComponentCollectionRef(ref)) {
-                    referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`;
-                    componentRefs.set(ref.elementType.name, RefsNeeded.REF_AND_REFS);
-                } else if (isCollectionRef(ref)) {
-                    referenceType = `HTMLElementCollectionProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
-                    imports = imports.plus(Import.HTMLElementCollectionProxy);
-                } else if (isComponentRef(ref)) {
-                    referenceType = `${ref.elementType.name}Ref<${ref.viewStateType.name}>`;
-                    if (!componentRefs.has(ref.elementType.name))
-                        componentRefs.set(ref.elementType.name, RefsNeeded.REF);
-                } else {
-                    referenceType = `HTMLElementProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
-                    imports = imports.plus(Import.HTMLElementProxy);
-                }
-                return `  ${ref.ref}: ${referenceType}`;
-            })
-            .join(',\n');
+    if (hasRefs(refs, false)) {
+        const generateTypeForPath = (refsTree: RefsTree, indent: Indent): string => {
+            const renderedRefs = refsTree.refs
+                .filter((_) => !_.autoRef)
+                .map((ref) => {
+                    let referenceType: string;
+                    if (isComponentCollectionRef(ref)) {
+                        referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`;
+                        componentRefs.set(ref.elementType.name, RefsNeeded.REF_AND_REFS);
+                    } else if (isCollectionRef(ref)) {
+                        referenceType = `HTMLElementCollectionProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
+                        imports = imports.plus(Import.HTMLElementCollectionProxy);
+                    } else if (isComponentRef(ref)) {
+                        referenceType = `${ref.elementType.name}Ref<${ref.viewStateType.name}>`;
+                        if (!componentRefs.has(ref.elementType.name))
+                            componentRefs.set(ref.elementType.name, RefsNeeded.REF);
+                    } else {
+                        referenceType = `HTMLElementProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
+                        imports = imports.plus(Import.HTMLElementProxy);
+                    }
+                    return `${indent.curr}${ref.ref}: ${referenceType}`;
+                })
+                .join(',\n');
+
+            const childTypes = Object.entries(refsTree.children)
+                .filter(([_, childRefNode]) => {
+                    return childRefNode.imported || hasRefs(childRefNode, false);
+                })
+                .map(([childName, childRefNode]) => {
+                    if (childRefNode.imported) {
+                        const importedTypeName = childRefNode.repeated
+                            ? childRefNode.imported.repeatedRefsTypeName
+                            : childRefNode.imported.refsTypeName;
+                        return `${indent.curr}${childName}: ${importedTypeName}`;
+                    } else if (hasRefs(childRefNode, false)) {
+                        const childType = generateTypeForPath(
+                            childRefNode,
+                            indent.child(true, true),
+                        );
+                        return `${indent.curr}${childName}: ${childType}`;
+                    }
+                })
+                .join(',\n');
+
+            // Combine refs and child types
+            const allTypes = [renderedRefs, childTypes].filter(Boolean).join(',\n');
+
+            return `{
+${allTypes}
+${indent.lastLine}}`;
+        };
+
+        const mainType = generateTypeForPath(refs, new Indent('', true, true));
 
         const renderedComponentRefs = [...componentRefs].map(([componentName, refsNeeded]) => {
             const elementType =
@@ -76,12 +114,11 @@ export type ${componentName}Refs<ParentVS> =
             }
             return refTypes;
         });
+
         renderedRefs = `${renderedComponentRefs.join('\n')}
-export interface ${refsType} {
-${renderedReferences}
-}`;
+export interface ${refsType} ${mainType}`;
     } else renderedRefs = `export interface ${refsType} {}`;
-    return { imports, renderedRefs, refImportsInUse };
+    return { imports, renderedRefs };
 }
 
 export function elementNameToJayType(element: HTMLElement): JayType {
@@ -90,78 +127,205 @@ export function elementNameToJayType(element: HTMLElement): JayType {
         : new JayHTMLType('HTMLElement');
 }
 
-export function newAutoRefNameGenerator() {
-    let nextId = 1;
-    return function (): string {
-        return 'aR' + nextId++;
-    };
+export class RefNameGenerator {
+    private nextId: number = 1;
+    private constNamesToVariables: Map<string, Variables> = new Map();
+
+    newAutoRefNameGenerator() {
+        return 'aR' + this.nextId++;
+    }
+
+    newConstantName(refName: string, variables: Variables): string {
+        let suffix = 2;
+        let constName = camelCase(`ref ${refName}`);
+        while (this.constNamesToVariables.has(constName)) {
+            if (this.constNamesToVariables.get(constName) === variables) {
+                return constName;
+            }
+            constName = camelCase(`ref ${refName}${suffix++}`);
+        }
+        this.constNamesToVariables.set(constName, variables);
+        return constName;
+    }
 }
 
-export function optimizeRefs({
-    rendered,
-    imports,
-    validations,
-    refs,
-}: RenderFragment): RenderFragment {
-    const mergedRefsMap = refs.reduce((refsMap, ref) => {
-        if (refsMap[ref.ref] === ref.ref) {
-            const firstRef: Ref = refsMap[ref.ref];
-            if (!equalJayTypes(firstRef.viewStateType, ref.viewStateType))
-                validations.push(
-                    `invalid usage of refs: the ref [${ref.ref}] is used with two different view types [${firstRef.viewStateType.name}, ${ref.viewStateType.name}]`,
-                );
-            else if (firstRef.dynamicRef !== ref.dynamicRef)
-                validations.push(
-                    `invalid usage of refs: the ref [${ref.ref}] is used once with forEach and second time without`,
-                );
-            else {
-                if (!equalJayTypes(firstRef.elementType, ref.elementType)) {
-                    if (firstRef.elementType instanceof JayUnionType) {
-                        if (!firstRef.elementType.hasType(ref.elementType))
+function markAutoOnImportedRefs(
+    deDuplicated: RefsTree,
+    headlessImports: JayHeadlessImports[],
+): RefsTree {
+    const importKeys = headlessImports.map((_) => _.key);
+    const mappedRefs = deDuplicated.refs.map((ref) => {
+        const isRefOfImportedHeadlessContract = !!importKeys.find((key) =>
+            ref.originalName.startsWith(`${key}.`),
+        );
+        if (isRefOfImportedHeadlessContract)
+            return mkRef(
+                ref.ref,
+                ref.originalName,
+                ref.constName,
+                ref.repeated,
+                true,
+                ref.viewStateType,
+                ref.elementType,
+            );
+        else return ref;
+    });
+    const mappedChildren = Object.fromEntries(
+        Object.entries(deDuplicated.children).map(([key, value]) => [
+            key,
+            markAutoOnImportedRefs(value, headlessImports),
+        ]),
+    );
+    return mkRefsTree(
+        mappedRefs,
+        mappedChildren,
+        deDuplicated.repeated,
+        deDuplicated?.imported?.refsTypeName,
+        deDuplicated?.imported?.repeatedRefsTypeName,
+    );
+}
+
+export function optimizeRefs(
+    { rendered, imports, validations, refs }: RenderFragment,
+    headlessImports: JayHeadlessImports[] = [],
+): RenderFragment {
+    const deDuplicateRefsTree = (refs: RefsTree): RefsTree => {
+        const mergedRefsMap = refs.refs.reduce((refsMap, ref) => {
+            if (refsMap[ref.ref] === ref.ref) {
+                const firstRef: Ref = refsMap[ref.ref];
+                if (!equalJayTypes(firstRef.viewStateType, ref.viewStateType))
+                    validations.push(
+                        `invalid usage of refs: the ref [${ref.ref}] is used with two different view types [${firstRef.viewStateType.name}, ${ref.viewStateType.name}]`,
+                    );
+                else if (firstRef.repeated !== ref.repeated)
+                    validations.push(
+                        `invalid usage of refs: the ref [${ref.ref}] is used once with forEach and second time without`,
+                    );
+                else {
+                    if (!equalJayTypes(firstRef.elementType, ref.elementType)) {
+                        if (firstRef.elementType instanceof JayUnionType) {
+                            if (!firstRef.elementType.hasType(ref.elementType))
+                                firstRef.elementType = new JayUnionType([
+                                    ...firstRef.elementType.ofTypes,
+                                    ref.elementType,
+                                ]);
+                        } else
                             firstRef.elementType = new JayUnionType([
-                                ...firstRef.elementType.ofTypes,
+                                firstRef.elementType,
                                 ref.elementType,
                             ]);
-                    } else
-                        firstRef.elementType = new JayUnionType([
-                            firstRef.elementType,
-                            ref.elementType,
-                        ]);
+                    }
                 }
-            }
-        } else refsMap[ref.ref] = ref;
-        return refsMap;
-    }, {});
+            } else refsMap[ref.ref] = ref;
+            return refsMap;
+        }, {});
+        const mergedRefs: Ref[] = Object.values(mergedRefsMap);
+        const optimizedChildren = Object.fromEntries(
+            Object.entries(refs.children).map(([key, child]) => [key, deDuplicateRefsTree(child)]),
+        );
 
-    const mergedRefs: Ref[] = Object.values(mergedRefsMap);
-    return new RenderFragment(rendered, imports, validations, mergedRefs);
+        return mkRefsTree(
+            mergedRefs,
+            optimizedChildren,
+            refs.repeated,
+            refs?.imported?.refsTypeName,
+            refs?.imported?.repeatedRefsTypeName,
+        );
+    };
+
+    const deDuplicated = deDuplicateRefsTree(refs);
+    const markedAutoOnImported = markAutoOnImportedRefs(deDuplicated, headlessImports);
+    const importedRefs = Object.fromEntries(headlessImports.map((_) => [_.key, _.refs]));
+    const combined = mkRefsTree(
+        markedAutoOnImported.refs,
+        { ...markedAutoOnImported.children, ...importedRefs },
+        markedAutoOnImported.repeated,
+    );
+    return new RenderFragment(rendered, imports, validations, combined);
 }
 
-export function renderRefsForReferenceManager(refs: Ref[]) {
-    const elemRefs = refs.filter((_) => !isComponentRef(_) && !isCollectionRef(_));
-    const elemCollectionRefs = refs.filter((_) => !isComponentRef(_) && isCollectionRef(_));
-    const compRefs = refs.filter((_) => isComponentRef(_) && !isCollectionRef(_));
-    const compCollectionRefs = refs.filter((_) => isComponentRef(_) && isCollectionRef(_));
+export enum ReferenceManagerTarget {
+    element,
+    elementBridge,
+    sandboxRoot,
+}
 
-    const elemRefsDeclarations = elemRefs.map((ref) => `'${ref.ref}'`).join(', ');
-    const elemCollectionRefsDeclarations = elemCollectionRefs
-        .map((ref) => `'${ref.ref}'`)
-        .join(', ');
-    const compRefsDeclarations = compRefs.map((ref) => `'${ref.ref}'`).join(', ');
-    const compCollectionRefsDeclarations = compCollectionRefs
-        .map((ref) => `'${ref.ref}'`)
-        .join(', ');
-    const refVariables = [
-        ...elemRefs.map((ref) => ref.constName),
-        ...elemCollectionRefs.map((ref) => ref.constName),
-        ...compRefs.map((ref) => ref.constName),
-        ...compCollectionRefs.map((ref) => ref.constName),
-    ].join(', ');
-    return {
-        elemRefsDeclarations,
-        elemCollectionRefsDeclarations,
-        compRefsDeclarations,
-        compCollectionRefsDeclarations,
-        refVariables,
+const REFERENCE_MANAGER_TYPES: Record<
+    ReferenceManagerTarget,
+    { referenceManagerInit: string; imports: Imports }
+> = {
+    [ReferenceManagerTarget.element]: {
+        referenceManagerInit: 'ReferencesManager.for',
+        imports: Imports.for(Import.ReferencesManager),
+    },
+    [ReferenceManagerTarget.elementBridge]: {
+        referenceManagerInit: 'SecureReferencesManager.forElement',
+        imports: Imports.for(Import.SecureReferencesManager),
+    },
+    [ReferenceManagerTarget.sandboxRoot]: {
+        referenceManagerInit: 'SecureReferencesManager.forSandboxRoot',
+        imports: Imports.for(Import.SecureReferencesManager),
+    },
+};
+
+export function renderReferenceManager(
+    refs: RefsTree,
+    target: ReferenceManagerTarget,
+): { renderedRefsManager: string; refsManagerImport: Imports } {
+    const { referenceManagerInit, imports } = REFERENCE_MANAGER_TYPES[target];
+    const options = target === ReferenceManagerTarget.element ? 'options, ' : '';
+
+    const renderRefManagerNode = (name: string, refsTree: RefsTree) => {
+        const elemRefs = refsTree.refs.filter((_) => !isComponentRef(_) && !isCollectionRef(_));
+        const elemCollectionRefs = refsTree.refs.filter(
+            (_) => !isComponentRef(_) && isCollectionRef(_),
+        );
+        const compRefs = refsTree.refs.filter((_) => isComponentRef(_) && !isCollectionRef(_));
+        const compCollectionRefs = refsTree.refs.filter(
+            (_) => isComponentRef(_) && isCollectionRef(_),
+        );
+
+        const elemRefsDeclarations = elemRefs.map((ref) => `'${ref.ref}'`).join(', ');
+        const elemCollectionRefsDeclarations = elemCollectionRefs
+            .map((ref) => `'${ref.ref}'`)
+            .join(', ');
+        const compRefsDeclarations = compRefs.map((ref) => `'${ref.ref}'`).join(', ');
+        const compCollectionRefsDeclarations = compCollectionRefs
+            .map((ref) => `'${ref.ref}'`)
+            .join(', ');
+        const refVariables = [
+            ...elemRefs.map((ref) => ref.constName),
+            ...elemCollectionRefs.map((ref) => ref.constName),
+            ...compRefs.map((ref) => ref.constName),
+            ...compCollectionRefs.map((ref) => ref.constName),
+        ].join(', ');
+
+        const childRenderedRefManagers: string[] = [];
+        const childRefManagerMembers: string[] = [];
+        Object.entries(refsTree.children).forEach(([childName, childRefNode]) => {
+            const name = camelCase(`${childName}RefManager`);
+            const rendered = renderRefManagerNode(name, childRefNode);
+            childRefManagerMembers.push(`    ${childName}: ${name}`);
+            childRenderedRefManagers.push(rendered);
+        });
+
+        const childRefManager =
+            childRefManagerMembers.length > 0
+                ? `, {
+  ${childRefManagerMembers.join(',\n')}         
+}`
+                : '';
+
+        const renderedRefManager = `    const [${name}, [${refVariables}]] =
+        ${referenceManagerInit}(${options}[${elemRefsDeclarations}], [${elemCollectionRefsDeclarations}], [${compRefsDeclarations}], [${compCollectionRefsDeclarations}]${childRefManager});`;
+        return [...childRenderedRefManagers, renderedRefManager].join('\n');
     };
+
+    if (hasRefs(refs, true)) {
+        const renderedRefsManager = renderRefManagerNode('refManager', refs);
+        return { renderedRefsManager, refsManagerImport: imports };
+    } else {
+        const renderedRefsManager = `const [refManager, []] = ${referenceManagerInit}(${options}[], [], [], []);`;
+        return { renderedRefsManager, refsManagerImport: imports };
+    }
 }

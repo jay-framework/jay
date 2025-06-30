@@ -3,7 +3,7 @@ import { transform } from 'typescript';
 import { tsxComponentTransformer } from '../../../lib/tsx-file/transform/tsx-component-transformer';
 import { createTsxSourceFile } from '../../test-utils/ts-source-utils';
 import { parseTsxFile } from '../../../lib/tsx-file/parse/parse-tsx-file';
-import { WithValidations } from 'jay-compiler-shared';
+import { WithValidations } from '@jay-framework/compiler-shared';
 import { JayTsxSourceFile } from '../../../lib/tsx-file/jsx-block';
 
 describe('tsxComponentTransformer', () => {
@@ -20,7 +20,7 @@ describe('tsxComponentTransformer', () => {
     }
 
     const source = `
-import { createSignal, makeJayTsxComponent, Props } from 'jay-component';
+import { createSignal, makeJayTsxComponent, Props } from '@jay-framework/component';
 
 export interface CounterProps {
     initialValue: number;
@@ -49,7 +49,7 @@ export const Counter = makeJayTsxComponent(CounterConstructor);
         expect(validations).toEqual([]);
         expect(code).toEqual(`
 import { CounterElementRefs, render } from './counter.jay-html';
-import { makeJayComponent, Props, createMemo, createSignal } from 'jay-component';
+import { makeJayComponent, Props, createMemo, createSignal } from '@jay-framework/component';
 
 export interface CounterProps {
     initialValue: number;

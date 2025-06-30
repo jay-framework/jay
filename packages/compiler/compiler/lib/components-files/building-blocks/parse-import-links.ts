@@ -3,14 +3,15 @@ import {
     hasExtension,
     JAY_QUERY_MAIN_SANDBOX,
     JAY_QUERY_WORKER_SANDBOX,
-} from 'jay-compiler-shared';
-import { JayImportLink, JayImportName } from 'jay-compiler-shared';
+    JayImportLink,
+    JayImportName,
+    JayUnknown,
+} from '@jay-framework/compiler-shared';
 import {
     extractImportDeclarations,
     getImportName,
     getImportSpecifiers,
 } from '../ts-utils/extract-imports';
-import { JayUnknown } from 'jay-compiler-shared';
 
 export function parseImportLinks(sourceFile: ts.SourceFile): JayImportLink[] {
     const importDeclarations = extractImportDeclarations(sourceFile).filter((importDeclaration) =>

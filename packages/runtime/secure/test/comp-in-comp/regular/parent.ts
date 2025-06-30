@@ -1,6 +1,6 @@
 import { ParentElementRefs, render as ParentRender } from './parent.jay-html';
-import { makeJayComponent, Props, createSignal } from 'jay-component';
-import { REPLACE, patch } from 'jay-json-patch';
+import { makeJayComponent, Props, createSignal } from '@jay-framework/component';
+import { REPLACE, patch } from '@jay-framework/json-patch';
 
 export interface ParentProps {}
 function ParentConstructor({}: Props<ParentProps>, refs: ParentElementRefs) {

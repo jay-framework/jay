@@ -1,4 +1,4 @@
-import { JayElement } from 'jay-runtime';
+import { JayElement } from '@jay-framework/runtime';
 
 interface WithEvents {
     addEventListener(id: string, event: string, callback: (Event) => void);

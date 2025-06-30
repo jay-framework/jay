@@ -1,0 +1,48 @@
+{
+  "name": "@jay-framework/stack-server-runtime",
+  "version": "0.5.0",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.mts",
+  "directories": {
+    "lib": "lib"
+  },
+  "files": [
+    "dist",
+    "readme.md"
+  ],
+  "scripts": {
+    "build": "npm run build:js && npm run build:types",
+    "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
+    "build:js": "vite build",
+    "build:types": "tsup lib/index.ts --dts-only --format esm",
+    "build:check-types": "tsc",
+    "test-definitions": "jay-cli definitions test",
+    "test-runtime": "jay-cli runtime test",
+    "clean": "rimraf dist",
+    "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@jay-framework/compiler-jay-html": "workspace:^",
+    "@jay-framework/component": "workspace:^",
+    "@jay-framework/fullstack-component": "workspace:^",
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/stack-route-scanner": "workspace:^"
+  },
+  "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
+    "@jay-framework/jay-cli": "workspace:^",
+    "@jay-framework/stack-client-runtime": "workspace:^",
+    "@types/express": "^5.0.2",
+    "@types/node": "^22.15.21",
+    "nodemon": "^3.0.3",
+    "replace-in-file": "^7.1.0",
+    "rimraf": "^5.0.5",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11",
+    "vitest": "^1.2.1"
+  }
+}

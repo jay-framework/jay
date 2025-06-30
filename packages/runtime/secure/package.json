@@ -1,8 +1,13 @@
 {
-  "name": "jay-secure",
-  "version": "1.0.0",
+  "name": "@jay-framework/secure",
+  "version": "0.5.0",
   "type": "module",
+  "license": "Apache-2.0",
   "main": "dist/index.js",
+  "files": [
+    "dist",
+    "readme.md"
+  ],
   "scripts": {
     "build": "npm run build:js && npm run build:types",
     "build:watch": "npm run build:cli-link && npm run build:js -- --watch",
@@ -31,17 +36,17 @@
     "runtime:top-level-collection-conditions": "jay-cli runtime test/top-level-collection-conditions/regular"
   },
   "dependencies": {
-    "jay-component": "workspace:^",
-    "jay-json-patch": "workspace:^",
-    "jay-reactive": "workspace:^",
-    "jay-runtime": "workspace:^",
-    "jay-serialization": "workspace:^"
+    "@jay-framework/component": "workspace:^",
+    "@jay-framework/json-patch": "workspace:^",
+    "@jay-framework/reactive": "workspace:^",
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/serialization": "workspace:^"
   },
   "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
     "@testing-library/jest-dom": "^6.2.0",
     "@types/node": "^20.11.5",
     "caniuse-lite": "^1.0.30001579",
-    "jay-dev-environment": "workspace:^",
     "npm-run-all2": "^6.1.1",
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",

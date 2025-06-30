@@ -1,4 +1,4 @@
-import { withContext } from 'jay-runtime';
+import { withContext } from '@jay-framework/runtime';
 import { COUNT_CONTEXT, mkContext } from './context-tests-components/number-context';
 import { LabelAndButtonComp } from './context-tests-components/label-and-button-component';
 import { App } from './context-tests-components/app-component';

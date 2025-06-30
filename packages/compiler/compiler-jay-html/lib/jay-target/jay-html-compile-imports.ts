@@ -8,13 +8,12 @@ import {
     JayImportedType,
     JayImportLink,
     RuntimeMode,
-} from 'jay-compiler-shared';
+} from '@jay-framework/compiler-shared';
 
 export function renderImports(
     imports: Imports,
     importsFor: ImportsFor,
     componentImports: Array<JayImportLink>,
-    refImportsInUse: Set<string>,
     importerMode: RuntimeMode,
 ): string {
     const runtimeImport = imports.render(importsFor);
@@ -26,23 +25,6 @@ export function renderImports(
             .join(', ');
 
         let imports = [];
-        importStatement.names
-            .filter((symbol) => isImportedType(symbol.type) && isComponentType(symbol.type.type))
-            .map((symbol) => ((symbol.type as JayImportedType).type as JayComponentType).name)
-            .filter(
-                (compType) =>
-                    refImportsInUse.has(compType + 'ComponentType') ||
-                    refImportsInUse.has(compType + 'Refs'),
-            )
-            .map((compType) => {
-                let importSymbols = [];
-                if (refImportsInUse.has(compType + 'ComponentType'))
-                    importSymbols.push(compType + 'ComponentType');
-                if (refImportsInUse.has(compType + 'Refs')) importSymbols.push(compType + 'Refs');
-                imports.push(
-                    `import {${importSymbols.join(', ')}} from "${importStatement.module}-refs";`,
-                );
-            });
         imports.push(
             `import {${symbols}} from "${importStatement.module}${getModeFileExtension(
                 importStatement.sandbox,
