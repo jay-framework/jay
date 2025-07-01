@@ -56,7 +56,7 @@ If you're working in a design-development team:
 
 1. **Read [Design Philosophy](./design-philosophy.md)** - Understand the collaborative approach
 2. **Study [Core Concepts](./core-concepts.md)** - Learn about contracts and separation of concerns
-4. **Explore [Examples](../examples/basic.md)** - See team workflow patterns
+3. **Explore [Examples](../examples/basic.md)** - See team workflow patterns
 
 ## Prerequisites
 

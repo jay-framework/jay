@@ -41,7 +41,6 @@ Designer (Figma) → Export Assets → Developer (Code) → Manual Implementatio
 
 Jay is built around the principle that **design and code should share a contract**.
 
-
 ```yaml
 # contract as YAML
 name: Component with Button
@@ -52,21 +51,27 @@ tags:
     type: interactive
     elementType: HTMLButtonElement
 ```
+
 ```typescript
 // The contract defines the interface
 interface ComponentWithButtonViewState {
-    text: string;         // What data the UI needs
-    disabled: string;
+  text: string; // What data the UI needs
+  disabled: string;
 }
 interface ComponentWithButtonRefs {
-    button: HTMLElementProxy<ComponentWithButtonViewState, HTMLButtonElement>;    // Reference to UI element
+  button: HTMLElementProxy<ComponentWithButtonViewState, HTMLButtonElement>; // Reference to UI element
 }
-type ComponentWithButtonContract = JayContract<ComponentWithButtonViewState, ComponentWithButtonRefs>
+type ComponentWithButtonContract = JayContract<
+  ComponentWithButtonViewState,
+  ComponentWithButtonRefs
+>;
 ```
+
 ```html
 <!-- Design implements the contract-->
-<button ref="button" disabled={disabled}>{text}</button>
+<button ref="button" disabled="{disabled}">{text}</button>
 ```
+
 ```typescript
 // Code implements the contract
 function ComponentWithButtonConstructor(props, refs) {
