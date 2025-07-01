@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/jay-cli",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "license": "Apache-2.0",
   "main": "dist/index.js",
   "bin": "dist/index.js",
