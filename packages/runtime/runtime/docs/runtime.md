@@ -203,6 +203,58 @@ at which
 
 - `propertyValue` - a function that renders the property value from the current data item
 
+## injectHeadLinks
+
+The `injectHeadLinks` function injects `<link>` elements into the document head. This is primarily used by the Jay compiler to automatically inject head links defined in Jay-HTML files.
+
+The function is used in client only use cases. For jay-stack, it is expected that slowly or fast rendering will handle links and this function will not be used.
+
+```typescript
+import { injectHeadLinks, HeadLink } from '@jay-framework/runtime';
+
+// Basic usage
+injectHeadLinks([
+  { rel: 'stylesheet', href: 'styles/main.css' },
+  { rel: 'icon', href: '/favicon.ico' },
+]);
+
+// With additional attributes
+injectHeadLinks([
+  {
+    rel: 'preconnect',
+    href: 'https://fonts.googleapis.com',
+    attributes: { crossorigin: '' },
+  },
+  {
+    rel: 'alternate',
+    href: '/feed.xml',
+    attributes: {
+      type: 'application/rss+xml',
+      title: 'RSS Feed',
+    },
+  },
+]);
+```
+
+The `HeadLink` interface:
+
+```typescript
+interface HeadLink {
+  rel: string;
+  href: string;
+  attributes?: Record<string, string>;
+}
+```
+
+**Features**:
+
+- **Duplicate Prevention**: Automatically prevents duplicate links by checking both `href` and `rel` attributes
+- **Attribute Support**: Supports all standard HTML link attributes via the `attributes` property
+- **Safe Injection**: Gracefully handles missing `document.head` and other edge cases
+- **Runtime Only**: Designed for browser environments where `document` is available
+
+**Generated Code**: The Jay compiler automatically generates calls to `injectHeadLinks` when Jay-HTML files contain `<link>` elements in the `<head>` section.
+
 ## Jay Component
 
 Jay Components are logic wrappers over a Jay Element, and can be coded using any coding methodology. They have to

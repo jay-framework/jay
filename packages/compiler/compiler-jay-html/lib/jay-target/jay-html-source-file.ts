@@ -16,6 +16,12 @@ export interface JayHeadlessImports {
     codeLink: JayImportLink;
 }
 
+export interface JayHtmlHeadLink {
+    rel: string;
+    href: string;
+    attributes: Record<string, string>;
+}
+
 export interface JayHtmlSourceFile extends CompilerSourceFile {
     format: SourceFileFormat.JayHtml;
     baseElementName: string;
@@ -23,4 +29,5 @@ export interface JayHtmlSourceFile extends CompilerSourceFile {
     body: HTMLElement;
     namespaces: JayHtmlNamespace[];
     headlessImports: JayHeadlessImports[];
+    headLinks: JayHtmlHeadLink[];
 }

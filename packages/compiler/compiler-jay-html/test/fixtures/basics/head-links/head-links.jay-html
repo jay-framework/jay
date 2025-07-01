@@ -1,0 +1,22 @@
+<html>
+<head>
+    <!-- Regular head links that should be injected -->
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="canonical" href="https://example.com/current-page">
+    <link rel="manifest" href="/manifest.json">
+
+    <script type="application/jay-data">
+data:
+   title: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+    <p>This tests head links injection</p>
+</div>
+</body>
+</html> 

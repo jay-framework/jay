@@ -34,7 +34,12 @@ import {
 } from '../expressions/expression-compiler';
 import { camelCase } from 'camel-case';
 
-import { JayHeadlessImports, JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
+import {
+    JayHeadlessImports,
+    JayHtmlNamespace,
+    JayHtmlSourceFile,
+    JayHtmlHeadLink,
+} from './jay-html-source-file';
 import { ensureSingleChildElement, isConditional, isForEach } from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
@@ -448,6 +453,24 @@ function processImportedHeadless(headlessImports: JayHeadlessImports[]): Map<str
     return result;
 }
 
+function renderHeadLinksArray(headLinks: JayHtmlHeadLink[]): string {
+    if (headLinks.length === 0) {
+        return '[]';
+    }
+
+    const linksCode = headLinks
+        .map((link) => {
+            const attributesCode =
+                Object.keys(link.attributes).length > 0
+                    ? `, attributes: ${JSON.stringify(link.attributes)}`
+                    : '';
+            return `{ rel: ${JSON.stringify(link.rel)}, href: ${JSON.stringify(link.href)}${attributesCode} }`;
+        })
+        .join(', ');
+
+    return `[${linksCode}]`;
+}
+
 function renderFunctionImplementation(
     types: JayType,
     rootBodyElement: HTMLElement,
@@ -456,6 +479,7 @@ function renderFunctionImplementation(
     namespaces: JayHtmlNamespace[],
     headlessImports: JayHeadlessImports[],
     importerMode: RuntimeMode,
+    headLinks: JayHtmlHeadLink[] = [],
 ): {
     renderedRefs: string;
     renderedElement: string;
@@ -496,6 +520,11 @@ function renderFunctionImplementation(
         .plus(Import.RenderElement)
         .plus(Import.ReferencesManager)
         .plus(Import.jayContract);
+
+    if (headLinks.length > 0) {
+        imports = imports.plus(Import.injectHeadLinks);
+    }
+
     const { imports: refImports, renderedRefs } = renderRefsType(renderedRoot.refs, refsType);
     imports = imports.plus(refImports);
 
@@ -521,9 +550,16 @@ ${Indent.forceIndent(code, 4)},
         ReferenceManagerTarget.element,
     );
 
+    // Generate head links injection code
+    const headLinksInjection =
+        headLinks.length > 0
+            ? `    injectHeadLinks(${renderHeadLinksArray(headLinks)});
+    `
+            : '';
+
     const body = `export function render(options?: RenderElementOptions): ${preRenderType} {
 ${renderedRefsManager}    
-    const render = (viewState: ${viewStateType}) => ConstructContext.withRootContext(
+${headLinksInjection}const render = (viewState: ${viewStateType}) => ConstructContext.withRootContext(
         viewState, refManager,
         () => ${renderedRoot.rendered.trim()}
     ) as ${elementType};
@@ -759,6 +795,7 @@ export function generateElementDefinitionFile(
                 jayFile.namespaces,
                 jayFile.headlessImports,
                 RuntimeMode.WorkerTrusted,
+                jayFile.headLinks,
             );
         return [
             renderImports(
@@ -790,6 +827,7 @@ export function generateElementFile(
         jayFile.namespaces,
         jayFile.headlessImports,
         importerMode,
+        jayFile.headLinks,
     );
     const renderedFile = [
         renderImports(
@@ -825,6 +863,7 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
         jayFile.namespaces,
         jayFile.headlessImports,
         RuntimeMode.WorkerSandbox,
+        jayFile.headLinks,
     );
     let renderedBridge = renderBridge(
         jayFile.types,

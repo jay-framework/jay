@@ -256,6 +256,11 @@ export const Import = {
         ImportsFor.definition,
         ImportsFor.elementSandbox,
     ),
+    injectHeadLinks: importStatementFragment(
+        JAY_RUNTIME,
+        'injectHeadLinks',
+        ImportsFor.implementation,
+    ),
 };
 
 export class Imports {

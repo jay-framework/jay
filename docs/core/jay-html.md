@@ -171,6 +171,219 @@ Jay-HTML files can import other components using special script tags.
 - `name` - Name of the component `const` to import, created using `makeJayStackComponent`
 - `key` - Attribute name under which the imported component's data and Refs are nested
 
+## Head Links
+
+Jay-HTML supports adding `<link>` elements to the document head for resources like stylesheets, icons, and other external resources. These links are automatically injected into the document head when the component is rendered.
+
+### Basic Head Links
+
+Add `<link>` elements directly in the `<head>` section:
+
+```html
+<html>
+  <head>
+    <link rel="stylesheet" href="styles/main.css" />
+    <link rel="icon" href="/favicon.ico" />
+
+    <script type="application/jay-data">
+      data:
+        title: string
+    </script>
+  </head>
+  <body>
+    <div>{title}</div>
+  </body>
+</html>
+```
+
+### Common Link Types
+
+#### Stylesheets
+
+```html
+<head>
+  <link rel="stylesheet" href="styles/main.css" />
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap"
+  />
+</head>
+```
+
+#### Icons and Favicons
+
+```html
+<head>
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+</head>
+```
+
+#### Preconnect and Preload
+
+```html
+<head>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" href="critical.css" as="style" />
+</head>
+```
+
+#### Web App Manifest
+
+```html
+<head>
+  <link rel="manifest" href="/manifest.json" />
+</head>
+```
+
+#### RSS Feeds
+
+```html
+<head>
+  <link rel="alternate" type="application/rss+xml" title="RSS Feed" href="/feed.xml" />
+</head>
+```
+
+### Link Attributes
+
+Head links support all standard HTML link attributes:
+
+```html
+<head>
+  <!-- Basic attributes -->
+  <link rel="stylesheet" href="styles/main.css" />
+
+  <!-- With type attribute -->
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+  <!-- With crossorigin -->
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- With title -->
+  <link rel="alternate" type="application/rss+xml" title="RSS Feed" href="/feed.xml" />
+
+  <!-- With media query -->
+  <link rel="stylesheet" href="styles/mobile.css" media="(max-width: 768px)" />
+</head>
+```
+
+### How It Works
+
+When Jay-HTML files contain `<link>` elements in the `<head>` section:
+
+1. **Parsing**: The compiler extracts all `<link>` elements from the head
+2. **Code Generation**: The generated TypeScript code imports `injectHeadLinks` from `@jay-framework/runtime`
+3. **Runtime Injection**: When the component renders, `injectHeadLinks` is called to inject the links into the document head
+4. **Duplicate Prevention**: The runtime prevents duplicate links by checking both `href` and `rel` attributes
+
+### Generated Code Example
+
+For a Jay-HTML file with head links:
+
+```html
+<html>
+  <head>
+    <link rel="stylesheet" href="styles/main.css" />
+    <link rel="icon" href="/favicon.ico" />
+
+    <script type="application/jay-data">
+      data:
+        title: string
+    </script>
+  </head>
+  <body>
+    <div>{title}</div>
+  </body>
+</html>
+```
+
+The generated TypeScript will include:
+
+```typescript
+import { injectHeadLinks } from '@jay-framework/runtime';
+
+// ... other imports and setup ...
+
+injectHeadLinks([
+  { rel: 'stylesheet', href: 'styles/main.css' },
+  { rel: 'icon', href: '/favicon.ico' },
+]);
+
+// ... rest of component code ...
+```
+
+### Best Practices
+
+#### 1. Use Relative Paths for Local Resources
+
+```html
+<!-- Good -->
+<link rel="stylesheet" href="styles/main.css" />
+<link rel="icon" href="/favicon.ico" />
+
+<!-- Avoid absolute paths for local resources -->
+<link rel="stylesheet" href="http://localhost:3000/styles/main.css" />
+```
+
+#### 2. Include Essential Resources
+
+```html
+<head>
+  <!-- Critical stylesheet -->
+  <link rel="stylesheet" href="styles/critical.css" />
+
+  <!-- Favicon -->
+  <link rel="icon" href="/favicon.ico" />
+
+  <!-- Web app manifest for PWA -->
+  <link rel="manifest" href="/manifest.json" />
+
+  <!-- Preconnect to external domains -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+</head>
+```
+
+#### 3. Optimize Performance
+
+```html
+<head>
+  <!-- Preconnect to external domains -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- Preload critical resources -->
+  <link rel="preload" href="fonts/inter.woff2" as="font" type="font/woff2" crossorigin />
+
+  <!-- Load non-critical stylesheets -->
+  <link rel="stylesheet" href="styles/non-critical.css" media="print" onload="this.media='all'" />
+</head>
+```
+
+#### 4. Handle Special Characters
+
+The compiler properly escapes special characters in URLs and attributes:
+
+```html
+<head>
+  <!-- URLs with query parameters -->
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400&display=swap"
+  />
+
+  <!-- Titles with quotes -->
+  <link rel="alternate" title='Site "Main" Page' href="/page with spaces.html" />
+</head>
+```
+
+### Limitations
+
+- **Import Links Excluded**: `<link rel="import">` elements are not injected as head links (they're handled separately for component imports)
+- **Dynamic Links**: Head links are static and cannot be dynamically generated based on component state
+- **Runtime Only**: Head links are only injected when the component is rendered in a browser environment
+
 ## Template Syntax
 
 Jay-HTML extends HTML with template syntax for dynamic content.

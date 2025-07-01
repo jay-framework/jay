@@ -439,5 +439,213 @@ describe('compiler', () => {
                 'failed to parse import names for module ./module - File not found.',
             );
         });
+
+        describe('head links parsing', () => {
+            it('should parse various head link types', async () => {
+                let jayFile = await parseJayFile(
+                    jayFileWith(
+                        `data:
+                            |   title: string`,
+                        '<body></body>',
+                        `<link rel="stylesheet" href="styles/main.css">
+                          |<link rel="preconnect" href="https://fonts.googleapis.com">
+                          |<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                          |<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;700&display=swap">
+                          |<link rel="icon" type="image/x-icon" href="/favicon.ico">
+                          |<link rel="canonical" href="https://example.com/current-page">
+                          |<link rel="alternate" type="application/rss+xml" title="RSS Feed" href="/feed.xml">
+                          |<link rel="manifest" href="/manifest.json">`,
+                    ),
+                    'Base',
+                    '',
+                    {},
+                    JAY_IMPORT_RESOLVER,
+                );
+
+                expect(jayFile.validations).toEqual([]);
+                expect(jayFile.val.headLinks).toHaveLength(8);
+
+                // Test stylesheet link
+                expect(jayFile.val.headLinks[0]).toEqual({
+                    rel: 'stylesheet',
+                    href: 'styles/main.css',
+                    attributes: {},
+                });
+
+                // Test preconnect with crossorigin
+                expect(jayFile.val.headLinks[2]).toEqual({
+                    rel: 'preconnect',
+                    href: 'https://fonts.gstatic.com',
+                    attributes: { crossorigin: '' },
+                });
+
+                // Test icon with type
+                expect(jayFile.val.headLinks[4]).toEqual({
+                    rel: 'icon',
+                    href: '/favicon.ico',
+                    attributes: { type: 'image/x-icon' },
+                });
+
+                // Test alternate with multiple attributes
+                expect(jayFile.val.headLinks[6]).toEqual({
+                    rel: 'alternate',
+                    href: '/feed.xml',
+                    attributes: { type: 'application/rss+xml', title: 'RSS Feed' },
+                });
+            });
+
+            it('should exclude import links from head links', async () => {
+                let jayFile = await parseJayFile(
+                    jayFileWith(
+                        `data:
+                            |   title: string`,
+                        '<body></body>',
+                        `<link rel="stylesheet" href="styles/main.css">
+                          |<link rel="icon" href="/favicon.ico">`,
+                    ),
+                    'Base',
+                    '',
+                    {},
+                    JAY_IMPORT_RESOLVER,
+                );
+
+                expect(jayFile.validations).toEqual([]);
+                expect(jayFile.val.headLinks).toHaveLength(2);
+                expect(jayFile.val.imports).toHaveLength(0);
+
+                // Only non-import links should be in headLinks
+                expect(jayFile.val.headLinks[0].rel).toBe('stylesheet');
+                expect(jayFile.val.headLinks[1].rel).toBe('icon');
+            });
+
+            it('should handle empty head links', async () => {
+                let jayFile = await parseJayFile(
+                    jayFileWith(
+                        `data:
+                            |   title: string`,
+                        '<body></body>',
+                    ),
+                    'Base',
+                    '',
+                    {},
+                    JAY_IMPORT_RESOLVER,
+                );
+
+                expect(jayFile.validations).toEqual([]);
+                expect(jayFile.val.headLinks).toHaveLength(0);
+                expect(jayFile.val.imports).toHaveLength(0);
+            });
+
+            it('should handle links with no attributes', async () => {
+                let jayFile = await parseJayFile(
+                    jayFileWith(
+                        `data:
+                            |   title: string`,
+                        '<body></body>',
+                        `<link rel="stylesheet" href="styles/main.css">
+                          |<link rel="preconnect" href="https://fonts.googleapis.com">`,
+                    ),
+                    'Base',
+                    '',
+                    {},
+                    JAY_IMPORT_RESOLVER,
+                );
+
+                expect(jayFile.validations).toEqual([]);
+                expect(jayFile.val.headLinks).toHaveLength(2);
+
+                expect(jayFile.val.headLinks[0]).toEqual({
+                    rel: 'stylesheet',
+                    href: 'styles/main.css',
+                    attributes: {},
+                });
+
+                expect(jayFile.val.headLinks[1]).toEqual({
+                    rel: 'preconnect',
+                    href: 'https://fonts.googleapis.com',
+                    attributes: {},
+                });
+            });
+
+            it('should handle links with missing rel or href', async () => {
+                let jayFile = await parseJayFile(
+                    jayFileWith(
+                        `data:
+                            |   title: string`,
+                        '<body></body>',
+                        `<link href="styles/main.css">
+                          |<link rel="stylesheet">
+                          |<link>`,
+                    ),
+                    'Base',
+                    '',
+                    {},
+                    JAY_IMPORT_RESOLVER,
+                );
+
+                expect(jayFile.validations).toEqual([]);
+                expect(jayFile.val.headLinks).toHaveLength(3);
+
+                // Missing rel should default to empty string
+                expect(jayFile.val.headLinks[0]).toEqual({
+                    rel: '',
+                    href: 'styles/main.css',
+                    attributes: {},
+                });
+
+                // Missing href should default to empty string
+                expect(jayFile.val.headLinks[1]).toEqual({
+                    rel: 'stylesheet',
+                    href: '',
+                    attributes: {},
+                });
+
+                // Missing both should default to empty strings
+                expect(jayFile.val.headLinks[2]).toEqual({
+                    rel: '',
+                    href: '',
+                    attributes: {},
+                });
+            });
+
+            it('should handle complex attributes correctly', async () => {
+                let jayFile = await parseJayFile(
+                    jayFileWith(
+                        `data:
+                            |   title: string`,
+                        '<body></body>',
+                        `<link rel="alternate" hreflang="es" href="https://example.com/es/" title="Spanish Version" type="text/html">
+                          |<link rel="icon" sizes="32x32" type="image/png" href="/favicon-32x32.png" id="favicon32">`,
+                    ),
+                    'Base',
+                    '',
+                    {},
+                    JAY_IMPORT_RESOLVER,
+                );
+
+                expect(jayFile.validations).toEqual([]);
+                expect(jayFile.val.headLinks).toHaveLength(2);
+
+                expect(jayFile.val.headLinks[0]).toEqual({
+                    rel: 'alternate',
+                    href: 'https://example.com/es/',
+                    attributes: {
+                        hreflang: 'es',
+                        title: 'Spanish Version',
+                        type: 'text/html',
+                    },
+                });
+
+                expect(jayFile.val.headLinks[1]).toEqual({
+                    rel: 'icon',
+                    href: '/favicon-32x32.png',
+                    attributes: {
+                        sizes: '32x32',
+                        type: 'image/png',
+                        id: 'favicon32',
+                    },
+                });
+            });
+        });
     });
 });

@@ -1,0 +1,59 @@
+<html>
+<head>
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="./styles/main.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500&display=swap">
+    
+    <!-- Icons and favicons -->
+    <link rel="icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    
+    <!-- Preconnect for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Web app manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- RSS feed -->
+    <link rel="alternate" type="application/rss+xml" title="RSS Feed" href="/feed.xml">
+    
+    <script type="application/jay-data">
+data:
+    title: string
+    description: string
+    </script>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h1>{title}</h1>
+        <p>{description}</p>
+    </header>
+    
+    <main>
+        <section class="demo-section">
+            <h2>Head Links Demo</h2>
+            <p>This page demonstrates various types of head links that are automatically injected by Jay:</p>
+            
+            <ul>
+                <li>Stylesheets (local and external)</li>
+                <li>Icons and favicons</li>
+                <li>Preconnect links for performance</li>
+                <li>Web app manifest</li>
+                <li>RSS feed links</li>
+            </ul>
+        </section>
+        
+        <section class="info-section">
+            <h3>How it works:</h3>
+            <p>The &lt;link&gt; elements in the &lt;head&gt; section of the Jay-HTML file are automatically parsed and injected into the document head when the component renders.</p>
+            
+            <h3>Check the browser:</h3>
+            <p>Open your browser's developer tools and inspect the &lt;head&gt; section to see the injected links!</p>
+        </section>
+    </main>
+</div>
+</body>
+</html> 

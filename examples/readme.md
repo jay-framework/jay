@@ -14,6 +14,10 @@ Sandboxed counter as a Jay Component running from a worker
 
 Sandboxed form as a Jay Component running from a worker
 
+### head-links-demo
+
+Demonstrates how Jay-HTML handles head links, showing various types of `<link>` elements that are automatically injected into the document head.
+
 ### mini-benchmark
 
 Sandboxed and non sandboxed versions of the jay benchmark

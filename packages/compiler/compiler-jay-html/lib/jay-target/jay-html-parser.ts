@@ -24,7 +24,12 @@ import { SourceFileFormat } from '@jay-framework/compiler-shared';
 import { JayImportLink, JayImportName } from '@jay-framework/compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
 
-import { JayHeadlessImports, JayHtmlNamespace, JayHtmlSourceFile } from './jay-html-source-file';
+import {
+    JayHeadlessImports,
+    JayHtmlNamespace,
+    JayHtmlSourceFile,
+    JayHtmlHeadLink,
+} from './jay-html-source-file';
 
 import { JayImportResolver } from './jay-import-resolver';
 import { contractToImportsViewStateAndRefs, EnumToImport } from '../contract';
@@ -303,6 +308,27 @@ function normalizeFilename(filename: string): string {
     return filename.replace('.jay-html', '');
 }
 
+function parseHeadLinks(root: HTMLElement): JayHtmlHeadLink[] {
+    const allLinks = root.querySelectorAll('head link');
+    return allLinks
+        .filter((link) => link.getAttribute('rel') !== 'import')
+        .map((link) => {
+            const attributes = { ...link.attributes };
+            const rel = attributes.rel || '';
+            const href = attributes.href || '';
+
+            // Remove rel and href from attributes since they're stored separately
+            delete attributes.rel;
+            delete attributes.href;
+
+            return {
+                rel,
+                href,
+                attributes,
+            };
+        });
+}
+
 export async function parseJayFile(
     html: string,
     filename: string,
@@ -338,6 +364,8 @@ export async function parseJayFile(
         ...headlessImports.flatMap((_) => _.contractLinks),
     ];
 
+    const headLinks = parseHeadLinks(root);
+
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
     let body = root.querySelector('body');
@@ -354,6 +382,7 @@ export async function parseJayFile(
             baseElementName,
             namespaces,
             headlessImports,
+            headLinks,
         } as JayHtmlSourceFile,
         validations,
     );

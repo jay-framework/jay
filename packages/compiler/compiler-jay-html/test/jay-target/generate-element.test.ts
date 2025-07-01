@@ -98,6 +98,13 @@ describe('generate jay-html element', () => {
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
+
+        it('head links injection', async () => {
+            const folder = 'basics/head-links';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
     });
 
     describe('conditions', () => {

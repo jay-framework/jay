@@ -486,3 +486,36 @@ export function normalizeMount(mounts: Array<MountFunc>): MountFunc {
         return noopMount;
     }
 }
+
+export interface HeadLink {
+    rel: string;
+    href: string;
+    attributes?: Record<string, string>;
+}
+
+// Todo for jay-stack, this needs to be part of the SSR / slowly / fast rendering flows
+export function injectHeadLinks(headLinks: HeadLink[]): void {
+    const head = document.head;
+    if (!head) return;
+
+    headLinks.forEach((linkData) => {
+        // Check if a link with the same href and rel already exists to avoid duplicates
+        const existingLink = head.querySelector(
+            `link[href="${linkData.href}"][rel="${linkData.rel}"]`,
+        );
+        if (existingLink) return;
+
+        const link = document.createElement('link');
+        link.rel = linkData.rel;
+        link.href = linkData.href;
+
+        // Set additional attributes
+        if (linkData.attributes) {
+            Object.entries(linkData.attributes).forEach(([key, value]) => {
+                link.setAttribute(key, value);
+            });
+        }
+
+        head.appendChild(link);
+    });
+}
