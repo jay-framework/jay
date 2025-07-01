@@ -35,15 +35,24 @@ Jay components are built around **contracts** that define:
 - **References**: Named UI elements that component logic can interact with
 - **Variants**: Design variations and states
 
+For designers, contracts are expressed as three types of tags in a design tool:
+- **Data tags**: Define the information displayed in the UI
+- **Interactive tags**: Define elements users can interact with
+- **Variant tags**: Define different visual states of the component
+
 ```typescript
 // The contract defines the interface
-interface CounterContract {
-  count: number;           // View state
-  increment: () => void;   // Component logic
-  decrement: () => void;   // Component logic
+interface CounterViewState {
+  count: number;         // Data to display
 }
-
-// UI design implements the contract
+interface CounterRefs {
+  increment: HTMLElementProxy<CounterViewState, HTMLButtonElement>;    // Reference to UI element
+  decrement: HTMLElementProxy<CounterViewState, HTMLButtonElement>;    // Reference to UI element
+}
+type CounterContract = JayContract<CounterViewState, CounterRefs>
+```
+```html
+<!-- UI design implements the contract -->
 <div>
   <button ref="decrement">-</button>
   <span>{count}</span>
@@ -167,15 +176,21 @@ Jay enforces unidirectional data flow:
 
 Components communicate through well-defined contracts:
 
+```html
+// Parent component provides data through view state
+<ChildComponent prop="{childProp}" />
+```
 ```typescript
-// Parent component provides data
-<ChildComponent data={parentData} />
-
-// Child component receives through contract
-interface ChildContract {
-  data: ParentData;
-  onUpdate: (newData: ParentData) => void;
+// Child component receives data through its contract
+interface ChildViewState {
+    childProp: string;         // Data to display
 }
+interface ChildRefs {
+    updateButton: HTMLElementProxy<ChildViewState, HTMLButtonElement>;    // Reference to UI element
+}
+type ChildContract = JayContract<ChildViewState, ChildRefs>
+// Events are handled by registering event listeners on refs in the parent component
+// The child component doesn't emit events through jay-html
 ```
 
 ## Type Safety

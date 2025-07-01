@@ -41,19 +41,35 @@ Designer (Figma) → Export Assets → Developer (Code) → Manual Implementatio
 
 Jay is built around the principle that **design and code should share a contract**.
 
+
+```yaml
+# contract as YAML
+name: Component with Button
+tags:
+  - tag: text
+  - tag: disabled
+  - tag: button
+    type: interactive
+    elementType: HTMLButtonElement
+```
 ```typescript
 // The contract defines the interface
-interface ButtonContract {
-  text: string;           // What data the UI needs
-  onClick: () => void;    // What actions the UI can trigger
-  disabled: boolean;      // What states the UI can be in
+interface ComponentWithButtonViewState {
+    text: string;         // What data the UI needs
+    disabled: string;
 }
-
-// Design implements the contract
+interface ComponentWithButtonRefs {
+    button: HTMLElementProxy<ComponentWithButtonViewState, HTMLButtonElement>;    // Reference to UI element
+}
+type ComponentWithButtonContract = JayContract<ComponentWithButtonViewState, ComponentWithButtonRefs>
+```
+```html
+<!-- Design implements the contract-->
 <button ref="button" disabled={disabled}>{text}</button>
-
+```
+```typescript
 // Code implements the contract
-function ButtonConstructor(props, refs) {
+function ComponentWithButtonConstructor(props, refs) {
   refs.button.onclick(() => props.onClick());
   return { text: props.text, disabled: props.disabled };
 }
@@ -195,19 +211,6 @@ Jay isolates components for security and performance.
 - **Maintainability** - clear boundaries between components
 - **Reusability** - components can be used in any context
 
-**Communication Pattern**:
-
-```typescript
-// Components communicate through explicit interfaces
-interface ParentContract {
-  childData: ChildData;
-  onChildUpdate: (data: ChildData) => void;
-}
-
-// No direct access to child internals
-// Only through defined contract methods
-```
-
 ## Design Trade-offs
 
 ### 1. Complexity vs. Flexibility
@@ -309,13 +312,6 @@ const MyComponent = makeJayComponent<MyComponentContract>(render, constructor);
 
 // 3. Use the component
 <MyComponent data={myData} actions={myActions} />
-```
-
-**Isolated Communication**:
-
-```typescript
-// Components communicate through explicit interfaces
-// No direct access to internal state or methods
 ```
 
 **Reactive State Management**:
