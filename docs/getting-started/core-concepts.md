@@ -36,6 +36,7 @@ Jay components are built around **contracts** that define:
 - **Variants**: Design variations and states
 
 For designers, contracts are expressed as three types of tags in a design tool:
+
 - **Data tags**: Define the information displayed in the UI
 - **Interactive tags**: Define elements users can interact with
 - **Variant tags**: Define different visual states of the component
@@ -43,14 +44,15 @@ For designers, contracts are expressed as three types of tags in a design tool:
 ```typescript
 // The contract defines the interface
 interface CounterViewState {
-  count: number;         // Data to display
+  count: number; // Data to display
 }
 interface CounterRefs {
-  increment: HTMLElementProxy<CounterViewState, HTMLButtonElement>;    // Reference to UI element
-  decrement: HTMLElementProxy<CounterViewState, HTMLButtonElement>;    // Reference to UI element
+  increment: HTMLElementProxy<CounterViewState, HTMLButtonElement>; // Reference to UI element
+  decrement: HTMLElementProxy<CounterViewState, HTMLButtonElement>; // Reference to UI element
 }
-type CounterContract = JayContract<CounterViewState, CounterRefs>
+type CounterContract = JayContract<CounterViewState, CounterRefs>;
 ```
+
 ```html
 <!-- UI design implements the contract -->
 <div>
@@ -177,18 +179,18 @@ Jay enforces unidirectional data flow:
 Components communicate through well-defined contracts:
 
 ```html
-// Parent component provides data through view state
-<ChildComponent prop="{childProp}" />
+// Parent component provides data through view state <ChildComponent prop="{childProp}" />
 ```
+
 ```typescript
 // Child component receives data through its contract
 interface ChildViewState {
-    childProp: string;         // Data to display
+  childProp: string; // Data to display
 }
 interface ChildRefs {
-    updateButton: HTMLElementProxy<ChildViewState, HTMLButtonElement>;    // Reference to UI element
+  updateButton: HTMLElementProxy<ChildViewState, HTMLButtonElement>; // Reference to UI element
 }
-type ChildContract = JayContract<ChildViewState, ChildRefs>
+type ChildContract = JayContract<ChildViewState, ChildRefs>;
 // Events are handled by registering event listeners on refs in the parent component
 // The child component doesn't emit events through jay-html
 ```
