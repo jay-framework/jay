@@ -161,13 +161,16 @@ interface EditorProtocol {
 interface DevServerProtocol {
   // Handle jay-html publication requests
   onPublish(callback: (params: {
-    route: string;
-    jayHtml: string;
-    name: string;
-  }) => Promise<{
-    success: boolean;
-    filePath?: string;
-    error?: string;
+    pages: [{
+        route: string;
+        jayHtml: string;
+        name: string;
+  }]}) => Promise<{
+    status: [{
+        success: boolean;
+        filePath?: string;
+        error?: string;
+    }]
   }>): void;
 
   // Handle image save requests
