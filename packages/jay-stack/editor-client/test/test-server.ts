@@ -135,9 +135,12 @@ export class TestServer {
         } catch (error) {
           const errorResponse = {
             id: message.id,
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            payload: {
+              type: message.payload.type,
+              success: false,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            }
           };
           socket.emit('protocol-response', errorResponse);
         }
@@ -150,20 +153,23 @@ export class TestServer {
   }
 
   private async handleProtocolMessage(message: any): Promise<any> {
-    const { id, type, params } = message;
-    const handler = this.protocolHandlers.get(type);
+    const { id, payload } = message;
+    const handler = this.protocolHandlers.get(payload.type);
 
     if (!handler) {
-      throw new Error(`No handler registered for message type: ${type}`);
+      throw new Error(`No handler registered for message type: ${payload.type}`);
     }
 
-    const result = await handler(params);
+    const result = await handler(payload);
     
     return {
       id,
-      success: true,
-      data: result,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      payload: {
+        type: payload.type,
+        success: true,
+        ...result
+      }
     };
   }
 }

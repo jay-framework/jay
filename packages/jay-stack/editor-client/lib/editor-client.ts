@@ -39,15 +39,15 @@ export class EditorClient implements EditorProtocol {
 
   // EditorProtocol implementation - delegate to ConnectionManager
   async publish(params: PublishMessage): Promise<PublishResponse> {
-    return this.connectionManager.sendMessage('publish', params);
+    return this.connectionManager.sendMessage<PublishMessage>(params);
   }
 
   async saveImage(params: SaveImageMessage): Promise<SaveImageResponse> {
-    return this.connectionManager.sendMessage('saveImage', params);
+    return this.connectionManager.sendMessage<SaveImageMessage>(params);
   }
 
   async hasImage(params: HasImageMessage): Promise<HasImageResponse> {
-    return this.connectionManager.sendMessage('hasImage', params);
+    return this.connectionManager.sendMessage<HasImageMessage>(params);
   }
 
   // Get access to the underlying connection manager if needed

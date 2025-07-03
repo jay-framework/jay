@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { EditorClient, createEditorClient, createEditorClientWithConnectionManager } from '../lib';
 import { ConnectionManager, createConnectionManager } from '../lib';
 import { createTestServer, TestServer } from './test-server';
+import type { PublishMessage } from '@jay-framework/editor-protocol';
 
 describe('Editor Client', () => {
   let client: EditorClient;
@@ -47,10 +48,11 @@ describe('Editor Client', () => {
 
   it('should publish jay-html files', async () => {
     // Set up test server handler
-    testServer.onPublish(async (params) => {
-      expect(params.pages).toHaveLength(1);
-      expect(params.pages[0].route).toBe('/test');
-      expect(params.pages[0].name).toBe('test-page');
+    testServer.onPublish(async (msg) => {
+      expect(msg.type).toBe('publish');
+      expect(msg.pages).toHaveLength(1);
+      expect(msg.pages[0].route).toBe('/test');
+      expect(msg.pages[0].name).toBe('test-page');
       return {
         status: [{ success: true, filePath: '/test/test-page.jay-html' }]
       };
@@ -59,6 +61,7 @@ describe('Editor Client', () => {
     await client.connect();
 
     const result = await client.publish({
+      type: 'publish',
       pages: [{
         route: '/test',
         jayHtml: '<div>Test content</div>',
@@ -77,9 +80,10 @@ describe('Editor Client', () => {
 
   it('should save images', async () => {
     // Set up test server handler
-    testServer.onSaveImage(async (params) => {
-      expect(params.imageId).toBe('test-image');
-      expect(params.imageData).toContain('data:image/png;base64');
+    testServer.onSaveImage(async (msg) => {
+      expect(msg.type).toBe('saveImage');
+      expect(msg.imageId).toBe('test-image');
+      expect(msg.imageData).toContain('data:image/png;base64');
       return {
         success: true,
         imageUrl: '/assets/test-image.png'
@@ -89,6 +93,7 @@ describe('Editor Client', () => {
     await client.connect();
 
     const result = await client.saveImage({
+      type: 'saveImage',
       imageId: 'test-image',
       imageData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
     });
@@ -99,8 +104,9 @@ describe('Editor Client', () => {
 
   it('should check if images exist', async () => {
     // Set up test server handler
-    testServer.onHasImage(async (params) => {
-      expect(params.imageId).toBe('test-image');
+    testServer.onHasImage(async (msg) => {
+      expect(msg.type).toBe('hasImage');
+      expect(msg.imageId).toBe('test-image');
       return {
         exists: true,
         imageUrl: '/assets/test-image.png'
@@ -110,6 +116,7 @@ describe('Editor Client', () => {
     await client.connect();
 
     const result = await client.hasImage({
+      type: 'hasImage',
       imageId: 'test-image'
     });
 
@@ -126,6 +133,7 @@ describe('Editor Client', () => {
     await client.connect();
 
     await expect(client.publish({
+      type: 'publish',
       pages: [{
         route: '/test',
         jayHtml: '<div>Test</div>',
@@ -192,13 +200,15 @@ describe('Connection Manager', () => {
 
   it('should send messages when connected', async () => {
     // Set up test server handler
-    testServer.onPublish(async (params) => {
+    testServer.onPublish(async (msg) => {
+      expect(msg.type).toBe('publish');
       return { status: [{ success: true, filePath: '/test/file.jay-html' }] };
     });
 
     await manager.connect();
 
-    const result = await manager.sendMessage('publish', {
+    const result = await manager.sendMessage<PublishMessage>({
+      type: 'publish',
       pages: [{
         route: '/test',
         jayHtml: '<div>Test</div>',

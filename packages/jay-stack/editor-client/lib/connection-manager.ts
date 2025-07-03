@@ -4,7 +4,13 @@ import type {
   ConnectionState, 
   ProtocolMessage, 
   ProtocolResponse,
-  PortDiscoveryResponse
+  PortDiscoveryResponse,
+  PublishMessage,
+  SaveImageMessage,
+  HasImageMessage,
+  PublishResponse,
+  SaveImageResponse,
+  HasImageResponse
 } from '@jay-framework/editor-protocol';
 
 export interface ConnectionManagerOptions {
@@ -78,10 +84,11 @@ export class ConnectionManager {
     return this.connectionState;
   }
 
-  async sendMessage<T>(
-    type: 'publish' | 'saveImage' | 'hasImage',
-    params: any
-  ): Promise<T> {
+  async sendMessage<T extends PublishMessage | SaveImageMessage | HasImageMessage>(
+    message: T
+  ): Promise<T extends PublishMessage ? PublishResponse : 
+                T extends SaveImageMessage ? SaveImageResponse : 
+                T extends HasImageMessage ? HasImageResponse : never> {
     if (this.connectionState !== 'connected') {
       throw new Error('Not connected to editor server');
     }
@@ -92,11 +99,10 @@ export class ConnectionManager {
 
     return new Promise((resolve, reject) => {
       const messageId = uuidv4();
-      const message: ProtocolMessage = {
+      const protocolMessage: ProtocolMessage = {
         id: messageId,
-        type,
-        params,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        payload: message
       };
 
       this.pendingRequests.set(messageId, { resolve, reject });
@@ -109,8 +115,8 @@ export class ConnectionManager {
         }
       }, this.scanTimeout);
 
-      this.socket!.emit('protocol-message', message);
-    });
+      this.socket!.emit('protocol-message', protocolMessage);
+    }) as any;
   }
 
   onConnectionStateChange(callback: (state: ConnectionState) => void): void {
@@ -218,10 +224,10 @@ export class ConnectionManager {
       const pendingRequest = this.pendingRequests.get(response.id);
       if (pendingRequest) {
         this.pendingRequests.delete(response.id);
-        if (response.success) {
-          pendingRequest.resolve(response.data);
+        if (response.payload.success) {
+          pendingRequest.resolve(response.payload);
         } else {
-          pendingRequest.reject(new Error(response.error || 'Unknown error'));
+          pendingRequest.reject(new Error(response.payload.error || 'Unknown error'));
         }
       }
     });

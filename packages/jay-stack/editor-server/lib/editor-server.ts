@@ -142,9 +142,12 @@ export class EditorServer implements DevServerProtocol {
         } catch (error) {
           const errorResponse: ProtocolResponse = {
             id: message.id,
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            payload: {
+              type: message.payload.type,
+              success: false,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            } as any
           };
           socket.emit('protocol-response', errorResponse);
         }
@@ -157,47 +160,44 @@ export class EditorServer implements DevServerProtocol {
   }
 
   private async handleProtocolMessage(message: ProtocolMessage): Promise<ProtocolResponse> {
-    const { id, type, params } = message;
+    const { id, payload } = message;
 
-    switch (type) {
+    switch (payload.type) {
       case 'publish':
         if (!this.handlers.publish) {
           throw new Error('Publish handler not registered');
         }
-        const publishResult = await this.handlers.publish(params as PublishMessage);
+        const publishResult = await this.handlers.publish(payload as PublishMessage);
         return {
           id,
-          success: true,
-          data: publishResult,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          payload: publishResult
         };
 
       case 'saveImage':
         if (!this.handlers.saveImage) {
           throw new Error('Save image handler not registered');
         }
-        const saveResult = await this.handlers.saveImage(params as SaveImageMessage);
+        const saveResult = await this.handlers.saveImage(payload as SaveImageMessage);
         return {
           id,
-          success: true,
-          data: saveResult,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          payload: saveResult
         };
 
       case 'hasImage':
         if (!this.handlers.hasImage) {
           throw new Error('Has image handler not registered');
         }
-        const hasResult = await this.handlers.hasImage(params as HasImageMessage);
+        const hasResult = await this.handlers.hasImage(payload as HasImageMessage);
         return {
           id,
-          success: true,
-          data: hasResult,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          payload: hasResult
         };
 
       default:
-        throw new Error(`Unknown message type: ${type}`);
+        throw new Error(`Unknown message type: ${(payload as any).type}`);
     }
   }
 
