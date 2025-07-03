@@ -1,21 +1,16 @@
-// Message format for WebSocket communication
-export interface ProtocolMessage {
-  id: string; // Unique message ID for request/response correlation
-  type: 'publish' | 'saveImage' | 'hasImage';
-  params: PublishMessage | SaveImageMessage | HasImageMessage;
-  timestamp: number;
-}
-
-// Import message types from protocol
-import type { PublishMessage, SaveImageMessage, HasImageMessage } from './protocol';
-
-export interface ProtocolResponse {
-  id: string; // Matches the request ID
-  success: boolean;
-  data?: any;
-  error?: string;
-  timestamp: number;
-}
+// Import message and response types from protocol
+export type { 
+  ProtocolMessage, 
+  ProtocolResponse,
+  PublishMessage,
+  SaveImageMessage,
+  HasImageMessage,
+  PublishResponse,
+  SaveImageResponse,
+  HasImageResponse,
+  BaseMessage,
+  BaseResponse
+} from './protocol';
 
 // Connection configuration
 export interface EditorConfig {
