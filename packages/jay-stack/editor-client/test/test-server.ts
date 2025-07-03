@@ -1,6 +1,7 @@
-import { createServer } from 'http';
+import {createServer, Server} from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { AddressInfo } from 'net';
+import {Socket} from "socket.io";
 
 export interface TestServerOptions {
   port?: number;
@@ -16,12 +17,13 @@ export interface TestServerResponse {
 }
 
 export class TestServer {
-  private httpServer: any;
+  private httpServer: Server;
   private socketServer: SocketIOServer | null = null;
   private port: number;
   private editorId: string;
   private status: 'init' | 'configured';
   private protocolHandlers: Map<string, (params: any) => Promise<any>> = new Map();
+  private connectedSockets: Set<Socket<any>> = new Set();
 
   constructor(options: TestServerOptions = {}) {
     this.port = options.port || 0; // 0 means let the OS assign a port
@@ -62,10 +64,27 @@ export class TestServer {
 
   async close(): Promise<void> {
     return new Promise((resolve) => {
-      if (this.socketServer) {
-        this.socketServer.close();
+      // Disconnect all connected sockets first
+      for (const socket of this.connectedSockets) {
+        socket.disconnect(true);
       }
-      if (this.httpServer) {
+      this.connectedSockets.clear();
+
+      // Close Socket.io server with a timeout
+      if (this.socketServer) {
+        this.httpServer.closeAllConnections();
+        this.httpServer.closeIdleConnections();
+        this.socketServer.close(() => {
+          // Close HTTP server after Socket.io is closed
+          if (this.httpServer) {
+            this.httpServer.close(() => resolve());
+          } else {
+            resolve();
+          }
+        });
+      } else if (this.httpServer) {
+        this.httpServer.closeAllConnections();
+        this.httpServer.closeIdleConnections();
         this.httpServer.close(() => resolve());
       } else {
         resolve();
@@ -126,7 +145,8 @@ export class TestServer {
     if (!this.socketServer) return;
 
     this.socketServer.on('connection', (socket) => {
-      console.log(`Test server: Editor connected: ${socket.id}`);
+      console.log(`Test server: Editor connected: ${socket.id}`, new Date().getTime());
+      this.connectedSockets.add(socket);
 
       socket.on('protocol-message', async (message) => {
         try {
@@ -147,7 +167,8 @@ export class TestServer {
       });
 
       socket.on('disconnect', () => {
-        console.log(`Test server: Editor disconnected: ${socket.id}`);
+        console.log(`Test server: Editor disconnected: ${socket.id}`, new Date().getTime());
+        this.connectedSockets.delete(socket);
       });
     });
   }

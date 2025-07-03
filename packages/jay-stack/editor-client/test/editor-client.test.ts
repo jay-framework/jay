@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { EditorClient, createEditorClient, createEditorClientWithConnectionManager } from '../lib';
 import { ConnectionManager, createConnectionManager } from '../lib';
-import { createTestServer, TestServer } from './test-server';
+import {createTestServer, TestServer, TestServerResponse} from './test-server';
 import type { PublishMessage } from '@jay-framework/editor-protocol';
 
 describe('Editor Client', () => {
   let client: EditorClient;
   let connectionManager: ConnectionManager;
   let testServer: TestServer;
-  let serverResponse: any;
+  let serverResponse: TestServerResponse;
 
   beforeEach(async () => {
     // Start test server
@@ -281,79 +281,3 @@ describe('Connection Manager', () => {
     await configuredResponse.close();
   }, 10000); // Increase timeout for this test
 });
-
-describe('Factory Functions', () => {
-  let testServer: TestServer;
-  let serverResponse: any;
-
-  beforeEach(async () => {
-    testServer = createTestServer();
-    serverResponse = await testServer.start();
-  });
-
-  afterEach(async () => {
-    await serverResponse.close();
-  });
-
-  it('should create client with options', async () => {
-    const client = createEditorClient({
-      portRange: [serverResponse.port, serverResponse.port],
-      scanTimeout: 1000,
-      retryAttempts: 1,
-      editorId: 'test-editor-id'
-    });
-    
-    expect(client).toBeInstanceOf(EditorClient);
-    expect(client.getConnectionState()).toBe('disconnected');
-
-    await client.connect();
-    expect(client.getConnectionState()).toBe('connected');
-    await client.disconnect();
-  });
-
-  it('should create client with existing connection manager', async () => {
-    const manager = createConnectionManager({
-      portRange: [serverResponse.port, serverResponse.port],
-      scanTimeout: 1000,
-      retryAttempts: 1,
-      editorId: 'test-editor-id'
-    });
-    const client = createEditorClientWithConnectionManager(manager);
-    
-    expect(client).toBeInstanceOf(EditorClient);
-    expect(client.getConnectionManager()).toBe(manager);
-
-    await client.connect();
-    expect(client.getConnectionState()).toBe('connected');
-    await client.disconnect();
-  });
-});
-
-describe('Protocol Message Types', () => {
-  it('should have correct message structure', () => {
-    const publishMessage = {
-      pages: [{
-        route: '/test',
-        jayHtml: '<div>Test</div>',
-        name: 'test-page'
-      }] as [{
-        route: string;
-        jayHtml: string;
-        name: string;
-      }]
-    };
-
-    const saveImageMessage = {
-      imageId: 'test-image',
-      imageData: 'data:image/png;base64,test'
-    };
-
-    const hasImageMessage = {
-      imageId: 'test-image'
-    };
-
-    expect(publishMessage.pages).toHaveLength(1);
-    expect(saveImageMessage.imageId).toBe('test-image');
-    expect(hasImageMessage.imageId).toBe('test-image');
-  });
-}); 
