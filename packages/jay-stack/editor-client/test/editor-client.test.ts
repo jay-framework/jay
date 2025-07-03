@@ -1,35 +1,35 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { EditorClient, createEditorClient, createEditorClientWithConnectionManager } from '../lib/editor-client';
-import { ConnectionManager, createConnectionManager } from '../lib/connection-manager';
-
-// Mock socket.io-client
-vi.mock('socket.io-client', () => ({
-  io: vi.fn(() => ({
-    on: vi.fn(),
-    emit: vi.fn(),
-    disconnect: vi.fn(),
-    connected: false
-  }))
-}));
-
-// Mock fetch
-global.fetch = vi.fn();
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { EditorClient, createEditorClient, createEditorClientWithConnectionManager } from '../lib';
+import { ConnectionManager, createConnectionManager } from '../lib';
+import { createTestServer, TestServer } from './test-server';
 
 describe('Editor Client', () => {
   let client: EditorClient;
   let connectionManager: ConnectionManager;
+  let testServer: TestServer;
+  let serverResponse: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Start test server
+    testServer = createTestServer({
+      editorId: 'test-editor-id',
+      status: 'init'
+    });
+    serverResponse = await testServer.start();
+
+    // Create connection manager that will connect to our test server
     connectionManager = createConnectionManager({
-      portRange: [3101, 3105],
-      scanTimeout: 100,
-      retryAttempts: 1
+      portRange: [serverResponse.port, serverResponse.port], // Only scan the test server port
+      scanTimeout: 1000,
+      retryAttempts: 1,
+      editorId: 'test-editor-id'
     });
     client = createEditorClientWithConnectionManager(connectionManager);
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
+  afterEach(async () => {
+    await client.disconnect();
+    await serverResponse.close();
   });
 
   it('should create editor client instance', () => {
@@ -40,22 +40,92 @@ describe('Editor Client', () => {
     expect(client.getConnectionState()).toBe('disconnected');
   });
 
-  it('should delegate connection to ConnectionManager', async () => {
-    // Mock the connection manager's connect method
-    const connectSpy = vi.spyOn(connectionManager, 'connect').mockResolvedValue();
-    
+  it('should connect to test server', async () => {
     await client.connect();
-    
-    expect(connectSpy).toHaveBeenCalled();
+    expect(client.getConnectionState()).toBe('connected');
   });
 
-  it('should delegate protocol methods to ConnectionManager', async () => {
-    // Mock the connection manager's sendMessage method
-    const sendMessageSpy = vi.spyOn(connectionManager, 'sendMessage').mockResolvedValue({
-      status: [{ success: true, filePath: '/test/file.jay-html' }]
+  it('should publish jay-html files', async () => {
+    // Set up test server handler
+    testServer.onPublish(async (params) => {
+      expect(params.pages).toHaveLength(1);
+      expect(params.pages[0].route).toBe('/test');
+      expect(params.pages[0].name).toBe('test-page');
+      return {
+        status: [{ success: true, filePath: '/test/test-page.jay-html' }]
+      };
     });
 
-    const params = {
+    await client.connect();
+
+    const result = await client.publish({
+      pages: [{
+        route: '/test',
+        jayHtml: '<div>Test content</div>',
+        name: 'test-page'
+      }] as [{
+        route: string;
+        jayHtml: string;
+        name: string;
+      }]
+    });
+
+    expect(result.status).toHaveLength(1);
+    expect(result.status[0].success).toBe(true);
+    expect(result.status[0].filePath).toBe('/test/test-page.jay-html');
+  });
+
+  it('should save images', async () => {
+    // Set up test server handler
+    testServer.onSaveImage(async (params) => {
+      expect(params.imageId).toBe('test-image');
+      expect(params.imageData).toContain('data:image/png;base64');
+      return {
+        success: true,
+        imageUrl: '/assets/test-image.png'
+      };
+    });
+
+    await client.connect();
+
+    const result = await client.saveImage({
+      imageId: 'test-image',
+      imageData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.imageUrl).toBe('/assets/test-image.png');
+  });
+
+  it('should check if images exist', async () => {
+    // Set up test server handler
+    testServer.onHasImage(async (params) => {
+      expect(params.imageId).toBe('test-image');
+      return {
+        exists: true,
+        imageUrl: '/assets/test-image.png'
+      };
+    });
+
+    await client.connect();
+
+    const result = await client.hasImage({
+      imageId: 'test-image'
+    });
+
+    expect(result.exists).toBe(true);
+    expect(result.imageUrl).toBe('/assets/test-image.png');
+  });
+
+  it('should handle server errors', async () => {
+    // Set up test server handler that throws an error
+    testServer.onPublish(async () => {
+      throw new Error('Test server error');
+    });
+
+    await client.connect();
+
+    await expect(client.publish({
       pages: [{
         route: '/test',
         jayHtml: '<div>Test</div>',
@@ -65,11 +135,7 @@ describe('Editor Client', () => {
         jayHtml: string;
         name: string;
       }]
-    };
-
-    await client.publish(params);
-    
-    expect(sendMessageSpy).toHaveBeenCalledWith('publish', params);
+    })).rejects.toThrow('Test server error');
   });
 
   it('should provide access to underlying ConnectionManager', () => {
@@ -86,18 +152,29 @@ describe('Editor Client', () => {
 
 describe('Connection Manager', () => {
   let manager: ConnectionManager;
+  let testServer: TestServer;
+  let serverResponse: any;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Start test server
+    testServer = createTestServer({
+      editorId: 'test-editor-id',
+      status: 'init'
+    });
+    serverResponse = await testServer.start();
+
     manager = createConnectionManager({
-      portRange: [3101, 3105],
-      scanTimeout: 100,
+      portRange: [serverResponse.port, serverResponse.port],
+      scanTimeout: 1000,
       retryAttempts: 1,
+      editorId: 'test-editor-id',
       autoReconnect: false
     });
   });
 
-  afterEach(() => {
-    vi.clearAllMocks();
+  afterEach(async () => {
+    await manager.disconnect();
+    await serverResponse.close();
   });
 
   it('should create connection manager instance', () => {
@@ -108,68 +185,137 @@ describe('Connection Manager', () => {
     expect(manager.getConnectionState()).toBe('disconnected');
   });
 
-  it('should handle connection errors gracefully', async () => {
-    // Mock fetch to return error
-    (global.fetch as any).mockRejectedValue(new Error('Network error'));
+  it('should connect to test server', async () => {
+    await manager.connect();
+    expect(manager.getConnectionState()).toBe('connected');
+  });
 
-    await expect(manager.connect()).rejects.toThrow('No editor server found');
-    expect(manager.getConnectionState()).toBe('error');
+  it('should send messages when connected', async () => {
+    // Set up test server handler
+    testServer.onPublish(async (params) => {
+      return { status: [{ success: true, filePath: '/test/file.jay-html' }] };
+    });
+
+    await manager.connect();
+
+    const result = await manager.sendMessage('publish', {
+      pages: [{
+        route: '/test',
+        jayHtml: '<div>Test</div>',
+        name: 'test-page'
+      }] as [{
+        route: string;
+        jayHtml: string;
+        name: string;
+      }]
+    });
+
+    expect(result.status).toHaveLength(1);
+    expect(result.status[0].success).toBe(true);
+    expect(result.status[0].filePath).toBe('/test/file.jay-html');
+  });
+
+  it('should handle connection errors gracefully', async () => {
+    // Create manager with non-existent port range
+    const badManager = createConnectionManager({
+      portRange: [9999, 9999],
+      scanTimeout: 100,
+      retryAttempts: 1
+    });
+
+    await expect(badManager.connect()).rejects.toThrow('No editor server found');
+    expect(badManager.getConnectionState()).toBe('error');
   });
 
   it('should handle manual disconnect', async () => {
+    await manager.connect();
+    expect(manager.getConnectionState()).toBe('connected');
+    
     await manager.disconnect();
     expect(manager.getConnectionState()).toBe('disconnected');
   });
 
-  it('should send messages when connected', async () => {
-    // Mock successful connection
-    (global.fetch as any).mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({ status: 'init', port: 3101 })
+  it('should handle server in configured mode', async () => {
+    // Close the init server
+    await serverResponse.close();
+
+    // Start a new server in configured mode
+    const configuredServer = createTestServer({
+      editorId: 'test-editor-id',
+      status: 'configured'
+    });
+    const configuredResponse = await configuredServer.start();
+
+    // Create manager with different editor ID (should not connect)
+    const wrongManager = createConnectionManager({
+      portRange: [configuredResponse.port, configuredResponse.port],
+      scanTimeout: 500,
+      retryAttempts: 1,
+      editorId: 'wrong-editor-id'
     });
 
-    // Mock socket.io connection
-    const mockSocket = {
-      on: vi.fn(),
-      emit: vi.fn(),
-      disconnect: vi.fn()
-    };
-    (require('socket.io-client').io as any).mockReturnValue(mockSocket);
+    await expect(wrongManager.connect()).rejects.toThrow('No editor server found');
 
-    await manager.connect();
-    
-    // Mock the socket response
-    const mockResponse = { id: 'test-id', success: true, data: { result: 'success' } };
-    const protocolResponseHandler = mockSocket.on.mock.calls.find(
-      call => call[0] === 'protocol-response'
-    )?.[1];
-    
-    if (protocolResponseHandler) {
-      protocolResponseHandler(mockResponse);
-    }
+    // Create manager with correct editor ID (should connect)
+    const correctManager = createConnectionManager({
+      portRange: [configuredResponse.port, configuredResponse.port],
+      scanTimeout: 500,
+      retryAttempts: 1,
+      editorId: 'test-editor-id'
+    });
 
-    const result = await manager.sendMessage('publish', { test: 'data' });
-    expect(result).toEqual({ result: 'success' });
-  });
+    await correctManager.connect();
+    expect(correctManager.getConnectionState()).toBe('connected');
+
+    await correctManager.disconnect();
+    await configuredResponse.close();
+  }, 10000); // Increase timeout for this test
 });
 
 describe('Factory Functions', () => {
-  it('should create client with options', () => {
+  let testServer: TestServer;
+  let serverResponse: any;
+
+  beforeEach(async () => {
+    testServer = createTestServer();
+    serverResponse = await testServer.start();
+  });
+
+  afterEach(async () => {
+    await serverResponse.close();
+  });
+
+  it('should create client with options', async () => {
     const client = createEditorClient({
-      portRange: [3101, 3105],
-      scanTimeout: 100
+      portRange: [serverResponse.port, serverResponse.port],
+      scanTimeout: 1000,
+      retryAttempts: 1,
+      editorId: 'test-editor-id'
     });
     
     expect(client).toBeInstanceOf(EditorClient);
     expect(client.getConnectionState()).toBe('disconnected');
+
+    await client.connect();
+    expect(client.getConnectionState()).toBe('connected');
+    await client.disconnect();
   });
 
-  it('should create client with existing connection manager', () => {
-    const manager = createConnectionManager();
+  it('should create client with existing connection manager', async () => {
+    const manager = createConnectionManager({
+      portRange: [serverResponse.port, serverResponse.port],
+      scanTimeout: 1000,
+      retryAttempts: 1,
+      editorId: 'test-editor-id'
+    });
     const client = createEditorClientWithConnectionManager(manager);
     
     expect(client).toBeInstanceOf(EditorClient);
     expect(client.getConnectionManager()).toBe(manager);
+
+    await client.connect();
+    expect(client.getConnectionState()).toBe('connected');
+    await client.disconnect();
   });
 });
 
