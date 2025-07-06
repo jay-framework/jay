@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import type {
   ProtocolMessage,
   ProtocolResponse,
@@ -60,10 +59,18 @@ export function createHasImageResponse(exists: boolean, imageUrl?: string): HasI
   };
 }
 
+// Simple ID generator using timestamp + random number
+let messageIdCounter = 0;
+function generateMessageId(): string {
+  const timestamp = Date.now();
+  const counter = ++messageIdCounter;
+  return `${timestamp}-${counter}`;
+}
+
 // Protocol wrapper constructors
 export function createProtocolMessage(payload: PublishMessage | SaveImageMessage | HasImageMessage): ProtocolMessage {
   return {
-    id: uuidv4(),
+    id: generateMessageId(),
     timestamp: Date.now(),
     payload
   };
@@ -79,38 +86,3 @@ export function createProtocolResponse(
     payload
   };
 }
-
-// Convenience constructors for common scenarios
-export function createSuccessfulPublishResponse(filePaths: string[]): PublishResponse {
-  return createPublishResponse(
-    filePaths.map(filePath => ({
-      success: true,
-      filePath
-    }))
-  );
-}
-
-export function createFailedPublishResponse(errors: string[]): PublishResponse {
-  return createPublishResponse(
-    errors.map(error => ({
-      success: false,
-      error
-    }))
-  );
-}
-
-export function createSuccessfulSaveImageResponse(imageUrl: string): SaveImageResponse {
-  return createSaveImageResponse(true, imageUrl);
-}
-
-export function createFailedSaveImageResponse(error: string): SaveImageResponse {
-  return createSaveImageResponse(false, undefined, error);
-}
-
-export function createImageExistsResponse(imageUrl: string): HasImageResponse {
-  return createHasImageResponse(true, imageUrl);
-}
-
-export function createImageNotExistsResponse(): HasImageResponse {
-  return createHasImageResponse(false);
-} 

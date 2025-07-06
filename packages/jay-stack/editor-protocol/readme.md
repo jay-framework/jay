@@ -57,7 +57,7 @@ const protocolMessage = createProtocolMessage(publishMessage);
 - `createPublishMessage(pages)` - Creates a publish message
 - `createSaveImageMessage(imageId, imageData)` - Creates a save image message
 - `createHasImageMessage(imageId)` - Creates a has image message
-- `createProtocolMessage(payload)` - Creates a protocol message wrapper with auto-generated ID and timestamp
+- `createProtocolMessage(payload)` - Creates a protocol message wrapper with auto-generated timestamp-based ID
 
 ### Response Constructors
 

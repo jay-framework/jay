@@ -26,14 +26,12 @@
     "test": ":",
     "test:watch": ":"
   },
-  "dependencies": {
-    "uuid": "^9.0.1"
-  },
+
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
     "@jay-framework/jay-cli": "workspace:^",
     "@types/node": "^22.15.21",
-    "@types/uuid": "^9.0.7",
+
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
