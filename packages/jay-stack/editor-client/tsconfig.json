@@ -3,7 +3,7 @@
   "compilerOptions": {
     "outDir": "dist",
     "paths": {
-      "@jay-framework/editor-protocol": ["../editor-protocol/lib"]
-    }
-  }
-} 
+      "@jay-framework/editor-protocol": ["../editor-protocol/lib"],
+    },
+  },
+}

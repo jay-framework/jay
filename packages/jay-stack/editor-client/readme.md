@@ -10,7 +10,7 @@ This package provides a Socket.io client that can be used by editor applications
 - Socket.io client with automatic reconnection
 - Protocol message handling for publish, saveImage, and hasImage operations
 - Connection state management
-- Type-safe protocol implementation
+- Type-safe protocol implementation with wrapper message structure
 
 ## Usage
 
@@ -32,6 +32,7 @@ await client.connect();
 
 // Publish a jay-html file
 const result = await client.publish({
+  type: 'publish',
   pages: [{
     route: '/pages',
     jayHtml: '<div>Hello World</div>',
@@ -67,41 +68,12 @@ client.onConnectionStateChange((state) => {
 
 // Use protocol methods
 const imageResult = await client.saveImage({
+  type: 'saveImage',
   imageId: 'my-image',
   imageData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
 });
 
 console.log('Image saved:', imageResult.imageUrl);
-```
-
-### Direct Connection Manager Usage
-
-```typescript
-import { createConnectionManager } from '@jay-framework/editor-client';
-
-// Create connection manager with auto-reconnect
-const manager = createConnectionManager({
-  portRange: [3101, 3200],
-  autoReconnect: true,
-  reconnectDelay: 1000,
-  maxReconnectAttempts: 5
-});
-
-// Connect and handle state changes
-await manager.connect();
-
-manager.onConnectionStateChange((state) => {
-  console.log('Connection state:', state);
-});
-
-// Send messages directly
-const result = await manager.sendMessage('publish', {
-  pages: [{
-    route: '/pages',
-    jayHtml: '<div>Hello World</div>',
-    name: 'home'
-  }]
-});
 ```
 
 ## Features
@@ -123,8 +95,8 @@ const result = await manager.sendMessage('publish', {
 - Error handling and recovery
 
 ### Type Safety
-- Full TypeScript support with named message types
-- Protocol interface compliance
+- Full TypeScript support with wrapper message structure
+- Protocol interface compliance with `id`, `timestamp`, and `payload` fields
 - Type-safe request/response handling
 
 ## Architecture
@@ -134,16 +106,19 @@ The package follows a clean separation of concerns:
 - **EditorClient**: High-level API that implements the `EditorProtocol` interface
 - **ConnectionManager**: Handles all connection logic, port discovery, and message transport
 
-### EditorClient
-- Implements the `EditorProtocol` interface
-- Delegates all connection and transport logic to `ConnectionManager`
-- Provides a clean, type-safe API for editor applications
+### Protocol Message Structure
 
-### ConnectionManager
-- Handles port discovery and server connection
-- Manages Socket.io connection and message transport
-- Provides auto-reconnect and connection state management
-- Can be used independently for custom implementations
+All messages use a wrapper structure:
+```typescript
+interface ProtocolMessage {
+  id: string;
+  timestamp: number;
+  payload: {
+    type: 'publish' | 'saveImage' | 'hasImage';
+    // ... message-specific fields
+  };
+}
+```
 
 ## Configuration Options
 
@@ -157,6 +132,25 @@ interface ConnectionManagerOptions {
   reconnectDelay?: number;             // Default: 1000ms
   maxReconnectAttempts?: number;       // Default: 5
 }
+```
+
+## Testing
+
+Comprehensive test suite including:
+- Unit tests for all components
+- End-to-end tests with real Socket.io servers
+- Multiple server and client scenarios
+- Connection state and error handling tests
+- Protocol message validation
+
+## Integration with Editor Applications
+
+This package is designed to be used by any editor application that needs to communicate with Jay dev servers, such as:
+
+- Figma plugins
+- Web-based editors
+- Desktop applications
+- Browser extensions 
 
 interface EditorClientOptions extends ConnectionManagerOptions {
   // Additional editor-specific options can be added here
@@ -170,4 +164,4 @@ This package is designed to be used by any editor application that needs to comm
 - Figma plugins
 - Web-based editors
 - Desktop applications
-- Browser extensions 
+- Browser extensions

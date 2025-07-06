@@ -11,6 +11,7 @@ This package provides a Socket.io server that can be integrated into Jay dev ser
 - Protocol message handling for publish, saveImage, and hasImage operations
 - Default protocol handlers for file operations
 - Configuration management via `.jay` files
+- Memory filesystem support for testing
 
 ## Usage
 
@@ -20,19 +21,17 @@ import { createEditorServer, createDefaultHandlers } from '@jay-framework/editor
 // Create the editor server
 const server = createEditorServer({
   projectRoot: '/path/to/project',
-  portRange: [3101, 3200]
+  portRange: [3101, 3200],
 });
 
-// Create default handlers for file operations
-const handlers = createDefaultHandlers({
-  projectRoot: '/path/to/project',
-  assetsDir: '/path/to/project/public/assets'
-});
-
+const handlePublish: EditorProtocol['publish'] = () => {} // callback implementation
+const handleSaveImage: EditorProtocol['saveImage'] = () => {} // callback implementation
+const handleHasImage: EditorProtocol['hasImage'] = () => {} // callback implementation
+    
 // Register protocol handlers
-server.onPublish(handlers.handlePublish.bind(handlers));
-server.onSaveImage(handlers.handleSaveImage.bind(handlers));
-server.onHasImage(handlers.handleHasImage.bind(handlers));
+server.onPublish(handlePublish);
+server.onSaveImage(handleSaveImage);
+server.onHasImage(handleHasImage);
 
 // Start the server
 const { port, editorId } = await server.start();
@@ -45,20 +44,27 @@ await server.stop();
 ## Features
 
 ### Port Discovery
+
 - Automatically finds available ports in the configured range
 - Provides HTTP endpoint for editor port discovery
 - Supports both "init" mode and "configured" mode
 
 ### Protocol Support
+
 - **Publish**: Saves jay-html files to the project
 - **Save Image**: Saves base64 image data to assets directory
 - **Has Image**: Checks if an image already exists
 
+### Protocol Message Structure
+
+All messages use a wrapper structure with `id`, `timestamp`, and `payload` fields for reliable communication.
+
 ### Configuration
-- Reads from `.jay` configuration file
-- Auto-generates configuration when in init mode
-- Supports custom port ranges and editor IDs
+- optional `editorId` config
+  - if omitted, starts with `init` mode supporting discovery of `editorId` and callback `onEditorId` to save `editorId`
+  - if provided, only accepts connection with the same `editorId`
+- Supports custom port ranges
 
 ## Integration with Dev Server
 
-This package is designed to be integrated into the existing `@jay-framework/dev-server` package to provide editor integration capabilities. 
+This package is designed to be integrated into the existing `@jay-framework/dev-server` package to provide editor integration capabilities.

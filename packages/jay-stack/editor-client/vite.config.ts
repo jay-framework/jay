@@ -19,16 +19,11 @@ export default defineConfig({
             transformMixedEsModules: true,
         },
         rollupOptions: {
-            external: [
-                '@jay-framework/editor-protocol',
-                'socket.io-client',
-                'get-port',
-                'uuid'
-            ],
+            external: ['@jay-framework/editor-protocol', 'socket.io-client', 'get-port', 'uuid'],
         },
     },
     test: {
         globals: true,
         environment: 'jsdom',
     },
-}); 
+});

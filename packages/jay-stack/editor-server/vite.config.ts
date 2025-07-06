@@ -24,11 +24,11 @@ export default defineConfig({
                 'fs',
                 'path',
                 'http',
-                'https'
+                'https',
             ],
         },
     },
     test: {
         globals: true,
     },
-}); 
+});
