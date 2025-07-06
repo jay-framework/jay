@@ -13,11 +13,11 @@ export interface BaseResponse {
 // Message types with discriminators and specific response types
 export interface PublishMessage extends BaseMessage<PublishResponse> {
   type: 'publish';
-  pages: [{
+  pages: {
     route: string;
     jayHtml: string;
     name: string;
-  }];
+  }[];
 }
 
 export interface SaveImageMessage extends BaseMessage<SaveImageResponse> {
@@ -34,11 +34,11 @@ export interface HasImageMessage extends BaseMessage<HasImageResponse> {
 // Response types with discriminators
 export interface PublishResponse extends BaseResponse {
   type: 'publish';
-  status: [{
+  status: {
     success: boolean;
     filePath?: string;
     error?: string;
-  }];
+  }[];
 }
 
 export interface SaveImageResponse extends BaseResponse {
