@@ -93,7 +93,11 @@ export class DefaultProtocolHandlers {
 
             return createSaveImageResponse(true, imageUrl);
         } catch (error) {
-            return createSaveImageResponse(false, undefined, error instanceof Error ? error.message : 'Unknown error');
+            return createSaveImageResponse(
+                false,
+                undefined,
+                error instanceof Error ? error.message : 'Unknown error',
+            );
         }
     }
 

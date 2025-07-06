@@ -24,10 +24,10 @@ const server = createEditorServer({
   portRange: [3101, 3200],
 });
 
-const handlePublish: EditorProtocol['publish'] = () => {} // callback implementation
-const handleSaveImage: EditorProtocol['saveImage'] = () => {} // callback implementation
-const handleHasImage: EditorProtocol['hasImage'] = () => {} // callback implementation
-    
+const handlePublish: EditorProtocol['publish'] = () => {}; // callback implementation
+const handleSaveImage: EditorProtocol['saveImage'] = () => {}; // callback implementation
+const handleHasImage: EditorProtocol['hasImage'] = () => {}; // callback implementation
+
 // Register protocol handlers
 server.onPublish(handlePublish);
 server.onSaveImage(handleSaveImage);
@@ -60,6 +60,7 @@ await server.stop();
 All messages use a wrapper structure with `id`, `timestamp`, and `payload` fields for reliable communication.
 
 ### Configuration
+
 - optional `editorId` config
   - if omitted, starts with `init` mode supporting discovery of `editorId` and callback `onEditorId` to save `editorId`
   - if provided, only accepts connection with the same `editorId`

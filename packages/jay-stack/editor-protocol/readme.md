@@ -44,7 +44,7 @@ const server: DevServerProtocol = {
 
 // Create messages using constructors
 const publishMessage = createPublishMessage([
-  { route: '/home', jayHtml: '<div>Home</div>', name: 'Home' }
+  { route: '/home', jayHtml: '<div>Home</div>', name: 'Home' },
 ]);
 
 const protocolMessage = createProtocolMessage(publishMessage);
@@ -65,8 +65,6 @@ const protocolMessage = createProtocolMessage(publishMessage);
 - `createSaveImageResponse(success, imageUrl?, error?)` - Creates a save image response
 - `createHasImageResponse(exists, imageUrl?)` - Creates a has image response
 - `createProtocolResponse(id, payload)` - Creates a protocol response wrapper with timestamp
-
-
 
 ## Protocol Operations
 

@@ -24,7 +24,7 @@ const client = createEditorClient({
   portRange: [3101, 3200],
   scanTimeout: 5000,
   retryAttempts: 3,
-  editorId: 'my-editor-123'
+  editorId: 'my-editor-123',
 });
 
 // Connect to the dev server
@@ -33,11 +33,13 @@ await client.connect();
 // Publish a jay-html file
 const result = await client.publish({
   type: 'publish',
-  pages: [{
-    route: '/pages',
-    jayHtml: '<div>Hello World</div>',
-    name: 'home'
-  }]
+  pages: [
+    {
+      route: '/pages',
+      jayHtml: '<div>Hello World</div>',
+      name: 'home',
+    },
+  ],
 });
 
 console.log('Published:', result.status[0].filePath);
@@ -46,14 +48,17 @@ console.log('Published:', result.status[0].filePath);
 ### Advanced Usage with Custom Connection Manager
 
 ```typescript
-import { createEditorClientWithConnectionManager, createConnectionManager } from '@jay-framework/editor-client';
+import {
+  createEditorClientWithConnectionManager,
+  createConnectionManager,
+} from '@jay-framework/editor-client';
 
 // Create a custom connection manager
 const connectionManager = createConnectionManager({
   portRange: [3101, 3200],
   autoReconnect: true,
   reconnectDelay: 1000,
-  maxReconnectAttempts: 5
+  maxReconnectAttempts: 5,
 });
 
 // Create editor client with the connection manager
@@ -70,7 +75,8 @@ client.onConnectionStateChange((state) => {
 const imageResult = await client.saveImage({
   type: 'saveImage',
   imageId: 'my-image',
-  imageData: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+  imageData:
+    'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==',
 });
 
 console.log('Image saved:', imageResult.imageUrl);
@@ -79,22 +85,26 @@ console.log('Image saved:', imageResult.imageUrl);
 ## Features
 
 ### Port Discovery
+
 - Automatically scans port range to find available dev servers
 - Supports both "init" mode and "configured" mode servers
 - Configurable scan timeout and retry attempts
 
 ### Protocol Support
+
 - **Publish**: Send jay-html files to the dev server
 - **Save Image**: Upload base64 image data to server assets
 - **Has Image**: Check if an image already exists on the server
 
 ### Connection Management
+
 - Automatic reconnection with exponential backoff
 - Connection state monitoring
 - Request timeout handling
 - Error handling and recovery
 
 ### Type Safety
+
 - Full TypeScript support with wrapper message structure
 - Protocol interface compliance with `id`, `timestamp`, and `payload` fields
 - Type-safe request/response handling
@@ -109,6 +119,7 @@ The package follows a clean separation of concerns:
 ### Protocol Message Structure
 
 All messages use a wrapper structure:
+
 ```typescript
 interface ProtocolMessage {
   id: string;
@@ -124,19 +135,20 @@ interface ProtocolMessage {
 
 ```typescript
 interface ConnectionManagerOptions {
-  portRange?: [number, number];        // Default: [3101, 3200]
-  scanTimeout?: number;                // Default: 5000ms
-  retryAttempts?: number;              // Default: 3
-  editorId?: string;                   // Auto-generated UUID if not provided
-  autoReconnect?: boolean;             // Default: true
-  reconnectDelay?: number;             // Default: 1000ms
-  maxReconnectAttempts?: number;       // Default: 5
+  portRange?: [number, number]; // Default: [3101, 3200]
+  scanTimeout?: number; // Default: 5000ms
+  retryAttempts?: number; // Default: 3
+  editorId?: string; // Auto-generated UUID if not provided
+  autoReconnect?: boolean; // Default: true
+  reconnectDelay?: number; // Default: 1000ms
+  maxReconnectAttempts?: number; // Default: 5
 }
 ```
 
 ## Testing
 
 Comprehensive test suite including:
+
 - Unit tests for all components
 - End-to-end tests with real Socket.io servers
 - Multiple server and client scenarios
@@ -150,11 +162,12 @@ This package is designed to be used by any editor application that needs to comm
 - Figma plugins
 - Web-based editors
 - Desktop applications
-- Browser extensions 
+- Browser extensions
 
 interface EditorClientOptions extends ConnectionManagerOptions {
-  // Additional editor-specific options can be added here
+// Additional editor-specific options can be added here
 }
+
 ```
 
 ## Integration with Editor Applications
@@ -165,3 +178,4 @@ This package is designed to be used by any editor application that needs to comm
 - Web-based editors
 - Desktop applications
 - Browser extensions
+```
