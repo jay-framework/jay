@@ -28,6 +28,7 @@
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
+    "@jay-framework/editor-client": "workspace:^",
     "@jay-framework/jay-cli": "workspace:^",
     "@types/express": "^5.0.2",
     "@types/node": "^22.15.21",

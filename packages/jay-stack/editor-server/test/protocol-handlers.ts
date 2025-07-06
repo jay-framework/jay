@@ -12,25 +12,33 @@ import type {
 export interface DefaultHandlersOptions {
   projectRoot: string;
   assetsDir?: string;
+  // For testing: allow mocking file system operations
+  mockFileSystem?: {
+    writeFile?: (path: string, content: string | Buffer) => void;
+    existsSync?: (path: string) => boolean;
+    mkdirSync?: (path: string, options?: any) => void;
+  };
 }
 
 export class DefaultProtocolHandlers {
   private projectRoot: string;
   private assetsDir: string;
+  private mockFileSystem?: DefaultHandlersOptions['mockFileSystem'];
 
   constructor(options: DefaultHandlersOptions) {
     this.projectRoot = options.projectRoot;
     this.assetsDir = options.assetsDir || join(this.projectRoot, 'public', 'assets');
+    this.mockFileSystem = options.mockFileSystem;
     
-    // Ensure assets directory exists
-    if (!existsSync(this.assetsDir)) {
+    // Ensure assets directory exists (unless mocking)
+    if (!this.mockFileSystem && !existsSync(this.assetsDir)) {
       mkdirSync(this.assetsDir, { recursive: true });
     }
   }
 
   async handlePublish(params: PublishMessage): Promise<PublishResponse> {
     const { pages } = params;
-    const results = [];
+    const results: PublishResponse["status"] = [];
 
     for (const page of pages) {
       try {
@@ -39,12 +47,17 @@ export class DefaultProtocolHandlers {
         
         // Ensure directory exists
         const dir = join(this.projectRoot, route);
-        if (!existsSync(dir)) {
-          mkdirSync(dir, { recursive: true });
+        if (this.mockFileSystem) {
+          if (!this.mockFileSystem.existsSync!(dir)) {
+            this.mockFileSystem.mkdirSync!(dir, { recursive: true });
+          }
+          this.mockFileSystem.writeFile!(filePath, jayHtml);
+        } else {
+          if (!existsSync(dir)) {
+            mkdirSync(dir, { recursive: true });
+          }
+          writeFileSync(filePath, jayHtml, 'utf8');
         }
-
-        // Write the jay-html file
-        writeFileSync(filePath, jayHtml, 'utf8');
         
         results.push({
           success: true,
@@ -58,7 +71,11 @@ export class DefaultProtocolHandlers {
       }
     }
 
-    return { status: results as [{ success: boolean; filePath?: string; error?: string; }] };
+    return {
+      type: 'publish',
+      success: true,
+      status: results
+    };
   }
 
   async handleSaveImage(params: SaveImageMessage): Promise<SaveImageResponse> {
@@ -75,17 +92,23 @@ export class DefaultProtocolHandlers {
       const filePath = join(this.assetsDir, fileName);
       
       // Write the image file
-      writeFileSync(filePath, buffer);
+      if (this.mockFileSystem) {
+        this.mockFileSystem.writeFile!(filePath, buffer);
+      } else {
+        writeFileSync(filePath, buffer);
+      }
       
       // Return the URL that will be accessible via the dev server
       const imageUrl = `/assets/${fileName}`;
       
       return {
+        type: 'saveImage',
         success: true,
         imageUrl
       };
     } catch (error) {
       return {
+        type: 'saveImage',
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
       };
@@ -103,9 +126,15 @@ export class DefaultProtocolHandlers {
         const fileName = `${imageId}${extension}`;
         const filePath = join(this.assetsDir, fileName);
         
-        if (existsSync(filePath)) {
+        const fileExists = this.mockFileSystem 
+          ? this.mockFileSystem.existsSync!(filePath)
+          : existsSync(filePath);
+        
+        if (fileExists) {
           const imageUrl = `/assets/${fileName}`;
           return {
+            type: 'hasImage',
+            success: true,
             exists: true,
             imageUrl
           };
@@ -113,10 +142,14 @@ export class DefaultProtocolHandlers {
       }
       
       return {
+        type: 'hasImage',
+        success: true,
         exists: false
       };
     } catch (error) {
       return {
+        type: 'hasImage',
+        success: false,
         exists: false
       };
     }

@@ -1,2 +1,1 @@
-export * from './editor-server';
-export * from './protocol-handlers'; 
+export * from './editor-server'; 
