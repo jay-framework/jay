@@ -7,6 +7,11 @@ import type {
     SaveImageResponse,
     HasImageResponse,
 } from '@jay-framework/editor-protocol';
+import {
+    createPublishResponse,
+    createSaveImageResponse,
+    createHasImageResponse,
+} from '@jay-framework/editor-protocol';
 
 export interface DefaultHandlersOptions {
     projectRoot: string;
@@ -62,11 +67,7 @@ export class DefaultProtocolHandlers {
             }
         }
 
-        return {
-            type: 'publish',
-            success: true,
-            status: results,
-        };
+        return createPublishResponse(results);
     }
 
     async handleSaveImage(params: SaveImageMessage): Promise<SaveImageResponse> {
@@ -90,17 +91,9 @@ export class DefaultProtocolHandlers {
             // Return the URL that will be accessible via the dev server
             const imageUrl = `/assets/${fileName}`;
 
-            return {
-                type: 'saveImage',
-                success: true,
-                imageUrl,
-            };
+            return createSaveImageResponse(true, imageUrl);
         } catch (error) {
-            return {
-                type: 'saveImage',
-                success: false,
-                error: error instanceof Error ? error.message : 'Unknown error',
-            };
+            return createSaveImageResponse(false, undefined, error instanceof Error ? error.message : 'Unknown error');
         }
     }
 
@@ -121,26 +114,13 @@ export class DefaultProtocolHandlers {
 
                 if (fileExists) {
                     const imageUrl = `/assets/${fileName}`;
-                    return {
-                        type: 'hasImage',
-                        success: true,
-                        exists: true,
-                        imageUrl,
-                    };
+                    return createHasImageResponse(true, imageUrl);
                 }
             }
 
-            return {
-                type: 'hasImage',
-                success: true,
-                exists: false,
-            };
+            return createHasImageResponse(false);
         } catch (error) {
-            return {
-                type: 'hasImage',
-                success: false,
-                exists: false,
-            };
+            return createHasImageResponse(false);
         }
     }
 

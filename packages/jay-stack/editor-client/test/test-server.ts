@@ -2,6 +2,7 @@ import { createServer, Server } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { AddressInfo } from 'net';
 import { Socket } from 'socket.io';
+import { createProtocolResponse } from '@jay-framework/editor-protocol';
 
 export interface TestServerOptions {
     port?: number;
@@ -153,15 +154,12 @@ export class TestServer {
                     const response = await this.handleProtocolMessage(message);
                     socket.emit('protocol-response', response);
                 } catch (error) {
-                    const errorResponse = {
-                        id: message.id,
-                        timestamp: Date.now(),
-                        payload: {
-                            type: message.payload.type,
-                            success: false,
-                            error: error instanceof Error ? error.message : 'Unknown error',
-                        },
+                    const errorPayload = {
+                        type: message.payload.type,
+                        success: false,
+                        error: error instanceof Error ? error.message : 'Unknown error',
                     };
+                    const errorResponse = createProtocolResponse(message.id, errorPayload);
                     socket.emit('protocol-response', errorResponse);
                 }
             });
@@ -183,15 +181,13 @@ export class TestServer {
 
         const result = await handler(payload);
 
-        return {
-            id,
-            timestamp: Date.now(),
-            payload: {
-                type: payload.type,
-                success: true,
-                ...result,
-            },
+        const responsePayload = {
+            type: payload.type,
+            success: true,
+            ...result,
         };
+
+        return createProtocolResponse(id, responsePayload);
     }
 }
 

@@ -2,7 +2,6 @@ import { io, Socket } from 'socket.io-client';
 import { v4 as uuidv4 } from 'uuid';
 import type {
     ConnectionState,
-    ProtocolMessage,
     ProtocolResponse,
     PortDiscoveryResponse,
     PublishMessage,
@@ -12,6 +11,7 @@ import type {
     SaveImageResponse,
     HasImageResponse,
 } from '@jay-framework/editor-protocol';
+import { createProtocolMessage } from '@jay-framework/editor-protocol';
 
 export interface ConnectionManagerOptions {
     portRange?: [number, number];
@@ -104,19 +104,14 @@ export class ConnectionManager {
         }
 
         return new Promise((resolve, reject) => {
-            const messageId = uuidv4();
-            const protocolMessage: ProtocolMessage = {
-                id: messageId,
-                timestamp: Date.now(),
-                payload: message,
-            };
+            const protocolMessage = createProtocolMessage(message);
 
-            this.pendingRequests.set(messageId, { resolve, reject });
+            this.pendingRequests.set(protocolMessage.id, { resolve, reject });
 
             // Set timeout for the request
             setTimeout(() => {
-                if (this.pendingRequests.has(messageId)) {
-                    this.pendingRequests.delete(messageId);
+                if (this.pendingRequests.has(protocolMessage.id)) {
+                    this.pendingRequests.delete(protocolMessage.id);
                     reject(new Error('Request timeout'));
                 }
             }, this.scanTimeout);

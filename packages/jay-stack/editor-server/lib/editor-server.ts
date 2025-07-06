@@ -13,6 +13,7 @@ import type {
     SaveImageResponse,
     HasImageResponse,
 } from '@jay-framework/editor-protocol';
+import { createProtocolResponse } from '@jay-framework/editor-protocol';
 
 export interface EditorServerOptions {
     editorId?: string;
@@ -134,15 +135,12 @@ export class EditorServer implements DevServerProtocol {
                     const response = await this.handleProtocolMessage(message);
                     socket.emit('protocol-response', response);
                 } catch (error) {
-                    const errorResponse: ProtocolResponse = {
-                        id: message.id,
-                        timestamp: Date.now(),
-                        payload: {
-                            type: message.payload.type,
-                            success: false,
-                            error: error instanceof Error ? error.message : 'Unknown error',
-                        } as any,
-                    };
+                    const errorPayload = {
+                        type: message.payload.type,
+                        success: false,
+                        error: error instanceof Error ? error.message : 'Unknown error',
+                    } as any;
+                    const errorResponse = createProtocolResponse(message.id, errorPayload);
                     socket.emit('protocol-response', errorResponse);
                 }
             });
@@ -162,33 +160,21 @@ export class EditorServer implements DevServerProtocol {
                     throw new Error('Publish handler not registered');
                 }
                 const publishResult = await this.handlers.publish(payload as PublishMessage);
-                return {
-                    id,
-                    timestamp: Date.now(),
-                    payload: publishResult,
-                };
+                return createProtocolResponse(id, publishResult);
 
             case 'saveImage':
                 if (!this.handlers.saveImage) {
                     throw new Error('Save image handler not registered');
                 }
                 const saveResult = await this.handlers.saveImage(payload as SaveImageMessage);
-                return {
-                    id,
-                    timestamp: Date.now(),
-                    payload: saveResult,
-                };
+                return createProtocolResponse(id, saveResult);
 
             case 'hasImage':
                 if (!this.handlers.hasImage) {
                     throw new Error('Has image handler not registered');
                 }
                 const hasResult = await this.handlers.hasImage(payload as HasImageMessage);
-                return {
-                    id,
-                    timestamp: Date.now(),
-                    payload: hasResult,
-                };
+                return createProtocolResponse(id, hasResult);
 
             default:
                 throw new Error(`Unknown message type: ${(payload as any).type}`);
