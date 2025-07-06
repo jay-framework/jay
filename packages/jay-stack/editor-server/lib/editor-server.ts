@@ -1,13 +1,9 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer } from 'http';
-import { parse } from 'yaml';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { v4 as uuidv4 } from 'uuid';
 import getPort from 'get-port';
 import type { 
   DevServerProtocol, 
-  EditorConfig, 
-  ProtocolMessage, 
+  ProtocolMessage,
   ProtocolResponse,
   PortDiscoveryResponse,
   PublishMessage,
@@ -19,8 +15,8 @@ import type {
 } from '@jay-framework/editor-protocol';
 
 export interface EditorServerOptions {
-  projectRoot: string;
-  config?: EditorConfig;
+  editorId?: string;
+  onEditorId?: (editorId: string) => void;
   portRange?: [number, number];
 }
 
@@ -29,9 +25,8 @@ export class EditorServer implements DevServerProtocol {
   private httpServer: any = null;
   private port: number | null = null;
   private editorId: string | null = null;
-  private projectRoot: string;
-  private config: EditorConfig;
   private portRange: [number, number];
+  private onEditorId: (editorId: string) => void;
   private handlers: {
     publish?: (params: PublishMessage) => Promise<PublishResponse>;
     saveImage?: (params: SaveImageMessage) => Promise<SaveImageResponse>;
@@ -39,10 +34,9 @@ export class EditorServer implements DevServerProtocol {
   } = {};
 
   constructor(options: EditorServerOptions) {
-    this.projectRoot = options.projectRoot;
-    this.config = options.config || this.loadConfig();
     this.portRange = options.portRange || [3101, 3200];
-    this.editorId = this.config.id || null;
+    this.onEditorId = options.onEditorId;
+    this.editorId = options.editorId || null;
   }
 
   async start(): Promise<{ port: number; editorId: string }> {
@@ -116,7 +110,7 @@ export class EditorServer implements DevServerProtocol {
     // If in init mode, accept the connection and set the ID
     if (!this.editorId) {
       this.editorId = tabId;
-      this.saveConfig();
+      this.onEditorId && this.onEditorId(tabId);
     }
 
     const response: PortDiscoveryResponse = {
@@ -198,57 +192,6 @@ export class EditorServer implements DevServerProtocol {
 
       default:
         throw new Error(`Unknown message type: ${(payload as any).type}`);
-    }
-  }
-
-  private loadConfig(): EditorConfig {
-    const configPath = `${this.projectRoot}/.jay`;
-    
-    if (!existsSync(configPath)) {
-      return {
-        portRanges: {
-          http: [3000, 3100],
-          editor: [3101, 3200]
-        }
-      };
-    }
-
-    try {
-      const configContent = readFileSync(configPath, 'utf8');
-      const parsed = parse(configContent);
-      return {
-        portRanges: {
-          http: [3000, 3100],
-          editor: [3101, 3200]
-        },
-        ...parsed.editor
-      };
-    } catch (error) {
-      console.warn('Failed to load .jay config:', error);
-      return {
-        portRanges: {
-          http: [3000, 3100],
-          editor: [3101, 3200]
-        }
-      };
-    }
-  }
-
-  private saveConfig(): void {
-    if (!this.editorId) return;
-
-    const configPath = `${this.projectRoot}/.jay`;
-    const config = {
-      editor: {
-        id: this.editorId,
-        portRanges: this.config.portRanges
-      }
-    };
-
-    try {
-      writeFileSync(configPath, JSON.stringify(config, null, 2));
-    } catch (error) {
-      console.warn('Failed to save .jay config:', error);
     }
   }
 }

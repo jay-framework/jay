@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { EditorServer, createEditorServer } from '../lib';
-import { DefaultProtocolHandlers, createDefaultHandlers } from './protocol-handlers';
+import { createDefaultHandlers } from './protocol-handlers';
 import { createEditorClient } from '@jay-framework/editor-client';
 import { join } from 'path';
 import { existsSync, rmSync, mkdirSync } from 'fs';
@@ -28,9 +28,7 @@ describe('Editor Server', () => {
   });
 
   it('should start server and return port and editor ID', async () => {
-    server = createEditorServer({
-      projectRoot: tempDir
-    });
+    server = createEditorServer({});
 
     const result = await server.start();
 
@@ -54,9 +52,7 @@ describe('Editor Server End-to-End Tests', () => {
     mkdirSync(tempDir, { recursive: true });
 
     // Create server with default handlers
-    server = createEditorServer({
-      projectRoot: tempDir
-    });
+    server = createEditorServer({});
 
     const handlers = createDefaultHandlers({
       projectRoot: tempDir
@@ -210,9 +206,7 @@ describe('Editor Server End-to-End Tests', () => {
     await client.disconnect();
 
     // Create a new server with a specific editor ID
-    const configuredServer = createEditorServer({
-      projectRoot: tempDir
-    });
+    const configuredServer = createEditorServer({});
 
     const handlers = createDefaultHandlers({
       projectRoot: tempDir
