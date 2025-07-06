@@ -19,7 +19,7 @@ const app: Express = express();
 async function initApp() {
     // Find available port for dev server
     const devServerPort = await getPort({ port: config.devServer?.portRange || [3000, 3100] });
-    
+
     // Start editor server
     const editorServer = createEditorServer({
         portRange: config.editorServer?.portRange || [3101, 3200],

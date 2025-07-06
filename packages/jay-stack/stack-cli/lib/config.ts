@@ -23,7 +23,7 @@ const DEFAULT_CONFIG: JayConfig = {
 
 export function loadConfig(): JayConfig {
     const configPath = path.resolve('.jay');
-    
+
     if (!fs.existsSync(configPath)) {
         return DEFAULT_CONFIG;
     }
@@ -31,7 +31,7 @@ export function loadConfig(): JayConfig {
     try {
         const configContent = fs.readFileSync(configPath, 'utf-8');
         const userConfig = YAML.parse(configContent);
-        
+
         // Merge with defaults, allowing user config to override defaults
         return {
             devServer: {
@@ -51,11 +51,11 @@ export function loadConfig(): JayConfig {
 
 export function updateConfig(updates: Partial<JayConfig>): void {
     const configPath = path.resolve('.jay');
-    
+
     try {
         // Load existing config or use defaults
         const existingConfig = loadConfig();
-        
+
         // Merge updates with existing config
         const updatedConfig = {
             ...existingConfig,
@@ -69,11 +69,11 @@ export function updateConfig(updates: Partial<JayConfig>): void {
                 ...updates.editorServer,
             },
         };
-        
+
         // Write back to file
         const yamlContent = YAML.stringify(updatedConfig, { indent: 2 });
         fs.writeFileSync(configPath, yamlContent);
     } catch (error) {
         console.warn('Failed to update .jay config file:', error);
     }
-} 
+}

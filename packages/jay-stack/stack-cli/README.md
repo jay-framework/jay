@@ -37,6 +37,7 @@ editorServer:
 ```
 
 If no `.jay` file is found, the CLI will use default port ranges:
+
 - **Dev Server**: `3000-3100`
 - **Editor Server**: `3101-3200`
 

@@ -34,4 +34,4 @@ The CLI will automatically find available ports within the specified ranges and 
 📁 Pages directory: ./src/pages
 ```
 
-You can now develop and edit your Jay app using these servers. 
+You can now develop and edit your Jay app using these servers.

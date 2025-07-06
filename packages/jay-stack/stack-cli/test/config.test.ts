@@ -30,7 +30,7 @@ describe('Config Loading', () => {
         }
 
         const config = loadConfig();
-        
+
         expect(config.devServer?.portRange).toEqual([3000, 3100]);
         expect(config.editorServer?.portRange).toEqual([3101, 3200]);
     });
@@ -40,7 +40,7 @@ describe('Config Loading', () => {
         fs.writeFileSync(configPath, customConfig);
 
         const config = loadConfig();
-        
+
         expect(config.devServer?.portRange).toEqual([4000, 4100]);
         expect(config.editorServer?.portRange).toEqual([4101, 4200]);
     });
@@ -50,7 +50,7 @@ describe('Config Loading', () => {
         fs.writeFileSync(configPath, partialConfig);
 
         const config = loadConfig();
-        
+
         expect(config.devServer?.portRange).toEqual([5000, 5100]);
         expect(config.editorServer?.portRange).toEqual([3101, 3200]); // Default value
     });
@@ -70,4 +70,4 @@ describe('Config Loading', () => {
         expect(updatedConfig.editorServer?.editorId).toEqual('test-editor-123');
         expect(updatedConfig.devServer?.portRange).toEqual([3000, 3100]); // Should preserve existing config
     });
-}); 
+});

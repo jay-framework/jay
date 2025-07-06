@@ -51,7 +51,11 @@ export class EditorServer implements DevServerProtocol {
             if (!this.isLocalhost(clientIP)) {
                 console.warn(`Rejected connection from non-localhost IP: ${clientIP}`);
                 res.writeHead(403, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: 'Access denied: Only localhost connections are allowed' }));
+                res.end(
+                    JSON.stringify({
+                        error: 'Access denied: Only localhost connections are allowed',
+                    }),
+                );
                 return;
             }
 
@@ -171,10 +175,9 @@ export class EditorServer implements DevServerProtocol {
 
     private isLocalhost(ip: string): boolean {
         // Handle IPv4 and IPv6 localhost addresses
-        return ip === '127.0.0.1' || 
-               ip === 'localhost' || 
-               ip === '::1' || 
-               ip === '::ffff:127.0.0.1';
+        return (
+            ip === '127.0.0.1' || ip === 'localhost' || ip === '::1' || ip === '::ffff:127.0.0.1'
+        );
     }
 
     private async handleProtocolMessage(message: ProtocolMessage): Promise<ProtocolResponse> {
