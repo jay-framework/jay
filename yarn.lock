@@ -4079,7 +4079,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@jay-framework/editor-client@workspace:packages/jay-stack/editor-client":
+"@jay-framework/editor-client@workspace:^, @jay-framework/editor-client@workspace:packages/jay-stack/editor-client":
   version: 0.0.0-use.local
   resolution: "@jay-framework/editor-client@workspace:packages/jay-stack/editor-client"
   dependencies:
@@ -4119,6 +4119,7 @@ __metadata:
   resolution: "@jay-framework/editor-server@workspace:packages/jay-stack/editor-server"
   dependencies:
     "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/editor-client": "workspace:^"
     "@jay-framework/editor-protocol": "workspace:^"
     "@jay-framework/jay-cli": "workspace:^"
     "@types/express": ^5.0.2
