@@ -23,7 +23,9 @@
   },
   "dependencies": {
     "@jay-framework/dev-server": "workspace:^",
+    "@jay-framework/editor-server": "workspace:^",
     "express": "^5.0.1",
+    "get-port": "^7.0.0",
     "vite": "^5.0.11"
   },
   "devDependencies": {

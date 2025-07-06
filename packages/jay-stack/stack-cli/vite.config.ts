@@ -28,7 +28,9 @@ export default defineConfig({
                 '@jay-framework/rollup-plugin',
                 '@jay-framework/vite-plugin',
                 '@jay-framework/dev-server',
+                '@jay-framework/editor-server',
                 'express',
+                'get-port',
             ],
             output: {
                 banner: '#!/usr/bin/env node',

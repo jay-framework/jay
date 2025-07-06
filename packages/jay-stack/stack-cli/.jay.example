@@ -1,0 +1,4 @@
+devServer:
+  portRange: [3000, 3100]
+editorServer:
+  portRange: [3101, 3200] 
