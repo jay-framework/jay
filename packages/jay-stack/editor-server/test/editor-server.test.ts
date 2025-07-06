@@ -3,27 +3,17 @@ import { EditorServer, createEditorServer } from '../lib';
 import { createDefaultHandlers } from './protocol-handlers';
 import { createEditorClient } from '@jay-framework/editor-client';
 import { join } from 'path';
-import { existsSync, rmSync, mkdirSync } from 'fs';
 
 describe('Editor Server', () => {
-  let tempDir: string;
   let server: EditorServer;
 
   beforeEach(() => {
-    // Create temporary directory for testing
-    tempDir = join(process.cwd(), 'temp-test-dir');
-    if (existsSync(tempDir)) {
-      rmSync(tempDir, { recursive: true, force: true });
-    }
-    mkdirSync(tempDir, { recursive: true });
+    // No filesystem setup needed for memory-based tests
   });
 
   afterEach(async () => {
     if (server) {
       await server.stop();
-    }
-    if (existsSync(tempDir)) {
-      rmSync(tempDir, { recursive: true, force: true });
     }
   });
 
@@ -38,24 +28,24 @@ describe('Editor Server', () => {
 });
 
 describe('Editor Server End-to-End Tests', () => {
-  let tempDir: string;
   let server: EditorServer;
   let client: any;
   let serverInfo: { port: number; editorId: string };
+  let memoryFileSystem: { files: Map<string, string | Buffer>; directories: Set<string> };
 
   beforeEach(async () => {
-    // Create temporary directory for testing
-    tempDir = join(process.cwd(), 'temp-test-dir');
-    if (existsSync(tempDir)) {
-      rmSync(tempDir, { recursive: true, force: true });
-    }
-    mkdirSync(tempDir, { recursive: true });
+    // Initialize memory filesystem
+    memoryFileSystem = {
+      files: new Map(),
+      directories: new Set()
+    };
 
-    // Create server with default handlers
+    // Create server with memory-based handlers
     server = createEditorServer({});
 
     const handlers = createDefaultHandlers({
-      projectRoot: tempDir
+      projectRoot: '/test-project',
+      memoryFileSystem
     });
 
     server.onPublish(handlers.handlePublish.bind(handlers));
@@ -80,9 +70,6 @@ describe('Editor Server End-to-End Tests', () => {
     }
     if (server) {
       await server.stop();
-    }
-    if (existsSync(tempDir)) {
-      rmSync(tempDir, { recursive: true, force: true });
     }
   });
 
@@ -111,9 +98,10 @@ describe('Editor Server End-to-End Tests', () => {
     expect(result.status[0].success).toBe(true);
     expect(result.status[0].filePath).toContain('test-page.jay-html');
 
-    // Verify file was actually created
-    const expectedPath = join(tempDir, 'test', 'test-page.jay-html');
-    expect(existsSync(expectedPath)).toBe(true);
+    // Verify file was created in memory
+    const expectedPath = '/test-project/test/test-page.jay-html';
+    expect(memoryFileSystem.files.has(expectedPath)).toBe(true);
+    expect(memoryFileSystem.files.get(expectedPath)).toBe('<div>Test content</div>');
   });
 
   it('should handle save image operation end-to-end', async () => {
@@ -130,9 +118,10 @@ describe('Editor Server End-to-End Tests', () => {
     expect(result.success).toBe(true);
     expect(result.imageUrl).toBe('/assets/test-image.png');
 
-    // Verify file was actually created
-    const expectedPath = join(tempDir, 'public', 'assets', 'test-image.png');
-    expect(existsSync(expectedPath)).toBe(true);
+    // Verify file was created in memory
+    const expectedPath = '/test-project/public/assets/test-image.png';
+    expect(memoryFileSystem.files.has(expectedPath)).toBe(true);
+    expect(memoryFileSystem.files.get(expectedPath)).toBeInstanceOf(Buffer);
   });
 
   it('should handle has image operation end-to-end', async () => {
@@ -193,11 +182,13 @@ describe('Editor Server End-to-End Tests', () => {
     expect(result.status[0].filePath).toContain('page1.jay-html');
     expect(result.status[1].filePath).toContain('page2.jay-html');
 
-    // Verify files were actually created
-    const path1 = join(tempDir, 'page1', 'page1.jay-html');
-    const path2 = join(tempDir, 'page2', 'page2.jay-html');
-    expect(existsSync(path1)).toBe(true);
-    expect(existsSync(path2)).toBe(true);
+    // Verify files were created in memory
+    const path1 = '/test-project/page1/page1.jay-html';
+    const path2 = '/test-project/page2/page2.jay-html';
+    expect(memoryFileSystem.files.has(path1)).toBe(true);
+    expect(memoryFileSystem.files.has(path2)).toBe(true);
+    expect(memoryFileSystem.files.get(path1)).toBe('<div>Page 1 content</div>');
+    expect(memoryFileSystem.files.get(path2)).toBe('<div>Page 2 content</div>');
   });
 
   it('should handle server in configured mode', async () => {
@@ -205,11 +196,17 @@ describe('Editor Server End-to-End Tests', () => {
     await server.stop();
     await client.disconnect();
 
-    // Create a new server with a specific editor ID
+    // Create a new server with memory filesystem
+    const configuredMemoryFileSystem = {
+      files: new Map<string, string | Buffer>(),
+      directories: new Set<string>()
+    };
+
     const configuredServer = createEditorServer({});
 
     const handlers = createDefaultHandlers({
-      projectRoot: tempDir
+      projectRoot: '/configured-project',
+      memoryFileSystem: configuredMemoryFileSystem
     });
 
     configuredServer.onPublish(handlers.handlePublish.bind(handlers));
@@ -244,6 +241,10 @@ describe('Editor Server End-to-End Tests', () => {
     });
 
     expect(result.status[0].success).toBe(true);
+
+    // Verify file was created in memory
+    const expectedPath = '/configured-project/configured/configured-page.jay-html';
+    expect(configuredMemoryFileSystem.files.has(expectedPath)).toBe(true);
 
     await configuredClient.disconnect();
     await configuredServer.stop();
@@ -280,5 +281,11 @@ describe('Editor Server End-to-End Tests', () => {
     expect(publishResult.status[0].success).toBe(true);
     expect(saveImageResult.success).toBe(true);
     expect(hasImageResult.exists).toBe(false);
+
+    // Verify files were created in memory
+    const publishPath = '/test-project/concurrent/concurrent-page.jay-html';
+    const imagePath = '/test-project/public/assets/concurrent-image.png';
+    expect(memoryFileSystem.files.has(publishPath)).toBe(true);
+    expect(memoryFileSystem.files.has(imagePath)).toBe(true);
   });
 }, 30000); // Increase timeout for end-to-end tests 

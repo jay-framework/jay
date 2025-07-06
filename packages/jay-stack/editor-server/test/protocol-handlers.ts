@@ -1,4 +1,3 @@
-import { writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import type { 
   PublishMessage, 
@@ -12,27 +11,26 @@ import type {
 export interface DefaultHandlersOptions {
   projectRoot: string;
   assetsDir?: string;
-  // For testing: allow mocking file system operations
-  mockFileSystem?: {
-    writeFile?: (path: string, content: string | Buffer) => void;
-    existsSync?: (path: string) => boolean;
-    mkdirSync?: (path: string, options?: any) => void;
+  // For testing: in-memory file system
+  memoryFileSystem?: {
+    files: Map<string, string | Buffer>;
+    directories: Set<string>;
   };
 }
 
 export class DefaultProtocolHandlers {
   private projectRoot: string;
   private assetsDir: string;
-  private mockFileSystem?: DefaultHandlersOptions['mockFileSystem'];
+  private memoryFileSystem?: DefaultHandlersOptions['memoryFileSystem'];
 
   constructor(options: DefaultHandlersOptions) {
     this.projectRoot = options.projectRoot;
     this.assetsDir = options.assetsDir || join(this.projectRoot, 'public', 'assets');
-    this.mockFileSystem = options.mockFileSystem;
+    this.memoryFileSystem = options.memoryFileSystem;
     
-    // Ensure assets directory exists (unless mocking)
-    if (!this.mockFileSystem && !existsSync(this.assetsDir)) {
-      mkdirSync(this.assetsDir, { recursive: true });
+    // Ensure assets directory exists in memory filesystem
+    if (this.memoryFileSystem) {
+      this.memoryFileSystem.directories.add(this.assetsDir);
     }
   }
 
@@ -47,16 +45,9 @@ export class DefaultProtocolHandlers {
         
         // Ensure directory exists
         const dir = join(this.projectRoot, route);
-        if (this.mockFileSystem) {
-          if (!this.mockFileSystem.existsSync!(dir)) {
-            this.mockFileSystem.mkdirSync!(dir, { recursive: true });
-          }
-          this.mockFileSystem.writeFile!(filePath, jayHtml);
-        } else {
-          if (!existsSync(dir)) {
-            mkdirSync(dir, { recursive: true });
-          }
-          writeFileSync(filePath, jayHtml, 'utf8');
+        if (this.memoryFileSystem) {
+          this.memoryFileSystem.directories.add(dir);
+          this.memoryFileSystem.files.set(filePath, jayHtml);
         }
         
         results.push({
@@ -91,11 +82,9 @@ export class DefaultProtocolHandlers {
       const fileName = `${imageId}${extension}`;
       const filePath = join(this.assetsDir, fileName);
       
-      // Write the image file
-      if (this.mockFileSystem) {
-        this.mockFileSystem.writeFile!(filePath, buffer);
-      } else {
-        writeFileSync(filePath, buffer);
+      // Write the image file to memory
+      if (this.memoryFileSystem) {
+        this.memoryFileSystem.files.set(filePath, buffer);
       }
       
       // Return the URL that will be accessible via the dev server
@@ -126,9 +115,9 @@ export class DefaultProtocolHandlers {
         const fileName = `${imageId}${extension}`;
         const filePath = join(this.assetsDir, fileName);
         
-        const fileExists = this.mockFileSystem 
-          ? this.mockFileSystem.existsSync!(filePath)
-          : existsSync(filePath);
+        const fileExists = this.memoryFileSystem 
+          ? this.memoryFileSystem.files.has(filePath)
+          : false;
         
         if (fileExists) {
           const imageUrl = `/assets/${fileName}`;
