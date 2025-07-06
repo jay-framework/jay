@@ -1,9 +1,16 @@
 {
-  "name": "@jay-framework/json-patch",
+  "name": "@jay-framework/editor-protocol",
   "version": "0.6.0",
   "type": "module",
   "license": "Apache-2.0",
-  "main": "./dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "files": [
     "dist",
     "readme.md"
@@ -16,15 +23,13 @@
     "build:check-types": "tsc",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
-    "test": "vitest run",
-    "test:watch": "vitest"
-  },
-  "dependencies": {
-    "@jay-framework/list-compare": "workspace:^"
+    "test": ":",
+    "test:watch": ":"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
-    "@types/node": "^20.11.5",
+    "@jay-framework/jay-cli": "workspace:^",
+    "@types/node": "^22.15.21",
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",

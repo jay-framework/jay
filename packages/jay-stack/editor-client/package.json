@@ -1,9 +1,16 @@
 {
-  "name": "@jay-framework/json-patch",
+  "name": "@jay-framework/editor-client",
   "version": "0.6.0",
   "type": "module",
   "license": "Apache-2.0",
-  "main": "./dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "files": [
     "dist",
     "readme.md"
@@ -20,11 +27,16 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@jay-framework/list-compare": "workspace:^"
+    "@jay-framework/editor-protocol": "workspace:^",
+    "get-port": "^7.0.0",
+    "socket.io-client": "^4.7.4",
+    "uuid": "^9.0.1"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
-    "@types/node": "^20.11.5",
+    "@jay-framework/jay-cli": "workspace:^",
+    "@types/node": "^22.15.21",
+    "@types/uuid": "^9.0.7",
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",

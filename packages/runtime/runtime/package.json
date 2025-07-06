@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/runtime",
-  "version": "0.5.3",
+  "version": "0.6.0",
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/index.js",
