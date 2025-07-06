@@ -33,6 +33,7 @@ devServer:
   portRange: [3000, 3100]
 editorServer:
   portRange: [3101, 3200]
+  # editorId will be automatically set when an editor connects
 ```
 
 If no `.jay` file is found, the CLI will use default port ranges:
@@ -40,6 +41,8 @@ If no `.jay` file is found, the CLI will use default port ranges:
 - **Editor Server**: `3101-3200`
 
 The CLI automatically finds available ports within these ranges using the `get-port` package.
+
+**Note**: The `editorId` field in the configuration will be automatically updated when an editor connects to the server.
 
 ## Default Configuration
 

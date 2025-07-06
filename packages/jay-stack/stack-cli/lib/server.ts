@@ -3,7 +3,7 @@ import { mkDevServer } from '@jay-framework/dev-server';
 import { createEditorServer } from '@jay-framework/editor-server';
 import getPort from 'get-port';
 import path from 'path';
-import { loadConfig } from './config';
+import { loadConfig, updateConfig } from './config';
 
 // Load configuration
 const config = loadConfig();
@@ -23,8 +23,15 @@ async function initApp() {
     // Start editor server
     const editorServer = createEditorServer({
         portRange: config.editorServer?.portRange || [3101, 3200],
+        editorId: config.editorServer?.editorId,
         onEditorId: (editorId) => {
             console.log(`Editor connected with ID: ${editorId}`);
+            // Update the .jay config file with the editor ID
+            updateConfig({
+                editorServer: {
+                    editorId: editorId,
+                },
+            });
         },
     });
 

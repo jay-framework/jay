@@ -8,6 +8,7 @@ export interface JayConfig {
     };
     editorServer?: {
         portRange?: [number, number];
+        editorId?: string;
     };
 }
 
@@ -45,5 +46,34 @@ export function loadConfig(): JayConfig {
     } catch (error) {
         console.warn('Failed to parse .jay YAML config file, using defaults:', error);
         return DEFAULT_CONFIG;
+    }
+}
+
+export function updateConfig(updates: Partial<JayConfig>): void {
+    const configPath = path.resolve('.jay');
+    
+    try {
+        // Load existing config or use defaults
+        const existingConfig = loadConfig();
+        
+        // Merge updates with existing config
+        const updatedConfig = {
+            ...existingConfig,
+            ...updates,
+            devServer: {
+                ...existingConfig.devServer,
+                ...updates.devServer,
+            },
+            editorServer: {
+                ...existingConfig.editorServer,
+                ...updates.editorServer,
+            },
+        };
+        
+        // Write back to file
+        const yamlContent = YAML.stringify(updatedConfig, { indent: 2 });
+        fs.writeFileSync(configPath, yamlContent);
+    } catch (error) {
+        console.warn('Failed to update .jay config file:', error);
     }
 } 

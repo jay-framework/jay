@@ -1,4 +1,5 @@
 devServer:
   portRange: [3000, 3100]
 editorServer:
-  portRange: [3101, 3200] 
+  portRange: [3101, 3200]
+  # editorId will be automatically set when an editor connects 

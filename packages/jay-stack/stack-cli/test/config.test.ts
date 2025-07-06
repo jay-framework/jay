@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { loadConfig, JayConfig } from '../lib';
+import { loadConfig, updateConfig, JayConfig } from '../lib/config';
 
 describe('Config Loading', () => {
     const configPath = path.resolve('.jay');
@@ -53,5 +53,21 @@ describe('Config Loading', () => {
         
         expect(config.devServer?.portRange).toEqual([5000, 5100]);
         expect(config.editorServer?.portRange).toEqual([3101, 3200]); // Default value
+    });
+
+    it('should update config with editorId', () => {
+        const initialConfig = `devServer:\n  portRange: [3000, 3100]\neditorServer:\n  portRange: [3101, 3200]\n`;
+        fs.writeFileSync(configPath, initialConfig);
+
+        // Update with editorId
+        updateConfig({
+            editorServer: {
+                editorId: 'test-editor-123',
+            },
+        });
+
+        const updatedConfig = loadConfig();
+        expect(updatedConfig.editorServer?.editorId).toEqual('test-editor-123');
+        expect(updatedConfig.devServer?.portRange).toEqual([3000, 3100]); // Should preserve existing config
     });
 }); 
