@@ -3,7 +3,8 @@ import {
     hasJayModeExtension,
     Import,
     JAY_CONTRACT_EXTENSION,
-    JAY_EXTENSION, TS_EXTENSION,
+    JAY_EXTENSION,
+    TS_EXTENSION,
 } from '@jay-framework/compiler-shared';
 import { LoadResult, PluginContext, ResolveIdResult, TransformResult } from 'rollup';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
@@ -25,13 +26,13 @@ import {
     JAY_IMPORT_RESOLVER,
     parseContract,
 } from '@jay-framework/compiler-jay-html';
-import {ViteDevServer} from "vite";
+import { ViteDevServer } from 'vite';
 
 const GLOBAL_FUNC_REPOSITORY = 'GLOBAL_FUNC_REPOSITORY.ts';
 
 export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: JayPluginContext) {
     const jayContext = givenJayContext || new JayPluginContext(jayOptions);
-    let server: ViteDevServer
+    let server: ViteDevServer;
     return {
         name: 'jay:runtime',
         configureServer(_server: ViteDevServer) {
@@ -109,8 +110,9 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
                 if (module) {
                     server.moduleGraph.invalidateModule(module);
                     server.ws.send({
-                        type: 'full-reload'
-                    });                }
+                        type: 'full-reload',
+                    });
+                }
             }
         },
     };
