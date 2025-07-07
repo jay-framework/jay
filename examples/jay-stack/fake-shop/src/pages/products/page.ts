@@ -3,7 +3,7 @@ import {
     PageProps,
     partialRender,
 } from '@jay-framework/fullstack-component';
-import { render, PageElementRefs, ProductOfPageViewState } from './page.jay-html';
+import { PageContract, PageElementRefs, ProductOfPageViewState } from './page.jay-html';
 import { Props } from '@jay-framework/component';
 import { getProducts } from '../../products-database';
 
@@ -27,7 +27,7 @@ function ProductsPageConstructor(
     };
 }
 
-export const page = makeJayStackComponent<typeof render>()
+export const page = makeJayStackComponent<PageContract>()
     .withProps<PageProps>()
     .withSlowlyRender(renderSlowlyChanging)
     .withFastRender(renderFastChanging)

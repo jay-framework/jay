@@ -37,7 +37,7 @@ describe('Editor Handlers', () => {
 
     it('should publish pages correctly', async () => {
         const handlers = createEditorHandlers(testConfig);
-        
+
         const result = await handlers.onPublish({
             type: 'publish',
             pages: [
@@ -62,7 +62,7 @@ describe('Editor Handlers', () => {
         // Check that files were created
         const homeFile = path.join(testPagesDir, 'page.jay-html');
         const aboutFile = path.join(testPagesDir, 'about', 'page.jay-html');
-        
+
         expect(fs.existsSync(homeFile)).toBe(true);
         expect(fs.existsSync(aboutFile)).toBe(true);
         expect(fs.readFileSync(homeFile, 'utf-8')).toBe('<div>Home Page</div>');
@@ -71,7 +71,7 @@ describe('Editor Handlers', () => {
 
     it('should save images correctly', async () => {
         const handlers = createEditorHandlers(testConfig);
-        
+
         const imageData = Buffer.from('fake-image-data').toString('base64');
         const result = await handlers.onSaveImage({
             type: 'saveImage',
@@ -89,7 +89,7 @@ describe('Editor Handlers', () => {
 
     it('should check image existence correctly', async () => {
         const handlers = createEditorHandlers(testConfig);
-        
+
         // Create test image
         const imagesDir = path.join(testPublicDir, 'images');
         fs.mkdirSync(imagesDir, { recursive: true });
@@ -114,4 +114,4 @@ describe('Editor Handlers', () => {
         expect(result2.exists).toBe(false);
         expect(result2.imageUrl).toBeUndefined();
     });
-}); 
+});

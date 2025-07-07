@@ -22,7 +22,7 @@ const app: Express = express();
 async function initApp() {
     // Find available port for dev server
     const devServerPort = await getPort({ port: resolvedConfig.devServer.portRange });
-    
+
     // Start editor server
     const editorServer = createEditorServer({
         portRange: resolvedConfig.editorServer.portRange,
@@ -84,9 +84,9 @@ async function initApp() {
         console.log('\n🛑 Shutting down servers...');
         await editorServer.stop();
         expressServer.closeAllConnections();
-        await new Promise(resolve => expressServer.close(resolve));
+        await new Promise((resolve) => expressServer.close(resolve));
         process.exit(0);
-    }
+    };
     // Handle graceful shutdown
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);

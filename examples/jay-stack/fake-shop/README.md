@@ -9,8 +9,8 @@ The `.jay` file in this directory configures the port ranges for both servers (Y
 ```yaml
 devServer:
   portRange: [3000, 3010]
-  pagesBase: './src/pages'  # Directory containing your Jay pages
-  publicFolder: './public'  # Directory for static files (CSS, JS, images, etc.)
+  pagesBase: './src/pages' # Directory containing your Jay pages
+  publicFolder: './public' # Directory for static files (CSS, JS, images, etc.)
 editorServer:
   portRange: [3011, 3020]
   # editorId will be automatically set when an editor connects

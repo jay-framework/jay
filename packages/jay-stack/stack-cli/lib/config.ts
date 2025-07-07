@@ -27,7 +27,7 @@ const DEFAULT_CONFIG: JayConfig = {
 
 export function loadConfig(): JayConfig {
     const configPath = path.resolve('.jay');
-    
+
     if (!fs.existsSync(configPath)) {
         return DEFAULT_CONFIG;
     }
@@ -35,7 +35,7 @@ export function loadConfig(): JayConfig {
     try {
         const configContent = fs.readFileSync(configPath, 'utf-8');
         const userConfig = YAML.parse(configContent);
-        
+
         // Merge with defaults, allowing user config to override defaults
         return {
             devServer: {

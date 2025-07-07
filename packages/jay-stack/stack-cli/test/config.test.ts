@@ -89,7 +89,7 @@ describe('Config Loading', () => {
         };
 
         const resolved = getConfigWithDefaults(partialConfig);
-        
+
         expect(resolved.devServer.pagesBase).toEqual('./custom/pages');
         expect(resolved.devServer.publicFolder).toEqual('./public'); // Default
         expect(resolved.devServer.portRange).toEqual([3000, 3100]); // Default
