@@ -2,6 +2,7 @@
   "name": "@jay-framework/jay-stack-cli",
   "version": "0.6.0",
   "license": "Apache-2.0",
+  "type": "module",
   "main": "dist/index.js",
   "bin": "dist/index.js",
   "files": [
@@ -23,6 +24,7 @@
   },
   "dependencies": {
     "@jay-framework/dev-server": "workspace:^",
+    "@jay-framework/editor-server": "workspace:^",
     "express": "^5.0.1",
     "vite": "^5.0.11"
   },

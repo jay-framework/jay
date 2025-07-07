@@ -46,6 +46,19 @@ export class EditorServer implements DevServerProtocol {
 
         // Create HTTP server for port discovery
         this.httpServer = createServer((req, res) => {
+            // Validate that request is from localhost
+            const clientIP = req.socket.remoteAddress || req.connection.remoteAddress;
+            if (!this.isLocalhost(clientIP)) {
+                console.warn(`Rejected connection from non-localhost IP: ${clientIP}`);
+                res.writeHead(403, { 'Content-Type': 'application/json' });
+                res.end(
+                    JSON.stringify({
+                        error: 'Access denied: Only localhost connections are allowed',
+                    }),
+                );
+                return;
+            }
+
             if (req.url?.startsWith('/editor-connect')) {
                 this.handlePortDiscovery(req, res);
             } else {
@@ -57,9 +70,10 @@ export class EditorServer implements DevServerProtocol {
         // Create Socket.io server
         this.io = new SocketIOServer(this.httpServer, {
             cors: {
-                origin: '*',
+                origin: ['http://localhost:*', 'http://127.0.0.1:*'],
                 methods: ['GET', 'POST'],
             },
+            allowEIO3: true,
         });
 
         // Setup Socket.io event handlers
@@ -128,7 +142,15 @@ export class EditorServer implements DevServerProtocol {
         if (!this.io) return;
 
         this.io.on('connection', (socket) => {
-            console.log(`Editor connected: ${socket.id}`);
+            // Validate that WebSocket connection is from localhost
+            const clientIP = socket.handshake.address;
+            if (!this.isLocalhost(clientIP)) {
+                console.warn(`Rejected WebSocket connection from non-localhost IP: ${clientIP}`);
+                socket.disconnect(true);
+                return;
+            }
+
+            console.log(`Editor connected: ${socket.id} from ${clientIP}`);
 
             socket.on('protocol-message', async (message: ProtocolMessage) => {
                 try {
@@ -149,6 +171,13 @@ export class EditorServer implements DevServerProtocol {
                 console.log(`Editor disconnected: ${socket.id}`);
             });
         });
+    }
+
+    private isLocalhost(ip: string): boolean {
+        // Handle IPv4 and IPv6 localhost addresses
+        return (
+            ip === '127.0.0.1' || ip === 'localhost' || ip === '::1' || ip === '::ffff:127.0.0.1'
+        );
     }
 
     private async handleProtocolMessage(message: ProtocolMessage): Promise<ProtocolResponse> {

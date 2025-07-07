@@ -11,7 +11,7 @@ export default defineConfig({
             entry: resolve(__dirname, 'lib/index.ts'),
             name: '@jay-framework/jay-stack-cli',
             fileName: 'index',
-            formats: ['cjs'],
+            formats: ['es'],
         },
         rollupOptions: {
             external: [
@@ -28,10 +28,13 @@ export default defineConfig({
                 '@jay-framework/rollup-plugin',
                 '@jay-framework/vite-plugin',
                 '@jay-framework/dev-server',
+                '@jay-framework/editor-server',
                 'express',
+                'get-port',
             ],
             output: {
                 banner: '#!/usr/bin/env node',
+                format: 'es',
             },
         },
     },

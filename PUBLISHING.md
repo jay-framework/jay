@@ -24,6 +24,7 @@ source ~/.zshrc
 ```
 
 Then publish using:
+
 ```bash
 yarn publish
 ```
@@ -31,6 +32,7 @@ yarn publish
 ### Option 2: Manual OTP Input
 
 If you prefer to enter the OTP manually:
+
 ```bash
 yarn publish:interactive
 ```
@@ -38,6 +40,7 @@ yarn publish:interactive
 ### Option 3: Direct Command with OTP
 
 Use the manual command with your OTP:
+
 ```bash
 NPM_OTP=your_otp_token_here yarn publish:manual
 ```
@@ -45,11 +48,13 @@ NPM_OTP=your_otp_token_here yarn publish:manual
 ## Getting Your OTP Token
 
 1. **From npm website**:
+
    - Go to https://www.npmjs.com/settings/tokens
    - Create a new token with "Automation" type
    - Use this token as your OTP
 
 2. **From npm CLI**:
+
    ```bash
    npm token list
    ```
@@ -64,6 +69,7 @@ NPM_OTP=your_otp_token_here yarn publish:manual
 For automated publishing via GitHub Actions:
 
 1. **Add secrets to your repository**:
+
    - `NPM_TOKEN`: Your npm authentication token
    - `NPM_OTP`: Your npm OTP token
 
@@ -74,7 +80,9 @@ For automated publishing via GitHub Actions:
 ## Configuration Files
 
 ### `.npmrc`
+
 The project includes an `.npmrc` file with:
+
 - Registry configuration
 - Access level settings
 - OTP environment variable reference
@@ -89,16 +97,19 @@ The project includes an `.npmrc` file with:
 ## Troubleshooting
 
 ### "OTP required" error
+
 - Ensure `NPM_OTP` environment variable is set
 - Verify your OTP token is valid
 - Check that you have publish permissions
 
 ### "Authentication failed" error
+
 - Verify your npm token is correct
 - Run `npm whoami` to check authentication
 - Try `npm login` to refresh credentials
 
 ### "Package already exists" error
+
 - Increment package versions before publishing
 - Use `yarn version:packages:patch|minor|major` to update versions
 
@@ -122,4 +133,4 @@ yarn version:packages:minor
 
 # Major version (1.0.0 -> 2.0.0)
 yarn version:packages:major
-``` 
+```
