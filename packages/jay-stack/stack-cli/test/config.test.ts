@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { loadConfig, updateConfig, JayConfig } from '../lib/config';
+import { loadConfig, updateConfig, getConfigWithDefaults, JayConfig } from '../lib/config';
 
 describe('Config Loading', () => {
     const configPath = path.resolve('.jay');
@@ -79,5 +79,21 @@ describe('Config Loading', () => {
         expect(config.devServer?.pagesBase).toEqual('./custom/pages');
         expect(config.devServer?.publicFolder).toEqual('./static');
         expect(config.devServer?.portRange).toEqual([3000, 3100]); // Should use default
+    });
+
+    it('should resolve config with defaults', () => {
+        const partialConfig: JayConfig = {
+            devServer: {
+                pagesBase: './custom/pages',
+            },
+        };
+
+        const resolved = getConfigWithDefaults(partialConfig);
+        
+        expect(resolved.devServer.pagesBase).toEqual('./custom/pages');
+        expect(resolved.devServer.publicFolder).toEqual('./public'); // Default
+        expect(resolved.devServer.portRange).toEqual([3000, 3100]); // Default
+        expect(resolved.editorServer.portRange).toEqual([3101, 3200]); // Default
+        expect(resolved.editorServer.editorId).toBeUndefined(); // Not set
     });
 });

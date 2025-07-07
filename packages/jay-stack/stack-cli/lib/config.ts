@@ -27,7 +27,7 @@ const DEFAULT_CONFIG: JayConfig = {
 
 export function loadConfig(): JayConfig {
     const configPath = path.resolve('.jay');
-
+    
     if (!fs.existsSync(configPath)) {
         return DEFAULT_CONFIG;
     }
@@ -35,7 +35,7 @@ export function loadConfig(): JayConfig {
     try {
         const configContent = fs.readFileSync(configPath, 'utf-8');
         const userConfig = YAML.parse(configContent);
-
+        
         // Merge with defaults, allowing user config to override defaults
         return {
             devServer: {
@@ -51,6 +51,20 @@ export function loadConfig(): JayConfig {
         console.warn('Failed to parse .jay YAML config file, using defaults:', error);
         return DEFAULT_CONFIG;
     }
+}
+
+export function getConfigWithDefaults(config: JayConfig): Required<JayConfig> {
+    return {
+        devServer: {
+            portRange: config.devServer?.portRange || DEFAULT_CONFIG.devServer!.portRange!,
+            pagesBase: config.devServer?.pagesBase || DEFAULT_CONFIG.devServer!.pagesBase!,
+            publicFolder: config.devServer?.publicFolder || DEFAULT_CONFIG.devServer!.publicFolder!,
+        },
+        editorServer: {
+            portRange: config.editorServer?.portRange || DEFAULT_CONFIG.editorServer!.portRange!,
+            editorId: config.editorServer?.editorId,
+        },
+    };
 }
 
 export function updateConfig(updates: Partial<JayConfig>): void {
