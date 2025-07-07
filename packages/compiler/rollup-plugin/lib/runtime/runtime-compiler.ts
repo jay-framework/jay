@@ -3,7 +3,7 @@ import {
     hasJayModeExtension,
     Import,
     JAY_CONTRACT_EXTENSION,
-    JAY_EXTENSION,
+    JAY_EXTENSION, TS_EXTENSION,
 } from '@jay-framework/compiler-shared';
 import { LoadResult, PluginContext, ResolveIdResult, TransformResult } from 'rollup';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
@@ -25,14 +25,18 @@ import {
     JAY_IMPORT_RESOLVER,
     parseContract,
 } from '@jay-framework/compiler-jay-html';
+import {ViteDevServer} from "vite";
 
 const GLOBAL_FUNC_REPOSITORY = 'GLOBAL_FUNC_REPOSITORY.ts';
 
 export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: JayPluginContext) {
     const jayContext = givenJayContext || new JayPluginContext(jayOptions);
-
+    let server: ViteDevServer
     return {
-        name: 'jay:runtime', // this name will show up in warnings and errors
+        name: 'jay:runtime',
+        configureServer(_server: ViteDevServer) {
+            server = _server;
+        },
         async resolveId(
             source: string,
             importer: string | undefined,
@@ -100,6 +104,12 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
         watchChange(id: string, change: { event: 'create' | 'update' | 'delete' }): void {
             console.log(`[watchChange] ${id} ${change.event}`);
             jayContext.deleteCachedJayFile(id);
+            if (server) {
+                const module = server.moduleGraph.getModuleById(id + TS_EXTENSION);
+                if (module) {
+                    server.moduleGraph.invalidateModule(module);
+                }
+            }
         },
     };
 }
