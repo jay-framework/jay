@@ -31,15 +31,19 @@ The CLI uses a `.jay` configuration file (YAML format) to customize port ranges 
 ```yaml
 devServer:
   portRange: [3000, 3100]
+  pagesBase: './src/pages'  # Directory containing your Jay pages
+  publicFolder: './public'  # Directory for static files (CSS, JS, images, etc.)
 editorServer:
   portRange: [3101, 3200]
   # editorId will be automatically set when an editor connects
 ```
 
-If no `.jay` file is found, the CLI will use default port ranges:
+If no `.jay` file is found, the CLI will use default values:
 
-- **Dev Server**: `3000-3100`
-- **Editor Server**: `3101-3200`
+- **Dev Server Port Range**: `3000-3100`
+- **Pages Directory**: `./src/pages`
+- **Public Folder**: `./public`
+- **Editor Server Port Range**: `3101-3200`
 
 The CLI automatically finds available ports within these ranges using the `get-port` package.
 
@@ -50,6 +54,7 @@ The CLI automatically finds available ports within these ranges using the `get-p
 The CLI uses the following default configuration:
 
 - **Pages Directory**: `./src/pages` - All Jay pages should be placed in this directory
+- **Public Folder**: `./public` - Static files (CSS, JS, images) are served from this directory
 - **TypeScript Config**: `./tsconfig.json` - Uses the project's TypeScript configuration
 - **Output Directory**: `build/@jay-framework/runtime` - Compiled Jay runtime files
 - **Dev Server Port Range**: `3000-3100` - Automatically finds available port
@@ -75,6 +80,10 @@ your-project/
 │           └── [slug]/             # parameterized segment
 │               ├── page.jay-html   # a page with url parameters
 │               ├── page.ts         # optional logic for the segment parameterized page
+├── public/                         # Static files (CSS, JS, images, etc.)
+│   ├── styles.css
+│   ├── script.js
+│   └── images/
 ├── tsconfig.json                   # TypeScript configuration
 └── package.json
 ```

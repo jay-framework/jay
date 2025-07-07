@@ -3,6 +3,7 @@ import { mkDevServer } from '@jay-framework/dev-server';
 import { createEditorServer } from '@jay-framework/editor-server';
 import getPort from 'get-port';
 import path from 'path';
+import fs from 'fs';
 import { loadConfig, updateConfig } from './config';
 
 // Load configuration
@@ -38,14 +39,24 @@ async function initApp() {
     const { port: editorPort, editorId } = await editorServer.start();
 
     // Start dev server
+    const pagesBase = config.devServer?.pagesBase || './src/pages';
     const { server, viteServer, routes } = await mkDevServer({
-        pagesBase: path.resolve('./src/pages'),
+        pagesBase: path.resolve(pagesBase),
         serverBase: '/',
         dontCacheSlowly: false,
         jayRollupConfig: jayOptions,
     });
 
     app.use(server);
+
+    // Serve static files from public folder
+    const publicFolder = config.devServer?.publicFolder || './public';
+    const publicPath = path.resolve(publicFolder);
+    if (fs.existsSync(publicPath)) {
+        app.use(express.static(publicPath));
+    } else {
+        console.log(`⚠️  Public folder not found: ${publicFolder}`);
+    }
 
     // Serve HTML
     routes.forEach((route) => {
@@ -54,10 +65,13 @@ async function initApp() {
 
     // Start http server
     const expressServer = app.listen(devServerPort, () => {
-        console.log(`🚀 Jay Stack CLI started successfully!`);
+        console.log(`🚀 Jay Stack dev server started successfully!`);
         console.log(`📱 Dev Server: http://localhost:${devServerPort}`);
         console.log(`🎨 Editor Server: http://localhost:${editorPort} (ID: ${editorId})`);
-        console.log(`📁 Pages directory: ./src/pages`);
+        console.log(`📁 Pages directory: ${pagesBase}`);
+        if (fs.existsSync(publicPath)) {
+            console.log(`📁 Public folder: ${publicFolder}`);
+        }
     });
 
     const shutdown = async () => {

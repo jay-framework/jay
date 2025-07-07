@@ -70,4 +70,14 @@ describe('Config Loading', () => {
         expect(updatedConfig.editorServer?.editorId).toEqual('test-editor-123');
         expect(updatedConfig.devServer?.portRange).toEqual([3000, 3100]); // Should preserve existing config
     });
+
+    it('should load custom pagesBase and publicFolder', () => {
+        const customConfig = `devServer:\n  pagesBase: './custom/pages'\n  publicFolder: './static'\neditorServer:\n  portRange: [3101, 3200]\n`;
+        fs.writeFileSync(configPath, customConfig);
+
+        const config = loadConfig();
+        expect(config.devServer?.pagesBase).toEqual('./custom/pages');
+        expect(config.devServer?.publicFolder).toEqual('./static');
+        expect(config.devServer?.portRange).toEqual([3000, 3100]); // Should use default
+    });
 });

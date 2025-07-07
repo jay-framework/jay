@@ -5,6 +5,8 @@ import YAML from 'yaml';
 export interface JayConfig {
     devServer?: {
         portRange?: [number, number];
+        pagesBase?: string;
+        publicFolder?: string;
     };
     editorServer?: {
         portRange?: [number, number];
@@ -15,6 +17,8 @@ export interface JayConfig {
 const DEFAULT_CONFIG: JayConfig = {
     devServer: {
         portRange: [3000, 3100],
+        pagesBase: './src/pages',
+        publicFolder: './public',
     },
     editorServer: {
         portRange: [3101, 3200],
