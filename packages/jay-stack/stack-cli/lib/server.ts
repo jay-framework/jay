@@ -53,7 +53,7 @@ async function initApp() {
     });
 
     // Start http server
-    app.listen(devServerPort, () => {
+    const expressServer = app.listen(devServerPort, () => {
         console.log(`🚀 Jay Stack CLI started successfully!`);
         console.log(`📱 Dev Server: http://localhost:${devServerPort}`);
         console.log(`🎨 Editor Server: http://localhost:${editorPort} (ID: ${editorId})`);
@@ -64,6 +64,8 @@ async function initApp() {
     process.on('SIGINT', async () => {
         console.log('\n🛑 Shutting down servers...');
         await editorServer.stop();
+        expressServer.closeAllConnections();
+        await new Promise(resolve => expressServer.close(resolve));
         process.exit(0);
     });
 }
