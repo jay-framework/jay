@@ -11,7 +11,7 @@ export default defineConfig({
             entry: resolve(__dirname, 'lib/index.ts'),
             name: '@jay-framework/jay-stack-cli',
             fileName: 'index',
-            formats: ['cjs'],
+            formats: ['es'],
         },
         rollupOptions: {
             external: [
@@ -34,6 +34,7 @@ export default defineConfig({
             ],
             output: {
                 banner: '#!/usr/bin/env node',
+                format: 'es',
             },
         },
     },
