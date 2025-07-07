@@ -4114,7 +4114,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@jay-framework/editor-server@workspace:packages/jay-stack/editor-server":
+"@jay-framework/editor-server@workspace:^, @jay-framework/editor-server@workspace:packages/jay-stack/editor-server":
   version: 0.0.0-use.local
   resolution: "@jay-framework/editor-server@workspace:packages/jay-stack/editor-server"
   dependencies:
@@ -4184,9 +4184,11 @@ __metadata:
   dependencies:
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/dev-server": "workspace:^"
+    "@jay-framework/editor-server": "workspace:^"
     "@types/express": ^5.0.2
     "@types/node": ^22.15.21
     express: ^5.0.1
+    get-port: ^7.0.0
     nodemon: ^3.0.3
     replace-in-file: ^7.1.0
     rimraf: ^5.0.5
