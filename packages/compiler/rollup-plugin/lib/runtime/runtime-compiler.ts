@@ -108,7 +108,9 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
                 const module = server.moduleGraph.getModuleById(id + TS_EXTENSION);
                 if (module) {
                     server.moduleGraph.invalidateModule(module);
-                }
+                    server.ws.send({
+                        type: 'full-reload'
+                    });                }
             }
         },
     };
