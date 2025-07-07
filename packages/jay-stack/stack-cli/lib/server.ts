@@ -60,14 +60,16 @@ async function initApp() {
         console.log(`📁 Pages directory: ./src/pages`);
     });
 
-    // Handle graceful shutdown
-    process.on('SIGINT', async () => {
+    const shutdown = async () => {
         console.log('\n🛑 Shutting down servers...');
         await editorServer.stop();
         expressServer.closeAllConnections();
         await new Promise(resolve => expressServer.close(resolve));
         process.exit(0);
-    });
+    }
+    // Handle graceful shutdown
+    process.on('SIGTERM', shutdown);
+    process.on('SIGINT', shutdown);
 }
 
 initApp().catch((error) => {
