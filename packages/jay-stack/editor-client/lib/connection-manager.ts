@@ -43,9 +43,9 @@ export class ConnectionManager {
         this.scanTimeout = options.scanTimeout || 5000;
         this.retryAttempts = options.retryAttempts || 3;
         this.editorId = options.editorId || uuidv4();
-        this.autoReconnect = options.autoReconnect ?? true;
-        this.reconnectDelay = options.reconnectDelay ?? 1000;
-        this.maxReconnectAttempts = options.maxReconnectAttempts ?? 5;
+        this.autoReconnect = options.autoReconnect || true;
+        this.reconnectDelay = options.reconnectDelay || 1000;
+        this.maxReconnectAttempts = options.maxReconnectAttempts || 5;
     }
 
     async connect(): Promise<void> {
