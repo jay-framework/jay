@@ -7,7 +7,11 @@ import type {
     SaveImageResponse,
     HasImageResponse,
 } from '@jay-framework/editor-protocol';
-import { ConnectionManager, ConnectionManagerOptions } from './connection-manager';
+import {
+    ConnectionManager,
+    ConnectionManagerOptions,
+    ConnectionStateCallback,
+} from './connection-manager';
 
 export interface EditorClientOptions extends ConnectionManagerOptions {
     // Additional editor-specific options can be added here
@@ -33,7 +37,7 @@ export class EditorClient implements EditorProtocol {
         return this.connectionManager.getConnectionState();
     }
 
-    onConnectionStateChange(callback: (state: any) => void): void {
+    onConnectionStateChange(callback: ConnectionStateCallback): () => void {
         return this.connectionManager.onConnectionStateChange(callback);
     }
 

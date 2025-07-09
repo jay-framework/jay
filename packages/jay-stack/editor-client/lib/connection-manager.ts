@@ -20,8 +20,9 @@ export interface ConnectionManagerOptions {
     editorId?: string;
     autoReconnect?: boolean;
     reconnectDelay?: number;
-    maxReconnectAttempts?: number;
 }
+
+export type ConnectionStateCallback = (state: ConnectionState) => void;
 
 export class ConnectionManager {
     private socket: Socket | null = null;
@@ -32,11 +33,11 @@ export class ConnectionManager {
     private editorId: string;
     private autoReconnect: boolean;
     private reconnectDelay: number;
-    private maxReconnectAttempts: number;
-    private reconnectAttempts: number = 0;
     private reconnectTimer: NodeJS.Timeout | null = null;
     private isManualDisconnect: boolean = false;
+    private isConnecting: boolean = false;
     private pendingRequests: Map<string, { resolve: Function; reject: Function }> = new Map();
+    private stateChangeCallbacks: Set<ConnectionStateCallback> = new Set();
 
     constructor(options: ConnectionManagerOptions = {}) {
         this.portRange = options.portRange || [3101, 3200];
@@ -45,43 +46,57 @@ export class ConnectionManager {
         this.editorId = options.editorId || uuidv4();
         this.autoReconnect = options.autoReconnect || true;
         this.reconnectDelay = options.reconnectDelay || 1000;
-        this.maxReconnectAttempts = options.maxReconnectAttempts || 5;
     }
 
     async connect(): Promise<void> {
-        if (this.connectionState === 'connected') {
+        if (this.connectionState === 'connected' || this.isConnecting) {
             return;
         }
 
         this.isManualDisconnect = false;
-        this.reconnectAttempts = 0;
-        this.connectionState = 'connecting';
+        this.isConnecting = true;
+        this.updateConnectionState('connecting');
 
         try {
             const serverPort = await this.discoverServer();
             await this.establishConnection(serverPort);
-            this.connectionState = 'connected';
+            this.updateConnectionState('connected');
         } catch (error) {
-            this.connectionState = 'error';
+            this.updateConnectionState('error');
             throw error;
+        } finally {
+            this.isConnecting = false;
         }
     }
 
     async disconnect(): Promise<void> {
         this.isManualDisconnect = true;
+        this.isConnecting = false;
+
         if (this.reconnectTimer) {
             clearTimeout(this.reconnectTimer);
             this.reconnectTimer = null;
         }
+
         if (this.socket) {
             this.socket.disconnect();
             this.socket = null;
         }
-        this.connectionState = 'disconnected';
+
+        this.updateConnectionState('disconnected');
     }
 
     getConnectionState(): ConnectionState {
         return this.connectionState;
+    }
+
+    onConnectionStateChange(callback: ConnectionStateCallback): () => void {
+        this.stateChangeCallbacks.add(callback);
+
+        // Return unsubscribe function
+        return () => {
+            this.stateChangeCallbacks.delete(callback);
+        };
     }
 
     async sendMessage<T extends PublishMessage | SaveImageMessage | HasImageMessage>(
@@ -120,20 +135,36 @@ export class ConnectionManager {
         }) as any;
     }
 
-    onConnectionStateChange(callback: (state: ConnectionState) => void): void {
-        // This would need to be implemented with a proper event system
-        // For now, we'll use polling
-        const checkState = () => {
-            const currentState = this.getConnectionState();
-            callback(currentState);
+    private updateConnectionState(newState: ConnectionState): void {
+        if (this.connectionState !== newState) {
+            const oldState = this.connectionState;
+            this.connectionState = newState;
 
-            if (currentState === 'disconnected' && this.autoReconnect && !this.isManualDisconnect) {
-                this.attemptReconnect();
+            // Notify all callbacks
+            this.stateChangeCallbacks.forEach((callback) => {
+                try {
+                    callback(newState);
+                } catch (error) {
+                    console.error('Error in connection state callback:', error);
+                }
+            });
+
+            // Handle automatic reconnection
+            if (newState === 'disconnected' && this.autoReconnect && !this.isManualDisconnect) {
+                this.scheduleReconnect();
             }
-        };
+        }
+    }
 
-        // Check state every second
-        setInterval(checkState, 1000);
+    private scheduleReconnect(): void {
+        if (this.isManualDisconnect || this.reconnectTimer) {
+            return;
+        }
+
+        this.reconnectTimer = setTimeout(() => {
+            this.reconnectTimer = null;
+            this.attemptReconnect();
+        }, this.reconnectDelay);
     }
 
     private async discoverServer(): Promise<number> {
@@ -213,7 +244,7 @@ export class ConnectionManager {
 
             this.socket.on('disconnect', () => {
                 console.log('Disconnected from editor server');
-                this.connectionState = 'disconnected';
+                this.updateConnectionState('disconnected');
             });
         });
     }
@@ -235,29 +266,19 @@ export class ConnectionManager {
     }
 
     private async attemptReconnect(): Promise<void> {
-        if (this.isManualDisconnect || this.reconnectAttempts >= this.maxReconnectAttempts) {
+        if (this.isManualDisconnect || this.isConnecting) {
             return;
         }
 
-        this.reconnectAttempts++;
-        console.log(
-            `Attempting to reconnect (${this.reconnectAttempts}/${this.maxReconnectAttempts})`,
-        );
+        console.log('Attempting to reconnect...');
 
         try {
             await this.connect();
-            this.reconnectAttempts = 0; // Reset on successful connection
             console.log('Reconnected successfully');
         } catch (error) {
             console.error('Reconnection failed:', error);
-
-            if (this.reconnectAttempts < this.maxReconnectAttempts) {
-                this.reconnectTimer = setTimeout(() => {
-                    this.attemptReconnect();
-                }, this.reconnectDelay * this.reconnectAttempts); // Exponential backoff
-            } else {
-                console.error('Max reconnection attempts reached');
-            }
+            // Schedule next reconnection attempt
+            this.scheduleReconnect();
         }
     }
 }

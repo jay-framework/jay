@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>  
+    <script type="application/jay-data">
+        data:
+                items:
+                -   id: string
+                    itemState: enum (state1|state2)
+                    title: string
+                    subItems:
+                    -   id: string
+                        subTitle: string
+    </script>
+</head>
+<body>
+<div>
+    <div forEach="items" trackBy="id">
+        <div>
+            <div if="itemState === state1">
+                <div>
+                    <div>
+                        <div>{title}</div>
+                            <div>
+                                <div forEach="subItems" trackBy="id">
+                                    <div>
+                                        <div>{subTitle}</div>
+                                        <div ref="nestedRef"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div if="itemState === state2">
+                    <div>
+                        <div>
+                            <div>{title}</div>
+                                <div>
+                                    <div forEach="subItems" trackBy="id">
+                                        <div>
+                                            <div>{subTitle}</div>
+                                            <div ref="nestedRef"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>    
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
