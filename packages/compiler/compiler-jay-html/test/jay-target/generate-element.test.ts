@@ -159,6 +159,13 @@ describe('generate jay-html element', () => {
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
+        it('for nested collections with refs in variants', async () => {
+            const folder = 'collections/nested-collection-with-refs-in-variants';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
         it('for collections with conditions', async () => {
             const folder = 'collections/collections-with-conditions';
             const elementFile = await readFileAndGenerateElementFile(folder);
