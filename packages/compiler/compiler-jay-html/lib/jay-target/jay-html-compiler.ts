@@ -416,9 +416,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 const forEachFragment = forEachAccessor
                     .render()
                     .map((_) => `(${paramName}: ${paramType}) => ${_}`);
-                let forEachVariables = variables.childVariableFor(
-                    (forEachAccessor.resolvedType as JayArrayType).itemType,
-                );
+                let forEachVariables = variables.childVariableFor(forEachAccessor);
                 let newContext = {
                     ...context,
                     variables: forEachVariables,
@@ -673,9 +671,7 @@ ${indent.firstLine}])`,
             const forEachFragment = forEachAccessor
                 .render()
                 .map((_) => `(${paramName}: ${paramType}) => ${_}`);
-            let forEachVariables = variables.childVariableFor(
-                (forEachAccessor.resolvedType as JayArrayType).itemType,
-            );
+            let forEachVariables = variables.childVariableFor(forEachAccessor);
             let childElement = renderHtmlElement(htmlElement, {
                 ...context,
                 variables: forEachVariables,
