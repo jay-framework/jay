@@ -20,7 +20,7 @@ console.log('Publishing packages with OTP token...');
 try {
     // Run the publish command with OTP
     execSync(
-        'yarn workspaces foreach --no-private exec "yarn npm publish --access public --otp ' +
+        'yarn workspaces foreach -p --no-private exec "yarn npm publish --access public --otp ' +
             otp +
             '"',
         {
