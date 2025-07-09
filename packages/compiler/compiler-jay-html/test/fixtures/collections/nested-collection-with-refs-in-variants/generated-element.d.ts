@@ -1,33 +1,55 @@
-import {JayElement, RenderElement, HTMLElementCollectionProxy, RenderElementOptions, JayContract} from "@jay-framework/runtime";
+import {
+    JayElement,
+    RenderElement,
+    HTMLElementCollectionProxy,
+    RenderElementOptions,
+    JayContract,
+} from '@jay-framework/runtime';
 
 export interface SubItemOfItemOfJCompWithNestedRefsIssueViewState {
-  id: string,
-  subTitle: string
+    id: string;
+    subTitle: string;
 }
 
 export interface ItemOfJCompWithNestedRefsIssueViewState {
-  id: string,
-  title: string,
-  subItems: Array<SubItemOfItemOfJCompWithNestedRefsIssueViewState>
+    id: string;
+    title: string;
+    subItems: Array<SubItemOfItemOfJCompWithNestedRefsIssueViewState>;
 }
 
 export interface JCompWithNestedRefsIssueViewState {
-  items: Array<ItemOfJCompWithNestedRefsIssueViewState>
+    items: Array<ItemOfJCompWithNestedRefsIssueViewState>;
 }
-
 
 export interface JCompWithNestedRefsIssueElementRefs {
-  items: {
-    subItems: {
-      nestedRef: HTMLElementCollectionProxy<SubItemOfItemOfJCompWithNestedRefsIssueViewState, HTMLDivElement>
-    }
-  }
+    items: {
+        subItems: {
+            nestedRef: HTMLElementCollectionProxy<
+                SubItemOfItemOfJCompWithNestedRefsIssueViewState,
+                HTMLDivElement
+            >;
+        };
+    };
 }
 
-export type JCompWithNestedRefsIssueElement = JayElement<JCompWithNestedRefsIssueViewState, JCompWithNestedRefsIssueElementRefs>
-export type JCompWithNestedRefsIssueElementRender = RenderElement<JCompWithNestedRefsIssueViewState, JCompWithNestedRefsIssueElementRefs, JCompWithNestedRefsIssueElement>
-export type JCompWithNestedRefsIssueElementPreRender = [JCompWithNestedRefsIssueElementRefs, JCompWithNestedRefsIssueElementRender]
-export type JCompWithNestedRefsIssueContract = JayContract<JCompWithNestedRefsIssueViewState, JCompWithNestedRefsIssueElementRefs>;
+export type JCompWithNestedRefsIssueElement = JayElement<
+    JCompWithNestedRefsIssueViewState,
+    JCompWithNestedRefsIssueElementRefs
+>;
+export type JCompWithNestedRefsIssueElementRender = RenderElement<
+    JCompWithNestedRefsIssueViewState,
+    JCompWithNestedRefsIssueElementRefs,
+    JCompWithNestedRefsIssueElement
+>;
+export type JCompWithNestedRefsIssueElementPreRender = [
+    JCompWithNestedRefsIssueElementRefs,
+    JCompWithNestedRefsIssueElementRender,
+];
+export type JCompWithNestedRefsIssueContract = JayContract<
+    JCompWithNestedRefsIssueViewState,
+    JCompWithNestedRefsIssueElementRefs
+>;
 
-
-export declare function render(options?: RenderElementOptions): JCompWithNestedRefsIssueElementPreRender
+export declare function render(
+    options?: RenderElementOptions,
+): JCompWithNestedRefsIssueElementPreRender;
