@@ -3,7 +3,6 @@ import {
     Import,
     Imports,
     ImportsFor,
-    JayArrayType,
     JayComponentType,
     JayImportLink,
     JayType,
@@ -352,9 +351,7 @@ ${indent.curr}return (${childElement.rendered})})}`,
                     return new RenderFragment('', Imports.none(), [
                         `forEach directive - failed to resolve type for forEach=${forEach}`,
                     ]);
-                let forEachVariables = variables.childVariableFor(
-                    (forEachAccessor.resolvedType as JayArrayType).itemType,
-                );
+                let forEachVariables = variables.childVariableFor(forEachAccessor);
                 let newContext = {
                     ...renderContext,
                     variables: forEachVariables,

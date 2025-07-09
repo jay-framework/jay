@@ -2,7 +2,7 @@ import {
     Import,
     Imports,
     isImportedType,
-    isObjectType,
+    isObjectType, JayArrayType,
     JayImportedType,
     JayImportName,
     JayType,
@@ -44,6 +44,7 @@ export class Variables {
     readonly currentType: JayType;
     readonly currentContext: string;
     readonly parent: Variables;
+    private readonly children: Record<string, Variables> = {}
     private readonly depth;
     constructor(currentTypes: JayType, parent: Variables = undefined, depth: number = 0) {
         this.currentVar = depth === 0 ? 'vs' : 'vs' + depth;
@@ -71,8 +72,16 @@ export class Variables {
         return new Accessor(this.currentVar, accessor, validations, curr);
     }
 
-    childVariableFor(resolvedForEachType: JayType): Variables {
-        return new Variables(resolvedForEachType, this, this.depth + 1);
+    childVariableFor(accessor: Accessor): Variables {
+        const path = accessor.terms.join('.')
+        if (this.children[path])
+            return this.children[path];
+        else {
+            const resolvedForEachType = (accessor.resolvedType as JayArrayType).itemType;
+            const variables = new Variables(resolvedForEachType, this, this.depth + 1)
+            this.children[path] = variables;
+            return variables;
+        }
     }
 }
 
