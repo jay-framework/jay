@@ -21,6 +21,14 @@ export interface EditorServerOptions {
     portRange?: [number, number];
 }
 
+const ALLOWED_ORIGINS = [
+    'https://www.figma.com',
+    'https://figma.com',
+    "http://localhost:*",
+    "http://127.0.0.1:*",
+    'null' // For local development/file:// protocol
+];
+
 export class EditorServer implements DevServerProtocol {
     private io: SocketIOServer | null = null;
     private httpServer: any = null;
@@ -48,6 +56,16 @@ export class EditorServer implements DevServerProtocol {
         this.httpServer = createServer((req, res) => {
             // Validate that request is from localhost
             const clientIP = req.socket.remoteAddress || req.connection.remoteAddress;
+
+            // set CORS
+            const origin = req.headers.origin;
+            if (ALLOWED_ORIGINS.includes(origin)) {
+                res.setHeader('Access-Control-Allow-Origin', origin);
+            }
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+
             if (!this.isLocalhost(clientIP)) {
                 console.warn(`Rejected connection from non-localhost IP: ${clientIP}`);
                 res.writeHead(403, { 'Content-Type': 'application/json' });
@@ -70,8 +88,9 @@ export class EditorServer implements DevServerProtocol {
         // Create Socket.io server
         this.io = new SocketIOServer(this.httpServer, {
             cors: {
-                origin: ['http://localhost:*', 'http://127.0.0.1:*'],
+                origin: ALLOWED_ORIGINS,
                 methods: ['GET', 'POST'],
+                credentials: true
             },
             allowEIO3: true,
         });
