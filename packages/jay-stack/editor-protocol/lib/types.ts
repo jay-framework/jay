@@ -27,7 +27,7 @@ export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'err
 
 // Port discovery response
 export interface PortDiscoveryResponse {
-    status: 'init' | 'configured';
+    status: 'init' | 'match' | 'no-match';
     id?: string;
     port: number;
 }

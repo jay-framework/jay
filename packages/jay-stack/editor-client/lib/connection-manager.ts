@@ -170,7 +170,7 @@ export class ConnectionManager {
     private async discoverServer(): Promise<number> {
         const [startPort, endPort] = this.portRange;
         const ports = Array.from({ length: endPort - startPort + 1 }, (_, i) => startPort + i);
-
+        const errors: string[] = [];
         for (let attempt = 0; attempt < this.retryAttempts; attempt++) {
             for (const port of ports) {
                 try {
@@ -179,7 +179,7 @@ export class ConnectionManager {
                         return port;
                     }
                 } catch (error) {
-                    // Continue to next port
+                    errors.push(`tried port ${port} with error ${error?.message}`)
                 }
             }
 
@@ -188,7 +188,7 @@ export class ConnectionManager {
             }
         }
 
-        throw new Error(`No editor server found in port range ${startPort}-${endPort}`);
+        throw new Error(`No editor server found in port range ${startPort}-${endPort}:\n${errors.join('\n')}`);
     }
 
     private async checkPort(port: number): Promise<PortDiscoveryResponse | null> {
@@ -211,10 +211,13 @@ export class ConnectionManager {
                 })
                 .then((data: PortDiscoveryResponse) => {
                     // Accept if server is in init mode or if IDs match
-                    if (data.status === 'init' || data.id === this.editorId) {
+                    if (data.status === 'init' || data.id === this.editorId && data.status === 'match') {
                         resolve(data);
                     } else {
-                        resolve(null);
+                        if (data.id)
+                            reject(new Error(`failed to match on editorId ${this.editorId} !== port's ${data.id}`));
+                        else
+                            reject(new Error(`failed to match on editorId ${this.editorId}`));
                     }
                 })
                 .catch((error) => {

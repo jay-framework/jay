@@ -142,16 +142,17 @@ export class EditorServer implements DevServerProtocol {
         }
 
         // If in init mode, accept the connection and set the ID
+        const response: PortDiscoveryResponse = {
+            status: this.editorId === tabId ? 'match' :
+                (!this.editorId)? 'init':'no-match',
+            id: this.editorId,
+            port: this.port!,
+        };
+
         if (!this.editorId) {
             this.editorId = tabId;
             this.onEditorId && this.onEditorId(tabId);
         }
-
-        const response: PortDiscoveryResponse = {
-            status: this.editorId === tabId ? 'configured' : 'init',
-            id: this.editorId,
-            port: this.port!,
-        };
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(response));
@@ -169,7 +170,7 @@ export class EditorServer implements DevServerProtocol {
                 return;
             }
 
-            console.log(`Editor connected: ${socket.id} from ${clientIP}`);
+            console.log(`Editor Socket connected: ${socket.id} from ${clientIP}`);
 
             socket.on('protocol-message', async (message: ProtocolMessage) => {
                 try {
@@ -187,7 +188,7 @@ export class EditorServer implements DevServerProtocol {
             });
 
             socket.on('disconnect', () => {
-                console.log(`Editor disconnected: ${socket.id}`);
+                console.log(`Editor Socket disconnected: ${socket.id}`);
             });
         });
     }

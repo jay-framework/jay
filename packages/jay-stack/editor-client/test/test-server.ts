@@ -7,7 +7,6 @@ import { createProtocolResponse } from '@jay-framework/editor-protocol';
 export interface TestServerOptions {
     port?: number;
     editorId?: string;
-    status?: 'init' | 'configured';
 }
 
 export interface TestServerResponse {
@@ -21,15 +20,13 @@ export class TestServer {
     private httpServer: Server;
     private socketServer: SocketIOServer | null = null;
     private port: number;
-    private editorId: string;
-    private status: 'init' | 'configured';
+    private editorId?: string;
     private protocolHandlers: Map<string, (params: any) => Promise<any>> = new Map();
     private connectedSockets: Set<Socket<any>> = new Set();
 
     constructor(options: TestServerOptions = {}) {
         this.port = options.port || 0; // 0 means let the OS assign a port
-        this.editorId = options.editorId || 'test-editor-id';
-        this.status = options.status || 'init';
+        this.editorId = options.editorId ;
     }
 
     async start(): Promise<TestServerResponse> {
@@ -126,14 +123,9 @@ export class TestServer {
         }
 
         // In configured mode, only respond if IDs match
-        if (this.status === 'configured' && tabId !== this.editorId) {
-            res.writeHead(404);
-            res.end('Not Found');
-            return;
-        }
-
         const response = {
-            status: this.status,
+            status: !this.editorId? 'init':
+                this.editorId === tabId ? 'match' : 'no-match',
             id: this.editorId,
             port: this.port,
         };

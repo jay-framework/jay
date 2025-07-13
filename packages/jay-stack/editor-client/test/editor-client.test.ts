@@ -12,10 +12,7 @@ describe('Editor Client', () => {
 
     beforeEach(async () => {
         // Start test server
-        testServer = createTestServer({
-            editorId: 'test-editor-id',
-            status: 'init',
-        });
+        testServer = createTestServer({});
         serverResponse = await testServer.start();
 
         // Create connection manager that will connect to our test server
@@ -177,8 +174,6 @@ describe('Connection Manager', () => {
     beforeEach(async () => {
         // Start test server
         testServer = createTestServer({
-            editorId: 'test-editor-id',
-            status: 'init',
         });
         serverResponse = await testServer.start();
 
@@ -267,7 +262,6 @@ describe('Connection Manager', () => {
         // Start a new server in configured mode
         const configuredServer = createTestServer({
             editorId: 'test-editor-id',
-            status: 'configured',
         });
         const configuredResponse = await configuredServer.start();
 
@@ -306,21 +300,13 @@ describe('Multiple Servers and Clients', () => {
 
     beforeEach(async () => {
         // Start multiple servers in different states
-        initServer1 = createTestServer({
-            editorId: 'init-server-1',
-            status: 'init',
-        });
-        initServer2 = createTestServer({
-            editorId: 'init-server-2',
-            status: 'init',
-        });
+        initServer1 = createTestServer({});
+        initServer2 = createTestServer({});
         configuredServer1 = createTestServer({
             editorId: 'client-1',
-            status: 'configured',
         });
         configuredServer2 = createTestServer({
             editorId: 'client-2',
-            status: 'configured',
         });
 
         const initResponse1 = await initServer1.start();
