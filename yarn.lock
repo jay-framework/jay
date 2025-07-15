@@ -4067,6 +4067,7 @@ __metadata:
     "@jay-framework/stack-client-runtime": "workspace:^"
     "@jay-framework/stack-route-scanner": "workspace:^"
     "@jay-framework/stack-server-runtime": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
     "@types/express": ^5.0.2
     "@types/node": ^22.15.21
     nodemon: ^3.0.3

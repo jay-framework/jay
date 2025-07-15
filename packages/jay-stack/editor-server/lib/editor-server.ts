@@ -21,6 +21,14 @@ export interface EditorServerOptions {
     portRange?: [number, number];
 }
 
+const ALLOWED_ORIGINS = [
+    'https://www.figma.com',
+    'https://figma.com',
+    'http://localhost:*',
+    'http://127.0.0.1:*',
+    'null', // For local development/file:// protocol
+];
+
 export class EditorServer implements DevServerProtocol {
     private io: SocketIOServer | null = null;
     private httpServer: any = null;
@@ -48,6 +56,19 @@ export class EditorServer implements DevServerProtocol {
         this.httpServer = createServer((req, res) => {
             // Validate that request is from localhost
             const clientIP = req.socket.remoteAddress || req.connection.remoteAddress;
+
+            // set CORS
+            const origin = req.headers.origin;
+            if (ALLOWED_ORIGINS.includes(origin)) {
+                res.setHeader('Access-Control-Allow-Origin', origin);
+            }
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+            res.setHeader(
+                'Access-Control-Allow-Headers',
+                'Origin, X-Requested-With, Content-Type, Accept, Authorization',
+            );
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+
             if (!this.isLocalhost(clientIP)) {
                 console.warn(`Rejected connection from non-localhost IP: ${clientIP}`);
                 res.writeHead(403, { 'Content-Type': 'application/json' });
@@ -70,8 +91,9 @@ export class EditorServer implements DevServerProtocol {
         // Create Socket.io server
         this.io = new SocketIOServer(this.httpServer, {
             cors: {
-                origin: ['http://localhost:*', 'http://127.0.0.1:*'],
+                origin: ALLOWED_ORIGINS,
                 methods: ['GET', 'POST'],
+                credentials: true,
             },
             allowEIO3: true,
         });
@@ -123,16 +145,16 @@ export class EditorServer implements DevServerProtocol {
         }
 
         // If in init mode, accept the connection and set the ID
+        const response: PortDiscoveryResponse = {
+            status: this.editorId === tabId ? 'match' : !this.editorId ? 'init' : 'no-match',
+            id: this.editorId,
+            port: this.port!,
+        };
+
         if (!this.editorId) {
             this.editorId = tabId;
             this.onEditorId && this.onEditorId(tabId);
         }
-
-        const response: PortDiscoveryResponse = {
-            status: this.editorId === tabId ? 'configured' : 'init',
-            id: this.editorId,
-            port: this.port!,
-        };
 
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify(response));
@@ -150,7 +172,7 @@ export class EditorServer implements DevServerProtocol {
                 return;
             }
 
-            console.log(`Editor connected: ${socket.id} from ${clientIP}`);
+            console.log(`Editor Socket connected: ${socket.id} from ${clientIP}`);
 
             socket.on('protocol-message', async (message: ProtocolMessage) => {
                 try {
@@ -168,7 +190,7 @@ export class EditorServer implements DevServerProtocol {
             });
 
             socket.on('disconnect', () => {
-                console.log(`Editor disconnected: ${socket.id}`);
+                console.log(`Editor Socket disconnected: ${socket.id}`);
             });
         });
     }

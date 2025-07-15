@@ -55,15 +55,18 @@ export interface HasImageResponse extends BaseResponse {
 }
 
 // Union types for all messages and responses
+export type EditorProtocolMessageTypes = PublishMessage | SaveImageMessage | HasImageMessage;
+export type EditorProtocolResponseTypes = PublishResponse | SaveImageResponse | HasImageResponse;
+
 export interface ProtocolMessage {
     id: string;
     timestamp: number;
-    payload: PublishMessage | SaveImageMessage | HasImageMessage;
+    payload: EditorProtocolMessageTypes;
 }
 export interface ProtocolResponse {
     id: string;
     timestamp: number;
-    payload: PublishResponse | SaveImageResponse | HasImageResponse;
+    payload: EditorProtocolResponseTypes;
 }
 
 // Editor side interface for communicating with dev server

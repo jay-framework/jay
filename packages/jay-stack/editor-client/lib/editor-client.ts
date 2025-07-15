@@ -1,4 +1,4 @@
-import type {
+import {
     EditorProtocol,
     PublishMessage,
     SaveImageMessage,
@@ -6,6 +6,8 @@ import type {
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
+    EditorProtocolMessageTypes,
+    EditorProtocolResponseTypes,
 } from '@jay-framework/editor-protocol';
 import {
     ConnectionManager,
@@ -52,6 +54,10 @@ export class EditorClient implements EditorProtocol {
 
     async hasImage(params: HasImageMessage): Promise<HasImageResponse> {
         return this.connectionManager.sendMessage<HasImageMessage>(params);
+    }
+
+    async send(params: EditorProtocolMessageTypes): Promise<EditorProtocolResponseTypes> {
+        return this.connectionManager.sendMessage<EditorProtocolMessageTypes>(params);
     }
 
     // Get access to the underlying connection manager if needed
