@@ -179,7 +179,7 @@ export class ConnectionManager {
                         return port;
                     }
                 } catch (error) {
-                    errors.push(`tried port ${port} with error ${error?.message}`)
+                    errors.push(`tried port ${port} with error ${error?.message}`);
                 }
             }
 
@@ -188,7 +188,9 @@ export class ConnectionManager {
             }
         }
 
-        throw new Error(`No editor server found in port range ${startPort}-${endPort}:\n${errors.join('\n')}`);
+        throw new Error(
+            `No editor server found in port range ${startPort}-${endPort}:\n${errors.join('\n')}`,
+        );
     }
 
     private async checkPort(port: number): Promise<PortDiscoveryResponse | null> {
@@ -211,13 +213,19 @@ export class ConnectionManager {
                 })
                 .then((data: PortDiscoveryResponse) => {
                     // Accept if server is in init mode or if IDs match
-                    if (data.status === 'init' || data.id === this.editorId && data.status === 'match') {
+                    if (
+                        data.status === 'init' ||
+                        (data.id === this.editorId && data.status === 'match')
+                    ) {
                         resolve(data);
                     } else {
                         if (data.id)
-                            reject(new Error(`failed to match on editorId ${this.editorId} !== port's ${data.id}`));
-                        else
-                            reject(new Error(`failed to match on editorId ${this.editorId}`));
+                            reject(
+                                new Error(
+                                    `failed to match on editorId ${this.editorId} !== port's ${data.id}`,
+                                ),
+                            );
+                        else reject(new Error(`failed to match on editorId ${this.editorId}`));
                     }
                 })
                 .catch((error) => {

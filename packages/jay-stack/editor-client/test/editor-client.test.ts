@@ -173,8 +173,7 @@ describe('Connection Manager', () => {
 
     beforeEach(async () => {
         // Start test server
-        testServer = createTestServer({
-        });
+        testServer = createTestServer({});
         serverResponse = await testServer.start();
 
         manager = createConnectionManager({

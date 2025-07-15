@@ -26,7 +26,7 @@ export class TestServer {
 
     constructor(options: TestServerOptions = {}) {
         this.port = options.port || 0; // 0 means let the OS assign a port
-        this.editorId = options.editorId ;
+        this.editorId = options.editorId;
     }
 
     async start(): Promise<TestServerResponse> {
@@ -124,8 +124,7 @@ export class TestServer {
 
         // In configured mode, only respond if IDs match
         const response = {
-            status: !this.editorId? 'init':
-                this.editorId === tabId ? 'match' : 'no-match',
+            status: !this.editorId ? 'init' : this.editorId === tabId ? 'match' : 'no-match',
             id: this.editorId,
             port: this.port,
         };

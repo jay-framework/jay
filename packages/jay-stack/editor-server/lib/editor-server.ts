@@ -24,9 +24,9 @@ export interface EditorServerOptions {
 const ALLOWED_ORIGINS = [
     'https://www.figma.com',
     'https://figma.com',
-    "http://localhost:*",
-    "http://127.0.0.1:*",
-    'null' // For local development/file:// protocol
+    'http://localhost:*',
+    'http://127.0.0.1:*',
+    'null', // For local development/file:// protocol
 ];
 
 export class EditorServer implements DevServerProtocol {
@@ -63,7 +63,10 @@ export class EditorServer implements DevServerProtocol {
                 res.setHeader('Access-Control-Allow-Origin', origin);
             }
             res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-            res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+            res.setHeader(
+                'Access-Control-Allow-Headers',
+                'Origin, X-Requested-With, Content-Type, Accept, Authorization',
+            );
             res.setHeader('Access-Control-Allow-Credentials', 'true');
 
             if (!this.isLocalhost(clientIP)) {
@@ -90,7 +93,7 @@ export class EditorServer implements DevServerProtocol {
             cors: {
                 origin: ALLOWED_ORIGINS,
                 methods: ['GET', 'POST'],
-                credentials: true
+                credentials: true,
             },
             allowEIO3: true,
         });
@@ -143,8 +146,7 @@ export class EditorServer implements DevServerProtocol {
 
         // If in init mode, accept the connection and set the ID
         const response: PortDiscoveryResponse = {
-            status: this.editorId === tabId ? 'match' :
-                (!this.editorId)? 'init':'no-match',
+            status: this.editorId === tabId ? 'match' : !this.editorId ? 'init' : 'no-match',
             id: this.editorId,
             port: this.port!,
         };

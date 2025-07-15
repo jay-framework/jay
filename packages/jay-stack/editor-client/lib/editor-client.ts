@@ -5,7 +5,9 @@ import {
     HasImageMessage,
     PublishResponse,
     SaveImageResponse,
-    HasImageResponse, EditorProtocolMessageTypes, EditorProtocolResponseTypes,
+    HasImageResponse,
+    EditorProtocolMessageTypes,
+    EditorProtocolResponseTypes,
 } from '@jay-framework/editor-protocol';
 import {
     ConnectionManager,
