@@ -1,16 +1,16 @@
 /* Head links test CSS */
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 20px;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 20px;
 }
 
 h1 {
-    color: #333;
-    text-align: center;
+  color: #333;
+  text-align: center;
 }
 
 p {
-    color: #666;
-    line-height: 1.6;
-} 
+  color: #666;
+  line-height: 1.6;
+}

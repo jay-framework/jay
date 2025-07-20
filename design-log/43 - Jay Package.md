@@ -1,7 +1,7 @@
 # Jay Package
 
-This design doc discusses how to include Jay headless components in an NPM Package, 
-so that Jay dev server can tell about them to an editor, and an application can use them as defined in 
+This design doc discusses how to include Jay headless components in an NPM Package,
+so that Jay dev server can tell about them to an editor, and an application can use them as defined in
 [40 - changing jay-html format.md](40%20-%20changing%20jay-html%20format.md)
 
 ## why not Headfull components?
@@ -12,8 +12,8 @@ which make them fully equivalent with full design customization options.
 
 ## Jay Package Structure
 
-Jay Package is an NPM package that has to include, at the very least, the contract files and exported 
-code for the headless components. 
+Jay Package is an NPM package that has to include, at the very least, the contract files and exported
+code for the headless components.
 
 Technically, for an NPM package to export additional files to `main`, it has to define a `files` member
 to know what to package and an `exports` member to know what is accessible from those package files
@@ -21,9 +21,7 @@ to know what to package and an `exports` member to know what is accessible from 
 ```json
 {
   "main": "dist/index.js",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "exports": {
     ".": "./dist/index.js",
     "./mood-tracker.jay-contract": "./dist/mood-tracker.jay-contract"
@@ -31,8 +29,6 @@ to know what to package and an `exports` member to know what is accessible from 
 }
 ```
 
-The suggested 
-
+The suggested
 
 // todo - define how to work with meta contracts, such as CMS and A/B tests
-

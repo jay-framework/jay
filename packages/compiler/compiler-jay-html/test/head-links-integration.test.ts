@@ -159,7 +159,9 @@ describe('head links integration', () => {
 
         expect(generated.val).toContain('injectHeadLinks([');
         // CSS link should NOT be included in head links when CSS extraction is enabled
-        expect(generated.val).not.toContain('{ rel: "stylesheet", href: "fixtures/styles/main.css" }');
+        expect(generated.val).not.toContain(
+            '{ rel: "stylesheet", href: "fixtures/styles/main.css" }',
+        );
         expect(generated.val).toContain('{ rel: "icon", href: "/favicon.ico" }');
     });
 

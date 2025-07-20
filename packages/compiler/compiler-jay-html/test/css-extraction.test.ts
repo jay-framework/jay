@@ -67,18 +67,16 @@ describe('CSS extraction', () => {
 
     it('should handle missing linked CSS gracefully', async () => {
         const jayFile = await parseJayFile(
-            jayFileWith(
-                TEST_YAML,
-                TEST_BODY,
-                `<link rel="stylesheet" href="styles/missing.css">`,
-            ),
+            jayFileWith(TEST_YAML, TEST_BODY, `<link rel="stylesheet" href="styles/missing.css">`),
             'MissingCssTest',
             './test',
             {},
             JAY_IMPORT_RESOLVER,
         );
 
-        expect(jayFile.validations).toContain('CSS file not found or unreadable: styles/missing.css');
+        expect(jayFile.validations).toContain(
+            'CSS file not found or unreadable: styles/missing.css',
+        );
         // When there are validation errors, the entire result is undefined
         expect(jayFile.val).toBeUndefined();
     });
@@ -140,4 +138,4 @@ describe('CSS extraction', () => {
         expect(jayFile.val.css).toContain('/* External CSS: styles/main.css */');
         expect(jayFile.val.css).toContain('.custom { font-weight: bold; }');
     });
-}); 
+});

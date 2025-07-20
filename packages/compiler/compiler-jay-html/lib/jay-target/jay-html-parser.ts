@@ -337,21 +337,28 @@ function parseHeadLinks(root: HTMLElement, excludeCssLinks: boolean = false): Ja
         });
 }
 
-async function extractCss(root: HTMLElement, filePath: string): Promise<WithValidations<string | undefined>> {
+async function extractCss(
+    root: HTMLElement,
+    filePath: string,
+): Promise<WithValidations<string | undefined>> {
     const cssParts: string[] = [];
     const validations: string[] = [];
-    
+
     // Extract CSS from <link> tags with rel="stylesheet"
     const styleLinks = root.querySelectorAll('head link[rel="stylesheet"]');
     for (const link of styleLinks) {
         const href = link.getAttribute('href');
         if (href) {
             // Only attempt to read local files, not external URLs
-            if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
+            if (
+                href.startsWith('http://') ||
+                href.startsWith('https://') ||
+                href.startsWith('//')
+            ) {
                 // Skip external URLs - they won't be extracted
                 continue;
             }
-            
+
             // Only attempt to read files if we have a valid file path
             if (filePath) {
                 try {
@@ -369,7 +376,7 @@ async function extractCss(root: HTMLElement, filePath: string): Promise<WithVali
             }
         }
     }
-    
+
     // Extract CSS from <style> tags
     const styleTags = root.querySelectorAll('head style, style');
     for (const style of styleTags) {
@@ -378,7 +385,7 @@ async function extractCss(root: HTMLElement, filePath: string): Promise<WithVali
             cssParts.push(cssContent);
         }
     }
-    
+
     const css = cssParts.length > 0 ? cssParts.join('\n\n') : undefined;
     return new WithValidations(css, validations);
 }
@@ -422,7 +429,7 @@ export async function parseJayFile(
     // Exclude CSS links from head links if CSS extraction is enabled (we have a file path)
     const excludeCssLinks = !!filePath;
     const headLinks = parseHeadLinks(root, excludeCssLinks);
-    
+
     // Merge CSS validations with existing validations
     validations.push(...cssResult.validations);
 
