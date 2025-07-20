@@ -134,7 +134,7 @@ describe('head links integration', () => {
             jayFileWith(
                 TEST_YAML,
                 SIMPLE_BODY,
-                `<link rel="stylesheet" href="styles/main.css">
+                `<link rel="stylesheet" href="fixtures/styles/main.css">
                   |<link rel="icon" href="/favicon.ico">
                   |<script type="application/jay-headfull" src="./fixtures/components/imports/component1.ts" names="comp1"></script>`,
             ),
@@ -159,7 +159,7 @@ describe('head links integration', () => {
         expect(generated.validations).toEqual([]);
 
         expect(generated.val).toContain('injectHeadLinks([');
-        expect(generated.val).toContain('{ rel: "stylesheet", href: "styles/main.css" }');
+        expect(generated.val).toContain('{ rel: "stylesheet", href: "fixtures/styles/main.css" }');
         expect(generated.val).toContain('{ rel: "icon", href: "/favicon.ico" }');
     });
 

@@ -1,0 +1,15 @@
+.counter {
+    color: blue;
+    font-size: 18px;
+}
+
+.button {
+    background: red;
+    border: none;
+    padding: 8px 16px;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+} 

@@ -11,6 +11,7 @@ import pluralize from 'pluralize';
 import { parseEnumValues, parseImportNames, parseIsEnum } from '../expressions/expression-compiler';
 import { ResolveTsConfigOptions } from '@jay-framework/compiler-analyze-exported-types';
 import path from 'path';
+import fs from 'fs/promises';
 import {
     JayArrayType,
     JayEnumType,
@@ -329,6 +330,52 @@ function parseHeadLinks(root: HTMLElement): JayHtmlHeadLink[] {
         });
 }
 
+async function extractCss(root: HTMLElement, filePath: string): Promise<WithValidations<string | undefined>> {
+    const cssParts: string[] = [];
+    const validations: string[] = [];
+    
+    // Extract CSS from <link> tags with rel="stylesheet"
+    const styleLinks = root.querySelectorAll('head link[rel="stylesheet"]');
+    for (const link of styleLinks) {
+        const href = link.getAttribute('href');
+        if (href) {
+            // Only attempt to read local files, not external URLs
+            if (href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')) {
+                // Skip external URLs - they won't be extracted
+                continue;
+            }
+            
+            // Only attempt to read files if we have a valid file path
+            if (filePath) {
+                try {
+                    // Resolve the CSS file path relative to the jay-html file
+                    const cssFilePath = path.resolve(filePath, href);
+                    const cssContent = await fs.readFile(cssFilePath, 'utf-8');
+                    cssParts.push(`/* External CSS: ${href} */\n${cssContent}`);
+                } catch (error) {
+                    // If the file doesn't exist or can't be read, add validation error
+                    validations.push(`CSS file not found or unreadable: ${href}`);
+                }
+            } else {
+                // If no file path is provided, just add a comment indicating the external CSS file
+                cssParts.push(`/* External CSS: ${href} */`);
+            }
+        }
+    }
+    
+    // Extract CSS from <style> tags
+    const styleTags = root.querySelectorAll('head style, style');
+    for (const style of styleTags) {
+        const cssContent = style.text.trim();
+        if (cssContent) {
+            cssParts.push(cssContent);
+        }
+    }
+    
+    const css = cssParts.length > 0 ? cssParts.join('\n\n') : undefined;
+    return new WithValidations(css, validations);
+}
+
 export async function parseJayFile(
     html: string,
     filename: string,
@@ -365,6 +412,10 @@ export async function parseJayFile(
     ];
 
     const headLinks = parseHeadLinks(root);
+    const cssResult = await extractCss(root, filePath);
+    
+    // Merge CSS validations with existing validations
+    validations.push(...cssResult.validations);
 
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
@@ -383,6 +434,7 @@ export async function parseJayFile(
             namespaces,
             headlessImports,
             headLinks,
+            css: cssResult.val,
         } as JayHtmlSourceFile,
         validations,
     );
