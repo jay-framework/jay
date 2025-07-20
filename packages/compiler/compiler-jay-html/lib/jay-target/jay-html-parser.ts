@@ -309,10 +309,17 @@ function normalizeFilename(filename: string): string {
     return filename.replace('.jay-html', '');
 }
 
-function parseHeadLinks(root: HTMLElement): JayHtmlHeadLink[] {
+function parseHeadLinks(root: HTMLElement, excludeCssLinks: boolean = false): JayHtmlHeadLink[] {
     const allLinks = root.querySelectorAll('head link');
     return allLinks
-        .filter((link) => link.getAttribute('rel') !== 'import')
+        .filter((link) => {
+            const rel = link.getAttribute('rel');
+            // Exclude import links
+            if (rel === 'import') return false;
+            // Exclude CSS links if CSS extraction is enabled
+            if (excludeCssLinks && rel === 'stylesheet') return false;
+            return true;
+        })
         .map((link) => {
             const attributes = { ...link.attributes };
             const rel = attributes.rel || '';
@@ -411,8 +418,10 @@ export async function parseJayFile(
         ...headlessImports.flatMap((_) => _.contractLinks),
     ];
 
-    const headLinks = parseHeadLinks(root);
     const cssResult = await extractCss(root, filePath);
+    // Exclude CSS links from head links if CSS extraction is enabled (we have a file path)
+    const excludeCssLinks = !!filePath;
+    const headLinks = parseHeadLinks(root, excludeCssLinks);
     
     // Merge CSS validations with existing validations
     validations.push(...cssResult.validations);
@@ -435,6 +444,7 @@ export async function parseJayFile(
             headlessImports,
             headLinks,
             css: cssResult.val,
+            filename: normalizedFileName,
         } as JayHtmlSourceFile,
         validations,
     );

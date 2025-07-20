@@ -22,11 +22,11 @@ describe('head links compilation', () => {
                 `data:
                     |   title: string`,
                 '<body><div>{title}</div></body>',
-                `<link rel="stylesheet" href="styles/main.css">
+                `<link rel="stylesheet" href="fixtures/styles/main.css">
                   |<link rel="icon" href="/favicon.ico">`,
             ),
             'TestHeadLinks',
-            '',
+            './test',
             {},
             JAY_IMPORT_RESOLVER,
         );
@@ -45,7 +45,8 @@ describe('head links compilation', () => {
         const callMatch = generated.val.match(/injectHeadLinks\(\[[\s\S]*?\]\)/);
         expect(callMatch).not.toBeNull();
         const callString = callMatch![0];
-        expect(callString).toContain('{ rel: "stylesheet", href: "styles/main.css" }');
+        // CSS links should NOT be included in head links when CSS extraction is enabled
+        expect(callString).not.toContain('{ rel: "stylesheet", href: "fixtures/styles/main.css" }');
         expect(callString).toContain('{ rel: "icon", href: "/favicon.ico" }');
     });
 
@@ -80,14 +81,14 @@ describe('head links compilation', () => {
                 `data:
                     |   title: string`,
                 '<body><div>{title}</div></body>',
-                `<link rel="stylesheet" href="styles/main.css">
+                `<link rel="stylesheet" href="fixtures/styles/main.css">
                   |<link rel="preconnect" href="https://fonts.googleapis.com">
                   |<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
                   |<link rel="icon" type="image/x-icon" href="/favicon.ico">
                   |<link rel="alternate" type="application/rss+xml" title="RSS Feed" href="/feed.xml">`,
             ),
             'TestComplexHeadLinks',
-            '',
+            './test',
             {},
             JAY_IMPORT_RESOLVER,
         );
@@ -101,7 +102,8 @@ describe('head links compilation', () => {
         const callMatch = generated.val.match(/injectHeadLinks\(\[[\s\S]*?\]\)/);
         expect(callMatch).not.toBeNull();
         const callString = callMatch![0];
-        expect(callString).toContain('{ rel: "stylesheet", href: "styles/main.css" }');
+        // CSS links should NOT be included in head links when CSS extraction is enabled
+        expect(callString).not.toContain('{ rel: "stylesheet", href: "fixtures/styles/main.css" }');
         expect(callString).toContain('{ rel: "preconnect", href: "https://fonts.googleapis.com" }');
         expect(callString).toContain(
             '{ rel: "preconnect", href: "https://fonts.gstatic.com", attributes: {"crossorigin":""} }',
@@ -120,7 +122,7 @@ describe('head links compilation', () => {
                 `data:
                     |   title: string`,
                 '<body><div>{title}</div></body>',
-                `<link rel="stylesheet" href="styles/main.css">
+                `<link rel="stylesheet" href="fixtures/styles/main.css">
                   |<link rel="import" href="./fixtures/components/imports/component1.ts" names="comp1"/>
                   |<link rel="icon" href="/favicon.ico">`,
             ),
@@ -135,11 +137,12 @@ describe('head links compilation', () => {
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generated.validations).toEqual([]);
 
-        // Should inject non-import links
+        // Should inject non-import links (but not CSS links when CSS extraction is enabled)
         const callMatch = generated.val.match(/injectHeadLinks\(\[[\s\S]*?\]\)/);
         expect(callMatch).not.toBeNull();
         const callString = callMatch![0];
-        expect(callString).toContain('{ rel: "stylesheet", href: "styles/main.css" }');
+        // CSS links should NOT be included in head links when CSS extraction is enabled
+        expect(callString).not.toContain('{ rel: "stylesheet", href: "fixtures/styles/main.css" }');
         expect(callString).toContain('{ rel: "icon", href: "/favicon.ico" }');
         // Should not inject import links
         expect(callString).not.toContain('my-component.html');
@@ -186,6 +189,12 @@ describe('head links compilation', () => {
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generated.validations).toEqual([]);
 
+        // When no file path is provided, CSS links should still be included in head links
+        const callMatch = generated.val.match(/injectHeadLinks\(\[[\s\S]*?\]\)/);
+        expect(callMatch).not.toBeNull();
+        const callString = callMatch![0];
+        expect(callString).toContain('{ rel: "stylesheet", href: "styles/main.css" }');
+
         // Check that injectHeadLinks is called after ReferencesManager setup but before render function definition
         const lines = generated.val.split('\n');
         const referencesManagerLine = lines.findIndex((line) =>
@@ -225,6 +234,7 @@ describe('head links compilation', () => {
         expect(generatedTrusted.validations).toEqual([]);
         let callMatchTrusted = generatedTrusted.val.match(/injectHeadLinks\(\[[\s\S]*?\]\)/);
         expect(callMatchTrusted).not.toBeNull();
+        // When no file path is provided, CSS links should still be included in head links
         expect(callMatchTrusted![0]).toContain('{ rel: "stylesheet", href: "styles/main.css" }');
 
         // Test MainSandbox mode
@@ -232,6 +242,7 @@ describe('head links compilation', () => {
         expect(generatedSandbox.validations).toEqual([]);
         let callMatchSandbox = generatedSandbox.val.match(/injectHeadLinks\(\[[\s\S]*?\]\)/);
         expect(callMatchSandbox).not.toBeNull();
+        // When no file path is provided, CSS links should still be included in head links
         expect(callMatchSandbox![0]).toContain('{ rel: "stylesheet", href: "styles/main.css" }');
     });
 

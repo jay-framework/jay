@@ -31,4 +31,5 @@ export interface JayHtmlSourceFile extends CompilerSourceFile {
     headlessImports: JayHeadlessImports[];
     headLinks: JayHtmlHeadLink[];
     css?: string;
+    filename?: string;
 }

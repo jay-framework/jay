@@ -469,6 +469,13 @@ function renderHeadLinksArray(headLinks: JayHtmlHeadLink[]): string {
     return `[${linksCode}]`;
 }
 
+function generateCssImport(jayFile: JayHtmlSourceFile): string {
+    if (!jayFile.css || !jayFile.filename) {
+        return '';
+    }
+    return `import './${jayFile.filename}.css';`;
+}
+
 function renderFunctionImplementation(
     types: JayType,
     rootBodyElement: HTMLElement,
@@ -793,6 +800,7 @@ export function generateElementDefinitionFile(
                 RuntimeMode.WorkerTrusted,
                 jayFile.headLinks,
             );
+        const cssImport = generateCssImport(jayFile);
         return [
             renderImports(
                 renderedImplementation.imports.plus(Import.jayElement),
@@ -800,6 +808,7 @@ export function generateElementDefinitionFile(
                 jayFile.imports,
                 RuntimeMode.MainTrusted,
             ),
+            cssImport,
             types,
             renderedRefs,
             renderedElement,
@@ -825,6 +834,7 @@ export function generateElementFile(
         importerMode,
         jayFile.headLinks,
     );
+    const cssImport = generateCssImport(jayFile);
     const renderedFile = [
         renderImports(
             renderedImplementation.imports.plus(Import.element).plus(Import.jayElement),
@@ -832,6 +842,7 @@ export function generateElementFile(
             jayFile.imports,
             importerMode,
         ),
+        cssImport,
         types,
         renderedRefs,
         renderedElement,

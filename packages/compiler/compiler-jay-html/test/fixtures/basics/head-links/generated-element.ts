@@ -10,6 +10,8 @@ import {
     injectHeadLinks,
 } from '@jay-framework/runtime';
 
+import './head-links.css';
+
 export interface HeadLinksViewState {
     title: string;
 }
@@ -28,7 +30,6 @@ export type HeadLinksContract = JayContract<HeadLinksViewState, HeadLinksElement
 export function render(options?: RenderElementOptions): HeadLinksElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     injectHeadLinks([
-        { rel: 'stylesheet', href: 'styles/main.css' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', attributes: { crossorigin: '' } },
         { rel: 'icon', href: '/favicon.ico', attributes: { type: 'image/x-icon' } },
