@@ -101,12 +101,15 @@ target.appendChild(instance.element.dom);
         expect(scriptForMatching).toEqual(`
 import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
 import { render } from "/page.jay-html.ts";
+import {page} from "/page.ts"
 
 const viewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file"};
 const fastCarryForward = {};
 
 const target = document.getElementById('target');
-const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [])
+const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [
+{comp: page.comp, contextMarkers: []}
+])
 
 const instance = pageComp({...viewState, ...fastCarryForward})
 target.appendChild(instance.element.dom);
