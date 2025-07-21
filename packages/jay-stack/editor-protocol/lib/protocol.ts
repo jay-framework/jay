@@ -24,6 +24,9 @@ export interface PublishMessage extends BaseMessage<PublishResponse> {
     }[];
 }
 
+export type PublishPage = PublishMessage['pages'][number];
+export type PublishComponent = PublishMessage['components'][number];
+
 export interface SaveImageMessage extends BaseMessage<SaveImageResponse> {
     type: 'saveImage';
     imageId: string;
@@ -44,6 +47,8 @@ export interface PublishResponse extends BaseResponse {
         error?: string;
     }[];
 }
+
+export type PublishStatus = PublishResponse['status'][number];
 
 export interface SaveImageResponse extends BaseResponse {
     type: 'saveImage';
