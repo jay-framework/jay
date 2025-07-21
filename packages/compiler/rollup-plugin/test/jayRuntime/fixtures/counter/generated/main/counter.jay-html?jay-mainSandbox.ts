@@ -10,6 +10,8 @@ import {
     JayContract,
 } from '@jay-framework/runtime';
 
+import './counter.css';
+
 export interface CounterViewState {
     count: number;
 }
@@ -39,9 +41,9 @@ export function render(options?: RenderElementOptions): CounterElementPreRender 
     const render = (viewState: CounterViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
-                e('button', {}, ['-'], refSubtracter()),
+                e('button', { class: 'action-button' }, ['-'], refSubtracter()),
                 e('span', { style: { cssText: 'margin: 0 16px' } }, [dt((vs) => vs.count)]),
-                e('button', {}, ['+'], refAdderButton()),
+                e('button', { class: 'action-button' }, ['+'], refAdderButton()),
             ]),
         ) as CounterElement;
     return [refManager.getPublicAPI() as CounterElementRefs, render];

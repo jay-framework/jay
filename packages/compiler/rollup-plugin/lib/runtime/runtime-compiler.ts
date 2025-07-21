@@ -30,6 +30,12 @@ import { ViteDevServer } from 'vite';
 
 const GLOBAL_FUNC_REPOSITORY = 'GLOBAL_FUNC_REPOSITORY.ts';
 
+function cssImportedByJayHtml(source: string,
+                              importer: string | undefined) {
+    return false; // todo start implementing
+}
+
+
 export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: JayPluginContext) {
     const jayContext = givenJayContext || new JayPluginContext(jayOptions);
     let server: ViteDevServer;
@@ -55,6 +61,9 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
                 return await resolveJayContract(this, source, importer, options);
             if (hasJayModeExtension(source))
                 return await resolveJayModeFile(this, source, importer, options);
+            if (cssImportedByJayHtml(source, importer)) {
+
+            }
             if (
                 source.includes(SANDBOX_ROOT_PREFIX) ||
                 (jayOptions.isWorker && importer === undefined)

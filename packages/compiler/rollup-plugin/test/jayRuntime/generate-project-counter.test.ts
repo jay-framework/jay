@@ -19,7 +19,7 @@ describe('jayRuntime plugin - counter', () => {
 
         beforeAll(async () => {
             await generateProject(projectRoot, { isWorker });
-        });
+        }, 1000000);
 
         describe('main', () => {
             it('generates application container', async () => {

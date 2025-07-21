@@ -20,7 +20,6 @@ import { getJayFileStructure } from '../../../lib/runtime/get-jay-file-structure
 
 describe('transformJayFile', () => {
     const jayContext = new JayPluginContext();
-    const projectRoot = 'jayRuntime/fixtures/counter';
     const folder = 'jayRuntime/fixtures/counter/source';
 
     const getContext = ({ jay }) =>
