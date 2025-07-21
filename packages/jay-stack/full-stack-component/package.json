@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/fullstack-component",
-  "version": "0.6.4",
+  "version": "0.6.5",
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/index.js",

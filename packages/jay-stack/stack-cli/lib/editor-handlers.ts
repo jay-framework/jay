@@ -2,9 +2,12 @@ import path from 'path';
 import fs from 'fs';
 import type {
     PublishMessage,
+    PublishComponent,
+    PublishPage,
+    PublishResponse,
+    PublishStatus,
     SaveImageMessage,
     HasImageMessage,
-    PublishResponse,
     SaveImageResponse,
     HasImageResponse,
 } from '@jay-framework/editor-protocol';
@@ -14,36 +17,76 @@ import type { JayConfig } from './config';
 export function createEditorHandlers(config: JayConfig) {
     const resolvedConfig = getConfigWithDefaults(config);
 
+    const handlePagePublish = async (page: PublishPage): Promise<PublishStatus> => {
+        try {
+            const pagesBasePath = path.resolve(resolvedConfig.devServer.pagesBase);
+
+            // Convert route to file path
+            const routePath = page.route === '/' ? '' : page.route;
+            const pageDir = path.join(pagesBasePath, routePath);
+            const pageFile = path.join(pageDir, 'page.jay-html');
+
+            // Ensure directory exists
+            await fs.promises.mkdir(pageDir, { recursive: true });
+
+            // Write the page content
+            await fs.promises.writeFile(pageFile, page.jayHtml, 'utf-8');
+
+            console.log(`📝 Published page: ${pageFile}`);
+
+            return {
+                success: true,
+                filePath: pageFile,
+            };
+        } catch (error) {
+            console.error(`Failed to publish page ${page.route}:`, error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error',
+            };
+        }
+    };
+
+    const handleComponentPublish = async (component: PublishComponent): Promise<PublishStatus> => {
+        try {
+            const componentsBasePath = path.resolve(resolvedConfig.devServer.componentsBase);
+            const componentFile = path.join(componentsBasePath, `${component.name}.jay-html`);
+
+            // Ensure components directory exists
+            await fs.promises.mkdir(componentsBasePath, { recursive: true });
+
+            // Write the component content
+            await fs.promises.writeFile(componentFile, component.jayHtml, 'utf-8');
+
+            console.log(`🧩 Published component: ${componentFile}`);
+
+            return {
+                success: true,
+                filePath: componentFile,
+            };
+        } catch (error) {
+            console.error(`Failed to publish component ${component.name}:`, error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error',
+            };
+        }
+    };
+
     const onPublish = async (params: PublishMessage): Promise<PublishResponse> => {
         const status = [];
 
-        for (const page of params.pages) {
-            try {
-                const pagesBasePath = path.resolve(resolvedConfig.devServer.pagesBase);
+        // Handle pages if provided
+        if (params.pages) {
+            for (const page of params.pages) {
+                status.push(await handlePagePublish(page));
+            }
+        }
 
-                // Convert route to file path
-                const routePath = page.route === '/' ? '' : page.route;
-                const pageDir = path.join(pagesBasePath, routePath);
-                const pageFile = path.join(pageDir, 'page.jay-html');
-
-                // Ensure directory exists
-                await fs.promises.mkdir(pageDir, { recursive: true });
-
-                // Write the page content
-                await fs.promises.writeFile(pageFile, page.jayHtml, 'utf-8');
-
-                console.log(`📝 Published page: ${pageFile}`);
-
-                status.push({
-                    success: true,
-                    filePath: pageFile,
-                });
-            } catch (error) {
-                console.error(`Failed to publish page ${page.route}:`, error);
-                status.push({
-                    success: false,
-                    error: error instanceof Error ? error.message : 'Unknown error',
-                });
+        // Handle components if provided
+        if (params.components) {
+            for (const component of params.components) {
+                status.push(await handleComponentPublish(component));
             }
         }
 
