@@ -13,8 +13,12 @@ export interface BaseResponse {
 // Message types with discriminators and specific response types
 export interface PublishMessage extends BaseMessage<PublishResponse> {
     type: 'publish';
-    pages: {
+    pages?: {
         route: string;
+        jayHtml: string;
+        name: string;
+    }[];
+    components?: {
         jayHtml: string;
         name: string;
     }[];

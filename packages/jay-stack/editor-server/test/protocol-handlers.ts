@@ -40,30 +40,60 @@ export class DefaultProtocolHandlers {
     }
 
     async handlePublish(params: PublishMessage): Promise<PublishResponse> {
-        const { pages } = params;
+        const { pages, components } = params;
         const results: PublishResponse['status'] = [];
 
-        for (const page of pages) {
-            try {
-                const { route, jayHtml, name } = page;
-                const filePath = join(this.projectRoot, route, `${name}.jay-html`);
+        // Handle pages
+        if (pages) {
+            for (const page of pages) {
+                try {
+                    const { route, jayHtml, name } = page;
+                    const filePath = join(this.projectRoot, route, `${name}.jay-html`);
 
-                // Ensure directory exists
-                const dir = join(this.projectRoot, route);
-                if (this.memoryFileSystem) {
-                    this.memoryFileSystem.directories.add(dir);
-                    this.memoryFileSystem.files.set(filePath, jayHtml);
+                    // Ensure directory exists
+                    const dir = join(this.projectRoot, route);
+                    if (this.memoryFileSystem) {
+                        this.memoryFileSystem.directories.add(dir);
+                        this.memoryFileSystem.files.set(filePath, jayHtml);
+                    }
+
+                    results.push({
+                        success: true,
+                        filePath: filePath,
+                    });
+                } catch (error) {
+                    results.push({
+                        success: false,
+                        error: error instanceof Error ? error.message : 'Unknown error',
+                    });
                 }
+            }
+        }
+        
+        // Handle components
+        if (components) {
+            for (const component of components) {
+                try {
+                    const { jayHtml, name } = component;
+                    const componentsDir = join(this.projectRoot, 'src', 'components');
+                    const filePath = join(componentsDir, `${name}.jay-html`);
 
-                results.push({
-                    success: true,
-                    filePath: filePath,
-                });
-            } catch (error) {
-                results.push({
-                    success: false,
-                    error: error instanceof Error ? error.message : 'Unknown error',
-                });
+                    // Ensure components directory exists
+                    if (this.memoryFileSystem) {
+                        this.memoryFileSystem.directories.add(componentsDir);
+                        this.memoryFileSystem.files.set(filePath, jayHtml);
+                    }
+
+                    results.push({
+                        success: true,
+                        filePath: filePath,
+                    });
+                } catch (error) {
+                    results.push({
+                        success: false,
+                        error: error instanceof Error ? error.message : 'Unknown error',
+                    });
+                }
             }
         }
 
