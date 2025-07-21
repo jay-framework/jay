@@ -1,5 +1,4 @@
 import { DevServerPagePart } from './load-page-parts';
-import path from 'node:path';
 
 export function generateClientScript(
     defaultViewState: object,
@@ -8,9 +7,9 @@ export function generateClientScript(
     jayHtmlPath: string,
 ) {
     const imports =
-        parts.length > 1 ? parts.map((part) => part.clientImport).join('\n') + '\n' : '';
+        parts.length > 0 ? parts.map((part) => part.clientImport).join('\n') + '\n' : '';
     const compositeParts =
-        parts.length > 1
+        parts.length > 0
             ? `[
 ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
         ]`
