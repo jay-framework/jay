@@ -69,7 +69,7 @@ export class DefaultProtocolHandlers {
                 }
             }
         }
-        
+
         // Handle components
         if (components) {
             for (const component of components) {

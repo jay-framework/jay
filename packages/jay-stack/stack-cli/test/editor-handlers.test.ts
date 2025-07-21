@@ -201,7 +201,7 @@ describe('Editor Handlers', () => {
 
             // Check that directory was created
             expect(fs.existsSync(testComponentsDir)).toBe(true);
-            
+
             // Check that component file was created
             const componentFile = path.join(testComponentsDir, 'TestComponent.jay-html');
             expect(fs.existsSync(componentFile)).toBe(true);
@@ -235,7 +235,7 @@ describe('Editor Handlers', () => {
             const handlers = createEditorHandlers(testConfig);
 
             const largeContent = '<div>' + 'x'.repeat(10000) + '</div>';
-            
+
             const result = await handlers.onPublish({
                 type: 'publish',
                 components: [
@@ -272,7 +272,9 @@ describe('Editor Handlers', () => {
             expect(result.success).toBe(true);
             expect(result.status).toHaveLength(1);
             expect(result.status[0].success).toBe(true);
-            expect(result.status[0].filePath).toContain('test-components/PathTestComponent.jay-html');
+            expect(result.status[0].filePath).toContain(
+                'test-components/PathTestComponent.jay-html',
+            );
             expect(result.status[0].filePath).toContain(path.resolve('.'));
         });
     });

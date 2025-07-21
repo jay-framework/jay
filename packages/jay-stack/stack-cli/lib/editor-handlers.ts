@@ -45,7 +45,7 @@ export function createEditorHandlers(config: JayConfig) {
                 error: error instanceof Error ? error.message : 'Unknown error',
             };
         }
-    }
+    };
 
     const handleComponentPublish = async (component: PublishComponent): Promise<PublishStatus> => {
         try {
@@ -71,7 +71,7 @@ export function createEditorHandlers(config: JayConfig) {
                 error: error instanceof Error ? error.message : 'Unknown error',
             };
         }
-    }
+    };
 
     const onPublish = async (params: PublishMessage): Promise<PublishResponse> => {
         const status = [];
