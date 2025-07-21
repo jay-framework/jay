@@ -1,9 +1,10 @@
 import {
+    CSS_EXTENSION,
     hasExtension,
     hasJayModeExtension,
     Import,
     JAY_CONTRACT_EXTENSION,
-    JAY_EXTENSION,
+    JAY_EXTENSION, JAY_QUERY_MAIN_SANDBOX, JAY_QUERY_WORKER_TRUSTED,
     TS_EXTENSION,
 } from '@jay-framework/compiler-shared';
 import { LoadResult, PluginContext, ResolveIdResult, TransformResult } from 'rollup';
@@ -14,7 +15,7 @@ import {
     removeSandboxPrefixForWorkerRoot,
     ResolveIdOptions,
     resolveJayModeFile,
-    resolveJayContract,
+    resolveJayContract, hasCssImportedByJayHtml, resolveCssFile,
 } from './resolve-id';
 import { loadContractFile, loadJayFile } from './load';
 import { JayRollupConfig } from '../common/types';
@@ -27,14 +28,9 @@ import {
     parseContract,
 } from '@jay-framework/compiler-jay-html';
 import { ViteDevServer } from 'vite';
+import path from "node:path";
 
 const GLOBAL_FUNC_REPOSITORY = 'GLOBAL_FUNC_REPOSITORY.ts';
-
-function cssImportedByJayHtml(source: string,
-                              importer: string | undefined) {
-    return false; // todo start implementing
-}
-
 
 export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: JayPluginContext) {
     const jayContext = givenJayContext || new JayPluginContext(jayOptions);
@@ -61,8 +57,8 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
                 return await resolveJayContract(this, source, importer, options);
             if (hasJayModeExtension(source))
                 return await resolveJayModeFile(this, source, importer, options);
-            if (cssImportedByJayHtml(source, importer)) {
-
+            if (hasCssImportedByJayHtml(source, importer)) {
+                return resolveCssFile(this, importer, source)
             }
             if (
                 source.includes(SANDBOX_ROOT_PREFIX) ||

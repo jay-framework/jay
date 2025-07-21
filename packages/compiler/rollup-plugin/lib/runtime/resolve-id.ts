@@ -3,13 +3,16 @@ import { watchChangesFor } from './watch';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
 import { appendJayMetadata, jayMetadataFromModuleMetadata } from './metadata';
 import {
+    CSS_EXTENSION,
     GenerateTarget,
-    hasExtension,
+    hasExtension, JAY_EXTENSION, JAY_QUERY_MAIN_SANDBOX,
     JAY_QUERY_WORKER_TRUSTED_TS,
     SourceFileFormat,
     TS_EXTENSION,
     TSX_EXTENSION,
 } from '@jay-framework/compiler-shared';
+
+const JAY_HTML_CSS = '?css'
 
 export interface ResolveIdOptions {
     attributes: Record<string, string>;
@@ -121,4 +124,26 @@ function getResolvedId(resolved: ResolvedId, mode: string, originId: string): st
     const extension = resolved.id.split('.').pop();
     const id = `${originId}?${mode}.${extension}`;
     return id;
+}
+
+export function hasCssImportedByJayHtml(source: string,
+                                 importer: string | undefined) {
+    return hasExtension(source, CSS_EXTENSION) &&
+        importer &&
+        (
+            hasExtension(importer, JAY_EXTENSION, {withTs: true}) ||
+            hasExtension(importer, JAY_EXTENSION+JAY_QUERY_MAIN_SANDBOX, {withTs: true})
+        )
+}
+
+export function resolveCssFile(context: PluginContext, importer: string, source: string) {
+    const originImporter = importer.split('?')[0];
+    const id = `${originImporter}${JAY_HTML_CSS}`;
+    return {
+        id,
+        meta: appendJayMetadata(context, id, {
+            format: SourceFileFormat.CSS,
+            originId: originImporter,
+        }),
+    };
 }
