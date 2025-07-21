@@ -8,13 +8,14 @@ describe('Editor Handlers', () => {
     const testConfig: JayConfig = {
         devServer: {
             pagesBase: './test-pages',
+            componentsBase: './test-components',
             publicFolder: './test-public',
         },
     };
 
     const testPagesDir = path.resolve('./test-pages');
     const testPublicDir = path.resolve('./test-public');
-    const testComponentsDir = path.resolve('./src/components');
+    const testComponentsDir = path.resolve('./test-components');
 
     beforeEach(() => {
         // Clean up test directories
@@ -271,7 +272,7 @@ describe('Editor Handlers', () => {
             expect(result.success).toBe(true);
             expect(result.status).toHaveLength(1);
             expect(result.status[0].success).toBe(true);
-            expect(result.status[0].filePath).toContain('src/components/PathTestComponent.jay-html');
+            expect(result.status[0].filePath).toContain('test-components/PathTestComponent.jay-html');
             expect(result.status[0].filePath).toContain(path.resolve('.'));
         });
     });

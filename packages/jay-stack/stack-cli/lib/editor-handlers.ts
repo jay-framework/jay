@@ -49,12 +49,11 @@ export function createEditorHandlers(config: JayConfig) {
 
     const handleComponentPublish = async (component: PublishComponent): Promise<PublishStatus> => {
         try {
-            const projectRoot = path.resolve(resolvedConfig.devServer.pagesBase, '..');
-            const componentsDir = path.join(projectRoot, 'src', 'components');
-            const componentFile = path.join(componentsDir, `${component.name}.jay-html`);
+            const componentsBasePath = path.resolve(resolvedConfig.devServer.componentsBase);
+            const componentFile = path.join(componentsBasePath, `${component.name}.jay-html`);
 
             // Ensure components directory exists
-            await fs.promises.mkdir(componentsDir, { recursive: true });
+            await fs.promises.mkdir(componentsBasePath, { recursive: true });
 
             // Write the component content
             await fs.promises.writeFile(componentFile, component.jayHtml, 'utf-8');
@@ -72,7 +71,7 @@ export function createEditorHandlers(config: JayConfig) {
                 error: error instanceof Error ? error.message : 'Unknown error',
             };
         }
-}
+    }
 
     const onPublish = async (params: PublishMessage): Promise<PublishResponse> => {
         const status = [];
