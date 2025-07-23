@@ -5,14 +5,17 @@ import { appendJayMetadata, jayMetadataFromModuleMetadata } from './metadata';
 import {
     CSS_EXTENSION,
     GenerateTarget,
-    hasExtension, JAY_EXTENSION, JAY_QUERY_MAIN_SANDBOX,
+    hasExtension,
+    JAY_EXTENSION,
+    JAY_QUERY_MAIN_SANDBOX,
     JAY_QUERY_WORKER_TRUSTED_TS,
     SourceFileFormat,
     TS_EXTENSION,
     TSX_EXTENSION,
 } from '@jay-framework/compiler-shared';
+import { stripTSExtension } from './load';
 
-const JAY_HTML_CSS = '?css'
+const JAY_HTML_CSS = '.css';
 
 export interface ResolveIdOptions {
     attributes: Record<string, string>;
@@ -126,24 +129,28 @@ function getResolvedId(resolved: ResolvedId, mode: string, originId: string): st
     return id;
 }
 
-export function hasCssImportedByJayHtml(source: string,
-                                 importer: string | undefined) {
-    return hasExtension(source, CSS_EXTENSION) &&
+export function hasCssImportedByJayHtml(source: string, importer: string | undefined) {
+    return (
+        hasExtension(source, CSS_EXTENSION) &&
         importer &&
-        (
-            hasExtension(importer, JAY_EXTENSION, {withTs: true}) ||
-            hasExtension(importer, JAY_EXTENSION+JAY_QUERY_MAIN_SANDBOX, {withTs: true})
-        )
+        (hasExtension(importer, JAY_EXTENSION, { withTs: true }) ||
+            hasExtension(importer, JAY_EXTENSION + JAY_QUERY_MAIN_SANDBOX, { withTs: true }))
+    );
 }
 
-export function resolveCssFile(context: PluginContext, importer: string, source: string) {
+export function resolveCssFile(context: PluginContext, importer: string) {
     const originImporter = importer.split('?')[0];
-    const id = `${originImporter}${JAY_HTML_CSS}`;
+    const originId = stripTSExtension(originImporter);
+    const id = `${originId}${JAY_HTML_CSS}`;
     return {
         id,
         meta: appendJayMetadata(context, id, {
             format: SourceFileFormat.CSS,
-            originId: originImporter,
+            originId: originId,
         }),
     };
+}
+
+export function isResolvedCssFile(id: string) {
+    return id.endsWith(JAY_HTML_CSS) && id.indexOf(JAY_EXTENSION) > 0;
 }

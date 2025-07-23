@@ -3,5 +3,5 @@ export enum SourceFileFormat {
     JayTsx = 'jay-tsx',
     JayContract = 'jay-contract',
     TypeScript = 'typeScript',
-    CSS = 'css'
+    CSS = 'css',
 }

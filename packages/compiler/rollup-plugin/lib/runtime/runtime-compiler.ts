@@ -1,13 +1,12 @@
 import {
-    CSS_EXTENSION,
     hasExtension,
     hasJayModeExtension,
     Import,
     JAY_CONTRACT_EXTENSION,
-    JAY_EXTENSION, JAY_QUERY_MAIN_SANDBOX, JAY_QUERY_WORKER_TRUSTED,
+    JAY_EXTENSION,
     TS_EXTENSION,
 } from '@jay-framework/compiler-shared';
-import { LoadResult, PluginContext, ResolveIdResult, TransformResult } from 'rollup';
+import { LoadResult, ResolveIdResult, TransformResult } from 'rollup';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
 import { transformJayFile } from './transform';
 import {
@@ -15,28 +14,41 @@ import {
     removeSandboxPrefixForWorkerRoot,
     ResolveIdOptions,
     resolveJayModeFile,
-    resolveJayContract, hasCssImportedByJayHtml, resolveCssFile,
+    resolveJayContract,
+    hasCssImportedByJayHtml,
+    resolveCssFile,
+    isResolvedCssFile,
 } from './resolve-id';
-import { loadContractFile, loadJayFile } from './load';
+import { loadContractFile, loadCssFile, loadJayFile } from './load';
 import { JayRollupConfig } from '../common/types';
 import { JayPluginContext } from './jay-plugin-context';
-import { getFileContext, readFileAsString } from '../common/files';
-import { checkCodeErrors } from '../common/errors';
+import { getFileContext } from '../common/files';
 import {
     compileContract,
     JAY_IMPORT_RESOLVER,
     parseContract,
 } from '@jay-framework/compiler-jay-html';
 import { ViteDevServer } from 'vite';
-import path from "node:path";
 
 const GLOBAL_FUNC_REPOSITORY = 'GLOBAL_FUNC_REPOSITORY.ts';
 
 export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: JayPluginContext) {
     const jayContext = givenJayContext || new JayPluginContext(jayOptions);
     let server: ViteDevServer;
+    let isVite: boolean = false;
     return {
         name: 'jay:runtime',
+        buildStart(opts) {
+            // Vite adds additional properties to the plugin context
+            isVite = Boolean(
+                opts.plugins?.some(
+                    (plugin) =>
+                        plugin.name === 'vite:build-metadata' || plugin.name?.startsWith('vite:'),
+                ),
+            );
+
+            console.log('[buildStart] Vite detected:', isVite);
+        },
         configureServer(_server: ViteDevServer) {
             server = _server;
         },
@@ -58,7 +70,7 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             if (hasJayModeExtension(source))
                 return await resolveJayModeFile(this, source, importer, options);
             if (hasCssImportedByJayHtml(source, importer)) {
-                return resolveCssFile(this, importer, source)
+                return resolveCssFile(this, importer);
             }
             if (
                 source.includes(SANDBOX_ROOT_PREFIX) ||
@@ -73,10 +85,12 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             if (
                 hasExtension(id, JAY_EXTENSION, { withTs: true }) ||
                 hasJayModeExtension(id, { withTs: true })
-            )
+            ) {
                 return await loadJayFile(this, id);
-            else if (hasExtension(id, JAY_CONTRACT_EXTENSION, { withTs: true })) {
+            } else if (hasExtension(id, JAY_CONTRACT_EXTENSION, { withTs: true })) {
                 return await loadContractFile(this, id);
+            } else if (isResolvedCssFile(id)) {
+                return await loadCssFile(this, jayContext, id, isVite);
             } else if (id === GLOBAL_FUNC_REPOSITORY) {
                 const { functionRepository } =
                     jayContext.globalFunctionsRepository.generateGlobalFile();
