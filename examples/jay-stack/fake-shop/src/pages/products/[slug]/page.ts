@@ -4,7 +4,7 @@ import {
     partialRender,
     UrlParams,
 } from '@jay-framework/fullstack-component';
-import { render, PageElementRefs } from './page.jay-html';
+import {render, PageElementRefs, PageContract} from './page.jay-html';
 import { Props } from '@jay-framework/component';
 import { getProductBySlug, getProducts } from '../../../products-database';
 import { getAvailableUnits } from '../../../inventory-service';
@@ -52,7 +52,7 @@ function ProductsPageConstructor(
     };
 }
 
-export const page = makeJayStackComponent<typeof render>()
+export const page = makeJayStackComponent<PageContract>()
     .withProps<PageProps>()
     .withLoadParams(urlLoader)
     .withSlowlyRender(renderSlowlyChanging)
