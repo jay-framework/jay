@@ -11,84 +11,121 @@ import type {
     SaveImageResponse,
     HasImageResponse,
 } from '@jay-framework/editor-protocol';
-import { getConfigWithDefaults } from './config';
 import type { JayConfig } from './config';
+import {generateElementDefinitionFile, JAY_IMPORT_RESOLVER, parseJayFile} from "@jay-framework/compiler-jay-html";
+import { JAY_EXTENSION } from "@jay-framework/compiler-shared";
 
-export function createEditorHandlers(config: JayConfig) {
-    const resolvedConfig = getConfigWithDefaults(config);
+const PAGE_FILENAME = `page${JAY_EXTENSION}`;
 
-    const handlePagePublish = async (page: PublishPage): Promise<PublishStatus> => {
-        try {
-            const pagesBasePath = path.resolve(resolvedConfig.devServer.pagesBase);
+type CreatedJayHtml = {
+    jayHtml: string,
+    filename: string,
+    dirname: string,
+    fullPath: string
+}
 
-            // Convert route to file path
-            const routePath = page.route === '/' ? '' : page.route;
-            const pageDir = path.join(pagesBasePath, routePath);
-            const pageFile = path.join(pageDir, 'page.jay-html');
+async function handlePagePublish(resolvedConfig: Required<JayConfig>, page: PublishPage): Promise<[PublishStatus, CreatedJayHtml]> {
+    try {
+        const pagesBasePath = path.resolve(resolvedConfig.devServer.pagesBase);
 
-            // Ensure directory exists
-            await fs.promises.mkdir(pageDir, { recursive: true });
+        // Convert route to file path
+        const routePath = page.route === '/' ? '' : page.route;
+        const dirname = path.join(pagesBasePath, routePath);
+        const fullPath = path.join(dirname, PAGE_FILENAME);
 
-            // Write the page content
-            await fs.promises.writeFile(pageFile, page.jayHtml, 'utf-8');
+        // Ensure directory exists
+        await fs.promises.mkdir(dirname, {recursive: true});
 
-            console.log(`📝 Published page: ${pageFile}`);
+        // Write the page content
+        await fs.promises.writeFile(fullPath, page.jayHtml, 'utf-8');
+        const createdJayHtml: CreatedJayHtml = ({
+            jayHtml: page.jayHtml,
+            filename: PAGE_FILENAME,
+            dirname,
+            fullPath
+        })
 
-            return {
-                success: true,
-                filePath: pageFile,
-            };
-        } catch (error) {
-            console.error(`Failed to publish page ${page.route}:`, error);
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Unknown error',
-            };
-        }
-    };
+        console.log(`📝 Published page: ${fullPath}`);
 
-    const handleComponentPublish = async (component: PublishComponent): Promise<PublishStatus> => {
-        try {
-            const componentsBasePath = path.resolve(resolvedConfig.devServer.componentsBase);
-            const componentFile = path.join(componentsBasePath, `${component.name}.jay-html`);
+        return [{
+            success: true,
+            filePath: fullPath,
+        }, createdJayHtml];
+    } catch (error) {
+        console.error(`Failed to publish page ${page.route}:`, error);
+        return [{
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        }, undefined];
+    }
+};
 
-            // Ensure components directory exists
-            await fs.promises.mkdir(componentsBasePath, { recursive: true });
+async function handleComponentPublish(resolvedConfig: Required<JayConfig>, component: PublishComponent): Promise<[PublishStatus, CreatedJayHtml]> {
+    try {
+        const dirname = path.resolve(resolvedConfig.devServer.componentsBase);
+        const filename = `${component.name}${JAY_EXTENSION}`
+        const fullPath = path.join(dirname, filename);
 
-            // Write the component content
-            await fs.promises.writeFile(componentFile, component.jayHtml, 'utf-8');
+        // Ensure components directory exists
+        await fs.promises.mkdir(dirname, { recursive: true });
 
-            console.log(`🧩 Published component: ${componentFile}`);
+        // Write the component content
+        await fs.promises.writeFile(fullPath, component.jayHtml, 'utf-8');
+        const createdJayHtml: CreatedJayHtml = ({
+            jayHtml: component.jayHtml,
+            filename,
+            dirname,
+            fullPath
+        })
 
-            return {
-                success: true,
-                filePath: componentFile,
-            };
-        } catch (error) {
-            console.error(`Failed to publish component ${component.name}:`, error);
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Unknown error',
-            };
-        }
-    };
+        console.log(`🧩 Published component: ${fullPath}`);
+
+        return [{
+            success: true,
+            filePath: fullPath,
+        }, createdJayHtml];
+    } catch (error) {
+        console.error(`Failed to publish component ${component.name}:`, error);
+        return [{
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error',
+        }, undefined];
+    }
+};
+
+
+export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: string) {
 
     const onPublish = async (params: PublishMessage): Promise<PublishResponse> => {
-        const status = [];
+        const status: PublishStatus[] = [];
+        const createdJayHtmls: CreatedJayHtml[] = []
 
         // Handle pages if provided
         if (params.pages) {
             for (const page of params.pages) {
-                status.push(await handlePagePublish(page));
+                const [pageStatus, createdJayHtml] = await handlePagePublish(config, page)
+                status.push(pageStatus);
+                if (pageStatus.success)
+                    createdJayHtmls.push(createdJayHtml);
             }
         }
 
         // Handle components if provided
         if (params.components) {
             for (const component of params.components) {
-                status.push(await handleComponentPublish(component));
+                const [compStatus, createdJayHtml] = await handleComponentPublish(config, component);
+                status.push(compStatus);
+                if (compStatus.success)
+                    createdJayHtmls.push(createdJayHtml);
             }
         }
+
+        for (const {jayHtml, dirname, filename, fullPath} of createdJayHtmls) {
+            const parsedJayHtml = await parseJayFile(jayHtml, dirname, filename, {relativePath: tsConfigPath}, JAY_IMPORT_RESOLVER)
+            const definitionFile = generateElementDefinitionFile(parsedJayHtml)
+            await fs.promises.writeFile(definitionFile.val, fullPath + '.d.ts', 'utf-8');
+        }
+
 
         return {
             type: 'publish',
@@ -100,7 +137,7 @@ export function createEditorHandlers(config: JayConfig) {
     const onSaveImage = async (params: SaveImageMessage): Promise<SaveImageResponse> => {
         try {
             const imagesDir = path.join(
-                path.resolve(resolvedConfig.devServer.publicFolder),
+                path.resolve(config.devServer.publicFolder),
                 'images',
             );
 
@@ -135,7 +172,7 @@ export function createEditorHandlers(config: JayConfig) {
         try {
             const filename = `${params.imageId}.png`;
             const imagePath = path.join(
-                path.resolve(resolvedConfig.devServer.publicFolder),
+                path.resolve(config.devServer.publicFolder),
                 'images',
                 filename,
             );
