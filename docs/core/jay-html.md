@@ -384,6 +384,94 @@ The compiler properly escapes special characters in URLs and attributes:
 - **Dynamic Links**: Head links are static and cannot be dynamically generated based on component state
 - **Runtime Only**: Head links are only injected when the component is rendered in a browser environment
 
+## CSS Support
+
+Jay-HTML provides built-in CSS support that automatically extracts and bundles CSS from your components. This enables seamless integration with design tools while maintaining proper CSS organization.
+
+### Overview
+
+When a Jay-HTML file contains CSS (either via `<link>` tags or inline `<style>`), the compiler will:
+
+1. **Extract CSS content** from `<link rel="stylesheet">` and `<style>` tags
+2. **Generate a CSS file** with the same name as the Jay-HTML file (e.g., `counter.css` for `counter.jay-html`)
+3. **Add a CSS import** to the generated TypeScript code
+4. **Exclude CSS links** from head links injection (to prevent duplication)
+
+### CSS Sources
+
+Jay-HTML supports CSS from multiple sources:
+
+#### External CSS Files
+
+```html
+<head>
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="components/button.css" />
+</head>
+```
+
+The compiler will:
+- Read the CSS content from the referenced files
+- Include the content in the generated CSS file
+- Add comments indicating the source
+
+#### Inline CSS
+
+```html
+<head>
+  <style>
+    .counter {
+      color: blue;
+      font-size: 18px;
+    }
+    
+    .button {
+      background: red;
+      border: none;
+      padding: 10px 20px;
+    }
+  </style>
+</head>
+```
+
+#### Combined CSS
+
+```html
+<head>
+  <link rel="stylesheet" href="styles/base.css" />
+  <style>
+    .component-specific {
+      margin: 20px;
+    }
+  </style>
+  <link rel="stylesheet" href="styles/theme.css" />
+</head>
+```
+
+### Example
+
+For a file `counter.jay-html` with CSS content:
+
+**Input Jay-HTML:**
+```html
+<html>
+  <head>
+    <link rel="stylesheet" href="styles/main.css" />
+    <style>
+      .counter { color: blue; }
+    </style>
+    
+    <script type="application/jay-data">
+      data:
+        count: number
+    </script>
+  </head>
+  <body>
+    <div class="counter">{count}</div>
+  </body>
+</html>
+```
+
 ## Template Syntax
 
 Jay-HTML extends HTML with template syntax for dynamic content.

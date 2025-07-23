@@ -134,7 +134,7 @@ describe('head links integration', () => {
             jayFileWith(
                 TEST_YAML,
                 SIMPLE_BODY,
-                `<link rel="stylesheet" href="styles/main.css">
+                `<link rel="stylesheet" href="fixtures/styles/main.css">
                   |<link rel="icon" href="/favicon.ico">
                   |<script type="application/jay-headfull" src="./fixtures/components/imports/component1.ts" names="comp1"></script>`,
             ),
@@ -146,20 +146,22 @@ describe('head links integration', () => {
 
         expect(jayFile.validations).toEqual([]);
 
-        // Should have 1 imports and 2 head links
+        // Should have 1 imports and 1 head link (CSS link is excluded when CSS extraction is enabled)
         expect(jayFile.val.imports).toHaveLength(1);
-        expect(jayFile.val.headLinks).toHaveLength(2);
+        expect(jayFile.val.headLinks).toHaveLength(1);
 
-        // Verify head links
-        expect(jayFile.val.headLinks[0].rel).toBe('stylesheet');
-        expect(jayFile.val.headLinks[1].rel).toBe('icon');
+        // Verify head links (CSS link is excluded, only icon link remains)
+        expect(jayFile.val.headLinks[0].rel).toBe('icon');
 
         // Generate code should only inject head links
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
         expect(generated.validations).toEqual([]);
 
         expect(generated.val).toContain('injectHeadLinks([');
-        expect(generated.val).toContain('{ rel: "stylesheet", href: "styles/main.css" }');
+        // CSS link should NOT be included in head links when CSS extraction is enabled
+        expect(generated.val).not.toContain(
+            '{ rel: "stylesheet", href: "fixtures/styles/main.css" }',
+        );
         expect(generated.val).toContain('{ rel: "icon", href: "/favicon.ico" }');
     });
 

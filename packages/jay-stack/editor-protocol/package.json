@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/editor-protocol",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/index.js",

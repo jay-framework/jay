@@ -1,5 +1,10 @@
 <html>
   <head>
+    <style>
+      .action-button {
+        border: 1px solid #2c3e50;
+      }
+    </style>
     <script type="application/jay-data">
       data:
         count: number
@@ -7,9 +12,9 @@
   </head>
   <body>
     <div>
-      <button ref="subtracter">-</button>
+      <button class="action-button" ref="subtracter">-</button>
       <span style="margin: 0 16px">{count}</span>
-      <button ref="adder-button">+</button>
+      <button class="action-button" ref="adder-button">+</button>
     </div>
   </body>
 </html>
