@@ -1,4 +1,4 @@
-import { Counter, HostElementRefs, render } from './host.jay-html';
+import { CounterOfHostViewState, HostElementRefs, render } from './host.jay-html';
 import {
     createDerivedArray,
     createEffect,
@@ -39,7 +39,7 @@ function HostConstructor({}: Props<HostProps>, refs: HostElementRefs) {
         }
     });
 
-    const counters = createDerivedArray<CounterData, Counter>(counterData, (internalCounter) => {
+    const counters = createDerivedArray<CounterData, CounterOfHostViewState>(counterData, (internalCounter) => {
         return {
             key: internalCounter().key,
             count: internalCounter().currentCount,
@@ -56,7 +56,7 @@ function HostConstructor({}: Props<HostProps>, refs: HostElementRefs) {
         if (Number(newValue)) setNumberOfCounters(Number(newValue));
     });
 
-    refs.counter.onChange(({ coordinate, event }: JayEvent<CounterEvent, Counter>) => {
+    refs.counters.counter.onChange(({ coordinate, event }: JayEvent<CounterEvent, CounterOfHostViewState>) => {
         console.log(coordinate, event);
         const counterIndex = counterData().findIndex(
             (internalCounter) => internalCounter.key === coordinate[0],
