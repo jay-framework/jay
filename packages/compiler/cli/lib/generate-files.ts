@@ -38,7 +38,7 @@ export async function generateFiles(
     let generationFailed = false;
     for (const jayFile of jayFiles) {
         const content = await fsp.readFile(jayFile, 'utf-8');
-        const parsedFile: JayHtmlSourceFile = checkValidationErrors(
+        const parsedFile = checkValidationErrors<JayHtmlSourceFile>(
             await parseJayFile(
                 content,
                 path.basename(jayFile.replace('.jay-html', '')),
