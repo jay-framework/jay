@@ -1,4 +1,4 @@
-const replace = require('replace-in-file');
+import replace from 'replace-in-file';
 
 // replaces "import ... from file.ts;" to "import ... from file;"
 const options = {
