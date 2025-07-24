@@ -1,4 +1,4 @@
-import glob from "glob";
+import glob from 'glob';
 const { sync: globSync } = glob;
 import path from 'node:path';
 import { JAY_CONTRACT_EXTENSION, JAY_EXTENSION } from '@jay-framework/compiler-shared';

@@ -1,8 +1,6 @@
 import { isFunctionLikeDeclarationBase } from '../../../lib/components-files/ts-utils/ts-compiler-utils';
 import ts from 'typescript';
-const {
-    isVariableStatement,
-} = ts;
+const { isVariableStatement } = ts;
 import {
     tsBindingNameToVariable,
     NameBindingResolver,

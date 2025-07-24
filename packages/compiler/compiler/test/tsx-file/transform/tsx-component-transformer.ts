@@ -1,5 +1,3 @@
-;
-
 import { tsxComponentTransformer } from '../../../lib/tsx-file/transform/tsx-component-transformer';
 import * as ts from 'typescript';
 const { transform } = ts;

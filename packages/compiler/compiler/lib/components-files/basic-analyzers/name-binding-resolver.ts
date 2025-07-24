@@ -2,9 +2,30 @@ import { createRequire } from 'module';
 import type * as ts from 'typescript';
 const require = createRequire(import.meta.url);
 const tsModule = require('typescript') as typeof ts;
-const { isElementAccessExpression, isIdentifier, isObjectBindingPattern, isPropertyAccessExpression, isStringLiteral, isObjectLiteralExpression, isPropertyAssignment, isShorthandPropertyAssignment, isArrayBindingPattern, isBindingElement, isParenthesizedExpression, isAsExpression, isArrowFunction, isFunctionExpression, isStatement, isNamespaceImport, isNamedImports, isCallExpression, isNumericLiteral, isToken, SyntaxKind, NodeFlags,  } = tsModule;
-;
-
+const {
+    isElementAccessExpression,
+    isIdentifier,
+    isObjectBindingPattern,
+    isPropertyAccessExpression,
+    isStringLiteral,
+    isObjectLiteralExpression,
+    isPropertyAssignment,
+    isShorthandPropertyAssignment,
+    isArrayBindingPattern,
+    isBindingElement,
+    isParenthesizedExpression,
+    isAsExpression,
+    isArrowFunction,
+    isFunctionExpression,
+    isStatement,
+    isNamespaceImport,
+    isNamedImports,
+    isCallExpression,
+    isNumericLiteral,
+    isToken,
+    SyntaxKind,
+    NodeFlags,
+} = tsModule;
 export enum VariableRootType {
     FunctionParameter,
     FunctionDefinition,

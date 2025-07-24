@@ -1,10 +1,16 @@
-;
 import { JsxBlock } from '../jsx-block';
 import { createRequire } from 'module';
 import type * as ts from 'typescript';
 const require = createRequire(import.meta.url);
 const tsModule = require('typescript') as typeof ts;
-const { isArrowFunction, isBinaryExpression, isJsxAttribute, isJsxExpression, isJsxSelfClosingElement, isStringLiteral } = tsModule;
+const {
+    isArrowFunction,
+    isBinaryExpression,
+    isJsxAttribute,
+    isJsxExpression,
+    isJsxSelfClosingElement,
+    isStringLiteral,
+} = tsModule;
 
 export function parseOpeningElement(
     node: ts.JsxOpeningElement | ts.JsxSelfClosingElement,

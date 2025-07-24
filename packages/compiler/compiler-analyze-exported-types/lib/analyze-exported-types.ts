@@ -3,7 +3,24 @@ import { createRequire } from 'module';
 import type * as ts from 'typescript';
 const require = createRequire(import.meta.url);
 const tsModule = require('typescript') as typeof ts;
-const { convertCompilerOptionsFromJson, createProgram, isCallExpression, isFunctionDeclaration, isIdentifier, isImportDeclaration, isInterfaceDeclaration, isNamedImports, isPropertySignature, isQualifiedName, isStringLiteral, isTypeAliasDeclaration, isTypeReferenceNode, isVariableStatement, parseConfigFileTextToJson, SyntaxKind } = tsModule;
+const {
+    convertCompilerOptionsFromJson,
+    createProgram,
+    isCallExpression,
+    isFunctionDeclaration,
+    isIdentifier,
+    isImportDeclaration,
+    isInterfaceDeclaration,
+    isNamedImports,
+    isPropertySignature,
+    isQualifiedName,
+    isStringLiteral,
+    isTypeAliasDeclaration,
+    isTypeReferenceNode,
+    isVariableStatement,
+    parseConfigFileTextToJson,
+    SyntaxKind,
+} = tsModule;
 export * from './resolve-ts-config';
 
 import { resolveTsConfig, ResolveTsConfigOptions } from './resolve-ts-config';

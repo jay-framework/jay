@@ -2,15 +2,21 @@ import { createRequire } from 'module';
 import type * as ts from 'typescript';
 const require = createRequire(import.meta.url);
 const tsModule = require('typescript') as typeof ts;
-const { isBlock, isCallExpression, isExpressionStatement, isIdentifier, isPropertyAccessExpression,  } = tsModule;
-import{
+const {
+    isBlock,
+    isCallExpression,
+    isExpressionStatement,
+    isIdentifier,
+    isPropertyAccessExpression,
+} = tsModule;
+import {
     flattenVariable,
     isFunctionVariableRoot,
     isParamVariableRoot,
 } from '../basic-analyzers/name-binding-resolver';
 import { isFunctionLikeDeclarationBase } from '../ts-utils/ts-compiler-utils';
 import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
-import {isIdentifierOrPropertyAccessExpression} from "../basic-analyzers/typescript-extras";
+import { isIdentifierOrPropertyAccessExpression } from '../basic-analyzers/typescript-extras';
 
 export interface FoundEventHandler {
     eventHandlerCallStatement: ts.ExpressionStatement;

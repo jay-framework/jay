@@ -3,7 +3,8 @@ import { createRequire } from 'module';
 import type * as ts from 'typescript';
 const require = createRequire(import.meta.url);
 const tsModule = require('typescript') as typeof ts;
-const { forEachChild, isArrowFunction, isFunctionDeclaration, isIdentifier, isVariableStatement,  } = tsModule;
+const { forEachChild, isArrowFunction, isFunctionDeclaration, isIdentifier, isVariableStatement } =
+    tsModule;
 
 export function findComponentConstructorsBlock(
     componentFunctionExpressions: ts.Expression[],

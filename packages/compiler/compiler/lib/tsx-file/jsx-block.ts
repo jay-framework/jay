@@ -1,4 +1,3 @@
-;
 import { astToCode } from '../components-files/ts-utils/ts-compiler-utils';
 import type * as ts from 'typescript';
 import { CompilerSourceFile, SourceFileFormat, prettifyHtml } from '@jay-framework/compiler-shared';

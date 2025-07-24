@@ -1,4 +1,3 @@
-;
 import { createTsSourceFile } from '../../test-utils/ts-source-utils';
 import * as ts from 'typescript';
 const { isIdentifier } = ts;

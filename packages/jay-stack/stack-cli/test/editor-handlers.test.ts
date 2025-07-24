@@ -30,8 +30,8 @@ describe('Editor Handlers', () => {
         },
         editorServer: {
             portRange: [3000, 3010],
-            editorId: 'xxx-xxx'
-        }
+            editorId: 'xxx-xxx',
+        },
     };
     const TS_CONFIG = './tsconfig.json';
 
@@ -105,7 +105,7 @@ describe('Editor Handlers', () => {
 
             expect(fs.existsSync(homeDtsFile)).toBe(true);
             expect(fs.existsSync(aboutDtsFile)).toBe(true);
-            
+
             // Validate .d.ts file structure
             const homeDtsContent = fs.readFileSync(homeDtsFile, 'utf-8');
             expect(homeDtsContent).toContain('export interface');
@@ -123,11 +123,17 @@ describe('Editor Handlers', () => {
                 components: [
                     {
                         name: 'Button',
-                        jayHtml: createValidJayHtml('<button>{text}</button>', 'data:\n  text: string'),
+                        jayHtml: createValidJayHtml(
+                            '<button>{text}</button>',
+                            'data:\n  text: string',
+                        ),
                     },
                     {
                         name: 'Card',
-                        jayHtml: createValidJayHtml('<div class="card">{content}</div>', 'data:\n  content: string'),
+                        jayHtml: createValidJayHtml(
+                            '<div class="card">{content}</div>',
+                            'data:\n  content: string',
+                        ),
                     },
                 ],
             });
@@ -144,7 +150,9 @@ describe('Editor Handlers', () => {
             expect(fs.existsSync(buttonFile)).toBe(true);
             expect(fs.existsSync(cardFile)).toBe(true);
             expect(fs.readFileSync(buttonFile, 'utf-8')).toContain('<button>{text}</button>');
-            expect(fs.readFileSync(cardFile, 'utf-8')).toContain('<div class="card">{content}</div>');
+            expect(fs.readFileSync(cardFile, 'utf-8')).toContain(
+                '<div class="card">{content}</div>',
+            );
 
             // Check that .d.ts files were generated
             const buttonDtsFile = path.join(testComponentsDir, 'Button.jay-html.d.ts');
@@ -152,7 +160,7 @@ describe('Editor Handlers', () => {
 
             expect(fs.existsSync(buttonDtsFile)).toBe(true);
             expect(fs.existsSync(cardDtsFile)).toBe(true);
-            
+
             // Validate .d.ts file structure
             const buttonDtsContent = fs.readFileSync(buttonDtsFile, 'utf-8');
             expect(buttonDtsContent).toContain('text: string');
@@ -175,11 +183,17 @@ describe('Editor Handlers', () => {
                 components: [
                     {
                         name: 'Header',
-                        jayHtml: createValidJayHtml('<header>{title}</header>', 'data:\n  title: string'),
+                        jayHtml: createValidJayHtml(
+                            '<header>{title}</header>',
+                            'data:\n  title: string',
+                        ),
                     },
                     {
                         name: 'Footer',
-                        jayHtml: createValidJayHtml('<footer>{copyright}</footer>', 'data:\n  copyright: string'),
+                        jayHtml: createValidJayHtml(
+                            '<footer>{copyright}</footer>',
+                            'data:\n  copyright: string',
+                        ),
                     },
                 ],
             });
@@ -289,10 +303,15 @@ describe('Editor Handlers', () => {
             // Check that component file was created with exact name
             const componentFile = path.join(testComponentsDir, 'My-Special_Component123.jay-html');
             expect(fs.existsSync(componentFile)).toBe(true);
-            expect(fs.readFileSync(componentFile, 'utf-8')).toContain('<div>Special Component</div>');
+            expect(fs.readFileSync(componentFile, 'utf-8')).toContain(
+                '<div>Special Component</div>',
+            );
 
             // Check that .d.ts file was generated
-            const componentDtsFile = path.join(testComponentsDir, 'My-Special_Component123.jay-html.d.ts');
+            const componentDtsFile = path.join(
+                testComponentsDir,
+                'My-Special_Component123.jay-html.d.ts',
+            );
             expect(fs.existsSync(componentDtsFile)).toBe(true);
         });
 
@@ -357,7 +376,7 @@ describe('Editor Handlers', () => {
                         name: 'TypedComponent',
                         jayHtml: createValidJayHtml(
                             '<div><span>{count}</span><button ref="increment">+</button></div>',
-                            'data:\n  count: number\n  title: string'
+                            'data:\n  count: number\n  title: string',
                         ),
                     },
                 ],
@@ -372,7 +391,7 @@ describe('Editor Handlers', () => {
             expect(fs.existsSync(componentDtsFile)).toBe(true);
 
             const dtsContent = fs.readFileSync(componentDtsFile, 'utf-8');
-            
+
             // Validate TypeScript definitions
             expect(dtsContent).toContain('export interface');
             expect(dtsContent).toContain('count: number');

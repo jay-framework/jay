@@ -1,10 +1,9 @@
-;
 import { SourceFileStatementAnalyzer } from '../basic-analyzers/scoped-source-file-statement-analyzer';
 import { createRequire } from 'module';
 import type * as ts from 'typescript';
 const require = createRequire(import.meta.url);
 const tsModule = require('typescript') as typeof ts;
-const { visitNode, isArrowFunction, isExpression  } = tsModule;
+const { visitNode, isArrowFunction, isExpression } = tsModule;
 import { astToCode, codeToAst } from '../ts-utils/ts-compiler-utils';
 import { FunctionRepositoryBuilder } from './function-repository-builder';
 
@@ -34,8 +33,7 @@ export function analyzeGlobalExec$(
         return node;
     };
 
-    if (isArrowFunction(foundExec$.arguments[0]))
-        visitNode(foundExec$.arguments[0].body, visitor);
+    if (isArrowFunction(foundExec$.arguments[0])) visitNode(foundExec$.arguments[0].body, visitor);
 
     if (foundUnsafeExpression) return { foundExec$, wasTransformed: false };
     else {

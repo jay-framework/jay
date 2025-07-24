@@ -1,10 +1,23 @@
-;
 import { isIdentifierOrPropertyAccessExpression } from './typescript-extras';
 import { createRequire } from 'module';
 import type * as ts from 'typescript';
 const require = createRequire(import.meta.url);
 const tsModule = require('typescript') as typeof ts;
-const { visitEachChild, isBinaryExpression, isCallExpression, isDecorator, isExpressionStatement, isFunctionDeclaration, isIdentifier, isNewExpression, isPropertyAccessExpression, isReturnStatement, isSpreadElement, SyntaxKind, transform,  } = tsModule;
+const {
+    visitEachChild,
+    isBinaryExpression,
+    isCallExpression,
+    isDecorator,
+    isExpressionStatement,
+    isFunctionDeclaration,
+    isIdentifier,
+    isNewExpression,
+    isPropertyAccessExpression,
+    isReturnStatement,
+    isSpreadElement,
+    SyntaxKind,
+    transform,
+} = tsModule;
 import {
     flattenVariable,
     isGlobalVariableRoot,

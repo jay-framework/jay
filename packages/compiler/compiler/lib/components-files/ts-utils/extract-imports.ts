@@ -2,8 +2,7 @@ import { createRequire } from 'module';
 import type * as ts from 'typescript';
 const require = createRequire(import.meta.url);
 const tsModule = require('typescript') as typeof ts;
-const { forEachChild, isImportDeclaration, isNamedImports, isStringLiteral, } = tsModule;
-
+const { forEachChild, isImportDeclaration, isNamedImports, isStringLiteral } = tsModule;
 
 export function extractImportDeclarations(sourceFile: ts.SourceFile): ts.ImportDeclaration[] {
     const importDeclarations: ts.ImportDeclaration[] = [];

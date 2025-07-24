@@ -8,8 +8,6 @@ import {
     ImportFromModuleResolvedType,
     SourceFileBindingResolver,
 } from '../basic-analyzers/source-file-binding-resolver';
-;
-
 export function isFirstParamJayEvent(
     eventHandler: ts.FunctionLikeDeclarationBase,
     bindingResolver: SourceFileBindingResolver,

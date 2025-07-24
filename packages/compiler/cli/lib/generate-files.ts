@@ -10,7 +10,11 @@ import {
     RuntimeMode,
     WithValidations,
 } from '@jay-framework/compiler-shared';
-import {JAY_IMPORT_RESOLVER, JayHtmlSourceFile, parseJayFile} from '@jay-framework/compiler-jay-html';
+import {
+    JAY_IMPORT_RESOLVER,
+    JayHtmlSourceFile,
+    parseJayFile,
+} from '@jay-framework/compiler-jay-html';
 
 function checkFileExists(filepath): Promise<Boolean> {
     return new Promise((resolve, reject) => {

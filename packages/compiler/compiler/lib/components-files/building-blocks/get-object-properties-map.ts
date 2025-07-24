@@ -2,9 +2,7 @@ import { createRequire } from 'module';
 import type * as ts from 'typescript';
 const require = createRequire(import.meta.url);
 const tsModule = require('typescript') as typeof ts;
-const { isComputedPropertyName, isIdentifier, isPropertyAssignment, isStringLiteral,  } = tsModule;
-;
-
+const { isComputedPropertyName, isIdentifier, isPropertyAssignment, isStringLiteral } = tsModule;
 export function getObjectPropertiesMap(
     expression: ts.ObjectLiteralExpression,
 ): Record<string, ts.Expression> {

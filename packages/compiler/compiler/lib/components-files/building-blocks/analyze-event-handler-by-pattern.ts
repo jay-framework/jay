@@ -2,7 +2,16 @@ import { createRequire } from 'module';
 import type * as ts from 'typescript';
 const require = createRequire(import.meta.url);
 const tsModule = require('typescript') as typeof ts;
-const { SyntaxKind, visitEachChild, visitNode, isBlock, isExpression, isIdentifier, isLiteralExpression, isStatement  } = tsModule;
+const {
+    SyntaxKind,
+    visitEachChild,
+    visitNode,
+    isBlock,
+    isExpression,
+    isIdentifier,
+    isLiteralExpression,
+    isStatement,
+} = tsModule;
 import {
     CompiledPattern,
     CompilePatternType,

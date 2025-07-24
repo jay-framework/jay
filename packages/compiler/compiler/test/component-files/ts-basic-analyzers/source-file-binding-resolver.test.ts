@@ -53,8 +53,10 @@ describe('SourceFileBindingResolver', () => {
         it('should explain the identifier y on the 3rd line', () => {
             expect(
                 sourceFileBindingResolver.explain(
-                    ((sourceFile.statements[2] as ts.ExpressionStatement).expression as ts.CallExpression)
-                        .arguments[0] as ts.Identifier,
+                    (
+                        (sourceFile.statements[2] as ts.ExpressionStatement)
+                            .expression as ts.CallExpression
+                    ).arguments[0] as ts.Identifier,
                 ),
             ).toEqual(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('y'));
         });
@@ -96,8 +98,10 @@ describe('SourceFileBindingResolver', () => {
         it('should explain the identifier y on the 3rd line', () => {
             expect(
                 sourceFileBindingResolver.explain(
-                    ((sourceFile.statements[2] as ts.ExpressionStatement).expression as ts.CallExpression)
-                        .arguments[0] as ts.Identifier,
+                    (
+                        (sourceFile.statements[2] as ts.ExpressionStatement)
+                            .expression as ts.CallExpression
+                    ).arguments[0] as ts.Identifier,
                 ),
             ).toEqual(sourceFileBindingResolver.findBindingResolver(sourceFile).getVariable('y'));
         });
@@ -254,14 +258,18 @@ describe('SourceFileBindingResolver', () => {
             let sourceFileBindingResolver = new SourceFileBindingResolver(sourceFile);
 
             let functionBindingResolver = sourceFileBindingResolver.findBindingResolver(
-                ((sourceFile.statements[0] as ts.ExpressionStatement).expression as ts.CallExpression)
-                    .arguments[0],
+                (
+                    (sourceFile.statements[0] as ts.ExpressionStatement)
+                        .expression as ts.CallExpression
+                ).arguments[0],
             );
 
             let functionBodyBindingResolver = sourceFileBindingResolver.findBindingResolver(
                 (
-                    ((sourceFile.statements[0] as ts.ExpressionStatement).expression as ts.CallExpression)
-                        .arguments[0] as ts.ArrowFunction
+                    (
+                        (sourceFile.statements[0] as ts.ExpressionStatement)
+                            .expression as ts.CallExpression
+                    ).arguments[0] as ts.ArrowFunction
                 ).body,
             );
 
@@ -300,8 +308,10 @@ describe('SourceFileBindingResolver', () => {
             });
 
             let arrowFunctionBody = (
-                ((sourceFile.statements[0] as ts.ExpressionStatement).expression as ts.CallExpression)
-                    .arguments[0] as ts.ArrowFunction
+                (
+                    (sourceFile.statements[0] as ts.ExpressionStatement)
+                        .expression as ts.CallExpression
+                ).arguments[0] as ts.ArrowFunction
             ).body as ts.Block;
 
             it('should explain the event identifier in the 1st function statement to the event variable', () => {
@@ -324,7 +334,8 @@ describe('SourceFileBindingResolver', () => {
                         (
                             (
                                 (arrowFunctionBody.statements[1] as ts.VariableStatement)
-                                    .declarationList.declarations[0].initializer as ts.CallExpression
+                                    .declarationList.declarations[0]
+                                    .initializer as ts.CallExpression
                             ).expression as ts.PropertyAccessExpression
                         ).expression as ts.Identifier,
                     ),
@@ -421,8 +432,10 @@ describe('SourceFileBindingResolver', () => {
                     assignedFrom: {
                         root: mkOtherVariableRoot(
                             (
-                                ((sourceFile.statements[1] as ts.ForStatement).statement as ts.Block)
-                                    .statements[0] as ts.VariableStatement
+                                (
+                                    (sourceFile.statements[1] as ts.ForStatement)
+                                        .statement as ts.Block
+                                ).statements[0] as ts.VariableStatement
                             ).declarationList.declarations[0].initializer,
                         ),
                     },
@@ -437,8 +450,10 @@ describe('SourceFileBindingResolver', () => {
                     sourceFileBindingResolver.explain(
                         (
                             (
-                                ((sourceFile.statements[1] as ts.ForStatement).statement as ts.Block)
-                                    .statements[0] as ts.VariableStatement
+                                (
+                                    (sourceFile.statements[1] as ts.ForStatement)
+                                        .statement as ts.Block
+                                ).statements[0] as ts.VariableStatement
                             ).declarationList.declarations[0].initializer as ts.BinaryExpression
                         ).left as ts.Identifier,
                     ),
@@ -450,8 +465,10 @@ describe('SourceFileBindingResolver', () => {
                     sourceFileBindingResolver.explain(
                         (
                             (
-                                ((sourceFile.statements[1] as ts.ForStatement).statement as ts.Block)
-                                    .statements[0] as ts.VariableStatement
+                                (
+                                    (sourceFile.statements[1] as ts.ForStatement)
+                                        .statement as ts.Block
+                                ).statements[0] as ts.VariableStatement
                             ).declarationList.declarations[0].initializer as ts.BinaryExpression
                         ).right as ts.Identifier,
                     ),
@@ -463,8 +480,10 @@ describe('SourceFileBindingResolver', () => {
                     sourceFileBindingResolver.explain(
                         (
                             (
-                                ((sourceFile.statements[1] as ts.ForStatement).statement as ts.Block)
-                                    .statements[1] as ts.ExpressionStatement
+                                (
+                                    (sourceFile.statements[1] as ts.ForStatement)
+                                        .statement as ts.Block
+                                ).statements[1] as ts.ExpressionStatement
                             ).expression as ts.CallExpression
                         ).arguments[0] as ts.Identifier,
                     ),
@@ -528,8 +547,10 @@ describe('SourceFileBindingResolver', () => {
                     assignedFrom: {
                         root: mkOtherVariableRoot(
                             (
-                                ((sourceFile.statements[1] as ts.ForStatement).statement as ts.Block)
-                                    .statements[0] as ts.VariableStatement
+                                (
+                                    (sourceFile.statements[1] as ts.ForStatement)
+                                        .statement as ts.Block
+                                ).statements[0] as ts.VariableStatement
                             ).declarationList.declarations[0].initializer,
                         ),
                     },
@@ -592,8 +613,10 @@ describe('SourceFileBindingResolver', () => {
                     assignedFrom: {
                         root: mkOtherVariableRoot(
                             (
-                                ((sourceFile.statements[1] as ts.ForStatement).statement as ts.Block)
-                                    .statements[0] as ts.VariableStatement
+                                (
+                                    (sourceFile.statements[1] as ts.ForStatement)
+                                        .statement as ts.Block
+                                ).statements[0] as ts.VariableStatement
                             ).declarationList.declarations[0].initializer,
                         ),
                     },
@@ -676,8 +699,10 @@ describe('SourceFileBindingResolver', () => {
                     sourceFileBindingResolver.explain(
                         (
                             (
-                                ((sourceFile.statements[1] as ts.WhileStatement).statement as ts.Block)
-                                    .statements[1] as ts.ExpressionStatement
+                                (
+                                    (sourceFile.statements[1] as ts.WhileStatement)
+                                        .statement as ts.Block
+                                ).statements[1] as ts.ExpressionStatement
                             ).expression as ts.CallExpression
                         ).arguments[0] as ts.Identifier,
                     ),
@@ -729,8 +754,10 @@ describe('SourceFileBindingResolver', () => {
             expect(
                 sourceFileBindingResolver.explain(
                     (
-                        ((sourceFile.statements[2] as ts.Block).statements[1] as ts.ExpressionStatement)
-                            .expression as ts.CallExpression
+                        (
+                            (sourceFile.statements[2] as ts.Block)
+                                .statements[1] as ts.ExpressionStatement
+                        ).expression as ts.CallExpression
                     ).arguments[0] as ts.Identifier,
                 ),
             ).toEqual(rootBindingResolver.getVariable('y'));
@@ -740,8 +767,10 @@ describe('SourceFileBindingResolver', () => {
             expect(
                 sourceFileBindingResolver.explain(
                     (
-                        ((sourceFile.statements[2] as ts.Block).statements[1] as ts.ExpressionStatement)
-                            .expression as ts.CallExpression
+                        (
+                            (sourceFile.statements[2] as ts.Block)
+                                .statements[1] as ts.ExpressionStatement
+                        ).expression as ts.CallExpression
                     ).arguments[1] as ts.Identifier,
                 ),
             ).toEqual(blockBindingResolver.getVariable('x'));
@@ -750,8 +779,10 @@ describe('SourceFileBindingResolver', () => {
         it('should explain the y identifier in the root console.log(y, x) to the root scope y', () => {
             expect(
                 sourceFileBindingResolver.explain(
-                    ((sourceFile.statements[3] as ts.ExpressionStatement).expression as ts.CallExpression)
-                        .arguments[0] as ts.Identifier,
+                    (
+                        (sourceFile.statements[3] as ts.ExpressionStatement)
+                            .expression as ts.CallExpression
+                    ).arguments[0] as ts.Identifier,
                 ),
             ).toEqual(rootBindingResolver.getVariable('y'));
         });
@@ -759,8 +790,10 @@ describe('SourceFileBindingResolver', () => {
         it('should explain the x identifier in the root console.log(y, x) to the root scope x', () => {
             expect(
                 sourceFileBindingResolver.explain(
-                    ((sourceFile.statements[3] as ts.ExpressionStatement).expression as ts.CallExpression)
-                        .arguments[1] as ts.Identifier,
+                    (
+                        (sourceFile.statements[3] as ts.ExpressionStatement)
+                            .expression as ts.CallExpression
+                    ).arguments[1] as ts.Identifier,
                 ),
             ).toEqual(rootBindingResolver.getVariable('x'));
         });

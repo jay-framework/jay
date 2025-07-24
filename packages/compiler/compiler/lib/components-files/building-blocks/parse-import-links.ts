@@ -2,7 +2,7 @@ import { createRequire } from 'module';
 import type * as ts from 'typescript';
 const require = createRequire(import.meta.url);
 const tsModule = require('typescript') as typeof ts;
-const { isStringLiteral,  } = tsModule;
+const { isStringLiteral } = tsModule;
 import {
     hasExtension,
     JAY_QUERY_MAIN_SANDBOX,

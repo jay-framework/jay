@@ -2,7 +2,24 @@ import { createRequire } from 'module';
 import type * as ts from 'typescript';
 const require = createRequire(import.meta.url);
 const tsModule = require('typescript') as typeof ts;
-const { visitNode, isArrayTypeNode, isBlock, isForInStatement, isForOfStatement, isForStatement, isFunctionDeclaration, isFunctionTypeNode, isIdentifier, isImportDeclaration, isStringLiteral, isTypeReferenceNode, isUnionTypeNode, isVariableDeclarationList, isVariableStatement, SyntaxKind, } = tsModule;
+const {
+    visitNode,
+    isArrayTypeNode,
+    isBlock,
+    isForInStatement,
+    isForOfStatement,
+    isForStatement,
+    isFunctionDeclaration,
+    isFunctionTypeNode,
+    isIdentifier,
+    isImportDeclaration,
+    isStringLiteral,
+    isTypeReferenceNode,
+    isUnionTypeNode,
+    isVariableDeclarationList,
+    isVariableStatement,
+    SyntaxKind,
+} = tsModule;
 import {
     FlattenedAccessChain,
     flattenVariable,

@@ -1,4 +1,3 @@
-;
 import { codeToAst } from '../ts-utils/ts-compiler-utils';
 import { createRequire } from 'module';
 import type * as ts from 'typescript';

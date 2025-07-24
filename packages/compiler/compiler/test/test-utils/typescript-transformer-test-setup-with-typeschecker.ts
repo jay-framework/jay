@@ -1,9 +1,18 @@
-import {createRequire} from "module";
+import { createRequire } from 'module';
 import type * as ts from 'typescript';
 const require = createRequire(import.meta.url);
 const tsModule = require('typescript') as typeof ts;
-const { ModuleKind, ModuleResolutionKind, ScriptTarget, sys, createSourceFile, createProgram, getPreEmitDiagnostics,
-    getLineAndCharacterOfPosition, flattenDiagnosticMessageText} = tsModule;
+const {
+    ModuleKind,
+    ModuleResolutionKind,
+    ScriptTarget,
+    sys,
+    createSourceFile,
+    createProgram,
+    getPreEmitDiagnostics,
+    getLineAndCharacterOfPosition,
+    flattenDiagnosticMessageText,
+} = tsModule;
 
 const compilerOptions: ts.CompilerOptions = {
     target: ScriptTarget.ES2022,
@@ -57,7 +66,10 @@ export interface TransformResult {
 }
 export function transformFile(
     filename: string,
-    setupCustomTransformers: (program: ts.Program, checker: ts.TypeChecker) => ts.CustomTransformers,
+    setupCustomTransformers: (
+        program: ts.Program,
+        checker: ts.TypeChecker,
+    ) => ts.CustomTransformers,
 ): TransformResult {
     const program = createProgram([filename], compilerOptions, host);
     const sourceFile = program.getSourceFile(filename);

@@ -1,4 +1,3 @@
-;
 import { JAY_COMPONENT } from '@jay-framework/compiler-shared';
 import { createRequire } from 'module';
 import type * as ts from 'typescript';

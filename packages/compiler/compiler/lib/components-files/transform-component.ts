@@ -1,4 +1,3 @@
-;
 import { mkTransformer, SourceFileTransformerContext } from './ts-utils/mk-transformer';
 import { createRequire } from 'module';
 import type * as ts from 'typescript';

@@ -411,6 +411,7 @@ Jay-HTML supports CSS from multiple sources:
 ```
 
 The compiler will:
+
 - Read the CSS content from the referenced files
 - Include the content in the generated CSS file
 - Add comments indicating the source
@@ -424,7 +425,7 @@ The compiler will:
       color: blue;
       font-size: 18px;
     }
-    
+
     .button {
       background: red;
       border: none;
@@ -453,14 +454,17 @@ The compiler will:
 For a file `counter.jay-html` with CSS content:
 
 **Input Jay-HTML:**
+
 ```html
 <html>
   <head>
     <link rel="stylesheet" href="styles/main.css" />
     <style>
-      .counter { color: blue; }
+      .counter {
+        color: blue;
+      }
     </style>
-    
+
     <script type="application/jay-data">
       data:
         count: number

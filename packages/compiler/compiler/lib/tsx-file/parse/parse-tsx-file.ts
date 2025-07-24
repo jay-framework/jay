@@ -14,7 +14,6 @@ import { getBaseElementName } from '../../components-files/building-blocks/get-b
 import { JAY_COMPONENT, MAKE_JAY_TSX_COMPONENT } from '@jay-framework/compiler-shared';
 import { findComponentConstructorsBlock } from '../../components-files/building-blocks/find-component-constructors';
 import { findFunctionExpressionReturnStatements } from '../../components-files/building-blocks/find-function-expression-return-statements';
-;
 import { getObjectPropertiesMap } from '../../components-files/building-blocks/get-object-properties-map';
 import { parseJsx } from './parse-jsx';
 import {

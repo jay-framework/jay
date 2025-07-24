@@ -2,7 +2,7 @@ import { createRequire } from 'module';
 import type * as ts from 'typescript';
 const require = createRequire(import.meta.url);
 const tsModule = require('typescript') as typeof ts;
-const { isIdentifier, isPropertyAccessExpression,  } = tsModule;
+const { isIdentifier, isPropertyAccessExpression } = tsModule;
 
 export function isIdentifierOrPropertyAccessExpression(
     node: ts.Node,

@@ -53,7 +53,9 @@ export function jayDefinitions() {
                     {},
                     JAY_IMPORT_RESOLVER,
                 );
-                const tsCode: string = checkValidationErrors(generateElementDefinitionFile(parsedFile));
+                const tsCode: string = checkValidationErrors(
+                    generateElementDefinitionFile(parsedFile),
+                );
                 const generatedFilename = await writeDefinitionFile(
                     dirname,
                     filename,
