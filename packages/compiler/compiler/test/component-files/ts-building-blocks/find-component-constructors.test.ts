@@ -1,4 +1,5 @@
-import ts, { isArrowFunction, isFunctionDeclaration, isFunctionExpression } from 'typescript';
+import ts from 'typescript';
+const { isArrowFunction, isFunctionDeclaration, isFunctionExpression } = ts;
 import { findComponentConstructorsBlock } from '../../../lib/components-files/building-blocks/find-component-constructors';
 import { createTsSourceFile } from '../../test-utils/ts-source-utils';
 import {

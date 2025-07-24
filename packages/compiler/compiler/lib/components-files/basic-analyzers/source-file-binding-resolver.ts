@@ -1,24 +1,8 @@
-import ts, {
-    Identifier,
-    isArrayTypeNode,
-    isBlock,
-    isForInStatement,
-    isForOfStatement,
-    isForStatement,
-    isFunctionDeclaration,
-    isFunctionTypeNode,
-    isIdentifier,
-    isImportDeclaration,
-    isStringLiteral,
-    isTypeReferenceNode,
-    isUnionTypeNode,
-    isVariableDeclarationList,
-    isVariableStatement,
-    PropertyAccessExpression,
-    SourceFile,
-    SyntaxKind,
-    VariableDeclarationList,
-} from 'typescript';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { visitNode, isArrayTypeNode, isBlock, isForInStatement, isForOfStatement, isForStatement, isFunctionDeclaration, isFunctionTypeNode, isIdentifier, isImportDeclaration, isStringLiteral, isTypeReferenceNode, isUnionTypeNode, isVariableDeclarationList, isVariableStatement, SyntaxKind, } = tsModule;
 import {
     FlattenedAccessChain,
     flattenVariable,
@@ -119,7 +103,7 @@ export class SpreadResolvedType implements ResolvedType {
 export class SourceFileBindingResolver {
     private nameBindingResolvers = new Map<ts.Node, NameBindingResolver>();
 
-    constructor(sourceFile: SourceFile) {
+    constructor(sourceFile: ts.SourceFile) {
         this.nameBindingResolvers.set(sourceFile, new NameBindingResolver());
         const nbResolversQueue: Array<NameBindingResolver> = [
             this.nameBindingResolvers.get(sourceFile),
@@ -129,7 +113,7 @@ export class SourceFileBindingResolver {
             nbResolversQueue.unshift(new NameBindingResolver(nbResolversQueue[0]));
             this.nameBindingResolvers.set(node, nbResolversQueue[0]);
             callback();
-            node.getChildren().forEach((child) => ts.visitNode(child, visitor));
+            node.getChildren().forEach((child) => visitNode(child, visitor));
             nbResolversQueue.shift();
             return node;
         };
@@ -147,7 +131,7 @@ export class SourceFileBindingResolver {
             } else if (isForStatement(node) && isVariableDeclarationList(node.initializer)) {
                 return doWithChildBindingResolver(node, () =>
                     nbResolversQueue[0].addVariableDeclarationList(
-                        node.initializer as VariableDeclarationList,
+                        node.initializer as ts.VariableDeclarationList,
                     ),
                 );
             } else if (
@@ -158,8 +142,8 @@ export class SourceFileBindingResolver {
             ) {
                 return doWithChildBindingResolver(node, () => {
                     let name = (
-                        (node.initializer as VariableDeclarationList).declarations[0]
-                            .name as Identifier
+                        (node.initializer as ts.VariableDeclarationList).declarations[0]
+                            .name as ts.Identifier
                     ).text;
                     nbResolversQueue[0].addVariable(
                         name,
@@ -171,10 +155,10 @@ export class SourceFileBindingResolver {
                     );
                 });
             }
-            node.getChildren().forEach((child) => ts.visitNode(child, visitor));
+            node.getChildren().forEach((child) => visitNode(child, visitor));
             return node;
         };
-        ts.visitNode(sourceFile, visitor);
+        visitNode(sourceFile, visitor);
     }
 
     findBindingResolver(node: ts.Node): NameBindingResolver {
@@ -183,7 +167,7 @@ export class SourceFileBindingResolver {
         return found;
     }
 
-    explain(identifier: Identifier | PropertyAccessExpression) {
+    explain(identifier: ts.Identifier | ts.PropertyAccessExpression) {
         return this.findBindingResolver(identifier).resolvePropertyAccessChain(identifier);
     }
 

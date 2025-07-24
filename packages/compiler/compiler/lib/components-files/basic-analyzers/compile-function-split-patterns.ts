@@ -1,19 +1,10 @@
-import ts, {
-    Expression,
-    isBinaryExpression,
-    isCallExpression,
-    isDecorator,
-    isExpressionStatement,
-    isFunctionDeclaration,
-    isIdentifier,
-    isNewExpression,
-    isPropertyAccessExpression,
-    isReturnStatement,
-    isSpreadElement,
-    NodeArray,
-    SourceFile,
-    SyntaxKind,
-} from 'typescript';
+;
+import { isIdentifierOrPropertyAccessExpression } from './typescript-extras';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { visitEachChild, isBinaryExpression, isCallExpression, isDecorator, isExpressionStatement, isFunctionDeclaration, isIdentifier, isNewExpression, isPropertyAccessExpression, isReturnStatement, isSpreadElement, SyntaxKind, transform,  } = tsModule;
 import {
     flattenVariable,
     isGlobalVariableRoot,
@@ -28,7 +19,6 @@ import {
     SourceFileBindingResolver,
     SpreadResolvedType,
 } from './source-file-binding-resolver';
-import { isIdentifierOrPropertyAccessExpression } from './typescript-extras';
 
 export enum CompilePatternType {
     RETURN,
@@ -117,7 +107,7 @@ function extractArgumentType(
 }
 
 function extractArgumentTypes(
-    callArgs: NodeArray<ts.Expression>,
+    callArgs: ts.NodeArray<ts.Expression>,
     sourceFileBinding: SourceFileBindingResolver,
     node: ts.FunctionDeclaration,
 ) {
@@ -127,7 +117,7 @@ function extractArgumentTypes(
 }
 
 export function compileFunctionSplitPatternsBlock(
-    patternFiles: SourceFile[],
+    patternFiles: ts.SourceFile[],
 ): WithValidations<CompiledPattern[]> {
     const validations: JayValidations = [];
     const compiledPatterns: CompiledPattern[] = [];
@@ -158,7 +148,7 @@ export function compileFunctionSplitPatternsBlock(
                 node.body.statements.forEach((statement, index) => {
                     let patternTargetEnv = declaredTargetEnv;
                     let patternType: CompilePatternType;
-                    let leftHandSide: Expression;
+                    let leftHandSide: ts.Expression;
                     let callArgumentTypes: ResolvedType[] = [];
                     if (
                         isReturnStatement(statement) &&
@@ -260,9 +250,9 @@ export function compileFunctionSplitPatternsBlock(
             return node;
         };
 
-        ts.transform(patternsFile, [
+        transform(patternsFile, [
             mkTransformer(({ context, sourceFile }) => {
-                ts.visitEachChild(patternsFile, findPatternFunctions, context);
+                visitEachChild(patternsFile, findPatternFunctions, context);
                 return sourceFile;
             }),
         ]);

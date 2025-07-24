@@ -1,5 +1,10 @@
-import ts, { isImportDeclaration } from 'typescript';
+;
 import { codeToAst } from '../ts-utils/ts-compiler-utils';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { isImportDeclaration } = tsModule;
 import { JAY_SECURE } from '@jay-framework/compiler-shared';
 
 function findAfterImportStatementIndex(statements: ts.Node[]) {

@@ -1,5 +1,9 @@
-import ts from 'typescript';
 import { getModeFileExtension, RuntimeMode } from '@jay-framework/compiler-shared';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { SyntaxKind, isImportDeclaration, isStringLiteral, isInterfaceDeclaration } = tsModule;
 import { astToCode, codeToAst } from './ts-utils/ts-compiler-utils';
 import { mkTransformer, SourceFileTransformerContext } from './ts-utils/mk-transformer';
 import { findMakeJayComponentImport } from './building-blocks/find-make-jay-component-import';
@@ -40,7 +44,7 @@ function generateComponentConstructorCalls(
 function getRenderImportSpecifier(node: ts.ImportDeclaration): ts.ImportSpecifier | undefined {
     const namedBindings = node.importClause?.namedBindings;
     switch (namedBindings?.kind) {
-        case ts.SyntaxKind.NamedImports: {
+        case SyntaxKind.NamedImports: {
             return namedBindings.elements.find((binding) => getImportName(binding) === 'render');
         }
         default:
@@ -54,7 +58,7 @@ function transformImport(
     context: ts.TransformationContext,
     hasFunctionRepository: boolean,
 ): ts.Statement {
-    if (ts.isStringLiteral(node.moduleSpecifier)) {
+    if (isStringLiteral(node.moduleSpecifier)) {
         if (findMakeJayComponentImport(MAKE_JAY_COMPONENT, node)) {
             const code = hasFunctionRepository
                 ? `import { makeJayComponentBridge, FunctionsRepository } from '@jay-framework/secure';`
@@ -103,8 +107,8 @@ function transformSourceFile(
 
     let transformedStatements = sourceFile.statements
         .map((statement) => {
-            if (ts.isInterfaceDeclaration(statement)) return statement;
-            else if (ts.isImportDeclaration(statement))
+            if (isInterfaceDeclaration(statement)) return statement;
+            else if (isImportDeclaration(statement))
                 return transformImport(statement, importerMode, context, hasFunctionRepository);
             else return undefined;
         })

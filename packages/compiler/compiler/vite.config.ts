@@ -10,10 +10,11 @@ export default defineConfig({
             entry: resolve(__dirname, 'lib/index.ts'),
             name: 'jayCompiler',
             fileName: 'index',
-            formats: ['cjs'],
+            formats: ['es'],
         },
         commonjsOptions: {
             transformMixedEsModules: true,
+            esmExternals: true,
         },
         rollupOptions: {
             external: [
@@ -23,6 +24,7 @@ export default defineConfig({
                 '@jay-framework/compiler-shared',
                 '@jay-framework/compiler-analyze-exported-types',
                 '@jay-framework/compiler-jay-html',
+                'typescript',
             ],
         },
     },

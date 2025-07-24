@@ -11,7 +11,7 @@ export default defineConfig({
             entry: resolve(__dirname, 'lib/index.ts'),
             name: 'jayCli',
             fileName: 'index',
-            formats: ['cjs'],
+            formats: ['es'],
         },
         rollupOptions: {
             external: [

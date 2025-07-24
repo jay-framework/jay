@@ -1,11 +1,15 @@
-import ts, { isCallExpression, isStringLiteral, isVariableStatement } from 'typescript';
 import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { forEachChild, isCallExpression, isStringLiteral, isVariableStatement } = tsModule;
 import {
     flattenVariable,
     isImportModuleVariableRoot,
 } from '../basic-analyzers/name-binding-resolver';
-import { isIdentifierOrPropertyAccessExpression } from '../basic-analyzers/typescript-extras';
 import { JAY_COMPONENT } from '@jay-framework/compiler-shared';
+import {isIdentifierOrPropertyAccessExpression} from "../basic-analyzers/typescript-extras";
 
 export enum FindComponentConstructorType {
     makeJayComponent = 'makeJayComponent',
@@ -77,9 +81,9 @@ export function findComponentConstructorCallsBlock(
         foundConstructorCalls.push(
             ...findComponentConstructorCalls(findType, bindingResolver, node),
         );
-        ts.forEachChild(node, visit);
+        forEachChild(node, visit);
     }
 
-    ts.forEachChild(sourceFile, visit);
+    forEachChild(sourceFile, visit);
     return foundConstructorCalls;
 }

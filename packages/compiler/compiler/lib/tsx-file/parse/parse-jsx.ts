@@ -1,23 +1,28 @@
-import * as ts from 'typescript';
+;
 import { parseOpeningElement } from './parse-opening-element';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { SyntaxKind, forEachChild, isJsxOpeningElement, isJsxSelfClosingElement, isJsxClosingElement, isJsxText, isJsxExpression } = tsModule;
 import { JsxBlock } from '../jsx-block';
 
 const SUPPORTED_JSX_NODES = new Set([
-    ts.SyntaxKind.ParenthesizedExpression,
-    ts.SyntaxKind.JsxText,
-    ts.SyntaxKind.JsxTextAllWhiteSpaces,
-    ts.SyntaxKind.JsxElement,
-    ts.SyntaxKind.JsxSelfClosingElement,
-    ts.SyntaxKind.JsxOpeningElement,
-    ts.SyntaxKind.JsxClosingElement,
-    ts.SyntaxKind.JsxFragment,
-    ts.SyntaxKind.JsxOpeningFragment,
-    ts.SyntaxKind.JsxClosingFragment,
-    ts.SyntaxKind.JsxAttribute,
-    ts.SyntaxKind.JsxAttributes,
-    ts.SyntaxKind.JsxSpreadAttribute,
-    ts.SyntaxKind.JsxExpression,
-    ts.SyntaxKind.JsxNamespacedName,
+    SyntaxKind.ParenthesizedExpression,
+    SyntaxKind.JsxText,
+    SyntaxKind.JsxTextAllWhiteSpaces,
+    SyntaxKind.JsxElement,
+    SyntaxKind.JsxSelfClosingElement,
+    SyntaxKind.JsxOpeningElement,
+    SyntaxKind.JsxClosingElement,
+    SyntaxKind.JsxFragment,
+    SyntaxKind.JsxOpeningFragment,
+    SyntaxKind.JsxClosingFragment,
+    SyntaxKind.JsxAttribute,
+    SyntaxKind.JsxAttributes,
+    SyntaxKind.JsxSpreadAttribute,
+    SyntaxKind.JsxExpression,
+    SyntaxKind.JsxNamespacedName,
 ]);
 
 export function parseJsx(
@@ -38,30 +43,30 @@ export function parseJsx(
 
         if (debug) console.log(node.kind, node.getText(), jsxBlock.data());
 
-        if (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) {
+        if (isJsxOpeningElement(node) || isJsxSelfClosingElement(node)) {
             parseOpeningElement(node, jsxBlock);
             return;
         }
 
-        if (ts.isJsxClosingElement(node)) {
+        if (isJsxClosingElement(node)) {
             jsxBlock.addHtml(node.getText());
             return;
         }
 
-        if (ts.isJsxText(node)) {
+        if (isJsxText(node)) {
             const trimmedText = node.getText().trim();
             trimmedText && jsxBlock.addHtml(trimmedText);
             return;
         }
 
-        if (ts.isJsxExpression(node)) {
+        if (isJsxExpression(node)) {
             jsxBlock.addHtml(`{_memo_${jsxBlock.addMemo(node.expression)}()}`);
             return;
         }
 
-        ts.forEachChild(node, visit);
+        forEachChild(node, visit);
     }
 
-    ts.forEachChild(expression, visit);
+    forEachChild(expression, visit);
     return jsxBlock;
 }

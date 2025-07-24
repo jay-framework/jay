@@ -1,17 +1,8 @@
 import { isFunctionLikeDeclarationBase } from '../../../lib/components-files/ts-utils/ts-compiler-utils';
-import ts, {
-    ExpressionStatement,
+import ts from 'typescript';
+const {
     isVariableStatement,
-    FunctionDeclaration,
-    PropertyAccessExpression,
-    VariableStatement,
-    ObjectLiteralExpression,
-    PropertyAssignment,
-    CallExpression,
-    ParameterDeclaration,
-    FunctionExpression,
-    ImportDeclaration,
-} from 'typescript';
+} = ts;
 import {
     tsBindingNameToVariable,
     NameBindingResolver,
@@ -37,7 +28,7 @@ function getAstNode(code: string, index: number = 0): ts.Node {
 }
 
 const ASSIGNMENT_RIGHT_SIDE_PLACEHOLDER = { name: 'ASSIGNMENT_RIGHT_SIDE_PLACEHOLDER' };
-const PARAM_ROOT = mkParameterVariableRoot({} as ParameterDeclaration, 0);
+const PARAM_ROOT = mkParameterVariableRoot({} as ts.ParameterDeclaration, 0);
 
 describe('NameBindingResolver', () => {
     describe('bindingNameToVariable', () => {
@@ -296,7 +287,7 @@ describe('NameBindingResolver', () => {
         function resolveNamesForVariableStatement(code: string) {
             let nameResolver = new NameBindingResolver();
             nameResolver.addVariable('a', { name: 'a', root: PARAM_ROOT });
-            let node = getAstNode(code) as VariableStatement;
+            let node = getAstNode(code) as ts.VariableStatement;
             nameResolver.addVariableStatement(node);
             let a = nameResolver.variables.get('a');
             return { nameResolver, a, node };
@@ -412,9 +403,9 @@ describe('NameBindingResolver', () => {
                     node: (
                         (
                             node.declarationList.declarations[0]
-                                .initializer as PropertyAccessExpression
-                        ).expression as PropertyAccessExpression
-                    ).expression as CallExpression,
+                                .initializer as ts.PropertyAccessExpression
+                        ).expression as ts.PropertyAccessExpression
+                    ).expression as ts.CallExpression,
                 };
                 return { a, nameResolver, node, functionCallAsRoot };
             }
@@ -540,7 +531,7 @@ describe('NameBindingResolver', () => {
                 definingStatement: node,
             });
             let zy = nameResolver.resolvePropertyAccessChain(
-                (getAstNode('z.y') as ExpressionStatement).expression,
+                (getAstNode('z.y') as ts.ExpressionStatement).expression,
             );
             expect(flattenVariable(zy)).toEqual({
                 path: [],
@@ -573,7 +564,7 @@ describe('NameBindingResolver', () => {
             });
 
             let zy = nameResolver.resolvePropertyAccessChain(
-                (getAstNode('z.y.x') as ExpressionStatement).expression,
+                (getAstNode('z.y.x') as ts.ExpressionStatement).expression,
             );
             expect(flattenVariable(zy)).toEqual({
                 path: [],
@@ -586,9 +577,9 @@ describe('NameBindingResolver', () => {
                 'let z = {a: function() {}}',
             );
             let declaredInlineFunction = (
-                (node.declarationList.declarations[0].initializer as ObjectLiteralExpression)
-                    .properties[0] as PropertyAssignment
-            ).initializer as FunctionExpression;
+                (node.declarationList.declarations[0].initializer as ts.ObjectLiteralExpression)
+                    .properties[0] as ts.PropertyAssignment
+            ).initializer as ts.FunctionExpression;
 
             expect(nameResolver.variables.has('z'));
             let z = nameResolver.variables.get('z');
@@ -604,7 +595,7 @@ describe('NameBindingResolver', () => {
             });
 
             let za = nameResolver.resolvePropertyAccessChain(
-                (getAstNode('z.a') as ExpressionStatement).expression,
+                (getAstNode('z.a') as ts.ExpressionStatement).expression,
             );
             expect(flattenVariable(za)).toEqual({
                 path: [],
@@ -617,7 +608,7 @@ describe('NameBindingResolver', () => {
                 'let [state, getState] = createSignal()',
             );
             let createSignalFunction = node.declarationList.declarations[0]
-                .initializer as CallExpression;
+                .initializer as ts.CallExpression;
 
             expect(nameResolver.variables.has('state'));
             let state = nameResolver.variables.get('state');
@@ -715,7 +706,7 @@ describe('NameBindingResolver', () => {
     describe('resolve function definition', () => {
         function resolveNamesForFunctionDeclaration(code: string) {
             let nameResolver = new NameBindingResolver();
-            let func = getAstNode(code) as FunctionDeclaration;
+            let func = getAstNode(code) as ts.FunctionDeclaration;
             nameResolver.addFunctionDeclaration(func);
             return { nameResolver, func };
         }
@@ -737,10 +728,10 @@ describe('NameBindingResolver', () => {
         it(`resolve property access chain`, () => {
             let nameResolver = new NameBindingResolver();
             nameResolver.addVariable('a', { name: 'a', root: PARAM_ROOT });
-            let node = getAstNode('a.b.c') as ExpressionStatement;
+            let node = getAstNode('a.b.c') as ts.ExpressionStatement;
 
             let resolvedVariable = nameResolver.resolvePropertyAccess(
-                node.expression as PropertyAccessExpression,
+                node.expression as ts.PropertyAccessExpression,
             );
 
             expect(resolvedVariable).toEqual({
@@ -763,7 +754,7 @@ describe('NameBindingResolver', () => {
     describe('resolve import variables', () => {
         function resolveNamesForVariableStatement(code: string) {
             let nameResolver = new NameBindingResolver();
-            let importDeclaration = getAstNode(code) as ImportDeclaration;
+            let importDeclaration = getAstNode(code) as ts.ImportDeclaration;
             let moduleSpecifier = importDeclaration.moduleSpecifier;
             nameResolver.addImportDeclaration(importDeclaration);
             return { nameResolver, importDeclaration, moduleSpecifier };
@@ -853,7 +844,7 @@ describe('NameBindingResolver', () => {
     describe('support resolve from globals', () => {
         function resolveNamesForVariableStatement(code: string) {
             let nameResolver = new NameBindingResolver();
-            let variableStatement = getAstNode(code) as VariableStatement;
+            let variableStatement = getAstNode(code) as ts.VariableStatement;
             nameResolver.addVariableStatement(variableStatement);
             return { nameResolver, variableStatement };
         }
@@ -916,7 +907,7 @@ describe('NameBindingResolver', () => {
             let parentNameResolver = new NameBindingResolver();
             parentNameResolver.addVariable('a', { name: 'a', root: PARAM_ROOT });
             let childNameResolver = new NameBindingResolver(parentNameResolver);
-            let node = getAstNode(code) as VariableStatement;
+            let node = getAstNode(code) as ts.VariableStatement;
             childNameResolver.addVariableStatement(node);
             let a = parentNameResolver.variables.get('a');
             return { parentNameResolver, childNameResolver, a, node };

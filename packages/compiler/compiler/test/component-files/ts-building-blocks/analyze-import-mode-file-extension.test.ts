@@ -1,5 +1,6 @@
 import { mkTransformer } from '../../../lib/components-files/ts-utils/mk-transformer';
-import ts, { isImportDeclaration } from 'typescript';
+import ts from 'typescript';
+const { isImportDeclaration } = ts;
 import { transformCode } from '../../test-utils/ts-compiler-test-utils';
 import { transformImportModeFileExtension } from '../../../lib/components-files/building-blocks/transform-import-mode-file-extension';
 import { prettify, RuntimeMode } from '@jay-framework/compiler-shared';

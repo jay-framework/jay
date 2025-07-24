@@ -1,10 +1,14 @@
-import ts, { isIdentifier, isStatement, SourceFile, Statement } from 'typescript';
 import { SourceFileBindingResolver } from './source-file-binding-resolver';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { isIdentifier, isStatement, visitNode } = tsModule;
 
 export interface StatementDependencies {
     id: number;
-    parent?: Statement;
-    statement: Statement;
+    parent?: ts.Statement;
+    statement: ts.Statement;
     dependsOn: Set<StatementDependencies>;
     isDependencyFor: Set<StatementDependencies>;
 }
@@ -12,13 +16,13 @@ export interface StatementDependencies {
 export class SourceFileStatementDependencies {
     private statementDependencies = new Map<ts.Node, StatementDependencies>();
 
-    constructor(sourceFile: SourceFile, bindingResolver: SourceFileBindingResolver) {
+    constructor(sourceFile: ts.SourceFile, bindingResolver: SourceFileBindingResolver) {
         let parents: StatementDependencies[] = [];
         let id = 0;
         const visitor = (node: ts.Node): ts.Node => {
             if (isStatement(node)) {
                 const statementDependencies = {
-                    statement: node,
+                    statement: node as ts.Statement,
                     parent: parents.at(-1)?.statement,
                     isDependencyFor: new Set<StatementDependencies>(),
                     dependsOn: new Set<StatementDependencies>(),
@@ -42,19 +46,19 @@ export class SourceFileStatementDependencies {
                 }
             }
 
-            node.getChildren().forEach((child) => ts.visitNode(child, visitor));
+            node.getChildren().forEach((child) => visitNode(child, visitor));
 
             if (isStatement(node)) parents.pop();
             return node;
         };
-        ts.visitNode(sourceFile, visitor);
+        visitNode(sourceFile, visitor);
     }
 
-    getDependsOn(statement: Statement) {
+    getDependsOn(statement: ts.Statement) {
         return this.statementDependencies.get(statement).dependsOn;
     }
 
-    getIsDependencyFor(statement: Statement) {
+    getIsDependencyFor(statement: ts.Statement) {
         return this.statementDependencies.get(statement).isDependencyFor;
     }
 
@@ -62,7 +66,7 @@ export class SourceFileStatementDependencies {
         return this.statementDependencies.values();
     }
 
-    getStatementDependencies(statement: Statement) {
+    getStatementDependencies(statement: ts.Statement) {
         return this.statementDependencies.get(statement);
     }
 }

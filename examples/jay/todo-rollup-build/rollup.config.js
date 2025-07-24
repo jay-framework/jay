@@ -13,14 +13,12 @@ const rollupConfig = defineConfig([
         output: [
             {
                 file: './dist/index.js',
-                format: 'iife',
-                name: 'jay',
+                format: 'es',
                 sourcemap: false,
             },
             {
                 file: './dist/index.min.js',
-                format: 'iife',
-                name: 'jay',
+                format: 'es',
                 plugins: [terser()],
                 sourcemap: false,
             },
@@ -47,14 +45,12 @@ const rollupConfig = defineConfig([
         output: [
             {
                 file: './dist-secure/index.js',
-                format: 'iife',
-                name: 'jay',
+                format: 'es',
                 sourcemap: true,
             },
             {
                 file: './dist-secure/index.min.js',
-                format: 'iife',
-                name: 'jay',
+                format: 'es',
                 plugins: [terser()],
                 sourcemap: true,
             },
@@ -76,14 +72,12 @@ const rollupConfig = defineConfig([
         output: [
             {
                 file: './dist-secure/worker.js',
-                format: 'iife',
-                name: 'jay',
+                format: 'es',
                 sourcemap: true,
             },
             {
                 file: './dist-secure/worker.min.js',
-                format: 'iife',
-                name: 'jay',
+                format: 'es',
                 plugins: [terser()],
                 sourcemap: true,
             },

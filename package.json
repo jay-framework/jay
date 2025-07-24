@@ -2,10 +2,12 @@
   "name": "jay",
   "private": true,
   "license": "Apache-2.0",
+  "type": "module",
   "scripts": {
     "build": "wsrun -te --report build",
     "build:check-types": "wsrun -p '@jay-framework/*' -e --prefix build:check-types",
     "build:watch": "wsrun -p '@jay-framework/*' --prefix build:watch",
+    "build:esbuild": "wsrun -te --report build:esbuild",
     "clean": "wsrun clean",
     "clean:node_modules": "rimraf node_modules && rimraf packages/*/node_modules && rimraf examples/*/node_modules && rimraf exploration/*/node_modules",
     "clean:node_modules:with-cache": "npm run clean:node_modules && yarn cache clean",
@@ -39,6 +41,7 @@
   },
   "devDependencies": {
     "commander": "^14.0.0",
+    "esbuild": "^0.20.0",
     "prettier": "^3.2.4",
     "replace-in-file": "^7.1.0",
     "wsrun": "^5.2.4"

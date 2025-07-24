@@ -1,5 +1,9 @@
-import ts from 'typescript';
 import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { forEachChild, isCallExpression, isIdentifier, isStringLiteral } = tsModule;
 import {
     flattenVariable,
     isImportModuleVariableRoot,
@@ -9,21 +13,21 @@ export function findExec$(bindingResolver: SourceFileBindingResolver, sourceFile
     const foundExec$: ts.CallExpression[] = [];
 
     function visit(node: ts.Node) {
-        if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+        if (isCallExpression(node) && isIdentifier(node.expression)) {
             const functionVariable = bindingResolver.explain(node.expression);
             const accessChain = flattenVariable(functionVariable);
             if (
                 accessChain.path.length === 1 &&
                 accessChain.path[0] === 'exec$' &&
                 isImportModuleVariableRoot(accessChain.root) &&
-                ts.isStringLiteral(accessChain.root.module) &&
+                isStringLiteral(accessChain.root.module) &&
                 accessChain.root.module.text === '@jay-framework/secure'
             )
                 foundExec$.push(node);
         }
-        ts.forEachChild(node, visit);
+        forEachChild(node, visit);
     }
 
-    ts.forEachChild(sourceFile, visit);
+    forEachChild(sourceFile, visit);
     return foundExec$;
 }

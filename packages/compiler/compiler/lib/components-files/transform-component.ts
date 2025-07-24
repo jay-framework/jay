@@ -1,5 +1,10 @@
-import ts, { ImportDeclaration, isImportDeclaration } from 'typescript';
+;
 import { mkTransformer, SourceFileTransformerContext } from './ts-utils/mk-transformer';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { isImportDeclaration, isStringLiteral, visitEachChild } = tsModule;
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
 import { CompiledPattern } from './basic-analyzers/compile-function-split-patterns';
@@ -29,8 +34,8 @@ type ComponentSecureFunctionsTransformerConfig = SourceFileTransformerContext & 
     globalFunctionRepository: FunctionRepositoryBuilder;
 };
 
-function isCssImport(node: ImportDeclaration) {
-    return ts.isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text.endsWith('.css');
+function isCssImport(node: ts.ImportDeclaration) {
+    return isStringLiteral(node.moduleSpecifier) && node.moduleSpecifier.text.endsWith('.css');
 }
 
 function mkComponentTransformer(sftContext: ComponentSecureFunctionsTransformerConfig) {
@@ -84,15 +89,15 @@ function mkComponentTransformer(sftContext: ComponentSecureFunctionsTransformerC
     let visitor = (node: ts.Node) => {
         if (replaceMap.has(node)) {
             node = replaceMap.get(node);
-            return ts.visitEachChild(node, visitor, context);
+            return visitEachChild(node, visitor, context);
         }
         if (isImportDeclaration(node)) {
             if (isCssImport(node)) return undefined;
             else return transformImportModeFileExtension(node, factory, RuntimeMode.WorkerSandbox);
         }
-        return ts.visitEachChild(node, visitor, context);
+        return visitEachChild(node, visitor, context);
     };
-    let transformedSourceFile = ts.visitEachChild(sftContext.sourceFile, visitor, context);
+    let transformedSourceFile = visitEachChild(sftContext.sourceFile, visitor, context);
 
     return transformComponentImports(
         transformedEventHandlers.length > 0,

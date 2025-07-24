@@ -1,11 +1,7 @@
-import {
-    CompilerOptions,
-    CustomTransformers,
-    ModuleKind,
-    ModuleResolutionKind,
-    ScriptTarget,
-} from 'typescript';
+;
 import * as ts from 'typescript';
+import * as ts from 'typescript';
+const { CompilerOptions, CustomTransformers, ModuleKind, ModuleResolutionKind, ScriptTarget,  } = ts;
 
 const compilerOptions: CompilerOptions = {
     target: ScriptTarget.ES2022,

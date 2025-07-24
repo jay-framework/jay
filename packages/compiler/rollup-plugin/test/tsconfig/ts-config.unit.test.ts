@@ -1,5 +1,7 @@
 import path from 'node:path';
-import { ModuleKind, ScriptTarget } from 'typescript';
+import * as ts from 'typescript';
+const { ModuleKind, ScriptTarget } = ts;
+;
 import { JayRollupConfig } from '../../lib';
 import { resolveTsCompilerOptions } from '../../lib/resolve-ts-config';
 

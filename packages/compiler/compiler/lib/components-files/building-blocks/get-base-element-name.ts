@@ -1,5 +1,9 @@
-import ts from 'typescript';
 import { WithValidations } from '@jay-framework/compiler-shared';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { SyntaxKind } = tsModule;
 
 export function getBaseElementName<T extends { name: ts.BindingName }>(
     makeJayComponentName: string,
@@ -16,7 +20,7 @@ export function getBaseElementName<T extends { name: ts.BindingName }>(
         ]);
     }
     const { name } = componentConstructors[0];
-    if (name.kind !== ts.SyntaxKind.Identifier) {
+    if (name.kind !== SyntaxKind.Identifier) {
         return new WithValidations(undefined, [
             `Component constructor initialized with "${makeJayComponentName}" is not exported as a const`,
         ]);

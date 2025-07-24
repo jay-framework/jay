@@ -1,5 +1,7 @@
-import { Expression, Identifier, isIdentifier } from 'typescript';
+;
 import { createTsSourceFile } from '../../test-utils/ts-source-utils';
+import * as ts from 'typescript';
+const { isIdentifier } = ts;
 import { SourceFileBindingResolver } from '../../../lib/components-files/basic-analyzers/source-file-binding-resolver';
 import {
     findComponentConstructorCallsBlock,
@@ -7,9 +9,9 @@ import {
 } from '../../../lib/components-files/building-blocks/find-component-constructor-calls';
 
 describe('findComponentConstructorCallsBlock', () => {
-    function assertIdentifier(expression: Expression, text: string) {
+    function assertIdentifier(expression: ts.Expression, text: string) {
         expect(isIdentifier(expression)).toBeTruthy();
-        let render = expression as Identifier;
+        let render = expression as ts.Identifier;
         expect(render.text).toBe(text);
     }
 

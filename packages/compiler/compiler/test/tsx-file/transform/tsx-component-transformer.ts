@@ -1,6 +1,8 @@
-import { transform } from 'typescript';
+;
 
 import { tsxComponentTransformer } from '../../../lib/tsx-file/transform/tsx-component-transformer';
+import * as ts from 'typescript';
+const { transform } = ts;
 import { createTsxSourceFile } from '../../test-utils/ts-source-utils';
 import { parseTsxFile } from '../../../lib/tsx-file/parse/parse-tsx-file';
 import { WithValidations } from '@jay-framework/compiler-shared';

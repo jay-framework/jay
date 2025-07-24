@@ -4,7 +4,7 @@ import {
     ResolveTsConfigOptions,
 } from '@jay-framework/compiler-analyze-exported-types';
 import { JayType, WithValidations } from '@jay-framework/compiler-shared';
-import fs from 'node:fs';
+import fs from 'fs';
 import path from 'path';
 
 export interface JayImportResolver {

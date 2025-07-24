@@ -1,5 +1,6 @@
-import ts from 'typescript';
+;
 import { FoundEventHandler } from './find-event-handler-functions';
+import type * as ts from 'typescript';
 import {
     TransformedEventHandlerByPattern,
     analyzeEventHandlerByPatternBlock,

@@ -1,5 +1,6 @@
-import ts from 'typescript';
+;
 import { JayTsxSourceFile } from '../jsx-block';
+import type * as ts from 'typescript';
 import {
     mkTransformer,
     SourceFileTransformerContext,

@@ -10,7 +10,10 @@ export default defineConfig({
             entry: resolve(__dirname, 'lib/index.ts'),
             name: 'jayStackRuntime',
             fileName: 'index',
-            formats: ['cjs'],
+            formats: ['es'],
+        },
+        commonjsOptions: {
+            transformMixedEsModules: true,
         },
         rollupOptions: {
             external: [
@@ -23,6 +26,8 @@ export default defineConfig({
                 '@jay-framework/stack-route-scanner',
                 '@jay-framework/stack-client-runtime',
                 '@jay-framework/stack-server-runtime',
+                '@jay-framework/compiler-shared',
+                '@jay-framework/compiler-jay-html',
                 'vite',
                 '@jay-framework/rollup-plugin',
                 '@jay-framework/vite-plugin',

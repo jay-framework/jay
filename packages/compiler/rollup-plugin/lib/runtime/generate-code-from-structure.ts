@@ -1,5 +1,9 @@
-import * as ts from 'typescript';
-import { transform } from 'typescript';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { transform } = tsModule;
+;
 import {
     transformComponentBridge,
     transformComponent,
@@ -124,11 +128,11 @@ function transformTsCode(
     id: string,
     code: string,
 ): string {
-    const tsSource = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+    const tsSource = tsModule.createSourceFile(id, code, tsModule.ScriptTarget.Latest, true, tsModule.ScriptKind.TS);
     const tsCode = transform(tsSource, transformers);
     checkDiagnosticsErrors(tsCode);
     const outputCode = jayContext.tsPrinter.printNode(
-        ts.EmitHint.Unspecified,
+        tsModule.EmitHint.Unspecified,
         tsCode.transformed[0],
         tsSource,
     );

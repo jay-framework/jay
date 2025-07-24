@@ -1,15 +1,8 @@
-import ts, {
-    Block,
-    ExpressionStatement,
-    Identifier,
-    isBlock,
-    isExpression,
-    isIdentifier,
-    isLiteralExpression,
-    isStatement,
-    TypeReferenceNode,
-    Visitor,
-} from 'typescript';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { SyntaxKind, visitEachChild, visitNode, isBlock, isExpression, isIdentifier, isLiteralExpression, isStatement  } = tsModule;
 import {
     CompiledPattern,
     CompilePatternType,
@@ -36,7 +29,7 @@ interface MatchedPattern {
 }
 
 interface MatchedVariable {
-    variable: Identifier;
+    variable: ts.Identifier;
     patternKey: number;
 }
 
@@ -81,7 +74,7 @@ ${returnedObjectProperties.length > 0 ? `\treturn ({${returnedObjectProperties}}
 interface TransformEventHandlerStatementVisitorSideEffects {
     matchedConstants: string[];
     matchedVariableReads: MatchedVariable[];
-    mainContextBlocks: Map<Block, Block>;
+    mainContextBlocks: Map<ts.Block, ts.Block>;
     // safeStatements: Statement[];
     matchedReturnPatterns: MatchedPattern[];
     wasEventHandlerTransformed: boolean;
@@ -188,7 +181,7 @@ const mkTransformEventHandlerStatementVisitor = (
                 } else return node;
                 let replacementPattern = `event.$${patternKey}`;
                 sideEffects.wasEventHandlerTransformed = true;
-                return (codeToAst(replacementPattern, context)[0] as ExpressionStatement)
+                return (codeToAst(replacementPattern, context)[0] as ts.ExpressionStatement)
                     .expression;
             }
         }
@@ -225,36 +218,36 @@ export const analyzeEventHandlerByPatternBlock = (
         sideEffects.wasEventHandlerTransformed &&
         isFirstParamJayEvent(eventHandler, bindingResolver)
     ) {
-        const originalJayEventType = eventHandler.parameters[0].type as TypeReferenceNode;
+        const originalJayEventType = eventHandler.parameters[0].type as ts.TypeReferenceNode;
         if (originalJayEventType.typeArguments?.length === 2) {
             const transformedJayEventType = factory.createTypeReferenceNode(
                 originalJayEventType.typeName,
                 [
-                    factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword),
+                    factory.createKeywordTypeNode(SyntaxKind.AnyKeyword),
                     originalJayEventType.typeArguments[1],
                 ],
             );
             let visitor = (node: ts.Node) => {
                 if (node === originalJayEventType) {
-                    return ts.visitEachChild(transformedJayEventType, visitor, context);
+                    return visitEachChild(transformedJayEventType, visitor, context);
                 }
-                return ts.visitEachChild(node, visitor, context);
+                return visitEachChild(node, visitor, context);
             };
-            transformedEventHandler = ts.visitEachChild(transformedEventHandler, visitor, context);
+            transformedEventHandler = visitEachChild(transformedEventHandler, visitor, context);
         }
 
         // generate function repository body
-        let bodyForFunctionRepository: Block = undefined;
+        let bodyForFunctionRepository: ts.Block = undefined;
         if (isBlock(eventHandler.body) && sideEffects.mainContextBlocks.has(eventHandler.body)) {
             let body = sideEffects.mainContextBlocks.get(eventHandler.body);
-            const replaceBodiesVisitor: Visitor = (node: ts.Node) => {
+            const replaceBodiesVisitor: ts.Visitor = (node: ts.Node) => {
                 let mainNode =
                     isBlock(node) && sideEffects.mainContextBlocks.has(node)
                         ? sideEffects.mainContextBlocks.get(node)
                         : node;
-                return ts.visitEachChild(mainNode, replaceBodiesVisitor, context);
+                return visitEachChild(mainNode, replaceBodiesVisitor, context);
             };
-            bodyForFunctionRepository = ts.visitNode(body, replaceBodiesVisitor) as Block;
+            bodyForFunctionRepository = visitNode(body, replaceBodiesVisitor) as ts.Block;
         }
 
         const { handlerCode, key } = generateFunctionRepository(

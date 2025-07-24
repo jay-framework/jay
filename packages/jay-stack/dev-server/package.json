@@ -3,7 +3,7 @@
   "version": "0.6.7",
   "type": "module",
   "license": "Apache-2.0",
-  "main": "dist/index.cjs",
+  "main": "dist/index.js",
   "files": [
     "dist",
     "readme.md"
@@ -28,6 +28,7 @@
     "@jay-framework/stack-client-runtime": "workspace:^",
     "@jay-framework/stack-route-scanner": "workspace:^",
     "@jay-framework/stack-server-runtime": "workspace:^",
+    "@jay-framework/compiler-shared": "workspace:^",
     "@jay-framework/vite-plugin": "workspace:^",
     "vite": "^5.0.11"
   },
