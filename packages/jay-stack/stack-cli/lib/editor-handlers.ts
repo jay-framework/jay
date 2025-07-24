@@ -144,8 +144,8 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
         for (const { jayHtml, dirname, filename, fullPath } of createdJayHtmls) {
             const parsedJayHtml = await parseJayFile(
                 jayHtml,
-                dirname,
                 filename,
+                dirname,
                 { relativePath: tsConfigPath },
                 JAY_IMPORT_RESOLVER,
             );
