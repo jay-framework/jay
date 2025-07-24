@@ -1,5 +1,6 @@
 import * as prettier from 'prettier';
-import { html as htmlBeautify } from 'js-beautify';
+import jsBeautify from 'js-beautify';
+const { html: htmlBeautify } = jsBeautify;
 
 export async function prettify(code: string, options: prettier.Options = {}): Promise<string> {
     // same format as global .prettierrc

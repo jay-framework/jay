@@ -8,12 +8,8 @@ export default defineConfig({
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
             name: 'jayEditorProtocol',
-            fileName: (format) => {
-                if (format === 'es') return 'index.js';
-                if (format === 'cjs') return 'index.cjs';
-                return `index.${format}.js`;
-            },
-            formats: ['es', 'cjs'],
+            fileName: 'index',
+            formats: ['es'],
         },
         commonjsOptions: {
             transformMixedEsModules: true,

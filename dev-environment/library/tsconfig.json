@@ -6,6 +6,7 @@
     "moduleResolution": "node",
     "jsx": "preserve",
     "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
     "skipLibCheck": true,
     "useDefineForClassFields": true,
     "resolveJsonModule": true,

@@ -1,18 +1,16 @@
-import ts, {
-    Expression,
-    FunctionLikeDeclarationBase,
-    isArrowFunction,
-    isFunctionDeclaration,
-    isIdentifier,
-    isVariableStatement,
-} from 'typescript';
 import { isFunctionLikeDeclarationBase } from '../ts-utils/ts-compiler-utils';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { forEachChild, isArrowFunction, isFunctionDeclaration, isIdentifier, isVariableStatement } =
+    tsModule;
 
 export function findComponentConstructorsBlock(
-    componentFunctionExpressions: Expression[],
+    componentFunctionExpressions: ts.Expression[],
     sourceFile: ts.SourceFile,
-): FunctionLikeDeclarationBase[] {
-    const foundConstructors: FunctionLikeDeclarationBase[] = [];
+): ts.FunctionLikeDeclarationBase[] {
+    const foundConstructors: ts.FunctionLikeDeclarationBase[] = [];
 
     const namedConstructors = new Set(
         componentFunctionExpressions
@@ -22,7 +20,7 @@ export function findComponentConstructorsBlock(
 
     const inlineConstructors = componentFunctionExpressions.filter(
         isFunctionLikeDeclarationBase,
-    ) as FunctionLikeDeclarationBase[];
+    ) as ts.FunctionLikeDeclarationBase[];
 
     function visit(node: ts.Node) {
         if (isFunctionDeclaration(node)) {
@@ -38,10 +36,10 @@ export function findComponentConstructorsBlock(
                     foundConstructors.push(declaration.initializer);
             });
         }
-        ts.forEachChild(node, visit);
+        forEachChild(node, visit);
     }
 
-    ts.forEachChild(sourceFile, visit);
+    forEachChild(sourceFile, visit);
 
     return [...foundConstructors, ...inlineConstructors];
 }

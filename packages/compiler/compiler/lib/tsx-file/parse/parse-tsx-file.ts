@@ -1,4 +1,9 @@
 import { JayTsxSourceFile } from '../jsx-block';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { isObjectLiteralExpression, ScriptKind } = tsModule;
 import { WithValidations } from '@jay-framework/compiler-shared';
 import {
     getImportByName,
@@ -9,7 +14,6 @@ import { getBaseElementName } from '../../components-files/building-blocks/get-b
 import { JAY_COMPONENT, MAKE_JAY_TSX_COMPONENT } from '@jay-framework/compiler-shared';
 import { findComponentConstructorsBlock } from '../../components-files/building-blocks/find-component-constructors';
 import { findFunctionExpressionReturnStatements } from '../../components-files/building-blocks/find-function-expression-return-statements';
-import ts from 'typescript';
 import { getObjectPropertiesMap } from '../../components-files/building-blocks/get-object-properties-map';
 import { parseJsx } from './parse-jsx';
 import {
@@ -19,7 +23,7 @@ import {
 import { SourceFileBindingResolver } from '../../components-files/basic-analyzers/source-file-binding-resolver';
 
 export function parseTsxFile(filename: string, source: string): WithValidations<JayTsxSourceFile> {
-    const sourceFile = createTsSourceFileFromSource(filename, source, ts.ScriptKind.TSX);
+    const sourceFile = createTsSourceFileFromSource(filename, source, ScriptKind.TSX);
 
     const imports = parseImportLinks(sourceFile);
     const makeJayTsxComponentImport = getImportByName(
@@ -61,7 +65,7 @@ export function parseTsxFile(filename: string, source: string): WithValidations<
             'Missing return statement in component constructor',
         ]);
     constructorReturnStatements.forEach((statement) => {
-        if (!ts.isObjectLiteralExpression(statement.expression))
+        if (!isObjectLiteralExpression(statement.expression))
             return new WithValidations(undefined, [
                 'Component constructor has to return an object literal',
             ]);

@@ -1,7 +1,8 @@
-import ts, {
-    CallExpression,
-    Expression,
-    Identifier,
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const {
     isArrowFunction,
     isBinaryExpression,
     isBlock,
@@ -18,11 +19,8 @@ import ts, {
     isStatement,
     isVariableStatement,
     isWhileStatement,
-    NewExpression,
-    PropertyAccessExpression,
-    SourceFile,
-    Statement,
-} from 'typescript';
+    SyntaxKind,
+} = tsModule;
 import {
     areResolvedTypesCompatible,
     FunctionResolvedType,
@@ -49,11 +47,11 @@ import {
     LetOrConst,
 } from './name-binding-resolver';
 import { ContextualVisitChild, visitWithContext } from '../ts-utils/visitor-with-context';
-import { byAnd, isIdentifierOrPropertyAccessExpression } from './typescript-extras';
+import { isIdentifierOrPropertyAccessExpression, byAnd } from './typescript-extras';
 
 export interface MatchedPattern {
     patterns: CompiledPattern[];
-    expression: Expression;
+    expression: ts.Expression;
     testId: number;
     subExpressionsMatching: boolean;
 }
@@ -71,7 +69,7 @@ enum PatternMatchType {
 
 export class SourceFileStatementAnalyzer {
     constructor(
-        private sourceFile: SourceFile,
+        private sourceFile: ts.SourceFile,
         private bindingResolver: SourceFileBindingResolver,
         private compiledPatterns: CompiledPattern[],
     ) {}
@@ -87,12 +85,12 @@ export class SourceFileStatementAnalyzer {
 }
 
 export class ScopedSourceFileStatementAnalyzer {
-    private analyzedStatements = new Map<Statement, AnalysisResult>();
-    private analyzedExpressions = new Map<Expression, MatchedPattern>();
+    private analyzedStatements = new Map<ts.Statement, AnalysisResult>();
+    private analyzedExpressions = new Map<ts.Expression, MatchedPattern>();
     private nextId: number = 0;
 
     constructor(
-        private sourceFile: SourceFile,
+        private sourceFile: ts.SourceFile,
         private bindingResolver: SourceFileBindingResolver,
         private compiledPatterns: CompiledPattern[],
         analysisScope: ts.Node,
@@ -100,7 +98,7 @@ export class ScopedSourceFileStatementAnalyzer {
         this.analyze(analysisScope);
     }
 
-    private addPatternToStatement(statement: Statement, matchedPattern: MatchedPattern) {
+    private addPatternToStatement(statement: ts.Statement, matchedPattern: MatchedPattern) {
         if (!this.analyzedStatements.get(statement)) {
             this.analyzedStatements.set(statement, {
                 targetEnv: matchedPattern.patterns.reduce(
@@ -140,14 +138,14 @@ export class ScopedSourceFileStatementAnalyzer {
         }
 
         interface AnalyzeContext {
-            statement?: Statement;
+            statement?: ts.Statement;
             roleInParent: RoleInParent;
         }
 
         const addExpressionStatus = (
             statement: ts.Statement,
             patterns: CompiledPattern[],
-            expression: Expression,
+            expression: ts.Expression,
             subExpressionsMatching: boolean,
         ) => {
             let matchedPattern = {
@@ -161,7 +159,7 @@ export class ScopedSourceFileStatementAnalyzer {
         };
 
         const analyzePropertyExpression = (
-            expression: Identifier | PropertyAccessExpression,
+            expression: ts.Identifier | ts.PropertyAccessExpression,
             visitChild: ContextualVisitChild<AnalyzeContext>,
             statement: ts.Statement,
             roleInParent: RoleInParent,
@@ -222,7 +220,7 @@ export class ScopedSourceFileStatementAnalyzer {
         };
 
         const analyzeCallOrNewExpression = (
-            node: CallExpression | NewExpression,
+            node: ts.CallExpression | ts.NewExpression,
             visitChild: ContextualVisitChild<AnalyzeContext>,
             statement: ts.Statement,
             roleInParent: RoleInParent,
@@ -277,7 +275,7 @@ export class ScopedSourceFileStatementAnalyzer {
                         return node;
                     } else if (
                         isBinaryExpression(node) &&
-                        node.operatorToken.kind === ts.SyntaxKind.EqualsToken
+                        node.operatorToken.kind === SyntaxKind.EqualsToken
                     )
                         this.markStatementSandbox(statement);
                     else if (!isLiteralExpression(node) && !isBinaryExpression(node))
@@ -350,7 +348,7 @@ export class ScopedSourceFileStatementAnalyzer {
                     visitChild(node.left, {
                         statement,
                         roleInParent:
-                            node.operatorToken.kind === ts.SyntaxKind.EqualsToken
+                            node.operatorToken.kind === SyntaxKind.EqualsToken
                                 ? RoleInParent.assign
                                 : RoleInParent.read,
                     });
@@ -369,7 +367,7 @@ export class ScopedSourceFileStatementAnalyzer {
     }
 
     private matchPattern(
-        patternTarget: Identifier | PropertyAccessExpression,
+        patternTarget: ts.Identifier | ts.PropertyAccessExpression,
         expectedPatternType: CompilePatternType,
         analysisScope: ts.Node,
     ): { matchedPatterns: CompiledPattern[]; matchType: PatternMatchType } {
@@ -493,10 +491,10 @@ export class ScopedSourceFileStatementAnalyzer {
         return { matchedPatterns: [], matchType: PatternMatchType.NONE };
     }
 
-    getExpressionStatus(expression: Expression): MatchedPattern {
+    getExpressionStatus(expression: ts.Expression): MatchedPattern {
         return this.analyzedExpressions.get(expression);
     }
-    getStatementStatus(statement: Statement): AnalysisResult {
+    getStatementStatus(statement: ts.Statement): AnalysisResult {
         return this.analyzedStatements.get(statement);
     }
 

@@ -1,12 +1,14 @@
-import {
-    ExpressionStatement,
-    FunctionLikeDeclarationBase,
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const {
     isBlock,
     isCallExpression,
     isExpressionStatement,
     isIdentifier,
     isPropertyAccessExpression,
-} from 'typescript';
+} = tsModule;
 import {
     flattenVariable,
     isFunctionVariableRoot,
@@ -17,13 +19,13 @@ import { SourceFileBindingResolver } from '../basic-analyzers/source-file-bindin
 import { isIdentifierOrPropertyAccessExpression } from '../basic-analyzers/typescript-extras';
 
 export interface FoundEventHandler {
-    eventHandlerCallStatement: ExpressionStatement;
-    eventHandler: FunctionLikeDeclarationBase;
+    eventHandlerCallStatement: ts.ExpressionStatement;
+    eventHandler: ts.FunctionLikeDeclarationBase;
     handlerIndex: number;
 }
 
 export function findEventHandlersBlock(
-    functionDeclaration: FunctionLikeDeclarationBase,
+    functionDeclaration: ts.FunctionLikeDeclarationBase,
     bindingResolver: SourceFileBindingResolver,
 ): FoundEventHandler[] {
     const foundEventHandlers: FoundEventHandler[] = [];

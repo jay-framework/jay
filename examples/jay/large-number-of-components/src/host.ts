@@ -1,4 +1,4 @@
-import { Counter, HostElementRefs, render } from './host.jay-html';
+import { CounterOfHostViewState, HostElementRefs, render } from './host.jay-html';
 import {
     createDerivedArray,
     createEffect,
@@ -39,13 +39,17 @@ function HostConstructor({}: Props<HostProps>, refs: HostElementRefs) {
         }
     });
 
-    const counters = createDerivedArray<CounterData, Counter>(counterData, (internalCounter) => {
-        return {
-            key: internalCounter().key,
-            count: internalCounter().currentCount,
-            counterClass: COUNTER_CLASSES[internalCounter().currentCount % COUNTER_CLASSES.length],
-        };
-    });
+    const counters = createDerivedArray<CounterData, CounterOfHostViewState>(
+        counterData,
+        (internalCounter) => {
+            return {
+                key: internalCounter().key,
+                count: internalCounter().currentCount,
+                counterClass:
+                    COUNTER_CLASSES[internalCounter().currentCount % COUNTER_CLASSES.length],
+            };
+        },
+    );
 
     const total = createMemo(() => {
         return counterData().reduce((prev, curr) => prev + curr.currentCount, 0);
@@ -56,18 +60,20 @@ function HostConstructor({}: Props<HostProps>, refs: HostElementRefs) {
         if (Number(newValue)) setNumberOfCounters(Number(newValue));
     });
 
-    refs.counter.onChange(({ coordinate, event }: JayEvent<CounterEvent, Counter>) => {
-        console.log(coordinate, event);
-        const counterIndex = counterData().findIndex(
-            (internalCounter) => internalCounter.key === coordinate[0],
-        );
-        if (counterData()[counterIndex].currentCount !== event.value)
-            setCounterData(
-                patch(counterData(), [
-                    { op: REPLACE, path: [counterIndex, 'currentCount'], value: event.value },
-                ]),
+    refs.counters.counter.onChange(
+        ({ coordinate, event }: JayEvent<CounterEvent, CounterOfHostViewState>) => {
+            console.log(coordinate, event);
+            const counterIndex = counterData().findIndex(
+                (internalCounter) => internalCounter.key === coordinate[0],
             );
-    });
+            if (counterData()[counterIndex].currentCount !== event.value)
+                setCounterData(
+                    patch(counterData(), [
+                        { op: REPLACE, path: [counterIndex, 'currentCount'], value: event.value },
+                    ]),
+                );
+        },
+    );
 
     return {
         render: () => ({ numberOfCounters, counters, total }),

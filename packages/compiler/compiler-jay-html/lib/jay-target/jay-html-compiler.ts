@@ -3,7 +3,6 @@ import {
     Imports,
     ImportsFor,
     isArrayType,
-    JayArrayType,
     JayComponentType,
     JayImportLink,
     JayType,

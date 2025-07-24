@@ -10,7 +10,7 @@ export default defineConfig({
             entry: resolve(__dirname, 'lib/index.ts'),
             name: 'vitePluginJay',
             fileName: 'index',
-            formats: ['cjs'],
+            formats: ['es'],
         },
         rollupOptions: {
             external: [

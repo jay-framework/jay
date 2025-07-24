@@ -1,10 +1,13 @@
 import { FoundEventHandler } from './find-event-handler-functions';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { isTypeReferenceNode } = tsModule;
 import {
     ImportFromModuleResolvedType,
     SourceFileBindingResolver,
 } from '../basic-analyzers/source-file-binding-resolver';
-import ts from 'typescript';
-
 export function isFirstParamJayEvent(
     eventHandler: ts.FunctionLikeDeclarationBase,
     bindingResolver: SourceFileBindingResolver,
@@ -12,7 +15,7 @@ export function isFirstParamJayEvent(
     if (eventHandler.parameters.length > 0 && eventHandler.parameters[0].type) {
         const explainedType = bindingResolver.explainType(eventHandler.parameters[0].type);
         if (
-            ts.isTypeReferenceNode(eventHandler.parameters[0].type) &&
+            isTypeReferenceNode(eventHandler.parameters[0].type) &&
             eventHandler.parameters[0].type.typeArguments?.length === 2 &&
             explainedType instanceof ImportFromModuleResolvedType &&
             explainedType.module === '@jay-framework/runtime' &&

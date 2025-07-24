@@ -35,13 +35,13 @@ export function jayDefinitions() {
                 const context = this as PluginContext;
                 const { filename, dirname } = getFileContext(id);
                 // make sure imported files are resolved first
-                const imports = getJayHtmlImports(code).filter((module) =>
+                const imports: string[] = getJayHtmlImports(code).filter((module: string) =>
                     module.endsWith('jay-html.d'),
                 );
                 await Promise.all(
                     imports.map((imported) =>
                         context.load({
-                            id: path.resolve(dirname, imported.slice(0, -2)),
+                            id: path.resolve(dirname, String(imported).slice(0, -2)),
                             resolveDependencies: true,
                         }),
                     ),
@@ -53,7 +53,9 @@ export function jayDefinitions() {
                     {},
                     JAY_IMPORT_RESOLVER,
                 );
-                const tsCode = checkValidationErrors(generateElementDefinitionFile(parsedFile));
+                const tsCode: string = checkValidationErrors(
+                    generateElementDefinitionFile(parsedFile),
+                );
                 const generatedFilename = await writeDefinitionFile(
                     dirname,
                     filename,

@@ -1,5 +1,9 @@
-import ts, { isImportDeclaration, isStringLiteral } from 'typescript';
 import { JAY_COMPONENT } from '@jay-framework/compiler-shared';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { forEachChild, isImportDeclaration, isStringLiteral } = tsModule;
 import { getImportName, getImportSpecifiers } from '../ts-utils/extract-imports';
 
 export function findMakeJayComponentImport(makeJayComponentName: string, node: ts.Node): string {
@@ -27,9 +31,9 @@ export function findMakeJayComponentImportTransformerBlock(
     function visitor(node: ts.Node) {
         foundMakeJayComponentProperty =
             foundMakeJayComponentProperty || findMakeJayComponentImport(makeJayComponentName, node);
-        ts.forEachChild(node, visitor);
+        forEachChild(node, visitor);
     }
 
-    ts.forEachChild(sourceFile, visitor);
+    forEachChild(sourceFile, visitor);
     return foundMakeJayComponentProperty;
 }

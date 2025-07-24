@@ -15,7 +15,7 @@ import {
 } from '../ts-basic-analyzers/compiler-patterns-for-testing';
 import { transformCode } from '../../test-utils/ts-compiler-test-utils';
 import { astToCode, codeToAst } from '../../../lib/components-files/ts-utils/ts-compiler-utils';
-import { FunctionRepositoryBuilder } from '../../../lib/components-files/building-blocks/function-repository-builder';
+import { FunctionRepositoryBuilder } from '../../../lib';
 
 function testTransformer(compiledPatterns: CompiledPattern[]) {
     const transformedExec$s: TransformedGlobalExec$[] = [];

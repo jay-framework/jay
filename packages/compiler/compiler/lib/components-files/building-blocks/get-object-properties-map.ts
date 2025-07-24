@@ -1,9 +1,12 @@
-import ts from 'typescript';
-
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { isComputedPropertyName, isIdentifier, isPropertyAssignment, isStringLiteral } = tsModule;
 export function getObjectPropertiesMap(
     expression: ts.ObjectLiteralExpression,
 ): Record<string, ts.Expression> {
-    return expression.properties.filter(ts.isPropertyAssignment).reduce((acc, property) => {
+    return expression.properties.filter(isPropertyAssignment).reduce((acc, property) => {
         const key = getKey(property);
         if (key) acc[getKey(property)] = property.initializer;
         return acc;
@@ -12,8 +15,8 @@ export function getObjectPropertiesMap(
 
 function getKey(property: ts.PropertyAssignment): string | undefined {
     const { name } = property;
-    if (ts.isIdentifier(name)) return name.getText();
-    if (ts.isComputedPropertyName(name) && ts.isStringLiteral(name.expression))
+    if (isIdentifier(name)) return name.getText();
+    if (isComputedPropertyName(name) && isStringLiteral(name.expression))
         return name.expression.text;
     return undefined;
 }

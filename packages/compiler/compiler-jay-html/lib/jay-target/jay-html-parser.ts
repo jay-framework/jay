@@ -463,5 +463,6 @@ export function getJayHtmlImports(html: string): string[] {
         .querySelectorAll(
             'script[type="application/jay-headfull"], script[type="application/jay-headless"]',
         )
-        .map((script) => script.getAttribute('src'));
+        .map((script) => script.getAttribute('src'))
+        .filter((src): src is string => src !== null);
 }

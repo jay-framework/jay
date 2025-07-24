@@ -10,7 +10,7 @@ export default defineConfig({
             entry: resolve(__dirname, 'lib/index.ts'),
             name: 'jayStackRuntime',
             fileName: 'index',
-            formats: ['cjs'],
+            formats: ['es'],
         },
         commonjsOptions: {
             transformMixedEsModules: true,
@@ -25,6 +25,7 @@ export default defineConfig({
                 '@jay-framework/stack-route-scanner',
                 '@jay-framework/stack-client-runtime',
                 '@jay-framework/compiler-jay-html',
+                'module',
             ],
         },
     },

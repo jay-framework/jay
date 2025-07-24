@@ -1,4 +1,8 @@
-import * as ts from 'typescript';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript');
+const { NewLineKind } = tsModule;
 import { JayRollupConfig } from '../common/types';
 import path from 'node:path';
 import {
@@ -21,7 +25,7 @@ export class JayPluginContext {
     constructor(readonly jayOptions: JayRollupConfig = {}) {
         this.projectRoot = path.dirname(jayOptions.tsConfigFilePath ?? process.cwd());
         this.outputDir = jayOptions.outputDir && path.join(this.projectRoot, jayOptions.outputDir);
-        this.tsPrinter = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
+        this.tsPrinter = tsModule.createPrinter({ newLine: NewLineKind.LineFeed });
         let compilerPatternsParseResult = compileFunctionSplitPatternsBlock(
             (jayOptions.compilerPatternFiles || []).map((fileName) => {
                 let fileContent = fs.readFileSync(fileName, { encoding: 'utf8' });

@@ -9,11 +9,11 @@ export default defineConfig({
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
             name: 'jayCompiler',
-            fileName: 'index',
-            formats: ['cjs'],
+            formats: ['es'],
         },
         commonjsOptions: {
             transformMixedEsModules: true,
+            esmExternals: true,
         },
         rollupOptions: {
             external: [

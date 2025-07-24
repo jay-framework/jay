@@ -1,13 +1,12 @@
-import ts, {
-    Identifier,
-    isIdentifier,
-    isPropertyAccessExpression,
-    PropertyAccessExpression,
-} from 'typescript';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { isIdentifier, isPropertyAccessExpression } = tsModule;
 
 export function isIdentifierOrPropertyAccessExpression(
     node: ts.Node,
-): node is Identifier | PropertyAccessExpression {
+): node is ts.Identifier | ts.PropertyAccessExpression {
     return isIdentifier(node) || isPropertyAccessExpression(node);
 }
 

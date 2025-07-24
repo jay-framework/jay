@@ -1,4 +1,7 @@
-import ts, { TransformerFactory } from 'typescript';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
 
 export interface SourceFileTransformerContext {
     factory: ts.NodeFactory;
@@ -13,7 +16,7 @@ export type SourceFileTransformer<S extends SourceFileTransformerContext> = (
 export function mkTransformer<C extends object>(
     fileTransformer: SourceFileTransformer<C & SourceFileTransformerContext>,
     config?: C,
-): TransformerFactory<ts.SourceFile> {
+): ts.TransformerFactory<ts.SourceFile> {
     return (context: ts.TransformationContext) => {
         const { factory } = context;
         return (sourceFile) => {

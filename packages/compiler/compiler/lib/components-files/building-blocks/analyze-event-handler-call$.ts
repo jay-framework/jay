@@ -1,15 +1,12 @@
-import ts, {
-    Expression,
-    ExpressionStatement,
-    isCallExpression,
-    isPropertyAccessExpression,
-    NodeFactory,
-    TransformationContext,
-} from 'typescript';
 import { codeToAst } from '../ts-utils/ts-compiler-utils';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { visitEachChild, isCallExpression, isPropertyAccessExpression } = tsModule;
 
 const analyzeEventHandlerCall =
-    (context: TransformationContext, factory: NodeFactory, handlerKey: string) => (node) => {
+    (context: ts.TransformationContext, factory: ts.NodeFactory, handlerKey: string) => (node) => {
         if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
             return factory.createCallExpression(
                 factory.createPropertyAccessExpression(
@@ -20,8 +17,8 @@ const analyzeEventHandlerCall =
                         ),
                         undefined,
                         codeToAst(`handler$('${handlerKey}')`, context).map(
-                            (_: ExpressionStatement) => _.expression,
-                        ) as Expression[],
+                            (_: ts.ExpressionStatement) => _.expression,
+                        ) as ts.Expression[],
                     ),
                     factory.createIdentifier('then'),
                 ),
@@ -33,11 +30,7 @@ const analyzeEventHandlerCall =
     };
 
 export const analyzeEventHandlerCallStatement$Block =
-    (context: TransformationContext, factory: NodeFactory, handlerKey: string) =>
-    (node: ExpressionStatement) => {
-        return ts.visitEachChild(
-            node,
-            analyzeEventHandlerCall(context, factory, handlerKey),
-            context,
-        );
+    (context: ts.TransformationContext, factory: ts.NodeFactory, handlerKey: string) =>
+    (node: ts.ExpressionStatement) => {
+        return visitEachChild(node, analyzeEventHandlerCall(context, factory, handlerKey), context);
     };

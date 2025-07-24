@@ -5,12 +5,11 @@ export default defineConfig({
     build: {
         minify: false,
         target: 'es2020',
-        ssr: resolve(__dirname, 'lib/index.ts'),
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
             name: 'jayCompilerAnalyzeExportedTypes',
             fileName: 'index',
-            formats: ['cjs'],
+            formats: ['es'],
         },
         commonjsOptions: {
             transformMixedEsModules: true,
@@ -21,6 +20,10 @@ export default defineConfig({
                 '@jay-framework/runtime',
                 '@jay-framework/secure',
                 '@jay-framework/compiler-shared',
+                'typescript',
+                'fs',
+                'path',
+                'module',
             ],
         },
     },

@@ -6,6 +6,9 @@ import path from 'node:path';
 import { parseJayFile } from '@jay-framework/compiler-jay-html';
 import { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
 import { JayRollupConfig } from '@jay-framework/rollup-plugin';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 export interface DevServerPagePart {
     compDefinition: AnyJayStackComponentDefinition;

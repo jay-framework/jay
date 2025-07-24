@@ -1,18 +1,13 @@
-import ts, {
-    BindingName,
-    Expression,
-    FunctionLikeDeclarationBase,
-    FunctionDeclaration,
-    Identifier,
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const {
     isElementAccessExpression,
     isIdentifier,
     isObjectBindingPattern,
     isPropertyAccessExpression,
     isStringLiteral,
-    ParameterDeclaration,
-    PropertyAccessExpression,
-    PropertyName,
-    VariableStatement,
     isObjectLiteralExpression,
     isPropertyAssignment,
     isShorthandPropertyAssignment,
@@ -22,18 +17,15 @@ import ts, {
     isAsExpression,
     isArrowFunction,
     isFunctionExpression,
-    Statement,
     isStatement,
     isNamespaceImport,
     isNamedImports,
-    CallExpression,
     isCallExpression,
     isNumericLiteral,
     isToken,
     SyntaxKind,
     NodeFlags,
-} from 'typescript';
-
+} = tsModule;
 export enum VariableRootType {
     FunctionParameter,
     FunctionDefinition,
@@ -51,7 +43,7 @@ export interface VariableRoot {
 export interface ParamVariableRoot extends VariableRoot {
     kind: VariableRootType.FunctionParameter;
     paramIndex: number;
-    param: ParameterDeclaration;
+    param: ts.ParameterDeclaration;
 }
 export function mkParameterVariableRoot(
     param: ts.ParameterDeclaration,
@@ -62,7 +54,7 @@ export function mkParameterVariableRoot(
 
 export interface FunctionVariableRoot extends VariableRoot {
     kind: VariableRootType.FunctionDefinition;
-    func: FunctionLikeDeclarationBase;
+    func: ts.FunctionLikeDeclarationBase;
 }
 
 export function mkFunctionVariableRoot(func: ts.FunctionLikeDeclarationBase): FunctionVariableRoot {
@@ -71,10 +63,10 @@ export function mkFunctionVariableRoot(func: ts.FunctionLikeDeclarationBase): Fu
 
 export interface LiteralVariableRoot extends VariableRoot {
     kind: VariableRootType.Literal;
-    literal: Expression;
+    literal: ts.Expression;
 }
 
-export function mkLiteralVariableRoot(literal: Expression): LiteralVariableRoot {
+export function mkLiteralVariableRoot(literal: ts.Expression): LiteralVariableRoot {
     return { kind: VariableRootType.Literal, literal };
 }
 
@@ -85,12 +77,12 @@ export enum ImportType {
 
 export interface ImportModuleVariableRoot extends VariableRoot {
     kind: VariableRootType.ImportModule;
-    module: Expression;
+    module: ts.Expression;
     importType: ImportType;
 }
 
 export function mkImportModuleVariableRoot(
-    module: Expression,
+    module: ts.Expression,
     importType: ImportType,
 ): ImportModuleVariableRoot {
     return { kind: VariableRootType.ImportModule, module, importType };
@@ -98,10 +90,10 @@ export function mkImportModuleVariableRoot(
 
 export interface FunctionCallVariableRoot extends VariableRoot {
     kind: VariableRootType.FunctionCall;
-    node: CallExpression;
+    node: ts.CallExpression;
 }
 
-export function mkFunctionCallVariableRoot(node: CallExpression): FunctionCallVariableRoot {
+export function mkFunctionCallVariableRoot(node: ts.CallExpression): FunctionCallVariableRoot {
     return { kind: VariableRootType.FunctionCall, node };
 }
 
@@ -154,7 +146,7 @@ export enum LetOrConst {
 export interface Variable {
     name?: string;
     letOrConst?: LetOrConst;
-    definingStatement?: Statement;
+    definingStatement?: ts.Statement;
     accessedFrom?: Variable;
     accessedByProperty?: string;
     assignedFrom?: Variable;
@@ -165,7 +157,7 @@ export interface Variable {
 export function mkVariable(members: {
     name?: string;
     letOrConst?: LetOrConst;
-    definingStatement?: Statement;
+    definingStatement?: ts.Statement;
     accessedFrom?: Variable;
     accessedByProperty?: string;
     assignedFrom?: Variable;
@@ -178,9 +170,9 @@ export function mkVariable(members: {
 export const UNKNOWN_VARIABLE: Variable = {};
 
 const getAccessedByProperty = (
-    binding: Identifier,
+    binding: ts.Identifier,
     accessedFrom?: Variable,
-    propertyName?: PropertyName,
+    propertyName?: ts.PropertyName,
 ) => {
     return accessedFrom
         ? propertyName
@@ -191,17 +183,17 @@ const getAccessedByProperty = (
         : undefined;
 };
 
-function findDeclaringStatement(node: ts.Node): Statement {
+function findDeclaringStatement(node: ts.Node): ts.Statement {
     if (!node) return undefined;
     else if (isStatement(node)) return node;
     else return findDeclaringStatement(node.parent);
 }
 
 export function tsBindingNameToVariable(
-    binding: BindingName,
+    binding: ts.BindingName,
     accessedFrom?: Variable,
     assignedFrom?: Variable,
-    propertyName?: PropertyName,
+    propertyName?: ts.PropertyName,
     root?: ParamVariableRoot,
 ): Variable[] {
     if (isIdentifier(binding)) {
@@ -250,7 +242,7 @@ export function tsBindingNameToVariable(
                     tsBindingNameToVariable(element.name, variable, undefined, {
                         kind: 80,
                         text: '' + index,
-                    } as Identifier)
+                    } as ts.Identifier)
                 );
             })
             .filter((variable) => !!variable);
@@ -266,7 +258,7 @@ export class NameBindingResolver {
         this.variables.set(name, variable);
     }
 
-    addFunctionParams(functionDeclaration: FunctionLikeDeclarationBase) {
+    addFunctionParams(functionDeclaration: ts.FunctionLikeDeclarationBase) {
         functionDeclaration.parameters.map((param, paramIndex) => {
             let paramVariables = tsBindingNameToVariable(
                 param.name,
@@ -281,7 +273,7 @@ export class NameBindingResolver {
         });
     }
 
-    addFunctionDeclaration(statement: FunctionDeclaration) {
+    addFunctionDeclaration(statement: ts.FunctionDeclaration) {
         if (statement.name) {
             let functionVariable = mkVariable({
                 name: statement.name.text,
@@ -311,7 +303,7 @@ export class NameBindingResolver {
         });
     }
 
-    addVariableStatement(variableStatement: VariableStatement) {
+    addVariableStatement(variableStatement: ts.VariableStatement) {
         this.addVariableDeclarationList(variableStatement.declarationList);
     }
 
@@ -319,7 +311,7 @@ export class NameBindingResolver {
         return this.variables.get(name) || UNKNOWN_VARIABLE;
     }
 
-    resolvePropertyAccessChain(expression: Expression): Variable {
+    resolvePropertyAccessChain(expression: ts.Expression): Variable {
         if (isPropertyAccessExpression(expression)) {
             const name = expression.name.text;
             const identifiersFromObject = this.resolvePropertyAccessChain(expression.expression);
@@ -391,11 +383,11 @@ export class NameBindingResolver {
         }
     }
 
-    resolvePropertyAccess(expression: PropertyAccessExpression): Variable {
+    resolvePropertyAccess(expression: ts.PropertyAccessExpression): Variable {
         return this.resolvePropertyAccessChain(expression);
     }
 
-    resolveIdentifier(expression: Identifier): Variable {
+    resolveIdentifier(expression: ts.Identifier): Variable {
         let variableName = expression.text;
         let nameResolver: NameBindingResolver = this;
         let resolved: Variable;

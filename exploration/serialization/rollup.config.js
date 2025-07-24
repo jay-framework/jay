@@ -7,8 +7,7 @@ const rollupConfig = defineConfig({
     input: './lib/index.ts',
     output: {
         file: 'dist/index.js',
-        format: 'iife',
-        name: 'jay',
+        format: 'es',
         sourcemap: true,
     },
     plugins: [typescript(), nodeResolve()],

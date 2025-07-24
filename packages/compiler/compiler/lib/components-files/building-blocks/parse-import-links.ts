@@ -1,4 +1,8 @@
-import * as ts from 'typescript';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { isStringLiteral } = tsModule;
 import {
     hasExtension,
     JAY_QUERY_MAIN_SANDBOX,
@@ -15,7 +19,7 @@ import {
 
 export function parseImportLinks(sourceFile: ts.SourceFile): JayImportLink[] {
     const importDeclarations = extractImportDeclarations(sourceFile).filter((importDeclaration) =>
-        ts.isStringLiteral(importDeclaration.moduleSpecifier),
+        isStringLiteral(importDeclaration.moduleSpecifier),
     );
     const importLinks = importDeclarations.map<JayImportLink>((importDeclaration) => {
         const module = (importDeclaration.moduleSpecifier as ts.StringLiteral).text;

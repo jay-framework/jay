@@ -4,7 +4,7 @@ import {
     partialRender,
     UrlParams,
 } from '@jay-framework/fullstack-component';
-import { render, PageElementRefs, PageContract } from './page.jay-html';
+import { PageElementRefs, PageContract } from './page.jay-html';
 import { Props } from '@jay-framework/component';
 import { getProductBySlug, getProducts } from '../../../products-database';
 import { getAvailableUnits } from '../../../inventory-service';

@@ -1,27 +1,11 @@
 import fs from 'fs';
-export * from './resolve-ts-config';
-
-import { resolveTsConfig, ResolveTsConfigOptions } from './resolve-ts-config';
-import {
-    JAY_4_REACT,
-    JAY_COMPONENT,
-    JayArrayType,
-    JayComponentApiMember,
-    JayComponentType,
-    JayElementConstructorType,
-    JayElementType,
-    JayObjectType,
-    JayType,
-    JayUnknown,
-    MAKE_JAY_4_REACT_COMPONENT,
-    MAKE_JAY_COMPONENT,
-    resolvePrimitiveType,
-} from '@jay-framework/compiler-shared';
-import ts, {
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const {
     convertCompilerOptionsFromJson,
     createProgram,
-    Identifier,
-    InterfaceDeclaration,
     isCallExpression,
     isFunctionDeclaration,
     isIdentifier,
@@ -34,23 +18,34 @@ import ts, {
     isTypeAliasDeclaration,
     isTypeReferenceNode,
     isVariableStatement,
-    Modifier,
-    NodeArray,
     parseConfigFileTextToJson,
-    QualifiedName,
-    Statement,
     SyntaxKind,
-    TypeChecker,
-    TypeNode,
-} from 'typescript';
+} = tsModule;
+export * from './resolve-ts-config';
 
-function getTypeName(typeName: Identifier | QualifiedName): string {
+import { resolveTsConfig, ResolveTsConfigOptions } from './resolve-ts-config';
+import {
+    JAY_COMPONENT,
+    JayArrayType,
+    JayComponentApiMember,
+    JayComponentType,
+    JayElementConstructorType,
+    JayElementType,
+    JayObjectType,
+    JayType,
+    JayUnknown,
+    MAKE_JAY_COMPONENT,
+    resolvePrimitiveType,
+} from '@jay-framework/compiler-shared';
+
+function getTypeName(typeName: ts.Identifier | ts.QualifiedName): string {
     if (isIdentifier(typeName)) return typeName.text;
     else if (isQualifiedName(typeName))
         return `${getTypeName(typeName.left)}.${typeName.right.text}`;
+    return '';
 }
 
-function getJayType(typeNode: TypeNode, types: JayType[]): JayType {
+function getJayType(typeNode: ts.TypeNode, types: JayType[]): JayType {
     let propType = resolvePrimitiveType(typeNode.getText());
     if (propType === JayUnknown && isTypeReferenceNode(typeNode)) {
         const typeName = getTypeName(typeNode.typeName);
@@ -62,7 +57,7 @@ function getJayType(typeNode: TypeNode, types: JayType[]): JayType {
 }
 
 function getInterfaceJayType(
-    interfaceDeclaration: InterfaceDeclaration,
+    interfaceDeclaration: ts.InterfaceDeclaration,
     types: JayType[],
 ): JayObjectType {
     let props = {};
@@ -71,7 +66,7 @@ function getInterfaceJayType(
         .filter((member) => isPropertySignature(member) && isIdentifier(member.name))
         .forEach((member) => {
             let property = member as ts.PropertySignature;
-            let name = member.name as Identifier;
+            let name = member.name as ts.Identifier;
             let propKey = name.text;
             props[propKey] = getJayType(property.type, [...types, jayObjectType]);
         });
@@ -84,7 +79,7 @@ function getElementConstructorType(name: string, typeName: string): JayElementCo
 }
 
 function getComponentType(
-    tsTypeChecker: TypeChecker,
+    tsTypeChecker: ts.TypeChecker,
     name: string,
     componentType: ts.Type,
 ): JayComponentType {
@@ -137,10 +132,10 @@ function loadTSCompilerOptions(options: ResolveTsConfigOptions = {}) {
     return convertCompilerOptionsFromJson(tsConfig.config.compilerOptions, tsConfigPath).options;
 }
 
-function isExportedStatement(statement: Statement) {
+function isExportedStatement(statement: ts.Statement) {
     return Boolean(
         (statement as any).modifiers &&
-            ((statement as any).modifiers as NodeArray<Modifier>).find(
+            ((statement as any).modifiers as ts.NodeArray<ts.Modifier>).find(
                 (_) => _.kind === SyntaxKind.ExportKeyword,
             ),
     );
@@ -162,7 +157,7 @@ function findImportedSymbol(module: string, namedImport: string): ImportedSymbol
     );
 }
 
-function mapImportedSymbols(statements: ts.NodeArray<ts.Statement>, tsTypeChecker: TypeChecker) {
+function mapImportedSymbols(statements: ts.NodeArray<ts.Statement>, tsTypeChecker: ts.TypeChecker) {
     statements.filter(isImportDeclaration).forEach((importDeclaration) => {
         if (
             isStringLiteral(importDeclaration.moduleSpecifier) &&

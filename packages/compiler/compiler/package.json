@@ -4,6 +4,7 @@
   "description": "",
   "license": "Apache-2.0",
   "main": "dist/index.js",
+  "type": "module",
   "directories": {
     "lib": "lib"
   },
@@ -15,7 +16,7 @@
     "build": "npm run build:js && npm run build:types",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
     "build:js": "vite build",
-    "build:types": "tsup lib/index.ts --dts-only --format cjs",
+    "build:types": "tsup lib/index.ts --dts-only --format esm",
     "build:check-types": "tsc",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",

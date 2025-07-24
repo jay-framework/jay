@@ -41,7 +41,7 @@ async function initApp() {
     const { port: editorPort, editorId } = await editorServer.start();
 
     // Set up editor server callbacks
-    const handlers = createEditorHandlers(config);
+    const handlers = createEditorHandlers(resolvedConfig, jayOptions.tsConfigFilePath);
     editorServer.onPublish(handlers.onPublish);
     editorServer.onSaveImage(handlers.onSaveImage);
     editorServer.onHasImage(handlers.onHasImage);

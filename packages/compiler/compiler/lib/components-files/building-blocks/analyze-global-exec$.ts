@@ -1,11 +1,9 @@
-import ts, {
-    CallExpression,
-    Expression,
-    ExpressionStatement,
-    isArrowFunction,
-    isExpression,
-} from 'typescript';
 import { SourceFileStatementAnalyzer } from '../basic-analyzers/scoped-source-file-statement-analyzer';
+import { createRequire } from 'module';
+import type * as ts from 'typescript';
+const require = createRequire(import.meta.url);
+const tsModule = require('typescript') as typeof ts;
+const { visitNode, isArrowFunction, isExpression } = tsModule;
 import { astToCode, codeToAst } from '../ts-utils/ts-compiler-utils';
 import { FunctionRepositoryBuilder } from './function-repository-builder';
 
@@ -29,23 +27,22 @@ export function analyzeGlobalExec$(
             foundUnsafeExpression =
                 foundUnsafeExpression || !matchedPattern || !matchedPattern.subExpressionsMatching;
         } else {
-            node.getChildren().forEach((child) => ts.visitNode(child, visitor));
+            node.getChildren().forEach((child) => visitNode(child, visitor));
         }
 
         return node;
     };
 
-    if (isArrowFunction(foundExec$.arguments[0]))
-        ts.visitNode(foundExec$.arguments[0].body, visitor);
+    if (isArrowFunction(foundExec$.arguments[0])) visitNode(foundExec$.arguments[0].body, visitor);
 
     if (foundUnsafeExpression) return { foundExec$, wasTransformed: false };
     else {
         const key = functionRepositoryBuilder.addFunction(astToCode(foundExec$.arguments[0]));
         const transformedExec$ = (
             codeToAst(`exec$(funcGlobal$('${key}'))`, context).map(
-                (_: ExpressionStatement) => _.expression,
-            ) as Expression[]
-        )[0] as CallExpression;
+                (_: ts.ExpressionStatement) => _.expression,
+            ) as ts.Expression[]
+        )[0] as ts.CallExpression;
         return { foundExec$, wasTransformed: true, transformedExec$ };
     }
 }

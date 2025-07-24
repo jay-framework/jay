@@ -1,15 +1,12 @@
 import * as ts from 'typescript';
 import * as path from 'node:path';
-import { CompilerOptions, ParseConfigFileHost, ParsedCommandLine } from 'typescript';
+import * as os from 'node:os';
 
-const JAY_TS_COMPILER_OPTIONS_OVERRIDE: CompilerOptions = { noEmit: false };
-
-import * as os from 'os';
-import { FormatDiagnosticsHost } from 'typescript';
+const JAY_TS_COMPILER_OPTIONS_OVERRIDE: ts.CompilerOptions = { noEmit: false };
 import { JayRollupConfig } from './common/types';
 import { withOriginalTrace } from '@jay-framework/compiler-shared';
 
-const diagnosticsHost: FormatDiagnosticsHost = {
+const diagnosticsHost: ts.FormatDiagnosticsHost = {
     getCanonicalFileName: (fileName) => fileName,
     getNewLine: () => os.EOL,
     getCurrentDirectory: () => process.cwd(),
@@ -18,7 +15,7 @@ const diagnosticsHost: FormatDiagnosticsHost = {
 export function resolveTsCompilerOptions({
     tsConfigFilePath = 'tsconfig.json',
     tsCompilerOptionsOverrides = {},
-}: JayRollupConfig): CompilerOptions {
+}: JayRollupConfig): ts.CompilerOptions {
     const compilerOptions = parseTsConfigFile(tsConfigFilePath, tsCompilerOptionsOverrides);
     if (!compilerOptions) {
         throw new Error(
@@ -42,8 +39,8 @@ export function resolveTsCompilerOptions({
 
 export function parseTsConfigFile(
     configFilePath: string,
-    compilerOptions: CompilerOptions,
-): ParsedCommandLine {
+    compilerOptions: ts.CompilerOptions,
+): ts.ParsedCommandLine {
     try {
         return ts.getParsedCommandLineOfConfigFile(
             resolveTsConfigPath(configFilePath),
@@ -63,7 +60,7 @@ function resolveTsConfigPath(relativePath: string): string {
     return tsConfigPath;
 }
 
-function getTsConfigHost(): ParseConfigFileHost {
+function getTsConfigHost(): ts.ParseConfigFileHost {
     return {
         fileExists: ts.sys.fileExists,
         getCurrentDirectory: ts.sys.getCurrentDirectory,
