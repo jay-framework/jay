@@ -38,9 +38,13 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
     let isVite: boolean = false;
     return {
         name: 'jay:runtime',
+        configResolved(config) {
+            // This is the most reliable way
+            isVite = true
+        },
         buildStart(opts) {
             // Vite adds additional properties to the plugin context
-            isVite = Boolean(
+            isVite = isVite || Boolean(
                 opts.plugins?.some(
                     (plugin) =>
                         plugin.name === 'vite:build-metadata' || plugin.name?.startsWith('vite:'),
