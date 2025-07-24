@@ -107,7 +107,7 @@ export async function readFileAndGenerateImportsFileFromJayFile(
     const dirname = path.resolve(__dirname, '../fixtures', folder);
     const file = givenFile ?? `${getFileFromFolder(folder)}`;
     const sourceFile = await readFixtureSourceJayFile(folder, file);
-    const parsedFile = checkValidationErrors(
+    const parsedFile: JayHtmlSourceFile = checkValidationErrors(
         await parseJayFile(sourceFile, file, dirname, {}, JAY_IMPORT_RESOLVER),
     );
     const output = generateImportsFileFromJayFile(parsedFile);
