@@ -1,6 +1,7 @@
 {
   "name": "@jay-framework/compiler-shared",
   "version": "0.6.7",
+  "type": "module",
   "description": "",
   "license": "Apache-2.0",
   "main": "dist/index.js",

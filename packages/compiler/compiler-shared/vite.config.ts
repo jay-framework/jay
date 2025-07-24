@@ -9,7 +9,6 @@ export default defineConfig({
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
             name: 'jayCompiler',
-            fileName: 'index',
             formats: ['es'],
         },
         commonjsOptions: {

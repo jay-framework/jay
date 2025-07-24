@@ -4,6 +4,7 @@
   "description": "",
   "license": "Apache-2.0",
   "main": "dist/index.js",
+  "type": "module",
   "directories": {
     "lib": "lib"
   },

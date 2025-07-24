@@ -4,7 +4,7 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
     build: {
         minify: false,
-        target: 'es2020',
+        target: 'node18',
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
             name: 'jayCompiler',
@@ -22,6 +22,7 @@ export default defineConfig({
                 '@jay-framework/compiler-shared',
                 '@jay-framework/compiler-analyze-exported-types',
                 'fs',
+                'fs/promises',
                 'path',
                 'module',
             ],

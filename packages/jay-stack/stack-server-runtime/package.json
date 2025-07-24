@@ -4,6 +4,7 @@
   "license": "Apache-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.mts",
+  "type": "module",
   "directories": {
     "lib": "lib"
   },
