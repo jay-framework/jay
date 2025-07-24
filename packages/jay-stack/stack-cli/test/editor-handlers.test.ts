@@ -4,18 +4,40 @@ import path from 'path';
 import { createEditorHandlers } from '../lib/editor-handlers';
 import type { JayConfig } from '../lib/config';
 
-describe('Editor Handlers', () => {
-    const testConfig: JayConfig = {
-        devServer: {
-            pagesBase: './test-pages',
-            componentsBase: './test-components',
-            publicFolder: './test-public',
-        },
-    };
+// Helper function to wrap jayHtml content in valid jay-html structure
+function createValidJayHtml(content: string, dataContract: string = 'data:'): string {
+    return `<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="application/jay-data">
+${dataContract}
+    </script>
+</head>
+<body>
+    ${content}
+</body>
+</html>`;
+}
 
-    const testPagesDir = path.resolve('./test-pages');
-    const testPublicDir = path.resolve('./test-public');
-    const testComponentsDir = path.resolve('./test-components');
+describe('Editor Handlers', () => {
+    const testConfig: Required<JayConfig> = {
+        devServer: {
+            pagesBase: './tmp-pages',
+            componentsBase: './tmp-components',
+            publicFolder: './tmp-public',
+        },
+        editorServer: {
+            portRange: [3000, 3010],
+            editorId: 'xxx-xxx'
+        }
+    };
+    const TS_CONFIG = './tsconfig.json';
+
+    const testPagesDir = path.resolve('./tmp-pages');
+    const testPublicDir = path.resolve('./tmp-public');
+    const testComponentsDir = path.resolve('./tmp-components');
 
     beforeEach(() => {
         // Clean up test directories
@@ -45,19 +67,19 @@ describe('Editor Handlers', () => {
 
     describe('Pages Publishing', () => {
         it('should publish pages correctly', async () => {
-            const handlers = createEditorHandlers(testConfig);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
 
             const result = await handlers.onPublish({
                 type: 'publish',
                 pages: [
                     {
                         route: '/',
-                        jayHtml: '<div>Home Page</div>',
+                        jayHtml: createValidJayHtml('<div>Home Page</div>'),
                         name: 'Home',
                     },
                     {
                         route: '/about',
-                        jayHtml: '<div>About Page</div>',
+                        jayHtml: createValidJayHtml('<div>About Page</div>'),
                         name: 'About',
                     },
                 ],
@@ -74,25 +96,38 @@ describe('Editor Handlers', () => {
 
             expect(fs.existsSync(homeFile)).toBe(true);
             expect(fs.existsSync(aboutFile)).toBe(true);
-            expect(fs.readFileSync(homeFile, 'utf-8')).toBe('<div>Home Page</div>');
-            expect(fs.readFileSync(aboutFile, 'utf-8')).toBe('<div>About Page</div>');
+            expect(fs.readFileSync(homeFile, 'utf-8')).toContain('<div>Home Page</div>');
+            expect(fs.readFileSync(aboutFile, 'utf-8')).toContain('<div>About Page</div>');
+
+            // Check that .d.ts files were generated
+            const homeDtsFile = path.join(testPagesDir, 'page.jay-html.d.ts');
+            const aboutDtsFile = path.join(testPagesDir, 'about', 'page.jay-html.d.ts');
+
+            expect(fs.existsSync(homeDtsFile)).toBe(true);
+            expect(fs.existsSync(aboutDtsFile)).toBe(true);
+            
+            // Validate .d.ts file structure
+            const homeDtsContent = fs.readFileSync(homeDtsFile, 'utf-8');
+            expect(homeDtsContent).toContain('export interface');
+            expect(homeDtsContent).toContain('export type');
+            expect(homeDtsContent).toContain('render(');
         });
     });
 
     describe('Components Publishing', () => {
         it('should publish components only', async () => {
-            const handlers = createEditorHandlers(testConfig);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
 
             const result = await handlers.onPublish({
                 type: 'publish',
                 components: [
                     {
                         name: 'Button',
-                        jayHtml: '<button>{{text}}</button>',
+                        jayHtml: createValidJayHtml('<button>{text}</button>', 'data:\n  text: string'),
                     },
                     {
                         name: 'Card',
-                        jayHtml: '<div class="card">{{content}}</div>',
+                        jayHtml: createValidJayHtml('<div class="card">{content}</div>', 'data:\n  content: string'),
                     },
                 ],
             });
@@ -108,30 +143,43 @@ describe('Editor Handlers', () => {
 
             expect(fs.existsSync(buttonFile)).toBe(true);
             expect(fs.existsSync(cardFile)).toBe(true);
-            expect(fs.readFileSync(buttonFile, 'utf-8')).toBe('<button>{{text}}</button>');
-            expect(fs.readFileSync(cardFile, 'utf-8')).toBe('<div class="card">{{content}}</div>');
+            expect(fs.readFileSync(buttonFile, 'utf-8')).toContain('<button>{text}</button>');
+            expect(fs.readFileSync(cardFile, 'utf-8')).toContain('<div class="card">{content}</div>');
+
+            // Check that .d.ts files were generated
+            const buttonDtsFile = path.join(testComponentsDir, 'Button.jay-html.d.ts');
+            const cardDtsFile = path.join(testComponentsDir, 'Card.jay-html.d.ts');
+
+            expect(fs.existsSync(buttonDtsFile)).toBe(true);
+            expect(fs.existsSync(cardDtsFile)).toBe(true);
+            
+            // Validate .d.ts file structure
+            const buttonDtsContent = fs.readFileSync(buttonDtsFile, 'utf-8');
+            expect(buttonDtsContent).toContain('text: string');
+            expect(buttonDtsContent).toContain('export interface');
+            expect(buttonDtsContent).toContain('render(');
         });
 
         it('should publish pages and components together', async () => {
-            const handlers = createEditorHandlers(testConfig);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
 
             const result = await handlers.onPublish({
                 type: 'publish',
                 pages: [
                     {
                         route: '/',
-                        jayHtml: '<div>Home Page</div>',
+                        jayHtml: createValidJayHtml('<div>Home Page</div>'),
                         name: 'Home',
                     },
                 ],
                 components: [
                     {
                         name: 'Header',
-                        jayHtml: '<header>{{title}}</header>',
+                        jayHtml: createValidJayHtml('<header>{title}</header>', 'data:\n  title: string'),
                     },
                     {
                         name: 'Footer',
-                        jayHtml: '<footer>{{copyright}}</footer>',
+                        jayHtml: createValidJayHtml('<footer>{copyright}</footer>', 'data:\n  copyright: string'),
                     },
                 ],
             });
@@ -145,19 +193,28 @@ describe('Editor Handlers', () => {
             // Check that page file was created
             const homeFile = path.join(testPagesDir, 'page.jay-html');
             expect(fs.existsSync(homeFile)).toBe(true);
-            expect(fs.readFileSync(homeFile, 'utf-8')).toBe('<div>Home Page</div>');
+            expect(fs.readFileSync(homeFile, 'utf-8')).toContain('<div>Home Page</div>');
 
             // Check that component files were created
             const headerFile = path.join(testComponentsDir, 'Header.jay-html');
             const footerFile = path.join(testComponentsDir, 'Footer.jay-html');
             expect(fs.existsSync(headerFile)).toBe(true);
             expect(fs.existsSync(footerFile)).toBe(true);
-            expect(fs.readFileSync(headerFile, 'utf-8')).toBe('<header>{{title}}</header>');
-            expect(fs.readFileSync(footerFile, 'utf-8')).toBe('<footer>{{copyright}}</footer>');
+            expect(fs.readFileSync(headerFile, 'utf-8')).toContain('<header>{title}</header>');
+            expect(fs.readFileSync(footerFile, 'utf-8')).toContain('<footer>{copyright}</footer>');
+
+            // Check that .d.ts files were generated for all
+            const homeDtsFile = path.join(testPagesDir, 'page.jay-html.d.ts');
+            const headerDtsFile = path.join(testComponentsDir, 'Header.jay-html.d.ts');
+            const footerDtsFile = path.join(testComponentsDir, 'Footer.jay-html.d.ts');
+
+            expect(fs.existsSync(homeDtsFile)).toBe(true);
+            expect(fs.existsSync(headerDtsFile)).toBe(true);
+            expect(fs.existsSync(footerDtsFile)).toBe(true);
         });
 
         it('should handle empty components array', async () => {
-            const handlers = createEditorHandlers(testConfig);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
 
             const result = await handlers.onPublish({
                 type: 'publish',
@@ -169,7 +226,7 @@ describe('Editor Handlers', () => {
         });
 
         it('should handle missing components and pages arrays', async () => {
-            const handlers = createEditorHandlers(testConfig);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
 
             const result = await handlers.onPublish({
                 type: 'publish',
@@ -180,7 +237,7 @@ describe('Editor Handlers', () => {
         });
 
         it('should create components directory if it does not exist', async () => {
-            const handlers = createEditorHandlers(testConfig);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
 
             // Ensure components directory doesn't exist
             expect(fs.existsSync(testComponentsDir)).toBe(false);
@@ -190,7 +247,7 @@ describe('Editor Handlers', () => {
                 components: [
                     {
                         name: 'TestComponent',
-                        jayHtml: '<div>Test Component</div>',
+                        jayHtml: createValidJayHtml('<div>Test Component</div>'),
                     },
                 ],
             });
@@ -205,18 +262,22 @@ describe('Editor Handlers', () => {
             // Check that component file was created
             const componentFile = path.join(testComponentsDir, 'TestComponent.jay-html');
             expect(fs.existsSync(componentFile)).toBe(true);
-            expect(fs.readFileSync(componentFile, 'utf-8')).toBe('<div>Test Component</div>');
+            expect(fs.readFileSync(componentFile, 'utf-8')).toContain('<div>Test Component</div>');
+
+            // Check that .d.ts file was generated
+            const componentDtsFile = path.join(testComponentsDir, 'TestComponent.jay-html.d.ts');
+            expect(fs.existsSync(componentDtsFile)).toBe(true);
         });
 
         it('should handle component names with special characters', async () => {
-            const handlers = createEditorHandlers(testConfig);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
 
             const result = await handlers.onPublish({
                 type: 'publish',
                 components: [
                     {
                         name: 'My-Special_Component123',
-                        jayHtml: '<div>Special Component</div>',
+                        jayHtml: createValidJayHtml('<div>Special Component</div>'),
                     },
                 ],
             });
@@ -228,11 +289,15 @@ describe('Editor Handlers', () => {
             // Check that component file was created with exact name
             const componentFile = path.join(testComponentsDir, 'My-Special_Component123.jay-html');
             expect(fs.existsSync(componentFile)).toBe(true);
-            expect(fs.readFileSync(componentFile, 'utf-8')).toBe('<div>Special Component</div>');
+            expect(fs.readFileSync(componentFile, 'utf-8')).toContain('<div>Special Component</div>');
+
+            // Check that .d.ts file was generated
+            const componentDtsFile = path.join(testComponentsDir, 'My-Special_Component123.jay-html.d.ts');
+            expect(fs.existsSync(componentDtsFile)).toBe(true);
         });
 
         it('should handle large component content', async () => {
-            const handlers = createEditorHandlers(testConfig);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
 
             const largeContent = '<div>' + 'x'.repeat(10000) + '</div>';
 
@@ -241,7 +306,7 @@ describe('Editor Handlers', () => {
                 components: [
                     {
                         name: 'LargeComponent',
-                        jayHtml: largeContent,
+                        jayHtml: createValidJayHtml(largeContent),
                     },
                 ],
             });
@@ -253,18 +318,22 @@ describe('Editor Handlers', () => {
             // Check that component file was created with large content
             const componentFile = path.join(testComponentsDir, 'LargeComponent.jay-html');
             expect(fs.existsSync(componentFile)).toBe(true);
-            expect(fs.readFileSync(componentFile, 'utf-8')).toBe(largeContent);
+            expect(fs.readFileSync(componentFile, 'utf-8')).toContain(largeContent);
+
+            // Check that .d.ts file was generated
+            const componentDtsFile = path.join(testComponentsDir, 'LargeComponent.jay-html.d.ts');
+            expect(fs.existsSync(componentDtsFile)).toBe(true);
         });
 
         it('should provide correct file paths in response', async () => {
-            const handlers = createEditorHandlers(testConfig);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
 
             const result = await handlers.onPublish({
                 type: 'publish',
                 components: [
                     {
                         name: 'PathTestComponent',
-                        jayHtml: '<div>Path Test</div>',
+                        jayHtml: createValidJayHtml('<div>Path Test</div>'),
                     },
                 ],
             });
@@ -273,15 +342,51 @@ describe('Editor Handlers', () => {
             expect(result.status).toHaveLength(1);
             expect(result.status[0].success).toBe(true);
             expect(result.status[0].filePath).toContain(
-                'test-components/PathTestComponent.jay-html',
+                'tmp-components/PathTestComponent.jay-html',
             );
             expect(result.status[0].filePath).toContain(path.resolve('.'));
+        });
+
+        it('should generate .d.ts files with proper TypeScript definitions', async () => {
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+
+            const result = await handlers.onPublish({
+                type: 'publish',
+                components: [
+                    {
+                        name: 'TypedComponent',
+                        jayHtml: createValidJayHtml(
+                            '<div><span>{count}</span><button ref="increment">+</button></div>',
+                            'data:\n  count: number\n  title: string'
+                        ),
+                    },
+                ],
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.status).toHaveLength(1);
+            expect(result.status[0].success).toBe(true);
+
+            // Check that .d.ts file was generated with proper content
+            const componentDtsFile = path.join(testComponentsDir, 'TypedComponent.jay-html.d.ts');
+            expect(fs.existsSync(componentDtsFile)).toBe(true);
+
+            const dtsContent = fs.readFileSync(componentDtsFile, 'utf-8');
+            
+            // Validate TypeScript definitions
+            expect(dtsContent).toContain('export interface');
+            expect(dtsContent).toContain('count: number');
+            expect(dtsContent).toContain('title: string');
+            expect(dtsContent).toContain('export interface');
+            expect(dtsContent).toContain('increment:');
+            expect(dtsContent).toContain('export type');
+            expect(dtsContent).toContain('export declare function render(');
         });
     });
 
     describe('Image Operations', () => {
         it('should save images correctly', async () => {
-            const handlers = createEditorHandlers(testConfig);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
 
             const imageData = Buffer.from('fake-image-data').toString('base64');
             const result = await handlers.onSaveImage({
@@ -299,7 +404,7 @@ describe('Editor Handlers', () => {
         });
 
         it('should check image existence correctly', async () => {
-            const handlers = createEditorHandlers(testConfig);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
 
             // Create test image
             const imagesDir = path.join(testPublicDir, 'images');

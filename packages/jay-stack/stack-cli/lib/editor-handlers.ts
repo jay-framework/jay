@@ -123,7 +123,10 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
         for (const {jayHtml, dirname, filename, fullPath} of createdJayHtmls) {
             const parsedJayHtml = await parseJayFile(jayHtml, dirname, filename, {relativePath: tsConfigPath}, JAY_IMPORT_RESOLVER)
             const definitionFile = generateElementDefinitionFile(parsedJayHtml)
-            await fs.promises.writeFile(definitionFile.val, fullPath + '.d.ts', 'utf-8');
+            if (definitionFile.validations.length > 0)
+                console.log(`failed to generate .d.ts for ${fullPath} with validation errors: ${definitionFile.validations.join('\n')}`);
+            else
+                await fs.promises.writeFile(fullPath + '.d.ts', definitionFile.val, 'utf-8');
         }
 
 
