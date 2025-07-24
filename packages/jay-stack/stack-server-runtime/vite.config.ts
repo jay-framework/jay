@@ -25,6 +25,7 @@ export default defineConfig({
                 '@jay-framework/stack-route-scanner',
                 '@jay-framework/stack-client-runtime',
                 '@jay-framework/compiler-jay-html',
+                'module',
             ],
         },
     },

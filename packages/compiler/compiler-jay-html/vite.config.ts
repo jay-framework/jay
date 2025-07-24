@@ -23,6 +23,7 @@ export default defineConfig({
                 '@jay-framework/compiler-analyze-exported-types',
                 'fs',
                 'path',
+                'module',
             ],
         },
     },

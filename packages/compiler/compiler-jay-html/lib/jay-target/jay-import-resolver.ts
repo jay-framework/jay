@@ -6,6 +6,9 @@ import {
 import { JayType, WithValidations } from '@jay-framework/compiler-shared';
 import fs from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 export interface JayImportResolver {
     resolveLink(importingModuleDir: string, link: string): string;
