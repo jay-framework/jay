@@ -6,12 +6,15 @@
             name="moodTracker"
             key="mt"
     ></script>
+    <style>
+      .main {background-color: lightsteelblue; border: 1px solid #3498db}
+    </style>
     <script type="application/jay-data">
       data:
     </script>
   </head>
   <body>
-    <div>
+    <div class="main">
       <h1>homepage</h1>
       <div>
         <div>Happy: {mt.happy} <button ref="mt.happy">more happy</button></div>
