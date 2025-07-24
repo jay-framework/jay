@@ -39,7 +39,6 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
     return {
         name: 'jay:runtime',
         configResolved(config) {
-            // This is the most reliable way
             isVite = true
         },
         buildStart(opts) {
