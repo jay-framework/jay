@@ -1,8 +1,6 @@
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript');
-const { NewLineKind } = tsModule;
+import tsBridge from '@jay-framework/typescript-bridge';
+const { createPrinter, NewLineKind } = tsBridge;
 import { JayRollupConfig } from '../common/types';
 import path from 'node:path';
 import {
@@ -25,7 +23,7 @@ export class JayPluginContext {
     constructor(readonly jayOptions: JayRollupConfig = {}) {
         this.projectRoot = path.dirname(jayOptions.tsConfigFilePath ?? process.cwd());
         this.outputDir = jayOptions.outputDir && path.join(this.projectRoot, jayOptions.outputDir);
-        this.tsPrinter = tsModule.createPrinter({ newLine: NewLineKind.LineFeed });
+        this.tsPrinter = createPrinter({ newLine: NewLineKind.LineFeed });
         let compilerPatternsParseResult = compileFunctionSplitPatternsBlock(
             (jayOptions.compilerPatternFiles || []).map((fileName) => {
                 let fileContent = fs.readFileSync(fileName, { encoding: 'utf8' });

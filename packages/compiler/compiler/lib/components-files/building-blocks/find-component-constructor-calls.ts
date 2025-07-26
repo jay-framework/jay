@@ -1,9 +1,9 @@
 import { SourceFileBindingResolver } from '../basic-analyzers/source-file-binding-resolver';
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
-const { forEachChild, isCallExpression, isStringLiteral, isVariableStatement } = tsModule;
+import tsBridge from '@jay-framework/typescript-bridge';
+
+const { isCallExpression, isIdentifier, isStringLiteral, isVariableStatement, forEachChild } =
+    tsBridge;
 import {
     flattenVariable,
     isImportModuleVariableRoot,

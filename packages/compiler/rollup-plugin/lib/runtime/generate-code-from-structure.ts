@@ -1,8 +1,6 @@
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
-const { transform } = tsModule;
+import tsBridge from '@jay-framework/typescript-bridge';
+const { transform, EmitHint, createSourceFile, ScriptTarget, ScriptKind } = tsBridge;
 import {
     transformComponentBridge,
     transformComponent,
@@ -127,17 +125,11 @@ function transformTsCode(
     id: string,
     code: string,
 ): string {
-    const tsSource = tsModule.createSourceFile(
-        id,
-        code,
-        tsModule.ScriptTarget.Latest,
-        true,
-        tsModule.ScriptKind.TS,
-    );
+    const tsSource = createSourceFile(id, code, ScriptTarget.Latest, true, ScriptKind.TS);
     const tsCode = transform(tsSource, transformers);
     checkDiagnosticsErrors(tsCode);
     const outputCode = jayContext.tsPrinter.printNode(
-        tsModule.EmitHint.Unspecified,
+        EmitHint.Unspecified,
         tsCode.transformed[0],
         tsSource,
     );

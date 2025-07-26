@@ -1,23 +1,22 @@
 import { isIdentifierOrPropertyAccessExpression } from './typescript-extras';
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
+import tsBridge from '@jay-framework/typescript-bridge';
+
 const {
-    visitEachChild,
-    isBinaryExpression,
-    isCallExpression,
-    isDecorator,
-    isExpressionStatement,
+    isSpreadElement,
     isFunctionDeclaration,
+    isDecorator,
+    isCallExpression,
     isIdentifier,
-    isNewExpression,
     isPropertyAccessExpression,
     isReturnStatement,
-    isSpreadElement,
+    isNewExpression,
+    isExpressionStatement,
+    isBinaryExpression,
     SyntaxKind,
     transform,
-} = tsModule;
+    visitEachChild,
+} = tsBridge;
 import {
     flattenVariable,
     isGlobalVariableRoot,

@@ -1,25 +1,24 @@
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
+import tsBridge from '@jay-framework/typescript-bridge';
+
 const {
+    isIdentifier,
+    SyntaxKind,
+    isStringLiteral,
     visitNode,
-    isArrayTypeNode,
+    isFunctionDeclaration,
+    isVariableStatement,
+    isImportDeclaration,
     isBlock,
+    isForStatement,
+    isVariableDeclarationList,
     isForInStatement,
     isForOfStatement,
-    isForStatement,
-    isFunctionDeclaration,
-    isFunctionTypeNode,
-    isIdentifier,
-    isImportDeclaration,
-    isStringLiteral,
     isTypeReferenceNode,
+    isArrayTypeNode,
+    isFunctionTypeNode,
     isUnionTypeNode,
-    isVariableDeclarationList,
-    isVariableStatement,
-    SyntaxKind,
-} = tsModule;
+} = tsBridge;
 import {
     FlattenedAccessChain,
     flattenVariable,

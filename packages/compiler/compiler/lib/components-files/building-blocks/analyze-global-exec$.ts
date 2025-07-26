@@ -1,9 +1,8 @@
 import { SourceFileStatementAnalyzer } from '../basic-analyzers/scoped-source-file-statement-analyzer';
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
-const { visitNode, isArrowFunction, isExpression } = tsModule;
+import tsBridge from '@jay-framework/typescript-bridge';
+
+const { transform, isArrowFunction, isExpression, visitNode } = tsBridge;
 import { astToCode, codeToAst } from '../ts-utils/ts-compiler-utils';
 import { FunctionRepositoryBuilder } from './function-repository-builder';
 

@@ -1,9 +1,8 @@
 import { codeToAst } from '../ts-utils/ts-compiler-utils';
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
-const { visitEachChild, isCallExpression, isPropertyAccessExpression } = tsModule;
+import tsBridge from '@jay-framework/typescript-bridge';
+
+const { visitEachChild, isCallExpression, isPropertyAccessExpression } = tsBridge;
 
 const analyzeEventHandlerCall =
     (context: ts.TransformationContext, factory: ts.NodeFactory, handlerKey: string) => (node) => {

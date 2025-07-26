@@ -1,8 +1,7 @@
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
-const { visitEachChild, visitNode } = tsModule;
+import tsBridge from '@jay-framework/typescript-bridge';
+
+const { visitEachChild, transform, visitNode } = tsBridge;
 
 export type ContextualVisitChild<Context> = (node: ts.Node, childContext?: Context) => ts.Node;
 export type ContextualVisitor<Context> = (

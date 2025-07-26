@@ -1,31 +1,30 @@
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
+import tsBridge from '@jay-framework/typescript-bridge';
+
 const {
-    isElementAccessExpression,
     isIdentifier,
+    isStatement,
     isObjectBindingPattern,
+    isArrayBindingPattern,
+    isBindingElement,
     isPropertyAccessExpression,
+    isElementAccessExpression,
     isStringLiteral,
+    isParenthesizedExpression,
+    isAsExpression,
     isObjectLiteralExpression,
     isPropertyAssignment,
     isShorthandPropertyAssignment,
-    isArrayBindingPattern,
-    isBindingElement,
-    isParenthesizedExpression,
-    isAsExpression,
-    isArrowFunction,
-    isFunctionExpression,
-    isStatement,
-    isNamespaceImport,
-    isNamedImports,
-    isCallExpression,
     isNumericLiteral,
     isToken,
-    SyntaxKind,
+    isNamespaceImport,
+    isNamedImports,
+    isArrowFunction,
+    isFunctionExpression,
+    isCallExpression,
     NodeFlags,
-} = tsModule;
+    SyntaxKind,
+} = tsBridge;
 export enum VariableRootType {
     FunctionParameter,
     FunctionDefinition,

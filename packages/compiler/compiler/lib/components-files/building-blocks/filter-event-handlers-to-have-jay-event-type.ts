@@ -1,9 +1,8 @@
 import { FoundEventHandler } from './find-event-handler-functions';
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
-const { isTypeReferenceNode } = tsModule;
+import tsBridge from '@jay-framework/typescript-bridge';
+
+const { isTypeReferenceNode } = tsBridge;
 import {
     ImportFromModuleResolvedType,
     SourceFileBindingResolver,

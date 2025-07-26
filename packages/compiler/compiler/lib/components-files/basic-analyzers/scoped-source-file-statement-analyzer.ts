@@ -1,26 +1,26 @@
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
+import tsBridge from '@jay-framework/typescript-bridge';
+
 const {
-    isArrowFunction,
     isBinaryExpression,
-    isBlock,
     isCallExpression,
-    isDoStatement,
-    isElementAccessExpression,
-    isForInStatement,
-    isForOfStatement,
-    isForStatement,
-    isIfStatement,
-    isLiteralExpression,
+    isIdentifier,
     isNewExpression,
     isPropertyAccessExpression,
+    SyntaxKind,
+    isArrowFunction,
+    isLiteralExpression,
     isStatement,
     isVariableStatement,
+    isBlock,
+    isIfStatement,
+    isForStatement,
+    isForOfStatement,
+    isForInStatement,
     isWhileStatement,
-    SyntaxKind,
-} = tsModule;
+    isDoStatement,
+    isElementAccessExpression,
+} = tsBridge;
 import {
     areResolvedTypesCompatible,
     FunctionResolvedType,

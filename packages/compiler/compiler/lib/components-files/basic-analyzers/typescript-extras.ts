@@ -1,8 +1,7 @@
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
-const { isIdentifier, isPropertyAccessExpression } = tsModule;
+import tsBridge from '@jay-framework/typescript-bridge';
+
+const { isIdentifier, isPropertyAccessExpression } = tsBridge;
 
 export function isIdentifierOrPropertyAccessExpression(
     node: ts.Node,

@@ -28,6 +28,7 @@
     "@jay-framework/component": "workspace:^",
     "@jay-framework/runtime": "workspace:^",
     "@jay-framework/secure": "workspace:^",
+    "@jay-framework/typescript-bridge": "workspace:^",
     "@types/js-yaml": "^4.0.9",
     "change-case": "^4.1.2",
     "js-beautify": "^1.14.11",

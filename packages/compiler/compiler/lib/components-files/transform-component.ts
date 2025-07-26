@@ -1,9 +1,8 @@
 import { mkTransformer, SourceFileTransformerContext } from './ts-utils/mk-transformer';
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
-const { isImportDeclaration, isStringLiteral, visitEachChild } = tsModule;
+import tsBridge from '@jay-framework/typescript-bridge';
+
+const { visitEachChild, transform, isStringLiteral, isImportDeclaration } = tsBridge;
 import { findComponentConstructorsBlock } from './building-blocks/find-component-constructors';
 import { findEventHandlersBlock } from './building-blocks/find-event-handler-functions';
 import { CompiledPattern } from './basic-analyzers/compile-function-split-patterns';

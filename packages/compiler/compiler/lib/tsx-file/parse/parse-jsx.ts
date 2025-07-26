@@ -1,8 +1,7 @@
 import { parseOpeningElement } from './parse-opening-element';
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
+import tsBridge from '@jay-framework/typescript-bridge';
+
 const {
     SyntaxKind,
     forEachChild,
@@ -11,7 +10,7 @@ const {
     isJsxClosingElement,
     isJsxText,
     isJsxExpression,
-} = tsModule;
+} = tsBridge;
 import { JsxBlock } from '../jsx-block';
 
 const SUPPORTED_JSX_NODES = new Set([
