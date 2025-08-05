@@ -52,16 +52,16 @@ function BoardConstructor({ title }: Props<BoardProps>, refs: BoardElementRefs) 
         setPillars(patch(pillars(), jsonPatch));
     }
 
-    refs.pillars.onMoveTaskToNext(({ viewState, event }) => {
+    refs.boardPillars.pillars.onMoveTaskToNext(({ viewState, event }) => {
         moveTask(viewState.pillarId, event.taskId, +1, 0);
     });
-    refs.pillars.onMoveTaskToPrev(({ viewState, event }) => {
+    refs.boardPillars.pillars.onMoveTaskToPrev(({ viewState, event }) => {
         moveTask(viewState.pillarId, event.taskId, -1, 0);
     });
-    refs.pillars.onMoveTaskUp(({ viewState, event }) => {
+    refs.boardPillars.pillars.onMoveTaskUp(({ viewState, event }) => {
         moveTask(viewState.pillarId, event.taskId, 0, -1);
     });
-    refs.pillars.onMoveTaskDown(({ viewState, event }) => {
+    refs.boardPillars.pillars.onMoveTaskDown(({ viewState, event }) => {
         moveTask(viewState.pillarId, event.taskId, 0, +1);
     });
 

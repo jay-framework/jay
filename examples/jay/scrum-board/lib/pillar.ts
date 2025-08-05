@@ -42,10 +42,10 @@ function PillarConstructor(
         };
     });
 
-    refs.tasks.onNext(({ viewState }) => onMoveTaskToNext.emit({ taskId: viewState.id }));
-    refs.tasks.onPrev(({ viewState }) => onMoveTaskToPrev.emit({ taskId: viewState.id }));
-    refs.tasks.onUp(({ viewState }) => onMoveTaskUp.emit({ taskId: viewState.id }));
-    refs.tasks.onDown(({ viewState }) => onMoveTaskDown.emit({ taskId: viewState.id }));
+    refs.taskData.tasks.onNext(({ viewState }) => onMoveTaskToNext.emit({ taskId: viewState.id }));
+    refs.taskData.tasks.onPrev(({ viewState }) => onMoveTaskToPrev.emit({ taskId: viewState.id }));
+    refs.taskData.tasks.onUp(({ viewState }) => onMoveTaskUp.emit({ taskId: viewState.id }));
+    refs.taskData.tasks.onDown(({ viewState }) => onMoveTaskDown.emit({ taskId: viewState.id }));
 
     return {
         render: () => ({ title, taskData }),
