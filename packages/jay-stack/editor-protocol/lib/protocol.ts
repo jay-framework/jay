@@ -17,10 +17,12 @@ export interface PublishMessage extends BaseMessage<PublishResponse> {
         route: string;
         jayHtml: string;
         name: string;
+        contract?: string; // Optional contract content for headless pages
     }[];
     components?: {
         jayHtml: string;
         name: string;
+        contract?: string; // Optional contract content for headless components
     }[];
 }
 
@@ -44,6 +46,7 @@ export interface PublishResponse extends BaseResponse {
     status: {
         success: boolean;
         filePath?: string;
+        contractPath?: string; // Path to published contract file (if applicable)
         error?: string;
     }[];
 }

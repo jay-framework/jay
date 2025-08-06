@@ -450,4 +450,222 @@ describe('Editor Handlers', () => {
             expect(result2.imageUrl).toBeUndefined();
         });
     });
+
+    describe('Contract Publishing', () => {
+        it('should publish pages with contracts correctly', async () => {
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+
+            const contractContent = `name: TestPage
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    required: true
+  - tag: count
+    type: data
+    dataType: number
+    required: true`;
+
+            const result = await handlers.onPublish({
+                type: 'publish',
+                pages: [
+                    {
+                        route: '/',
+                        jayHtml: createValidJayHtml(
+                            '<div>{title}: {count}</div>',
+                            'data:\n  title: string\n  count: number',
+                        ),
+                        name: 'Home',
+                        contract: contractContent,
+                    },
+                ],
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.status).toHaveLength(1);
+            expect(result.status[0].success).toBe(true);
+            expect(result.status[0].filePath).toBe(path.join(testPagesDir, 'page.jay-html'));
+            expect(result.status[0].contractPath).toBe(
+                path.join(testPagesDir, 'page.jay-contract'),
+            );
+
+            // Check that both files were created
+            expect(fs.existsSync(path.join(testPagesDir, 'page.jay-html'))).toBe(true);
+            expect(fs.existsSync(path.join(testPagesDir, 'page.jay-contract'))).toBe(true);
+
+            // Check contract content
+            const contractContentRead = fs.readFileSync(
+                path.join(testPagesDir, 'page.jay-contract'),
+                'utf-8',
+            );
+            expect(contractContentRead).toBe(contractContent);
+        });
+
+        it('should publish components with contracts correctly', async () => {
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+
+            const contractContent = `name: Counter
+tags:
+  - tag: count
+    type: data
+    dataType: number
+    required: true
+  - tag: title
+    type: data
+    dataType: string
+    required: true
+  - tag: increment
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Button to increment the counter
+  - tag: decrement
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Button to decrement the counter`;
+
+            const result = await handlers.onPublish({
+                type: 'publish',
+                components: [
+                    {
+                        jayHtml: createValidJayHtml(
+                            '<div><span>{title}: {count}</span><button ref="increment">+</button></div>',
+                            'data:\n  count: number\n  title: string',
+                        ),
+                        name: 'Counter',
+                        contract: contractContent,
+                    },
+                ],
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.status).toHaveLength(1);
+            expect(result.status[0].success).toBe(true);
+            expect(result.status[0].filePath).toBe(
+                path.join(testComponentsDir, 'Counter.jay-html'),
+            );
+            expect(result.status[0].contractPath).toBe(
+                path.join(testComponentsDir, 'Counter.jay-contract'),
+            );
+
+            // Check that both files were created
+            expect(fs.existsSync(path.join(testComponentsDir, 'Counter.jay-html'))).toBe(true);
+            expect(fs.existsSync(path.join(testComponentsDir, 'Counter.jay-contract'))).toBe(true);
+
+            // Check contract content
+            const contractContentRead = fs.readFileSync(
+                path.join(testComponentsDir, 'Counter.jay-contract'),
+                'utf-8',
+            );
+            expect(contractContentRead).toBe(contractContent);
+        });
+
+        it('should publish without contracts when not provided', async () => {
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+
+            const result = await handlers.onPublish({
+                type: 'publish',
+                pages: [
+                    {
+                        route: '/no-contract',
+                        jayHtml: createValidJayHtml('<div>No contract page</div>'),
+                        name: 'NoContract',
+                        // No contract provided
+                    },
+                ],
+                components: [
+                    {
+                        jayHtml: createValidJayHtml('<div>No contract component</div>'),
+                        name: 'NoContractComponent',
+                        // No contract provided
+                    },
+                ],
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.status).toHaveLength(2);
+
+            // Page result
+            expect(result.status[0].success).toBe(true);
+            expect(result.status[0].filePath).toBe(
+                path.join(testPagesDir, 'no-contract', 'page.jay-html'),
+            );
+            expect(result.status[0].contractPath).toBeUndefined();
+
+            // Component result
+            expect(result.status[1].success).toBe(true);
+            expect(result.status[1].filePath).toBe(
+                path.join(testComponentsDir, 'NoContractComponent.jay-html'),
+            );
+            expect(result.status[1].contractPath).toBeUndefined();
+
+            // Check that only jay-html files were created
+            expect(fs.existsSync(path.join(testPagesDir, 'no-contract', 'page.jay-html'))).toBe(
+                true,
+            );
+            expect(fs.existsSync(path.join(testPagesDir, 'no-contract', 'page.jay-contract'))).toBe(
+                false,
+            );
+            expect(
+                fs.existsSync(path.join(testComponentsDir, 'NoContractComponent.jay-html')),
+            ).toBe(true);
+            expect(
+                fs.existsSync(path.join(testComponentsDir, 'NoContractComponent.jay-contract')),
+            ).toBe(false);
+        });
+
+        it('should handle mixed publishing (some with contracts, some without)', async () => {
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+
+            const contractContent = `name: WithContract
+tags:
+  - tag: message
+    type: data
+    dataType: string
+    required: true`;
+
+            const result = await handlers.onPublish({
+                type: 'publish',
+                components: [
+                    {
+                        jayHtml: createValidJayHtml(
+                            '<div>{message}</div>',
+                            'data:\n  message: string',
+                        ),
+                        name: 'WithContract',
+                        contract: contractContent,
+                    },
+                    {
+                        jayHtml: createValidJayHtml('<div>No contract</div>'),
+                        name: 'WithoutContract',
+                        // No contract
+                    },
+                ],
+            });
+
+            expect(result.success).toBe(true);
+            expect(result.status).toHaveLength(2);
+
+            // First component with contract
+            expect(result.status[0].success).toBe(true);
+            expect(result.status[0].contractPath).toBe(
+                path.join(testComponentsDir, 'WithContract.jay-contract'),
+            );
+
+            // Second component without contract
+            expect(result.status[1].success).toBe(true);
+            expect(result.status[1].contractPath).toBeUndefined();
+
+            // Check files
+            expect(fs.existsSync(path.join(testComponentsDir, 'WithContract.jay-html'))).toBe(true);
+            expect(fs.existsSync(path.join(testComponentsDir, 'WithContract.jay-contract'))).toBe(
+                true,
+            );
+            expect(fs.existsSync(path.join(testComponentsDir, 'WithoutContract.jay-html'))).toBe(
+                true,
+            );
+            expect(
+                fs.existsSync(path.join(testComponentsDir, 'WithoutContract.jay-contract')),
+            ).toBe(false);
+        });
+    });
 });

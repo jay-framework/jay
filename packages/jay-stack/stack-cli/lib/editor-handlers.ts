@@ -17,7 +17,7 @@ import {
     JAY_IMPORT_RESOLVER,
     parseJayFile,
 } from '@jay-framework/compiler-jay-html';
-import { JAY_EXTENSION } from '@jay-framework/compiler-shared';
+import { JAY_EXTENSION, JAY_CONTRACT_EXTENSION } from '@jay-framework/compiler-shared';
 
 const PAGE_FILENAME = `page${JAY_EXTENSION}`;
 
@@ -45,6 +45,16 @@ async function handlePagePublish(
 
         // Write the page content
         await fs.promises.writeFile(fullPath, page.jayHtml, 'utf-8');
+
+        let contractPath: string | undefined;
+
+        // Write contract file if provided
+        if (page.contract) {
+            contractPath = path.join(dirname, `page${JAY_CONTRACT_EXTENSION}`);
+            await fs.promises.writeFile(contractPath, page.contract, 'utf-8');
+            console.log(`📄 Published page contract: ${contractPath}`);
+        }
+
         const createdJayHtml: CreatedJayHtml = {
             jayHtml: page.jayHtml,
             filename: PAGE_FILENAME,
@@ -58,6 +68,7 @@ async function handlePagePublish(
             {
                 success: true,
                 filePath: fullPath,
+                contractPath,
             },
             createdJayHtml,
         ];
@@ -87,6 +98,15 @@ async function handleComponentPublish(
 
         // Write the component content
         await fs.promises.writeFile(fullPath, component.jayHtml, 'utf-8');
+
+        let contractPath: string | undefined;
+
+        // Write contract file if provided
+        if (component.contract) {
+            contractPath = path.join(dirname, `${component.name}${JAY_CONTRACT_EXTENSION}`);
+            await fs.promises.writeFile(contractPath, component.contract, 'utf-8');
+        }
+
         const createdJayHtml: CreatedJayHtml = {
             jayHtml: component.jayHtml,
             filename,
@@ -100,6 +120,7 @@ async function handleComponentPublish(
             {
                 success: true,
                 filePath: fullPath,
+                contractPath,
             },
             createdJayHtml,
         ];

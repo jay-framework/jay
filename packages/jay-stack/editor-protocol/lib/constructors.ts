@@ -10,10 +10,14 @@ import type {
 } from './protocol';
 
 // Message constructors
-export function createPublishMessage(pages: PublishMessage['pages']): PublishMessage {
+export function createPublishMessage(
+    pages?: PublishMessage['pages'],
+    components?: PublishMessage['components'],
+): PublishMessage {
     return {
         type: 'publish',
         pages,
+        components,
     };
 }
 
