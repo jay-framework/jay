@@ -1,9 +1,8 @@
 import { JAY_COMPONENT } from '@jay-framework/compiler-shared';
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
-const { forEachChild, isImportDeclaration, isStringLiteral } = tsModule;
+import tsBridge from '@jay-framework/typescript-bridge';
+
+const { isStringLiteral, forEachChild, isImportDeclaration } = tsBridge;
 import { getImportName, getImportSpecifiers } from '../ts-utils/extract-imports';
 
 export function findMakeJayComponentImport(makeJayComponentName: string, node: ts.Node): string {

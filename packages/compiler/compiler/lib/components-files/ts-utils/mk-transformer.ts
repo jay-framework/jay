@@ -1,7 +1,4 @@
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
 
 export interface SourceFileTransformerContext {
     factory: ts.NodeFactory;

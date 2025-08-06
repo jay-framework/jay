@@ -4549,6 +4549,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@jay-framework/typescript-bridge@workspace:packages/compiler/typescript-bridge":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/typescript-bridge@workspace:packages/compiler/typescript-bridge"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@types/node": ^20.11.5
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+  languageName: unknown
+  linkType: soft
+
 "@jay-framework/vite-plugin@workspace:^, @jay-framework/vite-plugin@workspace:packages/compiler/vite-plugin":
   version: 0.0.0-use.local
   resolution: "@jay-framework/vite-plugin@workspace:packages/compiler/vite-plugin"

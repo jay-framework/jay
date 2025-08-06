@@ -1,9 +1,8 @@
 import { WithValidations } from '@jay-framework/compiler-shared';
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
-const { SyntaxKind } = tsModule;
+import tsBridge from '@jay-framework/typescript-bridge';
+
+const { SyntaxKind } = tsBridge;
 
 export function getBaseElementName<T extends { name: ts.BindingName }>(
     makeJayComponentName: string,

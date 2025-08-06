@@ -1,9 +1,8 @@
 import { withOriginalTrace } from '@jay-framework/compiler-shared';
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
-const { ScriptTarget, createSourceFile, ScriptKind } = tsModule;
+import tsBridge from '@jay-framework/typescript-bridge';
+
+const { createSourceFile, ScriptTarget, ScriptKind } = tsBridge;
 
 export function createTsSourceFileFromSource(
     filePath: string,

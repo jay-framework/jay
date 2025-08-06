@@ -1,23 +1,22 @@
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript');
+import tsBridge from '@jay-framework/typescript-bridge';
+
 const {
+    visitEachChild,
     isArrowFunction,
-    isConstructorDeclaration,
-    isFunctionDeclaration,
     isFunctionExpression,
-    isGetAccessorDeclaration,
-    isMethodDeclaration,
-    isSetAccessorDeclaration,
-    createPrinter,
-    EmitHint,
     createSourceFile,
     ScriptTarget,
-    setTextRange,
-    visitEachChild,
+    isFunctionDeclaration,
+    isMethodDeclaration,
+    isConstructorDeclaration,
+    isGetAccessorDeclaration,
+    isSetAccessorDeclaration,
+    createPrinter,
     NewLineKind,
-} = tsModule;
+    EmitHint,
+    setTextRange,
+} = tsBridge;
 
 const printer: ts.Printer = createPrinter({
     newLine: NewLineKind.LineFeed,

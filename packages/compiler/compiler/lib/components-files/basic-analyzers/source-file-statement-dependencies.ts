@@ -1,9 +1,8 @@
 import { SourceFileBindingResolver } from './source-file-binding-resolver';
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
-const { isIdentifier, isStatement, visitNode } = tsModule;
+import tsBridge from '@jay-framework/typescript-bridge';
+
+const { isIdentifier, isStatement, visitNode } = tsBridge;
 
 export interface StatementDependencies {
     id: number;

@@ -1,17 +1,17 @@
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
+import tsBridge from '@jay-framework/typescript-bridge';
+
 const {
-    SyntaxKind,
     visitEachChild,
-    visitNode,
+    isIdentifier,
+    SyntaxKind,
+    transform,
+    isStatement,
     isBlock,
     isExpression,
-    isIdentifier,
     isLiteralExpression,
-    isStatement,
-} = tsModule;
+    visitNode,
+} = tsBridge;
 import {
     CompiledPattern,
     CompilePatternType,

@@ -1,28 +1,24 @@
 import fs from 'fs';
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
+import tsBridge from '@jay-framework/typescript-bridge';
 const {
-    convertCompilerOptionsFromJson,
-    createProgram,
     isCallExpression,
     isFunctionDeclaration,
     isIdentifier,
+    SyntaxKind,
+    isStringLiteral,
+    isQualifiedName,
+    isTypeReferenceNode,
+    isPropertySignature,
+    convertCompilerOptionsFromJson,
+    createProgram,
     isImportDeclaration,
     isInterfaceDeclaration,
     isNamedImports,
-    isPropertySignature,
-    isQualifiedName,
-    isStringLiteral,
     isTypeAliasDeclaration,
-    isTypeReferenceNode,
     isVariableStatement,
     parseConfigFileTextToJson,
-    SyntaxKind,
-} = tsModule;
-export * from './resolve-ts-config';
-
+} = tsBridge;
 import { resolveTsConfig, ResolveTsConfigOptions } from './resolve-ts-config';
 import {
     JAY_COMPONENT,
@@ -37,6 +33,7 @@ import {
     MAKE_JAY_COMPONENT,
     resolvePrimitiveType,
 } from '@jay-framework/compiler-shared';
+export * from './resolve-ts-config';
 
 function getTypeName(typeName: ts.Identifier | ts.QualifiedName): string {
     if (isIdentifier(typeName)) return typeName.text;

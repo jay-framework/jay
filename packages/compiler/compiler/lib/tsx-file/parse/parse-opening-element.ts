@@ -1,16 +1,15 @@
 import { JsxBlock } from '../jsx-block';
-import { createRequire } from 'module';
 import type * as ts from 'typescript';
-const require = createRequire(import.meta.url);
-const tsModule = require('typescript') as typeof ts;
+import tsBridge from '@jay-framework/typescript-bridge';
+
 const {
-    isArrowFunction,
     isBinaryExpression,
+    isArrowFunction,
+    isStringLiteral,
     isJsxAttribute,
     isJsxExpression,
     isJsxSelfClosingElement,
-    isStringLiteral,
-} = tsModule;
+} = tsBridge;
 
 export function parseOpeningElement(
     node: ts.JsxOpeningElement | ts.JsxSelfClosingElement,

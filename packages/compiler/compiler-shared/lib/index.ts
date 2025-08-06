@@ -10,3 +10,4 @@ export * from './compiler-source-file';
 export * from './generate-target';
 export * from './errors';
 export * from './prettify';
+export * from '@jay-framework/typescript-bridge';
