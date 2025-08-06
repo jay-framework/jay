@@ -105,6 +105,7 @@ The Jay Stack CLI supports publishing both pages and components through editor i
 ### Contract Files
 
 Contract files (`.jay-contract`) define the interface for headless components:
+
 - **Data Structure**: Defines what data the component expects
 - **Refs Interface**: Specifies interactive elements and their types
 - **Component Name**: Identifies the component for imports

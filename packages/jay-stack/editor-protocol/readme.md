@@ -30,12 +30,14 @@ import {
 
 // Use in editor applications
 const editor: EditorProtocol = {
-  publish: async (params) => ({ 
-    status: [{ 
-      success: true, 
-      filePath: '/test.jay-html',
-      contractPath: '/test.jay-contract' // Optional contract file path
-    }] 
+  publish: async (params) => ({
+    status: [
+      {
+        success: true,
+        filePath: '/test.jay-html',
+        contractPath: '/test.jay-contract', // Optional contract file path
+      },
+    ],
   }),
   saveImage: async (params) => ({ success: true, imageUrl: '/assets/image.png' }),
   hasImage: async (params) => ({ exists: true, imageUrl: '/assets/image.png' }),
@@ -51,30 +53,30 @@ const server: DevServerProtocol = {
 // Create messages using constructors
 const pages = [
   { route: '/home', jayHtml: '<div>Home</div>', name: 'Home' },
-  { 
-    route: '/about', 
-    jayHtml: '<div>{title}</div>', 
-    name: 'About', 
+  {
+    route: '/about',
+    jayHtml: '<div>{title}</div>',
+    name: 'About',
     contract: `name: About
 tags:
   - tag: title
     type: data
     dataType: string
-    required: true` 
+    required: true`,
   },
 ];
 
 const components = [
   { jayHtml: '<button>Click me</button>', name: 'Button' },
-  { 
-    jayHtml: '<div>{count}</div>', 
-    name: 'Counter', 
+  {
+    jayHtml: '<div>{count}</div>',
+    name: 'Counter',
     contract: `name: Counter
 tags:
   - tag: count
     type: data
     dataType: number
-    required: true` 
+    required: true`,
   },
 ];
 
@@ -105,6 +107,7 @@ const protocolMessage = createProtocolMessage(publishMessage);
 Publishes jay-html files and optional jay-contract files to the dev server. Pages are published at specified routes, while components are published to the components directory.
 
 **Features:**
+
 - **Pages**: Published as `page.jay-html` and optional `page.jay-contract` files
 - **Components**: Published as `{name}.jay-html` and optional `{name}.jay-contract` files
 - **Contract Support**: Optional contract content for headless components
@@ -136,7 +139,7 @@ tags:
   - tag: increment
     type: interactive
     elementType: HTMLButtonElement
-    description: Button to increment the counter`
+    description: Button to increment the counter`,
 };
 
 const message = createPublishMessage(undefined, [component]);
