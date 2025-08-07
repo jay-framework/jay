@@ -22,5 +22,6 @@ const funcRepository: FunctionsRepository = {
         return { $0: event.keyCode };
     },
     '1': ({ event }: JayEvent<any, any>) => ({ $0: event.target.value }),
+    '2': ({ event }: JayEvent<any, any>) => ({ $0: event.target.checked }),
 };
 export const TodoComponent = makeJayComponentBridge(render, { funcRepository });

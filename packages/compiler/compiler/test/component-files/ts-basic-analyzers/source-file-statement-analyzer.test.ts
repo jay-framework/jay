@@ -201,6 +201,90 @@ describe('SourceFileStatementAnalyzer', () => {
             });
         });
 
+        describe('analyze read patterns', () => {
+            it('should match read patterns on function parameter', async () => {
+                const sourceFile = createTsSourceFile(`
+                import {JayEvent} from '@jay-framework/runtime';
+                ({event}: JayEvent) => {
+                    console.log(event.target.value);
+                }`);
+                const patterns = [...readEventTargetValuePattern()];
+                const bindingResolver = new SourceFileBindingResolver(sourceFile);
+
+                const analyzedFile = new ScopedSourceFileStatementAnalyzer(
+                    sourceFile,
+                    bindingResolver,
+                    patterns,
+                    sourceFile.statements[1],
+                );
+
+                expect(await printAnalyzedStatements(analyzedFile)).toEqual(
+                    new Set([
+                        'console.log(event.target.value); --> sandbox, patterns matched: [0]',
+                    ]),
+                );
+                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(
+                    new Set(['0: event.target.value; matches inputValuePattern']),
+                );
+            });
+
+            it('should match read patterns on variable assignment', async () => {
+                const sourceFile = createTsSourceFile(`
+                import {JayEvent} from '@jay-framework/runtime';
+                ({event}: JayEvent) => {
+                    const value = event.target.value;
+                }`);
+                const patterns = [...readEventTargetValuePattern()];
+                const bindingResolver = new SourceFileBindingResolver(sourceFile);
+
+                const analyzedFile = new ScopedSourceFileStatementAnalyzer(
+                    sourceFile,
+                    bindingResolver,
+                    patterns,
+                    sourceFile.statements[1],
+                );
+
+                expect(await printAnalyzedStatements(analyzedFile)).toEqual(
+                    new Set(['const value = event.target.value; --> main, patterns matched: [0]']),
+                );
+                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(
+                    new Set(['0: event.target.value; matches inputValuePattern']),
+                );
+            });
+
+            it('should match read patterns on literal object construction', async () => {
+                const sourceFile = createTsSourceFile(`
+                import {JayEvent} from '@jay-framework/runtime';
+                ({event}: JayEvent) => {
+                    const obj = {
+                      value: event.target.value,
+                      clicked: event.target.clicked
+                    }
+                }`);
+                const patterns = [...readEventTargetValuePattern()];
+                const bindingResolver = new SourceFileBindingResolver(sourceFile);
+
+                const analyzedFile = new ScopedSourceFileStatementAnalyzer(
+                    sourceFile,
+                    bindingResolver,
+                    patterns,
+                    sourceFile.statements[1],
+                );
+
+                expect(await printAnalyzedStatements(analyzedFile)).toEqual(
+                    new Set([
+                        'const obj = {\n' +
+                            '    value: event.target.value,\n' +
+                            '    clicked: event.target.clicked,\n' +
+                            '}; --> sandbox, patterns matched: [0]',
+                    ]),
+                );
+                expect(await printAnalyzedExpressions(analyzedFile)).toEqual(
+                    new Set(['0: event.target.value; matches inputValuePattern']),
+                );
+            });
+        });
+
         describe('analyze function calls', () => {
             it('should support call patterns', async () => {
                 const sourceFile = createTsSourceFile(`

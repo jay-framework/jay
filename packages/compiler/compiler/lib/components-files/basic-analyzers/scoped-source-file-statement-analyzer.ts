@@ -20,6 +20,7 @@ const {
     isWhileStatement,
     isDoStatement,
     isElementAccessExpression,
+    isPropertyAssignment,
 } = tsBridge;
 import {
     areResolvedTypesCompatible,
@@ -297,6 +298,15 @@ export class ScopedSourceFileStatementAnalyzer {
                     );
                     if (this.getStatementStatus(node)?.targetEnv === JayTargetEnv.any)
                         this.getStatementStatus(node).targetEnv = JayTargetEnv.main;
+                } else if (isPropertyAssignment(node)) {
+                    visitChild(node.initializer, {
+                        statement,
+                        roleInParent: RoleInParent.read,
+                    });
+                    visitChild(node.name, {
+                        statement,
+                        roleInParent: RoleInParent.none,
+                    });
                 } else if (isArrowFunction(node) && !isBlock(node.body)) {
                     visitChild(node.body, { statement, roleInParent: RoleInParent.read });
                     const bodyStatus = this.getExpressionStatus(node.body);
