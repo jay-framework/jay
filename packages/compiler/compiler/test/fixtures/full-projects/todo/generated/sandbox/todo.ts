@@ -108,11 +108,11 @@ function TodoComponentConstructor({ initialTodos }: Props<TodoProps>, refs: Todo
     refs.shownTodos.items.onRemove(({ viewState: item }) => {
         setTodos(todos().filter((_) => _ !== item));
     });
-    refs.toggleAll.onchange(({ event }: JayEvent<Event, TodoViewState>) =>
+    refs.toggleAll.onchange$(handler$('2')).then(({ event }: JayEvent<any, TodoViewState>) =>
         setTodos(
             todos().map((todo) => ({
                 ...todo,
-                isCompleted: (event.target as HTMLInputElement).checked,
+                isCompleted: event.$0,
             })),
         ),
     );
