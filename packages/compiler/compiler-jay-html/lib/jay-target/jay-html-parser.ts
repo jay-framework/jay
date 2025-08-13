@@ -8,7 +8,13 @@ import {
 import yaml from 'js-yaml';
 import { capitalCase, pascalCase } from 'change-case';
 import pluralize from 'pluralize';
-import { parseEnumValues, parseImportNames, parseIsEnum } from '../expressions/expression-compiler';
+import { 
+    parseEnumValues, 
+    parseImportNames, 
+    parseIsEnum,
+    parseIsPromise,
+    parsePromiseType,
+} from '../expressions/expression-compiler';
 import { ResolveTsConfigOptions } from '@jay-framework/compiler-analyze-exported-types';
 import path from 'path';
 import fs from 'fs/promises';
@@ -20,6 +26,7 @@ import {
     JayType,
     JayUnknown,
     resolvePrimitiveType,
+    JayPromiseType,
 } from '@jay-framework/compiler-shared';
 import { SourceFileFormat } from '@jay-framework/compiler-shared';
 import { JayImportLink, JayImportName } from '@jay-framework/compiler-shared';
@@ -80,6 +87,18 @@ function resolveType(
                 toInterfaceName([...path, prop]),
                 parseEnumValues(data[prop]),
             );
+        } else if (parseIsPromise(data[prop])) {
+            const innerType = parsePromiseType(data[prop]);
+            if (innerType) {
+                const resolvedInnerType = resolvePrimitiveType(innerType);
+                if (resolvedInnerType !== JayUnknown) {
+                    types[prop] = new JayPromiseType(resolvedInnerType);
+                } else {
+                    types[prop] = new JayPromiseType(JayUnknown);
+                }
+            } else {
+                types[prop] = new JayPromiseType(JayUnknown);
+            }
         } else {
             let [, ...pathTail] = path;
             validations.push(

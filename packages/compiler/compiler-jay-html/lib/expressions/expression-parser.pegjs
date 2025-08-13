@@ -87,6 +87,22 @@ enum
   }, [first])
 }
 
+is_promise
+  = _ "async" _ "variant" _ "of" _ "".* {
+  return true
+}
+  / _ "async" _ "".* {
+  return true
+}
+
+promise_type
+  = _ "async" _ "variant" _ "of" _ innerType:Identifier _ {
+  return innerType
+}
+  / _ "async" _ innerType:Identifier _ {
+  return innerType
+}
+
 booleanAttribute
   = template:template {
   let [renderFragment, isDynamic] = template;

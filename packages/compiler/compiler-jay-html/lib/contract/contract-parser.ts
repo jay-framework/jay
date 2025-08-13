@@ -3,10 +3,17 @@ import {
     JayType,
     resolvePrimitiveType,
     JayEnumType,
+    JayPromiseType,
+    JayUnknown,
 } from '@jay-framework/compiler-shared';
 import { Contract, ContractTag, ContractTagType } from './contract';
 import yaml from 'js-yaml';
-import { parseIsEnum, parseEnumValues } from '../';
+import { 
+    parseIsEnum, 
+    parseEnumValues, 
+    parseIsPromise, 
+    parsePromiseType,
+} from '../';
 import { pascalCase } from 'change-case';
 
 interface ParsedYamlTag {
@@ -30,6 +37,16 @@ function parseDataType(tag: string, dataType: string): JayType | undefined {
     if (!dataType) return undefined;
     if (parseIsEnum(dataType)) {
         return new JayEnumType(pascalCase(tag), parseEnumValues(dataType));
+    }
+    if (parseIsPromise(dataType)) {
+        const innerType = parsePromiseType(dataType);
+        if (innerType) {
+            const resolvedInnerType = resolvePrimitiveType(innerType);
+            if (resolvedInnerType !== JayUnknown) {
+                return new JayPromiseType(resolvedInnerType);
+            }
+        }
+        return new JayPromiseType(JayUnknown);
     }
     return resolvePrimitiveType(dataType);
 }

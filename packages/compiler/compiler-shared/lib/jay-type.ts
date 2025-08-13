@@ -35,6 +35,8 @@ const typesMap = {
     number: JayNumber,
     boolean: JayBoolean,
     date: JayDate,
+    currency: JayCurrencyType,
+    'zoned-date': JayDateWithTimezoneType
 };
 
 export function resolvePrimitiveType(typeName: string): JayType {

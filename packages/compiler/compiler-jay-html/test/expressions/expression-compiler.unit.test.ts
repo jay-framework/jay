@@ -9,6 +9,8 @@ import {
     parseEnumValues,
     parseImportNames,
     parseIsEnum,
+    parseIsPromise,
+    parsePromiseType,
     parsePropertyExpression,
     parseReactClassExpression,
     parseReactTextExpression,
@@ -731,6 +733,38 @@ describe('expression-compiler', () => {
             }).toThrow(
                 'failed to parse expression [enum(not an enum]. Expected ")" or "|" but "a" found.',
             );
+        });
+    });
+
+    describe('parsePromise', () => {
+        it('recognizes "async variant of <type>" format', () => {
+            const actual = parseIsPromise('async variant of string');
+            expect(actual).toEqual(true);
+        });
+
+        it('recognizes shorthand "async <type>" format', () => {
+            const actual = parseIsPromise('async string');
+            expect(actual).toEqual(true);
+        });
+
+        it('does not recognize non-promise types', () => {
+            const actual = parseIsPromise('string');
+            expect(actual).toEqual(false);
+        });
+
+        it('extracts inner type from "async variant of <type>" format', () => {
+            const actual = parsePromiseType('async variant of string');
+            expect(actual).toEqual('string');
+        });
+
+        it('extracts inner type from shorthand "async <type>" format', () => {
+            const actual = parsePromiseType('async string');
+            expect(actual).toEqual('string');
+        });
+
+        it('handles complex type names', () => {
+            const actual = parsePromiseType('async variant of UserProfile');
+            expect(actual).toEqual('UserProfile');
         });
     });
 });
