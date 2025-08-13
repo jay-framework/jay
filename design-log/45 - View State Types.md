@@ -21,6 +21,55 @@ To have full support for a type system, we need to extend the type system with a
 * `Currency` - which is a pair of currency symbol and amount
 * `DateWithTimezone` - date with a specific timezone to be rendered at
 
+## Promise of Objects and Arrays
+
+For complex types like objects and arrays, the `async variant of <type>` syntax becomes unwieldy. Instead, we use an object structure with an `async` property that contains the nested type definition.
+
+### Object Promise
+
+```yaml
+# Instead of: async variant of UserProfile
+userData:
+  async:
+    name: string
+    email: string
+    preferences:
+      theme: string
+      language: string
+```
+
+### Array Promise
+
+```yaml
+# Instead of: async variant of Notification[]
+notifications:
+  async:
+    - id: string
+      message: string
+      timestamp: date
+```
+
+### Mixed Promise Types
+
+```yaml
+data:
+  userProfile:
+    async:
+      name: string
+      email: string
+  settings:
+    async:
+      theme: string
+      language: string
+  notifications:
+    async:
+      - id: string
+        message: string
+        timestamp: date
+```
+
+This approach maintains the YAML structure while clearly indicating which properties are asynchronous, making contracts more readable and maintainable.
+
 ## Timezone
 
 Another challenge is that in Javascript, on the Browser, a `Date` object is always rendered at the browser local timezone
