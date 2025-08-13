@@ -10,6 +10,7 @@ export enum JayTypeKind {
     object,
     array,
     union,
+    promise
 }
 export interface JayType {
     name: string;
@@ -24,8 +25,11 @@ export class JayAtomicType implements JayType {
 export const JayString = new JayAtomicType('string');
 export const JayNumber = new JayAtomicType('number');
 export const JayBoolean = new JayAtomicType('boolean');
+export const JayCurrencyType = new JayAtomicType('Currency');
 export const JayDate = new JayAtomicType('Date');
+export const JayDateWithTimezoneType = new JayAtomicType('DateWithTimezone');
 export const JayUnknown = new JayAtomicType('Unknown');
+
 const typesMap = {
     string: JayString,
     number: JayNumber,
@@ -121,6 +125,15 @@ export class JayUnionType implements JayType {
     }
 }
 
+export class JayPromiseType implements JayType {
+    constructor(public readonly itemType: JayType) {}
+    readonly kind = JayTypeKind.promise;
+
+    get name() {
+        return `Promise<${this.itemType.name}>`;
+    }
+}
+
 export function isAtomicType(aType: JayType): aType is JayAtomicType {
     return aType.kind === JayTypeKind.atomic;
 }
@@ -155,9 +168,21 @@ export function isUnionType(aType: JayType): aType is JayUnionType {
     return aType.kind === JayTypeKind.union;
 }
 
+export function isPromiseType(aType: JayType): aType is JayPromiseType {
+    return aType.kind === JayTypeKind.promise;
+}
+
+export function isCurrencyType(aType: JayType): aType is JayAtomicType {
+    return aType.kind === JayTypeKind.atomic && aType.name === 'Currency';
+}
+
+export function isDateWithTimezoneType(aType: JayType): aType is JayAtomicType {
+    return aType.kind === JayTypeKind.atomic && aType.name === 'DateWithTimezone';
+}
+
 export function equalJayTypes(a: JayType, b: JayType) {
     if (a.name !== b.name) return false;
-    if (a instanceof JayAtomicType && b instanceof JayAtomicType) return true;
+    if (a instanceof JayAtomicType && b instanceof JayAtomicType) return a.name === b.name;
     else if (a instanceof JayEnumType && b instanceof JayEnumType)
         return (
             a.values.length === b.values.length &&
@@ -198,5 +223,7 @@ export function equalJayTypes(a: JayType, b: JayType) {
             a.ofTypes.length === b.ofTypes.length &&
             a.ofTypes.reduce((res, aType) => res && b.hasType(aType), true)
         );
+    } else if (a instanceof JayPromiseType && b instanceof JayPromiseType) {
+        return equalJayTypes(a.itemType, b.itemType);
     } else false;
 }
