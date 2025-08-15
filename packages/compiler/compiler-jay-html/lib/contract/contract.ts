@@ -17,6 +17,7 @@ export interface ContractTag {
     tags?: Array<ContractTag>;
     repeated?: boolean;
     link?: string;
+    async?: boolean;
 }
 
 export interface Contract {

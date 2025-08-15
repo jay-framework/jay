@@ -23,52 +23,97 @@ To have full support for a type system, we need to extend the type system with a
 
 ## Promise of Objects and Arrays
 
-For complex types like objects and arrays, the `async variant of <type>` syntax becomes unwieldy. Instead, we use an object structure with an `async` property that contains the nested type definition.
+For complex types like objects and arrays, the `async variant of <type>` syntax becomes unwieldy. Instead, we use an `async: true` property on the tag itself to indicate that the nested structure is asynchronous.
 
 ### Object Promise
 
 ```yaml
 # Instead of: async variant of UserProfile
-userData:
-  async:
-    name: string
-    email: string
-    preferences:
-      theme: string
-      language: string
+- tag: userProfile
+  type: data
+  async: true
+  tags:
+    - tag: name
+      type: data
+      dataType: string
+    - tag: email
+      type: data
+      dataType: string
+    - tag: preferences
+      type: data
+      async: true
+      tags:
+        - tag: theme
+          type: data
+          dataType: string
+        - tag: language
+          type: data
+          dataType: string
 ```
 
 ### Array Promise
 
 ```yaml
 # Instead of: async variant of Notification[]
-notifications:
-  async:
-    - id: string
-      message: string
-      timestamp: date
+- tag: notifications
+  type: data
+  async: true
+  repeated: true
+  tags:
+    - tag: id
+      type: data
+      dataType: string
+    - tag: message
+      type: data
+      dataType: string
+    - tag: timestamp
+      type: data
+      dataType: date
 ```
 
 ### Mixed Promise Types
 
 ```yaml
-data:
-  userProfile:
-    async:
-      name: string
-      email: string
-  settings:
-    async:
-      theme: string
-      language: string
-  notifications:
-    async:
-      - id: string
-        message: string
-        timestamp: date
+tags:
+  - tag: userProfile
+    type: data
+    async: true
+    tags:
+      - tag: name
+        type: data
+        dataType: string
+      - tag: email
+        type: data
+        dataType: string
+  - tag: settings
+    type: data
+    async: true
+    tags:
+      - tag: theme
+        type: data
+        dataType: string
+      - tag: language
+        type: data
+        dataType: string
+  - tag: notifications
+    type: data
+    async: true
+    tags:
+      - tag: item
+        type: data
+        tags:
+          - tag: id
+            type: data
+            dataType: string
+          - tag: message
+            type: data
+            dataType: string
+          - tag: timestamp
+            type: data
+            dataType: date
 ```
 
-This approach maintains the YAML structure while clearly indicating which properties are asynchronous, making contracts more readable and maintainable.
+This approach maintains the YAML structure while clearly indicating which tags are asynchronous, making contracts more readable and maintainable. The `async: true` property is a simple boolean flag that can be applied to any tag that has nested structure.
 
 ## Timezone
 
@@ -116,6 +161,21 @@ to be
 | async variant of &lt;type&gt;  | `JayPromise<JayType>` | 
 | async &lt;type&gt; (shorthand) | `JayPromise<JayType>` | 
 
+## update on async
 
+to better support both objects and arrays in `jay-html`, we changed the syntax to include the word `async` as part 
+of the property name, not the property type.
+
+e.g.
+```yaml
+data:
+  async name: string
+  async userProfile:
+    name: string
+    email: string
+  async notifications:
+    - id: string
+      message: string
+```
 
 

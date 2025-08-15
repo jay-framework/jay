@@ -5,6 +5,7 @@ import {
     JayEnumType,
     JayNumber,
     JayObjectType,
+    JayPromiseType,
     JayString,
     JayTypeKind,
     WithValidations,
@@ -153,6 +154,84 @@ describe('compiler', () => {
             expect(jayFile.val.types).toEqual(
                 new JayObjectType('BaseViewState', {
                     an_enum: new JayEnumType('AnEnumOfBaseViewState', ['one', 'two', 'three']),
+                }),
+            );
+        });
+
+        it('should parse async atomic types', async () => {
+            let jayFile = await parseJayFile(
+                jayFileWith(
+                    ` data:
+                        |   async name: string
+                        |   async email: string`,
+                    '<body></body>',
+                ),
+                'Base',
+                '',
+                {},
+                defaultImportResolver,
+            );
+
+            expect(jayFile.val.types).toEqual(
+                new JayObjectType('BaseViewState', {
+                    name: new JayPromiseType(JayString),
+                    email: new JayPromiseType(JayString),
+                }),
+            );
+        });
+
+        it('should parse async object types', async () => {
+            let jayFile = await parseJayFile(
+                jayFileWith(
+                    ` data:
+                        |   async userProfile:
+                        |     name: string
+                        |     email: string`,
+                    '<body></body>',
+                ),
+                'Base',
+                '',
+                {},
+                defaultImportResolver,
+            );
+
+            expect(jayFile.val.types).toEqual(
+                new JayObjectType('BaseViewState', {
+                    userProfile: new JayPromiseType(
+                        new JayObjectType('UserProfileOfBaseViewState', {
+                            name: JayString,
+                            email: JayString,
+                        })
+                    ),
+                }),
+            );
+        });
+
+        it('should parse async array types', async () => {
+            let jayFile = await parseJayFile(
+                jayFileWith(
+                    ` data:
+                        |   async notifications:
+                        |     - id: string
+                        |       message: string`,
+                    '<body></body>',
+                ),
+                'Base',
+                '',
+                {},
+                defaultImportResolver,
+            );
+
+            expect(jayFile.val.types).toEqual(
+                new JayObjectType('BaseViewState', {
+                    notifications: new JayPromiseType(
+                        new JayArrayType(
+                            new JayObjectType('NotificationOfBaseViewState', {
+                                id: JayString,
+                                message: JayString,
+                            })
+                        )
+                    ),
                 }),
             );
         });
