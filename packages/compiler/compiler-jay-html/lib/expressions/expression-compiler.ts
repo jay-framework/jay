@@ -190,21 +190,3 @@ export function parseIsEnum(expression: string): boolean {
 export function parseEnumValues(expression: string): string[] {
     return doParse(expression, 'enum');
 }
-
-export function parseIsPromise(expression: string): boolean {
-    try {
-        return doParse(expression, 'is_promise');
-    } catch (err) {
-        return false;
-    }
-}
-
-export function parsePromiseType(expression: string): string {
-    try {
-        return doParse(expression, 'promise_type');
-    } catch (err) {
-        return '';
-    }
-}
-
-
