@@ -1,6 +1,7 @@
 export * from './element';
 export * from './element-types';
 export * from './node-reference-types';
+export * from './types';
 export {
     EVENT_TRAP,
     GetTrapProxy,
