@@ -111,6 +111,9 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
     const elementType = parseElementType(tag.elementType);
     const required = tag.required;
 
+    if (validations.length > 0)
+        return new WithValidations(undefined, validations);
+
     if (types.val.includes(ContractTagType.subContract)) {
 
         if (tag.link) {
