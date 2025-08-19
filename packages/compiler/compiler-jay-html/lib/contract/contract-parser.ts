@@ -68,7 +68,8 @@ function parseType(
 
 function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
     // Default type to 'data' if not specified
-    const types = parseType(tag.type || 'data', tag.tag);
+    const types = parseType(tag.type || (tag.tags ? 'sub-contract' : 'data'), tag.tag);
+    const typesAsString = types.val.map(_ => ContractTagType[_]).join(', ');
     const validations = types.validations;
 
     // Validate that subcontract type is not mixed with other types
@@ -105,6 +106,12 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
         if (tag.elementType) {
             validations.push(`Tag [${tag.tag}] of type [sub-contract] cannot have an elementType`);
         }
+    }
+    else {
+        if (tag.tags)
+            validations.push(`Tag [${tag.tag}] of type [${typesAsString}] cannot have tags`);
+        if (tag.link)
+            validations.push(`Tag [${tag.tag}] of type [${typesAsString}] cannot have link`);
     }
 
     const description = parseDescription(tag.description);

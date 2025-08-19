@@ -6,8 +6,6 @@ import {
     JayNumber,
     JayString,
     JayPromiseType,
-    JayObjectType,
-    JayArrayType,
 } from '@jay-framework/compiler-shared';
 
 describe('parse contract', () => {
@@ -380,7 +378,7 @@ describe('parse contract', () => {
         });
     });
 
-    it('should default to data type if type is not specified', () => {
+    it('should default to data type if type is not specified and not tags', () => {
         const contract = `
         name: defaults
         tags:
@@ -393,6 +391,31 @@ describe('parse contract', () => {
         expect(result.val).toEqual({
             name: 'defaults',
             tags: [{ tag: 'name', type: [ContractTagType.data], dataType: JayString }],
+        });
+    });
+
+    it('should default to sub-contract type if type is not specified and the tag has tags', () => {
+        const contract = `
+        name: defaults
+        tags:
+          - tag: name
+            tags: 
+              - tag: firstName
+              - tag: lastName
+        `;
+
+        const result = parseContract(contract, 'contract.jay-contract');
+        expect(result.validations).toEqual([]);
+        expect(result.val).toEqual({
+            name: 'defaults',
+            tags: [{
+                tag: 'name',
+                type: [ContractTagType.subContract],
+                tags: [
+                    { tag: 'firstName', type: [ContractTagType.data], dataType: JayString },
+                    { tag: 'lastName', type: [ContractTagType.data], dataType: JayString },
+                ]
+            }],
         });
     });
 
@@ -557,7 +580,7 @@ tags:
 name: async-object-test
 tags:
   - tag: userProfile
-    type: data
+    type: sub-contract
     async: true
     tags:
       - tag: name
@@ -591,7 +614,7 @@ tags:
 name: async-array-test
 tags:
   - tag: notifications
-    type: data
+    type: sub-contract
     async: true
     repeated: true
     tags:
@@ -627,14 +650,14 @@ tags:
 name: nested-async-test
 tags:
   - tag: userProfile
-    type: data
+    type: sub-contract
     async: true
     tags:
       - tag: name
         type: data
         dataType: string
       - tag: preferences
-        type: data
+        type: sub-contract
         async: true
         tags:
           - tag: theme
