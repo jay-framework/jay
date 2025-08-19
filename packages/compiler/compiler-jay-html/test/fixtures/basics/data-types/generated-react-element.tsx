@@ -17,6 +17,7 @@ export interface DataTypesViewState {
     b1: boolean;
     o1: O1OfDataTypesViewState;
     a1: Array<A1OfDataTypesViewState>;
+    p1: Promise<string>;
 }
 
 export interface DataTypesElementRefs {}
@@ -34,6 +35,7 @@ export function reactRender({
             <span>{vs.b1}</span>
             <span>{vs.o1?.s2}</span>
             <span>{vs.o1?.n2}</span>
+            <span>{vs.p1}</span>
         </div>
     );
 }

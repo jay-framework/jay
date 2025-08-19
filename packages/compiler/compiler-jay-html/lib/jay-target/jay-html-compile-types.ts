@@ -2,7 +2,7 @@ import {
     isArrayType,
     isAtomicType,
     isEnumType,
-    isObjectType,
+    isObjectType, isPromiseType,
     JayImportedType,
     JayType,
 } from '@jay-framework/compiler-shared';
@@ -36,8 +36,20 @@ function renderInterface(aType: JayType): string {
                             throw new Error('not implemented yet');
                             // todo implement array of array or array of primitive
                         }
-                    } else if (isAtomicType(childType)) return `  ${prop}: ${childType.name}`;
-                    else if (isEnumType(childType)) {
+                    } else if (isAtomicType(childType)) {
+                        return `  ${prop}: ${childType.name}`;
+                    } else if (isPromiseType(childType)) {
+                        let promiseItemType = childType.itemType;
+                        if (isAtomicType(promiseItemType)) return `  ${prop}: Promise<${promiseItemType.name}>`;
+                        else if (isObjectType(promiseItemType)) {
+                            childInterfaces.push(renderInterface(promiseItemType));
+                            return `  ${prop}: Promise<${promiseItemType.name}>`;
+                        }
+                        else if (isArrayType(promiseItemType) && isObjectType(promiseItemType.itemType)) {
+                            childInterfaces.push(renderInterface(promiseItemType.itemType));
+                            return `  ${prop}: Promise<Array<${promiseItemType.itemType.name}>>`;
+                        }
+                    } else if (isEnumType(childType)) {
                         let genEnum = `export enum ${childType.name} {\n${childType.values
                             .map((_) => '  ' + _)
                             .join(',\n')}\n}`;

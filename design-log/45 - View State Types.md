@@ -178,4 +178,16 @@ data:
       message: string
 ```
 
+## update on formatting
 
+When considering both currency and timezone, we need to consider that formatting
+can be dynamic (something determined by the application logic) or something static.
+We also need to consider the designer role, who creates the `jay-html` file using visual
+editorial tools - should the designer lean all the formatting options and locale rules?
+
+The end result is that we believe formatting of dates and currencies should be done in one 
+place, that is the component logic, and that `jay-html` and a contract file should not 
+handle formatting.
+
+It also means that Jay will be less oppinionated with `Currency` and `ZonedDate` types, 
+instead letting the application developer choose their own types as needed.

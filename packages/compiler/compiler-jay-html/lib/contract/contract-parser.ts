@@ -7,9 +7,9 @@ import {
 } from '@jay-framework/compiler-shared';
 import { Contract, ContractTag, ContractTagType } from './contract';
 import yaml from 'js-yaml';
-import { 
-    parseIsEnum, 
-    parseEnumValues, 
+import {
+    parseIsEnum,
+    parseEnumValues,
 } from '../';
 import { pascalCase } from 'change-case';
 
@@ -107,32 +107,26 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
         }
     }
 
-    const parsedDataType = (tag.async === true)?
-        new JayPromiseType(parseDataType(tag.tag, dataType)):
-        parseDataType(tag.tag, dataType);
-
     const description = parseDescription(tag.description);
     const elementType = parseElementType(tag.elementType);
     const required = tag.required;
 
-    // Handle linked subcontract
-    if (tag.link) {
-        return new WithValidations<ContractTag>(
-            {
-                tag: tag.tag,
-                type: [ContractTagType.subContract],
-                ...(required && { required }),
-                ...(description && { description }),
-                ...(tag.repeated && { repeated: tag.repeated }),
-                link: tag.link,
-            },
-            validations,
-        );
-    }
+    if (types.val.includes(ContractTagType.subContract)) {
 
-    // Handle inline subcontract
-    if (tag.tags) {
-        // This is a regular subcontract
+        if (tag.link) {
+            return new WithValidations<ContractTag>(
+                {
+                    tag: tag.tag,
+                    type: [ContractTagType.subContract],
+                    ...(required && { required }),
+                    ...(description && { description }),
+                    ...(tag.repeated && { repeated: tag.repeated }),
+                    link: tag.link,
+                },
+                validations,
+            );
+        }
+
         const subTagResults = tag.tags.map((subTag) => parseTag(subTag));
         const subTagValidations = subTagResults.flatMap((tr) => tr.validations);
         const parsedSubTags = subTagResults
@@ -165,19 +159,24 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
             [...validations, ...subTagValidations, ...duplicateTagValidations],
         );
     }
+    else {
+        const parsedDataType = (tag.async === true)?
+            new JayPromiseType(parseDataType(tag.tag, dataType)):
+            parseDataType(tag.tag, dataType);
 
-    // Handle regular tag
-            const contractTag: ContractTag = {
+        // Handle regular tag
+        const contractTag: ContractTag = {
             tag: tag.tag,
             type: types.val,
-            ...(required && { required }),
-            ...(parsedDataType && { dataType: parsedDataType }),
-            ...(description && { description }),
-            ...(elementType && { elementType }),
-            ...(tag.async && { async: tag.async }),
+            ...(required && {required}),
+            ...(parsedDataType && {dataType: parsedDataType}),
+            ...(description && {description}),
+            ...(elementType && {elementType}),
+            ...(tag.async && {async: tag.async}),
         };
 
-    return new WithValidations<ContractTag>(contractTag, validations);
+        return new WithValidations<ContractTag>(contractTag, validations);
+    }
 }
 
 export function parseContract(contractYaml: string, fileName: string): WithValidations<Contract> {

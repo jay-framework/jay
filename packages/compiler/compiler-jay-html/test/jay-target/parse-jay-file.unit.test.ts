@@ -1,4 +1,9 @@
-import { parseJayFile } from '../lib';
+import {
+    parseJayFile,
+    JayImportResolver,
+    Contract,
+    JAY_IMPORT_RESOLVER,
+} from '../../lib';
 import {
     JayArrayType,
     JayBoolean,
@@ -10,12 +15,9 @@ import {
     JayTypeKind,
     WithValidations,
 } from '@jay-framework/compiler-shared';
-import { stripMargin } from './test-utils/strip-margin';
-import { JayImportResolver } from '../lib';
-import { Contract } from '../lib';
+import { stripMargin } from '../test-utils/strip-margin';
 import { ResolveTsConfigOptions } from '@jay-framework/compiler-analyze-exported-types';
 import { JayType } from '@jay-framework/compiler-shared';
-import { JAY_IMPORT_RESOLVER } from '../lib';
 
 describe('compiler', () => {
     const defaultImportResolver: JayImportResolver = {

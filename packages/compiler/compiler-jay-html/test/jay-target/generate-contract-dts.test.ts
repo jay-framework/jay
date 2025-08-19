@@ -39,6 +39,11 @@ describe('contract definitions', () => {
             const folder = 'contracts/named-counter';
             await testContractDefinitionFile(folder);
         });
+
+        it('for contract with new data types', async () => {
+            const folder = 'contracts/data-types';
+            await testContractDefinitionFile(folder);
+        });
     });
 
     describe('generate jay-html definition linked to contract', () => {

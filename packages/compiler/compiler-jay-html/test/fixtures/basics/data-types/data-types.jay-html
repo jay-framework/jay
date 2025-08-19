@@ -11,6 +11,13 @@ data:
    a1:
     -  s3: string
        n3: number
+   async p1: string
+   async po1:
+       ps2: string
+       pn2: number
+   async pa1:
+    -  ps3: string
+       pn3: number
      </script>
 </head>
 <body>
@@ -20,6 +27,15 @@ data:
     <span>{b1}</span>
     <span>{o1.s2}</span>
     <span>{o1.n2}</span>
+    <span when="p1:resolved">{p1}</span>
+    <span when="p1:loading">still loading</span>
+    <span when="p1:rejected">rejected with {message} and {stack}</span>
+    <span when="po1:resolved">{po1.ps2}</span>
+    <div when="pa1:resolved" forEach="pa1" trackBy="ps3">
+        <span>{ps3}</span>
+        <span>{pn3}</span>
+    </div>
+    <div when="pa1:loading">still loading the list</div>
 </div>
 </body>
 </html>

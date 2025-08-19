@@ -48,7 +48,7 @@ export function isArrayType(obj: any) {
     return Array.isArray(obj);
 }
 
-function toInterfaceName(name: string[]) {
+export function toInterfaceName(name: string[]) {
     return name
         .reverse()
         .map((segment) => pascalCase(pluralize.singular(segment)))
