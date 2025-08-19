@@ -25,9 +25,7 @@ export class JayAtomicType implements JayType {
 export const JayString = new JayAtomicType('string');
 export const JayNumber = new JayAtomicType('number');
 export const JayBoolean = new JayAtomicType('boolean');
-export const JayCurrencyType = new JayAtomicType('Currency');
 export const JayDate = new JayAtomicType('Date');
-export const JayDateWithTimezoneType = new JayAtomicType('DateWithTimezone');
 export const JayUnknown = new JayAtomicType('Unknown');
 
 const typesMap = {
@@ -35,8 +33,6 @@ const typesMap = {
     number: JayNumber,
     boolean: JayBoolean,
     date: JayDate,
-    currency: JayCurrencyType,
-    'zoned-date': JayDateWithTimezoneType
 };
 
 export function resolvePrimitiveType(typeName: string): JayType {
