@@ -5,7 +5,7 @@ import {
     BaseJayElement,
     JayComponent,
     JayComponentConstructor,
-    MountFunc,
+    MountFunc, noop,
     noopMount,
     noopUpdate,
     updateFunc,
@@ -161,9 +161,46 @@ export interface Conditional<ViewState> {
     elem: () => BaseJayElement<ViewState> | TextElement<ViewState>;
 }
 
+export enum WhenRole {
+    pending,
+    resolved,
+    rejected
+}
+export interface When<ViewState, ResolvedViewValue> {
+    role: WhenRole;
+    promise: (newData: ViewState) => Promise<ResolvedViewValue>;
+    elem: () => BaseJayElement<ResolvedViewValue> | TextElement<ResolvedViewValue> | string;
+}
+
+function when<ViewState, ResolvedViewValue>(
+    status: WhenRole,
+    promise: (newData: ViewState) => Promise<ResolvedViewValue>,
+    elem: () => BaseJayElement<ResolvedViewValue> | TextElement<ResolvedViewValue> | string
+): When<ViewState, ResolvedViewValue>{
+    return {
+        role: status,
+        promise,
+        elem
+    }
+}
+
+export const resolved = <ViewState, ResolvedViewValue>(
+    promise: (newData: ViewState) => Promise<ResolvedViewValue>,
+    elem: () => BaseJayElement<ResolvedViewValue> | TextElement<ResolvedViewValue> | string) =>
+    when(WhenRole.resolved, promise, elem)
+export const rejected = <ViewState, E extends Error>(
+    promise: (newData: ViewState) => Promise<any>,
+    elem: () => BaseJayElement<E> | TextElement<E> | string) =>
+    when(WhenRole.rejected, promise, elem)
+export const pending = <ViewState>(
+    promise: (newData: ViewState) => Promise<any>,
+    elem: () => BaseJayElement<never> | TextElement<never> | string) =>
+    when(WhenRole.pending, promise, elem)
+
 function isJayElement<ViewState>(
     c:
         | Conditional<ViewState>
+        | When<ViewState, any>
         | ForEach<ViewState, any>
         | TextElement<ViewState>
         | BaseJayElement<ViewState>,
@@ -173,6 +210,7 @@ function isJayElement<ViewState>(
 export function isCondition<ViewState>(
     c:
         | Conditional<ViewState>
+        | When<ViewState, any>
         | ForEach<ViewState, any>
         | TextElement<ViewState>
         | BaseJayElement<ViewState>,
@@ -183,11 +221,123 @@ export function isCondition<ViewState>(
 export function isForEach<ViewState, Item>(
     c:
         | Conditional<ViewState>
+        | When<ViewState, any>
         | ForEach<ViewState, Item>
         | TextElement<ViewState>
         | BaseJayElement<ViewState>,
 ): c is ForEach<ViewState, Item> {
     return (c as ForEach<ViewState, Item>).elemCreator !== undefined;
+}
+
+export function isWhen<ViewState, Item>(
+    c:
+        | Conditional<ViewState>
+        | When<ViewState, any>
+        | ForEach<ViewState, Item>
+        | TextElement<ViewState>
+        | BaseJayElement<ViewState>,
+): c is When<ViewState, any> {
+    return (c as When<ViewState, any>).promise !== undefined;
+}
+
+function mkWhenCondition<ViewState, Resolved>(
+    when: When<ViewState, Resolved>,
+    group: KindergartenGroup,
+): [updateFunc<ViewState>, MountFunc, MountFunc] {
+    switch (when.role) {
+        case WhenRole.resolved:
+            return mkWhenResolvedCondition(when, group);
+        case WhenRole.rejected:
+            return mkWhenRejectedCondition(when, group);
+        default:
+            return mkWhenPendingCondition(when, group);
+    }
+}
+
+function mkWhenResolvedCondition<ViewState, Resolved>(
+    when: When<ViewState, Resolved>,
+    group: KindergartenGroup,
+): [updateFunc<ViewState>, MountFunc, MountFunc] {
+    let show = false;
+    const parentContext = currentConstructionContext();
+    const savedContext = saveContext();
+    const [cUpdate, cMouth, cUnmount] = mkUpdateCondition(conditional(() => show, when.elem), group)
+    const handleResolved = (value) => {
+        show = true;
+        return restoreContext(savedContext, () =>
+            cUpdate(value))
+    }
+    let promise = when.promise(parentContext.currData)
+    promise.then(handleResolved).catch(noop)
+    const update = (viewState: ViewState) => {
+        const newValue = when.promise(viewState);
+        if (promise !== newValue) {
+            promise = newValue
+            promise.then(handleResolved).catch(noop)
+            show = false;
+            cUpdate(undefined);
+        }
+    }
+    return [update, cMouth, cUnmount]
+}
+
+function mkWhenRejectedCondition<ViewState, Resolved>(
+    when: When<ViewState, Resolved>,
+    group: KindergartenGroup,
+): [updateFunc<ViewState>, MountFunc, MountFunc] {
+    let show = false;
+    const parentContext = currentConstructionContext();
+    const savedContext = saveContext();
+    const [cUpdate, cMouth, cUnmount] = mkUpdateCondition(conditional(() => show, when.elem), group)
+    const handleRejected = (value) => {
+        show = true;
+        return restoreContext(savedContext, () =>
+            cUpdate(value))
+    }
+    let promise = when.promise(parentContext.currData)
+    promise.catch(handleRejected)
+    const update = (viewState: ViewState) => {
+        const newValue = when.promise(viewState);
+        if (promise !== newValue) {
+            promise = newValue
+            promise.catch(handleRejected)
+            show = false;
+            cUpdate(undefined);
+        }
+    }
+    return [update, cMouth, cUnmount]
+}
+
+function mkWhenPendingCondition<ViewState>(
+    when: When<ViewState, any>,
+    group: KindergartenGroup,
+): [updateFunc<ViewState>, MountFunc, MountFunc] {
+    let show = false;
+    const parentContext = currentConstructionContext();
+    const savedContext = saveContext();
+    const [cUpdate, cMouth, cUnmount] = mkUpdateCondition(conditional(() => show, when.elem), group)
+    const handlePending = () => {
+        show = true;
+        return restoreContext(savedContext, () =>
+            cUpdate(undefined));
+    }
+    let timeout = setTimeout(handlePending, 1);
+    const handleResolvedRejected = () => {
+        clearTimeout(timeout);
+    }
+    let promise = when.promise(parentContext.currData)
+    promise.finally(handleResolvedRejected).catch(noop)
+    const update = (viewState: ViewState) => {
+        const newValue = when.promise(viewState);
+        if (promise !== newValue) {
+            promise = newValue
+            timeout = setTimeout(handlePending, 1);
+            promise.finally(handleResolvedRejected).catch(noop)
+            show = false;
+            cUpdate(undefined);
+        }
+    }
+    return [update, cMouth, cUnmount]
 }
 
 export function forEach<T, Item>(
@@ -363,6 +513,7 @@ type DynamicElementChildren<ViewState> = Array<
     | ForEach<ViewState, any>
     | TextElement<ViewState>
     | BaseJayElement<ViewState>
+    | When<ViewState, any>
     | string
 >;
 
@@ -387,6 +538,8 @@ export const dynamicElementNS =
                 [update, mount, unmount] = mkUpdateCondition(child, group);
             } else if (isForEach(child)) {
                 [update, mount, unmount] = mkUpdateCollection(child, group);
+            } else if (isWhen(child)) {
+                [update, mount, unmount] = mkWhenCondition(child, group);
             } else {
                 group.ensureNode(child.dom);
                 if (child.update !== noopUpdate) update = child.update;
