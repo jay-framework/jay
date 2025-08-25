@@ -275,7 +275,8 @@ function mkWhenResolvedCondition<ViewState, Resolved>(
             promise = newValue
             promise.then(handleResolved).catch(noop)
             show = false;
-            cUpdate(undefined);
+            restoreContext(savedContext, () =>
+                cUpdate(undefined));
         }
     }
     return [update, cMouth, cUnmount]
@@ -302,7 +303,8 @@ function mkWhenRejectedCondition<ViewState, Resolved>(
             promise = newValue
             promise.catch(handleRejected)
             show = false;
-            cUpdate(undefined);
+            restoreContext(savedContext, () =>
+                cUpdate(undefined));
         }
     }
     return [update, cMouth, cUnmount]
@@ -334,7 +336,8 @@ function mkWhenPendingCondition<ViewState>(
             timeout = setTimeout(handlePending, 1);
             promise.finally(handleResolvedRejected).catch(noop)
             show = false;
-            cUpdate(undefined);
+            restoreContext(savedContext, () =>
+                cUpdate(undefined));
         }
     }
     return [update, cMouth, cUnmount]
@@ -426,7 +429,7 @@ function mkUpdateCondition<ViewState>(
             mount = () => lastResult && childElement.mount();
             unmount = () => childElement.unmount();
         }
-        let result = child.condition(newData);
+        const result = child.condition(newData);
 
         if (result) {
             if (!lastResult) {

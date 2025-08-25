@@ -1,11 +1,10 @@
 import {
     JayElement,
     ReferencesManager,
+    ConstructContext,
     dynamicElement as de,
-    element as e, dynamicText as dt, pending, rejected
+    element as e, dynamicText as dt, pending, rejected, resolved
 } from '../../lib';
-import { ConstructContext } from '../../lib';
-import {resolved} from "../../lib";
 
 function mkPromise<T>(): [(v: T) => void, (reason?: any) => void, Promise<any>] {
     let resolve: (v: T) => void;
@@ -29,35 +28,36 @@ describe('async-element', () => {
     interface ViewState {
         text1: Promise<string>;
     }
-    describe('rendering', () => {
-        function makeElement(data: ViewState): JayElement<ViewState, any> {
-            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
-            return ConstructContext.withRootContext(data, refManager, () =>
-                // noinspection DuplicatedCode
-                de('div', {id: 'parent'}, [
-                    pending(
-                        (vs: ViewState) => vs.text1,
-                        () => e('div', { style: { cssText: 'color:gray' }, id: 'pending-div' }, [
-                            STILL_LOADING,
+    function makeElement(data: ViewState): JayElement<ViewState, any> {
+        let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+        return ConstructContext.withRootContext(data, refManager, () =>
+            // noinspection DuplicatedCode
+            de('div', {id: 'parent'}, [
+                pending(
+                    (vs: ViewState) => vs.text1,
+                    () => e('div', { style: { cssText: 'color:gray' }, id: 'pending-div' }, [
+                        STILL_LOADING,
+                    ]),
+                ),
+                resolved(
+                    (vs: ViewState) => vs.text1,
+                    () =>
+                        e('div', { style: { cssText: 'color:red' }, id: 'resolved-div' }, [
+                            dt((data) => data),
                         ]),
-                    ),
-                    resolved(
-                        (vs: ViewState) => vs.text1,
-                        () =>
-                            e('div', { style: { cssText: 'color:red' }, id: 'resolved-div' }, [
-                                dt((data) => data),
-                            ]),
-                    ),
-                    rejected(
-                        (vs: ViewState) => vs.text1,
-                        () =>
-                            e('div', { style: { cssText: 'color:red' }, id: 'rejected-div' }, [
-                                dt((data: Error) => data.message),
-                            ]),
-                    ),
-                ]),
-            );
-        }
+                ),
+                rejected(
+                    (vs: ViewState) => vs.text1,
+                    () =>
+                        e('div', { style: { cssText: 'color:red' }, id: 'rejected-div' }, [
+                            dt((data: Error) => data.message),
+                        ]),
+                ),
+            ]),
+        );
+    }
+
+    describe('initial rendering', () => {
 
         it('should render pending promise on next microtask', async () => {
             const [resolve1, reject1, promise1] = mkPromise<string>();
@@ -98,6 +98,26 @@ describe('async-element', () => {
                 expect(jayElement.dom.children).toHaveLength(1);
                 expect(jayElement.dom.querySelector('#pending-div').innerHTML).toBe(STILL_LOADING);
             })
+        });
+    })
+
+    describe('updating promise', () => {
+        it('should render pending promise on next microtask', async () => {
+            const [resolve1, reject1, promise1] = mkPromise<string>();
+            resolve1("resolved to a value");
+            let jayElement = makeElement({
+                text1: promise1,
+            });
+            await promise1
+
+            const [resolve2, reject2, promise2] = mkPromise<string>();
+            resolve2("resolved to another value");
+            jayElement.update({
+                text1: promise2
+            })
+            await promise2
+
+            expect(jayElement.dom.querySelector('#resolved-div').innerHTML).toBe('resolved to another value');
         });
     })
 })
