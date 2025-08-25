@@ -147,5 +147,20 @@ describe('async-element', () => {
 
             expect(jayElement.dom.querySelector('#resolved-div').innerHTML).toBe(RESOLVED_2);
         });
+
+        it('should handle race condition of promise 1, update to promise 2, promise 2 resolved, then promise 1 resolved - should ignore promise 1 resolved value', async () => {
+            const [resolve1, reject1, promise1] = mkPromise<string>();
+            let jayElement = makeElement({ text1: promise1 });
+
+            const [resolve2, reject2, promise2] = mkPromise<string>();
+            jayElement.update({ text1: promise2 })
+            resolve2(RESOLVED_2);
+            await promise2
+
+            resolve1(RESOLVED);
+            await promise1
+
+            expect(jayElement.dom.querySelector('#resolved-div').innerHTML).toBe(RESOLVED_2);
+        });
     })
 })

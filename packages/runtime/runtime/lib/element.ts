@@ -263,21 +263,24 @@ function mkWhenConditionBase<ViewState, Resolved>(
     const parentContext = currentConstructionContext();
     const savedContext = saveContext();
     const [cUpdate, cMouth, cUnmount] = mkUpdateCondition(conditional(() => show, when.elem), group)
-    
-    const handleValue = (value) => {
-        show = true;
-        return restoreContext(savedContext, () =>
-            cUpdate(value))
+
+    let currentPromise = when.promise(parentContext.currData)
+
+    const handleValue = (changedPromise: Promise<Resolved>) => (value) => {
+        if (changedPromise === currentPromise) {
+            show = true;
+            return restoreContext(savedContext, () =>
+                cUpdate(value))
+        }
     }
     
-    let promise = when.promise(parentContext.currData)
-    setupPromise(promise, handleValue)
+    setupPromise(currentPromise, handleValue(currentPromise))
     
     const update = (viewState: ViewState) => {
         const newValue = when.promise(viewState);
-        if (promise !== newValue) {
-            promise = newValue
-            setupPromise(promise, handleValue)
+        if (currentPromise !== newValue) {
+            currentPromise = newValue
+            setupPromise(currentPromise, handleValue(currentPromise))
             show = false;
             restoreContext(savedContext, () =>
                 cUpdate(undefined));
