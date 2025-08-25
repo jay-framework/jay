@@ -254,93 +254,73 @@ function mkWhenCondition<ViewState, Resolved>(
     }
 }
 
-function mkWhenResolvedCondition<ViewState, Resolved>(
+function mkWhenConditionBase<ViewState, Resolved>(
     when: When<ViewState, Resolved>,
     group: KindergartenGroup,
+    setupPromise: (promise: Promise<any>, handleValue: (value: any) => void) => void,
 ): [updateFunc<ViewState>, MountFunc, MountFunc] {
     let show = false;
     const parentContext = currentConstructionContext();
     const savedContext = saveContext();
     const [cUpdate, cMouth, cUnmount] = mkUpdateCondition(conditional(() => show, when.elem), group)
-    const handleResolved = (value) => {
+    
+    const handleValue = (value) => {
         show = true;
         return restoreContext(savedContext, () =>
             cUpdate(value))
     }
+    
     let promise = when.promise(parentContext.currData)
-    promise.then(handleResolved).catch(noop)
+    setupPromise(promise, handleValue)
+    
     const update = (viewState: ViewState) => {
         const newValue = when.promise(viewState);
         if (promise !== newValue) {
             promise = newValue
-            promise.then(handleResolved).catch(noop)
+            setupPromise(promise, handleValue)
             show = false;
             restoreContext(savedContext, () =>
                 cUpdate(undefined));
         }
     }
     return [update, cMouth, cUnmount]
+}
+
+function mkWhenResolvedCondition<ViewState, Resolved>(
+    when: When<ViewState, Resolved>,
+    group: KindergartenGroup,
+): [updateFunc<ViewState>, MountFunc, MountFunc] {
+    return mkWhenConditionBase(
+        when,
+        group,
+        (promise, handleValue) => promise.then(handleValue).catch(noop),
+    )
 }
 
 function mkWhenRejectedCondition<ViewState, Resolved>(
     when: When<ViewState, Resolved>,
     group: KindergartenGroup,
 ): [updateFunc<ViewState>, MountFunc, MountFunc] {
-    let show = false;
-    const parentContext = currentConstructionContext();
-    const savedContext = saveContext();
-    const [cUpdate, cMouth, cUnmount] = mkUpdateCondition(conditional(() => show, when.elem), group)
-    const handleRejected = (value) => {
-        show = true;
-        return restoreContext(savedContext, () =>
-            cUpdate(value))
-    }
-    let promise = when.promise(parentContext.currData)
-    promise.catch(handleRejected)
-    const update = (viewState: ViewState) => {
-        const newValue = when.promise(viewState);
-        if (promise !== newValue) {
-            promise = newValue
-            promise.catch(handleRejected)
-            show = false;
-            restoreContext(savedContext, () =>
-                cUpdate(undefined));
-        }
-    }
-    return [update, cMouth, cUnmount]
+    return mkWhenConditionBase(
+        when,
+        group,
+        (promise, handleValue) => promise.catch(handleValue),
+    )
 }
 
 function mkWhenPendingCondition<ViewState>(
     when: When<ViewState, any>,
     group: KindergartenGroup,
 ): [updateFunc<ViewState>, MountFunc, MountFunc] {
-    let show = false;
-    const parentContext = currentConstructionContext();
-    const savedContext = saveContext();
-    const [cUpdate, cMouth, cUnmount] = mkUpdateCondition(conditional(() => show, when.elem), group)
-    const handlePending = () => {
-        show = true;
-        return restoreContext(savedContext, () =>
-            cUpdate(undefined));
-    }
-    let timeout = setTimeout(handlePending, 1);
-    const handleResolvedRejected = () => {
-        clearTimeout(timeout);
-    }
-    let promise = when.promise(parentContext.currData)
-    promise.finally(handleResolvedRejected).catch(noop)
-    const update = (viewState: ViewState) => {
-        const newValue = when.promise(viewState);
-        if (promise !== newValue) {
-            promise = newValue
-            timeout = setTimeout(handlePending, 1);
-            promise.finally(handleResolvedRejected).catch(noop)
-            show = false;
-            restoreContext(savedContext, () =>
-                cUpdate(undefined));
+    let timeout: ReturnType<typeof setTimeout>;
+    return mkWhenConditionBase(
+        when,
+        group,
+        (promise, handleValue) => {
+            timeout = setTimeout(() => handleValue(undefined), 1);
+            promise.finally(() => clearTimeout(timeout)).catch(noop);
         }
-    }
-    return [update, cMouth, cUnmount]
+    )
 }
 
 export function forEach<T, Item>(
