@@ -29,7 +29,8 @@ async function ignoreErrors(op: Promise<any>) {
 
 const STILL_LOADING = "still loading"
 const RESOLVED = "resolved to a value"
-const ERROR = "promise rejected with this error"
+const RESOLVED_2 = "resolved to another value"
+const PROMISE_ERROR = "promise rejected with this error"
 
 describe('async-element', () => {
     interface ViewState {
@@ -68,37 +69,31 @@ describe('async-element', () => {
 
         it('should render pending promise on next microtask', async () => {
             const [resolve1, reject1, promise1] = mkPromise<string>();
-            resolve1("resolved to a value");
-            let jayElement = makeElement({
-                text1: promise1,
-            });
+            resolve1(RESOLVED);
+            let jayElement = makeElement({ text1: promise1 });
             expect(jayElement.dom.children).toHaveLength(0);
             await promise1
 
             expect(jayElement.dom.children).toHaveLength(1);
-            expect(jayElement.dom.querySelector('#resolved-div').innerHTML).toBe('resolved to a value');
+            expect(jayElement.dom.querySelector('#resolved-div').innerHTML).toBe(RESOLVED);
         });
 
         it('should render rejected promise on next microtask', async () => {
             const [resolve1, reject1, promise1] = mkPromise<string>();
-            let jayElement = makeElement({
-                text1: promise1,
-            });
+            let jayElement = makeElement({ text1: promise1 });
             await Promise.resolve();
 
-            reject1(new Error('failed to do something'));
+            reject1(new Error(PROMISE_ERROR));
             expect(jayElement.dom.children).toHaveLength(0);
             await ignoreErrors(promise1);
 
             expect(jayElement.dom.children).toHaveLength(1);
-            expect(jayElement.dom.querySelector('#rejected-div').innerHTML).toBe('failed to do something');
+            expect(jayElement.dom.querySelector('#rejected-div').innerHTML).toBe(PROMISE_ERROR);
         });
 
         it('should render pending with 1 ms', async () => {
             const [resolve1, reject1, promise1] = mkPromise<string>();
-            let jayElement = makeElement({
-                text1: promise1,
-            });
+            let jayElement = makeElement({ text1: promise1 });
             expect(jayElement.dom.children).toHaveLength(0);
             vi.waitFor(() => {
                 expect(jayElement.dom.children).toHaveLength(1);
@@ -108,57 +103,49 @@ describe('async-element', () => {
 
         it('should render pending then resolved', async () => {
             const [resolve1, reject1, promise1] = mkPromise<string>();
-            let jayElement = makeElement({
-                text1: promise1,
-            });
+            let jayElement = makeElement({ text1: promise1 });
             expect(jayElement.dom.children).toHaveLength(0);
             vi.waitFor(() => {
                 expect(jayElement.dom.children).toHaveLength(1);
                 expect(jayElement.dom.querySelector('#pending-div').innerHTML).toBe(STILL_LOADING);
             })
 
-            resolve1("resolved to a value");
+            resolve1(RESOLVED);
             await promise1;
             expect(jayElement.dom.children).toHaveLength(1);
-            expect(jayElement.dom.querySelector('#resolved-div').innerHTML).toBe('resolved to a value');
+            expect(jayElement.dom.querySelector('#resolved-div').innerHTML).toBe(RESOLVED);
         });
 
         it('should render pending then rejected', async () => {
             const [resolve1, reject1, promise1] = mkPromise<string>();
-            let jayElement = makeElement({
-                text1: promise1,
-            });
+            let jayElement = makeElement({ text1: promise1 });
             expect(jayElement.dom.children).toHaveLength(0);
             vi.waitFor(() => {
                 expect(jayElement.dom.children).toHaveLength(1);
                 expect(jayElement.dom.querySelector('#pending-div').innerHTML).toBe(STILL_LOADING);
             })
 
-            reject1(new Error('failed to do something'));
+            reject1(new Error(PROMISE_ERROR));
             await ignoreErrors(promise1);
 
             expect(jayElement.dom.children).toHaveLength(1);
-            expect(jayElement.dom.querySelector('#rejected-div').innerHTML).toBe('failed to do something');
+            expect(jayElement.dom.querySelector('#rejected-div').innerHTML).toBe(PROMISE_ERROR);
         });
     })
 
     describe('updating promise', () => {
         it('should render pending promise on next microtask', async () => {
             const [resolve1, reject1, promise1] = mkPromise<string>();
-            resolve1("resolved to a value");
-            let jayElement = makeElement({
-                text1: promise1,
-            });
+            resolve1(RESOLVED);
+            let jayElement = makeElement({ text1: promise1 });
             await promise1
 
             const [resolve2, reject2, promise2] = mkPromise<string>();
-            resolve2("resolved to another value");
-            jayElement.update({
-                text1: promise2
-            })
+            resolve2(RESOLVED_2);
+            jayElement.update({ text1: promise2 })
             await promise2
 
-            expect(jayElement.dom.querySelector('#resolved-div').innerHTML).toBe('resolved to another value');
+            expect(jayElement.dom.querySelector('#resolved-div').innerHTML).toBe(RESOLVED_2);
         });
     })
 })
