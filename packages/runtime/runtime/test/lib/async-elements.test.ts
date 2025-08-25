@@ -20,6 +20,13 @@ function mkPromise<T>(): [(v: T) => void, (reason?: any) => void, Promise<any>] 
     return [resolve!, reject!, promise];
 }
 
+async function ignoreErrors(op: Promise<any>) {
+    try {
+        await op;
+    }
+    catch (e) {}
+}
+
 const STILL_LOADING = "still loading"
 const RESOLVED = "resolved to a value"
 const ERROR = "promise rejected with this error"
@@ -67,23 +74,22 @@ describe('async-element', () => {
             });
             expect(jayElement.dom.children).toHaveLength(0);
             await promise1
+
             expect(jayElement.dom.children).toHaveLength(1);
             expect(jayElement.dom.querySelector('#resolved-div').innerHTML).toBe('resolved to a value');
         });
 
         it('should render rejected promise on next microtask', async () => {
-
             const [resolve1, reject1, promise1] = mkPromise<string>();
             let jayElement = makeElement({
                 text1: promise1,
             });
             await Promise.resolve();
+
             reject1(new Error('failed to do something'));
             expect(jayElement.dom.children).toHaveLength(0);
-            try {
-                await promise1
-            }
-            catch (e) {}
+            await ignoreErrors(promise1);
+
             expect(jayElement.dom.children).toHaveLength(1);
             expect(jayElement.dom.querySelector('#rejected-div').innerHTML).toBe('failed to do something');
         });
@@ -98,6 +104,41 @@ describe('async-element', () => {
                 expect(jayElement.dom.children).toHaveLength(1);
                 expect(jayElement.dom.querySelector('#pending-div').innerHTML).toBe(STILL_LOADING);
             })
+        });
+
+        it('should render pending then resolved', async () => {
+            const [resolve1, reject1, promise1] = mkPromise<string>();
+            let jayElement = makeElement({
+                text1: promise1,
+            });
+            expect(jayElement.dom.children).toHaveLength(0);
+            vi.waitFor(() => {
+                expect(jayElement.dom.children).toHaveLength(1);
+                expect(jayElement.dom.querySelector('#pending-div').innerHTML).toBe(STILL_LOADING);
+            })
+
+            resolve1("resolved to a value");
+            await promise1;
+            expect(jayElement.dom.children).toHaveLength(1);
+            expect(jayElement.dom.querySelector('#resolved-div').innerHTML).toBe('resolved to a value');
+        });
+
+        it('should render pending then rejected', async () => {
+            const [resolve1, reject1, promise1] = mkPromise<string>();
+            let jayElement = makeElement({
+                text1: promise1,
+            });
+            expect(jayElement.dom.children).toHaveLength(0);
+            vi.waitFor(() => {
+                expect(jayElement.dom.children).toHaveLength(1);
+                expect(jayElement.dom.querySelector('#pending-div').innerHTML).toBe(STILL_LOADING);
+            })
+
+            reject1(new Error('failed to do something'));
+            await ignoreErrors(promise1);
+
+            expect(jayElement.dom.children).toHaveLength(1);
+            expect(jayElement.dom.querySelector('#rejected-div').innerHTML).toBe('failed to do something');
         });
     })
 
