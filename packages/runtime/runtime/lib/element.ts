@@ -254,10 +254,13 @@ function mkWhenCondition<ViewState, Resolved>(
     }
 }
 
+const Hide = Symbol();
+type SetupPromise = (promise: Promise<any>, handleValue: (value: any | typeof Hide) => void) => void
+
 function mkWhenConditionBase<ViewState, Resolved>(
     when: When<ViewState, Resolved>,
     group: KindergartenGroup,
-    setupPromise: (promise: Promise<any>, handleValue: (value: any) => void) => void,
+    setupPromise: SetupPromise,
 ): [updateFunc<ViewState>, MountFunc, MountFunc] {
     let show = false;
     const parentContext = currentConstructionContext();
@@ -266,11 +269,14 @@ function mkWhenConditionBase<ViewState, Resolved>(
 
     let currentPromise = when.promise(parentContext.currData)
 
-    const handleValue = (changedPromise: Promise<Resolved>) => (value) => {
+    const handleValue = (changedPromise: Promise<Resolved>) => (value: any | typeof Hide) => {
         if (changedPromise === currentPromise) {
-            show = true;
+            show = value !== Hide;
+            let childContext = parentContext.forAsync(value);
             return restoreContext(savedContext, () =>
-                cUpdate(value))
+                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () =>
+                    cUpdate(value))
+            )
         }
     }
     
@@ -321,7 +327,10 @@ function mkWhenPendingCondition<ViewState>(
         group,
         (promise, handleValue) => {
             timeout = setTimeout(() => handleValue(undefined), 1);
-            promise.finally(() => clearTimeout(timeout)).catch(noop);
+            promise.finally(() => {
+                clearTimeout(timeout);
+                handleValue(Hide);
+            }).catch(noop);
         }
     )
 }
