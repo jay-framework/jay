@@ -35,7 +35,6 @@ export function reactRender({
             <span>{vs.b1}</span>
             <span>{vs.o1?.s2}</span>
             <span>{vs.o1?.n2}</span>
-            <span>{vs.p1}</span>
         </div>
     );
 }

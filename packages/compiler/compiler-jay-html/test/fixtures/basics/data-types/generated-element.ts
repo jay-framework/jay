@@ -6,7 +6,7 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
-    JayContract,
+    JayContract, resolved,
 } from '@jay-framework/runtime';
 
 export interface O1OfDataTypesViewState {
@@ -61,7 +61,6 @@ export function render(options?: RenderElementOptions): DataTypesElementPreRende
                 e('span', {}, [dt((vs) => vs.b1)]),
                 e('span', {}, [dt((vs) => vs.o1?.s2)]),
                 e('span', {}, [dt((vs) => vs.o1?.n2)]),
-                e('span', {}, [dt((vs) => vs.p1)]),
             ]),
         ) as DataTypesElement;
     return [refManager.getPublicAPI() as DataTypesElementRefs, render];

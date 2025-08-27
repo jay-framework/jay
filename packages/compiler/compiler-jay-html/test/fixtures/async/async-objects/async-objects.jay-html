@@ -1,0 +1,24 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+   o1:
+       s2: string
+       n2: number
+   async po1:
+       ps2: string
+       pn2: number
+     </script>
+</head>
+<body>
+<div>
+    <span>{o1.s2}</span>
+    <span>{o1.n2}</span>
+    <div when-loading="po1">still loading the object</div>
+    <div when-resolved="po1">
+        <span>{po1.ps2}</span>
+        <span>{po1.pn2}</span>
+    </div>
+</div>
+</body>
+</html>

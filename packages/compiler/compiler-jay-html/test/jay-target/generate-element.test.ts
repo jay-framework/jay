@@ -333,4 +333,27 @@ describe('generate jay-html element', () => {
             );
         });
     });
+
+    describe('async rendering', () => {
+        it('for async simple types', async () => {
+            const folder = 'async/async-simple-types';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        it('for async objects', async () => {
+            const folder = 'async/async-objects';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        it('for async arrays', async () => {
+            const folder = 'async/async-arrays';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+    });
 });

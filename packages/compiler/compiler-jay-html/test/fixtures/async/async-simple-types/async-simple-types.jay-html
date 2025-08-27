@@ -1,0 +1,17 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+   s1: string
+   async p1: string
+     </script>
+</head>
+<body>
+<div>
+    <span>{s1}</span>
+    <span when-resolved="p1">{.}</span>
+    <span when-pending="p1">Still loading</span>
+    <span when-rejected="p1">We have an error: {message}</span>
+</div>
+</body>
+</html>

@@ -189,5 +189,23 @@ The end result is that we believe formatting of dates and currencies should be d
 place, that is the component logic, and that `jay-html` and a contract file should not 
 handle formatting.
 
-It also means that Jay will be less oppinionated with `Currency` and `ZonedDate` types, 
+It also means that Jay will be less opinionated with `Currency` and `ZonedDate` types, 
 instead letting the application developer choose their own types as needed.
+
+## Async in Jay-HTML
+
+with jay-html, to be consistent with `if` and `forEach`, we choose to use `when` for handling async data, 
+or promises.
+
+The suggested syntax is therefore 
+
+```html
+    <span when-resolved="p1">{.}</span>
+    <span when-pending="p1">Still loading</span>
+    <span when-rejected="p1">We have an error: {message}</span>
+```
+
+at which, 
+* `when-resolved` child view state data type is the type the promise is resolved to
+* `when-pending` child view state is an empty data type
+* `when-rejected` child view state is the `Error` type
