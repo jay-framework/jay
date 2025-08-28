@@ -121,6 +121,7 @@ Any tag can have additional metadata to be used by design tools. The supported m
 - `description` - A textual description of the tag. For multi-typed tags, this can be an array providing different descriptions for each usage of the tag as different types.
 - `required` - Whether the tag is required. This tells a design tool to give feedback to the designer if this tag is not used. For instance, a checkout button may be required in e-commerce product pages.
 - `repeated` - Whether this tag is a repeated data entity, or an array when transformed to coding types.
+- `async` - Whether this tag represents asynchronous data (promises). Available for `data` and `sub-contract` tags.
 
 ## Data Types
 
@@ -139,6 +140,99 @@ dataType: enum (option1 | option2 | option3)
 ```
 
 Enums define a set of allowed values separated by `|`.
+
+## Async Tags
+
+Async tags represent asynchronous data such as API responses, promises, or other async operations. They are useful for modeling data that needs to be loaded asynchronously in the UI.
+
+### Async Data Tags
+
+```yaml
+- tag: userProfile
+  type: data
+  async: true
+  dataType: string
+  description: User profile data loaded from API
+
+- tag: status
+  type: data
+  async: true
+  dataType: enum (active | inactive | pending)
+  description: Async status that updates from server
+```
+
+### Async Sub-Contract Tags
+
+```yaml
+- tag: userDetails
+  type: sub-contract
+  async: true
+  description: User details loaded asynchronously
+  tags:
+    - tag: name
+      type: data
+      dataType: string
+    - tag: email
+      type: data
+      dataType: string
+    - tag: avatar
+      type: data
+      dataType: string
+
+- tag: notifications
+  type: sub-contract
+  async: true
+  repeated: true
+  description: List of notifications loaded from server
+  tags:
+    - tag: id
+      type: data
+      dataType: string
+    - tag: message
+      type: data
+      dataType: string
+    - tag: timestamp
+      type: data
+      dataType: string
+```
+
+### Async with Linked Contracts
+
+```yaml
+- tag: productData
+  type: sub-contract
+  async: true
+  link: ./product-details
+  description: Product information loaded asynchronously
+
+- tag: reviews
+  type: sub-contract
+  async: true
+  repeated: true
+  link: ./review-item
+  description: Product reviews loaded from API
+```
+
+### Generated Types for Async Tags
+
+Async tags generate TypeScript `Promise<T>` types:
+
+```typescript
+// Generated from async contract
+export interface UserDashboardViewState {
+  userProfile: Promise<string>;
+  userDetails: Promise<{
+    name: string;
+    email: string;
+    avatar: string;
+  }>;
+  notifications: Promise<Array<{
+    id: string;
+    message: string;
+    timestamp: string;
+  }>>;
+}
+```
 
 ## Linked Contracts
 
