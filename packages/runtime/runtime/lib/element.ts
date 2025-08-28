@@ -5,7 +5,8 @@ import {
     BaseJayElement,
     JayComponent,
     JayComponentConstructor,
-    MountFunc, noop,
+    MountFunc,
+    noop,
     noopMount,
     noopUpdate,
     updateFunc,
@@ -164,7 +165,7 @@ export interface Conditional<ViewState> {
 export enum WhenRole {
     pending,
     resolved,
-    rejected
+    rejected,
 }
 export interface When<ViewState, ResolvedViewValue> {
     role: WhenRole;
@@ -175,27 +176,27 @@ export interface When<ViewState, ResolvedViewValue> {
 function when<ViewState, ResolvedViewValue>(
     status: WhenRole,
     promise: (newData: ViewState) => Promise<ResolvedViewValue>,
-    elem: () => BaseJayElement<ResolvedViewValue> | TextElement<ResolvedViewValue> | string
-): When<ViewState, ResolvedViewValue>{
+    elem: () => BaseJayElement<ResolvedViewValue> | TextElement<ResolvedViewValue> | string,
+): When<ViewState, ResolvedViewValue> {
     return {
         role: status,
         promise,
-        elem
-    }
+        elem,
+    };
 }
 
 export const resolved = <ViewState, ResolvedViewValue>(
     promise: (newData: ViewState) => Promise<ResolvedViewValue>,
-    elem: () => BaseJayElement<ResolvedViewValue> | TextElement<ResolvedViewValue> | string) =>
-    when(WhenRole.resolved, promise, elem)
-export const rejected = <ViewState, E extends Error>(
+    elem: () => BaseJayElement<ResolvedViewValue> | TextElement<ResolvedViewValue> | string,
+) => when(WhenRole.resolved, promise, elem);
+export const rejected = <ViewState>(
     promise: (newData: ViewState) => Promise<any>,
-    elem: () => BaseJayElement<E> | TextElement<E> | string) =>
-    when(WhenRole.rejected, promise, elem)
+    elem: () => BaseJayElement<Error> | TextElement<Error> | string,
+) => when(WhenRole.rejected, promise, elem);
 export const pending = <ViewState>(
     promise: (newData: ViewState) => Promise<any>,
-    elem: () => BaseJayElement<never> | TextElement<never> | string) =>
-    when(WhenRole.pending, promise, elem)
+    elem: () => BaseJayElement<never> | TextElement<never> | string,
+) => when(WhenRole.pending, promise, elem);
 
 function isJayElement<ViewState>(
     c:
@@ -255,7 +256,10 @@ function mkWhenCondition<ViewState, Resolved>(
 }
 
 const Hide = Symbol();
-type SetupPromise = (promise: Promise<any>, handleValue: (value: any | typeof Hide) => void) => void
+type SetupPromise = (
+    promise: Promise<any>,
+    handleValue: (value: any | typeof Hide) => void,
+) => void;
 
 function mkWhenConditionBase<ViewState, Resolved>(
     when: When<ViewState, Resolved>,
@@ -265,56 +269,51 @@ function mkWhenConditionBase<ViewState, Resolved>(
     let show = false;
     const parentContext = currentConstructionContext();
     const savedContext = saveContext();
-    const [cUpdate, cMouth, cUnmount] = mkUpdateCondition(conditional(() => show, when.elem), group)
+    const [cUpdate, cMouth, cUnmount] = mkUpdateCondition(
+        conditional(() => show, when.elem),
+        group,
+    );
 
-    let currentPromise = when.promise(parentContext.currData)
+    let currentPromise = when.promise(parentContext.currData);
 
     const handleValue = (changedPromise: Promise<Resolved>) => (value: any | typeof Hide) => {
         if (changedPromise === currentPromise) {
             show = value !== Hide;
             let childContext = parentContext.forAsync(value);
             return restoreContext(savedContext, () =>
-                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () =>
-                    cUpdate(value))
-            )
+                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => cUpdate(value)),
+            );
         }
-    }
-    
-    setupPromise(currentPromise, handleValue(currentPromise))
-    
+    };
+
+    setupPromise(currentPromise, handleValue(currentPromise));
+
     const update = (viewState: ViewState) => {
         const newValue = when.promise(viewState);
         if (currentPromise !== newValue) {
-            currentPromise = newValue
-            setupPromise(currentPromise, handleValue(currentPromise))
+            currentPromise = newValue;
+            setupPromise(currentPromise, handleValue(currentPromise));
             show = false;
-            restoreContext(savedContext, () =>
-                cUpdate(undefined));
+            restoreContext(savedContext, () => cUpdate(undefined));
         }
-    }
-    return [update, cMouth, cUnmount]
+    };
+    return [update, cMouth, cUnmount];
 }
 
 function mkWhenResolvedCondition<ViewState, Resolved>(
     when: When<ViewState, Resolved>,
     group: KindergartenGroup,
 ): [updateFunc<ViewState>, MountFunc, MountFunc] {
-    return mkWhenConditionBase(
-        when,
-        group,
-        (promise, handleValue) => promise.then(handleValue).catch(noop),
-    )
+    return mkWhenConditionBase(when, group, (promise, handleValue) =>
+        promise.then(handleValue).catch(noop),
+    );
 }
 
 function mkWhenRejectedCondition<ViewState, Resolved>(
     when: When<ViewState, Resolved>,
     group: KindergartenGroup,
 ): [updateFunc<ViewState>, MountFunc, MountFunc] {
-    return mkWhenConditionBase(
-        when,
-        group,
-        (promise, handleValue) => promise.catch(handleValue),
-    )
+    return mkWhenConditionBase(when, group, (promise, handleValue) => promise.catch(handleValue));
 }
 
 function mkWhenPendingCondition<ViewState>(
@@ -322,17 +321,15 @@ function mkWhenPendingCondition<ViewState>(
     group: KindergartenGroup,
 ): [updateFunc<ViewState>, MountFunc, MountFunc] {
     let timeout: ReturnType<typeof setTimeout>;
-    return mkWhenConditionBase(
-        when,
-        group,
-        (promise, handleValue) => {
-            timeout = setTimeout(() => handleValue(undefined), 1);
-            promise.finally(() => {
+    return mkWhenConditionBase(when, group, (promise, handleValue) => {
+        timeout = setTimeout(() => handleValue(undefined), 1);
+        promise
+            .finally(() => {
                 clearTimeout(timeout);
                 handleValue(Hide);
-            }).catch(noop);
-        }
-    )
+            })
+            .catch(noop);
+    });
 }
 
 export function forEach<T, Item>(

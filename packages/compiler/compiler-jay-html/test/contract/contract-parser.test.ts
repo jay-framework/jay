@@ -408,14 +408,16 @@ describe('parse contract', () => {
         expect(result.validations).toEqual([]);
         expect(result.val).toEqual({
             name: 'defaults',
-            tags: [{
-                tag: 'name',
-                type: [ContractTagType.subContract],
-                tags: [
-                    { tag: 'firstName', type: [ContractTagType.data], dataType: JayString },
-                    { tag: 'lastName', type: [ContractTagType.data], dataType: JayString },
-                ]
-            }],
+            tags: [
+                {
+                    tag: 'name',
+                    type: [ContractTagType.subContract],
+                    tags: [
+                        { tag: 'firstName', type: [ContractTagType.data], dataType: JayString },
+                        { tag: 'lastName', type: [ContractTagType.data], dataType: JayString },
+                    ],
+                },
+            ],
         });
     });
 
@@ -560,20 +562,20 @@ tags:
                 name: 'async-object-test',
                 tags: [
                     {
-                        tag: "name",
+                        tag: 'name',
                         type: [ContractTagType.data],
                         async: true,
-                        dataType: new JayPromiseType(JayString)
+                        dataType: new JayPromiseType(JayString),
                     },
                     {
-                        tag: "email",
+                        tag: 'email',
                         type: [ContractTagType.data],
                         async: true,
-                        dataType: new JayPromiseType(JayString)
+                        dataType: new JayPromiseType(JayString),
                     },
-                ]
-            })
-        })
+                ],
+            });
+        });
 
         it('should parse async object types correctly', () => {
             const contract = `
@@ -601,12 +603,12 @@ tags:
                         type: [ContractTagType.subContract],
                         async: true,
                         tags: [
-                            {tag: "name", type: [ContractTagType.data], dataType: JayString },
-                            {tag: "email", type: [ContractTagType.data], dataType: JayString },
-                        ]
-                    }
-                ]
-            })
+                            { tag: 'name', type: [ContractTagType.data], dataType: JayString },
+                            { tag: 'email', type: [ContractTagType.data], dataType: JayString },
+                        ],
+                    },
+                ],
+            });
         });
 
         it('should parse async array types correctly', () => {
@@ -637,12 +639,12 @@ tags:
                         repeated: true,
                         async: true,
                         tags: [
-                            {tag: "id", type: [ContractTagType.data], dataType: JayString },
-                            {tag: "message", type: [ContractTagType.data], dataType: JayString },
-                        ]
-                    }
-                ]
-            })
+                            { tag: 'id', type: [ContractTagType.data], dataType: JayString },
+                            { tag: 'message', type: [ContractTagType.data], dataType: JayString },
+                        ],
+                    },
+                ],
+            });
         });
 
         it('should parse nested async structures correctly', () => {
@@ -678,20 +680,28 @@ tags:
                         type: [ContractTagType.subContract],
                         async: true,
                         tags: [
-                            {tag: "name", type: [ContractTagType.data], dataType: JayString },
+                            { tag: 'name', type: [ContractTagType.data], dataType: JayString },
                             {
-                                tag: "preferences",
+                                tag: 'preferences',
                                 type: [ContractTagType.subContract],
                                 async: true,
                                 tags: [
-                                    {tag: "theme", type: [ContractTagType.data], dataType: JayString },
-                                    {tag: "language", type: [ContractTagType.data], dataType: JayString },
-                                ]
+                                    {
+                                        tag: 'theme',
+                                        type: [ContractTagType.data],
+                                        dataType: JayString,
+                                    },
+                                    {
+                                        tag: 'language',
+                                        type: [ContractTagType.data],
+                                        dataType: JayString,
+                                    },
+                                ],
                             },
-                        ]
-                    }
-                ]
-            })
+                        ],
+                    },
+                ],
+            });
         });
     });
 });

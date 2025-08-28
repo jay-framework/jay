@@ -21,7 +21,7 @@ import {
 } from '@jay-framework/compiler-shared';
 import { camelCase, pascalCase } from 'change-case';
 import path from 'path';
-import {toInterfaceName} from "../jay-target/jay-html-parser";
+import { toInterfaceName } from '../jay-target/jay-html-parser';
 
 export interface JayContractImportLink {
     module: string;
@@ -75,7 +75,7 @@ async function traverseTags(
                 ...context,
                 viewStateType: objectType,
                 isRepeated: isRepeated || subTag.repeated,
-                isAsync: subTag.async
+                isAsync: subTag.async,
             });
             if (subContractTypes.val) {
                 const result: SubContractTraverseResult = subContractTypes.val;
@@ -101,7 +101,7 @@ async function traverseTags(
         }
     }
 
-    const maybeArray = isRepeated ? new JayArrayType(objectType): objectType;
+    const maybeArray = isRepeated ? new JayArrayType(objectType) : objectType;
     const type = isAsync ? new JayPromiseType(maybeArray) : maybeArray;
 
     return new WithValidations<SubContractTraverseResult>(
@@ -144,8 +144,7 @@ async function traverseLinkedSubContract(tag: ContractTag, context: ContractTrav
             const maybeArrayType = isArrayType(subContractType)
                 ? new JayArrayType(new JayImportedType(viewState, subContractType.itemType))
                 : new JayImportedType(viewState, subContractType);
-            const type = isAsync ?
-                new JayPromiseType(maybeArrayType) : maybeArrayType;
+            const type = isAsync ? new JayPromiseType(maybeArrayType) : maybeArrayType;
 
             const importLinks: JayContractImportLink[] = [
                 {
@@ -183,7 +182,11 @@ async function traverseSubContractTag(
     if (tag.link) {
         return await traverseLinkedSubContract(tag, context);
     }
-    return await traverseTags(tag.tags, toInterfaceName([context.viewStateType.name, tag.tag]), context);
+    return await traverseTags(
+        tag.tags,
+        toInterfaceName([context.viewStateType.name, tag.tag]),
+        context,
+    );
 }
 
 async function traverseTag(
@@ -224,6 +227,6 @@ export async function contractToImportsViewStateAndRefs(
         isRepeated,
         contractFilePath,
         importResolver: jayImportResolver,
-        isAsync
+        isAsync,
     });
 }

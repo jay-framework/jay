@@ -1,25 +1,26 @@
 # View State Types
 
-The Jay type system, represented internally as `JayType` in 
+The Jay type system, represented internally as `JayType` in
 [jay-type.ts](..%2Fpackages%2Fcompiler%2Fcompiler-shared%2Flib%2Fjay-type.ts) describes the type system
 used to represent the `Data` and `Variant` parts of a contract.
 
-The current supported types are 
-* `string`
-* `number`
-* `boolean`
-* `Date`
-* `enum`
-* `object`
-* `array`
+The current supported types are
+
+- `string`
+- `number`
+- `boolean`
+- `Date`
+- `enum`
+- `object`
+- `array`
 
 ## Adding Types
 
 To have full support for a type system, we need to extend the type system with additional types
 
-* `Promise<JayType>` - allows a component to render a promise, which is a variant of pending and ready.
-* `Currency` - which is a pair of currency symbol and amount
-* `DateWithTimezone` - date with a specific timezone to be rendered at
+- `Promise<JayType>` - allows a component to render a promise, which is a variant of pending and ready.
+- `Currency` - which is a pair of currency symbol and amount
+- `DateWithTimezone` - date with a specific timezone to be rendered at
 
 ## Promise of Objects and Arrays
 
@@ -121,13 +122,13 @@ Another challenge is that in Javascript, on the Browser, a `Date` object is alwa
 unless otherwise specified in date formatting. But there are cases when we want to render a date in a specific timezone,
 other then the browser. For those cases, the timezone itself is a parameter.
 
-For simplicity, we suggest creating a new type that id a pair of a Date and Timezone, such as 
+For simplicity, we suggest creating a new type that id a pair of a Date and Timezone, such as
 
 ```typescript
 type DateWithTimezone = {
-    date: Date,
-    locales: string[] // the locals to use when formatting the date above
-}
+  date: Date;
+  locales: string[]; // the locals to use when formatting the date above
+};
 ```
 
 ## local
@@ -140,10 +141,10 @@ assumes the local was determined beforehand and is used with the formatting obje
 
 We also need to add formatting support into the Jay-HTML files. We map our types to formatting support as
 
-* `Date` --> `Intl.DateTimeFormat`, using the local timezone
-* `DateWithTimezone` --> `Intl.DateTimeFormat`, using the provided timezone
-* `Number` --> `Intl.NumberFormat`
-* `Currency` --> `Intl.NumberFormat`, with style `currency`
+- `Date` --> `Intl.DateTimeFormat`, using the local timezone
+- `DateWithTimezone` --> `Intl.DateTimeFormat`, using the provided timezone
+- `Number` --> `Intl.NumberFormat`
+- `Currency` --> `Intl.NumberFormat`, with style `currency`
 
 ## Jay-HTML and contract support
 
@@ -151,22 +152,23 @@ The new types are added to the jay-html type system, such that full typesystem i
 to be
 
 | name in Jay HTML or Contract   | jay type              |
-|--------------------------------|-----------------------|
+| ------------------------------ | --------------------- |
 | string                         | `JayString`           |
 | number                         | `JayNumber`           |
 | boolean                        | `JayBoolean`          |
 | date                           | `JayDate`             |
 | zoned-date                     | `JayZonedDate`        |
 | currency                       | `JayCurrency`         |
-| async variant of &lt;type&gt;  | `JayPromise<JayType>` | 
-| async &lt;type&gt; (shorthand) | `JayPromise<JayType>` | 
+| async variant of &lt;type&gt;  | `JayPromise<JayType>` |
+| async &lt;type&gt; (shorthand) | `JayPromise<JayType>` |
 
 ## update on async
 
-to better support both objects and arrays in `jay-html`, we changed the syntax to include the word `async` as part 
+to better support both objects and arrays in `jay-html`, we changed the syntax to include the word `async` as part
 of the property name, not the property type.
 
 e.g.
+
 ```yaml
 data:
   async name: string
@@ -185,27 +187,28 @@ can be dynamic (something determined by the application logic) or something stat
 We also need to consider the designer role, who creates the `jay-html` file using visual
 editorial tools - should the designer lean all the formatting options and locale rules?
 
-The end result is that we believe formatting of dates and currencies should be done in one 
-place, that is the component logic, and that `jay-html` and a contract file should not 
+The end result is that we believe formatting of dates and currencies should be done in one
+place, that is the component logic, and that `jay-html` and a contract file should not
 handle formatting.
 
-It also means that Jay will be less opinionated with `Currency` and `ZonedDate` types, 
+It also means that Jay will be less opinionated with `Currency` and `ZonedDate` types,
 instead letting the application developer choose their own types as needed.
 
 ## Async in Jay-HTML
 
-with jay-html, to be consistent with `if` and `forEach`, we choose to use `when` for handling async data, 
+with jay-html, to be consistent with `if` and `forEach`, we choose to use `when` for handling async data,
 or promises.
 
-The suggested syntax is therefore 
+The suggested syntax is therefore
 
 ```html
-    <span when-resolved="p1">{.}</span>
-    <span when-pending="p1">Still loading</span>
-    <span when-rejected="p1">We have an error: {message}</span>
+<span when-resolved="p1">{.}</span>
+<span when-pending="p1">Still loading</span>
+<span when-rejected="p1">We have an error: {message}</span>
 ```
 
-at which, 
-* `when-resolved` child view state data type is the type the promise is resolved to
-* `when-pending` child view state is an empty data type
-* `when-rejected` child view state is the `Error` type
+at which,
+
+- `when-resolved` child view state data type is the type the promise is resolved to
+- `when-pending` child view state is an empty data type
+- `when-rejected` child view state is the `Error` type

@@ -16,8 +16,8 @@ data:
     <span>{o1.n2}</span>
     <div when-loading="po1">still loading the object</div>
     <div when-resolved="po1">
-        <span>{po1.ps2}</span>
-        <span>{po1.pn2}</span>
+        <span>{ps2}</span>
+        <span>{pn2}</span>
     </div>
 </div>
 </body>

@@ -10,7 +10,7 @@ export enum JayTypeKind {
     object,
     array,
     union,
-    promise
+    promise,
 }
 export interface JayType {
     name: string;
@@ -131,6 +131,12 @@ export class JayPromiseType implements JayType {
         return `Promise<${this.itemType.name}>`;
     }
 }
+
+export const JayErrorType = new JayObjectType('Error', {
+    message: new JayAtomicType('string'),
+    name: new JayAtomicType('string'),
+    stack: new JayAtomicType('string'),
+});
 
 export function isAtomicType(aType: JayType): aType is JayAtomicType {
     return aType.kind === JayTypeKind.atomic;

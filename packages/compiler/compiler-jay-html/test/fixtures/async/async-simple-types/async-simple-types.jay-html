@@ -10,8 +10,8 @@ data:
 <div>
     <span>{s1}</span>
     <span when-resolved="p1">{.}</span>
-    <span when-pending="p1">Still loading</span>
-    <span when-rejected="p1">We have an error: {message}</span>
+    <span when-loading="p1">Still loading</span>
+    <span when-rejected="p1">We have an error: {name}, {message}, {stack}</span>
 </div>
 </body>
 </html>

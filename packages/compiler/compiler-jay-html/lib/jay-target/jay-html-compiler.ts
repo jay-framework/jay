@@ -3,20 +3,24 @@ import {
     Imports,
     ImportsFor,
     isArrayType,
+    isPromiseType,
+    JayAtomicType,
     JayComponentType,
+    JayErrorType,
     JayImportLink,
+    JayObjectType,
     JayType,
     JayUnknown,
     MainRuntimeModes,
     mergeRefsTrees,
     mkRef,
     mkRefsTree,
-    RenderFragment,
-    RuntimeMode,
-    WithValidations,
     nestRefs,
     Ref,
     RefsTree,
+    RenderFragment,
+    RuntimeMode,
+    WithValidations,
 } from '@jay-framework/compiler-shared';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
@@ -35,11 +39,18 @@ import { camelCase } from 'camel-case';
 
 import {
     JayHeadlessImports,
+    JayHtmlHeadLink,
     JayHtmlNamespace,
     JayHtmlSourceFile,
-    JayHtmlHeadLink,
 } from './jay-html-source-file';
-import { ensureSingleChildElement, isConditional, isForEach } from './jay-html-helpers';
+import {
+    AsyncDirectiveType,
+    AsyncDirectiveTypes,
+    checkAsync,
+    ensureSingleChildElement,
+    isConditional,
+    isForEach,
+} from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
 import {
@@ -97,7 +108,10 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             attrCanonical === 'if' ||
             attrCanonical === 'foreach' ||
             attrCanonical === 'trackby' ||
-            attrCanonical === 'ref'
+            attrCanonical === 'ref' ||
+            attrCanonical === AsyncDirectiveTypes.loading.directive ||
+            attrCanonical === AsyncDirectiveTypes.resolved.directive ||
+            attrCanonical === AsyncDirectiveTypes.rejected.directive
         )
             return;
         if (attrCanonical === 'style')
@@ -285,7 +299,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
             childIndent = childIndent.noFirstLineBreak();
 
         let needDynamicElement = childNodes
-            .map((_) => isConditional(_) || isForEach(_))
+            .map((_) => isConditional(_) || isForEach(_) || checkAsync(_).isAsync)
             .reduce((prev, current) => prev || current, false);
 
         let childRenders =
@@ -344,6 +358,20 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
 ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             childElement.imports.plus(Import.forEach),
             [...renderedForEach.validations, ...childElement.validations],
+            childElement.refs,
+        );
+    }
+
+    function renderAsync(
+        asyncType: AsyncDirectiveType,
+        getPromiseFragment: RenderFragment,
+        childElement: RenderFragment,
+        resolvedGenericTypes: string,
+    ) {
+        return new RenderFragment(
+            `${indent.firstLine}${asyncType.name}${resolvedGenericTypes}(${getPromiseFragment.rendered}, () => ${childElement.rendered.trim()})`,
+            childElement.imports.plus(asyncType.import),
+            [...getPromiseFragment.validations, ...childElement.validations],
             childElement.refs,
         );
     }
@@ -428,6 +456,65 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                     forEachAccessPath,
                     renderForEach(forEachFragment, forEachVariables, trackBy, childElement),
                 );
+            } else if (checkAsync(htmlElement).isAsync) {
+                const asyncDirective = checkAsync(htmlElement);
+                const asyncProperty = htmlElement.getAttribute(asyncDirective.directive);
+                const asyncAccessor = parseAccessor(asyncProperty, variables);
+                const asyncAccessPath = asyncAccessor.terms;
+                if (asyncAccessor.resolvedType === JayUnknown)
+                    return new RenderFragment('', Imports.none(), [
+                        `async directive - failed to resolve type for ${asyncDirective}=${asyncProperty}`,
+                    ]);
+                if (!isPromiseType(asyncAccessor.resolvedType))
+                    return new RenderFragment('', Imports.none(), [
+                        `async directive - resolved type for ${asyncDirective}=${asyncProperty} is not a promise, found ${asyncAccessor.resolvedType.name}`,
+                    ]);
+
+                const getPromiseFragment: RenderFragment = asyncAccessor
+                    .render()
+                    .map((_) => `vs => ${_}`);
+
+                if (asyncDirective === AsyncDirectiveTypes.resolved) {
+                    const promiseResolvedType = asyncAccessor.resolvedType.itemType;
+                    const childVariables = new Variables(promiseResolvedType, variables, 1);
+
+                    let newContext = {
+                        ...context,
+                        variables: childVariables,
+                        indent: indent.child().noFirstLineBreak().withLastLineBreak(),
+                    };
+
+                    let childElement = renderHtmlElement(htmlElement, newContext);
+                    return nestRefs(
+                        asyncAccessPath,
+                        renderAsync(
+                            asyncDirective,
+                            getPromiseFragment,
+                            childElement,
+                            `<${variables.currentType.name}, ${childVariables.currentType.name}>`,
+                        ),
+                    );
+                } else if (asyncDirective === AsyncDirectiveTypes.loading) {
+                    let childElement = renderHtmlElement(htmlElement, context);
+                    return nestRefs(
+                        asyncAccessPath,
+                        renderAsync(asyncDirective, getPromiseFragment, childElement, ''),
+                    );
+                } else if (asyncDirective === AsyncDirectiveTypes.rejected) {
+                    const childVariables = new Variables(JayErrorType, variables, 1);
+
+                    let newContext = {
+                        ...context,
+                        variables: childVariables,
+                        indent: indent.child().noFirstLineBreak().withLastLineBreak(),
+                    };
+
+                    let childElement = renderHtmlElement(htmlElement, newContext);
+                    return nestRefs(
+                        asyncAccessPath,
+                        renderAsync(asyncDirective, getPromiseFragment, childElement, ''),
+                    );
+                }
             } else {
                 return renderHtmlElement(htmlElement, context);
             }
@@ -613,6 +700,26 @@ ${childElement.rendered}
 ${indent.firstLine}])`,
             childElement.imports.plus(Import.sandboxForEach),
             [...renderedForEach.validations, ...childElement.validations],
+            childElement.refs,
+        );
+    }
+
+    function renderAsync(
+        asyncType: 'resolved' | 'pending' | 'rejected',
+        renderedAsync: RenderFragment,
+        asyncVariables: Variables,
+        childElement: RenderFragment,
+    ) {
+        const importMap = {
+            resolved: Import.resolved,
+            pending: Import.pending,
+            rejected: Import.rejected,
+        };
+
+        return new RenderFragment(
+            `${indent.firstLine}${asyncType}(${renderedAsync.rendered}, () => ${childElement.rendered.trim()})`,
+            childElement.imports.plus(importMap[asyncType]),
+            [...renderedAsync.validations, ...childElement.validations],
             childElement.refs,
         );
     }

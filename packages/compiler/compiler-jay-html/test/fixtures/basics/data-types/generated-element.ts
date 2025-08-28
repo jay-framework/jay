@@ -6,7 +6,7 @@ import {
     ReferencesManager,
     ConstructContext,
     RenderElementOptions,
-    JayContract, resolved,
+    JayContract,
 } from '@jay-framework/runtime';
 
 export interface O1OfDataTypesViewState {

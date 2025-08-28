@@ -1,13 +1,16 @@
 import {
     JayElement,
     element as e,
-    dynamicElement as de,
     dynamicText as dt,
     RenderElement,
     ReferencesManager,
+    dynamicElement as de,
+    resolved,
+    pending,
+    rejected,
     ConstructContext,
     RenderElementOptions,
-    JayContract, resolved, pending, rejected,
+    JayContract,
 } from '@jay-framework/runtime';
 
 export interface AsyncSimpleTypesViewState {
@@ -17,15 +20,23 @@ export interface AsyncSimpleTypesViewState {
 
 export interface AsyncSimpleTypesElementRefs {}
 
-export type AsyncSimpleTypesElement = JayElement<AsyncSimpleTypesViewState, AsyncSimpleTypesElementRefs>;
+export type AsyncSimpleTypesElement = JayElement<
+    AsyncSimpleTypesViewState,
+    AsyncSimpleTypesElementRefs
+>;
 export type AsyncSimpleTypesElementRender = RenderElement<
     AsyncSimpleTypesViewState,
     AsyncSimpleTypesElementRefs,
     AsyncSimpleTypesElement
 >;
-export type AsyncSimpleTypesElementPreRender = [AsyncSimpleTypesElementRefs, AsyncSimpleTypesElementRender];
-export type AsyncSimpleTypesContract = JayContract<AsyncSimpleTypesViewState, AsyncSimpleTypesElementRefs>;
-
+export type AsyncSimpleTypesElementPreRender = [
+    AsyncSimpleTypesElementRefs,
+    AsyncSimpleTypesElementRender,
+];
+export type AsyncSimpleTypesContract = JayContract<
+    AsyncSimpleTypesViewState,
+    AsyncSimpleTypesElementRefs
+>;
 
 export function render(options?: RenderElementOptions): AsyncSimpleTypesElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
@@ -33,9 +44,24 @@ export function render(options?: RenderElementOptions): AsyncSimpleTypesElementP
         ConstructContext.withRootContext(viewState, refManager, () =>
             de('div', {}, [
                 e('span', {}, [dt((vs) => vs.s1)]),
-                resolved(vs => vs.p1, () => dt((vs: string) => vs)),
-                pending(vs => vs.p1, () => "Still loading"),
-                rejected(vs => vs.p1, () => dt((vs: Error) => `We have an error: ${vs.message}`))
+                resolved<AsyncSimpleTypesViewState, string>(
+                    (vs) => vs.p1,
+                    () => e('span', {}, [dt((vs1) => vs1)]),
+                ),
+                pending(
+                    (vs) => vs.p1,
+                    () => e('span', {}, ['Still loading']),
+                ),
+                rejected(
+                    (vs) => vs.p1,
+                    () =>
+                        e('span', {}, [
+                            dt(
+                                (vs1) =>
+                                    `We have an error: ${vs1.name}, ${vs1.message}, ${vs1.stack}`,
+                            ),
+                        ]),
+                ),
             ]),
         ) as AsyncSimpleTypesElement;
     return [refManager.getPublicAPI() as AsyncSimpleTypesElementRefs, render];

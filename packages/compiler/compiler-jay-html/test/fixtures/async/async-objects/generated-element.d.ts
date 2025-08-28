@@ -6,13 +6,13 @@ import {
 } from '@jay-framework/runtime';
 
 export interface O1OfAsyncObjectsViewState {
-    s2: string
-    n2: number
+    s2: string;
+    n2: number;
 }
 
 export interface Po1OfAsyncObjectsViewState {
-    ps2: string
-    pn2: number
+    ps2: string;
+    pn2: number;
 }
 
 export interface AsyncObjectsViewState {

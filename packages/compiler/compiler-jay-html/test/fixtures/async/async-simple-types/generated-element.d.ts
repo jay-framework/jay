@@ -12,13 +12,22 @@ export interface AsyncSimpleTypesViewState {
 
 export interface AsyncSimpleTypesElementRefs {}
 
-export type AsyncSimpleTypesElement = JayElement<AsyncSimpleTypesViewState, AsyncSimpleTypesElementRefs>;
+export type AsyncSimpleTypesElement = JayElement<
+    AsyncSimpleTypesViewState,
+    AsyncSimpleTypesElementRefs
+>;
 export type AsyncSimpleTypesElementRender = RenderElement<
     AsyncSimpleTypesViewState,
     AsyncSimpleTypesElementRefs,
     AsyncSimpleTypesElement
 >;
-export type AsyncSimpleTypesElementPreRender = [AsyncSimpleTypesElementRefs, AsyncSimpleTypesElementRender];
-export type AsyncSimpleTypesContract = JayContract<AsyncSimpleTypesViewState, AsyncSimpleTypesElementRefs>;
+export type AsyncSimpleTypesElementPreRender = [
+    AsyncSimpleTypesElementRefs,
+    AsyncSimpleTypesElementRender,
+];
+export type AsyncSimpleTypesContract = JayContract<
+    AsyncSimpleTypesViewState,
+    AsyncSimpleTypesElementRefs
+>;
 
 export declare function render(options?: RenderElementOptions): AsyncSimpleTypesElementPreRender;

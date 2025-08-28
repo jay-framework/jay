@@ -18,7 +18,7 @@ data:
     </div>
     <span when-loading="pa1">still loading</span>
     <div when-resolved="pa1">
-        <div forEach="pa1" trackBy="ps3">
+        <div forEach="." trackBy="ps3">
             <span>{ps3}</span>
             <span>{pn3}</span>
         </div>

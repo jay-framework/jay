@@ -8,11 +8,7 @@ import {
 import yaml from 'js-yaml';
 import { capitalCase, pascalCase } from 'change-case';
 import pluralize from 'pluralize';
-import { 
-    parseEnumValues, 
-    parseImportNames, 
-    parseIsEnum,
-} from '../expressions/expression-compiler';
+import { parseEnumValues, parseImportNames, parseIsEnum } from '../expressions/expression-compiler';
 import { ResolveTsConfigOptions } from '@jay-framework/compiler-analyze-exported-types';
 import path from 'path';
 import fs from 'fs/promises';
@@ -75,26 +71,27 @@ function resolveType(
         const prop = isAsyncProp ? propKey.substring(6) : propKey; // Remove "async " prefix if present
 
         const checkAsync = (type: JayType): JayType =>
-            isAsyncProp?
-                new JayPromiseType(type) :
-                type;
+            isAsyncProp ? new JayPromiseType(type) : type;
 
         const resolvedPrimitive = resolvePrimitiveType(data[propKey]);
         if (resolvedPrimitive !== JayUnknown) {
             types[prop] = checkAsync(resolvedPrimitive);
         } else if (isArrayType(data[propKey])) {
-            types[prop] = checkAsync(new JayArrayType(
-                resolveType(data[propKey][0], validations, [...path, prop], imports)
-            ));
+            types[prop] = checkAsync(
+                new JayArrayType(
+                    resolveType(data[propKey][0], validations, [...path, prop], imports),
+                ),
+            );
         } else if (isObjectType(data[propKey])) {
-            types[prop] = checkAsync(resolveType(data[propKey], validations, [...path, prop], imports));
+            types[prop] = checkAsync(
+                resolveType(data[propKey], validations, [...path, prop], imports),
+            );
         } else if (resolveImportedType(imports, data[propKey]) !== JayUnknown) {
             types[prop] = checkAsync(resolveImportedType(imports, data[prop]));
         } else if (parseIsEnum(data[propKey])) {
-            types[prop] = checkAsync(new JayEnumType(
-                toInterfaceName([...path, prop]),
-                parseEnumValues(data[prop])
-            ));
+            types[prop] = checkAsync(
+                new JayEnumType(toInterfaceName([...path, prop]), parseEnumValues(data[prop])),
+            );
         } else {
             let [, ...pathTail] = path;
             validations.push(

@@ -7,10 +7,7 @@ import {
 } from '@jay-framework/compiler-shared';
 import { Contract, ContractTag, ContractTagType } from './contract';
 import yaml from 'js-yaml';
-import {
-    parseIsEnum,
-    parseEnumValues,
-} from '../';
+import { parseIsEnum, parseEnumValues } from '../';
 import { pascalCase } from 'change-case';
 
 interface ParsedYamlTag {
@@ -69,7 +66,7 @@ function parseType(
 function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
     // Default type to 'data' if not specified
     const types = parseType(tag.type || (tag.tags ? 'sub-contract' : 'data'), tag.tag);
-    const typesAsString = types.val.map(_ => ContractTagType[_]).join(', ');
+    const typesAsString = types.val.map((_) => ContractTagType[_]).join(', ');
     const validations = types.validations;
 
     // Validate that subcontract type is not mixed with other types
@@ -106,8 +103,7 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
         if (tag.elementType) {
             validations.push(`Tag [${tag.tag}] of type [sub-contract] cannot have an elementType`);
         }
-    }
-    else {
+    } else {
         if (tag.tags)
             validations.push(`Tag [${tag.tag}] of type [${typesAsString}] cannot have tags`);
         if (tag.link)
@@ -118,11 +114,9 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
     const elementType = parseElementType(tag.elementType);
     const required = tag.required;
 
-    if (validations.length > 0)
-        return new WithValidations(undefined, validations);
+    if (validations.length > 0) return new WithValidations(undefined, validations);
 
     if (types.val.includes(ContractTagType.subContract)) {
-
         if (tag.link) {
             return new WithValidations<ContractTag>(
                 {
@@ -168,21 +162,21 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
             },
             [...validations, ...subTagValidations, ...duplicateTagValidations],
         );
-    }
-    else {
-        const parsedDataType = (tag.async === true)?
-            new JayPromiseType(parseDataType(tag.tag, dataType)):
-            parseDataType(tag.tag, dataType);
+    } else {
+        const parsedDataType =
+            tag.async === true
+                ? new JayPromiseType(parseDataType(tag.tag, dataType))
+                : parseDataType(tag.tag, dataType);
 
         // Handle regular tag
         const contractTag: ContractTag = {
             tag: tag.tag,
             type: types.val,
-            ...(required && {required}),
-            ...(parsedDataType && {dataType: parsedDataType}),
-            ...(description && {description}),
-            ...(elementType && {elementType}),
-            ...(tag.async && {async: tag.async}),
+            ...(required && { required }),
+            ...(parsedDataType && { dataType: parsedDataType }),
+            ...(description && { description }),
+            ...(elementType && { elementType }),
+            ...(tag.async && { async: tag.async }),
         };
 
         return new WithValidations<ContractTag>(contractTag, validations);

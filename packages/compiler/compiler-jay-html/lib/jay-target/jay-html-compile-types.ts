@@ -2,7 +2,8 @@ import {
     isArrayType,
     isAtomicType,
     isEnumType,
-    isObjectType, isPromiseType,
+    isObjectType,
+    isPromiseType,
     JayImportedType,
     JayType,
 } from '@jay-framework/compiler-shared';
@@ -40,12 +41,15 @@ function renderInterface(aType: JayType): string {
                         return `  ${prop}: ${childType.name}`;
                     } else if (isPromiseType(childType)) {
                         let promiseItemType = childType.itemType;
-                        if (isAtomicType(promiseItemType)) return `  ${prop}: Promise<${promiseItemType.name}>`;
+                        if (isAtomicType(promiseItemType))
+                            return `  ${prop}: Promise<${promiseItemType.name}>`;
                         else if (isObjectType(promiseItemType)) {
                             childInterfaces.push(renderInterface(promiseItemType));
                             return `  ${prop}: Promise<${promiseItemType.name}>`;
-                        }
-                        else if (isArrayType(promiseItemType) && isObjectType(promiseItemType.itemType)) {
+                        } else if (
+                            isArrayType(promiseItemType) &&
+                            isObjectType(promiseItemType.itemType)
+                        ) {
                             childInterfaces.push(renderInterface(promiseItemType.itemType));
                             return `  ${prop}: Promise<Array<${promiseItemType.itemType.name}>>`;
                         }

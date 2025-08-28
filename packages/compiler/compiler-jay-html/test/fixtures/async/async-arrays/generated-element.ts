@@ -1,23 +1,26 @@
 import {
     JayElement,
     element as e,
-    dynamicElement as de,
     dynamicText as dt,
     RenderElement,
     ReferencesManager,
+    dynamicElement as de,
+    forEach,
+    resolved,
+    pending,
     ConstructContext,
     RenderElementOptions,
-    JayContract, resolved, pending, rejected, forEach,
+    JayContract,
 } from '@jay-framework/runtime';
 
 export interface A1OfAsyncArraysViewState {
-    s3: string
-    n3: number
+    s3: string;
+    n3: number;
 }
 
 export interface Pa1OfAsyncArraysViewState {
-    ps3: string
-    pn3: number
+    ps3: string;
+    pn3: number;
 }
 
 export interface AsyncArraysViewState {
@@ -43,24 +46,33 @@ export function render(options?: RenderElementOptions): AsyncArraysElementPreRen
             de('div', {}, [
                 forEach(
                     (vs: AsyncArraysViewState) => vs.a1,
+                    (vs1: A1OfAsyncArraysViewState) => {
+                        return e('div', {}, [
+                            e('span', {}, [dt((vs1) => vs1.s3)]),
+                            e('span', {}, [dt((vs1) => vs1.n3)]),
+                        ]);
+                    },
+                    's3',
+                ),
+                pending(
+                    (vs) => vs.pa1,
+                    () => e('span', {}, ['still loading']),
+                ),
+                resolved<AsyncArraysViewState, Array<Pa1OfAsyncArraysViewState>>(
+                    (vs) => vs.pa1,
                     () =>
-                        e('div', {}, [
-                            e('span', {}, [dt((vs) => vs.s3)]),
-                            e('span', {}, [dt((vs) => vs.n3)]),
+                        de('div', {}, [
+                            forEach(
+                                (vs1: Array<Pa1OfAsyncArraysViewState>) => vs1,
+                                (vs2: Pa1OfAsyncArraysViewState) => {
+                                    return e('div', {}, [
+                                        e('span', {}, [dt((vs2) => vs2.ps3)]),
+                                        e('span', {}, [dt((vs2) => vs2.pn3)]),
+                                    ]);
+                                },
+                                'ps3',
+                            ),
                         ]),
-                    "s3"),
-                pending(vs => vs.pa1, () => "Still loading"),
-                resolved(vs => vs.pa1, () =>
-                    de('div', {}, [
-                        forEach(
-                            (vs: Array<Pa1OfAsyncArraysViewState>) => vs,
-                            () =>
-                                e('div', {}, [
-                                    e('span', {}, [dt((vs: Pa1OfAsyncArraysViewState) => vs.ps3)]),
-                                    e('span', {}, [dt((vs: Pa1OfAsyncArraysViewState) => vs.pn3)]),
-                                ]),
-                            'ps3')
-                    ])
                 ),
             ]),
         ) as AsyncArraysElement;

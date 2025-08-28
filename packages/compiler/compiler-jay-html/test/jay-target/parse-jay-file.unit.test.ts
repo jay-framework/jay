@@ -1,9 +1,4 @@
-import {
-    parseJayFile,
-    JayImportResolver,
-    Contract,
-    JAY_IMPORT_RESOLVER,
-} from '../../lib';
+import { parseJayFile, JayImportResolver, Contract, JAY_IMPORT_RESOLVER } from '../../lib';
 import {
     JayArrayType,
     JayBoolean,
@@ -203,7 +198,7 @@ describe('compiler', () => {
                         new JayObjectType('UserProfileOfBaseViewState', {
                             name: JayString,
                             email: JayString,
-                        })
+                        }),
                     ),
                 }),
             );
@@ -231,8 +226,8 @@ describe('compiler', () => {
                             new JayObjectType('NotificationOfBaseViewState', {
                                 id: JayString,
                                 message: JayString,
-                            })
-                        )
+                            }),
+                        ),
                     ),
                 }),
             );

@@ -3,7 +3,12 @@ import {
     ReferencesManager,
     ConstructContext,
     dynamicElement as de,
-    element as e, dynamicText as dt, pending, rejected, resolved, forEach
+    element as e,
+    dynamicText as dt,
+    pending,
+    rejected,
+    resolved,
+    forEach,
 } from '../../lib';
 
 function mkPromise<T>(): [(v: T) => void, (reason?: any) => void, Promise<any>] {
@@ -23,14 +28,13 @@ function mkPromise<T>(): [(v: T) => void, (reason?: any) => void, Promise<any>] 
 async function ignoreErrors(op: Promise<any>) {
     try {
         await op;
-    }
-    catch (e) {}
+    } catch (e) {}
 }
 
-const STILL_LOADING = "still loading"
-const RESOLVED = "resolved to a value"
-const RESOLVED_2 = "resolved to another value"
-const PROMISE_ERROR = "promise rejected with this error"
+const STILL_LOADING = 'still loading';
+const RESOLVED = 'resolved to a value';
+const RESOLVED_2 = 'resolved to another value';
+const PROMISE_ERROR = 'promise rejected with this error';
 
 describe('async-element', () => {
     interface ViewState {
@@ -40,12 +44,13 @@ describe('async-element', () => {
         let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
         return ConstructContext.withRootContext(data, refManager, () =>
             // noinspection DuplicatedCode
-            de('div', {id: 'parent'}, [
+            de('div', { id: 'parent' }, [
                 pending(
                     (vs: ViewState) => vs.text1,
-                    () => e('div', { style: { cssText: 'color:gray' }, id: 'pending-div' }, [
-                        STILL_LOADING,
-                    ]),
+                    () =>
+                        e('div', { style: { cssText: 'color:gray' }, id: 'pending-div' }, [
+                            STILL_LOADING,
+                        ]),
                 ),
                 resolved(
                     (vs: ViewState) => vs.text1,
@@ -66,13 +71,12 @@ describe('async-element', () => {
     }
 
     describe('initial rendering', () => {
-
         it('should render pending promise on next microtask', async () => {
             const [resolve1, reject1, promise1] = mkPromise<string>();
             resolve1(RESOLVED);
             let jayElement = makeElement({ text1: promise1 });
             expect(jayElement.dom.children).toHaveLength(0);
-            await promise1
+            await promise1;
 
             expect(jayElement.dom.children).toHaveLength(1);
             expect(jayElement.dom.querySelector('#resolved-div').innerHTML).toBe(RESOLVED);
@@ -98,7 +102,7 @@ describe('async-element', () => {
             await vi.waitFor(() => {
                 expect(jayElement.dom.children).toHaveLength(1);
                 expect(jayElement.dom.querySelector('#pending-div').innerHTML).toBe(STILL_LOADING);
-            })
+            });
         });
 
         it('should render pending then resolved', async () => {
@@ -108,7 +112,7 @@ describe('async-element', () => {
             await vi.waitFor(() => {
                 expect(jayElement.dom.children).toHaveLength(1);
                 expect(jayElement.dom.querySelector('#pending-div').innerHTML).toBe(STILL_LOADING);
-            })
+            });
 
             resolve1(RESOLVED);
             await promise1;
@@ -123,7 +127,7 @@ describe('async-element', () => {
             await vi.waitFor(() => {
                 expect(jayElement.dom.children).toHaveLength(1);
                 expect(jayElement.dom.querySelector('#pending-div').innerHTML).toBe(STILL_LOADING);
-            })
+            });
 
             reject1(new Error(PROMISE_ERROR));
             await ignoreErrors(promise1);
@@ -131,19 +135,19 @@ describe('async-element', () => {
             expect(jayElement.dom.children).toHaveLength(1);
             expect(jayElement.dom.querySelector('#rejected-div').innerHTML).toBe(PROMISE_ERROR);
         });
-    })
+    });
 
     describe('updating promise', () => {
         it('should render pending promise on next microtask', async () => {
             const [resolve1, reject1, promise1] = mkPromise<string>();
             resolve1(RESOLVED);
             let jayElement = makeElement({ text1: promise1 });
-            await promise1
+            await promise1;
 
             const [resolve2, reject2, promise2] = mkPromise<string>();
             resolve2(RESOLVED_2);
-            jayElement.update({ text1: promise2 })
-            await promise2
+            jayElement.update({ text1: promise2 });
+            await promise2;
 
             expect(jayElement.dom.querySelector('#resolved-div').innerHTML).toBe(RESOLVED_2);
         });
@@ -153,16 +157,16 @@ describe('async-element', () => {
             let jayElement = makeElement({ text1: promise1 });
 
             const [resolve2, reject2, promise2] = mkPromise<string>();
-            jayElement.update({ text1: promise2 })
+            jayElement.update({ text1: promise2 });
             resolve2(RESOLVED_2);
-            await promise2
+            await promise2;
 
             resolve1(RESOLVED);
-            await promise1
+            await promise1;
 
             expect(jayElement.dom.querySelector('#resolved-div').innerHTML).toBe(RESOLVED_2);
         });
-    })
+    });
 
     describe('async array promise', () => {
         interface Item {
@@ -181,12 +185,10 @@ describe('async-element', () => {
         function makeArrayElement(data: ArrayViewState): JayElement<ArrayViewState, any> {
             let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
             return ConstructContext.withRootContext(data, refManager, () =>
-                de('div', {id: 'parent'}, [
+                de('div', { id: 'parent' }, [
                     pending(
                         (vs: ArrayViewState) => vs.items,
-                        () => e('div', { id: 'pending-div' }, [
-                            'Loading items...',
-                        ]),
+                        () => e('div', { id: 'pending-div' }, ['Loading items...']),
                     ),
                     resolved(
                         (vs: ArrayViewState) => vs.items,
@@ -205,10 +207,7 @@ describe('async-element', () => {
                     ),
                     rejected(
                         (vs: ArrayViewState) => vs.items,
-                        () =>
-                            e('div', { id: 'rejected-div' }, [
-                                'Failed to load items',
-                            ]),
+                        () => e('div', { id: 'rejected-div' }, ['Failed to load items']),
                     ),
                 ]),
             );
@@ -217,14 +216,16 @@ describe('async-element', () => {
         it('should render pending then resolved array of items', async () => {
             const [resolve, reject, promise] = mkPromise<Array<Item>>();
             let jayElement = makeArrayElement({ items: promise });
-            
+
             // Initially should have no children
             expect(jayElement.dom.children).toHaveLength(0);
-            
+
             // Should show pending state
             await vi.waitFor(() => {
                 expect(jayElement.dom.children).toHaveLength(1);
-                expect(jayElement.dom.querySelector('#pending-div')).toHaveTextContent('Loading items...');
+                expect(jayElement.dom.querySelector('#pending-div')).toHaveTextContent(
+                    'Loading items...',
+                );
             });
 
             // Resolve the promise with array of items
@@ -243,14 +244,16 @@ describe('async-element', () => {
         it('should handle promise rejection for array', async () => {
             const [resolve, reject, promise] = mkPromise<Array<Item>>();
             let jayElement = makeArrayElement({ items: promise });
-            
+
             // Initially should have no children
             expect(jayElement.dom.children).toHaveLength(0);
-            
+
             // Should show pending state
             await vi.waitFor(() => {
                 expect(jayElement.dom.children).toHaveLength(1);
-                expect(jayElement.dom.querySelector('#pending-div')).toHaveTextContent('Loading items...');
+                expect(jayElement.dom.querySelector('#pending-div')).toHaveTextContent(
+                    'Loading items...',
+                );
             });
 
             // Reject the promise
@@ -259,7 +262,9 @@ describe('async-element', () => {
 
             // Should show rejected state
             expect(jayElement.dom.children).toHaveLength(1);
-            expect(jayElement.dom.querySelector('#rejected-div')).toHaveTextContent('Failed to load items');
+            expect(jayElement.dom.querySelector('#rejected-div')).toHaveTextContent(
+                'Failed to load items',
+            );
         });
 
         it('should update from one resolved array to another', async () => {
@@ -285,5 +290,5 @@ describe('async-element', () => {
             expect(jayElement.dom.querySelector('#' + item2.id)).toHaveTextContent(item2.name);
             expect(jayElement.dom.querySelector('#' + item3.id)).toHaveTextContent(item3.name);
         });
-    })
-})
+    });
+});
