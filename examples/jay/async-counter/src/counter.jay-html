@@ -1,0 +1,16 @@
+<html>
+  <head>
+    <script type="application/jay-data">
+      data:
+        async count: number
+    </script>
+  </head>
+  <body>
+    <div>
+      <button ref="subtracter">-</button>
+      <span when-loading="count" style="margin: 0 16px; color: gray;width: 50px">...</span>
+      <span when-resolved="count" style="margin: 0 16px;width: 50px">{.}</span>
+      <button ref="adder-button">+</button>
+    </div>
+  </body>
+</html>

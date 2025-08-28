@@ -1,0 +1,13 @@
+<html>
+  <head>
+    <script type="application/jay-headfull" src="./counter" names="Counter"></script>
+    <script type="application/jay-data">
+      data:
+    </script>
+  </head>
+  <body>
+    <div>
+      <Counter initialValue="12" ref="a"></Counter>
+    </div>
+  </body>
+</html>
