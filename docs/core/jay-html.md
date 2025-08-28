@@ -548,6 +548,93 @@ Render imported components:
 </div>
 ```
 
+## Async Rendering
+
+Jay-HTML supports asynchronous data rendering with built-in loading, resolved, and error states. This enables seamless handling of promises, API calls, and other async operations directly in your templates.
+
+### Async Data Types
+
+Mark data properties as async using the `async` keyword in data scripts:
+
+```html
+<script type="application/jay-data">
+  data:
+    title: string
+    async userProfile: 
+      name: string
+      email: string
+      avatar: string
+    async notifications:
+    - id: string
+      message: string
+      timestamp: string
+    async status: enum (active | inactive | pending)
+</script>
+```
+
+### Conditional Rendering for Async States
+
+Use special conditional attributes to handle different promise states:
+
+#### Loading State
+
+Show content while the promise is pending:
+
+```html
+<div when-loading="userProfile">
+  <div class="loading-spinner">Loading user profile...</div>
+</div>
+
+<div when-loading="notifications">
+  <p>Fetching notifications...</p>
+</div>
+```
+
+#### Resolved State
+
+Show content when the promise resolves successfully:
+
+```html
+<div when-resolved="userProfile">
+  <img src="{avatar}" alt="Avatar" />
+  <h2>{name}</h2>
+  <p>{email}</p>
+</div>
+
+<ul when-resolved="notifications">
+  <li forEach="." trackBy="id">
+    <span>{message}</span>
+    <time>{timestamp}</time>
+  </li>
+</ul>
+```
+
+**Note**: Within `when-resolved` blocks, use `.` to refer to the resolved value, or access properties directly as shown above.
+
+#### Error State
+
+Show content when the promise is rejected:
+
+```html
+<div when-rejected="userProfile">
+  <p>Failed to load profile: {message}</p>
+  <button ref="retryProfile">Retry</button>
+</div>
+
+<div when-rejected="notifications">
+  <p>Error loading notifications</p>
+  <details>
+    <summary>Error Details</summary>
+    <pre>{name}: {message}</pre>
+  </details>
+</div>
+```
+
+**Error Properties**: Within `when-rejected` blocks, you have access to error properties:
+- `{name}` - Error name/type
+- `{message}` - Error message
+- `{stack}` - Error stack trace (in development)
+
 ## References
 
 Use `ref="name"` to create named references for component interaction:

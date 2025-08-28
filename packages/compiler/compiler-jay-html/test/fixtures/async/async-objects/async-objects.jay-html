@@ -2,31 +2,23 @@
 <head>
     <script type="application/jay-data">
 data:
-   s1: string
-   n1: number
-   b1: boolean
    o1:
        s2: string
        n2: number
-   a1:
-    -  s3: string
-       n3: number
-   async p1: string
    async po1:
        ps2: string
        pn2: number
-   async pa1:
-    -  ps3: string
-       pn3: number
      </script>
 </head>
 <body>
 <div>
-    <span>{s1}</span>
-    <span>{n1}</span>
-    <span>{b1}</span>
     <span>{o1.s2}</span>
     <span>{o1.n2}</span>
+    <div when-loading="po1">still loading the object</div>
+    <div when-resolved="po1">
+        <span>{ps2}</span>
+        <span>{pn2}</span>
+    </div>
 </div>
 </body>
 </html>

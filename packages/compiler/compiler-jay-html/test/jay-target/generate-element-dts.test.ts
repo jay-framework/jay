@@ -83,4 +83,36 @@ describe('generate jay-html definition', () => {
             await readFixtureElementDefinitionFile(folder),
         );
     });
+
+    describe('for async rendering', () => {
+        it('for async simple types', async () => {
+            const folder = 'async/async-simple-types';
+            const parsedFile = await readAndParseJayFile(folder);
+            let definitionFile = generateElementDefinitionFile(parsedFile);
+            expect(definitionFile.validations).toEqual([]);
+            expect(await prettify(definitionFile.val)).toEqual(
+                await readFixtureElementDefinitionFile(folder),
+            );
+        });
+
+        it('for async objects', async () => {
+            const folder = 'async/async-objects';
+            const parsedFile = await readAndParseJayFile(folder);
+            let definitionFile = generateElementDefinitionFile(parsedFile);
+            expect(definitionFile.validations).toEqual([]);
+            expect(await prettify(definitionFile.val)).toEqual(
+                await readFixtureElementDefinitionFile(folder),
+            );
+        });
+
+        it('for async arrays', async () => {
+            const folder = 'async/async-arrays';
+            const parsedFile = await readAndParseJayFile(folder);
+            let definitionFile = generateElementDefinitionFile(parsedFile);
+            expect(definitionFile.validations).toEqual([]);
+            expect(await prettify(definitionFile.val)).toEqual(
+                await readFixtureElementDefinitionFile(folder),
+            );
+        });
+    });
 });

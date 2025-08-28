@@ -26,7 +26,7 @@ Here's a simple Jay-HTML file:
 
 ## Key Differences from Standard HTML
 
-Jay-HTML extends HTML with seven main features:
+Jay-HTML extends HTML with eight main features:
 
 1. **Component and type imports** - Import reusable components and type definitions
 2. **Data contract definition** - Define component interfaces using YAML
@@ -35,6 +35,7 @@ Jay-HTML extends HTML with seven main features:
 5. **Data binding** - Bind component data to HTML using `{}` syntax
 6. **Conditional rendering** - Show/hide elements based on conditions
 7. **List rendering** - Iterate over arrays with `forEach` and `trackBy`
+8. **Async rendering** - Handle promises with loading, resolved, and error states
 
 ## Component Import System
 
@@ -102,6 +103,58 @@ Headless components provide only the contract and logic:
   name="dataStore"
   key="store"
 ></script>
+```
+
+## Async Rendering
+
+Jay-HTML provides built-in support for handling asynchronous data with dedicated conditional rendering attributes. Async data can be primitive types (like strings or numbers), objects, or arrays.
+
+### Async Data Declaration
+
+```html
+<script type="application/yaml-jay">
+  data:
+    title: string
+    async status: string              <!-- Primitive type -->
+    async userProfile:                <!-- Object type -->
+      name: string
+      email: string
+    async posts:                      <!-- Array type -->
+    - id: string
+      title: string
+</script>
+```
+
+### Async State Handling
+
+```html
+<body>
+  <h1>{title}</h1>
+  
+  <!-- Loading state -->
+  <div when-loading="userProfile">
+    Loading user profile...
+  </div>
+  
+  <!-- Success state -->
+  <div when-resolved="userProfile">
+    <h2>Welcome, {name}!</h2>
+    <p>{email}</p>
+  </div>
+  
+  <!-- Error state -->
+  <div when-rejected="userProfile">
+    Failed to load profile: {message}
+    <!-- Error properties available: {name}, {message}, {stack} -->
+  </div>
+  
+  <!-- Async arrays -->
+  <div when-resolved="posts">
+    <article forEach="." trackBy="id">
+      <h3>{title}</h3>
+    </article>
+  </div>
+</body>
 ```
 
 ## Documentation

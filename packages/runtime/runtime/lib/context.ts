@@ -106,6 +106,9 @@ export class ConstructContext<ViewState> {
     forItem<ChildViewState>(childViewState: ChildViewState, id: string) {
         return new ConstructContext(childViewState, false, [...this.coordinateBase, id]);
     }
+    forAsync<ChildViewState>(childViewState: ChildViewState) {
+        return new ConstructContext(childViewState, false, [...this.coordinateBase]);
+    }
 
     static withRootContext<ViewState, Refs>(
         viewState: ViewState,

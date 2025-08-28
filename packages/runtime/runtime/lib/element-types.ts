@@ -6,8 +6,9 @@ export interface updateFunc<T> {
 
 //type updateFunc<T> = (newData:T) => void;
 export type MountFunc = () => void;
-export const noopUpdate: updateFunc<any> = (_newData: any): void => {};
-export const noopMount: MountFunc = (): void => {};
+export const noop = () => {};
+export const noopUpdate: updateFunc<any> = noop;
+export const noopMount: MountFunc = noop;
 
 export interface BaseJayElement<ViewState> {
     // dom: HTMLElement, - provided by element-test-types.ts

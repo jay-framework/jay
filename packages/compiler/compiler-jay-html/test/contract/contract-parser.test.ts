@@ -5,6 +5,7 @@ import {
     JayEnumType,
     JayNumber,
     JayString,
+    JayPromiseType,
 } from '@jay-framework/compiler-shared';
 
 describe('parse contract', () => {
@@ -377,7 +378,7 @@ describe('parse contract', () => {
         });
     });
 
-    it('should default to data type if type is not specified', () => {
+    it('should default to data type if type is not specified and not tags', () => {
         const contract = `
         name: defaults
         tags:
@@ -390,6 +391,33 @@ describe('parse contract', () => {
         expect(result.val).toEqual({
             name: 'defaults',
             tags: [{ tag: 'name', type: [ContractTagType.data], dataType: JayString }],
+        });
+    });
+
+    it('should default to sub-contract type if type is not specified and the tag has tags', () => {
+        const contract = `
+        name: defaults
+        tags:
+          - tag: name
+            tags: 
+              - tag: firstName
+              - tag: lastName
+        `;
+
+        const result = parseContract(contract, 'contract.jay-contract');
+        expect(result.validations).toEqual([]);
+        expect(result.val).toEqual({
+            name: 'defaults',
+            tags: [
+                {
+                    tag: 'name',
+                    type: [ContractTagType.subContract],
+                    tags: [
+                        { tag: 'firstName', type: [ContractTagType.data], dataType: JayString },
+                        { tag: 'lastName', type: [ContractTagType.data], dataType: JayString },
+                    ],
+                },
+            ],
         });
     });
 
@@ -510,6 +538,170 @@ describe('parse contract', () => {
             expect(result.validations).toEqual([
                 'Tag [items] of type [sub-contract] must have either tags or a link',
             ]);
+        });
+    });
+
+    describe('async types parsing', () => {
+        it('should parse async atomic types correctly', () => {
+            const contract = `
+name: async-object-test
+tags:
+   - tag: name
+     type: data
+     async: true
+     dataType: string
+   - tag: email
+     type: data
+     async: true
+     dataType: string
+`;
+
+            const result = parseContract(contract, 'test.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val).toEqual({
+                name: 'async-object-test',
+                tags: [
+                    {
+                        tag: 'name',
+                        type: [ContractTagType.data],
+                        async: true,
+                        dataType: new JayPromiseType(JayString),
+                    },
+                    {
+                        tag: 'email',
+                        type: [ContractTagType.data],
+                        async: true,
+                        dataType: new JayPromiseType(JayString),
+                    },
+                ],
+            });
+        });
+
+        it('should parse async object types correctly', () => {
+            const contract = `
+name: async-object-test
+tags:
+  - tag: userProfile
+    type: sub-contract
+    async: true
+    tags:
+      - tag: name
+        type: data
+        dataType: string
+      - tag: email
+        type: data
+        dataType: string
+`;
+
+            const result = parseContract(contract, 'test.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val).toEqual({
+                name: 'async-object-test',
+                tags: [
+                    {
+                        tag: 'userProfile',
+                        type: [ContractTagType.subContract],
+                        async: true,
+                        tags: [
+                            { tag: 'name', type: [ContractTagType.data], dataType: JayString },
+                            { tag: 'email', type: [ContractTagType.data], dataType: JayString },
+                        ],
+                    },
+                ],
+            });
+        });
+
+        it('should parse async array types correctly', () => {
+            const contract = `
+name: async-array-test
+tags:
+  - tag: notifications
+    type: sub-contract
+    async: true
+    repeated: true
+    tags:
+      - tag: id
+        type: data
+        dataType: string
+      - tag: message
+        type: data
+        dataType: string
+`;
+
+            const result = parseContract(contract, 'test.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val).toEqual({
+                name: 'async-array-test',
+                tags: [
+                    {
+                        tag: 'notifications',
+                        type: [ContractTagType.subContract],
+                        repeated: true,
+                        async: true,
+                        tags: [
+                            { tag: 'id', type: [ContractTagType.data], dataType: JayString },
+                            { tag: 'message', type: [ContractTagType.data], dataType: JayString },
+                        ],
+                    },
+                ],
+            });
+        });
+
+        it('should parse nested async structures correctly', () => {
+            const contract = `
+name: nested-async-test
+tags:
+  - tag: userProfile
+    type: sub-contract
+    async: true
+    tags:
+      - tag: name
+        type: data
+        dataType: string
+      - tag: preferences
+        type: sub-contract
+        async: true
+        tags:
+          - tag: theme
+            type: data
+            dataType: string
+          - tag: language
+            type: data
+            dataType: string
+`;
+
+            const result = parseContract(contract, 'test.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val).toEqual({
+                name: 'nested-async-test',
+                tags: [
+                    {
+                        tag: 'userProfile',
+                        type: [ContractTagType.subContract],
+                        async: true,
+                        tags: [
+                            { tag: 'name', type: [ContractTagType.data], dataType: JayString },
+                            {
+                                tag: 'preferences',
+                                type: [ContractTagType.subContract],
+                                async: true,
+                                tags: [
+                                    {
+                                        tag: 'theme',
+                                        type: [ContractTagType.data],
+                                        dataType: JayString,
+                                    },
+                                    {
+                                        tag: 'language',
+                                        type: [ContractTagType.data],
+                                        dataType: JayString,
+                                    },
+                                ],
+                            },
+                        ],
+                    },
+                ],
+            });
         });
     });
 });

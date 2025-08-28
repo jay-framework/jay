@@ -3,6 +3,7 @@ import {
     JayType,
     resolvePrimitiveType,
     JayEnumType,
+    JayPromiseType,
 } from '@jay-framework/compiler-shared';
 import { Contract, ContractTag, ContractTagType } from './contract';
 import yaml from 'js-yaml';
@@ -19,6 +20,7 @@ interface ParsedYamlTag {
     tags?: Array<ParsedYamlTag>;
     repeated?: boolean;
     link?: string;
+    async?: boolean;
 }
 
 interface ParsedYaml {
@@ -63,7 +65,8 @@ function parseType(
 
 function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
     // Default type to 'data' if not specified
-    const types = parseType(tag.type || 'data', tag.tag);
+    const types = parseType(tag.type || (tag.tags ? 'sub-contract' : 'data'), tag.tag);
+    const typesAsString = types.val.map((_) => ContractTagType[_]).join(', ');
     const validations = types.validations;
 
     // Validate that subcontract type is not mixed with other types
@@ -100,30 +103,34 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
         if (tag.elementType) {
             validations.push(`Tag [${tag.tag}] of type [sub-contract] cannot have an elementType`);
         }
+    } else {
+        if (tag.tags)
+            validations.push(`Tag [${tag.tag}] of type [${typesAsString}] cannot have tags`);
+        if (tag.link)
+            validations.push(`Tag [${tag.tag}] of type [${typesAsString}] cannot have link`);
     }
 
-    const parsedDataType = parseDataType(tag.tag, dataType);
     const description = parseDescription(tag.description);
     const elementType = parseElementType(tag.elementType);
     const required = tag.required;
 
-    // Handle linked subcontract
-    if (tag.link) {
-        return new WithValidations<ContractTag>(
-            {
-                tag: tag.tag,
-                type: [ContractTagType.subContract],
-                ...(required && { required }),
-                ...(description && { description }),
-                ...(tag.repeated && { repeated: tag.repeated }),
-                link: tag.link,
-            },
-            validations,
-        );
-    }
+    if (validations.length > 0) return new WithValidations(undefined, validations);
 
-    // Handle inline subcontract
-    if (tag.tags) {
+    if (types.val.includes(ContractTagType.subContract)) {
+        if (tag.link) {
+            return new WithValidations<ContractTag>(
+                {
+                    tag: tag.tag,
+                    type: [ContractTagType.subContract],
+                    ...(required && { required }),
+                    ...(description && { description }),
+                    ...(tag.repeated && { repeated: tag.repeated }),
+                    link: tag.link,
+                },
+                validations,
+            );
+        }
+
         const subTagResults = tag.tags.map((subTag) => parseTag(subTag));
         const subTagValidations = subTagResults.flatMap((tr) => tr.validations);
         const parsedSubTags = subTagResults
@@ -151,22 +158,29 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
                 ...(description && { description }),
                 tags: parsedSubTags,
                 ...(tag.repeated && { repeated: tag.repeated }),
+                ...(tag.async && { async: tag.async }),
             },
             [...validations, ...subTagValidations, ...duplicateTagValidations],
         );
+    } else {
+        const parsedDataType =
+            tag.async === true
+                ? new JayPromiseType(parseDataType(tag.tag, dataType))
+                : parseDataType(tag.tag, dataType);
+
+        // Handle regular tag
+        const contractTag: ContractTag = {
+            tag: tag.tag,
+            type: types.val,
+            ...(required && { required }),
+            ...(parsedDataType && { dataType: parsedDataType }),
+            ...(description && { description }),
+            ...(elementType && { elementType }),
+            ...(tag.async && { async: tag.async }),
+        };
+
+        return new WithValidations<ContractTag>(contractTag, validations);
     }
-
-    // Handle regular tag
-    const contractTag: ContractTag = {
-        tag: tag.tag,
-        type: types.val,
-        ...(required && { required }),
-        ...(parsedDataType && { dataType: parsedDataType }),
-        ...(description && { description }),
-        ...(elementType && { elementType }),
-    };
-
-    return new WithValidations<ContractTag>(contractTag, validations);
 }
 
 export function parseContract(contractYaml: string, fileName: string): WithValidations<Contract> {

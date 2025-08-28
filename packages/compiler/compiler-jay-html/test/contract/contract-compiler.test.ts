@@ -127,13 +127,13 @@ describe('compile contract', () => {
             await prettify(`
         import { JayContract } from '@jay-framework/runtime';
         
-        export interface Item {
+        export interface ItemOfTodoViewState {
             title: string;
             completed: boolean;
         }
-
+        
         export interface TodoViewState {
-            item: Item;
+            item: ItemOfTodoViewState;
         }
 
         export interface TodoRefs {
@@ -172,26 +172,26 @@ describe('compile contract', () => {
             await prettify(`
         import { HTMLElementCollectionProxy, JayContract } from '@jay-framework/runtime';
 
-        export interface Items {
+        export interface ItemOfTodoViewState {
             title: string;
             completed: boolean;
         }
-
+        
         export interface TodoViewState {
-            items: Array<Items>;
+            items: Array<ItemOfTodoViewState>;
         }
-
+        
         export interface TodoRefs {
             items: {
-                title: HTMLElementCollectionProxy<Items, HTMLInputElement>;
-                completed: HTMLElementCollectionProxy<Items, HTMLInputElement>;
+                title: HTMLElementCollectionProxy<ItemOfTodoViewState, HTMLInputElement>;
+                completed: HTMLElementCollectionProxy<ItemOfTodoViewState, HTMLInputElement>;
             };
         }
         
         export interface TodoRepeatedRefs {
             items: {
-                title: HTMLElementCollectionProxy<Items, HTMLInputElement>;
-                completed: HTMLElementCollectionProxy<Items, HTMLInputElement>;
+                title: HTMLElementCollectionProxy<ItemOfTodoViewState, HTMLInputElement>;
+                completed: HTMLElementCollectionProxy<ItemOfTodoViewState, HTMLInputElement>;
             };
         }
 
@@ -250,43 +250,49 @@ describe('compile contract', () => {
             await prettify(`
         import { HTMLElementCollectionProxy, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
 
-        export interface NameFields {
+        export interface NameFieldOfPersonalInfoOfUserFormViewState {
             firstName: string;
             lastName: string;
         }
-
-        export interface PersonalInfo {
+        
+        export interface PersonalInfoOfUserFormViewState {
             sectionTitle: string;
-            nameFields: NameFields;
+            nameFields: NameFieldOfPersonalInfoOfUserFormViewState;
         }
-
-        export interface ContactFields {
+        
+        export interface ContactFieldOfContactInfoOfUserFormViewState {
             email: string;
             phone: string;
         }
-
-        export interface ContactInfo {
+        
+        export interface ContactInfoOfUserFormViewState {
             sectionTitle: string;
-            contactFields: ContactFields;
+            contactFields: ContactFieldOfContactInfoOfUserFormViewState;
         }
-
+        
         export interface UserFormViewState {
-            personalInfo: PersonalInfo;
-            contactInfo: ContactInfo;
+            personalInfo: PersonalInfoOfUserFormViewState;
+            contactInfo: ContactInfoOfUserFormViewState;
         }
-
+        
         export interface UserFormRefs {
             submitButton: HTMLElementProxy<UserFormViewState, HTMLButtonElement>;
             personalInfo: {
                 nameFields: {
-                    firstName: HTMLElementProxy<NameFields, HTMLInputElement>;
-                    lastName: HTMLElementProxy<NameFields, HTMLInputElement>;
+                    firstName: HTMLElementProxy<
+                        NameFieldOfPersonalInfoOfUserFormViewState,
+                        HTMLInputElement
+                    >;
+                    lastName: HTMLElementProxy<
+                        NameFieldOfPersonalInfoOfUserFormViewState,
+                        HTMLInputElement
+                    >;
                 };
             };
             contactInfo: {
                 contactFields: {
-                    email: HTMLElementProxy<ContactFields, HTMLInputElement>;
-                    phone: HTMLElementProxy<ContactFields, HTMLInputElement>;
+                    email: HTMLElementProxy<ContactFieldOfContactInfoOfUserFormViewState, HTMLInputElement>;
+                    phone: HTMLElementProxy<ContactFieldOfContactInfoOfUserFormViewState, HTMLInputElement>;
                 };
             };
         }
@@ -295,14 +301,26 @@ describe('compile contract', () => {
             submitButton: HTMLElementCollectionProxy<UserFormViewState, HTMLButtonElement>;
             personalInfo: {
                 nameFields: {
-                    firstName: HTMLElementCollectionProxy<NameFields, HTMLInputElement>;
-                    lastName: HTMLElementCollectionProxy<NameFields, HTMLInputElement>;
+                    firstName: HTMLElementCollectionProxy<
+                        NameFieldOfPersonalInfoOfUserFormViewState,
+                        HTMLInputElement
+                    >;
+                    lastName: HTMLElementCollectionProxy<
+                        NameFieldOfPersonalInfoOfUserFormViewState,
+                        HTMLInputElement
+                    >;
                 };
             };
             contactInfo: {
                 contactFields: {
-                    email: HTMLElementCollectionProxy<ContactFields, HTMLInputElement>;
-                    phone: HTMLElementCollectionProxy<ContactFields, HTMLInputElement>;
+                    email: HTMLElementCollectionProxy<
+                        ContactFieldOfContactInfoOfUserFormViewState,
+                        HTMLInputElement
+                    >;
+                    phone: HTMLElementCollectionProxy<
+                        ContactFieldOfContactInfoOfUserFormViewState,
+                        HTMLInputElement
+                    >;
                 };
             };
         }
@@ -344,14 +362,14 @@ describe('compile contract', () => {
           completed 
         }
 
-        export interface Items {
+        export interface ItemOfTodoViewState {
             title: string;
             completed: boolean;
         }
-
+        
         export interface TodoViewState {
             filter: Filter;
-            items: Array<Items>;
+            items: Array<ItemOfTodoViewState>;
         }
 
         export interface TodoRefs {

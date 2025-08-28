@@ -4135,6 +4135,7 @@ __metadata:
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/runtime": "workspace:^"
     "@jay-framework/secure": "workspace:^"
+    "@jay-framework/typescript-bridge": "workspace:^"
     "@testing-library/jest-dom": ^6.2.0
     "@types/js-beautify": ^1
     "@types/js-yaml": ^4.0.9
@@ -4549,7 +4550,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@jay-framework/typescript-bridge@workspace:packages/compiler/typescript-bridge":
+"@jay-framework/typescript-bridge@workspace:^, @jay-framework/typescript-bridge@workspace:packages/compiler/typescript-bridge":
   version: 0.0.0-use.local
   resolution: "@jay-framework/typescript-bridge@workspace:packages/compiler/typescript-bridge"
   dependencies:
@@ -10776,6 +10777,29 @@ __metadata:
     nodemon: ^3.0.3
     react: ^18.3.1
     react-dom: ^18.3.1
+    rimraf: ^5.0.5
+    tslib: ^2.6.2
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vite-plugin-inspect: ^0.8.1
+  languageName: unknown
+  linkType: soft
+
+"example-jay-async-counter@workspace:examples/jay/async-counter":
+  version: 0.0.0-use.local
+  resolution: "example-jay-async-counter@workspace:examples/jay/async-counter"
+  dependencies:
+    "@babel/core": ^7.23.7
+    "@babel/preset-env": ^7.23.8
+    "@babel/preset-typescript": ^7.23.3
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/reactive": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/secure": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
+    nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2
     typescript: ^5.3.3

@@ -105,6 +105,9 @@ export const Import = {
         ImportsFor.implementation,
     ),
     forEach: importStatementFragment(JAY_RUNTIME, 'forEach', ImportsFor.implementation),
+    resolved: importStatementFragment(JAY_RUNTIME, 'resolved', ImportsFor.implementation),
+    pending: importStatementFragment(JAY_RUNTIME, 'pending', ImportsFor.implementation),
+    rejected: importStatementFragment(JAY_RUNTIME, 'rejected', ImportsFor.implementation),
     ConstructContext: importStatementFragment(
         JAY_RUNTIME,
         'ConstructContext',

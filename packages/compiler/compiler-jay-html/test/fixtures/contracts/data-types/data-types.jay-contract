@@ -1,0 +1,55 @@
+name: data-types
+tags:
+  - tag: s1
+    type: data
+    dataType: string
+  - tag: n1
+    type: data
+    dataType: number
+  - tag: b1
+    type: data
+    dataType: boolean
+  - tag: o1
+    type: sub-contract
+    tags:
+      - tag: s2
+        type: data
+        dataType: string
+      - tag: n2
+        type: data
+        dataType: number
+  - tag: a1
+    type: sub-contract
+    repeated: true
+    tags:
+      - tag: s3
+        type: data
+        dataType: string
+      - tag: n3
+        type: data
+        dataType: number
+  - tag: p1
+    type: data
+    async: true
+    dataType: string
+  - tag: po1
+    type: sub-contract
+    async: true
+    tags:
+      - tag: ps2
+        type: data
+        dataType: string
+      - tag: pn2
+        type: data
+        dataType: number
+  - tag: pa1
+    type: sub-contract
+    repeated: true
+    async: true
+    tags:
+      - tag: ps3
+        type: data
+        dataType: string
+      - tag: pn3
+        type: data
+        dataType: number

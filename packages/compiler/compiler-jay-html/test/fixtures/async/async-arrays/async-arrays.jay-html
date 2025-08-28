@@ -1,0 +1,28 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+   a1:
+    -  s3: string
+       n3: number
+   async pa1:
+    -  ps3: string
+       pn3: number
+     </script>
+</head>
+<body>
+<div>
+    <div forEach="a1" trackBy="s3">
+        <span>{s3}</span>
+        <span>{n3}</span>
+    </div>
+    <span when-loading="pa1">still loading</span>
+    <div when-resolved="pa1">
+        <div forEach="." trackBy="ps3">
+            <span>{ps3}</span>
+            <span>{pn3}</span>
+        </div>
+    </div>
+</div>
+</body>
+</html>
