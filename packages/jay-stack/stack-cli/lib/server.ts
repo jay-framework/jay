@@ -6,6 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { loadConfig, updateConfig, getConfigWithDefaults } from './config';
 import { createEditorHandlers } from './editor-handlers';
+import {generatePageDefinitionFiles} from "./generate-page-definition-files";
 
 // Load configuration
 const config = loadConfig();
@@ -68,6 +69,9 @@ async function initApp() {
     routes.forEach((route) => {
         app.get(route.path, route.handler);
     });
+
+    // generate page d.ts files
+    generatePageDefinitionFiles(routes, jayOptions.tsConfigFilePath);
 
     // Start http server
     const expressServer = app.listen(devServerPort, () => {

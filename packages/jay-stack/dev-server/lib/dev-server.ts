@@ -47,6 +47,7 @@ function defaults(options: DevServerOptions): DevServerOptions {
 export interface DevServerRoute {
     path: string;
     handler: RequestHandler;
+    fsRoute: JayRoute;
 }
 
 export interface DevServer {
@@ -136,7 +137,7 @@ function mkRoute(
             res.status(500).end(e.stack);
         }
     };
-    return { path, handler };
+    return { path, handler, fsRoute: route };
 }
 
 export async function mkDevServer(options: DevServerOptions): Promise<DevServer> {
