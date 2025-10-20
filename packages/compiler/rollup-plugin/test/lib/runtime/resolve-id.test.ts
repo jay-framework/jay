@@ -41,7 +41,7 @@ describe('resolve-id', () => {
 
         it('adds .ts extension to id, adds originId and format to metadata', async () => {
             const context = getContext({ resolvedId });
-            expect(await resolveJayHtml(context, source, importer, options)).toEqual({
+            expect(await resolveJayHtml(context, source, importer, options, '')).toEqual({
                 id: `${originId}${TS_EXTENSION}`,
                 meta: { jay: { originId, format: SourceFileFormat.JayHtml } },
             });
@@ -52,7 +52,7 @@ describe('resolve-id', () => {
 
             it('returns null', async () => {
                 const context = getContext({ resolvedId });
-                expect(await resolveJayHtml(context, source, importer, options)).toBeNull();
+                expect(await resolveJayHtml(context, source, importer, options, '')).toBeNull();
             });
         });
 
@@ -69,7 +69,7 @@ describe('resolve-id', () => {
 
             it('returns resolved id', async () => {
                 const context = getContext({ resolvedId });
-                expect(await resolveJayHtml(context, source, importer, options)).toEqual({
+                expect(await resolveJayHtml(context, source, importer, options, '')).toEqual({
                     id: `${resolvedId.meta.jay.originId}${TS_EXTENSION}`,
                     meta: resolvedId.meta,
                 });
@@ -81,7 +81,7 @@ describe('resolve-id', () => {
 
             it('returns null', async () => {
                 const context = getContext({ resolvedId });
-                expect(await resolveJayHtml(context, source, importer, options)).toBeNull();
+                expect(await resolveJayHtml(context, source, importer, options, '')).toBeNull();
             });
         });
     });

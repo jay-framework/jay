@@ -16,9 +16,11 @@ export function getJayMetadata(
 ): JayMetadata {
     // vite does not store module metadata in SSR
     const metadataFromPlugin: JayMetadata = context.getModuleInfo(id)?.meta?.jay;
-    return context['ssr'] ?
+    const metadata = context['ssr'] ?
         metadataFromPlugin || SSR_METADATA.get(id) :
         metadataFromPlugin || {};
+    validateJayMetadata(id, metadata, checkPresent)
+    return metadata;
 }
 
 export function jayMetadataFromModuleMetadata(
@@ -27,11 +29,15 @@ export function jayMetadataFromModuleMetadata(
     { checkPresent = false }: { checkPresent?: boolean } = {},
 ): JayMetadata {
     const metadata = meta?.jay ?? {};
-    if (checkPresent) {
-        if (!metadata.originId) throw new Error(`Unknown Jay originId for ${id}`);
-        if (!metadata.format) throw new Error(`Unknown Jay format for ${id}`);
-    }
+    validateJayMetadata(id, metadata, checkPresent)
     return metadata;
+}
+
+function validateJayMetadata(id: string, jayMetadata: JayMetadata, doValidate: boolean) {
+    if (doValidate) {
+        if (!jayMetadata.originId) throw new Error(`Unknown Jay originId for ${id}`);
+        if (!jayMetadata.format) throw new Error(`Unknown Jay format for ${id}`);
+    }
 }
 
 export function appendJayMetadata(
