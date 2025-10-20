@@ -381,6 +381,69 @@ export interface TreeViewState {
 - Uses `$` prefix (inspired by JSON Schema `$ref`) instead of `#` to avoid YAML comment syntax
 - Path notation follows JSON Pointer style (RFC 6901)
 
+##### Non-Array Recursion (Single Optional Children)
+
+Recursion doesn't always require arrays. You can have single optional recursive references:
+
+**Linked List Pattern:**
+
+```yaml
+data:
+  value: string
+  id: string
+  next: $/data  # Single optional recursive reference (not an array!)
+```
+
+Generates:
+
+```typescript
+export interface LinkedListViewState {
+  value: string;
+  id: string;
+  next: LinkedListViewState | null;  // Nullable type for optional recursion
+}
+```
+
+**Binary Tree Pattern:**
+
+```yaml
+data:
+  value: number
+  id: string
+  left: $/data   # Optional left child
+  right: $/data  # Optional right child
+```
+
+Generates:
+
+```typescript
+export interface BinaryTreeViewState {
+  value: number;
+  id: string;
+  left: BinaryTreeViewState | null;
+  right: BinaryTreeViewState | null;
+}
+```
+
+**Type Generation Rules:**
+- `array<$/data>` → `Array<ViewState>` (for forEach loops)
+- `$/data` → `ViewState | null` (for conditionals with single children)
+- Non-array recursion requires conditional guards instead of forEach
+- Multiple optional children can exist in the same structure
+
+**Example Usage:**
+
+```html
+<div class="linked-list">
+  <div class="node" ref="listNode">
+    <span>{value}</span>
+    <div class="next" if="next">
+      <recurse ref="listNode" />  <!-- Guarded by conditional, not forEach -->
+    </div>
+  </div>
+</div>
+```
+
 #### Code Generation
 
 The recursive region should compile to an internal render function that can call itself:

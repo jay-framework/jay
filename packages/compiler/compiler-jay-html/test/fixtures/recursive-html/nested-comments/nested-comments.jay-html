@@ -1,0 +1,33 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+  author: string
+  text: string
+  id: string
+  showReplies: boolean
+  replies: array<$/data>
+    </script>
+</head>
+<body>
+<div class="comments">
+    <article class="comment" ref="comment">
+        <div class="comment-header">
+            <span class="author">{author}</span>
+        </div>
+        <div class="comment-body">
+            <p class="comment-text">{text}</p>
+        </div>
+        <div class="comment-actions">
+            <button ref="toggleReplies">Toggle Replies</button>
+        </div>
+        <div class="replies" if="showReplies">
+            <div forEach="replies" trackBy="id">
+                <recurse ref="comment" />
+            </div>
+        </div>
+    </article>
+</div>
+</body>
+</html>
+
