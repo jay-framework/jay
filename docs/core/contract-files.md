@@ -226,11 +226,13 @@ export interface UserDashboardViewState {
     email: string;
     avatar: string;
   }>;
-  notifications: Promise<Array<{
-    id: string;
-    message: string;
-    timestamp: string;
-  }>>;
+  notifications: Promise<
+    Array<{
+      id: string;
+      message: string;
+      timestamp: string;
+    }>
+  >;
 }
 ```
 

@@ -6,7 +6,7 @@ import path from 'path';
 import fs from 'fs';
 import { loadConfig, updateConfig, getConfigWithDefaults } from './config';
 import { createEditorHandlers } from './editor-handlers';
-import {generatePageDefinitionFiles} from "./generate-page-definition-files";
+import { generatePageDefinitionFiles } from './generate-page-definition-files';
 
 // Load configuration
 const config = loadConfig();

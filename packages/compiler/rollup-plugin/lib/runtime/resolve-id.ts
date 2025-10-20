@@ -43,20 +43,20 @@ export async function resolveJayHtml(
     const resolvedJayMeta = jayMetadataFromModuleMetadata(resolved.id, resolved.meta);
     const extension = generationTarget === GenerateTarget.react ? TSX_EXTENSION : TS_EXTENSION;
 
-    let format: SourceFileFormat, originId: string
+    let format: SourceFileFormat, originId: string;
     if (resolvedJayMeta.originId) {
-        format = resolvedJayMeta.format
+        format = resolvedJayMeta.format;
         originId = resolvedJayMeta.originId;
-    }
-    else {
+    } else {
         watchChangesFor(context, resolved.id);
         format = SourceFileFormat.JayHtml;
         originId = resolved.id;
     }
 
-    const id = context['ssr'] && originId.startsWith(root)?
-        `${originId}${extension}`.slice(root.length) :
-        `${originId}${extension}`
+    const id =
+        context['ssr'] && originId.startsWith(root)
+            ? `${originId}${extension}`.slice(root.length)
+            : `${originId}${extension}`;
 
     console.info(`[resolveId] resolved ${id} as ${format}`);
     return { id, meta: appendJayMetadata(context, id, { format, originId }) };

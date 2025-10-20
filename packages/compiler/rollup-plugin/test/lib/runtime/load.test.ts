@@ -14,9 +14,9 @@ describe('load', () => {
         const meta: { jay: JayMetadata } = { jay: { originId } };
 
         const getContext = ({ meta }: { meta?: { jay?: JayMetadata } } = {}) =>
-            mock<PluginContext & {ssr: boolean}>({
+            mock<PluginContext & { ssr: boolean }>({
                 getModuleInfo: vi.fn().mockReturnValue({ meta }),
-                ssr: false
+                ssr: false,
             });
 
         it('loads origin file', async () => {

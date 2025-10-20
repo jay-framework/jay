@@ -560,7 +560,7 @@ Mark data properties as async using the `async` keyword in data scripts:
 <script type="application/jay-data">
   data:
     title: string
-    async userProfile: 
+    async userProfile:
       name: string
       email: string
       avatar: string
@@ -631,6 +631,7 @@ Show content when the promise is rejected:
 ```
 
 **Error Properties**: Within `when-rejected` blocks, you have access to error properties:
+
 - `{name}` - Error name/type
 - `{message}` - Error message
 - `{stack}` - Error stack trace (in development)

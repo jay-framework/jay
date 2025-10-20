@@ -1,13 +1,12 @@
 import { render, CounterElementRefs } from './counter.jay-html';
-import {createMemo, createSignal, makeJayComponent, Props} from '@jay-framework/component';
+import { createMemo, createSignal, makeJayComponent, Props } from '@jay-framework/component';
 
 export interface CounterProps {
     initialValue: number;
 }
 
 function mkPromise(count: number): Promise<number> {
-    return new Promise(resolve =>
-        setTimeout(() => resolve(count), 1000))
+    return new Promise((resolve) => setTimeout(() => resolve(count), 1000));
 }
 
 function CounterConstructor({ initialValue }: Props<CounterProps>, refs: CounterElementRefs) {
@@ -17,11 +16,11 @@ function CounterConstructor({ initialValue }: Props<CounterProps>, refs: Counter
     refs.adderButton.onclick(() => setInternalCount(internalCount() + 1));
 
     // simulate calling an API to get the new count
-    const count = createMemo(() => mkPromise(internalCount()))
+    const count = createMemo(() => mkPromise(internalCount()));
 
     return {
         render: () => ({
-            count
+            count,
         }),
     };
 }

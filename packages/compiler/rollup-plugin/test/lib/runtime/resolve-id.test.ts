@@ -20,18 +20,21 @@ import { SANDBOX_ROOT_PREFIX } from '../../../lib/runtime/sandbox';
 describe('resolve-id', () => {
     const options = {} as ResolveIdOptions;
 
-    const getContext = ({
-        meta,
-        resolvedId,
-    }: {
-        meta?: { jay?: JayMetadata };
-        resolvedId?: Partial<ResolvedId>;
-    } = {}, ssr: boolean = false) =>
-        mock<PluginContext & {ssr: boolean}>({
+    const getContext = (
+        {
+            meta,
+            resolvedId,
+        }: {
+            meta?: { jay?: JayMetadata };
+            resolvedId?: Partial<ResolvedId>;
+        } = {},
+        ssr: boolean = false,
+    ) =>
+        mock<PluginContext & { ssr: boolean }>({
             getModuleInfo: vi.fn().mockReturnValue({ meta }),
             resolve: vi.fn().mockResolvedValue(resolvedId),
             getWatchFiles: vi.fn().mockReturnValue([]),
-            ssr
+            ssr,
         });
 
     describe('addTsExtensionForJayFile', () => {
@@ -39,7 +42,7 @@ describe('resolve-id', () => {
         const importer = '/root/src/index.ts';
         const originId = '/root/src/resolved.jay-html';
         const ssrProjectRoot = '/root';
-        const originIdRelativeToSsrRoot = '/src/resolved.jay-html'
+        const originIdRelativeToSsrRoot = '/src/resolved.jay-html';
         const resolvedId = { id: originId } as Partial<ResolvedId>;
 
         it('adds .ts extension to id, adds originId and format to metadata', async () => {
@@ -51,16 +54,17 @@ describe('resolve-id', () => {
         });
 
         describe('ssr', () => {
-
             // in SSR mode, vite mandates that the id be relative to the project root
             it('adds .ts extension to id, adds originId and format to metadata and remove root from the id', async () => {
                 const context = getContext({ resolvedId }, true);
-                expect(await resolveJayHtml(context, source, importer, options, ssrProjectRoot)).toEqual({
+                expect(
+                    await resolveJayHtml(context, source, importer, options, ssrProjectRoot),
+                ).toEqual({
                     id: `${originIdRelativeToSsrRoot}${TS_EXTENSION}`,
                     meta: { jay: { originId, format: SourceFileFormat.JayHtml } },
                 });
             });
-        })
+        });
 
         describe('when no file is resolved', () => {
             const resolvedId = null;

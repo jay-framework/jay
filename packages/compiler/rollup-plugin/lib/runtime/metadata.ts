@@ -1,5 +1,5 @@
-import {CustomPluginOptions, PluginContext} from 'rollup';
-import {SourceFileFormat} from '@jay-framework/compiler-shared';
+import { CustomPluginOptions, PluginContext } from 'rollup';
+import { SourceFileFormat } from '@jay-framework/compiler-shared';
 
 export interface JayMetadata {
     originId?: string;
@@ -7,7 +7,7 @@ export interface JayMetadata {
     isWorkerRoot?: boolean;
 }
 
-const SSR_METADATA = new Map<string, JayMetadata>
+const SSR_METADATA = new Map<string, JayMetadata>();
 
 export function getJayMetadata(
     context: PluginContext,
@@ -16,10 +16,10 @@ export function getJayMetadata(
 ): JayMetadata {
     // vite does not store module metadata in SSR
     const metadataFromPlugin: JayMetadata = context.getModuleInfo(id)?.meta?.jay;
-    const metadata = context['ssr'] ?
-        metadataFromPlugin || SSR_METADATA.get(id) :
-        metadataFromPlugin || {};
-    validateJayMetadata(id, metadata, checkPresent)
+    const metadata = context['ssr']
+        ? metadataFromPlugin || SSR_METADATA.get(id)
+        : metadataFromPlugin || {};
+    validateJayMetadata(id, metadata, checkPresent);
     return metadata;
 }
 
@@ -29,7 +29,7 @@ export function jayMetadataFromModuleMetadata(
     { checkPresent = false }: { checkPresent?: boolean } = {},
 ): JayMetadata {
     const metadata = meta?.jay ?? {};
-    validateJayMetadata(id, metadata, checkPresent)
+    validateJayMetadata(id, metadata, checkPresent);
     return metadata;
 }
 

@@ -130,24 +130,22 @@ Jay-HTML provides built-in support for handling asynchronous data with dedicated
 ```html
 <body>
   <h1>{title}</h1>
-  
+
   <!-- Loading state -->
-  <div when-loading="userProfile">
-    Loading user profile...
-  </div>
-  
+  <div when-loading="userProfile">Loading user profile...</div>
+
   <!-- Success state -->
   <div when-resolved="userProfile">
     <h2>Welcome, {name}!</h2>
     <p>{email}</p>
   </div>
-  
+
   <!-- Error state -->
   <div when-rejected="userProfile">
     Failed to load profile: {message}
     <!-- Error properties available: {name}, {message}, {stack} -->
   </div>
-  
+
   <!-- Async arrays -->
   <div when-resolved="posts">
     <article forEach="." trackBy="id">
