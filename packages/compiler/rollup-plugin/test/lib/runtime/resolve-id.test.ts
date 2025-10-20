@@ -26,17 +26,20 @@ describe('resolve-id', () => {
     }: {
         meta?: { jay?: JayMetadata };
         resolvedId?: Partial<ResolvedId>;
-    } = {}) =>
-        mock<PluginContext>({
+    } = {}, ssr: boolean = false) =>
+        mock<PluginContext & {ssr: boolean}>({
             getModuleInfo: vi.fn().mockReturnValue({ meta }),
             resolve: vi.fn().mockResolvedValue(resolvedId),
             getWatchFiles: vi.fn().mockReturnValue([]),
+            ssr
         });
 
     describe('addTsExtensionForJayFile', () => {
         const source = './app.jay-html';
         const importer = '/root/src/index.ts';
         const originId = '/root/src/resolved.jay-html';
+        const ssrProjectRoot = '/root';
+        const originIdRelativeToSsrRoot = '/src/resolved.jay-html'
         const resolvedId = { id: originId } as Partial<ResolvedId>;
 
         it('adds .ts extension to id, adds originId and format to metadata', async () => {
@@ -46,6 +49,17 @@ describe('resolve-id', () => {
                 meta: { jay: { originId, format: SourceFileFormat.JayHtml } },
             });
         });
+
+        describe('ssr', () => {
+
+            it('adds .ts extension to id, adds originId and format to metadata and remove root from the id', async () => {
+                const context = getContext({ resolvedId }, true);
+                expect(await resolveJayHtml(context, source, importer, options, ssrProjectRoot)).toEqual({
+                    id: `${originIdRelativeToSsrRoot}${TS_EXTENSION}`,
+                    meta: { jay: { originId, format: SourceFileFormat.JayHtml } },
+                });
+            });
+        })
 
         describe('when no file is resolved', () => {
             const resolvedId = null;
@@ -96,6 +110,14 @@ describe('resolve-id', () => {
             id: path.join(path.dirname(importer), resolveId),
             meta,
         } as Partial<ResolvedId>;
+
+        it('resolves via rollup, adds query to id, adds originId and format to meta', async () => {
+            const context = getContext({ meta, resolvedId });
+            expect(await resolveJayModeFile(context, source, importer, options)).toEqual({
+                id: `${path.join(path.dirname(importer), source)}${TS_EXTENSION}`,
+                meta: { jay: { originId: resolvedId.id, format } },
+            });
+        });
 
         it('resolves via rollup, adds query to id, adds originId and format to meta', async () => {
             const context = getContext({ meta, resolvedId });
