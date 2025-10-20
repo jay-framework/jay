@@ -28,7 +28,7 @@ import {
     JAY_IMPORT_RESOLVER,
     parseContract,
 } from '@jay-framework/compiler-jay-html';
-import { ViteDevServer } from 'vite';
+import { ViteDevServer, UserConfig } from 'vite';
 
 const GLOBAL_FUNC_REPOSITORY = 'GLOBAL_FUNC_REPOSITORY.ts';
 
@@ -36,9 +36,11 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
     const jayContext = givenJayContext || new JayPluginContext(jayOptions);
     let server: ViteDevServer;
     let isVite: boolean = false;
+    let config: UserConfig;
     return {
         name: 'jay:runtime',
-        configResolved(config) {
+        configResolved(_config) {
+            config = _config;
             isVite = true;
         },
         buildStart(opts) {
@@ -63,14 +65,17 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             importer: string | undefined,
             options: ResolveIdOptions,
         ): Promise<ResolveIdResult> {
-            if (hasExtension(source, JAY_EXTENSION))
+            if (hasExtension(source, JAY_EXTENSION) || hasExtension(source, JAY_EXTENSION + TS_EXTENSION)) {
+                console.log(`[resolveId jay] source ${source} importer: ${importer}`);
                 return await resolveJayHtml(
                     this,
                     source,
                     importer,
                     options,
+                    config?.root,
                     jayOptions.generationTarget,
                 );
+            }
             if (hasExtension(source, JAY_CONTRACT_EXTENSION))
                 return await resolveJayContract(this, source, importer, options);
             if (hasJayModeExtension(source))

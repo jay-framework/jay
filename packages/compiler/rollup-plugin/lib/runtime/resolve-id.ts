@@ -29,6 +29,7 @@ export async function resolveJayHtml(
     source: string,
     importer: string | undefined,
     options: ResolveIdOptions,
+    root: string,
     generationTarget: GenerateTarget = GenerateTarget.jay,
 ): Promise<ResolveIdResult> {
     const resolved = await context.resolve(source, importer, { ...options, skipSelf: true });
@@ -43,15 +44,21 @@ export async function resolveJayHtml(
     const extension = generationTarget === GenerateTarget.react ? TSX_EXTENSION : TS_EXTENSION;
     if (resolvedJayMeta.originId) {
         const { format, originId } = resolvedJayMeta;
-        const id = `${originId}${extension}`;
+        let id = `${originId}${extension}`;
+        if (context['ssr'] && id.startsWith(root))
+            id = id.slice(root.length);
         console.info(`[resolveId] resolved ${id} as ${format}`);
+        console.log('originId', originId);
         return { id, meta: appendJayMetadata(context, id, { format, originId }) };
     } else {
         watchChangesFor(context, resolved.id);
         const format = SourceFileFormat.JayHtml;
         const originId = resolved.id;
-        const id = `${originId}${extension}`;
+        let id = `${originId}${extension}`;
+        if (context['ssr'] && id.startsWith(root))
+            id = id.slice(root.length);
         console.info(`[resolveId] resolved ${id} as ${format}`);
+        console.log('originId', originId);
         return { id, meta: appendJayMetadata(context, id, { format, originId }) };
     }
 }

@@ -7,6 +7,7 @@
       sku: string
       id: string
       inStock: boolean
+      type: enum(physical | virtual)
   </script>
 </head>
 <body>
@@ -23,6 +24,8 @@
   <div if="!inStock">
     out of stock, come back later
   </div>
+  <div if="type===physical">physical</div>
+  <div if="type===virtual">virtual</div>
 </div>
 </body>
 </html>

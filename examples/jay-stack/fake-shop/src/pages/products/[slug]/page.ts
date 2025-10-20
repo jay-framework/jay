@@ -4,7 +4,7 @@ import {
     partialRender,
     UrlParams,
 } from '@jay-framework/fullstack-component';
-import { PageElementRefs, PageContract } from './page.jay-html';
+import {PageElementRefs, PageContract, TypeOfPageViewState} from './page.jay-html';
 import { Props } from '@jay-framework/component';
 import { getProductBySlug, getProducts } from '../../../products-database';
 import { getAvailableUnits } from '../../../inventory-service';
@@ -28,7 +28,7 @@ async function* urlLoader(): AsyncIterable<ProductPageParams[]> {
 
 async function renderSlowlyChanging(props: PageProps & ProductPageParams) {
     const { name, sku, price, id } = await getProductBySlug(props.slug);
-    return partialRender({ name, sku, price, id }, { productId: id });
+    return partialRender({ name, sku, price, id, type: TypeOfPageViewState.physical }, { productId: id });
 }
 
 async function renderFastChanging(props: PageProps & ProductPageParams & ProductsCarryForward) {
