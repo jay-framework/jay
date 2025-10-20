@@ -52,6 +52,7 @@ describe('resolve-id', () => {
 
         describe('ssr', () => {
 
+            // in SSR mode, vite mandates that the id be relative to the project root
             it('adds .ts extension to id, adds originId and format to metadata and remove root from the id', async () => {
                 const context = getContext({ resolvedId }, true);
                 expect(await resolveJayHtml(context, source, importer, options, ssrProjectRoot)).toEqual({
