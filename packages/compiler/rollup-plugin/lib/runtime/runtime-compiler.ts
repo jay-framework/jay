@@ -16,7 +16,7 @@ import {
     resolveJayModeFile,
     resolveJayContract,
     hasCssImportedByJayHtml,
-    resolveCssFile,
+    resolveCssFileImportedByJayHtml,
     isResolvedCssFile,
 } from './resolve-id';
 import { loadContractFile, loadCssFile, loadJayFile } from './load';
@@ -80,7 +80,7 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             if (hasJayModeExtension(source))
                 return await resolveJayModeFile(this, source, importer, options);
             if (hasCssImportedByJayHtml(source, importer)) {
-                return resolveCssFile(this, importer);
+                return resolveCssFileImportedByJayHtml(this, importer, config?.root);
             }
             if (
                 source.includes(SANDBOX_ROOT_PREFIX) ||

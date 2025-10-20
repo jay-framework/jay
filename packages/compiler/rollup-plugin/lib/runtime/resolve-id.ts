@@ -1,7 +1,7 @@
-import { CustomPluginOptions, PluginContext, ResolvedId, ResolveIdResult } from 'rollup';
-import { watchChangesFor } from './watch';
-import { SANDBOX_ROOT_PREFIX } from './sandbox';
-import { appendJayMetadata, jayMetadataFromModuleMetadata } from './metadata';
+import {CustomPluginOptions, PluginContext, ResolvedId, ResolveIdResult} from 'rollup';
+import {watchChangesFor} from './watch';
+import {SANDBOX_ROOT_PREFIX} from './sandbox';
+import {appendJayMetadata, getJayMetadata, jayMetadataFromModuleMetadata} from './metadata';
 import {
     CSS_EXTENSION,
     GenerateTarget,
@@ -13,7 +13,7 @@ import {
     TS_EXTENSION,
     TSX_EXTENSION,
 } from '@jay-framework/compiler-shared';
-import { stripTSExtension } from './load';
+import {stripTSExtension} from './load';
 
 const JAY_HTML_CSS = '.css';
 
@@ -131,8 +131,7 @@ export async function removeSandboxPrefixForWorkerRoot(
 
 function getResolvedId(resolved: ResolvedId, mode: string, originId: string): string {
     const extension = resolved.id.split('.').pop();
-    const id = `${originId}?${mode}.${extension}`;
-    return id;
+    return `${originId}?${mode}.${extension}`;
 }
 
 export function hasCssImportedByJayHtml(source: string, importer: string | undefined) {
@@ -144,10 +143,17 @@ export function hasCssImportedByJayHtml(source: string, importer: string | undef
     );
 }
 
-export function resolveCssFile(context: PluginContext, importer: string) {
+export function resolveCssFileImportedByJayHtml(context: PluginContext, importer: string, root: string) {
     const originImporter = importer.split('?')[0];
-    const originId = stripTSExtension(originImporter);
-    const id = `${originId}${JAY_HTML_CSS}`;
+    const originId =
+        context['ssr'] ?
+            getJayMetadata(context, originImporter)?.originId :
+            stripTSExtension(originImporter)
+
+    const id =
+        context['ssr'] && originId.startsWith(root)
+            ? `${originId}${JAY_HTML_CSS}`.slice(root.length)
+            : `${originId}${JAY_HTML_CSS}`;
     return {
         id,
         meta: appendJayMetadata(context, id, {
