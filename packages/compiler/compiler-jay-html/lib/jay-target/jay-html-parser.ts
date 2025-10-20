@@ -17,6 +17,7 @@ import {
     JayEnumType,
     JayImportedType,
     JayObjectType,
+    JayRecursiveType,
     JayType,
     JayUnknown,
     resolvePrimitiveType,
@@ -58,11 +59,79 @@ function resolveImportedType(imports: JayImportName[], type: string): JayType {
     } else return JayUnknown;
 }
 
+/**
+ * Checks if a type string is a recursive reference (starts with "$/" like "$/data")
+ */
+function isRecursiveReference(typeString: string): boolean {
+    return typeof typeString === 'string' && typeString.startsWith('$/');
+}
+
+/**
+ * Parses array<$/...> syntax to extract the recursive reference
+ * Returns the reference path if valid, null otherwise
+ */
+function parseArrayRecursiveReference(typeString: string): string | null {
+    if (typeof typeString !== 'string') return null;
+    
+    const match = typeString.match(/^array<(\$\/.*)>$/);
+    if (match && match[1]) {
+        return match[1];
+    }
+    return null;
+}
+
+/**
+ * Validates a recursive reference path against the root data structure
+ * Returns an error message if invalid, undefined if valid
+ */
+function validateRecursivePath(
+    referencePath: string,
+    rootData: any,
+    currentPath: Array<string>,
+): string | undefined {
+    // Parse the reference path (e.g., "$/data" or "$/data/submenu/items")
+    const parts = referencePath.split('/').filter((p) => p);
+    
+    if (parts.length === 0 || parts[0] !== '$') {
+        return `recursive reference must start with $/ (got: ${referencePath})`;
+    }
+    
+    // Remove the $ prefix
+    const pathParts = parts.slice(1);
+    
+    if (pathParts.length === 0) {
+        return `recursive reference path is incomplete (got: ${referencePath})`;
+    }
+    
+    // The first part must be 'data' (referencing the data structure)
+    if (pathParts[0] !== 'data') {
+        return `recursive reference path must start with $/data (got: ${referencePath})`;
+    }
+    
+    // If it's just "$/data", it's valid (references root)
+    if (pathParts.length === 1) {
+        return undefined;
+    }
+    
+    // For nested paths like "$/data/submenu/items", validate the path exists in the data structure
+    let currentData = rootData;
+    for (let i = 1; i < pathParts.length; i++) {
+        const part = pathParts[i];
+        if (!currentData || typeof currentData !== 'object' || !(part in currentData)) {
+            return `path does not exist in data structure`;
+        }
+        currentData = currentData[part];
+    }
+    
+    return undefined;
+}
+
 function resolveType(
     data: any,
     validations: JayValidations,
     path: Array<string>,
     imports: JayImportName[],
+    rootData?: any,
 ): JayObjectType {
     let types = {};
     for (let propKey in data) {
@@ -79,12 +148,12 @@ function resolveType(
         } else if (isArrayType(data[propKey])) {
             types[prop] = checkAsync(
                 new JayArrayType(
-                    resolveType(data[propKey][0], validations, [...path, prop], imports),
+                    resolveType(data[propKey][0], validations, [...path, prop], imports, rootData),
                 ),
             );
         } else if (isObjectType(data[propKey])) {
             types[prop] = checkAsync(
-                resolveType(data[propKey], validations, [...path, prop], imports),
+                resolveType(data[propKey], validations, [...path, prop], imports, rootData),
             );
         } else if (resolveImportedType(imports, data[propKey]) !== JayUnknown) {
             types[prop] = checkAsync(resolveImportedType(imports, data[prop]));
@@ -92,6 +161,32 @@ function resolveType(
             types[prop] = checkAsync(
                 new JayEnumType(toInterfaceName([...path, prop]), parseEnumValues(data[prop])),
             );
+        } else if (isRecursiveReference(data[propKey])) {
+            // Handle direct recursive reference like "next: $/data"
+            const referencePath = data[propKey];
+            const validationError = validateRecursivePath(referencePath, rootData || data, path);
+            if (validationError) {
+                let [, ...pathTail] = path;
+                validations.push(
+                    `invalid recursive reference [${referencePath}] found at [${['data', ...pathTail, prop].join('.')}] - ${validationError}`,
+                );
+            } else {
+                types[prop] = checkAsync(new JayRecursiveType(referencePath));
+            }
+        } else if (parseArrayRecursiveReference(data[propKey])) {
+            // Handle array recursive reference like "children: array<$/data>"
+            const referencePath = parseArrayRecursiveReference(data[propKey])!;
+            const validationError = validateRecursivePath(referencePath, rootData || data, path);
+            if (validationError) {
+                let [, ...pathTail] = path;
+                validations.push(
+                    `invalid recursive reference [${referencePath}] found at [${['data', ...pathTail, prop].join('.')}] - ${validationError}`,
+                );
+            } else {
+                types[prop] = checkAsync(
+                    new JayArrayType(new JayRecursiveType(referencePath)),
+                );
+            }
         } else {
             let [, ...pathTail] = path;
             validations.push(
@@ -100,6 +195,29 @@ function resolveType(
         }
     }
     return new JayObjectType(toInterfaceName(path), types);
+}
+
+/**
+ * Resolves recursive type references by setting their resolvedType property
+ * This must be called after the full type tree is built
+ */
+function resolveRecursiveReferences(type: JayType, rootType: JayObjectType): void {
+    if (type instanceof JayRecursiveType) {
+        // For now, we only support "$/data" which references the root type
+        if (type.referencePath === '$/data') {
+            type.resolvedType = rootType;
+        }
+        // TODO: Support nested paths like "$/data/submenu"
+    } else if (type instanceof JayArrayType) {
+        resolveRecursiveReferences(type.itemType, rootType);
+    } else if (type instanceof JayObjectType) {
+        for (const propKey in type.props) {
+            resolveRecursiveReferences(type.props[propKey], rootType);
+        }
+    } else if (type instanceof JayPromiseType) {
+        resolveRecursiveReferences(type.itemType, rootType);
+    }
+    // Other types don't contain nested types that need resolution
 }
 
 function parseTypes(
@@ -115,14 +233,20 @@ function parseTypes(
             validations,
             [baseElementName + 'ViewState'],
             imports,
+            jayYaml.data, // Pass root data for recursive reference validation
         );
         const headlessImportedTypes = Object.fromEntries(
             headlessImports.map((_) => [_.key, new JayImportedType(_.rootType.name, _.rootType)]),
         );
-        return new JayObjectType(resolvedType.name, {
+        const finalType = new JayObjectType(resolvedType.name, {
             ...headlessImportedTypes,
             ...resolvedType.props,
         });
+        
+        // Resolve recursive references now that we have the complete type tree
+        resolveRecursiveReferences(finalType, finalType);
+        
+        return finalType;
     } else if (typeof jayYaml.data === 'string') return resolveImportedType(imports, jayYaml.data);
 }
 

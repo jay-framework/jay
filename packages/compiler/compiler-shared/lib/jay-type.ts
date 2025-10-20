@@ -11,6 +11,7 @@ export enum JayTypeKind {
     array,
     union,
     promise,
+    recursive,
 }
 export interface JayType {
     name: string;
@@ -132,6 +133,18 @@ export class JayPromiseType implements JayType {
     }
 }
 
+export class JayRecursiveType implements JayType {
+    constructor(
+        public readonly referencePath: string,
+        public resolvedType?: JayType,
+    ) {}
+    readonly kind = JayTypeKind.recursive;
+
+    get name() {
+        return this.resolvedType?.name || `Recursive<${this.referencePath}>`;
+    }
+}
+
 export const JayErrorType = new JayObjectType('Error', {
     message: new JayAtomicType('string'),
     name: new JayAtomicType('string'),
@@ -174,6 +187,10 @@ export function isUnionType(aType: JayType): aType is JayUnionType {
 
 export function isPromiseType(aType: JayType): aType is JayPromiseType {
     return aType.kind === JayTypeKind.promise;
+}
+
+export function isRecursiveType(aType: JayType): aType is JayRecursiveType {
+    return aType.kind === JayTypeKind.recursive;
 }
 
 export function isCurrencyType(aType: JayType): aType is JayAtomicType {
@@ -229,5 +246,7 @@ export function equalJayTypes(a: JayType, b: JayType) {
         );
     } else if (a instanceof JayPromiseType && b instanceof JayPromiseType) {
         return equalJayTypes(a.itemType, b.itemType);
+    } else if (a instanceof JayRecursiveType && b instanceof JayRecursiveType) {
+        return a.referencePath === b.referencePath;
     } else false;
 }
