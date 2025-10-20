@@ -19,6 +19,23 @@ export async function generatePageDefinitionFiles(
             continue;
         }
 
+        const definitionFilePath = jayHtmlPath + '.d.ts';
+
+        // Check if definition file exists and is up to date
+        try {
+            const [sourceStats, defStats] = await Promise.all([
+                fs.promises.stat(jayHtmlPath),
+                fs.promises.stat(definitionFilePath).catch(() => null),
+            ]);
+
+            // Skip if definition file exists and is newer than source
+            if (defStats && defStats.mtime >= sourceStats.mtime) {
+                continue;
+            }
+        } catch (error) {
+            // If we can't check stats, continue with generation
+        }
+
         try {
             // Read the jay-html content
             const jayHtml = await fs.promises.readFile(jayHtmlPath, 'utf-8');
