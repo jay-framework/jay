@@ -116,8 +116,6 @@ function mkRoute(
                             route.jayHtmlPath,
                         );
 
-                        console.log(`[route] html \n${pageHtml}`)
-
                         const compiledPageHtml = await vite.transformIndexHtml(
                             !!url ? url : '/',
                             pageHtml,

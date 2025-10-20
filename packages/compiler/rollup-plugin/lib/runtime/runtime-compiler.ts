@@ -66,7 +66,6 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             options: ResolveIdOptions,
         ): Promise<ResolveIdResult> {
             if (hasExtension(source, JAY_EXTENSION) || hasExtension(source, JAY_EXTENSION + TS_EXTENSION)) {
-                console.log(`[resolveId jay] source ${source} importer: ${importer}`);
                 return await resolveJayHtml(
                     this,
                     source,
