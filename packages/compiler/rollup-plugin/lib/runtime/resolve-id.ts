@@ -42,25 +42,24 @@ export async function resolveJayHtml(
 
     const resolvedJayMeta = jayMetadataFromModuleMetadata(resolved.id, resolved.meta);
     const extension = generationTarget === GenerateTarget.react ? TSX_EXTENSION : TS_EXTENSION;
+
+    let format: SourceFileFormat, originId: string
     if (resolvedJayMeta.originId) {
-        const { format, originId } = resolvedJayMeta;
-        let id = `${originId}${extension}`;
-        if (context['ssr'] && id.startsWith(root))
-            id = id.slice(root.length);
-        console.info(`[resolveId] resolved ${id} as ${format}`);
-        console.log('originId', originId);
-        return { id, meta: appendJayMetadata(context, id, { format, originId }) };
-    } else {
-        watchChangesFor(context, resolved.id);
-        const format = SourceFileFormat.JayHtml;
-        const originId = resolved.id;
-        let id = `${originId}${extension}`;
-        if (context['ssr'] && id.startsWith(root))
-            id = id.slice(root.length);
-        console.info(`[resolveId] resolved ${id} as ${format}`);
-        console.log('originId', originId);
-        return { id, meta: appendJayMetadata(context, id, { format, originId }) };
+        format = resolvedJayMeta.format
+        originId = resolvedJayMeta.originId;
     }
+    else {
+        watchChangesFor(context, resolved.id);
+        format = SourceFileFormat.JayHtml;
+        originId = resolved.id;
+    }
+
+    const id = context['ssr'] && originId.startsWith(root)?
+        `${originId}${extension}`.slice(root.length) :
+        `${originId}${extension}`
+
+    console.info(`[resolveId] resolved ${id} as ${format}`);
+    return { id, meta: appendJayMetadata(context, id, { format, originId }) };
 }
 
 export async function resolveJayContract(
