@@ -1,0 +1,38 @@
+{
+    "name": "example-jay-tree-recursive",
+    "version": "1.0.0",
+    "type": "module",
+    "description": "Tree example using recursive Jay-HTML templates",
+    "private": true,
+    "license": "Apache-2.0",
+    "scripts": {
+        "definitions": "jay-cli definitions ./lib",
+        "runtime": "jay-cli runtime ./lib",
+        "build:js": "vite build --base ./",
+        "build:watch": "nodemon --watch '../../packages/rollup-plugin/dist/index.js' -x \"DEBUG=vite:hmr,jay:* vite --open\"",
+        "build": "npm run definitions && npm run build:js",
+        "confirm": "npm run clean && npm run build && npm run test",
+        "clean": "rimraf dist && rimraf build && (rimraf -g lib/**/*.d.ts || :)",
+        "test": ":"
+    },
+    "dependencies": {
+        "@jay-framework/component": "workspace:^",
+        "@jay-framework/reactive": "workspace:^",
+        "@jay-framework/runtime": "workspace:^"
+    },
+    "devDependencies": {
+        "@babel/core": "^7.23.7",
+        "@babel/preset-env": "^7.23.8",
+        "@babel/preset-typescript": "^7.23.3",
+        "@jay-framework/dev-environment": "workspace:^",
+        "@jay-framework/jay-cli": "workspace:^",
+        "@jay-framework/vite-plugin": "workspace:^",
+        "@rollup/plugin-node-resolve": "^15.2.3",
+        "nodemon": "^3.0.3",
+        "rimraf": "^5.0.5",
+        "tslib": "^2.6.2",
+        "typescript": "^5.3.3",
+        "vite": "^5.0.11",
+        "vite-plugin-inspect": "^0.8.1"
+    }
+}
