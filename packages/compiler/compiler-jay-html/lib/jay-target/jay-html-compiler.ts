@@ -51,6 +51,7 @@ import {
     isConditional,
     isForEach,
     isRecurse,
+    isRecurseWithData,
 } from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
@@ -326,7 +327,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
             childIndent = childIndent.noFirstLineBreak();
 
         let needDynamicElement = childNodes
-            .map((_) => isConditional(_) || isForEach(_) || checkAsync(_).isAsync)
+            .map((_) => isConditional(_) || isForEach(_) || isRecurseWithData(_) || checkAsync(_).isAsync)
             .reduce((prev, current) => prev || current, false);
 
         let childRenders =
@@ -501,13 +502,15 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 // Generate the recursive function call
                 const functionName = `renderRecursiveRegion_${refAttr}`;
                 
-                // If accessor is provided and not ".", we need to wrap in ConstructContext
+                // If accessor is provided and not ".", we need to use withData to switch context
                 if (accessorAttr && accessorAttr !== '.') {
                     const accessor = parseAccessor(accessorAttr, variables);
                     const accessorCode = accessor.render();
+                    // withData expects a function: (data) => data.child
+                    const accessorFunction = `(${variables.currentVar}) => ${accessorCode.rendered}`;
                     return new RenderFragment(
-                        `${indent.firstLine}ConstructContext.onData(${accessorCode.rendered}, () => ${functionName}())`,
-                        Imports.for(Import.ConstructContext).plus(accessorCode.imports),
+                        `${indent.firstLine}withData(${accessorFunction}, () => ${functionName}())`,
+                        Imports.for(Import.withData).plus(accessorCode.imports),
                         [...accessor.validations, ...accessorCode.validations],
                         mkRefsTree([], {}),
                     );

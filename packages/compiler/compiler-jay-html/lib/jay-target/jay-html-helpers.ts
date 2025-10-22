@@ -17,6 +17,17 @@ export function isRecurse(node: Node): boolean {
     );
 }
 
+/**
+ * Check if a recurse element requires withData (has accessor and it's not ".")
+ * This is used to determine if the parent needs to be a dynamic element
+ */
+export function isRecurseWithData(node: Node): boolean {
+    if (!isRecurse(node)) return false;
+    const accessor = (node as HTMLElement).getAttribute('accessor');
+    // Only needs withData if accessor is explicitly set and not "." (forEach default)
+    return accessor != null && accessor !== '.';
+}
+
 export interface AsyncDirectiveType {
     directive?: string;
     import?: ImportName;

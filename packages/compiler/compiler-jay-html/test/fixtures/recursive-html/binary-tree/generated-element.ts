@@ -6,6 +6,7 @@ import {
     RenderElement,
     ReferencesManager,
     conditional as c,
+    withData,
     dynamicElement as de,
     ConstructContext,
     HTMLElementProxy,
@@ -55,20 +56,22 @@ export function render(options?: RenderElementOptions): BinaryTreeElementPreRend
                     c(
                         (vs) => vs.hasLeft,
                         () =>
-                            e('div', { class: 'left-child' }, [
+                            de('div', { class: 'left-child' }, [
                                 e('div', { class: 'branch' }, ['L']),
-                                ConstructContext.onData(vs.left, () =>
-                                    renderRecursiveRegion_treeNode(),
+                                withData(
+                                    (vs) => vs.left,
+                                    () => renderRecursiveRegion_treeNode(),
                                 ),
                             ]),
                     ),
                     c(
                         (vs) => vs.hasRight,
                         () =>
-                            e('div', { class: 'right-child' }, [
+                            de('div', { class: 'right-child' }, [
                                 e('div', { class: 'branch' }, ['R']),
-                                ConstructContext.onData(vs.right, () =>
-                                    renderRecursiveRegion_treeNode(),
+                                withData(
+                                    (vs) => vs.right,
+                                    () => renderRecursiveRegion_treeNode(),
                                 ),
                             ]),
                     ),

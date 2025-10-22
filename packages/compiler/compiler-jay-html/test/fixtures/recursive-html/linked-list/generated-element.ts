@@ -6,6 +6,7 @@ import {
     RenderElement,
     ReferencesManager,
     conditional as c,
+    withData,
     dynamicElement as de,
     ConstructContext,
     HTMLElementProxy,
@@ -64,9 +65,10 @@ export function render(options?: RenderElementOptions): LinkedListElementPreRend
                 c(
                     (vs) => !vs.isLast,
                     () =>
-                        e('div', { class: 'next-node' }, [
-                            ConstructContext.onData(vs.next, () =>
-                                renderRecursiveRegion_listNode(),
+                        de('div', { class: 'next-node' }, [
+                            withData(
+                                (vs) => vs.next,
+                                () => renderRecursiveRegion_listNode(),
                             ),
                         ]),
                 ),
