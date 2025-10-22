@@ -1,4 +1,5 @@
 import {
+    BaseJayElement,
     JayElement,
     element as e,
     dynamicText as dt,
@@ -57,7 +58,7 @@ export function render(options?: RenderElementOptions): IndirectRecursionElement
         submenu: submenuRefManager,
     });
 
-    function renderRecursiveRegion_menuItem(nodeData: IndirectRecursionViewState) {
+    function renderRecursiveRegion_menuItem(): BaseJayElement<IndirectRecursionViewState> {
         return de(
             'li',
             { class: 'menu-item' },
@@ -78,7 +79,7 @@ export function render(options?: RenderElementOptions): IndirectRecursionElement
                                             (vs: IndirectRecursionViewState) => vs.submenu?.items,
                                             (vs1: IndirectRecursionViewState) => {
                                                 return e('li', {}, [
-                                                    renderRecursiveRegion_menuItem(vs1),
+                                                    renderRecursiveRegion_menuItem(),
                                                 ]);
                                             },
                                             'id',
@@ -94,7 +95,7 @@ export function render(options?: RenderElementOptions): IndirectRecursionElement
 
     const render = (viewState: IndirectRecursionViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            e('nav', { class: 'menu' }, [renderRecursiveRegion_menuItem(vs)]),
+            e('nav', { class: 'menu' }, [renderRecursiveRegion_menuItem()]),
         ) as IndirectRecursionElement;
     return [refManager.getPublicAPI() as IndirectRecursionElementRefs, render];
 }

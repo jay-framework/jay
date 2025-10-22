@@ -17,7 +17,7 @@ data:
         </div>
         <div class="next-arrow" if="!isLast">→</div>
         <div class="next-node" if="!isLast">
-            <recurse ref="listNode" />
+            <recurse ref="listNode" accessor="next" />
         </div>
     </div>
 </div>

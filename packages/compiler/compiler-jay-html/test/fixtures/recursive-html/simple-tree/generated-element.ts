@@ -1,4 +1,5 @@
 import {
+    BaseJayElement,
     JayElement,
     element as e,
     dynamicText as dt,
@@ -47,7 +48,7 @@ export function render(options?: RenderElementOptions): SimpleTreeElementPreRend
         },
     );
 
-    function renderRecursiveRegion_treeNode(nodeData: SimpleTreeViewState) {
+    function renderRecursiveRegion_treeNode(): BaseJayElement<SimpleTreeViewState> {
         return de(
             'div',
             { class: 'tree-node' },
@@ -65,7 +66,7 @@ export function render(options?: RenderElementOptions): SimpleTreeElementPreRend
                             forEach(
                                 (vs: SimpleTreeViewState) => vs.children,
                                 (vs1: SimpleTreeViewState) => {
-                                    return e('li', {}, [renderRecursiveRegion_treeNode(vs1)]);
+                                    return e('li', {}, [renderRecursiveRegion_treeNode()]);
                                 },
                                 'id',
                             ),
@@ -80,7 +81,7 @@ export function render(options?: RenderElementOptions): SimpleTreeElementPreRend
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', { class: 'tree-container' }, [
                 e('h1', {}, ['File Browser']),
-                renderRecursiveRegion_treeNode(vs),
+                renderRecursiveRegion_treeNode(),
             ]),
         ) as SimpleTreeElement;
     return [refManager.getPublicAPI() as SimpleTreeElementRefs, render];

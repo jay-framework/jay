@@ -1,4 +1,5 @@
 import {
+    BaseJayElement,
     JayElement,
     element as e,
     dynamicText as dt,
@@ -54,7 +55,7 @@ export function render(options?: RenderElementOptions): NestedCommentsElementPre
         },
     );
 
-    function renderRecursiveRegion_comment(nodeData: NestedCommentsViewState) {
+    function renderRecursiveRegion_comment(): BaseJayElement<NestedCommentsViewState> {
         return de(
             'article',
             { class: 'comment' },
@@ -75,7 +76,7 @@ export function render(options?: RenderElementOptions): NestedCommentsElementPre
                             forEach(
                                 (vs: NestedCommentsViewState) => vs.replies,
                                 (vs1: NestedCommentsViewState) => {
-                                    return e('div', {}, [renderRecursiveRegion_comment(vs1)]);
+                                    return e('div', {}, [renderRecursiveRegion_comment()]);
                                 },
                                 'id',
                             ),
@@ -88,7 +89,7 @@ export function render(options?: RenderElementOptions): NestedCommentsElementPre
 
     const render = (viewState: NestedCommentsViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            e('div', { class: 'comments' }, [renderRecursiveRegion_comment(vs)]),
+            e('div', { class: 'comments' }, [renderRecursiveRegion_comment()]),
         ) as NestedCommentsElement;
     return [refManager.getPublicAPI() as NestedCommentsElementRefs, render];
 }

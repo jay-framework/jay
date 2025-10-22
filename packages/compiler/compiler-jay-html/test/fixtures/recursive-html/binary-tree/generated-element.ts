@@ -1,4 +1,5 @@
 import {
+    BaseJayElement,
     JayElement,
     element as e,
     dynamicText as dt,
@@ -9,7 +10,7 @@ import {
     ConstructContext,
     HTMLElementProxy,
     RenderElementOptions,
-    JayContract, BaseJayElement,
+    JayContract,
 } from '@jay-framework/runtime';
 
 export interface BinaryTreeViewState {
@@ -56,7 +57,9 @@ export function render(options?: RenderElementOptions): BinaryTreeElementPreRend
                         () =>
                             e('div', { class: 'left-child' }, [
                                 e('div', { class: 'branch' }, ['L']),
-                                renderRecursiveRegion_treeNode(),
+                                ConstructContext.onData(vs.left, () =>
+                                    renderRecursiveRegion_treeNode(),
+                                ),
                             ]),
                     ),
                     c(
@@ -64,7 +67,9 @@ export function render(options?: RenderElementOptions): BinaryTreeElementPreRend
                         () =>
                             e('div', { class: 'right-child' }, [
                                 e('div', { class: 'branch' }, ['R']),
-                                renderRecursiveRegion_treeNode(),
+                                ConstructContext.onData(vs.right, () =>
+                                    renderRecursiveRegion_treeNode(),
+                                ),
                             ]),
                     ),
                 ]),

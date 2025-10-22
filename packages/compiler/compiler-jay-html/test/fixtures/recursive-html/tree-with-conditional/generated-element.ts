@@ -1,4 +1,5 @@
 import {
+    BaseJayElement,
     JayElement,
     element as e,
     dynamicText as dt,
@@ -62,7 +63,7 @@ export function render(options?: RenderElementOptions): TreeWithConditionalEleme
         },
     );
 
-    function renderRecursiveRegion_treeItem(nodeData: TreeWithConditionalViewState) {
+    function renderRecursiveRegion_treeItem(): BaseJayElement<TreeWithConditionalViewState> {
         return de(
             'div',
             { class: 'tree-item' },
@@ -88,7 +89,7 @@ export function render(options?: RenderElementOptions): TreeWithConditionalEleme
                                             (vs: TreeWithConditionalViewState) => vs.children,
                                             (vs1: TreeWithConditionalViewState) => {
                                                 return e('div', {}, [
-                                                    renderRecursiveRegion_treeItem(vs1),
+                                                    renderRecursiveRegion_treeItem(),
                                                 ]);
                                             },
                                             'id',
@@ -104,7 +105,7 @@ export function render(options?: RenderElementOptions): TreeWithConditionalEleme
 
     const render = (viewState: TreeWithConditionalViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            e('div', { class: 'file-tree' }, [renderRecursiveRegion_treeItem(vs)]),
+            e('div', { class: 'file-tree' }, [renderRecursiveRegion_treeItem()]),
         ) as TreeWithConditionalElement;
     return [refManager.getPublicAPI() as TreeWithConditionalElementRefs, render];
 }

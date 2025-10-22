@@ -374,13 +374,12 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                 viewStateType: contextForChildren.variables.currentType.name,
             };
             
-            // Replace the inline element with a function call
-            // Use the variable from the PARENT context (newContext), not the child context
-            const functionCall = `${newContext.indent.firstLine}${functionName}(${newContext.variables.currentVar})`;
+            // Replace the inline element with a function call (no parameters)
+            const functionCall = `${newContext.indent.firstLine}${functionName}()`;
             
             result = new RenderFragment(
                 functionCall,
-                result.imports,
+                result.imports.plus(Import.baseJayElement),
                 result.validations,
                 result.refs,
                 [...result.recursiveRegions, recursiveRegion],
@@ -470,8 +469,9 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             // if (isForEach(htmlElement)) dynamicRef = true;
 
             if (isRecurse(htmlElement)) {
-                // Handle <recurse ref="name" /> element
+                // Handle <recurse ref="name" accessor="path" /> element
                 const refAttr = htmlElement.getAttribute('ref');
+                const accessorAttr = htmlElement.getAttribute('accessor');
                 
                 if (!refAttr) {
                     return new RenderFragment('', Imports.none(), [
@@ -499,17 +499,27 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 region.hasRecurse = true;
                 
                 // Generate the recursive function call
-                // The function name will be: renderRecursiveRegion_${refName}
-                // We pass the current variable from the context (e.g., the forEach loop variable)
                 const functionName = `renderRecursiveRegion_${refAttr}`;
-                const currentVar = variables.currentVar;
                 
-                return new RenderFragment(
-                    `${indent.firstLine}${functionName}(${currentVar})`,
-                    Imports.none(),
-                    [],
-                    mkRefsTree([], {}),
-                );
+                // If accessor is provided and not ".", we need to wrap in ConstructContext
+                if (accessorAttr && accessorAttr !== '.') {
+                    const accessor = parseAccessor(accessorAttr, variables);
+                    const accessorCode = accessor.render();
+                    return new RenderFragment(
+                        `${indent.firstLine}ConstructContext.onData(${accessorCode.rendered}, () => ${functionName}())`,
+                        Imports.for(Import.ConstructContext).plus(accessorCode.imports),
+                        [...accessor.validations, ...accessorCode.validations],
+                        mkRefsTree([], {}),
+                    );
+                } else {
+                    // No accessor or "." means use current context (forEach case)
+                    return new RenderFragment(
+                        `${indent.firstLine}${functionName}()`,
+                        Imports.none(),
+                        [],
+                        mkRefsTree([], {}),
+                    );
+                }
             } else if (isConditional(htmlElement)) {
                 let condition = htmlElement.getAttribute('if');
                 let childElement = renderHtmlElement(htmlElement, {
@@ -669,10 +679,9 @@ function generateRecursiveFunctions(
     return recursiveRegions
         .map((region) => {
             const functionName = `renderRecursiveRegion_${region.refName}`;
-            const paramName = 'nodeData';
-            const paramType = region.viewStateType;
+            const returnType = `BaseJayElement<${region.viewStateType}>`;
 
-            return `    function ${functionName}(${paramName}: ${paramType}) {
+            return `    function ${functionName}(): ${returnType} {
         return ${region.renderedContent};
     }`;
         })

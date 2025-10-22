@@ -1,4 +1,5 @@
 import {
+    BaseJayElement,
     JayElement,
     element as e,
     dynamicText as dt,
@@ -42,7 +43,7 @@ export function render(options?: RenderElementOptions): LinkedListElementPreRend
         [],
     );
 
-    function renderRecursiveRegion_listNode(nodeData: LinkedListViewState) {
+    function renderRecursiveRegion_listNode(): BaseJayElement<LinkedListViewState> {
         return de(
             'div',
             { class: 'list-node' },
@@ -62,7 +63,12 @@ export function render(options?: RenderElementOptions): LinkedListElementPreRend
                 ),
                 c(
                     (vs) => !vs.isLast,
-                    () => e('div', { class: 'next-node' }, [renderRecursiveRegion_listNode(vs)]),
+                    () =>
+                        e('div', { class: 'next-node' }, [
+                            ConstructContext.onData(vs.next, () =>
+                                renderRecursiveRegion_listNode(),
+                            ),
+                        ]),
                 ),
             ],
             refListNode(),
@@ -71,7 +77,7 @@ export function render(options?: RenderElementOptions): LinkedListElementPreRend
 
     const render = (viewState: LinkedListViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            e('div', { class: 'linked-list' }, [renderRecursiveRegion_listNode(vs)]),
+            e('div', { class: 'linked-list' }, [renderRecursiveRegion_listNode()]),
         ) as LinkedListElement;
     return [refManager.getPublicAPI() as LinkedListElementRefs, render];
 }

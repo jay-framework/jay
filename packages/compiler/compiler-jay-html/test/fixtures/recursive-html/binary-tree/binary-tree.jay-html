@@ -19,11 +19,11 @@ data:
         <div class="children">
             <div class="left-child" if="hasLeft">
                 <div class="branch">L</div>
-                <recurse ref="treeNode" />
+                <recurse ref="treeNode" accessor="left" />
             </div>
             <div class="right-child" if="hasRight">
                 <div class="branch">R</div>
-                <recurse ref="treeNode" />
+                <recurse ref="treeNode" accessor="right" />
             </div>
         </div>
     </div>
