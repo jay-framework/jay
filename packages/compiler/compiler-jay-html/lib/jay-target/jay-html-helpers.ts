@@ -10,6 +10,13 @@ export function isForEach(node: Node): boolean {
     return node.nodeType !== NodeType.TEXT_NODE && (node as HTMLElement).hasAttribute('forEach');
 }
 
+export function isRecurse(node: Node): boolean {
+    return (
+        node.nodeType !== NodeType.TEXT_NODE &&
+        (node as HTMLElement).rawTagName?.toLowerCase() === 'recurse'
+    );
+}
+
 export interface AsyncDirectiveType {
     directive?: string;
     import?: ImportName;
