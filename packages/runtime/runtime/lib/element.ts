@@ -203,6 +203,7 @@ function isJayElement<ViewState>(
         | Conditional<ViewState>
         | When<ViewState, any>
         | ForEach<ViewState, any>
+        | WithData<ViewState, any>
         | TextElement<ViewState>
         | BaseJayElement<ViewState>,
 ): c is BaseJayElement<ViewState> {
@@ -213,6 +214,7 @@ export function isCondition<ViewState>(
         | Conditional<ViewState>
         | When<ViewState, any>
         | ForEach<ViewState, any>
+        | WithData<ViewState, any>
         | TextElement<ViewState>
         | BaseJayElement<ViewState>,
 ): c is Conditional<ViewState> {
@@ -224,6 +226,7 @@ export function isForEach<ViewState, Item>(
         | Conditional<ViewState>
         | When<ViewState, any>
         | ForEach<ViewState, Item>
+        | WithData<ViewState, any>
         | TextElement<ViewState>
         | BaseJayElement<ViewState>,
 ): c is ForEach<ViewState, Item> {
@@ -235,10 +238,23 @@ export function isWhen<ViewState, Item>(
         | Conditional<ViewState>
         | When<ViewState, any>
         | ForEach<ViewState, Item>
+        | WithData<ViewState, any>
         | TextElement<ViewState>
         | BaseJayElement<ViewState>,
 ): c is When<ViewState, any> {
     return (c as When<ViewState, any>).promise !== undefined;
+}
+
+export function isWithData<ViewState, ChildViewState>(
+    c:
+        | Conditional<ViewState>
+        | When<ViewState, any>
+        | ForEach<ViewState, any>
+        | WithData<ViewState, ChildViewState>
+        | TextElement<ViewState>
+        | BaseJayElement<ViewState>,
+): c is WithData<ViewState, ChildViewState> {
+    return (c as WithData<ViewState, ChildViewState>).accessor !== undefined;
 }
 
 function mkWhenCondition<ViewState, Resolved>(
@@ -346,6 +362,18 @@ export interface ForEach<ViewState, Item> {
     trackBy: string;
 }
 
+export function withData<ParentViewState, ChildViewState>(
+    accessor: (data: ParentViewState) => ChildViewState | null | undefined,
+    elem: () => BaseJayElement<ChildViewState>,
+): WithData<ParentViewState, ChildViewState> {
+    return { accessor, elem };
+}
+
+export interface WithData<ParentViewState, ChildViewState> {
+    accessor: (data: ParentViewState) => ChildViewState | null | undefined;
+    elem: () => BaseJayElement<ChildViewState>;
+}
+
 function applyListChanges<Item>(
     group: KindergartenGroup,
     instructions: Array<MatchResult<Item, BaseJayElement<Item>>>,
@@ -435,6 +463,33 @@ function mkUpdateCondition<ViewState>(
     return [update, mount, unmount];
 }
 
+function mkUpdateWithData<ParentViewState, ChildViewState>(
+    child: WithData<ParentViewState, ChildViewState>,
+    group: KindergartenGroup,
+): [updateFunc<ParentViewState>, MountFunc, MountFunc] {
+    const parentContext = currentConstructionContext();
+
+    // Wrap the update to switch context when updating
+    return mkUpdateCondition({
+        condition: (data: ParentViewState) => child.accessor(data) != null,
+        elem: (): BaseJayElement<ParentViewState> => {
+            const childElem = child.elem();
+            const update = (newData: ParentViewState) => {
+                const childData = child.accessor(newData);
+                const childContext = parentContext.forAsync(childData);
+                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => childElem.update(childData))
+
+            }
+            return {
+                update,
+                mount: childElem.mount,
+                unmount: childElem.unmount,
+                dom: childElem.dom
+            }
+        }
+    }, group);
+}
+
 function text<ViewState>(content: string): TextElement<ViewState> {
     return {
         dom: document.createTextNode(content),
@@ -503,6 +558,7 @@ export const mathMLElement = elementNS(MathML);
 type DynamicElementChildren<ViewState> = Array<
     | Conditional<ViewState>
     | ForEach<ViewState, any>
+    | WithData<ViewState, any>
     | TextElement<ViewState>
     | BaseJayElement<ViewState>
     | When<ViewState, any>
@@ -530,6 +586,8 @@ export const dynamicElementNS =
                 [update, mount, unmount] = mkUpdateCondition(child, group);
             } else if (isForEach(child)) {
                 [update, mount, unmount] = mkUpdateCollection(child, group);
+            } else if (isWithData(child)) {
+                [update, mount, unmount] = mkUpdateWithData(child, group);
             } else if (isWhen(child)) {
                 [update, mount, unmount] = mkWhenCondition(child, group);
             } else {
