@@ -16,9 +16,11 @@ data:
             <span class="icon">{type}</span>
             <span class="name">{name}</span>
         </div>
-        <div class="children" if="type == folder && isExpanded">
-            <div forEach="children" trackBy="id">
-                <recurse ref="treeItem" />
+        <div if="type == folder">
+            <div class="children" if="isExpanded">
+                <div forEach="children" trackBy="id">
+                    <recurse ref="treeItem" />
+                </div>
             </div>
         </div>
     </div>

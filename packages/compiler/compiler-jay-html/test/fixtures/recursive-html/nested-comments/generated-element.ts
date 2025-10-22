@@ -2,11 +2,11 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
-    dynamicElement as de,
-    conditional as c,
-    forEach,
     RenderElement,
     ReferencesManager,
+    conditional as c,
+    dynamicElement as de,
+    forEach,
     ConstructContext,
     HTMLElementProxy,
     RenderElementOptions,
@@ -23,6 +23,7 @@ export interface NestedCommentsViewState {
 
 export interface NestedCommentsElementRefs {
     toggleReplies: HTMLElementProxy<NestedCommentsViewState, HTMLButtonElement>;
+    comment: HTMLElementProxy<NestedCommentsViewState, HTMLElement>;
 }
 
 export type NestedCommentsElement = JayElement<NestedCommentsViewState, NestedCommentsElementRefs>;
@@ -41,46 +42,53 @@ export type NestedCommentsContract = JayContract<
 >;
 
 export function render(options?: RenderElementOptions): NestedCommentsElementPreRender {
-    const [refManager, [refToggleReplies]] = ReferencesManager.for(
+    const [repliesRefManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [refManager, [refToggleReplies, refComment]] = ReferencesManager.for(
         options,
-        ['toggleReplies'],
+        ['toggleReplies', 'comment'],
         [],
         [],
         [],
+        {
+            replies: repliesRefManager,
+        },
     );
 
-    function renderRecursiveRegion_comment(commentData: NestedCommentsViewState) {
-        return de('article', { class: 'comment' }, [
-            e('div', { class: 'comment-header' }, [
-                e('span', { class: 'author' }, [dt((vs: NestedCommentsViewState) => vs.author)]),
-            ]),
-            e('div', { class: 'comment-body' }, [
-                e('p', { class: 'comment-text' }, [dt((vs: NestedCommentsViewState) => vs.text)]),
-            ]),
-            e('div', { class: 'comment-actions' }, [
-                e('button', {}, ['Toggle Replies'], refToggleReplies()),
-            ]),
-            c(
-                (vs: NestedCommentsViewState) => vs.showReplies,
-                () =>
-                    de('div', { class: 'replies' }, [
-                        forEach(
-                            (vs: NestedCommentsViewState) => vs.replies,
-                            (replyData: NestedCommentsViewState) => {
-                                return e('div', {}, [renderRecursiveRegion_comment(replyData)]);
-                            },
-                            'id',
-                        ),
-                    ]),
-            ),
-        ]);
+    function renderRecursiveRegion_comment(nodeData: NestedCommentsViewState) {
+        return de(
+            'article',
+            { class: 'comment' },
+            [
+                e('div', { class: 'comment-header' }, [
+                    e('span', { class: 'author' }, [dt((vs) => vs.author)]),
+                ]),
+                e('div', { class: 'comment-body' }, [
+                    e('p', { class: 'comment-text' }, [dt((vs) => vs.text)]),
+                ]),
+                e('div', { class: 'comment-actions' }, [
+                    e('button', {}, ['Toggle Replies'], refToggleReplies()),
+                ]),
+                c(
+                    (vs) => vs.showReplies,
+                    () =>
+                        de('div', { class: 'replies' }, [
+                            forEach(
+                                (vs: NestedCommentsViewState) => vs.replies,
+                                (vs1: NestedCommentsViewState) => {
+                                    return e('div', {}, [renderRecursiveRegion_comment(vs1)]);
+                                },
+                                'id',
+                            ),
+                        ]),
+                ),
+            ],
+            refComment(),
+        );
     }
 
     const render = (viewState: NestedCommentsViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            e('div', { class: 'comments' }, [renderRecursiveRegion_comment(viewState)]),
+            e('div', { class: 'comments' }, [renderRecursiveRegion_comment(vs)]),
         ) as NestedCommentsElement;
-
     return [refManager.getPublicAPI() as NestedCommentsElementRefs, render];
 }
-

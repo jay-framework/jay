@@ -2,11 +2,11 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
-    dynamicElement as de,
-    conditional as c,
-    forEach,
     RenderElement,
     ReferencesManager,
+    conditional as c,
+    dynamicElement as de,
+    forEach,
     ConstructContext,
     HTMLElementProxy,
     RenderElementOptions,
@@ -28,6 +28,7 @@ export interface TreeWithConditionalViewState {
 
 export interface TreeWithConditionalElementRefs {
     itemHeader: HTMLElementProxy<TreeWithConditionalViewState, HTMLDivElement>;
+    treeItem: HTMLElementProxy<TreeWithConditionalViewState, HTMLDivElement>;
 }
 
 export type TreeWithConditionalElement = JayElement<
@@ -49,46 +50,61 @@ export type TreeWithConditionalContract = JayContract<
 >;
 
 export function render(options?: RenderElementOptions): TreeWithConditionalElementPreRender {
-    const [refManager, [refItemHeader]] = ReferencesManager.for(
+    const [childrenRefManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [refManager, [refItemHeader, refTreeItem]] = ReferencesManager.for(
         options,
-        ['itemHeader'],
+        ['itemHeader', 'treeItem'],
         [],
         [],
         [],
+        {
+            children: childrenRefManager,
+        },
     );
 
-    function renderRecursiveRegion_treeItem(itemData: TreeWithConditionalViewState) {
-        return de('div', { class: 'tree-item' }, [
-            e(
-                'div',
-                { class: 'item-header' },
-                [
-                    e('span', { class: 'icon' }, [dt((vs: TreeWithConditionalViewState) => vs.type)]),
-                    e('span', { class: 'name' }, [dt((vs: TreeWithConditionalViewState) => vs.name)]),
-                ],
-                refItemHeader(),
-            ),
-            c(
-                (vs: TreeWithConditionalViewState) => vs.type == TypeOfTreeWithConditionalViewState.folder && vs.isExpanded,
-                () =>
-                    de('div', { class: 'children' }, [
-                        forEach(
-                            (vs: TreeWithConditionalViewState) => vs.children,
-                            (childData: TreeWithConditionalViewState) => {
-                                return e('div', {}, [renderRecursiveRegion_treeItem(childData)]);
-                            },
-                            'id',
-                        ),
-                    ]),
-            ),
-        ]);
+    function renderRecursiveRegion_treeItem(nodeData: TreeWithConditionalViewState) {
+        return de(
+            'div',
+            { class: 'tree-item' },
+            [
+                e(
+                    'div',
+                    { class: 'item-header' },
+                    [
+                        e('span', { class: 'icon' }, [dt((vs) => vs.type)]),
+                        e('span', { class: 'name' }, [dt((vs) => vs.name)]),
+                    ],
+                    refItemHeader(),
+                ),
+                c(
+                    (vs) => vs.type === TypeOfTreeWithConditionalViewState.folder,
+                    () =>
+                        de('div', {}, [
+                            c(
+                                (vs) => vs.isExpanded,
+                                () =>
+                                    de('div', { class: 'children' }, [
+                                        forEach(
+                                            (vs: TreeWithConditionalViewState) => vs.children,
+                                            (vs1: TreeWithConditionalViewState) => {
+                                                return e('div', {}, [
+                                                    renderRecursiveRegion_treeItem(vs1),
+                                                ]);
+                                            },
+                                            'id',
+                                        ),
+                                    ]),
+                            ),
+                        ]),
+                ),
+            ],
+            refTreeItem(),
+        );
     }
 
     const render = (viewState: TreeWithConditionalViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            e('div', { class: 'file-tree' }, [renderRecursiveRegion_treeItem(viewState)]),
+            e('div', { class: 'file-tree' }, [renderRecursiveRegion_treeItem(vs)]),
         ) as TreeWithConditionalElement;
-
     return [refManager.getPublicAPI() as TreeWithConditionalElementRefs, render];
 }
-

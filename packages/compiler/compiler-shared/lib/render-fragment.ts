@@ -108,26 +108,41 @@ export function mkRef(
     };
 }
 
+export interface RecursiveRegion {
+    refName: string;
+    renderedContent: string;
+    viewStateType: string;
+}
+
 export class RenderFragment {
     rendered: string;
     imports: Imports;
     validations: JayValidations;
     refs: RefsTree;
+    recursiveRegions: RecursiveRegion[];
 
     constructor(
         rendered: string,
         imports: Imports = Imports.none(),
         validations: JayValidations = [],
         refs: RefsTree = mkRefsTree([], {}),
+        recursiveRegions: RecursiveRegion[] = [],
     ) {
         this.rendered = rendered;
         this.imports = imports;
         this.validations = validations;
         this.refs = refs;
+        this.recursiveRegions = recursiveRegions;
     }
 
     map(f: (s: string) => string): RenderFragment {
-        return new RenderFragment(f(this.rendered), this.imports, this.validations, this.refs);
+        return new RenderFragment(
+            f(this.rendered),
+            this.imports,
+            this.validations,
+            this.refs,
+            this.recursiveRegions,
+        );
     }
 
     plusImport(imp: Imports): RenderFragment {
@@ -136,6 +151,7 @@ export class RenderFragment {
             this.imports.plus(imp),
             this.validations,
             this.refs,
+            this.recursiveRegions,
         );
     }
 
@@ -160,6 +176,7 @@ export class RenderFragment {
             Imports.merge(fragment1.imports, fragment2.imports),
             [...fragment1.validations, ...fragment2.validations],
             newRefsTree,
+            [...fragment1.recursiveRegions, ...fragment2.recursiveRegions],
         );
     }
 }

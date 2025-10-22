@@ -2,14 +2,14 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
-    dynamicElement as de,
-    conditional as c,
     RenderElement,
     ReferencesManager,
+    conditional as c,
+    dynamicElement as de,
     ConstructContext,
     HTMLElementProxy,
     RenderElementOptions,
-    JayContract,
+    JayContract, BaseJayElement,
 } from '@jay-framework/runtime';
 
 export interface BinaryTreeViewState {
@@ -23,6 +23,7 @@ export interface BinaryTreeViewState {
 
 export interface BinaryTreeElementRefs {
     nodeValue: HTMLElementProxy<BinaryTreeViewState, HTMLDivElement>;
+    treeNode: HTMLElementProxy<BinaryTreeViewState, HTMLDivElement>;
 }
 
 export type BinaryTreeElement = JayElement<BinaryTreeViewState, BinaryTreeElementRefs>;
@@ -35,45 +36,46 @@ export type BinaryTreeElementPreRender = [BinaryTreeElementRefs, BinaryTreeEleme
 export type BinaryTreeContract = JayContract<BinaryTreeViewState, BinaryTreeElementRefs>;
 
 export function render(options?: RenderElementOptions): BinaryTreeElementPreRender {
-    const [refManager, [refNodeValue]] = ReferencesManager.for(
+    const [refManager, [refNodeValue, refTreeNode]] = ReferencesManager.for(
         options,
-        ['nodeValue'],
+        ['nodeValue', 'treeNode'],
         [],
         [],
         [],
     );
 
-    function renderRecursiveRegion_treeNode(nodeData: BinaryTreeViewState) {
-        return e('div', { class: 'tree-node' }, [
-            e('div', { class: 'node-value' }, [dt((vs: BinaryTreeViewState) => vs.value)], refNodeValue()),
-            de('div', { class: 'children' }, [
-                c(
-                    (vs: BinaryTreeViewState) => vs.hasLeft,
-                    () =>
-                        de('div', { class: 'left-child' }, [
-                            e('div', { class: 'branch' }, ['L']),
-                            // Recursive call with left child
-                            renderRecursiveRegion_treeNode(nodeData.left!),
-                        ]),
-                ),
-                c(
-                    (vs: BinaryTreeViewState) => vs.hasRight,
-                    () =>
-                        de('div', { class: 'right-child' }, [
-                            e('div', { class: 'branch' }, ['R']),
-                            // Recursive call with right child
-                            renderRecursiveRegion_treeNode(nodeData.right!),
-                        ]),
-                ),
-            ]),
-        ]);
+    function renderRecursiveRegion_treeNode(): BaseJayElement<BinaryTreeViewState> {
+        return e(
+            'div',
+            { class: 'tree-node' },
+            [
+                e('div', { class: 'node-value' }, [dt((vs) => ` ${vs.value} `)], refNodeValue()),
+                de('div', { class: 'children' }, [
+                    c(
+                        (vs) => vs.hasLeft,
+                        () =>
+                            e('div', { class: 'left-child' }, [
+                                e('div', { class: 'branch' }, ['L']),
+                                renderRecursiveRegion_treeNode(),
+                            ]),
+                    ),
+                    c(
+                        (vs) => vs.hasRight,
+                        () =>
+                            e('div', { class: 'right-child' }, [
+                                e('div', { class: 'branch' }, ['R']),
+                                renderRecursiveRegion_treeNode(),
+                            ]),
+                    ),
+                ]),
+            ],
+            refTreeNode(),
+        );
     }
 
     const render = (viewState: BinaryTreeViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            e('div', { class: 'binary-tree' }, [renderRecursiveRegion_treeNode(viewState)]),
+            e('div', { class: 'binary-tree' }, [renderRecursiveRegion_treeNode()]),
         ) as BinaryTreeElement;
-
     return [refManager.getPublicAPI() as BinaryTreeElementRefs, render];
 }
-

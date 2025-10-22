@@ -2,12 +2,13 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
-    dynamicElement as de,
-    conditional as c,
-    forEach,
     RenderElement,
     ReferencesManager,
+    conditional as c,
+    dynamicElement as de,
+    forEach,
     ConstructContext,
+    HTMLElementProxy,
     RenderElementOptions,
     JayContract,
 } from '@jay-framework/runtime';
@@ -25,7 +26,9 @@ export interface IndirectRecursionViewState {
     submenu: SubmenuOfIndirectRecursionViewState;
 }
 
-export interface IndirectRecursionElementRefs {}
+export interface IndirectRecursionElementRefs {
+    menuItem: HTMLElementProxy<IndirectRecursionViewState, HTMLLIElement>;
+}
 
 export type IndirectRecursionElement = JayElement<
     IndirectRecursionViewState,
@@ -46,35 +49,52 @@ export type IndirectRecursionContract = JayContract<
 >;
 
 export function render(options?: RenderElementOptions): IndirectRecursionElementPreRender {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [itemsRefManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [submenuRefManager, []] = ReferencesManager.for(options, [], [], [], [], {
+        items: itemsRefManager,
+    });
+    const [refManager, [refMenuItem]] = ReferencesManager.for(options, ['menuItem'], [], [], [], {
+        submenu: submenuRefManager,
+    });
 
-    function renderRecursiveRegion_menuItem(itemData: IndirectRecursionViewState) {
-        return de('li', { class: 'menu-item' }, [
-            e('a', { href: '#' }, [
-                e('span', { class: 'icon' }, [dt((vs: IndirectRecursionViewState) => vs.icon)]),
-                e('span', { class: 'label' }, [dt((vs: IndirectRecursionViewState) => vs.label)]),
-            ]),
-            c(
-                (vs: IndirectRecursionViewState) => vs.hasSubmenu && vs.isOpen,
-                () =>
-                    de('ul', { class: 'submenu' }, [
-                        forEach(
-                            (vs: IndirectRecursionViewState) => vs.submenu?.items,
-                            (childData: IndirectRecursionViewState) => {
-                                return e('li', {}, [renderRecursiveRegion_menuItem(childData)]);
-                            },
-                            'id',
-                        ),
-                    ]),
-            ),
-        ]);
+    function renderRecursiveRegion_menuItem(nodeData: IndirectRecursionViewState) {
+        return de(
+            'li',
+            { class: 'menu-item' },
+            [
+                e('a', { href: '#' }, [
+                    e('span', { class: 'icon' }, [dt((vs) => vs.icon)]),
+                    e('span', { class: 'label' }, [dt((vs) => vs.label)]),
+                ]),
+                c(
+                    (vs) => vs.hasSubmenu,
+                    () =>
+                        de('div', {}, [
+                            c(
+                                (vs) => vs.isOpen,
+                                () =>
+                                    de('ul', { class: 'submenu' }, [
+                                        forEach(
+                                            (vs: IndirectRecursionViewState) => vs.submenu?.items,
+                                            (vs1: IndirectRecursionViewState) => {
+                                                return e('li', {}, [
+                                                    renderRecursiveRegion_menuItem(vs1),
+                                                ]);
+                                            },
+                                            'id',
+                                        ),
+                                    ]),
+                            ),
+                        ]),
+                ),
+            ],
+            refMenuItem(),
+        );
     }
 
     const render = (viewState: IndirectRecursionViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            e('nav', { class: 'menu' }, [renderRecursiveRegion_menuItem(viewState)]),
+            e('nav', { class: 'menu' }, [renderRecursiveRegion_menuItem(vs)]),
         ) as IndirectRecursionElement;
-
     return [refManager.getPublicAPI() as IndirectRecursionElementRefs, render];
 }
-

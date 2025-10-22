@@ -15,7 +15,7 @@ import {
     mergeRefsTrees,
     mkRef,
     mkRefsTree,
-    nestRefs,
+    nestRefs, RecursiveRegion,
     Ref,
     RefsTree,
     RenderFragment,
@@ -268,6 +268,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                 .plus(tagFunc.import),
             [...attributes.validations, ...children.validations, ...ref.validations],
             mergeRefsTrees(attributes.refs, children.refs, ref.refs),
+            [...attributes.recursiveRegions, ...children.recursiveRegions, ...ref.recursiveRegions],
         );
     }
 
@@ -289,6 +290,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                 .plus(tagFunc.import),
             [...attributes.validations, ...children.validations, ...ref.validations],
             mergeRefsTrees(attributes.refs, children.refs, ref.refs),
+            [...attributes.recursiveRegions, ...children.recursiveRegions, ...ref.recursiveRegions],
         );
     }
 
@@ -298,16 +300,17 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
 
         // Check if this element defines a recursive region
         let contextForChildren = newContext;
+        let currentRegion: RecursiveRegionInfo | null = null;
         if (htmlElement.hasAttribute('ref')) {
             const refName = htmlElement.getAttribute('ref');
-            const newRegion: RecursiveRegionInfo = {
+            currentRegion = {
                 refName,
                 hasRecurse: false,
                 isInsideGuard: newContext.isInsideGuard,
             };
             contextForChildren = {
                 ...newContext,
-                recursiveRegions: [...newContext.recursiveRegions, newRegion],
+                recursiveRegions: [...newContext.recursiveRegions, currentRegion],
             };
         }
 
@@ -344,8 +347,9 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
         let attributes = renderAttributes(htmlElement, contextForChildren);
         let renderedRef = renderElementRef(htmlElement, contextForChildren);
 
+        let result: RenderFragment;
         if (needDynamicElement)
-            return de(
+            result = de(
                 htmlElement.rawTagName,
                 attributes,
                 childRenders,
@@ -353,13 +357,37 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                 newContext.indent,
             );
         else
-            return e(
+            result = e(
                 htmlElement.rawTagName,
                 attributes,
                 childRenders,
                 renderedRef,
                 newContext.indent,
             );
+
+        // If this element has a ref that contains recursion, extract it to a function
+        if (currentRegion && currentRegion.hasRecurse) {
+            const functionName = `renderRecursiveRegion_${currentRegion.refName}`;
+            const recursiveRegion: RecursiveRegion = {
+                refName: currentRegion.refName,
+                renderedContent: result.rendered,
+                viewStateType: contextForChildren.variables.currentType.name,
+            };
+            
+            // Replace the inline element with a function call
+            // Use the variable from the PARENT context (newContext), not the child context
+            const functionCall = `${newContext.indent.firstLine}${functionName}(${newContext.variables.currentVar})`;
+            
+            result = new RenderFragment(
+                functionCall,
+                result.imports,
+                result.validations,
+                result.refs,
+                [...result.recursiveRegions, recursiveRegion],
+            );
+        }
+
+        return result;
     }
 
     function c(renderedCondition: RenderFragment, childElement: RenderFragment) {
@@ -368,6 +396,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
             Imports.merge(childElement.imports, renderedCondition.imports).plus(Import.conditional),
             [...renderedCondition.validations, ...childElement.validations],
             mergeRefsTrees(renderedCondition.refs, childElement.refs),
+            [...renderedCondition.recursiveRegions, ...childElement.recursiveRegions],
         );
     }
 
@@ -383,6 +412,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             childElement.imports.plus(Import.forEach),
             [...renderedForEach.validations, ...childElement.validations],
             childElement.refs,
+            [...renderedForEach.recursiveRegions, ...childElement.recursiveRegions],
         );
     }
 
@@ -468,9 +498,14 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 // Mark that this region has recursion
                 region.hasRecurse = true;
                 
-                // For now, generate a placeholder - actual code generation will come later
+                // Generate the recursive function call
+                // The function name will be: renderRecursiveRegion_${refName}
+                // We pass the current variable from the context (e.g., the forEach loop variable)
+                const functionName = `renderRecursiveRegion_${refAttr}`;
+                const currentVar = variables.currentVar;
+                
                 return new RenderFragment(
-                    `${indent.firstLine}/* TODO: recursive call to ${refAttr} */`,
+                    `${indent.firstLine}${functionName}(${currentVar})`,
                     Imports.none(),
                     [],
                     mkRefsTree([], {}),
@@ -624,6 +659,26 @@ function generateCssImport(jayFile: JayHtmlSourceFile): string {
     return `import './${jayFile.filename}.css';`;
 }
 
+function generateRecursiveFunctions(
+    recursiveRegions: RecursiveRegion[],
+): string {
+    if (recursiveRegions.length === 0) {
+        return '';
+    }
+
+    return recursiveRegions
+        .map((region) => {
+            const functionName = `renderRecursiveRegion_${region.refName}`;
+            const paramName = 'nodeData';
+            const paramType = region.viewStateType;
+
+            return `    function ${functionName}(${paramName}: ${paramType}) {
+        return ${region.renderedContent};
+    }`;
+        })
+        .join('\n\n');
+}
+
 function renderFunctionImplementation(
     types: JayType,
     rootBodyElement: HTMLElement,
@@ -712,9 +767,13 @@ ${Indent.forceIndent(code, 4)},
     `
             : '';
 
+    // Generate recursive render functions
+    const recursiveFunctions = generateRecursiveFunctions(renderedRoot.recursiveRegions);
+    const recursiveFunctionsSection = recursiveFunctions ? `\n${recursiveFunctions}\n\n` : '';
+
     const body = `export function render(options?: RenderElementOptions): ${preRenderType} {
 ${renderedRefsManager}    
-${headLinksInjection}const render = (viewState: ${viewStateType}) => ConstructContext.withRootContext(
+${headLinksInjection}${recursiveFunctionsSection}    const render = (viewState: ${viewStateType}) => ConstructContext.withRootContext(
         viewState, refManager,
         () => ${renderedRoot.rendered.trim()}
     ) as ${elementType};

@@ -18,11 +18,13 @@ data:
             <span class="icon">{icon}</span>
             <span class="label">{label}</span>
         </a>
-        <ul class="submenu" if="hasSubmenu && isOpen">
-            <li forEach="submenu.items" trackBy="id">
-                <recurse ref="menuItem" />
-            </li>
-        </ul>
+        <div if="hasSubmenu">
+            <ul class="submenu" if="isOpen">
+                <li forEach="submenu.items" trackBy="id">
+                    <recurse ref="menuItem" />
+                </li>
+            </ul>
+        </div>
     </li>
 </nav>
 </body>

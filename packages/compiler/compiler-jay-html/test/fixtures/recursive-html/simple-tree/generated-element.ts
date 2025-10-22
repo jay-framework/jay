@@ -2,11 +2,11 @@ import {
     JayElement,
     element as e,
     dynamicText as dt,
-    dynamicElement as de,
-    conditional as c,
-    forEach,
     RenderElement,
     ReferencesManager,
+    conditional as c,
+    dynamicElement as de,
+    forEach,
     ConstructContext,
     HTMLElementProxy,
     RenderElementOptions,
@@ -22,6 +22,7 @@ export interface SimpleTreeViewState {
 
 export interface SimpleTreeElementRefs {
     nodeHeader: HTMLElementProxy<SimpleTreeViewState, HTMLDivElement>;
+    treeNode: HTMLElementProxy<SimpleTreeViewState, HTMLDivElement>;
 }
 
 export type SimpleTreeElement = JayElement<SimpleTreeViewState, SimpleTreeElementRefs>;
@@ -34,35 +35,53 @@ export type SimpleTreeElementPreRender = [SimpleTreeElementRefs, SimpleTreeEleme
 export type SimpleTreeContract = JayContract<SimpleTreeViewState, SimpleTreeElementRefs>;
 
 export function render(options?: RenderElementOptions): SimpleTreeElementPreRender {
-    const [refManager, [refNodeHeader]] = ReferencesManager.for(options, ['nodeHeader'], [], [], []);
+    const [childrenRefManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [refManager, [refNodeHeader, refTreeNode]] = ReferencesManager.for(
+        options,
+        ['nodeHeader', 'treeNode'],
+        [],
+        [],
+        [],
+        {
+            children: childrenRefManager,
+        },
+    );
 
     function renderRecursiveRegion_treeNode(nodeData: SimpleTreeViewState) {
-        return de('div', { class: 'tree-node' }, [
-            e('div', { class: 'node-header' }, [e('span', {}, [dt((vs: SimpleTreeViewState) => vs.name)])], refNodeHeader()),
-            c(
-                (vs: SimpleTreeViewState) => vs.open,
-                () =>
-                    de('ul', {}, [
-                        forEach(
-                            (vs: SimpleTreeViewState) => vs.children,
-                            (childData: SimpleTreeViewState) => {
-                                return e('li', {}, [renderRecursiveRegion_treeNode(childData)]);
-                            },
-                            'id',
-                        ),
-                    ]),
-            ),
-        ]);
+        return de(
+            'div',
+            { class: 'tree-node' },
+            [
+                e(
+                    'div',
+                    { class: 'node-header' },
+                    [e('span', {}, [dt((vs) => vs.name)])],
+                    refNodeHeader(),
+                ),
+                c(
+                    (vs) => vs.open,
+                    () =>
+                        de('ul', {}, [
+                            forEach(
+                                (vs: SimpleTreeViewState) => vs.children,
+                                (vs1: SimpleTreeViewState) => {
+                                    return e('li', {}, [renderRecursiveRegion_treeNode(vs1)]);
+                                },
+                                'id',
+                            ),
+                        ]),
+                ),
+            ],
+            refTreeNode(),
+        );
     }
 
     const render = (viewState: SimpleTreeViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', { class: 'tree-container' }, [
                 e('h1', {}, ['File Browser']),
-                renderRecursiveRegion_treeNode(viewState),
+                renderRecursiveRegion_treeNode(vs),
             ]),
         ) as SimpleTreeElement;
-
     return [refManager.getPublicAPI() as SimpleTreeElementRefs, render];
 }
-
