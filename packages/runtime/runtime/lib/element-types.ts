@@ -77,3 +77,17 @@ export type JayContract<ViewState extends object, Refs extends object> = {
 };
 export type ExtractViewState<A> = A extends JayContract<infer ViewState, any> ? ViewState : never;
 export type ExtractRefs<A> = A extends JayContract<any, infer Refs> ? Refs : never;
+
+export enum LogType {
+    ASYNC_ERROR,
+    CONTEXT_NOT_FOUND
+}
+
+export type JayLog = {
+    log: (type: LogType) => void,
+    error: (type: LogType, error: Error) => void
+}
+export const jayLog: JayLog = {
+    log: noop,
+    error: noop
+}

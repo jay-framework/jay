@@ -4,9 +4,8 @@ import { RandomAccessLinkedList as List } from '@jay-framework/list-compare';
 import {
     BaseJayElement,
     JayComponent,
-    JayComponentConstructor,
+    JayComponentConstructor, jayLog, LogType,
     MountFunc,
-    noop,
     noopMount,
     noopUpdate,
     updateFunc,
@@ -283,10 +282,20 @@ function mkWhenConditionBase<ViewState, Resolved>(
     setupPromise: SetupPromise,
 ): [updateFunc<ViewState>, MountFunc, MountFunc] {
     let show = false;
+    let savedValue = undefined;
     const parentContext = currentConstructionContext();
     const savedContext = saveContext();
     const [cUpdate, cMouth, cUnmount] = mkUpdateCondition(
-        conditional(() => show, when.elem),
+        conditional(
+            () => show, () => {
+                let childContext = parentContext.forAsync(savedValue);
+                return restoreContext(savedContext, () => {
+                    return withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => {
+                        return when.elem()
+                    })
+                    }
+                );
+            }),
         group,
     );
 
@@ -295,10 +304,8 @@ function mkWhenConditionBase<ViewState, Resolved>(
     const handleValue = (changedPromise: Promise<Resolved>) => (value: any | typeof Hide) => {
         if (changedPromise === currentPromise) {
             show = value !== Hide;
-            let childContext = parentContext.forAsync(value);
-            return restoreContext(savedContext, () =>
-                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => cUpdate(value)),
-            );
+            savedValue = value;
+            cUpdate(value);
         }
     };
 
@@ -321,7 +328,7 @@ function mkWhenResolvedCondition<ViewState, Resolved>(
     group: KindergartenGroup,
 ): [updateFunc<ViewState>, MountFunc, MountFunc] {
     return mkWhenConditionBase(when, group, (promise, handleValue) =>
-        promise.then(handleValue).catch(noop),
+        promise.then(handleValue).catch((err) => jayLog.error(LogType.ASYNC_ERROR, err))
     );
 }
 
@@ -344,7 +351,7 @@ function mkWhenPendingCondition<ViewState>(
                 clearTimeout(timeout);
                 handleValue(Hide);
             })
-            .catch(noop);
+            .catch((err) => jayLog.error(LogType.ASYNC_ERROR, err));
     });
 }
 
@@ -440,13 +447,16 @@ function mkUpdateCondition<ViewState>(
         unmount = noopMount;
     let lastResult = false;
     let childElement: BaseJayElement<ViewState> | TextElement<ViewState> = undefined;
+    const savedContext = saveContext();
     const update = (newData: ViewState) => {
-        if (!childElement) {
-            childElement = child.elem();
+        const result = child.condition(newData);
+        if (!childElement && result) {
+            restoreContext(savedContext, () => {
+                childElement = child.elem();
+            })
             mount = () => lastResult && childElement.mount();
             unmount = () => childElement.unmount();
         }
-        const result = child.condition(newData);
 
         if (result) {
             if (!lastResult) {
