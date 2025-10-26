@@ -19,7 +19,9 @@ import {
     WithValidations,
     mkRef,
     isEnumType,
-    isRecursiveType, isObjectType, isPromiseType,
+    isRecursiveType,
+    isObjectType,
+    isPromiseType,
 } from '@jay-framework/compiler-shared';
 import { camelCase, pascalCase } from 'change-case';
 import path from 'path';
@@ -186,17 +188,17 @@ function traverseRecursiveSubContract(
     context: ContractTraversalContext,
 ): WithValidations<SubContractTraverseResult> {
     const { isRepeated, isAsync } = context;
-    
+
     // Create a recursive type with the reference path
     const referencePath = tag.link;
     const recursiveType = new JayRecursiveType(referencePath);
-    
+
     // Wrap in array if repeated
     const maybeArrayType = isRepeated ? new JayArrayType(recursiveType) : recursiveType;
-    
+
     // Wrap in promise if async
     const type = isAsync ? new JayPromiseType(maybeArrayType) : maybeArrayType;
-    
+
     // Return result with empty refs (recursive types don't have their own refs)
     return new WithValidations<SubContractTraverseResult>({
         type,
@@ -252,7 +254,7 @@ async function traverseTag(
 
 function resolveRecursiveReferences(type: JayType | undefined, rootType: JayType): void {
     if (!type) return;
-    
+
     if (isRecursiveType(type)) {
         if (type.referencePath === '$/') {
             // Reference to root type
@@ -262,7 +264,7 @@ function resolveRecursiveReferences(type: JayType | undefined, rootType: JayType
             const path = type.referencePath.substring(2); // Remove '$/'
             const pathParts = path.split('/');
             let currentType: JayType = rootType;
-            
+
             // Navigate through the path
             for (const part of pathParts) {
                 if (isObjectType(currentType)) {
@@ -276,7 +278,7 @@ function resolveRecursiveReferences(type: JayType | undefined, rootType: JayType
                     break;
                 }
             }
-            
+
             type.resolvedType = currentType || rootType;
         }
     } else if (isArrayType(type)) {
@@ -315,7 +317,7 @@ export async function contractToImportsViewStateAndRefs(
         importResolver: jayImportResolver,
         isAsync,
     });
-    
+
     // Resolve recursive references
     return result.map((r) => {
         if (r.type) {
