@@ -139,13 +139,20 @@ describe('expression-compiler', () => {
         });
 
         it('complex condition with enums and booleans', () => {
-            const actual = parseCondition('anEnum == one && member || anEnum == two && !member2', defaultVars);
-            expect(actual.rendered).toEqual('vs => ((vs.anEnum === AnEnum.one) && (vs.member)) || ((vs.anEnum === AnEnum.two) && (!vs.member2))');
+            const actual = parseCondition(
+                'anEnum == one && member || anEnum == two && !member2',
+                defaultVars,
+            );
+            expect(actual.rendered).toEqual(
+                'vs => ((vs.anEnum === AnEnum.one) && (vs.member)) || ((vs.anEnum === AnEnum.two) && (!vs.member2))',
+            );
         });
 
         it('parenthesized conditions', () => {
             const actual = parseCondition('(member || member2) && anEnum == one', defaultVars);
-            expect(actual.rendered).toEqual('vs => ((vs.member) || (vs.member2)) && (vs.anEnum === AnEnum.one)');
+            expect(actual.rendered).toEqual(
+                'vs => ((vs.member) || (vs.member2)) && (vs.anEnum === AnEnum.one)',
+            );
         });
 
         it('basic condition with member not in type should report a problem', () => {

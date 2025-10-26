@@ -95,11 +95,7 @@ export const Import = {
         'conditional as c',
         ImportsFor.implementation,
     ),
-    withData: importStatementFragment(
-        JAY_RUNTIME,
-        'withData',
-        ImportsFor.implementation,
-    ),
+    withData: importStatementFragment(JAY_RUNTIME, 'withData', ImportsFor.implementation),
     dynamicElement: importStatementFragment(
         JAY_RUNTIME,
         'dynamicElement as de',

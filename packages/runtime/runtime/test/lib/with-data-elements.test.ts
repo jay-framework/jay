@@ -3,7 +3,8 @@ import {
     dynamicElement as de,
     element as e,
     dynamicText as dt,
-    conditional as c, BaseJayElement,
+    conditional as c,
+    BaseJayElement,
 } from '../../lib/';
 import { JayElement, ReferencesManager } from '../../lib';
 import { ConstructContext } from '../../lib';
@@ -42,7 +43,7 @@ describe('withData-element', () => {
                 parentName: 'Parent',
                 child: { childName: 'Child', value: 42 },
             });
-            
+
             expect(jayElement.dom.querySelector('#parent-name')).toHaveTextContent('Parent');
             expect(jayElement.dom.querySelector('#child')).not.toBeNull();
             expect(jayElement.dom.querySelector('#child-name')).toHaveTextContent('Child');
@@ -54,7 +55,7 @@ describe('withData-element', () => {
                 parentName: 'Parent',
                 child: null,
             });
-            
+
             expect(jayElement.dom.querySelector('#parent-name')).toHaveTextContent('Parent');
             expect(jayElement.dom.querySelector('#child')).toBeNull();
         });
@@ -64,7 +65,7 @@ describe('withData-element', () => {
                 parentName: 'Parent',
                 child: undefined,
             });
-            
+
             expect(jayElement.dom.querySelector('#parent-name')).toHaveTextContent('Parent');
             expect(jayElement.dom.querySelector('#child')).toBeNull();
         });
@@ -93,12 +94,12 @@ describe('withData-element', () => {
                 parentName: 'Parent',
                 child: { childName: 'Child1', value: 42 },
             });
-            
+
             jayElement.update({
                 parentName: 'Parent',
                 child: { childName: 'Child2', value: 99 },
             });
-            
+
             expect(jayElement.dom.querySelector('#child-name')).toHaveTextContent('Child2');
             expect(jayElement.dom.querySelector('#child-value')).toHaveTextContent('99');
         });
@@ -108,14 +109,14 @@ describe('withData-element', () => {
                 parentName: 'Parent',
                 child: null,
             });
-            
+
             expect(jayElement.dom.querySelector('#child')).toBeNull();
-            
+
             jayElement.update({
                 parentName: 'Parent',
                 child: { childName: 'NewChild', value: 123 },
             });
-            
+
             expect(jayElement.dom.querySelector('#child')).not.toBeNull();
             expect(jayElement.dom.querySelector('#child-name')).toHaveTextContent('NewChild');
             expect(jayElement.dom.querySelector('#child-value')).toHaveTextContent('123');
@@ -126,14 +127,14 @@ describe('withData-element', () => {
                 parentName: 'Parent',
                 child: { childName: 'Child', value: 42 },
             });
-            
+
             expect(jayElement.dom.querySelector('#child')).not.toBeNull();
-            
+
             jayElement.update({
                 parentName: 'Parent',
                 child: null,
             });
-            
+
             expect(jayElement.dom.querySelector('#child')).toBeNull();
         });
 
@@ -142,12 +143,12 @@ describe('withData-element', () => {
                 parentName: 'Parent1',
                 child: { childName: 'Child', value: 42 },
             });
-            
+
             jayElement.update({
                 parentName: 'Parent2',
                 child: { childName: 'Child', value: 42 },
             });
-            
+
             expect(jayElement.dom.querySelector('#parent-name')).toHaveTextContent('Parent2');
             expect(jayElement.dom.querySelector('#child-name')).toHaveTextContent('Child');
         });
@@ -189,9 +190,9 @@ describe('withData-element', () => {
                     value: 123,
                 },
             };
-            
+
             let jayElement = makeNestedElement(container);
-            
+
             expect(jayElement.dom.querySelector('.name')).toHaveTextContent('Outer');
             expect(jayElement.dom.querySelector('.inner')).not.toBeNull();
             expect(jayElement.dom.querySelector('.title')).toHaveTextContent('Inner');
@@ -203,9 +204,9 @@ describe('withData-element', () => {
                 name: 'Outer',
                 inner: null,
             };
-            
+
             let jayElement = makeNestedElement(container);
-            
+
             expect(jayElement.dom.querySelector('.name')).toHaveTextContent('Outer');
             expect(jayElement.dom.querySelector('.inner')).toBeNull();
         });
@@ -215,15 +216,15 @@ describe('withData-element', () => {
                 name: 'Outer',
                 inner: null,
             };
-            
+
             let jayElement = makeNestedElement(container);
             expect(jayElement.dom.querySelector('.inner')).toBeNull();
-            
+
             jayElement.update({
                 name: 'Outer',
                 inner: { title: 'New Inner', value: 456 },
             });
-            
+
             expect(jayElement.dom.querySelector('.inner')).not.toBeNull();
             expect(jayElement.dom.querySelector('.title')).toHaveTextContent('New Inner');
             expect(jayElement.dom.querySelector('.value')).toHaveTextContent('456');
@@ -235,7 +236,7 @@ describe('withData-element', () => {
         // Recursion requires conditional guards to prevent infinite construction.
         // The pattern matches what the Jay-HTML compiler generates:
         //   c((vs) => vs.hasLeft, () => de(..., [withData((vs) => vs.left, () => renderTree())]))
-        
+
         interface BinaryTreeNode {
             value: number;
             hasLeft: boolean;
@@ -246,7 +247,7 @@ describe('withData-element', () => {
 
         function makeBinaryTree(data: BinaryTreeNode): JayElement<BinaryTreeNode, any> {
             let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
-            
+
             // Recursive render function (matches generated code pattern)
             function renderTreeNode(): BaseJayElement<BinaryTreeNode> {
                 return de('div', { class: 'tree-node' }, [
@@ -254,28 +255,30 @@ describe('withData-element', () => {
                     de('div', { class: 'children' }, [
                         c(
                             (vs) => vs.hasLeft,
-                            () => de('div', { class: 'left-child' }, [
-                                e('div', { class: 'branch' }, ['L']),
-                                withData(
-                                    (vs) => vs.left,
-                                    () => renderTreeNode(),
-                                ),
-                            ]),
+                            () =>
+                                de('div', { class: 'left-child' }, [
+                                    e('div', { class: 'branch' }, ['L']),
+                                    withData(
+                                        (vs) => vs.left,
+                                        () => renderTreeNode(),
+                                    ),
+                                ]),
                         ),
                         c(
                             (vs) => vs.hasRight,
-                            () => de('div', { class: 'right-child' }, [
-                                e('div', { class: 'branch' }, ['R']),
-                                withData(
-                                    (vs) => vs.right,
-                                    () => renderTreeNode(),
-                                ),
-                            ]),
+                            () =>
+                                de('div', { class: 'right-child' }, [
+                                    e('div', { class: 'branch' }, ['R']),
+                                    withData(
+                                        (vs) => vs.right,
+                                        () => renderTreeNode(),
+                                    ),
+                                ]),
                         ),
                     ]),
                 ]);
             }
-            
+
             return ConstructContext.withRootContext(data, refManager, renderTreeNode);
         }
 
@@ -299,14 +302,14 @@ describe('withData-element', () => {
                     right: null,
                 },
             };
-            
+
             const jayElement = makeBinaryTree(tree);
-            
+
             const values = Array.from(jayElement.dom.querySelectorAll('.value')).map(
                 (el) => el.textContent,
             );
             expect(values).toEqual(['50', '30', '70']);
-            
+
             const branches = Array.from(jayElement.dom.querySelectorAll('.branch')).map(
                 (el) => el.textContent,
             );
@@ -345,9 +348,9 @@ describe('withData-element', () => {
                     },
                 },
             };
-            
+
             const jayElement = makeBinaryTree(tree);
-            
+
             const values = Array.from(jayElement.dom.querySelectorAll('.value')).map(
                 (el) => el.textContent,
             );
@@ -362,14 +365,14 @@ describe('withData-element', () => {
                 left: null,
                 right: null,
             };
-            
+
             const jayElement = makeBinaryTree(tree);
-            
+
             const values = Array.from(jayElement.dom.querySelectorAll('.value')).map(
                 (el) => el.textContent,
             );
             expect(values).toEqual(['42']);
-            
+
             // Should have no branches since no children
             const branches = jayElement.dom.querySelectorAll('.branch');
             expect(branches.length).toBe(0);
@@ -384,10 +387,12 @@ describe('withData-element', () => {
                 left: null,
                 right: null,
             };
-            
+
             const jayElement = makeBinaryTree(tree);
-            expect(Array.from(jayElement.dom.querySelectorAll('.value')).map(el => el.textContent)).toEqual(['50']);
-            
+            expect(
+                Array.from(jayElement.dom.querySelectorAll('.value')).map((el) => el.textContent),
+            ).toEqual(['50']);
+
             // Add children
             jayElement.update({
                 value: 50,
@@ -408,7 +413,7 @@ describe('withData-element', () => {
                     right: null,
                 },
             });
-            
+
             const values = Array.from(jayElement.dom.querySelectorAll('.value')).map(
                 (el) => el.textContent,
             );
@@ -435,14 +440,14 @@ describe('withData-element', () => {
                 },
                 right: null,
             };
-            
+
             const jayElement = makeBinaryTree(tree);
-            
+
             const values = Array.from(jayElement.dom.querySelectorAll('.value')).map(
                 (el) => el.textContent,
             );
             expect(values).toEqual(['10', '5', '3']);
-            
+
             // Should only have left branches
             const branches = Array.from(jayElement.dom.querySelectorAll('.branch')).map(
                 (el) => el.textContent,
@@ -451,4 +456,3 @@ describe('withData-element', () => {
         });
     });
 });
-

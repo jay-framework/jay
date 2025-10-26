@@ -4,7 +4,9 @@ import { RandomAccessLinkedList as List } from '@jay-framework/list-compare';
 import {
     BaseJayElement,
     JayComponent,
-    JayComponentConstructor, jayLog, LogType,
+    JayComponentConstructor,
+    jayLog,
+    LogType,
     MountFunc,
     noopMount,
     noopUpdate,
@@ -287,15 +289,16 @@ function mkWhenConditionBase<ViewState, Resolved>(
     const savedContext = saveContext();
     const [cUpdate, cMouth, cUnmount] = mkUpdateCondition(
         conditional(
-            () => show, () => {
+            () => show,
+            () => {
                 let childContext = parentContext.forAsync(savedValue);
                 return restoreContext(savedContext, () => {
                     return withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => {
-                        return when.elem()
-                    })
-                    }
-                );
-            }),
+                        return when.elem();
+                    });
+                });
+            },
+        ),
         group,
     );
 
@@ -328,7 +331,7 @@ function mkWhenResolvedCondition<ViewState, Resolved>(
     group: KindergartenGroup,
 ): [updateFunc<ViewState>, MountFunc, MountFunc] {
     return mkWhenConditionBase(when, group, (promise, handleValue) =>
-        promise.then(handleValue).catch((err) => jayLog.error(LogType.ASYNC_ERROR, err))
+        promise.then(handleValue).catch((err) => jayLog.error(LogType.ASYNC_ERROR, err)),
     );
 }
 
@@ -453,7 +456,7 @@ function mkUpdateCondition<ViewState>(
         if (!childElement && result) {
             restoreContext(savedContext, () => {
                 childElement = child.elem();
-            })
+            });
             mount = () => lastResult && childElement.mount();
             unmount = () => childElement.unmount();
         }
@@ -483,16 +486,16 @@ function mkUpdateWithData<ParentViewState, ChildViewState>(
     let childElement: BaseJayElement<ChildViewState> | undefined = undefined;
     const parentContext = currentConstructionContext();
     const savedContext = saveContext();
-    
+
     const update = (newData: ParentViewState) => {
         const childData = child.accessor(newData);
         const result = childData != null;
-        
+
         // Construct the child element when first needed
         if (!childElement && result) {
             const childContext = parentContext.forAsync(childData);
             childElement = restoreContext(savedContext, () =>
-                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => child.elem())
+                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => child.elem()),
             );
             mount = () => lastResult && childElement!.mount();
             unmount = () => childElement!.unmount();
@@ -507,9 +510,9 @@ function mkUpdateWithData<ParentViewState, ChildViewState>(
             // Update child with child data, not parent data
             const childContext = parentContext.forAsync(childData);
             restoreContext(savedContext, () =>
-                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => 
-                    childElement!.update(childData!)
-                )
+                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () =>
+                    childElement!.update(childData!),
+                ),
             );
         } else if (lastResult) {
             childElement!.unmount();
@@ -518,7 +521,7 @@ function mkUpdateWithData<ParentViewState, ChildViewState>(
 
         lastResult = result;
     };
-    
+
     return [update, mount, unmount];
 }
 

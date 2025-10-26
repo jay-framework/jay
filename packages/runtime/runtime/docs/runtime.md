@@ -346,7 +346,12 @@ The `trackBy` parameter is crucial for performance - it tells Jay how to identif
 Example usage for a simple list:
 
 ```typescript
-import { forEach, dynamicElement as de, element as e, dynamicText as dt } from '@jay-framework/runtime';
+import {
+  forEach,
+  dynamicElement as de,
+  element as e,
+  dynamicText as dt,
+} from '@jay-framework/runtime';
 
 interface TodoItem {
   id: string;
@@ -362,9 +367,7 @@ de('ul', { class: 'todo-list' }, [
   forEach(
     (vs) => vs.todos,
     (item: TodoItem) =>
-      e('li', { id: item.id, class: item.completed ? 'completed' : '' }, [
-        dt((item) => item.text),
-      ]),
+      e('li', { id: item.id, class: item.completed ? 'completed' : '' }, [dt((item) => item.text)]),
     'id',
   ),
 ]);
@@ -399,6 +402,7 @@ de('div', { class: 'chat' }, [
 ```
 
 **Key Features**:
+
 - **Efficient Updates**: Only modifies DOM elements that actually changed
 - **Smart Reordering**: Moves existing elements rather than recreating them when order changes
 - **Memory Management**: Properly unmounts removed elements
@@ -428,7 +432,12 @@ at which
 Example usage for showing/hiding UI elements:
 
 ```typescript
-import { conditional, dynamicElement as de, element as e, dynamicText as dt } from '@jay-framework/runtime';
+import {
+  conditional,
+  dynamicElement as de,
+  element as e,
+  dynamicText as dt,
+} from '@jay-framework/runtime';
 
 interface ViewState {
   isLoggedIn: boolean;
@@ -483,6 +492,7 @@ de('div', { class: 'form' }, [
 ```
 
 **Key Features**:
+
 - **Lazy Creation**: The element is only created when the condition first becomes true
 - **Efficient Toggling**: Mounting/unmounting is efficient when toggling visibility
 - **Clean DOM**: When false, the element is completely removed from the DOM (not just hidden)
@@ -497,6 +507,7 @@ The Jay-HTML compiler automatically generates `conditional` calls when encounter
 The `withData` function enables context switching for child elements with a different data type. This is primarily used for recursive structures where a child element needs to operate on a subset or related piece of the parent's data.
 
 `withData` is similar to `conditional`, but instead of checking a boolean condition, it:
+
 1. Checks if the accessor function returns a non-null/undefined value
 2. If present, renders the child element with the accessed data as its ViewState
 3. If null/undefined, hides the child element
@@ -520,7 +531,12 @@ at which
 Example usage for a binary tree structure:
 
 ```typescript
-import { element as e, dynamicElement as de, withData, dynamicText as dt } from '@jay-framework/runtime';
+import {
+  element as e,
+  dynamicElement as de,
+  withData,
+  dynamicText as dt,
+} from '@jay-framework/runtime';
 
 interface TreeNode {
   value: number;

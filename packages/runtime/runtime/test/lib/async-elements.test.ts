@@ -9,9 +9,11 @@ import {
     rejected,
     resolved,
     forEach,
-    jayLog, LogType, noop,
+    jayLog,
+    LogType,
+    noop,
 } from '../../lib';
-import {afterAll, beforeAll} from "vitest";
+import { afterAll, beforeAll } from 'vitest';
 
 function mkPromise<T>(): [(v: T) => void, (reason?: any) => void, Promise<any>] {
     let resolve: (v: T) => void;
@@ -36,10 +38,10 @@ async function ignoreErrors(op: Promise<any>) {
 const STILL_LOADING = 'still loading';
 const RESOLVED = 'resolved to a value';
 const RESOLVED_2 = 'resolved to another value';
-const PROMISE_ERROR = 'TEST PROMISE REJECTION - this error is intentional to test promise rejection';
+const PROMISE_ERROR =
+    'TEST PROMISE REJECTION - this error is intentional to test promise rejection';
 
 describe('async-element', () => {
-
     // beforeAll(() => {
     //     jayLog.error = (type: LogType, error: Error) => console.error(type, error);
     // })

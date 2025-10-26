@@ -37,7 +37,9 @@ function renderInterface(aType: JayType): string {
                         } else if (isRecursiveType(arrayItemType)) {
                             // Recursive array: array<$/data> → Array<ViewState>
                             if (!arrayItemType.resolvedType) {
-                                throw new Error(`Recursive type not resolved: ${arrayItemType.referencePath}`);
+                                throw new Error(
+                                    `Recursive type not resolved: ${arrayItemType.referencePath}`,
+                                );
                             }
                             return `  ${prop}: Array<${arrayItemType.resolvedType.name}>`;
                         } else {
@@ -69,7 +71,9 @@ function renderInterface(aType: JayType): string {
                     } else if (isRecursiveType(childType)) {
                         // Recursive single child: $/data → ViewState | null
                         if (!childType.resolvedType) {
-                            throw new Error(`Recursive type not resolved: ${childType.referencePath}`);
+                            throw new Error(
+                                `Recursive type not resolved: ${childType.referencePath}`,
+                            );
                         }
                         return `  ${prop}: ${childType.resolvedType.name} | null`;
                     } else throw new Error(`unknown type ${childType.name}, ${childType.kind}`);

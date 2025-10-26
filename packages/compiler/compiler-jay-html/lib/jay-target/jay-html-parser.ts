@@ -72,7 +72,7 @@ function isRecursiveReference(typeString: string): boolean {
  */
 function parseArrayRecursiveReference(typeString: string): string | null {
     if (typeof typeString !== 'string') return null;
-    
+
     const match = typeString.match(/^array<(\$\/.*)>$/);
     if (match && match[1]) {
         return match[1];
@@ -91,28 +91,28 @@ function validateRecursivePath(
 ): string | undefined {
     // Parse the reference path (e.g., "$/data" or "$/data/submenu/items")
     const parts = referencePath.split('/').filter((p) => p);
-    
+
     if (parts.length === 0 || parts[0] !== '$') {
         return `recursive reference must start with $/ (got: ${referencePath})`;
     }
-    
+
     // Remove the $ prefix
     const pathParts = parts.slice(1);
-    
+
     if (pathParts.length === 0) {
         return `recursive reference path is incomplete (got: ${referencePath})`;
     }
-    
+
     // The first part must be 'data' (referencing the data structure)
     if (pathParts[0] !== 'data') {
         return `recursive reference path must start with $/data (got: ${referencePath})`;
     }
-    
+
     // If it's just "$/data", it's valid (references root)
     if (pathParts.length === 1) {
         return undefined;
     }
-    
+
     // For nested paths like "$/data/submenu/items", validate the path exists in the data structure
     let currentData = rootData;
     for (let i = 1; i < pathParts.length; i++) {
@@ -122,7 +122,7 @@ function validateRecursivePath(
         }
         currentData = currentData[part];
     }
-    
+
     return undefined;
 }
 
@@ -183,9 +183,7 @@ function resolveType(
                     `invalid recursive reference [${referencePath}] found at [${['data', ...pathTail, prop].join('.')}] - ${validationError}`,
                 );
             } else {
-                types[prop] = checkAsync(
-                    new JayArrayType(new JayRecursiveType(referencePath)),
-                );
+                types[prop] = checkAsync(new JayArrayType(new JayRecursiveType(referencePath)));
             }
         } else {
             let [, ...pathTail] = path;
@@ -242,10 +240,10 @@ function parseTypes(
             ...headlessImportedTypes,
             ...resolvedType.props,
         });
-        
+
         // Resolve recursive references now that we have the complete type tree
         resolveRecursiveReferences(finalType, finalType);
-        
+
         return finalType;
     } else if (typeof jayYaml.data === 'string') return resolveImportedType(imports, jayYaml.data);
 }

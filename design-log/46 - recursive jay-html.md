@@ -77,7 +77,7 @@ Define a named recursive region that can be referenced within itself.
   <body>
     <div class="tree-container">
       <h1>File Browser</h1>
-      
+
       <!-- Define the recursive region -->
       <recursive-region name="treeNode">
         <div class="node">
@@ -99,11 +99,13 @@ Define a named recursive region that can be referenced within itself.
 ```
 
 **Advantages:**
+
 - Explicit region boundaries
 - Named regions are clear and self-documenting
 - Can potentially have multiple recursive regions in one component
 
 **Disadvantages:**
+
 - More verbose syntax
 - Two new elements (`recursive-region` and `recurse`)
 
@@ -125,7 +127,7 @@ Mark an element with a `recursive` attribute to indicate that this subtree shoul
   <body>
     <div class="tree-container">
       <h1>File Browser</h1>
-      
+
       <!-- Mark the subtree as recursive -->
       <div class="node" recursive>
         <div ref="head" class="node-header">
@@ -144,12 +146,14 @@ Mark an element with a `recursive` attribute to indicate that this subtree shoul
 ```
 
 **Advantages:**
+
 - Clean, minimal syntax
 - No new elements, just an attribute
 - The recursion point (forEach) implicitly triggers the recursive rendering
 - Clear visual boundary of what repeats
 
 **Disadvantages:**
+
 - Implicit behavior (subtree repeats at forEach without explicit marker)
 - Need clear rules about where recursion happens
 
@@ -171,7 +175,7 @@ The element marked with a `recursive-region` attribute defines the boundary, and
   <body>
     <div class="tree-container">
       <h1>File Browser</h1>
-      
+
       <!-- Mark the recursive region boundary -->
       <div class="node" recursive-region>
         <div ref="head" class="node-header">
@@ -191,11 +195,13 @@ The element marked with a `recursive-region` attribute defines the boundary, and
 ```
 
 **Advantages:**
+
 - Clear boundaries with `recursive-region`
 - Explicit recursion point with `<recurse>`
 - Intuitive: "recurse the region I'm inside"
 
 **Disadvantages:**
+
 - Two new concepts (attribute and element)
 - Implicit region reference (which region does `<recurse>` refer to?)
 
@@ -217,7 +223,7 @@ Use Jay's existing `ref` system to mark and reference recursive regions. A regio
   <body>
     <div class="tree-container">
       <h1>File Browser</h1>
-      
+
       <!-- Use ref to mark the region - becomes recursive because it's referenced by <recurse> -->
       <div class="node" ref="treeNode">
         <div ref="head" class="node-header">
@@ -237,6 +243,7 @@ Use Jay's existing `ref` system to mark and reference recursive regions. A regio
 ```
 
 **Advantages:**
+
 - Reuses existing `ref` concept that Jay developers already understand
 - No special syntax needed - just regular `ref="name"`
 - Explicit: `<recurse ref="treeNode">` clearly shows what's being recursed
@@ -245,6 +252,7 @@ Use Jay's existing `ref` system to mark and reference recursive regions. A regio
 - Compiler infers recursion from usage
 
 **Disadvantages:**
+
 - None significant - this is the cleanest approach
 
 ## Recommended Approach: `ref` on Recursive Regions
@@ -267,12 +275,12 @@ The compiler automatically detects that a ref marks a recursive region when it f
 ### Key Features
 
 1. **Reuses Familiar Concepts**: Uses Jay's existing `ref` system, making it intuitive for developers
-   
 2. **Explicit References**: `<recurse ref="regionName">` clearly shows which region repeats
 
 3. **Multiple Recursive Regions**: A component can have multiple recursive regions, each with a unique ref name
 
 4. **Type References**: Uses `array<$/data>` syntax to explicitly define recursive types
+
    - `$/data` references the root data type
    - `$/data/path/to/type` references nested types
    - Inspired by JSON Schema `$ref`, using `$` prefix (instead of `#` which is YAML comment syntax)
@@ -311,7 +319,7 @@ For a recursive HTML region, the ViewState must support the recursive structure 
 data:
   name: string
   id: string
-  children: array<$/data>  # References the root data type
+  children: array<$/data> # References the root data type
 ```
 
 ```typescript
@@ -330,7 +338,7 @@ data:
   name: string
   id: string
   childContainer:
-    items: array<$/data>  # Still references root data type
+    items: array<$/data> # Still references root data type
 ```
 
 Generates:
@@ -340,7 +348,7 @@ export interface TreeViewState {
   name: string;
   id: string;
   childContainer: {
-    items: Array<TreeViewState>;  // Recursive reference to root type
+    items: Array<TreeViewState>; // Recursive reference to root type
   };
 }
 ```
@@ -355,8 +363,8 @@ data:
   metadata:
     title: string
     category: string
-  children: array<$/data>          # References root type
-  relatedItems: array<$/data/metadata>  # References nested metadata type
+  children: array<$/data> # References root type
+  relatedItems: array<$/data/metadata> # References nested metadata type
 ```
 
 Generates:
@@ -370,12 +378,13 @@ export interface MetadataOfTreeViewState {
 export interface TreeViewState {
   name: string;
   metadata: MetadataOfTreeViewState;
-  children: Array<TreeViewState>;  // References root
-  relatedItems: Array<MetadataOfTreeViewState>;  // References nested type
+  children: Array<TreeViewState>; // References root
+  relatedItems: Array<MetadataOfTreeViewState>; // References nested type
 }
 ```
 
 **Reference Syntax:**
+
 - `$/data` - References the root data type
 - `$/data/path/to/type` - References a nested type within the data structure
 - Uses `$` prefix (inspired by JSON Schema `$ref`) instead of `#` to avoid YAML comment syntax
@@ -391,7 +400,7 @@ Recursion doesn't always require arrays. You can have single optional recursive 
 data:
   value: string
   id: string
-  next: $/data  # Single optional recursive reference (not an array!)
+  next: $/data # Single optional recursive reference (not an array!)
 ```
 
 Generates:
@@ -400,7 +409,7 @@ Generates:
 export interface LinkedListViewState {
   value: string;
   id: string;
-  next: LinkedListViewState | null;  // Nullable type for optional recursion
+  next: LinkedListViewState | null; // Nullable type for optional recursion
 }
 ```
 
@@ -410,8 +419,8 @@ export interface LinkedListViewState {
 data:
   value: number
   id: string
-  left: $/data   # Optional left child
-  right: $/data  # Optional right child
+  left: $/data # Optional left child
+  right: $/data # Optional right child
 ```
 
 Generates:
@@ -426,6 +435,7 @@ export interface BinaryTreeViewState {
 ```
 
 **Type Generation Rules:**
+
 - `array<$/data>` → `Array<ViewState>` (for forEach loops)
 - `$/data` → `ViewState | null` (for conditionals with single children)
 - Non-array recursion requires conditional guards instead of forEach
@@ -438,7 +448,8 @@ export interface BinaryTreeViewState {
   <div class="node" ref="listNode">
     <span>{value}</span>
     <div class="next" if="next">
-      <recurse ref="listNode" />  <!-- Guarded by conditional, not forEach -->
+      <recurse ref="listNode" />
+      <!-- Guarded by conditional, not forEach -->
     </div>
   </div>
 </div>
@@ -453,7 +464,7 @@ The recursive region should compile to an internal render function that can call
 ```html
 <div class="tree-container">
   <h1>{title}</h1>
-  
+
   <div class="node" ref="treeNode">
     <div ref="head" class="node-header">
       <span>{name}</span>
@@ -471,30 +482,30 @@ The recursive region should compile to an internal render function that can call
 
 ```typescript
 import {
-    JayElement,
-    element as e,
-    dynamicText as dt,
-    dynamicElement as de,
-    conditional as c,
-    forEach,
-    RenderElement,
-    ReferencesManager,
-    ConstructContext,
-    HTMLElementProxy,
-    RenderElementOptions,
-    JayContract,
+  JayElement,
+  element as e,
+  dynamicText as dt,
+  dynamicElement as de,
+  conditional as c,
+  forEach,
+  RenderElement,
+  ReferencesManager,
+  ConstructContext,
+  HTMLElementProxy,
+  RenderElementOptions,
+  JayContract,
 } from '@jay-framework/runtime';
 
 export interface TreeViewState {
-    title: string;
-    name: string;
-    id: string;
-    open: boolean;
-    children: Array<TreeViewState>;
+  title: string;
+  name: string;
+  id: string;
+  open: boolean;
+  children: Array<TreeViewState>;
 }
 
 export interface TreeElementRefs {
-    head: HTMLElementProxy<TreeViewState, HTMLDivElement>;
+  head: HTMLElementProxy<TreeViewState, HTMLDivElement>;
 }
 
 export type TreeElement = JayElement<TreeViewState, TreeElementRefs>;
@@ -503,48 +514,48 @@ export type TreeElementPreRender = [TreeElementRefs, TreeElementRender];
 export type TreeContract = JayContract<TreeViewState, TreeElementRefs>;
 
 export function render(options?: RenderElementOptions): TreeElementPreRender {
-    // Setup refs - head is a regular ref in the recursive region
-    const [refManager, [refHead]] = ReferencesManager.for(options, ['head'], [], [], []);
-    
-    // Internal recursive render function for the region marked with ref="treeNode"
-    function renderRecursiveRegion_treeNode(nodeData: TreeViewState) {
-        return e('div', { class: 'node' }, [
-            e('div', { class: 'node-header' }, [
-                e('span', {}, [dt((vs) => vs.name)]),
-            ], refHead()),
-            c(
-                (vs) => vs.open,
-                () => de('ul', {}, [
-                    forEach(
-                        (vs: TreeViewState) => vs.children,
-                        (childData: TreeViewState) => {
-                            return e('li', {}, [
-                                // <recurse ref="treeNode" /> becomes a recursive call
-                                renderRecursiveRegion_treeNode(childData)
-                            ]);
-                        },
-                        'id',
-                    ),
-                ]),
+  // Setup refs - head is a regular ref in the recursive region
+  const [refManager, [refHead]] = ReferencesManager.for(options, ['head'], [], [], []);
+
+  // Internal recursive render function for the region marked with ref="treeNode"
+  function renderRecursiveRegion_treeNode(nodeData: TreeViewState) {
+    return e('div', { class: 'node' }, [
+      e('div', { class: 'node-header' }, [e('span', {}, [dt((vs) => vs.name)])], refHead()),
+      c(
+        (vs) => vs.open,
+        () =>
+          de('ul', {}, [
+            forEach(
+              (vs: TreeViewState) => vs.children,
+              (childData: TreeViewState) => {
+                return e('li', {}, [
+                  // <recurse ref="treeNode" /> becomes a recursive call
+                  renderRecursiveRegion_treeNode(childData),
+                ]);
+              },
+              'id',
             ),
-        ]);
-    }
-    
-    // Main render function
-    const render = (viewState: TreeViewState) =>
-        ConstructContext.withRootContext(viewState, refManager, () =>
-            e('div', { class: 'tree-container' }, [
-                e('h1', {}, [dt((vs) => vs.title)]),
-                // Call the recursive region function with root viewState
-                renderRecursiveRegion_treeNode(viewState),
-            ]),
-        ) as TreeElement;
-        
-    return [refManager.getPublicAPI() as TreeElementRefs, render];
+          ]),
+      ),
+    ]);
+  }
+
+  // Main render function
+  const render = (viewState: TreeViewState) =>
+    ConstructContext.withRootContext(viewState, refManager, () =>
+      e('div', { class: 'tree-container' }, [
+        e('h1', {}, [dt((vs) => vs.title)]),
+        // Call the recursive region function with root viewState
+        renderRecursiveRegion_treeNode(viewState),
+      ]),
+    ) as TreeElement;
+
+  return [refManager.getPublicAPI() as TreeElementRefs, render];
 }
 ```
 
 **Key Points**:
+
 - The recursive region (element with `ref="treeNode"`) becomes a separate internal function `renderRecursiveRegion_treeNode`
 - The function takes a `TreeViewState` parameter (the recursive type)
 - Within `forEach`, `<recurse ref="treeNode" />` compiles to `renderRecursiveRegion_treeNode(childData)`
@@ -574,7 +585,7 @@ tags:
   - tag: children
     type: sub-contract
     repeated: true
-    link: $/  # References the root contract (self)
+    link: $/ # References the root contract (self)
 ```
 
 The `link: $/` references the root of the current contract, creating a recursive structure.
@@ -596,7 +607,7 @@ tags:
       - tag: items
         type: sub-contract
         repeated: true
-        link: $/  # References root contract
+        link: $/ # References root contract
 ```
 
 #### Referencing Nested Sub-Contracts
@@ -621,14 +632,15 @@ tags:
   - tag: children
     type: sub-contract
     repeated: true
-    link: $/  # References root contract
+    link: $/ # References root contract
   - tag: relatedMetadata
     type: sub-contract
     repeated: true
-    link: $/metadata  # References nested metadata sub-contract
+    link: $/metadata # References nested metadata sub-contract
 ```
 
 **Contract Reference Syntax:**
+
 - `link: $/` - References the root contract (self-reference)
 - `link: $/path/to/subcontract` - References a nested sub-contract
 - `link: ./external-contract` - References an external contract file (non-recursive)
@@ -638,14 +650,16 @@ tags:
 ### Validation Rules
 
 1. **Recursion Guard Required**: `<recurse>` must be inside a `forEach` or have an ancestor with an `if` condition
+
    - Error: "Recursive <recurse> element must be guarded by forEach or conditional to prevent infinite recursion"
 
 2. **Type Consistency**: The data type within `forEach` that contains `<recurse>` must match the referenced type (e.g., `array<$/data>` references root ViewState)
 
 3. **Circular Type Detection**: The compiler should detect and support circular type references:
+
    ```typescript
    interface Node {
-     children: Array<Node>;  // Valid recursive type
+     children: Array<Node>; // Valid recursive type
    }
    ```
 
@@ -688,9 +702,7 @@ A large component with header, toolbar, and a recursive file tree in one section
       <div class="file-tree">
         <div class="tree-item" ref="treeItem">
           <div ref="itemHeader" class="item-header">
-            <span class="icon">
-              {type == folder ? (isExpanded ? '📂' : '📁') : '📄'}
-            </span>
+            <span class="icon"> {type == folder ? (isExpanded ? '📂' : '📁') : '📄'} </span>
             <span class="name">{name}</span>
             <span class="size" if="type == file">{size}</span>
           </div>
@@ -713,6 +725,7 @@ A large component with header, toolbar, and a recursive file tree in one section
 ```
 
 **Key points:**
+
 - Large HTML structure with header, tree, and footer
 - Only the `.tree-item` section is recursive
 - The rest of the HTML is rendered normally
@@ -792,6 +805,7 @@ A comment section with thread controls, where only the comment structure is recu
 ```
 
 **Key points:**
+
 - Thread header and reply form are not recursive
 - Only the comment article structure repeats for nested replies
 - Keeps all UI in one component
@@ -825,9 +839,7 @@ A company org chart with controls, where the employee card structure is recursiv
           <button ref="hierarchyView" class="{chartView == hierarchy ? 'active' : ''}">
             Hierarchy View
           </button>
-          <button ref="flatView" class="{chartView == flat ? 'active' : ''}">
-            Flat View
-          </button>
+          <button ref="flatView" class="{chartView == flat ? 'active' : ''}">Flat View</button>
         </div>
         <div class="chart-tools">
           <input ref="searchInput" placeholder="Search employees..." />
@@ -905,16 +917,10 @@ A sidebar navigation with branding and user info, where menu items can have nest
       <!-- Recursive menu structure -->
       <ul class="nav-menu">
         <li class="menu-item" ref="menuItem">
-          <a 
-            ref="menuLink" 
-            href="{url}"
-            class="menu-link {isActive ? 'active' : ''}"
-          >
+          <a ref="menuLink" href="{url}" class="menu-link {isActive ? 'active' : ''}">
             <span class="menu-icon">{icon}</span>
             <span class="menu-label">{label}</span>
-            <span class="submenu-arrow" if="hasSubmenu">
-              {isOpen ? '▼' : '▶'}
-            </span>
+            <span class="submenu-arrow" if="hasSubmenu"> {isOpen ? '▼' : '▶'} </span>
           </a>
           <ul class="submenu" if="hasSubmenu && isOpen">
             <li forEach="submenu.items" trackBy="id">
@@ -942,6 +948,7 @@ A sidebar navigation with branding and user info, where menu items can have nest
 ```
 
 **Key points:**
+
 - Branding header and user profile footer are not recursive
 - Only the menu item `<li>` structure repeats for nested submenus
 - The recursion goes through an indirect path: `submenu.items: array<$/data>`
@@ -955,6 +962,7 @@ Components currently using the self-import pattern can be migrated to use recurs
 **Before (separate component file):**
 
 `tree-node.jay-html`:
+
 ```html
 <html>
   <head>
@@ -985,6 +993,7 @@ Components currently using the self-import pattern can be migrated to use recurs
 **After (single file with recursive region):**
 
 `tree.jay-html`:
+
 ```html
 <html>
   <head>
@@ -1000,7 +1009,7 @@ Components currently using the self-import pattern can be migrated to use recurs
   <body>
     <div class="tree-view">
       <h1>{title}</h1>
-      
+
       <div class="tree-node" ref="treeNode">
         <div ref="head">
           <span class="tree-arrow">{open ? '▼' : '►'}</span>
@@ -1018,6 +1027,7 @@ Components currently using the self-import pattern can be migrated to use recurs
 ```
 
 **Benefits of migration:**
+
 - Eliminates the need for a separate component file
 - All HTML structure stays in one place
 - Easier to see the complete component structure
@@ -1030,20 +1040,24 @@ The self-import pattern should continue to work for components that genuinely ne
 ## Q & A
 
 1. **Type reference syntax**: Should we require explicit `array<$/data>` annotation or infer from usage?
+
    - **Answer**: Require explicit `array<$/data>` for clarity and to help design tools
    - Uses `$` prefix (inspired by JSON Schema `$ref`) to avoid YAML comment syntax (`#`)
    - This makes the recursive relationship explicit and unambiguous
    - Allows referencing any type in the structure, not just root (e.g., `array<$/data/path>`)
 
 2. **Multiple recursion points**: Can a component have multiple recursive properties with different recursive regions?
+
    ```yaml
    data:
      leftTree: array<$/data>
      rightTree: array<$/data>
    ```
+
    - **Answer**: Yes, supported naturally by having multiple recursive regions (multiple `ref="name"` elements with corresponding `<recurse>` calls)
 
 3. **Depth limiting**: Should there be runtime depth limiting to prevent infinite recursion bugs?
+
    - **Answer**: No, no need
 
 4. **Performance**: How do we optimize recursive rendering for large trees?
@@ -1056,6 +1070,7 @@ The self-import pattern should continue to work for components that genuinely ne
 Using regular `ref="name"` to mark regions and `<recurse ref="name" />` to trigger recursion provides the cleanest, most intuitive syntax for recursive jay-html structures. Combined with `$`-prefixed type references (`array<$/data>`, inspired by JSON Schema `$ref`), this creates a clear and explicit system for defining recursive UIs. The compiler automatically detects which refs mark recursive regions based on `<recurse>` usage. It maintains type safety, works well with design tools, and reduces boilerplate compared to the current self-import approach.
 
 Key benefits:
+
 - **Reuses Jay's ref system**: Uses familiar `ref` attributes with no special syntax
 - **Automatic detection**: Compiler infers recursive regions from `<recurse>` usage
 - **Explicit**: Recursion points are clearly marked with `<recurse ref="name" />`
@@ -1083,36 +1098,37 @@ The `withData` runtime function (which handles accessor-based recursion) include
 
 ```typescript
 function mkUpdateWithData<ParentViewState, ChildViewState>(
-    child: WithData<ParentViewState, ChildViewState>,
-    group: KindergartenGroup,
+  child: WithData<ParentViewState, ChildViewState>,
+  group: KindergartenGroup,
 ): [updateFunc<ParentViewState>, MountFunc, MountFunc] {
-    // ...
-    const update = (newData: ParentViewState) => {
-        const childData = child.accessor(newData);
-        const result = childData != null;  // <-- Built-in null check
-        
-        // Only constructs/renders when childData is not null
-        if (!childElement && result) {
-            // Construct child element in child's context
-            const childContext = parentContext.forAsync(childData);
-            childElement = restoreContext(savedContext, () =>
-                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => child.elem())
-            );
-        }
-        
-        // Handles mounting/unmounting based on null check
-        if (result) {
-            // Mount and update with child data
-            childElement!.update(childData!);
-        } else if (lastResult) {
-            // Unmount when child becomes null
-            childElement!.unmount();
-        }
-    };
+  // ...
+  const update = (newData: ParentViewState) => {
+    const childData = child.accessor(newData);
+    const result = childData != null; // <-- Built-in null check
+
+    // Only constructs/renders when childData is not null
+    if (!childElement && result) {
+      // Construct child element in child's context
+      const childContext = parentContext.forAsync(childData);
+      childElement = restoreContext(savedContext, () =>
+        withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => child.elem()),
+      );
+    }
+
+    // Handles mounting/unmounting based on null check
+    if (result) {
+      // Mount and update with child data
+      childElement!.update(childData!);
+    } else if (lastResult) {
+      // Unmount when child becomes null
+      childElement!.unmount();
+    }
+  };
 }
 ```
 
 This means:
+
 - If `accessor` returns `null`, the recursive element is never constructed
 - Recursion naturally terminates when reaching a leaf node (where `left`/`right`/`next` is `null`)
 - No explicit `if` conditional needed around `<recurse accessor="left">`
@@ -1120,9 +1136,11 @@ This means:
 ### Updated Validation Rules
 
 **Old Rule (Initial Design):**
+
 - All `<recurse>` elements must be inside a `forEach` loop or `if` conditional
 
 **New Rule (Refined):**
+
 - `<recurse>` **with accessor** (e.g., `<recurse ref="node" accessor="left">`) is self-guarding via `withData`'s null check
   - No explicit guard required
   - Can be used directly inside the recursive region
@@ -1159,13 +1177,15 @@ The `if="hasLeft"` is optional for recursion safety (withData handles null), but
   <!-- forEach is required - provides both context and guard -->
   <ul if="open">
     <li forEach="children" trackBy="id">
-      <recurse ref="treeNode" />  <!-- or accessor="." -->
+      <recurse ref="treeNode" />
+      <!-- or accessor="." -->
     </li>
   </ul>
 </div>
 ```
 
 The `forEach` is required because:
+
 1. It provides the iteration context (switches to each child's data)
 2. It guards against infinite recursion (no iteration when `children` is empty)
 
@@ -1177,15 +1197,16 @@ The compiler validation was updated to reflect this:
 // Recursion with accessor uses withData which has built-in null check (self-guarding)
 // Recursion without accessor (or with ".") relies on forEach context, so needs explicit guard
 if ((!accessorAttr || accessorAttr === '.') && !context.isInsideGuard) {
-    return new RenderFragment('', Imports.none(), [
-        `<recurse ref="${refAttr}"> without accessor must be inside a forEach loop to provide context and prevent infinite recursion`,
-    ]);
+  return new RenderFragment('', Imports.none(), [
+    `<recurse ref="${refAttr}"> without accessor must be inside a forEach loop to provide context and prevent infinite recursion`,
+  ]);
 }
 ```
 
 ### Design Implications
 
 This refinement:
+
 1. **Simplifies usage** for common recursive structures (linked lists, binary trees)
 2. **Reduces boilerplate** - no need for redundant conditionals around accessor-based recursion
 3. **Maintains safety** - recursion still cannot cause infinite loops
@@ -1193,4 +1214,3 @@ This refinement:
 5. **Preserves flexibility** - developers can still add `if` conditions for UX purposes
 
 The distinction between "self-guarding accessor recursion" and "forEach-guarded iteration recursion" better reflects the underlying runtime behavior and makes the feature easier to understand and use correctly.
-

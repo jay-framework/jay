@@ -15,7 +15,8 @@ import {
     mergeRefsTrees,
     mkRef,
     mkRefsTree,
-    nestRefs, RecursiveRegion,
+    nestRefs,
+    RecursiveRegion,
     Ref,
     RefsTree,
     RenderFragment,
@@ -327,7 +328,13 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
             childIndent = childIndent.noFirstLineBreak();
 
         let needDynamicElement = childNodes
-            .map((_) => isConditional(_) || isForEach(_) || isRecurseWithData(_) || checkAsync(_).isAsync)
+            .map(
+                (_) =>
+                    isConditional(_) ||
+                    isForEach(_) ||
+                    isRecurseWithData(_) ||
+                    checkAsync(_).isAsync,
+            )
             .reduce((prev, current) => prev || current, false);
 
         let childRenders =
@@ -374,10 +381,10 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                 renderedContent: result.rendered,
                 viewStateType: contextForChildren.variables.currentType.name,
             };
-            
+
             // Replace the inline element with a function call (no parameters)
             const functionCall = `${newContext.indent.firstLine}${functionName}()`;
-            
+
             result = new RenderFragment(
                 functionCall,
                 result.imports.plus(Import.baseJayElement),
@@ -473,22 +480,22 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 // Handle <recurse ref="name" accessor="path" /> element
                 const refAttr = htmlElement.getAttribute('ref');
                 const accessorAttr = htmlElement.getAttribute('accessor');
-                
+
                 if (!refAttr) {
                     return new RenderFragment('', Imports.none(), [
                         '<recurse> element must have a "ref" attribute',
                     ]);
                 }
-                
+
                 // Find the recursive region with matching ref
                 const region = context.recursiveRegions.find((r) => r.refName === refAttr);
-                
+
                 if (!region) {
                     return new RenderFragment('', Imports.none(), [
                         `<recurse ref="${refAttr}"> references unknown ref - no element with ref="${refAttr}" found as ancestor`,
                     ]);
                 }
-                
+
                 // Validate recursion guard
                 // Recursion with accessor uses withData which has built-in null check (self-guarding)
                 // Recursion without accessor (or with ".") relies on forEach context, so needs explicit guard
@@ -497,13 +504,13 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                         `<recurse ref="${refAttr}"> without accessor must be inside a forEach loop to provide context and prevent infinite recursion`,
                     ]);
                 }
-                
+
                 // Mark that this region has recursion
                 region.hasRecurse = true;
-                
+
                 // Generate the recursive function call
                 const functionName = `renderRecursiveRegion_${refAttr}`;
-                
+
                 // If accessor is provided and not ".", we need to use withData to switch context
                 if (accessorAttr && accessorAttr !== '.') {
                     const accessor = parseAccessor(accessorAttr, variables);
@@ -674,9 +681,7 @@ function generateCssImport(jayFile: JayHtmlSourceFile): string {
     return `import './${jayFile.filename}.css';`;
 }
 
-function generateRecursiveFunctions(
-    recursiveRegions: RecursiveRegion[],
-): string {
+function generateRecursiveFunctions(recursiveRegions: RecursiveRegion[]): string {
     if (recursiveRegions.length === 0) {
         return '';
     }

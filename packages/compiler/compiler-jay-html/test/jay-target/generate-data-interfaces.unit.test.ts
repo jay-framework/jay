@@ -82,14 +82,14 @@ export interface ElementNameViewState {
                 id: JayString,
                 children: new JayArrayType(new JayRecursiveType('$/data')),
             });
-            
+
             // Resolve the recursive reference
             const childrenArray = rootType.props.children as JayArrayType;
             const recursiveType = childrenArray.itemType as JayRecursiveType;
             recursiveType.resolvedType = rootType;
-            
+
             let genInterface = generateTypes(rootType);
-            
+
             expect(await prettify(genInterface)).toEqual(
                 await prettify(`export interface TreeViewState {
   name: string,
@@ -105,13 +105,13 @@ export interface ElementNameViewState {
                 id: JayString,
                 next: new JayRecursiveType('$/data'),
             });
-            
+
             // Resolve the recursive reference
             const recursiveType = rootType.props.next as JayRecursiveType;
             recursiveType.resolvedType = rootType;
-            
+
             let genInterface = generateTypes(rootType);
-            
+
             expect(await prettify(genInterface)).toEqual(
                 await prettify(`export interface LinkedListViewState {
   value: string,
@@ -130,15 +130,15 @@ export interface ElementNameViewState {
                     items: new JayArrayType(new JayRecursiveType('$/data')),
                 }),
             });
-            
+
             // Resolve the recursive reference
             const submenu = rootType.props.submenu as JayObjectType;
             const items = submenu.props.items as JayArrayType;
             const recursiveType = items.itemType as JayRecursiveType;
             recursiveType.resolvedType = rootType;
-            
+
             let genInterface = generateTypes(rootType);
-            
+
             expect(await prettify(genInterface)).toEqual(
                 await prettify(`export interface SubmenuOfMenuViewState {
   title: string,
@@ -160,15 +160,15 @@ export interface MenuViewState {
                 left: new JayRecursiveType('$/data'),
                 right: new JayRecursiveType('$/data'),
             });
-            
+
             // Resolve the recursive references
             const leftRecursive = rootType.props.left as JayRecursiveType;
             leftRecursive.resolvedType = rootType;
             const rightRecursive = rootType.props.right as JayRecursiveType;
             rightRecursive.resolvedType = rootType;
-            
+
             let genInterface = generateTypes(rootType);
-            
+
             expect(await prettify(genInterface)).toEqual(
                 await prettify(`export interface BinaryTreeViewState {
   value: number,

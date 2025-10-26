@@ -14,8 +14,7 @@ let root = node('root', [
 
 window.onload = function () {
     let target = document.getElementById('target');
-    let treeComponent = TreeNode({root});
+    let treeComponent = TreeNode({ root });
     target.innerHTML = '';
     target.appendChild(treeComponent.element.dom);
 };
-

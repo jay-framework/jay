@@ -19,8 +19,8 @@ data:
   id: string
   hasLeft: boolean
   hasRight: boolean
-  left: $/data   # Single optional child (left)
-  right: $/data  # Single optional child (right)
+  left: $/data # Single optional child (left)
+  right: $/data # Single optional child (right)
 ```
 
 The `$/data` syntax (without `array<>`) creates a nullable recursive reference. This is perfect for binary tree nodes where each node can have at most one left and one right child.
@@ -35,17 +35,20 @@ The `$/data` syntax (without `array<>`) creates a nullable recursive reference. 
   <div class="node-children" if="hasLeft || hasRight">
     <div class="child-branch left-branch" if="hasLeft">
       <div class="branch-line"></div>
-      <recurse ref="treeNode" accessor="left" />  <!-- Left subtree -->
+      <recurse ref="treeNode" accessor="left" />
+      <!-- Left subtree -->
     </div>
     <div class="child-branch right-branch" if="hasRight">
       <div class="branch-line"></div>
-      <recurse ref="treeNode" accessor="right" />  <!-- Right subtree -->
+      <recurse ref="treeNode" accessor="right" />
+      <!-- Right subtree -->
     </div>
   </div>
 </div>
 ```
 
 The `accessor` attribute tells the compiler which property to use for recursion:
+
 - `accessor="left"` uses the `left` property
 - `accessor="right"` uses the `right` property
 
@@ -54,8 +57,14 @@ The `accessor` attribute tells the compiler which property to use for recursion:
 The compiler generates `withData` calls for accessor-based recursion:
 
 ```typescript
-withData((vs) => vs.left, () => renderRecursiveRegion_treeNode())
-withData((vs) => vs.right, () => renderRecursiveRegion_treeNode())
+withData(
+  (vs) => vs.left,
+  () => renderRecursiveRegion_treeNode(),
+);
+withData(
+  (vs) => vs.right,
+  () => renderRecursiveRegion_treeNode(),
+);
 ```
 
 This ensures proper context switching and handles null values automatically.
@@ -76,12 +85,14 @@ yarn build:watch
 ## Comparison with Tree-Recursive Example
 
 ### Tree-Recursive (Array-based)
+
 - Uses `array<$/data>` for multiple children
 - Uses `forEach` to iterate children
 - No `accessor` attribute needed
 - Generates static `e()` elements in forEach
 
 ### BTree-Recursive (Accessor-based)
+
 - Uses `$/data` for single optional children
 - Uses `if` conditionals for left/right
 - Requires `accessor` attribute to specify which child
@@ -102,4 +113,3 @@ The example creates this binary search tree:
 ```
 
 Each node is rendered recursively using the same template, demonstrating the power of recursive Jay-HTML templates for hierarchical data structures.
-

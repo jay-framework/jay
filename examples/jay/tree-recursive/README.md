@@ -19,7 +19,7 @@ data:
   id: string
   open: boolean
   hasChildren: boolean
-  children: array<$/data>  # Self-referencing array
+  children: array<$/data> # Self-referencing array
 ```
 
 The `array<$/data>` syntax creates a recursive type reference where each child has the same structure as the parent.
@@ -36,7 +36,8 @@ The `array<$/data>` syntax creates a recursive type reference where each child h
   </div>
   <ul if="open" class="tree-children">
     <li forEach="children" trackBy="id">
-      <recurse ref="treeNode" />  <!-- Recursive call -->
+      <recurse ref="treeNode" />
+      <!-- Recursive call -->
     </li>
   </ul>
 </div>
@@ -77,4 +78,3 @@ This `tree-recursive` example uses **template recursion** with the `<recurse>` e
 2. **More explicit**: Clear recursive boundary with `ref` attribute
 3. **Single file**: Everything in one Jay-HTML file
 4. **Type safety**: Automatic recursive type generation
-

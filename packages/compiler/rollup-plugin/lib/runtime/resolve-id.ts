@@ -1,7 +1,7 @@
-import {CustomPluginOptions, PluginContext, ResolvedId, ResolveIdResult} from 'rollup';
-import {watchChangesFor} from './watch';
-import {SANDBOX_ROOT_PREFIX} from './sandbox';
-import {appendJayMetadata, getJayMetadata, jayMetadataFromModuleMetadata} from './metadata';
+import { CustomPluginOptions, PluginContext, ResolvedId, ResolveIdResult } from 'rollup';
+import { watchChangesFor } from './watch';
+import { SANDBOX_ROOT_PREFIX } from './sandbox';
+import { appendJayMetadata, getJayMetadata, jayMetadataFromModuleMetadata } from './metadata';
 import {
     CSS_EXTENSION,
     GenerateTarget,
@@ -13,7 +13,7 @@ import {
     TS_EXTENSION,
     TSX_EXTENSION,
 } from '@jay-framework/compiler-shared';
-import {stripTSExtension} from './load';
+import { stripTSExtension } from './load';
 
 const JAY_HTML_CSS = '.css';
 
@@ -143,12 +143,15 @@ export function hasCssImportedByJayHtml(source: string, importer: string | undef
     );
 }
 
-export function resolveCssFileImportedByJayHtml(context: PluginContext, importer: string, root: string) {
+export function resolveCssFileImportedByJayHtml(
+    context: PluginContext,
+    importer: string,
+    root: string,
+) {
     const originImporter = importer.split('?')[0];
-    const originId =
-        context['ssr'] ?
-            getJayMetadata(context, originImporter)?.originId :
-            stripTSExtension(originImporter)
+    const originId = context['ssr']
+        ? getJayMetadata(context, originImporter)?.originId
+        : stripTSExtension(originImporter);
 
     const id =
         context['ssr'] && originId.startsWith(root)

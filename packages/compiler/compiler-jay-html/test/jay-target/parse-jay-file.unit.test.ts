@@ -5,7 +5,8 @@ import {
     JayEnumType,
     JayNumber,
     JayObjectType,
-    JayPromiseType, JayRecursiveType,
+    JayPromiseType,
+    JayRecursiveType,
     JayString,
     JayTypeKind,
     WithValidations,
@@ -254,16 +255,16 @@ describe('compiler', () => {
                 expect(types.name).toBe('TreeViewState');
                 expect(types.props.name).toBe(JayString);
                 expect(types.props.id).toBe(JayString);
-                
+
                 // Check children is an array
                 expect(types.props.children).toBeInstanceOf(JayArrayType);
                 const childrenArray = types.props.children as JayArrayType;
-                
+
                 // Check the item type is a recursive reference
                 expect(childrenArray.itemType.kind).toBe(JayTypeKind.recursive);
                 const recursiveType = childrenArray.itemType as JayRecursiveType;
                 expect(recursiveType.referencePath).toBe('$/data');
-                
+
                 // Check that the recursive reference is resolved to the root type
                 expect(recursiveType.resolvedType).toBe(types);
                 expect(recursiveType.name).toBe('TreeViewState');
@@ -289,12 +290,12 @@ describe('compiler', () => {
                 expect(types.name).toBe('LinkedListViewState');
                 expect(types.props.value).toBe(JayString);
                 expect(types.props.id).toBe(JayString);
-                
+
                 // Check next is a recursive reference
                 expect(types.props.next.kind).toBe(JayTypeKind.recursive);
                 const recursiveType = types.props.next as JayRecursiveType;
                 expect(recursiveType.referencePath).toBe('$/data');
-                
+
                 // Check that the recursive reference is resolved to the root type
                 expect(recursiveType.resolvedType).toBe(types);
                 expect(recursiveType.name).toBe('LinkedListViewState');
@@ -320,16 +321,16 @@ describe('compiler', () => {
                 expect(jayFile.validations).toEqual([]);
                 const types = jayFile.val.types as JayObjectType;
                 expect(types.name).toBe('MenuViewState');
-                
+
                 // Check submenu.items
                 const submenu = types.props.submenu as JayObjectType;
                 expect(submenu.props.title).toBe(JayString);
-                
+
                 const items = submenu.props.items as JayArrayType;
                 expect(items.itemType.kind).toBe(JayTypeKind.recursive);
                 const recursiveType = items.itemType as JayRecursiveType;
                 expect(recursiveType.referencePath).toBe('$/data');
-                
+
                 // Check that the recursive reference is resolved to the root type
                 expect(recursiveType.resolvedType).toBe(types);
                 expect(recursiveType.name).toBe('MenuViewState');
@@ -348,7 +349,7 @@ describe('compiler', () => {
                     {},
                     defaultImportResolver,
                 );
-                
+
                 expect(jayFile.validations.length).toBeGreaterThan(0);
                 expect(jayFile.validations[0]).toContain('invalid recursive reference');
                 expect(jayFile.validations[0]).toContain('$/invalid/path');

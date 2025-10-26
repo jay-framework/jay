@@ -12,16 +12,8 @@ import './index.css';
 
 let root = btreeNode(
     50,
-    btreeNode(
-        30,
-        btreeNode(20, btreeNode(10), null),
-        btreeNode(40)
-    ),
-    btreeNode(
-        70,
-        btreeNode(60, null, btreeNode(65)),
-        btreeNode(80)
-    )
+    btreeNode(30, btreeNode(20, btreeNode(10), null), btreeNode(40)),
+    btreeNode(70, btreeNode(60, null, btreeNode(65)), btreeNode(80)),
 );
 
 window.onload = function () {
@@ -30,4 +22,3 @@ window.onload = function () {
     target.innerHTML = '';
     target.appendChild(treeComponent.element.dom);
 };
-
