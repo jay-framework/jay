@@ -104,7 +104,7 @@ body {
     margin-left: 10px;
 }
 
-.left-branch .branch-line::after {
+.left-branch > .branch-line::after {
     content: '';
     position: absolute;
     top: 0;
@@ -116,7 +116,7 @@ body {
     transform: rotate(-30deg);
 }
 
-.right-branch .branch-line::after {
+.right-branch > .branch-line::after {
     content: '';
     position: absolute;
     top: 0;
