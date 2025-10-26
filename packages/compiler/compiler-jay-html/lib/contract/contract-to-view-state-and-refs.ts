@@ -9,6 +9,7 @@ import {
     JayImportedType,
     JayObjectType,
     JayPromiseType,
+    JayRecursiveType,
     JayType,
     JayUnknown,
     JayValidations,
@@ -18,6 +19,7 @@ import {
     WithValidations,
     mkRef,
     isEnumType,
+    isRecursiveType, isObjectType, isPromiseType,
 } from '@jay-framework/compiler-shared';
 import { camelCase, pascalCase } from 'change-case';
 import path from 'path';
@@ -175,11 +177,44 @@ async function traverseLinkedSubContract(tag: ContractTag, context: ContractTrav
     }
 }
 
+function isRecursiveLink(link: string): boolean {
+    return link.startsWith('$/');
+}
+
+function traverseRecursiveSubContract(
+    tag: ContractTag,
+    context: ContractTraversalContext,
+): WithValidations<SubContractTraverseResult> {
+    const { isRepeated, isAsync } = context;
+    
+    // Create a recursive type with the reference path
+    const referencePath = tag.link;
+    const recursiveType = new JayRecursiveType(referencePath);
+    
+    // Wrap in array if repeated
+    const maybeArrayType = isRepeated ? new JayArrayType(recursiveType) : recursiveType;
+    
+    // Wrap in promise if async
+    const type = isAsync ? new JayPromiseType(maybeArrayType) : maybeArrayType;
+    
+    // Return result with empty refs (recursive types don't have their own refs)
+    return new WithValidations<SubContractTraverseResult>({
+        type,
+        refs: mkRefsTree([], {}, isRepeated),
+        importLinks: [],
+        enumsToImport: [],
+    });
+}
+
 async function traverseSubContractTag(
     tag: ContractTag,
     context: ContractTraversalContext,
 ): Promise<WithValidations<SubContractTraverseResult>> {
     if (tag.link) {
+        // Check if it's a recursive reference
+        if (isRecursiveLink(tag.link)) {
+            return traverseRecursiveSubContract(tag, context);
+        }
         return await traverseLinkedSubContract(tag, context);
     }
     return await traverseTags(
@@ -208,11 +243,62 @@ async function traverseTag(
             new JayHTMLType(elementType),
         );
         return { ref, ...(tag.dataType ? { type: tag.dataType } : {}) };
-    } else if (tag.type.includes(ContractTagType.variant) && tag.dataType instanceof JayEnumType) {
+    } else if (tag.type.includes(ContractTagType.variant) && isEnumType(tag.dataType)) {
         return { type: tag.dataType };
     } else {
         return { type: tag.dataType || JayUnknown };
     }
+}
+
+function resolveRecursiveReferences(type: JayType | undefined, rootType: JayType): void {
+    if (!type) return;
+    
+    if (isRecursiveType(type)) {
+        if (type.referencePath === '$/') {
+            // Reference to root type
+            type.resolvedType = rootType;
+        } else if (type.referencePath.startsWith('$/')) {
+            // Reference to nested type
+            const path = type.referencePath.substring(2); // Remove '$/'
+            const pathParts = path.split('/');
+            let currentType: JayType = rootType;
+            
+            // Navigate through the path
+            for (const part of pathParts) {
+                if (isObjectType(currentType)) {
+                    const camelCasePart = camelCase(part);
+                    currentType = currentType.props[camelCasePart];
+                    if (!currentType) {
+                        // Invalid path - will be caught during compilation
+                        break;
+                    }
+                } else {
+                    break;
+                }
+            }
+            
+            type.resolvedType = currentType || rootType;
+        }
+    } else if (isArrayType(type)) {
+        resolveRecursiveReferences(type.itemType, rootType);
+    } else if (isObjectType(type) && type.props) {
+        for (const memberType of Object.values(type.props)) {
+            resolveRecursiveReferences(memberType, rootType);
+        }
+    } else if (isPromiseType(type)) {
+        resolveRecursiveReferences(type.itemType, rootType);
+    }
+}
+
+function getRootObjectType(type: JayType | undefined): JayType | undefined {
+    if (!type) return undefined;
+    if (isArrayType(type)) {
+        return getRootObjectType(type.itemType);
+    }
+    if (isPromiseType(type)) {
+        return getRootObjectType(type.itemType);
+    }
+    return type;
 }
 
 export async function contractToImportsViewStateAndRefs(
@@ -222,11 +308,23 @@ export async function contractToImportsViewStateAndRefs(
     isRepeated: boolean = false,
     isAsync: boolean = false,
 ): Promise<WithValidations<SubContractTraverseResult>> {
-    return await traverseTags(contract.tags, pascalCase(contract.name + 'ViewState'), {
+    const result = await traverseTags(contract.tags, pascalCase(contract.name + 'ViewState'), {
         viewStateType: undefined,
         isRepeated,
         contractFilePath,
         importResolver: jayImportResolver,
         isAsync,
+    });
+    
+    // Resolve recursive references
+    return result.map((r) => {
+        if (r.type) {
+            // Find the root object type (unwrap arrays and promises)
+            const rootType = getRootObjectType(r.type);
+            if (rootType) {
+                resolveRecursiveReferences(r.type, rootType);
+            }
+        }
+        return r;
     });
 }

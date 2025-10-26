@@ -6,6 +6,7 @@ import {
     JayNumber,
     JayString,
     JayPromiseType,
+    JayRecursiveType,
 } from '@jay-framework/compiler-shared';
 
 describe('parse contract', () => {
@@ -702,6 +703,204 @@ tags:
                     },
                 ],
             });
+        });
+    });
+
+    describe('recursive contracts', () => {
+        it('should parse simple recursive contract with $/  ', () => {
+            const contract = `
+name: tree-node
+tags:
+  - tag: name
+    type: data
+    dataType: string
+  - tag: id
+    type: data
+    dataType: string
+  - tag: children
+    type: sub-contract
+    repeated: true
+    link: $/
+`;
+            const result = parseContract(contract, 'tree-node.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val).toEqual({
+                name: 'tree-node',
+                tags: [
+                    { tag: 'name', type: [ContractTagType.data], dataType: JayString },
+                    { tag: 'id', type: [ContractTagType.data], dataType: JayString },
+                    {
+                        tag: 'children',
+                        type: [ContractTagType.subContract],
+                        repeated: true,
+                        link: '$/',
+                    },
+                ],
+            });
+        });
+
+        it('should parse binary tree with multiple recursive references', () => {
+            const contract = `
+name: binary-tree
+tags:
+  - tag: value
+    type: data
+    dataType: number
+  - tag: id
+    type: data
+    dataType: string
+  - tag: left
+    type: sub-contract
+    link: $/
+  - tag: right
+    type: sub-contract
+    link: $/
+`;
+            const result = parseContract(contract, 'binary-tree.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val).toEqual({
+                name: 'binary-tree',
+                tags: [
+                    { tag: 'value', type: [ContractTagType.data], dataType: JayNumber },
+                    { tag: 'id', type: [ContractTagType.data], dataType: JayString },
+                    {
+                        tag: 'left',
+                        type: [ContractTagType.subContract],
+                        link: '$/',
+                    },
+                    {
+                        tag: 'right',
+                        type: [ContractTagType.subContract],
+                        link: '$/',
+                    },
+                ],
+            });
+        });
+
+        it('should parse indirect recursion through container', () => {
+            const contract = `
+name: menu-item
+tags:
+  - tag: label
+    type: data
+    dataType: string
+  - tag: id
+    type: data
+    dataType: string
+  - tag: submenu
+    type: sub-contract
+    tags:
+      - tag: items
+        type: sub-contract
+        repeated: true
+        link: $/
+`;
+            const result = parseContract(contract, 'menu-item.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val).toEqual({
+                name: 'menu-item',
+                tags: [
+                    { tag: 'label', type: [ContractTagType.data], dataType: JayString },
+                    { tag: 'id', type: [ContractTagType.data], dataType: JayString },
+                    {
+                        tag: 'submenu',
+                        type: [ContractTagType.subContract],
+                        tags: [
+                            {
+                                tag: 'items',
+                                type: [ContractTagType.subContract],
+                                repeated: true,
+                                link: '$/',
+                            },
+                        ],
+                    },
+                ],
+            });
+        });
+
+        it('should parse nested type reference with $/path syntax', () => {
+            const contract = `
+name: complex-tree
+tags:
+  - tag: name
+    type: data
+    dataType: string
+  - tag: metadata
+    type: sub-contract
+    tags:
+      - tag: category
+        type: data
+        dataType: string
+      - tag: tags
+        type: data
+        dataType: string
+  - tag: children
+    type: sub-contract
+    repeated: true
+    link: $/
+  - tag: relatedMetadata
+    type: sub-contract
+    repeated: true
+    link: $/metadata
+`;
+            const result = parseContract(contract, 'complex-tree.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.tags).toEqual([
+                { tag: 'name', type: [ContractTagType.data], dataType: JayString },
+                {
+                    tag: 'metadata',
+                    type: [ContractTagType.subContract],
+                    tags: [
+                        { tag: 'category', type: [ContractTagType.data], dataType: JayString },
+                        { tag: 'tags', type: [ContractTagType.data], dataType: JayString },
+                    ],
+                },
+                {
+                    tag: 'children',
+                    type: [ContractTagType.subContract],
+                    repeated: true,
+                    link: '$/',
+                },
+                {
+                    tag: 'relatedMetadata',
+                    type: [ContractTagType.subContract],
+                    repeated: true,
+                    link: '$/metadata',
+                },
+            ]);
+        });
+
+        it('should allow mixing recursive and external links', () => {
+            const contract = `
+name: file-node
+tags:
+  - tag: name
+    type: data
+    dataType: string
+  - tag: permissions
+    type: sub-contract
+    link: ./file-permissions${JAY_CONTRACT_EXTENSION}
+  - tag: children
+    type: sub-contract
+    repeated: true
+    link: $/
+`;
+            const result = parseContract(contract, 'file-node.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.tags).toEqual([
+                { tag: 'name', type: [ContractTagType.data], dataType: JayString },
+                {
+                    tag: 'permissions',
+                    type: [ContractTagType.subContract],
+                    link: `./file-permissions${JAY_CONTRACT_EXTENSION}`,
+                },
+                {
+                    tag: 'children',
+                    type: [ContractTagType.subContract],
+                    repeated: true,
+                    link: '$/',
+                },
+            ]);
         });
     });
 });
